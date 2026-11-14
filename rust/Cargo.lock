@@ -373,6 +373,7 @@ name = "interrexx-api"
 version = "0.1.0"
 dependencies = [
  "interrexx-core",
+ "interrexx-upstream",
  "libc",
  "libloading",
  "rustc-hash",

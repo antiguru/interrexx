@@ -10,20 +10,22 @@
 use std::cell::Cell;
 use std::ffi::{c_char, c_int, c_uchar, c_ushort, c_void};
 
-/// Defines each scalar type the header declares by `typedef`, and beside them
-/// each name with the tokens of the Rust type it stands for, from which the
-/// header generator (`header.rs`) spells the C declaration.
+/// Defines each type the header declares by `typedef` as a name for another
+/// type, and beside them, in the table `$table`, each name with the tokens of
+/// the Rust type it stands for, from which the header generator (`header.rs`)
+/// spells the C declaration.
 macro_rules! c_typedefs {
-    ($($(#[$meta:meta])* $name:ident = $ty:ty;)*) => {
+    ($table:ident: $($(#[$meta:meta])* $name:ident = $ty:ty;)*) => {
         $( $(#[$meta])* pub type $name = $ty; )*
 
-        /// Each scalar typedef, as the header names it, and the tokens of its
-        /// Rust type, in declaration order.
-        pub const C_TYPEDEFS: &[(&str, &str)] = &[$((stringify!($name), stringify!($ty))),*];
+        /// Each typedef, as the header names it, and the tokens of its Rust
+        /// type, in declaration order.
+        pub const $table: &[(&str, &str)] = &[$((stringify!($name), stringify!($ty))),*];
     };
 }
 
 c_typedefs! {
+    C_TYPEDEFS:
     /// `wholenumber_t`.
     wholenumber_t = isize;
     /// `stringsize_t`.
@@ -41,6 +43,18 @@ c_typedefs! {
 /// `REXXPFN`. Its C declaration differs by platform, so it is in the header
 /// generator's per-platform table rather than in [`C_TYPEDEFS`].
 pub type REXXPFN = *mut c_void;
+
+/// `process_id_t`, the identifier of a process. A platform type, in the header
+/// generator's per-platform table.
+pub type process_id_t = libc::pid_t;
+
+/// `thread_id_t`, the identifier of a thread. A platform type, in the header
+/// generator's per-platform table.
+pub type thread_id_t = libc::pthread_t;
+
+/// `PEXIT`, the parameter block an exit handler receives, whose layout the
+/// exit's function code names. The header declares it by hand.
+pub type PEXIT = *mut c_char;
 
 /// `intptr_t`, a C type of its own name: a member that holds one is spelled
 /// with it rather than as `ssize_t`.
@@ -117,6 +131,7 @@ pub const C_TYPE_NAMES: &[(&str, &str)] = &[
     ("c_char", "char"),
     ("c_uchar", "unsigned char"),
     ("c_ushort", "unsigned short"),
+    ("c_short", "short"),
     ("c_int", "int"),
     ("c_void", "void"),
     ("i8", "int8_t"),
@@ -169,6 +184,15 @@ pub fn c_type(tokens: &str) -> String {
     if let Some((_, c)) = C_TYPE_NAMES.iter().find(|(rust, _)| *rust == tokens) {
         return (*c).to_string();
     }
+    // A handler's C name is a function type, and its Rust name the pointer to
+    // one.
+    if C_HANDLERS
+        .iter()
+        .chain(API_HANDLERS)
+        .any(|(name, _)| *name == tokens)
+    {
+        return format!("{tokens} *");
+    }
     assert!(
         !tokens.is_empty()
             && tokens
@@ -180,7 +204,15 @@ pub fn c_type(tokens: &str) -> String {
 }
 
 /// A pointer to `pointee`, constant when `constant` is set.
+///
+/// # Panics
+/// For a constant pointee that is itself a pointer: the `const` written
+/// before it would qualify what it points at instead.
 fn pointer_to(pointee: &str, constant: bool) -> String {
+    assert!(
+        !(constant && pointee.ends_with('*')),
+        "a pointer to a constant {pointee} has no spelling here"
+    );
     let pointee = if constant {
         format!("const {pointee}")
     } else {
@@ -387,10 +419,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`. The blocks
-    /// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
-    /// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
-    /// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
+    /// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXSIOSAY_PARM {
@@ -421,6 +450,69 @@ c_struct! {
 }
 
 c_struct! {
+    /// `RXMSQPLL_PARM`: the line a queue exit pulls.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXMSQPLL_PARM {
+        pub rxmsq_retc: RXSTRING,
+    }
+}
+
+c_struct! {
+    /// `RXMSQSIZ_PARM`: the number of lines a queue exit reports.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXMSQSIZ_PARM {
+        pub rxmsq_size: usize,
+    }
+}
+
+c_struct! {
+    /// `RXMSQNAM_PARM`: the queue name a queue exit sets.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXMSQNAM_PARM {
+        pub rxmsq_name: RXSTRING,
+    }
+}
+
+c_struct! {
+    /// `RXSIOTRD_PARM`: the line a terminal read exit answers.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXSIOTRD_PARM {
+        pub rxsiotrd_retc: RXSTRING,
+    }
+}
+
+c_struct! {
+    /// `RXSIODTR_PARM`: the line a debug read exit answers.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXSIODTR_PARM {
+        pub rxsiodtr_retc: RXSTRING,
+    }
+}
+
+c_struct! {
+    /// `RXHLTTST_PARM`: the flag a halt test exit sets.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXHLTTST_PARM {
+        pub rxhlt_flags: RXHLT_FLAGS,
+    }
+}
+
+c_struct! {
+    /// `RXTRCTST_PARM`: the flag a trace test exit sets.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXTRCTST_PARM {
+        pub rxtrc_flags: RXTRC_FLAGS,
+    }
+}
+
+c_struct! {
     /// `SHVBLOCK`.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
@@ -433,6 +525,18 @@ c_struct! {
         pub shvcode: c_uchar,
         pub shvret: c_uchar,
     }
+}
+
+c_typedefs! {
+    C_POINTER_TYPEDEFS:
+    /// `PRXSTRING`.
+    PRXSTRING = *mut RXSTRING;
+    /// `PCONSTRXSTRING`.
+    PCONSTRXSTRING = *mut CONSTRXSTRING;
+    /// `PRXSYSEXIT`.
+    PRXSYSEXIT = *mut RXSYSEXIT;
+    /// `PSHVBLOCK`.
+    PSHVBLOCK = *mut SHVBLOCK;
 }
 
 c_struct! {
@@ -469,6 +573,22 @@ c_struct! {
         pub microseconds: usize,
         pub yearday: usize,
         pub valid: u16,
+    }
+}
+
+c_struct! {
+    /// `RexxConditionData`: a condition's code, return code, message, error
+    /// text, line and program, with the texts as strings. No function of the
+    /// interface takes or fills one.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxConditionData {
+        pub code: wholenumber_t,
+        pub rc: wholenumber_t,
+        pub message: RXSTRING,
+        pub errortext: RXSTRING,
+        pub position: usize,
+        pub program: RXSTRING,
     }
 }
 
@@ -603,6 +723,75 @@ c_struct! {
     }
 }
 
+/// Defines each handler type the header declares: a function the interpreter
+/// calls, whose C name is the function type and whose Rust name is the
+/// pointer to it. Beside them, in the table `$table`, each name with the
+/// tokens of its result's Rust type (`None` for none) and of each parameter's,
+/// from which the header generator spells the C declaration.
+macro_rules! c_handlers {
+    ($table:ident, $types:ident: $($(#[$meta:meta])* $name:ident = fn($($arg:ty),* $(,)?) $(-> $ret:ty)?;)*) => {
+        $( $(#[$meta])* pub type $name = unsafe extern "C-unwind" fn($($arg),*) $(-> $ret)?; )*
+
+        /// Each handler type, as the header names it, and its C declaration's
+        /// parts, in declaration order.
+        pub const $table: &[(&str, CMember)] = &[$((
+            stringify!($name),
+            CMember::Function {
+                returns: c_handlers!(@returns $($ret)?),
+                parameters: &[$(stringify!($arg)),*],
+            },
+        )),*];
+
+        /// Each handler type's name and the Rust type it has, in declaration
+        /// order.
+        #[must_use]
+        pub fn $types() -> Vec<(&'static str, &'static str)> {
+            vec![$((stringify!($name), std::any::type_name::<$name>())),*]
+        }
+    };
+    (@returns) => { None };
+    (@returns $ret:ty) => { Some(stringify!($ret)) };
+}
+
+c_handlers! {
+    C_HANDLERS, c_handler_types:
+    /// `RexxSubcomHandler`: a classic command handler. It receives the
+    /// command, a flag word it sets and a result buffer, and answers a return
+    /// code.
+    RexxSubcomHandler = fn(*mut CONSTRXSTRING, *mut c_ushort, *mut RXSTRING) -> RexxReturnCode;
+    /// `RexxRoutineHandler`: a classic external function. It receives its
+    /// name, its arguments, the current queue's name and a result buffer, and
+    /// answers zero when it ran.
+    RexxRoutineHandler = fn(CSTRING, usize, *mut CONSTRXSTRING, CSTRING, *mut RXSTRING) -> usize;
+    /// `RexxFunctionHandler`: as [`RexxRoutineHandler`].
+    RexxFunctionHandler = fn(CSTRING, usize, *mut CONSTRXSTRING, CSTRING, *mut RXSTRING) -> usize;
+    /// `RexxExitHandler`: a classic system exit. It receives the exit's
+    /// function and subfunction codes and the parameter block, and answers
+    /// whether it handled the exit.
+    RexxExitHandler = fn(c_int, c_int, PEXIT) -> c_int;
+}
+
+c_handlers! {
+    API_HANDLERS, api_handler_types:
+    /// `RexxContextExitHandler`: a context exit. It receives the exit context,
+    /// the exit's function and subfunction codes and the parameter block, and
+    /// answers whether it handled the exit.
+    RexxContextExitHandler = fn(*mut RexxExitContext_, c_int, c_int, PEXIT) -> c_int;
+    /// `RexxContextCommandHandler`: a command environment's handler. It
+    /// receives the exit context, the environment's name and the command, and
+    /// answers the command's return code object.
+    RexxContextCommandHandler = fn(*mut RexxExitContext_, RexxStringObject, RexxStringObject) -> RexxObjectPtr;
+    /// `RexxRedirectingCommandHandler`: as [`RexxContextCommandHandler`], with
+    /// the redirector context through which the command's input and output
+    /// pass.
+    RexxRedirectingCommandHandler = fn(
+        *mut RexxExitContext_,
+        RexxStringObject,
+        RexxStringObject,
+        *mut RexxIORedirectorContext_,
+    ) -> RexxObjectPtr;
+}
+
 /// `RexxPackageLoader` and `RexxPackageUnloader`.
 pub type PackageHook = unsafe extern "C-unwind" fn(*mut RexxThreadContext_);
 /// `RexxPackageLoader`, the hook a package runs when it is loaded.
@@ -652,6 +841,61 @@ c_struct! {
         pub unloader: Option<RexxPackageUnloader>,
         pub routines: *mut RexxRoutineEntry,
         pub methods: *mut RexxMethodEntry,
+    }
+}
+
+c_struct! {
+    /// `RexxContextEnvironment`: a command environment's handler and name, an
+    /// entry of the `DIRECT_ENVIRONMENTS` option.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxContextEnvironment {
+        pub handler: Option<RexxContextCommandHandler>,
+        pub name: *const c_char,
+    }
+}
+
+c_struct! {
+    /// `RexxRedirectingEnvironment`: a redirecting command environment's
+    /// handler and name, an entry of the `REDIRECTING_ENVIRONMENTS` option.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxRedirectingEnvironment {
+        pub handler: Option<RexxRedirectingCommandHandler>,
+        pub name: *const c_char,
+    }
+}
+
+c_struct! {
+    /// `RexxRegisteredEnvironment`: the name a subcommand handler is
+    /// registered under and the environment name it serves, an entry of the
+    /// `REGISTERED_ENVIRONMENTS` option.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxRegisteredEnvironment {
+        pub registeredName: *const c_char,
+        pub name: *const c_char,
+    }
+}
+
+c_struct! {
+    /// `RexxLibraryPackage`: a package's name and its table, the value of the
+    /// `REGISTER_LIBRARY` option.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxLibraryPackage {
+        pub registeredName: *const c_char,
+        pub table: *mut RexxPackageEntry,
+    }
+}
+
+c_struct! {
+    /// `RexxOption`: one option of a new interpreter instance, its name and a
+    /// value of the type the name implies.
+    #[repr(C)]
+    pub struct RexxOption {
+        pub optionName: *const c_char,
+        pub option: ValueDescriptor,
     }
 }
 

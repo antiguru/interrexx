@@ -11,17 +11,30 @@
 //! type through [`c_type`], never from a C string kept beside the Rust one,
 //! so a change to a Rust definition changes the header and the ABI dump
 //! (`tests/abi_dump.rs`) measures the two against each other.
+//!
+//! The constants come from `constants.rs`, the exports from `exports.rs`, and
+//! the error codes of `oorexxerrors.h` from the error table
+//! (`interrexx-inventory/data/errors.tsv`), whose rows [`sections`] takes.
 
+use crate::constants::{
+    API_VERSIONS, ARGUMENT_TYPES, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENVIRONMENT_KINDS,
+    OPTION_NAMES, error_code, has_error_code, optional_argument_types, value_codes,
+};
+use crate::exports::{Declared, EXPORTS, Export, pointer_types};
 use crate::layout::{
-    C_TYPEDEFS, CField, CMember, CONSTRXSTRING, CSpelling, CallContextInterface, CxxMethod,
-    EXIT_FLAG_BITS, ExitContextInterface, FORWARDED_RESPELLED, HANDLES, IORedirectorInterface,
-    MethodContextInterface, REXXDATETIME, RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM,
-    RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXSYSEXIT, RXVALCALL_PARM, RXVARNOVALUE_PARM,
-    RexxCallContext_, RexxCondition, RexxContextExit, RexxExitContext_, RexxIORedirectorContext_,
-    RexxInstance_, RexxInstanceInterface, RexxMethodContext_, RexxMethodEntry, RexxPackageEntry,
-    RexxQueueTime, RexxRoutineEntry, RexxThreadContext_, RexxThreadInterface, SHVBLOCK,
-    THREAD_ALIASES, THREAD_INSTANCE_FIELDS, THREAD_INSTANCE_FORWARDS, THREAD_ONLY,
-    THREAD_RESPELLED, THREAD_UNNAMED, THREAD_VALUE_ACCESSORS, ValueDescriptor, ValueUnion, c_type,
+    API_HANDLERS, C_HANDLERS, C_POINTER_TYPEDEFS, C_TYPEDEFS, CField, CMember, CONSTRXSTRING,
+    CSpelling, CallContextInterface, CxxMethod, EXIT_FLAG_BITS, ExitContextInterface,
+    FORWARDED_RESPELLED, HANDLES, IORedirectorInterface, MethodContextInterface, REXXDATETIME,
+    RXCMDHST_PARM, RXFNCCAL_PARM, RXHLTTST_PARM, RXMSQNAM_PARM, RXMSQPLL_PARM, RXMSQPSH_PARM,
+    RXMSQSIZ_PARM, RXOFNCCAL_PARM, RXSIODTR_PARM, RXSIOSAY_PARM, RXSIOTRD_PARM, RXSTRING,
+    RXSYSEXIT, RXTRCTST_PARM, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition,
+    RexxConditionData, RexxContextEnvironment, RexxContextExit, RexxExitContext_,
+    RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface, RexxLibraryPackage,
+    RexxMethodContext_, RexxMethodEntry, RexxOption, RexxPackageEntry, RexxQueueTime,
+    RexxRedirectingEnvironment, RexxRegisteredEnvironment, RexxRoutineEntry, RexxThreadContext_,
+    RexxThreadInterface, SHVBLOCK, THREAD_ALIASES, THREAD_INSTANCE_FIELDS,
+    THREAD_INSTANCE_FORWARDS, THREAD_ONLY, THREAD_RESPELLED, THREAD_UNNAMED,
+    THREAD_VALUE_ACCESSORS, ValueDescriptor, ValueUnion, c_type,
 };
 use std::fmt::Write as _;
 
@@ -104,6 +117,16 @@ const fn named(name: &'static str, tag: &'static str, fields: &'static [CField])
     }
 }
 
+/// A struct with no tag.
+const fn anonymous(name: &'static str, fields: &'static [CField]) -> Struct {
+    Struct {
+        name,
+        tag: Tag::Anonymous,
+        fields,
+        retype: &[],
+    }
+}
+
 /// The classic API's data structs, in `rexx.h`.
 const CLASSIC_STRUCTS: &[Struct] = &[
     named("RXSTRING", "_RXSTRING", RXSTRING::C_FIELDS),
@@ -111,6 +134,11 @@ const CLASSIC_STRUCTS: &[Struct] = &[
     named("RXSYSEXIT", "_RXSYSEXIT", RXSYSEXIT::C_FIELDS),
     named("SHVBLOCK", "_SHVBLOCK", SHVBLOCK::C_FIELDS),
     named("RexxQueueTime", "_RexxQueueTime", RexxQueueTime::C_FIELDS),
+    named(
+        "RexxConditionData",
+        "_RexxConditionData",
+        RexxConditionData::C_FIELDS,
+    ),
 ];
 
 /// The exit parameter blocks that have a Rust struct, in `rexx.h`, after the
@@ -142,6 +170,13 @@ const EXIT_STRUCTS: &[Struct] = &[
         "_RXVALCALL_PARM",
         RXVALCALL_PARM::C_FIELDS,
     ),
+    named("RXMSQPLL_PARM", "_RXMSQPLL_PARM", RXMSQPLL_PARM::C_FIELDS),
+    named("RXMSQSIZ_PARM", "_RXMSQSIZ_PARM", RXMSQSIZ_PARM::C_FIELDS),
+    named("RXMSQNAM_PARM", "_RXMSQNAM_PARM", RXMSQNAM_PARM::C_FIELDS),
+    named("RXSIOTRD_PARM", "_RXSIOTRD_PARM", RXSIOTRD_PARM::C_FIELDS),
+    named("RXSIODTR_PARM", "_RXSIODTR_PARM", RXSIODTR_PARM::C_FIELDS),
+    named("RXHLTTST_PARM", "_RXHLTTST_PARM", RXHLTTST_PARM::C_FIELDS),
+    named("RXTRCTST_PARM", "_RXTRCTST_PARM", RXTRCTST_PARM::C_FIELDS),
 ];
 
 /// The object-oriented API's data structs, in `oorexxapi.h`.
@@ -151,12 +186,7 @@ const API_STRUCTS: &[Struct] = &[
         "_ValueDescriptor",
         ValueDescriptor::C_FIELDS,
     ),
-    Struct {
-        name: "RexxCondition",
-        tag: Tag::Anonymous,
-        fields: RexxCondition::C_FIELDS,
-        retype: &[],
-    },
+    anonymous("RexxCondition", RexxCondition::C_FIELDS),
     named(
         "RexxContextExit",
         "_RexxContextExit",
@@ -177,6 +207,17 @@ const API_STRUCTS: &[Struct] = &[
         "_RexxPackageEntry",
         RexxPackageEntry::C_FIELDS,
     ),
+    anonymous("RexxContextEnvironment", RexxContextEnvironment::C_FIELDS),
+    anonymous(
+        "RexxRedirectingEnvironment",
+        RexxRedirectingEnvironment::C_FIELDS,
+    ),
+    anonymous(
+        "RexxRegisteredEnvironment",
+        RexxRegisteredEnvironment::C_FIELDS,
+    ),
+    anonymous("RexxLibraryPackage", RexxLibraryPackage::C_FIELDS),
+    anonymous("RexxOption", RexxOption::C_FIELDS),
 ];
 
 /// The context structs, by their Rust name (the C struct tag), in
@@ -214,58 +255,68 @@ pub struct Section {
     pub text: String,
 }
 
-/// Every generated section of every header.
+/// One message of the error table: its major and minor code and its
+/// symbolic name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ErrorRow<'a> {
+    /// The major code.
+    pub major: u16,
+    /// The minor code.
+    pub sub: u16,
+    /// The symbolic name, `Error_...`.
+    pub symbol: &'a str,
+}
+
+/// Every generated section of every header, with `errors` the rows of the
+/// error table (`interrexx-inventory/data/errors.tsv`), from which
+/// `oorexxerrors.h` is written.
 #[must_use]
-pub fn sections() -> Vec<Section> {
+pub fn sections(errors: &[ErrorRow<'_>]) -> Vec<Section> {
+    let section = |file: &str, name: &'static str, text: String| Section {
+        file: file.to_string(),
+        name,
+        text,
+    };
     let mut out = vec![
-        Section {
-            file: "rexx.h".to_string(),
-            name: "typedefs",
-            text: typedefs(),
-        },
-        Section {
-            file: "rexx.h".to_string(),
-            name: "handles",
-            text: handles(),
-        },
-        Section {
-            file: "rexx.h".to_string(),
-            name: "structs",
-            text: classic_structs(),
-        },
-        Section {
-            file: "oorexxapi.h".to_string(),
-            name: "contexts",
-            text: context_typedefs(),
-        },
-        Section {
-            file: "oorexxapi.h".to_string(),
-            name: "structs",
-            text: structs(API_STRUCTS),
-        },
-        Section {
-            file: "oorexxapi.h".to_string(),
-            name: "tables",
-            text: tables(),
-        },
-        Section {
-            file: "oorexxapi.h".to_string(),
-            name: "context-structs",
-            text: context_structs(),
-        },
+        section("rexx.h", "typedefs", typedefs(C_TYPEDEFS)),
+        section("rexx.h", "handles", handles()),
+        section("rexx.h", "structs", classic_structs()),
+        section("rexx.h", "pointers", typedefs(C_POINTER_TYPEDEFS)),
+        section("rexx.h", "handlers", handler_typedefs(C_HANDLERS)),
+        section("rexx.h", "constants", constants(CLASSIC_LIMITS)),
+        section("rexx.h", "exports", exports(Declared::In("rexx.h"))),
+        section("rexxapidefs.h", "constants", constants(CLASSIC_CONSTANTS)),
+        section("oorexxapi.h", "contexts", context_typedefs()),
+        section("oorexxapi.h", "handlers", handler_typedefs(API_HANDLERS)),
+        section("oorexxapi.h", "structs", structs(API_STRUCTS)),
+        section("oorexxapi.h", "tables", tables()),
+        section("oorexxapi.h", "context-structs", context_structs()),
+        section("oorexxapi.h", "constants", api_constants()),
+        section("oorexxapi.h", "argument-types", argument_types()),
+        section(
+            "oorexxapi.h",
+            "exports",
+            exports(Declared::In("oorexxapi.h")),
+        ),
+        section("oorexxerrors.h", "errors", error_codes(errors)),
     ];
     for platform in PLATFORMS {
         let dir = format!("{PLATFORM_DIR}/{}", platform.name);
-        out.push(Section {
-            file: format!("{dir}/rexxapitypes.h"),
-            name: "platform-types",
-            text: platform_types(platform),
-        });
-        out.push(Section {
-            file: format!("{dir}/rexxplatformdefs.h"),
-            name: "platform-defs",
-            text: platform_defs(platform),
-        });
+        out.push(section(
+            &format!("{dir}/rexxapitypes.h"),
+            "platform-types",
+            platform_types(platform),
+        ));
+        out.push(section(
+            &format!("{dir}/rexxplatformdefs.h"),
+            "platform-defs",
+            platform_defs(platform),
+        ));
+        out.push(section(
+            &format!("{dir}/rexxplatformapis.h"),
+            "platform-exports",
+            exports(Declared::Platform),
+        ));
     }
     out
 }
@@ -274,7 +325,7 @@ pub fn sections() -> Vec<Section> {
 #[must_use]
 pub fn files() -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
-    for section in sections() {
+    for section in sections(&[]) {
         if !files.contains(&section.file) {
             files.push(section.file);
         }
@@ -364,10 +415,152 @@ fn declarator(ty: &str, name: &str) -> String {
     }
 }
 
-fn typedefs() -> String {
+/// A typedef of each name of `list` for the C type of its Rust tokens.
+fn typedefs(list: &[(&str, &str)]) -> String {
     let mut out = String::new();
-    for (name, tokens) in C_TYPEDEFS {
+    for (name, tokens) in list {
         writeln!(out, "typedef {};", declarator(&c_type(tokens), name)).unwrap();
+    }
+    out
+}
+
+/// The result and the parameter list of a function declaration, as C types:
+/// `void` for no result and for no parameters.
+fn signature(declaration: &CMember) -> (String, String) {
+    let CMember::Function {
+        returns,
+        parameters,
+    } = declaration
+    else {
+        panic!("{declaration:?} declares no function");
+    };
+    let returns = returns.map_or_else(|| "void".to_string(), c_type);
+    let parameters = if parameters.is_empty() {
+        "void".to_string()
+    } else {
+        parameters
+            .iter()
+            .map(|tokens| c_type(tokens))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    (returns, parameters)
+}
+
+/// A function type of each handler of `list`, under its name.
+fn handler_typedefs(list: &[(&str, CMember)]) -> String {
+    let mut out = String::new();
+    for (name, declaration) in list {
+        let (returns, parameters) = signature(declaration);
+        writeln!(out, "typedef {returns} REXXENTRY {name}({parameters});").unwrap();
+    }
+    out
+}
+
+/// A `#define` of each constant of `list`.
+fn constants(list: &[CConstant]) -> String {
+    let mut out = String::new();
+    for constant in list {
+        writeln!(out, "#define {} {}", constant.name, constant.text()).unwrap();
+    }
+    out
+}
+
+/// The constants of `oorexxapi.h`: the versions, the value codes, the option
+/// names and the kinds of command environment.
+fn api_constants() -> String {
+    let mut out = constants(API_VERSIONS);
+    out.push('\n');
+    out.push_str(&constants(&value_codes()));
+    out.push('\n');
+    for (name, text) in OPTION_NAMES {
+        writeln!(out, "#define {name} \"{text}\"").unwrap();
+    }
+    out.push_str(&constants(ENVIRONMENT_KINDS));
+    out
+}
+
+/// `ARGUMENT_TYPE_<name>` for every value code and its optional form, each
+/// the C type of the argument an entry receives for it.
+fn argument_types() -> String {
+    let mut out = String::new();
+    for (name, tokens) in ARGUMENT_TYPES {
+        writeln!(out, "#define ARGUMENT_TYPE_{name} {}", c_type(tokens)).unwrap();
+    }
+    for name in optional_argument_types() {
+        let Some((_, tokens)) = ARGUMENT_TYPES.iter().find(|(row, _)| *row == name) else {
+            panic!("the optional argument type {name} has no required one");
+        };
+        writeln!(
+            out,
+            "#define ARGUMENT_TYPE_OPTIONAL_{name} {}",
+            c_type(tokens)
+        )
+        .unwrap();
+    }
+    out
+}
+
+/// The declaration of `export`.
+#[must_use]
+pub fn prototype(export: &Export) -> String {
+    let (returns, parameters) = signature(&export.declaration);
+    format!(
+        "{};",
+        declarator(
+            &returns,
+            &format!("REXXENTRY {}({parameters})", export.name)
+        )
+    )
+}
+
+/// The exports declared where `declared` says: each prototype, then the
+/// typedef of a pointer to each and the upper-case alias of each, where they
+/// have one.
+fn exports(declared: Declared) -> String {
+    let mine: Vec<&Export> = EXPORTS.iter().filter(|e| e.declared == declared).collect();
+    let mut out = String::new();
+    for export in &mine {
+        writeln!(out, "{}", prototype(export)).unwrap();
+    }
+    // A pointer typedef is declared beside the classic exports, so that every
+    // one is in `rexx.h`, its function's platform declaration included.
+    if declared == Declared::In("rexx.h") {
+        out.push('\n');
+        for (name, declaration, _) in pointer_types() {
+            let (returns, parameters) = signature(&declaration);
+            writeln!(
+                out,
+                "typedef {};",
+                declarator(&returns, &format!("(REXXENTRY *{name})({parameters})"))
+            )
+            .unwrap();
+        }
+    }
+    let aliases: Vec<(&str, &str)> = mine
+        .iter()
+        .filter_map(|export| Some((export.alias?, export.name)))
+        .collect();
+    if !aliases.is_empty() {
+        out.push('\n');
+        for (alias, name) in aliases {
+            writeln!(out, "#define {alias} {name}").unwrap();
+        }
+    }
+    out
+}
+
+/// `Rexx_<symbol>` for every row of `errors` that has a code.
+fn error_codes(errors: &[ErrorRow<'_>]) -> String {
+    let mut out = String::new();
+    for row in errors.iter().filter(|row| has_error_code(row.major)) {
+        writeln!(
+            out,
+            "#define Rexx_{} {}",
+            row.symbol,
+            error_code(row.major, row.sub)
+        )
+        .unwrap();
     }
     out
 }
@@ -504,20 +697,8 @@ fn tables() -> String {
                 CMember::Value(tokens) => {
                     writeln!(out, "    {};", declarator(&c_type(tokens), member)).unwrap();
                 }
-                CMember::Function {
-                    returns,
-                    parameters,
-                } => {
-                    let returns = returns.map_or_else(|| "void".to_string(), c_type);
-                    let parameters = if parameters.is_empty() {
-                        "void".to_string()
-                    } else {
-                        parameters
-                            .iter()
-                            .map(|tokens| c_type(tokens))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    };
+                CMember::Function { .. } => {
+                    let (returns, parameters) = signature(decl);
                     writeln!(out, "    {returns} (RexxEntry *{member})({parameters});").unwrap();
                 }
             }

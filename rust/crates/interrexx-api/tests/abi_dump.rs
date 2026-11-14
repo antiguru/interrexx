@@ -3,9 +3,13 @@
 //! The `#[repr(C)]` surface measured by a C and a C++ compiler.
 //!
 //! The test writes a dump program from the Rust definitions (sizes, alignments, offsets, member
-//! types and bit positions), compiles it as C and as C++ against the API headers, runs it and
-//! compares what the compiler measured with what Rust reports. The headers are read by the
-//! compiler alone: nothing here parses their text.
+//! types, bit positions, constants, and the types of the handlers, the exports and the pointers to
+//! them), compiles it as C and as C++ against the API headers, runs it and compares what the
+//! compiler measured with what Rust reports. The headers are read by the compiler alone: nothing
+//! here parses their text.
+//!
+//! The dump takes no export's address where it would be evaluated, so it links against no
+//! library: `interrexx-capi`'s `tests/link.rs` links every export as C and as C++.
 //!
 //! The dump compiles against the repository's own headers (`include/`, generated from the same
 //! Rust definitions by `src/header.rs`), so the generator is checked against Rust. The tests named
@@ -17,16 +21,25 @@
 //! `size_t`, `stringsize_t` and `logical_t` alike; they are one C type on this platform, and
 //! the dump's typedef facts check each of them separately.
 
+use interrexx_api::constants::{
+    API_VERSIONS, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENVIRONMENT_KINDS, OPTION_NAMES,
+    argument_type_names, error_code, has_error_code, optional_argument_types, value_codes,
+};
+use interrexx_api::exports::{Declared, EXPORTS, export_types, pointer_types};
 use interrexx_api::layout::{
     CONSTRXSTRING, CallContextInterface, EXIT_FLAG_BITS, ExitContextInterface, ExitFlags,
     IORedirectorInterface, MethodContextInterface, REXXDATETIME, RXCMDHST_PARM, RXFNCCAL_PARM,
-    RXMSQPSH_PARM, RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXSYSEXIT, RXVALCALL_PARM,
-    RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition, RexxContextExit, RexxExitContext_,
-    RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface, RexxMethodContext_,
-    RexxMethodEntry, RexxPackageEntry, RexxQueueTime, RexxReturnCode, RexxRoutineEntry,
-    RexxThreadContext_, RexxThreadInterface, SHVBLOCK, ValueDescriptor, ValueUnion, logical_t,
-    stringsize_t, wholenumber_t,
+    RXHLTTST_PARM, RXMSQNAM_PARM, RXMSQPLL_PARM, RXMSQPSH_PARM, RXMSQSIZ_PARM, RXOFNCCAL_PARM,
+    RXSIODTR_PARM, RXSIOSAY_PARM, RXSIOTRD_PARM, RXSTRING, RXSYSEXIT, RXTRCTST_PARM,
+    RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition, RexxConditionData,
+    RexxContextEnvironment, RexxContextExit, RexxExitContext_, RexxIORedirectorContext_,
+    RexxInstance_, RexxInstanceInterface, RexxLibraryPackage, RexxMethodContext_, RexxMethodEntry,
+    RexxOption, RexxPackageEntry, RexxQueueTime, RexxRedirectingEnvironment,
+    RexxRegisteredEnvironment, RexxReturnCode, RexxRoutineEntry, RexxThreadContext_,
+    RexxThreadInterface, SHVBLOCK, ValueDescriptor, ValueUnion, api_handler_types, c_handler_types,
+    logical_t, stringsize_t, wholenumber_t,
 };
+use interrexx_upstream::errors::Table as ErrorTable;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::mem::{align_of, offset_of, size_of};
@@ -167,6 +180,8 @@ const PREAMBLE: &str = r#"
 #define ALIGNOF(T) _Alignof(T)
 #define SAME(EXPR, ...) _Generic((EXPR), __VA_ARGS__: 1, default: 0)
 #endif
+#define TEXT_(X) #X
+#define TEXT(X) TEXT_(X)
 "#;
 
 /// The headers the dump includes.
@@ -229,7 +244,7 @@ macro_rules! strukt {
 /// Every `repr(C)` struct that has a header twin.
 ///
 /// The header's `RXEXFCAL_PARM` and `RXSIOTRC_PARM` share the layout of `RXOFNCCAL_PARM` and
-/// `RXSIOSAY_PARM`. The blocks of a lone `RXSTRING` or `size_t` member have no Rust type.
+/// `RXSIOSAY_PARM`.
 fn structs() -> Vec<Struct> {
     vec![
         strukt!("RXSTRING" = RXSTRING { strlength, strptr }),
@@ -294,6 +309,13 @@ fn structs() -> Vec<Struct> {
             }
         ),
         strukt!("RXSIOSAY_PARM" = RXSIOSAY_PARM { rxsio_string }),
+        strukt!("RXMSQPLL_PARM" = RXMSQPLL_PARM { rxmsq_retc }),
+        strukt!("RXMSQSIZ_PARM" = RXMSQSIZ_PARM { rxmsq_size }),
+        strukt!("RXMSQNAM_PARM" = RXMSQNAM_PARM { rxmsq_name }),
+        strukt!("RXSIOTRD_PARM" = RXSIOTRD_PARM { rxsiotrd_retc }),
+        strukt!("RXSIODTR_PARM" = RXSIODTR_PARM { rxsiodtr_retc }),
+        strukt!("RXHLTTST_PARM" = RXHLTTST_PARM { rxhlt_flags }),
+        strukt!("RXTRCTST_PARM" = RXTRCTST_PARM { rxtrc_flags }),
         strukt!("RXSIOTRC_PARM" = RXSIOSAY_PARM { rxsio_string }),
         strukt!(
             "RXVALCALL_PARM" = RXVALCALL_PARM {
@@ -348,6 +370,32 @@ fn structs() -> Vec<Struct> {
                 valid
             }
         ),
+        // spec: native.calls.condition-data
+        strukt!(
+            "RexxConditionData" = RexxConditionData {
+                code,
+                rc,
+                message,
+                errortext,
+                position,
+                program
+            }
+        ),
+        strukt!("RexxContextEnvironment" = RexxContextEnvironment { handler, name }),
+        strukt!("RexxRedirectingEnvironment" = RexxRedirectingEnvironment { handler, name }),
+        strukt!(
+            "RexxRegisteredEnvironment" = RexxRegisteredEnvironment {
+                registeredName,
+                name
+            }
+        ),
+        strukt!(
+            "RexxLibraryPackage" = RexxLibraryPackage {
+                registeredName,
+                table
+            }
+        ),
+        strukt!("RexxOption" = RexxOption { optionName, option }),
         strukt!(
             "RexxCondition" = RexxCondition {
                 code,
@@ -473,10 +521,11 @@ macro_rules! integer_typedef {
 /// Every scalar and handle typedef the Rust definitions carry.
 fn typedefs() -> Vec<Typedef> {
     use interrexx_api::layout::{
-        CSTRING, POINTER, REXXPFN, RexxArrayObject, RexxBufferObject, RexxBufferStringObject,
-        RexxClassObject, RexxDirectoryObject, RexxMethodObject, RexxMutableBufferObject,
-        RexxObjectPtr, RexxPackageObject, RexxPointerObject, RexxRoutineObject, RexxStemObject,
-        RexxStringObject, RexxStringTableObject, RexxSupplierObject, RexxVariableReferenceObject,
+        CSTRING, PCONSTRXSTRING, PEXIT, POINTER, PRXSTRING, PRXSYSEXIT, PSHVBLOCK, REXXPFN,
+        RexxArrayObject, RexxBufferObject, RexxBufferStringObject, RexxClassObject,
+        RexxDirectoryObject, RexxMethodObject, RexxMutableBufferObject, RexxObjectPtr,
+        RexxPackageObject, RexxPointerObject, RexxRoutineObject, RexxStemObject, RexxStringObject,
+        RexxStringTableObject, RexxSupplierObject, RexxVariableReferenceObject,
     };
     vec![
         integer_typedef!("wholenumber_t", wholenumber_t),
@@ -502,6 +551,11 @@ fn typedefs() -> Vec<Typedef> {
         pointer_typedef!("RexxStemObject", RexxStemObject),
         pointer_typedef!("RexxMutableBufferObject", RexxMutableBufferObject),
         pointer_typedef!("RexxVariableReferenceObject", RexxVariableReferenceObject),
+        pointer_typedef!("PRXSTRING", PRXSTRING),
+        pointer_typedef!("PCONSTRXSTRING", PCONSTRXSTRING),
+        pointer_typedef!("PRXSYSEXIT", PRXSYSEXIT),
+        pointer_typedef!("PSHVBLOCK", PSHVBLOCK),
+        pointer_typedef!("PEXIT", PEXIT),
     ]
 }
 
@@ -532,6 +586,112 @@ fn tables() -> Vec<Table> {
         table!(ExitContextInterface),
         table!(IORedirectorInterface),
     ]
+}
+
+/// A type the dump checks: the expression whose type it measures, and the Rust type that
+/// expression must have in C.
+struct TypeCheck {
+    key: String,
+    expression: String,
+    rust: &'static str,
+}
+
+/// Every handler typedef, declared export, pointer typedef and argument type, each checked by
+/// the type of an expression of it.
+fn type_checks() -> Vec<TypeCheck> {
+    let mut out = Vec::new();
+    for (name, rust) in c_handler_types().into_iter().chain(api_handler_types()) {
+        out.push(TypeCheck {
+            key: format!("type handler {name}"),
+            expression: format!("({name} *)0"),
+            rust,
+        });
+    }
+    for (export, (name, rust)) in EXPORTS.iter().zip(export_types()) {
+        // An undeclared export has no declaration to measure; the link test finds it by
+        // symbol.
+        if export.declared != Declared::Nowhere {
+            out.push(TypeCheck {
+                key: format!("type export {name}"),
+                expression: format!("&{name}"),
+                rust,
+            });
+        }
+    }
+    for (name, _, rust) in pointer_types() {
+        out.push(TypeCheck {
+            key: format!("type pointer {name}"),
+            expression: format!("({name})0"),
+            rust,
+        });
+    }
+    {
+        use interrexx_api::layout::{PCONSTRXSTRING, PEXIT, PRXSTRING, PRXSYSEXIT, PSHVBLOCK};
+        for (name, rust) in [
+            ("PRXSTRING", std::any::type_name::<PRXSTRING>()),
+            ("PCONSTRXSTRING", std::any::type_name::<PCONSTRXSTRING>()),
+            ("PRXSYSEXIT", std::any::type_name::<PRXSYSEXIT>()),
+            ("PSHVBLOCK", std::any::type_name::<PSHVBLOCK>()),
+            ("PEXIT", std::any::type_name::<PEXIT>()),
+        ] {
+            out.push(TypeCheck {
+                key: format!("type typedef {name}"),
+                expression: format!("({name})0"),
+                rust,
+            });
+        }
+    }
+    let arguments = argument_type_names();
+    for (name, rust) in &arguments {
+        out.push(TypeCheck {
+            key: format!("type argument {name}"),
+            expression: format!("(ARGUMENT_TYPE_{name})0"),
+            rust,
+        });
+    }
+    for name in optional_argument_types() {
+        let (_, rust) = arguments
+            .iter()
+            .find(|(row, _)| *row == name)
+            .expect("an optional argument type has a required one");
+        out.push(TypeCheck {
+            key: format!("type argument OPTIONAL_{name}"),
+            expression: format!("(ARGUMENT_TYPE_OPTIONAL_{name})0"),
+            rust,
+        });
+    }
+    out
+}
+
+/// The error table, `interrexx-inventory/data/errors.tsv`.
+fn error_table() -> ErrorTable {
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../interrexx-inventory/data/errors.tsv");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    ErrorTable::from_tsv(&text)
+}
+
+/// Every numeric constant the headers define: the classic codes and limits, the versions, the
+/// value codes, the kinds of command environment and the error codes.
+fn constants() -> Vec<CConstant> {
+    let mut out: Vec<CConstant> = CLASSIC_CONSTANTS
+        .iter()
+        .chain(CLASSIC_LIMITS)
+        .chain(API_VERSIONS)
+        .chain(ENVIRONMENT_KINDS)
+        .cloned()
+        .collect();
+    out.extend(value_codes());
+    for row in error_table().rows {
+        if has_error_code(row.major) {
+            out.push(CConstant {
+                name: format!("Rexx_{}", row.symbol).into(),
+                value: error_code(row.major, row.sub),
+                form: interrexx_api::constants::Form::Decimal,
+            });
+        }
+    }
+    out
 }
 
 /// Drops every module path from `type_name`'s spelling.
@@ -586,7 +746,10 @@ fn c_type(rust: &str) -> String {
         "f32" => "float".to_string(),
         "f64" => "double".to_string(),
         "c_void" => "void".to_string(),
-        "RexxCondition" | "ValueDescriptor" | "RexxPackageEntry" => rust.to_string(),
+        "RexxCondition" | "ValueDescriptor" | "RexxPackageEntry" | "RexxOption" | "RXSTRING"
+        | "CONSTRXSTRING" | "RXSYSEXIT" | "SHVBLOCK" | "RexxQueueTime" | "REXXDATETIME" => {
+            rust.to_string()
+        }
         "RexxInstance_"
         | "RexxThreadContext_"
         | "RexxMethodContext_"
@@ -768,6 +931,31 @@ fn dump_program() -> String {
         )
         .unwrap();
     }
+    for check in type_checks() {
+        let expected = c_member_type(check.rust);
+        writeln!(
+            out,
+            "  printf(\"{}\\t%d\\n\", SAME({}, {expected}));",
+            check.key, check.expression
+        )
+        .unwrap();
+    }
+    for constant in constants() {
+        let name = &constant.name;
+        writeln!(
+            out,
+            "  printf(\"const {name}\\t%lld\\n\", (long long)({name}));"
+        )
+        .unwrap();
+    }
+    for (name, _) in OPTION_NAMES {
+        writeln!(out, "  printf(\"text {name}\\t%s\\n\", {name});").unwrap();
+    }
+    for export in EXPORTS {
+        if let Some(alias) = export.alias {
+            writeln!(out, "  printf(\"alias {alias}\\t%s\\n\", TEXT({alias}));").unwrap();
+        }
+    }
     out.push_str("  return 0;\n}\n");
     out
 }
@@ -835,6 +1023,23 @@ fn rust_facts() -> Facts {
             format!("type ValueDescriptor.value.{member}"),
             "1".to_string(),
         );
+    }
+    for check in type_checks() {
+        put(check.key, "1".to_string());
+    }
+    for constant in constants() {
+        put(
+            format!("const {}", constant.name),
+            constant.value.to_string(),
+        );
+    }
+    for (name, text) in OPTION_NAMES {
+        put(format!("text {name}"), (*text).to_string());
+    }
+    for export in EXPORTS {
+        if let Some(alias) = export.alias {
+            put(format!("alias {alias}"), export.name.to_string());
+        }
     }
     facts
 }
@@ -932,11 +1137,32 @@ fn the_dump_names_what_it_measures() {
         "type RexxThreadInterface.SendMessage",
         "type RexxInstanceInterface.interfaceVersion",
         "type ValueDescriptor.value.value_int",
+        "layout RexxConditionData size",
+        "field RXMSQSIZ_PARM.rxmsq_size offset",
+        "field RexxOption.option offset",
+        "type handler RexxSubcomHandler",
+        "type export RexxStart",
+        "type export RexxPullQueue",
+        "type export RexxCreateInterpreter",
+        "type pointer PFNREXXOPENQUEUE",
+        "type typedef PRXSTRING",
+        "type argument OSELF",
+        "type argument OPTIONAL_RexxVariableReferenceObject",
+        "const RXSHV_NOAVL",
+        "const REXX_VALUE_OPTIONAL_CSTRING",
+        "const REXX_CURRENT_INTERPRETER_VERSION",
+        "const Rexx_Error_Program_unreadable",
+        "text INITIAL_ADDRESS_ENVIRONMENT",
+        "alias REXXGETVERSIONINFORMATON",
     ] {
         assert!(facts.contains_key(key), "the dump does not measure {key}");
     }
     assert_eq!(facts["typedef wholenumber_t signed"], "1");
     assert_eq!(facts["typedef stringsize_t signed"], "0");
+    assert!(
+        !facts.contains_key("type export RexxStemSort"),
+        "an undeclared export has no declaration to measure"
+    );
 }
 
 /// **A wrong Rust layout is reported**: a pair of members swapped in a table changes the

@@ -2,8 +2,9 @@
 
 /*
  * The classic Rexx programming interface: the scalar and object handle types,
- * the string, exit and shared-variable structures, the queue time stamp and
- * the system exit parameter blocks.
+ * the string, exit and shared-variable structures, the queue time stamp, the
+ * system exit parameter blocks, the handler types, and the functions the
+ * interpreter and the API libraries export.
  *
  * Each section between a BEGIN GENERATED and an END GENERATED line is written
  * from interrexx's Rust definitions by rust/crates/interrexx-api/src/header.rs:
@@ -16,6 +17,7 @@
 
 #include "rexxapitypes.h"
 #include "rexxplatformdefs.h"
+#include "rexxapidefs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +99,7 @@ typedef struct _CONSTRXSTRING CONSTRXSTRING;
 typedef struct _RXSYSEXIT RXSYSEXIT;
 typedef struct _SHVBLOCK SHVBLOCK;
 typedef struct _RexxQueueTime RexxQueueTime;
+typedef struct _RexxConditionData RexxConditionData;
 
 struct _RXSTRING {
     size_t strlength;
@@ -134,6 +137,15 @@ struct _RexxQueueTime {
     uint16_t weekday;
     uint32_t microseconds;
     uint32_t yearday;
+};
+
+struct _RexxConditionData {
+    wholenumber_t code;
+    wholenumber_t rc;
+    RXSTRING message;
+    RXSTRING errortext;
+    size_t position;
+    RXSTRING program;
 };
 
 typedef struct _RXFNC_FLAGS {
@@ -174,6 +186,13 @@ typedef struct _RXSIOSAY_PARM RXSIOSAY_PARM;
 typedef struct _RXSIOTRC_PARM RXSIOTRC_PARM;
 typedef struct _RXVARNOVALUE_PARM RXVARNOVALUE_PARM;
 typedef struct _RXVALCALL_PARM RXVALCALL_PARM;
+typedef struct _RXMSQPLL_PARM RXMSQPLL_PARM;
+typedef struct _RXMSQSIZ_PARM RXMSQSIZ_PARM;
+typedef struct _RXMSQNAM_PARM RXMSQNAM_PARM;
+typedef struct _RXSIOTRD_PARM RXSIOTRD_PARM;
+typedef struct _RXSIODTR_PARM RXSIODTR_PARM;
+typedef struct _RXHLTTST_PARM RXHLTTST_PARM;
+typedef struct _RXTRCTST_PARM RXTRCTST_PARM;
 
 struct _RXFNCCAL_PARM {
     RXFNC_FLAGS rxfnc_flags;
@@ -235,10 +254,183 @@ struct _RXVALCALL_PARM {
     RexxStringObject variable_name;
     RexxObjectPtr value;
 };
+
+struct _RXMSQPLL_PARM {
+    RXSTRING rxmsq_retc;
+};
+
+struct _RXMSQSIZ_PARM {
+    size_t rxmsq_size;
+};
+
+struct _RXMSQNAM_PARM {
+    RXSTRING rxmsq_name;
+};
+
+struct _RXSIOTRD_PARM {
+    RXSTRING rxsiotrd_retc;
+};
+
+struct _RXSIODTR_PARM {
+    RXSTRING rxsiodtr_retc;
+};
+
+struct _RXHLTTST_PARM {
+    RXHLT_FLAGS rxhlt_flags;
+};
+
+struct _RXTRCTST_PARM {
+    RXTRC_FLAGS rxtrc_flags;
+};
 /* END GENERATED structs */
+
+/* BEGIN GENERATED pointers */
+typedef RXSTRING *PRXSTRING;
+typedef CONSTRXSTRING *PCONSTRXSTRING;
+typedef RXSYSEXIT *PRXSYSEXIT;
+typedef SHVBLOCK *PSHVBLOCK;
+/* END GENERATED pointers */
+
+/* BEGIN GENERATED handlers */
+typedef RexxReturnCode REXXENTRY RexxSubcomHandler(CONSTRXSTRING *, unsigned short *, RXSTRING *);
+typedef size_t REXXENTRY RexxRoutineHandler(CSTRING, size_t, CONSTRXSTRING *, CSTRING, RXSTRING *);
+typedef size_t REXXENTRY RexxFunctionHandler(CSTRING, size_t, CONSTRXSTRING *, CSTRING, RXSTRING *);
+typedef int REXXENTRY RexxExitHandler(int, int, PEXIT);
+/* END GENERATED handlers */
+
+/* BEGIN GENERATED constants */
+#define MAX_QUEUE_NAME_LENGTH 250
+#define RX_CB_OK 0
+#define RX_CB_BADP 1
+#define RX_CB_NOTSTARTED 2
+#define RX_CB_TOOMANYP 3
+#define RX_CB_BADN 8
+/* END GENERATED constants */
+
+/* BEGIN GENERATED exports */
+int REXXENTRY RexxStart(size_t, CONSTRXSTRING *, CSTRING, RXSTRING *, CSTRING, int, RXSYSEXIT *, short *, RXSTRING *);
+void REXXENTRY RexxWaitForTermination(void);
+RexxReturnCode REXXENTRY RexxDidRexxTerminate(void);
+RexxReturnCode REXXENTRY RexxShutDownAPI(void);
+RexxReturnCode REXXENTRY RexxTranslateProgram(CSTRING, CSTRING, RXSYSEXIT *);
+RexxReturnCode REXXENTRY RexxTranslateInstoreProgram(CSTRING, CONSTRXSTRING *, RXSTRING *);
+char *REXXENTRY RexxGetVersionInformation(void);
+RexxReturnCode REXXENTRY RexxRegisterSubcomDll(CSTRING, CSTRING, CSTRING, CSTRING, size_t);
+RexxReturnCode REXXENTRY RexxRegisterSubcomExe(CSTRING, REXXPFN, CSTRING);
+RexxReturnCode REXXENTRY RexxQuerySubcom(CSTRING, CSTRING, unsigned short *, char *);
+RexxReturnCode REXXENTRY RexxDeregisterSubcom(CSTRING, CSTRING);
+RexxReturnCode REXXENTRY RexxVariablePool(SHVBLOCK *);
+RexxReturnCode REXXENTRY RexxCallBack(CSTRING, size_t, CONSTRXSTRING *, short *, RXSTRING *);
+RexxReturnCode REXXENTRY RexxRegisterFunctionDll(CSTRING, CSTRING, CSTRING);
+RexxReturnCode REXXENTRY RexxRegisterFunctionExe(CSTRING, REXXPFN);
+RexxReturnCode REXXENTRY RexxDeregisterFunction(CSTRING);
+RexxReturnCode REXXENTRY RexxQueryFunction(CSTRING);
+RexxReturnCode REXXENTRY RexxRegisterExitDll(CSTRING, CSTRING, CSTRING, CSTRING, size_t);
+RexxReturnCode REXXENTRY RexxRegisterExitExe(CSTRING, REXXPFN, CSTRING);
+RexxReturnCode REXXENTRY RexxDeregisterExit(CSTRING, CSTRING);
+RexxReturnCode REXXENTRY RexxQueryExit(CSTRING, CSTRING, unsigned short *, char *);
+RexxReturnCode REXXENTRY RexxSetHalt(process_id_t, thread_id_t);
+RexxReturnCode REXXENTRY RexxSetTrace(process_id_t, thread_id_t);
+RexxReturnCode REXXENTRY RexxResetTrace(process_id_t, thread_id_t);
+RexxReturnCode REXXENTRY RexxAddMacro(CSTRING, CSTRING, size_t);
+RexxReturnCode REXXENTRY RexxDropMacro(CSTRING);
+RexxReturnCode REXXENTRY RexxSaveMacroSpace(size_t, CSTRING *, CSTRING);
+RexxReturnCode REXXENTRY RexxLoadMacroSpace(size_t, CSTRING *, CSTRING);
+RexxReturnCode REXXENTRY RexxQueryMacro(CSTRING, unsigned short *);
+RexxReturnCode REXXENTRY RexxReorderMacro(CSTRING, size_t);
+RexxReturnCode REXXENTRY RexxClearMacroSpace(void);
+RexxReturnCode REXXENTRY RexxCreateQueue(char *, size_t, CSTRING, size_t *);
+RexxReturnCode REXXENTRY RexxOpenQueue(CSTRING, size_t *);
+RexxReturnCode REXXENTRY RexxQueueExists(CSTRING);
+RexxReturnCode REXXENTRY RexxDeleteQueue(CSTRING);
+RexxReturnCode REXXENTRY RexxQueryQueue(CSTRING, size_t *);
+RexxReturnCode REXXENTRY RexxAddQueue(CSTRING, CONSTRXSTRING *, size_t);
+RexxReturnCode REXXENTRY RexxPullFromQueue(CSTRING, RXSTRING *, RexxQueueTime *, size_t);
+RexxReturnCode REXXENTRY RexxClearQueue(CSTRING);
+void *REXXENTRY RexxAllocateMemory(size_t);
+RexxReturnCode REXXENTRY RexxFreeMemory(void *);
+
+typedef int (REXXENTRY *PFNREXXSTART)(size_t, CONSTRXSTRING *, CSTRING, RXSTRING *, CSTRING, int, RXSYSEXIT *, short *, RXSTRING *);
+typedef void (REXXENTRY *PFNREXXWAITFORTERMINATION)(void);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDIDREXXTERMINATE)(void);
+typedef RexxReturnCode (REXXENTRY *PFNREXXSHUTDOWNAPI)(void);
+typedef RexxReturnCode (REXXENTRY *PFNREXXTRANSLATEPROGRAM)(CSTRING, CSTRING, RXSYSEXIT *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXTRANSLATEINSTOREPROGRAM)(CSTRING, CONSTRXSTRING *, RXSTRING *);
+typedef char *(REXXENTRY *PFNGETVERSIONINFORMATION)(void);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTERSUBCOMDLL)(CSTRING, CSTRING, CSTRING, char *, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTERSUBCOMEXE)(CSTRING, REXXPFN, char *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUERYSUBCOM)(CSTRING, CSTRING, unsigned short *, char *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDEREGISTERSUBCOM)(CSTRING, CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXVARIABLEPOOL)(SHVBLOCK *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXCALLBACK)(CSTRING, size_t, CONSTRXSTRING *, short *, RXSTRING *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTERFUNCTIONDLL)(CSTRING, CSTRING, CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTERFUNCTIONEXE)(CSTRING, REXXPFN);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDEREGISTERFUNCTION)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUERYFUNCTION)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTEREXITDLL)(CSTRING, CSTRING, CSTRING, char *, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREGISTEREXITEXE)(CSTRING, REXXPFN, char *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDEREGISTEREXIT)(CSTRING, CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUERYEXIT)(CSTRING, CSTRING, unsigned short *, char *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXSETHALT)(process_id_t, thread_id_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXSETTRACE)(process_id_t, thread_id_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXRESETTRACE)(process_id_t, thread_id_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXADDMACRO)(CSTRING, CSTRING, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDROPMACRO)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXSAVEMACROSPACE)(size_t, CSTRING *, CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXLOADMACROSPACE)(size_t, CSTRING *, CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUERYMACRO)(CSTRING, unsigned short *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXREORDERMACRO)(CSTRING, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXCLEARMACROSPACE)(void);
+typedef RexxReturnCode (REXXENTRY *PFNREXXCREATEQUEUE)(char *, size_t, CSTRING, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXOPENQUEUE)(CSTRING, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUEUEEXISTS)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXDELETEQUEUE)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXQUERYQUEUE)(CSTRING, size_t *);
+typedef RexxReturnCode (REXXENTRY *PFNREXXADDQUEUE)(CSTRING, CONSTRXSTRING *, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXPULLFROMQUEUE)(CSTRING, RXSTRING *, RexxQueueTime *, size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXCLEARQUEUE)(CSTRING);
+typedef RexxReturnCode (REXXENTRY *PFNREXXPULLQUEUE)(CSTRING, RXSTRING *, REXXDATETIME *, size_t);
+typedef void *(REXXENTRY *PFNREXXALLOCATEMEMORY)(size_t);
+typedef RexxReturnCode (REXXENTRY *PFNREXXFREEMEMORY)(void *);
+
+#define REXXSTART RexxStart
+#define REXXWAITFORTERMINATION RexxWaitForTermination
+#define REXXDIDREXXTERMINATE RexxDidRexxTerminate
+#define REXXSHUTDOWNAPI RexxShutDownAPI
+#define REXXTRANSLATEPROGRAM RexxTranslateProgram
+#define REXXTRANSLATEINSTOREPROGRAM RexxTranslateInstoreProgram
+#define REXXGETVERSIONINFORMATON RexxGetVersionInformation
+#define REXXREGISTERSUBCOMDLL RexxRegisterSubcomDll
+#define REXXREGISTERSUBCOMEXE RexxRegisterSubcomExe
+#define REXXQUERYSUBCOM RexxQuerySubcom
+#define REXXDEREGISTERSUBCOM RexxDeregisterSubcom
+#define REXXVARIABLEPOOL RexxVariablePool
+#define REXXCALLBACK RexxCallBack
+#define REXXREGISTERFUNCTIONDLL RexxRegisterFunctionDll
+#define REXXREGISTERFUNCTIONEXE RexxRegisterFunctionExe
+#define REXXDEREGISTERFUNCTION RexxDeregisterFunction
+#define REXXQUERYFUNCTION RexxQueryFunction
+#define REXXREGISTEREXITDLL RexxRegisterExitDll
+#define REXXREGISTEREXITEXE RexxRegisterExitExe
+#define REXXDEREGISTEREXIT RexxDeregisterExit
+#define REXXQUERYEXIT RexxQueryExit
+#define REXXSETHALT RexxSetHalt
+#define REXXSETTRACE RexxSetTrace
+#define REXXRESETTRACE RexxResetTrace
+#define REXXADDMACRO RexxAddMacro
+#define REXXDROPMACRO RexxDropMacro
+#define REXXSAVEMACROSPACE RexxSaveMacroSpace
+#define REXXLOADMACROSPACE RexxLoadMacroSpace
+#define REXXQUERYMACRO RexxQueryMacro
+#define REXXREORDERMACRO RexxReorderMacro
+#define REXXCLEARMACROSPACE RexxClearMacroSpace
+/* END GENERATED exports */
 
 #ifdef __cplusplus
 }
 #endif
+
+/* The exports whose signatures name a type of this platform's. */
+#include "rexxplatformapis.h"
 
 #endif

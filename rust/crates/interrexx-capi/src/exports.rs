@@ -7,8 +7,9 @@
 use std::ffi::{c_char, c_int, c_short, c_void};
 
 use interrexx_api::layout::{
-    CONSTRXSTRING, RXSTRING, RXSYSEXIT, RexxContextExit, RexxInstance_, RexxReturnCode,
-    RexxStemObject, RexxThreadContext_, SHVBLOCK, ValueDescriptor,
+    CONSTRXSTRING, RXSTRING, RXSYSEXIT, RexxContextEnvironment, RexxContextExit, RexxInstance_,
+    RexxLibraryPackage, RexxOption, RexxRedirectingEnvironment, RexxRegisteredEnvironment,
+    RexxReturnCode, RexxStemObject, RexxThreadContext_, SHVBLOCK, process_id_t, thread_id_t,
 };
 
 /// `RXARI_NOT_FOUND`.
@@ -79,17 +80,17 @@ unsafe fn context_exits(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxStart(
     argc: usize,
-    argv: *const CONSTRXSTRING,
+    argv: *mut CONSTRXSTRING,
     name: *const c_char,
     instore: *mut RXSTRING,
     environment: *const c_char,
     call_type: c_int,
-    exits: *mut c_void,
+    exits: *mut RXSYSEXIT,
     rc: *mut c_short,
     result: *mut RXSTRING,
 ) -> c_int {
     // SAFETY: the caller's guarantee.
-    let exits = unsafe { registered_exits(exits.cast()) };
+    let exits = unsafe { registered_exits(exits) };
     // SAFETY: the caller's guarantee for each string.
     let text = |strptr: *const c_char, length: usize| unsafe {
         std::slice::from_raw_parts(strptr.cast::<u8>(), length).to_vec()
@@ -204,10 +205,10 @@ pub extern "C" fn RexxDidRexxTerminate() -> RexxReturnCode {
 pub unsafe extern "C" fn RexxTranslateProgram(
     input: *const c_char,
     output: *const c_char,
-    exits: *mut c_void,
+    exits: *mut RXSYSEXIT,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee.
-    unsafe { RexxCompileProgram(input, output, exits, false) }
+    unsafe { RexxCompileProgram(input, output, exits.cast(), false) }
 }
 
 /// `RexxTranslateInstoreProgram`: `source`, named `name`, translated, its image into `image`
@@ -219,7 +220,7 @@ pub unsafe extern "C" fn RexxTranslateProgram(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxTranslateInstoreProgram(
     name: *const c_char,
-    source: *const CONSTRXSTRING,
+    source: *mut CONSTRXSTRING,
     image: *mut RXSTRING,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee.
@@ -320,7 +321,7 @@ pub unsafe extern "C" fn RexxVariablePool(blocks: *mut SHVBLOCK) -> RexxReturnCo
 pub unsafe extern "C-unwind" fn RexxCallBack(
     label: *const c_char,
     argc: usize,
-    argv: *const CONSTRXSTRING,
+    argv: *mut CONSTRXSTRING,
     rc: *mut c_short,
     result: *mut RXSTRING,
 ) -> RexxReturnCode {
@@ -336,44 +337,40 @@ fn found(done: bool) -> RexxReturnCode {
 /// `RexxSetHalt`: the `RexxStart` run on `thread` halted at its next clause. The process id is
 /// ignored.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxSetHalt(_process: i32, thread: usize) -> RexxReturnCode {
-    found(interrexx::embedding::classic_halt(thread))
+pub extern "C" fn RexxSetHalt(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
+    found(interrexx::embedding::classic_halt(thread as usize))
 }
 
 /// `RexxSetTrace`: the external trace of the `RexxStart` run on `thread` turned on.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxSetTrace(_process: i32, thread: usize) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread, true))
+pub extern "C" fn RexxSetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
+    found(interrexx::embedding::classic_trace(thread as usize, true))
 }
 
 /// `RexxResetTrace`: the external trace of the `RexxStart` run on `thread` turned off.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxResetTrace(_process: i32, thread: usize) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread, false))
-}
-
-/// `RexxOption` (`api/oorexxapi.h`): a name and a value of the type the name
-/// implies, read here as the word it is.
-#[repr(C)]
-struct RexxOption {
-    name: *const c_char,
-    option: ValueDescriptor,
+pub extern "C" fn RexxResetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
+    found(interrexx::embedding::classic_trace(thread as usize, false))
 }
 
 /// `RexxContextEnvironment`, `RexxRedirectingEnvironment` and
-/// `RexxRegisteredEnvironment`: a pointer and a name.
+/// `RexxRegisteredEnvironment` read alike: a pointer and a name.
 #[repr(C)]
 struct NamedEntry {
     first: *mut c_void,
     name: *const c_char,
 }
 
-/// `RexxLibraryPackage` (`api/oorexxapi.h`): a package's name and its table.
-#[repr(C)]
-struct RexxLibraryPackage {
-    registered_name: *const c_char,
-    table: *const interrexx_api::layout::RexxPackageEntry,
-}
+// Each of the three entries is laid out as `NamedEntry`.
+const _: () = {
+    use std::mem::{offset_of, size_of};
+    assert!(size_of::<NamedEntry>() == size_of::<RexxContextEnvironment>());
+    assert!(offset_of!(NamedEntry, name) == offset_of!(RexxContextEnvironment, name));
+    assert!(size_of::<NamedEntry>() == size_of::<RexxRedirectingEnvironment>());
+    assert!(offset_of!(NamedEntry, name) == offset_of!(RexxRedirectingEnvironment, name));
+    assert!(size_of::<NamedEntry>() == size_of::<RexxRegisteredEnvironment>());
+    assert!(offset_of!(NamedEntry, name) == offset_of!(RexxRegisteredEnvironment, name));
+};
 
 /// The bytes of a NUL-terminated string, or `None` for a null pointer.
 ///
@@ -422,8 +419,8 @@ unsafe fn instance_options(options: *const RexxOption) -> interrexx::embedding::
     let mut at = options;
     // SAFETY: the caller's guarantee, entry by entry.
     unsafe {
-        while !(*at).name.is_null() {
-            let name = std::ffi::CStr::from_ptr((*at).name).to_bytes();
+        while !(*at).optionName.is_null() {
+            let name = std::ffi::CStr::from_ptr((*at).optionName).to_bytes();
             let word = (*at).option.value.value_POINTER;
             match name {
                 b"InitialAddress" => read.initial_address = text_of(word.cast()),
@@ -455,7 +452,7 @@ unsafe fn instance_options(options: *const RexxOption) -> interrexx::embedding::
                 b"RegisterLibrary" => {
                     let package = word.cast::<RexxLibraryPackage>();
                     if !package.is_null() {
-                        let name = text_of((*package).registered_name).unwrap_or_default();
+                        let name = text_of((*package).registeredName).unwrap_or_default();
                         let table = interrexx_api::load::SentPackage::new((*package).table);
                         read.registered_libraries.push((name, table));
                     }
@@ -481,10 +478,10 @@ unsafe fn instance_options(options: *const RexxOption) -> interrexx::embedding::
 pub unsafe extern "C" fn RexxCreateInterpreter(
     instance: *mut *mut RexxInstance_,
     thread: *mut *mut RexxThreadContext_,
-    options: *mut c_void,
+    options: *mut RexxOption,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee.
-    let options = unsafe { instance_options(options.cast()) };
+    let options = unsafe { instance_options(options) };
     let Some(context) = interrexx::embedding::create_instance(options) else {
         return 0;
     };
@@ -519,3 +516,26 @@ pub unsafe extern "C" fn RexxStemSort(
 ) -> RexxReturnCode {
     TARGET_NOT_FOUND
 }
+
+// Each export has the type `interrexx_api::exports` declares it with, which is what the
+// headers in `include/` declare.
+const _: () = {
+    use interrexx_api::exports::signatures as declared;
+    let _: declared::RexxStart = RexxStart;
+    let _: declared::RexxWaitForTermination = RexxWaitForTermination;
+    let _: declared::RexxDidRexxTerminate = RexxDidRexxTerminate;
+    let _: declared::RexxTranslateProgram = RexxTranslateProgram;
+    let _: declared::RexxTranslateInstoreProgram = RexxTranslateInstoreProgram;
+    let _: declared::RexxCompileProgram = RexxCompileProgram;
+    let _: declared::RexxCreateInterpreterImage = RexxCreateInterpreterImage;
+    let _: declared::RexxGetVersionInformation = RexxGetVersionInformation;
+    let _: declared::RexxGetErrorMessage = RexxGetErrorMessage;
+    let _: declared::RexxGetErrorMessageByNumber = RexxGetErrorMessageByNumber;
+    let _: declared::RexxVariablePool = RexxVariablePool;
+    let _: declared::RexxCallBack = RexxCallBack;
+    let _: declared::RexxSetHalt = RexxSetHalt;
+    let _: declared::RexxSetTrace = RexxSetTrace;
+    let _: declared::RexxResetTrace = RexxResetTrace;
+    let _: declared::RexxCreateInterpreter = RexxCreateInterpreter;
+    let _: declared::RexxStemSort = RexxStemSort;
+};

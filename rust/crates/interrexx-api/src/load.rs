@@ -13,9 +13,9 @@ use crate::invoke::MAX_NATIVE_ARGUMENTS;
 use crate::layout::{
     CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFFSUB_BIT, RXFMLIFO_BIT, RXFNCCAL_PARM,
     RXMSQPSH_PARM, RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM,
-    RexxCallContext_, RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_,
-    RexxMethodEntry, RexxObjectPtr, RexxPackageEntry, RexxRoutineEntry, RexxStringObject,
-    RexxThreadContext_, ValueDescriptor, ValueUnion,
+    RexxCallContext_, RexxExitContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr,
+    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor,
+    ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
 use std::ffi::{CStr, c_char, c_int, c_void};
@@ -1472,7 +1472,7 @@ impl ClassicEntry {
             handler(
                 name.as_ptr().cast(),
                 argv.len(),
-                argv.as_ptr(),
+                argv.as_ptr().cast_mut(),
                 queue.as_ptr().cast(),
                 &raw mut result,
             )
@@ -1507,7 +1507,11 @@ impl ClassicEntry {
         // addresses a buffer of its length.
         let rc = unsafe {
             let handler = std::mem::transmute::<*mut c_void, SubcomHandler>(self.address());
-            handler(&raw const argument, &raw mut flags, &raw mut result)
+            handler(
+                (&raw const argument).cast_mut(),
+                &raw mut flags,
+                &raw mut result,
+            )
         };
         // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
         let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
@@ -1519,17 +1523,10 @@ impl ClassicEntry {
 const DEFAULT_RESULT_BUFFER: usize = 256;
 
 /// `RexxFunctionHandler`. It may unwind as a [`Stub`] may.
-type FunctionHandler = unsafe extern "C-unwind" fn(
-    *const c_char,
-    usize,
-    *const CONSTRXSTRING,
-    *const c_char,
-    *mut RXSTRING,
-) -> usize;
+type FunctionHandler = crate::layout::RexxFunctionHandler;
 
 /// `RexxSubcomHandler`.
-type SubcomHandler =
-    unsafe extern "C-unwind" fn(*const CONSTRXSTRING, *mut u16, *mut RXSTRING) -> c_int;
+type SubcomHandler = crate::layout::RexxSubcomHandler;
 
 /// A classic handler's return code and result, `None` where it left a null `strptr`.
 #[derive(Debug, PartialEq, Eq)]
@@ -1836,11 +1833,10 @@ impl<O> ExitOutcome<O> {
 }
 
 /// `RexxExitHandler`.
-type ExitFunction = unsafe extern "C-unwind" fn(c_int, c_int, *mut c_char) -> c_int;
+type ExitFunction = crate::layout::RexxExitHandler;
 
 /// `RexxContextExitHandler`.
-type ContextExitFunction =
-    unsafe extern "C-unwind" fn(*mut RexxExitContext_, c_int, c_int, *mut c_char) -> c_int;
+type ContextExitFunction = crate::layout::RexxContextExitHandler;
 
 impl ExitHandler {
     /// Calls the handler with `request`'s block, or
@@ -2120,19 +2116,10 @@ pub const REDIRECTING_COMMAND_ENVIRONMENT: c_int = 2;
 
 /// `RexxContextCommandHandler`. It may unwind as a
 /// [`Stub`] may.
-type DirectHandler = unsafe extern "C-unwind" fn(
-    *mut RexxExitContext_,
-    RexxStringObject,
-    RexxStringObject,
-) -> RexxObjectPtr;
+type DirectHandler = crate::layout::RexxContextCommandHandler;
 
 /// `RexxRedirectingCommandHandler`.
-type RedirectingHandler = unsafe extern "C-unwind" fn(
-    *mut RexxExitContext_,
-    RexxStringObject,
-    RexxStringObject,
-    *mut RexxIORedirectorContext_,
-) -> RexxObjectPtr;
+type RedirectingHandler = crate::layout::RexxRedirectingCommandHandler;
 
 /// A command handler an extension registered through `AddCommandEnvironment`.
 ///

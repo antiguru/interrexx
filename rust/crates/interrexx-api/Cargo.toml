@@ -22,5 +22,9 @@ libloading = "0.9.0"
 # was handed (`load.rs`).
 libc = "0.2.186"
 
+[dev-dependencies]
+# Reads `interrexx-inventory/data/errors.tsv`, from which `include/oorexxerrors.h` is written.
+interrexx-upstream.workspace = true
+
 [lints]
 workspace = true
