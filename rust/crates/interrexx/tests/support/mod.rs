@@ -581,11 +581,12 @@ mod tests {
                 "{changed}"
             );
         }
-        let user_package = b"    12 *-* Method UNKNOWN with scope \"Monitor\" in package \"/tmp/x.rex\" (no source available).\n";
-        let other_package = b"    13 *-* Method UNKNOWN with scope \"Monitor\" in package \"/tmp/x.rex\" (no source available).\n";
+        let text = interrexx_inventory::errors::expand("⟨101.24¦UNKNOWN¦Monitor¦/tmp/x.rex⟩");
+        let user_package = format!("    12 *-* {text}\n");
+        let other_package = format!("    13 *-* {text}\n");
         assert_ne!(
-            normalize_stderr(user_package),
-            normalize_stderr(other_package)
+            normalize_stderr(user_package.as_bytes()),
+            normalize_stderr(other_package.as_bytes())
         );
     }
 
