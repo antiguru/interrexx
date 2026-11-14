@@ -1,6 +1,7 @@
 # Developing interrexx
 
-Design notes are in `docs/design/`; the language specification is `spec/`.
+Design notes are in `docs/design/`; the language specification is `spec/`. The standing decisions
+and the reasons for them are in `docs/design/decisions.md`; read it before proposing to change one.
 
 ## Setup
 
@@ -14,13 +15,16 @@ These trees are read-only and under their own licences: never modify them. **Cle
 service, `rxqueue`, `rxsubcom`, `librexxapi` and the extension libraries are written from
 behaviour descriptions, public headers (`api/`), `oodocs`, ooTest and running ooRexx, never from
 reading ooRexx's `rexxapi/`, `utilities/` or `extensions/` sources, and ooRexx is never traced or
-disassembled. Nothing in interrexx copies ooRexx source or documentation text.
+disassembled. Nothing in interrexx copies ooRexx source or documentation text. Error message texts
+are interrexx's own data: a message that states a fact mechanically, or that comes from the ANSI
+standard, may keep its wording, and distinctive prose is written fresh.
 
 ## What correct means
 
 The specification is normative; ooRexx is evidence. A program's stdout, stderr and exit status
-match ooRexx's byte for byte unless a Deviation in `spec/src/deviations.md` says otherwise. See
-`docs/design/testing.md`.
+match ooRexx's byte for byte unless a Deviation in `spec/src/deviations.md` says otherwise, or the
+specification leaves the difference unspecified: for an error, only the code and the subcode are
+specified, not the message text or the items of `ADDITIONAL`. See `docs/design/testing.md`.
 
 ## Running ooRexx and interrexx
 
