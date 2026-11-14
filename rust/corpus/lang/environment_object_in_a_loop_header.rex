@@ -27,7 +27,7 @@ do i = 1 to 5 for .ARRAY
 end
 
 after_for:
-say 'for      rc' rc errortext(rc)
+say 'for      rc' rc (errortext(rc) \== '')
 
 signal on syntax name after_count
 do .ARRAY

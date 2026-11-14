@@ -2,7 +2,7 @@
  * through a real unary `+` on the oracle, so a stem receiver here carries
  * the same forwarded native-method frame an operator's own left operand
  * does. Measured, rc 215, stderr opening
- * `       *-* Compiled method "+" with scope "String".`.
+ * the frame of method "+" with scope String (101.20).
  */
 
 do i = b. to 5

@@ -27,13 +27,13 @@ trym: procedure
   signal on syntax
   say 'method:' .T~new~go(m)
   return
-syntax: say 'method' condition('o')~code condition('o')~message; return
+syntax: say 'method' condition('o')~code; return
 tryr: procedure
   use arg r
   signal on syntax name rsyntax
   say 'routine:' r~call
   return
-rsyntax: say 'routine' condition('o')~code condition('o')~message; return
+rsyntax: say 'routine' condition('o')~code; return
 ::routine helper
   return 'helper ran'
 ::class T public

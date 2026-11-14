@@ -19,7 +19,7 @@ probe: procedure
   return
 reported:
   say 'code   ' condition('O')['CODE']
-  say 'message' condition('O')['MESSAGE']
+  say 'rc     ' rc
   return
 
 ::class Silent

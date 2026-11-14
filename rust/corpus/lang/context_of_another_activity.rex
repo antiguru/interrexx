@@ -22,7 +22,7 @@ signal on syntax
 say c~line
 exit
 syntax:
-  say 'ended:' condition('o')~code condition('o')~message
+  say 'ended:' condition('o')~code
 ::class k
 ::attribute ctx get unguarded
 ::attribute inv get unguarded

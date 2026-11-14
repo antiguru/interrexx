@@ -30,7 +30,7 @@ exit
 popped:
   c = condition('o')
   x = .traceOutput~destination
-  say c~code c~message
+  say c~code
   return
 ::routine r1
 trace r

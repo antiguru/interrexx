@@ -1,5 +1,5 @@
-/* A trapped INTERPRET error's line inserts: the oracle numbers the whole
-   string as the line of the INTERPRET clause, which is not line 1 here. */
+/* The code of a trapped INTERPRET error, for strings that hold a translation
+   error. */
 call show 'y = (1'
 call show 'nop; nop; y = a[1'
 call show 'say 1 /* open'
@@ -30,11 +30,5 @@ show: procedure
   return
 syntax:
   c = condition('o')
-  a = c~additional
-  line = c~code 'items' a~items
-  do i = 1 to a~items
-    line = line '['a[i]']'
-  end
-  say line
-  say '   ' c~message
+  say src '->' c~code
   return

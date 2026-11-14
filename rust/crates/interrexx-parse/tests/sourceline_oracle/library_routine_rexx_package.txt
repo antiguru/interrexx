@@ -8,12 +8,12 @@ signal on syntax name bad
 say fs('Z', 'x')
 bad:
   c = condition('O')
-  say 'bad' c~code '|' c~message
+  say 'bad' c~code
 signal on syntax name none
 say fs()
 none:
   c = condition('O')
-  say 'none' c~code '|' c~message
+  say 'none' c~code
 r = .context~package~findRoutine('FS')
 say 'findRoutine' r~call('E', 'q.rs') r~package~name
 say 'filespec' filespec('N', '/a/b.c')

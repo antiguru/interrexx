@@ -1,6 +1,5 @@
-/* A directive error's ADDITIONAL array when the source reaches the parser
-   through .Package~new: the token the oracle passes to a message that does
-   not show it, beside controls that pass none and ones whose text uses it. */
+/* The code of a directive error when the source reaches the parser through
+   .Package~new, beside controls that raise none. */
 call show '::method'
 call show '::routine'
 call show '::requires'
@@ -50,11 +49,5 @@ show: procedure
   return
 syntax:
   c = condition('o')
-  a = c~additional
-  line = src '->' c~code 'items' a~items
-  do i = 1 to a~items
-    line = line '['a[i]']'
-  end
-  say line
-  say '   ' c~message
+  say src '->' c~code
   return

@@ -21,7 +21,7 @@ call TestNestedAttach .array~of(1, 2)
 say 'not raised'
 exit
 syntax:
-  say 'raised' condition('o')~code condition('o')~message
+  say 'raised' condition('o')~code
   say 'result' var('result')
   exit
 ::requires 'orxfunction' LIBRARY

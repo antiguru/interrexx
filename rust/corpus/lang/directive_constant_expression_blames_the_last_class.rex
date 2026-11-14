@@ -14,8 +14,8 @@
  *
  *     25 *-* ::constant x (1/0)
  *     26 *-* ::class B
- * Error 42 running <path> line 25:  Arithmetic overflow/underflow.
- * Error 42.3:  Arithmetic overflow; divisor must not be zero.
+ * Error 42 running <path> line 25, the report frame,
+ * then Error 42.3, a zero divisor.
  */
 
 say 'prolog'

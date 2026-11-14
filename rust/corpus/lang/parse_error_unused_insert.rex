@@ -1,6 +1,5 @@
-/* A trapped translation error's ADDITIONAL array, where the oracle passes an
-   insert its message text does not use, beside controls that use theirs and
-   one that takes none. */
+/* The code of a trapped translation error, for strings that raise one beside
+   controls that raise none. */
 call show 'use arg (a)'
 call show 'call ns:"x"'
 call show 'call ns:'
@@ -18,11 +17,5 @@ show: procedure
   return
 syntax:
   c = condition('o')
-  a = c~additional
-  line = src '->' c~code 'items' a~items
-  do i = 1 to a~items
-    line = line '['a[i]']'
-  end
-  say line
-  say '   ' c~message
+  say src '->' c~code
   return

@@ -68,7 +68,7 @@ try: procedure
   return
 refused:
   c = condition('O')
-  say name '['v']!' c~code '|' c~message
+  say name '['v']!' c~code
   return
 
 ::requires 'orxfunction' LIBRARY

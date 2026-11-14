@@ -19,4 +19,4 @@ missing: procedure
   return znowhere()
 absent:
   raised = condition('O')
-  return raised['CODE'] raised['MESSAGE']
+  return raised['CODE']

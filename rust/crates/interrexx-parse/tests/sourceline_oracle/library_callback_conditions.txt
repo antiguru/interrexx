@@ -41,7 +41,7 @@ try: procedure
   return
 syntax:
   o = condition('o')
-  say m n '->' o~code o~rc '|' o~errortext '|' o~message '|' o~additional~items '|' t~continue
+  say m n '->' o~code o~rc '|' t~continue
   return
 ::class T
 ::attribute continue

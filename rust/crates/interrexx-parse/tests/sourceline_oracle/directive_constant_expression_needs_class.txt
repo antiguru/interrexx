@@ -9,9 +9,9 @@ count 23
  * enclosing ::CLASS to blame alongside it:
  *
  *     23 *-* ::constant sep (1+2)
- * Error 99 running <path> line 23:  Translation error.
- * Error 99.906:  A ::CONSTANT directive with an expression requires a
- * matching ::CLASS directive.
+ * Error 99 running <path> line 23, the report frame, then Error 99.906:
+ * a ::CONSTANT directive with an expression
+ * needs a ::CLASS directive above it.
  *
  * The expression itself is well-formed (`1+2`), which is deliberate: this
  * program is a witness for the STRUCTURAL check alone, and would still fail

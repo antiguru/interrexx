@@ -20,8 +20,8 @@ OS calls go through `rustix` or safe crates (`nix`, `dns-lookup`, `if-addrs`). T
 * Typed arguments convert in order before the routine runs; the first failure raises 88.901
   (missing), 88.922 (too many), 88.907 (32-bit integer), 88.905 (positive whole number) or 88.921
   (double).
-* A routine that rejects its converted input raises 40.1, `External routine "NAME" failed.`, with
-  the name as called, uppercased. This document calls that a routine failure.
+* A routine that rejects its converted input raises 40.1 with the name as called,
+  uppercased, as its insert. This document calls that a routine failure.
 * Where ooRexx crashes, interrexx raises a Rexx error instead (a Deviation): 93.900 for a
   RegularExpression with no compiled pattern or after `uninit`, 40.1 for an unknown group in
   `SysGetgrnam`/`SysGetgrgid`, a non-numeric `SockSelect` stem entry, or a `SockGetHostId` with no
