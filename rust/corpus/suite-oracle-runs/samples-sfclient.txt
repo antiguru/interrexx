@@ -1,6 +1,8 @@
 # The oracle on ootest group samples/sfclient, ootest revision 13178, four runs.
 # The group's TEST_04 drives the sample's socket server or client on fixed
 # ports; runs 1, 2 and 4 ran it beside the other socket sample groups.
+# A message text and a built-in method's traceback line are cut from the record,
+# as the comparisons cut them (r[conv.error.text], r[class.stackframe.builtin]).
 
 ## Run 1: eight groups at once
 rc 124, 300.01 s; started TEST_01_SAMPLEEXISTS TEST_04_SFCLIENT.REX; failing TEST_04_SFCLIENT.REX
@@ -24,10 +26,8 @@ Errors:             1
   Class:  sfclient.testGroup
   File:   .../ooRexx/samples/sfclient.testGroup
   Event:  SYNTAX 98.923 raised unexpectedly.
-    Address command redirection failed (Interrupted system call).
     Line:    144
    144 *-*     address ''      'rexx' prgPathName with input using (inArr) output stem myStem.
-       *-* Compiled method "SEND" with scope "Message".
   1585 *-*     .message~new(self, methodName)~send
   1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
    548 *-*   test~execute(testResult, verbose)
