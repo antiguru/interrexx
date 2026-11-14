@@ -1,0 +1,15 @@
+26	0	Invalid whole number.
+26	2	Value of repetition count expression in DO or LOOP instruction must be zero or a positive whole number; found "&1".
+26	3	Value of FOR expression in DO or LOOP instruction must be zero or a positive whole number; found "&1".
+26	4	Positional pattern of parsing template must be a whole number; found "&1".
+26	5	DIGITS value must be a positive whole number; found "&1".
+26	6	FUZZ value must be zero or a positive whole number; found "&1".
+26	7	Number used in TRACE setting must be a whole number; found "&1".
+26	8	Operand to the right of the power operator (**) must be a whole number; found "&1".
+26	11	Result of % operation would need exponential notation at the current NUMERIC DIGITS.
+26	12	Result of % operation used for // operation would need exponential notation at the current NUMERIC DIGITS.
+26	900	&1.
+26	901	Result of a method call must be a whole number; found "&1".
+26	902	Result of a COMPARETO method call must be a whole number; found "&1".
+26	903	Result of a COMPARE method call must be a whole number; found "&1".
+26	904	Stem "&1" element 0 is not a whole number; found "&2".
