@@ -15,7 +15,7 @@ count 43
    substitutes the conversion. An engine that substitutes the value's own
    rendering prints
 
-     Error 40.903:  ERRORTEXT argument 1 must be in the range 0-99; found "1.00E+6".
+     Error 40.903, naming ERRORTEXT, argument 1 and the value "1.00E+6".
 
    and one that re-renders under the DIGITS in force at the call rather than
    at creation prints `1000000` here by luck and the wrong thing the moment

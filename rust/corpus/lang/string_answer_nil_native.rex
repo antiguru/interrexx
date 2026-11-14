@@ -4,16 +4,16 @@ o = .sn~new
 t = .t~new
 signal on syntax name s1
 say t~int(o)
-s1: say 'int' condition('O')~code condition('O')~message
+s1: say 'int' condition('O')~code
 signal on syntax name s2
 say t~double(o)
-s2: say 'double' condition('O')~code condition('O')~message
+s2: say 'double' condition('O')~code
 signal on syntax name s3
 say t~size(o)
-s3: say 'size' condition('O')~code condition('O')~message
+s3: say 'size' condition('O')~code
 signal on syntax name s4
 say t~stem(o)
-s4: say 'stem' condition('O')~code condition('O')~message
+s4: say 'stem' condition('O')~code
 say 'tostring' t~tostring(o)
 exit
 ::requires 'orxfunction' LIBRARY

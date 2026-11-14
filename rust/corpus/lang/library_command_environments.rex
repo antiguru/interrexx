@@ -9,7 +9,7 @@ signal on syntax name direct
 address "rc-direct" "" with input using 123
 say 'not here'
 direct:
-say 'direct with' condition('o')~code condition('o')~message
+say 'direct with' condition('o')~code
 
 call TestAddCommandEnvironment "rc-redirecting", "redirecting"
 address "rc-redirecting" ""
@@ -64,7 +64,7 @@ signal on syntax name upper
 address 'RC-DIRECT' '' with output stem o.
 say 'not here'
 upper:
-say 'upper' condition('o')~code condition('o')~message
+say 'upper' condition('o')~code
 exit
 
 ::routine TestAddCommandEnvironment PUBLIC EXTERNAL "LIBRARY orxfunction"

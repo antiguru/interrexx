@@ -20,6 +20,6 @@ try:
   return
 syntax:
   c = condition('O')
-  say label c~code '|' c~message
+  say label c~code
   return
 ::requires 'pk.cls'

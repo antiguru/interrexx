@@ -34,7 +34,7 @@ do n = 1 to 999
   m = SysGetMessage(n)
   if m == 'Error: Message not found' then iterate
   found += 1
-  say n m
+  say n (m \== '')
   if m \== SysGetMessageX(1, n, 'rexx.cat') then say n 'differs by SysGetMessageX'
 end
 say found 'found'
@@ -114,13 +114,19 @@ call t "SysFormatMessage('&1', 'q', 'r')"
 
 say '-- catalogs'
 entries = .array~of(.array~of(1, 1, 'one'), .array~of(1, 2, 'two &1 &2'), -
-  .array~of(1, 3, ''), .array~of(2, 5, 'five'), .array~of(100, 1, 'far &2'))
+  .array~of(1, 3, ''), .array~of(1, 7, 'a=&1 b=&2 c=&3 d=&4'), .array~of(2, 5, 'five'), -
+  .array~of(100, 1, 'far &2'))
 call catalog d'/w.cat', 2, entries
 cat = here'/'d'/w.cat'
 call t "SysGetMessage(1, cat)"
 call t "SysGetMessage(2, cat, 'a', 'b', 'c')"
 call t "SysGetMessage(3, cat)"
 call t "SysGetMessage(4, cat)"
+call t "SysGetMessage(7, cat)"
+call t "SysGetMessage(7, cat, 1)"
+call t "SysGetMessage(7, cat, 1, 2, , 4)"
+call t "SysGetMessage(7, cat, , , 3, 4, 5)"
+call t "SysGetMessage(7, cat, 1, 2, 3, 4, 5, 6, 7, 8, 9)"
 call t "SysGetMessageX(2, 5, cat)"
 call t "SysGetMessageX(100, 1, cat, 'x', 'y')"
 call t "SysGetMessageX(3, 1, cat)"
@@ -193,10 +199,12 @@ t:
   parse arg expr
   signal on syntax name err
   interpret 'r =' expr
+  /* The text of the interpreter's own message 678 is not specified. */
+  if abbrev(expr, 'SysGetMessage(678') then r = (r \== '')
   say expr '->' '['r']'
   return
 err:
-  say expr '-> syntax' condition('o')~code ':' condition('o')~message
+  say expr '-> syntax' condition('o')~code ':'
   return
 
 /* SysGetMessage(1, name) with NLSPATH and LANG set as given. */

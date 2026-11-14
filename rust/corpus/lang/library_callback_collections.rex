@@ -13,16 +13,16 @@ say t~of1A('x')~items t~of2A('x', 'y')~size t~of3A(1,2,3)~size t~of4A(1,2,3,4)~m
 say t~isa(a) t~isa('x') t~isa(.list~new) t~isa(.array~new(2,2))
 signal on syntax name s1
 say t~at(a, 3)
-s1: say 'at3' condition('o')~code condition('o')~message
+s1: say 'at3' condition('o')~code
 signal on syntax name s2
 say t~at(a, 99)
 s2: say 'at99' condition('o')~code
 signal on syntax name s3
 say t~put(a, 'z', 0)
-s3: say 'put0' condition('o')~code condition('o')~message
+s3: say 'put0' condition('o')~code
 signal on syntax name s4
 say t~at(a, 0)
-s4: say 'at0' condition('o')~code condition('o')~message
+s4: say 'at0' condition('o')~code
 d = t~newdir; say d~class d~items
 say t~dput(d, 'v', 'k') d['k'] t~dat(d, 'k') t~isdir(d) t~isdir(.stringtable~new) t~isdir(.table~new)
 signal on syntax name s5

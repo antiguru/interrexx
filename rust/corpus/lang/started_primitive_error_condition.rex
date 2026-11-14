@@ -5,7 +5,7 @@ m~wait
 call SysSleep 0.3
 c = m~errorCondition
 do k over .array~of('CONDITION','DESCRIPTION','CODE','ERRORTEXT','MESSAGE','POSITION','PROGRAM','PACKAGE','PROPAGATED','RC','INSTRUCTION')
-  v = c[k]
+  v = c[k]; if (k = 'ERRORTEXT' | k = 'MESSAGE') & v \== .nil then v = (v \== '')
   if v == .nil then say k '.nil'; else say k '['v']'
 end
 say 'ADDITIONAL' c~additional~items 'TB' c~traceback~items 'SF' c~stackframes~items

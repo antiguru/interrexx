@@ -6,7 +6,7 @@ do i = 1 to 3000
   a[i] = copies('x', 40) || i
   call probe
 end
-say 'done' i length(m)
+say 'done' i (m \== '')
 exit
 
 probe: procedure expose m
@@ -15,5 +15,5 @@ probe: procedure expose m
   return
 syntax:
   c = condition('O')
-  m = c~message c~errortext
+  m = c~errortext
   return

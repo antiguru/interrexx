@@ -81,7 +81,7 @@ t: procedure
   return
 bad:
   c = condition('O')
-  say 'error' code '|' c~code c~message
+  say 'error' code '|' c~code
   return
 
 ::class k

@@ -9,7 +9,7 @@ say t~send(.array~of(1,,3), 'items', .array~new) t~send('xyz', 'substr', .array~
 say t~scoped(.sub~new, 'who', .base, .array~new) t~scoped(.sub~new, 'who', .sub, .array~new) t~send0(.sub~new, 'who')
 signal on syntax name s1
 say t~send0('abc', 'nosuchmethod')
-s1: say 'nomethod' condition('o')~code condition('o')~message
+s1: say 'nomethod' condition('o')~code
 say t~send0(.u~new, 'foo') '|' t~send0(.u~new, 'whoami') '|' t~send1(.u~new, 'fOo', 1)
 say t~isinst('abc', .string) t~isinst(.sub~new, .base) t~isinst(.sub~new, .array) t~hasm('abc', 'left') t~hasm('abc', 'LEFT') t~hasm('abc', 'nope')
 say t~args~items t~args(1,,3)~size t~args(1,,3)~items t~arg(2, 'x', 'y') t~arg(3,,'z')

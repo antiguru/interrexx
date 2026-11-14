@@ -3,7 +3,7 @@
  * operator's own exponent range check -- `s.` converts fine (its default is
  * "1") and the exponent, evaluated separately, is what fails past that
  * conversion. Measured, rc 230, stderr opening
- * `       *-* Compiled method "**" with scope "String".`.
+ * the frame of method "**" with scope String (101.20).
  */
 
 s. = 1

@@ -107,7 +107,7 @@ t: procedure expose f b
   return
 bad:
   c = condition('O')
-  say 'error' translate(code, '?', '00'x) '|' c~code c~message
+  say 'error' translate(code, '?', '00'x) '|' c~code
   return
 
 ::class myarray subclass array

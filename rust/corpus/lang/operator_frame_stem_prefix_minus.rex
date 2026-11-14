@@ -1,7 +1,7 @@
 /* The same forwarded frame reached through a prefix
  * operator instead of an infix one, whose dispatch is a different path that
  * happens to collide with infix minus's own frame text. Measured, rc 215,
- * stderr opening `       *-* Compiled method "-" with scope "String".`.
+ * stderr opening the frame of method "-" with scope String (101.20).
  */
 
 say -b.

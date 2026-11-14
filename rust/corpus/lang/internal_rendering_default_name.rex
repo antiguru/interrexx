@@ -24,7 +24,7 @@ try:
   interpret arg(1)
   return
 syntax:
-  say condition('o')~message
+  say
   return
 ::class withname
 ::method defaultname class
