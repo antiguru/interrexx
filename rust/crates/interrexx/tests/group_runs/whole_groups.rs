@@ -899,7 +899,7 @@ mod sim_gate {
         Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked, outcome, run_crate_process,
         run_crate_sim, run_oracle_within,
     };
-    use super::super::super::support::{oracle, sidecar};
+    use super::super::super::support::{error_text, oracle, sidecar};
     use super::{
         DIFFERING, ORACLE_DEADLINE, ORACLE_RUNS, ORACLE_RUNS_UNSETTLED, Part, WALL_CLOCK, at_once,
         copy, failing, key, left_out_of, refusal, relative, split, started,
@@ -1367,13 +1367,15 @@ mod sim_gate {
         relative(run_oracle_within(oracle, &at, &args, ORACLE_DEADLINE), &at)
     }
 
-    /// `stderr` without the `rexx-sim: ` lines, a child's included.
+    /// `stderr` without the `rexx-sim: ` lines, a child's included, and with
+    /// the message text of an error report cut (`r[conv.error.text]`).
     fn sim_masked(stderr: &[u8]) -> Vec<u8> {
         let text = String::from_utf8_lossy(stderr);
-        text.split_inclusive('\n')
+        let kept = text
+            .split_inclusive('\n')
             .filter(|line| !line.starts_with("rexx-sim: "))
-            .collect::<String>()
-            .into_bytes()
+            .collect::<String>();
+        error_text::cut_error_texts(kept.as_bytes())
     }
 
     /// The run's own `rexx-sim: ` line, its last line.
