@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166, 172, 173]
+deviations: [166, 172, 173, 174]
 ---
 
 # Threads and halting
@@ -18,7 +18,9 @@ r[native.threads.attach]
 A thread that native code starts may attach to the interpreter. It is then an
 [activity](../concurrency/activities.md) of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
-and it leaves the interpreter when it detaches. The fixture's thread posts an
+except the one each message interrupts, which [Deviation
+174](r:native.threads.attach.deviation.174) stops, and it leaves the
+interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.
 
 ```rexx
@@ -46,6 +48,21 @@ rc 0
 1
 posted
 ```
+
+r[native.threads.attach.deviation.174]
+While a message that an attached thread sends runs, the activity that was
+running when it arrived makes no progress in Rexx clauses ([Deviation
+174](../deviations.md#174-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
+The message runs at that activity's next clause boundary, or during its wait
+or its call into a native library that is not built in, and the activity goes
+on only once the message has finished. A message that arrives while another
+runs or waits runs on top of it, and the earlier goes on only once the later
+has finished. A message that waits, directly or through a chain of waits, for
+a guard lock a stopped activity holds or for the completion of a message whose
+send it runs is refused at once, and the program ends with exit code 120. In
+ooRexx the thread's messages run alongside the other activities. The tests of
+this rule need an extension of their own that sends messages by name, so they
+run outside this page.
 
 r[native.threads.attach.deviation.173]
 `DetachThread` called from a thread other than the one that attached the

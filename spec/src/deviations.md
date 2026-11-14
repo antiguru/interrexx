@@ -1399,3 +1399,23 @@ answers its result.
 context does nothing, and so does a second `DetachThread` from the thread that
 attached it. The attachment stays as the first detach left it, or as it was.
 ooRexx aborts the process in both cases.
+
+## 174. A message from an attached thread stops the activity it interrupts
+
+While a message that a thread attached to the interpreter sends runs, the
+activity that was running when it arrived, the main program or another, makes
+no progress in Rexx clauses. The message does not wait for that activity: it
+runs at the activity's next clause boundary, or during a wait of the activity,
+such as `SysSleep`, a semaphore's `wait`, a guard or a message's `result`, or
+during a call it makes into a native library that is not built into the
+interpreter. The activity goes on only once the message has finished, even
+where its wait or its call ended first. Messages are served one at a time: one
+that arrives while another runs or waits runs on top of it, and the earlier one
+goes on only once the later has finished. A message that waits for a guard lock
+an activity it stopped holds, or for the completion of a message whose send
+such an activity runs, directly or through a chain of such waits, never gets
+it, and the wait is refused at once as [Deviation
+14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an inverted wait:
+the thread's send answers nothing, and the program, which runs on to its end,
+ends with exit code 120. ooRexx runs each attached thread's messages on that
+thread, alongside the other activities. Issue #681 tracks doing the same.
