@@ -12,7 +12,7 @@ use gate_tables::{
     verdict, verdict_is_gated, verdict_label,
 };
 use table_c::checks::{
-    OracleShape, argutil_assertion, check_concept_line_counts, check_documented_edge,
+    OracleShape, Ran, argutil_assertion, check_concept_line_counts, check_documented_edge,
     check_edge_endpoints, check_entry_kinds, check_entry_present, check_interpolated_text,
     check_oracle_shape, check_probe_text, class_probe_shape, probe_set, run_probe,
 };
@@ -36,12 +36,18 @@ struct Concept {
     control: &'static str,
     /// How many lines of `stdout` this section's probe prints on the oracle.
     oracle_lines: usize,
-    /// The Deviation whose behaviour departs from the section's own sentence.
-    /// The row then answers differently from the oracle by ruling: it is kept
-    /// out of the gate while that Deviation is active and names this table in
-    /// `deviations.tsv`, and a licensed row that agrees is a structural
-    /// failure, because the departure it licenses has gone.
-    licensed_by: Option<u32>,
+    /// The Deviation whose behaviour departs from the section's own sentence,
+    /// and what this crate answers under it. See [`concept_licence`].
+    licensed_by: Option<Licence>,
+}
+
+/// A concept row's licence to answer differently from the oracle.
+struct Licence {
+    /// The Deviation, which must be an active row of `deviations.tsv` naming
+    /// this table.
+    deviation: u32,
+    /// The `stdout` the Deviation predicts for the row's probe on this crate.
+    crate_stdout: &'static str,
 }
 
 /// One arm per `provide.xml` section id.
@@ -62,7 +68,10 @@ const CONCEPTS: &[Concept] = &[
                   section says, so a method defined afterwards does not answer: the row \
                   then agrees with the oracle and its Deviation 110 licence is stale",
         oracle_lines: 3,
-        licensed_by: Some(110),
+        licensed_by: Some(Licence {
+            deviation: 110,
+            crate_stdout: "before 0\nafter 1\nfresh 1\n",
+        }),
     },
     Concept {
         id: "xmixin",
@@ -274,15 +283,23 @@ struct Measured {
 /// The table's name in `deviations.tsv`'s models column.
 const LICENCE_MODEL: &str = "gate_table_c";
 
-/// Checks a concept row's licence against `deviations.tsv` and against the
-/// row's own verdict, and answers what keeps the row out of the gate.
+/// Checks a concept row's licence and answers what keeps the row out of the
+/// gate. The licence holds only while its Deviation is an active row of
+/// `deviations.tsv` naming this table and this crate answers exactly what the
+/// licence predicts, on `stdout`, with the oracle's exit status and `stderr`,
+/// neither loud nor refusing. Anything else is a structural failure, so the
+/// licence covers the one departure its Deviation makes and no other: a row
+/// that agrees with the oracle has lost that departure, and one that answers
+/// otherwise has a difference nothing licenses.
 fn concept_licence(
     concept: &Concept,
     subject: &str,
     verdict: Option<Verdict>,
+    ran: &Ran,
     structural: &mut Vec<Structural>,
 ) -> Option<String> {
-    let number = concept.licensed_by?;
+    let licence = concept.licensed_by.as_ref()?;
+    let number = licence.deviation;
     let table = support::deviations::load(&support::deviations::repository());
     let named = table
         .get(&number)
@@ -302,6 +319,22 @@ fn concept_licence(
             detail: format!(
                 "agrees with the oracle although Deviation {number} licenses it to differ, \
                  so the departure the licence names has gone and the licence is stale"
+            ),
+        });
+    } else if ran.crate_stdout != licence.crate_stdout.as_bytes()
+        || ran.crate_exit != ran.oracle_exit
+        || ran.crate_stderr != ran.oracle_stderr
+        || ran.crate_loud
+        || ran.crate_refused.is_some()
+    {
+        structural.push(Structural {
+            subject: subject.to_string(),
+            detail: format!(
+                "answers other than Deviation {number} predicts (stdout {:?}, exit {} where \
+                 the oracle's is {}), and the licence covers only that answer",
+                String::from_utf8_lossy(&ran.crate_stdout),
+                ran.crate_exit,
+                ran.oracle_exit,
             ),
         });
     }
@@ -485,7 +518,7 @@ fn concept_and_class_gate_table() {
             &mut structural,
         );
         let verdict = answered.then(|| verdict(ran.differs));
-        let licensed = concept_licence(concept, &subject, verdict, &mut structural);
+        let licensed = concept_licence(concept, &subject, verdict, &ran, &mut structural);
         measured.push(Measured {
             kind: "concept",
             subject: format!("{} {}", section.id, section.title),
