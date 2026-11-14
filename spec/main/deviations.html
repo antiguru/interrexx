@@ -1172,6 +1172,16 @@ holds; <code>DO OVER</code> the list skips that entry. ooRexx counts the empty p
 item: <code>items</code> stays one higher than the items the Array holds, and <code>isEmpty</code>
 answers 0 after its last item is removed. Its <code>DO OVER</code> assigns <code>.nil</code> for the
 entry.</p>
+<h2 id="173-isstring-answers-true-for-every-string"><a class="header" href="#173-isstring-answers-true-for-every-string">173. IsString answers true for every String</a></h2>
+<p>The native API's <code>IsString</code> answers true for every instance of String, a number
+that an operator made included, so equal strings get the same answer however
+they were made. ooRexx answers false for a number that an operator made and for
+some numbers written as literals, such as <code>12</code>, <code>'12'</code> and <code>10000000000</code>, whose
+internal form is a number object rather than a string, and true for others,
+such as <code>3.5</code> and <code>'0'</code>. The same test decides whether its
+<code>DecodeConditionInfo</code> reports a condition's description: interrexx reports a
+description that is any instance of String, where ooRexx reports none for a
+description such as <code>2 + 3</code>.</p>
 
                     </main>
 

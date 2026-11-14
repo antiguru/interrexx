@@ -174,6 +174,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="native-routines-and-methods"><a class="header" href="#native-routines-and-methods">Native routines and methods</a></h1>
+<p class="deviations">Deviations: D173</p>
 <p>A routine or method of a library with a package entry declares the types of
 its arguments and of its result. The interpreter converts each argument to its
 type before the code runs, and converts the result back to a Rexx object after
@@ -273,6 +274,34 @@ wrote it: in capitals for a symbol, and as spelled for a quoted name.</p>
 ::requires 'specfixture' LIBRARY
 </code></pre>
 <pre><code class="language-output">FXNAME FXNAME fXnAmE
+</code></pre>
+<div class="rule" id="r-native.calls.isstring"><a href="#r-native.calls.isstring">[native.calls.isstring]</a></div>
+<p><code>IsString</code> answers whether an object is an instance of String: true for any
+such instance, a number that an operator made included, and false for any
+other object, an instance of a subclass of String among them. A true answer
+means the string accessors, such as <code>StringLength</code> and <code>StringData</code>, can read
+the object as it is.</p>
+<pre><code class="language-rexx">say fxIsString('abc') fxIsString(1.1) fxIsString(.string~new('x')),
+  fxIsString(.sub~new('y')) fxIsString(.array~new) fxIsString(.nil)
+::class sub subclass string
+::requires 'specfixture' LIBRARY
+</code></pre>
+<pre><code class="language-output">1 1 1 0 0 0
+</code></pre>
+<div class="rule" id="r-native.calls.deviation.173"><a href="#r-native.calls.deviation.173">[native.calls.deviation.173]</a></div>
+<p><code>IsString</code> answers true for every instance of String, so equal strings get
+the same answer however they were made, and <code>DecodeConditionInfo</code> reports a
+condition's description whenever it is an instance of String (<a href="../deviations.html">Deviation
+173</a>). ooRexx answers false for a number that an operator
+made and for some numbers written as literals, whose internal form is a number
+object rather than a string: <code>12</code>, <code>'12'</code> and <code>10000000000</code> among them, but not
+<code>3.5</code> or <code>'0'</code>. Its <code>DecodeConditionInfo</code> reports no description where the
+description is such a number, as for <code>RAISE USER BOOM DESCRIPTION (2 + 3)</code>.</p>
+<pre><code class="language-rexx">say fxIsString(80 + 1) fxIsString(1 + .1) fxIsString(1 / 3) fxIsString(-1.1),
+  fxIsString(12) fxIsString('12') fxIsString(3.5) (1 / 3)~class~id
+::requires 'specfixture' LIBRARY
+</code></pre>
+<pre><code class="language-output">1 1 1 1 1 1 1 String
 </code></pre>
 <h2 id="results"><a class="header" href="#results">Results</a></h2>
 <div class="rule" id="r-native.calls.result"><a href="#r-native.calls.result">[native.calls.result]</a></div>
