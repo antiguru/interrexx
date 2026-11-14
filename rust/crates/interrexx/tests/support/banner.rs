@@ -8,7 +8,7 @@
 const ORACLE_NOTICE_LINES: usize = 5;
 
 /// `lines` as a recorded block shows them. The oracle's banner is recognised by position: the
-/// line before `Build date: ` is the version line, whose last word is the version, and the
+/// line before `Build date: ` is the version line, whose first word that starts with a digit is the version, and the
 /// [`ORACLE_NOTICE_LINES`] lines after `Addressing mode: ` become one line. `oracle` says which
 /// side printed the lines.
 pub fn recorded<'a>(lines: impl IntoIterator<Item = &'a str>, oracle: bool) -> Vec<String> {
@@ -24,7 +24,9 @@ pub fn recorded<'a>(lines: impl IntoIterator<Item = &'a str>, oracle: bool) -> V
             && lines
                 .get(index)
                 .is_some_and(|next| next.starts_with("Build date: "))
-            && let Some(version) = line.split(' ').next_back()
+            && let Some(version) = line
+                .split(' ')
+                .find(|word| word.starts_with(|c: char| c.is_ascii_digit()))
         {
             out.push(format!(
                 "interrexx <version> (Open Object Rexx {version} compatible)"
