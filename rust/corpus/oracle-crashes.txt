@@ -1,4 +1,4 @@
-# Programs known to crash or exhaust the C++ oracle interpreter
+# Programs known to crash or exhaust the ooRexx interpreter
 # (third_party/oracle/bin/rexx, r13346), so nobody has to rediscover them by
 # running them. A sweep, a probe, or a corpus generator excludes these by
 # reference. Do not run any program below to "confirm" an entry.
@@ -12,7 +12,7 @@
 # external routines).
 #
 # The failure modes are not folded into one label. An entry is a deterministic
-# memory-safety defect in the C++ (SIGSEGV, rc 139); or a resource-exhaustion
+# memory-safety defect in ooRexx (SIGSEGV, rc 139); or a resource-exhaustion
 # hazard (unbounded allocation, OOM-killed); or an INDEFINITE BLOCK -- the
 # process alive and healthy, consuming no CPU, parked on a wait that nothing in
 # the program can ever satisfy; or an UNDEFINED ANSWER -- a value the oracle
@@ -34,7 +34,7 @@ Effect: SIGSEGV, rc 139, deterministic.
 
 Cause: upstream SourceForge **SF #2018**. An orphaned `WHEN` (a `WHEN` clause
 with no body, immediately followed by another `WHEN`) reaches a null-pointer
-dereference in the C++ parser/interpreter's `SELECT` handling. Not something
+dereference in ooRexx's `SELECT` handling. Not something
 this crate needs to reproduce.
 
 ## 2. `say date('M','0','D')`
@@ -55,7 +55,7 @@ Effect: **not a SIGSEGV** -- runaway allocation, OOM-killed by the host
 turns an otherwise slower failure into an immediate one under the
 standard oracle invocation above). Recorded here as a hazard rather than
 a defect: raising `NUMERIC DIGITS` widens the precision every arithmetic
-operation carries, and at four figures and above the C++ allocates
+operation carries, and at four figures and above ooRexx allocates
 proportionally to that precision on a scale not characterised
 further, so the rule is: never set it above 1000 in a probe, rather than
 searching for the exact boundary.
@@ -232,7 +232,7 @@ The comment above
 it says so -- "this activation becomes a phantom, and we issued the message as
 if we don't exist". Because the activation is already stopped, the recursion
 does not grow the interpreter's own activation depth, which is what the
-resource guard counts; it grows the C++ stack instead, and that runs out
+resource guard counts; it grows ooRexx's native stack instead, and that runs out
 without anything checking.
 
 The neighbour that bounds it, and it is one keyword: **the same program with
@@ -445,7 +445,7 @@ nothing on stderr, and it did not return; it had to be killed by name.
 `?` is `TraceSetting`'s debug prefix, and interactive debug pauses after a
 traced clause to read a command from the console; the wrapper gives the child
 no terminal and nothing else ever writes to it, so nothing can satisfy that
-read. It was not confirmed at the C++ site, and confirming it means running
+read. It was not confirmed in ooRexx, and confirming it means running
 this program.
 
 The neighbour bounds it and is clean: `::options trace r` -- the same letter
@@ -1510,7 +1510,7 @@ Effect: a hang after `made`, and not an INDEFINITE BLOCK: the process spins on t
 time in its first 6 s, `ps` state `R`), ignores SIGTERM, and is SIGKILLed at `timeout -k 5 20`'s
 25 s (rc 137, stderr empty). Measured under the
 standard wrapper from a fresh empty directory; the cause is not
-traced in the C++. This crate answers 11.1 at the conversion (`src/tests.rs`,
+traced in ooRexx. This crate answers 11.1 at the conversion (`src/tests.rs`,
 `a_cyclic_reference_is_insufficient_stack_in_every_conversion`). No upstream ticket.
 
 ## 60. Two variable references that refer to each other's variables, converted to a string
