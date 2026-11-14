@@ -520,6 +520,8 @@ macro_rules! integer_typedef {
 }
 
 /// Every scalar and handle typedef the Rust definitions carry.
+// spec: native.header.scalars native.header.handles native.header.platform
+// spec: native.header.platform.unix
 fn typedefs() -> Vec<Typedef> {
     use interrexx_api::layout::{
         CSTRING, PCONSTRXSTRING, PEXIT, POINTER, PRXSTRING, PRXSYSEXIT, PSHVBLOCK, REXXPFN,
@@ -601,6 +603,7 @@ struct TypeCheck {
 /// the type of an expression of it.
 fn type_checks() -> Vec<TypeCheck> {
     let mut out = Vec::new();
+    // spec: native.header.handler-types
     for (name, rust) in c_handler_types().into_iter().chain(api_handler_types()) {
         out.push(TypeCheck {
             key: format!("type handler {name}"),
@@ -695,6 +698,7 @@ fn error_table() -> ErrorTable {
 
 /// Every numeric constant the headers define: the classic codes and limits, the versions, the
 /// value codes, the kinds of command environment and the error codes.
+// spec: native.header.value-codes native.header.versions native.header.error-codes
 fn constants() -> Vec<CConstant> {
     let mut out: Vec<CConstant> = CLASSIC_CONSTANTS
         .iter()

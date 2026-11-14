@@ -10,7 +10,8 @@
 //! against each: every line the program says is a value the library computed through the macros.
 //!
 //! spec: native.header.files native.header.languages native.header.handles
-//! spec: native.header.platform native.header.declaration native.header.special-types
+//! spec: native.header.platform native.header.platform.unix native.header.declaration
+//! spec: native.header.special-types
 //! spec: native.header.argument-exists native.header.descriptors native.header.tables
 //! spec: native.header.package native.header.rxstring native.header.linkage
 

@@ -26,6 +26,9 @@ The pages of this chapter are:
   every activity is given, and halting activities from native code.
 * [Command handlers](handlers.md): a command environment that native code
   adds, and how its handler's answers and conditions reach the program.
+* [The header files](header.md): the files a library is compiled against,
+  their types and constants, and the macros that declare a library's
+  routines, methods and tables.
 
 What a library's name means, and where the file is searched for, is [the
 library rule](r:env.search.library). The directives that name a library are

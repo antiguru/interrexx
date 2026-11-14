@@ -433,6 +433,7 @@ fn reached(output: &str) -> BTreeMap<(String, String), Reached> {
 /// called once with distinct arguments, calls the table member of its own name, its alias's
 /// target, the thread context's method or the instance's, handing it the right context and its
 /// arguments in order, or answers the value member or instance field it reads.
+// spec: native.header.context-methods native.header.convenience
 #[test]
 fn every_context_method_reaches_its_member() {
     let calls = all_methods();
