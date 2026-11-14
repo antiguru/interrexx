@@ -51649,9 +51649,10 @@ included. When <code>start</code> is above the size, the first entry is what <co
 for <code>start</code>, which is <code>.nil</code>, and the positions after it are 1, 2 and so on.
 The <code>start</code> is read as <a href="classes/queue.html#r-class.queue.indexes">the Queue index rule</a> says;
 <code>count</code> must be a whole number from 0 up, or <code>SYNTAX 93.906</code> is raised, <code>.nil</code>
-raising <code>SYNTAX 97.1</code>. No <code>start</code> raises <code>SYNTAX 93.901</code>, and a third argument
-<code>SYNTAX 93.902</code>. The arguments are counted first. <code>count</code> is then checked with
-the messages and conditions of
+raising <code>SYNTAX 97.1</code>. No <code>start</code> raises <code>SYNTAX 93.901</code>, an omitted one
+<code>SYNTAX 93.903</code>, and a third argument <code>SYNTAX 93.902</code>. The arguments are counted
+first, an omitted <code>start</code> among them, so that it is refused before <code>count</code> is
+sent anything. <code>count</code> is then checked with the messages and conditions of
 <a href="classes/circularqueue.html#r-class.circularqueue.new.sends">the new rule</a>, after which its string value
 is read once more; that second value is the count, and one below 0 or not a
 whole number raises <code>SYNTAX 93.906</code>, so a count whose string value is <code>-1</code> is
@@ -51672,6 +51673,9 @@ call show e~section(3, 4)
 call show e~section(2, 99)
 say q~items q~size q~allItems~makeString('L', ',')
 call try 'q~section'
+call try 'q~section(, 1)'
+call try 'q~section(, "x")'
+call try 'q~section(, .loud~new(0, "1"))'
 call try 'q~section(0)'
 call try 'q~section(.nil)'
 call try 'q~section("x")'
@@ -51720,6 +51724,9 @@ CircularQueue 4 4 [c|The NIL object|The NIL object|a]
 CircularQueue 5 5 [b|c|The NIL object|The NIL object|a]
 4 4 a,b,c,d
 q~section =&gt; 93.901
+q~section(, 1) =&gt; 93.903
+q~section(, "x") =&gt; 93.903
+q~section(, .loud~new(0, "1")) =&gt; 93.903
 q~section(0) =&gt; 93.907
 q~section(.nil) =&gt; 93.907
 q~section("x") =&gt; 93.907
