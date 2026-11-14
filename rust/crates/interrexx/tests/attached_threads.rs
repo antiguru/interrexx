@@ -88,6 +88,10 @@ fn run_ours(name: &str, program: &str) -> Answer {
 }
 
 /// [`run_timed`], asking the oracle where `oracle`.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the run's wall time is what an idle thread must not stretch"
+)]
 fn run_against(name: &str, program: &str, oracle: bool) -> (Answer, std::time::Duration) {
     let dir = build(name);
     let program = fixture(program);
