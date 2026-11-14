@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Builtin function and error message tables for interrexx"
 
 [build-dependencies]
-# Reads `data/*` and, until texts are our own, the message texts.
+# Parses and checks `data/*` and `messages/*`.
 interrexx-upstream.workspace = true
 
 [dev-dependencies]

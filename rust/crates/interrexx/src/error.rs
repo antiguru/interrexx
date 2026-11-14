@@ -1737,20 +1737,22 @@ impl Raised {
     }
 
     /// 101.21: the traceback line a failing routine of an internal package
-    /// contributes, `*-*` marker and leading blanks included.
+    /// contributes. The text follows a blank line-number column and the
+    /// `*-*` marker, where a clause line has its number and the clause.
     pub(crate) fn compiled_routine_line(name: &[u8]) -> Vec<u8> {
-        match interrexx_inventory::errors::lookup(101, 21) {
-            Some(entry) => substitute(entry.text, &[name.to_vec()]),
-            None => b"<no message 101.21 in the catalogue>".to_vec(),
-        }
+        built_in_frame_line(message_text(
+            interrexx_inventory::errors::E101_21,
+            [name.to_vec()],
+        ))
     }
 
+    /// 101.20: the traceback line of a built-in method, laid out as
+    /// [`Raised::compiled_routine_line`]'s.
     pub(crate) fn compiled_method_line(name: &[u8], scope: &str) -> Vec<u8> {
-        let substitutions = vec![name.to_vec(), scope.as_bytes().to_vec()];
-        match interrexx_inventory::errors::lookup(101, 20) {
-            Some(entry) => substitute(entry.text, &substitutions),
-            None => b"<no message 101.20 in the catalogue>".to_vec(),
-        }
+        built_in_frame_line(message_text(
+            interrexx_inventory::errors::E101_20,
+            [name.to_vec(), scope.as_bytes().to_vec()],
+        ))
     }
 
     /// 93.904: a `MAX`/`MIN` argument is not a number. `position` is 1-based
@@ -2174,10 +2176,7 @@ impl Raised {
     /// report would carry, as the error of a `1/0` typed at a stop shows: the
     /// prefix, `42:` and the text of 42, then the same with `42.3`.
     pub(crate) fn debug_error_lines(&self) -> Vec<Vec<u8>> {
-        let prefix = match interrexx_inventory::errors::lookup(101, 4) {
-            Some(entry) => substitute(entry.text, &[]),
-            None => b"+++ Interactive trace.  Error".to_vec(),
-        };
+        let prefix = message_text(interrexx_inventory::errors::E101_4, []);
         let mut lines = Vec::new();
         let mut major = prefix.clone();
         major.extend_from_slice(format!(" {}:   ", self.number).as_bytes());
@@ -2301,8 +2300,17 @@ impl Raised {
     }
 }
 
+/// `text` as a traceback line with no source clause: the blank six-wide
+/// line-number column, a blank and the `*-*` marker that a clause line has,
+/// then `text` (`r[class.stackframe.builtin]`).
+fn built_in_frame_line(text: Vec<u8>) -> Vec<u8> {
+    let mut line = b"       *-* ".to_vec();
+    line.extend_from_slice(&text);
+    line
+}
+
 /// The catalogue text of `msg` with exactly its inserts.
-fn message_text<const N: usize>(
+pub(crate) fn message_text<const N: usize>(
     msg: interrexx_inventory::errors::Msg<N>,
     inserts: [Substitution; N],
 ) -> Vec<u8> {

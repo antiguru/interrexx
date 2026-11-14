@@ -2,7 +2,9 @@
 //! `tests/rexx_command/cases` runs both binaries with the same words from a
 //! directory of the same programs, and the three descriptors must agree. The
 //! recorded block is the oracle's, normalised; the `-v` banner is
-//! interrexx's own (Deviation 96), so the oracle's is mapped to it first.
+//! interrexx's own (Deviation 96), so the oracle's is mapped to it first. The
+//! lines of the usage text are recorded as `<usage>`, its wording being
+//! unspecified.
 //!
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
@@ -259,7 +261,8 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
         Some(code) => format!("rc> {code}\n"),
         None => "rc> none\n".to_string(),
     };
-    for (tag, bytes) in [("out", stdout), ("err", stderr)] {
+    let stderr = usage_masked(stderr, status);
+    for (tag, bytes) in [("out", stdout), ("err", &stderr[..])] {
         // The message text of an error report is not specified, so a recorded
         // answer holds the code and subcode of each report and not its text.
         let bytes = error_text::cut_error_texts(bytes);
@@ -271,6 +274,23 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
         }
     }
     rendered
+}
+
+/// `stderr` with the lines of a usage text masked: its layout, a blank line
+/// and three lines with the status 255, is specified and its wording is not
+/// (`r[env.invocation.forms]`). Any other output is returned as it is.
+fn usage_masked(stderr: &[u8], status: Option<i32>) -> Vec<u8> {
+    let lines: Vec<&[u8]> = stderr.split_inclusive(|&b| b == b'\n').collect();
+    let usage = status == Some(255)
+        && lines.len() == 4
+        && lines[0] == b"\n"
+        && lines[1..]
+            .iter()
+            .all(|line| line.len() > 1 && line.ends_with(b"\n"));
+    if !usage {
+        return stderr.to_vec();
+    }
+    b"\n<usage>\n<usage>\n<usage>\n".to_vec()
 }
 
 /// Runs `program` with `args` from `dir` under `timeout`.

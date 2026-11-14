@@ -21,8 +21,8 @@
 /// follows. A line that shows a built-in method or routine as a level of a
 /// traceback is dropped whole, because a build may not have that level
 /// (`r[class.stackframe.builtin]`): the line that starts with blanks only, then
-/// `*-*`, and then `Compiled method "<name>" with scope "<scope>".` or
-/// `Compiled routine "<name>".`. The level of a method or routine written in
+/// `*-*`, and then the text of a built-in method's or routine's level
+/// ([`is_built_in_frame_line`]). The level of a method or routine written in
 /// Rexx, the library's included, is a numbered line and stays. Every other
 /// line is a separate comparison and stays exact. The
 /// comparisons between this crate and the oracle apply it to both sides, so
@@ -46,22 +46,59 @@ pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
 }
 
 /// Whether `line` is the traceback line of a built-in method or routine:
-/// blanks where a line number would stand, `*-* Compiled method "<name>" with
-/// scope "<scope>".` or `*-* Compiled routine "<name>".`. A numbered line, a
-/// trace line and any other text are not.
+/// blanks where a line number would stand, `*-* ` and then the text of
+/// message 101.20 or 101.21 with its inserts, as this crate writes it, or the
+/// oracle's `Compiled method "<name>" with scope "<scope>".` or
+/// `Compiled routine "<name>".`. A numbered line, a trace line and any other
+/// text are not.
 fn is_built_in_frame_line(line: &[u8]) -> bool {
     let blanks = line.iter().take_while(|&&b| b == b' ').count();
-    let Some(rest) = line[blanks..].strip_prefix(b"*-* Compiled ") else {
+    let Some(rest) = line[blanks..].strip_prefix(b"*-* ") else {
         return false;
     };
-    if blanks == 0 || !rest.ends_with(b"\".") {
+    if blanks == 0 {
         return false;
     }
-    rest.strip_prefix(b"method \"").is_some_and(|quoted| {
-        quoted
-            .windows(b"\" with scope \"".len())
-            .any(|w| w == b"\" with scope \"")
-    }) || rest.starts_with(b"routine \"")
+    let ours = [(101, 20), (101, 21)].into_iter().any(|(major, sub)| {
+        interrexx_inventory::errors::lookup(major, sub)
+            .is_some_and(|message| matches_template(rest, message.text))
+    });
+    ours || matches_template(rest, "Compiled method \"&1\" with scope \"&2\".")
+        || matches_template(rest, "Compiled routine \"&1\".")
+}
+
+/// Whether `text` is `template` with each `&k` replaced by some bytes: it
+/// starts with the template's first literal part, ends with its last, and
+/// holds the parts between in order.
+fn matches_template(text: &[u8], template: &str) -> bool {
+    let mut parts: Vec<&[u8]> = Vec::new();
+    let mut rest = template.as_bytes();
+    while let Some(at) = rest
+        .windows(2)
+        .position(|pair| pair[0] == b'&' && pair[1].is_ascii_digit())
+    {
+        parts.push(&rest[..at]);
+        rest = &rest[at + 2..];
+    }
+    parts.push(rest);
+    let (first, last) = (parts[0], parts[parts.len() - 1]);
+    if parts.len() == 1 {
+        return text == first;
+    }
+    let Some(mut middle) = text.strip_prefix(first) else {
+        return false;
+    };
+    let Some(inner) = middle.strip_suffix(last) else {
+        return false;
+    };
+    middle = inner;
+    for part in &parts[1..parts.len() - 1] {
+        match middle.windows(part.len()).position(|w| w == *part) {
+            Some(at) => middle = &middle[at + part.len()..],
+            None => return false,
+        }
+    }
+    true
 }
 
 /// `line` up to and including the colon that ends an error report's numbers,
@@ -211,6 +248,20 @@ mod tests {
         let without = b"     3 *-* x~put(1)\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
         let with = b"       *-* Compiled method \"PUT\" with scope \"Directory\".\n     3 *-* x~put(1)\n       *-* Compiled routine \"SYSSLEEP\".\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
         assert_eq!(cut_error_texts(with), cut_error_texts(without));
+        // This crate's own lines, the texts of 101.20 and 101.21, too.
+        let mut ours = format!(
+            "       *-* {}\n     3 *-* x~put(1)\n       *-* {}\n",
+            interrexx_inventory::errors::render(
+                interrexx_inventory::errors::E101_20,
+                ["PUT", "Directory"]
+            ),
+            interrexx_inventory::errors::render(interrexx_inventory::errors::E101_21, ["SYSSLEEP"]),
+        )
+        .into_bytes();
+        ours.extend_from_slice(
+            b"     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n",
+        );
+        assert_eq!(cut_error_texts(&ours), cut_error_texts(without));
         // A different line of Rexx code, or a different level count of Rexx
         // code, still differs.
         let other_line = b"     4 *-* x~put(1)\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";

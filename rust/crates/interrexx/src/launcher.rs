@@ -45,10 +45,11 @@ pub enum Program {
     Instore(Vec<u8>),
 }
 
-/// The usage text, written to standard error.
-pub const USAGE: &[u8] = b"\nSyntax is \"rexx [-o[d] \"options\"] filename [arguments]\"\n\
-or        \"rexx -e program_string [arguments]\"\n\
-or        \"rexx -v\".\n";
+/// The usage text, written to standard error: a blank line, then one line
+/// per form of the command (`r[env.invocation.forms]`).
+pub const USAGE: &[u8] = b"\nUsage: rexx [-o[d] options] program [arguments]\n\
+\x20      rexx -e program-text [arguments]\n\
+\x20      rexx -v\n";
 
 /// The status the usage text exits with: `main`'s `return -1`.
 pub const USAGE_STATUS: u8 = 255;

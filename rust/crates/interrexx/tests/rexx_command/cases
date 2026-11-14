@@ -3,9 +3,9 @@ run
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 # -v and -V print the banner (env.invocation.version)
 run
@@ -121,9 +121,9 @@ run
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 run
 -e
@@ -582,18 +582,18 @@ run
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 run
 -od
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 run
 -o
@@ -602,9 +602,9 @@ digits 12
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 # arguments, and .SYSCARGS from argc_base - 1
 # (env.invocation.arguments, env.invocation.syscargs)
@@ -768,18 +768,18 @@ run
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 run
 -
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 # the program search (env.invocation.program, env.invocation.notfound)
 run
@@ -1331,9 +1331,9 @@ digits 12
 ----
 rc> 255
 err> 
-err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
-err> or        "rexx -e program_string [arguments]"
-err> or        "rexx -v".
+err> <usage>
+err> <usage>
+err> <usage>
 
 # the endings of a program name: .REX before .rex, no .cls, none last
 # (env.search.program, env.search.extension)
