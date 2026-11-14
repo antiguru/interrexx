@@ -1,26 +1,36 @@
-count 29
+count 39
 /* An untrapped RAISE NOMETHOD is a 97.1 error whose ADDITIONAL holds the
-   receiver and the DESCRIPTION objects themselves, the null string where
-   there is no DESCRIPTION. The message names them by default name; a reader
-   that concatenates an item runs its MAKESTRING then. */
+   objects the clause's ADDITIONAL and DESCRIPTION gave, unconverted: a
+   reader that takes one's string value runs its MAKESTRING then. Only that
+   is compared; the count and order of the items are not specified. */
 signal on syntax name s1
-raise nomethod additional ('obj') description (.key~new)
-s1: o = condition('O'); say o~additional~items o~additional[2]~class~id
-say o~message
-say '['o~additional[1]']' '['o~additional[2]']'
+k = .key~new
+raise nomethod additional ('obj') description (k)
+s1: o = condition('O'); say o~code o~additional~hasItem(k)
+call find o~additional
 signal on syntax name s2
 a = .array~of('p', 'q')
 raise nomethod additional (a) description 'm'
-s2: o = condition('O'); say o~additional[1]~class~id (o~additional[1] == a)
-say o~message
+s2: o = condition('O'); say o~code o~additional~hasItem(a)
 signal on syntax name s3
-raise nomethod additional 'obj'
-s3: o = condition('O'); say o~additional~items o~additional[2]~class~id '['o~additional[2]']'
+k = .key~new
+raise nomethod additional (k)
+s3: o = condition('O'); say o~code o~additional~hasItem(k)
 signal on syntax name s4
-call sub
-s4: o = condition('O'); say o~additional[1]~class~id o~additional[2]~class~id
+k = .key~new
+call sub k
+s4: o = condition('O'); say o~code o~additional~hasItem(k)
+call find o~additional
 exit
-sub: raise nomethod additional (.key~new) description (.array~new) exit
+sub: raise nomethod additional ('obj') description (arg(1)) exit
+find: procedure
+do item over arg(1)
+  if item~isA(.key) then found = item
+end
+say 'found' found~class~id
+say 'reading'
+say '['found']'
+return
 ::class key
 ::method makestring
   say 'makestring ran'

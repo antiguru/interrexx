@@ -1300,24 +1300,24 @@ s: say condition('o')~code (condition('o')~message \== '')
 ```
 
 r[instr.raise.untrapped.additional]
-The `ADDITIONAL` entry of that `SYNTAX 97.1` is an array of two items: the
-value of the clause's ADDITIONAL, or the array its ARRAY makes, and the
-description, or the null string when the clause gave none. Both items are the
-objects themselves, not their string values. Nothing converts them when the
-condition is raised; code that later takes an item's string value asks the
-object for it then, so its `MAKESTRING` runs at that point.
+The objects that the clause's ADDITIONAL, or the array its ARRAY makes, and its
+DESCRIPTION give are in the `ADDITIONAL` of that `SYNTAX 97.1`. They are there
+as the objects themselves: nothing converts them when the condition is raised,
+and code that later takes the string value of one of them runs its
+`MAKESTRING` at that point. How many items that `ADDITIONAL` has, and where in
+it these objects are, is not specified.
 
 ```rexx
 signal on syntax name s
 a = .array~of('p', 'q')
 raise nomethod additional (a) description (.key~new)
 s: o = condition('o')
-say o~additional~items (o~additional[1] == a) o~additional[2]~class~id
-say 'reading'
-say '['o~additional[2]']'
-signal on syntax name t
-raise nomethod additional 'obj'
-t: say '['condition('o')~additional[2]']'
+say o~code o~additional~hasItem(a)
+do item over o~additional
+  if item~isA(.key) then found = item
+end
+say 'found' found~class~id
+say '['found']'
 ::class key
 ::method makestring
   say 'makestring ran'
@@ -1325,11 +1325,10 @@ t: say '['condition('o')~additional[2]']'
 ```
 
 ```output
-2 1 KEY
-reading
+97.1 1
+found KEY
 makestring ran
 [description]
-[]
 ```
 
 ```rexx
