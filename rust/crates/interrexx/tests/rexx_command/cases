@@ -165,8 +165,8 @@ say (
 ----
 rc> 221
 err>      1 *-* say (
-err> Error 35 running INSTORE line 1:  Invalid expression.
-err> Error 35.1:  Incorrect expression detected at "(".
+err> Error 35 running INSTORE line 1:
+err> Error 35.1:
 
 run
 -e
@@ -174,8 +174,8 @@ say 1/0
 ----
 rc> 214
 err>      1 *-* say 1/0
-err> Error 42 running INSTORE line 1:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running INSTORE line 1:
+err> Error 42.3:
 
 run
 -e
@@ -200,8 +200,8 @@ say .syscargs~items
 ----
 rc> 159
 err>      1 *-* say .syscargs~items
-err> Error 97 running INSTORE line 1:  Object method not found.
-err> Error 97.1:  Object ".SYSCARGS" does not understand message "ITEMS".
+err> Error 97 running INSTORE line 1:
+err> Error 97.1:
 
 run
 -e
@@ -379,8 +379,8 @@ opts.rex
 rc> 231
 err>      1 *-* ::OPTIONS :options digits 12
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid subkeyword found.
-err> Error 25.924:  Unknown keyword on ::OPTIONS directive; found ":".
+err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
+err> Error 25.924:
 
 run
 -o
@@ -389,8 +389,8 @@ opts.rex
 ----
 rc> 163
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 93:  Incorrect call to method.
-err> Error 93.900:  argument is not an ::OPTIONS directive.
+err> Error 93:
+err> Error 93.900:
 
 run
 -o
@@ -418,8 +418,8 @@ run
 ----
 rc> 163
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 93:  Incorrect call to method.
-err> Error 93.900:  argument 2 must not be empty.
+err> Error 93:
+err> Error 93.900:
 
 run
 -o
@@ -436,8 +436,8 @@ run
 :x
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program ":x" was not found.
+err> Error 3:
+err> Error 3.901:
 
 # -o's directive is cut to 511 bytes (env.invocation.optstring)
 run
@@ -459,8 +459,8 @@ opts.rex
 rc> 231
 err>      1 *-* ::OPTIONS bogus 9
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid subkeyword found.
-err> Error 25.924:  Unknown keyword on ::OPTIONS directive; found "BOGUS".
+err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
+err> Error 25.924:
 
 run
 -o
@@ -470,8 +470,8 @@ opts.rex
 rc> 230
 err>      1 *-* ::OPTIONS digits x
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 26 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid whole number.
-err> Error 26.5:  DIGITS value must be a positive whole number; found "X".
+err> Error 26 running PackageSettingsFromOptionsDirectiveString line 1:
+err> Error 26.5:
 
 run
 -o
@@ -481,8 +481,8 @@ nonexist
 rc> 231
 err>      1 *-* ::OPTIONS bogus 9
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid subkeyword found.
-err> Error 25.924:  Unknown keyword on ::OPTIONS directive; found "BOGUS".
+err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
+err> Error 25.924:
 
 # -o yields to the program's own ::OPTIONS, and only -od reaches a ::REQUIRES
 # (env.invocation.optstring)
@@ -823,15 +823,15 @@ run
 dironly
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "dironly" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run
 dironly.rex
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "dironly.rex" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run rexx_path=rp
 viarp
@@ -851,8 +851,8 @@ run
 viarp
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "viarp" was not found.
+err> Error 3:
+err> Error 3.901:
 
 # a program in a directory that is not ASCII finds its neighbours
 # (env.invocation.program)
@@ -906,8 +906,8 @@ out> far
 out> LINUX SUBROUTINE DIR/rp\xC3\xA9/farcall.rex
 err>      3 *-* say 1/0
 err>      1 *-* call farcall
-err> Error 42 running DIR/rp\xC3\xA9/farcall.rex line 3:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/rp\xC3\xA9/farcall.rex line 3:
+err> Error 42.3:
 
 run rexx_path=rp_ff
 farmain.rex
@@ -917,8 +917,8 @@ out> far
 out> LINUX SUBROUTINE DIR/rp\xFF/farcall.rex
 err>      3 *-* say 1/0
 err>      1 *-* call farcall
-err> Error 42 running DIR/rp\xFF/farcall.rex line 3:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/rp\xFF/farcall.rex line 3:
+err> Error 42.3:
 
 # a program reached through a link is reported by the path that reached it
 # (env.invocation.program)
@@ -928,8 +928,8 @@ link.rex
 rc> 214
 out> LINUX COMMAND DIR/link.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/link.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/link.rex line 2:
+err> Error 42.3:
 
 run
 link
@@ -937,8 +937,8 @@ link
 rc> 214
 out> LINUX COMMAND DIR/link.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/link.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/link.rex line 2:
+err> Error 42.3:
 
 run
 lsub/ps.rex
@@ -946,45 +946,45 @@ lsub/ps.rex
 rc> 214
 out> LINUX COMMAND DIR/lsub/ps.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/lsub/ps.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/lsub/ps.rex line 2:
+err> Error 42.3:
 
 # not found: 3.901 with no position (env.invocation.notfound)
 run
 nonexist
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "nonexist" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run
 nonexist.rex
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "nonexist.rex" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run
 sub/nonexist
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "sub/nonexist" was not found.
+err> Error 3:
+err> Error 3.901:
 
 # unreadable: 3.1 naming the file found (env.invocation.notfound)
 run
 locked.rex
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.1:  Failure during initialization: File "DIR/locked.rex" is unreadable.
+err> Error 3:
+err> Error 3.1:
 
 run
 locked
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.1:  Failure during initialization: File "DIR/locked.rex" is unreadable.
+err> Error 3:
+err> Error 3.1:
 
 # PARSE SOURCE and error reports name the absolute normalised path
 # (env.invocation.program)
@@ -1005,16 +1005,16 @@ err42.rex
 ----
 rc> 214
 err>      1 *-* say 1/0
-err> Error 42 running DIR/err42.rex line 1:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/err42.rex line 1:
+err> Error 42.3:
 
 run
 err35.rex
 ----
 rc> 221
 err>      1 *-* say 'x' +
-err> Error 35 running DIR/err35.rex line 1:  Invalid expression.
-err> Error 35.1:  Incorrect expression detected at "+".
+err> Error 35 running DIR/err35.rex line 1:
+err> Error 35.1:
 
 # the exit status (env.invocation.status)
 run
@@ -1094,8 +1094,8 @@ my prog.rex
 rc> 214
 out> LINUX COMMAND DIR/my prog.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/my prog.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/my prog.rex line 2:
+err> Error 42.3:
 
 run
 my prog
@@ -1103,8 +1103,8 @@ my prog
 rc> 214
 out> LINUX COMMAND DIR/my prog.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/my prog.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/my prog.rex line 2:
+err> Error 42.3:
 
 run
 p\xff.rex
@@ -1112,8 +1112,8 @@ p\xff.rex
 rc> 214
 out> LINUX COMMAND DIR/p\xFF.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/p\xFF.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/p\xFF.rex line 2:
+err> Error 42.3:
 
 run
 p\xff
@@ -1121,8 +1121,8 @@ p\xff
 rc> 214
 out> LINUX COMMAND DIR/p\xFF.rex
 err>      2 *-* say 1/0
-err> Error 42 running DIR/p\xFF.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/p\xFF.rex line 2:
+err> Error 42.3:
 
 run
 q\xff
@@ -1130,8 +1130,8 @@ q\xff
 rc> 214
 out> LINUX COMMAND DIR/q\xFF
 err>      2 *-* say 1/0
-err> Error 42 running DIR/q\xFF line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running DIR/q\xFF line 2:
+err> Error 42.3:
 
 # arguments are bytes (env.invocation.arguments)
 run
@@ -1248,8 +1248,8 @@ opts.rex
 rc> 232
 err>      1 *-* ::OPTIONS trace x
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 24 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid TRACE request.
-err> Error 24.1:  TRACE request letter must be one of "ACEFILNOR"; found "X".
+err> Error 24 running PackageSettingsFromOptionsDirectiveString line 1:
+err> Error 24.1:
 
 run
 -o
@@ -1258,8 +1258,8 @@ calllib.rex
 ----
 rc> 213
 err>      1 *-* call libr
-err> Error 43 running DIR/calllib.rex line 1:  Routine not found.
-err> Error 43.1:  Could not find routine "LIBR".
+err> Error 43 running DIR/calllib.rex line 1:
+err> Error 43.1:
 
 # an empty -o string with a following word (env.invocation.optstring)
 run
@@ -1269,8 +1269,8 @@ run
 ----
 rc> 163
 err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
-err> Error 93:  Incorrect call to method.
-err> Error 93.900:  argument 2 must not be empty.
+err> Error 93:
+err> Error 93.900:
 
 run
 -o
@@ -1278,8 +1278,8 @@ run
 x:
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "x:" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run
 -o
@@ -1330,8 +1330,8 @@ run
 ----
 rc> 215
 err>      1 *-* -v
-err> Error 41 running INSTORE line 1:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("V") used in arithmetic operation.
+err> Error 41 running INSTORE line 1:
+err> Error 41.1:
 
 run
 -o
@@ -1355,8 +1355,8 @@ run
 ordc
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "ordc" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run rexx_path=rp
 ordx
@@ -1407,8 +1407,8 @@ run rexx_path=rp
 ./viarp
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "./viarp" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run rexx_path=rp
 sub2/inrp
@@ -1420,8 +1420,8 @@ run rexx_path=rp
 ./sub2/inrp
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "./sub2/inrp" was not found.
+err> Error 3:
+err> Error 3.901:
 
 # the written form, then the lower-case form (env.search.case)
 run
@@ -1434,8 +1434,8 @@ run
 a3uponly
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "a3uponly" was not found.
+err> Error 3:
+err> Error 3.901:
 
 run
 ORD
@@ -1457,8 +1457,8 @@ say sibonly()
 ----
 rc> 213
 err>      1 *-* say sibonly()
-err> Error 43 running INSTORE line 1:  Routine not found.
-err> Error 43.1:  Could not find routine "SIBONLY".
+err> Error 43 running INSTORE line 1:
+err> Error 43.1:
 
 run
 -e

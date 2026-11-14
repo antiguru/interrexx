@@ -10,6 +10,8 @@
 
 #[path = "support/banner.rs"]
 mod banner;
+#[path = "support/error_text.rs"]
+mod error_text;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -122,7 +124,10 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
         None => "rc> none\n".to_string(),
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
-        for line in escaped(bytes).replace(&dir, "DIR").lines() {
+        // The message text of an error report is not specified, so a recorded
+        // answer holds the code and subcode of each report and not its text.
+        let bytes = error_text::cut_error_texts(bytes);
+        for line in escaped(&bytes).replace(&dir, "DIR").lines() {
             let Some(line) = banner::recorded(line, oracle) else {
                 continue;
             };
@@ -527,12 +532,7 @@ fn the_oracle_refuses_this_crates_images_as_another_versions() {
             .expect("the oracle starts");
         assert_eq!(
             render(&dir, &ran.stdout, &ran.stderr, ran.status.code(), true),
-            format!(
-                "rc> 253\n\
-                 err> Error 3:  Failure during initialization.\n\
-                 err> Error 3.903:  Program \"DIR/{image}\" cannot be run by this version of \
-                 the REXX interpreter.\n"
-            ),
+            "rc> 253\nerr> Error 3:\nerr> Error 3.903:\n",
             "{image}"
         );
     }

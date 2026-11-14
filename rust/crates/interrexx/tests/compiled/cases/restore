@@ -161,8 +161,8 @@ out> 3
 out> raise
 err>     27 *-*   Program in "DIR/observe.rxo" (no source available).
 err>     17 *-* Program in "DIR/observe.rxo" (no source available).
-err> Error 41 running DIR/observe.rxo line 27:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("a") used in arithmetic operation.
+err> Error 41 running DIR/observe.rxo line 27:
+err> Error 41.1:
 
 rexx
 observee.rxo
@@ -182,8 +182,8 @@ out> 3
 out> raise
 err>     27 *-*   Program in "DIR/observee.rxo" (no source available).
 err>     17 *-* Program in "DIR/observee.rxo" (no source available).
-err> Error 41 running DIR/observee.rxo line 27:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("a") used in arithmetic operation.
+err> Error 41 running DIR/observee.rxo line 27:
+err> Error 41.1:
 
 # A method's, a routine's and the program's traceback lines, and an
 # INTERPRET string, which shows its own text.
@@ -207,8 +207,8 @@ err>     20 *-* Routine RT in package "DIR/levels.rxo" (no source available).
 err>     25 *-* call rt
 err>     25 *-* Routine RR in package "DIR/levels.rxo" (no source available).
 err>      9 *-* Program in "DIR/levels.rxo" (no source available).
-err> Error 41 running DIR/levels.rxo line 17:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("b") used in arithmetic operation.
+err> Error 41 running DIR/levels.rxo line 17:
+err> Error 41.1:
 
 # A restored routine's and method's >I> and <I< lines still print.
 rexx
@@ -315,8 +315,8 @@ rc> 243
 err>      2 *-* /**/@
 err>        *-* Compiled method "NEW" with scope "Routine".
 err>      1 *-* r = .Routine~new('rb', .stream~new('lib.rxo')~arrayin)
-err> Error 13 running rb line 2:  Invalid character in program.
-err> Error 13.1:  Incorrect character in program "@" ('40'X).
+err> Error 13 running rb line 2:
+err> Error 13.1:
 
 # A restored executable inherits no context.
 rexx
@@ -342,8 +342,8 @@ install.rxo
 ----
 rc> 158
 err>      2 *-* Program in "DIR/install.rxo" (no source available).
-err> Error 98 running DIR/install.rxo line 2:  Execution error.
-err> Error 98.909:  Class "ZZZ" not found.
+err> Error 98 running DIR/install.rxo line 2:
+err> Error 98.909:
 
 rexx
 frames.rxo
@@ -371,8 +371,8 @@ rc> 215
 out> in fail
 err>      2 *-* Routine DIR/fail.rxo in package "DIR/fail.rxo" (no source available).
 err>      2 *-* ::requires 'fail.rxo'
-err> Error 41 running DIR/fail.rxo line 2:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("q") used in arithmetic operation.
+err> Error 41 running DIR/fail.rxo line 2:
+err> Error 41.1:
 
 rexx
 prologue.rex
@@ -383,8 +383,8 @@ out>      2 *-* Routine pk in package "pk" (no source available).
 out>        *-* Compiled method "NEW" with scope "Package".
 out>      2 *-* p = .Package~new('pk', .stream~new('faile.rxo')~arrayin)
 err>      4 *-* say .Routine~newFile('fail.rxo')~name
-err> Error 97 running DIR/prologue.rex line 4:  Object method not found.
-err> Error 97.1:  Object "a Routine" does not understand message "NAME".
+err> Error 97 running DIR/prologue.rex line 4:
+err> Error 97.1:
 
 # rexx -o and -od reach a program only when it is compiled: an image
 # neither takes them nor spends the count, so the source it requires does.
@@ -454,8 +454,8 @@ tagline.rex
 ----
 rc> 243
 err>      1 *-* /**/@
-err> Error 13 running DIR/tagline.rex line 1:  Invalid character in program.
-err> Error 13.1:  Incorrect character in program "@" ('40'X).
+err> Error 13 running DIR/tagline.rex line 1:
+err> Error 13.1:
 
 # rexxc translates an image it is given as source.
 rexxc
@@ -465,8 +465,8 @@ copy.rxo
 ----
 rc> 243
 err>      2 *-* /**/@
-err> Error 13 running DIR/lib.rxo line 2:  Invalid character in program.
-err> Error 13.1:  Incorrect character in program "@" ('40'X).
+err> Error 13 running DIR/lib.rxo line 2:
+err> Error 13.1:
 
 rexxc
 libe.rxo
@@ -474,8 +474,8 @@ libe.rxo
 ----
 rc> 243
 err>      2 *-* /**/@
-err> Error 13 running DIR/libe.rxo line 2:  Invalid character in program.
-err> Error 13.1:  Incorrect character in program "@" ('40'X).
+err> Error 13 running DIR/libe.rxo line 2:
+err> Error 13.1:
 
 # A routine restored from an image and run by Routine~call keeps the name
 # rexxc gave it, the path of the file it translated; called by name it is
@@ -563,8 +563,8 @@ rexx
 solo
 ----
 rc> 253
-err> Error 3:  Failure during initialization.
-err> Error 3.901:  Failure during initialization: Program "solo" was not found.
+err> Error 3:
+err> Error 3.901:
 
 # What a program can still read from its image: the source of the routines
 # and methods and of the package is empty, but the data of a ::RESOURCE and

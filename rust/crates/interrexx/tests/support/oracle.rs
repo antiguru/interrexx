@@ -362,11 +362,6 @@ pub enum StderrComparison {
     /// for a program whose trace lines are written by two threads whose
     /// interleaving is not a specified observable.
     Multiset,
-    /// [`StderrComparison::Raw`], except that the message text of an error
-    /// report is dropped: only its code and subcode are compared, as
-    /// [`super::error_codes_only`] describes. For a comparison of the class
-    /// library's own errors, whose texts are not specified.
-    ErrorCodes,
 }
 
 /// How `stdout` is compared: byte-for-byte, or as a sorted multiset of lines.
@@ -449,26 +444,34 @@ pub fn descriptor_diff_modes(
     stdout_mode: StdoutComparison,
     stderr_mode: StderrComparison,
 ) -> DescriptorDiff {
+    // The message text of an error report is not specified, so each side's
+    // error lines are cut to their code and subcode before any mode compares
+    // the channel (`r[conv.error.text]`).
+    let (rust_stdout, cpp_stdout) = (
+        super::error_text::cut_error_texts(&rust.stdout),
+        super::error_text::cut_error_texts(&cpp.stdout),
+    );
+    let (rust_stderr, cpp_stderr) = (
+        super::error_text::cut_error_texts(&rust.stderr),
+        super::error_text::cut_error_texts(&cpp.stderr),
+    );
     DescriptorDiff {
         stdout: match stdout_mode {
-            StdoutComparison::Raw => rust.stdout != cpp.stdout,
+            StdoutComparison::Raw => rust_stdout != cpp_stdout,
             StdoutComparison::Multiset => {
-                stdout_multiset(&rust.stdout) != stdout_multiset(&cpp.stdout)
+                stdout_multiset(&rust_stdout) != stdout_multiset(&cpp_stdout)
             }
         },
         stderr: match stderr_mode {
             StderrComparison::Normalized => {
-                super::normalize_stderr(&rust.stderr) != super::normalize_stderr(&cpp.stderr)
+                super::normalize_stderr(&rust_stderr) != super::normalize_stderr(&cpp_stderr)
             }
             StderrComparison::Raw => {
-                super::normalize_library_lines(&rust.stderr)
-                    != super::normalize_library_lines(&cpp.stderr)
+                super::normalize_library_lines(&rust_stderr)
+                    != super::normalize_library_lines(&cpp_stderr)
             }
             StderrComparison::Multiset => {
-                stderr_multiset(&rust.stderr) != stderr_multiset(&cpp.stderr)
-            }
-            StderrComparison::ErrorCodes => {
-                super::error_codes_only(&rust.stderr) != super::error_codes_only(&cpp.stderr)
+                stderr_multiset(&rust_stderr) != stderr_multiset(&cpp_stderr)
             }
         },
         exit_code: wrapped_exit_code(rust.exit_code) != cpp.expect_exit_code(),
@@ -582,6 +585,60 @@ mod tests {
             StderrComparison::Raw,
         );
         assert_eq!(differs, vec!["stderr"]);
+    }
+
+    /// The two lines of an error report, with `text` after the
+    /// colons of both.
+    fn report(code: &str, sub: &str, text: &str) -> Vec<u8> {
+        format!(
+            "     2 *-* say 1/0\nError {code} running /t/x.rex line 2:  {text}\nError {code}.{sub}:  {text}\n"
+        )
+        .into_bytes()
+    }
+
+    /// Two error reports that differ only in message text are no difference
+    /// in any mode and on either channel, and a different code or subcode is
+    /// one (`r[conv.error.text]`).
+    #[test]
+    fn error_reports_compare_by_code_and_subcode_not_by_text() {
+        let modes = [
+            StderrComparison::Normalized,
+            StderrComparison::Raw,
+            StderrComparison::Multiset,
+        ];
+        let ours = report("42", "3", "One wording of it.");
+        for mode in modes {
+            let same_code = descriptor_diffs_with(
+                &outcome(&ours),
+                &cpp_outcome(&report("42", "3", "Another wording: of it.")),
+                mode,
+            );
+            assert!(same_code.is_empty(), "{mode:?}: {same_code:?}");
+            for other in [
+                report("43", "3", "One wording of it."),
+                report("42", "4", "One wording of it."),
+            ] {
+                let differs = descriptor_diffs_with(&outcome(&ours), &cpp_outcome(&other), mode);
+                assert_eq!(differs, vec!["stderr"], "{mode:?}");
+            }
+        }
+        // A report redirected to standard output is cut as well.
+        for stdout_mode in [StdoutComparison::Raw, StdoutComparison::Multiset] {
+            let same = descriptor_diffs_modes(
+                &stdout_outcome(&ours),
+                &cpp_stdout_outcome(&report("42", "3", "Another wording: of it.")),
+                stdout_mode,
+                StderrComparison::Normalized,
+            );
+            assert!(same.is_empty(), "{stdout_mode:?}: {same:?}");
+            let differs = descriptor_diffs_modes(
+                &stdout_outcome(&ours),
+                &cpp_stdout_outcome(&report("42", "4", "One wording of it.")),
+                stdout_mode,
+                StderrComparison::Normalized,
+            );
+            assert_eq!(differs, vec!["stdout"], "{stdout_mode:?}");
+        }
     }
 
     /// Both directions of [`StderrComparison`], on a transcript pair whose

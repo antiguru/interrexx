@@ -11,6 +11,8 @@
 //! bytes after its end, so no test here hands it an image that was cut,
 //! extended or changed in its header.
 
+#[path = "support/error_text.rs"]
+mod error_text;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -106,10 +108,12 @@ impl Side {
             command.stdin(file);
         }
         let output = command.output().expect("the binary starts");
+        // The message text of an error report is not specified, so a recorded
+        // answer holds the code and subcode of each report and not its text.
         let rendered = render(
             &self.dir,
-            &output.stdout,
-            &output.stderr,
+            &error_text::cut_error_texts(&output.stdout),
+            &error_text::cut_error_texts(&output.stderr),
             output.status.code(),
         );
         if case.directive == "compile" {

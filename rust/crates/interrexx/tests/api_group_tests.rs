@@ -29,8 +29,8 @@ use std::path::PathBuf;
 
 use group_runner::{
     GATE_ENV, SwitchMode, VERBOSITY, directive_bodies, excerpt, first_difference, fresh_copy,
-    gate_mode, group_file, masked, outcome, passes, run_crate, run_oracle, skip, test_names,
-    uses_rxapi,
+    gate_mode, group_file, masked, outcome, passes, run_crate, run_oracle, skip, stderr_agrees,
+    test_names, uses_rxapi,
 };
 use support::oracle;
 
@@ -210,7 +210,9 @@ fn every_test_of_the_api_groups_passes_and_matches_the_oracle_but_the_recorded()
                 passing.insert(member.clone());
             }
             let (their_out, our_out) = (masked(&theirs.stdout), masked(&ours.stdout));
-            if their_out != our_out || theirs.stderr != ours.stderr || theirs.status != ours.status
+            if their_out != our_out
+                || !stderr_agrees(&theirs.stderr, &ours.stderr)
+                || theirs.status != ours.status
             {
                 report.push_str(&format!(
                     "{member}: oracle {:?} {} {:?}, ours {:?} {} {:?}; {}\n",
@@ -223,7 +225,7 @@ fn every_test_of_the_api_groups_passes_and_matches_the_oracle_but_the_recorded()
                     first_difference(&their_out, &our_out),
                 ));
                 if outcome(&theirs.stdout) == outcome(&ours.stdout)
-                    && theirs.stderr == ours.stderr
+                    && stderr_agrees(&theirs.stderr, &ours.stderr)
                     && theirs.status == ours.status
                 {
                     detail_differing.insert(member);
@@ -247,7 +249,7 @@ fn every_test_of_the_api_groups_passes_and_matches_the_oracle_but_the_recorded()
         assert!(theirs.status.is_some(), "the oracle did not finish {group}");
         let (their_out, our_out) = (masked(&theirs.stdout), masked(&ours.stdout));
         if their_out != our_out
-            || theirs.stderr != ours.stderr
+            || !stderr_agrees(&theirs.stderr, &ours.stderr)
             || theirs.status != ours.status
             || !passes(&ours)
         {

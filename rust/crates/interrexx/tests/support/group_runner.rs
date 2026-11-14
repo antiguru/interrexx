@@ -333,9 +333,11 @@ pub fn without_rxfuncquery(frm: &Path) {
 }
 
 /// `stdout` with what differs between any two runs of one side masked: each
-/// timing line's duration and each detail header's timestamp.
+/// timing line's duration and each detail header's timestamp. The message text
+/// of an error report is cut as well, since it is not specified.
 pub fn masked(stdout: &[u8]) -> Vec<u8> {
-    let text = String::from_utf8_lossy(stdout);
+    let stdout = crate::support::error_text::cut_error_texts(stdout);
+    let text = String::from_utf8_lossy(&stdout);
     let lines: Vec<&str> = text
         .split('\n')
         .map(|line| {
@@ -392,10 +394,17 @@ pub fn passes(run: &Run) -> bool {
     run.status == Some(0) && outcome(&run.stdout).starts_with("pass,")
 }
 
+/// Whether two `stderr` bytes agree, the message text of an error report not
+/// being specified.
+pub fn stderr_agrees(theirs: &[u8], ours: &[u8]) -> bool {
+    crate::support::error_text::cut_error_texts(theirs)
+        == crate::support::error_text::cut_error_texts(ours)
+}
+
 /// Whether the two runs agree on every descriptor, stdout masked.
 pub fn agree(theirs: &Run, ours: &Run) -> bool {
     masked(&theirs.stdout) == masked(&ours.stdout)
-        && theirs.stderr == ours.stderr
+        && stderr_agrees(&theirs.stderr, &ours.stderr)
         && theirs.status == ours.status
 }
 
