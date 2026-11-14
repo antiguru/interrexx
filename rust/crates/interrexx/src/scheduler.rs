@@ -389,6 +389,10 @@ pub(crate) struct Activities {
     attached: usize,
     /// The native calls running with the baton vacated, innermost last.
     pub(crate) vacancies: Vec<Vacancy>,
+    /// The activities a callback's lend set aside ([`Interp::serve_recall`]),
+    /// innermost last. Each runs again only once that lend has ended
+    /// (Deviation 174).
+    lenders: Vec<ActivityId>,
 }
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
@@ -457,6 +461,7 @@ impl Activities {
             ended_stuck: false,
             attached: 0,
             vacancies: Vec::new(),
+            lenders: Vec::new(),
         }
     }
 
@@ -1165,21 +1170,59 @@ impl Interp {
         let me = self.activities.running;
         let mut at = owner;
         for _ in 0..self.activities.idle.len() {
-            let next = match self.activities.guards.waiting(at) {
-                Some(crate::guards::Waiting::Guard(key)) => self.activities.guards.owner(key),
-                Some(crate::guards::Waiting::Message(id)) => self
-                    .activities
-                    .message_ids
-                    .iter()
-                    .find(|(_, waited)| **waited == id)
-                    .and_then(|(message, _)| self.message_runner(*message)),
-                None => None,
-            };
-            match next {
+            match self.waited_on(at) {
                 Some(next) if next == me => return true,
                 Some(next) => at = next,
                 None => return false,
             }
+        }
+        false
+    }
+
+    /// The activity `at` waits on, as [`Interp::waits_on`] names it.
+    fn waited_on(&self, at: ActivityId) -> Option<ActivityId> {
+        self.waits_on(self.activities.guards.waiting(at)?)
+    }
+
+    /// The activity a wait for `waiting` waits on: the owner of the guard
+    /// lock, or the activity running the send of the message whose
+    /// completion it waits for.
+    fn waits_on(&self, waiting: crate::guards::Waiting) -> Option<ActivityId> {
+        match waiting {
+            crate::guards::Waiting::Guard(key) => self.activities.guards.owner(key),
+            crate::guards::Waiting::Message(id) => self
+                .activities
+                .message_ids
+                .iter()
+                .find(|(_, waited)| **waited == id)
+                .and_then(|(message, _)| self.message_runner(*message)),
+        }
+    }
+
+    /// Whether a wait for `reason` waits, through a chain of waits, on an
+    /// activity a callback's lend has set aside below the running one. That
+    /// activity runs again only once the callback has ended, so the wait can
+    /// never end (Deviation 174).
+    fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
+        let lenders = &self.activities.lenders;
+        if lenders.is_empty() {
+            return false;
+        }
+        let mut at = match reason {
+            ParkReason::Guard(key) => self.waits_on(crate::guards::Waiting::Guard(key)),
+            ParkReason::MessageResult(id) | ParkReason::MessageWait(id) => {
+                self.waits_on(crate::guards::Waiting::Message(id))
+            }
+            _ => None,
+        };
+        for _ in 0..self.activities.idle.len() {
+            let Some(next) = at else {
+                return false;
+            };
+            if lenders.contains(&next) {
+                return true;
+            }
+            at = self.waited_on(next);
         }
         false
     }
@@ -1423,7 +1466,9 @@ impl Interp {
     /// on this stack until the running one is woken. Where nothing can run,
     /// the refusal is an inverted wait if an activity is ready whose frames
     /// lie below a loop on the stack, and a wait nothing can end where no
-    /// activity is ready at all.
+    /// activity is ready at all. A wait [`Interp::waits_on_a_lender`] finds
+    /// on an activity a callback stopped is refused as an inverted wait at
+    /// once.
     pub(crate) fn pinned_wait(&mut self, reason: ParkReason) -> Option<Failure> {
         pinned_park!(self, reason);
         self.park(reason);
@@ -1432,7 +1477,13 @@ impl Interp {
             self.cancel_wait();
             return Some(Raised::insufficient_stack().into());
         }
-        let waited = self.run_others(true);
+        // Whatever else could still run, nothing it does lets that activity
+        // run before this wait ends.
+        let waited = if self.waits_on_a_lender(reason) {
+            Ok(Waited::Blocked { inverted: true })
+        } else {
+            self.run_others(true)
+        };
         pinned_unpark!(self);
         let failure = match waited {
             Ok(Waited::Woken) => return None,
@@ -1881,6 +1932,7 @@ impl Interp {
                 DrainAt::Stopped => Below::Buried,
             };
             self.activities.owners.push((outgoing, below));
+            self.activities.lenders.push(outgoing);
         }
         // An attached activity runs nothing between its callbacks, so what a
         // callback rooted as a temporary is dropped once it gives the baton
@@ -1904,6 +1956,7 @@ impl Interp {
             self.roots.activity_mut().pop_frame(frame);
         }
         if let Some(activity) = activity {
+            self.activities.lenders.pop();
             self.activities.owners.pop();
             self.swap_running(outgoing, activity);
         }
@@ -2176,7 +2229,7 @@ impl Interp {
 
     /// A failure another activity answered main's root loop with after
     /// main's own end, kept for the program's end to report.
-    fn keep_late_failure(&mut self, failure: Failure) {
+    pub(crate) fn keep_late_failure(&mut self, failure: Failure) {
         self.activities.late_failures.push(failure);
     }
 

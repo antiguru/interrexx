@@ -78,21 +78,45 @@ fn run(name: &str, program: &str) -> Answer {
 
 /// [`run`], answering besides how long our run took, from its start to its exit.
 fn run_timed(name: &str, program: &str) -> (Answer, std::time::Duration) {
-    run_against(name, program, gate_mode())
+    let asked = if gate_mode() {
+        Oracle::Whole
+    } else {
+        Oracle::Not
+    };
+    run_against(name, program, asked)
 }
 
 /// [`run`] where the oracle is not asked even under `REXX_CORPUS_GATE`: it aborts the program,
 /// or what the program reports is a property of our memory use that the oracle does not share.
 fn run_ours(name: &str, program: &str) -> Answer {
-    run_against(name, program, false).0
+    run_against(name, program, Oracle::Not).0
 }
 
-/// [`run_timed`], asking the oracle where `oracle`.
+/// [`run`] where the oracle, under `REXX_CORPUS_GATE`, must answer the same stderr and exit status
+/// only: its stdout differs as a Deviation says.
+fn run_agreeing_on_status(name: &str, program: &str) -> Answer {
+    let asked = if gate_mode() {
+        Oracle::Status
+    } else {
+        Oracle::Not
+    };
+    run_against(name, program, asked).0
+}
+
+/// What of a run the oracle is asked to answer the same.
+#[derive(Clone, Copy, PartialEq)]
+enum Oracle {
+    Not,
+    Whole,
+    Status,
+}
+
+/// [`run_timed`], asking the oracle as `oracle` says.
 #[expect(
     clippy::disallowed_methods,
     reason = "the run's wall time is what an idle thread must not stretch"
 )]
-fn run_against(name: &str, program: &str, oracle: bool) -> (Answer, std::time::Duration) {
+fn run_against(name: &str, program: &str, oracle: Oracle) -> (Answer, std::time::Duration) {
     let dir = build(name);
     let program = fixture(program);
     let began = std::time::Instant::now();
@@ -117,19 +141,24 @@ fn run_against(name: &str, program: &str, oracle: bool) -> (Answer, std::time::D
         String::from_utf8_lossy(&output.stderr).into_owned(),
         output.status.code().unwrap_or(-1),
     );
-    if oracle {
-        let oracle = support::oracle::locate();
-        let library_path = format!("{}:{}", oracle.lib_dir().display(), dir.display());
-        let theirs = oracle.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
-        assert_eq!(
-            (
-                String::from_utf8_lossy(&theirs.stdout).into_owned(),
-                String::from_utf8_lossy(&theirs.stderr).into_owned(),
-                theirs.expect_exit_code(),
-            ),
-            ours,
-            "the oracle"
+    if oracle != Oracle::Not {
+        let located = support::oracle::locate();
+        let library_path = format!("{}:{}", located.lib_dir().display(), dir.display());
+        let theirs = located.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
+        let theirs = (
+            String::from_utf8_lossy(&theirs.stdout).into_owned(),
+            String::from_utf8_lossy(&theirs.stderr).into_owned(),
+            theirs.expect_exit_code(),
         );
+        if oracle == Oracle::Whole {
+            assert_eq!(theirs, ours, "the oracle");
+        } else {
+            assert_eq!(
+                (&theirs.1, theirs.2),
+                (&ours.1, ours.2),
+                "the oracle's status"
+            );
+        }
     }
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
     (ours, took)
@@ -325,16 +354,118 @@ fn an_idle_attached_thread_does_not_hold_program_end() {
 }
 
 /// A message an attached thread sent before the main program ends, still running when it does,
-/// holds the program's end until it finishes, and the program ends with rc 0. The callback buries
-/// the main activity while it runs, so the run does not separate the hold on the program's end
-/// from main waiting for the callback.
-// spec: native.threads.end
+/// holds the program's end until it finishes, and the program ends with rc 0. The main program
+/// says it ends only once the message has finished, as it makes no progress while the message runs
+/// (Deviation 174). The oracle says so first, so it is asked for the exit status only.
+// spec: native.threads.end, native.threads.attach.deviation.174
 #[test]
 fn a_running_callback_holds_program_end() {
     assert_eq!(
-        run("attach-slow", "slow.rex"),
-        ("slow done\n".to_owned(), String::new(), 0)
+        run_agreeing_on_status("attach-slow", "slow.rex"),
+        ("slow done\nmain ends\n".to_owned(), String::new(), 0)
     );
+}
+
+/// A message an attached thread sent sleeps a second while the main program loops on
+/// `SysSleep 0.05`: the main program makes no progress meanwhile, its sleeps included, and counts
+/// fewer than five (Deviation 174). The oracle runs it meanwhile and says `main ran`, so it is asked
+/// for the exit status only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_runs_while_main_runs_rexx() {
+    assert_eq!(
+        run_agreeing_on_status("attach-nap", "nap.rex"),
+        ("main stopped\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A message an attached thread sends while the main program is in a call into the extension,
+/// which blocks for a second, runs during the call and sleeps two seconds. The call returns
+/// first, but the main program goes on only once the message has finished (Deviation 174). The
+/// oracle goes on at the return, so it is asked for the exit status only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_during_a_native_call_holds_its_return() {
+    assert_eq!(
+        run_agreeing_on_status("attach-pause", "pause.rex"),
+        ("slow done\nmain returned\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A message an attached thread sends while the main program waits on an event semaphore runs
+/// during the wait and posts the semaphore, then sleeps a second. The main program wakes only once
+/// the message has finished (Deviation 174). The oracle wakes it at the post, so it is asked for
+/// the exit status only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_during_a_wait_holds_its_wake() {
+    assert_eq!(
+        run_agreeing_on_status("attach-semwait", "semwait.rex"),
+        ("callback ends\nsem seen\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A second attached thread's message starts while the first's sleeps, and sleeps as long: the
+/// first, whose sleep ends first, finishes only after the second, as messages are served one at
+/// a time, the later on top of the earlier (Deviation 174). The oracle finishes them in the order
+/// their sleeps end (`a b`), so it is asked for the exit status only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn callbacks_are_served_one_on_top_of_another() {
+    assert_eq!(
+        run_agreeing_on_status("attach-lifo", "lifo.rex"),
+        ("b a\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// An attached thread's message waits for the guard of an object whose guarded method the main
+/// program runs. The main program makes no progress while the message runs, so the wait is
+/// refused at once as an inverted wait (Deviation 174): the message answers nothing, and the
+/// program, which runs to its end, ends with rc 120. The oracle waits for the method and says
+/// `ticked 1`, so it is not asked.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_waiting_for_a_guard_the_main_program_holds_is_refused() {
+    assert_eq!(
+        run_ours("attach-guard", "guard.rex"),
+        ("ticked 0\n".to_owned(), inverted_wait("a guard"), 120)
+    );
+}
+
+/// An attached thread's message waits for the result of the message whose send the main program
+/// runs. The wait is refused at once as an inverted wait, as a wait for a guard the main program
+/// holds is (Deviation 174). The oracle says `got served`, so it is not asked.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_waiting_for_a_result_the_main_program_gives_is_refused() {
+    assert_eq!(
+        run_ours("attach-reply", "reply.rex"),
+        (
+            "done\n".to_owned(),
+            inverted_wait("a message's completion"),
+            120
+        )
+    );
+}
+
+/// An attached thread's message waits on an event semaphore that a second attached thread's
+/// message, sent a second later, posts. The first waits on nothing the main program would
+/// provide, so it is not refused, and the second message, served on top of it, ends its wait.
+// spec: native.threads.attach
+#[test]
+fn attached_callbacks_wait_for_each_other() {
+    assert_eq!(
+        run("attach-coord", "coord.rex"),
+        ("sem seen\ndone\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// The line on stderr that refuses a pinned wait for `what` as an inverted wait.
+fn inverted_wait(what: &str) -> String {
+    format!(
+        "interrexx: a pinned wait for {what} that only an activity pinned below it can end is \
+         not implemented\n"
+    )
 }
 
 /// One thread attaches, sends `TICK` and detaches ten thousand times: every message runs, and
