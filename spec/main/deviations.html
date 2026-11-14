@@ -1164,6 +1164,14 @@ condition of its own.</p>
 <p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, before
 anything is read or positioned, answers 0, the host's offset when nothing has
 been consumed. ooRexx answers the size of the file.</p>
+<h2 id="172-a-lists-array-counts-only-the-items-it-holds"><a class="header" href="#172-a-lists-array-counts-only-the-items-it-holds">172. A list's Array counts only the items it holds</a></h2>
+<p>The Array that <code>allItems</code> and <code>makeArray</code> answer for a <code>List</code> with an entry
+that holds nothing has no item at that entry's place, and its <code>items</code> counts
+only the items it holds, so <code>items</code> and <code>isEmpty</code> agree with what the Array
+holds; <code>DO OVER</code> the list skips that entry. ooRexx counts the empty place as an
+item: <code>items</code> stays one higher than the items the Array holds, and <code>isEmpty</code>
+answers 0 after its last item is removed. Its <code>DO OVER</code> assigns <code>.nil</code> for the
+entry.</p>
 
                     </main>
 
