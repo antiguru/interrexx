@@ -310,20 +310,8 @@ impl Surface for Interp {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()> {
         let caller = self.caller();
-        match self.send_message(receiver, name, scope, arguments, caller) {
-            Ok(answer) => {
-                if let Some(answer) = answer {
-                    self.roots.activity_mut().push_temp(answer);
-                }
-                Ok(answer)
-            }
-            // A send retried once a guard lock is free leaves nothing behind.
-            Err(_) if self.send_retried() => Err(()),
-            Err(failure) => {
-                self.hold_native_condition(failure);
-                Err(())
-            }
-        }
+        let answered = self.send_message(receiver, name, scope, arguments, caller);
+        self.sent(answered)
     }
 
     fn send_own(
@@ -337,10 +325,16 @@ impl Surface for Interp {
         if !self.receiver_has_scope(receiver, class) {
             return None;
         }
-        // A send whose search starts at the class itself finds the class's
-        // own method, which a subclass's method of the same name would
-        // otherwise come ahead of (r[class.methods.scoped]).
-        Some(self.send(receiver, name, Some(class), arguments))
+        // A search that starts at a class finds that class's method ahead of
+        // a method of the same name a more derived class defines
+        // (r[class.methods.scoped]). Starting at the most derived class of
+        // the library run through `class` keeps a library subclass's own
+        // methods, such as those of the supplier a stream answers, which
+        // `class`'s methods would find uninitialised.
+        let start = self.library_scope_through(receiver, class);
+        let caller = self.caller();
+        let answered = self.send_past_own(receiver, name, start, arguments, caller);
+        Some(self.sent(answered))
     }
 
     fn store_get(&mut self, table: ObjRef, index: &[u8]) -> Option<Result<Option<ObjRef>, ()>> {
@@ -990,6 +984,25 @@ impl Interp {
             state.bytes.lend();
         }
         Some(state)
+    }
+
+    /// A send's answer as the surface reports it, rooted, or its condition
+    /// held.
+    fn sent(&mut self, answered: Result<Option<ObjRef>, Failure>) -> Result<Option<ObjRef>, ()> {
+        match answered {
+            Ok(answer) => {
+                if let Some(answer) = answer {
+                    self.roots.activity_mut().push_temp(answer);
+                }
+                Ok(answer)
+            }
+            // A send retried once a guard lock is free leaves nothing behind.
+            Err(_) if self.send_retried() => Err(()),
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                Err(())
+            }
+        }
     }
 
     /// A direct collection member's answer as the surface reports it, rooted,

@@ -551,6 +551,18 @@ impl ClassRegistry {
         self.graph.has_scope_at(handle, scope)
     }
 
+    /// The scopes folded into a behaviour a receiver holds, each after the
+    /// scopes it sees past itself.
+    pub fn scopes_at(&self, handle: BehaviourHandle) -> &[ObjRef] {
+        self.graph.scopes_at(handle)
+    }
+
+    /// [`Self::scopes_at`] for `class`'s class-side behaviour.
+    pub fn class_scopes(&self, class: ObjRef) -> &[ObjRef] {
+        self.graph
+            .scopes_at(self.graph.class_behaviour_handle(class))
+    }
+
     /// The scope a `SUPER` reference resolves to for a method found at `scope` in a
     /// behaviour a receiver holds.
     pub fn super_scope_at(&self, handle: BehaviourHandle, scope: ObjRef) -> Option<ObjRef> {

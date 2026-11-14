@@ -111,10 +111,12 @@ pub trait Surface {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()>;
 
-    /// [`Surface::send`] of the method that the built-in class `id` defines for
-    /// `name`, so that a method a subclass or the object itself defines under
-    /// that name does not run. `None` where `receiver` is not an instance of
-    /// that class or of a subclass of it.
+    /// [`Surface::send`] of the method that the built-in class `id`, or a
+    /// subclass of it that the interpreter's own library defines, has for
+    /// `name` in `receiver`'s class order, so that a method a class of the
+    /// program or the object itself defines under that name does not run.
+    /// `None` where `receiver` is not an instance of that class or of a
+    /// subclass of it.
     fn send_own(
         &mut self,
         receiver: ObjRef,

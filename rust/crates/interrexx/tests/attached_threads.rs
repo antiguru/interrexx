@@ -662,6 +662,97 @@ array 3 directory 0 table 0
     );
 }
 
+/// [`thread_interface_members_send_no_message_a_subclass_redefines`] on instances of the built-in
+/// classes themselves, each given methods of its own under the names of the matching messages with
+/// `setMethod` and the scope `OBJECT`: none of those methods runs.
+// spec: native.threads.attach
+#[test]
+fn thread_interface_members_run_no_method_an_object_sets_on_itself() {
+    let expected = "\
+Array Stem Supplier Object Package Routine Method
+ITEMS runs
+direct: fake
+ArrayAt v
+ArrayAt null
+ArrayAppend 2
+ArrayAppendString 3
+ArraySize 3
+ArrayItems 3
+ArrayDimension 1
+GetStemElement v
+GetStemElement null
+GetStemArrayElement w
+GetAllStemElements present
+GetStemArrayElement null
+GetStemValue S.
+SupplierAvailable 1
+SupplierItem i1
+SupplierIndex x1
+SupplierAvailable 0
+DirectoryAt v
+DirectoryRemove v
+StringTableAt v
+StringTableRemove v
+IsInstanceOf 1
+HasMethod 0
+FindPackageClass null
+GetPackageRoutines present
+GetPackagePublicRoutines present
+GetPackageClasses present
+GetPackagePublicClasses present
+GetPackageMethods present
+GetRoutinePackage present
+GetMethodPackage present
+";
+    assert_eq!(
+        run("attach-objm", "objm.rex"),
+        (expected.to_owned(), String::new(), 0)
+    );
+}
+
+/// [`thread_interface_members_send_no_message_a_subclass_redefines`] on an instance of a class of
+/// the program that inherits `Comparable`, a mixin class of the interpreter's own library, ahead of
+/// a second class of the program that redefines the array's methods: the redefinitions behind the
+/// mixin do not run either.
+// spec: native.threads.attach
+#[test]
+fn thread_interface_members_send_no_message_a_subclass_behind_a_library_mixin_redefines() {
+    let expected = "\
+ArrayAt v
+ArrayAt null
+ArrayAppend 2
+ArrayAppendString 3
+ArraySize 3
+ArrayItems 3
+ArrayDimension 1
+";
+    assert_eq!(
+        run("attach-mixin", "mixin.rex"),
+        (expected.to_owned(), String::new(), 0)
+    );
+}
+
+/// The supplier members of the thread interface on the supplier a stream answers, whose class is
+/// a subclass of `Supplier` the interpreter's own library defines: that subclass's methods answer,
+/// so the members read the stream's lines. Not asked of the oracle, which ends this program with a
+/// segmentation fault.
+// spec: native.threads.attach
+#[test]
+fn thread_interface_supplier_members_run_a_library_subclass_s_own_methods() {
+    let expected = "\
+StreamSupplier 1 line1 1
+SupplierAvailable 1
+SupplierItem line1
+SupplierIndex 1
+SupplierAvailable 1
+after: 1 line2
+";
+    assert_eq!(
+        run_ours("attach-ssup", "ssup.rex"),
+        (expected.to_owned(), String::new(), 0)
+    );
+}
+
 /// An attached thread's message waits on an event semaphore that a started activity, asleep
 /// when the message arrives, posts once its sleep of seven seconds ends. The sleep may end the
 /// wait, so stderr says nothing of it however long it takes.
