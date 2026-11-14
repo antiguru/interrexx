@@ -1,0 +1,4 @@
+36	0	Unmatched "(" or "[" in expression.
+36	900	&1.
+36	901	Left parenthesis "(" in position &1 on line &2 requires a corresponding right parenthesis ")".
+36	902	Square bracket "[" in position &1 on line &2 requires a corresponding right square bracket "]".

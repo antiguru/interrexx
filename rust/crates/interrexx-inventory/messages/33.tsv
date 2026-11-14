@@ -1,0 +1,8 @@
+33	0	Invalid expression result.
+33	1	Value of NUMERIC DIGITS ("&1") must exceed value of NUMERIC FUZZ ("&2").
+33	2	Value of NUMERIC DIGITS ("&1") must not exceed &2.
+33	900	&1.
+33	901	Invalid expression result following VALUE keyword of ADDRESS instruction.
+33	902	Invalid expression result following VALUE keyword of SIGNAL instruction.
+33	903	Invalid expression result following VALUE keyword of TRACE instruction.
+33	904	Invalid expression result following SYNTAX keyword of RAISE instruction.

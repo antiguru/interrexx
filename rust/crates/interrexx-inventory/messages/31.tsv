@@ -1,0 +1,5 @@
+31	0	Name starts with number or ".".
+31	1	A value cannot be assigned to a number; found "&1".
+31	2	Variable symbol must not start with a number; found "&1".
+31	3	Variable symbol must not start with a "."; found "&1".
+31	900	&1.
