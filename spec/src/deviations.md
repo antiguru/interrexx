@@ -1385,7 +1385,7 @@ DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
 3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
 the owner on 2026-11-14 (#554).
 
-## 172. A callback after the embedding ends the interpreter
+## 174. A callback after the embedding ends the interpreter
 
 A thread that stays attached after the embedding calls `Terminate` can still
 make callbacks through its context, and each one is refused: it answers the
@@ -1393,14 +1393,14 @@ failure value of the member, runs nothing, and does not wait. The interpreter
 no longer exists once `Terminate` returns. ooRexx runs such a callback and
 answers its result.
 
-## 173. DetachThread from the wrong thread or twice
+## 175. DetachThread from the wrong thread or twice
 
 `DetachThread` called from a thread other than the one that attached the
 context does nothing, and so does a second `DetachThread` from the thread that
 attached it. The attachment stays as the first detach left it, or as it was.
 ooRexx aborts the process in both cases.
 
-## 174. A message from an attached thread stops the activity it interrupts
+## 176. A message from an attached thread stops the activity it interrupts
 
 While a message that a thread attached to the interpreter sends runs, the
 activity that was running when it arrived, the main program or another, makes

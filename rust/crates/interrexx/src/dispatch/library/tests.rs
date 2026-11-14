@@ -1160,7 +1160,7 @@ fn pending_callback_unposted(interp: &Interp, context: usize) -> interrexx_api::
 
 /// **A callback that arrives while another runs is held, and the held ones
 /// are served first come, first served, once it has stopped running**
-/// (`r[native.threads.attach.deviation.174]`). Three threads attached to
+/// (`r[native.threads.attach.deviation.176]`). Three threads attached to
 /// contexts of their own post their recalls one after another while the
 /// running activity is marked as a callback that runs: draining serves none.
 /// Once it no longer runs, one drain serves all three in the order they

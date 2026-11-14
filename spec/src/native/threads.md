@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166, 172, 173, 174]
+deviations: [166, 174, 175, 176]
 ---
 
 # Threads and halting
@@ -19,7 +19,7 @@ A thread that native code starts may attach to the interpreter. It is then an
 [activity](../concurrency/activities.md) of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
 except the one each message interrupts, which [Deviation
-174](r:native.threads.attach.deviation.174) stops, and it leaves the
+176](r:native.threads.attach.deviation.176) stops, and it leaves the
 interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.
 
@@ -49,10 +49,10 @@ rc 0
 posted
 ```
 
-r[native.threads.attach.deviation.174]
+r[native.threads.attach.deviation.176]
 While a message that an attached thread sends runs, the activity that was
 running when it arrived makes no progress in Rexx clauses ([Deviation
-174](../deviations.md#174-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
+176](../deviations.md#176-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
 The message runs at that activity's next clause boundary, or during its wait
 or its call into a native library that is not built in, and the activity goes
 on only once the message has finished. A message that arrives while another
@@ -76,11 +76,11 @@ ooRexx the thread's messages run alongside the other activities. The tests of
 this rule need an extension of their own that sends messages by name, so they
 run outside this page.
 
-r[native.threads.attach.deviation.173]
+r[native.threads.attach.deviation.175]
 `DetachThread` called from a thread other than the one that attached the
 context does nothing, and so does a second `DetachThread` from the thread that
 attached it ([Deviation
-173](../deviations.md#173-detachthread-from-the-wrong-thread-or-twice)): the
+175](../deviations.md#175-detachthread-from-the-wrong-thread-or-twice)): the
 attachment stays as it was, and its next message runs. A message sent after
 the thread did detach is not covered here but by [Deviation
 19](../deviations.md#19-callback-from-a-foreign-thread), which refuses it. ooRexx
@@ -157,12 +157,12 @@ rc 0 waited 0
 main ends
 ```
 
-r[native.threads.end.deviation.172]
+r[native.threads.end.deviation.174]
 A thread that is still attached when the embedding calls `Terminate` can send
 no message afterwards: each send through its context is refused, answers the
 failure value of the member and runs nothing, and `DetachThread` from that
 thread returns ([Deviation
-172](../deviations.md#172-a-callback-after-the-embedding-ends-the-interpreter)).
+174](../deviations.md#174-a-callback-after-the-embedding-ends-the-interpreter)).
 ooRexx runs the message and answers its result. The example needs an
 embedding that calls `Terminate`, which the `rexx` command does not, so the
 tests of this rule run one instead.

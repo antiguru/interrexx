@@ -1,6 +1,6 @@
 /* An attached thread's message, unguarded, sends TICK to an object whose guarded method the main
    program runs, a method that started the thread.
-   spec: native.threads.attach.deviation.174 */
+   spec: native.threads.attach.deviation.176 */
 t = .ticks~new
 t~holdlater
 do while AtDone() < 1

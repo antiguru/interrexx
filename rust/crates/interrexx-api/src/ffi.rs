@@ -1238,7 +1238,7 @@ impl ThreadContext {
 
     /// Asks the callback in flight on this context, an attached activity's,
     /// to give the baton back once its send has failed, and to send again
-    /// (`r[native.threads.attach.deviation.174]`), answering whether it will.
+    /// (`r[native.threads.attach.deviation.176]`), answering whether it will.
     /// It will only where the member in flight sends through [`retrying`]:
     /// any other member answers its failure, and nothing is asked of it.
     pub fn ask_retry(&self) -> bool {

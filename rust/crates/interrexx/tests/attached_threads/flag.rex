@@ -1,6 +1,6 @@
 /* An attached thread's message waits with GUARD OFF WHEN for a flag that the main program sets
    once it has run Rexx code for a second.
-   spec: native.threads.attach.deviation.174 */
+   spec: native.threads.attach.deviation.176 */
 t = .ticks~new
 t~flag = 0
 call AtSend t, 'AWAITFLAG'
