@@ -22,6 +22,8 @@ pub(crate) struct Delivery {
     /// run since the slice fell due, outermost first. A caller's count is kept
     /// while its callees run.
     pub(crate) counts: Vec<(crate::activation::ActivationId, u32)>,
+    /// The slices that fell due while the destination held a guard.
+    pub(crate) guarded_slices: u32,
 }
 
 /// What each execution of the interpreter needs its own copy of.
