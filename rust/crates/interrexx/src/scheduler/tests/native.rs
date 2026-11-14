@@ -2,6 +2,7 @@
 //! the test libraries in the worktree's `build/lib`.
 
 use crate::{Interp, Invocation, Outcome, SwitchMode};
+use interrexx_inventory::errors::expand;
 
 const RUN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 
@@ -256,9 +257,8 @@ fn a_function_whose_call_left_its_driver_and_answered_nothing_is_44_1() {
     for run in [&kept, &left] {
         assert_eq!(run.outcome.exit_code, 212);
         assert!(
-            run.stderr().ends_with(
-                "Error 44.1:  No data returned from function \"TESTADDCOMMANDENVIRONMENT\".\n"
-            ),
+            run.stderr()
+                .ends_with(&expand("Error 44.1:  ⟨44.1¦TESTADDCOMMANDENVIRONMENT⟩\n")),
             "{}",
             run.stderr()
         );

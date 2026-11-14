@@ -6,6 +6,7 @@
 //! exactly (see `ArithError::message`'s doc comment) -- those two tests pin
 //! the closest achievable approximation, not a byte-exact match.
 
+use interrexx_inventory::errors::expand;
 use interrexx_num::{ArithError, DivOp, Number};
 
 fn n(s: &str) -> Number {
@@ -17,10 +18,7 @@ fn divide_by_zero_message_is_42_003() {
     // Provoked with `signal on syntax name oops; r = 1 / 0`.
     let err = n("1").div(&n("0"), 9, DivOp::Divide).unwrap_err();
     assert_eq!(err, ArithError::DivideByZero);
-    assert_eq!(
-        err.message(),
-        "Arithmetic overflow; divisor must not be zero."
-    );
+    assert_eq!(err.message(), expand("⟨42.3⟩"));
     assert_eq!(err.additional(), Vec::<String>::new());
 }
 
@@ -32,7 +30,7 @@ fn divide_by_zero_message_is_the_same_for_all_three_operators() {
     for op in [DivOp::Divide, DivOp::IntegerDivide, DivOp::Remainder] {
         assert_eq!(
             n("1").div(&n("0"), 9, op).unwrap_err().message(),
-            "Arithmetic overflow; divisor must not be zero."
+            expand("⟨42.3⟩")
         );
     }
 }
@@ -48,10 +46,7 @@ fn general_overflow_message_is_42_901_substituting_the_adjusted_exponent_and_the
         }
     ));
     assert_eq!(err.additional(), vec!["1999999999", "9"]);
-    assert_eq!(
-        err.message(),
-        "Arithmetic overflow; exponent (\"1999999999\") exceeds 9 digits."
-    );
+    assert_eq!(err.message(), expand("⟨42.901¦1999999999¦9⟩"));
 }
 
 #[test]
@@ -62,10 +57,7 @@ fn general_overflow_message_uses_9_regardless_of_the_active_digits_setting() {
     // either way.
     let err = n("9e999999999").mul(&n("9e999999999"), 15).unwrap_err();
     assert_eq!(err.additional()[1], "9");
-    assert_eq!(
-        err.message(),
-        "Arithmetic overflow; exponent (\"1999999999\") exceeds 9 digits."
-    );
+    assert_eq!(err.message(), expand("⟨42.901¦1999999999¦9⟩"));
 }
 
 #[test]
@@ -81,10 +73,7 @@ fn general_underflow_message_is_42_902_substituting_the_raw_exponent_not_the_adj
         }
     ));
     assert_eq!(err.additional(), vec!["-1000000010", "9"]);
-    assert_eq!(
-        err.message(),
-        "Arithmetic underflow; exponent (\"-1000000010\") exceeds 9 digits."
-    );
+    assert_eq!(err.message(), expand("⟨42.902¦-1000000010¦9⟩"));
 }
 
 #[test]
@@ -93,10 +82,7 @@ fn zero_to_a_negative_power_message_is_42_903_no_substitution() {
     let err = n("0").pow(&n("-1"), 9).unwrap_err();
     assert_eq!(err, ArithError::ZeroToNegativePower);
     assert_eq!(err.additional(), Vec::<String>::new());
-    assert_eq!(
-        err.message(),
-        "Arithmetic underflow; zero raised to a negative power."
-    );
+    assert_eq!(err.message(), expand("⟨42.903⟩"));
 }
 
 #[test]
@@ -105,10 +91,7 @@ fn power_magnitude_precheck_message_is_42_001() {
     let err = n("100").pow(&n("999999999"), 9).unwrap_err();
     assert!(matches!(err, ArithError::PowerOverflow { .. }));
     assert_eq!(err.additional(), vec!["100", "**", "999999999"]);
-    assert_eq!(
-        err.message(),
-        "Arithmetic overflow detected at:  \"100**999999999\"."
-    );
+    assert_eq!(err.message(), expand("⟨42.1¦¦¦100**999999999⟩"));
 }
 
 #[test]
@@ -126,7 +109,7 @@ fn power_magnitude_precheck_message_renders_full_stored_precision_not_the_9_digi
     assert_eq!(err.additional()[0], "123456789012345678");
     assert_eq!(
         err.message(),
-        "Arithmetic overflow detected at:  \"123456789012345678**999999999\"."
+        expand("⟨42.1¦¦¦123456789012345678**999999999⟩")
     );
 }
 
@@ -138,10 +121,7 @@ fn integer_divide_not_whole_message_is_26_011_no_substitution() {
         .unwrap_err();
     assert_eq!(err, ArithError::IntegerDivideNotWhole);
     assert_eq!(err.additional(), Vec::<String>::new());
-    assert_eq!(
-        err.message(),
-        "Result of % operation did not result in a whole number."
-    );
+    assert_eq!(err.message(), expand("⟨26.11⟩"));
 }
 
 #[test]
@@ -150,10 +130,7 @@ fn remainder_not_whole_message_is_26_012_no_substitution() {
     let err = n("123456").div(&n("2"), 3, DivOp::Remainder).unwrap_err();
     assert_eq!(err, ArithError::RemainderNotWhole);
     assert_eq!(err.additional(), Vec::<String>::new());
-    assert_eq!(
-        err.message(),
-        "Result of // operation did not result in a whole number."
-    );
+    assert_eq!(err.message(), expand("⟨26.12⟩"));
 }
 
 #[test]
@@ -162,10 +139,7 @@ fn power_exponent_not_whole_message_is_26_008_substituting_the_exponent() {
     let err = n("2").pow(&n("2.5"), 9).unwrap_err();
     assert!(matches!(err, ArithError::PowerExponentNotWhole { .. }));
     assert_eq!(err.additional(), vec!["2.5"]);
-    assert_eq!(
-        err.message(),
-        "Operand to the right of the power operator (**) must be a whole number; found \"2.5\"."
-    );
+    assert_eq!(err.message(), expand("⟨26.8¦2.5⟩"));
 }
 
 #[test]
@@ -175,10 +149,7 @@ fn power_exponent_not_whole_message_substitutes_the_original_exponent_not_the_ro
     // before checking wholeness).
     let err = n("2").pow(&n("1.23456"), 3).unwrap_err();
     assert_eq!(err.additional(), vec!["1.23456"]);
-    assert_eq!(
-        err.message(),
-        "Operand to the right of the power operator (**) must be a whole number; found \"1.23456\"."
-    );
+    assert_eq!(err.message(), expand("⟨26.8¦1.23456⟩"));
 }
 
 #[test]
@@ -195,7 +166,7 @@ fn system_resources_message_is_the_bare_error_5_no_substitution() {
     assert_eq!(err, ArithError::SystemResources);
     assert_eq!(err.clone().code(), 5);
     assert_eq!(err.additional(), Vec::<String>::new());
-    assert_eq!(err.message(), "System resources exhausted.");
+    assert_eq!(err.message(), expand("⟨5⟩"));
 }
 
 #[test]

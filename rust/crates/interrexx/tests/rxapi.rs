@@ -5,6 +5,7 @@
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
+use interrexx_inventory::errors::expand;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -197,7 +198,7 @@ fn a_killed_daemon_gives_a_clean_error() {
     );
     assert_eq!(
         stdout(&output),
-        "0\n0\n48.1 Failure in system service: SYSTEM QUEUE (RXAPI_NORXAPI).\n",
+        expand("0\n0\n48.1 ⟨48.1¦SYSTEM QUEUE (RXAPI_NORXAPI)⟩\n"),
         "{}",
         stderr(&output)
     );
@@ -262,7 +263,7 @@ fn character_builtins_refuse_the_queue() {
         let name = call[..call.find('(').expect("a call")].to_ascii_uppercase();
         assert_eq!(
             stdout(&output),
-            format!("40.915 {name} cannot be used with QUEUE:.\n"),
+            expand(&format!("40.915 ⟨40.915¦{name}⟩\n")),
             "{call}: {}",
             stderr(&output)
         );
@@ -399,7 +400,7 @@ fn a_command_without_a_service() {
     );
     assert_eq!(
         stdout(&held),
-        "48.1 Failure in system service: SYSTEM QUEUE (RXAPI_NORXAPI).\n",
+        expand("48.1 ⟨48.1¦SYSTEM QUEUE (RXAPI_NORXAPI)⟩\n"),
         "{}",
         stderr(&held)
     );
@@ -577,7 +578,7 @@ fn a_registered_routine_stays_registered_after_its_program_fails() {
     let first = service.run("say 'main ran'\n::routine foo6 external \"REGISTERED nosuchlib\"\n");
     assert_eq!(stdout(&first), "");
     assert!(
-        stderr(&first).contains("Error 90.999:  Unable to find external routine \"FOO6\"."),
+        stderr(&first).contains(&expand("Error 90.999:  ⟨90.999¦FOO6⟩")),
         "{}",
         stderr(&first)
     );

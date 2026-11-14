@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_inventory::errors::expand;
 
 /// The caller a resolution asked for outside any send is asking as: neither a
 /// receiver nor a package, which is the state the private and package access
@@ -569,9 +570,9 @@ fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
         let (code, stdout, stderr) = run(class, method);
         assert_eq!((code, stdout.as_str()), (163, ""), "{class}~{method}");
         assert!(
-            stderr.ends_with(&format!(
-                "Error 93.900:  the receiver is a value that is not {kind}.\n"
-            )),
+            stderr.ends_with(&expand(&format!(
+                "Error 93.900:  ⟨93.900¦the receiver is a value that is not {kind}⟩\n"
+            ))),
             "{class}~{method}: {stderr}"
         );
     }
@@ -595,8 +596,10 @@ fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
 fn a_write_to_a_packages_routines_table_moves_call_resolution() {
     let tail =
         "call foo\nsay result\n::routine foo\n  return 'foo'\n::routine bar\n  return 'bar'\n";
-    let missing = "     2 *-* call foo\nError 43 running /t.rex line 2:  Routine not found.\n\
-                   Error 43.1:  Could not find routine \"FOO\".\n";
+    let missing = expand(
+        "     2 *-* call foo\nError 43 running /t.rex line 2:  ⟨43⟩\n\
+                   Error 43.1:  ⟨43.1¦FOO⟩\n",
+    );
     for (write, expected) in [
         (".routines~put(.routines~bar, 'FOO')", (0, "bar\n", "")),
         (".routines['FOO'] = .routines~bar", (0, "bar\n", "")),
@@ -609,8 +612,8 @@ fn a_write_to_a_packages_routines_table_moves_call_resolution() {
             ".routines~putAll(.stringtable~new~~put(1, 'X'))",
             (0, "foo\n", ""),
         ),
-        (".routines~empty", (213, "", missing)),
-        (".routines~remove('FOO')", (213, "", missing)),
+        (".routines~empty", (213, "", missing.as_str())),
+        (".routines~remove('FOO')", (213, "", missing.as_str())),
     ] {
         let (code, stdout, stderr) = expected;
         assert_eq!(
@@ -691,10 +694,7 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
             run_source(&judged),
             (
                 0,
-                "34.1 Value of expression following IF keyword must be exactly \"0\" or \"1\"; \
-                 found \"The NIL object\".\n\
-                 34.901 Logical value must be exactly \"0\" or \"1\"; found \"The NIL object\".\n"
-                    .to_owned(),
+                expand("34.1 ⟨34.1¦The NIL object⟩\n34.901 ⟨34.901¦The NIL object⟩\n"),
                 String::new()
             ),
             "truth over {answer}"
@@ -824,7 +824,7 @@ fn an_argument_with_no_string_value_raises_where_one_with_a_string_value_answers
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (168, ""), "{source:?}");
         assert!(
-            stderr.contains("Error 88.909:  Argument 1 must have a string value."),
+            stderr.contains(&expand("Error 88.909:  ⟨88.909¦1⟩")),
             "{source:?} raised {stderr:?}"
         );
         assert!(
@@ -912,11 +912,11 @@ fn a_delegate_directive_forwards_under_every_key_it_claims() {
         ),
     ] {
         let clause = source.lines().next().expect("a first clause");
-        let expected = format!(
+        let expected = expand(&format!(
             "     1 *-* {clause}\n\
-             Error 97 running /t.rex line 1:  Object method not found.\n\
-             Error 97.1:  Object \"P\" does not understand message \"{message}\".\n"
-        );
+             Error 97 running /t.rex line 1:  ⟨97⟩\n\
+             Error 97.1:  ⟨97.1¦P¦{message}⟩\n"
+        ));
         assert_eq!(
             run_source(source),
             (159, String::new(), expected),
@@ -1003,10 +1003,9 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (159, ""), "{source:?}");
         assert!(
-            stderr.contains(&format!(
-                "Error 97.1:  Object \"The K class\" does not understand message \
-                 \"{missing}\"."
-            )),
+            stderr.contains(&expand(&format!(
+                "Error 97.1:  ⟨97.1¦The K class¦{missing}⟩"
+            ))),
             "{source:?} reported {stderr:?}"
         );
     }
@@ -1017,7 +1016,7 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
         run_source("r = .K~'A='(9)\nsay r\n::class K\n::attribute a class\n");
     assert_eq!((code, stdout.as_str()), (165, ""));
     assert!(
-        stderr.contains("Error 91.999:  Message \"A=\" did not return a result."),
+        stderr.contains(&expand("Error 91.999:  ⟨91.999¦A=⟩")),
         "the setter answered a value: {stderr:?}"
     );
 
@@ -1026,15 +1025,15 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
     for (source, catalogue) in [
         (
             "say .K~a(1)\n::class K\n::attribute a class\n",
-            "Error 93.902:  Too many arguments in invocation of method; 0 expected.",
+            expand("Error 93.902:  ⟨93.902¦0⟩"),
         ),
         (
             "say .K~'A='(1,2)\n::class K\n::attribute a class\n",
-            "Error 93.902:  Too many arguments in invocation of method; 1 expected.",
+            expand("Error 93.902:  ⟨93.902¦1⟩"),
         ),
         (
             "say .K~'A='()\n::class K\n::attribute a class\n",
-            "Error 93.903:  Missing argument in method; argument 1 is required.",
+            expand("Error 93.903:  ⟨93.903¦1⟩"),
         ),
         // **A trailing omission is not an argument that arrived, and a
         // leading one is.** Measured, both at rc 163: `(,)` reaches the
@@ -1042,16 +1041,19 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
         // side of the same rule is the `(,)` row below, which answers.
         (
             "say .K~'A='(,)\n::class K\n::attribute a class\n",
-            "Error 93.903:  Missing argument in method; argument 1 is required.",
+            expand("Error 93.903:  ⟨93.903¦1⟩"),
         ),
         (
             "say .K~'A='(,5)\n::class K\n::attribute a class\n",
-            "Error 93.902:  Too many arguments in invocation of method; 1 expected.",
+            expand("Error 93.902:  ⟨93.902¦1⟩"),
         ),
     ] {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
-        assert!(stderr.contains(catalogue), "{source:?} reported {stderr:?}");
+        assert!(
+            stderr.contains(&catalogue),
+            "{source:?} reported {stderr:?}"
+        );
         // **No frame of its own**, which is what separates an accessor
         // from a `NativeMethod` taking the same refusal: measured,
         // `'abc'~length(1)` carries a `Compiled method "LENGTH"` line
@@ -1083,9 +1085,7 @@ fn an_abstract_send_is_refused_at_the_send_naming_the_message() {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
         assert!(
-            stderr.contains(&format!(
-                "Error 93.965:  Method {named} is ABSTRACT and cannot be directly invoked."
-            )),
+            stderr.contains(&expand(&format!("Error 93.965:  ⟨93.965¦{named}⟩"))),
             "{source:?} reported {stderr:?}"
         );
         assert!(
@@ -1119,10 +1119,7 @@ fn private_sends_are_refused_by_who_is_sending() {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (159, ""), "{source:?}");
         assert!(
-            stderr.contains(
-                "Error 97.2:  Object \"The K class\" cannot accept private message \
-                 \"M\" from this context."
-            ),
+            stderr.contains(&expand("Error 97.2:  ⟨97.2¦The K class¦M⟩")),
             "a refused private send must report 97.2 naming the receiver and the \
              message, got {stderr:?} for {source:?}"
         );
@@ -1286,10 +1283,7 @@ fn a_scope_override_answers_and_has_one_refusal_for_each_bad_scope() {
     let (code, stdout, stderr) = run_source("say 'abc'~length:.Array\n");
     assert_eq!((code, stdout.as_str()), (163, ""));
     assert!(
-        stderr.contains(
-            "Error 93.957:  Target object \"abc\" is not a subclass of the message \
-             override scope (The Array class)."
-        ),
+        stderr.contains(&expand("Error 93.957:  ⟨93.957¦abc¦The Array class⟩")),
         "a class the receiver's behaviour does not hold must be 93.957, got {stderr:?}"
     );
 }
@@ -1729,9 +1723,7 @@ fn an_index_list_with_a_hole_is_98_975_naming_it() {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (158, ""), "{source:?}");
         assert!(
-            stderr.ends_with(&format!(
-                "Error 98.975:  Missing array element at position {hole}.\n"
-            )),
+            stderr.ends_with(&expand(&format!("Error 98.975:  ⟨98.975¦{hole}⟩\n"))),
             "{source:?}: {stderr}"
         );
     }
@@ -1759,33 +1751,32 @@ fn a_subscript_refusal_names_the_position_its_own_method_counts_from() {
     for (source, message) in [
         (
             "m = .array~new(2,3)\nsay m[,2]\n",
-            "Error 93.903:  Missing argument in method; argument 2 is required.",
+            expand("Error 93.903:  ⟨93.903¦2⟩"),
         ),
         (
             "m = .array~new(2,3)\nm[,2] = 1\n",
-            "Error 93.903:  Missing argument in method; argument 3 is required.",
+            expand("Error 93.903:  ⟨93.903¦3⟩"),
         ),
         (
             "a = (1,2)\na~put('v',0)\n",
-            "Error 93.907:  Method argument 2 must be a positive whole number; found \"0\".",
+            expand("Error 93.907:  ⟨93.907¦2¦0⟩"),
         ),
         (
             "m = .array~new(2,3)\nsay m[1,0]\n",
-            "Error 93.924:  Invalid position argument specified; found \"0\".",
+            expand("Error 93.924:  ⟨93.924¦0⟩"),
         ),
         (
             "say .array~new(2,'-1.0')~size\n",
-            "Error 93.906:  Method argument 2 must be zero or a positive whole \
-             number; found \"-1.0\".",
+            expand("Error 93.906:  ⟨93.906¦2¦-1.0⟩"),
         ),
         (
             "say .array~new(100000000000000001)~size\n",
-            "Error 93.959:  An array cannot contain more than 100000000000000000 elements.",
+            expand("Error 93.959:  ⟨93.959¦100000000000000000⟩"),
         ),
     ] {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
-        assert!(stderr.contains(message), "{source:?} {stderr:?}");
+        assert!(stderr.contains(&message), "{source:?} {stderr:?}");
     }
 }
 /// A subclass of `Array` constructs, keeps its class, and carries both a
@@ -2282,11 +2273,16 @@ fn a_scope_override_copy_of_an_uncopyable_object_raises() {
                   d: say condition('O')~code condition('O')~message\n\
                   \x20 return\n\
                   ::class zz\n";
-    let expected = "93.970 COPY method is not supported for object The Array class.\n\
-                    93.970 COPY method is not supported for object The ZZ class.\n\
-                    93.970 COPY method is not supported for object a RexxContext.\n\
-                    93.970 COPY method is not supported for object a RexxInfo.\n";
-    assert_eq!(run_source(source), (0, expected.to_string(), String::new()));
+    let expected: String = [
+        "The Array class",
+        "The ZZ class",
+        "a RexxContext",
+        "a RexxInfo",
+    ]
+    .iter()
+    .map(|object| expand(&format!("93.970 ⟨93.970¦{object}⟩\n")))
+    .collect();
+    assert_eq!(run_source(source), (0, expected, String::new()));
 }
 
 /// A primitive running under a name of its own that the receiver's search

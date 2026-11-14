@@ -16,6 +16,52 @@
 pub mod errors {
     include!(concat!(env!("OUT_DIR"), "/errors.rs"));
 
+    /// The text of `message` with its inserts filled in, in position order.
+    /// A test that expects a message renders it through this function rather
+    /// than quoting the text, so that a change of wording alone fails
+    /// nothing.
+    pub fn render<const N: usize>(message: Msg<N>, inserts: [&str; N]) -> String {
+        let (major, sub) = message.code();
+        let text = lookup(major, sub)
+            .expect("a message constant names a row")
+            .text;
+        String::from_utf8(substitute(text, &inserts)).expect("inserts and texts are UTF-8")
+    }
+
+    /// `expected` with each `⟨M.S¦v1¦v2⟩` replaced by the text of message
+    /// `M.S` with the inserts `v1`, `v2`, ... filled in, and each `⟨M⟩` by the
+    /// text of the major `M` on its own. A test writes the message lines it
+    /// expects with these markers instead of quoting a wording, so that the
+    /// wording can change without the test: the code and the inserts stay in
+    /// the expectation.
+    pub fn expand(expected: &str) -> String {
+        let mut out = String::with_capacity(expected.len());
+        let mut rest = expected;
+        while let Some(open) = rest.find('⟨') {
+            out.push_str(&rest[..open]);
+            let after = &rest[open + '⟨'.len_utf8()..];
+            let close = after.find('⟩').expect("a ⟨ marker is closed by ⟩");
+            let mut parts = after[..close].split('¦');
+            let code = parts.next().expect("split yields one part");
+            let inserts: Vec<&str> = parts.collect();
+            let (major, sub) = match code.split_once('.') {
+                Some((major, sub)) => (major, sub),
+                None => (code, "0"),
+            };
+            let message = lookup(
+                major.parse().expect("a marker names a major number"),
+                sub.parse().expect("a marker names a sub number"),
+            )
+            .unwrap_or_else(|| panic!("{code} is not a message"));
+            let text = String::from_utf8(substitute(message.text, &inserts))
+                .expect("inserts and texts are UTF-8");
+            out.push_str(&text);
+            rest = &after[close + '⟩'.len_utf8()..];
+        }
+        out.push_str(rest);
+        out
+    }
+
     /// `text` with `&1`, `&2`, ... replaced by the values of the same
     /// position. A position with no value stays as written.
     pub fn substitute<V: AsRef<[u8]>>(text: &str, values: &[V]) -> Vec<u8> {

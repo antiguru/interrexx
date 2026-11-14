@@ -3,6 +3,7 @@
 //! does not reach, held to the oracle's output. Each run has a private
 //! `REXX_API_DIR` and stops its daemon after.
 
+use interrexx_inventory::errors::expand;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
@@ -166,7 +167,7 @@ refused: procedure
   say "no error"
   return
 bad:
-  say condition("O")~code condition("O")~message
+  say condition("O")~code condition("O")~additional~makeString('l', ',')
   return
 ::class Forward inherit CommandHandler
 ::method init
@@ -181,7 +182,7 @@ bad:
   use arg c, ctx
   signal on syntax name x
   return ctx~isRedirected("zz")
-x: return condition("O")~code condition("O")~message
+x: return condition("O")~code condition("O")~additional~makeString('l', ',')
 "#;
     // Measured, oracle, exit status 0 and nothing on stderr.
     const EXPECTED: &str = "REDIRECTING SH 1\n\
@@ -190,9 +191,9 @@ x: return condition("O")~code condition("O")~message
                             ERROR 5 exit 5\n\
                             after 5\n\
                             1 1\n\
-                            z 93.900 isRedirected: the argument must be Input, Output, Error or Same.\n\
-                            93.900 deregister: there is no command environment named nosuchname.\n\
-                            98.900 this CommandContext belongs to a command that has ended.\n";
+                            z 93.900 isRedirected: the argument must be Input, Output, Error or Same\n\
+                            93.900 deregister: there is no command environment named nosuchname\n\
+                            98.900 this CommandContext belongs to a command that has ended\n";
     let run = scratch("forward");
     std::fs::write(run.join("forward.rex"), PROGRAM).expect("the program");
     let output = run_rexx(&["forward.rex"], &run, None);
@@ -221,16 +222,15 @@ refused: procedure
   say "no error"
   return
 bad:
-  say condition("O")~code condition("O")~message
+  say condition("O")~code condition("O")~additional~makeString('l', ',')
   return
 "#;
     // Measured, oracle, exit status 168.
-    const STDOUT: &str = "88.901 Missing argument; argument 1 is required.\n\
-                          88.901 Missing argument; argument 1 is required.\n";
-    const STDERR: &str = "       *-* Compiled method \"HANDLER\" with scope \"CommandHandler\".\n\
+    const STDOUT: &str = "88.901 1\n88.901 1\n";
+    const STDERR: &str = "⟨101.20¦HANDLER¦CommandHandler⟩\n\
                           \x20    3 *-* .CommandHandler~handler\n\
-                          Error 88 running {path} line 3:  Invalid argument.\n\
-                          Error 88.901:  Missing argument; argument 1 is required.\n";
+                          Error 88 running {path} line 3:  ⟨88⟩\n\
+                          Error 88.901:  ⟨88.901¦1⟩\n";
     let run = scratch("missing");
     std::fs::write(run.join("missing.rex"), PROGRAM).expect("the program");
     let output = run_rexx(&["missing.rex"], &run, None);
@@ -239,6 +239,6 @@ bad:
     assert_eq!(String::from_utf8_lossy(&output.stdout), STDOUT);
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        STDERR.replace("{path}", &path.display().to_string())
+        expand(&STDERR.replace("{path}", &path.display().to_string()))
     );
 }

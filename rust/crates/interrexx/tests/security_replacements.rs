@@ -4,6 +4,7 @@
 //! `REQUIRES` entry `NAME` is the file loaded.
 
 use interrexx::{Invocation, Outcome, run_program};
+use interrexx_inventory::errors::expand;
 
 fn run(program: &str) -> Outcome {
     run_program(
@@ -50,7 +51,7 @@ fn a_stream_replacement_that_is_not_a_stream_is_the_target() {
         };
         assert_eq!(
             String::from_utf8_lossy(&outcome.stdout),
-            format!("97.1 Object \"{target}\" does not understand message \"LINEOUT\".\n"),
+            expand(&format!("97.1 ⟨97.1¦{target}¦LINEOUT⟩\n")),
             "{label}"
         );
         assert!(!file.exists(), "{label}: the replaced file was written");
@@ -94,6 +95,6 @@ fn a_requires_name_that_is_not_a_string_names_its_string_value() {
     );
     assert_eq!(
         String::from_utf8_lossy(&outcome.stdout),
-        "3.1 Failure during initialization: File \"an Object\" is unreadable.\n2\n"
+        expand("3.1 ⟨3.1¦an Object⟩\n2\n")
     );
 }

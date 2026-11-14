@@ -409,6 +409,7 @@ mod tests {
     use super::*;
     use crate::error::Failure;
     use crate::{Interp, Invocation, run_program};
+    use interrexx_inventory::errors::expand;
 
     /// Runs `source` as a whole program and hands back the stdout it
     /// produced, having first insisted the run ended cleanly. Through
@@ -655,17 +656,13 @@ mod tests {
         let (code, stderr) = failure(b"say datatype('','')\n");
         assert_eq!(code, 163, "{stderr}");
         assert!(
-            stderr.contains(
-                "Error 93.915:  Method option must be one of \"ABILMNOSUVWX9\"; found \"?\"."
-            ),
+            stderr.contains(&expand("Error 93.915:  ⟨93.915¦ABILMNOSUVWX9¦?⟩")),
             "{stderr}"
         );
         let (code, stderr) = failure(b"say datatype(1,'Z')\n");
         assert_eq!(code, 163, "{stderr}");
         assert!(
-            stderr.contains(
-                "Error 93.915:  Method option must be one of \"ABILMNOSUVWX9\"; found \"Z\"."
-            ),
+            stderr.contains(&expand("Error 93.915:  ⟨93.915¦ABILMNOSUVWX9¦Z⟩")),
             "{stderr}"
         );
     }

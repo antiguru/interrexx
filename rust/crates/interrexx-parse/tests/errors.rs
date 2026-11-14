@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
+use interrexx_inventory::errors;
 use interrexx_parse::{
     ParseError, ProgramSource, SourceKind, parse_interpret, parse_program, program_from,
 };
@@ -515,14 +516,15 @@ fn the_do_subkey_rows_differ_from_the_oracle_as_deviation_38_says() {
         if !do_subkey_deviation(Some((error.code(), error.sub())), oracle) {
             continue;
         }
-        let want = if case.source.contains(" by ") {
-            &b"Unknown keyword following \"FOR\"; found \"BY\"."[..]
+        let keyword = if case.source.contains(" by ") {
+            "BY"
         } else {
-            &b"Unknown keyword following \"FOR\"; found \"TO\"."[..]
+            "TO"
         };
+        let want = errors::render(errors::E25_927, ["FOR", keyword]);
         assert_eq!(
             String::from_utf8_lossy(&error.message()),
-            String::from_utf8_lossy(want),
+            want,
             "row {}",
             case.row
         );
@@ -601,7 +603,10 @@ fn an_interpret_error_with_no_substitution_renders_the_condition_objects_message
     // `condition('o')~message`. Measured:
     //     code=99.908, no inserts.
     let error = parse_interpret(b"expose a".to_vec()).expect_err("EXPOSE is rejected");
-    assert_eq!(error.message(), b"INTERPRET data must not contain EXPOSE.");
+    assert_eq!(
+        error.message(),
+        errors::render(errors::E99_908, []).as_bytes()
+    );
 }
 
 #[test]
@@ -611,7 +616,7 @@ fn an_interpret_label_error_names_the_label() {
     let error = parse_interpret(b"x: nop".to_vec()).expect_err("a label is rejected");
     assert_eq!(
         error.message(),
-        br#"INTERPRET data must not contain labels; found "X"."#
+        errors::render(errors::E47_1, ["X"]).as_bytes()
     );
 }
 

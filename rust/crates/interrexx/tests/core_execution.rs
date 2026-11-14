@@ -2,6 +2,7 @@
 //! evaluation depth and recursion limits.
 
 use interrexx::{NOT_IMPLEMENTED_EXIT, run_program};
+use interrexx_inventory::errors::expand;
 
 /// The path these tests report programs under.
 const PROGRAM_PATH: &str = "/nonexistent/program.rex";
@@ -194,11 +195,11 @@ fn a_raised_condition_reports_the_failing_clause() {
     assert_eq!(outcome.exit_code, 256 - 34);
     assert_eq!(
         String::from_utf8(outcome.stderr).expect("the report is ASCII"),
-        format!(
+        expand(&format!(
             "     3 *-* say 2 & 1\n\
-             Error 34 running {PROGRAM_PATH} line 3:  Logical value not 0 or 1.\n\
-             Error 34.901:  Logical value must be exactly \"0\" or \"1\"; found \"2\".\n"
-        )
+             Error 34 running {PROGRAM_PATH} line 3:  ⟨34⟩\n\
+             Error 34.901:  ⟨34.901¦2⟩\n"
+        ))
     );
 }
 
@@ -219,11 +220,11 @@ fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {
     // reached -- the same shape the oracle prints, at a different depth: it
     // echoes 27,318 lines where this echoes `MAX_ACTIVATION_DEPTH` of them.
     assert!(
-        stderr.ends_with(&format!(
+        stderr.ends_with(&expand(&format!(
             "     2 *-* call sub\n\
-             Error 11 running {PROGRAM_PATH} line 6:  Control stack full.\n\
-             Error 11.1:  Insufficient control stack space; cannot continue execution.\n"
-        )),
+             Error 11 running {PROGRAM_PATH} line 6:  ⟨11⟩\n\
+             Error 11.1:  ⟨11.1⟩\n"
+        ))),
         "expected the 11.1 report, got the last 200 bytes {:?}",
         &stderr[stderr.len().saturating_sub(200)..]
     );

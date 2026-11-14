@@ -1,4 +1,5 @@
 use super::routines::routine_program;
+use interrexx_inventory::errors::expand;
 
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn annotate_outcome(source: &str) -> (i32, String, String) {
@@ -227,9 +228,8 @@ fn define_methods_over_local_refuses_a_non_method_entry() {
     let outcome = routine_program(b".K~defineMethods(.local)\n::class K\n");
     assert_eq!(outcome.exit_code, 163);
     assert!(
-        String::from_utf8_lossy(&outcome.stderr).contains(
-            "Error 93.974:  The method source argument must be a string, array, or method object."
-        ),
+        String::from_utf8_lossy(&outcome.stderr)
+            .contains(&expand("Error 93.974:  ⟨93.974¦method source⟩")),
         "{}",
         String::from_utf8_lossy(&outcome.stderr)
     );
@@ -246,7 +246,7 @@ fn a_registered_routine_nothing_supplies_is_90_999_before_the_first_clause() {
     assert_eq!(outcome.stdout, b"", "main must not have run");
     let stderr = String::from_utf8_lossy(&outcome.stderr);
     assert!(
-        stderr.contains("Error 90.999:  Unable to find external routine \"nofn\"."),
+        stderr.contains(&expand("Error 90.999:  ⟨90.999¦nofn⟩")),
         "{stderr}"
     );
 }
@@ -376,7 +376,7 @@ fn a_gap_the_oracle_diagnoses_before_a_class_refuses_ahead_of_the_class_error() 
             );
             assert_eq!(outcome.stdout, b"", "{source}: stdout");
             assert!(
-                stderr.contains("Error 98.903:  Unable to load library \"nosuchlib\"."),
+                stderr.contains(&expand("Error 98.903:  ⟨98.903¦nosuchlib⟩")),
                 "{source}: stderr {stderr}"
             );
         }
@@ -394,9 +394,7 @@ fn a_gap_the_oracle_diagnoses_before_a_class_refuses_ahead_of_the_class_error() 
         assert_eq!(outcome.stdout, b"", "{source}: stdout");
         assert!(
             stderr.contains("*-* ::requires 'zzznosuchfile.rex'\n")
-                && stderr.contains(
-                    "Error 43.901:  Could not find file \"zzznosuchfile.rex\" for ::REQUIRES."
-                ),
+                && stderr.contains(&expand("Error 43.901:  ⟨43.901¦zzznosuchfile.rex⟩")),
             "{source}: stderr {stderr}"
         );
     }
@@ -412,7 +410,7 @@ fn a_gap_the_oracle_diagnoses_before_a_class_refuses_ahead_of_the_class_error() 
         );
         assert_eq!(outcome.stdout, b"", "{source}: stdout");
         assert!(
-            stderr.contains("Error 98.909:  Class \"ZZZNOTACLASS\" not found."),
+            stderr.contains(&expand("Error 98.909:  ⟨98.909¦ZZZNOTACLASS⟩")),
             "{source}: stderr {stderr}"
         );
     }
@@ -481,7 +479,7 @@ fn a_directive_owing_both_a_translation_error_and_a_gap_answers_the_translation_
     assert_eq!(outcome.exit_code, 157, "exit code, stderr {stderr}");
     assert_eq!(outcome.stdout, b"", "stdout");
     assert!(
-        stderr.contains("Error 99.903:  Duplicate ::ROUTINE directive instruction."),
+        stderr.contains(&expand("Error 99.903:  ⟨99.903⟩")),
         "stderr {stderr}"
     );
     assert!(
@@ -496,7 +494,7 @@ fn a_directive_owing_both_a_translation_error_and_a_gap_answers_the_translation_
     assert_eq!(outcome.exit_code, 158, "exit code, stderr {stderr}");
     assert_eq!(outcome.stdout, b"", "stdout");
     assert!(
-        stderr.contains("Error 98.903:  Unable to load library \"nosuchlib\"."),
+        stderr.contains(&expand("Error 98.903:  ⟨98.903¦nosuchlib⟩")),
         "stderr {stderr}"
     );
 }
