@@ -370,9 +370,15 @@ pub(crate) struct Activities {
     /// The native frames of calls abandoned while they ran, by frame token
     /// ([`Interp::native_token`]), until their completions are drained.
     abandoned: Vec<(u64, Box<crate::NativeFrame>)>,
-    /// Those of them whose run is below the running loop, under a callback,
-    /// so that no loop above them can wait for their completions.
+    /// Those of the calls in flight whose run is below the running loop,
+    /// under a callback, so that no loop above them can wait for their
+    /// completions.
     runs_below: usize,
+    /// The lends that run an attached thread's callback. While one runs, a
+    /// later callback may end a wait, so a loop with nothing else to run or
+    /// wait for idles for posts instead of refusing the wait
+    /// (`r[native.threads.attach.deviation.174]`).
+    callbacks_lent: usize,
     /// The last token a blocking operation was posted under.
     next_block: u64,
     /// The tokens of blocking operations a halt abandoned, no longer in
@@ -490,6 +496,7 @@ impl Activities {
             in_flight: 0,
             abandoned: Vec::new(),
             runs_below: 0,
+            callbacks_lent: 0,
             next_block: 0,
             abandoned_blocks: Vec::new(),
             guards: crate::guards::GuardTable::default(),
@@ -1991,7 +1998,7 @@ impl Interp {
         table.ready.is_empty()
             && table.sleepers.is_empty()
             && table.held.is_empty()
-            && table.in_flight <= table.runs_below
+            && table.in_flight == table.runs_below
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
@@ -2174,6 +2181,8 @@ impl Interp {
             return;
         }
         let outgoing = self.activities.running;
+        let below = self.recalled_call_in_flight(&by);
+        let callback = matches!(by, Recaller::Context(_));
         let activity = match by {
             Recaller::Call { activity, frame } => {
                 self.activities
@@ -2214,7 +2223,8 @@ impl Interp {
         // back. The references it made are in the base frame's table.
         let temps = (self.activity.attached).then(|| self.roots.activity_mut().push_frame());
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
-        self.activities.runs_below += 1;
+        self.activities.runs_below += usize::from(below);
+        self.activities.callbacks_lent += usize::from(callback);
         let stack = (self.stack_base, self.stack_room);
         self.stack_base = base.unwrap_or(self.stack_base);
         self.stack_room = match (base, room) {
@@ -2225,7 +2235,8 @@ impl Interp {
         let baton = crate::sync::Arc::clone(&self.baton);
         baton.lend(thread, crate::island::Island::of(self));
         (self.stack_base, self.stack_room) = stack;
-        self.activities.runs_below -= 1;
+        self.activities.runs_below -= usize::from(below);
+        self.activities.callbacks_lent -= usize::from(callback);
         pin_leave!(self);
         if let Some(frame) = temps {
             self.roots.activity_mut().pop_frame(frame);
@@ -2234,6 +2245,36 @@ impl Interp {
             self.activities.lends.pop();
             self.activities.owners.pop();
             self.swap_running(outgoing, activity);
+        }
+    }
+
+    /// Whether the call `by` recalls the baton for counts in flight
+    /// ([`Activities::in_flight`]), so that a lend for its callback counts it
+    /// as run below ([`Activities::runs_below`]): a pool thread's call, which
+    /// counts from its exit, or a vacated call while a thread serves its
+    /// vacancy. An attached thread's callback recalls for no call.
+    fn recalled_call_in_flight(&self, by: &Recaller) -> bool {
+        // A lend that counted a call below which is not in flight would hide
+        // an unrelated call in flight from the tests that compare the two,
+        // and a wait that call may end would be refused.
+        match by {
+            &Recaller::Call { activity, frame } => {
+                let record = if activity == self.activities.running {
+                    Some(&self.activity)
+                } else {
+                    (self.activities.idle.get(activity.0 as usize))
+                        .and_then(Option::as_ref)
+                        .map(|idle| &idle.activity)
+                };
+                let pooled = record.is_some_and(|record| {
+                    (record.native_call.as_ref()).is_some_and(|call| call.frame() == frame)
+                });
+                pooled
+                    || self.activities.vacancies.iter().any(|vacancy| {
+                        vacancy.activity == activity && vacancy.frame == frame && vacancy.served
+                    })
+            }
+            Recaller::Context(_) => false,
         }
     }
 
@@ -2708,6 +2749,7 @@ impl Interp {
                 let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
                     if self.activities.in_flight == self.activities.runs_below
                         && self.activities.held.is_empty()
+                        && self.activities.callbacks_lent == 0
                     {
                         return Ok(None);
                     }

@@ -657,6 +657,18 @@ fn a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported() {
     );
 }
 
+/// [`a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported`] with the started activity
+/// in a call into the extension, which blocks for seven seconds, instead of asleep. The call may
+/// end the wait, so the wait is neither refused nor reported, and the post ends it.
+// spec: native.threads.attach
+#[test]
+fn a_callback_waiting_for_a_post_after_a_native_call_is_not_refused() {
+    assert_eq!(
+        run("attach-latecall", "latecall.rex"),
+        ("sem seen\ndone\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// An attached thread's message waits with `GUARD OFF WHEN` for a flag the main program sets once
 /// it has run Rexx code for a second. The main program makes no progress while the message runs,
 /// so the wait never ends (Deviation 174). After five seconds stderr says so, and the wait goes on
