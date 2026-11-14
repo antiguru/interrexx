@@ -541,7 +541,6 @@ rc 216
 [stdout]
 1
 [stderr]
-       *-* Compiled routine "SYSSTAT".
      2 *-* x = SysStat('', 'x')
 Error 40 running {dir}/probe.rex line 2:
 Error 40.1:
@@ -553,7 +552,6 @@ x = SysUmask('x')
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSUMASK".
      1 *-* x = SysUmask('x')
 Error 88 running {dir}/probe.rex line 1:
 Error 88.907:
@@ -565,7 +563,6 @@ x = SysStat(.nil, 'x')
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSSTAT".
      1 *-* x = SysStat(.nil, 'x')
 Error 88 running {dir}/probe.rex line 1:
 Error 88.909:
@@ -577,7 +574,6 @@ x = SysGetpid(1)
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSGETPID".
      1 *-* x = SysGetpid(1)
 Error 88 running {dir}/probe.rex line 1:
 Error 88.922:
@@ -752,7 +748,6 @@ rc 216
 40.1 External routine "SYSGETGRNAM" failed.
 40.1 External routine "SYSGETGRGID" failed.
 [stderr]
-       *-* Compiled routine "SYSGETGRNAM".
      7 *-* x = SysGetgrnam('nosuchgroupq', 'p')
 Error 40 running {dir}/probe.rex line 7:
 Error 40.1:

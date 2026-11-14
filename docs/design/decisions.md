@@ -29,6 +29,8 @@ page records why they are the way they are.
   documented accessor. Objects a program supplies to `RAISE` may be specified to reach the
   condition unchanged; the array the interpreter builds around them is not. Comparisons check
   only what is specified (`docs/design/testing.md`).
+  Whether a built-in method is a level of a traceback is unspecified, because a build may not
+  have it (2026-11-14, #388); comparisons drop those frame lines.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.
