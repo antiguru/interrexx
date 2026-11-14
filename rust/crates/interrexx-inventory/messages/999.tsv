@@ -1,0 +1,17 @@
+999	0	Invalid RXSUBCOM arguments.
+999	1	Invalid RXSUBCOM REGISTER arguments.
+999	2	Invalid RXSUBCOM DROP arguments.
+999	3	Invalid RXSUBCOM LOAD arguments.
+999	4	The rxapi queue service cannot be reached.
+999	5	Invalid data size.
+999	6	Out of memory for queue data.
+999	7	Invalid queue name "&1".
+999	8	Invalid queue access mode.
+999	10	Queue "&1" not found.
+999	11	Invalid RXSUBCOM QUERY arguments.
+999	12	Invalid rexxc arguments.
+999	13	Output file must not be the input file.
+999	14	Usage: rexxc source-file [output-file] [-s] [-e]
+999	15	With no output file, rexxc checks the syntax only.
+999	16	Invalid command syntax.
+999	17	The command failed with a system error.
