@@ -117,12 +117,25 @@ fn directive_name(rest: &str) -> String {
     name.to_ascii_lowercase()
 }
 
-/// Every unit of a group file's text.
+/// The class a `group~add(.name)` clause of `code` (lower case, comments
+/// removed) adds to the group, lower case.
+fn added_class(code: &str) -> Option<String> {
+    let (_, rest) = code.split_once("group~add(.")?;
+    let name = rest.split(')').next()?.trim();
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+/// Every unit of a group file's text. Where the file adds classes with
+/// `group~add`, only those classes and the classes they inherit from hold
+/// tests the group runs: a test class the file leaves out, or names only in
+/// a comment, is not run.
 fn units(text: &str) -> Vec<Unit> {
     let mut units = Vec::new();
     let mut current: Option<Unit> = None;
     let mut class: Option<String> = None;
     let mut tests: BTreeSet<String> = BTreeSet::new();
+    let mut parents: BTreeMap<String, String> = BTreeMap::new();
+    let mut added: BTreeSet<String> = BTreeSet::new();
     let mut resource_end: Option<String> = None;
     let (mut depth_code, mut depth_text) = (0, 0);
     for line in text.lines() {
@@ -131,6 +144,9 @@ fn units(text: &str) -> Vec<Unit> {
         let in_comment = depth_code > 0;
         let code = lex_line(line, &mut depth_code, false);
         let text = lex_line(line, &mut depth_text, true);
+        if current.is_none() {
+            added.extend(added_class(&code));
+        }
         if let Some(end) = &resource_end {
             if lower.starts_with(end.as_str()) {
                 resource_end = None;
@@ -152,6 +168,9 @@ fn units(text: &str) -> Vec<Unit> {
                         .position(|word| *word == "subclass")
                         .and_then(|at| words.get(at + 1))
                         .map(|word| word.trim_matches(['\'', '"']).to_string());
+                    if let Some(parent) = &parent {
+                        parents.insert(name.clone(), parent.clone());
+                    }
                     if parent
                         .as_deref()
                         .is_some_and(|parent| parent == "ootestcase" || tests.contains(parent))
@@ -202,6 +221,25 @@ fn units(text: &str) -> Vec<Unit> {
         }
     }
     units.extend(current);
+    if !added.is_empty() {
+        let mut run: BTreeSet<String> = BTreeSet::new();
+        for class in &added {
+            let mut at = Some(class.clone());
+            while let Some(class) = at.filter(|class| run.insert(class.clone())) {
+                at = parents.get(&class).cloned();
+            }
+        }
+        for unit in &mut units {
+            if unit.test
+                && unit
+                    .class
+                    .as_ref()
+                    .is_some_and(|class| !run.contains(class))
+            {
+                unit.test = false;
+            }
+        }
+    }
     units
 }
 
