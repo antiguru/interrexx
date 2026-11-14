@@ -98433,6 +98433,18 @@ say 'still running'
 <pre><code class="language-output">fine / no result / condition 40.900
 still running
 </code></pre>
+<div class="rule" id="r-native.calls.condition-data"><a href="native/calls.html#r-native.calls.condition-data">[native.calls.condition-data]</a></div>
+<p>The interface declares a record of a condition with its texts as strings,
+<code>RexxConditionData</code>, which no function of the interface fills or reads. Its
+fields, in this order, are:</p>
+<ul>
+<li><code>code</code>, a <code>wholenumber_t</code>: the condition's code.</li>
+<li><code>rc</code>, a <code>wholenumber_t</code>: the condition's return code.</li>
+<li><code>message</code>, an <code>RXSTRING</code>: the condition's secondary message.</li>
+<li><code>errortext</code>, an <code>RXSTRING</code>: the condition's error text.</li>
+<li><code>position</code>, a <code>size_t</code>: the number of the line the condition was raised on.</li>
+<li><code>program</code>, an <code>RXSTRING</code>: the name of the program that was running.</li>
+</ul>
 <h2 id="the-callers-state"><a class="header" href="#the-callers-state">The caller's state</a></h2>
 <div class="rule" id="r-native.calls.variables"><a href="native/calls.html#r-native.calls.variables">[native.calls.variables]</a></div>
 <p>A routine may set, read and drop the variables of its caller, by name, in any
