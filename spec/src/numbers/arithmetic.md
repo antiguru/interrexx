@@ -365,9 +365,8 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 ```
 
 r[num.arithmetic.power.message]
-The `ADDITIONAL` array of the `SYNTAX 42.1` error holds three items, the base
-and the exponent as the program wrote them, not as the numbers they denote, with
-the string `**` between them.
+The `ADDITIONAL` items of the `SYNTAX 42.1` error are
+[unspecified](r:conv.error.additional); the example reads the code only.
 
 ```rexx
 signal on syntax name a
@@ -381,16 +380,14 @@ signal on syntax name c
 say x ** 99999999e1
 c: call show
 exit
-show: l = ''
-do v over condition('o')~additional; l = l'['v']'; end
-say l
+show: say condition('o')~code
 return
 ```
 
 ```output
-[1E3][**][999999999]
-[ 100 ][**][999999999]
-[1E3][**][99999999E1]
+42.1
+42.1
+42.1
 ```
 
 ## Errors in the multiplicative and additive operators

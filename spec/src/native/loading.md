@@ -302,7 +302,8 @@ the end. It receives the name of the function in capitals, however the call
 spelled it. Its answer is the result of the call. A function that leaves no
 result makes a function call raise `SYNTAX 44.1` and a CALL drop the variable
 `RESULT`, and a function that refuses the call raises `SYNTAX 40.1`, whose
-`ADDITIONAL` holds the name of the function as it was registered, in capitals.
+`ADDITIONAL` array has one item, the name of the function as it was registered,
+in capitals, which says which function refused.
 
 ```rexx
 call rxfuncadd 'MyJoin', 'specclassic', 'FxClassicJoin'

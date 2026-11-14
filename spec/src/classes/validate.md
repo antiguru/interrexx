@@ -73,16 +73,17 @@ Validate
 r[class.validate.arguments]
 Every check takes the name of the argument as its first argument, the value as
 its second, and then its own further arguments. The name is only used in the
-error: it may be any string, a name or a text, and it is the first entry of the
-condition's `ADDITIONAL` array, whose other entries each rule below gives. The
-counts are fixed: two arguments for `number` and `logical`, two and an optional
+error: it may be any string, a name or a text. In the error of a failed check
+it is the first item of the condition's `ADDITIONAL` array, so that a program
+can tell which argument failed; each rule below says which other items are
+stated. The errors of the argument count and of `digits` below have no name
+among their items. The counts are fixed: two arguments for `number` and `logical`, two and an optional
 `digits` for the other number checks, three for `classType` and
 `requestClassType`, and four and an optional `digits` for the range checks. A
 call with fewer raises `SYNTAX 93.901`, one with more `93.902`, and one that
 leaves out a required argument before the last one given `93.903`; omitted
-arguments at the end count as not given. The `ADDITIONAL` array of the first
-holds the least number of arguments, that of the second the most, and that of
-the third the position of the first argument left out. The argument count is
+arguments at the end count as not given. The `ADDITIONAL` items of these three
+errors are [unspecified](r:conv.error.additional). The argument count is
 checked first, then `digits`, and the value last. Every value and bound is read
 as a string as [the conversion rule](r:conv.string.object) says. A check that
 fails raises the `SYNTAX` error of its method, which the rules below give.
@@ -114,7 +115,8 @@ t: procedure
   say m 'ok'
   return
 bad: c = condition('o')
-  say m c~code c~additional~items c~additional[1]
+  if c~code~left(2) == 93 then say m c~code
+  else say m c~code c~additional~items c~additional[1]
   return
 u: procedure
   m = arg(1)
@@ -123,31 +125,31 @@ u: procedure
   say m 'ok'
   return
 bad2: c = condition('o')
-  say m c~code c~additional~items c~additional[1]
+  say m c~code
   return
 ```
 
 ```output
 number 88.902 2 N
 number 88.902 2 my arg
-number 93.901 1 2
-number 93.902 1 2
-number 93.903 1 1
-positiveNumber 93.903 1 2
-numberRange 93.903 1 3
-classType 93.903 1 2
-numberRange 93.901 1 4
-numberRange 93.902 1 5
+number 93.901
+number 93.902
+number 93.903
+positiveNumber 93.903
+numberRange 93.903
+classType 93.903
+numberRange 93.901
+numberRange 93.902
 wholeNumber 26.5 1 0
-wholeNumber 93.902 1 3
-classType 93.901 1 3
-number("N", ) 93.901 1 2
-numberRange("N", 5, 1, ) 93.901 1 4
+wholeNumber 93.902
+classType 93.901
+number("N", ) 93.901
+numberRange("N", 5, 1, ) 93.901
 ```
 
 ```rexx
 /* per check: no argument; one fewer than it needs; the first left out; one more
-   than it takes (code/number of ADDITIONAL entries/first entry) */
+   than it takes (code) */
 specs = .array~of('number 2 2', 'logical 2 2', 'positiveNumber 2 3',,
   'nonNegativeNumber 2 3', 'wholeNumber 2 3', 'positiveWholeNumber 2 3',,
   'nonNegativeWholeNumber 2 3', 'position 2 3', 'length 2 3', 'classType 3 3',,
@@ -170,23 +172,23 @@ try: procedure
   interpret '.validate~'arg(1)'('arg(2)')'
   return 'ok'
 bad: c = condition('o')
-  return c~code'/'c~additional~items'/'c~additional[1]
+  return c~code
 ```
 
 ```output
-number                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
-logical                93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
-positiveNumber         93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-nonNegativeNumber      93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-wholeNumber            93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-positiveWholeNumber    93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-nonNegativeWholeNumber 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-position               93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-length                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-classType              93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
-requestClassType       93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
-numberRange            93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
-wholeNumberRange       93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+number                 93.901 93.901 93.903 93.902
+logical                93.901 93.901 93.903 93.902
+positiveNumber         93.901 93.901 93.903 93.902
+nonNegativeNumber      93.901 93.901 93.903 93.902
+wholeNumber            93.901 93.901 93.903 93.902
+positiveWholeNumber    93.901 93.901 93.903 93.902
+nonNegativeWholeNumber 93.901 93.901 93.903 93.902
+position               93.901 93.901 93.903 93.902
+length                 93.901 93.901 93.903 93.902
+classType              93.901 93.901 93.903 93.902
+requestClassType       93.901 93.901 93.903 93.902
+numberRange            93.901 93.901 93.903 93.902
+wholeNumberRange       93.901 93.901 93.903 93.902
 ```
 
 r[class.validate.digits]
@@ -196,7 +198,8 @@ least 1 and at most 999999999 and defaults to `9`, except for `length` and
 `position`, whose default is [the number of digits that whole numbers have
 internally](r:class.rexxinfo.limits). Any other value, a string that is no
 number included, raises `SYNTAX 26.5` before the value is read; its `ADDITIONAL`
-array holds the value of `digits`.
+array has one item, the value of `digits`, the string that is
+refused.
 The last example of this rule asks every check that takes `digits` for the cases
 that are refused, for the two limits that are not, and for a value that is no
 number under a refused `digits`.
@@ -321,7 +324,8 @@ also needs the value to be greater than zero (`SYNTAX 88.926`) and
 `nonNegativeNumber` to be zero or greater (`SYNTAX 88.925`); a value that is no
 number raises the error of the method asked, so `88.926` or `88.925`. Both take
 `digits`, and negative zero and `0.00` count as zero. The `ADDITIONAL` array of
-every error holds the name and the value.
+every error has two items, the name and then the value, which tell a program
+which argument failed and what it held.
 
 ```rexx
 vals = '5 -5 0 -0 0.00 5.5 1e3 1e-3 +7 abc 1E 2e+'
@@ -411,7 +415,8 @@ All take `digits`, whose default [differs for `position` and
 `length`](r:class.validate.digits). A value with a trailing period or zeros
 after the point, such as `5.` or `5.00`, and a value written with an exponent
 that makes it whole, such as `1e3`, count as whole; negative zero counts as
-zero. The `ADDITIONAL` array of every error holds the name and the value.
+zero. The `ADDITIONAL` array of every error has two items, the name and then the
+value, which tell a program which argument failed and what it held.
 
 ```rexx
 vals = '5 -5 0 -0 5. 5.00 5.5 1e3 1e-3 +7 abc 1234567890 1.0e9'~makearray(' ')
@@ -462,7 +467,9 @@ number takes part in the comparison as a string, so that `5` is below `x` and
 above `4x`, and a bound that is `.nil` raises `88.907`. `wholeNumberRange` has
 the same arguments and also needs the value to be a whole number as
 `wholeNumber` does; its bounds may have a fraction. The `ADDITIONAL` array of
-the error holds the name, `min`, `max` and the value.
+the error states the first item, the name, and the last item, the value, which
+tell a program which argument failed and what it held; the other items are
+[unspecified](r:conv.error.additional).
 
 ```rexx
 call t 'numberRange', 5, 1, 10
@@ -499,7 +506,8 @@ t: procedure
   return
 bad: c = condition('o')
   if arg(5, 'E') then say m v lo hi d '=>' c~code
-  else say m v lo hi '- =>' c~code c~additional~makeString('l', ' ; ')
+  else say m v lo hi '- =>' c~code c~additional[1] ';',
+    c~additional[c~additional~items]
   return
 ```
 
@@ -507,23 +515,23 @@ bad: c = condition('o')
 numberRange 5 1 10 - => ok
 numberRange 1 1 10 - => ok
 numberRange 10 1 10 - => ok
-numberRange 0 1 10 - => 88.907 N ; 1 ; 10 ; 0
-numberRange 11 1 10 - => 88.907 N ; 1 ; 10 ; 11
+numberRange 0 1 10 - => 88.907 N ; 0
+numberRange 11 1 10 - => 88.907 N ; 11
 numberRange 5.5 1 10 - => ok
-numberRange x 1 10 - => 88.907 N ; 1 ; 10 ; x
-numberRange 5 10 1 - => 88.907 N ; 10 ; 1 ; 5
+numberRange x 1 10 - => 88.907 N ; x
+numberRange 5 10 1 - => 88.907 N ; 5
 numberRange 5 5 5 - => ok
 wholeNumberRange 5 1 10 - => ok
-wholeNumberRange 5.5 1 10 - => 88.907 N ; 1 ; 10 ; 5.5
-wholeNumberRange 11 1 10 - => 88.907 N ; 1 ; 10 ; 11
-wholeNumberRange x 1 10 - => 88.907 N ; 1 ; 10 ; x
-wholeNumberRange 5 10 1 - => 88.907 N ; 10 ; 1 ; 5
+wholeNumberRange 5.5 1 10 - => 88.907 N ; 5.5
+wholeNumberRange 11 1 10 - => 88.907 N ; 11
+wholeNumberRange x 1 10 - => 88.907 N ; x
+wholeNumberRange 5 10 1 - => 88.907 N ; 5
 numberRange 1234567891 1234567890 1234567890 9 => ok
 numberRange 1234567891 1234567890 1234567890 12 => 88.907
 numberRange 5 1 x - => ok
-numberRange 5 x 9 - => 88.907 N ; x ; 9 ; 5
-numberRange 5 1 4x - => 88.907 N ; 1 ; 4x ; 5
-numberRange 5 1 The NIL object - => 88.907 N ; 1 ; The NIL object ; 5
+numberRange 5 x 9 - => 88.907 N ; 5
+numberRange 5 1 4x - => 88.907 N ; 5
+numberRange 5 1 The NIL object - => 88.907 N ; 5
 wholeNumberRange 5 1.5 9.5 - => ok
 ```
 
@@ -705,7 +713,8 @@ r[class.validate.logical]
 `logical` accepts exactly the strings `0` and `1`, or the objects `.true` and
 `.false`, and raises `SYNTAX 88.927` for any other value, such as `2`, a
 number written otherwise such as `1.0` or `01`, a string with blanks and the
-null string; the `ADDITIONAL` array holds the name and the value.
+null string; the `ADDITIONAL` array has two items, the name and then the value,
+which tell a program which argument failed and what it held.
 
 ```rexx
 call show .array~of('0', '1', .true, .false, '2')
@@ -741,15 +750,16 @@ bad: return condition('o')~code
 r[class.validate.classtype]
 `classType(name, object, class)` accepts an object that is an instance of
 `class`, a subclass or a class it inherits from included, as `isA` says, and
-raises `SYNTAX 88.914` otherwise, with `ADDITIONAL` holding the name and the id
-of the class. An argument `class` that is not a class raises `88.914` too,
-naming the argument `class`; [the sends rule](r:class.validate.classtype.sends)
-says where that error comes from. `requestClassType(name, object, class)` sends
+raises `SYNTAX 88.914` otherwise, whose first `ADDITIONAL` item is the name,
+which tells a program which argument failed. An argument `class` that is not a
+class raises `88.914` too, naming the argument `class`; [the sends
+rule](r:class.validate.classtype.sends) says where that error comes from. `requestClassType(name, object, class)` sends
 the object the message `request` with the id of the class as its argument, and
 answers the object that `request` answers when that is an instance of the class,
 and raises `SYNTAX 93.978` for an answer that is not, `.nil` being an instance
-of `Object` only; `ADDITIONAL` then holds the name, the id of the class and the
-object.
+of `Object` only; the first `ADDITIONAL` item of both errors is the name, which
+tells a program which argument failed. The other items of both errors are
+[unspecified](r:conv.error.additional).
 
 ```rexx
 call c 'classType', 'abc', .string
@@ -782,8 +792,7 @@ c: procedure
   end
   return
 bad: cd = condition('o')
-  say m k~string '=>' cd~code cd~additional~items cd~additional[1],
-      cd~additional[2]~string
+  say m k~string '=>' cd~code cd~additional[1]
   return
 ::class base
 ::class sub subclass base
@@ -800,25 +809,25 @@ bad: cd = condition('o')
 
 ```output
 classType The String class ok
-classType The Array class => 88.914 2 N Array
+classType The Array class => 88.914 N
 classType The Collection class ok
-classType The MIX class => 88.914 2 N MIX
+classType The MIX class => 88.914 N
 classType The MIX class ok
 classType The BASE class ok
-classType The SUB class => 88.914 2 N SUB
+classType The SUB class => 88.914 N
 classType The Object class ok
-classType string => 88.914 2 class Class
+classType string => 88.914 class
 requestClassType The String class answers String
   request Array
 requestClassType The Array class answers Array
   request String
 requestClassType The String class answers String
   request List
-requestClassType The List class => 93.978 3 N List
+requestClassType The List class => 93.978 N
   request Object
 requestClassType The Object class answers Object
 requestClassType The Array class answers Array
-requestClassType The String class => 93.978 3 N String
+requestClassType The String class => 93.978 N
 ```
 
 r[class.validate.classtype.sends]

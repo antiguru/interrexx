@@ -537,8 +537,10 @@ say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
 r[conv.error.additional]
 For an error the interpreter raises, the `ADDITIONAL` entry of the condition
 object is an Array, and the number, order and values of its items are
-unspecified, except where a rule states an item. A rule that states one says
-which item it is and what it holds. An error that `RAISE` gives rise to is
+unspecified, except where a rule states an item. A rule states an item only where the item is
+needed to understand the error and the program cannot get it otherwise, as with
+a number parse error that carries the string that failed to parse. A rule that
+states one says which item it is and what it holds. An error that `RAISE` gives rise to is
 such an error; the objects the clause supplied are governed by the [RAISE
 rules](r:instr.raise.untrapped).
 

@@ -86,19 +86,17 @@ t: parse arg expr
   interpret 'v =' expr
   say expr '=>' v
   return
-e: l = ''
-  do v over condition('o')~additional; l = l'['v']'; end
-  say expr '=>' condition('o')~code l
+e: say expr '=>' condition('o')~code
   return
 ::requires 'specfixture' LIBRARY
 ```
 
 ```output
-fxadd(1) => 88.901 [2]
-fxadd(, 1) => 88.901 [1]
-fxadd(1, 2, 3) => 88.922 [2]
+fxadd(1) => 88.901
+fxadd(, 1) => 88.901
+fxadd(1, 2, 3) => 88.922
 fxoptional() fxoptional(,) fxoptional(3) => omitted omitted 3
-fxoptional('x') => 88.907 [1][-2147483648][2147483647][x]
+fxoptional('x') => 88.907
 ```
 
 r[native.calls.arglist]
