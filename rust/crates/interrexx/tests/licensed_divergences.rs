@@ -247,6 +247,35 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
         oracle_stdout: "ran on 3\n",
         crate_stdout: "trapped 42.3 42\n",
     },
+    LicensedDivergence {
+        name: "operand-made-by-an-operation-shows-its-zeros",
+        program: "numeric digits 18\nd = 9999E8 + 0\n\
+                  say d (999999999 * d) (999999999 * 999900000000)\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "999900000000 9.998999990001E+20 9.99899999000100000E+20\n",
+        crate_stdout: "999900000000 9.99899999000100000E+20 9.99899999000100000E+20\n",
+    },
+    LicensedDivergence {
+        name: "lostdigits-counts-an-operation-result-as-shown",
+        program: "signal on lostdigits\nnumeric digits 20\nv = '1E3' + 0\n\
+                  numeric digits 3\nsay v (v + 0)\nexit\n\
+                  lostdigits: say 'LOSTDIGITS' condition('D')\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "1000 1E+3\n",
+        crate_stdout: "LOSTDIGITS 1000\n",
+    },
+    LicensedDivergence {
+        name: "lostdigits-in-a-comparison-counts-an-operation-result-as-shown",
+        program: "signal on lostdigits\nnumeric digits 20\nv = '1E3' + 0\n\
+                  numeric digits 3\nsay v > 5\nexit\n\
+                  lostdigits: say 'LOSTDIGITS' condition('D')\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "1\n",
+        crate_stdout: "LOSTDIGITS 1000\n",
+    },
 ];
 
 /// A directory of this run's own, because an unresolved Rexx name searches the

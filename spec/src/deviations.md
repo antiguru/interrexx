@@ -1367,17 +1367,19 @@ description such as `2 + 3`.
 
 An operand that an earlier arithmetic operation produced takes part in the next
 one with the digits of the number it is written as, trailing zeros included, as
-the same number written as a literal does. ooRexx keeps such a result as its
+a literal with the same characters does. ooRexx keeps such a result as its
 significant digits and an exponent and carries that form into the next
 operation, so a product or a sum rounded at NUMERIC DIGITS can differ: under
 NUMERIC DIGITS 18, `999999999 * (9999E8 + 0)` is `9.99899999000100000E+20`
-here and `9.998999990001E+20` on ooRexx.
+here, as `999999999 * 999900000000` is, and `9.998999990001E+20` on ooRexx.
+Ruled by the owner on 2026-11-14 (#522).
 
 ## 175. LOSTDIGITS counts the digits an operand made by an operation shows
 
 The digits that LOSTDIGITS counts in an operand that an earlier arithmetic
-operation produced are those of the number it is written as, trailing zeros
-included. ooRexx counts the significant digits of the form it keeps, so
-`'1E3' + 0` made under NUMERIC DIGITS 20, written `1000`, raises LOSTDIGITS as
-an operand under NUMERIC DIGITS 3 here and raises nothing on ooRexx.
-
+operation produced, in an arithmetic operation or a numeric comparison, are
+those of the number it is written as, trailing zeros included. ooRexx counts the
+significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
+DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
+3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
+the owner on 2026-11-14 (#554).

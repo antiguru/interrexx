@@ -3,7 +3,7 @@ element: "Numeric comparison"
 kind: concept
 ansi: "7.4.7, 7.4.10"
 rexxref: "Numbers and Arithmetic > Numeric Comparisons"
-deviations: [53]
+deviations: [53, 175]
 ---
 
 # Numeric comparison
@@ -166,3 +166,31 @@ b: say condition('d')
 123
 123
 ```
+
+r[num.comparison.deviation.175]
+A numeric comparison counts the digits of an operand that an earlier operation
+produced as [the arithmetic rule](r:num.arithmetic.deviation.175) does: those
+of the number it is written as, its trailing zeros included ([Deviation
+175](../deviations.md)). ooRexx counts the significant digits of the form it
+keeps, so below it answers `1` to both comparisons. A strict comparison
+compares the strings and counts no digits, on both.
+
+```rexx
+numeric digits 20
+v = '1E3' + 0
+numeric digits 3
+signal on lostdigits name a
+say v > 5
+a: say 'LOSTDIGITS' condition('D')
+signal on lostdigits name b
+say v = 1E3
+b: say 'LOSTDIGITS' condition('D')
+say v >> 5
+```
+
+```output
+LOSTDIGITS 1000
+LOSTDIGITS 1000
+0
+```
+
