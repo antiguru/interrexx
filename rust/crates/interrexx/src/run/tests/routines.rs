@@ -803,7 +803,7 @@ fn an_extensions_raise_with_substitutions_is_the_calls_condition() {
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
         expand(
-            "⟨101.21¦RXCALCSIN⟩\n     2 *-* say RxCalcSin(30, 3, 'X')\n\
+            "       *-* ⟨101.21¦RXCALCSIN⟩\n     2 *-* say RxCalcSin(30, 3, 'X')\n\
          Error 88 running /tmp/unwritten.rex line 2:  ⟨88⟩\n\
          Error 88.916:  ⟨88.916¦3¦D, R, or G¦X⟩\n"
         )

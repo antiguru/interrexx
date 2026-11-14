@@ -16,7 +16,6 @@ mod error_text;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
-use interrexx_inventory::errors::expand;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -221,7 +220,8 @@ fn each_route_runs_a_restored_program_as_the_oracles_does() {
     assert!(diverged.is_empty(), "{}", diverged.join("\n"));
 }
 
-/// The report this crate's `rexx` makes for `image` in `dir`.
+/// The report this crate's `rexx` makes for `image` in `dir`, its message
+/// texts cut.
 fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
     std::fs::write(side.dir.join(image), bytes).expect("the image");
     let output = side
@@ -231,19 +231,16 @@ fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
         .expect("rexx starts");
     render(
         &side.dir,
-        &output.stdout,
-        &output.stderr,
+        &error_text::cut_error_texts(&output.stdout),
+        &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )
 }
 
-/// The report for an image refused with `sub`: 3.903 or 3.905.
-fn refused(image: &str, sub: u16) -> String {
-    let message = match sub {
-        903 => expand(&format!("Error 3.903:  ⟨3.903¦DIR/{image}⟩")),
-        _ => expand(&format!("Error 3.905:  ⟨3.905¦DIR/{image}⟩")),
-    };
-    expand(&format!("rc> 253\nerr> Error 3:  ⟨3⟩\nerr> {message}\n"))
+/// The report for an image refused with `sub`, 3.903 or 3.905, with its
+/// message texts cut as [`report`] cuts them.
+fn refused(_image: &str, sub: u16) -> String {
+    format!("rc> 253\nerr> Error 3:\nerr> Error 3.{sub}:\n")
 }
 
 // spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
@@ -306,7 +303,7 @@ fn a_foreign_or_damaged_image_is_refused() {
 }
 
 /// What `rexx` writes for the file `name` that holds `bytes`, run in `side`'s
-/// directory with the argument `x`.
+/// directory with the argument `x`, its message texts cut.
 fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
     std::fs::write(side.dir.join(name), bytes).expect("the file");
     let output = side
@@ -314,10 +311,12 @@ fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
         .args([name, "x"])
         .output()
         .expect("rexx starts");
+    // Only the code of an error is compared, not its text
+    // (`r[conv.error.text]`).
     render(
         &side.dir,
-        &output.stdout,
-        &output.stderr,
+        &error_text::cut_error_texts(&output.stdout),
+        &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )
 }
@@ -457,12 +456,10 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
         tagcr.insert(tag - 1, b'\r');
         assert_eq!(
             report(&side, "tagcr.rxo", &tagcr),
-            expand(
-                "rc> 243\n\
+            "rc> 243\n\
              err>      2 *-* /**/@\n\
-             err> Error 13 running DIR/tagcr.rxo line 2:  ⟨13⟩\n\
-             err> Error 13.1:  ⟨13.1¦@¦40⟩\n"
-            ),
+             err> Error 13 running DIR/tagcr.rxo line 2:\n\
+             err> Error 13.1:\n",
             "CR before the tag's LF"
         );
         let output = side
@@ -480,12 +477,10 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
 // spec: env.invocation.rexxc.run
 #[test]
 fn an_opening_with_a_changed_byte_is_source() {
-    let stop = expand(
-        "rc> 243\n\
+    let stop = "rc> 243\n\
                 err>      2 *-* /**/@\n\
-                err> Error 13 running DIR/t.rxo line 2:  ⟨13⟩\n\
-                err> Error 13.1:  ⟨13.1¦@¦40⟩\n",
-    );
+                err> Error 13 running DIR/t.rxo line 2:\n\
+                err> Error 13.1:\n";
     // Four text files that begin like an image and hold none: both engines.
     let texts: [&[u8]; 4] = [
         b"#!/usr/bin/env rexx\n/**/@REXY say 1\n", // a letter of REXX

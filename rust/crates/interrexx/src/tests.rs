@@ -441,9 +441,9 @@ fn a_failing_pause_line_leaves_no_traceback_level() {
         crate::Invocation::none().with_input(input),
     );
     let stderr = String::from_utf8_lossy(&outcome.stderr);
-    for reached in ["Error 42.3:", "Error 35.1:"] {
+    for reached in ["42.3:", "35.1:"] {
         assert!(
-            stderr.contains(&format!("+++ Interactive trace.  {reached}")),
+            stderr.contains(&format!("{} {reached}", expand("⟨101.4⟩"))),
             "the pause did not report {reached}: {stderr}"
         );
     }
@@ -466,13 +466,7 @@ fn an_internal_call_does_not_prompt_again() {
         stderr.contains("*-*   nop"),
         "the callee's clause was not traced: {stderr}"
     );
-    assert_eq!(
-        stderr
-            .matches("+++ Interactive trace. \"Trace Off\"")
-            .count(),
-        1,
-        "{stderr}"
-    );
+    assert_eq!(stderr.matches(&expand("⟨101.5⟩")).count(), 1, "{stderr}");
 }
 
 /// `=` at the pause after a `LEAVE` runs the `LEAVE` again outside the loop
@@ -1722,8 +1716,7 @@ fn a_cyclic_reference_is_insufficient_stack_in_every_conversion() {
             assert_eq!(outcome.exit_code, 245, "{shape:?} then {used:?}");
             assert_eq!(String::from_utf8_lossy(&outcome.stdout), "made\n");
             assert!(
-                String::from_utf8_lossy(&outcome.stderr)
-                    .contains("Error 11.1:  Insufficient control stack space"),
+                String::from_utf8_lossy(&outcome.stderr).contains(&expand("Error 11.1:  ⟨11.1⟩")),
                 "{shape:?} then {used:?}: {}",
                 String::from_utf8_lossy(&outcome.stderr)
             );

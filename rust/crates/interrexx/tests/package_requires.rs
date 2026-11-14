@@ -145,9 +145,11 @@ fn each_of_the_four_search_routes_finds_the_required_file() {
             String::from_utf8_lossy(&cpp.stdout),
             "route {name}: stdout differs from the oracle"
         );
+        // Only the code of an error is compared, not its text
+        // (`r[conv.error.text]`).
         assert_eq!(
-            String::from_utf8_lossy(&stderr),
-            String::from_utf8_lossy(&cpp.stderr),
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(&stderr)),
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(&cpp.stderr)),
             "route {name}: stderr differs from the oracle"
         );
         assert_eq!(
@@ -214,9 +216,11 @@ fn the_earliest_route_wins_when_every_one_of_them_holds_a_copy() {
         String::from_utf8_lossy(&cpp.stdout),
         "stdout differs from the oracle"
     );
+    // Only the code of an error is compared, not its text
+    // (`r[conv.error.text]`).
     assert_eq!(
-        String::from_utf8_lossy(&stderr),
-        String::from_utf8_lossy(&cpp.stderr),
+        String::from_utf8_lossy(&support::error_text::cut_error_texts(&stderr)),
+        String::from_utf8_lossy(&support::error_text::cut_error_texts(&cpp.stderr)),
         "stderr differs from the oracle"
     );
     assert_eq!(
@@ -256,9 +260,11 @@ fn a_requires_cycle_is_the_oracles_own_report() {
         String::from_utf8_lossy(&cpp.stdout),
         "stdout differs from the oracle"
     );
+    // Only the code of an error is compared, not its text
+    // (`r[conv.error.text]`).
     assert_eq!(
-        String::from_utf8_lossy(&stderr),
-        String::from_utf8_lossy(&cpp.stderr),
+        String::from_utf8_lossy(&support::error_text::cut_error_texts(&stderr)),
+        String::from_utf8_lossy(&support::error_text::cut_error_texts(&cpp.stderr)),
         "stderr differs from the oracle"
     );
     assert_eq!(
@@ -317,9 +323,11 @@ fn noprolog_suppresses_a_required_files_prologue_and_not_a_programs_own() {
             String::from_utf8_lossy(&cpp.stdout),
             "{label}: stdout differs from the oracle"
         );
+        // Only the code of an error is compared, not its text
+        // (`r[conv.error.text]`).
         assert_eq!(
-            String::from_utf8_lossy(&stderr),
-            String::from_utf8_lossy(&cpp.stderr),
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(&stderr)),
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(&cpp.stderr)),
             "{label}: stderr differs from the oracle"
         );
         assert_eq!(

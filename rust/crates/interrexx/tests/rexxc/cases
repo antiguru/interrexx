@@ -2,8 +2,8 @@
 run
 ----
 rc> 255
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # the first word is the input whatever it looks like
 run
@@ -23,9 +23,9 @@ ok.rex
 -x
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 run
 ok.rex
@@ -33,9 +33,9 @@ o.rxo
 -x
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # a third word that is not a flag
 run
@@ -44,9 +44,9 @@ o.rxo
 extra
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # a bare dash is an unknown flag
 run
@@ -54,9 +54,9 @@ ok.rex
 -
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 run
 ok.rex
@@ -65,9 +65,9 @@ o.rxo
 -
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # output equal to input, after the banner
 run
@@ -79,7 +79,7 @@ out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
-out> Output file name must be different from input file name.
+out> Output file must not be the input file.
 
 run
 ok.rex
@@ -87,7 +87,7 @@ ok.rex
 -s
 ----
 rc> 254
-out> Output file name must be different from input file name.
+out> Output file must not be the input file.
 
 # not found
 run
@@ -398,9 +398,9 @@ ok.rex
 o.rxo
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 run
 ok.rex
@@ -409,9 +409,9 @@ ok.rex
 extra
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # the words are checked before the program is looked for, and the two names
 # before that (env.invocation.rexxc.words, env.invocation.rexxc.names)
@@ -420,9 +420,9 @@ nope
 -x
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 run
 nope
@@ -430,9 +430,9 @@ o.rxo
 extra
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 run
 nope
@@ -443,7 +443,7 @@ out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
-out> Output file name must be different from input file name.
+out> Output file must not be the input file.
 
 run
 nope
@@ -451,7 +451,7 @@ nope
 -s
 ----
 rc> 254
-out> Output file name must be different from input file name.
+out> Output file must not be the input file.
 
 # flags repeat, in either case and with letters after them
 run out=o.rxo
@@ -521,9 +521,9 @@ ok.rex
 -x
 ----
 rc> 255
-out> The rexxc command parameters are incorrect.
-out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
-out> Without outputfile rexxc only performs a syntax check.
+out> Invalid rexxc arguments.
+out> Usage: rexxc source-file [output-file] [-s] [-e]
+out> With no output file, rexxc checks the syntax only.
 
 # a library that ::REQUIRES names with LIBRARY is not bound; a REGISTERED
 # routine is (env.invocation.rexxc.translation)

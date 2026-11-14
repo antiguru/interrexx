@@ -508,8 +508,10 @@ mod tests {
     /// indentation of a library level's trace line is unspecified.
     #[test]
     fn a_different_library_indentation_normalises_equal() {
-        let shallow = b"  1459 *-*     Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
-        let deep = b"  1459 *-*         Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+        let text = interrexx_inventory::errors::expand("⟨101.24¦UNKNOWN¦Monitor¦REXX⟩");
+        let shallow = format!("  1459 *-*     {text}\n");
+        let deep = format!("  1459 *-*         {text}\n");
+        let (shallow, deep) = (shallow.as_bytes(), deep.as_bytes());
         assert_ne!(
             shallow.to_vec(),
             deep.to_vec(),
@@ -536,7 +538,11 @@ mod tests {
         let one = transcript(&frame("1459"), "1459");
         let mut two = Vec::new();
         two.extend_from_slice(
-            b"    12 *-* Method HELPER with scope \"Validate\" in package \"REXX\" (no source available).\n",
+            format!(
+                "    12 *-* {}\n",
+                interrexx_inventory::errors::expand("⟨101.24¦HELPER¦Validate¦REXX⟩")
+            )
+            .as_bytes(),
         );
         two.extend_from_slice(&transcript(&frame("88"), "12"));
         assert_ne!(one, two, "sanity: byte-exact still differs");

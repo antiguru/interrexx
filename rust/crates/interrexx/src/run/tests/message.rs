@@ -99,7 +99,7 @@ fn a_message_sends_two_indents_are_the_oracles_own_and_normalisation_cannot_see_
     assert_eq!(
         String::from_utf8(outcome.stderr).expect("the report is UTF-8"),
         expand(concat!(
-            "⟨101.20¦LENGTH¦String⟩\n",
+            "       *-* ⟨101.20¦LENGTH¦String⟩\n",
             "     3 *-*     say 'abc'~length(1)\n",
             "Error 93 running /abs/nested.rex line 3:  ⟨93⟩\n",
             "Error 93.902:  ⟨93.902¦0⟩\n",

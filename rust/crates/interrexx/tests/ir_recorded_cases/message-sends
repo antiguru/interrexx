@@ -74,10 +74,9 @@ end
 ----
 rc> 163
 out> before
-err>        *-* Compiled method "LENGTH" with scope "String".
 err>      3 *-*   'abc'~length(1)
-err> Error 93 running /nonexistent/ir-dual-case.rex line 3:  Incorrect call to method.
-err> Error 93.902:  Too many arguments in invocation of method; 0 expected.
+err> Error 93 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 93.902:
 
 # a send inside an INTERPRET fragment, which is a body of its own with its own
 # clause line and its own driver entry
@@ -123,5 +122,5 @@ x[1] = 2
 rc> 159
 out> before
 err>      3 *-* x[1] = 2
-err> Error 97 running /nonexistent/ir-dual-case.rex line 3:  Object method not found.
-err> Error 97.1:  Object "abc" does not understand message "[]=".
+err> Error 97 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 97.1:

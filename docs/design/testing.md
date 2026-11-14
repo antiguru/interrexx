@@ -31,8 +31,10 @@ two-way comparison against ANSI would report deliberate choices as defects.
 through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. `differential.txt` names
 the programs `tests/corpus.rs` runs under both interpreters. stdout and exit status compare byte for
 byte; stderr does too, apart from a narrow trace-indent normalisation that a program can opt out of.
-Comparing the text of stderr's error lines is stricter than the specification requires, a known
-gap in the harness (#388).
+Both sides' error lines are cut to their codes first (`tests/support/error_text.rs`), and the texts
+that name a level with no source, announce a routine or method in trace output, or form the notice
+of interactive tracing or a utility program's message are written in interrexx's wording on the
+oracle's side, so that the names they carry are compared and their wording is not.
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,

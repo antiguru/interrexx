@@ -20,8 +20,8 @@ err>      2 *-* select
 err>      3 *-*   when 'x' 
 err>        >>>     "x"
 err>      3 *-*   when 'x' 
-err> Error 34 running /nonexistent/ir-dual-case.rex line 3:  Logical value not 0 or 1.
-err> Error 34.2:  Value of expression following WHEN keyword must be exactly "0" or "1"; found "x".
+err> Error 34 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 34.2:
 
 # trace i over a call inside a WHEN's condition, in a scan that runs one WHEN
 # out before matching the next. The call takes an `Op::CallExpr` addressed at

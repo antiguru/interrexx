@@ -2386,6 +2386,26 @@ mod tests {
         assert_eq!(raised.exit_code(), 249);
     }
 
+    /// The frame of the report's first line is message 101.0 with the error
+    /// number, the program and the line as its inserts
+    /// (`r[conv.error.text]` specifies the frame).
+    #[test]
+    fn the_reports_frame_is_message_101_0() {
+        let raised = Raised::syntax(7, 3, vec![]);
+        let sites = one(4, b"end", 0);
+        let site = ClauseSite {
+            path: b"/abs/path/f.rex",
+            sites: &sites,
+        };
+        let report = String::from_utf8(raised.report(&site)).unwrap();
+        let frame = expand("⟨101.0¦7¦/abs/path/f.rex¦4⟩");
+        let major = report.lines().nth(1).expect("the major line");
+        assert!(
+            major.starts_with(&format!("{frame}  ")),
+            "{major:?} does not start with {frame:?}"
+        );
+    }
+
     /// A substituted message, and a clause echo that keeps its trailing space.
     #[test]
     fn a_substituted_message_and_a_clause_echo_that_keeps_its_trailing_space() {

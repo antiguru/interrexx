@@ -15,6 +15,8 @@
 
 use interrexx::Invocation;
 
+#[path = "support/error_text.rs"]
+mod error_text;
 mod watchdog;
 
 const CASES: &str = "tests/rxregexp_cases";
@@ -95,11 +97,14 @@ fn rxregexp_answers_as_described() {
                 }
                 "ours" | "program" => {
                     let outcome = run(format!("{}\n", case.input.trim_end()));
+                    // The message text of an error report is not specified, so
+                    // a recorded answer holds the code and subcode of each
+                    // report and not its text.
                     format!(
                         "rc {}\n[stdout]\n{}[stderr]\n{}",
                         outcome.exit_code,
-                        String::from_utf8_lossy(&outcome.stdout),
-                        String::from_utf8_lossy(&outcome.stderr),
+                        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stdout)),
+                        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr)),
                     )
                 }
                 other => panic!("unknown directive {other}"),

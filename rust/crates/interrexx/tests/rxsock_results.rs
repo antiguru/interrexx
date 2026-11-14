@@ -5,7 +5,7 @@
 //! crate's process holds one more descriptor than the oracle's at start.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
-//!   `Array[n]: a|b` for an `Array`, or as `ERR code message` for the SYNTAX
+//!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
 //!   condition it raises; the program requires `rxsock` LIBRARY.
 //! * `eval-packages`: as `eval`, the program requiring `socket.cls` and
 //!   `streamsocket.cls` instead.
@@ -48,7 +48,7 @@ fn eval_program(lines: &[&str], requires: &str) -> String {
     for (index, line) in lines.iter().enumerate() {
         program.push_str(&format!(
             "signal on syntax name s{index}\nv = {line}\ncall show v\nsignal n{index}\n\
-             s{index}: say 'ERR' condition('o')~code condition('o')~message\nn{index}: nop\n"
+             s{index}: say 'ERR' condition('o')~code\nn{index}: nop\n"
         ));
     }
     program.push_str(

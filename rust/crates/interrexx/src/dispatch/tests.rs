@@ -828,7 +828,7 @@ fn an_argument_with_no_string_value_raises_where_one_with_a_string_value_answers
             "{source:?} raised {stderr:?}"
         );
         assert!(
-            stderr.contains("Compiled method \"HASMETHOD\" with scope \"Object\"."),
+            stderr.contains(&expand("*-* ⟨101.20¦HASMETHOD¦Object⟩")),
             "{source:?} lost the method's own traceback line: {stderr:?}"
         );
     }

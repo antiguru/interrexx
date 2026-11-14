@@ -21,26 +21,28 @@ const PROGRAM: &str = "as = .ArrayStream~new\n\
      .TraceOutput~destination\n\
      say 'res' res\n\
      do v over as\n\
-     \x20 if word(v, 2) <> 'Routine' then say left(v, pos(' in package', v' in package') - 1)\n\
+     \x20 parse var v flag . '\"' name '\"'\n\
+     \x20 if translate(name) <> 'FW3' then say flag name\n\
      end\n\
      ::class ArrayStream subclass Array inherit Stream\n\
      ::method init\n  expose line\n  line = 0\n\
      ::method lineOut\n  parse arg line\n  self~append(line)\n  return 0\n";
 
-/// What the oracle printed, 8 runs of 8.
+/// What the oracle printed, 8 runs of 8: each announcement's flag and the
+/// method it names, the wording of its text being unspecified.
 const ORACLE_STDOUT: &str = "res 42\n\
-     \x20      >I> Method \"ONE\" with scope \"TEST\"\n\
-     \x20      >I> Method \"ONETWO\" with scope \"TEST\"\n\
-     \x20      <I< Method \"ONETWO\" with scope \"TEST\"\n\
-     \x20      <I< Method \"ONE\" with scope \"TEST\"\n\
-     \x20      >I> Method \"ONETWO\" with scope \"TEST\"\n\
-     \x20      <I< Method \"ONETWO\" with scope \"TEST\"\n\
-     \x20      >I> Method \"THREE\" with scope \"TEST\"\n\
-     \x20      <I< Method \"THREE\" with scope \"TEST\"\n\
-     \x20      >I> Method \"THREE\" with scope \"TEST\"\n\
-     \x20      >I> Method \"THREEFOUR\" with scope \"TEST\"\n\
-     \x20      <I< Method \"THREEFOUR\" with scope \"TEST\"\n\
-     \x20      <I< Method \"THREE\" with scope \"TEST\"\n";
+     >I> ONE\n\
+     >I> ONETWO\n\
+     <I< ONETWO\n\
+     <I< ONE\n\
+     >I> ONETWO\n\
+     <I< ONETWO\n\
+     >I> THREE\n\
+     <I< THREE\n\
+     >I> THREE\n\
+     >I> THREEFOUR\n\
+     <I< THREEFOUR\n\
+     <I< THREE\n";
 
 #[test]
 fn a_short_destination_keeps_each_delivery_whole_under_every_schedule() {

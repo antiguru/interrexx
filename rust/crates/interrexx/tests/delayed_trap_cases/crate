@@ -356,7 +356,7 @@ out> after 6
 out> linein 20
 err>        +++ "LINUX COMMAND /t.rex"
 err>      6 *-* nop
-err> +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
 err>      9 *-*   h:
 err>     10 *-*   n = n + 1
 err>        >>>     "1"
@@ -425,7 +425,7 @@ out> s 98.900 from input.
 out> linein 4
 err>        +++ "LINUX COMMAND /t.rex"
 err>      5 *-* nop
-err> +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
 err>      8 *-* s:
 err>      9 *-* trace off
 err>     10 *-* say 's' condition('o')~code condition('o')~message

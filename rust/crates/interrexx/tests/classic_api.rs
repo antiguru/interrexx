@@ -383,7 +383,7 @@ fn a_failing_classic_function_raises_40_1() {
     assert_eq!(output.status.code(), Some(216), "{stderr}");
     assert_eq!(
         stderr.lines().next(),
-        Some(expand("⟨101.21¦TESTCALLBACK⟩").as_str()),
+        Some(expand("       *-* ⟨101.21¦TESTCALLBACK⟩").as_str()),
         "{stderr}"
     );
     assert!(

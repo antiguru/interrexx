@@ -4,7 +4,7 @@
 //! fresh directory, `{dir}` in a case's text.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
-//!   `Array[n]: a|b` for an `Array`, or as `ERR code message` for the SYNTAX
+//!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
 //!   condition it raises; the program requires `rxunixsys` LIBRARY.
 //! * `program`: the input is the whole program; the case records rc, stdout
 //!   and stderr.
@@ -45,7 +45,7 @@ fn eval_program(lines: &[&str]) -> String {
     for (index, line) in lines.iter().enumerate() {
         program.push_str(&format!(
             "signal on syntax name s{index}\nv = {line}\ncall show v\nsignal n{index}\n\
-             s{index}: say 'ERR' condition('o')~code condition('o')~message\nn{index}: nop\n"
+             s{index}: say 'ERR' condition('o')~code\nn{index}: nop\n"
         ));
     }
     program.push_str(

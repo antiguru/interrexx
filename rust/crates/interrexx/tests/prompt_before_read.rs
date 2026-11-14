@@ -143,7 +143,7 @@ fn an_interactive_trace_prompt_arrives_before_its_command_is_typed() {
     // waits for is the prompt, which is the line the read is behind.
     line_containing(
         &stderr,
-        "Interactive trace",
+        &interrexx_inventory::errors::expand("⟨101.5⟩"),
         "the interactive trace prompt",
         &mut child,
     );
