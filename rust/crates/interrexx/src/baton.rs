@@ -236,15 +236,15 @@ impl<L: Copy> Baton<L> {
         self.changed.notify_all();
     }
 
-    /// Vacates the baton this thread holds, with `lent`, handed at once to
-    /// `to` where it names a thread, and answers the vacancy's depth, which
+    /// Vacates the baton this thread holds, with `lent`, and answers the
+    /// vacancy's depth, which
     /// [`Baton::take_vacancy`], [`Baton::reclaim_free`] and
     /// [`Baton::await_return`] name it by.
     ///
     /// # Panics
     ///
     /// If this thread does not hold it.
-    pub(crate) fn vacate(&self, lent: L, to: Option<thread::ThreadId>) -> usize {
+    pub(crate) fn vacate(&self, lent: L) -> usize {
         let me = thread::current().id();
         let mut state = lock(&self.state);
         assert_eq!(
@@ -255,11 +255,11 @@ impl<L: Copy> Baton<L> {
         let depth = state.lends.len();
         state.lends.push(Lend {
             lender: me,
-            lendee: to,
+            lendee: None,
             lent,
             vacancy: true,
         });
-        state.holder = to;
+        state.holder = None;
         drop(state);
         self.changed.notify_all();
         depth

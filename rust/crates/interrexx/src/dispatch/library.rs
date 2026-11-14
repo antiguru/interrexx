@@ -652,27 +652,21 @@ impl Interp {
 
     /// The baton as the running activity's native call in the native frame
     /// `frame` vacates it, recorded ([`Interp::push_vacancy`]) until
-    /// [`Interp::pop_vacancy`]. Where another activity is alive, a pool
-    /// thread is started to serve the vacancy from the start, so that the
-    /// others run while the call does; otherwise the first thread that calls
-    /// back from elsewhere starts one ([`crate::island::wait_served`]).
+    /// [`Interp::pop_vacancy`]. The first thread that recalls the baton from
+    /// elsewhere while it is vacated starts a pool thread to serve it
+    /// ([`crate::island::wait_served`]); a call nobody calls back from
+    /// elsewhere starts none.
     ///
     /// The interpreter is reached through the answer only, until it drops:
     /// its root pointer is derived last, from this borrow.
     pub(crate) fn vacated(&mut self, frame: u64) -> Vacated {
         self.push_vacancy(frame);
-        let server = if self.others_live() {
-            self.start_vacancy_server()
-        } else {
-            None
-        };
         Vacated {
             baton: Arc::clone(&self.baton),
             inbox: self.timer.inbox(),
             activity: self.running_activity(),
             frame,
             stack: (self.stack_base, self.stack_room),
-            server: std::cell::Cell::new(server),
             depth: std::cell::Cell::new(None),
             own: crate::island::Island::of(self),
         }
@@ -1740,8 +1734,6 @@ pub(crate) struct Vacated {
     /// The calling thread's stack base and room, for Rexx code a callback
     /// runs under the serving thread's lend.
     stack: (usize, usize),
-    /// The pool thread the vacancy is handed to as it is made, until it is.
-    server: std::cell::Cell<Option<std::thread::ThreadId>>,
     /// The vacancy's depth while the stub runs.
     depth: std::cell::Cell<Option<usize>>,
     /// The interpreter's root pointer, derived from the calling thread's own
@@ -1755,7 +1747,7 @@ impl Vacated {
     /// it is free, else once the thread it was handed to has seen the call
     /// return and given it back.
     pub(crate) fn around<R>(&self, call: impl FnOnce() -> R) -> R {
-        let depth = self.baton.vacate(self.own, self.server.take());
+        let depth = self.baton.vacate(self.own);
         self.depth.set(Some(depth));
         let answer = call();
         if !self.baton.reclaim_free(depth) {
@@ -1767,16 +1759,6 @@ impl Vacated {
         }
         self.depth.set(None);
         answer
-    }
-}
-
-impl Drop for Vacated {
-    /// A server started for a call that never ran its stub, which refused
-    /// before it, is handed a vacancy that returns at once.
-    fn drop(&mut self) {
-        if self.server.get().is_some() {
-            self.around(|| ());
-        }
     }
 }
 
