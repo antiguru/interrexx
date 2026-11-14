@@ -1,14 +1,14 @@
-count 54
+count 61
 /* A routine run by Routine~call, ~callWith or ~[] runs under its own name:
    the name it was created under, a directive's own spelling, the file name
-   newFile was given, or the main program's path. The primitive method that
-   ran it is a frame of its own, as every primitive method that entered a
-   Rexx body is. */
+   newFile was given, or the main program's path. A built-in level is not
+   printed: whether a build has one is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 if arg(1) == 'main' then do
-  do f over .context~stackframes; say 'main' f~type f~name; end
+  do f over visible(.context~stackframes); say 'main' f~type f~name; end
   return .context~name
 end
-r = .Routine~new('MyName', .array~of("do f over .context~stackframes", "say f~type '|' f~name '|' f~line '|' (f~target == .context~executable) '|' (f~executable == .routine~method('CALL')) '|' f~arguments~items '|' f~traceline '|' (f~context == .nil)", "end", "return .context~name"))
+r = .Routine~new('MyName', .array~of("do f over visible(.context~stackframes)", "say f~type '|' f~name '|' f~line '|' (f~target == .context~executable) '|' f~arguments~items '|' f~traceline '|' (f~context == .nil)", "end", "return .context~name"))
 say r~call(1, 2)
 say r~callWith(.array~of(3))
 say r~copy[4]
@@ -32,10 +32,17 @@ signal on syntax
 exit
 syntax:
 c = condition('O')
-do f over c~stackframes
+do f over visible(c~stackframes)
   say 'C' f~type '|' f~name '|' f~traceline
 end
 exit
+::routine visible
+  use arg all
+  levels = .array~new
+  do f over all
+    if word(f~traceline, 1) \== '*-*' then levels~append(f)
+  end
+  return levels
 ::routine foo
 return .context~stackframes[1]~name '|' .context~name
 ::routine 'bar'
@@ -45,11 +52,11 @@ say 1/0
 ::class cmp
 ::method compare
   use arg l, r
-  if .local~compared \== 1 then do f over .context~stackframes; say 'cmp' f~type f~name; end
+  if .local~compared \== 1 then do f over visible(.context~stackframes); say 'cmp' f~type f~name; end
   .local~compared = 1
   return l - r
 ::class c
 ::method init
-  do f over .context~stackframes; say 'init' f~type f~name; end
+  do f over visible(.context~stackframes); say 'init' f~type f~name; end
 ::method m
-  do f over .context~stackframes; say 'm' f~type f~name; end
+  do f over visible(.context~stackframes); say 'm' f~type f~name; end

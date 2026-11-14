@@ -67,7 +67,7 @@ fn no_state(interp: &Interp, receiver: ObjRef) -> Failure {
 /// `.stdout~charout(.K~new)` is `Argument 1 must have a string value` at
 /// rc 168 where `~string` would have answered `a K`, and an instance whose
 /// class defines `makeString` writes what the method returns.
-/// The refusal's own `Compiled method` traceback line comes from the dispatch
+/// The refusal's own built-in method traceback line comes from the dispatch
 /// layer, not from here -- measured, blaming it at this site as well puts the
 /// line in twice. It is a marshalling raise.
 fn write_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {

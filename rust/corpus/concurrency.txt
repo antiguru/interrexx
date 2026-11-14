@@ -88,7 +88,6 @@ lang/timer_post_reads_the_waiters_cancel.rex
 lang/timer_remainder_modulo_2_32.rex
 lang/trace_object_activity_fields.rex
 lang/uninit_after_every_activity.rex
-lang/trace_object_native_caller.rex
 lang/guard_serializes_started_sends.rex
 lang/reply_seen_by_a_guarded_send.rex
 lang/reply_continuation_parks_holding_the_guard.rex

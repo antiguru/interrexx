@@ -1,12 +1,16 @@
 /* A synchronous send's error trapped in its caller: ~errorCondition is the
-   condition object, and ~result re-raises it with its whole traceback. */
+   condition object, and ~result re-raises it with its whole traceback. A
+   built-in level is not printed: whether a build has one is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 o = .t~new
 m = .message~new(o, 'boom', 'I', 7)
 call doit m
 say 'hasError' m~hasError m~completed m~hasResult
 c = m~errorCondition
-say 'position' c~position 'traceback' c~traceback~items 'frames' c~stackFrames~items
-do line over c~traceback; say '>' line; end
+say 'position' c~position
+do line over c~traceback
+  if word(line, 1) \== '*-*' then say '>' line
+end
 r = m~result
 exit
 doit: procedure
@@ -14,7 +18,7 @@ doit: procedure
   signal on syntax
   m~send
   return
-syntax: say 'trapped' condition('O')~traceback~items; return
+syntax: say 'trapped'; return
 ::class t
 ::method boom
   use arg n

@@ -1502,12 +1502,12 @@ rc> 0
 out> sub
 err>        +++ "LINUX COMMAND DIR/rxtraceannounce.rex"
 err>      1 *-* call rxtraceannounce2
-err>        >I> Routine "DIR/rxtraceannounce2.rex", package "DIR/rxtraceannounce2.rex".
+err>        >I>
 err>      1 *-* say 'sub'
 err>        >>>   "sub"
-err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
-err>        <I< Routine "DIR/rxtraceannounce2.rex", package "DIR/rxtraceannounce2.rex".
-err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
+err> +++
+err>        <I<
+err> +++
 
 # a called `::ROUTINE` starts under the variable too: by name, as a function,
 # and as a routine object

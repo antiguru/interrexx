@@ -1,5 +1,7 @@
 /* Method~newFile and Routine~newFile on a file that does not parse raise
-   SYNTAX in that file, trapped and then untrapped. */
+   SYNTAX in that file, trapped and then untrapped. A built-in level is not
+   printed: whether a build has one is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 call try .method, 'badm.cls'
 call try .routine, 'badr.cls'
 r = .routine~newFile('badu.cls')
@@ -11,6 +13,8 @@ try: signal on syntax
   return
 syntax:
   o = condition('O')
-  say o~code o~position rc o~traceback~items
-  do l over o~traceback; say '  tb:' l; end
+  say o~code o~position rc
+  do l over o~traceback
+    if word(l, 1) \== '*-*' then say '  tb:' l
+  end
   return

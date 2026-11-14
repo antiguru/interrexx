@@ -4,7 +4,9 @@
    routine's, and that frame has a package and no line, so the condition has
    no POSITION and the report's major line names the package with no line.
    A method, a method with the NOMETHOD receiver and name, a routine, and
-   last an untrapped one from a routine for the report itself. */
+   last an untrapped one from a routine for the report itself. A built-in
+   level is not printed: its presence is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 t = .T~new
 call show 'method halt', t, 'HALT'
 call show 'method nomethod', t, 'NOMETHOD', 'FOO', .array~of('x')
@@ -27,8 +29,12 @@ show: procedure
 syntax:
   c = condition('o')
   say label c~code '|' c~position '|' filespec('n', c~program)
-  do l over c~traceback; say '  tb' l; end
-  do f over c~stackframes; say '  sf' f~type f~name f~line (f~target == .nil) f~executable~class~id; end
+  do l over c~traceback
+    if word(l, 1) \== '*-*' then say '  tb' l
+  end
+  do f over c~stackframes
+    if word(f~traceLine, 1) \== '*-*' then say '  sf' f~type f~name f~line (f~target == .nil) f~executable~class~id
+  end
   return
 ::class T
 ::method rc external "LIBRARY orxmethod TestRaiseCondition"

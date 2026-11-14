@@ -1062,8 +1062,8 @@ impl Interp {
     }
 
     /// [`Interp::is_forwarding_receiver`] of the reference `value`: measured,
-    /// `t = >s; say t + 0` with `s = 'abc'` is 41.1 under `Compiled method
-    /// "+" with scope "String"`, as `s~'+'(0)` is.
+    /// `t = >s; say t + 0` with `s = 'abc'` is 41.1 under a built-in method line
+    /// for + with scope String, as `s~'+'(0)` is.
     #[cold]
     #[inline(never)]
     fn is_forwarding_reference(&self, value: ObjRef) -> bool {

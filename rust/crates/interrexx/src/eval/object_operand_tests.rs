@@ -454,7 +454,7 @@ fn a_nil_defaulted_stem_carries_no_operator_frame() {
     );
     assert_eq!(stdout, "");
     assert!(
-        !stderr.contains("Compiled method"),
+        !stderr.lines().any(|line| line.starts_with("       *-* ")),
         "a `.nil`-defaulted stem's own arithmetic failure must carry no \
          operator-forwarded frame -- no method ever ran to raise from -- \
          but got {stderr:?}"

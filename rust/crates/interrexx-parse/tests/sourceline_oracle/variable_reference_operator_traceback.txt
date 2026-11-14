@@ -1,6 +1,6 @@
 count 26
 /* An operator on a variable reference runs the referenced value's own
-   operator method, whose Compiled method line a failure's traceback shows. */
+   operator method, whose built-in method line a failure's traceback shows. */
 s = 'abc'; n = 5; m. = 'q'; drop u
 call try 't = >s; say t + 0'
 call try 't = >s; say -t'

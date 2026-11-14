@@ -17,7 +17,7 @@ count 80
  * ORACLE_CRASHING_SENDS exempts. They are sent with an operand instead.
  *
  * The final send is untrapped, and it is an operator sent as a *message*, so
- * the `Compiled method "+" with scope "String".` line an operator message
+ * the built-in method line for + (scope String) an operator message
  * carries and an operator expression does not is compared as bytes. rc 215.
  */
 

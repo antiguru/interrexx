@@ -1,6 +1,9 @@
 /* A message a Stem, a VariableReference, or a base-class Directory does not
- * understand reaches its primitive UNKNOWN with no traceback level of its own;
- * a Directory subclass and an explicit ~unknown send keep the level. */
+ * understand reaches its UNKNOWN, and a Directory subclass and an explicit
+ * ~unknown send go through it too: the code of the error and the traceback
+ * levels of Rexx code are the same. A built-in level is not printed: whether a
+ * build has one is not specified (r[class.stackframe.builtin]), and its trace
+ * line has no line number. */
 d = .directory~new
 d~setMethod('go', 'return 1/0')
 call try d, 'GO'
@@ -25,7 +28,7 @@ try:
 syntax:
   say message condition('O')~code
   do line over condition('O')~traceback
-    say '  ['line']'
+    if word(line, 1) \== '*-*' then say '  ['line']'
   end
   return
 ::class ss subclass stem

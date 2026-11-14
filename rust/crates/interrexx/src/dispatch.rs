@@ -693,8 +693,8 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // without a separator, `C`, a lower-case option, an option omitted in
     // place, the empty list, 93.915 and the `C`-with-separator 93.902 -- and
     // the traceback frame names the message that was sent rather than the
-    // implementation, so `~toString` reads `Compiled method "TOSTRING" with
-    // scope "Array".` A second row here rather than a second function,
+    // implementation, so `~toString` shows a built-in method line for TOSTRING with
+    // scope Array. A second row here rather than a second function,
     // because a second function is where the two could come to disagree.
     (
         "Array",
@@ -795,8 +795,8 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // their store, donated to `Directory` out of
     // `StringTable`, which takes them from `IdentityTable`'s own rows. The donation puts
     // them in `Directory`'s **own** dictionary, which is what the scope in the
-    // traceback says: measured, `.environment~at()` reports `Compiled method
-    // "AT" with scope "Directory".`, not `IdentityTable`.
+    // traceback says: measured, `.environment~at()` shows a built-in method line
+    // for AT with scope Directory, not `IdentityTable`.
     ("Directory", "[]", Arity::Fixed(1), native_hash_bracket_at),
     // The store under its second name, donated from
     // `IdentityTable` and so the same function with
@@ -2752,7 +2752,7 @@ impl Interp {
 
     /// A method scope's `~id`, [`Interp::class_id_text`]'s rendering: a
     /// primitive `setMethod` or `run` installed under the `.nil` scope is
-    /// `Compiled method "HM" with scope ".NIL"`.
+    /// a built-in method line for HM with scope `.NIL`.
     pub(crate) fn scope_id(&mut self, scope: ObjRef) -> String {
         self.object_model();
         self.class_id_text(scope).to_string()
@@ -2888,7 +2888,7 @@ impl Interp {
             // **Neither this path nor `Generated` blames the method**, and both
             // are observable. An untrapped `1/0` inside a `::METHOD` body
             // reports the method's own failing clause and then the sending
-            // clause, with no `Compiled method` line between them, and
+            // clause, with no built-in method line between them, and
             // [`Interp::finish_call`] seals the method's own level for that,
             // exactly as it does for a call. A generated accessor and an
             // `ABSTRACT` send report the *sending* clause and nothing above it:
@@ -4563,7 +4563,7 @@ impl Interp {
         });
         // The native activation has given up the receiver before it reports
         // that error, so the level is a routine's: no target, and the
-        // `Compiled routine` line.
+        // built-in routine line.
         if reported_on_return {
             let executable = context::native_method_executable(self, target, name);
             let level = NativeLevel {

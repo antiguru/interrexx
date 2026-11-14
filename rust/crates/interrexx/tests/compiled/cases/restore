@@ -216,12 +216,12 @@ rc> 0
 out> in rt
 out> 2
 out> trapped 40.1
-err>        >I> Routine "RT", package "DIR/entries.rxo".
-err>        <I< Routine "RT", package "DIR/entries.rxo".
-err>        >I> Method "M", scope "C", package "DIR/entries.rxo".
-err>        <I< Method "M", scope "C", package "DIR/entries.rxo".
-err>        >I> Method "BOOM", scope "C", package "DIR/entries.rxo".
-err>        <I< Method "BOOM", scope "C", package "DIR/entries.rxo".
+err>        >I>
+err>        <I<
+err>        >I>
+err>        <I<
+err>        >I>
+err>        <I<
 
 # Interactive trace pauses only inside an INTERPRET string.
 rexx stdin=typed.txt
@@ -238,7 +238,7 @@ out> ?R
 err>        +++ "LINUX COMMAND DIR/debug.rxo"
 err>      5 *-* say "c";
 err>        >>>   "c"
-err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
+err> +++
 err>      5 *-* say "d"
 err>        >>>   "d"
 

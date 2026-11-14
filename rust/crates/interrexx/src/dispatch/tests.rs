@@ -1056,10 +1056,10 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
         );
         // **No frame of its own**, which is what separates an accessor
         // from a `NativeMethod` taking the same refusal: measured,
-        // `'abc'~length(1)` carries a `Compiled method "LENGTH"` line
+        // `'abc'~length(1)` carries a built-in method line for LENGTH
         // above the sending clause and none of these do.
         assert!(
-            !stderr.contains("Compiled method"),
+            !stderr.lines().any(|line| line.starts_with("       *-* ")),
             "{source:?} grew a traceback frame the oracle does not write: {stderr:?}"
         );
     }
@@ -1089,7 +1089,7 @@ fn an_abstract_send_is_refused_at_the_send_naming_the_message() {
             "{source:?} reported {stderr:?}"
         );
         assert!(
-            !stderr.contains("Compiled method"),
+            !stderr.lines().any(|line| line.starts_with("       *-* ")),
             "{source:?} grew a traceback frame the oracle does not write: {stderr:?}"
         );
     }
@@ -2287,7 +2287,7 @@ fn a_scope_override_copy_of_an_uncopyable_object_raises() {
 
 /// A primitive running under a name of its own that the receiver's search
 /// order hides lists no frame, so no frame is built without its method. The
-/// oracle lists `METHOD HAS ... Compiled method "HAS" with scope "MYARR"`.
+/// oracle lists `METHOD HAS ...` with a built-in method line for HAS with scope MYARR.
 #[test]
 fn a_hidden_primitive_lists_no_frame() {
     let program = ".myarr~define('HAS', .array~method('HASITEM'))\n\

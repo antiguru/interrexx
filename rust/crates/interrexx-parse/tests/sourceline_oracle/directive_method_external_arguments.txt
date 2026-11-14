@@ -1,6 +1,6 @@
 count 10
 /* A LIBRARY REXX entry point checks its own argument count from inside its
-   activation, so the report carries the Compiled method line and the major
+   activation, so the report carries the built-in method line and the major
    line names no source line -- unlike a primitive method's 93.902, which the
    send raises. */
 say 'main ran'
