@@ -1,0 +1,51 @@
+99	0	Translation error.
+99	900	&1.
+99	901	::CLASS directive must not reuse the name of another class.
+99	902	::METHOD directive must not reuse the name of another method.
+99	903	::ROUTINE directive must not reuse the name of another routine.
+99	904	::REQUIRES directive must not name a file that is already required.
+99	905	CLASS keyword on ::METHOD directive requires a matching ::CLASS directive.
+99	906	A ::CONSTANT directive with an expression requires a matching ::CLASS directive.
+99	907	EXPOSE must be the first instruction executed after a method invocation.
+99	908	INTERPRET data must not contain EXPOSE.
+99	909	GUARD must be the first instruction executed after EXPOSE or USE.
+99	910	USE LOCAL must be the first instruction executed after a method invocation.
+99	911	GUARD is valid only in a method.
+99	912	INTERPRET data must not contain GUARD.
+99	913	GUARD WHEN expression must refer to an exposed variable.
+99	914	INTERPRET data must not contain directive instructions.
+99	915	INTERPRET data must not contain USE LOCAL.
+99	916	Invalid directive.
+99	917	Invalid external name "&1".
+99	918	"," expected after USE ARG variable name; found "&1".
+99	919	REPLY is valid only in a method.
+99	921	Invalid line in method source array.
+99	922	::REQUIRES must precede every other directive.
+99	923	INTERPRET data must not contain FORWARD.
+99	924	INTERPRET data must not contain REPLY.
+99	925	::ATTRIBUTE name must be a valid variable name; found "&1".
+99	926	EXTERNAL of ::CLASS directive has too many parameters.
+99	927	Invalid metaclass "&1".
+99	928	EXTERNAL of ::CLASS directive requires a valid class name.
+99	929	Invalid class server "&1" in EXTERNAL of ::CLASS directive.
+99	930	"..." is valid only in the last position of an argument list.
+99	931	::ATTRIBUTE directive must not reuse the name of another method.
+99	932	::CONSTANT directive must not reuse the name of another method.
+99	933	ABSTRACT method must not have a body.
+99	934	ATTRIBUTE method must not have a body.
+99	935	EXTERNAL attribute must not have a body.
+99	936	EXTERNAL method must not have a body.
+99	937	Attribute with neither GET nor SET must not have a body.
+99	938	Constant must not have a body.
+99	939	EXTERNAL routine must not have a body.
+99	940	ABSTRACT attribute must not have a body.
+99	941	Method or routine source must not contain directive instructions.
+99	942	::RESOURCE directive must not reuse the name of another resource.
+99	943	Missing end marker "&1" in ::RESOURCE "&2".
+99	944	REXX must not be used as a namespace name.
+99	945	::ANNOTATE target &1 "&2" not found.
+99	946	DELEGATE method must not have a body.
+99	947	DELEGATE attribute must not have a body.
+99	948	USE LOCAL variable must not be compound; found "&1".
+99	949	Invalid class "&1".
+99	950	USE ARG variable reference must not have a default value.
