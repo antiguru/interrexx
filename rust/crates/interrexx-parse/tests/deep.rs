@@ -36,13 +36,10 @@ fn parse_on_a_sized_thread(bytes: Vec<u8>) -> Result<(), interrexx_parse::ParseE
         .expect("the thread itself must not panic")
 }
 
-/// 100,000 levels of parenthesis nesting is past both this parser's pre-fix
-/// native cliff (measured between 88,800 and 89,000, see this file's header)
-/// and `MAX_EXPR_DEPTH` (50,000), so it raises `11.1` instead of aborting
-/// with a native stack overflow -- the same
-/// condition, not a coincidence: `build/bin/rexx` raises it too, from
-/// somewhere between 39,900 and 39,950 parens onward, so this is parity with
-/// the oracle rather than an invented number.
+/// Parenthesis nesting past `MAX_EXPR_DEPTH` raises `11.1`
+/// (`r[expr.index.nesting]`) instead of aborting with a native stack
+/// overflow. The parser recurses to `MAX_EXPR_DEPTH` before it raises, so
+/// this also checks that the sized thread's stack holds that many levels.
 #[test]
 fn a_paren_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
     let bytes = deep_paren_program(100_000);
@@ -55,16 +52,10 @@ fn a_paren_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
     assert_eq!((err.code(), err.sub()), (11, 1));
 }
 
-/// Documents, rather than fixes, the gap `MAX_EXPR_DEPTH`'s own doc comment
-/// warns about: the counter is calibrated against the oracle's cliff and
-/// this parser's cliff *on the 512 MiB thread*, not against a `cargo test`
-/// default 2 MiB thread's far shallower one. **332 parens already aborts a
-/// default-stack thread natively** (measured on the shipped code,
-/// `examples/depth_probe.rs`'s `paren_default` mode: 331 parses, 332
-/// aborts), tens of thousands of levels below where `MAX_EXPR_DEPTH` would
-/// ever raise `11.1`. So a caller on a small thread is not protected by the
-/// counter for depths between this parser's own native cliff and
-/// `MAX_EXPR_DEPTH` -- only a sized thread is.
+/// Documents, rather than fixes, a gap: `MAX_EXPR_DEPTH` is sized for the
+/// 512 MiB thread, and a default-stack thread overflows natively far below
+/// it. A caller on a small thread is not protected by the counter, only a
+/// sized thread is. Shallow nesting still parses there.
 #[test]
 fn a_shallow_paren_nesting_still_parses_on_a_default_stack_thread() {
     let program = parse_program(deep_paren_program(300)).expect("parses");
@@ -82,21 +73,18 @@ fn deep_sum_program(terms: usize) -> Vec<u8> {
     src.into_bytes()
 }
 
-/// The exact depth this crate's own throwaway measurement tool,
-/// `examples/depth_probe.rs`, found the pre-fix cliff at: 2449 terms parsed
-/// and dropped, 2450 aborted. This is comfortably past that on the same
-/// default-stack test thread, so a regression in any of the three fixed
-/// recursions reintroduces a hang rather than a hard-to-notice slowdown.
+/// A long flat chain parses and drops on a default-stack test thread. Its
+/// length is past where the parser and the drop used to recurse once per
+/// term (`examples/depth_probe.rs` finds that depth), so a regression in any
+/// of those recursions aborts here.
 #[test]
 fn a_chain_past_the_pre_fix_cliff_parses_and_drops() {
     let program = parse_program(deep_sum_program(5_000)).expect("parses");
     drop(program);
 }
 
-/// The depth the oracle itself still answers (see this file's own header):
-/// `build/bin/rexx` prints a result for a 100,000-term chain and only exits
-/// 139 (its own stack overflow) at 150,000. Nothing in this crate should be
-/// shallower than the language it reproduces.
+/// A flat chain as long as the oracle still answers parses and drops: the
+/// parser must not be shallower than the implementation it is compared with.
 #[test]
 fn the_depth_the_oracle_still_answers_also_parses_and_drops() {
     let program = parse_program(deep_sum_program(100_000)).expect("parses");

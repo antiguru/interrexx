@@ -12,22 +12,12 @@ use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
 };
 
-/// How many levels of nested expression the parser will descend before
-/// raising `11.1`, "Insufficient control stack space; cannot continue
-/// execution", instead of recursing one level deeper.
+/// How many levels of nested expression the parser descends before raising
+/// `11.1` (`r[expr.index.nesting]`) instead of recursing one level deeper.
+/// The native stack of the thread the interpreter parses on must hold this
+/// many levels: `tests/deep.rs` recurses to this depth on that thread, so a
+/// change that makes a level costlier shows there as an abort.
 pub const MAX_EXPR_DEPTH: u32 = 50_000;
-
-/// The shallowest native stack overflow measured for any recursion
-/// `MAX_EXPR_DEPTH` guards, on the 512 MiB thread, debug: 88,800 levels of
-/// grouping parentheses parsed and 89,000 aborted, against 91,948 and 92,337
-/// for nested calls.
-const MEASURED_NATIVE_CLIFF: u32 = 88_800;
-
-const _: () = assert!(
-    MAX_EXPR_DEPTH < MEASURED_NATIVE_CLIFF,
-    "MAX_EXPR_DEPTH must stay below the measured native cliff, or the counter never fires \
-     and a deep expression aborts the process instead of raising 11.1"
-);
 
 /// Dyadic operator precedence, from the precedence table.
 fn precedence(op: Operator) -> u8 {
@@ -937,10 +927,8 @@ impl<'a, 'c> Parser<'a, 'c> {
             TokenKind::LeftParen => {
                 self.advance();
                 // One more level would recurse past MAX_EXPR_DEPTH, so raise
-                // the same condition as the reference implementation does past
-                // its own, differently-sized cliff, rather than descending into
-                // `full_subexpression` at all. See `MAX_EXPR_DEPTH`'s own doc
-                // comment for the two cliffs this sits between.
+                // 11.1 (r[expr.index.nesting]) rather than descending into
+                // `full_subexpression` at all.
                 if self.expr_depth >= MAX_EXPR_DEPTH {
                     return Err(self.raise(E11_1, []));
                 }
