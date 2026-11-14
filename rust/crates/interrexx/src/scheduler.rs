@@ -1432,7 +1432,11 @@ impl Interp {
             self.cancel_wait();
             return Some(Raised::insufficient_stack().into());
         }
-        let waited = self.run_others(true);
+        let waited = if self.guard_held_below(reason) {
+            Ok(Waited::Blocked { inverted: true })
+        } else {
+            self.run_others(true)
+        };
         pinned_unpark!(self);
         let failure = match waited {
             Ok(Waited::Woken) => return None,
@@ -1445,6 +1449,20 @@ impl Interp {
         };
         self.cancel_wait();
         Some(failure)
+    }
+
+    /// Whether `reason` is a guard whose owner waits in a loop below this
+    /// one, from Rust frames that stay live there: it goes on, and releases
+    /// the guard, only once this wait has ended, as a callback a parked one's
+    /// wait served must finish first (Deviation 174). Other activities may
+    /// keep this loop running meanwhile, so the wait is refused at once.
+    fn guard_held_below(&self, reason: ParkReason) -> bool {
+        let ParkReason::Guard(key) = reason else {
+            return false;
+        };
+        self.activities.guards.owner(key).is_some_and(|owner| {
+            (self.activities.owners.iter()).any(|&(below, how)| below == owner && how != Below::Free)
+        })
     }
 
     /// Withdraws the running activity from every message's waiters, from the
@@ -1721,11 +1739,14 @@ impl Interp {
         self.file_posts(posted, at, false);
     }
 
-    /// [`Interp::file_completions`], where `defers` with a callback through
-    /// an attached thread's context left for the loop the running activity
-    /// yields to, which serves it with that activity unburied: whether one
-    /// was. Only this drain defers, not one a lend it makes nests.
+    /// [`Interp::file_completions`], where `defers`, at a clause boundary,
+    /// with each callback through a thread context left in the inbox for a
+    /// scheduler loop to serve, and the rest filed: whether one was. A
+    /// callback served inside a clause would bury the activity running it,
+    /// which may hold what the callback then waits for, a guard say. Only
+    /// this drain defers, not one a lend it makes nests.
     fn file_posts(&mut self, mut posted: VecDeque<Posted>, at: DrainAt, defers: bool) -> bool {
+        let mut deferred = VecDeque::new();
         if self.sim.is_some() {
             self.sim_screen_posts(&posted);
         }
@@ -1748,16 +1769,14 @@ impl Interp {
                         self.end_abandoned_call(frame);
                     }
                 }
-                // A callback through an attached thread's context, where the
-                // running activity may yield, waits for the loop it yields to,
-                // which serves it with that activity unburied.
+                // A callback through a thread context waits for a loop, which
+                // serves it with the activity it set aside unburied where that
+                // activity waits at its driver's exit.
                 Posted::Recall(recall)
                     if defers
                         && matches!(recall.by, Recaller::Context(address) if address != 0) =>
                 {
-                    posted.push_front(Posted::Recall(recall));
-                    self.timer.requeue(std::mem::take(&mut posted));
-                    return true;
+                    deferred.push_back(Posted::Recall(recall));
                 }
                 Posted::Recall(recall) => {
                     self.timer.requeue(std::mem::take(&mut posted));
@@ -1831,7 +1850,9 @@ impl Interp {
                 }
             }
         }
-        false
+        let any = !deferred.is_empty();
+        self.timer.requeue(deferred);
+        any
     }
 
     /// `activity`'s record, running or idle, or `None` for a handle no
@@ -2823,10 +2844,14 @@ impl Interp {
         }
         if self.timer.requests().pending(crate::timer::INBOX) {
             let posted = self.timer.drain();
-            // Only where a slice leaves the driver, which then has nothing
-            // of the activity's on this stack.
-            let defers = yields && self.activity.pin_depth == 0 && self.activity.root_driver;
-            if self.file_posts(posted, DrainAt::MidRun, defers) {
+            // A slice is taken only where it leaves the driver, which then has
+            // nothing of the activity's on this stack. Anywhere else the
+            // deferred callback waits for the next loop that drains.
+            if self.file_posts(posted, DrainAt::MidRun, true)
+                && yields
+                && self.activity.pin_depth == 0
+                && self.activity.root_driver
+            {
                 return Err(Failure::Slice);
             }
         }
