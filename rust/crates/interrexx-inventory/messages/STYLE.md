@@ -63,7 +63,12 @@ and `; found "&k"` closes the text when the row renders the value that broke the
   have a symbol following it because there is no Y; found "&k".`
 * A token where none of its kind may stand: `Unexpected X.`
 * A name that does not resolve: `X "&k" not found.`
-* An operation that failed on a value: `X cannot be Y.`
+* An operation that failed on a value: `X cannot be Y.` A failed conversion reads
+  `Object "&k" cannot be converted to a Y.`, and code that fails to load reads
+  `X cannot be loaded.`, with `from library "&k"` where the row has the library.
+* A directive whose name another directive of its kind already took:
+  `::X directive must not reuse the name of another Y.`
+* A directive or method kind that takes no body but has one: `X must not have a body.`
 * A malformed construct with no more to say: `Invalid X.`
 
 ## Words
