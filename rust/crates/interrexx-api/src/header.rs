@@ -13,13 +13,15 @@
 //! (`tests/abi_dump.rs`) measures the two against each other.
 
 use crate::layout::{
-    C_TYPEDEFS, CField, CMember, CONSTRXSTRING, CSpelling, CallContextInterface, EXIT_FLAG_BITS,
-    ExitContextInterface, HANDLES, IORedirectorInterface, MethodContextInterface, REXXDATETIME,
-    RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM, RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING,
-    RXSYSEXIT, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition, RexxContextExit,
-    RexxExitContext_, RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface,
-    RexxMethodContext_, RexxMethodEntry, RexxPackageEntry, RexxQueueTime, RexxRoutineEntry,
-    RexxThreadContext_, RexxThreadInterface, SHVBLOCK, ValueDescriptor, ValueUnion, c_type,
+    C_TYPEDEFS, CField, CMember, CONSTRXSTRING, CSpelling, CallContextInterface, CxxMethod,
+    EXIT_FLAG_BITS, ExitContextInterface, FORWARDED_RESPELLED, HANDLES, IORedirectorInterface,
+    MethodContextInterface, REXXDATETIME, RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM,
+    RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXSYSEXIT, RXVALCALL_PARM, RXVARNOVALUE_PARM,
+    RexxCallContext_, RexxCondition, RexxContextExit, RexxExitContext_, RexxIORedirectorContext_,
+    RexxInstance_, RexxInstanceInterface, RexxMethodContext_, RexxMethodEntry, RexxPackageEntry,
+    RexxQueueTime, RexxRoutineEntry, RexxThreadContext_, RexxThreadInterface, SHVBLOCK,
+    THREAD_ALIASES, THREAD_INSTANCE_FIELDS, THREAD_INSTANCE_FORWARDS, THREAD_ONLY,
+    THREAD_RESPELLED, THREAD_UNNAMED, THREAD_VALUE_ACCESSORS, ValueDescriptor, ValueUnion, c_type,
 };
 use std::fmt::Write as _;
 
@@ -178,8 +180,8 @@ const API_STRUCTS: &[Struct] = &[
 ];
 
 /// The context structs, by their Rust name (the C struct tag), in
-/// `oorexxapi.h`.
-const CONTEXTS: &[(&str, &[CField])] = &[
+/// `oorexxapi.h`, in the order of their tables in [`TABLES`].
+pub const CONTEXTS: &[(&str, &[CField])] = &[
     ("RexxInstance_", RexxInstance_::C_FIELDS),
     ("RexxThreadContext_", RexxThreadContext_::C_FIELDS),
     ("RexxMethodContext_", RexxMethodContext_::C_FIELDS),
@@ -191,8 +193,9 @@ const CONTEXTS: &[(&str, &[CField])] = &[
     ),
 ];
 
-/// The interface tables, by name, in `oorexxapi.h`.
-const TABLES: &[(&str, &[(&str, CMember)])] = &[
+/// The interface tables, by name, in `oorexxapi.h`: each the `functions` of
+/// the context of the same place in [`CONTEXTS`].
+pub const TABLES: &[(&str, &[(&str, CMember)])] = &[
     ("RexxInstanceInterface", RexxInstanceInterface::C_DECLS),
     ("RexxThreadInterface", RexxThreadInterface::C_DECLS),
     ("MethodContextInterface", MethodContextInterface::C_DECLS),
@@ -524,7 +527,7 @@ fn tables() -> String {
     out
 }
 
-/// The context structs' fields.
+/// The context structs' fields and, in C++, their methods.
 fn context_structs() -> String {
     let mut out = String::new();
     for (at, (tag, members)) in CONTEXTS.iter().enumerate() {
@@ -533,9 +536,246 @@ fn context_structs() -> String {
         }
         writeln!(out, "struct {tag} {{").unwrap();
         fields(&mut out, members, &[], "    ");
+        out.push_str("#ifdef __cplusplus\n");
+        for method in methods(tag) {
+            writeln!(out, "    {}", method.definition()).unwrap();
+        }
+        out.push_str("#endif\n");
         out.push_str("};\n");
     }
     out
+}
+
+/// How a context struct's C++ method reaches the interface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Body {
+    /// Calls this function member of the context's own table, the context
+    /// first and the method's arguments after it.
+    Table(&'static str),
+    /// Answers this value member of the context's own table.
+    Value(&'static str),
+    /// Calls the method of the same name and parameters on the context's
+    /// `threadContext`.
+    Thread,
+    /// Calls the method of this name on the context's `instance`.
+    Instance(&'static str),
+    /// Answers this field of the context's `instance`.
+    InstanceField(&'static str),
+}
+
+/// One C++ method of a context struct.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Method {
+    /// Its name.
+    pub name: &'static str,
+    /// The C type of its result, `void` for none.
+    pub returns: String,
+    /// The C type of each parameter.
+    pub parameters: Vec<String>,
+    /// What it calls or reads.
+    pub body: Body,
+}
+
+impl Method {
+    /// The name and the parameter types, which tell overloads apart.
+    #[must_use]
+    pub fn signature(&self) -> String {
+        format!("{}({})", self.name, self.parameters.join(", "))
+    }
+
+    /// The inline definition, on one line.
+    #[must_use]
+    pub fn definition(&self) -> String {
+        let parameters: Vec<String> = self
+            .parameters
+            .iter()
+            .enumerate()
+            .map(|(at, ty)| declarator(ty, &format!("a{}", at + 1)))
+            .collect();
+        let arguments: Vec<String> = (1..=self.parameters.len())
+            .map(|at| format!("a{at}"))
+            .collect();
+        let arguments = arguments.join(", ");
+        let expression = match self.body {
+            Body::Table(member) if arguments.is_empty() => format!("functions->{member}(this)"),
+            Body::Table(member) => format!("functions->{member}(this, {arguments})"),
+            Body::Value(member) => format!("functions->{member}"),
+            Body::Thread => format!("threadContext->{}({arguments})", self.name),
+            Body::Instance(method) => format!("instance->{method}({arguments})"),
+            Body::InstanceField(field) => format!("instance->{field}"),
+        };
+        let statement = if self.returns == "void" {
+            expression
+        } else {
+            format!("return {expression}")
+        };
+        format!(
+            "{} {{ {statement}; }}",
+            declarator(
+                &self.returns,
+                &format!("{}({})", self.name, parameters.join(", "))
+            )
+        )
+    }
+}
+
+/// The interface table of context `context`.
+///
+/// # Panics
+/// If `context` is not one of [`CONTEXTS`].
+fn table_of(context: &str) -> &'static [(&'static str, CMember)] {
+    let at = CONTEXTS
+        .iter()
+        .position(|(tag, _)| *tag == context)
+        .unwrap_or_else(|| panic!("{context} is not a context struct"));
+    TABLES[at].1
+}
+
+/// The result and the parameters after the context of function member
+/// `member` of `table`, as C types.
+///
+/// # Panics
+/// If `table` has no function member `member`.
+fn function_of(table: &[(&str, CMember)], member: &str) -> (String, Vec<String>) {
+    let Some((
+        _,
+        CMember::Function {
+            returns,
+            parameters,
+        },
+    )) = table.iter().find(|(name, _)| *name == member)
+    else {
+        panic!("{member} is not a function member of its table");
+    };
+    let returns = returns.map_or_else(|| "void".to_string(), c_type);
+    let parameters = parameters.iter().skip(1).map(|ty| c_type(ty)).collect();
+    (returns, parameters)
+}
+
+/// A method calling `spelling.target` of `table`, under `spelling`'s name and
+/// with its spelling where it gives one.
+fn spelled_method(table: &[(&str, CMember)], spelling: &CxxMethod, body: Body) -> Method {
+    let (returns, parameters) = function_of(table, spelling.target);
+    Method {
+        name: spelling.name,
+        returns: spelling.returns.map_or(returns, c_type),
+        parameters: spelling.parameters.map_or(parameters, |tokens| {
+            tokens.iter().map(|ty| c_type(ty)).collect()
+        }),
+        body,
+    }
+}
+
+/// A method of each function member of `table` not in `unnamed`, under the
+/// member's name, spelled as `respelled` says where it names the member.
+fn own_methods(
+    table: &'static [(&'static str, CMember)],
+    unnamed: &[&str],
+    respelled: &[CxxMethod],
+) -> Vec<Method> {
+    table
+        .iter()
+        .filter(|(name, decl)| matches!(decl, CMember::Function { .. }) && !unnamed.contains(name))
+        .map(|(name, _)| {
+            let spelling = respelled
+                .iter()
+                .find(|spelling| spelling.target == *name)
+                .copied()
+                .unwrap_or(CxxMethod {
+                    name,
+                    target: name,
+                    parameters: None,
+                    returns: None,
+                });
+            spelled_method(table, &spelling, Body::Table(name))
+        })
+        .collect()
+}
+
+/// The thread context's methods: one per function member, the convenience
+/// aliases, the constant-object accessors and the forwards to its instance.
+fn thread_methods() -> Vec<Method> {
+    let table = table_of("RexxThreadContext_");
+    let instance = table_of("RexxInstance_");
+    let mut out = own_methods(table, THREAD_UNNAMED, THREAD_RESPELLED);
+    for alias in THREAD_ALIASES {
+        out.push(spelled_method(table, alias, Body::Table(alias.target)));
+    }
+    for (name, member) in THREAD_VALUE_ACCESSORS {
+        let Some((_, CMember::Value(tokens))) = table.iter().find(|(field, _)| field == member)
+        else {
+            panic!("{member} is not a value member of the thread table");
+        };
+        out.push(Method {
+            name,
+            returns: c_type(tokens),
+            parameters: Vec::new(),
+            body: Body::Value(member),
+        });
+    }
+    for name in THREAD_INSTANCE_FORWARDS {
+        let (returns, parameters) = function_of(instance, name);
+        out.push(Method {
+            name,
+            returns,
+            parameters,
+            body: Body::Instance(name),
+        });
+    }
+    for (name, field, returns) in THREAD_INSTANCE_FIELDS {
+        assert!(
+            RexxInstance_::C_FIELDS.iter().any(|f| f.name == *field),
+            "{field} is not a field of the instance"
+        );
+        out.push(Method {
+            name,
+            returns: c_type(returns),
+            parameters: Vec::new(),
+            body: Body::InstanceField(field),
+        });
+    }
+    out
+}
+
+/// The C++ methods of context struct `context`, in the order the header
+/// defines them.
+///
+/// The instance and the redirector context have one method per function member
+/// of their table. The thread context adds to those the methods of
+/// [`thread_methods`]. The method, call and exit contexts have one per function
+/// member of their own table and forward every thread context method but
+/// [`THREAD_ONLY`] to their `threadContext`.
+///
+/// # Panics
+/// If `context` is not one of [`CONTEXTS`].
+#[must_use]
+pub fn methods(context: &str) -> Vec<Method> {
+    let table = table_of(context);
+    match context {
+        "RexxThreadContext_" => thread_methods(),
+        "RexxMethodContext_" | "RexxCallContext_" | "RexxExitContext_" => {
+            let mut out = own_methods(table, &[], &[]);
+            for method in thread_methods() {
+                if THREAD_ONLY.contains(&method.name) {
+                    continue;
+                }
+                let returns = FORWARDED_RESPELLED
+                    .iter()
+                    .find(|spelling| {
+                        spelling.name == method.name && method.body == Body::Table(spelling.target)
+                    })
+                    .and_then(|spelling| spelling.returns)
+                    .map_or(method.returns, c_type);
+                out.push(Method {
+                    returns,
+                    body: Body::Thread,
+                    ..method
+                });
+            }
+            out
+        }
+        _ => own_methods(table, &[], &[]),
+    }
 }
 
 fn platform_types(platform: &Platform) -> String {

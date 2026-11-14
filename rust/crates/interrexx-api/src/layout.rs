@@ -1254,6 +1254,144 @@ interface! {
     }
 }
 
+/// A C++ method of a context struct that calls one member of an interface
+/// table under a name or a spelling the member does not give it.
+///
+/// The parameters are those after the context; each is spelled from Rust type
+/// tokens as a table member's are. The spec states no overload set yet (#649):
+/// the names, overloads and targets below are the interface's as extensions
+/// call it, with meaning from the rexxapi book.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CxxMethod {
+    /// The method's name.
+    pub name: &'static str,
+    /// The table member it calls.
+    pub target: &'static str,
+    /// Its parameters after the context, `None` for the target's own.
+    pub parameters: Option<&'static [&'static str]>,
+    /// Its result, `None` for the target's own.
+    pub returns: Option<&'static str>,
+}
+
+/// A [`CxxMethod`] with the target's parameters and result.
+const fn alias(name: &'static str, target: &'static str) -> CxxMethod {
+    CxxMethod {
+        name,
+        target,
+        parameters: None,
+        returns: None,
+    }
+}
+
+/// A [`CxxMethod`] with its own parameters and the target's result.
+const fn respelled(
+    name: &'static str,
+    target: &'static str,
+    parameters: &'static [&'static str],
+) -> CxxMethod {
+    CxxMethod {
+        name,
+        target,
+        parameters: Some(parameters),
+        returns: None,
+    }
+}
+
+/// The thread context's convenience methods: short names for conversions,
+/// string and array constructors, each overloaded by its parameters. Every
+/// context that forwards to the thread context has them too.
+pub const THREAD_ALIASES: &[CxxMethod] = &[
+    alias("ObjectToCSelf", "ObjectToCSelfScoped"),
+    alias("WholeNumber", "WholeNumberToObject"),
+    alias("Uintptr", "UintptrToObject"),
+    alias("Intptr", "IntptrToObject"),
+    respelled("StringSize", "StringSizeToObject", &["usize"]),
+    alias("WholeNumber", "ObjectToWholeNumber"),
+    respelled(
+        "StringSize",
+        "ObjectToStringSize",
+        &["RexxObjectPtr", "*mut usize"],
+    ),
+    alias("Int64", "Int64ToObject"),
+    alias("UnsignedInt64", "UnsignedInt64ToObject"),
+    alias("Int64", "ObjectToInt64"),
+    alias("UnsignedInt64", "ObjectToUnsignedInt64"),
+    alias("Int32", "Int32ToObject"),
+    alias("UnsignedInt32", "UnsignedInt32ToObject"),
+    alias("Int32", "ObjectToInt32"),
+    alias("UnsignedInt32", "ObjectToUnsignedInt32"),
+    alias("Uintptr", "ObjectToUintptr"),
+    alias("Intptr", "ObjectToIntptr"),
+    alias("Logical", "ObjectToLogical"),
+    alias("Logical", "LogicalToObject"),
+    alias("Double", "DoubleToObject"),
+    alias("Double", "ObjectToDouble"),
+    alias("CString", "ObjectToStringValue"),
+    alias("String", "NewString"),
+    alias("String", "NewStringFromAsciiz"),
+    alias("CString", "NewStringFromAsciiz"),
+    alias("Array", "ArrayOfOne"),
+    alias("Array", "ArrayOfTwo"),
+    alias("Array", "ArrayOfThree"),
+    alias("Array", "ArrayOfFour"),
+];
+
+/// The thread context's methods of a member's own name whose parameters the
+/// method spells otherwise than the member: `size_t` for `stringsize_t`, the
+/// same C type, and a signed count where the member takes a size, which the
+/// call converts.
+pub const THREAD_RESPELLED: &[CxxMethod] = &[
+    respelled("StringSizeToObject", "StringSizeToObject", &["usize"]),
+    respelled(
+        "ObjectToStringSize",
+        "ObjectToStringSize",
+        &["RexxObjectPtr", "*mut usize"],
+    ),
+    respelled("NewBuffer", "NewBuffer", &["wholenumber_t"]),
+    respelled("NewMutableBuffer", "NewMutableBuffer", &["wholenumber_t"]),
+];
+
+/// The thread table's members no method of the member's own name calls: an
+/// alias in [`THREAD_ALIASES`] reaches each.
+pub const THREAD_UNNAMED: &[&str] = &["ObjectToCSelfScoped"];
+
+/// The thread context's accessors of the constant objects: each method's name
+/// and the value member of the thread table it reads.
+pub const THREAD_VALUE_ACCESSORS: &[(&str, &str)] = &[
+    ("Nil", "RexxNil"),
+    ("True", "RexxTrue"),
+    ("False", "RexxFalse"),
+    ("NullString", "RexxNullString"),
+];
+
+/// The instance table's members the thread context forwards to its
+/// `instance`, under the member's own name.
+pub const THREAD_INSTANCE_FORWARDS: &[&str] = &[
+    "InterpreterVersion",
+    "LanguageLevel",
+    "AddCommandEnvironment",
+    "StackCommandEnvironment",
+];
+
+/// The thread context's accessors of a field of its instance: the method's
+/// name, the field's C name and the method's result.
+pub const THREAD_INSTANCE_FIELDS: &[(&str, &str, &str)] =
+    &[("GetApplicationData", "applicationData", "POINTER")];
+
+/// The thread context's methods the method, call and exit contexts do not
+/// forward: those that act on the thread itself.
+pub const THREAD_ONLY: &[&str] = &["DetachThread", "HaltThread", "SetThreadTrace"];
+
+/// The thread context's methods that the method, call and exit contexts
+/// forward with another result: `DisplayCondition` answers the error number
+/// there as a `logical_t`.
+pub const FORWARDED_RESPELLED: &[CxxMethod] = &[CxxMethod {
+    name: "DisplayCondition",
+    target: "DisplayCondition",
+    parameters: None,
+    returns: Some("logical_t"),
+}];
+
 /// The method-context table an extension calls through, at one address.
 pub static METHOD_CONTEXT_INTERFACE: MethodContextInterface = MethodContextInterface::REFUSING;
 
