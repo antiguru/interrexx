@@ -3,7 +3,7 @@ element: "Arithmetic"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10"
 rexxref: "Numbers and Arithmetic > Arithmetic"
-deviations: [53, 102]
+deviations: [53, 102, 174, 175]
 ---
 
 # Arithmetic
@@ -536,4 +536,55 @@ b: say condition('c')
 ```output
 LOSTDIGITS
 LOSTDIGITS
+```
+
+r[num.arithmetic.deviation.174]
+An operand that an earlier operation produced takes part with the digits of
+the number it is written as ([the result rule](r:num.formats.result)), as any
+other operand does ([the digits rule](r:num.arithmetic.digits)): a trailing
+zero it shows is a digit like any other. The operation therefore gives what it
+gives for a literal with the same characters as that result, such as
+`999900000000` for `9999E8 + 0`, and not what it gives for another spelling of
+the same number, such as `9999E8` ([Deviation 174](../deviations.md)). ooRexx
+keeps such a result as its significant digits and an exponent and carries that
+into the next operation, so where the zeros would take part, its answer
+differs: for the first and the third product below it answers
+`9.998999990001E+20` and `-9.998999990001E+20`, and for the second, with the
+literal `999900000000`, and the fourth, with the literal `9999E8`, what is
+shown here.
+
+```rexx
+numeric digits 18
+d = 9999E8 + 0
+say d (999999999 * d) (999999999 * 999900000000) (999999999 * -(9999E8)),
+  (999999999 * 9999E8)
+```
+
+```output
+999900000000 9.99899999000100000E+20 9.99899999000100000E+20 -9.99899999000100000E+20 9.998999990001E+20
+```
+
+r[num.arithmetic.deviation.175]
+The digits that [the lost digits rule](r:num.arithmetic.lostdigits) counts in
+an operand that an earlier operation produced are those of the number it is
+written as, its trailing zeros included, as for any other operand ([Deviation
+175](../deviations.md)); [the comparison rule](r:num.comparison.deviation.175)
+counts them the same way. A whole number made at a higher NUMERIC DIGITS and
+used at a lower one can therefore raise LOSTDIGITS. ooRexx counts the
+significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
+DIGITS 20 is one digit to it and raises nothing under NUMERIC DIGITS 3, where
+its operations answer `1E+3`.
+
+```rexx
+signal on lostdigits
+numeric digits 20
+v = '1E3' + 0
+numeric digits 3
+say v (v + 0)
+exit
+lostdigits: say 'LOSTDIGITS' condition('D')
+```
+
+```output
+LOSTDIGITS 1000
 ```
