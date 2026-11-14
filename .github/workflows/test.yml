@@ -235,21 +235,48 @@ jobs:
           --lib --test concurrency_tests --test corpus
           -E 'kind(lib) | (binary(concurrency_tests) & test(/^measured::/)) | (binary(corpus) & test(=pinning_report_over_the_corpus))'
 
+  # The checked-in tables derived from the pinned ooRexx sources must match them. Needs the
+  # submodule but no oracle build, so it does not wait for the third-party trees.
+  upstream-interface:
+    name: upstream interface
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+      - name: Install nextest
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: nextest@0.9.150
+      - name: Check the generated tables
+        # Regenerates every table in memory and fails, printing the differing rows, when one
+        # differs from the checked-in file (a submodule bump or an edited row). The fix is
+        # `cargo run -p interrexx-upstream -- write`, see docs/developing.md.
+        env:
+          REXX_UPSTREAM: ${{ github.workspace }}/third_party/ooRexx
+        run: cargo run --locked -p interrexx-upstream -- check
+      - name: Internal routine names agree with the pinned sources
+        run: cargo nextest run --locked -p interrexx --test internal_routines --profile ci
+
   # The check branch protection requires; it passes when every job above did.
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, spec-oracle, doctest, pinning]
+    needs: [shard, spec-oracle, doctest, pinning, upstream-interface]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}"
+          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.spec-oracle.result }}" = success
           test "${{ needs.doctest.result }}" = success
           test "${{ needs.pinning.result }}" = success
+          test "${{ needs.upstream-interface.result }}" = success
 
   fmt:
     name: Cargo fmt
