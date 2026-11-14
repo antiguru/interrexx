@@ -854,11 +854,16 @@ activities run on while it waits, and the refusal comes once nothing else can
 run, during the main program or at its end, so their output and their errors
 come first. Inside a message that an attached thread sends, or a routine that
 an embedding host calls, it comes there too, where another wait goes on for a
-later message. It then ends the run even where native code could still end
-another activity's wait. A host's call answers with a condition pending, and
-the refusal is reported when the host terminates the instance. The refusal claims only that the wait can never be
-satisfied. After a `reply` the result is settled, and the method's own
-`result` and `wait` answer at once.
+later message. In a program the `rexx` command or `RexxStart` runs, the
+refusal ends the run, even where native code could still end another
+activity's wait. A call that a host makes on an instance it created with
+`RexxCreateInterpreter`, from any thread, answers no result and leaves a
+condition pending, and the instance takes further calls until `Terminate`.
+The refusal's text is written when the host terminates the instance, unless
+the call came from the thread that created the instance and the host cleared
+the condition. The refusal claims only that the wait can never be satisfied.
+After a `reply` the result is settled, and the method's own `result` and
+`wait` answer at once.
 A wait that would close a ring of waits between activities raises `SYNTAX
 98.905` whatever was loaded ([the deadlock rule](r:conc.locks.deadlock)).
 In the third example the program loads [the fixture library
