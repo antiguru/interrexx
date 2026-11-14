@@ -245,14 +245,30 @@ fn an_attached_callback_has_its_own_thread_number() {
     );
 }
 
-/// Two threads attached at once each send `TICK` five times while the main program sleeps: every
-/// message runs.
+/// Two threads attached at once each send `TICK` five times, each to an object of its own, while
+/// the main program sleeps: every message runs. Sent to one object, a `TICK` that arrives while
+/// the other thread's runs would wait for the guard it holds, as
+/// `a_callback_waiting_for_a_guard_another_callback_holds_is_refused` shows.
 // spec: native.threads.attach
 #[test]
 fn two_attached_threads_call_back_concurrently() {
     assert_eq!(
         run("attach-two", "two.rex"),
-        ("ticked 10\n".to_owned(), String::new(), 0)
+        ("ticked 5 5\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A second attached thread's `TICK` arrives while the first thread's message runs Rexx code in a
+/// guarded method of the same object. The first message makes no progress while the `TICK` runs,
+/// so the `TICK`'s wait for its guard is refused at once (Deviation 174), and the program ends
+/// with rc 120. The oracle runs the `TICK` once the first message has finished and says
+/// `ticked 1`, so it is not asked.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_waiting_for_a_guard_another_callback_holds_is_refused() {
+    assert_eq!(
+        run_ours("attach-busy", "busy.rex"),
+        ("ticked 0\n".to_owned(), inverted_wait("a guard"), 120)
     );
 }
 

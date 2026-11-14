@@ -5,10 +5,10 @@
    The rest are unguarded unless they say otherwise. NAP notes that it naps, sleeps a second and
    notes that it napped. LIFOA notes that it started, sleeps two seconds and adds `a` to ORDER,
    and LIFOB sleeps two seconds and adds `b`. HOLD, guarded, has a thread send TICK and runs Rexx
-   code for a second. SERVE has a thread send AWAITREPLY, runs Rexx code for a second and answers
-   `served`, and AWAITREPLY says the result of the message MSG. AWAITSEM waits up to ten seconds
-   on the event semaphore SEM and says so, POSTSEM posts it, and POSTNAP posts it, sleeps a second
-   and says it ends. */
+   code for a second, and BUSY, guarded, runs Rexx code for a second. SERVE has a thread send
+   AWAITREPLY, runs Rexx code for a second and answers `served`, and AWAITREPLY says the result of
+   the message MSG. AWAITSEM waits up to ten seconds on the event semaphore SEM and says so,
+   POSTSEM posts it, and POSTNAP posts it, sleeps a second and says it ends. */
 ::requires 'attach' LIBRARY
 ::class ticks public
 ::attribute count
@@ -86,3 +86,7 @@
   sem~post
   call SysSleep 1
   say 'callback ends'
+::method busy
+  call time 'R'
+  do until time('E') > 1
+  end
