@@ -260,54 +260,44 @@ pub fn method_waits_on(name: &str) -> &'static str {
         .map_or(NO_PROGRAM, |(_, work)| *work)
 }
 
-/// A sentence of the reference saying the user cannot construct a class, with
-/// the line it is on and the status it grounds.
+/// A passage of the reference saying the user cannot construct a class: the
+/// lines it is on, a short locator found there (a fragment, not the sentence,
+/// which the reference holds and this table does not repeat), and the status
+/// it grounds.
 pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, &str, Status)] = &[
-    (
-        "Buffer",
-        429,
-        429,
-        "can only be created using the native code application programming interfaces.",
-        Status::Unreachable,
-    ),
-    (
-        "Pointer",
-        7844,
-        7844,
-        "can only be created using the native code application programming interfaces.",
-        Status::Unreachable,
-    ),
+    ("Buffer", 429, 429, "native code", Status::Unreachable),
+    ("Pointer", 7844, 7844, "native code", Status::Unreachable),
     (
         "RexxContext",
         8479,
         8479,
-        "They cannot be directly created by the user.",
+        "directly created",
         Status::NotCovered,
     ),
     (
         "RexxInfo",
         8876,
         8876,
-        "other instances cannot be created or copied.",
+        "created or copied",
         Status::NotCovered,
     ),
     (
         "StackFrame",
         10341,
         10341,
-        "StackFrame instances cannot be directly created by the user.",
+        "directly created",
         Status::NotCovered,
     ),
     (
         "VariableReference",
         13490,
         13491,
-        "Calling the new method to create a VariableReference instance is not allowed.",
+        "is not allowed",
         Status::NotCovered,
     ),
 ];
 
-/// The file every [`UNCONSTRUCTIBLE`] sentence is in.
+/// The file every [`UNCONSTRUCTIBLE`] passage is in.
 pub const UNCONSTRUCTIBLE_BOOK: &str = "utilityclasses.xml";
 
 /// Placeholders the class tables use for the two concatenation operators that
@@ -702,9 +692,9 @@ pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
         "~new constructs, or one opted in with a committed construction".into(),
         "program. `not-covered` says no construction program is committed and".into(),
         "CARRIES NO CLAIM ABOUT THE ORACLE. `unreachable` is grounded in a".into(),
-        "sentence of the reference itself and belongs to the classes whose".into(),
-        "sentence says instances come only from native code; each such".into(),
-        "sentence is re-read at the line it cites on every run.".into(),
+        "passage of the reference itself and belongs to the classes whose".into(),
+        "passage says instances come only from native code; each such".into(),
+        "passage is re-read at the line it cites on every run.".into(),
         String::new(),
         format!(
             "`construction` is the Rexx expression a method row's instance arm \

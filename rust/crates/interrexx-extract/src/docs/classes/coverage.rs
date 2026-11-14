@@ -1,5 +1,5 @@
 //! A class row's coverage: the construction measurements, read together
-//! with the reference's own sentences saying a class cannot be constructed.
+//! with the reference's own passages saying a class cannot be constructed.
 
 use std::collections::BTreeMap;
 
@@ -8,7 +8,7 @@ use super::{
     UNCONSTRUCTIBLE, UNCONSTRUCTIBLE_BOOK,
 };
 
-/// Re-reads each [`UNCONSTRUCTIBLE`] quotation at the lines it cites, so a
+/// Re-reads each [`UNCONSTRUCTIBLE`] locator at the lines it cites, so a
 /// citation that has gone stale reddens rather than being carried.
 pub(super) fn unconstructible_index(
     books: &[Book],
@@ -19,19 +19,19 @@ pub(super) fn unconstructible_index(
         .unwrap_or_else(|| panic!("{UNCONSTRUCTIBLE_BOOK} is not among the books"));
     let lines: Vec<&str> = book.text.lines().collect();
     let mut out = BTreeMap::new();
-    for &(class, first, last, sentence, status) in UNCONSTRUCTIBLE {
+    for &(class, first, last, locator, status) in UNCONSTRUCTIBLE {
         let span = lines
             .get(first - 1..last)
             .unwrap_or_else(|| panic!("{UNCONSTRUCTIBLE_BOOK} has no lines {first}-{last}"))
             .join(" ");
         let plain = collapse(&strip_tags(&span));
         assert!(
-            plain.contains(sentence),
-            "{UNCONSTRUCTIBLE_BOOK}:{first}-{last} no longer reads {sentence:?}; it reads \
+            plain.contains(locator),
+            "{UNCONSTRUCTIBLE_BOOK}:{first}-{last} no longer holds {locator:?}; it reads \
              {plain:?}. This citation grounds {class}'s status, and a status grounded in a \
-             sentence that moved is grounded in nothing"
+             passage that moved is grounded in nothing"
         );
-        out.insert(class, (first, last, sentence, status));
+        out.insert(class, (first, last, locator, status));
     }
     out
 }
@@ -55,10 +55,10 @@ fn collapse(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// A class's coverage and the sentence `class-set.txt` states it in.
+/// A class's coverage and the reason `class-set.txt` states it in.
 pub(super) fn coverage_of(
     name: &str,
-    sentence: Option<(usize, usize, &'static str, Status)>,
+    passage: Option<(usize, usize, &'static str, Status)>,
 ) -> (Coverage, String) {
     let upper = name.to_ascii_uppercase();
     let construction = CONSTRUCTION
@@ -87,13 +87,13 @@ pub(super) fn coverage_of(
         expression: expression.to_string(),
         directive: directive.clone(),
     };
-    if let Some((first, last, text, status)) = sentence {
+    if let Some((first, last, _locator, status)) = passage {
         let at = if first == last {
             format!("{first}")
         } else {
             format!("{first}-{last}")
         };
-        let cited = format!("{UNCONSTRUCTIBLE_BOOK}:{at} \"{text}\"");
+        let cited = format!("{UNCONSTRUCTIBLE_BOOK}:{at}");
         if status == Status::Unreachable {
             assert!(
                 program.is_none(),
