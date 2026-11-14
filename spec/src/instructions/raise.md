@@ -1299,6 +1299,38 @@ s: say condition('o')~code (condition('o')~message \== '')
 97.1 1
 ```
 
+r[instr.raise.untrapped.additional]
+The objects that the clause's ADDITIONAL, or the array its ARRAY makes, and its
+DESCRIPTION give are in the `ADDITIONAL` of that `SYNTAX 97.1`. They are there
+as the objects themselves: nothing converts them when the condition is raised,
+and code that later takes the string value of one of them runs its
+`MAKESTRING` at that point. How many items that `ADDITIONAL` has, and where in
+it these objects are, is not specified.
+
+```rexx
+signal on syntax name s
+a = .array~of('p', 'q')
+raise nomethod additional (a) description (.key~new)
+s: o = condition('o')
+say o~code o~additional~hasItem(a)
+do item over o~additional
+  if item~isA(.key) then found = item
+end
+say 'found' found~class~id
+say '['found']'
+::class key
+::method makestring
+  say 'makestring ran'
+  return 'description'
+```
+
+```output
+97.1 1
+found KEY
+makestring ran
+[description]
+```
+
 ```rexx
 call on error name e
 call r1

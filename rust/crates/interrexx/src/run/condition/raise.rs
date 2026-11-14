@@ -396,8 +396,21 @@ impl Interp {
             None if name.as_ref() == b"NOMETHOD" => {
                 let mut raised = match (self.activity.pending_additional.take(), description) {
                     (Some(receiver), description) => {
-                        let receiver = self.string_value_text(receiver)?;
-                        Raised::no_method(&receiver, &description.unwrap_or_default())
+                        let target = self.string_value_text(receiver)?;
+                        let raised = Raised::no_method(&target, &description.unwrap_or_default());
+                        // r[instr.raise.untrapped.additional]: the objects the
+                        // clause supplied reach the condition's `ADDITIONAL`
+                        // unconverted, so a reader that takes an item's string
+                        // value runs its `MAKESTRING` then. The layout, the
+                        // receiver then the description or the null string, is
+                        // not specified (r[conv.error.additional]).
+                        let message = match description_object {
+                            Some(object) => object,
+                            None => self.text(b""),
+                        };
+                        self.activity.pending_additional =
+                            Some(self.security_arguments_array(&[Some(receiver), Some(message)]));
+                        raised
                     }
                     (None, _) => Raised::syntax(97, 5, Vec::new()),
                 };
