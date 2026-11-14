@@ -170,8 +170,24 @@ pub fn normalize_stderr(bytes: &[u8]) -> Vec<u8> {
 /// the number, and how many such levels there are, unspecified.
 const LIBRARY_LINE_FIELD: &[u8] = b"     N";
 
-/// The tail of a traceback line for a method of the class library.
-const LIBRARY_FRAME_TAIL: &[u8] = b" in package \"REXX\" (no source available).";
+/// The tails of a traceback line for a method or a routine of the class
+/// library, which has no source: what the catalogue text (101.24, 101.25)
+/// shows after the name and the scope, with the package `REXX`. Each is read
+/// from the table, behind sentinel inserts, so no wording is quoted here.
+fn library_frame_tails() -> &'static [Vec<u8>] {
+    static TAILS: std::sync::OnceLock<Vec<Vec<u8>>> = std::sync::OnceLock::new();
+    TAILS.get_or_init(|| {
+        let after = |marker: &str, last: char| -> Vec<u8> {
+            let text = interrexx_inventory::errors::expand(marker);
+            let at = text.find(last).expect("the sentinel is in the text") + last.len_utf8();
+            text.as_bytes()[at..].to_vec()
+        };
+        vec![
+            after("⟨101.24¦\u{1}¦\u{2}¦REXX⟩", '\u{2}'),
+            after("⟨101.25¦\u{1}¦REXX⟩", '\u{1}'),
+        ]
+    })
+}
 
 /// The tail of an error report's first line when the error was raised in the
 /// class library, up to the number.
@@ -215,9 +231,12 @@ pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
 }
 
 /// `line` with its number replaced, when it is a traceback line of a library
-/// method: blanks, digits, ` *-* `, text and [`LIBRARY_FRAME_TAIL`].
+/// method: blanks, digits, ` *-* `, text and one of [`library_frame_tails`].
 fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
-    if !line.ends_with(LIBRARY_FRAME_TAIL) {
+    if !library_frame_tails()
+        .iter()
+        .any(|tail| line.ends_with(tail))
+    {
         return None;
     }
     let blanks = line.iter().take_while(|&&b| b == b' ').count();
@@ -522,15 +541,21 @@ mod tests {
 
     use super::normalize_library_lines;
 
-    const FRAME_1459: &[u8] = b"  1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
-    const FRAME_88: &[u8] = b"    88 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+    /// The traceback line of a library method at line `number`.
+    fn frame(number: &str) -> Vec<u8> {
+        format!(
+            "{number:>6} *-* {}\n",
+            interrexx_inventory::errors::expand("⟨101.24¦UNKNOWN¦Monitor¦REXX⟩")
+        )
+        .into_bytes()
+    }
 
     fn transcript(frame: &[u8], report_line: &str) -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(frame);
         out.extend_from_slice(b"     2 *-* x = .Validate~number('N', 'x')\n");
         out.extend_from_slice(
-            format!("Error 88 running REXX line {report_line}:  Invalid argument.\n").as_bytes(),
+            format!("Error 88 running REXX line {report_line}:  Invented major text.\n").as_bytes(),
         );
         out
     }
@@ -539,8 +564,8 @@ mod tests {
     /// compare equal: the number is unspecified.
     #[test]
     fn a_different_library_line_normalises_equal() {
-        let one = transcript(FRAME_1459, "1459");
-        let other = transcript(FRAME_88, "88");
+        let one = transcript(&frame("1459"), "1459");
+        let other = transcript(&frame("88"), "88");
         assert_ne!(one, other, "sanity: byte-exact still differs");
         assert_eq!(normalize_stderr(&one), normalize_stderr(&other));
         assert_eq!(
@@ -578,12 +603,12 @@ mod tests {
     /// unspecified.
     #[test]
     fn an_extra_library_frame_normalises_equal() {
-        let one = transcript(FRAME_1459, "1459");
+        let one = transcript(&frame("1459"), "1459");
         let mut two = Vec::new();
         two.extend_from_slice(
             b"    12 *-* Method HELPER with scope \"Validate\" in package \"REXX\" (no source available).\n",
         );
-        two.extend_from_slice(&transcript(FRAME_88, "12"));
+        two.extend_from_slice(&transcript(&frame("88"), "12"));
         assert_ne!(one, two, "sanity: byte-exact still differs");
         assert_eq!(normalize_stderr(&one), normalize_stderr(&two));
     }
@@ -591,7 +616,7 @@ mod tests {
     /// A user line that differs only in its number is still a difference.
     #[test]
     fn a_different_user_line_still_differs() {
-        let one = transcript(FRAME_1459, "1459");
+        let one = transcript(&frame("1459"), "1459");
         let mut other = one.clone();
         let at = other.windows(7).position(|w| w == b"     2 ").unwrap();
         other[at + 5] = b'3';
@@ -602,7 +627,7 @@ mod tests {
     /// `REXX` are each still a difference.
     #[test]
     fn a_different_method_scope_or_package_still_differs() {
-        let one = transcript(FRAME_1459, "1459");
+        let one = transcript(&frame("1459"), "1459");
         for (from, to) in [
             (&b"UNKNOWN"[..], &b"OTHER"[..]),
             (b"\"Monitor\"", b"\"Monitor2\""),
@@ -653,16 +678,16 @@ mod tests {
     #[test]
     fn error_codes_only_drops_message_text_and_nothing_else() {
         use super::error_codes_only;
-        let one = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        let one = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Invented major text.\nError 93.902:  Invented sub text, 2 shown.\n";
         let other = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Wording differs.\nError 93.902:  Another text: with a colon.\n";
         assert_eq!(error_codes_only(one), error_codes_only(other));
-        let subcode = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.903:  Too many arguments; 2 expected.\n";
+        let subcode = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Invented major text.\nError 93.903:  Invented sub text, 2 shown.\n";
         assert_ne!(error_codes_only(one), error_codes_only(subcode));
-        let code = b"     2 *-* say x~put(1)\nError 94 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        let code = b"     2 *-* say x~put(1)\nError 94 running /t/x.rex line 2:  Invented major text.\nError 93.902:  Invented sub text, 2 shown.\n";
         assert_ne!(error_codes_only(one), error_codes_only(code));
-        let line = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 3:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        let line = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 3:  Invented major text.\nError 93.902:  Invented sub text, 2 shown.\n";
         assert_ne!(error_codes_only(one), error_codes_only(line));
-        let traceback = b"     3 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        let traceback = b"     3 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Invented major text.\nError 93.902:  Invented sub text, 2 shown.\n";
         assert_ne!(error_codes_only(one), error_codes_only(traceback));
         let plain = b"say with Error 93: text\nErrors: 5\nError 93:  no subcode form\n";
         assert_eq!(error_codes_only(plain), plain.to_vec());

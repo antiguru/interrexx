@@ -17,15 +17,15 @@ pub const SUBCOM_LOAD: u16 = 3;
 pub const SUBCOM_QUERY: u16 = 11;
 /// `rxqueue`: the queuing system is not available.
 pub const QUEUE_NOT_INITIALISED: u16 = 4;
-/// `rxqueue`: the size of the data is incorrect.
+/// `rxqueue`: the data size is refused (999.5).
 pub const QUEUE_SIZE: u16 = 5;
-/// `rxqueue`: storage for data queues is exhausted.
+/// `rxqueue`: queue storage ran out (999.6).
 pub const QUEUE_NO_MEMORY: u16 = 6;
 /// `rxqueue`: a queue name is not valid. Insert 1 is the name.
 pub const QUEUE_NAME: u16 = 7;
-/// `rxqueue`: the queue access mode is not correct.
+/// `rxqueue`: the access mode is refused (999.8).
 pub const QUEUE_ACCESS: u16 = 8;
-/// `rxqueue`: a queue does not exist. Insert 1 is the name.
+/// `rxqueue`: no queue of that name (999.10). Insert 1 is the name.
 pub const QUEUE_EXIST: u16 = 10;
 /// `rxqueue`: the command's syntax is incorrect.
 pub const QUEUE_SYNTAX: u16 = 16;

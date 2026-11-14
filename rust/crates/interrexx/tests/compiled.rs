@@ -16,6 +16,7 @@ mod messages;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
+use interrexx_inventory::errors::expand;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -241,13 +242,10 @@ fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
 /// The report for an image refused with `sub`: 3.903 or 3.905.
 fn refused(image: &str, sub: u16) -> String {
     let message = match sub {
-        903 => format!(
-            "Error 3.903:  Program \"DIR/{image}\" cannot be run by this version of the REXX \
-             interpreter."
-        ),
-        _ => format!("Error 3.905:  Encoded compiled program \"DIR/{image}\" cannot be decoded."),
+        903 => expand(&format!("Error 3.903:  ⟨3.903¦DIR/{image}⟩")),
+        _ => expand(&format!("Error 3.905:  ⟨3.905¦DIR/{image}⟩")),
     };
-    format!("rc> 253\nerr> Error 3:  Failure during initialization.\nerr> {message}\n")
+    expand(&format!("rc> 253\nerr> Error 3:  ⟨3⟩\nerr> {message}\n"))
 }
 
 // spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
@@ -461,10 +459,12 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
         tagcr.insert(tag - 1, b'\r');
         assert_eq!(
             report(&side, "tagcr.rxo", &tagcr),
-            "rc> 243\n\
+            expand(
+                "rc> 243\n\
              err>      2 *-* /**/@\n\
-             err> Error 13 running DIR/tagcr.rxo line 2:  Invalid character in program.\n\
-             err> Error 13.1:  Incorrect character in program \"@\" ('40'X).\n",
+             err> Error 13 running DIR/tagcr.rxo line 2:  ⟨13⟩\n\
+             err> Error 13.1:  ⟨13.1¦@¦40⟩\n"
+            ),
             "CR before the tag's LF"
         );
         let output = side
@@ -482,10 +482,12 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
 // spec: env.invocation.rexxc.run
 #[test]
 fn an_opening_with_a_changed_byte_is_source() {
-    let stop = "rc> 243\n\
+    let stop = expand(
+        "rc> 243\n\
                 err>      2 *-* /**/@\n\
-                err> Error 13 running DIR/t.rxo line 2:  Invalid character in program.\n\
-                err> Error 13.1:  Incorrect character in program \"@\" ('40'X).\n";
+                err> Error 13 running DIR/t.rxo line 2:  ⟨13⟩\n\
+                err> Error 13.1:  ⟨13.1¦@¦40⟩\n",
+    );
     // Four text files that begin like an image and hold none: both engines.
     let texts: [&[u8]; 4] = [
         b"#!/usr/bin/env rexx\n/**/@REXY say 1\n", // a letter of REXX

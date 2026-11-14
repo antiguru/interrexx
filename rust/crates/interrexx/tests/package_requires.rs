@@ -8,6 +8,7 @@
 
 mod support;
 
+use interrexx_inventory::errors::expand;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -164,7 +165,7 @@ fn each_of_the_four_search_routes_finds_the_required_file() {
                 assert_eq!(exit_code, 213, "route {name}: exit status");
                 assert!(
                     String::from_utf8_lossy(&stderr)
-                        .contains("Error 43.901:  Could not find file \"reqlib\" for ::REQUIRES."),
+                        .contains(&expand("Error 43.901:  ⟨43.901¦reqlib⟩")),
                     "route {name}: stderr {:?}",
                     String::from_utf8_lossy(&stderr)
                 );
@@ -278,8 +279,10 @@ fn a_requires_cycle_is_the_oracles_own_report() {
         "one clause echo per level of the chain: {stderr}"
     );
     assert!(
-        stderr.contains("Error 98.952:  Circular ::REQUIRES references detected with ")
-            && stderr.contains(&format!("{}/a.rex.", dir.display())),
+        stderr.contains(&expand(&format!(
+            "Error 98.952:  ⟨98.952¦{}/a.rex⟩",
+            dir.display()
+        ))),
         "the report does not name the file the cycle closed on: {stderr}"
     );
 }

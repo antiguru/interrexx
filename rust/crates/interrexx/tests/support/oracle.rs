@@ -498,6 +498,7 @@ mod tests {
         stdout_multiset,
     };
     use interrexx::{Outcome, StackSpan};
+    use interrexx_inventory::errors::expand;
 
     /// [`DescriptorDiff::labels`] names exactly the channels whose field is
     /// set, over every combination of the three.
@@ -559,10 +560,9 @@ mod tests {
     #[test]
     fn raw_ignores_a_library_line_number_and_not_a_user_line_number() {
         let frame = |n: &str| {
-            format!(
-                "{n:>6} *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
-                 (no source available).\n     2 *-* x = 1\nError 4 running REXX line {n}:  Halt\n"
-            )
+            expand(&format!(
+                "{n:>6} *-* ⟨101.24¦UNKNOWN¦Monitor¦REXX⟩\n     2 *-* x = 1\nError 4 running REXX line {n}:  Halt\n"
+            ))
         };
         let same = descriptor_diffs_with(
             &outcome(frame("1459").as_bytes()),

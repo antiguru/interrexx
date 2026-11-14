@@ -17,6 +17,7 @@ fn an_operand_that_spells_an_integer_reads_as_that_integer() {
 use super::*;
 use crate::plan::BodyKey;
 use crate::{Activation, error::Failure};
+use interrexx_inventory::errors::expand;
 use interrexx_parse::{InstructionKind, Program, parse_program};
 use std::rc::Rc;
 
@@ -1031,8 +1032,7 @@ fn an_unresolvable_name_raises_43_1() {
     );
     assert_eq!(outcome.exit_code, 213);
     assert!(
-        String::from_utf8_lossy(&outcome.stderr)
-            .contains(r#"Error 43.1:  Could not find routine "ZORKOLO"."#),
+        String::from_utf8_lossy(&outcome.stderr).contains(&expand("Error 43.1:  ⟨43.1¦ZORKOLO⟩")),
         "stderr: {:?}",
         String::from_utf8_lossy(&outcome.stderr)
     );
@@ -1052,8 +1052,7 @@ fn a_literal_call_target_never_reaches_the_label_table() {
     );
     assert_eq!(outcome.exit_code, 213);
     assert!(
-        String::from_utf8_lossy(&outcome.stderr)
-            .contains(r#"Error 43.1:  Could not find routine "f"."#),
+        String::from_utf8_lossy(&outcome.stderr).contains(&expand("Error 43.1:  ⟨43.1¦f⟩")),
         "stderr: {:?}",
         String::from_utf8_lossy(&outcome.stderr)
     );
@@ -1077,8 +1076,7 @@ fn a_routine_returning_no_value_in_expression_form_raises_44_1() {
     assert_eq!(outcome.exit_code, 212, "256 - 44");
     let stderr = String::from_utf8_lossy(&outcome.stderr);
     assert!(
-        stderr.contains("Function or message did not return data.")
-            && stderr.contains("No data returned from function \"F\"."),
+        stderr.contains(&expand("⟨44⟩")) && stderr.contains(&expand("⟨44.1¦F⟩")),
         "stderr: {stderr:?}"
     );
     assert_eq!(

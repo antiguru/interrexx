@@ -2,6 +2,7 @@ use super::super::dispatch;
 use crate::error::Failure;
 use crate::{Interp, error::Raised};
 use interrexx_core::{Decoded, ObjRef};
+use interrexx_inventory::errors::expand;
 
 /// Runs `name` over `arguments`, each `None` standing for an omitted
 /// interior position, and answers the result's own bytes.
@@ -793,29 +794,23 @@ fn the_new_raisers_render_the_oracles_own_message_text() {
     let cases = [
         (
             Raised::argument_not_whole(b"LEFT", 2, b"q"),
-            "LEFT argument 2 must be a whole number; found \"q\".",
+            expand("⟨40.12¦LEFT¦2¦q⟩"),
         ),
         (
             Raised::argument_not_a_pad(b"LEFT", 3, b"xx"),
-            "LEFT argument 3 must be a single character; found \"xx\".",
+            expand("⟨40.23¦LEFT¦3¦xx⟩"),
         ),
-        (
-            Raised::invalid_length(b"-1"),
-            "Invalid length argument specified; found \"-1\".",
-        ),
-        (
-            Raised::invalid_position(b"0"),
-            "Invalid position argument specified; found \"0\".",
-        ),
+        (Raised::invalid_length(b"-1"), expand("⟨93.923¦-1⟩")),
+        (Raised::invalid_position(b"0"), expand("⟨93.924¦0⟩")),
         (
             Raised::argument_not_non_negative(1, b"-1"),
-            "Method argument 1 must be zero or a positive whole number; found \"-1\".",
+            expand("⟨93.906¦1¦-1⟩"),
         ),
         (
             Raised::invalid_option("BLT", b"Xyz"),
-            "Method option must be one of \"BLT\"; found \"Xyz\".",
+            expand("⟨93.915¦BLT¦Xyz⟩"),
         ),
-        (Raised::system_resources(), "System resources exhausted."),
+        (Raised::system_resources(), expand("⟨5⟩")),
     ];
     for (raised, expected) in cases {
         let rendered = String::from_utf8(raised.report(&crate::error::ClauseSite {
@@ -824,7 +819,7 @@ fn the_new_raisers_render_the_oracles_own_message_text() {
         }))
         .expect("the catalogue is UTF-8");
         assert!(
-            rendered.contains(expected),
+            rendered.contains(&expected),
             "{rendered:?} does not carry {expected:?}"
         );
     }

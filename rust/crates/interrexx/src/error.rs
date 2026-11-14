@@ -2334,6 +2334,7 @@ pub(crate) fn displayable(bytes: &mut [u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use interrexx_inventory::errors::expand;
 
     #[test]
     fn a_parse_errors_inserts_render_the_same_secondary_line_through_raised() {
@@ -2368,9 +2369,11 @@ mod tests {
         };
         assert_eq!(
             String::from_utf8(raised.report(&site)).unwrap(),
-            "     4 *-* end\n\
-             Error 7 running /abs/path/f.rex line 4:  WHEN or OTHERWISE expected.\n\
-             Error 7.3:  All WHEN expressions of SELECT are false; OTHERWISE expected.\n"
+            expand(
+                "     4 *-* end\n\
+             Error 7 running /abs/path/f.rex line 4:  ⟨7⟩\n\
+             Error 7.3:  ⟨7.3⟩\n"
+            )
         );
         assert_eq!(raised.exit_code(), 249);
     }
@@ -2387,9 +2390,11 @@ mod tests {
         let report = String::from_utf8(raised.report(&site)).unwrap();
         assert_eq!(
             report,
-            "    12 *-* if 'x' \n\
-             Error 34 running /abs/w.rex line 12:  Logical value not 0 or 1.\n\
-             Error 34.901:  Logical value must be exactly \"0\" or \"1\"; found \"x\".\n"
+            expand(
+                "    12 *-* if 'x' \n\
+             Error 34 running /abs/w.rex line 12:  ⟨34⟩\n\
+             Error 34.901:  ⟨34.901¦x⟩\n"
+            )
         );
         assert_eq!(raised.exit_code(), 222);
     }
@@ -2478,10 +2483,7 @@ mod tests {
     #[test]
     fn a_substitution_value_containing_an_ampersand_digit_is_left_alone() {
         let raised = Raised::nonnumeric(b"&1");
-        assert_eq!(
-            raised.message(41, 1),
-            b"Nonnumeric value (\"&1\") used in arithmetic operation."
-        );
+        assert_eq!(raised.message(41, 1), expand("⟨41.1¦&1⟩").as_bytes());
     }
 
     /// An `&` that is not a substitution, and a missing value, both pass
@@ -2547,12 +2549,12 @@ mod tests {
         };
         assert_eq!(
             String::from_utf8(raised.report(&site)).unwrap(),
-            concat!(
+            expand(concat!(
                 "     8 *-*       say 1/0\n",
                 "     3 *-*     call sub1\n",
-                "Error 42 running /abs/c2.rex line 8:  Arithmetic overflow/underflow.\n",
-                "Error 42.3:  Arithmetic overflow; divisor must not be zero.\n",
-            )
+                "Error 42 running /abs/c2.rex line 8:  ⟨42⟩\n",
+                "Error 42.3:  ⟨42.3⟩\n",
+            ))
         );
     }
 

@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_inventory::errors::expand;
 
 // ---- condition traps, RAISE and NOVALUE ----
 
@@ -1241,12 +1242,14 @@ fn a_started_messages_report_names_the_line_that_raised() {
     assert_eq!(outcome.exit_code, 214);
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        "     6 *-* say 1/0\n\
-         Error 42 running /w/m.rex line 6:  Arithmetic overflow/underflow.\n\
-         Error 42.3:  Arithmetic overflow; divisor must not be zero.\n\
+        expand(
+            "     6 *-* say 1/0\n\
+         Error 42 running /w/m.rex line 6:  ⟨42⟩\n\
+         Error 42.3:  ⟨42.3⟩\n\
          \x20    6 *-* say 1/0\n\
-         Error 42 running /w/m.rex line 3:  Arithmetic overflow/underflow.\n\
-         Error 42.3:  Arithmetic overflow; divisor must not be zero.\n"
+         Error 42 running /w/m.rex line 3:  ⟨42⟩\n\
+         Error 42.3:  ⟨42.3⟩\n"
+        )
     );
 }
 
@@ -1265,14 +1268,16 @@ fn a_started_messages_halt_report_names_the_line_that_raised() {
     assert_eq!(outcome.exit_code, 252);
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        "     9 *-*   raise halt\n\
+        expand(
+            "     9 *-*   raise halt\n\
          \x20    6 *-* call sub\n\
-         Error 4 running /w/h.rex line 9:  Program interrupted.\n\
-         Error 4.1:  Program interrupted with HALT condition.\n\
+         Error 4 running /w/h.rex line 9:  ⟨4⟩\n\
+         Error 4.1:  ⟨4.1¦HALT⟩\n\
          \x20    9 *-*   raise halt\n\
          \x20    6 *-* call sub\n\
-         Error 4 running /w/h.rex line 2:  Program interrupted.\n\
-         Error 4.1:  Program interrupted with HALT condition.\n"
+         Error 4 running /w/h.rex line 2:  ⟨4⟩\n\
+         Error 4.1:  ⟨4.1¦HALT⟩\n"
+        )
     );
 }
 

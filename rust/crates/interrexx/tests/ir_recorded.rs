@@ -2,6 +2,7 @@
 //! and required to answer the bytes committed for it, plus a sweep that runs
 //! every population to completion with no body refused.
 
+use interrexx_inventory::errors::expand;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -246,16 +247,16 @@ const BRANCH_CASES: &[InlineCase] = &[
         name: "select with no matching when",
         program: "select\n  when 1 = 0 then say 'a'\nend\nsay 'after'\n",
         stdout: "",
-        stderr: "     3 *-* end\nError 7 running <PATH> line 3:  WHEN or OTHERWISE expected.\n\
-                 Error 7.3:  All WHEN expressions of SELECT are false; OTHERWISE expected.\n",
+        stderr: "     3 *-* end\nError 7 running <PATH> line 3:  ⟨7⟩\n\
+                 Error 7.3:  ⟨7.3⟩\n",
         exit_code: 249,
     },
     InlineCase {
         name: "select case with no matching when",
         program: "select case 2\n  when 1 then say 'a'\nend\nsay 'after'\n",
         stdout: "",
-        stderr: "     3 *-* end\nError 7 running <PATH> line 3:  WHEN or OTHERWISE expected.\n\
-                 Error 7.3:  All WHEN expressions of SELECT are false; OTHERWISE expected.\n",
+        stderr: "     3 *-* end\nError 7 running <PATH> line 3:  ⟨7⟩\n\
+                 Error 7.3:  ⟨7.3⟩\n",
         exit_code: 249,
     },
     InlineCase {
@@ -298,9 +299,7 @@ const BRANCH_CASES: &[InlineCase] = &[
         stderr: "     2 *-* select case 2\n       >K>   \"CASE\" => \"2\"\n     3 *-*   \
                  when 2 \n       >>>     \"2\"\n       >>>     \"1\"\n     3 *-*     then\n     \
                  4 *-*       when 3 \n       >>>         \"3\"\n       >>>         \"0\"\n     \
-                 5 *-*     end\n     5 *-*     end\nError 7 running <PATH> line 5:  WHEN or \
-                 OTHERWISE expected.\nError 7.3:  All WHEN expressions of SELECT are false; \
-                 OTHERWISE expected.\n",
+                 5 *-*     end\n     5 *-*     end\nError 7 running <PATH> line 5:  ⟨7⟩\nError 7.3:  ⟨7.3⟩\n",
         exit_code: 249,
     },
     InlineCase {
@@ -322,9 +321,7 @@ const BRANCH_CASES: &[InlineCase] = &[
         name: "iterate naming a select is 28.5",
         program: "select label s\n  when 1 = 1 then iterate s\nend\nsay 'after'\n",
         stdout: "",
-        stderr: "     2 *-*       iterate s\nError 28 running <PATH> line 2:  Invalid LEAVE or \
-                 ITERATE.\nError 28.5:  Symbol following ITERATE (\"S\") does not match a \
-                 repetitive block instruction.\n",
+        stderr: "     2 *-*       iterate s\nError 28 running <PATH> line 2:  ⟨28⟩\nError 28.5:  ⟨28.5¦S⟩\n",
         exit_code: 228,
     },
     InlineCase {
@@ -428,9 +425,7 @@ const BRANCH_CASES: &[InlineCase] = &[
         name: "leave naming nothing, forwarded out of a when",
         program: "do i = 1 to 1\n  select\n    when 1 = 1 then leave nope\n  end\nend\n",
         stdout: "",
-        stderr: "     3 *-* leave nope\nError 28 running <PATH> line 3:  Invalid LEAVE or \
-                 ITERATE.\nError 28.3:  Symbol following LEAVE (\"NOPE\") must either match the \
-                 label of a current loop or block instruction.\n",
+        stderr: "     3 *-* leave nope\nError 28 running <PATH> line 3:  ⟨28⟩\nError 28.3:  ⟨28.3¦NOPE⟩\n",
         exit_code: 228,
     },
     InlineCase {
@@ -440,9 +435,7 @@ const BRANCH_CASES: &[InlineCase] = &[
         program: "do i = 1 to 1\n  select\n    when 1 = 0 then nop\n    otherwise leave nope\n  \
                   end\nend\n",
         stdout: "",
-        stderr: "     4 *-* leave nope\nError 28 running <PATH> line 4:  Invalid LEAVE or \
-                 ITERATE.\nError 28.3:  Symbol following LEAVE (\"NOPE\") must either match the \
-                 label of a current loop or block instruction.\n",
+        stderr: "     4 *-* leave nope\nError 28 running <PATH> line 4:  ⟨28⟩\nError 28.3:  ⟨28.3¦NOPE⟩\n",
         exit_code: 228,
     },
     InlineCase {
@@ -521,8 +514,7 @@ const BRANCH_CASES: &[InlineCase] = &[
                   h:\nsay 1/0\nreturn\n",
         stdout: "",
         stderr: "    11 *-*     say 1/0\n     3 *-*   when raiser() = 'V' \nError 42 running \
-                 <PATH> line 11:  Arithmetic overflow/underflow.\nError 42.3:  Arithmetic \
-                 overflow; divisor must not be zero.\n",
+                 <PATH> line 11:  Arithmetic overflow/underflow.\nError 42.3:  ⟨42.3⟩\n",
         exit_code: 214,
     },
     InlineCase {
@@ -536,8 +528,7 @@ const BRANCH_CASES: &[InlineCase] = &[
                   say 1/0\nreturn\n",
         stdout: "V\n",
         stderr: "    11 *-*         say 1/0\n     3 *-*       say raiser()\nError 42 running \
-                 <PATH> line 11:  Arithmetic overflow/underflow.\nError 42.3:  Arithmetic \
-                 overflow; divisor must not be zero.\n",
+                 <PATH> line 11:  Arithmetic overflow/underflow.\nError 42.3:  ⟨42.3⟩\n",
         exit_code: 214,
     },
     InlineCase {
@@ -549,9 +540,7 @@ const BRANCH_CASES: &[InlineCase] = &[
                   otherwise nop\n  end\n  return\n",
         stdout: "",
         stderr: "     5 *-*         procedure\n     1 *-* call sub 1\nError 17 running <PATH> \
-                 line 5:  Unexpected PROCEDURE.\nError 17.1:  PROCEDURE is valid only when it is \
-                 the first instruction executed after an internal CALL or function \
-                 invocation.\n",
+                 line 5:  Unexpected PROCEDURE.\nError 17.1:  ⟨17.1⟩\n",
         exit_code: 239,
     },
     InlineCase {
@@ -560,9 +549,8 @@ const BRANCH_CASES: &[InlineCase] = &[
         name: "if condition is not a logical value",
         program: "if 'x' then say 'y'\n",
         stdout: "",
-        stderr: "     1 *-* if 'x' \nError 34 running <PATH> line 1:  Logical value not 0 or 1.\n\
-                 Error 34.1:  Value of expression following IF keyword must be exactly \"0\" \
-                 or \"1\"; found \"x\".\n",
+        stderr: "     1 *-* if 'x' \nError 34 running <PATH> line 1:  ⟨34⟩\n\
+                 Error 34.1:  ⟨34.1¦x⟩\n",
         exit_code: 222,
     },
     InlineCase {
@@ -636,8 +624,7 @@ const BRANCH_CASES: &[InlineCase] = &[
                   say 'after'\nexit\nraiser:\nraise user zx return 'V'\nh:\nsay 1/0\nreturn\n",
         stdout: "",
         stderr: "     9 *-*   say 1/0\n     2 *-* if raiser() = 'V' \nError 42 running <PATH> \
-                 line 9:  Arithmetic overflow/underflow.\nError 42.3:  Arithmetic overflow; \
-                 divisor must not be zero.\n",
+                 line 9:  Arithmetic overflow/underflow.\nError 42.3:  ⟨42.3⟩\n",
         exit_code: 214,
     },
     InlineCase {
@@ -651,8 +638,7 @@ const BRANCH_CASES: &[InlineCase] = &[
                   end\nsay 'after'\nexit\nraiser:\nraise user zx return 'V'\nh:\nzq = 1/0\nreturn\n",
         stdout: "",
         stderr: "    10 *-*     zq = 1/0\n     3 *-*   if raiser() = 'V' \nError 42 running \
-                 <PATH> line 10:  Arithmetic overflow/underflow.\nError 42.3:  Arithmetic \
-                 overflow; divisor must not be zero.\n",
+                 <PATH> line 10:  Arithmetic overflow/underflow.\nError 42.3:  ⟨42.3⟩\n",
         exit_code: 214,
     },
     InlineCase {
@@ -664,9 +650,7 @@ const BRANCH_CASES: &[InlineCase] = &[
         program: "call sub 1\nexit\nsub:\n  if arg(1) = 1 then procedure\n  return\n",
         stdout: "",
         stderr: "     4 *-*       procedure\n     1 *-* call sub 1\nError 17 running <PATH> \
-                 line 4:  Unexpected PROCEDURE.\nError 17.1:  PROCEDURE is valid only when it \
-                 is the first instruction executed after an internal CALL or function \
-                 invocation.\n",
+                 line 4:  Unexpected PROCEDURE.\nError 17.1:  ⟨17.1⟩\n",
         exit_code: 239,
     },
 ];
@@ -747,7 +731,7 @@ fn compare_inline_cases(cases: &[InlineCase]) {
         );
         assert_eq!(
             String::from_utf8_lossy(&outcome.stderr),
-            case.stderr.replace("<PATH>", INLINE_PATH),
+            expand(case.stderr).replace("<PATH>", INLINE_PATH),
             "[{}] trace moved",
             case.name
         );
@@ -1042,10 +1026,14 @@ fn compare(case: &Case) -> Option<String> {
 
 /// The library a 98.903 report in `stderr` names, if there is one.
 fn unloaded_library(stderr: &[u8]) -> Option<String> {
-    const MARKER: &str = "Unable to load library \"";
+    // The text around the library name, from the table behind a sentinel.
+    let sample = expand("⟨98.903¦\u{1}⟩");
+    let (head, tail) = sample
+        .split_once('\u{1}')
+        .expect("the sentinel is in the text");
     let text = String::from_utf8_lossy(stderr);
-    let start = text.find(MARKER)? + MARKER.len();
-    let length = text[start..].find('"')?;
+    let start = text.find(head)? + head.len();
+    let length = text[start..].find(tail)?;
     Some(text[start..start + length].to_string())
 }
 

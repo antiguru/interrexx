@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_inventory::errors::expand;
 
 /// The body selector's `Some(index)` half, which no execution path can
 /// construct yet (`Activation::body`'s own doc has why). Exercised
@@ -328,7 +329,7 @@ fn a_duplicate_routine_directive_is_99_903_before_the_first_clause() {
     assert_eq!(outcome.stdout, b"", "stdout is empty: main never ran");
     let stderr = String::from_utf8_lossy(&outcome.stderr);
     assert!(
-        stderr.contains("Error 99.903:  Duplicate ::ROUTINE directive instruction.")
+        stderr.contains(&expand("Error 99.903:  ⟨99.903⟩"))
             && stderr.contains("*-* ::routine zork"),
         "expected the oracle's own report with the directive echoed, got: {stderr}"
     );
@@ -351,8 +352,7 @@ fn a_duplicate_resource_name_is_refused_and_a_distinct_one_is_not() {
     assert_eq!(refused.stdout, b"", "stdout is empty: main never ran");
     let stderr = String::from_utf8_lossy(&refused.stderr);
     assert!(
-        stderr.contains("Error 99.942:  Duplicate ::RESOURCE directive instruction.")
-            && stderr.contains("*-* ::resource D"),
+        stderr.contains(&expand("Error 99.942:  ⟨99.942⟩")) && stderr.contains("*-* ::resource D"),
         "expected the oracle's own report with the second directive echoed, got: {stderr}"
     );
 
@@ -506,13 +506,13 @@ fn a_routines_own_clauses_echo_at_indent_zero_however_deep_the_call_site_is() {
     );
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        format!(
-            "       >I> Routine \"RTN\" in package \"{PATH}\".\n\
+        expand(&format!(
+            "       >I> ⟨101.18¦RTN¦{PATH}⟩\n\
              \x20    8 *-* n1 = 1\n\
              \x20      >>>   \"1\"\n\
              \x20    9 *-* return\n\
-             \x20      <I< Routine \"RTN\" in package \"{PATH}\".\n"
-        )
+             \x20      <I< ⟨101.18¦RTN¦{PATH}⟩\n"
+        ))
     );
 }
 
@@ -522,10 +522,10 @@ fn a_routines_own_clauses_echo_at_indent_zero_however_deep_the_call_site_is() {
 #[test]
 fn the_invocation_prefixes_fire_for_exactly_the_four_label_tracing_letters() {
     const PATH: &str = "/tmp/rtn-letters.rex";
-    let announced = format!(
-        "       >I> Routine \"RTN\" in package \"{PATH}\".\n\
-         \x20      <I< Routine \"RTN\" in package \"{PATH}\".\n"
-    );
+    let announced = expand(&format!(
+        "       >I> ⟨101.18¦RTN¦{PATH}⟩\n\
+         \x20      <I< ⟨101.18¦RTN¦{PATH}⟩\n"
+    ));
     for letter in *b"ailr" {
         let source = format!(
             "call rtn\n::routine rtn\ntrace {}\nreturn\n",
@@ -565,10 +565,10 @@ fn the_invocation_prefixes_fire_for_exactly_the_four_label_tracing_letters() {
 #[test]
 fn the_invocation_prefixes_are_not_announced_from_inside_a_nested_construct() {
     const PATH: &str = "/tmp/rtn-nested.rex";
-    let both = format!(
-        "       >I> Routine \"RTN\" in package \"{PATH}\".\n\
-         \x20      <I< Routine \"RTN\" in package \"{PATH}\".\n"
-    );
+    let both = expand(&format!(
+        "       >I> ⟨101.18¦RTN¦{PATH}⟩\n\
+         \x20      <I< ⟨101.18¦RTN¦{PATH}⟩\n"
+    ));
     let cases: &[(&str, &str, &str)] = &[
         ("an IF then-branch", "if 1=1 then trace l", ""),
         ("an IF else-branch", "if 1=0 then nop; else trace l", ""),
@@ -632,8 +632,8 @@ fn the_invocation_prefixes_are_not_announced_from_inside_a_nested_construct() {
 #[test]
 fn the_invocation_prefixes_are_gated_on_more_than_the_trace_letter() {
     const PATH: &str = "/tmp/rtn-gate.rex";
-    let entry = format!("       >I> Routine \"RTN\" in package \"{PATH}\".\n");
-    let exit = format!("       <I< Routine \"RTN\" in package \"{PATH}\".\n");
+    let entry = expand(&format!("       >I> ⟨101.18¦RTN¦{PATH}⟩\n"));
+    let exit = expand(&format!("       <I< ⟨101.18¦RTN¦{PATH}⟩\n"));
     let both = format!("{entry}{exit}");
 
     let check = |what: &str, source: &str, want: &str| {
@@ -802,9 +802,11 @@ fn an_extensions_raise_with_substitutions_is_the_calls_condition() {
     assert_eq!(outcome.stdout, b"before\n");
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        "       *-* Compiled routine \"RXCALCSIN\".\n     2 *-* say RxCalcSin(30, 3, 'X')\n\
-         Error 88 running /tmp/unwritten.rex line 2:  Invalid argument.\n\
-         Error 88.916:  Argument 3 must be one of D, R, or G; found \"X\".\n"
+        expand(
+            "⟨101.21¦RXCALCSIN⟩\n     2 *-* say RxCalcSin(30, 3, 'X')\n\
+         Error 88 running /tmp/unwritten.rex line 2:  ⟨88⟩\n\
+         Error 88.916:  ⟨88.916¦3¦D, R, or G¦X⟩\n"
+        )
     );
 }
 
@@ -883,9 +885,7 @@ fn a_directive_naming_a_library_that_is_not_there_is_98_903() {
         let upper = shown.contains("::requires");
         let named = if upper { "ZZZNOLIB" } else { "zzznolib" };
         assert!(
-            stderr.contains(&format!(
-                "Error 98.903:  Unable to load library \"{named}\"."
-            )),
+            stderr.contains(&expand(&format!("Error 98.903:  ⟨98.903¦{named}⟩"))),
             "{shown}: stderr {stderr}"
         );
     }
@@ -919,11 +919,10 @@ fn a_builtin_called_with_too_few_arguments_reports_the_oracles_40_3() {
     assert_eq!(outcome.exit_code, 216, "256 - 40");
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        format!(
+        expand(&format!(
             "     1 *-* say length()\n\
-             Error 40 running {path} line 1:  Incorrect call to routine.\n\
-             Error 40.3:  Not enough arguments in invocation of LENGTH; \
-             minimum expected is 1.\n"
-        )
+             Error 40 running {path} line 1:  ⟨40⟩\n\
+             Error 40.3:  ⟨40.3¦LENGTH¦1⟩\n"
+        ))
     );
 }
