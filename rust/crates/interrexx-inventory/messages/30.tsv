@@ -1,0 +1,3 @@
+30	0	Name or symbol too long.
+30	1	Name or symbol exceeds 250 characters; found "&1".
+30	900	&1.
