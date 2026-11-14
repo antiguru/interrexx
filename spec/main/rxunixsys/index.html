@@ -329,9 +329,9 @@ call try "SysGeterrnomsg('+2')"
 call try "SysGeterrnomsg('1E0')"
 call try "SysGeterrnomsg(2*3)"
 call try "SysGeterrnomsg(1.5)"
-call try "SysGeterrnomsg(2147483647)"
-call try "SysGeterrnomsg('-2147483647')"
-call try "SysGeterrnomsg('-2147483648')"
+call try "(SysGeterrnomsg(2147483647) \= '')"
+call try "(SysGeterrnomsg('-2147483647') \= '')"
+call try "(SysGeterrnomsg('-2147483648') \= '')"
 call try "SysGeterrnomsg('2147483648')"
 call try "SysGeterrnomsg('-2147483649')"
 call try "SysGeterrnomsg('')"
@@ -359,9 +359,9 @@ SysGeterrnomsg('+2') =&gt; No such file or directory
 SysGeterrnomsg('1E0') =&gt; Operation not permitted
 SysGeterrnomsg(2*3) =&gt; No such device or address
 SysGeterrnomsg(1.5) -&gt; 88.907
-SysGeterrnomsg(2147483647) =&gt; Unknown
-SysGeterrnomsg('-2147483647') =&gt; Unknown
-SysGeterrnomsg('-2147483648') =&gt; Unknown
+(SysGeterrnomsg(2147483647) \= '') =&gt; 1
+(SysGeterrnomsg('-2147483647') \= '') =&gt; 1
+(SysGeterrnomsg('-2147483648') \= '') =&gt; 1
 SysGeterrnomsg('2147483648') -&gt; 88.907
 SysGeterrnomsg('-2147483649') -&gt; 88.907
 SysGeterrnomsg('') -&gt; 88.907
@@ -469,9 +469,12 @@ clause, after the failed call and after nothing else that fails, as in the
 examples; what a later clause finds, and what another activity does to it, is
 the subject of <a href="#r-rxunixsys.index.deviation.164">Deviation 164</a>.
 <code>SysGeterrnomsg</code> answers
-<code>Ok</code> for <code>0</code> and <code>Unknown</code> for a number without a text. It takes the number as
-a <a href="#r-rxunixsys.index.whole">whole number</a>, and the numbers of the table that
-the examples show are fixed: the text of another number is that of the system.</p>
+<code>Ok</code> for <code>0</code> and, for every other number, the text that the platform gives that
+error number, as C's <code>strerror</code> words it at run time, so that the wording
+differs between platforms. The answer is never the null string, also for a
+number that is no error number of the platform, or is negative. It takes the
+number as a <a href="#r-rxunixsys.index.whole">whole number</a>. The examples show the
+texts that Linux gives.</p>
 <pre><code class="language-rexx">say SysUnlink('c1zqnone') SysGeterrno()
 say SysMkdirUnix('c1zqnone/c1zqnone', 493) SysGeterrno()
 say SysMkdirUnix('c1zqd1', 493) SysMkdirUnix('c1zqd1', 493) SysGeterrno()
@@ -482,7 +485,7 @@ say SysMkdirUnix('c1zqf1', 493) SysGeterrno() SysRmdirUnix('c1zqf1') SysGeterrno
 call SysFileDelete 'c1zqf1'
 say SysGeterrnomsg(0) '|' SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13)
 say SysGeterrnomsg(17) '|' SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22)
-say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
+say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnomsg(1000) \= '') '|' (SysGeterrnomsg(-1) \= '')
 ::requires 'rxunixsys' library
 </code></pre>
 <pre><code class="language-output">-1 2
@@ -492,7 +495,7 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 -1 17 -1 20
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
-Directory not empty | Unknown | Unknown
+Directory not empty | 1 | 1 | 1
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-rxunixsys.index.deviation.164"><a href="#r-rxunixsys.index.deviation.164">[rxunixsys.index.deviation.164]</a></div>

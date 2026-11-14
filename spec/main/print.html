@@ -96184,6 +96184,33 @@ say h~result
 </code></pre>
 <pre><code class="language-output rc=120">start
 </code></pre>
+<div class="rule" id="r-conc.locks.trace.deviation.14"><a href="concurrency/locks.html#r-conc.locks.trace.deviation.14">[conc.locks.trace.deviation.14]</a></div>
+<p>The same holds for the destination of a trace line (an object set with
+<code>.traceoutput~destination</code>) whose guarded <code>LINEOUT</code> method waits for a change
+that only another activity can make: a delivery that holds a guard does not
+give the kernel to another activity, so such a wait is refused after the delivery
+has gone on for several seconds with another activity ready, and the program
+ends with exit code 120. In the example the destination loops until a started
+activity sets a flag.</p>
+<pre><code class="language-rexx">.environment~flag = 0
+.traceoutput~destination(.sink~new)
+m = .setter~new~start('go')
+say 'start'
+trace r
+x = 1
+trace off
+say 'done'
+::class sink
+::method lineout guarded
+  do while .environment~flag \= 1; end
+  return 0
+::class setter
+::method go
+  call syssleep 0.2
+  .environment~flag = 1
+</code></pre>
+<pre><code class="language-output rc=120">start
+</code></pre>
 <div class="rule" id="r-conc.locks.deviation.20"><a href="concurrency/locks.html#r-conc.locks.deviation.20">[conc.locks.deviation.20]</a></div>
 <p>A wait that no activity, timer or call can end is refused, and the program
 ends with exit code 120. ooRexx waits for ever. This holds for the waits that
@@ -108872,9 +108899,9 @@ call try "SysGeterrnomsg('+2')"
 call try "SysGeterrnomsg('1E0')"
 call try "SysGeterrnomsg(2*3)"
 call try "SysGeterrnomsg(1.5)"
-call try "SysGeterrnomsg(2147483647)"
-call try "SysGeterrnomsg('-2147483647')"
-call try "SysGeterrnomsg('-2147483648')"
+call try "(SysGeterrnomsg(2147483647) \= '')"
+call try "(SysGeterrnomsg('-2147483647') \= '')"
+call try "(SysGeterrnomsg('-2147483648') \= '')"
 call try "SysGeterrnomsg('2147483648')"
 call try "SysGeterrnomsg('-2147483649')"
 call try "SysGeterrnomsg('')"
@@ -108902,9 +108929,9 @@ SysGeterrnomsg('+2') =&gt; No such file or directory
 SysGeterrnomsg('1E0') =&gt; Operation not permitted
 SysGeterrnomsg(2*3) =&gt; No such device or address
 SysGeterrnomsg(1.5) -&gt; 88.907
-SysGeterrnomsg(2147483647) =&gt; Unknown
-SysGeterrnomsg('-2147483647') =&gt; Unknown
-SysGeterrnomsg('-2147483648') =&gt; Unknown
+(SysGeterrnomsg(2147483647) \= '') =&gt; 1
+(SysGeterrnomsg('-2147483647') \= '') =&gt; 1
+(SysGeterrnomsg('-2147483648') \= '') =&gt; 1
 SysGeterrnomsg('2147483648') -&gt; 88.907
 SysGeterrnomsg('-2147483649') -&gt; 88.907
 SysGeterrnomsg('') -&gt; 88.907
@@ -109012,9 +109039,12 @@ clause, after the failed call and after nothing else that fails, as in the
 examples; what a later clause finds, and what another activity does to it, is
 the subject of <a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">Deviation 164</a>.
 <code>SysGeterrnomsg</code> answers
-<code>Ok</code> for <code>0</code> and <code>Unknown</code> for a number without a text. It takes the number as
-a <a href="rxunixsys/index.html#r-rxunixsys.index.whole">whole number</a>, and the numbers of the table that
-the examples show are fixed: the text of another number is that of the system.</p>
+<code>Ok</code> for <code>0</code> and, for every other number, the text that the platform gives that
+error number, as C's <code>strerror</code> words it at run time, so that the wording
+differs between platforms. The answer is never the null string, also for a
+number that is no error number of the platform, or is negative. It takes the
+number as a <a href="rxunixsys/index.html#r-rxunixsys.index.whole">whole number</a>. The examples show the
+texts that Linux gives.</p>
 <pre><code class="language-rexx">say SysUnlink('c1zqnone') SysGeterrno()
 say SysMkdirUnix('c1zqnone/c1zqnone', 493) SysGeterrno()
 say SysMkdirUnix('c1zqd1', 493) SysMkdirUnix('c1zqd1', 493) SysGeterrno()
@@ -109025,7 +109055,7 @@ say SysMkdirUnix('c1zqf1', 493) SysGeterrno() SysRmdirUnix('c1zqf1') SysGeterrno
 call SysFileDelete 'c1zqf1'
 say SysGeterrnomsg(0) '|' SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13)
 say SysGeterrnomsg(17) '|' SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22)
-say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
+say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnomsg(1000) \= '') '|' (SysGeterrnomsg(-1) \= '')
 ::requires 'rxunixsys' library
 </code></pre>
 <pre><code class="language-output">-1 2
@@ -109035,7 +109065,7 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 -1 17 -1 20
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
-Directory not empty | Unknown | Unknown
+Directory not empty | 1 | 1 | 1
 </code></pre>
 <h2 id="deviations-88"><a class="header" href="#deviations-88">Deviations</a></h2>
 <div class="rule" id="r-rxunixsys.index.deviation.164"><a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">[rxunixsys.index.deviation.164]</a></div>
