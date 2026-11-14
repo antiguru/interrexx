@@ -1,11 +1,10 @@
-//! The conversion table, row by row and against the frozen header.
+//! The conversion table, row by row and against the value codes the headers define.
 
 use std::borrow::Cow;
-use std::collections::BTreeMap;
-use std::path::PathBuf;
 
+use interrexx_api::constants::{ARGUMENT_TYPES, OPTIONAL_VALUES, VALUE_ALIASES, value_codes};
 use interrexx_api::handles::Table;
-use interrexx_api::layout::POINTER;
+use interrexx_api::layout::{POINTER, c_type};
 use interrexx_api::values::{
     ARGUMENT_EXISTS, CStringPool, Class, Constants, Conversion, Converted, Failure, Host, Numeric,
     OPTIONAL_ARGUMENT, Raised, Repr, ResultRead, SPECIAL_ARGUMENT, Value, code, consumes_argument,
@@ -314,100 +313,37 @@ fn roots_of(locals: &Table) -> RootSet {
     roots
 }
 
-/// The frozen header (D5).
-fn header() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../third_party/ooRexx/api/oorexxapi.h");
-    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
-}
-
-/// Every `#define REXX_VALUE_<name> <number>` the header carries, minus the
-/// platform aliases, whose names begin with an underscore.
-fn header_codes() -> BTreeMap<String, u16> {
-    let mut found = BTreeMap::new();
-    for line in header().lines() {
-        let line = line.split("//").next().unwrap_or("").trim();
-        let Some(rest) = line.strip_prefix("#define REXX_VALUE_") else {
-            continue;
-        };
-        let mut parts = rest.split_whitespace();
-        let (Some(name), Some(number)) = (parts.next(), parts.next()) else {
-            continue;
-        };
-        if name.starts_with('_') {
-            continue;
-        }
-        let Ok(code) = number.parse::<u16>() else {
-            continue;
-        };
-        found.insert(name.to_string(), code);
-    }
-    found
-}
-
 // ---------------------------------------------------------------- the table
 
+/// Every value code the header defines comes from the table: an alias and an
+/// optional form name a code the table has, and `OPTIONAL_<name>` is that code
+/// with the optional bit, which the conversion strips. The ABI dump
+/// (`tests/abi_dump.rs`) measures each value in the header.
 #[test]
-fn the_table_has_a_row_for_every_code_the_header_defines() {
-    let table: BTreeMap<String, u16> = rows()
-        .map(|(code, name)| (name.to_string(), code))
-        .collect();
-    assert_eq!(
-        table,
-        header_codes(),
-        "the table and `api/oorexxapi.h` disagree about the REXX_VALUE_ codes"
-    );
-}
-
-/// A platform alias is a second spelling of a code the table already has, not
-/// a row of its own.
-#[test]
-fn every_platform_alias_names_a_code_the_table_has() {
-    let known: Vec<u16> = rows().map(|(code, _)| code).collect();
-    let mut aliases = 0;
-    for line in header().lines() {
-        let line = line.split("//").next().unwrap_or("").trim();
-        let Some(rest) = line.strip_prefix("#define REXX_VALUE__") else {
-            continue;
-        };
-        let mut parts = rest.split_whitespace();
-        let (Some(_), Some(number)) = (parts.next(), parts.next()) else {
-            continue;
-        };
-        let Ok(code) = number.parse::<u16>() else {
-            continue;
-        };
-        aliases += 1;
-        assert!(known.contains(&code), "alias for an unknown code {code}");
+fn every_value_code_is_a_row_or_a_row_with_the_optional_bit() {
+    let codes = value_codes();
+    let value_of = |name: &str| {
+        codes
+            .iter()
+            .find(|constant| constant.name == name)
+            .unwrap_or_else(|| panic!("no {name}"))
+            .value
+    };
+    for (code, name) in rows() {
+        assert_eq!(value_of(&format!("REXX_VALUE_{name}")), i64::from(code));
     }
-    assert!(
-        aliases > 0,
-        "the scan found no aliases, so it is not reading the header"
-    );
-}
-
-/// `OPTIONAL_CSTRING` is `CSTRING` with a bit set, which is why it is not a
-/// row of its own. Asserted over every `REXX_VALUE_OPTIONAL_` line rather
-/// than for the one this task needs.
-#[test]
-fn every_optional_name_is_a_base_code_with_the_optional_bit() {
-    let codes = header_codes();
-    let mut optionals = 0;
-    for line in header().lines() {
-        let line = line.split("//").next().unwrap_or("").trim();
-        let Some(rest) = line.strip_prefix("#define REXX_VALUE_OPTIONAL_") else {
-            continue;
-        };
-        let Some((name, body)) = rest.split_once(char::is_whitespace) else {
-            continue;
-        };
-        optionals += 1;
-        let base = *codes
-            .get(name)
-            .unwrap_or_else(|| panic!("OPTIONAL_{name} has no base code"));
+    for (alias, name) in VALUE_ALIASES {
         assert_eq!(
-            body.split_whitespace().collect::<String>(),
-            format!("(REXX_OPTIONAL_ARGUMENT|REXX_VALUE_{name})"),
+            value_of(&format!("REXX_VALUE_{alias}")),
+            value_of(&format!("REXX_VALUE_{name}")),
+            "{alias}"
+        );
+    }
+    for name in OPTIONAL_VALUES {
+        let base = u16::try_from(value_of(&format!("REXX_VALUE_{name}"))).expect("a code");
+        assert_eq!(
+            value_of(&format!("REXX_VALUE_OPTIONAL_{name}")),
+            i64::from(OPTIONAL_ARGUMENT | base),
             "OPTIONAL_{name} is not its base code with the optional bit"
         );
         assert_eq!(
@@ -416,34 +352,14 @@ fn every_optional_name_is_a_base_code_with_the_optional_bit() {
         );
         assert!(interrexx_api::values::is_optional(OPTIONAL_ARGUMENT | base));
     }
-    assert!(
-        optionals > 0,
-        "the scan found no REXX_VALUE_OPTIONAL_ lines, so it is not reading the header"
-    );
 }
 
-/// Each row's union member, checked against the C type the header's own
-/// `ARGUMENT_TYPE_<name>` define gives that code. Reading the union is
-/// `ffi.rs`'s work, and this is what lets it read one without a second switch
-/// on the code.
+/// Each row's union member, checked against the C type of the argument an
+/// entry receives for its code (`ARGUMENT_TYPE_<name>`, whose header text the
+/// ABI dump measures). Reading the union is `ffi.rs`'s work, and this is what
+/// lets it read one without a second switch on the code.
 #[test]
-fn every_row_names_the_union_member_the_header_gives_its_code() {
-    let mut declared: BTreeMap<String, String> = BTreeMap::new();
-    for line in header().lines() {
-        let line = line.split("//").next().unwrap_or("").trim();
-        let Some(rest) = line.strip_prefix("#define ARGUMENT_TYPE_") else {
-            continue;
-        };
-        let Some((name, c_type)) = rest.split_once(char::is_whitespace) else {
-            continue;
-        };
-        declared.insert(name.to_string(), c_type.trim().to_string());
-    }
-    assert!(
-        declared.contains_key("CSELF"),
-        "the scan found no ARGUMENT_TYPE_ defines, so it is not reading the header"
-    );
-
+fn every_row_names_the_union_member_of_its_argument_type() {
     let expected = |c_type: &str| -> Repr {
         match c_type {
             "CSTRING" => Repr::CString,
@@ -467,12 +383,15 @@ fn every_row_names_the_union_member_the_header_gives_its_code() {
     };
 
     for (code, name) in rows() {
-        let c_type = declared
-            .get(name)
-            .unwrap_or_else(|| panic!("the header has no ARGUMENT_TYPE_{name}"));
+        let tokens = ARGUMENT_TYPES
+            .iter()
+            .find(|(row, _)| *row == name)
+            .map(|(_, tokens)| *tokens)
+            .unwrap_or_else(|| panic!("no ARGUMENT_TYPE_{name}"));
+        let c_type = c_type(tokens);
         assert_eq!(
             repr(code),
-            Some(expected(c_type)),
+            Some(expected(&c_type)),
             "REXX_VALUE_{name} is declared {c_type}"
         );
         assert_eq!(

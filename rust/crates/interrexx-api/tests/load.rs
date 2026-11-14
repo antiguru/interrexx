@@ -1,7 +1,7 @@
 //! The loader, run against the checkout-local compiled extension.
 
 use interrexx_api::layout::{RexxMethodEntry, RexxPackageEntry, RexxRoutineEntry};
-use interrexx_api::load::{self, CURRENT_INTERPRETER_VERSION, CURRENT_LANGUAGE_LEVEL, Failure};
+use interrexx_api::load::{self, CURRENT_INTERPRETER_VERSION, Failure};
 use std::ffi::c_int;
 use std::path::{Path, PathBuf};
 
@@ -159,47 +159,4 @@ fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
             "requiredVersion {required:#010x} was refused"
         );
     }
-}
-
-/// The hexadecimal value `#define <current>` names through one more
-/// `#define`, as the header spells both current versions.
-fn current_version(current: &str) -> c_int {
-    let header =
-        std::fs::read_to_string(repository_root().join("third_party/ooRexx/api/oorexxapi.h"))
-            .expect("the frozen header is readable");
-    let named = header
-        .lines()
-        .find_map(|line| line.strip_prefix(&format!("#define {current} ")))
-        .unwrap_or_else(|| panic!("the header defines {current}"))
-        .trim();
-    let literal = header
-        .lines()
-        .find_map(|line| line.strip_prefix(&format!("#define {named} ")))
-        .unwrap_or_else(|| panic!("the header defines {named}"))
-        .trim();
-    c_int::from_str_radix(
-        literal
-            .strip_prefix("0x")
-            .unwrap_or_else(|| panic!("{named} is a hexadecimal literal")),
-        16,
-    )
-    .expect("a hexadecimal literal")
-}
-
-#[test]
-fn the_interpreter_version_is_the_frozen_headers() {
-    assert_eq!(
-        CURRENT_INTERPRETER_VERSION,
-        current_version("REXX_CURRENT_INTERPRETER_VERSION"),
-        "the constant no longer matches api/oorexxapi.h"
-    );
-}
-
-#[test]
-fn the_language_level_is_the_frozen_headers() {
-    assert_eq!(
-        CURRENT_LANGUAGE_LEVEL,
-        usize::try_from(current_version("REXX_CURRENT_LANGUAGE_LEVEL")).expect("positive"),
-        "the constant no longer matches api/oorexxapi.h"
-    );
 }

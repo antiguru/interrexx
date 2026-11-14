@@ -92,19 +92,6 @@ fn declarations_of(header: &str, name: &str) -> Vec<(String, Option<String>)> {
     found
 }
 
-/// The value of `#define <name> <integer>`.
-fn defined(header: &str, name: &str) -> isize {
-    let needle = format!("#define {name} ");
-    let line = header
-        .lines()
-        .find(|line| line.starts_with(&needle))
-        .unwrap_or_else(|| panic!("{name} is not defined in the header"));
-    line[needle.len()..]
-        .trim()
-        .parse()
-        .unwrap_or_else(|e| panic!("{name}: {e}"))
-}
-
 /// **A refusing member aborts exactly where returning is unsafe**: it answers
 /// a data pointer the extension dereferences (`POINTER`, `CSTRING` or a
 /// `RexxInstance *`), or it is one of the `Throw` members, which the oracle
@@ -181,39 +168,6 @@ fn the_scan_reads_one_struct_at_a_time() {
         !method.contains(&"SendMessage".to_string()),
         "the scan is reading past the struct it was asked for"
     );
-}
-
-#[test]
-fn every_interface_version_is_the_frozen_headers() {
-    let header = header();
-    for (name, ours) in [
-        (
-            "INSTANCE_INTERFACE_VERSION",
-            interrexx_api::layout::INSTANCE_INTERFACE_VERSION,
-        ),
-        (
-            "THREAD_INTERFACE_VERSION",
-            interrexx_api::layout::THREAD_INTERFACE_VERSION,
-        ),
-        (
-            "METHOD_INTERFACE_VERSION",
-            interrexx_api::layout::METHOD_INTERFACE_VERSION,
-        ),
-        (
-            "CALL_INTERFACE_VERSION",
-            interrexx_api::layout::CALL_INTERFACE_VERSION,
-        ),
-        (
-            "EXIT_INTERFACE_VERSION",
-            interrexx_api::layout::EXIT_INTERFACE_VERSION,
-        ),
-        (
-            "REDIRECT_INTERFACE_VERSION",
-            interrexx_api::layout::REDIRECT_INTERFACE_VERSION,
-        ),
-    ] {
-        assert_eq!(defined(&header, name), ours, "{name}");
-    }
 }
 
 #[test]
