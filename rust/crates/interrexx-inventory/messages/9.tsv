@@ -1,0 +1,3 @@
+9	0	Unexpected WHEN or OTHERWISE.
+9	1	WHEN has no corresponding SELECT.
+9	2	OTHERWISE has no corresponding SELECT.

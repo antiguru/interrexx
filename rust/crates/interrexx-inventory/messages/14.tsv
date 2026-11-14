@@ -1,0 +1,7 @@
+14	0	Incomplete DO/LOOP/SELECT/IF.
+14	1	DO instruction on line &1 requires matching END.
+14	2	SELECT instruction on line &1 requires matching END.
+14	3	THEN on line &1 must be followed by an instruction.
+14	4	ELSE on line &1 must be followed by an instruction.
+14	5	DO or LOOP instruction on line &1 requires matching END.
+14	901	OTHERWISE on line &1 requires matching END.

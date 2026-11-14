@@ -1,0 +1,3 @@
+17	0	Unexpected PROCEDURE.
+17	1	PROCEDURE is valid only when it is the first instruction executed after an internal CALL or function invocation.
+17	901	INTERPRET data must not contain PROCEDURE.
