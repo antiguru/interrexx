@@ -169,24 +169,16 @@ pub fn normalize_stderr(bytes: &[u8]) -> Vec<u8> {
 /// the number, and how many such levels there are, unspecified.
 const LIBRARY_LINE_FIELD: &[u8] = b"     N";
 
-/// The tails of a traceback line for a method or a routine of the class
-/// library, which has no source: what the catalogue text (101.24, 101.25)
-/// shows after the name and the scope, with the package `REXX`. Each is read
-/// from the table, behind sentinel inserts, so no wording is quoted here.
-fn library_frame_tails() -> &'static [Vec<u8>] {
-    static TAILS: std::sync::OnceLock<Vec<Vec<u8>>> = std::sync::OnceLock::new();
-    TAILS.get_or_init(|| {
-        let after = |marker: &str, last: char| -> Vec<u8> {
-            let text = interrexx_inventory::errors::expand(marker);
-            let at = text.find(last).expect("the sentinel is in the text") + last.len_utf8();
-            text.as_bytes()[at..].to_vec()
-        };
-        vec![
-            after("⟨101.24¦\u{1}¦\u{2}¦REXX⟩", '\u{2}'),
-            after("⟨101.25¦\u{1}¦REXX⟩", '\u{1}'),
-        ]
-    })
-}
+/// What replaces the text of a library level's traceback line. The text says
+/// that the code has no source, and its wording and the names in it are not
+/// specified (`r[cond.information.library.trace]`).
+const LIBRARY_LINE_TEXT: &[u8] = b"<no source>";
+
+/// The words every text that says that code has no source holds, as
+/// `r[cond.information.library.trace]` describes it. Whether a numbered
+/// traceback line is a library level's is told by them, since the text of
+/// such a line is not specified and the line carries no other mark.
+const NO_SOURCE_WORDS: &[u8] = b"no source";
 
 /// The tail of an error report's first line when the error was raised in the
 /// class library, up to the number.
@@ -194,14 +186,15 @@ const LIBRARY_REPORT_MARK: &[u8] = b" running REXX line ";
 
 /// `r[cond.information.library]` as a comparison: a line number in the class
 /// library, the indentation of its trace line, and the number of library
-/// levels, are not observable. Every traceback line of a library method
-/// (the `<n> *-*` line of 101.22 to 101.26 for a package without source) has its
-/// number replaced by a placeholder of the same width and the blanks after
-/// `*-*` replaced by one, a run of adjacent such lines is kept as its last line (the
-/// level nearest the code that sent the message), and the report's
+/// levels, are not observable. Every traceback line of a library method (a
+/// numbered `*-*` line whose text says that the code has no source, as
+/// `r[cond.information.library.trace]` describes it) has its number replaced
+/// by a placeholder of the same width, the blanks after `*-*` replaced by one
+/// and its text replaced by a placeholder, since the wording and the names in
+/// it are not specified. A run of adjacent such lines is kept as its last line
+/// (the level nearest the code that sent the message), and the report's
 /// `running REXX line <n>` is `running REXX line N`. The lineless
-/// `running REXX` form, a user line, a different method name, scope or
-/// package, and every other byte are unchanged.
+/// `running REXX` form, a user line and every other byte are unchanged.
 pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
@@ -229,15 +222,10 @@ pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
     joined
 }
 
-/// `line` with its number replaced, when it is a traceback line of a library
-/// method: blanks, digits, ` *-* `, text and one of [`library_frame_tails`].
+/// `line` with its number and text replaced, when it is a traceback line of a
+/// library method: blanks, digits, ` *-* ` and a text that holds
+/// [`NO_SOURCE_WORDS`].
 fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
-    if !library_frame_tails()
-        .iter()
-        .any(|tail| line.ends_with(tail))
-    {
-        return None;
-    }
     let blanks = line.iter().take_while(|&&b| b == b' ').count();
     let digits = line[blanks..]
         .iter()
@@ -247,15 +235,20 @@ fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
     if digits == 0 || !rest.starts_with(b" *-* ") {
         return None;
     }
+    let text = &rest[b" *-* ".len()..];
+    if !text
+        .windows(NO_SOURCE_WORDS.len())
+        .any(|w| w == NO_SOURCE_WORDS)
+    {
+        return None;
+    }
     // The blanks after `*-*` are the nesting depth of the clause that was
     // running, which `r[cond.information.library]` leaves unspecified for a
     // library level.
-    let text = &rest[b" *-* ".len()..];
-    let indent = text.iter().take_while(|&&b| b == b' ').count();
     let mut out = Vec::with_capacity(line.len());
     out.extend_from_slice(LIBRARY_LINE_FIELD);
     out.extend_from_slice(b" *-* ");
-    out.extend_from_slice(&text[indent..]);
+    out.extend_from_slice(LIBRARY_LINE_TEXT);
     Some(out)
 }
 
@@ -559,35 +552,23 @@ mod tests {
         assert_ne!(normalize_stderr(&one), normalize_stderr(&other));
     }
 
-    /// A different method name, a different scope and a package other than
-    /// `REXX` are each still a difference.
+    /// A numbered line whose text does not say that the code has no source is
+    /// a user line and keeps its text; one that does is a library level whatever
+    /// its wording and names.
     #[test]
-    fn a_different_method_scope_or_package_still_differs() {
+    fn a_library_frame_is_told_by_its_text_and_a_user_line_is_not() {
         let one = transcript(&frame("1459"), "1459");
-        for (from, to) in [
-            (&b"UNKNOWN"[..], &b"OTHER"[..]),
-            (b"\"Monitor\"", b"\"Monitor2\""),
-            (b"package \"REXX\"", b"package \"Rexx\""),
-        ] {
-            let text = String::from_utf8(one.clone()).unwrap();
-            let changed = text.replacen(
-                std::str::from_utf8(from).unwrap(),
-                std::str::from_utf8(to).unwrap(),
-                1,
-            );
-            assert_ne!(
-                normalize_stderr(&one),
-                normalize_stderr(changed.as_bytes()),
-                "{changed}"
-            );
-        }
-        let text = interrexx_inventory::errors::expand("⟨101.24¦UNKNOWN¦Monitor¦/tmp/x.rex⟩");
-        let user_package = format!("    12 *-* {text}\n");
-        let other_package = format!("    13 *-* {text}\n");
-        assert_ne!(
-            normalize_stderr(user_package.as_bytes()),
-            normalize_stderr(other_package.as_bytes())
+        let other = format!(
+            "    77 *-* {}\n",
+            interrexx_inventory::errors::expand("⟨101.24¦OTHER¦Validate¦/tmp/x.rex⟩")
         );
+        let two = transcript(other.as_bytes(), "1459");
+        assert_eq!(normalize_stderr(&one), normalize_stderr(&two));
+        let reworded = transcript(b"    77 *-* Some words, and no source at all.\n", "1459");
+        assert_eq!(normalize_stderr(&one), normalize_stderr(&reworded));
+        let user = b"    12 *-* say 'one'\n";
+        let user_other = b"    12 *-* say 'other'\n";
+        assert_ne!(normalize_stderr(user), normalize_stderr(user_other));
     }
 
     /// The report of an error in a program, and the lineless library report,
