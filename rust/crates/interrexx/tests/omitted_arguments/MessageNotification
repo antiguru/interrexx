@@ -1,0 +1,9 @@
+# MessageNotification: each documented instance method, sent each argument list with a hole.
+sends
+messageComplete (,'a')
+messageComplete ('a',)
+messageComplete (,,'a')
+----
+messageComplete (,'a') => 93.965
+messageComplete ('a',) => 93.965
+messageComplete (,,'a') => 93.965

@@ -313,7 +313,13 @@ fn array_step(
         }
         _ => args,
     };
-    let receiver = store_of(interp, receiver)?;
+    let store = store_of(interp, receiver)?;
+    // r[class.queue.next]: a queue's `next` and `previous` take one argument,
+    // and a second is 93.926 however many items the queue holds.
+    if store != receiver && args.len() > 1 {
+        return Err(Raised::too_many_subscripts(1).into());
+    }
+    let receiver = store;
     // **An index past the end still steps.** Measured:
     // `.Array~of('a','b')~previous(5)` answers `2`, where bailing out on the
     // out-of-range subscript answers `.nil`.

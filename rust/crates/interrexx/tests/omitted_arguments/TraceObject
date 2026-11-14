@@ -1,0 +1,15 @@
+# TraceObject: each documented instance method, sent each argument list with a hole.
+sends
+compareTo (,'a')
+compareTo ('a',)
+compareTo (,,'a')
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+----
+compareTo (,'a') => 93.924
+compareTo ('a',) => 93.924
+compareTo (,,'a') => 93.924
+makeString (,'a') => ok
+makeString ('a',) => ok
+makeString (,,'a') => ok

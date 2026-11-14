@@ -137,6 +137,12 @@ fn native_queue_at(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let store = store_of(interp, receiver)?;
+    // r[class.queue.at]: a queue's `at` takes one argument, and a second is
+    // 93.926 however many items the queue holds. An Array, its own store,
+    // takes a subscript per dimension.
+    if store != receiver && args.len() > 1 {
+        return Err(Raised::too_many_subscripts(1).into());
+    }
     if let [Some(only)] = args {
         let index = queue_index(interp, receiver, *only, 1)?;
         return super::native_array_at_for(interp, cleared, store, &[Some(index)]);

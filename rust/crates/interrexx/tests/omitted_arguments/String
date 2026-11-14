@@ -1,0 +1,711 @@
+# String: each documented instance method, sent each argument list with a hole.
+sends
++ (,'a')
++ ('a',)
++ (,,'a')
+- (,'a')
+- ('a',)
+- (,,'a')
+* (,'a')
+* ('a',)
+* (,,'a')
+** (,'a')
+** ('a',)
+** (,,'a')
+/ (,'a')
+/ ('a',)
+/ (,,'a')
+// (,'a')
+// ('a',)
+// (,,'a')
+% (,'a')
+% ('a',)
+% (,,'a')
+= (,'a')
+= ('a',)
+= (,,'a')
+== (,'a')
+== ('a',)
+== (,,'a')
+< (,'a')
+< ('a',)
+< (,,'a')
+<= (,'a')
+<= ('a',)
+<= (,,'a')
+<< (,'a')
+<< ('a',)
+<< (,,'a')
+<<= (,'a')
+<<= ('a',)
+<<= (,,'a')
+<> (,'a')
+<> ('a',)
+<> (,,'a')
+> (,'a')
+> ('a',)
+> (,,'a')
+>= (,'a')
+>= ('a',)
+>= (,,'a')
+>< (,'a')
+>< ('a',)
+>< (,,'a')
+>> (,'a')
+>> ('a',)
+>> (,,'a')
+>>= (,'a')
+>>= ('a',)
+>>= (,,'a')
+\= (,'a')
+\= ('a',)
+\= (,,'a')
+\== (,'a')
+\== ('a',)
+\== (,,'a')
+\< (,'a')
+\< ('a',)
+\< (,,'a')
+\<< (,'a')
+\<< ('a',)
+\<< (,,'a')
+\> (,'a')
+\> ('a',)
+\> (,,'a')
+\>> (,'a')
+\>> ('a',)
+\>> (,,'a')
+(abuttal) (,'a')
+(abuttal) ('a',)
+(abuttal) (,,'a')
+|| (,'a')
+|| ('a',)
+|| (,,'a')
+(blank) (,'a')
+(blank) ('a',)
+(blank) (,,'a')
+\ (,'a')
+\ ('a',)
+\ (,,'a')
+& (,'a')
+& ('a',)
+& (,,'a')
+&& (,'a')
+&& ('a',)
+&& (,,'a')
+| (,'a')
+| ('a',)
+| (,,'a')
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+? (,'a')
+? ('a',)
+? (,,'a')
+abbrev (,'a')
+abbrev ('a',)
+abbrev (,,'a')
+abs (,'a')
+abs ('a',)
+abs (,,'a')
+append (,'a')
+append ('a',)
+append (,,'a')
+b2x (,'a')
+b2x ('a',)
+b2x (,,'a')
+bitAnd (,'a')
+bitAnd ('a',)
+bitAnd (,,'a')
+bitOr (,'a')
+bitOr ('a',)
+bitOr (,,'a')
+bitXor (,'a')
+bitXor ('a',)
+bitXor (,,'a')
+c2d (,'a')
+c2d ('a',)
+c2d (,,'a')
+c2x (,'a')
+c2x ('a',)
+c2x (,,'a')
+caselessAbbrev (,'a')
+caselessAbbrev ('a',)
+caselessAbbrev (,,'a')
+caselessChangeStr (,'a')
+caselessChangeStr ('a',)
+caselessChangeStr (,,'a')
+caselessCompare (,'a')
+caselessCompare ('a',)
+caselessCompare (,,'a')
+caselessCompareTo (,'a')
+caselessCompareTo ('a',)
+caselessCompareTo (,,'a')
+caselessContains (,'a')
+caselessContains ('a',)
+caselessContains (,,'a')
+caselessContainsWord (,'a')
+caselessContainsWord ('a',)
+caselessContainsWord (,,'a')
+caselessCountStr (,'a')
+caselessCountStr ('a',)
+caselessCountStr (,,'a')
+caselessEndsWith (,'a')
+caselessEndsWith ('a',)
+caselessEndsWith (,,'a')
+caselessEquals (,'a')
+caselessEquals ('a',)
+caselessEquals (,,'a')
+caselessLastPos (,'a')
+caselessLastPos ('a',)
+caselessLastPos (,,'a')
+caselessMatch (,'a')
+caselessMatch ('a',)
+caselessMatch (,,'a')
+caselessMatchChar (,'a')
+caselessMatchChar ('a',)
+caselessMatchChar (,,'a')
+caselessPos (,'a')
+caselessPos ('a',)
+caselessPos (,,'a')
+caselessStartsWith (,'a')
+caselessStartsWith ('a',)
+caselessStartsWith (,,'a')
+caselessWordPos (,'a')
+caselessWordPos ('a',)
+caselessWordPos (,,'a')
+ceiling (,'a')
+ceiling ('a',)
+ceiling (,,'a')
+center (,'a')
+center ('a',)
+center (,,'a')
+centre (,'a')
+centre ('a',)
+centre (,,'a')
+changeStr (,'a')
+changeStr ('a',)
+changeStr (,,'a')
+compare (,'a')
+compare ('a',)
+compare (,,'a')
+compareTo (,'a')
+compareTo ('a',)
+compareTo (,,'a')
+contains (,'a')
+contains ('a',)
+contains (,,'a')
+containsWord (,'a')
+containsWord ('a',)
+containsWord (,,'a')
+copies (,'a')
+copies ('a',)
+copies (,,'a')
+countStr (,'a')
+countStr ('a',)
+countStr (,,'a')
+d2c (,'a')
+d2c ('a',)
+d2c (,,'a')
+d2x (,'a')
+d2x ('a',)
+d2x (,,'a')
+dataType (,'a')
+dataType ('a',)
+dataType (,,'a')
+decodeBase64 (,'a')
+decodeBase64 ('a',)
+decodeBase64 (,,'a')
+delStr (,'a')
+delStr ('a',)
+delStr (,,'a')
+delWord (,'a')
+delWord ('a',)
+delWord (,,'a')
+encodeBase64 (,'a')
+encodeBase64 ('a',)
+encodeBase64 (,,'a')
+endsWith (,'a')
+endsWith ('a',)
+endsWith (,,'a')
+equals (,'a')
+equals ('a',)
+equals (,,'a')
+floor (,'a')
+floor ('a',)
+floor (,,'a')
+format (,'a')
+format ('a',)
+format (,,'a')
+hashCode (,'a')
+hashCode ('a',)
+hashCode (,,'a')
+insert (,'a')
+insert ('a',)
+insert (,,'a')
+lastPos (,'a')
+lastPos ('a',)
+lastPos (,,'a')
+left (,'a')
+left ('a',)
+left (,,'a')
+length (,'a')
+length ('a',)
+length (,,'a')
+lower (,'a')
+lower ('a',)
+lower (,,'a')
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+match (,'a')
+match ('a',)
+match (,,'a')
+matchChar (,'a')
+matchChar ('a',)
+matchChar (,,'a')
+max (,'a')
+max ('a',)
+max (,,'a')
+min (,'a')
+min ('a',)
+min (,,'a')
+modulo (,'a')
+modulo ('a',)
+modulo (,,'a')
+overlay (,'a')
+overlay ('a',)
+overlay (,,'a')
+pos (,'a')
+pos ('a',)
+pos (,,'a')
+replaceAt (,'a')
+replaceAt ('a',)
+replaceAt (,,'a')
+reverse (,'a')
+reverse ('a',)
+reverse (,,'a')
+right (,'a')
+right ('a',)
+right (,,'a')
+round (,'a')
+round ('a',)
+round (,,'a')
+sign (,'a')
+sign ('a',)
+sign (,,'a')
+space (,'a')
+space ('a',)
+space (,,'a')
+startsWith (,'a')
+startsWith ('a',)
+startsWith (,,'a')
+strip (,'a')
+strip ('a',)
+strip (,,'a')
+subChar (,'a')
+subChar ('a',)
+subChar (,,'a')
+substr (,'a')
+substr ('a',)
+substr (,,'a')
+subWord (,'a')
+subWord ('a',)
+subWord (,,'a')
+subWords (,'a')
+subWords ('a',)
+subWords (,,'a')
+translate (,'a')
+translate ('a',)
+translate (,,'a')
+trunc (,'a')
+trunc ('a',)
+trunc (,,'a')
+upper (,'a')
+upper ('a',)
+upper (,,'a')
+verify (,'a')
+verify ('a',)
+verify (,,'a')
+word (,'a')
+word ('a',)
+word (,,'a')
+wordIndex (,'a')
+wordIndex ('a',)
+wordIndex (,,'a')
+wordLength (,'a')
+wordLength ('a',)
+wordLength (,,'a')
+wordPos (,'a')
+wordPos ('a',)
+wordPos (,,'a')
+words (,'a')
+words ('a',)
+words (,,'a')
+x2b (,'a')
+x2b ('a',)
+x2b (,,'a')
+x2c (,'a')
+x2c ('a',)
+x2c (,,'a')
+x2d (,'a')
+x2d ('a',)
+x2d (,,'a')
+----
++ (,'a') => 93.902
++ ('a',) => 41.1
++ (,,'a') => 93.902
+- (,'a') => 93.902
+- ('a',) => 41.1
+- (,,'a') => 93.902
+* (,'a') => 93.902
+* ('a',) => 41.1
+* (,,'a') => 93.902
+** (,'a') => 93.902
+** ('a',) => 41.1
+** (,,'a') => 93.902
+/ (,'a') => 93.902
+/ ('a',) => 41.1
+/ (,,'a') => 93.902
+// (,'a') => 93.902
+// ('a',) => 41.1
+// (,,'a') => 93.902
+% (,'a') => 93.902
+% ('a',) => 41.1
+% (,,'a') => 93.902
+= (,'a') => 93.902
+= ('a',) => ok
+= (,,'a') => 93.902
+== (,'a') => 93.902
+== ('a',) => ok
+== (,,'a') => 93.902
+< (,'a') => 93.902
+< ('a',) => ok
+< (,,'a') => 93.902
+<= (,'a') => 93.902
+<= ('a',) => ok
+<= (,,'a') => 93.902
+<< (,'a') => 93.902
+<< ('a',) => ok
+<< (,,'a') => 93.902
+<<= (,'a') => 93.902
+<<= ('a',) => ok
+<<= (,,'a') => 93.902
+<> (,'a') => 93.902
+<> ('a',) => ok
+<> (,,'a') => 93.902
+> (,'a') => 93.902
+> ('a',) => ok
+> (,,'a') => 93.902
+>= (,'a') => 93.902
+>= ('a',) => ok
+>= (,,'a') => 93.902
+>< (,'a') => 93.902
+>< ('a',) => ok
+>< (,,'a') => 93.902
+>> (,'a') => 93.902
+>> ('a',) => ok
+>> (,,'a') => 93.902
+>>= (,'a') => 93.902
+>>= ('a',) => ok
+>>= (,,'a') => 93.902
+\= (,'a') => 93.902
+\= ('a',) => ok
+\= (,,'a') => 93.902
+\== (,'a') => 93.902
+\== ('a',) => ok
+\== (,,'a') => 93.902
+\< (,'a') => 93.902
+\< ('a',) => ok
+\< (,,'a') => 93.902
+\<< (,'a') => 93.902
+\<< ('a',) => ok
+\<< (,,'a') => 93.902
+\> (,'a') => 93.902
+\> ('a',) => ok
+\> (,,'a') => 93.902
+\>> (,'a') => 93.902
+\>> ('a',) => ok
+\>> (,,'a') => 93.902
+(abuttal) (,'a') => 97.1
+(abuttal) ('a',) => 97.1
+(abuttal) (,,'a') => 97.1
+|| (,'a') => 93.902
+|| ('a',) => ok
+|| (,,'a') => 93.902
+(blank) (,'a') => 97.1
+(blank) ('a',) => 97.1
+(blank) (,,'a') => 97.1
+\ (,'a') => 93.902
+\ ('a',) => 93.902
+\ (,,'a') => 93.902
+& (,'a') => 93.902
+& ('a',) => 34.901
+& (,,'a') => 93.902
+&& (,'a') => 93.902
+&& ('a',) => 34.901
+&& (,,'a') => 93.902
+| (,'a') => 93.902
+| ('a',) => 34.901
+| (,,'a') => 93.902
+[] (,'a') => 93.903
+[] ('a',) => 93.924
+[] (,,'a') => 93.902
+? (,'a') => 88.901
+? ('a',) => 88.901
+? (,,'a') => 93.902
+abbrev (,'a') => 93.903
+abbrev ('a',) => ok
+abbrev (,,'a') => 93.902
+abs (,'a') => 93.902
+abs ('a',) => 93.902
+abs (,,'a') => 93.902
+append (,'a') => 93.902
+append ('a',) => ok
+append (,,'a') => 93.902
+b2x (,'a') => 93.902
+b2x ('a',) => 93.902
+b2x (,,'a') => 93.902
+bitAnd (,'a') => ok
+bitAnd ('a',) => ok
+bitAnd (,,'a') => 93.902
+bitOr (,'a') => ok
+bitOr ('a',) => ok
+bitOr (,,'a') => 93.902
+bitXor (,'a') => ok
+bitXor ('a',) => ok
+bitXor (,,'a') => 93.902
+c2d (,'a') => 93.902
+c2d ('a',) => 93.923
+c2d (,,'a') => 93.902
+c2x (,'a') => 93.902
+c2x ('a',) => 93.902
+c2x (,,'a') => 93.902
+caselessAbbrev (,'a') => 93.903
+caselessAbbrev ('a',) => ok
+caselessAbbrev (,,'a') => 93.902
+caselessChangeStr (,'a') => 93.903
+caselessChangeStr ('a',) => 93.903
+caselessChangeStr (,,'a') => 93.903
+caselessCompare (,'a') => 93.903
+caselessCompare ('a',) => ok
+caselessCompare (,,'a') => 93.902
+caselessCompareTo (,'a') => 93.903
+caselessCompareTo ('a',) => ok
+caselessCompareTo (,,'a') => 93.903
+caselessContains (,'a') => 93.903
+caselessContains ('a',) => ok
+caselessContains (,,'a') => 93.903
+caselessContainsWord (,'a') => 93.903
+caselessContainsWord ('a',) => ok
+caselessContainsWord (,,'a') => 93.902
+caselessCountStr (,'a') => 93.902
+caselessCountStr ('a',) => ok
+caselessCountStr (,,'a') => 93.902
+caselessEndsWith (,'a') => 93.902
+caselessEndsWith ('a',) => ok
+caselessEndsWith (,,'a') => 93.902
+caselessEquals (,'a') => 93.902
+caselessEquals ('a',) => ok
+caselessEquals (,,'a') => 93.902
+caselessLastPos (,'a') => 93.903
+caselessLastPos ('a',) => ok
+caselessLastPos (,,'a') => 93.903
+caselessMatch (,'a') => 93.903
+caselessMatch ('a',) => 93.924
+caselessMatch (,,'a') => 93.903
+caselessMatchChar (,'a') => 93.903
+caselessMatchChar ('a',) => 93.924
+caselessMatchChar (,,'a') => 93.902
+caselessPos (,'a') => 93.903
+caselessPos ('a',) => ok
+caselessPos (,,'a') => 93.903
+caselessStartsWith (,'a') => 93.902
+caselessStartsWith ('a',) => ok
+caselessStartsWith (,,'a') => 93.902
+caselessWordPos (,'a') => 93.903
+caselessWordPos ('a',) => ok
+caselessWordPos (,,'a') => 93.902
+ceiling (,'a') => 93.902
+ceiling ('a',) => 93.902
+ceiling (,,'a') => 93.902
+center (,'a') => 93.903
+center ('a',) => 93.923
+center (,,'a') => 93.902
+centre (,'a') => 93.903
+centre ('a',) => 93.923
+centre (,,'a') => 93.902
+changeStr (,'a') => 93.903
+changeStr ('a',) => 93.903
+changeStr (,,'a') => 93.903
+compare (,'a') => 93.903
+compare ('a',) => ok
+compare (,,'a') => 93.902
+compareTo (,'a') => 93.903
+compareTo ('a',) => ok
+compareTo (,,'a') => 93.903
+contains (,'a') => 93.903
+contains ('a',) => ok
+contains (,,'a') => 93.903
+containsWord (,'a') => 93.903
+containsWord ('a',) => ok
+containsWord (,,'a') => 93.902
+copies (,'a') => 93.902
+copies ('a',) => 93.906
+copies (,,'a') => 93.902
+countStr (,'a') => 93.902
+countStr ('a',) => ok
+countStr (,,'a') => 93.902
+d2c (,'a') => 93.902
+d2c ('a',) => 93.929
+d2c (,,'a') => 93.902
+d2x (,'a') => 93.902
+d2x ('a',) => 93.928
+d2x (,,'a') => 93.902
+dataType (,'a') => 93.902
+dataType ('a',) => ok
+dataType (,,'a') => 93.902
+decodeBase64 (,'a') => 93.902
+decodeBase64 ('a',) => 93.902
+decodeBase64 (,,'a') => 93.902
+delStr (,'a') => 93.923
+delStr ('a',) => 93.924
+delStr (,,'a') => 93.902
+delWord (,'a') => 93.903
+delWord ('a',) => 93.924
+delWord (,,'a') => 93.902
+encodeBase64 (,'a') => 93.902
+encodeBase64 ('a',) => 93.902
+encodeBase64 (,,'a') => 93.902
+endsWith (,'a') => 93.902
+endsWith ('a',) => ok
+endsWith (,,'a') => 93.902
+equals (,'a') => 93.902
+equals ('a',) => ok
+equals (,,'a') => 93.902
+floor (,'a') => 93.902
+floor ('a',) => 93.902
+floor (,,'a') => 93.902
+format (,'a') => 93.943
+format ('a',) => 93.943
+format (,,'a') => 93.943
+hashCode (,'a') => 93.902
+hashCode ('a',) => 93.902
+hashCode (,,'a') => 93.902
+insert (,'a') => 93.903
+insert ('a',) => ok
+insert (,,'a') => 93.903
+lastPos (,'a') => 93.903
+lastPos ('a',) => ok
+lastPos (,,'a') => 93.903
+left (,'a') => 93.903
+left ('a',) => 93.923
+left (,,'a') => 93.902
+length (,'a') => 93.902
+length ('a',) => 93.902
+length (,,'a') => 93.902
+lower (,'a') => 93.923
+lower ('a',) => 93.924
+lower (,,'a') => 93.902
+makeArray (,'a') => 93.902
+makeArray ('a',) => ok
+makeArray (,,'a') => 93.902
+makeString (,'a') => 93.902
+makeString ('a',) => 93.902
+makeString (,,'a') => 93.902
+match (,'a') => 93.903
+match ('a',) => 93.924
+match (,,'a') => 93.903
+matchChar (,'a') => 93.903
+matchChar ('a',) => 93.924
+matchChar (,,'a') => 93.902
+max (,'a') => 93.943
+max ('a',) => 93.943
+max (,,'a') => 93.943
+min (,'a') => 93.943
+min ('a',) => 93.943
+min (,,'a') => 93.943
+modulo (,'a') => 93.902
+modulo ('a',) => 93.943
+modulo (,,'a') => 93.902
+overlay (,'a') => 93.903
+overlay ('a',) => ok
+overlay (,,'a') => 93.903
+pos (,'a') => 93.903
+pos ('a',) => ok
+pos (,,'a') => 93.903
+replaceAt (,'a') => 93.903
+replaceAt ('a',) => 93.903
+replaceAt (,,'a') => 93.903
+reverse (,'a') => 93.902
+reverse ('a',) => 93.902
+reverse (,,'a') => 93.902
+right (,'a') => 93.903
+right ('a',) => 93.923
+right (,,'a') => 93.902
+round (,'a') => 93.902
+round ('a',) => 93.902
+round (,,'a') => 93.902
+sign (,'a') => 93.902
+sign ('a',) => 93.902
+sign (,,'a') => 93.902
+space (,'a') => ok
+space ('a',) => 93.923
+space (,,'a') => 93.902
+startsWith (,'a') => 93.902
+startsWith ('a',) => ok
+startsWith (,,'a') => 93.902
+strip (,'a') => ok
+strip ('a',) => 93.915
+strip (,,'a') => 93.902
+subChar (,'a') => 93.902
+subChar ('a',) => 93.924
+subChar (,,'a') => 93.902
+substr (,'a') => 93.903
+substr ('a',) => 93.924
+substr (,,'a') => 93.903
+subWord (,'a') => 93.903
+subWord ('a',) => 93.924
+subWord (,,'a') => 93.902
+subWords (,'a') => 93.923
+subWords ('a',) => 93.924
+subWords (,,'a') => 93.902
+translate (,'a') => ok
+translate ('a',) => ok
+translate (,,'a') => ok
+trunc (,'a') => 93.902
+trunc ('a',) => 93.943
+trunc (,,'a') => 93.902
+upper (,'a') => 93.923
+upper ('a',) => 93.924
+upper (,,'a') => 93.902
+verify (,'a') => 93.903
+verify ('a',) => ok
+verify (,,'a') => 93.903
+word (,'a') => 93.902
+word ('a',) => 93.924
+word (,,'a') => 93.902
+wordIndex (,'a') => 93.902
+wordIndex ('a',) => 93.924
+wordIndex (,,'a') => 93.902
+wordLength (,'a') => 93.902
+wordLength ('a',) => 93.924
+wordLength (,,'a') => 93.902
+wordPos (,'a') => 93.903
+wordPos ('a',) => ok
+wordPos (,,'a') => 93.902
+words (,'a') => 93.902
+words ('a',) => 93.902
+words (,,'a') => 93.902
+x2b (,'a') => 93.902
+x2b ('a',) => 93.902
+x2b (,,'a') => 93.902
+x2c (,'a') => 93.902
+x2c ('a',) => 93.902
+x2c (,,'a') => 93.902
+x2d (,'a') => 93.902
+x2d ('a',) => 93.923
+x2d (,,'a') => 93.902

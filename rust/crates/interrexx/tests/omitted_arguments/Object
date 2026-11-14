@@ -1,0 +1,189 @@
+# Object: each documented instance method, sent each argument list with a hole.
+sends
+= (,'a')
+= ('a',)
+= (,,'a')
+== (,'a')
+== ('a',)
+== (,,'a')
+<> (,'a')
+<> ('a',)
+<> (,,'a')
+>< (,'a')
+>< ('a',)
+>< (,,'a')
+\= (,'a')
+\= ('a',)
+\= (,,'a')
+\== (,'a')
+\== ('a',)
+\== (,,'a')
+(abuttal) (,'a')
+(abuttal) ('a',)
+(abuttal) (,,'a')
+|| (,'a')
+|| ('a',)
+|| (,,'a')
+(blank) (,'a')
+(blank) ('a',)
+(blank) (,,'a')
+class (,'a')
+class ('a',)
+class (,,'a')
+copy (,'a')
+copy ('a',)
+copy (,,'a')
+defaultName (,'a')
+defaultName ('a',)
+defaultName (,,'a')
+hashCode (,'a')
+hashCode ('a',)
+hashCode (,,'a')
+hasMethod (,'a')
+hasMethod ('a',)
+hasMethod (,,'a')
+identityHash (,'a')
+identityHash ('a',)
+identityHash (,,'a')
+instanceMethod (,'a')
+instanceMethod ('a',)
+instanceMethod (,,'a')
+instanceMethods (,'a')
+instanceMethods ('a',)
+instanceMethods (,,'a')
+isA (,'a')
+isA ('a',)
+isA (,,'a')
+isInstanceOf (,'a')
+isInstanceOf ('a',)
+isInstanceOf (,,'a')
+isNil (,'a')
+isNil ('a',)
+isNil (,,'a')
+objectName (,'a')
+objectName ('a',)
+objectName (,,'a')
+objectName= (,'a')
+objectName= ('a',)
+objectName= (,,'a')
+request (,'a')
+request ('a',)
+request (,,'a')
+run (,'a')
+run ('a',)
+run (,,'a')
+send (,'a')
+send ('a',)
+send (,,'a')
+sendWith (,'a')
+sendWith ('a',)
+sendWith (,,'a')
+setMethod (,'a')
+setMethod ('a',)
+setMethod (,,'a')
+start (,'a')
+start ('a',)
+start (,,'a')
+startWith (,'a')
+startWith ('a',)
+startWith (,,'a')
+string (,'a')
+string ('a',)
+string (,,'a')
+unsetMethod (,'a')
+unsetMethod ('a',)
+unsetMethod (,,'a')
+----
+= (,'a') => 93.902
+= ('a',) => ok
+= (,,'a') => 93.902
+== (,'a') => 93.902
+== ('a',) => ok
+== (,,'a') => 93.902
+<> (,'a') => 93.902
+<> ('a',) => ok
+<> (,,'a') => 93.902
+>< (,'a') => 93.902
+>< ('a',) => ok
+>< (,,'a') => 93.902
+\= (,'a') => 93.902
+\= ('a',) => ok
+\= (,,'a') => 93.902
+\== (,'a') => 93.902
+\== ('a',) => ok
+\== (,,'a') => 93.902
+(abuttal) (,'a') => 97.1
+(abuttal) ('a',) => 97.1
+(abuttal) (,,'a') => 97.1
+|| (,'a') => 93.902
+|| ('a',) => ok
+|| (,,'a') => 93.902
+(blank) (,'a') => 97.1
+(blank) ('a',) => 97.1
+(blank) (,,'a') => 97.1
+class (,'a') => 93.902
+class ('a',) => 93.902
+class (,,'a') => 93.902
+copy (,'a') => 93.902
+copy ('a',) => 93.902
+copy (,,'a') => 93.902
+defaultName (,'a') => 93.902
+defaultName ('a',) => 93.902
+defaultName (,,'a') => 93.902
+hashCode (,'a') => 93.902
+hashCode ('a',) => 93.902
+hashCode (,,'a') => 93.902
+hasMethod (,'a') => 93.902
+hasMethod ('a',) => ok
+hasMethod (,,'a') => 93.902
+identityHash (,'a') => 93.902
+identityHash ('a',) => 93.902
+identityHash (,,'a') => 93.902
+instanceMethod (,'a') => 93.902
+instanceMethod ('a',) => ok
+instanceMethod (,,'a') => 93.902
+instanceMethods (,'a') => 93.902
+instanceMethods ('a',) => ok
+instanceMethods (,,'a') => 93.902
+isA (,'a') => 93.902
+isA ('a',) => 88.914
+isA (,,'a') => 93.902
+isInstanceOf (,'a') => 93.902
+isInstanceOf ('a',) => 88.914
+isInstanceOf (,,'a') => 93.902
+isNil (,'a') => 93.902
+isNil ('a',) => 93.902
+isNil (,,'a') => 93.902
+objectName (,'a') => 93.902
+objectName ('a',) => 93.902
+objectName (,,'a') => 93.902
+objectName= (,'a') => 93.902
+objectName= ('a',) => ok
+objectName= (,,'a') => 93.902
+request (,'a') => 93.902
+request ('a',) => ok
+request (,,'a') => 93.902
+run (,'a') => 97.2
+run ('a',) => 97.2
+run (,,'a') => 97.2
+send (,'a') => 88.901
+send ('a',) => 97.1
+send (,,'a') => 88.901
+sendWith (,'a') => 88.901
+sendWith ('a',) => 88.901
+sendWith (,,'a') => 93.902
+setMethod (,'a') => 97.2
+setMethod ('a',) => 97.2
+setMethod (,,'a') => 97.2
+start (,'a') => 88.901
+start ('a',) => ok
+start (,,'a') => 88.901
+startWith (,'a') => 88.901
+startWith ('a',) => 93.903
+startWith (,,'a') => 93.902
+string (,'a') => 93.902
+string ('a',) => 93.902
+string (,,'a') => 93.902
+unsetMethod (,'a') => 97.2
+unsetMethod ('a',) => 97.2
+unsetMethod (,,'a') => 97.2

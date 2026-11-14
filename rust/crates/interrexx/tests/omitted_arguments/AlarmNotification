@@ -1,0 +1,15 @@
+# AlarmNotification: each documented instance method, sent each argument list with a hole.
+sends
+cancel (,'a')
+cancel ('a',)
+cancel (,,'a')
+triggered (,'a')
+triggered ('a',)
+triggered (,,'a')
+----
+cancel (,'a') => ok
+cancel ('a',) => ok
+cancel (,,'a') => ok
+triggered (,'a') => 93.965
+triggered ('a',) => 93.965
+triggered (,,'a') => 93.965

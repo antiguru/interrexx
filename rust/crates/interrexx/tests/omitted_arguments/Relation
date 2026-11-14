@@ -1,0 +1,171 @@
+# Relation: each documented instance method, sent each argument list with a hole.
+sends
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+[]= (,'a')
+[]= ('a',)
+[]= (,,'a')
+allAt (,'a')
+allAt ('a',)
+allAt (,,'a')
+allIndex (,'a')
+allIndex ('a',)
+allIndex (,,'a')
+allIndexes (,'a')
+allIndexes ('a',)
+allIndexes (,,'a')
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+at (,'a')
+at ('a',)
+at (,,'a')
+difference (,'a')
+difference ('a',)
+difference (,,'a')
+empty (,'a')
+empty ('a',)
+empty (,,'a')
+hasIndex (,'a')
+hasIndex ('a',)
+hasIndex (,,'a')
+hasItem (,'a')
+hasItem ('a',)
+hasItem (,,'a')
+index (,'a')
+index ('a',)
+index (,,'a')
+intersection (,'a')
+intersection ('a',)
+intersection (,,'a')
+isEmpty (,'a')
+isEmpty ('a',)
+isEmpty (,,'a')
+items (,'a')
+items ('a',)
+items (,,'a')
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+put (,'a')
+put ('a',)
+put (,,'a')
+remove (,'a')
+remove ('a',)
+remove (,,'a')
+removeAll (,'a')
+removeAll ('a',)
+removeAll (,,'a')
+removeItem (,'a')
+removeItem ('a',)
+removeItem (,,'a')
+subset (,'a')
+subset ('a',)
+subset (,,'a')
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+union (,'a')
+union ('a',)
+union (,,'a')
+uniqueIndexes (,'a')
+uniqueIndexes ('a',)
+uniqueIndexes (,,'a')
+xor (,'a')
+xor ('a',)
+xor (,,'a')
+disjoint (,'a')
+disjoint ('a',)
+disjoint (,,'a')
+equivalent (,'a')
+equivalent ('a',)
+equivalent (,,'a')
+putAll (,'a')
+putAll ('a',)
+putAll (,,'a')
+----
+[] (,'a') => 93.902
+[] ('a',) => ok
+[] (,,'a') => 93.902
+[]= (,'a') => 88.901
+[]= ('a',) => 88.901
+[]= (,,'a') => 93.902
+allAt (,'a') => 93.902
+allAt ('a',) => ok
+allAt (,,'a') => 93.902
+allIndex (,'a') => 93.902
+allIndex ('a',) => ok
+allIndex (,,'a') => 93.902
+allIndexes (,'a') => 93.902
+allIndexes ('a',) => 93.902
+allIndexes (,,'a') => 93.902
+allItems (,'a') => 93.902
+allItems ('a',) => 93.902
+allItems (,,'a') => 93.902
+at (,'a') => 93.902
+at ('a',) => ok
+at (,,'a') => 93.902
+difference (,'a') => 93.902
+difference ('a',) => ok
+difference (,,'a') => 93.902
+empty (,'a') => 93.902
+empty ('a',) => 93.902
+empty (,,'a') => 93.902
+hasIndex (,'a') => 93.902
+hasIndex ('a',) => ok
+hasIndex (,,'a') => 93.902
+hasItem (,'a') => 93.903
+hasItem ('a',) => ok
+hasItem (,,'a') => 93.902
+index (,'a') => 93.902
+index ('a',) => ok
+index (,,'a') => 93.902
+intersection (,'a') => 93.902
+intersection ('a',) => ok
+intersection (,,'a') => 93.902
+isEmpty (,'a') => 93.902
+isEmpty ('a',) => 93.902
+isEmpty (,,'a') => 93.902
+items (,'a') => 93.902
+items ('a',) => ok
+items (,,'a') => 93.902
+makeArray (,'a') => 93.902
+makeArray ('a',) => 93.902
+makeArray (,,'a') => 93.902
+put (,'a') => 88.901
+put ('a',) => 88.901
+put (,,'a') => 93.902
+remove (,'a') => 93.902
+remove ('a',) => ok
+remove (,,'a') => 93.902
+removeAll (,'a') => 93.902
+removeAll ('a',) => ok
+removeAll (,,'a') => 93.902
+removeItem (,'a') => 93.903
+removeItem ('a',) => ok
+removeItem (,,'a') => 93.902
+subset (,'a') => 93.902
+subset ('a',) => ok
+subset (,,'a') => 93.902
+supplier (,'a') => 93.902
+supplier ('a',) => ok
+supplier (,,'a') => 93.902
+union (,'a') => 93.902
+union ('a',) => ok
+union (,,'a') => 93.902
+uniqueIndexes (,'a') => 93.902
+uniqueIndexes ('a',) => 93.902
+uniqueIndexes (,,'a') => 93.902
+xor (,'a') => 93.902
+xor ('a',) => ok
+xor (,,'a') => 93.902
+disjoint (,'a') => 93.902
+disjoint ('a',) => ok
+disjoint (,,'a') => 93.902
+equivalent (,'a') => 93.902
+equivalent ('a',) => 97.1
+equivalent (,,'a') => 93.902
+putAll (,'a') => 93.902
+putAll ('a',) => 93.948
+putAll (,,'a') => 93.902

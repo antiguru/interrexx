@@ -1,0 +1,99 @@
+# Method: each documented instance method, sent each argument list with a hole.
+sends
+annotation (,'a')
+annotation ('a',)
+annotation (,,'a')
+annotations (,'a')
+annotations ('a',)
+annotations (,,'a')
+isAbstract (,'a')
+isAbstract ('a',)
+isAbstract (,,'a')
+isAttribute (,'a')
+isAttribute ('a',)
+isAttribute (,,'a')
+isConstant (,'a')
+isConstant ('a',)
+isConstant (,,'a')
+isGuarded (,'a')
+isGuarded ('a',)
+isGuarded (,,'a')
+isPackage (,'a')
+isPackage ('a',)
+isPackage (,,'a')
+isPrivate (,'a')
+isPrivate ('a',)
+isPrivate (,,'a')
+isProtected (,'a')
+isProtected ('a',)
+isProtected (,,'a')
+package (,'a')
+package ('a',)
+package (,,'a')
+scope (,'a')
+scope ('a',)
+scope (,,'a')
+setGuarded (,'a')
+setGuarded ('a',)
+setGuarded (,,'a')
+setPrivate (,'a')
+setPrivate ('a',)
+setPrivate (,,'a')
+setProtected (,'a')
+setProtected ('a',)
+setProtected (,,'a')
+setUnguarded (,'a')
+setUnguarded ('a',)
+setUnguarded (,,'a')
+source (,'a')
+source ('a',)
+source (,,'a')
+----
+annotation (,'a') => 93.902
+annotation ('a',) => ok
+annotation (,,'a') => 93.902
+annotations (,'a') => 93.902
+annotations ('a',) => 93.902
+annotations (,,'a') => 93.902
+isAbstract (,'a') => 93.902
+isAbstract ('a',) => 93.902
+isAbstract (,,'a') => 93.902
+isAttribute (,'a') => 93.902
+isAttribute ('a',) => 93.902
+isAttribute (,,'a') => 93.902
+isConstant (,'a') => 93.902
+isConstant ('a',) => 93.902
+isConstant (,,'a') => 93.902
+isGuarded (,'a') => 93.902
+isGuarded ('a',) => 93.902
+isGuarded (,,'a') => 93.902
+isPackage (,'a') => 93.902
+isPackage ('a',) => 93.902
+isPackage (,,'a') => 93.902
+isPrivate (,'a') => 93.902
+isPrivate ('a',) => 93.902
+isPrivate (,,'a') => 93.902
+isProtected (,'a') => 93.902
+isProtected ('a',) => 93.902
+isProtected (,,'a') => 93.902
+package (,'a') => 93.902
+package ('a',) => 93.902
+package (,,'a') => 93.902
+scope (,'a') => 93.902
+scope ('a',) => 93.902
+scope (,,'a') => 93.902
+setGuarded (,'a') => 93.902
+setGuarded ('a',) => 93.902
+setGuarded (,,'a') => 93.902
+setPrivate (,'a') => 93.902
+setPrivate ('a',) => 93.902
+setPrivate (,,'a') => 93.902
+setProtected (,'a') => 93.902
+setProtected ('a',) => 93.902
+setProtected (,,'a') => 93.902
+setUnguarded (,'a') => 93.902
+setUnguarded ('a',) => 93.902
+setUnguarded (,,'a') => 93.902
+source (,'a') => 93.902
+source ('a',) => 93.902
+source (,,'a') => 93.902

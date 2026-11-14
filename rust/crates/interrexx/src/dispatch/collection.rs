@@ -62,6 +62,13 @@ pub(super) fn position_in(
     index_use: IndexUse,
 ) -> Result<Option<usize>, Failure> {
     let store = store_of(interp, receiver)?;
+    // r[class.queue.at]: a queue's index methods take one argument, and a
+    // second is 93.926 whatever the first is and however many items the
+    // queue holds; the store's own dimension, unfixed while it is empty,
+    // decides nothing.
+    if store != receiver && args.len() > 1 {
+        return Err(Raised::too_many_subscripts(1).into());
+    }
     if let [Some(only)] = args
         && interp.array_slots(*only).is_some()
     {

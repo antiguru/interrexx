@@ -1,0 +1,225 @@
+# Package: each documented instance method, sent each argument list with a hole.
+sends
+addClass (,'a')
+addClass ('a',)
+addClass (,,'a')
+addPackage (,'a')
+addPackage ('a',)
+addPackage (,,'a')
+addPublicClass (,'a')
+addPublicClass ('a',)
+addPublicClass (,,'a')
+addPublicRoutine (,'a')
+addPublicRoutine ('a',)
+addPublicRoutine (,,'a')
+addRoutine (,'a')
+addRoutine ('a',)
+addRoutine (,,'a')
+annotation (,'a')
+annotation ('a',)
+annotation (,,'a')
+annotations (,'a')
+annotations ('a',)
+annotations (,,'a')
+classes (,'a')
+classes ('a',)
+classes (,,'a')
+definedMethods (,'a')
+definedMethods ('a',)
+definedMethods (,,'a')
+digits (,'a')
+digits ('a',)
+digits (,,'a')
+findClass (,'a')
+findClass ('a',)
+findClass (,,'a')
+findNamespace (,'a')
+findNamespace ('a',)
+findNamespace (,,'a')
+findProgram (,'a')
+findProgram ('a',)
+findProgram (,,'a')
+findPublicClass (,'a')
+findPublicClass ('a',)
+findPublicClass (,,'a')
+findPublicRoutine (,'a')
+findPublicRoutine ('a',)
+findPublicRoutine (,,'a')
+findRoutine (,'a')
+findRoutine ('a',)
+findRoutine (,,'a')
+form (,'a')
+form ('a',)
+form (,,'a')
+fuzz (,'a')
+fuzz ('a',)
+fuzz (,,'a')
+importedClasses (,'a')
+importedClasses ('a',)
+importedClasses (,,'a')
+importedPackages (,'a')
+importedPackages ('a',)
+importedPackages (,,'a')
+importedRoutines (,'a')
+importedRoutines ('a',)
+importedRoutines (,,'a')
+loadLibrary (,'a')
+loadLibrary ('a',)
+loadLibrary (,,'a')
+loadPackage (,'a')
+loadPackage ('a',)
+loadPackage (,,'a')
+local (,'a')
+local ('a',)
+local (,,'a')
+name (,'a')
+name ('a',)
+name (,,'a')
+namespaces (,'a')
+namespaces ('a',)
+namespaces (,,'a')
+options (,'a')
+options ('a',)
+options (,,'a')
+prolog (,'a')
+prolog ('a',)
+prolog (,,'a')
+publicClasses (,'a')
+publicClasses ('a',)
+publicClasses (,,'a')
+publicRoutines (,'a')
+publicRoutines ('a',)
+publicRoutines (,,'a')
+resource (,'a')
+resource ('a',)
+resource (,,'a')
+resources (,'a')
+resources ('a',)
+resources (,,'a')
+routines (,'a')
+routines ('a',)
+routines (,,'a')
+source (,'a')
+source ('a',)
+source (,,'a')
+sourceLine (,'a')
+sourceLine ('a',)
+sourceLine (,,'a')
+sourceSize (,'a')
+sourceSize ('a',)
+sourceSize (,,'a')
+trace (,'a')
+trace ('a',)
+trace (,,'a')
+----
+addClass (,'a') => 88.901
+addClass ('a',) => 88.901
+addClass (,,'a') => 93.902
+addPackage (,'a') => 88.901
+addPackage ('a',) => 88.914
+addPackage (,,'a') => 93.902
+addPublicClass (,'a') => 88.901
+addPublicClass ('a',) => 88.901
+addPublicClass (,,'a') => 93.902
+addPublicRoutine (,'a') => 88.901
+addPublicRoutine ('a',) => 88.901
+addPublicRoutine (,,'a') => 93.902
+addRoutine (,'a') => 88.901
+addRoutine ('a',) => 88.901
+addRoutine (,,'a') => 93.902
+annotation (,'a') => 93.902
+annotation ('a',) => ok
+annotation (,,'a') => 93.902
+annotations (,'a') => 93.902
+annotations ('a',) => 93.902
+annotations (,,'a') => 93.902
+classes (,'a') => 93.902
+classes ('a',) => 93.902
+classes (,,'a') => 93.902
+definedMethods (,'a') => 93.902
+definedMethods ('a',) => 93.902
+definedMethods (,,'a') => 93.902
+digits (,'a') => 93.902
+digits ('a',) => 93.902
+digits (,,'a') => 93.902
+findClass (,'a') => 93.902
+findClass ('a',) => ok
+findClass (,,'a') => 93.902
+findNamespace (,'a') => 93.902
+findNamespace ('a',) => ok
+findNamespace (,,'a') => 93.902
+findProgram (,'a') => 93.902
+findProgram ('a',) => ok
+findProgram (,,'a') => 93.902
+findPublicClass (,'a') => 93.902
+findPublicClass ('a',) => ok
+findPublicClass (,,'a') => 93.902
+findPublicRoutine (,'a') => 93.902
+findPublicRoutine ('a',) => ok
+findPublicRoutine (,,'a') => 93.902
+findRoutine (,'a') => 93.902
+findRoutine ('a',) => ok
+findRoutine (,,'a') => 93.902
+form (,'a') => 93.902
+form ('a',) => 93.902
+form (,,'a') => 93.902
+fuzz (,'a') => 93.902
+fuzz ('a',) => 93.902
+fuzz (,,'a') => 93.902
+importedClasses (,'a') => 93.902
+importedClasses ('a',) => 93.902
+importedClasses (,,'a') => 93.902
+importedPackages (,'a') => 93.902
+importedPackages ('a',) => 93.902
+importedPackages (,,'a') => 93.902
+importedRoutines (,'a') => 93.902
+importedRoutines ('a',) => 93.902
+importedRoutines (,,'a') => 93.902
+loadLibrary (,'a') => 93.902
+loadLibrary ('a',) => 98.984
+loadLibrary (,,'a') => 93.902
+loadPackage (,'a') => 93.903
+loadPackage ('a',) => 98.984
+loadPackage (,,'a') => 93.902
+local (,'a') => 93.902
+local ('a',) => 93.902
+local (,,'a') => 93.902
+name (,'a') => 93.902
+name ('a',) => 93.902
+name (,,'a') => 93.902
+namespaces (,'a') => 93.902
+namespaces ('a',) => 93.902
+namespaces (,,'a') => 93.902
+options (,'a') => 93.903
+options ('a',) => 93.903
+options (,,'a') => 93.902
+prolog (,'a') => 93.902
+prolog ('a',) => 93.902
+prolog (,,'a') => 93.902
+publicClasses (,'a') => 93.902
+publicClasses ('a',) => 93.902
+publicClasses (,,'a') => 93.902
+publicRoutines (,'a') => 93.902
+publicRoutines ('a',) => 93.902
+publicRoutines (,,'a') => 93.902
+resource (,'a') => 93.902
+resource ('a',) => ok
+resource (,,'a') => 93.902
+resources (,'a') => 93.902
+resources ('a',) => 93.902
+resources (,,'a') => 93.902
+routines (,'a') => 93.902
+routines ('a',) => 93.902
+routines (,,'a') => 93.902
+source (,'a') => 93.902
+source ('a',) => 93.902
+source (,,'a') => 93.902
+sourceLine (,'a') => 93.902
+sourceLine ('a',) => 93.924
+sourceLine (,,'a') => 93.902
+sourceSize (,'a') => 93.902
+sourceSize ('a',) => 93.902
+sourceSize (,,'a') => 93.902
+trace (,'a') => 93.902
+trace ('a',) => 93.902
+trace (,,'a') => 93.902

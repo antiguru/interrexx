@@ -1,0 +1,189 @@
+# Class: each documented instance method, sent each argument list with a hole.
+sends
+= (,'a')
+= ('a',)
+= (,,'a')
+== (,'a')
+== ('a',)
+== (,,'a')
+<> (,'a')
+<> ('a',)
+<> (,,'a')
+>< (,'a')
+>< ('a',)
+>< (,,'a')
+\= (,'a')
+\= ('a',)
+\= (,,'a')
+\== (,'a')
+\== ('a',)
+\== (,,'a')
+activate (,'a')
+activate ('a',)
+activate (,,'a')
+annotation (,'a')
+annotation ('a',)
+annotation (,,'a')
+annotations (,'a')
+annotations ('a',)
+annotations (,,'a')
+baseClass (,'a')
+baseClass ('a',)
+baseClass (,,'a')
+defaultName (,'a')
+defaultName ('a',)
+defaultName (,,'a')
+define (,'a')
+define ('a',)
+define (,,'a')
+defineMethods (,'a')
+defineMethods ('a',)
+defineMethods (,,'a')
+delete (,'a')
+delete ('a',)
+delete (,,'a')
+enhanced (,'a')
+enhanced ('a',)
+enhanced (,,'a')
+id (,'a')
+id ('a',)
+id (,,'a')
+inherit (,'a')
+inherit ('a',)
+inherit (,,'a')
+isAbstract (,'a')
+isAbstract ('a',)
+isAbstract (,,'a')
+isMetaclass (,'a')
+isMetaclass ('a',)
+isMetaclass (,,'a')
+isSubclassOf (,'a')
+isSubclassOf ('a',)
+isSubclassOf (,,'a')
+metaClass (,'a')
+metaClass ('a',)
+metaClass (,,'a')
+method (,'a')
+method ('a',)
+method (,,'a')
+methods (,'a')
+methods ('a',)
+methods (,,'a')
+mixinClass (,'a')
+mixinClass ('a',)
+mixinClass (,,'a')
+package (,'a')
+package ('a',)
+package (,,'a')
+queryMixinClass (,'a')
+queryMixinClass ('a',)
+queryMixinClass (,,'a')
+subclass (,'a')
+subclass ('a',)
+subclass (,,'a')
+subclasses (,'a')
+subclasses ('a',)
+subclasses (,,'a')
+superClass (,'a')
+superClass ('a',)
+superClass (,,'a')
+superClasses (,'a')
+superClasses ('a',)
+superClasses (,,'a')
+uninherit (,'a')
+uninherit ('a',)
+uninherit (,,'a')
+----
+= (,'a') => 93.902
+= ('a',) => ok
+= (,,'a') => 93.902
+== (,'a') => 93.902
+== ('a',) => ok
+== (,,'a') => 93.902
+<> (,'a') => 93.902
+<> ('a',) => ok
+<> (,,'a') => 93.902
+>< (,'a') => 93.902
+>< ('a',) => ok
+>< (,,'a') => 93.902
+\= (,'a') => 93.902
+\= ('a',) => ok
+\= (,,'a') => 93.902
+\== (,'a') => 93.902
+\== ('a',) => ok
+\== (,,'a') => 93.902
+activate (,'a') => 93.902
+activate ('a',) => 93.902
+activate (,,'a') => 93.902
+annotation (,'a') => 93.902
+annotation ('a',) => ok
+annotation (,,'a') => 93.902
+annotations (,'a') => 93.902
+annotations ('a',) => 93.902
+annotations (,,'a') => 93.902
+baseClass (,'a') => 93.902
+baseClass ('a',) => 93.902
+baseClass (,,'a') => 93.902
+defaultName (,'a') => 93.902
+defaultName ('a',) => 93.902
+defaultName (,,'a') => 93.902
+define (,'a') => 88.901
+define ('a',) => ok
+define (,,'a') => 93.902
+defineMethods (,'a') => 93.902
+defineMethods ('a',) => 97.1
+defineMethods (,,'a') => 93.902
+delete (,'a') => 93.902
+delete ('a',) => ok
+delete (,,'a') => 93.902
+enhanced (,'a') => 88.901
+enhanced ('a',) => 97.1
+enhanced (,,'a') => 88.901
+id (,'a') => 93.902
+id ('a',) => 93.902
+id (,,'a') => 93.902
+inherit (,'a') => 88.901
+inherit ('a',) => 98.942
+inherit (,,'a') => 93.902
+isAbstract (,'a') => 93.902
+isAbstract ('a',) => 93.902
+isAbstract (,,'a') => 93.902
+isMetaclass (,'a') => 93.902
+isMetaclass ('a',) => 93.902
+isMetaclass (,,'a') => 93.902
+isSubclassOf (,'a') => 93.902
+isSubclassOf ('a',) => 88.914
+isSubclassOf (,,'a') => 93.902
+metaClass (,'a') => 93.902
+metaClass ('a',) => 93.902
+metaClass (,,'a') => 93.902
+method (,'a') => 93.902
+method ('a',) => 97.1
+method (,,'a') => 93.902
+methods (,'a') => 93.902
+methods ('a',) => ok
+methods (,,'a') => 93.902
+mixinClass (,'a') => 99.927
+mixinClass ('a',) => ok
+mixinClass (,,'a') => 88.901
+package (,'a') => 93.902
+package ('a',) => 93.902
+package (,,'a') => 93.902
+queryMixinClass (,'a') => 93.902
+queryMixinClass ('a',) => 93.902
+queryMixinClass (,,'a') => 93.902
+subclass (,'a') => 99.927
+subclass ('a',) => ok
+subclass (,,'a') => 88.901
+subclasses (,'a') => 93.902
+subclasses ('a',) => 93.902
+subclasses (,,'a') => 93.902
+superClass (,'a') => 93.902
+superClass ('a',) => 93.902
+superClass (,,'a') => 93.902
+superClasses (,'a') => 93.902
+superClasses ('a',) => 93.902
+superClasses (,,'a') => 93.902
+uninherit (,'a') => 93.902
+uninherit ('a',) => 98.942
+uninherit (,,'a') => 93.902

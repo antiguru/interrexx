@@ -1,0 +1,267 @@
+# Array: each documented instance method, sent each argument list with a hole.
+sends
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+[]= (,'a')
+[]= ('a',)
+[]= (,,'a')
+allIndexes (,'a')
+allIndexes ('a',)
+allIndexes (,,'a')
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+append (,'a')
+append ('a',)
+append (,,'a')
+at (,'a')
+at ('a',)
+at (,,'a')
+delete (,'a')
+delete ('a',)
+delete (,,'a')
+dimension (,'a')
+dimension ('a',)
+dimension (,,'a')
+dimensions (,'a')
+dimensions ('a',)
+dimensions (,,'a')
+empty (,'a')
+empty ('a',)
+empty (,,'a')
+fill (,'a')
+fill ('a',)
+fill (,,'a')
+first (,'a')
+first ('a',)
+first (,,'a')
+firstItem (,'a')
+firstItem ('a',)
+firstItem (,,'a')
+hasIndex (,'a')
+hasIndex ('a',)
+hasIndex (,,'a')
+hasItem (,'a')
+hasItem ('a',)
+hasItem (,,'a')
+index (,'a')
+index ('a',)
+index (,,'a')
+insert (,'a')
+insert ('a',)
+insert (,,'a')
+isEmpty (,'a')
+isEmpty ('a',)
+isEmpty (,,'a')
+items (,'a')
+items ('a',)
+items (,,'a')
+last (,'a')
+last ('a',)
+last (,,'a')
+lastItem (,'a')
+lastItem ('a',)
+lastItem (,,'a')
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+next (,'a')
+next ('a',)
+next (,,'a')
+previous (,'a')
+previous ('a',)
+previous (,,'a')
+put (,'a')
+put ('a',)
+put (,,'a')
+remove (,'a')
+remove ('a',)
+remove (,,'a')
+removeItem (,'a')
+removeItem ('a',)
+removeItem (,,'a')
+section (,'a')
+section ('a',)
+section (,,'a')
+size (,'a')
+size ('a',)
+size (,,'a')
+sort (,'a')
+sort ('a',)
+sort (,,'a')
+sortWith (,'a')
+sortWith ('a',)
+sortWith (,,'a')
+stableSort (,'a')
+stableSort ('a',)
+stableSort (,,'a')
+stableSortWith (,'a')
+stableSortWith ('a',)
+stableSortWith (,,'a')
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+toString (,'a')
+toString ('a',)
+toString (,,'a')
+difference (,'a')
+difference ('a',)
+difference (,,'a')
+disjoint (,'a')
+disjoint ('a',)
+disjoint (,,'a')
+equivalent (,'a')
+equivalent ('a',)
+equivalent (,,'a')
+intersection (,'a')
+intersection ('a',)
+intersection (,,'a')
+subset (,'a')
+subset ('a',)
+subset (,,'a')
+union (,'a')
+union ('a',)
+union (,,'a')
+xor (,'a')
+xor ('a',)
+xor (,,'a')
+appendAll (,'a')
+appendAll ('a',)
+appendAll (,,'a')
+----
+[] (,'a') => ok
+[] ('a',) => 93.907
+[] (,,'a') => ok
+[]= (,'a') => 93.903
+[]= ('a',) => 93.901
+[]= (,,'a') => 93.903
+allIndexes (,'a') => 93.902
+allIndexes ('a',) => 93.902
+allIndexes (,,'a') => 93.902
+allItems (,'a') => 93.902
+allItems ('a',) => 93.902
+allItems (,,'a') => 93.902
+append (,'a') => 93.902
+append ('a',) => ok
+append (,,'a') => 93.902
+at (,'a') => ok
+at ('a',) => 93.907
+at (,,'a') => ok
+delete (,'a') => 93.902
+delete ('a',) => 93.907
+delete (,,'a') => 93.902
+dimension (,'a') => 93.902
+dimension ('a',) => 93.907
+dimension (,,'a') => 93.902
+dimensions (,'a') => 93.902
+dimensions ('a',) => 93.902
+dimensions (,,'a') => 93.902
+empty (,'a') => 93.902
+empty ('a',) => 93.902
+empty (,,'a') => 93.902
+fill (,'a') => 93.902
+fill ('a',) => ok
+fill (,,'a') => 93.902
+first (,'a') => 93.902
+first ('a',) => 93.902
+first (,,'a') => 93.902
+firstItem (,'a') => 93.902
+firstItem ('a',) => 93.902
+firstItem (,,'a') => 93.902
+hasIndex (,'a') => ok
+hasIndex ('a',) => 93.907
+hasIndex (,,'a') => ok
+hasItem (,'a') => 93.902
+hasItem ('a',) => ok
+hasItem (,,'a') => 93.902
+index (,'a') => 93.902
+index ('a',) => ok
+index (,,'a') => 93.902
+insert (,'a') => 93.907
+insert ('a',) => ok
+insert (,,'a') => 93.902
+isEmpty (,'a') => 93.902
+isEmpty ('a',) => 93.902
+isEmpty (,,'a') => 93.902
+items (,'a') => 93.902
+items ('a',) => 93.902
+items (,,'a') => 93.902
+last (,'a') => 93.902
+last ('a',) => 93.902
+last (,,'a') => 93.902
+lastItem (,'a') => 93.902
+lastItem ('a',) => 93.902
+lastItem (,,'a') => 93.902
+makeArray (,'a') => 93.902
+makeArray ('a',) => 93.902
+makeArray (,,'a') => 93.902
+makeString (,'a') => ok
+makeString ('a',) => 93.915
+makeString (,,'a') => 93.902
+next (,'a') => ok
+next ('a',) => 93.907
+next (,,'a') => ok
+previous (,'a') => ok
+previous ('a',) => 93.907
+previous (,,'a') => ok
+put (,'a') => 93.903
+put ('a',) => 93.901
+put (,,'a') => 93.903
+remove (,'a') => ok
+remove ('a',) => 93.907
+remove (,,'a') => ok
+removeItem (,'a') => 93.902
+removeItem ('a',) => ok
+removeItem (,,'a') => 93.902
+section (,'a') => 93.903
+section ('a',) => 93.907
+section (,,'a') => 93.902
+size (,'a') => 93.902
+size ('a',) => 93.902
+size (,,'a') => 93.902
+sort (,'a') => 93.902
+sort ('a',) => 93.902
+sort (,,'a') => 93.902
+sortWith (,'a') => 93.902
+sortWith ('a',) => ok
+sortWith (,,'a') => 93.902
+stableSort (,'a') => 93.902
+stableSort ('a',) => 93.902
+stableSort (,,'a') => 93.902
+stableSortWith (,'a') => 93.902
+stableSortWith ('a',) => ok
+stableSortWith (,,'a') => 93.902
+supplier (,'a') => 93.902
+supplier ('a',) => 93.902
+supplier (,,'a') => 93.902
+toString (,'a') => ok
+toString ('a',) => 93.915
+toString (,,'a') => 93.902
+difference (,'a') => 93.902
+difference ('a',) => ok
+difference (,,'a') => 93.902
+disjoint (,'a') => 93.902
+disjoint ('a',) => ok
+disjoint (,,'a') => 93.902
+equivalent (,'a') => 93.902
+equivalent ('a',) => 97.1
+equivalent (,,'a') => 93.902
+intersection (,'a') => 93.902
+intersection ('a',) => ok
+intersection (,,'a') => 93.902
+subset (,'a') => 93.902
+subset ('a',) => ok
+subset (,,'a') => 93.902
+union (,'a') => 93.902
+union ('a',) => ok
+union (,,'a') => 93.902
+xor (,'a') => 93.902
+xor ('a',) => ok
+xor (,,'a') => 93.902
+appendAll (,'a') => 93.902
+appendAll ('a',) => 93.948
+appendAll (,,'a') => 93.902

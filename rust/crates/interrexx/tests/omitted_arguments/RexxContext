@@ -1,0 +1,93 @@
+# RexxContext: each documented instance method, sent each argument list with a hole.
+sends
+args (,'a')
+args ('a',)
+args (,,'a')
+condition (,'a')
+condition ('a',)
+condition (,,'a')
+digits (,'a')
+digits ('a',)
+digits (,,'a')
+executable (,'a')
+executable ('a',)
+executable (,,'a')
+form (,'a')
+form ('a',)
+form (,,'a')
+fuzz (,'a')
+fuzz ('a',)
+fuzz (,,'a')
+interpreter (,'a')
+interpreter ('a',)
+interpreter (,,'a')
+invocation (,'a')
+invocation ('a',)
+invocation (,,'a')
+line (,'a')
+line ('a',)
+line (,,'a')
+name (,'a')
+name ('a',)
+name (,,'a')
+package (,'a')
+package ('a',)
+package (,,'a')
+rs (,'a')
+rs ('a',)
+rs (,,'a')
+stackFrames (,'a')
+stackFrames ('a',)
+stackFrames (,,'a')
+thread (,'a')
+thread ('a',)
+thread (,,'a')
+variables (,'a')
+variables ('a',)
+variables (,,'a')
+----
+args (,'a') => 93.902
+args ('a',) => 93.902
+args (,,'a') => 93.902
+condition (,'a') => 93.902
+condition ('a',) => 93.902
+condition (,,'a') => 93.902
+digits (,'a') => 93.902
+digits ('a',) => 93.902
+digits (,,'a') => 93.902
+executable (,'a') => 93.902
+executable ('a',) => 93.902
+executable (,,'a') => 93.902
+form (,'a') => 93.902
+form ('a',) => 93.902
+form (,,'a') => 93.902
+fuzz (,'a') => 93.902
+fuzz ('a',) => 93.902
+fuzz (,,'a') => 93.902
+interpreter (,'a') => 93.902
+interpreter ('a',) => 93.902
+interpreter (,,'a') => 93.902
+invocation (,'a') => 93.902
+invocation ('a',) => 93.902
+invocation (,,'a') => 93.902
+line (,'a') => 93.902
+line ('a',) => 93.902
+line (,,'a') => 93.902
+name (,'a') => 93.902
+name ('a',) => 93.902
+name (,,'a') => 93.902
+package (,'a') => 93.902
+package ('a',) => 93.902
+package (,,'a') => 93.902
+rs (,'a') => 93.902
+rs ('a',) => 93.902
+rs (,,'a') => 93.902
+stackFrames (,'a') => 93.902
+stackFrames ('a',) => 93.902
+stackFrames (,,'a') => 93.902
+thread (,'a') => 93.902
+thread ('a',) => 93.902
+thread (,,'a') => 93.902
+variables (,'a') => 93.902
+variables ('a',) => 93.902
+variables (,,'a') => 93.902
