@@ -1003,8 +1003,8 @@ impl Interp {
 
     /// Converts an arithmetic operand to a `Number`, or 41.1 with the
     /// operand's own rendered text as the substitution -- measured, `say
-    /// 'abc' + 1` reports `Nonnumeric value ("abc")`, the operand as it
-    /// renders, not upcased or otherwise transformed.
+    /// 'abc' + 1` carries `abc`, the operand as it renders, not upcased or
+    /// otherwise transformed.
     pub(crate) fn arith_operand(&mut self, value: ObjRef) -> Result<Number, Failure> {
         match self.to_number(value) {
             Ok(number) => Ok(number),
@@ -1537,8 +1537,8 @@ impl Interp {
             // and no other operator, so the six are `Object`'s identity test
             // and every other operator is a name the behaviour does not hold:
             // `.array = .array` is `1` and `.array = 'The Array class'` is `0`;
-            // `.array > .array` and `.array + 1` are both `97.1 Object "The
-            // Array class" does not understand message`.
+            // `.array > .array` and `.array + 1` both raise 97.1 with
+            // `The Array class` as the receiver item.
             Body::Class { .. } => Some(value),
             Body::Instance { .. } => Some(value),
             // Neither `Array` nor a class this crate builds as a native body
