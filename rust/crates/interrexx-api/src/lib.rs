@@ -3,6 +3,7 @@
 pub mod callbacks;
 pub mod ffi;
 pub mod handles;
+pub mod header;
 pub mod invoke;
 pub mod layout;
 pub mod load;

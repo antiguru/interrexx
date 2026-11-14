@@ -116,6 +116,7 @@ Unset, the gate switches below report and exit 0; set to `1`, a mismatch fails t
 | `REXX_SIM_ORACLE_REFRESH`, `REXX_SIM_CALIBRATION` | grow the committed ooRexx outcome sets; write the calibration rows |
 | `REXX_WHOLE_GROUPS_ONLY` | runs only the named group files |
 | `REXX_METHOD_BODIES_REFRESH`, `REXX_REFUSAL_SITES_REFRESH` | regenerate those committed tables |
+| `REXX_HEADERS_REFRESH` | writes the generated sections of the C headers in `include/` from the Rust definitions |
 | `REXX_TEST_THREAD_SANITIZER` | adapts tests to a ThreadSanitizer build |
 | `REXX_SWITCH_MODE` | read by `rexx`: the switch mode, including `sim:...` |
 | `REXX_API_DIR`, `XDG_RUNTIME_DIR` | set by `rust/.cargo/config.toml` so tests reach private API services, interrexx's and ooRexx's, never the user's |

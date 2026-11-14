@@ -8,148 +8,90 @@
 //! through.
 
 use std::cell::Cell;
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{c_char, c_int, c_uchar, c_ushort, c_void};
 
-/// `wholenumber_t`.
-pub type wholenumber_t = isize;
-/// `stringsize_t`.
-pub type stringsize_t = usize;
-/// `logical_t`.
-pub type logical_t = usize;
-/// `CSTRING`.
-pub type CSTRING = *const c_char;
-/// `POINTER`.
-pub type POINTER = *mut c_void;
-/// `REXXPFN`.
+/// Defines each scalar type the header declares by `typedef`, and beside them
+/// each name with the tokens of the Rust type it stands for, from which the
+/// header generator (`header.rs`) spells the C declaration.
+macro_rules! c_typedefs {
+    ($($(#[$meta:meta])* $name:ident = $ty:ty;)*) => {
+        $( $(#[$meta])* pub type $name = $ty; )*
+
+        /// Each scalar typedef, as the header names it, and the tokens of its
+        /// Rust type, in declaration order.
+        pub const C_TYPEDEFS: &[(&str, &str)] = &[$((stringify!($name), stringify!($ty))),*];
+    };
+}
+
+c_typedefs! {
+    /// `wholenumber_t`.
+    wholenumber_t = isize;
+    /// `stringsize_t`.
+    stringsize_t = usize;
+    /// `logical_t`.
+    logical_t = usize;
+    /// `CSTRING`.
+    CSTRING = *const c_char;
+    /// `POINTER`.
+    POINTER = *mut c_void;
+    /// `RexxReturnCode`.
+    RexxReturnCode = c_int;
+}
+
+/// `REXXPFN`. Its C declaration differs by platform, so it is in the header
+/// generator's per-platform table rather than in [`C_TYPEDEFS`].
 pub type REXXPFN = *mut c_void;
 
-/// `_RexxObjectPtr` and `RexxObjectPtr`.
-#[repr(C)]
-pub struct RexxObjectPtr_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxObjectPtr = *mut RexxObjectPtr_;
+/// `intptr_t`, a C type of its own name: a member that holds one is spelled
+/// with it rather than as `ssize_t`.
+pub type intptr_t = isize;
+/// `uintptr_t`, a C type of its own name: a member that holds one is spelled
+/// with it rather than as `size_t`.
+pub type uintptr_t = usize;
 
-/// `_RexxStringObject` and `RexxStringObject`.
-#[repr(C)]
-pub struct RexxStringObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxStringObject = *mut RexxStringObject_;
+/// Defines each opaque object handle: the struct an extension never sees
+/// inside and the pointer to it that the extension holds. Beside them, each
+/// handle's name with the handle whose struct its C++ struct derives from, so
+/// that C++ passes a narrower handle where a wider one is expected.
+macro_rules! handles {
+    ($($Handle:ident = $Struct:ident $(: $Base:ident)?;)*) => {
+        $(
+            #[doc = concat!("`_", stringify!($Handle), "` and `", stringify!($Handle), "`.")]
+            #[repr(C)]
+            pub struct $Struct {
+                _opaque: [u8; 0],
+            }
+            /// A handle to an object of that shape; opaque to an extension.
+            pub type $Handle = *mut $Struct;
+        )*
 
-/// `_RexxBufferStringObject` and `RexxBufferStringObject`.
-#[repr(C)]
-pub struct RexxBufferStringObject_ {
-    _opaque: [u8; 0],
+        /// Each handle, as the header names it, and the handle its C++ struct
+        /// derives from (`None` for the root), in declaration order.
+        pub const HANDLES: &[(&str, Option<&str>)] =
+            &[$((stringify!($Handle), handles!(@base $($Base)?))),*];
+    };
+    (@base) => { None };
+    (@base $Base:ident) => { Some(stringify!($Base)) };
 }
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxBufferStringObject = *mut RexxBufferStringObject_;
 
-/// `_RexxArrayObject` and `RexxArrayObject`.
-#[repr(C)]
-pub struct RexxArrayObject_ {
-    _opaque: [u8; 0],
+handles! {
+    RexxObjectPtr = RexxObjectPtr_;
+    RexxStringObject = RexxStringObject_ : RexxObjectPtr;
+    RexxBufferStringObject = RexxBufferStringObject_ : RexxStringObject;
+    RexxArrayObject = RexxArrayObject_ : RexxObjectPtr;
+    RexxBufferObject = RexxBufferObject_ : RexxObjectPtr;
+    RexxPointerObject = RexxPointerObject_ : RexxObjectPtr;
+    RexxMethodObject = RexxMethodObject_ : RexxObjectPtr;
+    RexxRoutineObject = RexxRoutineObject_ : RexxObjectPtr;
+    RexxPackageObject = RexxPackageObject_ : RexxObjectPtr;
+    RexxClassObject = RexxClassObject_ : RexxObjectPtr;
+    RexxDirectoryObject = RexxDirectoryObject_ : RexxObjectPtr;
+    RexxStringTableObject = RexxStringTableObject_ : RexxObjectPtr;
+    RexxSupplierObject = RexxSupplierObject_ : RexxObjectPtr;
+    RexxStemObject = RexxStemObject_ : RexxObjectPtr;
+    RexxMutableBufferObject = RexxMutableBufferObject_ : RexxObjectPtr;
+    RexxVariableReferenceObject = RexxVariableReferenceObject_ : RexxObjectPtr;
 }
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxArrayObject = *mut RexxArrayObject_;
-
-/// `_RexxBufferObject` and `RexxBufferObject`.
-#[repr(C)]
-pub struct RexxBufferObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxBufferObject = *mut RexxBufferObject_;
-
-/// `_RexxPointerObject` and `RexxPointerObject`.
-#[repr(C)]
-pub struct RexxPointerObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxPointerObject = *mut RexxPointerObject_;
-
-/// `_RexxMethodObject` and `RexxMethodObject`.
-#[repr(C)]
-pub struct RexxMethodObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxMethodObject = *mut RexxMethodObject_;
-
-/// `_RexxRoutineObject` and `RexxRoutineObject`.
-#[repr(C)]
-pub struct RexxRoutineObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxRoutineObject = *mut RexxRoutineObject_;
-
-/// `_RexxPackageObject` and `RexxPackageObject`.
-#[repr(C)]
-pub struct RexxPackageObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxPackageObject = *mut RexxPackageObject_;
-
-/// `_RexxClassObject` and `RexxClassObject`.
-#[repr(C)]
-pub struct RexxClassObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxClassObject = *mut RexxClassObject_;
-
-/// `_RexxDirectoryObject` and `RexxDirectoryObject`.
-#[repr(C)]
-pub struct RexxDirectoryObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxDirectoryObject = *mut RexxDirectoryObject_;
-
-/// `_RexxStringTableObject` and `RexxStringTableObject`.
-#[repr(C)]
-pub struct RexxStringTableObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxStringTableObject = *mut RexxStringTableObject_;
-
-/// `_RexxSupplierObject` and `RexxSupplierObject`.
-#[repr(C)]
-pub struct RexxSupplierObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxSupplierObject = *mut RexxSupplierObject_;
-
-/// `_RexxStemObject` and `RexxStemObject`.
-#[repr(C)]
-pub struct RexxStemObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxStemObject = *mut RexxStemObject_;
-
-/// `_RexxMutableBufferObject` and `RexxMutableBufferObject`.
-#[repr(C)]
-pub struct RexxMutableBufferObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxMutableBufferObject = *mut RexxMutableBufferObject_;
-
-/// `_RexxVariableReferenceObject` and `RexxVariableReferenceObject`.
-#[repr(C)]
-pub struct RexxVariableReferenceObject_ {
-    _opaque: [u8; 0],
-}
-/// A handle to an object of that shape; opaque to an extension.
-pub type RexxVariableReferenceObject = *mut RexxVariableReferenceObject_;
 
 /// `INSTANCE_INTERFACE_VERSION`.
 pub const INSTANCE_INTERFACE_VERSION: wholenumber_t = 102;
@@ -164,36 +106,180 @@ pub const EXIT_INTERFACE_VERSION: wholenumber_t = 101;
 /// `REDIRECT_INTERFACE_VERSION`.
 pub const REDIRECT_INTERFACE_VERSION: wholenumber_t = 100;
 
-/// `RXSTRING`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXSTRING {
-    pub strlength: usize,
-    pub strptr: *mut c_char,
+/// The C spelling of each Rust type token that is not itself the C name.
+///
+/// A token missing here is a C name already: a typedef the header declares
+/// (`logical_t`, `CSTRING`, `RXSTRING`, a handle) or a standard C type of the
+/// same name (`intptr_t`). The mapping keys on tokens, not on the type they
+/// resolve to, so `logical_t`, `stringsize_t` and `usize` keep three spellings
+/// for one Rust type.
+pub const C_TYPE_NAMES: &[(&str, &str)] = &[
+    ("c_char", "char"),
+    ("c_uchar", "unsigned char"),
+    ("c_ushort", "unsigned short"),
+    ("c_int", "int"),
+    ("c_void", "void"),
+    ("i8", "int8_t"),
+    ("u8", "uint8_t"),
+    ("i16", "int16_t"),
+    ("u16", "uint16_t"),
+    ("i32", "int32_t"),
+    ("u32", "uint32_t"),
+    ("i64", "int64_t"),
+    ("u64", "uint64_t"),
+    ("isize", "ssize_t"),
+    ("usize", "size_t"),
+    ("f32", "float"),
+    ("f64", "double"),
+    // A context struct is reached through its typedef name, which is the
+    // struct in C++ and a pointer to the constant struct in C.
+    ("RexxInstance_", "RexxInstance"),
+    ("RexxThreadContext_", "RexxThreadContext"),
+    ("RexxMethodContext_", "RexxMethodContext"),
+    ("RexxCallContext_", "RexxCallContext"),
+    ("RexxExitContext_", "RexxExitContext"),
+    ("RexxIORedirectorContext_", "RexxIORedirectorContext"),
+];
+
+/// The C type the header spells for the Rust type written as `tokens`.
+///
+/// A raw pointer is the C pointer to the pointee's spelling; an `Option` of a
+/// function pointer is that function pointer, which C lets be null.
+///
+/// # Panics
+/// If `tokens` is neither a pointer, an `Option`, a mapped token nor a plain
+/// name.
+#[must_use]
+pub fn c_type(tokens: &str) -> String {
+    let tokens = tokens.trim();
+    if let Some(pointee) = tokens.strip_prefix("*mut ") {
+        return pointer_to(&c_type(pointee), false);
+    }
+    if let Some(pointee) = tokens.strip_prefix("*const ") {
+        return pointer_to(&c_type(pointee), true);
+    }
+    if let Some(inner) = tokens
+        .strip_prefix("Option")
+        .map(str::trim_start)
+        .and_then(|rest| rest.strip_prefix('<'))
+        .and_then(|rest| rest.strip_suffix('>'))
+    {
+        return c_type(inner);
+    }
+    if let Some((_, c)) = C_TYPE_NAMES.iter().find(|(rust, _)| *rust == tokens) {
+        return (*c).to_string();
+    }
+    assert!(
+        !tokens.is_empty()
+            && tokens
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || ch == '_'),
+        "{tokens} is not a type the header can spell"
+    );
+    tokens.to_string()
 }
 
-/// `CONSTRXSTRING`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct CONSTRXSTRING {
-    pub strlength: usize,
-    pub strptr: *const c_char,
+/// A pointer to `pointee`, constant when `constant` is set.
+fn pointer_to(pointee: &str, constant: bool) -> String {
+    let pointee = if constant {
+        format!("const {pointee}")
+    } else {
+        pointee.to_string()
+    };
+    if pointee.ends_with('*') {
+        format!("{pointee}*")
+    } else {
+        format!("{pointee} *")
+    }
 }
 
-/// `RXSYSEXIT`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXSYSEXIT {
-    pub sysexit_name: *const c_char,
-    pub sysexit_code: c_int,
+/// How the header spells the type of one struct field.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CSpelling {
+    /// From the tokens of the field's Rust type, through [`c_type`].
+    Rust(&'static str),
+    /// As given: the C type is narrower than the Rust one, which holds it as an
+    /// untyped pointer.
+    C(&'static str),
 }
 
-/// `RexxContextExit`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RexxContextExit {
-    pub handler: *mut c_void,
-    pub sysexit_code: c_int,
+/// One field of a `repr(C)` struct as the header declares it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CField {
+    /// The field's C name.
+    pub name: &'static str,
+    /// Its C type.
+    pub ty: CSpelling,
+}
+
+/// Defines a `repr(C)` struct the header declares and, beside it, its fields as
+/// the header declares them ([`CField`]): each field's C name is its Rust name
+/// unless `=> "name"` follows the type, and its C type is spelled from the Rust
+/// type's tokens unless `as "type"` gives it.
+macro_rules! c_struct {
+    (
+        $(#[$meta:meta])*
+        pub struct $Name:ident {
+            $( pub $field:ident : $ty:ty $(=> $c_name:literal)? $(as $c_type:literal)? ),* $(,)?
+        }
+    ) => {
+        $(#[$meta])*
+        pub struct $Name {
+            $( pub $field: $ty, )*
+        }
+
+        impl $Name {
+            /// Each field as the header declares it, in order.
+            pub const C_FIELDS: &'static [CField] = &[$(CField {
+                name: c_struct!(@name $field $($c_name)?),
+                ty: c_struct!(@type $ty $(, $c_type)?),
+            }),*];
+        }
+    };
+    (@name $field:ident) => { stringify!($field) };
+    (@name $field:ident $c_name:literal) => { $c_name };
+    (@type $ty:ty) => { CSpelling::Rust(stringify!($ty)) };
+    (@type $ty:ty, $c_type:literal) => { CSpelling::C($c_type) };
+}
+
+c_struct! {
+    /// `RXSTRING`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXSTRING {
+        pub strlength: usize,
+        pub strptr: *mut c_char,
+    }
+}
+
+c_struct! {
+    /// `CONSTRXSTRING`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct CONSTRXSTRING {
+        pub strlength: usize,
+        pub strptr: *const c_char,
+    }
+}
+
+c_struct! {
+    /// `RXSYSEXIT`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXSYSEXIT {
+        pub sysexit_name: *const c_char,
+        pub sysexit_code: c_int,
+    }
+}
+
+c_struct! {
+    /// `RexxContextExit`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RexxContextExit {
+        pub handler: *mut c_void as "RexxContextExitHandler *",
+        pub sysexit_code: c_int,
+    }
 }
 
 /// The flag word that begins an exit's parameter block: the C bit fields
@@ -230,147 +316,182 @@ pub const EXIT_FLAG_BITS: &[(&str, &[(&str, u32)])] = &[
     ("RXTRC_FLAGS", &[("rxftrace", 0)]),
 ];
 
-/// `RXFNCCAL_PARM`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXFNCCAL_PARM {
-    pub rxfnc_flags: ExitFlags,
-    pub rxfnc_name: *const c_char,
-    pub rxfnc_namel: u16,
-    pub rxfnc_que: *const c_char,
-    pub rxfnc_quel: u16,
-    pub rxfnc_argc: u16,
-    pub rxfnc_argv: *const CONSTRXSTRING,
-    pub rxfnc_retc: RXSTRING,
+/// `RXFNC_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXFNC_FLAGS = ExitFlags;
+/// `RXOFNC_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXOFNC_FLAGS = ExitFlags;
+/// `RXEXF_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXEXF_FLAGS = ExitFlags;
+/// `RXCMD_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXCMD_FLAGS = ExitFlags;
+/// `RXMSQ_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXMSQ_FLAGS = ExitFlags;
+/// `RXHLT_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXHLT_FLAGS = ExitFlags;
+/// `RXTRC_FLAGS`: an [`ExitFlags`] word with the bits [`EXIT_FLAG_BITS`] names for it.
+pub type RXTRC_FLAGS = ExitFlags;
+
+c_struct! {
+    /// `RXFNCCAL_PARM`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXFNCCAL_PARM {
+        pub rxfnc_flags: RXFNC_FLAGS,
+        pub rxfnc_name: *const c_char,
+        pub rxfnc_namel: c_ushort,
+        pub rxfnc_que: *const c_char,
+        pub rxfnc_quel: c_ushort,
+        pub rxfnc_argc: c_ushort,
+        pub rxfnc_argv: *const CONSTRXSTRING,
+        pub rxfnc_retc: RXSTRING,
+    }
 }
 
-/// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM`, which share
-/// one shape.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXOFNCCAL_PARM {
-    pub rxfnc_flags: ExitFlags,
-    pub rxfnc_name: CONSTRXSTRING,
-    pub rxfnc_argc: usize,
-    pub rxfnc_argv: *mut RexxObjectPtr,
-    pub rxfnc_retc: RexxObjectPtr,
+c_struct! {
+    /// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM`, which share
+    /// one shape.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXOFNCCAL_PARM {
+        pub rxfnc_flags: RXOFNC_FLAGS,
+        pub rxfnc_name: CONSTRXSTRING,
+        pub rxfnc_argc: usize,
+        pub rxfnc_argv: *mut RexxObjectPtr,
+        pub rxfnc_retc: RexxObjectPtr,
+    }
 }
 
-/// `RXCMDHST_PARM`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXCMDHST_PARM {
-    pub rxcmd_flags: ExitFlags,
-    pub rxcmd_address: *const c_char,
-    pub rxcmd_addressl: u16,
-    pub rxcmd_dll: *const c_char,
-    pub rxcmd_dll_len: u16,
-    pub rxcmd_command: CONSTRXSTRING,
-    pub rxcmd_retc: RXSTRING,
+c_struct! {
+    /// `RXCMDHST_PARM`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXCMDHST_PARM {
+        pub rxcmd_flags: RXCMD_FLAGS,
+        pub rxcmd_address: *const c_char,
+        pub rxcmd_addressl: c_ushort,
+        pub rxcmd_dll: *const c_char,
+        pub rxcmd_dll_len: c_ushort,
+        pub rxcmd_command: CONSTRXSTRING,
+        pub rxcmd_retc: RXSTRING,
+    }
 }
 
-/// `RXMSQPSH_PARM`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXMSQPSH_PARM {
-    pub rxmsq_flags: ExitFlags,
-    pub rxmsq_value: CONSTRXSTRING,
+c_struct! {
+    /// `RXMSQPSH_PARM`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXMSQPSH_PARM {
+        pub rxmsq_flags: RXMSQ_FLAGS,
+        pub rxmsq_value: CONSTRXSTRING,
+    }
 }
 
-/// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`. The blocks
-/// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
-/// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
-/// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXSIOSAY_PARM {
-    pub rxsio_string: CONSTRXSTRING,
+c_struct! {
+    /// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`. The blocks
+    /// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
+    /// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
+    /// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXSIOSAY_PARM {
+        pub rxsio_string: CONSTRXSTRING,
+    }
 }
 
-/// `RXVALCALL_PARM`; `RXVARNOVALUE_PARM` is its last
-/// two members.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXVALCALL_PARM {
-    pub selector: RexxStringObject,
-    pub variable_name: RexxStringObject,
-    pub value: RexxObjectPtr,
+c_struct! {
+    /// `RXVALCALL_PARM`; `RXVARNOVALUE_PARM` is its last
+    /// two members.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXVALCALL_PARM {
+        pub selector: RexxStringObject,
+        pub variable_name: RexxStringObject,
+        pub value: RexxObjectPtr,
+    }
 }
 
-/// `RXVARNOVALUE_PARM`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct RXVARNOVALUE_PARM {
-    pub variable_name: RexxStringObject,
-    pub value: RexxObjectPtr,
+c_struct! {
+    /// `RXVARNOVALUE_PARM`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct RXVARNOVALUE_PARM {
+        pub variable_name: RexxStringObject,
+        pub value: RexxObjectPtr,
+    }
 }
 
-/// `SHVBLOCK`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct SHVBLOCK {
-    pub shvnext: *mut SHVBLOCK,
-    pub shvname: CONSTRXSTRING,
-    pub shvvalue: RXSTRING,
-    pub shvnamelen: usize,
-    pub shvvaluelen: usize,
-    pub shvcode: u8,
-    pub shvret: u8,
+c_struct! {
+    /// `SHVBLOCK`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct SHVBLOCK {
+        pub shvnext: *mut SHVBLOCK,
+        pub shvname: CONSTRXSTRING,
+        pub shvvalue: RXSTRING,
+        pub shvnamelen: usize,
+        pub shvvaluelen: usize,
+        pub shvcode: c_uchar,
+        pub shvret: c_uchar,
+    }
 }
 
-/// `RexxQueueTime`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RexxQueueTime {
-    pub hours: u16,
-    pub minutes: u16,
-    pub seconds: u16,
-    pub hundredths: u16,
-    pub day: u16,
-    pub month: u16,
-    pub year: u16,
-    pub weekday: u16,
-    pub microseconds: u32,
-    pub yearday: u32,
+c_struct! {
+    /// `RexxQueueTime`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    pub struct RexxQueueTime {
+        pub hours: u16,
+        pub minutes: u16,
+        pub seconds: u16,
+        pub hundredths: u16,
+        pub day: u16,
+        pub month: u16,
+        pub year: u16,
+        pub weekday: u16,
+        pub microseconds: u32,
+        pub yearday: u32,
+    }
 }
 
-/// `REXXDATETIME`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct REXXDATETIME {
-    pub hours: u16,
-    pub minutes: u16,
-    pub seconds: u16,
-    pub hundredths: u16,
-    pub day: u16,
-    pub month: u16,
-    pub year: u16,
-    pub weekday: u16,
-    pub microseconds: usize,
-    pub yearday: usize,
-    pub valid: u16,
+c_struct! {
+    /// `REXXDATETIME`.
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    pub struct REXXDATETIME {
+        pub hours: u16,
+        pub minutes: u16,
+        pub seconds: u16,
+        pub hundredths: u16,
+        pub day: u16,
+        pub month: u16,
+        pub year: u16,
+        pub weekday: u16,
+        pub microseconds: usize,
+        pub yearday: usize,
+        pub valid: u16,
+    }
 }
 
-/// `RexxReturnCode`.
-pub type RexxReturnCode = c_int;
-
-/// `RexxCondition`.
-#[repr(C)]
-pub struct RexxCondition {
-    pub code: wholenumber_t,
-    pub rc: wholenumber_t,
-    pub position: usize,
-    pub conditionName: RexxStringObject,
-    pub message: RexxStringObject,
-    pub errortext: RexxStringObject,
-    pub program: RexxStringObject,
-    pub description: RexxStringObject,
-    pub additional: RexxArrayObject,
+c_struct! {
+    /// `RexxCondition`.
+    #[repr(C)]
+    pub struct RexxCondition {
+        pub code: wholenumber_t,
+        pub rc: wholenumber_t,
+        pub position: usize,
+        pub conditionName: RexxStringObject,
+        pub message: RexxStringObject,
+        pub errortext: RexxStringObject,
+        pub program: RexxStringObject,
+        pub description: RexxStringObject,
+        pub additional: RexxArrayObject,
+    }
 }
 
 /// Defines the anonymous union inside `ValueDescriptor` and, beside it, each
 /// member's name and Rust type, which the ABI dump test (`tests/abi_dump.rs`)
-/// measures against the header's union.
+/// measures against the header's union, and each member as the header
+/// declares it.
 macro_rules! value_union {
     ($($member:ident : $ty:ty,)*) => {
         /// The anonymous union inside `ValueDescriptor`.
@@ -389,6 +510,12 @@ macro_rules! value_union {
             pub fn member_types() -> Vec<(&'static str, &'static str)> {
                 vec![$((stringify!($member), std::any::type_name::<$ty>())),*]
             }
+
+            /// Each member as the header declares it, in order.
+            pub const C_FIELDS: &'static [CField] = &[$(CField {
+                name: stringify!($member),
+                ty: CSpelling::Rust(stringify!($ty)),
+            }),*];
         }
     };
 }
@@ -423,9 +550,9 @@ value_union! {
     value___uint32_t: u32,
     value_uint64_t: u64,
     value___uint64_t: u64,
-    value_intptr_t: isize,
-    value_uintptr_t: usize,
-    value___uintptr_t: usize,
+    value_intptr_t: intptr_t,
+    value_uintptr_t: uintptr_t,
+    value___uintptr_t: uintptr_t,
     value_size_t: usize,
     value_ssize_t: isize,
     value_RexxArrayObject: RexxArrayObject,
@@ -454,8 +581,8 @@ value_union! {
     value_OPTIONAL_uint16_t: u16,
     value_OPTIONAL_uint32_t: u32,
     value_OPTIONAL_uint64_t: u64,
-    value_OPTIONAL_intptr_t: isize,
-    value_OPTIONAL_uintptr_t: usize,
+    value_OPTIONAL_intptr_t: intptr_t,
+    value_OPTIONAL_uintptr_t: uintptr_t,
     value_OPTIONAL_ssize_t: isize,
     value_OPTIONAL_size_t: usize,
     value_OPTIONAL_RexxArrayObject: RexxArrayObject,
@@ -466,98 +593,122 @@ value_union! {
     value_OPTIONAL_nonnegative_wholenumber_t: wholenumber_t,
 }
 
-/// `ValueDescriptor`.
-#[repr(C)]
-pub struct ValueDescriptor {
-    pub value: ValueUnion,
-    pub r#type: u16,
-    pub flags: u16,
+c_struct! {
+    /// `ValueDescriptor`.
+    #[repr(C)]
+    pub struct ValueDescriptor {
+        pub value: ValueUnion,
+        pub r#type: u16 => "type",
+        pub flags: u16,
+    }
 }
 
 /// `RexxPackageLoader` and `RexxPackageUnloader`.
 pub type PackageHook = unsafe extern "C-unwind" fn(*mut RexxThreadContext_);
+/// `RexxPackageLoader`, the hook a package runs when it is loaded.
+pub type RexxPackageLoader = PackageHook;
+/// `RexxPackageUnloader`, the hook a package runs when it is unloaded.
+pub type RexxPackageUnloader = PackageHook;
 
-/// `RexxRoutineEntry`.
-#[repr(C)]
-#[derive(Debug)]
-pub struct RexxRoutineEntry {
-    pub style: c_int,
-    pub reserved1: c_int,
-    pub name: *const c_char,
-    pub entry_point: *mut c_void,
-    pub reserved2: c_int,
-    pub reserved3: c_int,
+c_struct! {
+    /// `RexxRoutineEntry`.
+    #[repr(C)]
+    #[derive(Debug)]
+    pub struct RexxRoutineEntry {
+        pub style: c_int,
+        pub reserved1: c_int,
+        pub name: *const c_char,
+        pub entry_point: *mut c_void => "entryPoint",
+        pub reserved2: c_int,
+        pub reserved3: c_int,
+    }
 }
 
-/// `RexxMethodEntry`.
-#[repr(C)]
-#[derive(Debug)]
-pub struct RexxMethodEntry {
-    pub style: c_int,
-    pub reserved1: c_int,
-    pub name: *const c_char,
-    pub entry_point: *mut c_void,
-    pub reserved2: c_int,
-    pub reserved3: c_int,
+c_struct! {
+    /// `RexxMethodEntry`.
+    #[repr(C)]
+    #[derive(Debug)]
+    pub struct RexxMethodEntry {
+        pub style: c_int,
+        pub reserved1: c_int,
+        pub name: *const c_char,
+        pub entry_point: *mut c_void => "entryPoint",
+        pub reserved2: c_int,
+        pub reserved3: c_int,
+    }
 }
 
-/// `RexxPackageEntry`.
-#[repr(C)]
-#[derive(Debug)]
-pub struct RexxPackageEntry {
-    pub size: c_int,
-    pub api_version: c_int,
-    pub required_version: c_int,
-    pub package_name: *const c_char,
-    pub package_version: *const c_char,
-    pub loader: Option<PackageHook>,
-    pub unloader: Option<PackageHook>,
-    pub routines: *mut RexxRoutineEntry,
-    pub methods: *mut RexxMethodEntry,
+c_struct! {
+    /// `RexxPackageEntry`.
+    #[repr(C)]
+    #[derive(Debug)]
+    pub struct RexxPackageEntry {
+        pub size: c_int,
+        pub api_version: c_int => "apiVersion",
+        pub required_version: c_int => "requiredVersion",
+        pub package_name: *const c_char => "packageName",
+        pub package_version: *const c_char => "packageVersion",
+        pub loader: Option<RexxPackageLoader>,
+        pub unloader: Option<RexxPackageUnloader>,
+        pub routines: *mut RexxRoutineEntry,
+        pub methods: *mut RexxMethodEntry,
+    }
 }
 
-/// `RexxInstance_`.
-#[repr(C)]
-pub struct RexxInstance_ {
-    pub functions: *mut RexxInstanceInterface,
-    pub applicationData: *mut c_void,
+c_struct! {
+    /// `RexxInstance_`.
+    #[repr(C)]
+    pub struct RexxInstance_ {
+        pub functions: *mut RexxInstanceInterface,
+        pub applicationData: *mut c_void,
+    }
 }
 
-/// `RexxThreadContext_`.
-#[repr(C)]
-pub struct RexxThreadContext_ {
-    pub instance: *mut RexxInstance_,
-    pub functions: *mut RexxThreadInterface,
+c_struct! {
+    /// `RexxThreadContext_`.
+    #[repr(C)]
+    pub struct RexxThreadContext_ {
+        pub instance: *mut RexxInstance_,
+        pub functions: *mut RexxThreadInterface,
+    }
 }
 
-/// `RexxMethodContext_`.
-#[repr(C)]
-pub struct RexxMethodContext_ {
-    pub threadContext: *mut RexxThreadContext_,
-    pub functions: *mut MethodContextInterface,
-    pub arguments: *mut ValueDescriptor,
+c_struct! {
+    /// `RexxMethodContext_`.
+    #[repr(C)]
+    pub struct RexxMethodContext_ {
+        pub threadContext: *mut RexxThreadContext_,
+        pub functions: *mut MethodContextInterface,
+        pub arguments: *mut ValueDescriptor,
+    }
 }
 
-/// `RexxCallContext_`.
-#[repr(C)]
-pub struct RexxCallContext_ {
-    pub threadContext: *mut RexxThreadContext_,
-    pub functions: *mut CallContextInterface,
-    pub arguments: *mut ValueDescriptor,
+c_struct! {
+    /// `RexxCallContext_`.
+    #[repr(C)]
+    pub struct RexxCallContext_ {
+        pub threadContext: *mut RexxThreadContext_,
+        pub functions: *mut CallContextInterface,
+        pub arguments: *mut ValueDescriptor,
+    }
 }
 
-/// `RexxExitContext_`.
-#[repr(C)]
-pub struct RexxExitContext_ {
-    pub threadContext: *mut RexxThreadContext_,
-    pub functions: *mut ExitContextInterface,
-    pub arguments: *mut ValueDescriptor,
+c_struct! {
+    /// `RexxExitContext_`.
+    #[repr(C)]
+    pub struct RexxExitContext_ {
+        pub threadContext: *mut RexxThreadContext_,
+        pub functions: *mut ExitContextInterface,
+        pub arguments: *mut ValueDescriptor,
+    }
 }
 
-/// `RexxIORedirectorContext_`.
-#[repr(C)]
-pub struct RexxIORedirectorContext_ {
-    pub functions: *mut IORedirectorInterface,
+c_struct! {
+    /// `RexxIORedirectorContext_`.
+    #[repr(C)]
+    pub struct RexxIORedirectorContext_ {
+        pub functions: *mut IORedirectorInterface,
+    }
 }
 
 /// A context we handed out, together with the state that owns it.
@@ -746,6 +897,33 @@ macro_rules! entry_aborts {
     };
 }
 
+/// One interface member as the header declares it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CMember {
+    /// A data member, with the tokens of its Rust type.
+    Value(&'static str),
+    /// A function pointer: the tokens of its result's Rust type (`None` when it
+    /// returns nothing) and of each parameter's.
+    Function {
+        returns: Option<&'static str>,
+        parameters: &'static [&'static str],
+    },
+}
+
+/// One interface member's [`CMember`], from the same tokens that give its Rust
+/// type.
+macro_rules! entry_c {
+    (value $ty:ty = $value:expr) => {
+        CMember::Value(stringify!($ty))
+    };
+    ($(aborts)? $(unwinds)? call($($arg:ty),*)) => {
+        CMember::Function { returns: None, parameters: &[$(stringify!($arg)),*] }
+    };
+    ($(aborts)? $(unwinds)? call($($arg:ty),*) -> $ret:ty $(, failing $value:expr)?) => {
+        CMember::Function { returns: Some(stringify!($ret)), parameters: &[$(stringify!($arg)),*] }
+    };
+}
+
 /// One interface table, and the member names a test measures it against.
 ///
 /// `populated` additionally builds `REFUSING`, in which no member is a null
@@ -762,6 +940,10 @@ macro_rules! interface {
         impl $Name {
             /// The member names the frozen header declares, in order.
             pub const FIELDS: &'static [&'static str] = &[$(stringify!($field)),*];
+
+            /// Each member as the header declares it, in order.
+            pub const C_DECLS: &'static [(&'static str, CMember)] =
+                &[$((stringify!($field), entry_c!($($kind)*))),*];
 
             /// For each of [`Self::FIELDS`], whether its refusing stub aborts
             /// rather than records and returns.
@@ -859,8 +1041,8 @@ interface! {
         GetMethodPackage: { call(*mut RexxThreadContext_, RexxMethodObject) -> RexxPackageObject },
         ObjectToCSelf: { aborts call(*mut RexxThreadContext_, RexxObjectPtr) -> POINTER },
         WholeNumberToObject: { call(*mut RexxThreadContext_, wholenumber_t) -> RexxObjectPtr },
-        UintptrToObject: { call(*mut RexxThreadContext_, usize) -> RexxObjectPtr },
-        IntptrToObject: { call(*mut RexxThreadContext_, isize) -> RexxObjectPtr },
+        UintptrToObject: { call(*mut RexxThreadContext_, uintptr_t) -> RexxObjectPtr },
+        IntptrToObject: { call(*mut RexxThreadContext_, intptr_t) -> RexxObjectPtr },
         ValueToObject: { call(*mut RexxThreadContext_, *mut ValueDescriptor) -> RexxObjectPtr },
         ValuesToObject: { call(*mut RexxThreadContext_, *mut ValueDescriptor, usize) -> RexxArrayObject },
         ObjectToValue: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut ValueDescriptor) -> logical_t },
@@ -875,8 +1057,8 @@ interface! {
         UnsignedInt32ToObject: { call(*mut RexxThreadContext_, u32) -> RexxObjectPtr },
         ObjectToInt32: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut i32) -> logical_t },
         ObjectToUnsignedInt32: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut u32) -> logical_t },
-        ObjectToUintptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut usize) -> logical_t },
-        ObjectToIntptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut isize) -> logical_t },
+        ObjectToUintptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut uintptr_t) -> logical_t },
+        ObjectToIntptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut intptr_t) -> logical_t },
         ObjectToLogical: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut logical_t) -> logical_t },
         LogicalToObject: { call(*mut RexxThreadContext_, logical_t) -> RexxObjectPtr },
         DoubleToObject: { call(*mut RexxThreadContext_, f64) -> RexxObjectPtr },
