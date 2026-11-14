@@ -19,8 +19,8 @@ onsyntax:
   say 'instruction' o~at('INSTRUCTION')
   say 'code       ' o~at('CODE')
   say 'rc         ' o~at('RC')
-  say 'errortext  ' o~at('ERRORTEXT')
-  say 'message    ' o~at('MESSAGE')
+  say 'errortext  ' (o~at('ERRORTEXT') \== '')
+  say 'message    ' (o~at('MESSAGE') \== '') (o~at('MESSAGE') \== o~at('ERRORTEXT'))
   say 'position   ' o~at('POSITION')
   say 'propagated ' o~at('PROPAGATED')
   say 'description[' || o~at('DESCRIPTION') || ']'

@@ -2,9 +2,9 @@
  * is not an array, and a string is taken. */
 signal on syntax name s1
 .context~package~loadPackage('nm', .object~new)
-s1: say condition('o')~code condition('o')~message
+s1: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s2
 .context~package~loadPackage('nm2', 'say 1')
 say 'ok2'
 exit
-s2: say condition('o')~code condition('o')~message
+s2: say condition('o')~code condition('o')~additional~makeString('l', ',')

@@ -5,11 +5,11 @@ say .nil~instanceMethod('COPY') .nil~instanceMethods(.nil)~available
 say .nil~objectName .nil~string
 signal on syntax
 .nil~copy
-syntax: say condition('O')~message
+syntax: say condition('O')~additional~makeString('l', ',')
 signal on syntax name s2
 .nil~start('isNil')
-s2: say condition('O')~message
+s2: say condition('O')~additional~makeString('l', ',')
 signal on syntax name s3
 .nil~objectName = 'x'
-s3: say condition('O')~message
+s3: say condition('O')~additional~makeString('l', ',')
 say .nil~startWith('isNil', .array~new)~result

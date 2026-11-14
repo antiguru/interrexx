@@ -2,7 +2,7 @@
  * changes shape.
  *
  * startsWith and endsWith take a **named** argument, so a missing one is
- * 88.901 `Missing argument; argument match is required.` at rc 168, not the
+ * 88.901 (a missing named argument) at rc 168, not the
  * 93.903 at rc 163 every other method in this family raises, and .nil is
  * 88.909 rather than a conversion error.
  *

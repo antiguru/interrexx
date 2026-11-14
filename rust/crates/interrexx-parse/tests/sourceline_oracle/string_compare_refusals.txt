@@ -17,7 +17,7 @@ n = 0
 next:
 n = n + 1
 select
-  /* The first argument is required, and must have a string value. */
+  /* Argument 1 is required and is read as a string. */
   when n = 1 then say n 'answered' p~abbrev()
   when n = 2 then say n 'answered' p~abbrev(.nil)
   when n = 3 then say n 'answered' p~compare()

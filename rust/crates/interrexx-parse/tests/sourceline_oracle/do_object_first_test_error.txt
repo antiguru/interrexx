@@ -6,7 +6,7 @@ do i = 1 to 2; say i; end
 signal on syntax name s1
 lbl: do i = .k~new(1) to 3; say 'x' i; iterate lbl; end
 exit
-s1: say 'trapped' rc condition('O')~message; say sigl
+s1: say 'trapped' rc condition('O')~additional~makeString('l', ','); say sigl
 do i = .k~new(5) to .k~new(1) ; say 'y' i; end
 exit
 nothing: return

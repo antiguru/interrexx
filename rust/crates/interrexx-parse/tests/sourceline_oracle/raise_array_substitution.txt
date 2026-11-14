@@ -2,8 +2,8 @@ count 23
 /* RAISE SYNTAX ... ARRAY, the substitution list and its own trace lines
  * Under trace i so the >A> lines are visible.
  *
- * THE OMITTED POSITION IS THE POINT. 40.4's message is "Too many arguments
- * in invocation of &1; maximum expected is &2.", and array ('R',,'X')
+ * THE OMITTED POSITION IS THE POINT. 40.4's message takes two inserts, &1
+ * the routine and &2 the maximum, and array ('R',,'X')
  * leaves &2 a hole: the oracle substitutes nothing there and never uses
  * 'X' at all. An implementation that closes the gap up instead prints
  * "maximum expected is X." -- readable, plausible, and wrong. That is a

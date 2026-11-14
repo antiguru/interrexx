@@ -11,7 +11,7 @@ t: procedure
   .context~package~loadPackage(n, src)
   say 'loaded' n
   return
-syntax: say 'err' condition('o')~code condition('o')~message
+syntax: say 'err' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 ::class ma
 ::method makearray

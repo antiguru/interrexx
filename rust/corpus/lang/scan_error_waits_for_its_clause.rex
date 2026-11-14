@@ -20,5 +20,5 @@ try:
   say 'ran'
   return
 caught:
-  say condition('o')~code condition('o')~message
+  say condition('o')~code condition('o')~additional~makeString('l', ',')
   return

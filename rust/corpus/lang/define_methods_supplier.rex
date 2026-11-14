@@ -22,7 +22,7 @@ signal on syntax
 .k~defineMethods(.object~new)
 exit
 syntax:
-  say condition('O')['CODE'] condition('O')['MESSAGE']
+  say condition('O')['CODE'] condition('O')['ADDITIONAL']~makeString('l', ',')
 ::class k
 ::method m1
 ::class s

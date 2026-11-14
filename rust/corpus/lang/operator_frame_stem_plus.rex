@@ -2,7 +2,7 @@
  * itself to its default value (the same forward `~length` already reaches),
  * and the method that raises is the default's -- so the traceback names
  * scope "String", not "Stem", which is `b.~class`. Measured, rc 215, stderr
- * opening `       *-* Compiled method "+" with scope "String".`.
+ * opening the frame of method "+" with scope String (101.20).
  */
 
 say b. + 1

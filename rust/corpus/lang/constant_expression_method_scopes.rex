@@ -8,7 +8,7 @@ p~zz
 say 'enhanced instr' var('result')
 signal on syntax name s1
 say p~zz
-s1: say condition('o')~code condition('o')~message
+s1: say condition('o')~code condition('o')~additional~makeString('l', ',')
 .c~cgo
 .c~define('FR', .c~e)
 .c~new~fr
@@ -32,4 +32,4 @@ exit
   signal on syntax name s2
   say self~run(.r~e)
 s2:
-  say condition('o')~code condition('o')~message
+  say condition('o')~code condition('o')~additional~makeString('l', ',')

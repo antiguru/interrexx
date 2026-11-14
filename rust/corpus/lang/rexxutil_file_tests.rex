@@ -97,5 +97,5 @@ t: procedure
   return
 bad:
   c = condition('O')
-  say 'error' code '|' c~code c~message
+  say 'error' code '|' c~code c~additional~makeString('l', ',')
   return

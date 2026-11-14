@@ -7,14 +7,14 @@ signal on syntax
 a = novalue
 a = 'next clause'
 syntax:
-say 'syntax' a rc condition('C') sigl condition('O')~position condition('O')~message
+say 'syntax' a rc condition('C') sigl condition('O')~position condition('O')~additional~makeString('l', ',')
 say 'novalue trap' condition('S')
 signal on novalue name no_such_label
 signal on any name any_handler
 b = undefined_variable
 say 'not reached'
 any_handler:
-say 'any' condition('C') rc sigl condition('O')~message
+say 'any' condition('C') rc sigl condition('O')~additional~makeString('l', ',')
 call inner
 signal on syntax name no_such_label_either
 say 1 / 0
@@ -26,5 +26,5 @@ inner:
   x = charin('/')
   say 'inner not reached'
 inner_syntax:
-  say 'inner syntax' rc sigl condition('O')~message
+  say 'inner syntax' rc sigl condition('O')~additional~makeString('l', ',')
   return

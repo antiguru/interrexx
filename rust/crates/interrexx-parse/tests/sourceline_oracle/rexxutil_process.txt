@@ -98,7 +98,7 @@ t:
   say expr '->' r
   return
 trap:
-  say expr '->' condition('O')~code condition('O')~message
+  say expr '->' condition('O')~code condition('O')~additional~makeString('l', ',')
   return
 
 /* A process's /proc stat line as a directory of the fields this program

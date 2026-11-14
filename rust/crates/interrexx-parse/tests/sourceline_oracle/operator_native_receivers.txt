@@ -8,16 +8,16 @@ say (.context == .context) (.methods == .methods)
 say ('x' == a) (1 = a)
 signal on syntax name s1
 say a + 1
-s1: say condition('o')~code condition('o')~message
+s1: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s2
 say d < d
-s2: say condition('o')~code condition('o')~message
+s2: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s3
 say \a
-s3: say condition('o')~code condition('o')~message
+s3: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s4
 say a & 1
-s4: say condition('o')~code condition('o')~message
+s4: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s5
 say -a
-s5: say condition('o')~code condition('o')~message
+s5: say condition('o')~code condition('o')~additional~makeString('l', ',')

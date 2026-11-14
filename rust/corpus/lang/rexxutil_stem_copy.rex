@@ -75,7 +75,7 @@ t: procedure
   return
 bad:
   c = condition('O')
-  say 'error' code '|' c~code c~message '|' show()
+  say 'error' code '|' c~code c~additional~makeString('l', ',') '|' show()
   return
 
 show: procedure expose a. b.

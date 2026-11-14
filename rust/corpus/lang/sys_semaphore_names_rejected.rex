@@ -13,16 +13,16 @@ say 'open nul' SysOpenEventSem('0'x || 'abc') SysOpenMutexSem('//' || '0'x)
 say 'create nul' (SysCreateEventSem('/' || '0'x || 'abc') == '') (SysCreateMutexSem('//' || '0'x || 'q/r') == '')
 signal on syntax name e1
 say SysOpenEventSem()
-e1: say 'error' condition('o')~code condition('o')~message
+e1: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e2
 say SysOpenMutexSem('a', 'b')
-e2: say 'error' condition('o')~code condition('o')~message
+e2: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e3
 say SysOpenEventSem(.nil)
-e3: say 'error' condition('o')~code condition('o')~message
+e3: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e4
 say SysOpenMutexSem(, 'b')
-e4: say 'error' condition('o')~code condition('o')~message
+e4: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e5
 say SysOpenEventSem(.nil, 'b')
-e5: say 'error' condition('o')~code condition('o')~message
+e5: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')

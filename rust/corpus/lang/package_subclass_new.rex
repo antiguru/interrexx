@@ -16,7 +16,7 @@ say .k~new('p2', .array~of('::routine z', 'return 1'))~routines~items
 .context~package~addPackage(x); say 'added' x~class~id
 signal on syntax name e1
 z = .ka~new('a', .array~of('nop'))
-e1: say 'e1' condition('O')~code condition('O')~message
+e1: say 'e1' condition('O')~code condition('O')~additional~makeString('l', ',')
 exit
 ::class k subclass package
 ::method go

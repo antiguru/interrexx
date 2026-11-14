@@ -9,7 +9,7 @@ say '12'~equals(12) '1E1'~equals(10) 'The Array class'~equals(.array)
 signal on syntax
 say 'x'~equals()
 exit
-syntax: say condition('o')~code condition('o')~message
+syntax: say condition('o')~code condition('o')~additional~makeString('l', ',')
 ::class kmake
 ::method makestring; return 'kmake'
 ::class kstr

@@ -25,7 +25,7 @@ say g~class (g == f) g~type g~line (g~context == f~context)
 signal on syntax name s1
 x = .context~copy
 s1:
-say condition('O')['CODE'] condition('O')['MESSAGE']
+say condition('O')['CODE'] condition('O')['ADDITIONAL']~makeString('l', ',')
 ::class k
 ::method m1
   return 'm1' self~class~id

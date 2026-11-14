@@ -25,28 +25,28 @@ say 'event release' SysReleaseMutexSem(e) SysReleaseMutexSem(e) SysWaitEventSem(
 say 'close' SysCloseMutexSem(m) SysCloseMutexSem(e)
 signal on syntax name e1
 say SysPostEventSem()
-e1: say 'error' condition('o')~code condition('o')~message
+e1: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e2
 say SysPostEventSem('abc')
-e2: say 'error' condition('o')~code condition('o')~message
+e2: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e3
 say SysWaitEventSem(h, 'x')
-e3: say 'error' condition('o')~code condition('o')~message
+e3: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e4
 say SysWaitEventSem(h, 1.5)
-e4: say 'error' condition('o')~code condition('o')~message
+e4: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e5
 say SysPostEventSem(h, 1)
-e5: say 'error' condition('o')~code condition('o')~message
+e5: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e6
 say SysCreateEventSem(,,1)
-e6: say 'error' condition('o')~code condition('o')~message
+e6: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e7
 say SysWaitEventSem(h, 3000000000)
-e7: say 'error' condition('o')~code condition('o')~message
+e7: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e8
 say SysPostEventSem(-1)
-e8: say 'error' condition('o')~code condition('o')~message
+e8: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name e9
 say SysCreateMutexSem('', 2)
-e9: say 'error' condition('o')~code condition('o')~message
+e9: say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')

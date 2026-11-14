@@ -104,19 +104,19 @@ call t 'plus', .k~new('5')~'+'()
 call t 'encodebase64', x~encodebase64
 signal on syntax name e1
 v = .k~new
-e1: say 'e1' condition('O')~code condition('O')~message
+e1: say 'e1' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e2
 say .k~new('abc')~abs
-e2: say 'e2' condition('O')~code condition('O')~message
+e2: say 'e2' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e3
 say .k~new('abc') + 1
-e3: say 'e3' condition('O')~code condition('O')~message
+e3: say 'e3' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e4
 say 1 + .k~new('abc')
-e4: say 'e4' condition('O')~code condition('O')~message
+e4: say 'e4' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e5
 say .ka~new('x')
-e5: say 'e5' condition('O')~code condition('O')~message
+e5: say 'e5' condition('O')~code condition('O')~additional~makeString('l', ',')
 exit
 t: say left(arg(1), 22) arg(2)~class~id '['arg(2)']'; return
 sub: use arg u; say u~class~id u; return u

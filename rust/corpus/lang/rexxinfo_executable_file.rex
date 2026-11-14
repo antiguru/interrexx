@@ -10,4 +10,4 @@ c = .rexxinfo~copy
 say 'not reached'
 exit
 syntax:
-  say condition('O')['CODE'] condition('O')['MESSAGE']
+  say condition('O')['CODE'] condition('O')['ADDITIONAL']~makeString('l', ',')

@@ -24,7 +24,7 @@ try: procedure expose c
   return
 syntax:
   o = condition('O')
-  say o~code o~message
+  say o~code o~additional~makeString('l', ',')
   do l over o~traceback; say ' ' l; end
   return
 ::class Meta subclass class

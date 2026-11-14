@@ -184,5 +184,5 @@ syntax:
   o = condition('o')
   extra = ''
   if show == 'b' then extra = 'b~items' b~items
-  say o~code o~message '| f.0' f.0 extra
+  say o~code '| f.0' f.0 extra
   return

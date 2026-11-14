@@ -2,7 +2,7 @@
  * whose own check is textual rather than numeric -- `s.`'s default "abc" is
  * not a logical value, and that check (not a numeric conversion) is what
  * fails inside the forwarded method. Measured, rc 222, stderr opening
- * `       *-* Compiled method "&" with scope "String".`.
+ * the frame of method "&" with scope String (101.20).
  */
 
 s. = 'abc'

@@ -5,7 +5,7 @@ call t1; call t2; call t3; call t4; call t5; call t6; call t7; call t8; call t9
 exit
 t1: signal on syntax name x1
 do i = .environment to 5; say 't1' i; end; return
-x1: say 't1' rc condition('O')~message; return
+x1: say 't1' rc condition('O')~additional~makeString('l', ','); return
 t2: do i = 1 to 3; say 't2' i; if i = 2 then i = .s~new('abc'); end
 say 't2 end' i; return
 t3: do i = .s~new(' 2 ') to 3; say 't3 ['i']'; end; say 't3 end' i; return
@@ -17,7 +17,7 @@ say 't6 end' a.k; return
 t7: do i = .c~new to 3; say 't7' i; end; say 't7 end' i; return
 t8: signal on syntax name x8
 do i = 1 to 3; say 't8' i; i = .local; end; return
-x8: say 't8' rc condition('O')~message i; return
+x8: say 't8' rc condition('O')~additional~makeString('l', ',') i; return
 t9: do i = .s~new('abc') to 3; say 't9' i; end; say 't9 end' i; return
 ::class s
 ::method init; expose v; use arg v

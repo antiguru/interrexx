@@ -56,7 +56,7 @@ attempt: procedure
   return .Routine~newFile('body.rex', context)~call
 failed:
   raised = condition('O')
-  return raised['CODE'] raised['MESSAGE']
+  return raised['CODE'] raised['ADDITIONAL']~makeString('l', ',')
 
 newpackage: procedure
   use arg source, context, extra
@@ -65,14 +65,14 @@ newpackage: procedure
   return .Package~new('n', source, context)~name
 refused:
   raised = condition('O')
-  return raised['CODE'] raised['MESSAGE']
+  return raised['CODE'] raised['ADDITIONAL']~makeString('l', ',')
 
 nocontext: procedure
   signal on syntax name absent
   return .Package~new('n', .array~of("say helper()"))~name
 absent:
   raised = condition('O')
-  return raised['CODE'] raised['MESSAGE']
+  return raised['CODE'] raised['ADDITIONAL']~makeString('l', ',')
 
 filepackage: procedure
   use arg file, given
@@ -81,7 +81,7 @@ filepackage: procedure
   return built(.Package~new(file))
 missing:
   raised = condition('O')
-  return raised['CODE'] raised['MESSAGE']
+  return raised['CODE'] raised['ADDITIONAL']~makeString('l', ',')
 
 built: procedure
   use arg package

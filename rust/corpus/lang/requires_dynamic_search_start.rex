@@ -43,7 +43,7 @@ try: procedure
   signal on syntax
   return .routine~new(dir'/any.zzz', code)~call
 syntax:
-  return 'syntax' condition('o')~code condition('o')~message
+  return 'syntax' condition('o')~code condition('o')~additional~makeString('l', ',')
 
 write: procedure
   use arg path, answer

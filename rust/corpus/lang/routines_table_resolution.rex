@@ -20,7 +20,7 @@ call foo
 say 'after remove' result
 exit
 syntax:
-say condition('O')~code condition('O')~message
+say condition('O')~code condition('O')~additional~makeString('l', ',')
 say (.context~package~findRoutine('FOO') == .nil)
 ::routine foo
   return 'foo'

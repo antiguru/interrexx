@@ -30,7 +30,7 @@
 #
 # The receivers, the directives each needs and the two that are sent to from
 # inside a call are corpus/introspection-receivers.tsv.
-Buffer	new	class	REFUSED:the oracle refuses this send by design -- measured, .Buffer~new answers 93.967 NEW method is not supported for the Buffer class, and the reference says instances come only from native code (utilityclasses.xml:429)
+Buffer	new	class	REFUSED:the oracle refuses this send by design -- measured, .Buffer~new answers 93.967, refusing the send, and the reference says instances come only from native code (utilityclasses.xml:429)
 Class	new	class	'C9'
 Class	<>	instance	.Object
 Class	=	instance	.Object

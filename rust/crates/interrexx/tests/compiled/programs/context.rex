@@ -4,12 +4,12 @@ say 'routine src' .Routine~new('a', src)~call
 say 'method src' .Method~new('b', src)~source~items
 signal on syntax name s1
 say 'routine rxo' .Routine~new('c', lines)~call
-s1: say 'trap1' condition('o')~code condition('o')~message
+s1: say 'trap1' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s2
 m = .Method~new('d', lines)
 .object~define('ZZ', m)
 say 'method rxo' .object~new~zz
-s2: say 'trap2' condition('o')~code condition('o')~message
+s2: say 'trap2' condition('o')~code condition('o')~additional~makeString('l', ',')
 exit
 ::routine callerfn
   return 'callerfn'

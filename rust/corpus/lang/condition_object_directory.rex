@@ -4,7 +4,7 @@ x = 1/0
 h1: c = condition('o')
 say c~class~id c~items c~hasEntry('CODE') c~hasIndex('CODE') c~hasEntry('RC') c~code c~rc
 say c~allIndexes~sortWith(.caselessComparator~new)~makeString('L', ' ')
-say c~isA(.directory) c~entry('condition') c['MESSAGE']
+say c~isA(.directory) c~entry('condition') c['ADDITIONAL']~makeString('l', ',')
 c~extra = 5; say c~extra c~items
 call on error name he
 'exit 3'

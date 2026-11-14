@@ -15,7 +15,7 @@ signal on syntax
 use arg name, value
 call r value
 syntax: say name condition('C') rc condition('O')~code condition('O')~additional~class~id
-say condition('O')~message
+say condition('O')~additional~makeString('l', ',')
 return
 ::routine ru
 raise user zork additional (.array) return

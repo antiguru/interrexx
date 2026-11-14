@@ -33,5 +33,5 @@ try:
   return
 caught:
   o = condition('o')
-  say o~code o~position o~message
+  say o~code o~position o~additional~makeString('l', ',')
   return

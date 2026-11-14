@@ -37,7 +37,7 @@ failed:
   -- A count other than 0 or 1 is the bare 93, whose message is not shown.
   code = condition('O')~code
   if code == '93.0' then say arg(1) '[' || v || '] error' code
-  else say arg(1) '[' || v || '] error' code condition('O')~message
+  else say arg(1) '[' || v || '] error' code condition('O')~additional~makeString('l', ',')
   return
 ignored:
   return

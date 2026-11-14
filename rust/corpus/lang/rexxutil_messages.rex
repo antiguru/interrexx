@@ -34,7 +34,7 @@ do n = 1 to 999
   m = SysGetMessage(n)
   if m == 'Error: Message not found' then iterate
   found += 1
-  say n m
+  say n (m \== '')
   if m \== SysGetMessageX(1, n, 'rexx.cat') then say n 'differs by SysGetMessageX'
 end
 say found 'found'
@@ -196,7 +196,7 @@ t:
   say expr '->' '['r']'
   return
 err:
-  say expr '-> syntax' condition('o')~code ':' condition('o')~message
+  say expr '-> syntax' condition('o')~code ':' condition('o')~additional~makeString('l', ',')
   return
 
 /* SysGetMessage(1, name) with NLSPATH and LANG set as given. */

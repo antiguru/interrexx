@@ -18,4 +18,4 @@ try: procedure
   pkg~loadPackage(name)
   return 'loaded'
 raised:
-  return 'raised' condition('O')~code condition('O')~message
+  return 'raised' condition('O')~code condition('O')~additional~makeString('l', ',')

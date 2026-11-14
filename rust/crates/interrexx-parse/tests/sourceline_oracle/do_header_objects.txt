@@ -11,9 +11,9 @@ x2: say 't2' rc condition('O')~code; return
 t3: signal on syntax name x3; do i = 1 to 3 by .context; end; return
 x3: say 't3' rc condition('O')~code; return
 t4: signal on syntax name x4; do i = 1 to 3 by .t~new; end; return
-x4: say 't4' rc condition('O')~message; return
+x4: say 't4' rc condition('O')~additional~makeString('l', ','); return
 t5: signal on syntax name x5; do i = 1 to 3 by .local; end; return
-x5: say 't5' rc condition('O')~message; return
+x5: say 't5' rc condition('O')~additional~makeString('l', ','); return
 t6: do i = .p~new(1) to .p~new(3) by .p~new(1); say 't6' i; end; return
 ::class t
 ::class p
