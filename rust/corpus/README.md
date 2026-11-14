@@ -155,7 +155,7 @@ against the oracle in `crates/interrexx/tests/input_oracle.rs`, which drives the
   mean.
 * `errors/` -- not a `rexx-diff` corpus either. `parse-errors.tsv` holds one row
   per program with the answer `build/bin/rexxc` gave for it: the major number,
-  sub-number, reported line and secondary message when it refused, and `ok` when
+  sub-number and reported line when it refused (not the message text), and `ok` when
   it translated. `interrexx-parse`'s `tests/errors.rs` reads it and checks both
   directions, so a parser that rejected nothing and one that rejected everything
   both fail; `interrexx`'s `tests/rexxc.rs` checks this crate's `rexxc` against

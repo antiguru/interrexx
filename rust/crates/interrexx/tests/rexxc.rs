@@ -269,7 +269,6 @@ struct Row {
     class: String,
     expect: String,
     main_line: String,
-    message: Vec<u8>,
     program: Vec<u8>,
 }
 
@@ -314,20 +313,15 @@ fn rows() -> Vec<Row> {
             header = false;
             continue;
         }
-        let fields: Vec<&str> = line.splitn(5, '\t').collect();
-        let [class, expect, main_line, message, program] = fields[..] else {
-            panic!("line {}: five fields", index + 1);
+        let fields: Vec<&str> = line.splitn(4, '\t').collect();
+        let [class, expect, main_line, program] = fields[..] else {
+            panic!("line {}: four fields", index + 1);
         };
         rows.push(Row {
             line: index + 1,
             class: class.to_string(),
             expect: expect.to_string(),
             main_line: main_line.to_string(),
-            message: if message == "-" {
-                Vec::new()
-            } else {
-                decode(message)
-            },
             program: decode(program),
         });
     }
@@ -400,13 +394,15 @@ fn answer(root: &Path, row: &Row) -> Answer {
     } else {
         let (major, _) = row.expect.split_once('.').expect("major.sub");
         let major: i32 = major.parse().expect("a major number");
-        let secondary = [format!("Error {}:  ", row.expect).as_bytes(), &row.message].concat();
-        let main = format!(" line {}:  ", row.main_line);
-        let stderr = &output.stderr;
+        // The message text is not specified, so the two report lines are
+        // compared by their code and subcode and the reported line.
+        let secondary = format!("Error {}:", row.expect);
+        let main = format!(" line {}:", row.main_line);
+        let stderr = error_text::cut_error_texts(&output.stderr);
         status == Some(256 - major)
             && stderr
                 .split(|&byte| byte == b'\n')
-                .any(|line| line == secondary.as_slice())
+                .any(|line| line == secondary.as_bytes())
             && stderr
                 .windows(main.len())
                 .any(|window| window == main.as_bytes())
@@ -443,7 +439,7 @@ fn rexxc_agrees_with_every_recorded_parse_error_row() {
     assert!(
         checked
             .iter()
-            .any(|row| row.message.starts_with(b"Unable to load library")),
+            .any(|row| row.class == "install" && row.expect == "98.903"),
         "the library-binding rows are checked"
     );
     let root = scratch("tsv");
