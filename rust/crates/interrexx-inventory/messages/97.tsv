@@ -1,0 +1,7 @@
+97	0	Object method not found.
+97	1	Method "&2" not found in object "&1".
+97	2	Private method "&2" of object "&1" cannot be invoked by this caller.
+97	3	Package method "&2" of object "&1" cannot be invoked from another package.
+97	4	Constant "&2" of object "&1" has no value yet.
+97	5	NOMETHOD condition is not trapped.
+97	900	&1.
