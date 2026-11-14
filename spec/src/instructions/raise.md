@@ -1299,6 +1299,39 @@ s: say condition('o')~code (condition('o')~message \== '')
 97.1 1
 ```
 
+r[instr.raise.untrapped.additional]
+The `ADDITIONAL` entry of that `SYNTAX 97.1` is an array of two items: the
+value of the clause's ADDITIONAL, or the array its ARRAY makes, and the
+description, or the null string when the clause gave none. Both items are the
+objects themselves, not their string values. Nothing converts them when the
+condition is raised; code that later takes an item's string value asks the
+object for it then, so its `MAKESTRING` runs at that point.
+
+```rexx
+signal on syntax name s
+a = .array~of('p', 'q')
+raise nomethod additional (a) description (.key~new)
+s: o = condition('o')
+say o~additional~items (o~additional[1] == a) o~additional[2]~class~id
+say 'reading'
+say '['o~additional[2]']'
+signal on syntax name t
+raise nomethod additional 'obj'
+t: say '['condition('o')~additional[2]']'
+::class key
+::method makestring
+  say 'makestring ran'
+  return 'description'
+```
+
+```output
+2 1 KEY
+reading
+makestring ran
+[description]
+[]
+```
+
 ```rexx
 call on error name e
 call r1

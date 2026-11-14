@@ -396,8 +396,23 @@ impl Interp {
             None if name.as_ref() == b"NOMETHOD" => {
                 let mut raised = match (self.activity.pending_additional.take(), description) {
                     (Some(receiver), description) => {
-                        let receiver = self.string_value_text(receiver)?;
-                        Raised::no_method(&receiver, &description.unwrap_or_default())
+                        let target = self.string_value_text(receiver)?;
+                        let raised = Raised::no_method(&target, &description.unwrap_or_default());
+                        // The 97.1 condition's `ADDITIONAL` holds the two
+                        // objects themselves, which the report renders by
+                        // name: a reader that converts an item later runs its
+                        // `MAKESTRING` then. Measured, `raise nomethod
+                        // additional (.array~of('p','q')) description 'm'`
+                        // gives an `ADDITIONAL` whose first item is that
+                        // array, and with no `DESCRIPTION` the second item is
+                        // the null string.
+                        let message = match description_object {
+                            Some(object) => object,
+                            None => self.text(b""),
+                        };
+                        self.activity.pending_additional =
+                            Some(self.security_arguments_array(&[Some(receiver), Some(message)]));
+                        raised
                     }
                     (None, _) => Raised::syntax(97, 5, Vec::new()),
                 };
