@@ -326,9 +326,9 @@ for `RC`, `PACKAGE` is the package that `.CONTEXT~PACKAGE` answers in the code
 that raised it, `PROGRAM` is the name of that package, and `POSITION` is the
 line of the clause, and `PROPAGATED` is `0` when the code that raised it
 answers it, as [the propagated rule](r:cond.information.propagated) says for
-the other case. `ADDITIONAL` is an array of the
-values that the error message names, `a` for the nonnumeric value `'a'` of
-error `41.1`. The description of a SYNTAX condition is the null string.
+the other case. `ADDITIONAL` is an array whose items are
+[unspecified](r:conv.error.additional) unless a rule states them: for error
+`41.1` it has one item, the nonnumeric value, `a` for the value `'a'`. The description of a SYNTAX condition is the null string.
 
 ```rexx
 signal on syntax name s

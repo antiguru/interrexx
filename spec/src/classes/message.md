@@ -662,8 +662,8 @@ has not ended, or ended without an error. The object has the entries of a
 SYNTAX condition, as [the entries rule](r:cond.information.object) lists
 them: for the division by zero of the example `CODE` is `42.3`, `RC` is `42`
 and `CONDITION` is `SYNTAX`; for a message that no method of the target
-understands `CODE` is `97.1` and the entry `ADDITIONAL` holds the string value
-of the target and the name. It takes no argument.
+understands `CODE` is `97.1` and the entry `ADDITIONAL` has two items, the
+string value of the target and then the name. It takes no argument.
 
 ```rexx
 t = .t~new

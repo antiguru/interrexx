@@ -73,16 +73,18 @@ Validate
 r[class.validate.arguments]
 Every check takes the name of the argument as its first argument, the value as
 its second, and then its own further arguments. The name is only used in the
-error: it may be any string, a name or a text, and it is the first entry of the
-condition's `ADDITIONAL` array, whose other entries each rule below gives. The
+error: it may be any string, a name or a text. In the error of a failed check
+it is the first item of the condition's `ADDITIONAL` array, and each rule below
+gives the other items. The errors of the argument count and of `digits` below
+have no name among their items. The
 counts are fixed: two arguments for `number` and `logical`, two and an optional
 `digits` for the other number checks, three for `classType` and
 `requestClassType`, and four and an optional `digits` for the range checks. A
 call with fewer raises `SYNTAX 93.901`, one with more `93.902`, and one that
 leaves out a required argument before the last one given `93.903`; omitted
-arguments at the end count as not given. The `ADDITIONAL` array of the first
-holds the least number of arguments, that of the second the most, and that of
-the third the position of the first argument left out. The argument count is
+arguments at the end count as not given. The `ADDITIONAL` array of each has one
+item: for the first the least number of arguments, for the second the most, and
+for the third the position of the first argument left out. The argument count is
 checked first, then `digits`, and the value last. Every value and bound is read
 as a string as [the conversion rule](r:conv.string.object) says. A check that
 fails raises the `SYNTAX` error of its method, which the rules below give.
@@ -196,7 +198,7 @@ least 1 and at most 999999999 and defaults to `9`, except for `length` and
 `position`, whose default is [the number of digits that whole numbers have
 internally](r:class.rexxinfo.limits). Any other value, a string that is no
 number included, raises `SYNTAX 26.5` before the value is read; its `ADDITIONAL`
-array holds the value of `digits`.
+array has one item, the value of `digits`.
 The last example of this rule asks every check that takes `digits` for the cases
 that are refused, for the two limits that are not, and for a value that is no
 number under a refused `digits`.
@@ -321,7 +323,7 @@ also needs the value to be greater than zero (`SYNTAX 88.926`) and
 `nonNegativeNumber` to be zero or greater (`SYNTAX 88.925`); a value that is no
 number raises the error of the method asked, so `88.926` or `88.925`. Both take
 `digits`, and negative zero and `0.00` count as zero. The `ADDITIONAL` array of
-every error holds the name and the value.
+every error has two items, the name and then the value.
 
 ```rexx
 vals = '5 -5 0 -0 0.00 5.5 1e3 1e-3 +7 abc 1E 2e+'
@@ -411,7 +413,8 @@ All take `digits`, whose default [differs for `position` and
 `length`](r:class.validate.digits). A value with a trailing period or zeros
 after the point, such as `5.` or `5.00`, and a value written with an exponent
 that makes it whole, such as `1e3`, count as whole; negative zero counts as
-zero. The `ADDITIONAL` array of every error holds the name and the value.
+zero. The `ADDITIONAL` array of every error has two items, the name and then the
+value.
 
 ```rexx
 vals = '5 -5 0 -0 5. 5.00 5.5 1e3 1e-3 +7 abc 1234567890 1.0e9'~makearray(' ')
@@ -462,7 +465,7 @@ number takes part in the comparison as a string, so that `5` is below `x` and
 above `4x`, and a bound that is `.nil` raises `88.907`. `wholeNumberRange` has
 the same arguments and also needs the value to be a whole number as
 `wholeNumber` does; its bounds may have a fraction. The `ADDITIONAL` array of
-the error holds the name, `min`, `max` and the value.
+the error has four items: the name, `min`, `max` and the value, in that order.
 
 ```rexx
 call t 'numberRange', 5, 1, 10
@@ -705,7 +708,7 @@ r[class.validate.logical]
 `logical` accepts exactly the strings `0` and `1`, or the objects `.true` and
 `.false`, and raises `SYNTAX 88.927` for any other value, such as `2`, a
 number written otherwise such as `1.0` or `01`, a string with blanks and the
-null string; the `ADDITIONAL` array holds the name and the value.
+null string; the `ADDITIONAL` array has two items, the name and then the value.
 
 ```rexx
 call show .array~of('0', '1', .true, .false, '2')
@@ -741,15 +744,15 @@ bad: return condition('o')~code
 r[class.validate.classtype]
 `classType(name, object, class)` accepts an object that is an instance of
 `class`, a subclass or a class it inherits from included, as `isA` says, and
-raises `SYNTAX 88.914` otherwise, with `ADDITIONAL` holding the name and the id
+raises `SYNTAX 88.914` otherwise, with an `ADDITIONAL` array of two items, the name and the id
 of the class. An argument `class` that is not a class raises `88.914` too,
-naming the argument `class`; [the sends rule](r:class.validate.classtype.sends)
+naming the argument `class`, with `Class` as the second item; [the sends rule](r:class.validate.classtype.sends)
 says where that error comes from. `requestClassType(name, object, class)` sends
 the object the message `request` with the id of the class as its argument, and
 answers the object that `request` answers when that is an instance of the class,
 and raises `SYNTAX 93.978` for an answer that is not, `.nil` being an instance
-of `Object` only; `ADDITIONAL` then holds the name, the id of the class and the
-object.
+of `Object` only; `ADDITIONAL` then has three items: the name, the id of the class and the
+object, in that order.
 
 ```rexx
 call c 'classType', 'abc', .string

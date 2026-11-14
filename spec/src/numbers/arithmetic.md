@@ -365,9 +365,9 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 ```
 
 r[num.arithmetic.power.message]
-The `ADDITIONAL` array of the `SYNTAX 42.1` error holds three items, the base
-and the exponent as the program wrote them, not as the numbers they denote, with
-the string `**` between them.
+The `ADDITIONAL` array of the `SYNTAX 42.1` error has three items, in this
+order: the base, the string `**` and the exponent. The base and the exponent are
+as the program wrote them, not as the numbers they denote.
 
 ```rexx
 signal on syntax name a

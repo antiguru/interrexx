@@ -100,8 +100,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[expr.arithmetic.exponent.message]
-The `ADDITIONAL` array of the `SYNTAX 26.8` error holds the exponent as the
-program wrote it, not as the number it denotes.
+The `ADDITIONAL` array of the `SYNTAX 26.8` error has one item, the exponent
+as the program wrote it, not as the number it denotes.
 
 ```rexx
 signal on syntax name a
