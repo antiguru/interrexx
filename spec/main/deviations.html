@@ -862,12 +862,13 @@ each position from 1 up to that number, so the members are what <code>[]</code> 
 for those values rather than the items of the list: an item can be missed and
 <code>.nil</code> can become a member.</p>
 <h2 id="126-compareto-with-an-argument-of-another-class"><a class="header" href="#126-compareto-with-an-argument-of-another-class">126. compareTo with an argument of another class</a></h2>
-<p><code>compareTo</code> of a <code>DateTime</code>, a <code>TimeSpan</code> or a <code>File</code>, and every comparison
+<p><code>compareTo</code> of a <code>DateTime</code>, a <code>TimeSpan</code> or a <code>File</code>, and every ordering
 operator that sends it, raises <code>SYNTAX 88.914</code> when the argument is not an
 instance of <code>DateTime</code>, <code>TimeSpan</code> or <code>File</code> respectively (an instance of a
 subclass is one). The error follows the <code>isA</code> that is sent to the argument and
 precedes every other message. ooRexx answers 1 or -1 for an argument of another
-class, whatever the receiver is.</p>
+class, whatever the receiver is. The equality operators answer that such an
+argument is not equal, as ooRexx does.</p>
 <h2 id="127-adding-a-span-to-a-datetime-keeps-the-offset-of-the-datetime"><a class="header" href="#127-adding-a-span-to-a-datetime-keeps-the-offset-of-the-datetime">127. Adding a span to a DateTime keeps the offset of the DateTime</a></h2>
 <p><code>DateTime + TimeSpan</code>, <code>DateTime - TimeSpan</code> and <code>TimeSpan + DateTime</code> answer
 an instance that has the offset of the <code>DateTime</code> operand. ooRexx gives the

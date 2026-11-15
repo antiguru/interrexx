@@ -2307,13 +2307,21 @@ junk = .file~new(f)~delete
 </code></pre>
 <div class="rule" id="r-class.file.deviation.126"><a href="#r-class.file.deviation.126">[class.file.deviation.126]</a></div>
 <p><code>compareTo</code> of a <code>File</code> with an argument that is not a <code>File</code> (an instance of a
-subclass is one), and a comparison operator with such an argument, raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that the method sends to the argument and
-precedes <code>isCaseSensitive</code>, <code>absolutePath</code> and every other message; an operator
-whose argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
+subclass is one), and an ordering operator (<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;&lt;</code>, <code>&lt;&lt;=</code>,
+<code>&gt;&gt;</code>, <code>&gt;&gt;=</code>, <code>\&lt;</code>, <code>\&gt;</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code>) with such an argument, raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that <code>compareTo</code> sends to the argument and
+precedes <code>isCaseSensitive</code>, <code>absolutePath</code> and every other message. An equality
+operator (<code>=</code>, <code>==</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code>) with such an argument answers
+that it is not equal, as ooRexx does: <code>=</code> and <code>==</code> answer 0, the others 1. It
+sends <code>compareTo</code> as for any argument, and the argument is sent nothing but the
+<code>isA</code> of <code>compareTo</code>; an override of <code>compareTo</code> that forwards to this one gets
+the same answer. Only an equality operator sent to the same receiver counts: the
+<code>compareTo</code> of a <code>File</code> that the comparison of another object sends raises. An
+operator whose argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
 rule</a> says, and <code>compareTo</code> itself raises for
-<code>.nil</code>. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
-so the answer says nothing about the two values. In the example the last line is
-a probe that answers false to <code>isA</code> and gets nothing else.</p>
+<code>.nil</code>. ooRexx answers 1 or -1 from <code>compareTo</code> for such an argument, and an
+ordering operator answers from that, whatever the receiver is, so the answer
+says nothing about the two values. In the example the last line is a probe that
+answers false to <code>isA</code> and gets nothing else.</p>
 <pre><code class="language-rexx">a = .file~new('/t/a')
 call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
 call try 'a~compareTo(.timespan~fromHours(2))'
@@ -2362,8 +2370,8 @@ a~compareTo(5) =&gt; 88.914
 a~compareTo(.nil) =&gt; 88.914
 a &lt; .timespan~fromHours(2) =&gt; 88.914
 a &gt;&gt;= "/t/a" =&gt; 88.914
-a = 5 =&gt; 88.914
-a \== .object~new =&gt; 88.914
+a = 5 =&gt; 0
+a \== .object~new =&gt; 1
 a = .nil =&gt; 0
 a &lt; .nil =&gt; 93.973
 a~compareTo(.sub~new("/t/a")) =&gt; 0

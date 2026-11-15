@@ -1139,8 +1139,9 @@ is the longer, comparing the signed counts, so that a negative span is less than
 any that is not. The argument is sent <code>isA</code> with <code>TimeSpan</code>, and a <code>TimeSpan</code> is
 then sent <code>totalMicroseconds</code>; the receiver is sent nothing. An argument that is
 no <code>TimeSpan</code> raises <code>SYNTAX 88.914</code> as soon as <code>isA</code> has answered (<a href="#r-class.timespan.deviation.126">Deviation
-126</a>), and the comparison operators raise it for
-such an argument too, <code>.nil</code> excepted (see below). The comparison operators <code>=</code>,
+126</a>), and so do the ordering operators, <code>.nil</code>
+excepted (see below); the equality operators answer that such an argument is not
+equal. The comparison operators <code>=</code>,
 <code>==</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;&gt;</code>, <code>&gt;&lt;</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&lt;</code>, <code>&lt;&lt;=</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;=</code>,
 <code>\&lt;</code>, <code>\&gt;</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code> are those of
 <a href="orderable.html#r-class.orderable.compare"><code>Orderable</code></a>, which answer from <code>compareTo</code> of the
@@ -1696,14 +1697,25 @@ sends 0
 </code></pre>
 <div class="rule" id="r-class.timespan.deviation.126"><a href="#r-class.timespan.deviation.126">[class.timespan.deviation.126]</a></div>
 <p><code>compareTo</code> of a <code>TimeSpan</code> with an argument that is not a <code>TimeSpan</code> (an
-instance of a subclass is one), and a comparison operator with such an argument,
-raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that the method sends to the
-argument and precedes <code>totalMicroseconds</code> and every other message; an operator
-whose argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
-rule</a> says, and <code>compareTo</code> itself raises for
-<code>.nil</code>. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
-so the answer says nothing about the two values. In the example the last line is
-a probe that answers false to <code>isA</code> and gets nothing else.</p>
+instance of a subclass is one), and an ordering operator (<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>,
+<code>&lt;&lt;</code>, <code>&lt;&lt;=</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;=</code>, <code>\&lt;</code>, <code>\&gt;</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code>) with such an argument,
+raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that <code>compareTo</code> sends to the
+argument and precedes <code>totalMicroseconds</code> and every other message. An equality
+operator (<code>=</code>, <code>==</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code>) with such an argument answers
+that it is not equal, as ooRexx does: <code>=</code> and <code>==</code> answer 0, the others 1. It
+sends <code>compareTo</code> as for any argument, and the argument is sent nothing but the
+<code>isA</code> of <code>compareTo</code>; an override of <code>compareTo</code> that forwards to this one gets
+the same answer. Only an equality operator sent to the same receiver counts: the
+<code>compareTo</code> of a <code>TimeSpan</code> that the comparison of another object sends raises.
+An 88.914 that <code>compareTo</code> raises for an argument that is a <code>TimeSpan</code> is raised
+by the operator too. An operator whose argument is <code>.nil</code> sends no <code>compareTo</code>
+and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code> rule</a> says, and
+<code>compareTo</code> itself raises for <code>.nil</code>. ooRexx answers 1 or -1 from <code>compareTo</code>
+for such an argument, and an ordering operator answers from that, whatever the
+receiver is, so the answer says nothing about the two values. In the example the
+last line is a probe that answers false to <code>isA</code> and gets nothing else. A hash
+collection that holds a <code>TimeSpan</code> and an index of another class with the same
+hash code compares them with <code>==</code>, and finds them unequal.</p>
 <pre><code class="language-rexx">a = .timespan~new(1, 2, 3)
 call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
 call try 'a~compareTo(.file~new("/t/a"))'
@@ -1718,6 +1730,14 @@ call try 'a = .nil'
 call try 'a &lt; .nil'
 call try 'a~compareTo(.sub~new(1, 2, 3))'
 call try 'a~compareTo(a~copy)'
+t = .table~new
+t['1'] = 'string'
+t[.timespan~new(1)] = 'span'
+say t~items t['1'] t[.timespan~new(1)]
+call try '.picky~new(1) = .picky~new(1)'
+call try '.relay~new(1) = 5'
+call try '.own~new(1) = 5'
+call try '.asker~new = 5'
 .local~log = ''
 call try 'a~compareTo(.probe~new)'
 say 'sent:' .local~log
@@ -1730,6 +1750,18 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 ::class sub subclass timespan
+::class asker inherit orderable
+::method compareTo
+  return .timespan~new(1)~compareTo('x')
+::class own subclass timespan
+::method '='
+  return self~compareTo(arg(1)) = 0
+::class relay subclass timespan
+::method compareTo
+  forward class (super)
+::class picky subclass timespan
+::method compareTo
+  raise syntax 88.914 array (1, 'Picky')
 ::class probe
 ::method isA
   .local~log = .local~log 'ISA('arg(1)~id')'
@@ -1745,12 +1777,17 @@ a~compareTo(5) =&gt; 88.914
 a~compareTo(.nil) =&gt; 88.914
 a &lt; .datetime~minDate =&gt; 88.914
 a &gt;&gt;= "x" =&gt; 88.914
-a = 3723000000 =&gt; 88.914
-a \== .object~new =&gt; 88.914
+a = 3723000000 =&gt; 0
+a \== .object~new =&gt; 1
 a = .nil =&gt; 0
 a &lt; .nil =&gt; 93.973
 a~compareTo(.sub~new(1, 2, 3)) =&gt; 0
 a~compareTo(a~copy) =&gt; 0
+2 string span
+.picky~new(1) = .picky~new(1) =&gt; 88.914
+.relay~new(1) = 5 =&gt; 0
+.own~new(1) = 5 =&gt; 88.914
+.asker~new = 5 =&gt; 88.914
 a~compareTo(.probe~new) =&gt; 88.914
 sent:  ISA(TimeSpan)
 </code></pre>
