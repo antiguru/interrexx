@@ -917,8 +917,7 @@ fn a_racing_group_run_failing_before_the_refusal_does_not_agree() {
 
 #[test]
 fn a_racing_group_run_with_other_stderr_before_the_refusal_does_not_agree() {
-    let mut run = summary_run(41, 0, "", interrexx::NOT_IMPLEMENTED_EXIT);
-    run.stderr = UNSATISFIABLE_WAIT.as_bytes().to_vec();
+    let run = refused_with(41, 0, &format!("a line on stderr\n{UNSATISFIABLE_WAIT}"));
     assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
 }
 
