@@ -461,7 +461,11 @@ impl Surface for Interp {
         label: &[u8],
         arguments: &[Option<Vec<u8>>],
     ) -> interrexx_api::callbacks::CallBack {
-        Interp::call_back(self, label, arguments)
+        let answered = Interp::call_back(self, label, arguments);
+        // What the code wrote reaches the descriptors before the native
+        // caller writes again (r[instr.say.deviation.40]).
+        self.hand_over_output();
+        answered
     }
 
     fn share_session_queue(&mut self) {
@@ -623,6 +627,9 @@ impl Surface for Interp {
 
     fn load_package(&mut self, name: &[u8]) -> Option<ObjRef> {
         let loaded = self.load_package_global(name);
+        // What the code wrote reaches the descriptors before the native
+        // caller writes again (r[instr.say.deviation.40]).
+        self.hand_over_output();
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)
@@ -630,6 +637,9 @@ impl Surface for Interp {
 
     fn load_package_source(&mut self, name: &[u8], lines: &[Vec<u8>]) -> Option<ObjRef> {
         let loaded = self.package_from_source(name, lines, None, true);
+        // What the code wrote reaches the descriptors before the native
+        // caller writes again (r[instr.say.deviation.40]).
+        self.hand_over_output();
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)

@@ -677,6 +677,9 @@ impl Interp {
         if !library.has_hook(hook) {
             return Ok(());
         }
+        // What the program wrote reaches the descriptors before the native
+        // code writes its own (r[instr.say.deviation.40]).
+        self.hand_over_output();
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
         pin_enter!(self, crate::pinning::PinKind::LibraryEntry);
         let mut strings = CStringPool::new();
@@ -726,6 +729,9 @@ impl Interp {
         self.roots.activity_mut().push_temp(address);
         let issued = self.text(command);
         self.roots.activity_mut().push_temp(issued);
+        // What the program wrote reaches the descriptors before the native
+        // code writes its own (r[instr.say.deviation.40]).
+        self.hand_over_output();
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();

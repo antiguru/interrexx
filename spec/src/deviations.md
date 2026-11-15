@@ -283,12 +283,16 @@ ooRexx raises `35.1` at the colon.
 ## 40. Buffered standard output
 
 A standard output that is a pipe or a file is buffered and handed over
-before a read, before the program idles, before an ADDRESS command, before a
-call to native code, when a call native code made that ran Rexx code returns
-to it, at 64 KiB and at exit. ooRexx writes each line at once, so here
-output still buffered at a kill or crash is lost, and standard output and
-standard error sharing one pipe interleave differently. A write error on a buffered
-standard output is reported by the writes after the hand-over that met it.
+before a read, before the program idles, before an ADDRESS command, at 64 KiB
+and at exit. It is also handed over before native code runs: an external
+routine or method, a classic function or subcommand handler, a context command
+handler, a system exit, and a package's loader. And it is handed over when a
+call native code made returns to it: `CallProgram`, `CallRoutine`,
+`SendMessage`, `LoadPackage`, `LoadPackageFromData` and `RexxCallBack`.
+ooRexx writes each line at once, so here output still buffered at a kill or
+crash is lost, and standard output and standard error sharing one pipe
+interleave differently. A write error on a buffered standard output is
+reported by the writes after the hand-over that met it.
 
 ## 41. A damaged compiled image
 

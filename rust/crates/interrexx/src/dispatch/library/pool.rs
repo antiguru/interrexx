@@ -40,6 +40,9 @@ impl Interp {
         arguments: &[Option<ObjRef>],
         call: impl FnOnce() -> Option<R>,
     ) -> Result<R, Failure> {
+        // What the program wrote reaches the descriptors before the native
+        // code writes its own (r[instr.say.deviation.40]).
+        self.hand_over_output();
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, arguments, None);
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
@@ -86,6 +89,9 @@ impl Interp {
         handler: interrexx_api::load::ExitHandler,
         request: interrexx_api::load::ExitRequest<'_, Option<ObjRef>>,
     ) -> Result<interrexx_api::load::ExitOutcome<Option<ObjRef>>, Failure> {
+        // What the program wrote reaches the descriptors before the native
+        // code writes its own (r[instr.say.deviation.40]).
+        self.hand_over_output();
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
