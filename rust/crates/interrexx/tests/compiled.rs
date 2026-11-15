@@ -197,11 +197,13 @@ fn fixture_text() -> &'static str {
 
 /// `line` with the text of a trace line replaced by `<no source>`, when it is
 /// a clause line (a line number, `*-*` and the text) whose text is no part of
-/// a fixture program. A restored program has no source, so a clause line of
-/// its own shows a line that says no source is available, whose wording is
-/// not specified (`r[env.invocation.rexxc.source]`); the number and the
-/// blanks after `*-*` are specified and stay, and so does the text of a
-/// clause that a string supplies, such as one of an `INTERPRET`.
+/// a fixture program and has the form of a message that names the level: a
+/// name in double quotes, and a period at the end. A restored program has no
+/// source, so a clause line of its own shows a line that says no source is
+/// available, whose wording is not specified
+/// (`r[env.invocation.rexxc.source]`); the number and the blanks after `*-*`
+/// are specified and stay, and so does the text of a clause that a string
+/// supplies, such as one of an `INTERPRET`, and any other text.
 fn without_clause_text(line: &str) -> String {
     let trimmed = line.trim_start_matches(' ');
     let digits = trimmed.bytes().take_while(u8::is_ascii_digit).count();
@@ -212,11 +214,47 @@ fn without_clause_text(line: &str) -> String {
         return line.to_string();
     }
     let text = rest.trim_start_matches(' ');
-    if fixture_text().contains(text.trim_end()) {
+    if fixture_text().contains(text.trim_end()) || !names_in_quotes(text) {
         return line.to_string();
     }
     let keep = line.len() - text.len();
     format!("{}<no source>", &line[..keep])
+}
+
+/// Whether `text` holds a non-empty string in double quotes, its quotes
+/// paired, and ends with a period.
+fn names_in_quotes(text: &str) -> bool {
+    let text = text.trim_end();
+    text.ends_with('.')
+        && text.matches('"').count().is_multiple_of(2)
+        && text
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .any(|name| !name.is_empty())
+}
+
+/// A clause line that says the level has no source is masked, whatever its
+/// wording; a clause line of other text keeps its text, so a garbled clause
+/// is still a difference.
+#[test]
+fn only_a_line_that_names_its_level_is_masked() {
+    assert_eq!(
+        without_clause_text("     2 *-* Some words \"DIR/x.rxo\", more words."),
+        "     2 *-* <no source>"
+    );
+    assert_eq!(
+        without_clause_text("     2 *-*   Other words \"pk\"."),
+        "     2 *-*   <no source>"
+    );
+    for kept in [
+        "     2 *-* garbled clause",
+        "     2 *-* say \"x\"",
+        "     2 *-* Words \"\".",
+        "       *-* Words \"R\".",
+    ] {
+        assert_eq!(without_clause_text(kept), kept);
+    }
 }
 
 /// The three descriptors as the case file records them, with the side's
