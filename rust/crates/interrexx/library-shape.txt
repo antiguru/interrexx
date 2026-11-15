@@ -1,5 +1,5 @@
 # The interrexx library shape. Generated: see library_shape.rs for how to regenerate.
-class ALARM public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class ALARM public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance !RUN private=1 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !STARTTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=alarm_startTimer
   instance !STOPTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=alarm_stopTimer
@@ -10,11 +10,11 @@ class ALARM public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotation
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SCHEDULEDTIME private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=1 package=0 entry=-
   instance TRIGGERED private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=1 package=0 entry=-
-class ALARMNOTIFICATION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class ALARMNOTIFICATION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance CANCEL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance TRIGGERED private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
-class ARGUTIL public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
-class ARRAY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1
+class ARGUTIL public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
+class ARRAY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -53,7 +53,7 @@ class ARRAY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDER
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class BAG public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION,SETCOLLECTION annotations=- identity=1
+class BAG public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION,SETCOLLECTION annotations=- identity=1 env=same
   instance ALLAT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLINDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -92,7 +92,7 @@ class BAG public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class BAGMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class BAGMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=none
   instance DIFFERENCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_DIFFERENCE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -108,16 +108,16 @@ class BAGMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotat
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class BUFFER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class BUFFER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class CASELESSCOLUMNCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class CASELESSCOLUMNCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class CASELESSCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class CASELESSCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class CASELESSDESCENDINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class CASELESSDESCENDINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class CIRCULARQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=QUEUE annotations=- identity=1
+class CIRCULARQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=QUEUE annotations=- identity=1 env=same
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INSERT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -139,7 +139,7 @@ class CIRCULARQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=QUEUE ann
   instance UNION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class CLASS public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class CLASS public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance <> private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance = private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance == private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -174,7 +174,7 @@ class CLASS public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annot
   instance \= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance \== private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class COLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
@@ -194,10 +194,10 @@ class COLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annot
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance [] private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
-class COLUMNCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class COLUMNCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMMANDCONTEXT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class COMMANDCONTEXT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance !CHECK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_check
   instance !DERIVEDNAME private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !DROPVAR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_dropVar
@@ -225,7 +225,7 @@ class COMMANDCONTEXT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT a
   instance VARIABLES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_variables
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMMANDHANDLER public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class COMMANDHANDLER public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance COMMAND private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   class !DEREGISTER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdhandler_deregister
   class !REGISTER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdhandler_register
@@ -234,7 +234,7 @@ class COMMANDHANDLER public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT a
   class HANDLER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdhandler_handler
   class HANDLERS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdhandler_handlers
   class REGISTER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMMANDINPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,INPUTSTREAM annotations=- identity=1
+class COMMANDINPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,INPUTSTREAM annotations=- identity=1 env=same
   instance !NEXTLINE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !READLINE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_lineIn
   instance CHARIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -242,18 +242,18 @@ class COMMANDINPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,INP
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance LINEIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance LINES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMMANDOUTPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,OUTPUTSTREAM annotations=- identity=1
+class COMMANDOUTPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,OUTPUTSTREAM annotations=- identity=1 env=same
   instance !WRITE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_write
   instance CHAROUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CLOSE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance FLUSH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance LINEOUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMPARABLE public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class COMPARABLE public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance COMPARETO private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class COMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class COMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class DATETIME public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1
+class DATETIME public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1 env=same
   instance + private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance - private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ADDDAYS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -330,9 +330,9 @@ class DATETIME public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARA
   class MAXDATE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class MINDATE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class TODAY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class DESCENDINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class DESCENDINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class DIRECTORY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class DIRECTORY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -358,14 +358,14 @@ class DIRECTORY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,M
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class EVENTSEMAPHORE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class EVENTSEMAPHORE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ISPOSTED private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance POST private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance RESET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNINIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance WAIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1
+class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1 env=same
   instance ABSOLUTEFILE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ABSOLUTEPATH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CANREAD private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -436,7 +436,7 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   class TEMPORARYPATH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class WRITECHARS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class WRITELINES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class IDENTITYTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class IDENTITYTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -455,8 +455,8 @@ class IDENTITYTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJE
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class INPUTOUTPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT,INPUTSTREAM,OUTPUTSTREAM annotations=- identity=1
-class INPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class INPUTOUTPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT,INPUTSTREAM,OUTPUTSTREAM annotations=- identity=1 env=same
+class INPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ARRAYIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CHARIN private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance CHAROUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -467,10 +467,10 @@ class INPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT anno
   instance LINES private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance OPEN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance POSITION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class INVERTINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class INVERTINGCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class LIST public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1
+class LIST public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -500,21 +500,21 @@ class LIST public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDERE
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class LOCALSERVER public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class LOCALSERVER public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=none
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INITINSTANCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_STANDARDSTREAM private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_standard_stream
-class MANYITEMMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class MANYITEMMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=none
   instance DIFFERENCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MAPCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1
+class MAPCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1 env=same
   instance MAKEARRAY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PUTALL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MESSAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MESSAGENOTIFICATION,ALARMNOTIFICATION annotations=- identity=1
+class MESSAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MESSAGENOTIFICATION,ALARMNOTIFICATION annotations=- identity=1 env=same
   instance ARGUMENTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance COMPLETED private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ERRORCONDITION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -535,9 +535,9 @@ class MESSAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MES
   instance TRIGGERED private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance WAIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MESSAGENOTIFICATION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class MESSAGENOTIFICATION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance MESSAGECOMPLETE private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
-class METHOD public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class METHOD public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ANNOTATION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ANNOTATIONS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ISABSTRACT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -558,12 +558,12 @@ class METHOD public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT anno
   class LOADEXTERNALMETHOD private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEWFILE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MONITOR public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class MONITOR public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance CURRENT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DESTINATION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNKNOWN private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MUTABLEBUFFER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class MUTABLEBUFFER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CASELESSCHANGESTR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CASELESSCONTAINS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -616,20 +616,20 @@ class MUTABLEBUFFER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJE
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class MUTEXSEMAPHORE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class MUTEXSEMAPHORE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ACQUIRE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance RELEASE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNINIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class NATIVECOMMANDHANDLER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMMANDHANDLER annotations=- identity=1
+class NATIVECOMMANDHANDLER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMMANDHANDLER annotations=- identity=1 env=same
   instance COMMAND private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance KIND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdnative_kind
   instance NAME private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class NUMERICCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1
+class NUMERICCOMPARATOR public=1 mixin=1 abstract=0 metaclass=CLASS supers=COMPARATOR annotations=- identity=1 env=same
   instance COMPARE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class OBJECT public=native mixin=0 abstract=0 metaclass=CLASS supers=- annotations=- identity=1
+class OBJECT public=native mixin=0 abstract=0 metaclass=CLASS supers=- annotations=- identity=1 env=same
   instance  private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance   private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance <> private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -663,7 +663,7 @@ class OBJECT public=native mixin=0 abstract=0 metaclass=CLASS supers=- annotatio
   instance \== private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance || private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class ORDERABLE public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class ORDERABLE public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance < private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance << private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance <<= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -683,7 +683,7 @@ class ORDERABLE public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annota
   instance \== private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance \> private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance \>> private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class ORDEREDCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1
+class ORDEREDCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1 env=same
   instance APPEND private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
   instance APPENDALL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DELETE private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
@@ -704,7 +704,7 @@ class ORDEREDCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLE
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class OUTPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class OUTPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ARRAYOUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CHARIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CHAROUT private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
@@ -715,7 +715,7 @@ class OUTPUTSTREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT ann
   instance LINES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance OPEN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance POSITION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class PACKAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class PACKAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ADDCLASS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ADDPACKAGE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ADDPUBLICCLASS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -756,14 +756,14 @@ class PACKAGE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT ann
   instance TRACE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class DEFAULTOPTIONS private=0 protected=1 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class POINTER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class POINTER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance = private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance == private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ISNULL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance \= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance \== private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class PROPERTIES public=1 mixin=0 abstract=0 metaclass=CLASS supers=DIRECTORY annotations=- identity=1
+class PROPERTIES public=1 mixin=0 abstract=0 metaclass=CLASS supers=DIRECTORY annotations=- identity=1 env=same
   instance GETLOGICAL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance GETPROPERTY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance GETWHOLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -775,7 +775,7 @@ class PROPERTIES public=1 mixin=0 abstract=0 metaclass=CLASS supers=DIRECTORY an
   instance SETWHOLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class LOAD private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class QUEUE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1
+class QUEUE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -810,7 +810,7 @@ class QUEUE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDER
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class RELATION public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class RELATION public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLAT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLINDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -838,7 +838,7 @@ class RELATION public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MA
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class REXXCONTEXT public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class REXXCONTEXT public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ARGS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CONDITION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance COPY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -856,7 +856,7 @@ class REXXCONTEXT public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT
   instance THREAD private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance VARIABLES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class REXXQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class REXXQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance DELETE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance EMPTY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_clear_queue
   instance GET private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -874,7 +874,7 @@ class REXXQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annota
   class DELETE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_delete_queue
   class EXISTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_queue_exists
   class OPEN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_open_queue
-class ROUTINE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class ROUTINE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ANNOTATION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ANNOTATIONS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CALL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -886,7 +886,7 @@ class ROUTINE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT ann
   class LOADEXTERNALROUTINE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEWFILE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class SET public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION,SETCOLLECTION annotations=- identity=1
+class SET public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION,SETCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -919,8 +919,8 @@ class SET public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class SETCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1
-class SETMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class SETCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1 env=same
+class SETMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=none
   instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_INTERSECTION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_PUT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -934,9 +934,9 @@ class SETMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotat
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance XOR private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class SINGLETON public=1 mixin=1 abstract=0 metaclass=CLASS supers=CLASS annotations=- identity=1
+class SINGLETON public=1 mixin=1 abstract=0 metaclass=CLASS supers=CLASS annotations=- identity=1 env=same
   instance NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class STACKFRAME public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class STACKFRAME public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ARGUMENTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CONTEXT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance EXECUTABLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -949,7 +949,7 @@ class STACKFRAME public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT 
   instance TRACELINE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance TYPE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class STEM public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class STEM public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -970,7 +970,7 @@ class STEM public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOL
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class STREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=INPUTOUTPUTSTREAM annotations=- identity=1
+class STREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=INPUTOUTPUTSTREAM annotations=- identity=1 env=same
   instance !C_STREAM_INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_init
   instance !HANDLE_SET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=handle_set
   instance !QUERY_EXISTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=query_exists
@@ -1006,7 +1006,7 @@ class STREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=INPUTOUTPUTSTREA
   instance STRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNINIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_uninit
-class STREAMSUPPLIER public=1 mixin=0 abstract=0 metaclass=CLASS supers=SUPPLIER annotations=- identity=1
+class STREAMSUPPLIER public=1 mixin=0 abstract=0 metaclass=CLASS supers=SUPPLIER annotations=- identity=1 env=same
   instance AVAILABLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1015,7 +1015,7 @@ class STREAMSUPPLIER public=1 mixin=0 abstract=0 metaclass=CLASS supers=SUPPLIER
   instance ITEM private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance NEXT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class STRING public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE annotations=- identity=1
+class STRING public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE annotations=- identity=1 env=same
   instance  private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance   private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance % private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1150,7 +1150,7 @@ class STRING public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMP
   class TAB private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class UPPER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class XDIGIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class STRINGTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class STRINGTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1174,7 +1174,7 @@ class STRINGTABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class SUPPLIER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class SUPPLIER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AVAILABLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1187,14 +1187,14 @@ class SUPPLIER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT an
   instance NEXT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class SUPPLIERMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class SUPPLIERMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=none
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance GETARRAYS private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERREXX_CHECK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_supplier_check
   instance INTERREXX_COLLECTED private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_supplier_collected
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class TABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
+class TABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1 env=same
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance AT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1213,7 +1213,7 @@ class TABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCO
   instance [] private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance []= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class TICKER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class TICKER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance !CREATETIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=ticker_createTimer
   instance !RUN private=1 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !STOPTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=ticker_stopTimer
@@ -1224,7 +1224,7 @@ class TICKER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotatio
   instance CANCELLED private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERVAL private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=1 package=0 entry=-
-class TIMESPAN public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1
+class TIMESPAN public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1 env=same
   instance !SETCOUNT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance % private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance * private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1264,7 +1264,7 @@ class TIMESPAN public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARA
   class FROMNORMALTIME private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class FROMSECONDS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class FROMSTRINGFORMAT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class TRACEOBJECT public=1 mixin=0 abstract=0 metaclass=CLASS supers=STRINGTABLE annotations=- identity=1
+class TRACEOBJECT public=1 mixin=0 abstract=0 metaclass=CLASS supers=STRINGTABLE annotations=- identity=1 env=same
   instance COMPARETO private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance MAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class ACTIVATE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1279,7 +1279,7 @@ class TRACEOBJECT public=1 mixin=0 abstract=0 metaclass=CLASS supers=STRINGTABLE
   class OPTION= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=1 package=0 entry=-
   class SETMAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class UNSETMAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class VALIDATE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class VALIDATE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   class !RUN private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class !TEXT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class CLASSTYPE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1295,14 +1295,14 @@ class VALIDATE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotat
   class REQUESTCLASSTYPE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class WHOLENUMBER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class WHOLENUMBERRANGE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class VARIABLEREFERENCE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class VARIABLEREFERENCE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance NAME private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance REQUEST private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance UNKNOWN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance VALUE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance VALUE= private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-class WEAKREFERENCE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+class WEAKREFERENCE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1 env=same
   instance VALUE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 environment ALARM
