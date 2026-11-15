@@ -15140,7 +15140,9 @@ say 1 +
 <p>SAY and the builtins that write to the standard output share one stream, and
 the text of all of them appears in the order the program wrote it. A standard
 output that is a pipe or a file is buffered, and it is handed over at the
-points that <a href="instructions/../deviations.html">Deviation 40</a> names. ooRexx writes each line
+points that <a href="instructions/../deviations.html">Deviation 40</a> names, unless
+<a href="instructions/../environment/invocation.html#r-env.invocation.unbuffered"><code>rexx -u</code></a> or <code>REXX_UNBUFFERED</code> makes it
+unbuffered. ooRexx writes each line
 at once, so text still buffered when the process is killed or crashes is lost
 here and is not lost there.</p>
 <pre><code class="language-rexx">say 'one'
@@ -89263,7 +89265,8 @@ minus sign; the first word that does not is the program name, and every word
 after it is an argument, even one that begins with a minus sign. Only the
 letter after the minus sign of an option word says which option it is, in
 either case: <code>e</code> is <a href="environment/invocation.html#r-env.invocation.expression">the expression option</a>, <code>o</code>
-is <a href="environment/invocation.html#r-env.invocation.optstring">the options option</a>, and <code>v</code> is <a href="environment/invocation.html#r-env.invocation.version">the version
+is <a href="environment/invocation.html#r-env.invocation.optstring">the options option</a>, <code>u</code> is <a href="environment/invocation.html#r-env.invocation.unbuffered">the unbuffered
+option</a>, and <code>v</code> is <a href="environment/invocation.html#r-env.invocation.version">the version
 option</a>. Any later letter of the word is ignored,
 except the <code>d</code> that may follow <code>o</code>, so <code>-ev</code> is an expression option and <code>-vo</code>
 a version option. An option word whose letter is none of these, a minus sign
@@ -89279,6 +89282,16 @@ What the banner says is <a href="environment/invocation.html#r-env.invocation.de
 that stands after the program name, or is the word after <code>-e</code>, is not an
 option word: the first is an argument and the second is the text of the
 program, and neither prints the banner.</p>
+<div class="rule" id="r-env.invocation.unbuffered"><a href="environment/invocation.html#r-env.invocation.unbuffered">[env.invocation.unbuffered]</a></div>
+<p>An option word <code>-u</code>, in either case, makes the program's standard output and
+standard error unbuffered: each write reaches its stream as it is made,
+partial lines too, as it does when the environment variable <code>REXX_UNBUFFERED</code>
+is set to anything but the empty string. Without either, a standard output that
+is not a terminal is buffered, as <a href="environment/../deviations.html#40-buffered-standard-output">Deviation
+40</a> says. <code>-u</code> takes <a href="environment/invocation.html#r-env.invocation.syscargs">the place
+of an option word in <code>.syscargs</code></a>. ooRexx writes
+unbuffered output whatever the words say, and ignores <code>-u</code> as an option word
+it does not know.</p>
 <h2 id="running-a-string"><a class="header" href="#running-a-string">Running a string</a></h2>
 <div class="rule" id="r-env.invocation.expression"><a href="environment/invocation.html#r-env.invocation.expression">[env.invocation.expression]</a></div>
 <p>An option word <code>-e</code> takes the next word as the text of a program, and runs
@@ -128397,11 +128410,19 @@ with an internal code in its message.</p>
 ooRexx raises <code>35.1</code> at the colon.</p>
 <h2 id="40-buffered-standard-output"><a class="header" href="#40-buffered-standard-output">40. Buffered standard output</a></h2>
 <p>A standard output that is a pipe or a file is buffered and handed over
-before a read, before the program idles, before an ADDRESS command, at 64
-KiB and at exit. ooRexx writes each line at once, so here output still
+before a read, before the program idles, before an ADDRESS command, at 64 KiB
+and at exit. While it is buffered, the order of its text against what native
+code writes to the same descriptor itself, an external routine, a handler, an
+exit or the program that embeds the interpreter, is unspecified, except that
+what native code wrote through C's standard streams before the program's text
+lands before it. ooRexx writes each line at once, so here output still
 buffered at a kill or crash is lost, and standard output and standard error
-sharing one pipe interleave differently. A write error on a buffered
-standard output is reported by the writes after the hand-over that met it.</p>
+sharing one pipe interleave differently. The environment variable
+<code>REXX_UNBUFFERED</code>, set to anything but the empty string, or <code>rexx -u</code>, makes
+both streams unbuffered, which is ooRexx's order, and <code>.output~flush</code> hands the
+buffer over from a program (the owner's ruling on #721, 2026-11-15). A write
+error on a buffered standard output is reported by the writes after the
+hand-over that met it.</p>
 <h2 id="41-a-damaged-compiled-image"><a class="header" href="#41-a-damaged-compiled-image">41. A damaged compiled image</a></h2>
 <p>An encoded program image whose decoded bytes lack the image tag raises
 <code>3.903</code>. ooRexx runs the partly decoded buffer as source, with unpredictable

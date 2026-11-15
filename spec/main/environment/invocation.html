@@ -210,7 +210,8 @@ minus sign; the first word that does not is the program name, and every word
 after it is an argument, even one that begins with a minus sign. Only the
 letter after the minus sign of an option word says which option it is, in
 either case: <code>e</code> is <a href="#r-env.invocation.expression">the expression option</a>, <code>o</code>
-is <a href="#r-env.invocation.optstring">the options option</a>, and <code>v</code> is <a href="#r-env.invocation.version">the version
+is <a href="#r-env.invocation.optstring">the options option</a>, <code>u</code> is <a href="#r-env.invocation.unbuffered">the unbuffered
+option</a>, and <code>v</code> is <a href="#r-env.invocation.version">the version
 option</a>. Any later letter of the word is ignored,
 except the <code>d</code> that may follow <code>o</code>, so <code>-ev</code> is an expression option and <code>-vo</code>
 a version option. An option word whose letter is none of these, a minus sign
@@ -226,6 +227,16 @@ What the banner says is <a href="#r-env.invocation.deviation.96">stated below</a
 that stands after the program name, or is the word after <code>-e</code>, is not an
 option word: the first is an argument and the second is the text of the
 program, and neither prints the banner.</p>
+<div class="rule" id="r-env.invocation.unbuffered"><a href="#r-env.invocation.unbuffered">[env.invocation.unbuffered]</a></div>
+<p>An option word <code>-u</code>, in either case, makes the program's standard output and
+standard error unbuffered: each write reaches its stream as it is made,
+partial lines too, as it does when the environment variable <code>REXX_UNBUFFERED</code>
+is set to anything but the empty string. Without either, a standard output that
+is not a terminal is buffered, as <a href="../deviations.html#40-buffered-standard-output">Deviation
+40</a> says. <code>-u</code> takes <a href="#r-env.invocation.syscargs">the place
+of an option word in <code>.syscargs</code></a>. ooRexx writes
+unbuffered output whatever the words say, and ignores <code>-u</code> as an option word
+it does not know.</p>
 <h2 id="running-a-string"><a class="header" href="#running-a-string">Running a string</a></h2>
 <div class="rule" id="r-env.invocation.expression"><a href="#r-env.invocation.expression">[env.invocation.expression]</a></div>
 <p>An option word <code>-e</code> takes the next word as the text of a program, and runs

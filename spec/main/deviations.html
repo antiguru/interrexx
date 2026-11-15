@@ -370,11 +370,19 @@ with an internal code in its message.</p>
 ooRexx raises <code>35.1</code> at the colon.</p>
 <h2 id="40-buffered-standard-output"><a class="header" href="#40-buffered-standard-output">40. Buffered standard output</a></h2>
 <p>A standard output that is a pipe or a file is buffered and handed over
-before a read, before the program idles, before an ADDRESS command, at 64
-KiB and at exit. ooRexx writes each line at once, so here output still
+before a read, before the program idles, before an ADDRESS command, at 64 KiB
+and at exit. While it is buffered, the order of its text against what native
+code writes to the same descriptor itself, an external routine, a handler, an
+exit or the program that embeds the interpreter, is unspecified, except that
+what native code wrote through C's standard streams before the program's text
+lands before it. ooRexx writes each line at once, so here output still
 buffered at a kill or crash is lost, and standard output and standard error
-sharing one pipe interleave differently. A write error on a buffered
-standard output is reported by the writes after the hand-over that met it.</p>
+sharing one pipe interleave differently. The environment variable
+<code>REXX_UNBUFFERED</code>, set to anything but the empty string, or <code>rexx -u</code>, makes
+both streams unbuffered, which is ooRexx's order, and <code>.output~flush</code> hands the
+buffer over from a program (the owner's ruling on #721, 2026-11-15). A write
+error on a buffered standard output is reported by the writes after the
+hand-over that met it.</p>
 <h2 id="41-a-damaged-compiled-image"><a class="header" href="#41-a-damaged-compiled-image">41. A damaged compiled image</a></h2>
 <p>An encoded program image whose decoded bytes lack the image tag raises
 <code>3.903</code>. ooRexx runs the partly decoded buffer as source, with unpredictable
