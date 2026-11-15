@@ -841,9 +841,13 @@ pub fn mark_starts(at: &Path) {
     mark_starts_with(at, START_MARKED);
 }
 
+/// The `.local` entry that [`mark_starts_in_file`]'s copy sets to the name of
+/// the test that is starting, upper case, before its `setUp` runs.
+pub const RUNNING_TEST: &str = "INTERREXX_SUITE_TEST";
+
 /// Makes the copy at `at` append `started NAME` to `marker` as each test
 /// starts, closing it after each line, so the line is on disk before the
-/// test runs. `marker`'s path holds no quote.
+/// test runs, and set [`RUNNING_TEST`]. `marker`'s path holds no quote.
 pub fn mark_starts_in_file(at: &Path, marker: &Path) {
     let marker = marker.to_str().expect("a UTF-8 marker path");
     assert!(
@@ -851,7 +855,7 @@ pub fn mark_starts_in_file(at: &Path, marker: &Path) {
         "a marker path without quotes"
     );
     let marked = format!(
-        "  aTestResult~startTest(self); .stream~new('{marker}')~~lineout('started' fName)~close -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n"
+        "  .local~setEntry('{RUNNING_TEST}', fName~upper); aTestResult~startTest(self); .stream~new('{marker}')~~lineout('started' fName)~close -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n"
     );
     mark_starts_with(at, marked.as_bytes());
 }
