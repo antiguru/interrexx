@@ -256,14 +256,14 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "derived",
         "normal",
         "failure, assertions 2, rc 1, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START, TEST_OBJECT_AND_SCOPE and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
+        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
     ),
     (
         "base/keyword/TRACE_TraceObject.testGroup",
         "derived",
         "every",
         "failure, assertions 2, rc 1, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START, TEST_OBJECT_AND_SCOPE and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
+        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
     ),
 ];
 
