@@ -82,8 +82,13 @@ pub enum Owner {
     Environment,
     Flaky,
     NotRun,
-    /// The test asserts behaviour the specification leaves unspecified; the
-    /// reason cites the rule that says so, as `r[ID]`.
+    /// Assertions of the test check behaviour the specification leaves
+    /// unspecified: the reason names their lines and, for a condition that
+    /// tests wording, its line and a structural replacement ([`named_lines`]),
+    /// and cites the rule that says so, as `r[ID]`. The test stays expected;
+    /// only the named assertions are kept from running
+    /// ([`guards::guard_assertions`]) and only the named conditions are
+    /// replaced ([`guards::guard_conditions`]).
     Unspecified,
 }
 
@@ -183,6 +188,11 @@ pub fn parse_rows(file: &str, text: &str) -> (Option<String>, Vec<Row>, Vec<Stri
             problems.push(format!(
                 "{file}:{line_number}: the test is not upper case or the reason is empty"
             ));
+        }
+        if owner == Owner::Unspecified
+            && let Err(problem) = named_lines(reason)
+        {
+            problems.push(format!("{file}:{line_number}: {problem}"));
         }
         rows.push(Row {
             file: file.to_string(),
@@ -379,6 +389,8 @@ pub fn check_rows(rows: &[Row], context: &Context) -> Vec<String> {
 mod checks;
 use checks::check_not_run;
 pub use checks::check_row;
+pub mod guards;
+use guards::{condition_span, enclosing, guardable, named_lines};
 
 /// The rows the group files alone determine, one line each as the files hold
 /// them: every test of a group below [`WINDOWS_DIR`]; every test of another

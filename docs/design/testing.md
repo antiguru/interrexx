@@ -65,9 +65,23 @@ fresh copy with its own API service.
 * A group passes when every test in its expected set started and passed, every test that ran is
   expected or listed, and the run ended normally. The expected set is the group's test methods,
   enumerated from source, less its rows in `rust/corpus/suite-licences.txt` (Deviation,
-  environment, known-flaky and unspecified rows, each with a checked reason; an unspecified row's
-  test asserts what a cited rule leaves unspecified, such as a message's wording) and
+  environment and known-flaky rows, each with a checked reason) and
   `rust/corpus/suite-not-run.txt` (tests the framework does not run on this host).
+* An unspecified row in `suite-licences.txt` leaves its test in the expected set and names, by
+  line in the group file, the assertions that check what a cited rule leaves unspecified, such as
+  a message's wording. In each side's copy a guard in front of each named line keeps that
+  assertion from running while one of its rows' tests runs, on the same line, so no line number
+  changes; a shared helper's assertion still runs for every other test. A named line starts an
+  assertion, or is an IF ending in THEN whose next line does, and lies in the row's test or in a
+  method or routine that is no other test; the row check fails a line that does not. An assertion
+  that checks wording and specified behaviour in one call stays exempt, and its row says so.
+  A branch whose condition tests wording, such as the routine announcement's, is not an assertion:
+  the row names its IF line as `conditions LINES as EXPRESSION; `, and the copy's condition on that
+  line becomes the pair of the row's tests running EXPRESSION, a structural test of the same
+  distinction, and every other test running the line's own condition, so the assertions in the
+  branch's bodies stay gated. The row check fails a condition line that is no IF ending in THEN or
+  that lies in another test, and the rewrite keeps the line and its THEN, so an ELSE binds as
+  before. Both conditions are evaluated, so the line's own must not raise for the row's tests.
 * A crash, refusal, timeout or memory kill on interrexx renames the last started test out and runs
   the group again, so one failure does not hide the rest.
 * Runs are bounded: ooRexx 300 s, interrexx four times ooRexx's time and at least 60 s, under a

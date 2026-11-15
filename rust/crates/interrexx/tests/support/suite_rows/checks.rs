@@ -38,8 +38,54 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
             }
         }
         Owner::NotRun => check_not_run(row, &text, context),
-        Owner::Unspecified => check_unspecified(row, context),
+        Owner::Unspecified => {
+            check_assertions(row, &text, context)?;
+            check_unspecified(row, context)
+        }
     }
+}
+
+/// Each line an Unspecified row names is in the group file, in the row's test
+/// or in a method or routine that is no other test of the group, and is of the
+/// kind its part of the reason names: an assertion or an IF of one, or an IF
+/// ending in THEN.
+fn check_assertions(row: &Row, text: &str, context: &Context) -> Result<(), String> {
+    let (dir, group) = row.group.rsplit_once('/').unwrap_or(("", &row.group));
+    let tests = source_test_names_in(&context.root, dir, group);
+    let source: Vec<&str> = text.lines().collect();
+    let named = named_lines(&row.reason)?;
+    let lines = named
+        .assertions
+        .iter()
+        .map(|line| (*line, false))
+        .chain(named.conditions.iter().map(|line| (*line, true)));
+    for (line, condition) in lines {
+        let Some(clause) = source.get(line - 1) else {
+            return Err(format!("the group file has no line {line}"));
+        };
+        if condition {
+            if condition_span(clause.as_bytes()).is_none() {
+                return Err(format!("line {line} is no IF ending in THEN"));
+            }
+        } else if !guardable(
+            clause.as_bytes(),
+            source.get(line).map(|next| next.as_bytes()),
+        ) {
+            return Err(format!(
+                "line {line} starts no assertion and is no IF of one"
+            ));
+        }
+        match enclosing(text, line) {
+            None => return Err(format!("line {line} is in no method or routine")),
+            Some((keyword, name))
+                if keyword == "method" && name != row.test && tests.contains(&name) =>
+            {
+                return Err(format!("line {line} is in the test {name}"));
+            }
+            Some(_) => {}
+        }
+    }
+    Ok(())
 }
 
 /// An Unspecified row's reason cites a rule as `r[ID]`, and the
