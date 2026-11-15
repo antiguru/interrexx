@@ -1096,6 +1096,27 @@ fn attach_here(context: usize) {
     );
 }
 
+/// Whether this thread is foreign to the attached activity whose context is
+/// `context`: it is neither attached to that context nor running a call of
+/// the activity (`r[native.threads.attach.deviation.175]`). A thread context
+/// no `AttachThread` answered has no thread of its own here, so no thread is
+/// foreign to it.
+///
+/// # Safety
+/// `context` is a thread context a [`ThreadContext`] handed out, some clone
+/// of which is alive, or a kept one.
+unsafe fn foreign_to_attached(context: *mut RexxThreadContext_) -> bool {
+    // SAFETY: the caller guarantees `context` is live, and its wrapper's
+    // `owner` is its `Innermost`. The reference ends with the function.
+    let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+    // Decided from `attached`, which is written only before the context's
+    // address is handed out, and from this thread's own records, so the
+    // answer asks nothing of the interpreter and waits for no baton.
+    cell.attached.get()
+        && !attached_here(context as usize)
+        && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
+}
+
 /// Ends one attach of this thread to `context`, answering whether it was
 /// attached.
 fn detach_here(context: usize) -> bool {
@@ -5606,7 +5627,7 @@ mod redirector {
 /// thread runs a call of it, a callback through the context, the activity
 /// ends once that callback's member returns. A `DetachThread` from a thread
 /// not attached to an attached activity's context, as a second one is, does
-/// nothing.
+/// nothing and returns at once (`r[native.threads.attach.deviation.175]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
@@ -5628,6 +5649,12 @@ unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
         }
         Some(_) => return,
         None => {}
+    }
+    // Decided before any baton is taken, so the misuse cannot wait for the
+    // attached thread's message, which may itself wait for this thread.
+    // SAFETY: as `whole_number_to_object`.
+    if unsafe { foreign_to_attached(context) } {
+        return;
     }
     // SAFETY: as `whole_number_to_object`; the call aborts where no native
     // call is in flight on a context no attached activity has.
@@ -5659,22 +5686,37 @@ fn end_attached(cell: &Innermost) {
 }
 
 /// `HaltThread`: the context's
-/// activity is asked to halt.
+/// activity is asked to halt. Through an attached activity's context, from
+/// a thread foreign to it ([`foreign_to_attached`]), it does nothing and
+/// returns at once (`r[native.threads.attach.deviation.175]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
+    // Decided before any baton is taken, as in `detach_thread`.
+    // SAFETY: as `whole_number_to_object`.
+    if unsafe { foreign_to_attached(context) } {
+        return;
+    }
     let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     or_nothing!(unsafe { innermost_activation(&mut room, context, "HaltThread") }).halt(false);
 }
 
 /// `SetThreadTrace`: external
-/// tracing of the context's activity on or off.
+/// tracing of the context's activity on or off. Through an attached
+/// activity's context, from a thread foreign to it
+/// ([`foreign_to_attached`]), it does nothing and returns at once
+/// (`r[native.threads.attach.deviation.175]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn set_thread_trace(context: *mut RexxThreadContext_, setting: logical_t) {
+    // Decided before any baton is taken, as in `detach_thread`.
+    // SAFETY: as `whole_number_to_object`.
+    if unsafe { foreign_to_attached(context) } {
+        return;
+    }
     let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     or_nothing!(unsafe { innermost_activation(&mut room, context, "SetThreadTrace") })

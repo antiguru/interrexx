@@ -9,6 +9,7 @@ do while AtAttached() = 0
 end
 call on halt name halted
 call AtHalt 0
+nop
 call AtOpen
 do while AtDone() < 1
   call SysSleep 0.05

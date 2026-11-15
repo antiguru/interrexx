@@ -1364,16 +1364,16 @@ fn the_switch_survives_rxfuncdrop() {
 }
 
 /// An attached thread's message loops for ever while the main program is in a call into the
-/// extension, which calls `Halt` through the instance: the message takes the HALT condition, which
-/// it does not trap, so the thread's `CheckCondition` finds SYNTAX, and the main program traps its
-/// own HALT once the call returns.
+/// extension, which calls `Halt` through the instance once the message has started: the message
+/// takes the HALT condition, which it does not trap, so the thread's `CheckCondition` finds SYNTAX
+/// 4.1, and the main program traps its own HALT once the call returns.
 // spec: native.threads.halt
 #[test]
 fn halt_reaches_a_running_attached_callback() {
     assert_eq!(
         run("halt-running", "haltrun.rex"),
         (
-            "main halted\ncondition SYNTAX\n".to_owned(),
+            "main halted\ncondition SYNTAX 4.1\n".to_owned(),
             String::new(),
             0
         )
@@ -1382,13 +1382,17 @@ fn halt_reaches_a_running_attached_callback() {
 
 /// An attached thread's message calls `HaltThread` on its attachment's thread context, from the
 /// thread running the message: the message takes the HALT condition at its next clause, and the
-/// thread finds SYNTAX, while the main program, which was not asked, runs on to `main done`.
+/// thread finds SYNTAX 4.1, while the main program, which was not asked, runs on to `main done`.
 // spec: native.threads.halt
 #[test]
 fn halt_thread_halts_only_its_attached_activity() {
     assert_eq!(
         run("halt-thread", "haltself.rex"),
-        ("condition SYNTAX\nmain done\n".to_owned(), String::new(), 0)
+        (
+            "condition SYNTAX 4.1\nmain done\n".to_owned(),
+            String::new(),
+            0
+        )
     );
 }
 
@@ -1409,12 +1413,11 @@ fn an_idle_attached_activity_drops_a_halt_per_the_probe() {
 }
 
 /// [`an_idle_attached_activity_drops_a_halt_per_the_probe`] with `SetTrace(1)` instead of `Halt`:
-/// the method runs untraced, as the oracle shows, so no trace line names `ticks.cls`. The main
-/// program's own trace lines name the program's path, so the oracle is asked for the stdout only.
+/// the method runs untraced, as the oracle shows, so no trace line names `ticks.cls`.
 // spec: native.threads.trace
 #[test]
 fn an_idle_attached_activity_is_not_traced_per_the_probe() {
-    let (stdout, stderr, code) = run_agreeing_on_stdout("trace-idle", "idletrace.rex");
+    let (stdout, stderr, code) = run("trace-idle", "idletrace.rex");
     assert_eq!(
         (stdout.as_str(), code),
         ("one\ntwo\nthree\nno condition\n", 0),
@@ -1445,4 +1448,73 @@ fn attach_from_a_foreign_thread_is_refused_in_simulation() {
     );
     assert_ne!(code, 0, "stdout {stdout:?} stderr {stderr:?}");
     assert!(!stdout.contains("ticked"), "stdout {stdout:?}");
+}
+
+/// One attached thread's message loops for ever, and a second attached thread's message, `THREE`,
+/// arrives while it does, which holds it until the first ends
+/// (`r[native.threads.attach.deviation.176]`). `Halt` through the instance then halts the looping
+/// message, whose thread finds SYNTAX 4.1, and the main program. The held message's activity runs
+/// no message yet, so it is not asked: `THREE` runs to its end. The oracle runs `THREE` alongside
+/// the loop, before the halt, and prints the same.
+// spec: native.threads.halt
+#[test]
+fn a_held_message_runs_after_a_halt() {
+    assert_eq!(
+        run("halt-held", "haltheld.rex"),
+        (
+            "one\ntwo\nthree\nmain halted\ncondition SYNTAX 4.1\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// `HaltThread` and `SetThreadTrace`, called on an idle attached thread's context from the main
+/// program's call into the extension, return and do nothing: the thread's later message runs to
+/// its end untraced, and the main program is not halted. The oracle hangs, so it is not asked.
+// spec: native.threads.attach.deviation.175
+#[test]
+fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
+    assert_eq!(
+        run_ours("misuse-idle", "misidle.rex"),
+        (
+            "one\ntwo\nthree\nno condition\nmain done\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// `HaltThread`, `SetThreadTrace` and `DetachThread`, called on an attached thread's context from
+/// the main program's call into the extension while that thread's message runs Rexx code for two
+/// seconds, return well within that time and do nothing: the message runs to its end untraced and
+/// leaves no condition. The oracle hangs, so it is not asked.
+// spec: native.threads.attach.deviation.175
+#[test]
+fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_once() {
+    assert_eq!(
+        run_ours_for("misuse-running", "misrun.rex", "60"),
+        (
+            "long done\nreturned at once 1\nno condition\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An attached thread's message waits in a call into the extension for the main program's call to
+/// let it go on, which that call does only once its `HaltThread`, `SetThreadTrace` and
+/// `DetachThread` on the thread's context have returned. They return at once, so neither waits
+/// for the other. The oracle hangs, so it is not asked.
+// spec: native.threads.attach.deviation.175
+#[test]
+fn halt_trace_and_detach_from_the_thread_a_message_waits_on_do_not_hang() {
+    assert_eq!(
+        run_ours_for("misuse-waiting", "miswait.rex", "30"),
+        (
+            "released\nreturned at once 1\nno condition\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
 }

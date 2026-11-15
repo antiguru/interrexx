@@ -12,8 +12,10 @@
    SLEEPY, guarded, sleeps a second. HOLDLATER, guarded, has a thread send LATER and runs Rexx
    code for a second, and LATER sends TICK, from inside its own method. AWAITFLAG waits, with
    GUARD OFF WHEN, until the attribute FLAG is 1 and says so. THREE says `one`, `two` and `three`,
-   one clause each, and SPIN sets SPINNING to 1 and loops for ever. HALTSELF calls AtHaltIdle on
-   the thread context of the thread running it, then says `after`. All three are unguarded. */
+   one clause each, and SPIN calls AtStart and loops for ever. HALTSELF calls AtHaltIdle on the
+   thread context of the thread running it, then says `after`. LONG calls AtStart, runs Rexx code
+   for two seconds and says `long done`. STALLED calls AtStart, then AtAwaitRelease, and says
+   `released`. All six are unguarded. */
 ::requires 'attach' LIBRARY
 ::class ticks public
 ::attribute count
@@ -24,11 +26,9 @@
 ::attribute astarted
 ::attribute order
 ::attribute msg
-::attribute spinning
 ::method init
-  expose count started napping napped astarted order sem spinning
+  expose count started napping napped astarted order sem
   count = 0
-  spinning = 0
   started = 0
   napping = 0
   napped = 0
@@ -120,10 +120,19 @@
   say 'two'
   say 'three'
 ::method spin unguarded
-  expose spinning
-  spinning = 1
+  call AtStart
   do forever
   end
 ::method haltself unguarded
   call AtHaltIdle 0
   say 'after'
+::method long unguarded
+  call AtStart
+  call time 'R'
+  do while time('E') < 2
+  end
+  say 'long done'
+::method stalled unguarded
+  call AtStart
+  call AtAwaitRelease
+  say 'released'
