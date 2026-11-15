@@ -108,18 +108,6 @@ EXCEPTIONS = [
         "ours declares the function through the handler typedef, the same function type",
     ),
     (
-        "both",
-        "macro REXX_METHOD_PROTOTYPE",
-        "ours does not end the declaration with a semicolon, upstream's does; a use that "
-        "omits the semicolon after the macro compiles upstream and not here",
-    ),
-    (
-        "both",
-        "macro REXX_TYPED_ROUTINE_PROTOTYPE",
-        "ours does not end the declaration with a semicolon, upstream's does; a use that "
-        "omits the semicolon after the macro compiles upstream and not here",
-    ),
-    (
         "upstream",
         "header platform/windows/rexxapitypes.h",
         "interrexx has Unix platform headers only (decisions.md, per-platform layout)",

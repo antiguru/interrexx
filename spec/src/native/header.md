@@ -339,7 +339,8 @@ the values of elements 1 to `N`, each read as its parameter's code, stores
 the result in element 0 as the result's code, and answers a null pointer.
 `REXX_TYPED_ROUTINE_PROTOTYPE(name)` and `REXX_METHOD_PROTOTYPE(name)`
 declare such an entry, for a table in another source file than the
-declaration.
+declaration. Both expand to a declaration that ends in a semicolon, so a use
+compiles with or without a semicolon of its own.
 
 r[native.header.argument-exists]
 In the code of a routine or method, `argumentExists(i)` is whether the
