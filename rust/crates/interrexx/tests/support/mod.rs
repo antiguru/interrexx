@@ -174,11 +174,12 @@ const LIBRARY_LINE_FIELD: &[u8] = b"     N";
 /// specified (`r[cond.information.library.trace]`).
 const LIBRARY_LINE_TEXT: &[u8] = b"<no source>";
 
-/// The words every text that says that code has no source holds, as
-/// `r[cond.information.library.trace]` describes it. Whether a numbered
-/// traceback line is a library level's is told by them, since the text of
-/// such a line is not specified and the line carries no other mark.
-const NO_SOURCE_WORDS: &[u8] = b"no source";
+/// The package of the class library, `REXX` (`r[cond.information.library]`),
+/// as the traceback line of one of its levels names it: the last string in
+/// double quotes in the line's text. Whether a numbered traceback line is a
+/// library level's is told by it, since the rest of such a line's text is not
+/// specified.
+const LIBRARY_PACKAGE: &[u8] = b"\"REXX\"";
 
 /// The tail of an error report's first line when the error was raised in the
 /// class library, up to the number.
@@ -187,14 +188,16 @@ const LIBRARY_REPORT_MARK: &[u8] = b" running REXX line ";
 /// `r[cond.information.library]` as a comparison: a line number in the class
 /// library, the indentation of its trace line, and the number of library
 /// levels, are not observable. Every traceback line of a library method (a
-/// numbered `*-*` line whose text says that the code has no source, as
-/// `r[cond.information.library.trace]` describes it) has its number replaced
+/// numbered `*-*` line whose text names the package [`LIBRARY_PACKAGE`] as its
+/// last quoted string) has its number replaced
 /// by a placeholder of the same width, the blanks after `*-*` replaced by one
 /// and its text replaced by a placeholder, since the wording and the names in
 /// it are not specified. A run of adjacent such lines is kept as its last line
 /// (the level nearest the code that sent the message), and the report's
 /// `running REXX line <n>` is `running REXX line N`. The lineless
-/// `running REXX` form, a user line and every other byte are unchanged.
+/// `running REXX` form, a user line, the level of a user package without
+/// source, and every other byte are unchanged. A clause of Rexx code whose last
+/// string is `"REXX"` would be read as a library level.
 pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
@@ -223,8 +226,8 @@ pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
 }
 
 /// `line` with its number and text replaced, when it is a traceback line of a
-/// library method: blanks, digits, ` *-* ` and a text that holds
-/// [`NO_SOURCE_WORDS`].
+/// library method: blanks, digits, ` *-* ` and a text whose last quoted
+/// string is [`LIBRARY_PACKAGE`].
 fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
     let blanks = line.iter().take_while(|&&b| b == b' ').count();
     let digits = line[blanks..]
@@ -236,10 +239,7 @@ fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
         return None;
     }
     let text = &rest[b" *-* ".len()..];
-    if !text
-        .windows(NO_SOURCE_WORDS.len())
-        .any(|w| w == NO_SOURCE_WORDS)
-    {
+    if last_quoted(text) != Some(LIBRARY_PACKAGE) {
         return None;
     }
     // The blanks after `*-*` are the nesting depth of the clause that was
@@ -250,6 +250,13 @@ fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
     out.extend_from_slice(b" *-* ");
     out.extend_from_slice(LIBRARY_LINE_TEXT);
     Some(out)
+}
+
+/// The last string in double quotes in `text`, quotes included.
+fn last_quoted(text: &[u8]) -> Option<&[u8]> {
+    let close = text.iter().rposition(|&b| b == b'"')?;
+    let open = text[..close].iter().rposition(|&b| b == b'"')?;
+    Some(&text[open..=close])
 }
 
 /// `line` with the number of `Error n running REXX line <n>:` replaced, when
@@ -552,20 +559,48 @@ mod tests {
         assert_ne!(normalize_stderr(&one), normalize_stderr(&other));
     }
 
-    /// A numbered line whose text does not say that the code has no source is
-    /// a user line and keeps its text; one that does is a library level whatever
-    /// its wording and names.
+    /// A level is a library level by its package: the level of a user package
+    /// without source keeps its number and stays a level of its own, and so
+    /// does a user clause whose text holds the words of a library level's.
     #[test]
-    fn a_library_frame_is_told_by_its_text_and_a_user_line_is_not() {
+    fn a_library_frame_is_told_by_its_package_and_a_user_line_is_not() {
         let one = transcript(&frame("1459"), "1459");
-        let other = format!(
+        // The names in a library level's text are not specified.
+        let renamed = format!(
             "    77 *-* {}\n",
-            interrexx_inventory::errors::expand("⟨101.24¦OTHER¦Validate¦/tmp/x.rex⟩")
+            interrexx_inventory::errors::expand("⟨101.24¦OTHER¦Validate¦REXX⟩")
         );
-        let two = transcript(other.as_bytes(), "1459");
-        assert_eq!(normalize_stderr(&one), normalize_stderr(&two));
-        let reworded = transcript(b"    77 *-* Some words, and no source at all.\n", "1459");
-        assert_eq!(normalize_stderr(&one), normalize_stderr(&reworded));
+        let renamed = transcript(renamed.as_bytes(), "1459");
+        assert_eq!(normalize_stderr(&one), normalize_stderr(&renamed));
+        let user_package = format!(
+            "    77 *-* {}\n",
+            interrexx_inventory::errors::expand("⟨101.24¦UNKNOWN¦Monitor¦/tmp/x.rex⟩")
+        );
+        let two = transcript(user_package.as_bytes(), "1459");
+        assert_ne!(normalize_stderr(&one), normalize_stderr(&two));
+        // A user level without source, at another line, or twice where the
+        // other side has it once.
+        let routine = |number: &str| {
+            format!(
+                "{number:>6} *-* {}\n",
+                interrexx_inventory::errors::expand("⟨101.25¦R¦/t/x.rxo⟩")
+            )
+        };
+        let at_3 = routine("3");
+        let at_7 = routine("7");
+        assert_ne!(
+            normalize_library_lines(at_3.as_bytes()),
+            normalize_library_lines(at_7.as_bytes())
+        );
+        let twice = format!("{at_3}{at_3}");
+        assert_ne!(
+            normalize_library_lines(twice.as_bytes()),
+            normalize_library_lines(at_3.as_bytes())
+        );
+        // A user clause that holds the words of a library level's text.
+        let clause = b"    12 *-* say 'no source' 1/0\n";
+        let clause_13 = b"    13 *-* say 'no source' 1/0\n";
+        assert_ne!(normalize_stderr(clause), normalize_stderr(clause_13));
         let user = b"    12 *-* say 'one'\n";
         let user_other = b"    12 *-* say 'other'\n";
         assert_ne!(normalize_stderr(user), normalize_stderr(user_other));
