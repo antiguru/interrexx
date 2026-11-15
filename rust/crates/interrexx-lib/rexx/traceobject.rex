@@ -174,7 +174,7 @@
   else lock = '  '
   pool = pool || copies(' ', max(poolWidth - length(pool), 0))
   count = count || copies(' ', max(countWidth - length(count), 0))
-  return prefix || ' ' || first || second || ' ' || 'A' || pool || ' ' || 'L' || count || ' ' || lock || '] ' || line
+  return prefix || ' ' || first || second || ' ' || 'B' || pool || ' ' || 'L' || count || ' ' || lock || '] ' || line
 
 /* r[class.traceobject.makestring] */
 ::method makeString
