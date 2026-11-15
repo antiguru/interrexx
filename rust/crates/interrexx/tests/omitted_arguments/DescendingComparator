@@ -1,4 +1,5 @@
 # DescendingComparator: each documented instance method, sent each argument list with a hole.
+
 sends
 compare (,'a')
 compare ('a',)

@@ -1,45 +1,64 @@
 # Routine: each documented instance method, sent each argument list with a hole.
+
 sends
 [] (,'a')
 [] ('a',)
 [] (,,'a')
-annotation (,'a')
-annotation ('a',)
-annotation (,,'a')
-annotations (,'a')
-annotations ('a',)
-annotations (,,'a')
-call (,'a')
-call ('a',)
-call (,,'a')
-callWith (,'a')
-callWith ('a',)
-callWith (,,'a')
-package (,'a')
-package ('a',)
-package (,,'a')
-source (,'a')
-source ('a',)
-source (,,'a')
 ----
 [] (,'a') => ok
 [] ('a',) => ok
 [] (,,'a') => ok
+
+sends
+annotation (,'a')
+annotation ('a',)
+annotation (,,'a')
+----
 annotation (,'a') => 93.902
 annotation ('a',) => ok
 annotation (,,'a') => 93.902
+
+sends
+annotations (,'a')
+annotations ('a',)
+annotations (,,'a')
+----
 annotations (,'a') => 93.902
 annotations ('a',) => 93.902
 annotations (,,'a') => 93.902
+
+sends
+call (,'a')
+call ('a',)
+call (,,'a')
+----
 call (,'a') => ok
 call ('a',) => ok
 call (,,'a') => ok
+
+sends
+callWith (,'a')
+callWith ('a',)
+callWith (,,'a')
+----
 callWith (,'a') => 93.902
 callWith ('a',) => ok
 callWith (,,'a') => 93.902
+
+sends
+package (,'a')
+package ('a',)
+package (,,'a')
+----
 package (,'a') => 93.902
 package ('a',) => 93.902
 package (,,'a') => 93.902
+
+sends
+source (,'a')
+source ('a',)
+source (,,'a')
+----
 source (,'a') => 93.902
 source ('a',) => 93.902
 source (,,'a') => 93.902

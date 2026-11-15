@@ -7,12 +7,14 @@
 //! happens to raise, which is what this table catches.
 //!
 //! One case file per class under `tests/omitted_arguments/`, named after the
-//! class, whose `sends` case lists `method arguments` lines. The receiver
+//! class, with a `sends` case per method that lists its `method arguments`
+//! lines. The receiver
 //! is the class's construction program, run afresh for every send. Some
 //! construction programs answer a shared object (`.Class~package`,
 //! `.Object~method('objectName')`, `.routines~r`, `.RexxInfo`), so a send
 //! that succeeds and changes its receiver's state would reach the later
-//! sends; the methods that would are left out ([`SKIPPED_METHODS`]).
+//! sends; the methods that would are left out ([`SKIPPED_METHODS`]), as is a
+//! send that starts an activity ([`SKIPPED_SENDS`]).
 //!
 //! Recording: `OMITTED_ARGUMENTS_RECORD=1 REWRITE=1` runs the cases on the
 //! oracle (`REXX_ORACLE_ROOT`), each with an `XDG_RUNTIME_DIR` of its own.
@@ -77,22 +79,19 @@ const SKIPPED_ROWS: &[(&str, &str, &str)] = &[
 ];
 
 /// Methods left out of every probed class, each with why.
-const SKIPPED_METHODS: &[(&str, &str)] = &[
-    (
-        "setSecurityManager",
-        "the receivers that have it are shared objects (a package, a routine, a method), so \
+const SKIPPED_METHODS: &[(&str, &str)] = &[(
+    "setSecurityManager",
+    "the receivers that have it are shared objects (a package, a routine, a method), so \
          a manager it sets would intercept every later send",
-    ),
-    (
-        "start",
-        "a send it accepts starts an activity that runs on past the send and raises in its \
-         own time, as the classes left out for starting activities would",
-    ),
-    (
-        "startWith",
-        "as `start`: a send it accepts starts an activity that runs on past the send",
-    ),
-];
+)];
+
+/// Single sends left out of every probed class, each with why.
+const SKIPPED_SENDS: &[(&str, &str, &str)] = &[(
+    "start",
+    "('a',)",
+    "the send is accepted and starts an activity that runs on past the send and raises in its \
+     own time, as the classes left out for starting activities would",
+)];
 
 /// The methods [`SKIPPED_ROWS`] applies to: `compareTo` and the comparison
 /// operators.
@@ -155,6 +154,9 @@ fn methods(class: &str) -> Vec<String> {
 
 fn skipped_row(class: &str, method: &str, pattern: &str) -> bool {
     SKIPPED_METHODS.iter().any(|(skip, _)| *skip == method)
+        || SKIPPED_SENDS
+            .iter()
+            .any(|(skip, arguments, _)| *skip == method && *arguments == pattern)
         || COMPARISONS.contains(&method)
             && SKIPPED_ROWS
                 .iter()

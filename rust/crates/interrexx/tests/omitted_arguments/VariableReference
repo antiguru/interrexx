@@ -1,27 +1,37 @@
 # VariableReference: each documented instance method, sent each argument list with a hole.
+
 sends
 name (,'a')
 name ('a',)
 name (,,'a')
-request (,'a')
-request ('a',)
-request (,,'a')
-unknown (,'a')
-unknown ('a',)
-unknown (,,'a')
-value (,'a')
-value ('a',)
-value (,,'a')
 ----
 name (,'a') => 93.902
 name ('a',) => 93.902
 name (,,'a') => 93.902
+
+sends
+request (,'a')
+request ('a',)
+request (,,'a')
+----
 request (,'a') => 93.902
 request ('a',) => ok
 request (,,'a') => 93.902
+
+sends
+unknown (,'a')
+unknown ('a',)
+unknown (,,'a')
+----
 unknown (,'a') => 93.903
 unknown ('a',) => 93.903
 unknown (,,'a') => 93.902
+
+sends
+value (,'a')
+value ('a',)
+value (,,'a')
+----
 value (,'a') => 93.902
 value ('a',) => 93.902
 value (,,'a') => 93.902

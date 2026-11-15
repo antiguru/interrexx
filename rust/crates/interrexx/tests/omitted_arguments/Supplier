@@ -1,45 +1,64 @@
 # Supplier: each documented instance method, sent each argument list with a hole.
+
 sends
 allIndexes (,'a')
 allIndexes ('a',)
 allIndexes (,,'a')
-allItems (,'a')
-allItems ('a',)
-allItems (,,'a')
-available (,'a')
-available ('a',)
-available (,,'a')
-index (,'a')
-index ('a',)
-index (,,'a')
-item (,'a')
-item ('a',)
-item (,,'a')
-next (,'a')
-next ('a',)
-next (,,'a')
-supplier (,'a')
-supplier ('a',)
-supplier (,,'a')
 ----
 allIndexes (,'a') => 93.902
 allIndexes ('a',) => 93.902
 allIndexes (,,'a') => 93.902
+
+sends
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+----
 allItems (,'a') => 93.902
 allItems ('a',) => 93.902
 allItems (,,'a') => 93.902
+
+sends
+available (,'a')
+available ('a',)
+available (,,'a')
+----
 available (,'a') => 93.902
 available ('a',) => 93.902
 available (,,'a') => 93.902
+
+sends
+index (,'a')
+index ('a',)
+index (,,'a')
+----
 index (,'a') => 93.902
 index ('a',) => 93.902
 index (,,'a') => 93.902
+
+sends
+item (,'a')
+item ('a',)
+item (,,'a')
+----
 item (,'a') => 93.902
 item ('a',) => 93.902
 item (,,'a') => 93.902
+
+sends
+next (,'a')
+next ('a',)
+next (,,'a')
+----
 next (,'a') => 93.902
 next ('a',) => 93.902
 next (,,'a') => 93.902
+
+sends
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+----
 supplier (,'a') => 93.902
 supplier ('a',) => 93.902
 supplier (,,'a') => 93.902

@@ -1,171 +1,253 @@
 # RexxInfo: each documented instance method, sent each argument list with a hole.
+
 sends
 architecture (,'a')
 architecture ('a',)
 architecture (,,'a')
-caseSensitiveFiles (,'a')
-caseSensitiveFiles ('a',)
-caseSensitiveFiles (,,'a')
-date (,'a')
-date ('a',)
-date (,,'a')
-debug (,'a')
-debug ('a',)
-debug (,,'a')
-digits (,'a')
-digits ('a',)
-digits (,,'a')
-directorySeparator (,'a')
-directorySeparator ('a',)
-directorySeparator (,,'a')
-endofline (,'a')
-endofline ('a',)
-endofline (,,'a')
-executable (,'a')
-executable ('a',)
-executable (,,'a')
-form (,'a')
-form ('a',)
-form (,,'a')
-fuzz (,'a')
-fuzz ('a',)
-fuzz (,,'a')
-internalDigits (,'a')
-internalDigits ('a',)
-internalDigits (,,'a')
-internalMaxNumber (,'a')
-internalMaxNumber ('a',)
-internalMaxNumber (,,'a')
-internalMinNumber (,'a')
-internalMinNumber ('a',)
-internalMinNumber (,,'a')
-languageLevel (,'a')
-languageLevel ('a',)
-languageLevel (,,'a')
-libraryPath (,'a')
-libraryPath ('a',)
-libraryPath (,,'a')
-majorVersion (,'a')
-majorVersion ('a',)
-majorVersion (,,'a')
-maxArraySize (,'a')
-maxArraySize ('a',)
-maxArraySize (,,'a')
-maxExponent (,'a')
-maxExponent ('a',)
-maxExponent (,,'a')
-maxPathLength (,'a')
-maxPathLength ('a',)
-maxPathLength (,,'a')
-minExponent (,'a')
-minExponent ('a',)
-minExponent (,,'a')
-modification (,'a')
-modification ('a',)
-modification (,,'a')
-name (,'a')
-name ('a',)
-name (,,'a')
-package (,'a')
-package ('a',)
-package (,,'a')
-pathSeparator (,'a')
-pathSeparator ('a',)
-pathSeparator (,,'a')
-platform (,'a')
-platform ('a',)
-platform (,,'a')
-release (,'a')
-release ('a',)
-release (,,'a')
-revision (,'a')
-revision ('a',)
-revision (,,'a')
-version (,'a')
-version ('a',)
-version (,,'a')
 ----
 architecture (,'a') => 93.902
 architecture ('a',) => 93.902
 architecture (,,'a') => 93.902
+
+sends
+caseSensitiveFiles (,'a')
+caseSensitiveFiles ('a',)
+caseSensitiveFiles (,,'a')
+----
 caseSensitiveFiles (,'a') => 93.902
 caseSensitiveFiles ('a',) => 93.902
 caseSensitiveFiles (,,'a') => 93.902
+
+sends
+date (,'a')
+date ('a',)
+date (,,'a')
+----
 date (,'a') => 93.902
 date ('a',) => 93.902
 date (,,'a') => 93.902
+
+sends
+debug (,'a')
+debug ('a',)
+debug (,,'a')
+----
 debug (,'a') => 93.902
 debug ('a',) => 93.902
 debug (,,'a') => 93.902
+
+sends
+digits (,'a')
+digits ('a',)
+digits (,,'a')
+----
 digits (,'a') => 93.902
 digits ('a',) => 93.902
 digits (,,'a') => 93.902
+
+sends
+directorySeparator (,'a')
+directorySeparator ('a',)
+directorySeparator (,,'a')
+----
 directorySeparator (,'a') => 93.902
 directorySeparator ('a',) => 93.902
 directorySeparator (,,'a') => 93.902
+
+sends
+endofline (,'a')
+endofline ('a',)
+endofline (,,'a')
+----
 endofline (,'a') => 93.902
 endofline ('a',) => 93.902
 endofline (,,'a') => 93.902
+
+sends
+executable (,'a')
+executable ('a',)
+executable (,,'a')
+----
 executable (,'a') => 93.902
 executable ('a',) => 93.902
 executable (,,'a') => 93.902
+
+sends
+form (,'a')
+form ('a',)
+form (,,'a')
+----
 form (,'a') => 93.902
 form ('a',) => 93.902
 form (,,'a') => 93.902
+
+sends
+fuzz (,'a')
+fuzz ('a',)
+fuzz (,,'a')
+----
 fuzz (,'a') => 93.902
 fuzz ('a',) => 93.902
 fuzz (,,'a') => 93.902
+
+sends
+internalDigits (,'a')
+internalDigits ('a',)
+internalDigits (,,'a')
+----
 internalDigits (,'a') => 93.902
 internalDigits ('a',) => 93.902
 internalDigits (,,'a') => 93.902
+
+sends
+internalMaxNumber (,'a')
+internalMaxNumber ('a',)
+internalMaxNumber (,,'a')
+----
 internalMaxNumber (,'a') => 93.902
 internalMaxNumber ('a',) => 93.902
 internalMaxNumber (,,'a') => 93.902
+
+sends
+internalMinNumber (,'a')
+internalMinNumber ('a',)
+internalMinNumber (,,'a')
+----
 internalMinNumber (,'a') => 93.902
 internalMinNumber ('a',) => 93.902
 internalMinNumber (,,'a') => 93.902
+
+sends
+languageLevel (,'a')
+languageLevel ('a',)
+languageLevel (,,'a')
+----
 languageLevel (,'a') => 93.902
 languageLevel ('a',) => 93.902
 languageLevel (,,'a') => 93.902
+
+sends
+libraryPath (,'a')
+libraryPath ('a',)
+libraryPath (,,'a')
+----
 libraryPath (,'a') => 93.902
 libraryPath ('a',) => 93.902
 libraryPath (,,'a') => 93.902
+
+sends
+majorVersion (,'a')
+majorVersion ('a',)
+majorVersion (,,'a')
+----
 majorVersion (,'a') => 93.902
 majorVersion ('a',) => 93.902
 majorVersion (,,'a') => 93.902
+
+sends
+maxArraySize (,'a')
+maxArraySize ('a',)
+maxArraySize (,,'a')
+----
 maxArraySize (,'a') => 93.902
 maxArraySize ('a',) => 93.902
 maxArraySize (,,'a') => 93.902
+
+sends
+maxExponent (,'a')
+maxExponent ('a',)
+maxExponent (,,'a')
+----
 maxExponent (,'a') => 93.902
 maxExponent ('a',) => 93.902
 maxExponent (,,'a') => 93.902
+
+sends
+maxPathLength (,'a')
+maxPathLength ('a',)
+maxPathLength (,,'a')
+----
 maxPathLength (,'a') => 93.902
 maxPathLength ('a',) => 93.902
 maxPathLength (,,'a') => 93.902
+
+sends
+minExponent (,'a')
+minExponent ('a',)
+minExponent (,,'a')
+----
 minExponent (,'a') => 93.902
 minExponent ('a',) => 93.902
 minExponent (,,'a') => 93.902
+
+sends
+modification (,'a')
+modification ('a',)
+modification (,,'a')
+----
 modification (,'a') => 93.902
 modification ('a',) => 93.902
 modification (,,'a') => 93.902
+
+sends
+name (,'a')
+name ('a',)
+name (,,'a')
+----
 name (,'a') => 93.902
 name ('a',) => 93.902
 name (,,'a') => 93.902
+
+sends
+package (,'a')
+package ('a',)
+package (,,'a')
+----
 package (,'a') => 93.902
 package ('a',) => 93.902
 package (,,'a') => 93.902
+
+sends
+pathSeparator (,'a')
+pathSeparator ('a',)
+pathSeparator (,,'a')
+----
 pathSeparator (,'a') => 93.902
 pathSeparator ('a',) => 93.902
 pathSeparator (,,'a') => 93.902
+
+sends
+platform (,'a')
+platform ('a',)
+platform (,,'a')
+----
 platform (,'a') => 93.902
 platform ('a',) => 93.902
 platform (,,'a') => 93.902
+
+sends
+release (,'a')
+release ('a',)
+release (,,'a')
+----
 release (,'a') => 93.902
 release ('a',) => 93.902
 release (,,'a') => 93.902
+
+sends
+revision (,'a')
+revision ('a',)
+revision (,,'a')
+----
 revision (,'a') => 93.902
 revision ('a',) => 93.902
 revision (,,'a') => 93.902
+
+sends
+version (,'a')
+version ('a',)
+version (,,'a')
+----
 version (,'a') => 93.902
 version ('a',) => 93.902
 version (,,'a') => 93.902
