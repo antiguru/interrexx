@@ -412,11 +412,17 @@ fn a_held_library_is_not_replaced_by_a_later_answer() {
     let (first, second) = (Rc::new(open_rxregexp()), Rc::new(open_rxregexp()));
     let mut libraries = crate::Libraries::new();
     assert!(Rc::ptr_eq(
-        &libraries.hold(b"rxregexp", Rc::clone(&first)).0,
+        &libraries
+            .hold(b"rxregexp", Rc::clone(&first))
+            .unwrap_or_else(|_| panic!("nothing else loads it"))
+            .0,
         &first
     ));
     assert!(Rc::ptr_eq(
-        &libraries.hold(b"rxregexp", Rc::clone(&second)).0,
+        &libraries
+            .hold(b"rxregexp", Rc::clone(&second))
+            .unwrap_or_else(|_| panic!("nothing else loads it"))
+            .0,
         &first
     ));
     assert!(Rc::ptr_eq(
@@ -426,7 +432,10 @@ fn a_held_library_is_not_replaced_by_a_later_answer() {
     // The control that says the second library was refused rather than
     // never built: under a name nothing is held for it is taken.
     assert!(Rc::ptr_eq(
-        &libraries.hold(b"zorkolib", Rc::clone(&second)).0,
+        &libraries
+            .hold(b"zorkolib", Rc::clone(&second))
+            .unwrap_or_else(|_| panic!("nothing else loads it"))
+            .0,
         &second
     ));
 }
@@ -657,7 +666,8 @@ fn unload_order(input: &str) -> String {
     let order: Vec<String> = interp
         .libraries
         .end()
-        .0
+        .expect("the only live instance ends last")
+        .next()
         .into_iter()
         .map(|(name, _)| String::from_utf8(name).expect("a case's names are ASCII"))
         .collect();
@@ -775,10 +785,12 @@ fn a_programs_end_runs_its_librarys_unloader() {
 #[test]
 fn dropping_the_libraries_closes_what_termination_left_open() {
     let mut libraries = crate::Libraries::new();
-    let (held, _) = libraries.hold(
-        b"hooked",
-        Rc::new(interrexx_api::load::hooks_only(None, None)),
-    );
+    let (held, _) = libraries
+        .hold(
+            b"hooked",
+            Rc::new(interrexx_api::load::hooks_only(None, None)),
+        )
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
     assert!(held.is_open());
     drop(libraries);
     assert!(!held.is_open(), "dropping the libraries left one open");

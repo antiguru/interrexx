@@ -111,11 +111,16 @@ Raising and throwing differ, as in ooRexx:
   library's `unloader` and closes it. An instance created after that runs the `loader` again
   (`r[native.loading.shared]`, `r[native.loading.unload]`, `r[native.loading.again]`).
 * `libraries.rs` keeps that round process-wide. A load of a library whose `loader` another thread
-  is running waits for it, and a load that would run a `loader` waits while another thread runs
-  any, so two loaders never wait on each other. An instance is created only once the last round's
-  unloaders have returned. A thread never waits for a hook running on itself or on a thread that
-  created its instance (`RexxCreateInterpreter` hands the new instance's thread that lineage), so
-  a hook that creates an instance or loads a library does not wait for itself.
+  is running waits for it, with the interpreter's baton vacated as for an external call, so that
+  loader may call into the waiting instance. A load of another library does not wait. An instance
+  is created only once the last round's unloaders have returned, and the last instance counts as
+  live until then, so an instance an unloader creates shares its libraries. Libraries an unloader
+  loads are walked in the same termination. A thread never waits for a hook running on itself or
+  on a thread that created its instance (`RexxCreateInterpreter` hands the new instance's thread
+  that lineage), so a hook that creates an instance or loads a library does not wait for itself.
+  Each wait is recorded with the thread's lineage, and a wait that would close a cycle of such
+  waits is not made: the load finds the library loaded, or the instance joins the round being
+  unloaded, as ooRexx, which makes neither wait, behaves.
 * A closed library is never unmapped: an attached thread, or a thread the library started, may
   still be returning into its code when the last instance ends (`r[native.loading.static]`).
   A later load by name finds the copy already mapped.

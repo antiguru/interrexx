@@ -57,8 +57,20 @@ struct Round {
     /// The threads running the unloaders of a round that has ended, one entry
     /// for each such round, until they have returned.
     unloading: Vec<ThreadId>,
+    /// The threads waiting in [`Libraries::new`] or [`await_loader`].
+    waits: Vec<Wait>,
     /// The number the next entry of `loaded` is known by.
     next: u64,
+}
+
+/// A thread waiting for hooks that other threads run.
+struct Wait {
+    /// The waiting thread's [`lineage`]: the thread last, after the threads
+    /// that created the instance it runs, which may be waiting for it in
+    /// ways this module does not see.
+    blocked: Vec<ThreadId>,
+    /// The threads running the hooks it waits for.
+    holders: Vec<ThreadId>,
 }
 
 /// One library a round has loaded.
@@ -80,6 +92,7 @@ static ROUND: LazyLock<Mutex<Round>> = LazyLock::new(|| {
         order: PackageTable::new(),
         loaded: Vec::new(),
         unloading: Vec::new(),
+        waits: Vec::new(),
         next: 0,
     })
 });
@@ -121,13 +134,82 @@ pub(crate) fn adopt(lineage: Vec<ThreadId>) {
     ANCESTORS.set(lineage);
 }
 
-/// Whether this thread is to go on while `holder` runs a loader or unloaders.
+/// Whether this thread is to wait while `holder` runs a loader or unloaders.
 fn waits_for(holder: ThreadId) -> bool {
     // A hook that creates an instance or loads a library itself waits for
     // that instance to start or that load to end, so the thread doing either
     // for it must not wait for the hook in turn.
     holder != std::thread::current().id()
         && !ANCESTORS.with_borrow(|ancestors| ancestors.contains(&holder))
+}
+
+/// Whether this thread, were it to wait for the hooks that `holders` run,
+/// would wait for itself: whether one of them waits, directly or through
+/// other waits, for this thread or for a thread of its [`lineage`].
+fn closes_cycle(round: &Round, holders: &[ThreadId]) -> bool {
+    let mine = lineage();
+    let mut reached = holders.to_vec();
+    let mut at = 0;
+    while let Some(&thread) = reached.get(at) {
+        at += 1;
+        if mine.contains(&thread) {
+            return true;
+        }
+        // A thread waits for what its own wait names, and so does every
+        // thread of whose lineage it is part, as it may be waiting for that
+        // thread to start or to answer.
+        for wait in &round.waits {
+            if wait.blocked.contains(&thread) {
+                for holder in &wait.holders {
+                    if !reached.contains(holder) {
+                        reached.push(*holder);
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Waits on [`SETTLED`] for `holders` as this thread's wait, which
+/// [`closes_cycle`] sees meanwhile.
+fn wait_for(
+    mut round: MutexGuard<'static, Round>,
+    holders: Vec<ThreadId>,
+) -> MutexGuard<'static, Round> {
+    let blocked = lineage();
+    let thread = std::thread::current().id();
+    round.waits.push(Wait { blocked, holders });
+    round = wait(round);
+    if let Some(at) = (round.waits.iter()).position(|wait| wait.blocked.last() == Some(&thread)) {
+        round.waits.remove(at);
+    }
+    round
+}
+
+/// The thread whose loader a load of `name` from the file `identity` is to
+/// wait for: the one running the loader of that load, where this thread
+/// waits for it and the wait would not close a cycle.
+fn loader_to_wait_for(round: &Round, name: &[u8], identity: usize) -> Option<ThreadId> {
+    let holder = round
+        .loaded
+        .iter()
+        .find(|loaded| loaded.name == name && loaded.identity == identity)?
+        .loading?;
+    // A wait that would close a cycle is not made: the load finds the library
+    // loaded, as a load from the thread running its loader does.
+    (waits_for(holder) && !closes_cycle(round, &[holder])).then_some(holder)
+}
+
+/// Waits until a load of `name` from the file `identity` no longer has a
+/// loader to wait for, which [`Libraries::hold`] answers `Err` for. Touches
+/// nothing but the round, so a thread may wait here with its interpreter's
+/// baton vacated.
+pub(crate) fn await_loader(name: &[u8], identity: usize) {
+    let mut round = round();
+    while let Some(holder) = loader_to_wait_for(&round, name, identity) {
+        round = wait_for(round, vec![holder]);
+    }
 }
 
 /// A load whose loader the holder runs: dropping it, once the loader has
@@ -149,10 +231,43 @@ impl Drop for Loading {
 }
 
 /// The unloaders of a round that has ended, which the holder runs: dropping it,
-/// once they have returned, lets the instances waiting to be created go on.
+/// once they have returned, ends the count of the instance that ran them and
+/// lets the instances waiting to be created go on.
 #[must_use]
 pub(crate) struct Unloading {
     thread: ThreadId,
+    /// The libraries [`Unloading::next`] has answered.
+    walked: Vec<u64>,
+}
+
+impl Unloading {
+    /// The libraries whose unloaders run next, with their names, in the order
+    /// they run: those of the round no earlier call answered, which once the
+    /// first call's have run are those an unloader loaded. Answers nothing
+    /// once every library of the round has been answered
+    /// (`r[native.loading.unload]`).
+    pub(crate) fn next(&mut self) -> Vec<(Vec<u8>, Unload)> {
+        let round = round();
+        let mut batch = Vec::new();
+        for name in round.order.names() {
+            for loaded in &round.loaded {
+                if loaded.name == name && !self.walked.contains(&loaded.id) {
+                    self.walked.push(loaded.id);
+                    batch.push((loaded.name.clone(), loaded.unload.clone()));
+                }
+            }
+        }
+        batch
+    }
+
+    /// Every library of the round, in the order it loaded.
+    pub(crate) fn libraries(&self) -> Vec<Unload> {
+        round()
+            .loaded
+            .iter()
+            .map(|loaded| loaded.unload.clone())
+            .collect()
+    }
 }
 
 impl Drop for Unloading {
@@ -160,6 +275,15 @@ impl Drop for Unloading {
         let mut round = round();
         if let Some(at) = round.unloading.iter().position(|held| *held == self.thread) {
             round.unloading.remove(at);
+        }
+        round.live -= 1;
+        // An instance an unloader created and left live goes on without the
+        // libraries whose unloaders have run.
+        let walked = std::mem::take(&mut self.walked);
+        round.loaded.retain(|loaded| !walked.contains(&loaded.id));
+        if round.live == 0 {
+            round.loaded.clear();
+            round.order = PackageTable::new();
         }
         drop(round);
         SETTLED.notify_all();
@@ -171,8 +295,21 @@ impl Libraries {
     /// one waits for (`r[native.loading.again]`).
     pub(crate) fn new() -> Libraries {
         let mut round = round();
-        while round.unloading.iter().any(|holder| waits_for(*holder)) {
-            round = wait(round);
+        loop {
+            let holders: Vec<ThreadId> = (round.unloading.iter().copied())
+                .filter(|holder| waits_for(*holder))
+                .collect();
+            // An instance whose wait would close a cycle joins the round
+            // whose unloaders run, as one an unloader creates does.
+            if holders.is_empty() || closes_cycle(&round, &holders) {
+                break;
+            }
+            // While unloaders run, the live instances are the one whose
+            // termination runs them, on the baton the unloading thread holds,
+            // and those its unloaders created, on threads of that thread's
+            // lineage, which do not wait here. So a thread waiting here
+            // holds no baton the unloaders need, and vacates none.
+            round = wait_for(round, holders);
         }
         round.live += 1;
         Libraries {
@@ -194,38 +331,28 @@ impl Libraries {
     /// run: it is where no live instance has loaded the same file under that
     /// name (`r[native.loading.shared]`).
     ///
-    /// Where another thread runs the loader of that load, this answers once it
-    /// has returned. A load that would run a loader waits too while another
-    /// thread runs any loader, so two threads never each wait inside a loader
-    /// for the other's.
+    /// Answers `library` back as the error, holding nothing, where another
+    /// thread runs the loader of that load and this thread is to wait for it
+    /// first, with [`await_loader`], and then ask again.
     pub(crate) fn hold(
         &mut self,
         name: &[u8],
         library: Rc<Library>,
-    ) -> (Rc<Library>, Option<Loading>) {
+    ) -> Result<(Rc<Library>, Option<Loading>), Rc<Library>> {
         if let Some(held) = self.held.get(name) {
-            return (Rc::clone(held), None);
+            return Ok((Rc::clone(held), None));
         }
         let identity = library.identity();
         let loading = {
             let mut round = round();
-            let id = loop {
-                let known = round
-                    .loaded
-                    .iter()
-                    .find(|loaded| loaded.name == name && loaded.identity == identity);
-                let waits = match known {
-                    Some(known) => known.loading.is_some_and(waits_for),
-                    None => round
-                        .loaded
-                        .iter()
-                        .any(|loaded| loaded.loading.is_some_and(waits_for)),
-                };
-                if !waits {
-                    break known.map(|known| known.id);
-                }
-                round = wait(round);
-            };
+            if loader_to_wait_for(&round, name, identity).is_some() {
+                return Err(library);
+            }
+            let id = round
+                .loaded
+                .iter()
+                .find(|loaded| loaded.name == name && loaded.identity == identity)
+                .map(|known| known.id);
             round.order.put(name);
             match id {
                 Some(_) => None,
@@ -245,7 +372,7 @@ impl Libraries {
         };
         self.loaded.push(name.to_vec());
         self.held.insert(name.to_vec(), Rc::clone(&library));
-        (library, loading)
+        Ok((library, loading))
     }
 
     /// Records an ask for `name` that loaded nothing, which the table sees as a
@@ -259,19 +386,19 @@ impl Libraries {
     }
 
     /// Ends this interpreter's count as a live instance. Where it was the
-    /// last, answers every library the process loaded, with its name, in the
-    /// order their unloaders run, and an [`Unloading`] to hold while they run.
-    /// The next instance starts afresh (`r[native.loading.again]`) once that
-    /// is dropped, and this interpreter's drop closes the libraries.
-    /// Otherwise answers nothing, and the libraries stay loaded for the
-    /// instances still live. Answers nothing once ended.
-    pub(crate) fn end(&mut self) -> (Vec<(Vec<u8>, Unload)>, Option<Unloading>) {
+    /// last, answers the [`Unloading`] that walks the libraries of the process
+    /// and is held while their unloaders run. This interpreter counts as live
+    /// until that is dropped, and the next instance starts afresh
+    /// (`r[native.loading.again]`) then. Otherwise answers nothing, and the
+    /// libraries stay loaded for the instances still live. Answers nothing
+    /// once ended.
+    pub(crate) fn end(&mut self) -> Option<Unloading> {
         if !std::mem::replace(&mut self.live, false) {
-            return (Vec::new(), None);
+            return None;
         }
         let mut round = round();
-        round.live -= 1;
-        if round.live > 0 {
+        if round.live > 1 {
+            round.live -= 1;
             // The library may call through the context its loader was
             // handed until it is closed, after this interpreter has gone.
             // Only the instance whose load a round recorded keeps one, so an
@@ -286,24 +413,22 @@ impl Libraries {
                     }
                 }
             }
-            return (Vec::new(), None);
+            return None;
         }
+        // The libraries stay findable while the unloaders run, so that an
+        // instance an unloader creates shares them (`r[native.loading.reentrant]`).
         let thread = std::thread::current().id();
         round.unloading.push(thread);
-        let loaded = std::mem::take(&mut round.loaded);
-        let order = std::mem::replace(&mut round.order, PackageTable::new());
-        drop(round);
-        let walk = order
-            .names()
-            .flat_map(|name| {
-                loaded
-                    .iter()
-                    .filter(move |loaded| loaded.name == name)
-                    .map(|loaded| (loaded.name.clone(), loaded.unload.clone()))
-            })
-            .collect();
-        self.last = loaded.into_iter().map(|loaded| loaded.unload).collect();
-        (walk, Some(Unloading { thread }))
+        Some(Unloading {
+            thread,
+            walked: Vec::new(),
+        })
+    }
+
+    /// Takes `unloading` once its unloaders have run, and drops it, after
+    /// which this interpreter's drop closes every library of the round.
+    pub(crate) fn unloaded(&mut self, unloading: Unloading) {
+        self.last = unloading.libraries();
     }
 }
 
@@ -317,7 +442,9 @@ impl Drop for Libraries {
         // No unloader runs here: outside the unit tests, an interpreter that
         // nothing terminated is dropped only while a panic unwinds out of its
         // run, when its state is not one extension code can call back into.
-        let _ = self.end();
+        if let Some(unloading) = self.end() {
+            self.unloaded(unloading);
+        }
         for unload in &self.last {
             unload.library().close();
         }
@@ -495,9 +622,13 @@ mod tests {
         let mut libraries = Libraries::new();
         let first = Rc::new(interrexx_api::load::hooks_only(None, None));
         let second = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let (held, _) = libraries.hold(b"lib", Rc::clone(&first));
+        let (held, _) = libraries
+            .hold(b"lib", Rc::clone(&first))
+            .unwrap_or_else(|_| panic!("no other thread loads it"));
         assert!(Rc::ptr_eq(&held, &first));
-        let (again, loads) = libraries.hold(b"lib", second);
+        let (again, loads) = libraries
+            .hold(b"lib", second)
+            .unwrap_or_else(|_| panic!("no other thread loads it"));
         assert!(Rc::ptr_eq(&again, &first));
         assert!(loads.is_none());
         assert!(

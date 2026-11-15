@@ -906,23 +906,53 @@ impl Interp {
     fn run_package_unloaders(&mut self) -> Option<Loud> {
         // Held until the walk ends, however it ends, so that no instance is
         // created while an unloader runs (`r[native.loading.again]`).
-        let (walk, _unloading) = self.libraries.end();
-        for (_, unload) in walk {
-            let library = unload.library();
-            match self.run_package_hook(&library, Hook::Unloader) {
-                Ok(()) => {
-                    // A registered handler's code may be in this library, and
-                    // nothing ties the two together.
-                    if library.close() {
-                        self.command_handlers.clear();
-                        self.environments.close_registered();
-                    }
-                }
-                Err(Failure::Loud(loud)) => return Some(*loud),
-                Err(_) => return None,
+        let mut unloading = self.libraries.end()?;
+        // A library an unloader loads is walked after the ones before it, in
+        // the same termination (`r[native.loading.unload]`).
+        let refused = 'walk: loop {
+            let batch = unloading.next();
+            if batch.is_empty() {
+                break None;
             }
+            for (_, unload) in batch {
+                let library = unload.library();
+                match self.run_package_hook(&library, Hook::Unloader) {
+                    Ok(()) => {
+                        // A registered handler's code may be in this library, and
+                        // nothing ties the two together.
+                        if library.close() {
+                            self.command_handlers.clear();
+                            self.environments.close_registered();
+                        }
+                    }
+                    Err(Failure::Loud(loud)) => break 'walk Some(*loud),
+                    Err(_) => break 'walk None,
+                }
+            }
+        };
+        self.libraries.unloaded(unloading);
+        refused
+    }
+
+    /// Runs `wait`, which must not touch this interpreter, with the baton
+    /// vacated (`r[native.threads.attach]`), in a native frame of its own, as
+    /// an external call runs: a thread that `wait` waits for may call into
+    /// this interpreter meanwhile. A deterministic switch mode keeps the
+    /// baton, as it does for every native call.
+    pub(crate) fn wait_vacated(&mut self, wait: impl FnOnce()) {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        if self.switch.is_none() {
+            let frame = self.native_token();
+            let vacated = self.vacated(frame);
+            vacated.around(wait);
+            drop(vacated);
+            self.pop_vacancy(frame);
+        } else {
+            wait();
         }
-        None
+        let _ = self.pop_native_frame();
+        pin_leave!(self);
     }
 
     /// What a native call answers once its frame is off the stack: the value,
