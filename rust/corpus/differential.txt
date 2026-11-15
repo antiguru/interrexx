@@ -1226,6 +1226,7 @@ lang/method_object_identity_through_subclass.rex
 lang/setmethod_instance_method.rex
 lang/uninit_defined_on_superclass_later.rex
 lang/package_prolog_of_compiled_executable.rex
+lang/stackframes_sortwith_comparator.rex
 lang/class_setmethod_instance_methods.rex
 lang/security_manager_protected_primitive.rex
 lang/security_manager_set_protected.rex
@@ -1327,6 +1328,7 @@ lang/interpret_frame_invocation_indent.rex
 lang/method_package_rexx_library.rex
 lang/compile_failure_condition_origin.rex
 lang/requires_install_levels.rex
+lang/primitive_frame_past_override.rex
 lang/security_manager_set_during_install.rex
 lang/variable_reference_operator_traceback.rex
 lang/stem_default_string_rendering.rex

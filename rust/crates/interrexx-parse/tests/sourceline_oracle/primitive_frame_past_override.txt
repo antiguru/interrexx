@@ -1,0 +1,55 @@
+count 54
+/* A subclass override that forwards to a primitive with FORWARD CLASS
+   (SUPER) reaches the subclass's own methods from the primitive: SORT sends
+   compareTo, []= sends hashCode, REQUEST sends makefoo, and a Routine
+   subclass's NEW builds a routine whose ::requires runs. A 93.900 that
+   compareTo raises inside the sort lists the levels of Rexx code with their
+   lines. A built-in level is not printed: whether a build has one is not
+   specified (r[class.stackframe.builtin]), and a level of Rexx code has a
+   numbered trace line (r[class.stackframe.traceline]). */
+a = .myarr~of(.k~new(2), .k~new(1))
+a~sort
+say 'sorted' a[1]~v a[2]~v
+t = .mytab~new
+t[.k~new(3)] = 4
+say 'items' t~items
+r = .myk~new(1)~request('FOO')
+say 'request' r
+r = .myr~new('r', .array~of('return 1', "::requires 'pro.cls'"))
+say r~class
+signal on syntax
+c = .myarr~of(.k~new(2), .bad~new)
+c~sort
+exit
+syntax:
+  o = condition('o')
+  say 'syntax' o~code
+  do f over o~stackframes
+    if f~traceLine~word(1)~datatype('W') then
+      say '  cf' f~type filespec('name', f~name) f~line
+  end
+  do l over o~traceback
+    if l~word(1)~datatype('W') then say '  tb' l
+  end
+  exit
+::class k
+::method init; expose v; use arg v
+::method compareTo; expose v; use arg o
+  say '  compare'
+  return v - o~v
+::method v; expose v; return v
+::method hashCode; say '  hash'; return 'x'
+::class myk subclass k
+::method request; say 'myk request'; forward class (super)
+::method makefoo; say '  makefoo'; return 1
+::class bad
+::method compareTo; raise syntax 93.900 array('boom')
+::class myarr subclass array
+::method sort
+  forward class (super)
+::class mytab subclass table
+::method '[]='
+  forward class (super)
+::class myr subclass routine
+::method new class
+  forward class (super)
