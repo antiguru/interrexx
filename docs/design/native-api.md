@@ -121,6 +121,13 @@ Raising and throwing differ, as in ooRexx:
   Each wait is recorded with the thread's lineage, and a wait that would close a cycle of such
   waits is not made: the load finds the library loaded, or the instance joins the round being
   unloaded, as ooRexx, which makes neither wait, behaves.
+* A `loader` or `unloader` runs with its instance's baton vacated, as an external call does
+  (`r[native.loading.reentrant]`). A thread the hook waits for may then call into that instance,
+  and so may a loader that another of the hook's loads waits for, so a wait between instances
+  never runs through a baton a hook holds. A load through the instance whose `loader` another
+  thread runs waits for it as a load through another instance does. The loader's guard is
+  released before the baton is taken back, because such a load may hold a lend above the
+  vacancy.
 * A closed library is never unmapped: an attached thread, or a thread the library started, may
   still be returning into its code when the last instance ends (`r[native.loading.static]`).
   A later load by name finds the copy already mapped.

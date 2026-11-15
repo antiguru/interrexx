@@ -201,6 +201,12 @@ fn loader_to_wait_for(round: &Round, name: &[u8], identity: usize) -> Option<Thr
     (waits_for(holder) && !closes_cycle(round, &[holder])).then_some(holder)
 }
 
+/// Whether a load of `name` from the file `identity` is to wait, with
+/// [`await_loader`], for a loader that another thread runs.
+pub(crate) fn loader_to_await(name: &[u8], identity: usize) -> bool {
+    loader_to_wait_for(&round(), name, identity).is_some()
+}
+
 /// Waits until a load of `name` from the file `identity` no longer has a
 /// loader to wait for, which [`Libraries::hold`] answers `Err` for. Touches
 /// nothing but the round, so a thread may wait here with its interpreter's
@@ -305,10 +311,11 @@ impl Libraries {
                 break;
             }
             // While unloaders run, the live instances are the one whose
-            // termination runs them, on the baton the unloading thread holds,
-            // and those its unloaders created, on threads of that thread's
-            // lineage, which do not wait here. So a thread waiting here
-            // holds no baton the unloaders need, and vacates none.
+            // termination runs them, on the baton the unloading thread holds
+            // or has vacated for the unloader, and those its unloaders
+            // created, on threads of that thread's lineage, which do not wait
+            // here. So a thread waiting here holds no baton the unloaders
+            // need, and vacates none.
             round = wait_for(round, holders);
         }
         round.live += 1;

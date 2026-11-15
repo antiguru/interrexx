@@ -2226,7 +2226,16 @@ impl Interp {
     /// where the same directive spelling the name in lower case loads.
     pub(crate) fn resolve_library(&mut self, name: &[u8]) -> LibraryLoad {
         if let Some(held) = self.libraries.get(name) {
-            return LibraryLoad::Loaded(Rc::clone(held));
+            let held = Rc::clone(held);
+            // A loader runs with the baton vacated, so another thread may load
+            // the library through this interpreter while the load that holds
+            // it still runs the loader, and that load is to wait for it too
+            // (`r[native.loading.shared]`).
+            let identity = held.identity();
+            if crate::libraries::loader_to_await(name, identity) {
+                self.wait_vacated(|| crate::libraries::await_loader(name, identity));
+            }
+            return LibraryLoad::Loaded(held);
         }
         // An extension library this crate runs in Rust, ahead of any search.
         if let Some(library) = crate::extensions::library(name) {
@@ -2267,10 +2276,11 @@ impl Interp {
                 };
                 // For example, a loader that raises leaves the library held
                 // with its routines callable, and the ask raises.
-                let ran = self.run_package_hook(&held, interrexx_api::load::Hook::Loader);
-                // The loads of other instances waiting for this loader go on,
-                // whether it returned or raised.
-                drop(loading);
+                // The loads of other instances, or of other threads of this
+                // one, waiting for this loader go on once it has returned or
+                // raised, which drops `loading`.
+                let ran =
+                    self.run_package_hook(&held, interrexx_api::load::Hook::Loader, Some(loading));
                 match ran {
                     Ok(()) => LibraryLoad::Loaded(held),
                     Err(failure) => LibraryLoad::Raised(failure),

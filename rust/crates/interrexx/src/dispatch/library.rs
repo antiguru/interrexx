@@ -762,7 +762,12 @@ impl Interp {
     }
 
     /// Runs `library`'s `hook` in a native frame of its own, as
-    /// `Activity::run` runs a callback dispatcher.
+    /// `Activity::run` runs a callback dispatcher, with the baton vacated
+    /// while the hook runs (`r[native.loading.reentrant]`), as an external
+    /// call runs: a thread the hook waits for may call into this interpreter
+    /// meanwhile. A deterministic switch mode keeps the baton, as it does for
+    /// every native call. `loading`, the guard of a loader's load, is
+    /// dropped as soon as the hook has returned or unwound.
     ///
     /// # Errors
     /// The condition the hook raised, and [`Loud`] for an interface member it
@@ -771,17 +776,48 @@ impl Interp {
         &mut self,
         library: &Library,
         hook: Hook,
+        loading: Option<crate::libraries::Loading>,
     ) -> Result<(), Failure> {
         if !library.has_hook(hook) {
             return Ok(());
         }
+        // Dropped before the baton is taken back: a load waiting for this
+        // loader may hold a lend above the vacancy, through a thread the
+        // loader called into this interpreter for, and the baton comes back
+        // only once that lend has ended (`r[native.loading.shared]`).
+        let returned = move |ran| {
+            drop(loading);
+            ran
+        };
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
         pin_enter!(self, crate::pinning::PinKind::LibraryEntry);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
         let inbox = self.timer.inbox();
-        let (ran, pending) = {
-            let frame = self.native_token();
+        let frame = self.native_token();
+        // A loader or unloader is external code, so it runs as
+        // `run_classic_handler` runs a classic handler. The vacancy's root
+        // pointer is derived from this borrow of the whole interpreter, as
+        // the last use of `self` until it is popped, so every callback the
+        // hook makes reaches the interpreter through it.
+        let (ran, pending) = if self.switch.is_none() {
+            let vacated = self.vacated(frame);
+            let ran = {
+                let activation = Activation::new(Conversion {
+                    host: HostRef::through(&vacated),
+                    strings: &mut strings,
+                });
+                activation.set_frame(frame);
+                let _reachable = crate::embedding::OtherRun::enter(&inbox);
+                let ran = thread.enter(&activation, |contexts| {
+                    vacated.around(|| returned(invoke::hook(library, hook, contexts, &activation)))
+                });
+                (ran, activation.pending())
+            };
+            drop(vacated);
+            self.pop_vacancy(frame);
+            ran
+        } else {
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
@@ -789,7 +825,7 @@ impl Interp {
             activation.set_frame(frame);
             let _reachable = crate::embedding::OtherRun::enter(&inbox);
             let ran = thread.enter(&activation, |contexts| {
-                invoke::hook(library, hook, contexts, &activation)
+                returned(invoke::hook(library, hook, contexts, &activation))
             });
             (ran, activation.pending())
         };
@@ -916,7 +952,7 @@ impl Interp {
             }
             for (_, unload) in batch {
                 let library = unload.library();
-                match self.run_package_hook(&library, Hook::Unloader) {
+                match self.run_package_hook(&library, Hook::Unloader, None) {
                     Ok(()) => {
                         // A registered handler's code may be in this library, and
                         // nothing ties the two together.
