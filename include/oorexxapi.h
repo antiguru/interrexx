@@ -1692,11 +1692,11 @@ typedef CSTRING NAME;
 
 /* Declarations of the entries a routine or method declaration defines, for a
  * table in another source file than the declaration, and of a classic
- * function. */
+ * function. The first two end in a semicolon, so a use may omit its own. */
 #define REXX_TYPED_ROUTINE_PROTOTYPE(name) \
-    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxCallContext *, ValueDescriptor *)
+    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxCallContext *context, ValueDescriptor *arguments);
 #define REXX_METHOD_PROTOTYPE(name) \
-    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxMethodContext *, ValueDescriptor *)
+    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxMethodContext *context, ValueDescriptor *arguments);
 #define REXX_CLASSIC_ROUTINE_PROTOTYPE(name) RexxRoutineHandler name
 
 /* The rows of a routine table and of a method table: the style, the name the

@@ -2026,7 +2026,7 @@ impl ExitHandler {
                     rxfnc_que: queue.as_ptr().cast(),
                     rxfnc_quel: short_length(&queue),
                     rxfnc_argc: u16::try_from(argv.len()).unwrap_or(u16::MAX),
-                    rxfnc_argv: argv.as_ptr(),
+                    rxfnc_argv: argv.as_mut_ptr(),
                     rxfnc_retc: returned(DEFAULT_RESULT_BUFFER),
                 };
                 let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());

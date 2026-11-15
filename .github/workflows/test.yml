@@ -260,6 +260,19 @@ jobs:
         run: cargo run --locked -p interrexx-upstream -- check
       - name: Internal routine names agree with the pinned sources
         run: cargo nextest run --locked -p interrexx --test internal_routines --profile ci
+      - name: The Rust layout is the pinned headers' layout
+        # The ABI dump compiled as C and as C++ against the pinned `api/` headers. Named here so the
+        # check stays in the job that owns the pinned tree.
+        env:
+          REXX_UPSTREAM: ${{ github.workspace }}/third_party/ooRexx
+        run: >
+          cargo nextest run --locked -p interrexx-api --test abi_dump
+          -E 'test(upstream_headers)' --profile ci
+      - name: include/ declares the names of the pinned headers, and no others
+        # Every header of both trees, as C++ and as C: macros with their expansion from the
+        # preprocessor, declarations from clang's syntax tree; the exceptions are listed in the
+        # script with their reasons.
+        run: python3 ../scripts/names-diff.py ../third_party/ooRexx/api ../include
 
   # The check branch protection requires; it passes when every job above did.
   test:
