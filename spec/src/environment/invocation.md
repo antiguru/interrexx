@@ -604,7 +604,9 @@ the groups of four characters of an encoded image. An encoded image whose
 base64 text does not decode whole, because characters follow the `=` that
 closes it, an `=` stands inside it, it ends with a group of fewer than four
 characters, or a group closed by `=` has bits left over that are not zero, is
-refused with the error `3.905` and the status 253. ooRexx runs an image that has bytes after its end,
+refused with the error `3.905` and the status 253. For an encoded image that
+rule decides first: one cut inside a group of four is `3.905`, and one cut
+between groups is `3.903`. ooRexx runs an image that has bytes after its end,
 ignores some changed header bytes and crashes on others, and crashes on an
 image that ends too early ([Deviation
 153](../deviations.md#153-a-damaged-compiled-image-is-refused)).
