@@ -39,10 +39,9 @@ dropped. A numbered traceback line whose text names the package `REXX` as its la
 a library level and is normalised to a placeholder. Stdout is compared whole, except where the
 group runner masks it (an ooTest group's holds the traceback of an error a test meets, so the
 runner cuts the lines of an error report and the built-in levels of a traceback and compares every
-other line whole; the simulation gate masks a program row's stdout with the wider cut that also
-drops the text of a trace announcement, until #733 narrows it), so a program in this corpus
-prints the codes, flags and Rexx levels of a run and never the wording of a message, an
-announcement or a built-in level.
+other line whole; the simulation gate compares a program row's stdout whole), so a program in
+this corpus prints the codes, flags and Rexx levels of a run and never the wording of a message,
+an announcement or a built-in level.
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,
@@ -87,7 +86,11 @@ policies (`rust/corpus/sim-gate.tsv`). It fails on a panic, a scheduler invarian
 determinism breach, a hang, a design-limit refusal where ooRexx does not deadlock, or a failed
 check of the program's own that no recorded ooRexx outcome shares. Known exceptions are rows in
 `rust/corpus/sim-exempt.tsv`. ooRexx outcomes per group part are committed under
-`rust/corpus/sim-oracle/`, and differences from them are reported, never gating. A failing run
+`rust/corpus/sim-oracle/`, and differences from them are reported, never gating. A program row
+compares its stdout whole and its stderr after the structural cut of `tests/support/error_text.rs`;
+a group part's stdout is cut like the group runner's (error-report and built-in traceback lines
+only). A change to what a row compares changes the digests of its recorded outcomes, so the sets
+are refreshed with a full `REXX_SIM_ORACLE_REFRESH=1` run in the same change. A failing run
 prints a replay line naming the group, part, seed and policy.
 
 ## Test tiers
