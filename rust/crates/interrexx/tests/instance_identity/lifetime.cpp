@@ -7,6 +7,14 @@
 // current directory, sleeps for a second and prints `loader end` (or `unloader end`). Where
 // LIFETIME_NESTED is set, the loader, after printing `loader`, creates an instance of its own that
 // loads `lifetime` too, prints `created inner`, terminates it and prints `terminated inner`.
+// Where LIFETIME_RELOAD is set, the loader, after printing `loader`, loads `lifetime` through the
+// thread context it is handed and prints `reloaded 1` or `reloaded 0` for the answer. Where
+// LIFETIME_OTHER is set, it loads the library `lifetime2` the same way and prints `other 1` or
+// `other 0`. Where LIFETIME_UNLOADER_CREATES is set, the unloader, after printing `unloader`,
+// unsets it and does what LIFETIME_NESTED makes the loader do.
+//
+// Built with -DOTHER it is the extension `lifetime2` instead, a library whose hooks print `other
+// loader` and `other unloader`, which does nothing else.
 //
 // Built with -DDRIVER it is also a program, which does not link the extension: it creates
 // interpreter instances that each load `lifetime` with LOAD_REQUIRED_LIBRARY, and prints a line
@@ -21,6 +29,9 @@
 //                the unloader has started, creates B; then terminates B, whose unloader is slow
 //                too
 //   nested       with LIFETIME_NESTED set, creates A and terminates it
+//   reload       with LIFETIME_RELOAD set, creates A and terminates it
+//   other        with LIFETIME_OTHER set, creates A and terminates it
+//   unloadernew  with LIFETIME_UNLOADER_CREATES set, creates A and terminates it
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,17 +39,27 @@
 #include <unistd.h>
 #include "oorexxapi.h"
 
+#ifdef OTHER
+#define PREFIX "other "
+#define ENTRY lifetime2_package_entry
+#define PACKAGE_NAME "lifetime2"
+#else
+#define PREFIX ""
+#define ENTRY lifetime_package_entry
+#define PACKAGE_NAME "lifetime"
+#endif
+
 // Runs the hook `name`: prints its name, or, where LIFETIME_SLOW names it, runs it slowly.
 static void hook(const char *name)
 {
     const char *slow = getenv("LIFETIME_SLOW");
     if (slow == NULL || strcmp(slow, name) != 0)
     {
-        printf("%s\n", name);
+        printf(PREFIX "%s\n", name);
         fflush(stdout);
         return;
     }
-    printf("%s start\n", name);
+    printf(PREFIX "%s start\n", name);
     fflush(stdout);
     FILE *started = fopen("hook-started", "w");
     if (started != NULL)
@@ -46,7 +67,7 @@ static void hook(const char *name)
         fclose(started);
     }
     sleep(1);
-    printf("%s end\n", name);
+    printf(PREFIX "%s end\n", name);
     fflush(stdout);
 }
 
@@ -69,24 +90,49 @@ static void inner(void)
     printf("terminated inner\n");
 }
 
-static void RexxEntry LifetimeLoader(RexxThreadContext *)
+// Loads the library `name` through `context` and prints `label` with the answer.
+static void load_through(RexxThreadContext *context, const char *name, const char *label)
+{
+    printf("%s %d\n", label, context->LoadLibrary(name) ? 1 : 0);
+    fflush(stdout);
+}
+
+static void RexxEntry LifetimeLoader(RexxThreadContext *context)
 {
     hook("loader");
+#ifndef OTHER
     if (getenv("LIFETIME_NESTED") != NULL)
     {
         inner();
     }
+    if (getenv("LIFETIME_RELOAD") != NULL)
+    {
+        load_through(context, "lifetime", "reloaded");
+    }
+    if (getenv("LIFETIME_OTHER") != NULL)
+    {
+        load_through(context, "lifetime2", "other");
+    }
+#endif
 }
 
 static void RexxEntry LifetimeUnloader(RexxThreadContext *)
 {
     hook("unloader");
+#ifndef OTHER
+    if (getenv("LIFETIME_UNLOADER_CREATES") != NULL)
+    {
+        // Once, so that the instance this creates does not create another in its own unloader.
+        unsetenv("LIFETIME_UNLOADER_CREATES");
+        inner();
+    }
+#endif
 }
 
-RexxPackageEntry lifetime_package_entry = {
+RexxPackageEntry ENTRY = {
     STANDARD_PACKAGE_HEADER
     REXX_INTERPRETER_4_0_0,
-    "lifetime",
+    PACKAGE_NAME,
     "1.0",
     LifetimeLoader,
     LifetimeUnloader,
@@ -94,7 +140,11 @@ RexxPackageEntry lifetime_package_entry = {
     NULL
 };
 
+#ifdef OTHER
+OOREXX_GET_PACKAGE(lifetime2);
+#else
 OOREXX_GET_PACKAGE(lifetime);
+#endif
 
 #ifdef DRIVER
 static RexxInstance *create(const char *name)
@@ -185,9 +235,14 @@ int main(int argc, char **argv)
         terminate(b, "B");
         return 0;
     }
-    if (strcmp(scenario, "nested") == 0)
+    if (strcmp(scenario, "nested") == 0 || strcmp(scenario, "reload") == 0
+        || strcmp(scenario, "other") == 0 || strcmp(scenario, "unloadernew") == 0)
     {
-        setenv("LIFETIME_NESTED", "1", 1);
+        const char *variable = strcmp(scenario, "nested") == 0   ? "LIFETIME_NESTED"
+                               : strcmp(scenario, "reload") == 0 ? "LIFETIME_RELOAD"
+                               : strcmp(scenario, "other") == 0  ? "LIFETIME_OTHER"
+                                                                 : "LIFETIME_UNLOADER_CREATES";
+        setenv(variable, "1", 1);
         RexxInstance *a = create("A");
         if (a == NULL)
         {

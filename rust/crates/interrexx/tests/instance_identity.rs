@@ -14,12 +14,14 @@
 //! the same. Built as a program, it calls the members after the interpreter has ended.
 //!
 //! **The lifetime of a library across instances** (`r[native.loading.shared]`,
-//! `r[native.loading.unload]`, `r[native.loading.again]`). The extension
+//! `r[native.loading.unload]`, `r[native.loading.again]`,
+//! `r[native.loading.reentrant]`). The extension
 //! `tests/instance_identity/lifetime.cpp` prints `loader` from its loader and `unloader` from its
 //! unloader. Built as a program, it creates instances that each load it and prints a line after
 //! each creation and each `Terminate`. Under `REXX_CORPUS_GATE` the same program built against the
 //! oracle's library prints the same, except in the scenarios where one instance is created while
-//! another runs a hook, which the oracle does not wait for.
+//! another runs a hook, which the oracle does not wait for, and in the one where an unloader creates
+//! an instance, where the oracle runs no hooks of that instance.
 
 #![cfg(target_os = "linux")]
 
@@ -535,6 +537,18 @@ fn lifetime_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
             &dir.join("liblifetime.so").to_string_lossy(),
         ],
     );
+    // The second library, which the scenario `other` loads from a loader.
+    compile(
+        "lifetime.cpp",
+        &[
+            "-DOTHER",
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-o",
+            &dir.join("liblifetime2.so").to_string_lossy(),
+        ],
+    );
     for library in [cdylibs::librexx(), cdylibs::librexxapi()] {
         let name = library.file_name().expect("a library name").to_owned();
         let mut versioned = name.clone();
@@ -730,5 +744,59 @@ fn an_instance_a_loader_creates_shares_the_load_in_progress() {
             String::new(),
             0
         )
+    );
+}
+
+/// A loader that loads, through its thread context, the library whose loader it is finds it
+/// loaded: the load answers true at once and runs no second loader.
+// spec: native.loading.reentrant
+#[test]
+fn a_loader_loading_its_own_library_finds_it_loaded() {
+    assert_eq!(
+        run_lifetime("lifetime-reload", "reload"),
+        (
+            "loader\nreloaded 1\ncreated A\nunloader\nterminated A\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// A loader that loads another library gets the load without waiting, and the other library's
+/// loader runs inside it. Both unloaders run, in the order the libraries were asked for, when the
+/// instance ends.
+// spec: native.loading.reentrant
+#[test]
+fn a_loader_loading_another_library_runs_that_loader_inside_its_own() {
+    assert_eq!(
+        run_lifetime("lifetime-other", "other"),
+        (
+            "loader\nother loader\nother 1\ncreated A\nunloader\nother unloader\nterminated A\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An unloader that creates an instance, which loads the library, does not wait for itself: the
+/// instance is created and terminated inside the unloader, and the termination that follows
+/// completes. Whether the instance runs the library's hooks again is unspecified, and the oracle
+/// differs from this implementation there, so the run is not compared with it and the hook lines
+/// are not asserted.
+// spec: native.loading.reentrant
+#[test]
+fn an_instance_an_unloader_creates_is_created_without_waiting() {
+    let (stdout, stderr, code) =
+        lifetime_runs("lifetime-unloadernew", "unloadernew", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    let at = |line: &str| lines.iter().position(|held| *held == line);
+    assert!(
+        at("created A") < at("unloader")
+            && at("unloader") < at("created inner")
+            && at("created inner") < at("terminated inner")
+            && at("terminated inner") < at("terminated A"),
+        "{stdout}"
     );
 }
