@@ -926,6 +926,34 @@ fn c_stdio_and_rexx_output_keep_their_order_in_files() {
     );
 }
 
+/// r[instr.say.deviation.40]: with standard output not a terminal, the `SAY` output of a program
+/// `CallProgram` runs on an instance's thread context lands before a C line printed after the
+/// call, a line a native routine prints lands after the lines the program wrote before calling
+/// it, and a C line printed after a `SendMessage` that wrote a line lands after that line.
+/// Measured on the oracle with the same driver; ours held the program's output until the
+/// instance ended (#706).
+#[test]
+fn rexx_output_lands_before_the_native_code_that_follows() {
+    let output = run_driver(
+        "callprogram_stdio",
+        &[
+            ("p.rex", "say 'rexx p'\n"),
+            (
+                "q.rex",
+                "say 'rexx before'\ncall cprint\nsay 'rexx after'\n::requires 'clib' LIBRARY\n",
+            ),
+        ],
+        &[],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "c one\nrexx p\nc two\nrexx before\nc inside\nrexx after\nc three\nrexx send\nc send\nc four\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 /// `RexxStart`'s result into a caller's buffer: one exactly the result's length gets a new block
 /// and is left untouched, one a byte longer takes the result and its NUL and nothing past them,
 /// a shorter one gets a new block. The bytes after each buffer are checked. Measured on the

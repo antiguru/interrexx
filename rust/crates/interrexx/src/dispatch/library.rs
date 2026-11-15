@@ -501,6 +501,9 @@ impl Interp {
         receiver: ObjRef,
         resume: super::NativeResume,
     ) -> Option<(Result<Option<ObjRef>, Refused>, Option<usize>)> {
+        // What the program wrote reaches the descriptors before the native
+        // code writes its own (r[instr.say.deviation.40]).
+        self.hand_over_output();
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
         let frame = self.native_token();

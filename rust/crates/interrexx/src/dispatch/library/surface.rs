@@ -310,7 +310,11 @@ impl Surface for Interp {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()> {
         let caller = self.caller();
-        match self.send_message(receiver, name, scope, arguments, caller) {
+        let answered = self.send_message(receiver, name, scope, arguments, caller);
+        // What the method wrote reaches the descriptors before the native
+        // caller writes again (r[instr.say.deviation.40]).
+        self.hand_over_output();
+        match answered {
             Ok(answer) => {
                 if let Some(answer) = answer {
                     self.roots.activity_mut().push_temp(answer);
@@ -1073,6 +1077,9 @@ impl Interp {
             .push(crate::activity::ApiBase { below, native });
         let ran = run(self);
         self.activity.api_bases.pop();
+        // What the code wrote reaches the descriptors before the native
+        // caller writes again (r[instr.say.deviation.40]).
+        self.hand_over_output();
         ran
     }
 
