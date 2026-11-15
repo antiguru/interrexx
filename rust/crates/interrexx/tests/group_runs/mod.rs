@@ -651,6 +651,18 @@ fn a_racing_row_ending_in_another_refusal_is_not_allowed() {
 }
 
 #[test]
+fn a_racing_row_passing_with_output_on_stderr_is_not_allowed() {
+    let noisy = race_run(13, 0, 0, "a line on stderr\n");
+    assert!(!race_allowed(&race_passed(), &noisy));
+}
+
+#[test]
+fn a_racing_row_with_the_refusal_at_another_status_is_not_allowed() {
+    let other_status = race_run(12, 0, 1, UNSATISFIABLE_WAIT);
+    assert!(!race_allowed(&race_passed(), &other_status));
+}
+
+#[test]
 fn a_racing_row_passing_short_of_its_assertions_is_not_allowed() {
     assert!(!race_allowed(&race_run(12, 0, 0, ""), &race_passed()));
 }

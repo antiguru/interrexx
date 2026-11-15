@@ -282,17 +282,25 @@ fn key(run: &Run) -> String {
 }
 
 /// `run` without the end its group's [`RACES_ITS_END`] row may take: when
-/// `file` holds such a row and `run` ended at rc 120 with stderr ending in
-/// the unsatisfiable-wait refusal, the run as it ends when the race goes
-/// the other way. The refusal comes once every test has run, after the
-/// rest of stderr and all of stdout, and the activity left waiting is
-/// stopped inside its last assertion, `assertTrue(sem~acquire)` (:167), so
-/// that run ends at rc 0, without the refusal, and with one assertion
-/// more.
+/// `file` holds such a row, `run` started that row's test, and `run` ended
+/// at rc 120 with stderr ending in the unsatisfiable-wait refusal, the run
+/// as it ends when the race goes the other way. The refusal comes once
+/// every test has run, after the rest of stderr and all of stdout, and the
+/// activity left waiting is stopped inside its last assertion,
+/// `assertTrue(sem~acquire)` (:167), so that run ends at rc 0, without the
+/// refusal, and with one assertion more.
+///
+/// The tie to the row ends at its test having started: the refusal names
+/// no activity, and it comes after the last test, whichever that is, has
+/// ended, so a group run cannot tell which test's activity is the one
+/// left waiting. Another test of the group that left an activity waiting
+/// inside its last assertion would end the same way.
 fn without_the_race_end(file: &str, run: &Run) -> Option<Run> {
+    let tests = started(run);
     let races = RACES_ITS_END.iter().any(|(row, _)| {
         row.strip_prefix(file)
-            .is_some_and(|test| test.starts_with(' '))
+            .and_then(|test| test.strip_prefix(' '))
+            .is_some_and(|test| tests.iter().any(|started| started == test))
     });
     let stderr = run.stderr.strip_suffix(UNSATISFIABLE_WAIT.as_bytes())?;
     if !races || run.status != Some(interrexx::NOT_IMPLEMENTED_EXIT) {
@@ -912,6 +920,15 @@ fn a_racing_group_run_with_other_stderr_before_the_refusal_does_not_agree() {
     let mut run = summary_run(41, 0, "", interrexx::NOT_IMPLEMENTED_EXIT);
     run.stderr = UNSATISFIABLE_WAIT.as_bytes().to_vec();
     assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_racing_group_run_that_did_not_start_the_racing_test_does_not_agree() {
+    let starts = "started TEST_ACQUIRE_NUMBER\n";
+    let oracle = summary_run(42, 0, starts, 0);
+    let mut run = summary_run(41, 0, starts, interrexx::NOT_IMPLEMENTED_EXIT);
+    run.stderr.extend_from_slice(UNSATISFIABLE_WAIT.as_bytes());
+    assert!(agreement(RACING, &[&oracle], false, &run).is_none());
 }
 
 #[test]
