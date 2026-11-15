@@ -106,14 +106,14 @@ Object	isNil	instance	--
 Object	objectName	instance	--
 Object	objectName=	instance	'named'
 Object	request	instance	'string'
-Object	run	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'RUN' from this context, and self~run from inside one works
+Object	run	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, and self~run from inside one works
 Object	send	instance	'MM'
 Object	sendWith	instance	'MM', .Array~new(0)
-Object	setMethod	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'SETMETHOD' from this context, and self~setMethod from inside one works
+Object	setMethod	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, and self~setMethod from inside one works
 Object	start	instance	'MM'
 Object	startWith	instance	'MM', .Array~new(0)
 Object	string	instance	--
-Object	unsetMethod	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'UNSETMETHOD' from this context, and self~unsetMethod from inside one works
+Object	unsetMethod	instance	EXEMPT:private on Object -- measured, a send from outside a method answers 97.2, and self~unsetMethod from inside one works
 Object	||	instance	'x'
 Package	defaultOptions	class	'DIGITS'
 Package	new	class	'p9.rex', .Array~of('return 1')
@@ -155,7 +155,7 @@ Package	source	instance	--
 Package	sourceLine	instance	1
 Package	sourceSize	instance	--
 Package	trace	instance	--
-Pointer	new	class	REFUSED:the oracle refuses this send by design -- measured, .Pointer~new answers 93.967 NEW method is not supported for the Pointer class, and the reference says instances come only from native code (utilityclasses.xml:6910)
+Pointer	new	class	REFUSED:the oracle refuses this send by design -- measured, .Pointer~new answers 93.967, and the reference says instances come only from native code (utilityclasses.xml:6910)
 RexxContext	args	instance	--
 RexxContext	condition	instance	--
 RexxContext	digits	instance	--

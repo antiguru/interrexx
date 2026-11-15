@@ -260,54 +260,57 @@ pub fn method_waits_on(name: &str) -> &'static str {
         .map_or(NO_PROGRAM, |(_, work)| *work)
 }
 
-/// A sentence of the reference saying the user cannot construct a class, with
-/// the line it is on and the status it grounds.
-pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, &str, Status)] = &[
+/// A passage of the reference saying the user cannot construct a class: the
+/// lines it is on, the [`digest`] of its normalised text (the reference holds
+/// the sentence and this table does not repeat it), and the status it
+/// grounds. Any rewording of the cited lines changes the digest, so the
+/// check in `coverage.rs` asks for a re-read.
+pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, u64, Status)] = &[
     (
         "Buffer",
         429,
         429,
-        "can only be created using the native code application programming interfaces.",
+        0x64cc_59f0_c30f_68a6,
         Status::Unreachable,
     ),
     (
         "Pointer",
         7844,
         7844,
-        "can only be created using the native code application programming interfaces.",
+        0xb184_ad6a_ba2e_0335,
         Status::Unreachable,
     ),
     (
         "RexxContext",
         8479,
         8479,
-        "They cannot be directly created by the user.",
+        0x2483_8a93_6825_d0a0,
         Status::NotCovered,
     ),
     (
         "RexxInfo",
         8876,
         8876,
-        "other instances cannot be created or copied.",
+        0x0679_4370_edd5_9c54,
         Status::NotCovered,
     ),
     (
         "StackFrame",
         10341,
         10341,
-        "StackFrame instances cannot be directly created by the user.",
+        0x14dc_afab_6908_063f,
         Status::NotCovered,
     ),
     (
         "VariableReference",
         13490,
         13491,
-        "Calling the new method to create a VariableReference instance is not allowed.",
+        0xfc72_ceb3_abda_08cc,
         Status::NotCovered,
     ),
 ];
 
-/// The file every [`UNCONSTRUCTIBLE`] sentence is in.
+/// The file every [`UNCONSTRUCTIBLE`] passage is in.
 pub const UNCONSTRUCTIBLE_BOOK: &str = "utilityclasses.xml";
 
 /// Placeholders the class tables use for the two concatenation operators that
@@ -702,9 +705,9 @@ pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
         "~new constructs, or one opted in with a committed construction".into(),
         "program. `not-covered` says no construction program is committed and".into(),
         "CARRIES NO CLAIM ABOUT THE ORACLE. `unreachable` is grounded in a".into(),
-        "sentence of the reference itself and belongs to the classes whose".into(),
-        "sentence says instances come only from native code; each such".into(),
-        "sentence is re-read at the line it cites on every run.".into(),
+        "passage of the reference itself and belongs to the classes whose".into(),
+        "passage says instances come only from native code; each such".into(),
+        "passage is re-read at the line it cites on every run.".into(),
         String::new(),
         format!(
             "`construction` is the Rexx expression a method row's instance arm \

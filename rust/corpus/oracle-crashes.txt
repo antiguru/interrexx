@@ -191,7 +191,7 @@ a string reaches a class field write.
 The neighbour that bounds it: the same metaclass whose `NEW` forwards
 (`forward class (super)`) answers rc 0 and builds the class, and the same
 `::METHOD new CLASS` reached *directly* -- `.MyMeta~new("k")~id` -- is a clean
-Error 97.1 (object "x" does not understand message "ID") at rc 159. So it is
+Error 97.1 at rc 159. So it is
 the cast inside `subclass`, not the overridden `NEW` itself, and a reader
 shortening this program to the direct send measures the wrong thing.
 

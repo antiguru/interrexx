@@ -342,7 +342,7 @@ fn an_operator_followed_by_equals_is_an_assignment_shortcut() {
 fn an_exponent_sign_joins_the_symbol_only_when_digits_follow() {
     // Measured: `say 1e+5` prints 1E+5 and `say 1.5e-3` prints 1.5E-3, so the
     // sign is inside the symbol. With `y = 5`, `say 1e+y` fails with
-    // `Nonnumeric value ("1E") used in arithmetic operation` and `say 1e5+y`
+    // error 41.1 with the value `1E` as its first insert and `say 1e5+y`
     // prints 100005, so there the sign is an operator and the symbol stops
     // before it.
     let toks = scan_ok("1e+5");
