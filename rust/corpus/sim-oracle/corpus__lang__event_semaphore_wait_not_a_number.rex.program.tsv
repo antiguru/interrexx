@@ -1,3 +1,3 @@
-# The oracle's outcomes of corpus/lang/event_semaphore_wait_not_a_number.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/event_semaphore_wait_not_a_number.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
-5	168	f2e42118db453743	rc 168, stdout 0 lines, stderr 3 lines
+10	168	f2e42118db453743	rc 168, stdout 0 lines, stderr 3 lines

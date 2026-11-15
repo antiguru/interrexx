@@ -1,3 +1,3 @@
-# The oracle's outcomes of corpus/lang/message_notify_untrapped.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/message_notify_untrapped.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
-5	214	840141c4c611fecc	rc 214, stdout 1 lines, stderr 4 lines
+10	214	840141c4c611fecc	rc 214, stdout 1 lines, stderr 4 lines
