@@ -123,9 +123,15 @@ enum Target {
     /// program owns and which stays open -- measured, such an object's
     /// `~state` is still `READY` after the command while its bytes are on
     /// disk.
+    ///
+    /// `emptied_late` marks a `REPLACE` of the file the input reads: it is
+    /// opened without emptying it where it is resolved, so that an open that
+    /// fails still keeps the command from running, and emptied only where
+    /// its deferred lines are written, after the input has been read.
     Stream {
         object: ObjRef,
         qualified: Option<Vec<u8>>,
+        emptied_late: bool,
     },
 }
 
@@ -147,6 +153,7 @@ impl Target {
                 Target::Stream {
                     object,
                     qualified: None,
+                    ..
                 },
                 Origin::Stream(source),
             ) => object == source,
@@ -378,17 +385,33 @@ impl IoContext {
             }
             let rest = split_lines(&std::mem::take(&mut *self.carry.borrow_mut()));
             self.write_lines(interp, target, 0, &rest)?;
+            self.write_deferred_again(interp, &rest)?;
         }
         self.close_named(interp)
     }
 
-    /// Closes each named stream this redirection opened.
+    /// The lines of a deferred output, written once more to an error target
+    /// it shares: measured, a stem that is the input, the output and the error
+    /// ends up holding everything the command wrote twice over, the second
+    /// time after the first, and so does a file.
+    fn write_deferred_again(&self, interp: &mut Interp, lines: &[Vec<u8>]) -> Result<(), Failure> {
+        if self.deferred != Some(Stream::Output) || !self.shares_one_target() {
+            return Ok(());
+        }
+        let Some(error) = &self.error else {
+            return Ok(());
+        };
+        self.write_lines(interp, error, 0, lines)
+    }
+
+    /// Closes each named stream this redirection opened, an error target
+    /// that shares the output's file among them, which is a stream of its own.
     fn close_named(&self, interp: &mut Interp) -> Result<(), Failure> {
-        let error = self.error.as_ref().filter(|_| !self.shares_one_target());
-        for target in self.output.iter().chain(error) {
+        for target in self.output.iter().chain(&self.error) {
             if let Target::Stream {
                 object,
                 qualified: Some(_),
+                ..
             } = *target
             {
                 let caller = interp.caller();
@@ -412,6 +435,7 @@ impl IoContext {
                 self.begin_target(interp, target, 0)?;
             }
             self.write_lines(interp, target, 0, out)?;
+            self.write_deferred_again(interp, out)?;
         }
         // **One object for both streams is written once.** Everything the
         // command produced is in `out` and `err` is empty.
@@ -635,16 +659,28 @@ impl Interp {
             }
             None => (Input::None, Origin::Other),
         };
+        let input_name = match &origin {
+            Origin::Name(name) => Some(name.as_slice()),
+            _ => None,
+        };
         let output = match output {
-            Some((target, option, local)) => {
-                Some(self.output_target(code_for(local), target, option, Stream::Output)?)
-            }
+            Some((target, option, local)) => Some(self.output_target(
+                code_for(local),
+                target,
+                option,
+                Stream::Output,
+                input_name,
+            )?),
             None => None,
         };
         let error = match error {
-            Some((target, option, local)) => {
-                Some(self.output_target(code_for(local), target, option, Stream::Error)?)
-            }
+            Some((target, option, local)) => Some(self.output_target(
+                code_for(local),
+                target,
+                option,
+                Stream::Error,
+                input_name,
+            )?),
             None => None,
         };
         let deferred = if output
@@ -782,6 +818,7 @@ impl Interp {
         target: &Redirection,
         option: OutputOption,
         stream: Stream,
+        input_name: Option<&[u8]>,
     ) -> Result<Target, Failure> {
         let append = option == OutputOption::Append;
         match target {
@@ -797,21 +834,34 @@ impl Interp {
                 let object = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(object);
                 self.trace_redirect_target(stream, object)?;
-                self.using_output_target(object, option)
+                self.using_output_target(object, option, input_name)
             }
             Redirection::Stream(expression) => {
                 let name = self.redirect_stream_name(code, expression, stream)?;
-                let mode: &[u8] = match append {
-                    true => b"WRITE APPEND",
-                    false => b"WRITE REPLACE",
-                };
-                let object = self.open_named_stream(&name, mode, false)?;
-                Ok(Target::Stream {
-                    object,
-                    qualified: Some(name),
-                })
+                self.named_output_target(name, append, input_name)
             }
         }
+    }
+
+    /// The file `qualified` opened as an output target, emptied now for a
+    /// `REPLACE` unless it is the file the input reads.
+    fn named_output_target(
+        &mut self,
+        qualified: Vec<u8>,
+        append: bool,
+        input_name: Option<&[u8]>,
+    ) -> Result<Target, Failure> {
+        let emptied_late = !append && input_name == Some(qualified.as_slice());
+        let mode: &[u8] = match append || emptied_late {
+            true => b"WRITE APPEND",
+            false => b"WRITE REPLACE",
+        };
+        let object = self.open_named_stream(&qualified, mode, false)?;
+        Ok(Target::Stream {
+            object,
+            qualified: Some(qualified),
+            emptied_late,
+        })
     }
 
     /// `WITH OUTPUT USING expr`, in `createOutputTarget`'s own order: a stem,
@@ -821,6 +871,7 @@ impl Interp {
         &mut self,
         object: ObjRef,
         option: OutputOption,
+        input_name: Option<&[u8]>,
     ) -> Result<Target, Failure> {
         let append = option == OutputOption::Append;
         // **Whether an option was written matters here, not just which one.**
@@ -843,18 +894,11 @@ impl Interp {
             return Ok(Target::Stream {
                 object,
                 qualified: None,
+                emptied_late: false,
             });
         }
         if let Some(path) = self.file_object_path(object)? {
-            let mode: &[u8] = match append {
-                true => b"WRITE APPEND",
-                false => b"WRITE REPLACE",
-            };
-            let opened = self.open_named_stream(&path, mode, false)?;
-            return Ok(Target::Stream {
-                object: opened,
-                qualified: Some(path),
-            });
+            return self.named_output_target(path, append, input_name);
         }
         if self.is_ordered_collection(object) {
             return Ok(Target::Collection { object, append });
@@ -921,7 +965,27 @@ impl Interp {
                 }
                 Ok(1)
             }
-            // Opened, and truncated for `REPLACE`, where it was resolved.
+            Target::Stream {
+                object,
+                ref qualified,
+                emptied_late: true,
+            } => {
+                let caller = self.caller();
+                self.send_message(object, b"CLOSE", None, &[], caller)?;
+                let option = self.text(b"WRITE REPLACE");
+                self.roots.activity_mut().push_temp(option);
+                let caller = self.caller();
+                let answer = self
+                    .send_message(object, b"OPEN", None, &[Some(option)], caller)?
+                    .unwrap_or(ObjRef::NIL);
+                let answered = self.string_value_text(answer)?;
+                if answered != b"READY:" {
+                    let qualified = qualified.as_deref().unwrap_or_default();
+                    return Err(Raised::stream_not_writeable(qualified, &answered).into());
+                }
+                Ok(1)
+            }
+            // Opened, and emptied for `REPLACE`, where it was resolved.
             Target::Stream { .. } | Target::Queue { .. } => Ok(1),
         }
     }

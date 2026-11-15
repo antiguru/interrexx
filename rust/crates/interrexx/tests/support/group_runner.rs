@@ -24,6 +24,9 @@
 
 #[path = "group_runner/bytes/mod.rs"]
 mod bytes;
+#[cfg(test)]
+#[path = "group_runner/tests.rs"]
+mod tests;
 use bytes::contains;
 pub use bytes::renamed;
 
@@ -332,13 +335,40 @@ pub fn without_rxfuncquery(frm: &Path) {
     fs::write(frm, kept.join(&b'\n')).expect("cannot rewrite the copied ooTest.frm");
 }
 
+/// The line that reports the interpreter's version, which ends with the date
+/// it was built.
+const VERSIONED: &str = "Interpreter:";
+
+/// The month names a build date spells.
+const MONTHS: [&str; 12] = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/// `line` without the build date it ends with, `d Mon yyyy`, and the blanks
+/// before it; a line that does not end with a date of that shape is kept
+/// whole, so that a change to the form shows as a difference.
+fn without_build_date(line: &str) -> &str {
+    let words: Vec<&str> = line.rsplitn(4, ' ').collect();
+    let [year, month, day, rest] = words[..] else {
+        return line;
+    };
+    let digits = |word: &str, lengths: &[usize]| {
+        lengths.contains(&word.len()) && word.bytes().all(|b| b.is_ascii_digit())
+    };
+    if digits(day, &[1, 2]) && MONTHS.contains(&month) && digits(year, &[4]) {
+        rest.trim_end()
+    } else {
+        line
+    }
+}
+
 /// `stdout` with what differs between any two runs of one side masked: each
-/// timing line's duration and each detail header's timestamp. The lines of an
-/// error report and the built-in levels of a traceback are cut as well, since
-/// the message text and the built-in levels are not specified: ooTest, the
-/// program here, writes the traceback of an error its tests meet to stdout,
-/// and it is not this repository's to change. Every other stdout line is
-/// compared whole.
+/// timing line's duration, each detail header's timestamp and the build date
+/// the version line ends with. The lines of an error report and the built-in
+/// levels of a traceback are cut as well, since the message text and the
+/// built-in levels are not specified: ooTest, the program here, writes the
+/// traceback of an error its tests meet to stdout, and it is not this
+/// repository's to change. Every other stdout line is compared whole.
 pub fn masked(stdout: &[u8]) -> Vec<u8> {
     mask_timings(&crate::support::error_text::cut_report_lines(stdout))
 }
@@ -357,6 +387,9 @@ fn mask_timings(stdout: &[u8]) -> Vec<u8> {
     let lines: Vec<&str> = text
         .split('\n')
         .map(|line| {
+            if line.starts_with(VERSIONED) {
+                return without_build_date(line.trim_end());
+            }
             TIMINGS
                 .iter()
                 .chain(STAMPED)
