@@ -264,7 +264,8 @@ A library is loaded for the process, not for one instance. Its package entry's
 loader runs once, when the first instance of the process loads the library. An
 instance that loads the library while another instance that loaded it is still
 live runs no loader: the two use one copy of the library, its static storage
-included. Such a load completes only once the loader has returned, so no
+included. Such a load, and a load that another thread makes through the
+instance running the loader, completes only once the loader has returned, so no
 instance calls a routine of the library before its loader has finished, except
 where [the re-entrancy rule](r:native.loading.reentrant) lets it go on. A load
 waits for the loader of that library only: a load of another library, which no
@@ -312,7 +313,13 @@ ones.
 r[native.loading.reentrant]
 A thread that is running a loader or an unloader never waits for its own hook.
 What the [shared](r:native.loading.shared) and [again](r:native.loading.again)
-rules make other threads wait for, it goes on without. A loader that loads, with
+rules make other threads wait for, it goes on without. While a loader or an
+unloader runs, the instance running it is in a call into a native library, in
+the sense of [Deviation 176](r:native.threads.attach.deviation.176): a message
+that an attached thread sends to that instance meanwhile runs without waiting
+for the hook to return. A hook may therefore wait for a thread that calls into
+the instance running it, for instance through a load that waits for the loader
+another thread runs. A loader that loads, with
 the thread context it is handed, the library whose loader it is finds the
 library loaded: the load completes at once and runs no loader. A loader or an
 unloader that loads another library, or creates an instance that loads a
@@ -324,7 +331,11 @@ turn, the load finds it and runs no second loader. An instance a hook creates is
 created without waiting, and is a live instance like any other. An instance that
 an unloader of the last instance creates shares the libraries that instance
 holds, as the last instance is still live: a library it loads that the process
-holds runs no loader, and its termination is not the last and runs no unloader.
+holds runs no loader, and its termination, while that instance is live, is not
+the last and runs no unloader. Where it is still live once that instance's
+termination has ended, it is the last live instance, but its own termination
+runs none of the unloaders that termination ran a second time, and an instance
+created after it loads those libraries afresh.
 A load does not wait for a loader where the thread running that loader waits,
 directly or through other such waits, for the loading thread, or for a thread
 that created its instance: the load finds the library loaded and runs no
