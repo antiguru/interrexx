@@ -849,6 +849,14 @@ say 'D>' c~message c~errorText c~position c~program
     // Every frame and traceback entry that is not a line of the user's own
     // program is a library frame and says no source is available. The run
     // must have produced some.
+    // What 101.24 and 101.25 show after the package, read from the table.
+    let tails: Vec<String> = ["⟨101.24¦M¦S¦\u{1}⟩", "⟨101.25¦R¦\u{1}⟩"]
+        .iter()
+        .map(|marker| {
+            let text = interrexx_inventory::errors::expand(marker);
+            text[text.find('\u{1}').expect("the sentinel is in the text") + 1..].to_string()
+        })
+        .collect();
     let mut library_frames = 0;
     for line in output.lines() {
         let body = line
@@ -863,7 +871,7 @@ say 'D>' c~message c~errorText c~position c~program
         }
         library_frames += 1;
         assert!(
-            body.ends_with("(no source available)."),
+            tails.iter().any(|tail| body.ends_with(tail.as_str())),
             "a library frame renders text (redacted):\n{shown}"
         );
     }
@@ -872,7 +880,7 @@ say 'D>' c~message c~errorText c~position c~program
         "no library frame was rendered (redacted):\n{shown}"
     );
     assert!(
-        output.contains("(no source available)"),
+        tails.iter().any(|tail| output.contains(tail.as_str())),
         "the uncaught run rendered no library frame (redacted):\n{shown}"
     );
 }

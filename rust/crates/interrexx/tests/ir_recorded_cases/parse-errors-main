@@ -8,8 +8,8 @@ say 'abc
 ----
 rc> 250
 err>      2 *-* say 'abc
-err> Error 6 running /nonexistent/ir-dual-case.rex line 2:  Unmatched "/*" or quote.
-err> Error 6.2:  Unmatched single quote (').
+err> Error 6 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 6.2:
 
 # a grammar error inside a block, echoed without the block's indent
 program
@@ -20,8 +20,8 @@ end
 ----
 rc> 221
 err>      3 *-* if then
-err> Error 35 running /nonexistent/ir-dual-case.rex line 3:  Invalid expression.
-err> Error 35.929:  Missing expression in logical expression list.
+err> Error 35 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 35.929:
 
 # an END after a label's clause, echoed alone
 program
@@ -31,8 +31,8 @@ lab: nop
 ----
 rc> 246
 err>      3 *-* end
-err> Error 10 running /nonexistent/ir-dual-case.rex line 3:  Unexpected or unmatched END.
-err> Error 10.1:  END has no corresponding DO, LOOP, or SELECT.
+err> Error 10 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 10.1:
 
 # a continued clause, echoed joined
 program
@@ -42,5 +42,5 @@ if ,
 ----
 rc> 221
 err>      2 *-* if ,  then
-err> Error 35 running /nonexistent/ir-dual-case.rex line 2:  Invalid expression.
-err> Error 35.929:  Missing expression in logical expression list.
+err> Error 35 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 35.929:

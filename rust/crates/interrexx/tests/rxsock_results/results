@@ -5,7 +5,7 @@ program
 say rxfuncquery('SockSocket')
 signal on syntax
 say SockSocket('AF_INET', 'SOCK_STREAM', 0)
-syntax: say condition('o')~code condition('o')~message
+syntax: say condition('o')~code
 say .context~package~loadLibrary('RXSOCK') .context~package~loadLibrary('rxsock')
 say rxfuncquery('SockSocket') rxfuncquery('socksoclose') rxfuncquery('SockPSock_Errno')
 say rxfuncadd('SockLoadFuncs', 'rxsock', 'SockLoadFuncs')
@@ -15,7 +15,7 @@ say SockVersion()
 rc 0
 [stdout]
 1
-43.1 Could not find routine "SOCKSOCKET".
+43.1
 0 1
 0 0 0
 0
@@ -76,52 +76,52 @@ SockIoctl(99999, 'FIONBIO', 1)
 SockIoctl(99999, 'FIONREAD', 'v')
 SockIoctl(99999, 'BOGUS', 1)
 ----
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 1 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 1 expected.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "1.5".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "2147483648".
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.901
+ERR 88.901
+ERR 88.907
+ERR 88.907
+ERR 88.907
 "-1"
 "-1"
-ERR 88.901 Missing argument; argument 2 is required.
-ERR 88.909 Argument 2 must have a string value.
-ERR 88.922 Too many arguments in invocation; 3 expected.
-ERR 88.901 Missing argument; argument 3 is required.
-ERR 88.907 Argument 3 must be in the range -2147483648 to 2147483647; found "x".
-ERR 40.1 External routine "SOCKRECV" failed.
-ERR 88.907 Argument 2 must be in the range -2147483648 to 2147483647; found "x".
+ERR 88.901
+ERR 88.909
+ERR 88.922
+ERR 88.901
+ERR 88.907
+ERR 40.1
+ERR 88.907
 "-1"
-ERR 88.907 Argument 2 must be in the range -2147483648 to 2147483647; found "x".
+ERR 88.907
 "-1"
-ERR 88.921 Argument 4 must be a valid double value; found "x".
-ERR 88.922 Too many arguments in invocation; 4 expected.
+ERR 88.921
+ERR 88.922
 "0"
-ERR 88.907 Argument 3 must be in the range -2147483648 to 2147483647; found "x".
-ERR 88.901 Missing argument; argument 2 is required.
-ERR 88.901 Missing argument; argument 3 is required.
-ERR 88.922 Too many arguments in invocation; 4 expected.
-ERR 88.901 Missing argument; argument 4 is required.
-ERR 88.922 Too many arguments in invocation; 5 expected.
-ERR 88.922 Too many arguments in invocation; 2 expected.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.901 Missing argument; argument 2 is required.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.901 Missing argument; argument 3 is required.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 40.1 External routine "SOCKSOCKET" failed.
-ERR 40.1 External routine "SOCKSOCKET" failed.
-ERR 40.1 External routine "SOCKSOCKET" failed.
-ERR 40.1 External routine "SOCKGETSOCKOPT" failed.
-ERR 40.1 External routine "SOCKSETSOCKOPT" failed.
-ERR 40.1 External routine "SOCKIOCTL" failed.
+ERR 88.907
+ERR 88.901
+ERR 88.901
+ERR 88.922
+ERR 88.901
+ERR 88.922
+ERR 88.922
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 40.1
+ERR 40.1
+ERR 40.1
+ERR 40.1
+ERR 40.1
+ERR 40.1
 "-1"
 "-1"
 "-1"
@@ -386,7 +386,7 @@ call SysSleep 0.1
 say 'send' SockSend(c, 'more') errno
 signal on syntax
 say 'recv' SockRecv(c, 'buf', -1)
-syntax: say 'ERR' condition('o')~code condition('o')~message
+syntax: say 'ERR' condition('o')~code
 say SockClose(c) SockClose(l)
 ::requires 'rxsock' LIBRARY
 ----
@@ -404,7 +404,7 @@ recv 0 [] 0
 close 0
 send -1 32
 send -1 32
-ERR 40.1 External routine "SOCKRECV" failed.
+ERR 40.1
 0 0
 [stderr]
 
@@ -502,12 +502,12 @@ signal on syntax
 call SockSelect , 'w.', , 0
 say 'not raised'
 exit
-syntax: say condition('o')~code condition('o')~message
+syntax: say condition('o')~code
 ::requires 'rxsock' LIBRARY
 ----
 rc 0
 [stdout]
-40.1 External routine "SOCKSELECT" failed.
+40.1
 [stderr]
 
 # Socket options: booleans, the linger pair (16-bit halves, missing words
@@ -803,78 +803,59 @@ eval-packages
 .HostInfo~new('no.such.invalid')~addr
 .HostInfo~new('127.1')~makeStem['!ADDR.0']
 ----
-ERR 88.905 Argument socket must be a positive whole number; found "AF_INET6".
-ERR 88.905 Argument socket must be a positive whole number; found "0".
-ERR 88.905 Argument socket must be a positive whole number; found "1.5".
-ERR 93.914 Method argument domain must be one of AF_INET; found "AF_INET6".
-ERR 93.914 Method argument type must be one of SOCK_STREAM
-SOCK_DGRAM
-SOCK_RAW; found "SOCK_SEQPACKET".
-ERR 93.914 Method argument protocol must be one of 0
-IPPROTO_UDP
-IPPROTO_TCP; found "6".
+ERR 88.905
+ERR 88.905
+ERR 88.905
+ERR 93.914
+ERR 93.914
+ERR 93.914
 "0"
-ERR 93.902 Too many arguments in invocation of method; 3 expected.
+ERR 93.902
 "0"
-ERR 93.901 Not enough arguments for method; 1 expected.
-ERR 93.914 Method argument 1 must be one of SO_DEBUG
-SO_REUSEADDR
-SO_TYPE
-SO_ERROR
-SO_DONTROUTE
-SO_BROADCAST
-SO_SNDBUF
-SO_RCVBUF
-SO_KEEPALIVE
-SO_OOBINLINE
-SO_LINGER
-SO_RCVLOWAT
-SO_SNDLOWAT
-SO_RCVTIMEO
-SO_SNDTIMEO
-SO_USELOOPBACK; found "BOGUS".
-ERR 93.902 Too many arguments in invocation of method; 1 expected.
+ERR 93.901
+ERR 93.914
+ERR 93.902
 "STREAM"
 "0 0"
-ERR 93.901 Not enough arguments for method; 2 expected.
-ERR 93.903 Missing argument in method; argument 1 is required.
-ERR 93.907 Method argument 2 must be a positive whole number; found "".
+ERR 93.901
+ERR 93.903
+ERR 93.907
 "0"
 "The NIL object"
 "The NIL object"
 "0"
-ERR 88.914 Argument hostaddr must be an instance of the INETADDRESS class.
-ERR 88.914 Argument hostaddr must be an instance of the INETADDRESS class.
-ERR 88.904 The backlog argument must be zero or a positive whole number; found "-1".
-ERR 88.904 The backlog argument must be zero or a positive whole number; found "x".
-ERR 88.911 Argument length is an invalid length value; found "-1".
+ERR 88.914
+ERR 88.914
+ERR 88.904
+ERR 88.904
+ERR 88.911
 "The NIL object"
-ERR 88.905 Argument length must be a positive whole number; found "0".
-ERR 88.914 Argument address must be an instance of the INETADDRESS class.
-ERR 93.901 Not enough arguments for method; 4 expected.
-ERR 88.914 Argument reads must be an instance of the Array class.
+ERR 88.905
+ERR 88.914
+ERR 93.901
+ERR 88.914
 "0"
 "0"
 "The NIL object"
 "The NIL object"
 "0.0.0.0"
 "AF_INET"
-ERR 93.901 Not enough arguments for method; 1 expected.
-ERR 93.902 Too many arguments in invocation of method; 1 expected.
-ERR 93.902 Too many arguments in invocation of method; 0 expected.
+ERR 93.901
+ERR 93.902
+ERR 93.902
 "127.0.0.1"
 "127.0.0.1"
-ERR 93.901 Not enough arguments for method; 2 expected.
-ERR 93.902 Too many arguments in invocation of method; 3 expected.
-ERR 88.907 Argument port must be in the range 0 to 65535; found "70000".
-ERR 88.907 Argument port must be in the range 0 to 65535; found "x".
-ERR 93.914 Method argument family must be one of AF_INET; found "AF_INET6".
+ERR 93.901
+ERR 93.902
+ERR 88.907
+ERR 88.907
+ERR 93.914
 "AF_INET"
 "1.2.3.4.5"
 "INADDR_any"
 " 80 "
-ERR 93.901 Not enough arguments for method; 1 expected.
-ERR 93.902 Too many arguments in invocation of method; 1 expected.
+ERR 93.901
+ERR 93.902
 Array[1]: 127.0.0.1
 Array[0]: 
 "HOSTINFO.!ADDR"
@@ -891,16 +872,16 @@ say s~open
 say s~close
 signal on syntax name e1
 s~arrayIn
-e1: say condition('o')~code condition('o')~message
+e1: say condition('o')~code
 signal on syntax name e2
 s~lineIn(, 2)
-e2: say condition('o')~code condition('o')~message
+e2: say condition('o')~code
 signal on syntax name e3
 s~charIn(, -1)
-e3: say condition('o')~code condition('o')~message
+e3: say condition('o')~code
 signal on syntax name e4
 s = .StreamSocket~new('x')
-e4: say condition('o')~code condition('o')~message
+e4: say condition('o')~code
 say '['s~lineIn(, 0)']'
 ::requires 'streamsocket.cls'
 ----
@@ -910,10 +891,10 @@ READY [READY:] 127.0.0.1:1 0 0
 0 [] [] 0
 NOTREADY: ECONNREFUSED
 READY: ECONNREFUSED
-93.963 Call to unsupported or unimplemented method.
-93.908 Method argument 2 must not exceed 1; found "&3".
-93.906 Method argument 2 must be zero or a positive whole number; found "-1".
-93.914 Method argument 1 must be one of a Socket class instance; found "x".
+93.963
+93.908
+93.906
+93.914
 []
 [stderr]
 
@@ -943,7 +924,7 @@ parse var text 'boundary="' boundary '"'
 say text~changeStr(boundary, 'B')~changeStr('0d0a'x, '|')
 signal on syntax
 m~addPart(.mimemultipart~new)
-syntax: say condition('o')~code condition('o')~message
+syntax: say condition('o')~code
 ::requires 'mime.cls'
 ----
 rc 0
@@ -956,7 +937,7 @@ multipart/mixed  []
 MIME-Version: 1.0|Content-Type: multipart/mixed; boundary="B"||
 ===ooRexx=Mime=Part=== == 1
 MIME-Version: 1.0|Content-Type: multipart/mixed; boundary="B"||--B|MIME-Version: 1.0|Content-Type: text/plain|Content-Transfer-Encoding: 7bit|Content-ID: <id>|Content-Description: desc|Content-Disposition: inline||one|..|..|||--B|MIME-Version: 1.0|Content-Type: text/html||||--B--|
-93.948 Method argument MIMEPART must be of the &2 class.
+93.948
 [stderr]
 
 # smtp.cls without a server: its defaults, the content setter, and a
@@ -970,19 +951,19 @@ msg~content = .mimepart~new
 say msg~content~changeStr('0d0a'x, '|')
 signal on syntax name e1
 msg~content = .object~new
-e1: say condition('o')~code condition('o')~message
+e1: say condition('o')~code
 m = .smtp~new
 say m~smtperrno '['m~authid']['m~password']['m~response']' m~cmdresponse~items m~debug m~localhost
 say m~connect('127.0.0.1:1') m~cmdresponse~toString('L', '|') '['m~smtperrno']'
 say m~connect('127.0.0.1:x')
 signal on syntax name e2
 m~send('x')
-e2: say condition('o')~code condition('o')~message
+e2: say condition('o')~code
 m~localhost = 'myhost'
 say m~localhost
 signal on syntax name e3
 m~connect('127.0.0.1:1')
-e3: say condition('o')~code condition('o')~message
+e3: say condition('o')~code
 ::requires 'smtp.cls'
 ----
 rc 0
@@ -990,13 +971,13 @@ rc 0
 [][][] 0
 plain
 MIME-Version: 1.0|Content-Type: text/plain|||
-93.948 Method argument MIMEPART must be of the MIMEMULTIPART class.
+93.948
 SMTPERRNO [][][] 0 0 127.0.0.l
 -1 |EHLO 127.0.0.l| [   ]
 -1
-93.948 Method argument 1 must be of the SMTPMsg class.
+93.948
 myhost
-97.1 Object "myhost" does not understand message "NAME".
+97.1
 [stderr]
 
 # The interpreter's own descriptors (the timer's wake socket the signal

@@ -1,30 +1,33 @@
-count 37
-/* A comparator's compare runs under a METHOD frame of the sortWith or
-   stableSortWith that called it: its arguments are the comparator, its
-   target the receiver, its executable Array's method, and it has no line.
-   A condition raised in compare lists the frame too. */
+count 40
+/* A comparator's compare that sortWith or stableSortWith runs has its own
+   level first in its stackFrames, and the program's level, at the line of
+   the sort, last (r[class.stackframe.builtin]). A condition raised in
+   compare lists compare's level first too. Whether the sort has a level of
+   its own between them is not specified, so only levels of Rexx code, whose
+   trace line is numbered (r[class.stackframe.traceline]), are printed. */
 test = .array~of(2, 1)
 c = .recorder~new
 test~sortWith(c)
-call show 'sortWith', c~frames, test, c
+call show 'sortWith', c~frames, c
 test~stableSortWith(c)
-call show 'stableSortWith', c~frames, test, c
+call show 'stableSortWith', c~frames, c
 signal on syntax
 test~sortWith(.failing~new)
 exit
 syntax:
-  frames = condition('o')~stackFrames
-  do f over frames
-    if f~type \== 'PROGRAM' then say 'condition' f~type f~name f~arguments~items f~traceLine
+  do f over condition('o')~stackFrames
+    if f~traceLine~word(1)~datatype('W') then
+      say 'condition' f~type filespec('name', f~name) f~line f~traceLine
   end
   exit
 
 show: procedure
-  use arg tag, frames, test, c
-  f = frames[2]
-  say tag f~type f~name f~line (f~target == test) f~arguments~items (f~arguments[1] == c)
-  say tag (f~executable == .Array~method(f~name)) f~traceLine
-  say tag 'next' frames[3]~type
+  use arg tag, frames, c
+  f = frames[1]
+  say tag f~type f~name f~line (f~target == c),
+    (f~executable == .recorder~method('COMPARE')) f~traceLine
+  f = frames[frames~items]
+  say tag 'last' f~type f~line
   return
 
 ::class recorder

@@ -1,7 +1,9 @@
 /* While a package's ::REQUIRES install, the package is a level of its own
    stopped on the directive, below the required file's levels: in a required
    prologue, a ::CONSTANT expression, a trapped condition's frames and
-   traceback, and under the NEW of .Package and .Routine. */
+   traceback, and under the NEW of .Package and .Routine. A built-in level is
+   not printed: whether a build has one is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 say 'main' .c~s~makestring('l', ',')
 signal on syntax name s1
 call caller.rex
@@ -19,8 +21,14 @@ p = .package~new('pk2', .array~of('say .c2~s~makestring("l", ",")', '::class c2'
 exit
 show:
   c = condition('o')
-  say c~code c~traceback~makearray~makestring('l', '|')
-  do f over c~stackframes; say '  ' f~type filespec('name', f~name) f~line; end
+  tb = .array~new
+  do l over c~traceback
+    if word(l, 1) \== '*-*' then tb~append(l)
+  end
+  say c~code tb~makestring('l', '|')
+  do f over c~stackframes
+    if word(f~traceLine, 1) \== '*-*' then say '  ' f~type filespec('name', f~name) f~line
+  end
   return
 ::requires 'pro.cls'
 ::requires 'cfr.cls'

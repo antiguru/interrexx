@@ -17,6 +17,24 @@ fn rendered(outcome: &crate::Outcome) -> String {
     rendered
 }
 
+/// `rendered` with the text after the code of each `Error N.M:` line cut:
+/// the code is the contract and the text is not (`r[conv.error.text]`).
+fn without_subcode_texts(rendered: &str) -> String {
+    let mut out = String::new();
+    for line in rendered.lines() {
+        let cut = line.strip_prefix("err> Error ").and_then(|rest| {
+            let (code, _) = rest.split_once(':')?;
+            let (major, sub) = code.split_once('.')?;
+            let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
+            (digits(major) && digits(sub))
+                .then(|| &line[..line.len() - rest.len() + code.len() + 1])
+        });
+        out.push_str(cut.unwrap_or(line));
+        out.push('\n');
+    }
+    out
+}
+
 /// **An error `SysStemSort` raises from inside its sort is reported when
 /// nothing traps it**, where the oracle crashes (`corpus/oracle-crashes.txt`
 /// entry 37, upstream SF #2068). No differential can cover these, so the case
@@ -39,7 +57,7 @@ fn an_untrapped_error_inside_the_sort_is_reported() {
                 case.input.clone().into_bytes(),
                 crate::Invocation::none(),
             );
-            rendered(&outcome)
+            without_subcode_texts(&rendered(&outcome))
         });
     });
     assert!(cases > 0, "{UNTRAPPED_SORT_CASES} ran no case");

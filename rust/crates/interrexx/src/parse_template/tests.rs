@@ -540,9 +540,7 @@ fn a_positional_operand_must_be_a_whole_number_within_the_active_digits() {
         );
         assert_eq!(outcome.exit_code, 230, "{source}");
         assert!(
-            String::from_utf8_lossy(&outcome.stderr).contains(
-                "Error 26.4:  Positional pattern of PARSE template must be a whole number"
-            ),
+            String::from_utf8_lossy(&outcome.stderr).contains("Error 26.4:  "),
             "{source}: {}",
             String::from_utf8_lossy(&outcome.stderr)
         );

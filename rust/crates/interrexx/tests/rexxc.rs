@@ -125,11 +125,31 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
         // The message text of an error report is not specified, so a recorded
-        // answer holds the code and subcode of each report and not its text.
-        let bytes = error_text::cut_error_texts(bytes);
-        for line in escaped(&bytes).replace(&dir, "DIR").lines() {
-            let Some(line) = banner::recorded(line, oracle) else {
-                continue;
+        // answer holds the code and subcode of each report on stderr and not
+        // its text.
+        let bytes = if tag == "err" {
+            error_text::cut_error_texts(bytes)
+        } else {
+            bytes.to_vec()
+        };
+        let text = escaped(&bytes).replace(&dir, "DIR");
+        for line in banner::recorded(text.lines(), oracle) {
+            // The statuses 254 and 255 end a command that prints a message
+            // or the usage text, whose wording is not specified
+            // (`r[conv.error.text]`): each of their lines but the banner's
+            // is recorded as `<message>`.
+            let banner_line = [
+                "interrexx ",
+                "Build date: ",
+                "Addressing mode: ",
+                "Licensed under ",
+            ]
+            .iter()
+            .any(|prefix| line.starts_with(prefix));
+            let line = if matches!(status, Some(254 | 255)) && tag == "out" && !banner_line {
+                "<message>".to_string()
+            } else {
+                line
             };
             rendered.push_str(&format!("{tag}> {line}\n"));
         }
@@ -503,10 +523,7 @@ fn registered_registers_then_fails_to_resolve() {
     std::fs::remove_dir_all(&root).expect("the witness directory is removed");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(166), "{stderr}");
-    assert!(
-        stderr.contains("Error 90.999:  Unable to find external routine \"y\"."),
-        "{stderr}"
-    );
+    assert!(stderr.contains("Error 90.999:  "), "{stderr}");
 }
 
 #[test]

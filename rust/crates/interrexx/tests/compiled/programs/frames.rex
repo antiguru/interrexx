@@ -1,5 +1,5 @@
-do f over .context~stackFrames; say '['f~traceLine']' f~line; end
+do f over .context~stackFrames; say f~traceLine; say f~line; end
 call sub
 exit
-sub: do f over .context~stackFrames; say '['f~traceLine']'; end
+sub: do f over .context~stackFrames; say f~traceLine; end
 return

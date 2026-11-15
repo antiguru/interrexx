@@ -13,7 +13,7 @@ exit
 syntax:
   c = condition('O')
   say c~code c~position c~propagated
-  do l over c~traceback; say ' ' l; end
+  do l over c~traceback; if l~word(1)~datatype('W') then say ' ' l; end -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
   do f over c~stackframes; say ' ' f~type '['f~name']' f~line; end
   signal off syntax
   x = k~callr(.routine~new('rr', 'return 1 / 0'), .array~new)

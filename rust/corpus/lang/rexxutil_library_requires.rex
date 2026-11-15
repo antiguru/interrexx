@@ -1,6 +1,8 @@
 /* ::REQUIRES of the internal rexxutil and REXX packages as libraries: their
    routines join this package's imported routines, are found there before the
-   security manager is asked, and run under the name the call wrote. */
+   security manager is asked. The name a call wrote shows only in the trace
+   line of a built-in level, which is not specified
+   (r[class.stackframe.builtin]), so a failing call prints its code only. */
 p = .context~package
 say 'call' SysSleep(0)
 ir = p~importedRoutines
@@ -21,7 +23,7 @@ say '-- the manager is not asked for an imported routine'
 p~setSecurityManager(.collector~new)
 call managed
 
-say '-- a failing call names the routine as written'
+say '-- a failing call, written as a string and as a symbol'
 call quoted
 call symbol
 exit
@@ -36,9 +38,7 @@ symbol:
   return
 blamed:
   c = condition('o')
-  do line over c~traceback
-    if line~pos('Compiled') > 0 then say c~code line~strip
-  end
+  say c~code
   return
 
 ::routine managed

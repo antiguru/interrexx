@@ -1,33 +1,56 @@
-//! Drops the message text of an error report, and the frame lines of built-in
-//! methods, from a run's output.
+//! Drops the message text of an error report, and what a build may word or
+//! level differently, from a run's error stream.
 //!
 //! The text of a message is not specified (`r[conv.error.text]`): its code and
 //! subcode are. Whether a built-in method is a level of the traceback is not
 //! specified either (`r[class.stackframe.builtin]`). A comparison of this
-//! crate's output with the oracle's applies [`cut_error_texts`] to both sides,
-//! so that a difference in wording, or in which built-in levels a build shows,
-//! is not a difference in behaviour. A file of its own, so that a test binary
-//! without the rest of `support` can include it with `#[path]`.
+//! crate's output with the oracle's applies [`cut_error_texts`] to both sides'
+//! stderr, so that a difference in wording, or in which built-in levels a
+//! build shows, is not a difference in behaviour. Standard output is compared
+//! whole: a program that prints a message prints its code instead. The cut
+//! recognises a line by its structure, which the specification fixes, and
+//! never by a wording. A file of its own, so that a test binary without the
+//! rest of `support` can include it with `#[path]`.
 
-/// `bytes` with the message text of every error report dropped, so that only
-/// an error's code and subcode are observable (`r[conv.error.text]`). An
+/// `bytes`, a run's stderr, with the message text of every error report
+/// dropped, so that only an error's code and subcode are observable
+/// (`r[conv.error.text]`). An
 /// error is reported by two lines,
 /// `Error <code> running <file> line <n>:  <text>` and
 /// `Error <code>.<subcode>:  <text>` (`Error <code>:  <text>` where it fails
-/// before a program runs), and a line typed at an interactive
-/// trace stop is reported by two lines that start with `+++` and hold the
-/// code and the code with its subcode as the first word that ends in a colon.
-/// Each keeps its text up to the colon that ends the numbers and loses what
-/// follows. A line that shows a built-in method or routine as a level of a
-/// traceback is dropped whole, because a build may not have that level
-/// (`r[class.stackframe.builtin]`): the line that starts with blanks only, then
-/// `*-*`, and then `Compiled method "<name>" with scope "<scope>".` or
-/// `Compiled routine "<name>".`. The level of a method or routine written in
-/// Rexx, the library's included, is a numbered line and stays. Every other
-/// line is a separate comparison and stays exact. The
-/// comparisons between this crate and the oracle apply it to both sides, so
-/// that a difference in wording is not a difference in behaviour.
+/// before a program runs); each keeps its text up to the colon that ends the
+/// numbers and loses what follows. A line typed at an interactive trace stop
+/// is reported by two lines that start with `+++` and hold the code and the
+/// code with its subcode as the first word that ends in a colon
+/// (`r[env.debugging.input.error]`): each keeps `+++` and that word. The
+/// notice of interactive tracing is the other line that starts with `+++`
+/// and holds no word that ends in a colon (`r[env.debugging.notice]`): it
+/// keeps `+++`. The announcement of a routine or method in trace output, a
+/// line of blanks where a line number would stand and then `>I> ` or `<I< `
+/// (`r[instr.trace.tags]`), keeps the flag. A line that shows a built-in
+/// method or routine as a level of a traceback is dropped whole, because a
+/// build may not have that level (`r[class.stackframe.builtin]`): six blanks
+/// where a line number would stand, `*-* ` and a text that names the method
+/// or routine in double quotes and ends with a period, as every text that
+/// names one does (`r[conv.error.text]`). The level of a method or routine
+/// written in Rexx has a number (`r[class.stackframe.traceline]`) and stays,
+/// and so does an unnumbered line of any other text. Every other line is a
+/// separate comparison and stays exact.
 pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
+    cut(bytes, true)
+}
+
+/// [`cut_error_texts`] without the cut of a trace announcement: only the lines
+/// of an error report and the built-in levels of a traceback are touched, and
+/// every other line, a trace line included, stays whole. For a program's
+/// stdout, where trace output is compared.
+pub fn cut_report_lines(bytes: &[u8]) -> Vec<u8> {
+    cut(bytes, false)
+}
+
+/// The shared body of [`cut_error_texts`] and [`cut_report_lines`];
+/// `announcements` says whether the text of a trace announcement is cut too.
+fn cut(bytes: &[u8], announcements: bool) -> Vec<u8> {
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
     if had_trailing_newline {
@@ -36,7 +59,13 @@ pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
     let out: Vec<Vec<u8>> = lines
         .into_iter()
         .filter(|line| !is_built_in_frame_line(line))
-        .map(error_report_without_text)
+        .map(|line| {
+            if announcements {
+                error_report_without_text(&announcement_without_text(line))
+            } else {
+                error_report_without_text(line)
+            }
+        })
         .collect();
     let mut joined = out.join(&b'\n');
     if had_trailing_newline {
@@ -45,23 +74,39 @@ pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
     joined
 }
 
-/// Whether `line` is the traceback line of a built-in method or routine:
-/// blanks where a line number would stand, `*-* Compiled method "<name>" with
-/// scope "<scope>".` or `*-* Compiled routine "<name>".`. A numbered line, a
-/// trace line and any other text are not.
+/// The blanks that stand for the six columns of a line number, and the blank
+/// after them, in a trace line (`r[instr.trace.line]`).
+const NO_LINE_NUMBER: &[u8] = b"       ";
+
+/// Whether `line` has the structure of the traceback line of a built-in
+/// method or routine: [`NO_LINE_NUMBER`], `*-* `, and a text that holds a
+/// non-empty name in double quotes and ends with a period. A numbered line,
+/// a trace line, and an unnumbered line of other text are not.
 fn is_built_in_frame_line(line: &[u8]) -> bool {
-    let blanks = line.iter().take_while(|&&b| b == b' ').count();
-    let Some(rest) = line[blanks..].strip_prefix(b"*-* Compiled ") else {
+    let Some(text) = line
+        .strip_prefix(NO_LINE_NUMBER)
+        .and_then(|rest| rest.strip_prefix(b"*-* "))
+    else {
         return false;
     };
-    if blanks == 0 || !rest.ends_with(b"\".") {
-        return false;
+    let names = text
+        .split(|&b| b == b'"')
+        .skip(1)
+        .step_by(2)
+        .any(|quoted| !quoted.is_empty());
+    let quotes = text.iter().filter(|&&b| b == b'"').count();
+    names && quotes.is_multiple_of(2) && text.ends_with(b".")
+}
+
+/// `line` without the text after the flag of a trace announcement (blanks,
+/// then `>I> ` or `<I< `); any other line unchanged.
+fn announcement_without_text(line: &[u8]) -> Vec<u8> {
+    let blanks = line.iter().take_while(|&&b| b == b' ').count();
+    let rest = &line[blanks..];
+    if blanks > 0 && (rest.starts_with(b">I> ") || rest.starts_with(b"<I< ")) {
+        return line[..blanks + 3].to_vec();
     }
-    rest.strip_prefix(b"method \"").is_some_and(|quoted| {
-        quoted
-            .windows(b"\" with scope \"".len())
-            .any(|w| w == b"\" with scope \"")
-    }) || rest.starts_with(b"routine \"")
+    line.to_vec()
 }
 
 /// `line` up to and including the colon that ends an error report's numbers,
@@ -116,27 +161,22 @@ fn error_report_without_text(line: &[u8]) -> Vec<u8> {
     }
 }
 
-/// `line` up to and including its first word that ends in a colon, when it
+/// `+++` and the first word of `line` that ends in a colon, when `line`
 /// starts with `+++` and that word is a code (`42:`) or a code and subcode
 /// (`42.3:`), as `r[env.debugging.input.error]` shows an error reported at a
-/// stop; otherwise `line` unchanged. The notice is not an error line and has
-/// no such word.
+/// stop; `+++` alone when `line` is the notice, which has no word that ends
+/// in a colon (`r[env.debugging.notice]`); otherwise `line` unchanged.
 fn debug_error_without_text(line: &[u8]) -> Vec<u8> {
-    let mut at = 0;
-    for word in line.split(|&b| b == b' ') {
-        let end = at + word.len();
-        if let Some(number) = word.strip_suffix(b":")
-            && is_code(number)
-        {
-            return line[..end].to_vec();
+    let mut words = line.split(|&b| b == b' ').skip(1);
+    match words.find(|word| word.ends_with(b":")) {
+        None => b"+++".to_vec(),
+        Some(word) if is_code(&word[..word.len() - 1]) => {
+            let mut out = b"+++ ".to_vec();
+            out.extend_from_slice(word);
+            out
         }
-        if word.ends_with(b":") {
-            // The first colon-ended word is not a code: not an error line.
-            break;
-        }
-        at = end + 1;
+        Some(_) => line.to_vec(),
     }
-    line.to_vec()
 }
 
 /// Whether `word` is `<digits>` or `<digits>.<digits>`.
@@ -183,33 +223,35 @@ mod tests {
             b"Error 98 running REXX:\n".to_vec()
         );
         // A line typed at an interactive stop is reported with `+++` lines
-        // whose first colon-ended word is the code, then the code and subcode.
-        let debug = b"+++ Interactive trace.  Error 42:   Some wording.\n+++ Interactive trace.  Error 42.3:  Other: wording.\n";
-        assert_eq!(
-            cut_error_texts(debug),
-            b"+++ Interactive trace.  Error 42:\n+++ Interactive trace.  Error 42.3:\n".to_vec()
-        );
+        // whose first colon-ended word is the code, then the code and subcode;
+        // the words before it are not compared.
+        let debug = b"+++ Some words.  Error 42:   Some wording.\n+++ Some words.  Error 42.3:  Other: wording.\n";
+        assert_eq!(cut_error_texts(debug), b"+++ 42:\n+++ 42.3:\n".to_vec());
         let reworded = b"+++ Stopped.  Error 42:   Different wording.\n+++ Stopped.  Error 42.3:  Words: more.\n";
-        assert_eq!(
-            cut_error_texts(reworded),
-            b"+++ Stopped.  Error 42:\n+++ Stopped.  Error 42.3:\n".to_vec()
-        );
-        let other_subcode = b"+++ Interactive trace.  Error 42:   Some wording.\n+++ Interactive trace.  Error 42.4:  Other: wording.\n";
+        assert_eq!(cut_error_texts(reworded), cut_error_texts(debug));
+        let other_subcode = b"+++ Some words.  Error 42:   Some wording.\n+++ Some words.  Error 42.4:  Other: wording.\n";
         assert_ne!(cut_error_texts(debug), cut_error_texts(other_subcode));
-        // The notice has no code, and a `+++` line whose first colon-ended
-        // word is not a code is kept whole.
-        let notice = b"+++ Interactive trace.  Type: say or exit.\n+++ note: 5 and 6:  x\n";
-        assert_eq!(cut_error_texts(notice), notice.to_vec());
+        // The notice has no colon-ended word and is cut to `+++`; a `+++`
+        // line whose first colon-ended word is not a code is kept whole.
+        let notice = b"+++ Tracing is on; end it somehow.\n+++ note: 5 and 6:  x\n";
+        assert_eq!(
+            cut_error_texts(notice),
+            b"+++\n+++ note: 5 and 6:  x\n".to_vec()
+        );
+        // An indented `+++` line is a command trace and stays.
+        let command = b"       +++ \"cmd\"\n";
+        assert_eq!(cut_error_texts(command), command.to_vec());
     }
 
     /// Two outputs that differ only by the traceback line of a built-in
     /// method or routine compare equal, whether the build shows the level or
-    /// not; a difference in the line of Rexx code does not.
+    /// not and however it words it; a difference in the line of Rexx code
+    /// does not.
     #[test]
     fn cut_error_texts_drops_built_in_frame_lines_and_nothing_else() {
         use super::cut_error_texts;
         let without = b"     3 *-* x~put(1)\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
-        let with = b"       *-* Compiled method \"PUT\" with scope \"Directory\".\n     3 *-* x~put(1)\n       *-* Compiled routine \"SYSSLEEP\".\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
+        let with = b"       *-* Some words \"SEND\" and \"Message\".\n     3 *-* x~put(1)\n       *-* Other words \"R\".\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
         assert_eq!(cut_error_texts(with), cut_error_texts(without));
         // A different line of Rexx code, or a different level count of Rexx
         // code, still differs.
@@ -217,14 +259,65 @@ mod tests {
         assert_ne!(cut_error_texts(with), cut_error_texts(other_line));
         let fewer = b"     3 *-* x~put(1)\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
         assert_ne!(cut_error_texts(with), cut_error_texts(fewer));
-        // A numbered line is Rexx code, even when it reads like a built-in
-        // level, and so is a line without the blanks.
-        let numbered = b"     3 *-* Compiled routine \"R\".\n*-* Compiled routine \"R\".\n";
+        // A numbered line is Rexx code, and so is a line without the blanks.
+        let numbered = b"     3 *-* x\n*-* y\n";
         assert_eq!(cut_error_texts(numbered), numbered.to_vec());
+        // An unnumbered line that names nothing in quotes, or does not end
+        // with a period, or is indented otherwise, is not a built-in level:
+        // an extra or a missing one is a difference.
+        let clause = b"     3 *-* say x\n";
+        for extra in [
+            &b"       *-* say y\n"[..],
+            b"       *-* say \"y\"\n",
+            b"       *-* say \"\".\n",
+            b"        *-* Words \"R\".\n",
+            b"      *-* Words \"R\".\n",
+        ] {
+            let more = [&clause[..], extra].concat();
+            assert_ne!(
+                cut_error_texts(&more),
+                cut_error_texts(clause),
+                "{}",
+                String::from_utf8_lossy(extra)
+            );
+        }
         // The last line may have no newline.
         assert_eq!(
-            cut_error_texts(b"       *-* Compiled routine \"R\".\n     1 *-* x"),
+            cut_error_texts(b"       *-* Some words \"R\".\n     1 *-* x"),
             b"     1 *-* x".to_vec()
         );
+    }
+
+    /// The text of a trace announcement is not compared, its flag and
+    /// indentation are; other trace lines are.
+    #[test]
+    fn cut_error_texts_drops_the_text_of_an_announcement() {
+        use super::cut_error_texts;
+        let one = b"       >I> Some words \"R\".\n       <I< More words.\n";
+        let other = b"       >I> Other words.\n       <I< Else.\n";
+        assert_eq!(cut_error_texts(one), b"       >I>\n       <I<\n".to_vec());
+        assert_eq!(cut_error_texts(one), cut_error_texts(other));
+        let flag = b"       <I< Other words.\n       <I< Else.\n";
+        assert_ne!(cut_error_texts(one), cut_error_texts(flag));
+        let value = b"       >V>   X => \"1\"\n";
+        assert_eq!(cut_error_texts(value), value.to_vec());
+    }
+
+    /// The stdout cut touches error-report lines and built-in levels, and
+    /// leaves a trace announcement, a trace value line and any other text
+    /// whole.
+    #[test]
+    fn cut_report_lines_leaves_every_other_line_whole() {
+        use super::{cut_error_texts, cut_report_lines};
+        let report = b"       *-* Words \"R\".\nError 93 running /t/x.rex line 2:  Text.\nError 93.902:  Text.\n";
+        assert_eq!(cut_report_lines(report), cut_error_texts(report));
+        let announcement = b"       >I> Some words.\n       <I< Other.\n";
+        assert_eq!(cut_report_lines(announcement), announcement.to_vec());
+        assert_ne!(
+            cut_report_lines(announcement),
+            cut_report_lines(b"       >I> Different words.\n       <I< Other.\n")
+        );
+        let other = b"Passed: 3\n    >V> X => \"1\"\n";
+        assert_eq!(cut_report_lines(other), other.to_vec());
     }
 }

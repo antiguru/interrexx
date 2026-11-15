@@ -1,6 +1,6 @@
 /* A generated getter takes no arguments, and the refusal carries no frame of
    its own: the report is the sending clause and the two catalogue lines, with
-   no `Compiled method` line above them, because a generated attribute getter
+   no built-in method line above them, because a generated attribute getter
    raises directly where a primitive method raises from inside a
    native activation. */
 

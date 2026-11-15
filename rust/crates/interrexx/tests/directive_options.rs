@@ -56,14 +56,17 @@ fn concurrently_traced(path: &Path) -> bool {
         .is_some_and(|name| CONCURRENTLY_TRACED.contains(&name))
 }
 
-/// One side's stderr in the form the comparison uses: the bytes as they came
-/// for an ordinary program, and [`support::oracle::stderr_multiset`] for one on
-/// [`CONCURRENTLY_TRACED`].
+/// One side's stderr in the form the comparison uses: the bytes with the
+/// message texts cut ([`support::error_text::cut_error_texts`]) for an
+/// ordinary program, and [`support::oracle::stderr_multiset`] of those for one
+/// on [`CONCURRENTLY_TRACED`].
 fn stderr_for_comparison(bytes: &[u8], concurrently_traced: bool) -> String {
+    // A message's text is not compared, only its code (`r[conv.error.text]`).
+    let bytes = support::error_text::cut_error_texts(bytes);
     if concurrently_traced {
-        return support::oracle::stderr_multiset(bytes);
+        return support::oracle::stderr_multiset(&bytes);
     }
-    String::from_utf8_lossy(bytes).into_owned()
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 fn run_crate(path: &Path) -> Outcome {
@@ -374,7 +377,7 @@ fn lostdigits_raises_98_972_where_the_oracle_does_and_nowhere_else() {
             .unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
         let cpp = oracle.run(&path);
         let outcome = run_crate(&path);
-        let stderr = String::from_utf8_lossy(&outcome.stderr).into_owned();
+        let stderr = stderr_for_comparison(&outcome.stderr, false);
         match expect {
             Raises => {
                 assert!(
@@ -384,7 +387,7 @@ fn lostdigits_raises_98_972_where_the_oracle_does_and_nowhere_else() {
                 );
                 assert_eq!(
                     stderr,
-                    String::from_utf8_lossy(&cpp.stderr),
+                    stderr_for_comparison(&cpp.stderr, false),
                     "{name}: stderr differs from the oracle"
                 );
                 assert_eq!(
@@ -405,8 +408,8 @@ fn lostdigits_raises_98_972_where_the_oracle_does_and_nowhere_else() {
                     "{name}: stdout differs from the oracle"
                 );
                 assert_eq!(
-                    String::from_utf8_lossy(&outcome.stderr),
-                    String::from_utf8_lossy(&cpp.stderr),
+                    stderr,
+                    stderr_for_comparison(&cpp.stderr, false),
                     "{name}: stderr differs from the oracle"
                 );
                 assert_eq!(

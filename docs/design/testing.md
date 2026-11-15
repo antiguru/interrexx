@@ -31,8 +31,18 @@ two-way comparison against ANSI would report deliberate choices as defects.
 through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. `differential.txt` names
 the programs `tests/corpus.rs` runs under both interpreters. stdout and exit status compare byte for
 byte; stderr does too, apart from a narrow trace-indent normalisation that a program can opt out of.
-Comparing the text of stderr's error lines is stricter than the specification requires, a known
-gap in the harness (#388).
+Both sides' stderr is cut first (`tests/support/error_text.rs`), by the structure the specification
+fixes and never by a wording: an error report keeps its code, the lines of an interactive trace stop
+keep `+++` and the code, a trace announcement keeps its flag, and a traceback line of a built-in
+level (blank number column, `*-*`, a text that names it in double quotes and ends with a period) is
+dropped. A numbered traceback line whose text names the package `REXX` as its last quoted string is
+a library level and is normalised to a placeholder. Stdout is compared whole, except where the
+group runner masks it (an ooTest group's holds the traceback of an error a test meets, so the
+runner cuts the lines of an error report and the built-in levels of a traceback and compares every
+other line whole; the simulation gate masks a program row's stdout with the wider cut that also
+drops the text of a trace announcement, until #733 narrows it), so a program in this corpus
+prints the codes, flags and Rexx levels of a run and never the wording of a message, an
+announcement or a built-in level.
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,
@@ -56,7 +66,8 @@ fresh copy with its own API service.
 * A group passes when every test in its expected set started and passed, every test that ran is
   expected or listed, and the run ended normally. The expected set is the group's test methods,
   enumerated from source, less its rows in `rust/corpus/suite-licences.txt` (Deviation,
-  environment and known-flaky rows, each with a checked reason) and
+  environment, known-flaky and unspecified rows, each with a checked reason; an unspecified row's
+  test asserts what a cited rule leaves unspecified, such as a message's wording) and
   `rust/corpus/suite-not-run.txt` (tests the framework does not run on this host).
 * A crash, refusal, timeout or memory kill on interrexx renames the last started test out and runs
   the group again, so one failure does not hide the rest.

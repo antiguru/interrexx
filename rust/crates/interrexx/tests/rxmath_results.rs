@@ -8,7 +8,7 @@
 //!   `NUMERIC DIGITS D` (and `NUMERIC FORM F`), with `::requires 'rxmath'
 //!   LIBRARY`.
 //! * `raises`: each input line is an expression whose SYNTAX condition is
-//!   trapped and shown as its code and secondary message.
+//!   trapped and shown as its code.
 //! * `program`: the input is the whole program; the case records rc, stdout
 //!   and stderr.
 
@@ -16,6 +16,8 @@ use std::collections::HashMap;
 
 use interrexx::Invocation;
 
+#[path = "support/error_text.rs"]
+mod error_text;
 mod watchdog;
 
 const CASES: &str = "tests/rxmath_results";
@@ -43,7 +45,7 @@ fn raises_program(lines: &[&str]) -> String {
     for (index, line) in lines.iter().enumerate() {
         program.push_str(&format!(
             "signal on syntax name s{index}\nsay {line}\nsay \"no error\"\nsignal n{index}\n\
-             s{index}: say condition(\"o\")~code condition(\"o\")~message\nn{index}: nop\n"
+             s{index}: say condition(\"o\")~code\nn{index}: nop\n"
         ));
     }
     program.push_str("::requires 'rxmath' LIBRARY\n");
@@ -84,12 +86,15 @@ fn rxmath_answers_as_the_oracle_does() {
                 }
                 "program" => {
                     let outcome = run(format!("{}\n", case.input.trim_end()));
+                    // The message text of an error report is not specified, so
+                    // a recorded answer holds the code and subcode of each
+                    // report on stderr and not its text.
                     format!(
                         "rc {}\n[stdout]\n{}[stderr]\n{}",
                         outcome.exit_code,
                         String::from_utf8_lossy(&outcome.stdout)
                             .replace(env!("CARGO_PKG_VERSION"), "<version>"),
-                        String::from_utf8_lossy(&outcome.stderr),
+                        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr)),
                     )
                 }
                 other => panic!("unknown directive {other}"),

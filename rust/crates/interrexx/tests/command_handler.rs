@@ -227,7 +227,7 @@ bad:
 "#;
     // Measured, oracle, exit status 168.
     const STDOUT: &str = "88.901 1\n88.901 1\n";
-    const STDERR: &str = "⟨101.20¦HANDLER¦CommandHandler⟩\n\
+    const STDERR: &str = "       *-* ⟨101.20¦HANDLER¦CommandHandler⟩\n\
                           \x20    3 *-* .CommandHandler~handler\n\
                           Error 88 running {path} line 3:  ⟨88⟩\n\
                           Error 88.901:  ⟨88.901¦1⟩\n";

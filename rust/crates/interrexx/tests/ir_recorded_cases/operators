@@ -152,8 +152,8 @@ say (0 & 'x')
 ----
 rc> 222
 err>      1 *-* say (0 & 'x')
-err> Error 34 running /nonexistent/ir-dual-case.rex line 1:  Logical value not 0 or 1.
-err> Error 34.901:  Logical value must be exactly "0" or "1"; found "x".
+err> Error 34 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 34.901:
 
 # both operands bad, where the substitution says which one was checked first:
 # the report names `"y"`, the **left** operand's own text.
@@ -162,8 +162,8 @@ say ('y' & 'x')
 ----
 rc> 222
 err>      1 *-* say ('y' & 'x')
-err> Error 34 running /nonexistent/ir-dual-case.rex line 1:  Logical value not 0 or 1.
-err> Error 34.901:  Logical value must be exactly "0" or "1"; found "y".
+err> Error 34 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 34.901:
 
 # a failure reached through each family, trapped, so that one row says which
 # clause SIGL lands on for each. Concatenation and comparison have no raise of
@@ -394,8 +394,8 @@ say \'abc'
 ----
 rc> 222
 err>      1 *-* say \'abc'
-err> Error 34 running /nonexistent/ir-dual-case.rex line 1:  Logical value not 0 or 1.
-err> Error 34.901:  Logical value must be exactly "0" or "1"; found "abc".
+err> Error 34 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 34.901:
 
 # `-` on the same value that is not numeric, which is the row beside the one
 # above: the operand is converted first, so this is 41.1 where `\` on the
@@ -406,8 +406,8 @@ say -'abc'
 ----
 rc> 215
 err>      1 *-* say -'abc'
-err> Error 41 running /nonexistent/ir-dual-case.rex line 1:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("abc") used in arithmetic operation.
+err> Error 41 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 41.1:
 
 # trace i: the `>P>` line each prefix operator's result owes, after its
 # operand's own lines and in the order the operators are applied -- so a prefix

@@ -54,7 +54,7 @@ impl Interp {
     }
 
     /// Calls the classic function `name` with `arguments` as strings. A non-zero
-    /// return is 40.1, its traceback line the routine's `Compiled routine`.
+    /// return is 40.1, its traceback line the routine's built-in routine line.
     pub(crate) fn call_classic_function(
         &mut self,
         name: &[u8],

@@ -30,7 +30,7 @@ try:
   return
 refused:
   c = condition('O')
-  say expression c~code '|' c~message
+  say expression c~code
   return
 
 ::requires 'orxfunction' LIBRARY

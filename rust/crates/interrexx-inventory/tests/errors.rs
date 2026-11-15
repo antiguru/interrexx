@@ -1,9 +1,8 @@
 use interrexx_inventory::errors;
 
 #[test]
-fn every_message_from_the_catalogue_is_present() {
-    // 56 <Message> + 648 <SubMessage> = 704, as of 8c880bdd. If this changes,
-    // the C++ tree gained or lost an error and the Rust side must follow.
+fn every_message_of_the_table_is_present() {
+    // 56 majors + 648 submessages = 704, the rows of `data/errors.tsv`.
     assert_eq!(errors::MESSAGES.len(), 704);
     assert_eq!(errors::MESSAGES.iter().filter(|m| m.sub == 0).count(), 56);
 }
@@ -37,7 +36,7 @@ fn arity<const N: usize>(_: errors::Msg<N>) -> usize {
     N
 }
 
-/// The highest `&k` in the catalogue text of `(major, sub)`.
+/// The highest `&k` in the text of `(major, sub)`.
 fn highest_placeholder(code: (u16, u16)) -> usize {
     let text = errors::lookup(code.0, code.1)
         .expect("the constant names a row")
@@ -50,11 +49,10 @@ fn highest_placeholder(code: (u16, u16)) -> usize {
 }
 
 #[test]
-fn every_constants_arity_is_its_texts_highest_placeholder() {
+fn every_text_shows_only_inserts_its_constant_takes() {
     let mut wrong = Vec::new();
     for &(code, n) in errors::ARITIES {
-        let overridden = errors::ARITY_OVERRIDES.iter().find(|(c, _)| *c == code);
-        if n != overridden.map_or_else(|| highest_placeholder(code), |&(_, n)| n) {
+        if highest_placeholder(code) > n {
             wrong.push(code);
         }
     }
@@ -62,15 +60,8 @@ fn every_constants_arity_is_its_texts_highest_placeholder() {
     assert_eq!(errors::ARITIES.len(), errors::MESSAGES.len());
     assert_eq!(arity(errors::E13_1), 2);
     assert_eq!(arity(errors::E10_2), 3);
-}
-
-#[test]
-fn every_arity_override_exceeds_its_texts_placeholders() {
-    for &(code, n) in errors::ARITY_OVERRIDES {
-        assert!(n > highest_placeholder(code), "{code:?}");
-    }
+    // A message may take an insert its text does not show.
     assert_eq!(arity(errors::E89_1), 1);
-    assert_eq!(highest_placeholder(errors::E89_1.code()), 0);
 }
 
 #[test]
@@ -110,7 +101,7 @@ fn a_rendered_position_never_exceeds_the_insert_count() {
 #[test]
 fn every_overridden_row_carries_its_override() {
     let table = table();
-    for &(code, n) in errors::ARITY_OVERRIDES {
+    for &(code, n) in interrexx_upstream::errors::ARITY_OVERRIDES {
         let row = table
             .rows
             .iter()

@@ -16,7 +16,7 @@ use crate::group_runner::{
     read_lossy, source_classes, source_test_names_in, test_classes, worktree,
 };
 
-/// The Deviation, Environment and Flaky rows.
+/// The Deviation, Environment, Flaky and Unspecified rows.
 pub const LICENCES: &str = "rust/corpus/suite-licences.txt";
 /// The tests the framework does not run on this host.
 pub const NOT_RUN: &str = "rust/corpus/suite-not-run.txt";
@@ -82,6 +82,9 @@ pub enum Owner {
     Environment,
     Flaky,
     NotRun,
+    /// The test asserts behaviour the specification leaves unspecified; the
+    /// reason cites the rule that says so, as `r[ID]`.
+    Unspecified,
 }
 
 impl Owner {
@@ -97,6 +100,7 @@ impl Owner {
             "Environment" => Some(Owner::Environment),
             "Flaky" => Some(Owner::Flaky),
             "NotRun" => Some(Owner::NotRun),
+            "Unspecified" => Some(Owner::Unspecified),
             _ => None,
         }
     }
@@ -104,7 +108,9 @@ impl Owner {
     /// The file a row of this owner belongs in.
     pub fn file(self) -> &'static str {
         match self {
-            Owner::Deviation(_) | Owner::Environment | Owner::Flaky => LICENCES,
+            Owner::Deviation(_) | Owner::Environment | Owner::Flaky | Owner::Unspecified => {
+                LICENCES
+            }
             Owner::NotRun => NOT_RUN,
         }
     }

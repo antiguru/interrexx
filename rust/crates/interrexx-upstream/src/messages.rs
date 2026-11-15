@@ -96,6 +96,18 @@ pub fn validate(table: &Table, texts: &[Text]) -> Vec<String> {
     problems
 }
 
+/// The problems of `texts` as the complete set for `table`: one line naming
+/// each code of the table that has no text. Empty when every row has one.
+pub fn missing(table: &Table, texts: &[Text]) -> Vec<String> {
+    let have: BTreeSet<(u16, u16)> = texts.iter().map(|t| (t.major, t.sub)).collect();
+    table
+        .rows
+        .iter()
+        .filter(|r| !have.contains(&(r.major, r.sub)))
+        .map(|r| format!("{}.{} has no text", r.major, r.sub))
+        .collect()
+}
+
 /// Reads every `*.tsv` file of `dir` (none if the directory holds none),
 /// in file-name order. A problem in any file is returned with the rest.
 pub fn load_dir(dir: &Path) -> Result<Vec<Text>, Vec<String>> {

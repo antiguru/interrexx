@@ -6,10 +6,14 @@
 //! case records this crate's answer, and its comment the oracle's: SYNTAX 88.909
 //! where the call's argument is one the builtin reads as a string, and SYNTAX
 //! 98.973 at a position the builtin reads as a number, a character or an
-//! option (`r[conv.string.deviation.169]`).
+//! option (`r[conv.string.deviation.169]`). It records as well what a trap of
+//! the error sees: the code, and for 88.909 the argument's position
+//! (`r[conv.string.builtin-argument]`).
 
 use interrexx::Invocation;
 
+#[path = "support/error_text.rs"]
+mod error_text;
 mod watchdog;
 
 const CASES: &str = "tests/string_answer_arguments";
@@ -24,14 +28,27 @@ fn call_program(call: &str, answer: &str) -> String {
     )
 }
 
+/// The program a `refuses` case runs with the error trapped: it prints the
+/// code, and for 88.909 the position of the argument, the item that
+/// `r[conv.string.builtin-argument]` fixes as `ADDITIONAL[1]`.
+fn trapped_program(call: &str, answer: &str) -> String {
+    format!(
+        "o = .q~new\nsignal on syntax\nsay {call}\nsay \"after\"\nexit\nsyntax: c = condition('o')\nif c~code == 88.909 then say c~code c~additional[1]\nelse say c~code\nexit\n::class q\n::method string\n  return {answer}\n"
+    )
+}
+
 /// `rc`, stdout and stderr as the case file records them.
 fn transcript(text: String) -> String {
     let outcome = watchdog::run_bounded(PATH, text.into_bytes(), Invocation::none());
+    // The message text of an error report is not specified, so a recorded
+    // answer holds the code and subcode of each report on stderr and not its
+    // text.
     format!(
         "rc {}\n[stdout]\n{}[stderr]\n{}",
         outcome.exit_code,
         String::from_utf8_lossy(&outcome.stdout),
-        String::from_utf8_lossy(&outcome.stderr).replace(PATH, "PROGRAM"),
+        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr))
+            .replace(PATH, "PROGRAM"),
     )
 }
 
@@ -49,7 +66,17 @@ fn string_answers_at_builtin_argument_positions() {
                         Some("directory") => ".directory~new",
                         other => panic!("unknown string= {other:?}"),
                     };
-                    transcript(call_program(input, answer))
+                    let mut out = transcript(call_program(input, answer));
+                    if case.directive == "refuses" {
+                        let trapped = watchdog::run_bounded(
+                            PATH,
+                            trapped_program(input, answer).into_bytes(),
+                            Invocation::none(),
+                        );
+                        out.push_str("[trapped]\n");
+                        out.push_str(&String::from_utf8_lossy(&trapped.stdout));
+                    }
+                    out
                 }
                 "program" => transcript(format!("{input}\n")),
                 other => panic!("unknown directive {other}"),

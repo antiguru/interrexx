@@ -16,7 +16,6 @@ mod error_text;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
-use interrexx_inventory::errors::expand;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -110,10 +109,11 @@ impl Side {
         }
         let output = command.output().expect("the binary starts");
         // The message text of an error report is not specified, so a recorded
-        // answer holds the code and subcode of each report and not its text.
+        // answer holds the code and subcode of each report on stderr and not
+        // its text.
         let rendered = render(
             &self.dir,
-            &error_text::cut_error_texts(&output.stdout),
+            &output.stdout,
             &error_text::cut_error_texts(&output.stderr),
             output.status.code(),
         );
@@ -174,6 +174,89 @@ fn escaped(bytes: &[u8]) -> String {
     out
 }
 
+/// The text of every fixture program, to tell a clause that a trace line
+/// shows from the line that says its program has no source.
+fn fixture_text() -> &'static str {
+    static TEXT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    fn collect(dir: &Path, into: &mut String) {
+        for entry in std::fs::read_dir(dir).expect("the fixture directory") {
+            let entry = entry.expect("a fixture entry");
+            if entry.file_type().expect("its type").is_dir() {
+                collect(&entry.path(), into);
+            } else if let Ok(text) = std::fs::read_to_string(entry.path()) {
+                into.push_str(&text);
+            }
+        }
+    }
+    TEXT.get_or_init(|| {
+        let mut text = String::new();
+        collect(Path::new(PROGRAMS), &mut text);
+        text
+    })
+}
+
+/// `line` with the text of a trace line replaced by `<no source>`, when it is
+/// a clause line (a line number, `*-*` and the text) whose text is no part of
+/// a fixture program and has the form of a message that names the level: a
+/// name in double quotes, and a period at the end. A restored program has no
+/// source, so a clause line of its own shows a line that says no source is
+/// available, whose wording is not specified
+/// (`r[env.invocation.rexxc.source]`); the number and the blanks after `*-*`
+/// are specified and stay, and so does the text of a clause that a string
+/// supplies, such as one of an `INTERPRET`, and any other text.
+fn without_clause_text(line: &str) -> String {
+    let trimmed = line.trim_start_matches(' ');
+    let digits = trimmed.bytes().take_while(u8::is_ascii_digit).count();
+    let Some(rest) = trimmed[digits..].strip_prefix(" *-*") else {
+        return line.to_string();
+    };
+    if digits == 0 {
+        return line.to_string();
+    }
+    let text = rest.trim_start_matches(' ');
+    if fixture_text().contains(text.trim_end()) || !names_in_quotes(text) {
+        return line.to_string();
+    }
+    let keep = line.len() - text.len();
+    format!("{}<no source>", &line[..keep])
+}
+
+/// Whether `text` holds a non-empty string in double quotes, its quotes
+/// paired, and ends with a period.
+fn names_in_quotes(text: &str) -> bool {
+    let text = text.trim_end();
+    text.ends_with('.')
+        && text.matches('"').count().is_multiple_of(2)
+        && text
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .any(|name| !name.is_empty())
+}
+
+/// A clause line that says the level has no source is masked, whatever its
+/// wording; a clause line of other text keeps its text, so a garbled clause
+/// is still a difference.
+#[test]
+fn only_a_line_that_names_its_level_is_masked() {
+    assert_eq!(
+        without_clause_text("     2 *-* Some words \"DIR/x.rxo\", more words."),
+        "     2 *-* <no source>"
+    );
+    assert_eq!(
+        without_clause_text("     2 *-*   Other words \"pk\"."),
+        "     2 *-*   <no source>"
+    );
+    for kept in [
+        "     2 *-* garbled clause",
+        "     2 *-* say \"x\"",
+        "     2 *-* Words \"\".",
+        "       *-* Words \"R\".",
+    ] {
+        assert_eq!(without_clause_text(kept), kept);
+    }
+}
+
 /// The three descriptors as the case file records them, with the side's
 /// directory as `DIR`.
 fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> String {
@@ -184,7 +267,7 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> Stri
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
         for line in escaped(bytes).replace(&dir, "DIR").lines() {
-            rendered.push_str(&format!("{tag}> {line}\n"));
+            rendered.push_str(&format!("{tag}> {}\n", without_clause_text(line)));
         }
     }
     rendered
@@ -221,7 +304,8 @@ fn each_route_runs_a_restored_program_as_the_oracles_does() {
     assert!(diverged.is_empty(), "{}", diverged.join("\n"));
 }
 
-/// The report this crate's `rexx` makes for `image` in `dir`.
+/// The report this crate's `rexx` makes for `image` in `dir`, its message
+/// texts cut.
 fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
     std::fs::write(side.dir.join(image), bytes).expect("the image");
     let output = side
@@ -232,18 +316,15 @@ fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
     render(
         &side.dir,
         &output.stdout,
-        &output.stderr,
+        &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )
 }
 
-/// The report for an image refused with `sub`: 3.903 or 3.905.
-fn refused(image: &str, sub: u16) -> String {
-    let message = match sub {
-        903 => expand(&format!("Error 3.903:  ⟨3.903¦DIR/{image}⟩")),
-        _ => expand(&format!("Error 3.905:  ⟨3.905¦DIR/{image}⟩")),
-    };
-    expand(&format!("rc> 253\nerr> Error 3:  ⟨3⟩\nerr> {message}\n"))
+/// The report for an image refused with `sub`, 3.903 or 3.905, with its
+/// message texts cut as [`report`] cuts them.
+fn refused(_image: &str, sub: u16) -> String {
+    format!("rc> 253\nerr> Error 3:\nerr> Error 3.{sub}:\n")
 }
 
 // spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
@@ -308,7 +389,7 @@ fn a_foreign_or_damaged_image_is_refused() {
 }
 
 /// What `rexx` writes for the file `name` that holds `bytes`, run in `side`'s
-/// directory with the argument `x`.
+/// directory with the argument `x`, its message texts cut.
 fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
     std::fs::write(side.dir.join(name), bytes).expect("the file");
     let output = side
@@ -316,10 +397,12 @@ fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
         .args([name, "x"])
         .output()
         .expect("rexx starts");
+    // Only the code of an error is compared, not its text
+    // (`r[conv.error.text]`).
     render(
         &side.dir,
         &output.stdout,
-        &output.stderr,
+        &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )
 }
@@ -459,12 +542,10 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
         tagcr.insert(tag - 1, b'\r');
         assert_eq!(
             report(&side, "tagcr.rxo", &tagcr),
-            expand(
-                "rc> 243\n\
+            "rc> 243\n\
              err>      2 *-* /**/@\n\
-             err> Error 13 running DIR/tagcr.rxo line 2:  ⟨13⟩\n\
-             err> Error 13.1:  ⟨13.1¦@¦40⟩\n"
-            ),
+             err> Error 13 running DIR/tagcr.rxo line 2:\n\
+             err> Error 13.1:\n",
             "CR before the tag's LF"
         );
         let output = side
@@ -482,12 +563,10 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
 // spec: env.invocation.rexxc.run
 #[test]
 fn an_opening_with_a_changed_byte_is_source() {
-    let stop = expand(
-        "rc> 243\n\
+    let stop = "rc> 243\n\
                 err>      2 *-* /**/@\n\
-                err> Error 13 running DIR/t.rxo line 2:  ⟨13⟩\n\
-                err> Error 13.1:  ⟨13.1¦@¦40⟩\n",
-    );
+                err> Error 13 running DIR/t.rxo line 2:\n\
+                err> Error 13.1:\n";
     // Four text files that begin like an image and hold none: both engines.
     let texts: [&[u8]; 4] = [
         b"#!/usr/bin/env rexx\n/**/@REXY say 1\n", // a letter of REXX

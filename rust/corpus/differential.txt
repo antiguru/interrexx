@@ -859,7 +859,6 @@ lang/timer_post_reads_the_waiters_cancel.rex
 lang/timer_remainder_modulo_2_32.rex
 lang/trace_object_activity_fields.rex
 lang/uninit_after_every_activity.rex
-lang/trace_object_native_caller.rex
 lang/guard_serializes_started_sends.rex
 lang/reply_seen_by_a_guarded_send.rex
 lang/reply_continuation_parks_holding_the_guard.rex
@@ -1159,7 +1158,6 @@ lang/weak_reference_held_values.rex
 lang/string_subclass_operators.rex
 lang/class_side_string.rex
 lang/routine_object_add_copy.rex
-lang/stackframes_native_routine.rex
 lang/package_copy_mutated.rex
 lang/package_rexx_copy_lookups.rex
 lang/package_rerequire_collected.rex
@@ -1229,7 +1227,6 @@ lang/setmethod_instance_method.rex
 lang/uninit_defined_on_superclass_later.rex
 lang/package_prolog_of_compiled_executable.rex
 lang/stackframes_sortwith_comparator.rex
-lang/stackframes_sortwith_dispatched_scope.rex
 lang/class_setmethod_instance_methods.rex
 lang/security_manager_protected_primitive.rex
 lang/security_manager_set_protected.rex

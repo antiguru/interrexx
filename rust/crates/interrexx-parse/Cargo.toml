@@ -19,9 +19,8 @@ rustc-hash = "2.1.2"
 # arithmetic of their own.
 interrexx-num.workspace = true
 
-# `error.rs` renders a `ParseError`'s message from the message table the build
-# script derives from `interpreter/messages/rexxmsg.xml`, so no message text is
-# hand-copied into this crate.
+# `error.rs` renders a `ParseError`'s message from the inventory's message
+# table, so no message text is written out in this crate.
 interrexx-inventory.workspace = true
 
 [dev-dependencies]

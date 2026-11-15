@@ -1,6 +1,6 @@
 count 26
 /* An operator on a variable reference runs the referenced value's own
-   operator method, whose Compiled method line a failure's traceback shows. */
+   operator method; a failure's traceback shows the levels of Rexx code. */
 s = 'abc'; n = 5; m. = 'q'; drop u
 call try 't = >s; say t + 0'
 call try 't = >s; say -t'
@@ -23,5 +23,5 @@ try:
   return
 syntax:
   say arg(1) condition('o')~code
-  do l over condition('o')~traceback; say '   ' l; end
+  do l over condition('o')~traceback; if l~word(1)~datatype('W') then say '   ' l; end -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
   return

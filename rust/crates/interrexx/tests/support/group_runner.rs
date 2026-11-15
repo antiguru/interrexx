@@ -364,11 +364,26 @@ fn without_build_date(line: &str) -> &str {
 
 /// `stdout` with what differs between any two runs of one side masked: each
 /// timing line's duration, each detail header's timestamp and the build date
-/// the version line ends with. The message text of an error report is cut as
-/// well, since it is not specified.
+/// the version line ends with. The lines of an error report and the built-in
+/// levels of a traceback are cut as well, since the message text and the
+/// built-in levels are not specified: ooTest, the program here, writes the
+/// traceback of an error its tests meet to stdout, and it is not this
+/// repository's to change. Every other stdout line is compared whole.
 pub fn masked(stdout: &[u8]) -> Vec<u8> {
-    let stdout = crate::support::error_text::cut_error_texts(stdout);
-    let text = String::from_utf8_lossy(&stdout);
+    mask_timings(&crate::support::error_text::cut_report_lines(stdout))
+}
+
+/// [`masked`] with the whole cut of `cut_error_texts`, which also
+/// drops the text of a trace announcement. The simulation gate masks the
+/// stdout of a program row with it until #733 narrows that cut: narrowing it
+/// changes the digests of the program rows whose stdout the wider cut touches,
+/// which needs a full `REXX_SIM_ORACLE_REFRESH=1`.
+pub fn masked_with_announcements_cut(stdout: &[u8]) -> Vec<u8> {
+    mask_timings(&crate::support::error_text::cut_error_texts(stdout))
+}
+
+fn mask_timings(stdout: &[u8]) -> Vec<u8> {
+    let text = String::from_utf8_lossy(stdout);
     let lines: Vec<&str> = text
         .split('\n')
         .map(|line| {

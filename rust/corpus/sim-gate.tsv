@@ -164,7 +164,6 @@ corpus/lang/timer_post_reads_the_waiters_cancel.rex	program	19	70	14	25	30	-	-
 corpus/lang/timer_remainder_modulo_2_32.rex	program	10	70	14	25	25	-	-
 corpus/lang/trace_object_activity_fields.rex	program	4	70	14	25	30	-	-
 corpus/lang/uninit_after_every_activity.rex	program	1	70	14	25	30	-	-
-corpus/lang/trace_object_native_caller.rex	program	1	70	14	25	25	-	-
 corpus/lang/guard_serializes_started_sends.rex	program	21	70	14	25	30	-	-
 corpus/lang/reply_seen_by_a_guarded_send.rex	program	6	70	14	25	30	-	-
 corpus/lang/reply_continuation_parks_holding_the_guard.rex	program	1	70	14	25	35	-	-

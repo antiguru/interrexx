@@ -7,7 +7,7 @@ say RxCalcSqrt(.Raiser~new)
 s1:
 c = condition('O')
 say 'by name' c~code c~position filespec('n', c~program) c~traceback~items
-do l over c~traceback; say ' ' l; end
+do l over c~traceback; if l~word(1)~datatype('W') then say ' ' l; end -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
 signal on syntax name s2
 say sq(.Raiser~new)
 s2:

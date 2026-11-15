@@ -161,9 +161,9 @@ impl Raised {
         Raised::syntax(4, 1, vec![b"HALT".to_vec()])
     }
 
-    /// 41.1: a nonnumeric value used in arithmetic. `value` is the
-    /// operand's own text, verbatim -- measured, `say 'abc' + 1` reports
-    /// `Nonnumeric value ("abc")`, the operand as it renders, not upcased
+    /// 41.1, raised when arithmetic meets an operand that is not a number.
+    /// `value` is the operand's own text, verbatim -- measured, `say 'abc' + 1`
+    /// carries `abc` as its item, the operand as it renders, not upcased
     /// or otherwise transformed.
     pub(crate) fn nonnumeric(value: &[u8]) -> Raised {
         Raised::syntax(41, 1, vec![value.to_vec()])
@@ -1701,11 +1701,10 @@ impl Raised {
     /// carries no source -- the sourceless method line, reached from the
     /// traceback when no source is available.
     pub(crate) fn sourceless_method_line(name: &[u8], scope: &str, package: &[u8]) -> Vec<u8> {
-        let substitutions = vec![name.to_vec(), scope.as_bytes().to_vec(), package.to_vec()];
-        match interrexx_inventory::errors::lookup(101, 24) {
-            Some(entry) => substitute(entry.text, &substitutions),
-            None => b"<no message 101.24 in the catalogue>".to_vec(),
-        }
+        message_text(
+            interrexx_inventory::errors::E101_24,
+            [name.to_vec(), scope.as_bytes().to_vec(), package.to_vec()],
+        )
     }
 
     /// The same for a routine activation: `formatSourcelessTraceLine`'s
@@ -1720,37 +1719,33 @@ impl Raised {
     /// The same for an activation that is a whole program rather than a
     /// method -- `formatSourcelessTraceLine`'s `else` arm.
     pub(crate) fn sourceless_program_line(package: &[u8]) -> Vec<u8> {
-        match interrexx_inventory::errors::lookup(101, 26) {
-            Some(entry) => substitute(entry.text, &[package.to_vec()]),
-            None => b"<no message 101.26 in the catalogue>".to_vec(),
-        }
+        message_text(interrexx_inventory::errors::E101_26, [package.to_vec()])
     }
 
     /// The traceback line a native method activation contributes, rendered
     /// whole. 101.5: the line an interactive-debug pause prints before it
     /// reads, once per activation and unindented.
     pub(crate) fn debug_prompt_line() -> Vec<u8> {
-        match interrexx_inventory::errors::lookup(101, 5) {
-            Some(entry) => substitute(entry.text, &[]),
-            None => b"<no message 101.5 in the catalogue>".to_vec(),
-        }
+        message_text(interrexx_inventory::errors::E101_5, [])
     }
 
     /// 101.21: the traceback line a failing routine of an internal package
-    /// contributes, `*-*` marker and leading blanks included.
+    /// contributes. The text follows a blank line-number column and the
+    /// `*-*` marker, where a clause line has its number and the clause.
     pub(crate) fn compiled_routine_line(name: &[u8]) -> Vec<u8> {
-        match interrexx_inventory::errors::lookup(101, 21) {
-            Some(entry) => substitute(entry.text, &[name.to_vec()]),
-            None => b"<no message 101.21 in the catalogue>".to_vec(),
-        }
+        built_in_frame_line(message_text(
+            interrexx_inventory::errors::E101_21,
+            [name.to_vec()],
+        ))
     }
 
+    /// 101.20: the traceback line of a built-in method, laid out as
+    /// [`Raised::compiled_routine_line`]'s.
     pub(crate) fn compiled_method_line(name: &[u8], scope: &str) -> Vec<u8> {
-        let substitutions = vec![name.to_vec(), scope.as_bytes().to_vec()];
-        match interrexx_inventory::errors::lookup(101, 20) {
-            Some(entry) => substitute(entry.text, &substitutions),
-            None => b"<no message 101.20 in the catalogue>".to_vec(),
-        }
+        built_in_frame_line(message_text(
+            interrexx_inventory::errors::E101_20,
+            [name.to_vec(), scope.as_bytes().to_vec()],
+        ))
     }
 
     /// 93.904: a `MAX`/`MIN` argument is not a number. `position` is 1-based
@@ -2174,10 +2169,7 @@ impl Raised {
     /// report would carry, as the error of a `1/0` typed at a stop shows: the
     /// prefix, `42:` and the text of 42, then the same with `42.3`.
     pub(crate) fn debug_error_lines(&self) -> Vec<Vec<u8>> {
-        let prefix = match interrexx_inventory::errors::lookup(101, 4) {
-            Some(entry) => substitute(entry.text, &[]),
-            None => b"+++ Interactive trace.  Error".to_vec(),
-        };
+        let prefix = message_text(interrexx_inventory::errors::E101_4, []);
         let mut lines = Vec::new();
         let mut major = prefix.clone();
         major.extend_from_slice(format!(" {}:   ", self.number).as_bytes());
@@ -2259,20 +2251,38 @@ impl Raised {
         // and without the `raise propagate`: the echo lines, the sub line and
         // the exit code are identical, and only ` running <path> line <n>`
         // goes.
-        let mut position = Vec::new();
-        if !self.delivery.positionless {
-            position.extend_from_slice(b" running ");
-            position.extend_from_slice(named);
-            match (innermost, line) {
-                (Some(FailureSite::Packaged { .. }), _) => {}
-                (_, line) => {
-                    position.extend_from_slice(format!(" line {}", line.unwrap_or(0)).as_bytes());
-                }
-            }
-        }
-        let mut out = format!("Error {}", self.number).into_bytes();
-        out.extend_from_slice(&position);
-        out.extend_from_slice(b":  ");
+        // The frame is message 101.0 with the number, the program and the
+        // line; without a line it is 101.1, the number, 101.2 and the
+        // program, and without a position 101.1 and the number, each ended by
+        // a colon (`r[conv.error.text]`).
+        let number = self.number.to_string().into_bytes();
+        let mut out = if self.delivery.positionless {
+            let mut out = message_text(interrexx_inventory::errors::E101_1, []);
+            out.push(b' ');
+            out.extend_from_slice(&number);
+            out.push(b':');
+            out
+        } else if let Some(FailureSite::Packaged { .. }) = innermost {
+            let mut out = message_text(interrexx_inventory::errors::E101_1, []);
+            out.push(b' ');
+            out.extend_from_slice(&number);
+            out.push(b' ');
+            out.extend_from_slice(&message_text(interrexx_inventory::errors::E101_2, []));
+            out.push(b' ');
+            out.extend_from_slice(named);
+            out.push(b':');
+            out
+        } else {
+            message_text(
+                interrexx_inventory::errors::E101_0,
+                [
+                    number,
+                    named.to_vec(),
+                    line.unwrap_or(0).to_string().into_bytes(),
+                ],
+            )
+        };
+        out.extend_from_slice(b"  ");
         out.extend_from_slice(&self.message(self.number, 0));
         lines.push(out);
         // **Sub `0` prints no second line at all**, measured: `raise syntax
@@ -2301,8 +2311,17 @@ impl Raised {
     }
 }
 
+/// `text` as a traceback line with no source clause: the blank six-wide
+/// line-number column, a blank and the `*-*` marker that a clause line has,
+/// then `text` (`r[class.stackframe.builtin]`).
+fn built_in_frame_line(text: Vec<u8>) -> Vec<u8> {
+    let mut line = b"       *-* ".to_vec();
+    line.extend_from_slice(&text);
+    line
+}
+
 /// The catalogue text of `msg` with exactly its inserts.
-fn message_text<const N: usize>(
+pub(crate) fn message_text<const N: usize>(
     msg: interrexx_inventory::errors::Msg<N>,
     inserts: [Substitution; N],
 ) -> Vec<u8> {
@@ -2376,6 +2395,26 @@ mod tests {
             )
         );
         assert_eq!(raised.exit_code(), 249);
+    }
+
+    /// The frame of the report's first line is message 101.0 with the error
+    /// number, the program and the line as its inserts
+    /// (`r[conv.error.text]` specifies the frame).
+    #[test]
+    fn the_reports_frame_is_message_101_0() {
+        let raised = Raised::syntax(7, 3, vec![]);
+        let sites = one(4, b"end", 0);
+        let site = ClauseSite {
+            path: b"/abs/path/f.rex",
+            sites: &sites,
+        };
+        let report = String::from_utf8(raised.report(&site)).unwrap();
+        let frame = expand("⟨101.0¦7¦/abs/path/f.rex¦4⟩");
+        let major = report.lines().nth(1).expect("the major line");
+        assert!(
+            major.starts_with(&format!("{frame}  ")),
+            "{major:?} does not start with {frame:?}"
+        );
     }
 
     /// A substituted message, and a clause echo that keeps its trailing space.

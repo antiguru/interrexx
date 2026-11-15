@@ -656,10 +656,7 @@ fn exponent_oversize_message_substitutes_the_mantissa_not_the_exponent_digits() 
     // "100") could be confused for the exponent leaking through; a
     // multi-digit mantissa rules that out.
     let err = fmt("1e10", 9, Form::Scientific, None, None, Some(1), None).unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"1\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦1¦1⟩"));
 
     let err = fmt(
         "123456789012.345",
@@ -671,10 +668,7 @@ fn exponent_oversize_message_substitutes_the_mantissa_not_the_exponent_digits() 
         Some(0),
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"1.23456789\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦1.23456789¦1⟩"));
 
     // `before`/`after` do not affect it: both apply only once this check has
     // passed.
@@ -688,10 +682,7 @@ fn exponent_oversize_message_substitutes_the_mantissa_not_the_exponent_digits() 
         Some(0),
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"1.23456789\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦1.23456789¦1⟩"));
 }
 
 #[test]
@@ -712,10 +703,7 @@ fn exponent_oversize_message_uses_the_pre_carry_exponent_not_the_final_one() {
         None,
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"9.996\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦9.996¦1⟩"));
 }
 
 #[test]
@@ -738,10 +726,7 @@ fn exponent_oversize_is_still_reported_when_only_the_post_carry_exponent_overflo
         None,
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"1\" is too large for 2 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦1¦2⟩"));
 }
 
 #[test]
@@ -768,10 +753,7 @@ fn exponent_oversize_can_be_triggered_for_the_first_time_by_a_post_carry_exponen
         Some(10),
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Exponent of \"1.000000000\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.941¦1.000000000¦1⟩"));
 }
 
 // ---- additional(): the raw substitution values, in interpreter order ------

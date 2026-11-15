@@ -5,7 +5,7 @@ say m~package~name m~source~items
 .k~define('ZZ', m)
 say 'method rxo' .k~new~zz
 s2: say 'trap2' condition('o')~code
-do l over condition('o')~traceback; say '['l']'; end
+do l over condition('o')~traceback; if l~word(1)~datatype('W') then say l; end
 exit
 ::class k
 ::routine callerfn

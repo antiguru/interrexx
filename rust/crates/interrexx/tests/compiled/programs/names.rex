@@ -4,4 +4,4 @@ call 'named.rxo'
 say 'call' result
 signal on syntax name s
 .Routine~newFile('fail.rxo')~call
-s: do l over condition('o')~traceback; say l; end
+s: do l over condition('o')~traceback; if l~word(1)~datatype('W') then say l; end
