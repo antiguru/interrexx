@@ -76,10 +76,11 @@ page records why they are the way they are.
 * **A regular build does not read `third_party/`** (2026-11-13, #388). Tables derived from ooRexx
   are checked in, with a CI job that checks them against the pinned revision. The C and C++
   headers in `include/` are generated from the Rust layout definitions, in a per-platform layout
-  that holds Unix content only so far. The `standalone` CI job builds, lints and tests on a
-  checkout without the submodule and without a cargo cache, so a build script that reads the tree
-  fails there. Tests that need the tree are held out of that run by a filter that names each one
-  with its reason, not skipped at run time.
+  that holds Unix content only so far. The `build`, `shard`, `doctest` and `clippy` CI jobs
+  run on a checkout without the submodule. `build`, `doctest`, `clippy` and `msrv-standalone` keep
+  a cargo cache that no job with the submodule saved, and `shard` keeps none, so a build script
+  that reads the tree fails there. Tests that need the tree are held out of that run by a filter
+  that names each one with its reason, not skipped at run time.
 * **`include/` declares the names of ooRexx's headers, and no others** (2026-11-14, #650, #712).
   A CI job diffs every name both ways and fails on a difference that the script does not list with
   a reason. The eight exports the pinned headers leave undeclared stay undeclared in `include/`;
