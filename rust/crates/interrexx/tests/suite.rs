@@ -6,7 +6,8 @@
 //!
 //! Each side runs from its own copy: [`group_runner::fresh_copy_from`], the
 //! group file's namesakes elsewhere in the copy deleted, the assertions its
-//! Unspecified rows name guarded ([`suite_rows::guards::guard_assertions`]), and each
+//! Unspecified rows name guarded ([`suite_rows::guards::guard_assertions`]), the
+//! conditions they name replaced ([`suite_rows::guards::guard_conditions`]), and each
 //! test's start marked in [`marker`]'s file. Each run has an API service of its own
 //! ([`private_service`]), stopped after it. A run of this crate that a
 //! refusal, a crash, a timeout or the memory cap ends has its last started test
@@ -516,6 +517,10 @@ fn prepare(
     suite_rows::guards::guard_assertions(
         &group_file,
         &suite_rows::guards::guarded_assertions(&rows, &path),
+    );
+    suite_rows::guards::guard_conditions(
+        &group_file,
+        &suite_rows::guards::guarded_conditions(&rows, &path),
     );
     let marker = marker(run);
     if marker.exists() {
@@ -1348,6 +1353,7 @@ mod row_checks {
         "base/bif/CHAROUT",
         "base/bif/ERRORTEXT",
         "base/keyword/TRACE",
+        "base/keyword/TRACE_TraceObject",
         "base/class/RexxQueue",
         "extensions/json/json",
         "extensions/rxmath/RxMath",
@@ -1382,6 +1388,15 @@ mod row_checks {
         (
             LICENCES,
             "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 188; asserts a wording, r[conv.error.text]",
+        ),
+        // IF lines of the row's test, with and without assertions.
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 350 378 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tassertions 276; conditions 350 as x; r[conv.error.text]",
         ),
         (
             LICENCES,
@@ -1464,6 +1479,32 @@ mod row_checks {
         (
             LICENCES,
             "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1190; r[conv.error.text]",
+        ),
+        // A condition line that is not there, is no IF, is a DO, is in another
+        // test, or is named as an assertion too; and a malformed replacement.
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 9999 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 352 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 351 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 618 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tassertions 350; conditions 350 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 350 r[conv.error.text]",
         ),
         (
             LICENCES,

@@ -75,6 +75,13 @@ fresh copy with its own API service.
   assertion, or is an IF ending in THEN whose next line does, and lies in the row's test or in a
   method or routine that is no other test; the row check fails a line that does not. An assertion
   that checks wording and specified behaviour in one call stays exempt, and its row says so.
+  A branch whose condition tests wording, such as the routine announcement's, is not an assertion:
+  the row names its IF line as `conditions LINES as EXPRESSION; `, and the copy's condition on that
+  line becomes the pair of the row's tests running EXPRESSION, a structural test of the same
+  distinction, and every other test running the line's own condition, so the assertions in the
+  branch's bodies stay gated. The row check fails a condition line that is no IF ending in THEN or
+  that lies in another test, and the rewrite keeps the line and its THEN, so an ELSE binds as
+  before. Both conditions are evaluated, so the line's own must not raise for the row's tests.
 * A crash, refusal, timeout or memory kill on interrexx renames the last started test out and runs
   the group again, so one failure does not hide the rest.
 * Runs are bounded: ooRexx 300 s, interrexx four times ooRexx's time and at least 60 s, under a

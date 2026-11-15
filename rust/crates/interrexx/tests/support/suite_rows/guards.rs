@@ -7,15 +7,71 @@ use crate::group_runner::{RUNNING_TEST, read_bytes};
 /// The prefix of an Unspecified row's reason that names its assertions.
 const ASSERTIONS: &str = "assertions ";
 
+/// The prefix, after the assertions, of the part of an Unspecified row's reason
+/// that names conditions and what replaces them.
+const CONDITIONS: &str = "conditions ";
+
+/// Separates a condition list from its replacement.
+const REPLACED_BY: &str = " as ";
+
+/// What an Unspecified row's reason names in its group file: the lines of its
+/// assertions and the lines of its conditions with the one expression that
+/// replaces each condition's test while the row's test runs.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Named {
+    pub assertions: BTreeSet<usize>,
+    pub conditions: BTreeSet<usize>,
+    /// The replacement of every line in `conditions`, empty where there are none.
+    pub replacement: String,
+}
+
 /// The lines of its group file that an Unspecified row's reason names in its
-/// leading `assertions LIST; `, where LIST is space-separated line numbers
-/// and `FIRST-LAST` ranges, each line named once.
-pub fn assertion_lines(reason: &str) -> Result<BTreeSet<usize>, String> {
-    let list = reason
-        .strip_prefix(ASSERTIONS)
-        .and_then(|rest| rest.split_once("; "))
-        .map(|(list, _)| list)
-        .ok_or("the reason does not start `assertions LINES; `")?;
+/// leading `assertions LIST; ` and then `conditions LIST as EXPRESSION; `, each
+/// part optional but one present. LIST is space-separated line numbers and
+/// `FIRST-LAST` ranges, each line named once in the reason, and EXPRESSION is a
+/// Rexx expression without `; `.
+pub fn named_lines(reason: &str) -> Result<Named, String> {
+    let mut rest = reason;
+    let mut named = Named {
+        assertions: BTreeSet::new(),
+        conditions: BTreeSet::new(),
+        replacement: String::new(),
+    };
+    if let Some(after) = rest.strip_prefix(ASSERTIONS) {
+        let (list, after) = after
+            .split_once("; ")
+            .ok_or("the assertions are not ended by `; `")?;
+        named.assertions = line_list(list)?;
+        rest = after;
+    }
+    if let Some(after) = rest.strip_prefix(CONDITIONS) {
+        let (list, after) = after
+            .split_once(REPLACED_BY)
+            .ok_or("the conditions are not followed by ` as EXPRESSION; `")?;
+        let (expression, _) = after
+            .split_once("; ")
+            .ok_or("the replacement expression is not ended by `; `")?;
+        if expression.trim().is_empty() || expression.contains(['\n', '\r']) {
+            return Err("the replacement expression is empty or spans lines".to_string());
+        }
+        named.conditions = line_list(list)?;
+        named.replacement = expression.to_string();
+    }
+    if named.assertions.is_empty() && named.conditions.is_empty() {
+        return Err(
+            "the reason does not start `assertions LINES; ` or `conditions LINES as EXPRESSION; `"
+                .to_string(),
+        );
+    }
+    if let Some(line) = named.assertions.intersection(&named.conditions).next() {
+        return Err(format!("line {line} is both an assertion and a condition"));
+    }
+    Ok(named)
+}
+
+/// The lines a space-separated LIST of numbers and `FIRST-LAST` ranges names,
+/// each once.
+fn line_list(list: &str) -> Result<BTreeSet<usize>, String> {
     let number = |text: &str| {
         text.parse::<usize>()
             .ok()
@@ -48,13 +104,49 @@ pub fn guarded_assertions(rows: &[Row], group: &str) -> BTreeMap<usize, BTreeSet
         .iter()
         .filter(|row| row.group == group && row.owner == Owner::Unspecified)
     {
-        let lines = assertion_lines(&row.reason)
-            .unwrap_or_else(|problem| panic!("{}: {problem}", row.at()));
-        for line in lines {
+        let named =
+            named_lines(&row.reason).unwrap_or_else(|problem| panic!("{}: {problem}", row.at()));
+        for line in named.assertions {
             guards.entry(line).or_default().insert(row.test.clone());
         }
     }
     guards
+}
+
+/// Each condition line `group`'s Unspecified rows name, with the tests whose
+/// rows name it and the expression that replaces its test for them. The rows
+/// are well formed, and rows that name one line agree on its expression.
+pub fn guarded_conditions(rows: &[Row], group: &str) -> BTreeMap<usize, Condition> {
+    let mut guards: BTreeMap<usize, Condition> = BTreeMap::new();
+    for row in rows
+        .iter()
+        .filter(|row| row.group == group && row.owner == Owner::Unspecified)
+    {
+        let named =
+            named_lines(&row.reason).unwrap_or_else(|problem| panic!("{}: {problem}", row.at()));
+        for line in named.conditions {
+            let guard = guards.entry(line).or_insert_with(|| Condition {
+                tests: BTreeSet::new(),
+                replacement: named.replacement.clone(),
+            });
+            assert_eq!(
+                guard.replacement,
+                named.replacement,
+                "{}: line {line} is replaced differently by another row",
+                row.at()
+            );
+            guard.tests.insert(row.test.clone());
+        }
+    }
+    guards
+}
+
+/// A condition line's guard: the tests that run its replacement and the
+/// replacement.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Condition {
+    pub tests: BTreeSet<String>,
+    pub replacement: String,
 }
 
 /// Whether the source line `line` starts, after its indentation, with an
@@ -77,6 +169,26 @@ pub fn guardable(line: &[u8], next: Option<&[u8]>) -> bool {
         && clause.get(2).is_some_and(u8::is_ascii_whitespace)
         && clause.ends_with(b" then")
         && next.is_some_and(starts_assertion)
+}
+
+/// The byte range of the condition of a source line that is an IF ending in
+/// THEN, the text between the two without its blanks, `None` for any other
+/// line.
+pub fn condition_span(line: &[u8]) -> Option<std::ops::Range<usize>> {
+    let indent = line.len() - clause_of(line).len();
+    let clause = clause_of(line).trim_ascii_end();
+    let rest = clause
+        .get(..2)
+        .filter(|keyword| keyword.eq_ignore_ascii_case(b"if"))
+        .and(clause.get(2..))
+        .filter(|rest| rest.first().is_some_and(u8::is_ascii_whitespace))?;
+    let then = rest.len().checked_sub(5)?;
+    if !rest[then..].eq_ignore_ascii_case(b" then") {
+        return None;
+    }
+    let condition = rest[..then].trim_ascii();
+    let start = indent + 2 + (rest.len() - rest.trim_ascii_start().len());
+    (!condition.is_empty()).then(|| start..start + condition.len())
 }
 
 /// `line` after its indentation.
@@ -153,6 +265,65 @@ pub fn guard_assertions(group_file: &Path, guards: &BTreeMap<usize, BTreeSet<Str
         done,
         guards.len(),
         "every guarded line of {} exists",
+        group_file.display()
+    );
+    fs::write(group_file, rewritten).expect("cannot rewrite the copied group file");
+}
+
+/// Rewrites each IF line of the copied `group_file` that `guards` names so that
+/// its condition is the line's replacement, not the line's own, while one of
+/// the line's tests runs ([`RUNNING_TEST`]), and the line's own otherwise. The
+/// rewritten condition stays on the same line, so no line number changes, and
+/// the IF keeps its THEN and what follows it, so its ELSE binds as before. Both
+/// conditions are evaluated, which a condition that raises for another test's
+/// data must not rely on avoiding.
+pub fn guard_conditions(group_file: &Path, guards: &BTreeMap<usize, Condition>) {
+    if guards.is_empty() {
+        return;
+    }
+    let text = read_bytes(group_file);
+    let mut rewritten = Vec::with_capacity(text.len());
+    let mut done = 0;
+    for (at, line) in text.split_inclusive(|byte| *byte == b'\n').enumerate() {
+        let Some(guard) = guards.get(&(at + 1)) else {
+            rewritten.extend_from_slice(line);
+            continue;
+        };
+        let span = condition_span(line).unwrap_or_else(|| {
+            panic!(
+                "{} line {} is no IF ending in THEN",
+                group_file.display(),
+                at + 1
+            )
+        });
+        let names: Vec<&str> = guard.tests.iter().map(String::as_str).collect();
+        // The names are words of a quoted string.
+        assert!(
+            names.iter().all(|name| !name
+                .bytes()
+                .any(|byte| byte == b'\'' || byte.is_ascii_whitespace())),
+            "test names without a quote or a blank: {names:?}"
+        );
+        let running = format!("wordpos(.{RUNNING_TEST}, '{}')", names.join(" "));
+        // Everything before the span is the indentation and the IF, everything
+        // after it the THEN and the rest of the line.
+        rewritten.extend_from_slice(&line[..span.start]);
+        rewritten.extend_from_slice(
+            format!(
+                "({running} > 0 & ({})) | ({running} = 0 & (",
+                guard.replacement
+            )
+            .as_bytes(),
+        );
+        rewritten.extend_from_slice(&line[span.clone()]);
+        rewritten.extend_from_slice(b"))");
+        rewritten.extend_from_slice(&line[span.end..]);
+        done += 1;
+    }
+    assert_eq!(
+        done,
+        guards.len(),
+        "every guarded condition of {} exists",
         group_file.display()
     );
     fs::write(group_file, rewritten).expect("cannot rewrite the copied group file");
