@@ -290,15 +290,39 @@ r[native.loading.again]
 Once the last live instance of a process has been terminated, no instance holds
 a library. When an instance created after that loads a library,
 the library's loader runs again, and its unloader runs again when the last
-instance live with it is terminated. An instance created while the last one's
-unloaders are still running is created only once they have returned, so a
-loader of the later instance never runs inside an unloader of the earlier ones.
+instance live with it is terminated. An instance that another thread creates while the
+last one's unloaders are still running is created only once they have returned,
+so a loader of the later instance never runs inside an unloader of the earlier
+ones.
 
 > For example, after the two instances of the [unload
 > example](r:native.loading.unload) have been terminated, the host creates a
 > third instance, which loads the test library, and terminates it. The host
 > sees `loader`, `unloader`, `loader`, `unloader` in that order, and no other
 > line of the library's.
+
+r[native.loading.reentrant]
+A thread that is running a loader or an unloader never waits for its own hook.
+What the [shared](r:native.loading.shared) and [again](r:native.loading.again)
+rules make other threads wait for, it goes on without. A loader that loads, with
+the thread context it is handed, the library whose loader it is finds the
+library loaded: the load completes at once and runs no loader. A loader or an
+unloader that loads another library, or creates an instance that loads a
+library, gets that load and that creation without waiting. Where the load is the
+first of the library in the process, the library's own loader runs inside the
+hook that asked for it, and where the library is already loading on that thread
+or on the thread that created the instance, the load finds it and runs no second
+loader. An instance a hook creates is created without waiting, and is a live
+instance like any other. Whether the instance an unloader of the last instance
+creates runs the loaders and unloaders of the libraries it loads, or finds them
+still loaded, is unspecified. A hook that starts a thread of its own and waits
+for it must not have that thread create an instance or load a library: the rules
+above make that thread wait for the hook, and the two would wait for each other.
+
+> For example, a loader of the test library creates an instance that loads the
+> test library, and terminates it. The host sees `loader` and then the lines of
+> the instance's creation and termination, and the library's loader does not
+> run a second time.
 
 r[native.loading.static]
 Whether a library's static storage starts afresh when [a later
