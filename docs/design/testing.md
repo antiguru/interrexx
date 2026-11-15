@@ -31,13 +31,16 @@ two-way comparison against ANSI would report deliberate choices as defects.
 through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. `differential.txt` names
 the programs `tests/corpus.rs` runs under both interpreters. stdout and exit status compare byte for
 byte; stderr does too, apart from a narrow trace-indent normalisation that a program can opt out of.
-Both sides' output is cut first (`tests/support/error_text.rs`), by the structure the specification
+Both sides' stderr is cut first (`tests/support/error_text.rs`), by the structure the specification
 fixes and never by a wording: an error report keeps its code, the lines of an interactive trace stop
 keep `+++` and the code, a trace announcement keeps its flag, and a traceback line of a built-in
-level (blank number column, `*-*`) is dropped. A numbered traceback line whose text says the code
-has no source is a library level and is normalised to a placeholder. A program in this corpus prints
-the codes, flags and Rexx levels of a run and never the wording of a message, an announcement or a
-built-in level.
+level (blank number column, `*-*`, a text that names it in double quotes and ends with a period) is
+dropped. A numbered traceback line whose text names the package `REXX` as its last quoted string is
+a library level and is normalised to a placeholder. Stdout is compared whole, except where the
+group runner masks it (an ooTest group's holds the traceback of an error a test meets; the
+simulation gate masks a program's the same way), so a program in this corpus prints the codes,
+flags and Rexx levels of a run and never the wording of a message, an announcement or a built-in
+level.
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,
