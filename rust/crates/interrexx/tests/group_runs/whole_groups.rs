@@ -915,9 +915,9 @@ mod sim_gate {
     use std::time::Duration;
 
     use super::super::super::group_runner::{
-        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked, masked_with_announcements_cut,
-        outcome, run_crate_process,
-        run_crate_sim, run_oracle_within,
+        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked,
+        masked_with_announcements_cut, outcome, run_crate_process, run_crate_sim,
+        run_oracle_within,
     };
     use super::super::super::support::{error_text, oracle, sidecar};
     use super::{
@@ -1887,7 +1887,10 @@ mod sim_gate {
                 if reds.is_empty() {
                     "passed".to_string()
                 } else {
-                    format!("failed {}", outcome_key(&unit.row, &compared(&unit.row, &ran.run)))
+                    format!(
+                        "failed {}",
+                        outcome_key(&unit.row, &compared(&unit.row, &ran.run))
+                    )
                 }
             ));
             reds = after_rerun(&unit.row, first, reds);
@@ -2055,8 +2058,10 @@ mod sim_gate {
             };
             let same = hash(first).is_some()
                 && hash(first) == hash(second)
-                && compared(&unit.row, &first.run).stdout == compared(&unit.row, &second.run).stdout
-                && compared(&unit.row, &first.run).stderr == compared(&unit.row, &second.run).stderr
+                && compared(&unit.row, &first.run).stdout
+                    == compared(&unit.row, &second.run).stdout
+                && compared(&unit.row, &first.run).stderr
+                    == compared(&unit.row, &second.run).stderr
                 && first.run.status == second.run.status;
             eprintln!(
                 "self-test {}: trace {:?} {:?}, {}",
