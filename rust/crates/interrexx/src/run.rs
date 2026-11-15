@@ -1817,6 +1817,20 @@ impl Interp {
             Some(value) => {
                 self.roots.activity_mut().push_temp(value);
                 let value = self.required_string_value(value)?;
+                // With no trace, exit or route to read the line, its bytes go
+                // from the value to the buffer, and no third copy of a large
+                // value is made on the way.
+                if !self.traced_mode().results
+                    && self.exits.is_none()
+                    && self.output_route()?.is_none()
+                {
+                    let rendered = self.render(value);
+                    let mut out = std::mem::take(&mut self.out);
+                    out.extend_from_slice(rendered.text(self));
+                    self.out = out;
+                    self.write_out_line(b"");
+                    return self.say_written();
+                }
                 self.to_text(value).to_vec()
             }
             None => Vec::new(),
@@ -1858,12 +1872,17 @@ impl Interp {
             }
             _ => {
                 self.write_out_line(&line);
-                // The write the `Stream` native method's return would have
-                // ended with.
-                if !self.uninit_ready.is_empty() {
-                    self.run_uninits_at_return(None)?;
-                }
+                return self.say_written();
             }
+        }
+        Ok(())
+    }
+
+    /// What a `SAY` written to the buffer ends with: the write the `Stream`
+    /// native method's return would have ended with.
+    fn say_written(&mut self) -> Result<(), Failure> {
+        if !self.uninit_ready.is_empty() {
+            self.run_uninits_at_return(None)?;
         }
         Ok(())
     }

@@ -443,10 +443,10 @@ pub(crate) fn word_index(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let string = required_render(interp, args, 1);
 
-    let index = word_range(&string, position).map_or(0, |word| word.start + 1);
+    let index = word_range(string.text(interp), position).map_or(0, |word| word.start + 1);
     Ok(interp.counted(index))
 }
 
@@ -456,24 +456,26 @@ pub(crate) fn word_length(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let string = required_render(interp, args, 1);
 
-    let length = word_range(&string, position).map_or(0, |word| word.len());
+    let length = word_range(string.text(interp), position).map_or(0, |word| word.len());
     Ok(interp.counted(length))
 }
 
 /// `SUBWORD(string, n [,length])`: `length` words from the `n`th, as a slice
 /// of the argument.
 pub(crate) fn subword(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let n = converted_position(interp, name, args, 2)?;
     let requested = whole_number(interp, name, args, 3)?;
     let position = position_of(n)?;
     let count = requested.map(length_of).transpose()?;
 
-    let found = subword_range(&string, position, count);
-    Ok(interp.text(&string[found]))
+    let string = required_render(interp, args, 1);
+    let string = string.text(interp);
+    let found = subword_range(string, position, count);
+    let out = super::string::unchanged(interp, &string[found])?;
+    Ok(interp.text_built(out))
 }
 
 /// `DELWORD(string, n [,length])`: the argument with `length` words from the
