@@ -200,7 +200,7 @@ pub(crate) fn datatype(
         Some(matched) => matched,
         None => {
             let text = required_string(interp, args, 1);
-            datatype_matches(interp, &text, letter)?
+            Some(datatype_whole(interp, &text)?)
         }
     };
     let Some(matched) = matched else {
@@ -218,23 +218,15 @@ pub(crate) fn datatype_kind(text: &[u8]) -> &'static [u8] {
     }
 }
 
-/// Whether `text` is of the kind `letter` names, shared with
-/// `String~dataType`, or `None` when `letter` is not one of the thirteen.
-/// Fails only for `W`, whose rounding is arithmetic.
-pub(crate) fn datatype_matches(
-    interp: &mut Interp,
-    text: &[u8],
-    letter: u8,
-) -> Result<Option<bool>, Failure> {
-    if let Some(matched) = datatype_letter_matches(text, letter) {
-        return Ok(matched);
-    }
+/// `DATATYPE`'s `W` test, the one letter that reads the running settings and
+/// can raise, shared with `String~dataType`.
+pub(crate) fn datatype_whole(interp: &mut Interp, text: &[u8]) -> Result<bool, Failure> {
     // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
     // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
     // of zero under the current settings and asks whether the result is an
     // integer, with no bound from a machine integer. That `plus` is an
     // operator, so it raises LOSTDIGITS and 42 as one.
-    Ok(Some(match parse_number(text) {
+    Ok(match parse_number(text) {
         Some(number) => {
             let digits = interp.activation().settings.digits();
             interp.lostdigits_check_with(&number, |_| text.to_vec())?;
@@ -244,12 +236,13 @@ pub(crate) fn datatype_matches(
                 .is_integer(digits)
         }
         None => false,
-    }))
+    })
 }
 
-/// [`datatype_matches`] for every letter but `W`, which reads the running
-/// settings and can raise: `None` for `W`, `Some(None)` for a letter that is
-/// not one of the thirteen.
+/// Whether `text` is of the kind `letter` names, shared with
+/// `String~dataType`, for every letter but `W`: `None` for `W`, which
+/// [`datatype_whole`] answers, and `Some(None)` for a letter that is not one
+/// of the thirteen.
 pub(crate) fn datatype_letter_matches(text: &[u8], letter: u8) -> Option<Option<bool>> {
     let matched = match letter {
         b'A' => !text.is_empty() && text.iter().all(u8::is_ascii_alphanumeric),

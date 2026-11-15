@@ -210,6 +210,18 @@ impl Interp {
         self.text_built(bytes)
     }
 
+    /// [`Interp::integer_text`] for digits that may be a constant, which is
+    /// answered without a buffer of its own.
+    pub(crate) fn integer_text_cow(&mut self, bytes: Cow<'_, [u8]>, digits: u64) -> ObjRef {
+        match bytes {
+            Cow::Owned(bytes) => self.integer_text(bytes, digits),
+            Cow::Borrowed(bytes) => match rendered_small_int(bytes, digits) {
+                Some(handle) => handle,
+                None => self.text(bytes),
+            },
+        }
+    }
+
     pub(crate) fn text_built(&mut self, bytes: Vec<u8>) -> ObjRef {
         if bytes.len() <= INLINE_BYTES {
             let value = self.text(&bytes);

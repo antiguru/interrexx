@@ -1432,7 +1432,7 @@ fn native_string_c2d(
         let rendered = interp.render(receiver);
         crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, true)?
     };
-    Ok(Some(interp.integer_text(text, digits)))
+    Ok(Some(interp.integer_text_cow(text, digits)))
 }
 
 /// `String~"X2D"`.
@@ -1447,7 +1447,7 @@ fn native_string_x2d(
         let rendered = interp.render(receiver);
         crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, false)?
     };
-    Ok(Some(interp.integer_text(text, digits)))
+    Ok(Some(interp.integer_text_cow(text, digits)))
 }
 
 /// `String~"D2C"`.
@@ -1562,7 +1562,7 @@ fn native_string_datatype(
         Some(matched) => matched,
         None => {
             let bytes = interp.to_text(receiver).to_vec();
-            crate::builtin::datatype::datatype_matches(interp, &bytes, letter)?
+            Some(crate::builtin::datatype::datatype_whole(interp, &bytes)?)
         }
     };
     let Some(matched) = matched else {

@@ -454,7 +454,7 @@ fn x2d_c2d(
         let string = required_render(interp, args, 1);
         x2d_c2d_text(interp, string.text(interp), requested, character)?
     };
-    Ok(interp.integer_text(text, digits))
+    Ok(interp.integer_text_cow(text, digits))
 }
 
 /// `X2D`'s and `C2D`'s answer once the string and the length are read, shared
@@ -466,13 +466,13 @@ pub(crate) fn x2d_c2d_text(
     string: &[u8],
     requested: Option<usize>,
     character: bool,
-) -> Result<(Vec<u8>, u64), Failure> {
+) -> Result<(std::borrow::Cow<'static, [u8]>, u64), Failure> {
     let digits = current_digits(interp);
     // A length of zero answers zero without validating anything at all --
     // measured, `x2d('zz',0)` is `0`, not an error.
     let result_size = requested.unwrap_or(string.len());
     if result_size == 0 {
-        return Ok((b"0".to_vec(), digits));
+        return Ok((std::borrow::Cow::Borrowed(b"0"), digits));
     }
 
     let packed;
@@ -554,7 +554,7 @@ pub(crate) fn x2d_c2d_text(
             }
         }
     }
-    Ok((render_decimal(&accumulator, negative), digits))
+    Ok((render_decimal(&accumulator, negative).into(), digits))
 }
 
 /// `C2D(string [,n])`: the argument's bytes read as a binary integer.
