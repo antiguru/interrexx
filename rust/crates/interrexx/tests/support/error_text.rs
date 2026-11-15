@@ -28,11 +28,14 @@
 /// keeps `+++`. The announcement of a routine or method in trace output, a
 /// line of blanks where a line number would stand and then `>I> ` or `<I< `
 /// (`r[instr.trace.tags]`), keeps the flag. A line that shows a built-in
-/// method or routine as a level of a traceback, blanks where a line number
-/// would stand and then `*-* ` and its text, is dropped whole, because a
-/// build may not have that level (`r[class.stackframe.builtin]`). The level
-/// of a method or routine written in Rexx has a number and stays. Every other
-/// line is a separate comparison and stays exact.
+/// method or routine as a level of a traceback is dropped whole, because a
+/// build may not have that level (`r[class.stackframe.builtin]`): six blanks
+/// where a line number would stand, `*-* ` and a text that names the method
+/// or routine in double quotes and ends with a period, as every text that
+/// names one does (`r[conv.error.text]`). The level of a method or routine
+/// written in Rexx has a number (`r[class.stackframe.traceline]`) and stays,
+/// and so does an unnumbered line of any other text. Every other line is a
+/// separate comparison and stays exact.
 pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
@@ -51,12 +54,28 @@ pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
     joined
 }
 
+/// The blanks that stand for the six columns of a line number, and the blank
+/// after them, in a trace line (`r[instr.trace.line]`).
+const NO_LINE_NUMBER: &[u8] = b"       ";
+
 /// Whether `line` has the structure of the traceback line of a built-in
-/// method or routine: blanks where a line number would stand, `*-* ` and some
-/// text. A numbered line, a trace line and any other text are not.
+/// method or routine: [`NO_LINE_NUMBER`], `*-* `, and a text that holds a
+/// non-empty name in double quotes and ends with a period. A numbered line,
+/// a trace line, and an unnumbered line of other text are not.
 fn is_built_in_frame_line(line: &[u8]) -> bool {
-    let blanks = line.iter().take_while(|&&b| b == b' ').count();
-    blanks > 0 && line[blanks..].starts_with(b"*-* ")
+    let Some(text) = line
+        .strip_prefix(NO_LINE_NUMBER)
+        .and_then(|rest| rest.strip_prefix(b"*-* "))
+    else {
+        return false;
+    };
+    let names = text
+        .split(|&b| b == b'"')
+        .skip(1)
+        .step_by(2)
+        .any(|quoted| !quoted.is_empty());
+    let quotes = text.iter().filter(|&&b| b == b'"').count();
+    names && quotes.is_multiple_of(2) && text.ends_with(b".")
 }
 
 /// `line` without the text after the flag of a trace announcement (blanks,
@@ -212,7 +231,7 @@ mod tests {
     fn cut_error_texts_drops_built_in_frame_lines_and_nothing_else() {
         use super::cut_error_texts;
         let without = b"     3 *-* x~put(1)\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
-        let with = b"       *-* Some words.\n     3 *-* x~put(1)\n       *-* Other words \"R\".\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
+        let with = b"       *-* Some words \"SEND\" and \"Message\".\n     3 *-* x~put(1)\n       *-* Other words \"R\".\n     1 *-* call p\nError 93 running /t/x.rex line 3:  Text.\nError 93.902:  Text.\n";
         assert_eq!(cut_error_texts(with), cut_error_texts(without));
         // A different line of Rexx code, or a different level count of Rexx
         // code, still differs.
@@ -223,9 +242,28 @@ mod tests {
         // A numbered line is Rexx code, and so is a line without the blanks.
         let numbered = b"     3 *-* x\n*-* y\n";
         assert_eq!(cut_error_texts(numbered), numbered.to_vec());
+        // An unnumbered line that names nothing in quotes, or does not end
+        // with a period, or is indented otherwise, is not a built-in level:
+        // an extra or a missing one is a difference.
+        let clause = b"     3 *-* say x\n";
+        for extra in [
+            &b"       *-* say y\n"[..],
+            b"       *-* say \"y\"\n",
+            b"       *-* say \"\".\n",
+            b"        *-* Words \"R\".\n",
+            b"      *-* Words \"R\".\n",
+        ] {
+            let more = [&clause[..], extra].concat();
+            assert_ne!(
+                cut_error_texts(&more),
+                cut_error_texts(clause),
+                "{}",
+                String::from_utf8_lossy(extra)
+            );
+        }
         // The last line may have no newline.
         assert_eq!(
-            cut_error_texts(b"       *-* Some words.\n     1 *-* x"),
+            cut_error_texts(b"       *-* Some words \"R\".\n     1 *-* x"),
             b"     1 *-* x".to_vec()
         );
     }
