@@ -38376,6 +38376,59 @@ quiet made Routine
 .package~new("e3", "exit 5")~class~id =&gt; Package
 .package~new("e4", "return 5")~class~id =&gt; Package
 </code></pre>
+<div class="rule" id="r-class.package.new.untranslated"><a href="classes/package.html#r-class.package.new.untranslated">[class.package.new.untranslated]</a></div>
+<p>A package whose translation raised is not answered by <code>new</code>, but the <code>PACKAGE</code>
+entry of <a href="classes/../conditions/information.html#r-cond.information.object">the condition object</a> of that error is
+the package of the text that did not translate, and a program that traps the
+condition can hold it. The package is an ordinary one that was never
+installed: its <code>name</code> is the name given to <code>new</code>, <code>source</code> answers the lines
+given to <code>new</code>, and <code>routines</code>, <code>classes</code>, <code>publicRoutines</code> and <code>publicClasses</code>
+are empty, whatever directives came before the line that failed. Every method
+of <code>Package</code> works on it as on any other package: <code>addRoutine</code>,
+<code>addPublicRoutine</code>, <code>addClass</code> and <code>addPackage</code> add to it as their rules say,
+and answer it, what was added is found by <code>findRoutine</code> and listed by
+<code>routines</code>, and a package that imports it finds the public routines that were
+added. Each translation makes its own package, so the packages of two
+translations of the same source are not <code>==</code>, and neither is <code>==</code> to the
+package that ran the code.</p>
+<pre><code class="language-rexx">src = .array~of('::class k', '::routine zz', '  return 1', 'if then')
+f1 = failed(src)
+f2 = failed(src)
+say f1~class~id f1~name f1~source~items f1~routines~items f1~classes~items f1~publicRoutines~items
+say (f1 == f2) (f1 == f1) (f1 == .context~package)
+x = .routine~new('xr', 'return "xr called"')
+say (f1~addPublicRoutine('xr', x) == f1) f1~routines~items f1~publicRoutines~items f1~findRoutine('XR')~call
+say f2~routines~items
+y = .routine~new('yr', 'return "yr called"')
+say (f2~addRoutine('yr', y) == f2) f2~routines~items f2~publicRoutines~items f2~findRoutine('YR')~call
+q2 = .package~new('q2', 'return 1')
+say (q2~addPackage(f2) == q2) q2~findRoutine('YR')~isNil
+say (f1~addClass('late', .object~subclass('late')) == f1) f1~classes~items f1~publicClasses~items
+q = .package~new('q', 'return 1')
+say (q~addPackage(f1) == q) q~importedPackages~items q~findRoutine('XR')~call
+say (f1~addPackage(f1) == f1) f1~importedPackages~items
+exit
+failed: procedure
+  signal on syntax name bad
+  .package~new('broken', arg(1))
+  return .nil
+bad:
+  c = condition('o')
+  say c~code c~package~name
+  return c~package
+</code></pre>
+<pre><code class="language-output">35.929 broken
+35.929 broken
+Package broken 4 0 0 0
+0 1 0
+1 1 1 xr called
+0
+1 1 0 yr called
+1 1
+1 1 0
+1 1 xr called
+1 1
+</code></pre>
 <h3 id="defaultoptions"><a class="header" href="#defaultoptions">defaultOptions</a></h3>
 <div class="rule" id="r-class.package.defaultoptions"><a href="classes/package.html#r-class.package.defaultoptions">[class.package.defaultoptions]</a></div>
 <p><code>defaultOptions</code> reads and sets the options that a package gets when it is
