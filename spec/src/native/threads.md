@@ -77,14 +77,20 @@ this rule need an extension of their own that sends messages by name, so they
 run outside this page.
 
 r[native.threads.attach.deviation.175]
-`DetachThread` called from a thread other than the one that attached the
-context does nothing, and so does a second `DetachThread` from the thread that
-attached it ([Deviation
-175](../deviations.md#175-detachthread-from-the-wrong-thread-or-twice)): the
-attachment stays as it was, and its next message runs. A message sent after
-the thread did detach is not covered here but by [Deviation
-19](../deviations.md#19-callback-from-a-foreign-thread), which refuses it. ooRexx
-aborts the process on both misuses, so there is no example.
+`DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second `DetachThread` from the thread that attached it ([Deviation
+175](../deviations.md#175-an-attached-threads-context-used-from-another-thread)).
+The attachment stays as it was, and its next message runs, neither halted nor
+traced by the call. The call does not wait for a message the attached thread
+runs, so it returns even where that message waits for the calling thread.
+Native code on another thread halts or traces the interpreter through the
+instance's `Halt` and `SetTrace` instead, as [the halt
+rule](r:native.threads.halt) and [the trace rule](r:native.threads.trace) say.
+A message sent after the thread did detach is not covered here but by
+[Deviation 19](../deviations.md#19-callback-from-a-foreign-thread), which
+refuses it. ooRexx aborts the process or hangs on each of these misuses, so
+there is no example.
 
 r[native.threads.end]
 The end of a program waits for an attached thread only while that thread's
@@ -224,10 +230,14 @@ Native code may ask the interpreter to halt every activity, or only the
 activity whose call is running it. Each activity that is asked takes the
 [HALT condition](../conditions/halt.md) at its next clause, which for the
 activity of the call is the first clause after the call returns, and an
-activity that was not asked runs on. An [attached thread](r:native.threads.attach)
-whose activity runs no message when the interpreter is asked to halt every
-activity is not asked: the next message it sends runs unhalted. In the examples a second activity loops
-with a short sleep and records whether it was halted.
+activity that was not asked runs on. An [attached
+thread](r:native.threads.attach) whose activity runs no message when the
+interpreter is asked to halt every activity is not asked: the next message it
+sends runs unhalted. A message that has arrived but is held under [Deviation
+176](r:native.threads.attach.deviation.176) has not begun, so its activity
+runs no message and is not asked either: the message runs to its end once it
+is let go. In the examples a second activity loops with a short sleep and
+records whether it was halted.
 
 ```rexx
 w = .n3zqw~new
@@ -320,8 +330,9 @@ its own, as [the scope of the setting](r:bif.trace.scope) says. Turned off,
 every activity runs on untraced from its next clause. An [attached
 thread](r:native.threads.attach) whose activity runs no message when the trace
 is turned on or off is not reached: the next message it sends runs with its
-method's own setting. A request made after the interpreter has ended does nothing. The trace lines name the program's path,
-so the tests that witness this rule compare them outside this page.
+method's own setting. A request made after the interpreter has ended does
+nothing. The trace lines name the program's path, so the tests that witness
+this rule compare them outside this page.
 
 r[native.threads.trace.deviation.166]
 Code that was already running when native code first turned the external trace

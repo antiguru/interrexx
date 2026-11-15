@@ -1410,12 +1410,15 @@ failure value of the member, runs nothing, and does not wait. The interpreter
 no longer exists once `Terminate` returns. ooRexx runs such a callback and
 answers its result.
 
-## 175. DetachThread from the wrong thread or twice
+## 175. An attached thread's context used from another thread
 
-`DetachThread` called from a thread other than the one that attached the
-context does nothing, and so does a second `DetachThread` from the thread that
-attached it. The attachment stays as the first detach left it, or as it was.
-ooRexx aborts the process in both cases.
+`DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second `DetachThread` from the thread that attached it. The attachment
+stays as the first detach left it, or as it was, and the call never waits for
+a message the attached thread runs. Halting or tracing the interpreter from
+another thread remains the work of the instance's `Halt` and `SetTrace`.
+ooRexx aborts the process or hangs in these cases.
 
 ## 176. A message from an attached thread stops the activity it interrupts
 
