@@ -325,6 +325,11 @@ impl Interp {
         {
             return self.run_rust_routine(body, code, name, args, executable);
         }
+        if let Some(classic) = entry.classic_entry() {
+            return self
+                .call_classic_entry(classic, name, args)
+                .map(Started::Ran);
+        }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
         self.leave_next_native = false;

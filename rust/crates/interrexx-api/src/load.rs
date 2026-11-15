@@ -1270,6 +1270,20 @@ impl NativeRoutineEntry {
         !self.entry_point.is_null()
     }
 
+    /// The row's address as the classic `RexxFunctionHandler` it names, for a
+    /// `ROUTINE_CLASSIC_STYLE` row of a library still open; `None` for any
+    /// other row.
+    #[must_use]
+    pub fn classic_entry(&self) -> Option<ClassicEntry> {
+        if self.style != ROUTINE_CLASSIC_STYLE || !self.mapping.is_open() {
+            return None;
+        }
+        // SAFETY: `REXX_CLASSIC_ROUTINE` fills a classic row with a
+        // `RexxFunctionHandler`, mapped while the library is open, which it
+        // stays for every call that reaches the row.
+        unsafe { ClassicEntry::new(self.entry_point) }
+    }
+
     /// The row's address as the typed stub it names, or `None` for a row that
     /// carries none, for a row of any style but `ROUTINE_TYPED_STYLE`, and for
     /// a row whose library has been closed.

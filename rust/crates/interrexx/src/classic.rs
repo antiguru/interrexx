@@ -63,6 +63,19 @@ impl Interp {
         let Some(entry) = self.classic_function(name) else {
             return Err(Raised::routine_not_found(name).into());
         };
+        self.call_classic_entry(entry, name, arguments)
+    }
+
+    /// Calls the classic `RexxFunctionHandler` `entry` as the function `name`,
+    /// as [`Interp::call_classic_function`] calls a registered one: a row of a
+    /// package's routine table of the classic style is called the same way
+    /// (r[native.loading.classic-row]).
+    pub(crate) fn call_classic_entry(
+        &mut self,
+        entry: ClassicEntry,
+        name: &[u8],
+        arguments: &[Option<ObjRef>],
+    ) -> Result<Option<ObjRef>, Failure> {
         let mut texts = Vec::with_capacity(arguments.len());
         for argument in arguments {
             texts.push(match argument {
@@ -72,8 +85,11 @@ impl Interp {
         }
         let queue = self.current_queue_name()?;
         let borrowed: Vec<Option<&[u8]>> = texts.iter().map(Option::as_deref).collect();
-        let called = self.run_classic_handler(name, arguments, || {
-            entry.call_function(name, &borrowed, &queue)
+        // r[native.loading.classic-call]: the handler gets the function's name
+        // in capitals, however the call spelled it.
+        let upper = name.to_ascii_uppercase();
+        let called = self.run_classic_handler(&upper, arguments, || {
+            entry.call_function(&upper, &borrowed, &queue)
         })?;
         if called.rc != 0 {
             self.blame_native_routine(name, None, arguments, crate::RoutineObject::OfCode, None);

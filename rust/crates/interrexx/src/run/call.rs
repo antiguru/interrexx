@@ -1118,6 +1118,11 @@ impl Interp {
                     .run_internal_as(row, InternalName::Called(name), arguments, from)
                     .map(internal_begun);
             }
+            if let Some(classic) = self.classic_routine_entry(installed) {
+                return self
+                    .call_classic_entry(classic, name, &arguments[from..])
+                    .map(|value| Begun::Done(Ended::Returned(value)));
+            }
         }
 
         let entered = match resolved {
