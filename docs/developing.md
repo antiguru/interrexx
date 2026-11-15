@@ -155,8 +155,8 @@ From `rust/`, under the memory cap:
   no job with the submodule saved. So a build script or test that reads the tree fails there. The
   six shards run this profile over the archive that `build` made without the submodule; the
   `upstream-tier` job runs the complement, `--ignore-default-filter -E 'not default()'`, on a
-  checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target, runs this profile and the doc
-  tests on the toolchain `rust-version` declares, on a checkout with no submodule.
+  checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target and runs this profile's unit tests
+  (`--lib`) on the toolchain `rust-version` declares, on a checkout with no submodule.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under

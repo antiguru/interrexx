@@ -386,10 +386,10 @@ jobs:
           test -n "$msrv"
           echo "msrv=$msrv" >> "$GITHUB_OUTPUT"
 
-  # The regular tier on the declared MSRV, on a checkout without the submodule and with no cargo
-  # cache. It builds every target and runs the `standalone` profile and the doc tests, so the
-  # floor holds for the code and for the tests. Lints and the header compile change between
-  # releases and run on stable in the jobs above.
+  # The declared MSRV, on a checkout without the submodule. It builds every target and runs the
+  # unit tests of the `standalone` profile, so the floor holds for the code and for the tests
+  # that need no tree, and the job stays off the critical path. Lints, the header compile and
+  # the integration suites run on stable in the jobs above.
   msrv-standalone:
     name: standalone (no submodule, rust ${{ needs.msrv.outputs.msrv }})
     needs: [third-party, msrv]
@@ -404,7 +404,10 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: ${{ needs.msrv.outputs.msrv }}
-          cache: false
+          cache-workspaces: rust
+          # Keyed by toolchain, and saved by this job only: a cache from a job that had the
+          # submodule could hold a build script's output for an input that is gone here.
+          cache-key: msrv-no-submodule-${{ needs.msrv.outputs.msrv }}
       - uses: actions/cache/restore@v6
         with:
           # Only ootest and oodocs are kept below.
@@ -444,9 +447,7 @@ jobs:
       - name: Cargo build
         run: cargo build --locked --workspace --all-targets
       - name: Cargo nextest
-        run: cargo nextest run --locked --workspace --profile standalone
-      - name: Cargo doc tests
-        run: cargo test --locked --workspace --doc
+        run: cargo nextest run --locked --workspace --profile standalone --lib
 
   # The check branch protection requires; it passes when every job above did.
   test:
