@@ -8,7 +8,7 @@ use super::super::group_runner::{
     rows_in_parallel, run_crate_within, run_oracle_within, skip, started,
 };
 use super::super::support::oracle;
-use super::{WALL_CLOCK, inverted};
+use super::{RACES_ITS_END, UNSATISFIABLE_WAIT, WALL_CLOCK, inverted};
 
 /// Where the table is written when set.
 const TABLE_ENV: &str = "REXX_WHOLE_GROUPS_TABLE";
@@ -124,20 +124,6 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "every",
         "error, assertions 92, rc 2, last started TEST_SOURCE, failing [TEST_NEW_ARRAY_FROM_FILE TEST_NEW_FILE_COMPILED]",
         "tests outside the derived list that fail alone too: Method NEW's array and compiled-file shapes",
-    ),
-    (
-        "base/class/MutexSemaphore.testGroup",
-        "whole",
-        "every",
-        "interrexx: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
-        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
-    ),
-    (
-        "base/class/MutexSemaphore.testGroup",
-        "derived",
-        "every",
-        "interrexx: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
-        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
     ),
     (
         "base/class/Object.testGroup",
@@ -293,6 +279,72 @@ fn key(run: &Run) -> String {
         refusal(run).unwrap_or_else(|| outcome(&run.stdout)),
         failing(run).join(" ")
     )
+}
+
+/// `run` without the end its group's [`RACES_ITS_END`] row may take: when
+/// `file` holds such a row and `run` ended at rc 120 with stderr ending in
+/// the unsatisfiable-wait refusal, the run as it ends when the race goes
+/// the other way. The refusal comes once every test has run, after the
+/// rest of stderr and all of stdout, and the activity left waiting is
+/// stopped inside its last assertion, `assertTrue(sem~acquire)` (:167), so
+/// that run ends at rc 0, without the refusal, and with one assertion
+/// more.
+fn without_the_race_end(file: &str, run: &Run) -> Option<Run> {
+    let races = RACES_ITS_END.iter().any(|(row, _)| {
+        row.strip_prefix(file)
+            .is_some_and(|test| test.starts_with(' '))
+    });
+    let stderr = run.stderr.strip_suffix(UNSATISFIABLE_WAIT.as_bytes())?;
+    if !races || run.status != Some(interrexx::NOT_IMPLEMENTED_EXIT) {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&run.stdout);
+    let stdout: Vec<String> = text
+        .split('\n')
+        .map(|line| match line.strip_prefix("Assertions:") {
+            Some(count) => {
+                let count: u64 = count.trim().parse().expect("an assertion count");
+                format!("{:<20}{}", "Assertions:", count + 1)
+            }
+            None => line.to_string(),
+        })
+        .collect();
+    Some(Run {
+        stdout: stdout.join("\n").into_bytes(),
+        stderr: stderr.to_vec(),
+        status: Some(0),
+    })
+}
+
+/// How `file`'s `run` stands against the oracle's distinct outcomes
+/// `seen`: the cell when it agrees with one of them. A run ending in its
+/// group's race end agrees when it does without that end, so the rest of
+/// it must be an oracle outcome's at rc 0.
+fn agreement(file: &str, seen: &[&Run], counted_only: bool, run: &Run) -> Option<String> {
+    let raced = without_the_race_end(file, run);
+    let judged = raced.as_ref().unwrap_or(run);
+    let after = if raced.is_some() {
+        ", but for the unsatisfiable-wait refusal its race may end in"
+    } else {
+        ""
+    };
+    match seen.iter().position(|theirs| agree(theirs, judged)) {
+        Some(number) => Some(format!("agrees with {}{after}", number + 1)),
+        None if counted_only && agree(&count_masked(seen[0]), &count_masked(judged)) => Some(
+            format!("agrees but for the assertion count{after}: {}", key(run)),
+        ),
+        None => None,
+    }
+}
+
+/// The refusal of `file`'s `run` that leaves its last started test out of
+/// the rest part: any but the deadline and the end of a race
+/// [`RACES_ITS_END`] lists, which comes after every test has run.
+fn refused(file: &str, run: &Run) -> Option<String> {
+    refusal(run).filter(|line| {
+        !line.ends_with("the run exceeded its deadline")
+            && without_the_race_end(file, run).is_none()
+    })
 }
 
 /// `run` with its summary's assertion count masked.
@@ -460,13 +512,10 @@ fn rows_of(
     let (row, ours) = checked(oracle, run, file, part, &left_out, &[]);
     let mut rows = vec![row];
     if part == Part::Whole {
-        let refused = |run: &Run| {
-            refusal(run).filter(|line| !line.ends_with("the run exceeded its deadline"))
-        };
         let mut refusing = Vec::new();
         let mut last = ours;
         let mut before = false;
-        while let Some(line) = refused(&last) {
+        while let Some(line) = refused(file, &last) {
             let Some(test) = started(&last).pop() else {
                 rows[0]
                     .started
@@ -613,21 +662,18 @@ fn one_row(
     let mut started_cells = format!("{file}\t{}\tskipped [{}]", part.label(), refusing.join(" "));
     // Where the oracle's runs differ from each other only
     // in their assertion count, the count is not compared.
-    let counted_only = counted_only(&seen.iter().map(|(run, _)| *run).collect::<Vec<_>>());
+    let outcomes: Vec<&Run> = seen.iter().map(|(run, _)| *run).collect();
+    let counted_only = counted_only(&outcomes);
     let mut keys = [String::new(), String::new()];
     let mut agrees = [false; 2];
     let mut stuck = [false; 2];
     for (at, run) in ours.iter().enumerate() {
         stuck[at] = inverted(run) || run.status.is_none();
         keys[at] = key(run);
-        let cell = match seen.iter().position(|(theirs, _)| agree(theirs, run)) {
-            Some(number) => {
+        let cell = match agreement(file, &outcomes, counted_only, run) {
+            Some(cell) => {
                 agrees[at] = true;
-                format!("agrees with {}", number + 1)
-            }
-            None if counted_only && agree(&count_masked(seen[0].0), &count_masked(run)) => {
-                agrees[at] = true;
-                format!("agrees but for the assertion count: {}", keys[at])
+                cell
             }
             None => format!("differs: {}; {}", keys[at], difference(seen[0].0, run)),
         };
@@ -791,6 +837,95 @@ fn outcomes_differing_in_count_and_status_are_not_counted_only() {
         &summary_run(12, 0, "", 0),
         &summary_run(17, 1, "", 1)
     ]));
+}
+
+/// The group file of [`RACES_ITS_END`]'s row.
+const RACING: &str = "base/class/MutexSemaphore.testGroup";
+
+/// What the marked starts put on stderr before a run ends.
+const STARTS: &str = "started TEST_ACQUIRE_NUMBER\nstarted TEST_EXCLUSION\n";
+
+/// A refusal other than the race's.
+const OTHER_REFUSAL: &str = "interrexx: a pinned wait for a guard that only an activity pinned below it can end is not implemented\n";
+
+/// A passing run of the group with `assertions`.
+fn passed(assertions: u32) -> Run {
+    summary_run(assertions, 0, STARTS, 0)
+}
+
+/// A run with `assertions` and `failures`, ending at rc 120 with
+/// `refusal` after the marked starts.
+fn refused_with(assertions: u32, failures: u32, refusal: &str) -> Run {
+    let mut run = summary_run(
+        assertions,
+        failures,
+        STARTS,
+        interrexx::NOT_IMPLEMENTED_EXIT,
+    );
+    run.stderr.extend_from_slice(refusal.as_bytes());
+    run
+}
+
+#[test]
+fn a_racing_group_run_ending_in_the_refusal_one_assertion_short_agrees() {
+    let run = refused_with(41, 0, UNSATISFIABLE_WAIT);
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_some());
+}
+
+#[test]
+fn a_racing_group_run_ending_in_the_refusal_with_every_assertion_does_not_agree() {
+    let run = refused_with(42, 0, UNSATISFIABLE_WAIT);
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_racing_group_run_ending_in_the_refusal_agrees_but_for_the_count() {
+    let outcomes = [passed(42), passed(40)];
+    let seen: Vec<&Run> = outcomes.iter().collect();
+    let run = refused_with(40, 0, UNSATISFIABLE_WAIT);
+    assert!(agreement(RACING, &seen, true, &run).is_some());
+}
+
+#[test]
+fn a_racing_group_run_ending_in_another_refusal_does_not_agree() {
+    let run = refused_with(41, 0, OTHER_REFUSAL);
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_racing_group_run_with_the_refusal_at_another_status_does_not_agree() {
+    let run = Run {
+        status: Some(1),
+        ..refused_with(41, 0, UNSATISFIABLE_WAIT)
+    };
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_racing_group_run_failing_before_the_refusal_does_not_agree() {
+    let run = refused_with(41, 1, UNSATISFIABLE_WAIT);
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_racing_group_run_with_other_stderr_before_the_refusal_does_not_agree() {
+    let mut run = summary_run(41, 0, "", interrexx::NOT_IMPLEMENTED_EXIT);
+    run.stderr = UNSATISFIABLE_WAIT.as_bytes().to_vec();
+    assert!(agreement(RACING, &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn a_group_without_a_racing_row_ending_in_the_refusal_does_not_agree() {
+    let run = refused_with(41, 0, UNSATISFIABLE_WAIT);
+    assert!(agreement("base/class/Message.testGroup", &[&passed(42)], false, &run).is_none());
+}
+
+#[test]
+fn only_a_racing_groups_race_end_keeps_its_last_test_in_the_rest() {
+    let run = refused_with(41, 0, UNSATISFIABLE_WAIT);
+    assert_eq!(refused(RACING, &run), None);
+    assert!(refused("base/class/Message.testGroup", &run).is_some());
+    assert!(refused(RACING, &refused_with(41, 0, OTHER_REFUSAL)).is_some());
 }
 
 #[test]

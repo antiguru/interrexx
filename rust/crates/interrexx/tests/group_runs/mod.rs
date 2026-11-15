@@ -466,9 +466,13 @@ const WALL_CLOCK: &[&str] = &[
 /// activity's acquire can never end, and the program does not end while it
 /// waits (`r[conc.halt.end.alive]`). Either schedule can come first in
 /// either mode, so each mode's run is allowed to pass or to end in the
-/// unsatisfiable-wait refusal after every assertion passed; any other end
-/// is not allowed, even when both modes end alike.
-const RACES_ITS_END: &[&str] = &["base/class/MutexSemaphore.testGroup TEST_EXCLUSION"];
+/// unsatisfiable-wait refusal after every assertion it reaches passed; any
+/// other end is not allowed, even when both modes end alike. Each row
+/// carries its assertion count when it passes; the activity left waiting is
+/// stopped inside its last assertion, `assertTrue(sem~acquire)` (:167), so
+/// the refusal end counts one fewer. `whole_groups` allows the same two
+/// ends for each run of a group holding such a row.
+const RACES_ITS_END: &[(&str, u32)] = &[("base/class/MutexSemaphore.testGroup TEST_EXCLUSION", 13)];
 
 /// The whole of stderr of a run refused at a wait that nothing left to run
 /// can end (Deviation 20).
@@ -483,21 +487,24 @@ fn summary(run: &Run, label: &str) -> Option<String> {
         .map(|value| value.trim().to_string())
 }
 
-/// How a run of a [`RACES_ITS_END`] row ended, where it is an end the race
-/// allows: one test run with no failure and no error, then either rc 0 with
-/// nothing on stderr or the unsatisfiable-wait refusal alone.
-fn race_end(run: &Run) -> Option<&'static str> {
+/// How a run of a [`RACES_ITS_END`] row passing with `assertions` ended,
+/// where it is an end the race allows: one test run with no failure and no
+/// error, then either rc 0 with nothing on stderr and `assertions`, or the
+/// unsatisfiable-wait refusal alone and one assertion fewer.
+fn race_end(run: &Run, assertions: u32) -> Option<&'static str> {
     let passed = summary(run, "Tests ran:").as_deref() == Some("1")
         && summary(run, "Failures:").as_deref() == Some("0")
         && summary(run, "Errors:").as_deref() == Some("0");
     if !passed {
         return None;
     }
-    if run.status == Some(0) && run.stderr.is_empty() {
+    let counted = summary(run, "Assertions:").and_then(|count| count.parse::<u32>().ok());
+    if run.status == Some(0) && run.stderr.is_empty() && counted == Some(assertions) {
         return Some("pass");
     }
     if run.status == Some(interrexx::NOT_IMPLEMENTED_EXIT)
         && run.stderr == UNSATISFIABLE_WAIT.as_bytes()
+        && counted == Some(assertions - 1)
     {
         return Some("pass, then the unsatisfiable-wait refusal");
     }
@@ -523,8 +530,8 @@ fn assertions(run: &Run) -> String {
 /// How two runs of this crate compare, and whether the difference, if
 /// any, is one `row` is listed for.
 fn compare_modes(row: &str, normal: &Run, every: &Run) -> (String, bool) {
-    if RACES_ITS_END.contains(&row) {
-        let ends = (race_end(normal), race_end(every));
+    if let Some((_, assertions)) = RACES_ITS_END.iter().find(|(listed, _)| *listed == row) {
+        let ends = (race_end(normal, *assertions), race_end(every, *assertions));
         let show = |end: Option<&'static str>| end.unwrap_or("not an end the race allows");
         return (
             format!("{} then {}", show(ends.0), show(ends.1)),
@@ -601,7 +608,7 @@ fn race_run(assertions: u32, failures: u32, status: i32, stderr: &str) -> Run {
 /// Whether [`compare_modes`] allows `normal` then `every` for the row of
 /// [`RACES_ITS_END`].
 fn race_allowed(normal: &Run, every: &Run) -> bool {
-    compare_modes(RACES_ITS_END[0], normal, every).1
+    compare_modes(RACES_ITS_END[0].0, normal, every).1
 }
 
 fn race_passed() -> Run {
@@ -641,6 +648,17 @@ fn a_racing_row_ending_in_another_refusal_is_not_allowed() {
         "interrexx: a pinned wait for a guard that only an activity pinned below it can end is not implemented\n",
     );
     assert!(!race_allowed(&race_passed(), &other));
+}
+
+#[test]
+fn a_racing_row_passing_short_of_its_assertions_is_not_allowed() {
+    assert!(!race_allowed(&race_run(12, 0, 0, ""), &race_passed()));
+}
+
+#[test]
+fn a_racing_row_refused_short_of_its_assertions_is_not_allowed() {
+    let short = race_run(11, 0, interrexx::NOT_IMPLEMENTED_EXIT, UNSATISFIABLE_WAIT);
+    assert!(!race_allowed(&race_passed(), &short));
 }
 
 #[test]
