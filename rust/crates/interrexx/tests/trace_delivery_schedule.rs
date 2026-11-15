@@ -21,28 +21,33 @@ const PROGRAM: &str = "as = .ArrayStream~new\n\
      .TraceOutput~destination\n\
      say 'res' res\n\
      do v over as\n\
-     \x20 parse var v flag . '\"' name '\"'\n\
-     \x20 if translate(name) <> 'FW3' then say flag name\n\
+     \x20 f = v['STACKFRAME']\n\
+     \x20 if f~type == 'METHOD' then do\n\
+     \x20   text = v['TRACELINE']\n\
+     \x20   say left(text, verify(text, ' ') + 2) f~name f~executable~scope~id\n\
+     \x20 end\n\
      end\n\
      ::class ArrayStream subclass Array inherit Stream\n\
      ::method init\n  expose line\n  line = 0\n\
-     ::method lineOut\n  parse arg line\n  self~append(line)\n  return 0\n";
+     ::method lineOut\n  use arg object\n  parse arg line\n  self~append(object)\n  return 0\n";
 
-/// What the oracle printed, 8 runs of 8: each announcement's flag and the
-/// method it names, the wording of its text being unspecified.
+/// What the oracle printed, 8 runs of 8: for each line of a method, kept by
+/// the kind of its level, the indentation and flag of the announcement, the
+/// method and its scope; the wording of the announcement's text is not
+/// specified (`r[conv.error.text]`), and the routine's own lines are left out.
 const ORACLE_STDOUT: &str = "res 42\n\
-     >I> ONE\n\
-     >I> ONETWO\n\
-     <I< ONETWO\n\
-     <I< ONE\n\
-     >I> ONETWO\n\
-     <I< ONETWO\n\
-     >I> THREE\n\
-     <I< THREE\n\
-     >I> THREE\n\
-     >I> THREEFOUR\n\
-     <I< THREEFOUR\n\
-     <I< THREE\n";
+     \x20      >I> ONE TEST\n\
+     \x20      >I> ONETWO TEST\n\
+     \x20      <I< ONETWO TEST\n\
+     \x20      <I< ONE TEST\n\
+     \x20      >I> ONETWO TEST\n\
+     \x20      <I< ONETWO TEST\n\
+     \x20      >I> THREE TEST\n\
+     \x20      <I< THREE TEST\n\
+     \x20      >I> THREE TEST\n\
+     \x20      >I> THREEFOUR TEST\n\
+     \x20      <I< THREEFOUR TEST\n\
+     \x20      <I< THREE TEST\n";
 
 #[test]
 fn a_short_destination_keeps_each_delivery_whole_under_every_schedule() {
