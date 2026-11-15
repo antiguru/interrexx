@@ -205,3 +205,33 @@ copies fill=a
 y = copies(x, 1)
 ----
 0.00
+
+copies fill=a
+y = c2d(x, 3)
+----
+0.00
+
+copies fill=a
+y = x~c2d(3)
+----
+0.00
+
+copies fill=a
+y = x2d(x, 4)
+----
+0.50
+
+copies fill=a
+y = x~x2d(4)
+----
+0.50
+
+copies fill=a
+y = datatype(x, 'A')
+----
+0.00
+
+copies fill=a
+y = x~datatype('A')
+----
+0.00

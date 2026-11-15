@@ -1428,9 +1428,11 @@ fn native_string_c2d(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let requested = conversion_length_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let value = crate::builtin::convert::x2d_c2d_over(interp, &bytes, requested, true)?;
-    Ok(Some(value))
+    let (text, digits) = {
+        let rendered = interp.render(receiver);
+        crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, true)?
+    };
+    Ok(Some(interp.integer_text(text, digits)))
 }
 
 /// `String~"X2D"`.
@@ -1441,9 +1443,11 @@ fn native_string_x2d(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let requested = conversion_length_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let value = crate::builtin::convert::x2d_c2d_over(interp, &bytes, requested, false)?;
-    Ok(Some(value))
+    let (text, digits) = {
+        let rendered = interp.render(receiver);
+        crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, false)?
+    };
+    Ok(Some(interp.integer_text(text, digits)))
 }
 
 /// `String~"D2C"`.
@@ -1550,8 +1554,18 @@ fn native_string_datatype(
         };
         return Ok(Some(interp.text(kind)));
     };
-    let bytes = interp.to_text(receiver).to_vec();
-    let Some(matched) = crate::builtin::datatype::datatype_matches(interp, &bytes, letter)? else {
+    let plain = {
+        let rendered = interp.render(receiver);
+        crate::builtin::datatype::datatype_letter_matches(rendered.text(interp), letter)
+    };
+    let matched = match plain {
+        Some(matched) => matched,
+        None => {
+            let bytes = interp.to_text(receiver).to_vec();
+            crate::builtin::datatype::datatype_matches(interp, &bytes, letter)?
+        }
+    };
+    let Some(matched) = matched else {
         return Err(Raised::method_option_not_recognised(
             crate::builtin::datatype::DATATYPE_OPTIONS,
             &[letter],
