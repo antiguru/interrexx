@@ -100,6 +100,22 @@
   return self~'<<='(other)
 
 
+/* r[class.timespan.deviation.126], r[class.datetime.deviation.126],
+   r[class.file.deviation.126]: whether the compareTo that calls this, refusing
+   an argument of another class, was sent by an equality operator of
+   Orderable, which then answers not equal. Frames of compareTo between the two
+   are those of an override that forwards. */
+::routine askedForEquality
+  frames = .context~stackFrames
+  do i = 3 to frames~items
+    frame = frames[i]
+    if frame~name == 'COMPARETO' then iterate
+    if frame~type \== 'METHOD' then return .false
+    if frame~executable~scope \== .Orderable then return .false
+    return wordpos(frame~name, '= == \= \==') > 0
+  end
+  return .false
+
 ::class "Comparable" public mixinclass Object
 
 -- r[class.comparable.compareto]

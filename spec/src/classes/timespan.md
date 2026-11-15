@@ -1059,8 +1059,9 @@ is the longer, comparing the signed counts, so that a negative span is less than
 any that is not. The argument is sent `isA` with `TimeSpan`, and a `TimeSpan` is
 then sent `totalMicroseconds`; the receiver is sent nothing. An argument that is
 no `TimeSpan` raises `SYNTAX 88.914` as soon as `isA` has answered ([Deviation
-126](r:class.timespan.deviation.126)), and the comparison operators raise it for
-such an argument too, `.nil` excepted (see below). The comparison operators `=`,
+126](r:class.timespan.deviation.126)), and so do the ordering operators, `.nil`
+excepted (see below); the equality operators answer that such an argument is not
+equal. The comparison operators `=`,
 `==`, `<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`, `<<`, `<<=`, `>>`, `>>=`,
 `\<`, `\>`, `\<<` and `\>>` are those of
 [`Orderable`](r:class.orderable.compare), which answer from `compareTo` of the
@@ -1663,14 +1664,24 @@ sends 0
 
 r[class.timespan.deviation.126]
 `compareTo` of a `TimeSpan` with an argument that is not a `TimeSpan` (an
-instance of a subclass is one), and a comparison operator with such an argument,
-raise `SYNTAX 88.914`. The error follows the `isA` that the method sends to the
-argument and precedes `totalMicroseconds` and every other message; an operator
-whose argument is `.nil` sends no `compareTo` and does as [the `.nil`
+instance of a subclass is one), and an ordering operator (`<`, `<=`, `>`, `>=`,
+`<<`, `<<=`, `>>`, `>>=`, `\<`, `\>`, `\<<` and `\>>`) with such an argument,
+raise `SYNTAX 88.914`. The error follows the `isA` that `compareTo` sends to the
+argument and precedes `totalMicroseconds` and every other message. An equality
+operator (`=`, `==`, `\=`, `\==`, `<>` and `><`) with such an argument answers
+that it is not equal, as ooRexx does: `=` and `==` answer 0, the others 1. It
+sends `compareTo` as for any argument, and the argument is sent nothing but the
+`isA` of `compareTo`; an override of `compareTo` that forwards to this one gets
+the same answer. An 88.914 that `compareTo` raises for an argument that is a
+`TimeSpan` is raised by the operator too. An operator whose argument is `.nil`
+sends no `compareTo` and does as [the `.nil`
 rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
-`.nil`. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
-so the answer says nothing about the two values. In the example the last line is
-a probe that answers false to `isA` and gets nothing else.
+`.nil`. ooRexx answers 1 or -1 from `compareTo` for such an argument, and an
+ordering operator answers from that, whatever the receiver is, so the answer
+says nothing about the two values. In the example the last line is a probe that
+answers false to `isA` and gets nothing else. A hash collection that holds a
+`TimeSpan` and an index of another class with the same hash code compares them
+with `==`, and finds them unequal.
 
 ```rexx
 a = .timespan~new(1, 2, 3)
@@ -1687,6 +1698,13 @@ call try 'a = .nil'
 call try 'a < .nil'
 call try 'a~compareTo(.sub~new(1, 2, 3))'
 call try 'a~compareTo(a~copy)'
+t = .table~new
+t['1'] = 'string'
+t[.timespan~new(1)] = 'span'
+say t~items t['1'] t[.timespan~new(1)]
+call try '.picky~new(1) = .picky~new(1)'
+call try '.relay~new(1) = 5'
+call try '.own~new(1) = 5'
 .local~log = ''
 call try 'a~compareTo(.probe~new)'
 say 'sent:' .local~log
@@ -1699,6 +1717,15 @@ try:
 bad: say arg(1) '=>' condition('o')~code
   return
 ::class sub subclass timespan
+::class own subclass timespan
+::method '='
+  return self~compareTo(arg(1)) = 0
+::class relay subclass timespan
+::method compareTo
+  forward class (super)
+::class picky subclass timespan
+::method compareTo
+  raise syntax 88.914 array (1, 'Picky')
 ::class probe
 ::method isA
   .local~log = .local~log 'ISA('arg(1)~id')'
@@ -1716,12 +1743,16 @@ a~compareTo(5) => 88.914
 a~compareTo(.nil) => 88.914
 a < .datetime~minDate => 88.914
 a >>= "x" => 88.914
-a = 3723000000 => 88.914
-a \== .object~new => 88.914
+a = 3723000000 => 0
+a \== .object~new => 1
 a = .nil => 0
 a < .nil => 93.973
 a~compareTo(.sub~new(1, 2, 3)) => 0
 a~compareTo(a~copy) => 0
+2 string span
+.picky~new(1) = .picky~new(1) => 88.914
+.relay~new(1) = 5 => 0
+.own~new(1) = 5 => 88.914
 a~compareTo(.probe~new) => 88.914
 sent:  ISA(TimeSpan)
 ```

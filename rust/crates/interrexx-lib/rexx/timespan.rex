@@ -495,7 +495,10 @@
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
   x = arg(1)
-  if \x~isA(.TimeSpan) then raise syntax 88.914 array (1, 'TimeSpan')
+  if \x~isA(.TimeSpan) then do
+    if askedForEquality() then return 1
+    raise syntax 88.914 array (1, 'TimeSpan')
+  end
   o = x~totalMicroseconds
   if us < o then return -1
   if us > o then return 1

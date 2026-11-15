@@ -2374,12 +2374,18 @@ request ARRAY
 
 r[class.file.deviation.126]
 `compareTo` of a `File` with an argument that is not a `File` (an instance of a
-subclass is one), and a comparison operator with such an argument, raise `SYNTAX
-88.914`. The error follows the `isA` that the method sends to the argument and
-precedes `isCaseSensitive`, `absolutePath` and every other message; an operator
-whose argument is `.nil` sends no `compareTo` and does as [the `.nil`
-rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
-`.nil`. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+subclass is one), and an ordering operator (`<`, `<=`, `>`, `>=`, `<<`, `<<=`,
+`>>`, `>>=`, `\<`, `\>`, `\<<` and `\>>`) with such an argument, raise `SYNTAX
+88.914`. The error follows the `isA` that `compareTo` sends to the argument and
+precedes `isCaseSensitive`, `absolutePath` and every other message. An equality
+operator (`=`, `==`, `\=`, `\==`, `<>` and `><`) with such an argument answers
+that it is not equal, as ooRexx does: `=` and `==` answer 0, the others 1. It
+sends `compareTo` as for any argument, and the argument is sent nothing but the
+`isA` of `compareTo`; an override of `compareTo` that forwards to this one gets
+the same answer. An operator whose argument is `.nil` sends no `compareTo` and
+does as [the `.nil` rule](r:class.orderable.compare.nil) says, and `compareTo`
+itself raises for `.nil`. ooRexx answers 1 or -1 from `compareTo` for such an
+argument, and an ordering operator answers from that, whatever the receiver is,
 so the answer says nothing about the two values. In the example the last line is
 a probe that answers false to `isA` and gets nothing else.
 
@@ -2434,8 +2440,8 @@ a~compareTo(5) => 88.914
 a~compareTo(.nil) => 88.914
 a < .timespan~fromHours(2) => 88.914
 a >>= "/t/a" => 88.914
-a = 5 => 88.914
-a \== .object~new => 88.914
+a = 5 => 0
+a \== .object~new => 1
 a = .nil => 0
 a < .nil => 93.973
 a~compareTo(.sub~new("/t/a")) => 0
