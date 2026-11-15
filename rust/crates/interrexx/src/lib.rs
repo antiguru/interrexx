@@ -3991,6 +3991,13 @@ impl Interp {
 /// the empty string (r[instr.say.deviation.40]).
 pub const UNBUFFERED_ENV: &str = "REXX_UNBUFFERED";
 
+/// Writes out what native code left in C's standard streams, for a sink to
+/// call before it writes, so that what C wrote first lands first
+/// (r[instr.say.deviation.40]).
+pub fn flush_c_streams() {
+    signal::flush_c_streams();
+}
+
 /// Whether [`UNBUFFERED_ENV`] is set to anything but the empty string.
 pub fn unbuffered_requested() -> bool {
     std::env::var_os(UNBUFFERED_ENV).is_some_and(|value| !value.is_empty())
