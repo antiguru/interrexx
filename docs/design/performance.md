@@ -44,7 +44,8 @@ budget is a small whole-process percentage per program, so cumulative drift is v
 `varlookup`, `compound`, `strings`, `arith`, `bigdigits` (`NUMERIC DIGITS 1000`), `textnum`,
 `decloop`, `decrender`, `parse`, `alloc`, `alloc4c`, `churn`, `heapshape` (full-GC pause), `nop`
 and `assign` (per-clause cost), `fibcall`,
-`fibfunc`, `intcall`, `extcall` (a native extension call), `dirread`, `hashnew`, `pkglocal`,
+`fibfunc`, `intcall`, `extcall` (a native extension call), `dirread`, `hashnew`, `hashgrow`, `hashlookup`, `hashchurn`, `hashiter`, `hashdup`, `hashcopy`
+(the hash store) and `stemchurn` (stem tails), `pkglocal`,
 `interpret`, `define`, `listops` (`List` operations at the ends and after a handle), `startup`, and `pingpong/` (message, semaphore and guard handoffs between
 activities). `rust/bench-rexxcps/rexxcps.rex` is REXXCPS with fixed loop counts, so both sides do
 identical work. Each program's output is deterministic, and the README says what each covers.
@@ -72,6 +73,23 @@ The most recent run counting cycles on both sides (2026-08-20, at `d90de68e3`) g
 `strings`. Where interrexx is slower the gap is retired instructions in value operations
 (allocation, string materialisation, `PARSE`, decimal loop control); it has fewer cache and branch
 misses than ooRexx on every axis measured except L1i.
+
+## Hash store baseline
+
+Callgrind instruction counts (whole process, and with libc and ld-linux subtracted) and release
+wall time (median of five) for the programs that exercise the hash store and stem tails, measured
+2026-11-16 at `3bb9709da` before the store changes (issue #36), release build, two callgrind rounds.
+Most of `hashcopy`'s whole-process count is inside libc, hence its small subtracted figure.
+
+| program | Ir (whole process) | Ir (libc subtracted) | wall (s) |
+|---|---:|---:|---:|
+| `hashgrow` | 9,435,493,844 | 8,476,257,915 | 0.902 |
+| `hashlookup` | 14,132,248,904 | 13,889,603,910 | 1.167 |
+| `hashchurn` | 10,858,084,638 | 10,010,283,823 | 1.016 |
+| `hashiter` | 22,656,804,383 | 21,496,226,401 | 1.677 |
+| `hashdup` | 18,485,651,065 | 17,773,988,475 | 1.037 |
+| `hashcopy` | 15,185,194,570 | 4,917,274,166 | 0.661 |
+| `stemchurn` | 10,294,692,398 | 9,709,202,516 | 0.778 |
 
 ## Tried and rejected
 
