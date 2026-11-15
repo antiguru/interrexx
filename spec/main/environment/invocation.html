@@ -685,13 +685,17 @@ unpredictable results (<a href="../deviations.html#41-a-damaged-compiled-image">
 <p>An image that ends too early, one that has bytes after its end, and one that
 has a changed byte in its header, the second byte of 0 of the binary form
 included, are refused with the error <code>3.903</code> and the status 253, before any of
-its code runs. So is an image with any other byte changed: <code>rexxc</code> writes a
-SHA-256 digest of the image into it, and <code>rexx</code> refuses an image whose bytes
-do not give that digest. interrexx does not check the digest yet (issue #235),
-and no test covers that part. An encoded image whose base64 text does not decode whole,
-because characters follow the <code>=</code> that closes it, an <code>=</code> stands inside it, or
-it ends with a group of fewer than four characters, is refused with the error
-<code>3.905</code> and the status 253. ooRexx runs an image that has bytes after its end,
+its code runs. So is an image with any other changed byte of the decoded image
+after the <code>#!</code> line: <code>rexxc</code> writes a SHA-256 digest of everything after the
+image's header into it, and <code>rexx</code> refuses an image whose bytes do not give
+that digest. The <code>#!</code> line is not read, and neither are the line ends between
+the groups of four characters of an encoded image. An encoded image whose
+base64 text does not decode whole, because characters follow the <code>=</code> that
+closes it, an <code>=</code> stands inside it, it ends with a group of fewer than four
+characters, or a group closed by <code>=</code> has bits left over that are not zero, is
+refused with the error <code>3.905</code> and the status 253. For an encoded image that
+rule decides first: one cut inside a group of four is <code>3.905</code>, and one cut
+between groups is <code>3.903</code>. ooRexx runs an image that has bytes after its end,
 ignores some changed header bytes and crashes on others, and crashes on an
 image that ends too early (<a href="../deviations.html#153-a-damaged-compiled-image-is-refused">Deviation
 153</a>).</p>
