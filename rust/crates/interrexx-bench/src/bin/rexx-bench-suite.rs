@@ -141,6 +141,30 @@ const AXES: &[Axis] = &[
         role: Role::Loop,
     },
     Axis {
+        name: "hashchurn",
+        role: Role::Loop,
+    },
+    Axis {
+        name: "hashcopy",
+        role: Role::Loop,
+    },
+    Axis {
+        name: "hashdup",
+        role: Role::Loop,
+    },
+    Axis {
+        name: "hashgrow",
+        role: Role::Loop,
+    },
+    Axis {
+        name: "hashiter",
+        role: Role::Loop,
+    },
+    Axis {
+        name: "hashlookup",
+        role: Role::Loop,
+    },
+    Axis {
         name: "hashnew",
         role: Role::Loop,
     },
@@ -183,6 +207,10 @@ const AXES: &[Axis] = &[
     Axis {
         name: "startup",
         role: Role::Offset,
+    },
+    Axis {
+        name: "stemchurn",
+        role: Role::Loop,
     },
     Axis {
         name: "strings",

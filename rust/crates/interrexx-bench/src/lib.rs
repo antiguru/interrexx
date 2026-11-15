@@ -57,6 +57,22 @@ pub static PROGRAMS: &[&str] = &[
     "dirread",
     // Hash-collection construction, whose INIT sizes the store.
     "hashnew",
+    // Store growth from empty, with string keys and with keys whose user
+    // `HASHCODE` runs per probe.
+    "hashgrow",
+    // Hits and misses against a small and a large `Directory`.
+    "hashlookup",
+    // `put` and `remove` on a table that stays small, which tests space reuse.
+    "hashchurn",
+    // `allIndexes`, `supplier` and `DO OVER` over one `StringTable`.
+    "hashiter",
+    // `Relation` duplicates: many items under one index, among many indexes.
+    "hashdup",
+    // `copy` of a large `Table`.
+    "hashcopy",
+    // Stem tail `DROP` and re-assignment over a large set of tails, then
+    // `DO OVER`.
+    "stemchurn",
     // An environment symbol read once the running package has a local, which
     // searches that local first.
     "pkglocal",
