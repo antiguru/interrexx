@@ -2,7 +2,10 @@
    takes: the oracle builds its object at the raise, with the native frame
    leading STACKFRAMES and TRACEBACK, and a frame with a package and no line
    gives it no POSITION. From the main program, an internal routine and a
-   method. No description is passed (oracle-crashes.txt entry 17). */
+   method. No description is passed (oracle-crashes.txt entry 17). No
+   built-in method runs here, so every level is printed. The native level's
+   trace line has no line number, and its text is message text
+   (r[conv.error.text]): it is printed as its first word, `*-*`. */
 t = .T~new
 call on user bar name handler
 say 'main' t~rc('USER BAR', , .array~of('x'), 'r1')
@@ -21,8 +24,13 @@ handler:
     if o~hasIndex(k) then say ' ' k '=' filespec('n', o[k]~string)
   end
   say '  frames' o['STACKFRAMES']~items
-  do l over o['TRACEBACK']; say '  tb' l; end
-  do f over o['STACKFRAMES']; say '  sf' f~type filespec('n', f~name) f~line; end
+  do l over o['TRACEBACK']
+    if word(l, 1) == '*-*' then say '  tb' word(l, 1)
+    else say '  tb' l
+  end
+  do f over o['STACKFRAMES']
+    say '  sf' f~type filespec('n', f~name) f~line
+  end
   return 'fromhandler'
 ::class T
 ::method rc external "LIBRARY orxmethod TestRaiseCondition"
@@ -33,5 +41,8 @@ handler:
 h2:
   o = condition('o')
   say '  wrap position' o~hasIndex('POSITION') o['POSITION']~string
-  do l over o['TRACEBACK']; say '  tb' l; end
+  do l over o['TRACEBACK']
+    if word(l, 1) == '*-*' then say '  tb' word(l, 1)
+    else say '  tb' l
+  end
   return

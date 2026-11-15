@@ -28,9 +28,9 @@ interrexx-parse.workspace = true
 # what turns one into text.
 interrexx-num.workspace = true
 
-# The message catalogue, generated into `errors.rs` from
-# `interpreter/messages/rexxmsg.xml`. Stderr is compared byte for byte, so the
-# text an error prints is looked up here rather than hand-transcribed.
+# The message table, generated into `errors.rs` from the inventory's
+# `data/errors.tsv` and `messages/`. The text an error prints is looked up
+# here rather than written out where it is raised.
 interrexx-inventory.workspace = true
 
 # The class/method-dictionary model: `ClassRegistry` and

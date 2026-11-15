@@ -142,9 +142,11 @@ const CASES: &[Case] = &[
         source: "say gc(1,2)",
     },
     // ---- ERRORTEXT ----
+    // A message's wording is unspecified (`r[conv.error.text]`), so the cases
+    // show only whether a number has one.
     Case {
         name: "errortext_range",
-        source: "say errortext(0) '|' errortext(1) '|' errortext(40) '|' errortext(93) '|' errortext(99)",
+        source: "say length(errortext(0)) length(errortext(1)) (errortext(40) \\== '') (errortext(93) \\== '') (errortext(99) \\== '')",
     },
     Case {
         name: "errortext_no_entry",
@@ -152,7 +154,7 @@ const CASES: &[Case] = &[
     },
     Case {
         name: "errortext_whole_float",
-        source: "say errortext(99.0)",
+        source: "say (errortext(99.0) == errortext(99)) (errortext(99.0) \\== '')",
     },
     Case {
         name: "errortext_not_whole",

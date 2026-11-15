@@ -23,6 +23,11 @@ REXX_UPSTREAM=$PWD/third_party/ooRexx cargo run -p interrexx-upstream -- write
 differing rows, when a checked-in file differs. The `upstream interface` CI job runs it, so a
 bump without regeneration and a hand-edited row both fail.
 
+The text of each error message is in `rust/crates/interrexx-inventory/messages/<major>.tsv`, written
+to the style sheet `STYLE.md` beside them. The build requires a text for every row of `errors.tsv`
+and only the inserts the row renders, so a regenerated table that gains a message fails to build
+until the message has its text.
+
 These trees are read-only and under their own licences: never modify them. **Clean room:** the API
 service, `rxqueue`, `rxsubcom`, `librexxapi` and the extension libraries are written from
 behaviour descriptions, public headers (`api/`), `oodocs`, ooTest and running ooRexx, never from

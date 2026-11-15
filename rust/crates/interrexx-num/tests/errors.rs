@@ -91,7 +91,7 @@ fn power_magnitude_precheck_message_is_42_001() {
     let err = n("100").pow(&n("999999999"), 9).unwrap_err();
     assert!(matches!(err, ArithError::PowerOverflow { .. }));
     assert_eq!(err.additional(), vec!["100", "**", "999999999"]);
-    assert_eq!(err.message(), expand("⟨42.1¦¦¦100**999999999⟩"));
+    assert_eq!(err.message(), expand("⟨42.1¦100¦**¦999999999⟩"));
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn power_magnitude_precheck_message_renders_full_stored_precision_not_the_9_digi
     assert_eq!(err.additional()[0], "123456789012345678");
     assert_eq!(
         err.message(),
-        expand("⟨42.1¦¦¦123456789012345678**999999999⟩")
+        expand("⟨42.1¦123456789012345678¦**¦999999999⟩")
     );
 }
 

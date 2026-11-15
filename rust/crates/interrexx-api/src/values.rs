@@ -230,53 +230,32 @@ pub const MAX_WHOLENUMBER: i64 = 999_999_999_999_999_999;
 const RESULT_DIGITS: usize = 9;
 
 impl std::fmt::Display for Failure {
+    /// A refusal a program sees is stated by its error number, whose text is
+    /// the message table's and is not repeated here. The others are this
+    /// implementation's gaps and are described.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Failure::MissingArgument { position } => {
-                write!(f, "argument {position} is required")
+        let code = |number: u32| format!("{}.{}", number / 1000, number % 1000);
+        match (self.error_number(false), self.error_number(true)) {
+            (Some(routine), Some(method)) if routine == method => {
+                write!(f, "conversion refused with error {}", code(routine))
             }
-            Failure::NoStringValue { position } => {
-                write!(f, "argument {position} must have a string value")
-            }
-            Failure::InvalidDouble { position, .. } => {
-                write!(f, "argument {position} must be a valid double value")
-            }
-            Failure::NotPositive { position, .. } => {
-                write!(f, "argument {position} must be a positive whole number")
-            }
-            Failure::NotNonnegative { position, .. } => {
-                write!(
-                    f,
-                    "argument {position} must be zero or a positive whole number"
-                )
-            }
-            Failure::OutOfRange {
-                position, min, max, ..
-            } => write!(f, "argument {position} must be in the range {min} to {max}"),
-            Failure::NotLogical { .. } => write!(f, "logical value must be exactly 0 or 1"),
-            Failure::NotArray { .. } => {
-                write!(f, "the argument has no single-dimensional array value")
-            }
-            Failure::NotInstance { position, class } => write!(
+            (Some(routine), Some(method)) => write!(
                 f,
-                "argument {position} must be an instance of the {} class",
-                class.id()
+                "conversion refused with error {} ({} in a method)",
+                code(routine),
+                code(method)
             ),
-            Failure::NotPointerString { position, .. } => {
-                write!(f, "argument {position} is not in valid pointer format")
-            }
-            Failure::NoStem { position, .. } => {
-                write!(f, "argument {position} must have a stem object value")
-            }
-            Failure::ClassicStyle => write!(f, "a call to a ROUTINE_CLASSIC_STYLE routine"),
-            Failure::Signature => write!(f, "incorrect signature"),
-            Failure::ResultSignature => write!(f, "incorrect signature for the result"),
-            Failure::TooManyArguments { expected } => {
-                write!(f, "too many arguments in invocation; {expected} expected")
-            }
-            Failure::UnfilledSlot { entry } => write!(f, "{entry}"),
-            Failure::StaleHandle => write!(f, "the handle is no longer held by this activation"),
-            Failure::Raised => write!(f, "the interpreter raised a condition while converting"),
+            _ => match self {
+                Failure::ClassicStyle => write!(f, "a call to a ROUTINE_CLASSIC_STYLE routine"),
+                Failure::UnfilledSlot { entry } => write!(f, "{entry}"),
+                Failure::StaleHandle => {
+                    write!(f, "the handle is no longer held by this activation")
+                }
+                Failure::Raised => {
+                    write!(f, "the interpreter raised a condition while converting")
+                }
+                _ => write!(f, "{self:?}"),
+            },
         }
     }
 }

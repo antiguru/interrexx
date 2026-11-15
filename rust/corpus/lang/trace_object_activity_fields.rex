@@ -3,7 +3,8 @@
    instruction, and on a >I> line the CALLERSTACKFRAME. That is the frame
    below the traced one, else the one that started the activity: the frame
    that sent ~start, or the replying frame for a REPLY's continuation, either
-   with the starting activity's THREAD. */
+   with the starting activity's THREAD. The wording of an announcement is not
+   specified, so a >I> or <I< line is printed as its flag. */
 s = .sink~new
 zz = .traceoutput~destination(s)
 call rt 'a', 'b'
@@ -29,7 +30,10 @@ exit
 ::method lineout unguarded
   expose seen
   use arg v
-  seen~append(subword(v~traceline, 1, 3) '| thread' v~thread 'invocation' v~invocation~datatype('W'))
+  tl = v~traceline
+  if wordpos(word(tl, 1), '>I> <I<') > 0 then tl = word(tl, 1)
+  else tl = subword(tl, 1, 3)
+  seen~append(tl '| thread' v~thread 'invocation' v~invocation~datatype('W'))
   seen~append('  entries' v~allIndexes~sort~makeString('L', ' '))
   f = v~stackframe
   seen~append('  frame' f~type filespec('name', f~name) f~line f~executable~class~id f~target~class~id)

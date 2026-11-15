@@ -15,7 +15,7 @@ show: procedure
   do f over c~stackframes
     say ' ' f~type '|' f~name '|' f~line '|' f~arguments~items '|' (f~target == .nil) '|' (f~invocation == .nil) '|' (f~context == .nil)
   end
-  do l over c~traceback; say ' ' l; end
+  do l over c~traceback; if l~word(1)~datatype('W') then say ' ' l; end -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
   return
 
 inPlace: procedure

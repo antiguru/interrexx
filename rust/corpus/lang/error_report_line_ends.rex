@@ -1,5 +1,6 @@
 /* An error report goes to the trace output one line at a time, and a line
-   keeps a line end that an insert or an echoed clause holds. */
+   keeps a line end that an echoed clause holds. The text of a report line is
+   not specified (r[conv.error.text]), so such a line is printed as its code. */
 lines = .LineCollector~new
 .TraceOutput~destination(lines)
 o = .replier~new
@@ -18,7 +19,7 @@ exit
 
 show: procedure
   parse arg line
-  if pos(' running ', line) > 0 then say 'line' word(line, 1) word(line, 2) 'running ...'
+  if word(line, 1) == 'Error' then say 'line' word(line, 1) word(line, 2)
   else say 'line' c2x(line)
   return
 
@@ -38,6 +39,6 @@ raise syntax 98.900 array('a' || '01'x || .endofline || 'second line')
 ::class Echo
 ::method lineOut
   line = arg(1)~makeString
-  if pos(' running ', line) > 0 then say 'line' word(line, 1) word(line, 2) 'running ...'
+  if word(line, 1) == 'Error' then say 'line' word(line, 1) word(line, 2)
   else say 'line' c2x(line)
   return 0

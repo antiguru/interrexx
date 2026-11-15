@@ -668,7 +668,7 @@ pub(crate) fn build_live_frame(interp: &mut Interp, level: LiveLevel) -> Result<
 
 /// The `StackFrame` of the primitive method in row `row` of
 /// [`Activity::method_levels`]: no line, no invocation and no context, and
-/// its `Compiled method` line as its traceback.
+/// its built-in method line as its traceback.
 fn build_method_level_frame(interp: &mut Interp, row: usize) -> Result<ObjRef, Failure> {
     let level = &interp.activity.method_levels[row];
     let (resolution, receiver) = (level.resolution, level.receiver);
@@ -960,7 +960,7 @@ pub(crate) fn build_ended_frame(
 
 /// The `StackFrame` of a native method or routine that `target` (`.nil` for a
 /// routine) was sent with `arguments`, with no line or invocation and its
-/// `Compiled method` or `Compiled routine` line as its traceback. A routine's
+/// built-in method or routine line as its traceback. A routine's
 /// context is the calling activation's and a method's is `.nil`: `SysSleep`,
 /// `FILESPEC` and an `EXTERNAL` routine answer one, `SUBSTR` and an `EXTERNAL`
 /// method none. `caller` is `None` for a method, and for a routine the depth of
@@ -1025,7 +1025,7 @@ pub(crate) fn native_method_executable(
 
 /// The `StackFrame` of the native call in row `row` of
 /// [`Activity::native_handles`]: no line and no invocation, the calling
-/// activation's context, and the `Compiled routine` or `Compiled method` line
+/// activation's context, and the built-in routine or method line
 /// as its traceback.
 ///
 /// # Panics

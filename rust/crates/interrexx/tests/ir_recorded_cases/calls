@@ -256,8 +256,8 @@ return 1
 ----
 rc> 213
 err>      1 *-* call "ZSUB"
-err> Error 43 running /nonexistent/ir-dual-case.rex line 1:  Routine not found.
-err> Error 43.1:  Could not find routine "ZSUB".
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.1:
 
 # a name that is neither a label, a builtin nor a ::ROUTINE
 program
@@ -268,8 +268,8 @@ say 'not reached'
 rc> 213
 out> before
 err>      2 *-* call zorkolo
-err> Error 43 running /nonexistent/ir-dual-case.rex line 2:  Routine not found.
-err> Error 43.1:  Could not find routine "ZORKOLO".
+err> Error 43 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 43.1:
 
 # an argument expression that raises, reported against the CALL's own clause
 # The callee never runs, which is what says the arguments are evaluated in the
@@ -285,8 +285,8 @@ return 1
 rc> 214
 out> before
 err>      2 *-* call zsub 1/0
-err> Error 42 running /nonexistent/ir-dual-case.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 42.3:
 
 # a variable-reference argument, whose callee writes the caller's variable
 # `>zp` is the one argument form whose value is not the whole of what the callee

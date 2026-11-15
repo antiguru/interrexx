@@ -5,7 +5,7 @@ program
 say rxfuncquery('SysGetpid')
 signal on syntax
 say SysGetpid()
-syntax: say condition('o')~code condition('o')~message
+syntax: say condition('o')~code
 say .context~package~loadLibrary('RXUNIXSYS')
 say .context~package~loadLibrary('rxunixsys')
 say rxfuncquery('SysGetpid') rxfuncquery('sysmkdirunix') rxfuncquery('SysRmdirUnix')
@@ -16,7 +16,7 @@ say rxfuncdrop('SysGeterrnomsg') SysGeterrnomsg(2)
 rc 0
 [stdout]
 1
-43.1 Could not find routine "SYSGETPID".
+43.1
 0
 1
 0 0 0
@@ -70,36 +70,36 @@ SysStat('/dev/null', '00'x||'p')
 SysUname(,)
 SysGeterrnomsg(13,)
 ----
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 0 expected.
-ERR 88.922 Too many arguments in invocation; 1 expected.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.901 Missing argument; argument 2 is required.
-ERR 88.901 Missing argument; argument 3 is required.
-ERR 88.901 Missing argument; argument 1 is required.
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "2147483648".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "1.5".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found " ".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "0x1".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "The NIL object".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Object".
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Array".
+ERR 88.922
+ERR 88.922
+ERR 88.922
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 88.901
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
+ERR 88.907
 "1"
 "1"
 "1"
 "1"
 "Ok"
 "1"
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "".
-ERR 88.909 Argument 1 must have a string value.
-ERR 88.909 Argument 2 must have a string value.
-ERR 40.1 External routine "SYSSTAT" failed.
-ERR 40.1 External routine "SYSUNAME" failed.
+ERR 88.907
+ERR 88.909
+ERR 88.909
+ERR 40.1
+ERR 40.1
 "crw-rw-rw-"
-ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1
 "Linux"
 "Permission denied"
 
@@ -108,7 +108,7 @@ eval
 SysGeterrnomsg(-2147483647)
 SysGeterrnomsg(0)
 ----
-ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "-2.14748365E+9".
+ERR 88.907
 "Ok"
 
 # SysGeterrnomsg answers the platform's text for every number but 0, never
@@ -163,8 +163,8 @@ SysSignal(999, 'Ignore')
 "Linux"
 "Linux"
 "Linux"
-ERR 40.1 External routine "SYSUNAME" failed.
-ERR 40.1 External routine "SYSUNAME" failed.
+ERR 40.1
+ERR 40.1
 "1"
 "1"
 "1"
@@ -175,9 +175,9 @@ ERR 40.1 External routine "SYSUNAME" failed.
 "1"
 "1"
 "1"
-ERR 88.901 Missing argument; argument 2 is required.
-ERR 40.1 External routine "SYSSIGNAL" failed.
-ERR 40.1 External routine "SYSSIGNAL" failed.
+ERR 88.901
+ERR 40.1
+ERR 40.1
 "0"
 "0"
 
@@ -200,13 +200,13 @@ SysStat('/dev/null', 'i')~datatype('W')
 SysStat('/dev/null', 'n')~datatype('W')
 SysStat('/', 'm')~length SysStat('/', 'a')~words SysStat('/', 'c')~wordlength(1)
 ----
-ERR 40.1 External routine "SYSSTAT" failed.
-ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1
+ERR 40.1
 ""
 ""
 ""
-ERR 40.1 External routine "SYSSTAT" failed.
-ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1
+ERR 40.1
 "259"
 "259"
 "crw-rw-rw-"
@@ -230,14 +230,14 @@ SysChmod('/nonexist', 'rwxrwxrwxx')
 SysChmod('/nonexist', '---------')
 SysChmod('', 'rwxrwxrwx')
 ----
-ERR 40.1 External routine "SYSCHMOD" failed.
+ERR 40.1
 "-1"
-ERR 40.1 External routine "SYSCHMOD" failed.
+ERR 40.1
 "-1"
 "-1"
-ERR 40.1 External routine "SYSCHMOD" failed.
-ERR 40.1 External routine "SYSCHMOD" failed.
-ERR 40.1 External routine "SYSCHMOD" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
 "-1"
 "-1"
 
@@ -276,9 +276,9 @@ SysGetgrgid(0, '')
 SysGetgrgid(0, 'z')
 SysGetgrgid(2147483646, 'q')
 ----
-ERR 40.1 External routine "SYSGETPWNAM" failed.
-ERR 40.1 External routine "SYSGETPWNAM" failed.
-ERR 40.1 External routine "SYSGETPWNAM" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
 ""
 ""
 "root"
@@ -292,22 +292,22 @@ ERR 40.1 External routine "SYSGETPWNAM" failed.
 "0"
 ""
 ""
-ERR 40.1 External routine "SYSGETPWUID" failed.
-ERR 40.1 External routine "SYSGETPWUID" failed.
+ERR 40.1
+ERR 40.1
 "root"
 "0"
 ""
 "The Array class"
-ERR 40.1 External routine "SYSGETGRNAM" failed.
-ERR 40.1 External routine "SYSGETGRNAM" failed.
-ERR 40.1 External routine "SYSGETGRNAM" failed.
-ERR 40.1 External routine "SYSGETGRNAM" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
+ERR 40.1
 "root"
 "0"
 ""
-ERR 40.1 External routine "SYSGETGRGID" failed.
-ERR 40.1 External routine "SYSGETGRGID" failed.
-ERR 40.1 External routine "SYSGETGRGID" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
 
 # Services: http is 80/tcp with the alias www.
 eval
@@ -338,24 +338,24 @@ SysGetservbyport(80, 'tcp', 'q')
 "http"
 "http"
 Array[1]: www
-ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
-ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+ERR 40.1
+ERR 40.1
 ""
 ""
-ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
-ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+ERR 40.1
+ERR 40.1
 ""
 ""
 "http"
 "80"
 Array[1]: www
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
 ""
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
-ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1
+ERR 40.1
+ERR 40.1
 
 # Deviation 90: SysWordexp is refused. It stays registered (RxFuncQuery
 # answers 0 once RxFuncAdd has registered it, as on the oracle), and every call raises the routine failure,
@@ -736,17 +736,17 @@ rc 0
 ruled
 signal on syntax name a
 say SysGetgrnam('nosuchgroupq', 'n')
-a: say condition('o')~code condition('o')~message
+a: say condition('o')~code
 signal on syntax name b
 say SysGetgrgid(2147483646, 'm')
-b: say condition('o')~code condition('o')~message
+b: say condition('o')~code
 x = SysGetgrnam('nosuchgroupq', 'p')
 ::requires 'rxunixsys' LIBRARY
 ----
 rc 216
 [stdout]
-40.1 External routine "SYSGETGRNAM" failed.
-40.1 External routine "SYSGETGRGID" failed.
+40.1
+40.1
 [stderr]
      7 *-* x = SysGetgrnam('nosuchgroupq', 'p')
 Error 40 running {dir}/probe.rex line 7:

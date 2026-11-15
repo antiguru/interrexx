@@ -1067,7 +1067,7 @@ fn package_new(
     // **`INIT` is sent after the package is built, and an argument too many
     // is what it refuses.** Measured, `.Package~new('c3', a, ctx, 'X')` prints
     // the prologue's own line before reporting `93.902 ... 0 expected.` at
-    // rc 163, under a `Compiled method "INIT" with scope "Object".` frame:
+    // rc 163, under a built-in method frame for INIT with scope Object:
     // `Object~init` raises it, so neither the count nor the frame is this
     // function's to produce.
     let extra: Vec<Option<ObjRef>> = args.iter().skip(consumed).copied().collect();

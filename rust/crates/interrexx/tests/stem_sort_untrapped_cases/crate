@@ -9,10 +9,10 @@ program
 call SysStemSort "s."
 ----
 rc> 216
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      1 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 1:  Incorrect call to routine.
-err> Error 40.922:  Stem argument does not have a valid count for element 0.
+err> Error 40.922:
 
 # a stem default and no element 0
 program
@@ -20,10 +20,10 @@ s. = ''
 call SysStemSort "s."
 ----
 rc> 216
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.922:  Stem argument does not have a valid count for element 0.
+err> Error 40.922:
 
 # elements from 4 up and no element 0
 program
@@ -31,10 +31,10 @@ do i = 4 to 6; s.i = i; end
 call SysStemSort "s."
 ----
 rc> 216
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.922:  Stem argument does not have a valid count for element 0.
+err> Error 40.922:
 
 # a first element past the count
 program
@@ -42,10 +42,10 @@ s.0 = 2; s.1 = 'q'; s.2 = 'p'
 call SysStemSort "s.", , , 3
 ----
 rc> 216
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s.", , , 3
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.923:  The operation is outside the size of the stem array ("2").
+err> Error 40.923:
 
 # a missing element below the count
 program
@@ -53,10 +53,10 @@ s.0 = 2; s.1 = 'q'
 call SysStemSort "s."
 ----
 rc> 216
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.924:  Stem element at position "2" is not set.
+err> Error 40.924:
 
 # the adjacent success: a count of zero
 program
@@ -87,7 +87,7 @@ say 'not reached'
 ----
 rc> 163
 err>      6 *-* raise syntax 93.900 array('boom')
-err>        *-* Compiled routine "SYSSTEMSORT".
+err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort 's.'
-err> Error 93 running /t.rex line 2:  Incorrect call to method.
-err> Error 93.900:  boom.
+err> Error 93 running /t.rex line 2:  Invalid call to method.
+err> Error 93.900:

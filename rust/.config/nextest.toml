@@ -63,7 +63,6 @@ retries = 1
 # (REXX_CORPUS_GATE and the like) pass vacuously without it and stay in the profile.
 #
 # interrexx-api::invoke: oracle (15 tests), source (1 test): binary: oracle-built extension libraries (build/lib) and the api/ header of the submodule
-# interrexx-inventory::oracle_agreement: source: binary: interpreter/messages sources of the submodule
 # interrexx-parse::samples: source: binary: samples/ programs of the submodule
 # interrexx-parse::variants: source: binary: samples/ programs of the submodule
 # interrexx::classic_api: oracle+source: every test but those that run a driver this repository owns, linked against the staged librexx and librexxapi: testbinaries/, extensions/ and samples/ sources of the submodule, built into test extensions; a few also run the oracle
@@ -110,7 +109,6 @@ fail-fast = false
 default-filter = '''
 not (
   binary_id(=interrexx-api::invoke)
-  | binary_id(=interrexx-inventory::oracle_agreement)
   | binary_id(=interrexx-parse::samples)
   | binary_id(=interrexx-parse::variants)
   | (binary_id(=interrexx::classic_api) & test(=the_classic_group_passes))

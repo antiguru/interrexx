@@ -1,7 +1,8 @@
 /* A replied method's continuation announces >I> and <I< again on its own
    thread under ::OPTIONS TRACE LABELS, an empty rest after a forwarded
-   REPLY included. Routine and package names are not printed. Each send
-   waits for the replied threads before the next. */
+   REPLY included. The wording of an announcement is not specified, so a >I>
+   or <I< line is printed as its flag. Each send waits for the replied threads
+   before the next. */
 .traceOutput~destination(.shown~new)
 src = .array~of( -
   'return .test', -
@@ -35,9 +36,6 @@ say 'count' t~count
 ::method lineout
   use arg traced
   line = traced~makeString
-  at = pos(' Routine "', line)
-  if at > 0 then line = left(line, at + 8)
-  at = pos(' in package', line)
-  if at > 0 then line = left(line, at - 1)
+  if wordpos(word(line, 1), '>I> <I<') > 0 then line = left(line, pos(word(line, 1), line) + 2)
   say 'trace:' line
   return 0

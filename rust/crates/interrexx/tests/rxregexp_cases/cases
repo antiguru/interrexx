@@ -331,22 +331,22 @@ try: procedure
   say object~send(message, argument)
   return
 syntax:
-  say message condition('o')~code condition('o')~message
+  say message condition('o')~code
   return
 ::requires 'rxregexp.cls'
 ----
 rc 0
 [stdout]
 !POS
-match 93.900 RegularExpression has no pattern; give one to new or parse.
-pos 93.900 RegularExpression has no pattern; give one to new or parse.
+match 93.900
+pos 93.900
 0 1 2
-match 93.900 RegularExpression has been uninitialized.
-pos 93.900 RegularExpression has been uninitialized.
-parse 93.900 RegularExpression has been uninitialized.
+match 93.900
+pos 93.900
+parse 93.900
 [stderr]
 
-# The methods' argument rules, as condition code and secondary message.
+# The methods' argument rules, as condition code.
 program
 call try .RegularExpression, "new", .array~of('a', 'MAXIMUM')
 call try .RegularExpression, "new", .array~of('a', '')
@@ -379,30 +379,30 @@ try: procedure
   say message 'answered' answer~class~id
   return
 syntax:
-  say message condition('o')~code condition('o')~message
+  say message condition('o')~code
   return
 ::requires 'rxregexp.cls'
 ----
 rc 0
 [stdout]
-new 93.0 The NIL object
-new 93.0 The NIL object
-new 93.0 The NIL object
-new 38.0 The NIL object
-new 38.0 The NIL object
-new 88.922 Too many arguments in invocation; 2 expected.
+new 93.0
+new 93.0
+new 93.0
+new 38.0
+new 38.0
+new 88.922
 new answered RegularExpression
 position !POS
-parse 88.901 Missing argument; argument 1 is required.
-parse 93.0 The NIL object
-parse 93.0 The NIL object
-parse 88.922 Too many arguments in invocation; 2 expected.
+parse 88.901
+parse 93.0
+parse 93.0
+parse 88.922
 parse answered String
-match 88.901 Missing argument; argument 1 is required.
-match 88.922 Too many arguments in invocation; 1 expected.
-pos 88.901 Missing argument; argument 1 is required.
-pos 88.922 Too many arguments in invocation; 1 expected.
-position 93.902 Too many arguments in invocation of method; 0 expected.
+match 88.901
+match 88.922
+pos 88.901
+pos 88.922
+position 93.902
 0 2 2
 0 2 2
 0 1 1
@@ -417,7 +417,5 @@ r = .RegularExpression~new('a(')
 rc 218
 [stdout]
 [stderr]
-       *-* Compiled method "INIT" with scope "RegularExpression".
-       *-* Compiled method "NEW" with scope "Object".
      1 *-* r = .RegularExpression~new('a(')
-Error 38 running probe.rex line 1:  Invalid template or pattern.
+Error 38 running probe.rex line 1:

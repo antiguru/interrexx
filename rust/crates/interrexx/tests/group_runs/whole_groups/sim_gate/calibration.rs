@@ -74,7 +74,7 @@ fn calibration() {
             let mode = row.mode(seed(&row.group, &row.part, 0), "fifo");
             let ran = run_here(&row, &derived, &dir, &mode, CALIBRATION_DEADLINE);
             remove(&dir);
-            let mine = compared(&ran.run);
+            let mine = compared(&row, &ran.run);
             let line =
                 sim_line(&ran.run.stderr).expect("a calibration run produced a simulation report");
             let contended =

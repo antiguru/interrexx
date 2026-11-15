@@ -1,6 +1,8 @@
 # The oracle on ootest group samples/scclient, ootest revision 13178, four runs.
 # The group's TEST_04 drives the sample's socket server or client on fixed
 # ports; runs 1, 2 and 4 ran it beside the other socket sample groups.
+# A message text is cut from the record, as the comparisons cut it
+# (r[conv.error.text]), and a run's own directory is written <copy>.
 
 ## Run 1: eight groups at once
 rc 124, 300.14 s; started TEST_01_SAMPLEEXISTS TEST_04_SCCLIENT.REX; failing -
@@ -28,11 +30,11 @@ started TEST_01_SAMPLEEXISTS
 started TEST_04_SCCLIENT.REX
    362 *-* retc = SockRecv(s, 'xxx', len)
    123 *-*   data = sock~recv(1024)
-Error 4 running <oracle>/bin/socket.cls line 362:  Program interrupted.
-Error 4.1:  Program interrupted with HALT condition.
+Error 4 running <oracle>/bin/socket.cls line 362:
+Error 4.1:
     87 *-*     address ""      "rexx" prefix || "server" with input using (inArrS) output stem myStemS.
-Error 4 running /tmp/claude-1000/p9scope/a/work/samples__scclient/o/run/ooRexx/samples/scclient.testGroup line 87:  Program interrupted.
-Error 4.1:  Program interrupted with HALT condition.
+Error 4 running <copy>/ooRexx/samples/scclient.testGroup line 87:
+Error 4.1:
 
 ## Run 2: tests/suite.rs l3_core_suite, eight groups at once
 verdicts from its per-test record: TEST_01_SAMPLEEXISTS passed; TEST_04_SCCLIENT.REX passed

@@ -75,7 +75,7 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
     }
     expected.push_str(&expand(&format!(
         "     9 *-* call spin {DEPTH}\n\
-         \x20    N *-* ⟨101.24¦UNKNOWN¦Monitor¦REXX⟩\n\
+         \x20    N *-* <no source>\n\
          \x20    3 *-* x = 1\n\
          Error 42 running PROGRAM line 13:  ⟨42⟩\n\
          Error 42.3:  ⟨42.3⟩\n"

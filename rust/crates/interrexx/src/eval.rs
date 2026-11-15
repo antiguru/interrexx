@@ -920,7 +920,7 @@ impl Interp {
         // the details, and the arithmetic reports the **original argument**
         // rather than the conversion when the converted string is not numeric:
         // `'2' + .K` with a class-side `makeString` returning `'xx'` is 41.1
-        // `Nonnumeric value ("The K class")`.
+        // with `The K class` as its item.
         let converted = self.required_string_or_nil(right_value)?;
 
         let result = if op == Operator::Power {
@@ -1003,8 +1003,8 @@ impl Interp {
 
     /// Converts an arithmetic operand to a `Number`, or 41.1 with the
     /// operand's own rendered text as the substitution -- measured, `say
-    /// 'abc' + 1` reports `Nonnumeric value ("abc")`, the operand as it
-    /// renders, not upcased or otherwise transformed.
+    /// 'abc' + 1` carries `abc`, the operand as it renders, not upcased or
+    /// otherwise transformed.
     pub(crate) fn arith_operand(&mut self, value: ObjRef) -> Result<Number, Failure> {
         match self.to_number(value) {
             Ok(number) => Ok(number),
@@ -1062,8 +1062,8 @@ impl Interp {
     }
 
     /// [`Interp::is_forwarding_receiver`] of the reference `value`: measured,
-    /// `t = >s; say t + 0` with `s = 'abc'` is 41.1 under `Compiled method
-    /// "+" with scope "String"`, as `s~'+'(0)` is.
+    /// `t = >s; say t + 0` with `s = 'abc'` is 41.1 under a built-in method line
+    /// for + with scope String, as `s~'+'(0)` is.
     #[cold]
     #[inline(never)]
     fn is_forwarding_reference(&self, value: ObjRef) -> bool {
@@ -1518,8 +1518,8 @@ impl Interp {
         // **`.nil` is an operator receiver.** It answers `==`, `\\==`, `=`,
         // `<>` and `><` by identity and understands no other operator, so an
         // ordering or arithmetic operator against it is 97.1 -- measured,
-        // `.nil < 'x'` and `.nil + 1` both report `Object "The NIL object"
-        // does not understand message`. Reaching that through the send is
+        // `.nil < 'x'` and `.nil + 1` both raise it, with `The NIL object` as
+        // the receiver item. Reaching that through the send is
         // what `Object`'s own operator methods do; converting `.nil` to its
         // string value instead makes it equal to the text `The NIL object`
         // and orderable against anything.
@@ -1537,8 +1537,8 @@ impl Interp {
             // and no other operator, so the six are `Object`'s identity test
             // and every other operator is a name the behaviour does not hold:
             // `.array = .array` is `1` and `.array = 'The Array class'` is `0`;
-            // `.array > .array` and `.array + 1` are both `97.1 Object "The
-            // Array class" does not understand message`.
+            // `.array > .array` and `.array + 1` both raise 97.1 with
+            // `The Array class` as the receiver item.
             Body::Class { .. } => Some(value),
             Body::Instance { .. } => Some(value),
             // Neither `Array` nor a class this crate builds as a native body

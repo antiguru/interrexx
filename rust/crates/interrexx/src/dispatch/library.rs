@@ -300,7 +300,7 @@ impl Interp {
     /// against `args`, and answers what the extension returned, or `Entered`
     /// as [`Interp::run_library_method`] does.
     ///
-    /// `name` is the name the traceback's `Compiled routine` line gives, and
+    /// `name` is the name the traceback's built-in routine line gives, and
     /// `executable` what the routine's `StackFrame` answers.
     ///
     /// # Errors

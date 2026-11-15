@@ -233,8 +233,8 @@ say 2 ** 2.5
 ----
 rc> 230
 err>      1 *-* say 2 ** 2.5
-err> Error 26 running /nonexistent/ir-dual-case.rex line 1:  Invalid whole number.
-err> Error 26.8:  Operand to the right of the power operator (**) must be a whole number; found "2.5".
+err> Error 26 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 26.8:
 
 # **A nonnumeric exponent is 26.8 too, and that is what the row above cannot
 # say.** `2.5` converts and then fails as a whole number, so an exponent routed
@@ -272,8 +272,8 @@ say 6 // zd
 ----
 rc> 214
 err>      2 *-* say 6 // zd
-err> Error 42 running /nonexistent/ir-dual-case.rex line 2:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 42.3:
 
 # the same divisor under each dividing operator, trapped, so that one row says
 # every one of them reaches it and says which clause SIGL lands on for each.

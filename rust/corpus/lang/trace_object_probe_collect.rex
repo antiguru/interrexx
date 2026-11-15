@@ -2,8 +2,9 @@
    TraceObject, collected and not written. A >V> or >=> line's object carries
    VARIABLE (a compound's has no name and no value), NOTIFY gets each object,
    a method whose first clause is EXPOSE announces from its TRACE, and a
-   class whose INIT is traced still answers NEW. Names after a routine's
-   prefix and package names are not printed. */
+   class whose INIT is traced still answers NEW. The wording of an
+   announcement is not specified, so a >I> or <I< line is printed as its
+   flag. */
 got = .array~new
 told = .array~new
 .traceObject~notify = told
@@ -37,10 +38,7 @@ say got~items told~items
 do n = 1 to got~items
   t = got[n]
   line = t~traceLine
-  at = pos(' Routine "', line)
-  if at > 0 then line = left(line, at + 8)
-  at = pos(' in package', line)
-  if at > 0 then line = left(line, at - 1)
+  if wordpos(word(line, 1), '>I> <I<') > 0 then line = word(line, 1)
   same = (told[n] == t)
   v = t~variable
   if v == .nil then say same line

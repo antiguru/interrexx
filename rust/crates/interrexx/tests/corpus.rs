@@ -375,10 +375,8 @@ fn the_multiset_stdout_licence_covers_order_and_nothing_else() {
              multiset comparison would agree with anything"
         );
         assert!(
-            support::oracle::stdout_multiset(&support::error_text::cut_error_texts(&rust.stdout))
-                == support::oracle::stdout_multiset(&support::error_text::cut_error_texts(
-                    &cpp.stdout
-                )),
+            support::oracle::stdout_multiset(&rust.stdout)
+                == support::oracle::stdout_multiset(&cpp.stdout),
             "{listed}: differs on stdout as a multiset of lines, which Deviation 33 \
              does not license"
         );

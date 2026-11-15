@@ -595,21 +595,19 @@ impl Interp {
         let line_start = self.trace.len();
         self.trace.extend(std::iter::repeat_n(b' ', 7));
         self.trace.extend_from_slice(prefix.as_bytes());
-        match subject {
-            Announced::Routine { name } => {
-                self.trace.extend_from_slice(b" Routine \"");
-                self.trace.extend_from_slice(name);
-            }
-            Announced::Method { name, scope } => {
-                self.trace.extend_from_slice(b" Method \"");
-                self.trace.extend_from_slice(name);
-                self.trace.extend_from_slice(b"\" with scope \"");
-                self.trace.extend_from_slice(scope);
-            }
-        }
-        self.trace.extend_from_slice(b"\" in package \"");
-        self.trace.extend_from_slice(package);
-        self.trace.extend_from_slice(b"\".\n");
+        self.trace.push(b' ');
+        let text = match subject {
+            Announced::Routine { name } => crate::error::message_text(
+                interrexx_inventory::errors::E101_18,
+                [name.clone(), package.to_vec()],
+            ),
+            Announced::Method { name, scope } => crate::error::message_text(
+                interrexx_inventory::errors::E101_19,
+                [name.clone(), scope.clone(), package.to_vec()],
+            ),
+        };
+        self.trace.extend_from_slice(&text);
+        self.trace.push(b'\n');
         make_displayable(&mut self.trace, line_start);
         self.route_trace_line_as(line_start, prefix == ">I>");
     }

@@ -174,10 +174,10 @@ fn the_file_date_time_witness_reads_the_zone_the_oracle_does() {
             "exit status under TZ={zone}"
         );
         // The message text of an error report is not specified, so the error
-        // lines of each side are cut to their code and subcode first.
+        // lines of each side's stderr are cut to their code and subcode first.
         let cut = support::error_text::cut_error_texts;
         assert!(
-            cut(&out.stdout) == cut(&cpp.stdout),
+            out.stdout == cpp.stdout,
             "stdout under TZ={zone}:\n{}\n---\n{}",
             String::from_utf8_lossy(&out.stdout),
             String::from_utf8_lossy(&cpp.stdout)
@@ -262,7 +262,7 @@ fn an_overlap_probe_restores_absent_empty_and_present_timezone_settings() {
             String::from_utf8_lossy(&out.stderr)
         );
         let cut = support::error_text::cut_error_texts;
-        assert_eq!(cut(&out.stdout), cut(&cpp.stdout), "{name}");
+        assert_eq!(out.stdout, cpp.stdout, "{name}");
         // The program runs commands, so it starts an API daemon that ends just after it does;
         // memcap may report that daemon as still in its group. That line is memcap's, not ours.
         let stderr: Vec<u8> = String::from_utf8_lossy(&out.stderr)

@@ -59,13 +59,15 @@ fn fresh_run_dir() -> PathBuf {
     dir
 }
 
-/// One case's program, rendered in the tagged form the case files record.
+/// One case's program, rendered in the tagged form the case files record,
+/// with the message texts cut from stderr: they are not specified, only the
+/// codes are.
 fn tagged(exit_code: i32, stdout: &[u8], stderr: &[u8]) -> String {
     let mut out = format!("rc> {exit_code}\n");
     for line in String::from_utf8_lossy(stdout).lines() {
         out.push_str(&format!("out> {line}\n"));
     }
-    for line in String::from_utf8_lossy(stderr).lines() {
+    for line in String::from_utf8_lossy(&support::error_text::cut_error_texts(stderr)).lines() {
         out.push_str(&format!("err> {line}\n"));
     }
     out

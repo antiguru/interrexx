@@ -1,5 +1,5 @@
-//! Tables mechanically derived from the C++ tree, plus the one hand-written
-//! list that indexes into them.
+//! The builtin and error message tables, generated from the checked-in
+//! interface tables in `data/` and the message texts in `messages/`.
 //!
 //! # Message texts
 //!
@@ -10,8 +10,8 @@
 //! `data/errors.tsv`. A line that is empty or starts with `#` is a comment.
 //! A text has no tab and no line break. The build checks every file: its
 //! name is the major of each of its rows, each code is in `errors.tsv`, no
-//! code has two texts, and no text uses an insert outside the rendered set.
-//! The texts are checked but not yet used.
+//! code has two texts, every code has one, and no text uses an insert
+//! outside the rendered set. [`errors::MESSAGES`] carries these texts.
 
 pub mod errors {
     include!(concat!(env!("OUT_DIR"), "/errors.rs"));

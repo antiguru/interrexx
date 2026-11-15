@@ -22,7 +22,7 @@ signal on syntax name command
 address system 'exit 3'
 say 'not here'
 command:
-say 'command' condition('o')~code condition('o')~message
+say 'command' condition('o')~code
 exit
 
 ::routine TestAddCommandEnvironment PUBLIC EXTERNAL "LIBRARY orxfunction"

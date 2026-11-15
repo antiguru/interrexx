@@ -66,3 +66,14 @@ fn an_unknown_and_a_repeated_code_are_rejected() {
     assert!(problems[0].contains("not in errors.tsv"));
     assert!(problems[1].contains("more than one"));
 }
+
+#[test]
+fn a_code_without_a_text_is_missing() {
+    let texts = [text(91, 1, "Item &1 of &3"), text(91, 3, "None")];
+    assert_eq!(
+        missing(&table(), &texts),
+        vec!["91.2 has no text".to_string()]
+    );
+    let all = [text(91, 2, "Two &1 &2"), texts[0].clone(), texts[1].clone()];
+    assert!(missing(&table(), &all).is_empty());
+}

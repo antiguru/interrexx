@@ -1,37 +1,48 @@
-//! The `-v` banner as Deviation 96 states it. The oracle's banner lines are mapped to
-//! interrexx's, and the build date and interrexx's version are masked, so a recorded block holds
+//! The `-v` banner as Deviation 96 states it. The oracle's banner is mapped to interrexx's by
+//! position, and the build date and interrexx's version are masked, so a recorded block holds
 //! interrexx's text and both sides must agree on it.
 
-/// `line` as a recorded block shows it, or `None` for a line the oracle's banner has and
-/// interrexx's does not. `oracle` says which side printed it.
-pub fn recorded(line: &str, oracle: bool) -> Option<String> {
-    if let Some(_date) = line.strip_prefix("Build date: ") {
-        return Some("Build date: <date>".to_string());
-    }
-    if oracle {
-        if let Some(rest) = line.strip_prefix("Open Object Rexx Version ")
-            && let Some(version) = rest.split(' ').next()
+/// The lines of the oracle's banner after the one naming the addressing mode: the notice block
+/// that interrexx replaces by one line. The count is the oracle's `rexx -v` output, not a rule
+/// of the spec.
+const ORACLE_NOTICE_LINES: usize = 5;
+
+/// `lines` as a recorded block shows them. The oracle's banner is recognised by position: the
+/// line before `Build date: ` is the version line, whose first word that starts with a digit is the version, and the
+/// [`ORACLE_NOTICE_LINES`] lines after `Addressing mode: ` become one line. `oracle` says which
+/// side printed the lines.
+pub fn recorded<'a>(lines: impl IntoIterator<Item = &'a str>, oracle: bool) -> Vec<String> {
+    let lines: Vec<&str> = lines.into_iter().collect();
+    let mut out = Vec::with_capacity(lines.len());
+    let mut index = 0;
+    while index < lines.len() {
+        let line = lines[index];
+        index += 1;
+        if line.starts_with("Build date: ") {
+            out.push("Build date: <date>".to_string());
+        } else if oracle
+            && lines
+                .get(index)
+                .is_some_and(|next| next.starts_with("Build date: "))
+            && let Some(version) = line
+                .split(' ')
+                .find(|word| word.starts_with(|c: char| c.is_ascii_digit()))
         {
-            return Some(format!(
+            out.push(format!(
                 "interrexx <version> (Open Object Rexx {version} compatible)"
             ));
+        } else if oracle && line.starts_with("Addressing mode: ") {
+            out.push(line.to_string());
+            out.push("Licensed under MIT OR Apache-2.0.".to_string());
+            index = (index + ORACLE_NOTICE_LINES).min(lines.len());
+        } else if !oracle
+            && let Some(rest) = line.strip_prefix("interrexx ")
+            && let Some((_, tail)) = rest.split_once(" (Open Object Rexx ")
+        {
+            out.push(format!("interrexx <version> (Open Object Rexx {tail}"));
+        } else {
+            out.push(line.to_string());
         }
-        if line.starts_with("Copyright (c) 1995, 2004 IBM Corporation.") {
-            return Some("Licensed under MIT OR Apache-2.0.".to_string());
-        }
-        let dropped = [
-            "Copyright (c) 2005-",
-            "This program and the accompanying materials",
-            "of the Common ",
-            "https://www.oorexx.org/license.html",
-        ];
-        if dropped.iter().any(|prefix| line.starts_with(prefix)) {
-            return None;
-        }
-    } else if let Some(rest) = line.strip_prefix("interrexx ")
-        && let Some((_, tail)) = rest.split_once(" (Open Object Rexx ")
-    {
-        return Some(format!("interrexx <version> (Open Object Rexx {tail}"));
     }
-    Some(line.to_string())
+    out
 }

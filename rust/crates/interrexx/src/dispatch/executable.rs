@@ -643,7 +643,7 @@ fn begin_routine(
     };
     // A library routine runs under its own table spelling, which is the name
     // `Routine~call` passes: measured, `r~call(1, 2, 3)` over `RxCalcSqrt` is
-    // reported under `Compiled routine "RxCalcSqrt".` whether a directive or
+    // reported under a built-in routine line for RxCalcSqrt whether a directive or
     // an external-routine load answered `r`.
     let code = match (record.source, record.routine) {
         (crate::ExecutableSource::Loaded { code }, _) => Some(code),

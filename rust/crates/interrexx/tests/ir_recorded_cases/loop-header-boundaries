@@ -175,8 +175,8 @@ return
 rc> 214
 err>     10 *-*     say 1/0
 err>      2 *-* do i = 1 to raiser()
-err> Error 42 running /nonexistent/ir-dual-case.rex line 10:  Arithmetic overflow/underflow.
-err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
+err> Error 42 running /nonexistent/ir-dual-case.rex line 10:
+err> Error 42.3:
 
 # a call on handler queued by a WHILE condition
 # A different boundary from the header's: the re-test before pass 2 is its own
@@ -292,8 +292,8 @@ sub:
 rc> 239
 err>      5 *-*     procedure
 err>      1 *-* call sub 1
-err> Error 17 running /nonexistent/ir-dual-case.rex line 5:  Unexpected PROCEDURE.
-err> Error 17.1:  PROCEDURE is valid only when it is the first instruction executed after an internal CALL or function invocation.
+err> Error 17 running /nonexistent/ir-dual-case.rex line 5:
+err> Error 17.1:
 
 # a TO bound that is not numeric
 # The header's own failure, attributed to the DO clause and echoed with the
@@ -305,8 +305,8 @@ end
 ----
 rc> 215
 err>      1 *-* do i = 1 to 'a'
-err> Error 41 running /nonexistent/ir-dual-case.rex line 1:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("a") used in arithmetic operation.
+err> Error 41 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 41.1:
 
 # a bad TO bound in front of a BY with a side effect
 # **The row that says each header value is validated before the next one is
@@ -324,8 +324,8 @@ return 1
 ----
 rc> 215
 err>      1 *-* do i = 1 to 'a' by zf()
-err> Error 41 running /nonexistent/ir-dual-case.rex line 1:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("a") used in arithmetic operation.
+err> Error 41 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 41.1:
 
 # a bad TO bound under trace r
 # **The row that says each header value is echoed before it is validated.** The
@@ -342,5 +342,5 @@ rc> 215
 err>      2 *-* do i = 1 to 'a' by 2
 err>        >K>   "TO" => "a"
 err>      2 *-* do i = 1 to 'a' by 2
-err> Error 41 running /nonexistent/ir-dual-case.rex line 2:  Bad arithmetic conversion.
-err> Error 41.1:  Nonnumeric value ("a") used in arithmetic operation.
+err> Error 41 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 41.1:

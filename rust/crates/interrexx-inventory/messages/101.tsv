@@ -1,6 +1,7 @@
 101	0	Error &1 running &2 line &3:
 101	1	Error
 101	2	running
+# Nothing reads 101.3; the row stays because the build requires a text for every row of errors.tsv.
 101	3	line
 101	4	+++ Interactive trace error
 101	5	+++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.

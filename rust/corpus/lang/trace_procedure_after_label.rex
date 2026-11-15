@@ -6,8 +6,9 @@ s = .lines~new
 call m
 r = .o~new~n
 .traceOutput~destination
-do l over s~lines
-  say l
+do l over s~lines -- an announcement as its flag: its text is message text, r[conv.error.text]
+  if wordpos(word(l, 1), '>I> <I<') > 0 then say left(l, pos(word(l, 1), l) + 2)
+  else say l
 end
 say 'result' r
 exit

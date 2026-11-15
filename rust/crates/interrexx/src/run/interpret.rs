@@ -401,7 +401,7 @@ impl Interp {
 
     /// One line typed at a pause, run as an `INTERPRET` fragment that traces
     /// nothing. A SYNTAX condition inside it is reported under the two
-    /// `+++ Interactive trace.` lines and swallowed, and the pause goes on --
+    /// `+++` error lines and swallowed, and the pause goes on --
     /// measured, `zz = 1/0` at a pause reports 42.3 and the next line still
     /// runs.
     fn run_debug_fragment(&mut self, text: Vec<u8>) -> Result<Option<Flow>, Failure> {

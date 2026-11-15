@@ -1,5 +1,7 @@
 /* Method~new and Routine~new over source that does not parse raise SYNTAX
-   with the failing clause first, trapped and then untrapped. */
+   with the failing clause first, trapped and then untrapped. A built-in
+   level is not printed: whether a build has one is not specified
+   (r[class.stackframe.builtin]), and its trace line has no line number. */
 call try .method
 call try .routine
 r = .routine~new('r', .array~of('nop', 'if 1 then end'))
@@ -11,6 +13,8 @@ try: signal on syntax
   return
 syntax:
   o = condition('O')
-  say o~code o~position rc o~traceback~items
-  do l over o~traceback; say '  tb:' l; end
+  say o~code o~position rc
+  do l over o~traceback
+    if word(l, 1) \== '*-*' then say '  tb:' l
+  end
   return
