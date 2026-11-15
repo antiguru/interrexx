@@ -387,9 +387,7 @@ mod checks;
 use checks::check_not_run;
 pub use checks::check_row;
 mod guards;
-pub use guards::{
-    assertion_lines, enclosing, guard_assertions, guardable, guarded_assertions, starts_assertion,
-};
+pub use guards::{assertion_lines, enclosing, guard_assertions, guardable, guarded_assertions};
 
 /// The rows the group files alone determine, one line each as the files hold
 /// them: every test of a group below [`WINDOWS_DIR`]; every test of another

@@ -1343,6 +1343,8 @@ mod row_checks {
     const GROUPS: &[&str] = &[
         "base/bif/RXQUEUE",
         "base/bif/CHAROUT",
+        "base/bif/ERRORTEXT",
+        "base/keyword/TRACE",
         "base/class/RexxQueue",
         "extensions/json/json",
         "extensions/rxmath/RxMath",
@@ -1371,7 +1373,12 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tasserts a wording, r[conv.error.text]",
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 56 61-62; asserts a wording, r[conv.error.text]",
+        ),
+        // An IF of an assertion, in a helper method that is no test.
+        (
+            LICENCES,
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 188; asserts a wording, r[conv.error.text]",
         ),
         (
             LICENCES,
@@ -1414,11 +1421,46 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tasserts a wording",
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 56; asserts a wording",
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tr[conv.no.such.rule]",
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 56; r[conv.no.such.rule]",
+        ),
+        // No assertions named, or named badly.
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tasserts a wording, r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 62-61; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 56 56; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 0; r[conv.error.text]",
+        ),
+        // A line that is not there, the method's directive, an IF whose next
+        // line is no assertion, and an assertion of another test.
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 9999; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/bif/ERRORTEXT\tTEST_ERRORTEXT\tUnspecified\tassertions 55; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 170; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1190; r[conv.error.text]",
         ),
         (
             LICENCES,
