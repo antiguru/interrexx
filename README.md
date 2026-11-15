@@ -31,9 +31,11 @@ The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubco
 
 ## Testing
 
-The regular tests need no ooRexx build and no submodule, only the ooTest and ooRexx documentation
-checkouts. The preflight script lists the checkouts that are missing and prints the commands that
-fetch them:
+The regular tests need no ooRexx build and no submodule. They need the ooTest and ooRexx
+documentation checkouts, `svn` (the extractor tests read a checkout's revision), `memcap` on the
+path (some tests run a program under it) and a C and a C++ compiler (the ABI dump and the link test
+compile against `include/`). The preflight script lists the checkouts that are missing and prints
+the commands that fetch them:
 
 ```sh
 python3 rust/scripts/test_preflight.py --standalone
@@ -54,7 +56,9 @@ cargo test --workspace --doc
 ```
 
 Install nextest with `cargo install cargo-nextest --locked` or from a prebuilt binary
-(<https://nexte.st>); `cargo test --workspace` runs the same tests, more slowly.
+(<https://nexte.st>). Run the regular tests through nextest with the `standalone` profile:
+`cargo test --workspace` has no filter, so on a checkout without the submodule it also runs the
+upstream tier, which fails.
 
 `docs/developing.md` covers running the tests and both interpreters safely; `docs/design/`
 describes the implementation.

@@ -83,8 +83,10 @@ page records why they are the way they are.
 * **`include/` declares the names of ooRexx's headers, and no others** (2026-11-14, #650, #712).
   A CI job diffs every name both ways and fails on a difference that the script does not list with
   a reason. The eight exports the pinned headers leave undeclared stay undeclared in `include/`;
-  the libraries export them and the ABI dump checks them by symbol only. `RexxConditionData` is
-  declared, with a `repr(C)` twin that the ABI dump measures.
+  the libraries export them, and `interrexx-capi/tests/link.rs` finds them by symbol, since the ABI
+  dump has no declaration to measure. Declaring them would add names that ooRexx's headers lack,
+  which the diff exists to prevent. `RexxConditionData` is declared, with a `repr(C)` twin that the
+  ABI dump measures.
 * **C gets declarations, C++ gets contexts** (2026-11-14, #661). C code may use the headers'
   declarations, entry tables and routines that need no context; a library that calls the
   interpreter through a context is written in C++. ooRexx's own headers already stop C at the

@@ -8,9 +8,10 @@
 # Not flagged:
 #   * names of files this repository tracks itself (its own C++ probe sources);
 #   * the files in ALLOW below. They read ooRexx's sources in the upstream
-#     tier of the tests or in `interrexx-upstream`, or carry a file name as a
+#     tier of the tests, in `interrexx-upstream` (the checked-in tables) or in
+#     `rexx-extract-docs` (`DirectiveParser.cpp`), or carry a file name as a
 #     literal string or in recorded or derived data. No build script reads an
-#     ooRexx source any more (#388). Do not add to the list.
+#     ooRexx source. Do not add to the list.
 #
 # The patterns are plain regular expressions over file contents. Submodules are
 # not searched.

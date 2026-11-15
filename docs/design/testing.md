@@ -111,7 +111,11 @@ tests compile or run. The oracle tier runs or loads the built ooRexx, `third_par
   against the oracle, so they need the oracle tier. Gate mode runs under `cargo test`, not
   nextest.
 
-A test that needs the submodule or the oracle fails loudly when it is absent; it does not skip. The
+A test that needs the submodule or the oracle fails loudly when it is absent; it does not skip.
+The one exception is a test that compares against the oracle only in gate mode: two of them
+(`an_unreadable_console_is_end_of_input` and
+`a_program_that_never_finishes_reddens_at_the_deadline_instead_of_hanging`) print `*** SKIPPED`
+and return when their gate variable is unset. The
 `standalone` profile's `default-filter` keeps it out of the regular run, and a comment beside the
 filter in `rust/.config/nextest.toml` records each entry's tier and the path it needs.
 

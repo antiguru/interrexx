@@ -7,15 +7,18 @@ and the reasons for them are in `docs/design/decisions.md`; read it before propo
 
 A regular build and test run need no submodule and no ooRexx build. `cargo build` and
 `cargo nextest run --workspace --profile standalone` read only files of this repository, plus the
-ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts. `python3 rust/scripts/test_preflight.py
---standalone` lists whichever of those is missing and prints the `svn checkout` commands that fetch
-them; `test_preflight.py --standalone -- COMMAND` runs the command only if nothing is missing.
+ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts, and the tools some tests run:
+`svn`, `memcap` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
+lists whichever of the two checkouts is missing and prints the `svn checkout` commands that fetch
+them; it checks the checkouts only, not the tools. `test_preflight.py --standalone -- COMMAND` runs
+the command only if nothing is missing.
 
 The submodule and the oracle are needed only for the upstream tier of the tests and for the oracle
 comparisons (`docs/design/testing.md`). `scripts/setup-third-party.sh` checks out the pinned
 `third_party/ooRexx` submodule, builds it as `third_party/oracle` (CMake `Release`), and checks out
 ooTest and the documentation at a fixed revision. Then `python3 rust/scripts/test_preflight.py`
-lists anything the upstream tier still needs; `test_preflight.py -- COMMAND` runs the command only
+lists the checkouts and the oracle's `build/lib` libraries that are missing; it does not look at
+`third_party/ooRexx` or `third_party/oracle`. `test_preflight.py -- COMMAND` runs the command only
 if nothing is missing.
 
 Three tables are generated from the pinned sources and checked in: `classes.tsv`, `errors.tsv`
@@ -29,6 +32,10 @@ REXX_UPSTREAM=$PWD/third_party/ooRexx cargo run -p interrexx-upstream -- write
 `cargo run -p interrexx-upstream -- check` regenerates in memory and exits non-zero, printing the
 differing rows, when a checked-in file differs. The `upstream interface` CI job runs it, so a
 bump without regeneration and a hand-edited row both fail.
+
+A fourth file, `rust/corpus/docs/directive-options.txt`, is derived from `oodocs` and from the
+submodule's `parser/DirectiveParser.cpp`: `cargo run -p interrexx-extract --bin rexx-extract-docs`
+reads that source, so regenerating it needs the submodule. A regular build and test run do not.
 
 The same job compares `include/` with the pinned `api/` headers. The ABI dump of
 `interrexx-api/tests/abi_dump.rs` is compiled against `api/` (`REXX_UPSTREAM` set, tests
@@ -53,9 +60,12 @@ service, `rxqueue`, `rxsubcom`, `librexxapi` and the extension libraries are wri
 behaviour descriptions, public headers (`api/`), `oodocs`, ooTest and running ooRexx, never from
 reading ooRexx's `rexxapi/`, `utilities/` or `extensions/` sources, and ooRexx is never traced or
 disassembled. Nothing in interrexx copies ooRexx source or documentation text. Error message texts
-are interrexx's own data, written to the rules of `STYLE.md`: a text keeps ooRexx's wording only
-where it is ANSI's, one of the canonical phrases with names filled in, or a plain statement of the
-code's meaning, and every other text is written fresh.
+are interrexx's own data, written to the rules in
+`rust/crates/interrexx-inventory/messages/STYLE.md`. A text is written fresh unless it is ANSI's
+text for the code, one of the canonical phrases with only names filled in, or the plain statement
+anyone given only the meaning of the code would write nearly word for word: a subject, then `must`,
+`must not`, `is` or `expected`, then an object, with no adverb, no parenthetical remark, no second
+clause and no turn of phrase peculiar to ooRexx.
 
 No text under ooRexx's licence enters the repository, recorded runs included: a recorded oracle
 run keeps the code of an error line, not the text after it. No tool in the repository compares
@@ -132,7 +142,11 @@ From `rust/`, under the memory cap:
   nothing of `third_party/`. The profile's `default-filter` in `rust/.config/nextest.toml` holds
   the upstream tier out, and the comments above the profile give each entry's tier and the path it
   needs. A test that needs `third_party/` fails loudly when the tree is absent and does not skip
-  itself; the filter keeps it out of this profile. A new test that reads the submodule or runs the
+  itself; the filter keeps it out of this profile. Two tests that compare against the oracle only
+  in gate mode, `an_unreadable_console_is_end_of_input` and
+  `a_program_that_never_finishes_reddens_at_the_deadline_instead_of_hanging`, print `*** SKIPPED`
+  and return when their gate variable is unset; `rust/.config/nextest.toml` records them as the
+  exception. A new test that reads the submodule or runs the
   oracle is added to the filter with its tier and reason. The `build` CI job checks every name in
   the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
   test cannot leave the filter unnoticed. The `standalone` CI job runs this profile, `cargo build`,
