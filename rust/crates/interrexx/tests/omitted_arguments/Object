@@ -81,12 +81,6 @@ sendWith (,,'a')
 setMethod (,'a')
 setMethod ('a',)
 setMethod (,,'a')
-start (,'a')
-start ('a',)
-start (,,'a')
-startWith (,'a')
-startWith ('a',)
-startWith (,,'a')
 string (,'a')
 string ('a',)
 string (,,'a')
@@ -175,12 +169,6 @@ sendWith (,,'a') => 93.902
 setMethod (,'a') => 97.2
 setMethod ('a',) => 97.2
 setMethod (,,'a') => 97.2
-start (,'a') => 88.901
-start ('a',) => ok
-start (,,'a') => 88.901
-startWith (,'a') => 88.901
-startWith ('a',) => 93.903
-startWith (,,'a') => 93.902
 string (,'a') => 93.902
 string ('a',) => 93.902
 string (,,'a') => 93.902

@@ -66,7 +66,7 @@ pub(super) fn position_in(
     // second is 93.926 whatever the first is and however many items the
     // queue holds; the store's own dimension, unfixed while it is empty,
     // decides nothing.
-    if store != receiver && args.len() > 1 {
+    if args.len() > 1 && is_queue(interp, receiver) {
         return Err(Raised::too_many_subscripts(1).into());
     }
     if let [Some(only)] = args

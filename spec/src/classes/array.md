@@ -516,6 +516,7 @@ answer is `.nil` and nothing changes. It works on arrays of any number of
 dimensions, so the indexes are read as [the index rule](r:class.array.indexes)
 says, and it checks no argument count of its own: no argument raises
 `SYNTAX 93.901`, and two on a one-dimensional array raise `SYNTAX 93.926`.
+An instance of a subclass of Array reads its indexes as an Array does.
 
 ```rexx
 a = .array~of('a', 'b', 'c')
@@ -544,6 +545,17 @@ x 0 4
 a~remove => 93.901
 a~remove(1, 2) => 93.926
 a~remove(0) => 93.907
+```
+
+```rexx
+g = .grid~new(2, 2)
+g[1, 2] = 'x'
+say g~remove(1, 2) g~items
+::class grid subclass array
+```
+
+```output
+x 0
 ```
 
 r[class.array.removeitem]
@@ -620,7 +632,8 @@ dimension yet. A slot that holds `.nil` holds an item. The indexes are read as
 [the index rule](r:class.array.indexes) says, so the method takes no argument
 count of its own: no argument raises `SYNTAX 93.901`, and an index that is not
 a whole number of at least 1 raises `SYNTAX 93.907`, or `SYNTAX 93.924` in a
-multi-dimensional array.
+multi-dimensional array. An instance of a subclass of Array reads its indexes
+as an Array does.
 
 ```rexx
 a = .array~of('a', , .nil)
@@ -653,6 +666,17 @@ a~hasIndex(0) => 93.907
 a~hasIndex(.nil) => 93.907
 b~hasIndex(1) => 93.925
 b~hasIndex(0, 1) => 93.924
+```
+
+```rexx
+g = .grid~new(2, 2)
+g[1, 2] = 'x'
+say g~hasIndex(1, 2) g~hasIndex(2, 2)
+::class grid subclass array
+```
+
+```output
+1 0
 ```
 
 r[class.array.hasitem]
@@ -802,7 +826,9 @@ beyond the array answers as [the rule for an index beyond
 the array](r:class.array.next.beyond) says. The index is
 read as [the index rule](r:class.array.indexes) says, with `SYNTAX 93.901` for
 no index and `SYNTAX 93.907` for an index that is not a whole number of at
-least 1; so index 0 is an error, and `previous(1)` is `.nil`.
+least 1; so index 0 is an error, and `previous(1)` is `.nil`. An instance of
+a subclass of Array reads its index as an Array does, a subscript per
+dimension.
 
 ```rexx
 a = .array~of('a', , , 'd', 'e')
@@ -831,6 +857,18 @@ a~next => 93.901
 a~next(0) => 93.907
 a~previous(.nil) => 93.907
 a~next(1, 2) => 93.926
+```
+
+```rexx
+g = .grid~new(2, 2)
+g[1, 2] = 'x'
+g[2, 2] = 'y'
+say g~next(1, 1)~makeString(, ',') g~previous(2, 2)~makeString(, ',')
+::class grid subclass array
+```
+
+```output
+1,2 1,2
 ```
 
 r[class.array.next.beyond]

@@ -316,7 +316,7 @@ fn array_step(
     let store = store_of(interp, receiver)?;
     // r[class.queue.next]: a queue's `next` and `previous` take one argument,
     // and a second is 93.926 however many items the queue holds.
-    if store != receiver && args.len() > 1 {
+    if args.len() > 1 && is_queue(interp, receiver) {
         return Err(Raised::too_many_subscripts(1).into());
     }
     let receiver = store;

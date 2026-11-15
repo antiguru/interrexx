@@ -3,7 +3,7 @@
 
 use super::{
     Arity, Body, Cleared, Failure, IndexUse, Interp, NativeMethod, ObjRef, Raised, append_slot,
-    array_position, array_slots, array_splice, array_splice_slot, item_argument,
+    array_position, array_slots, array_splice, array_splice_slot, is_queue, item_argument,
     native_array_delete, queue_bound, queue_index, read_slots, store_of,
 };
 
@@ -138,9 +138,8 @@ fn native_queue_at(
 ) -> Result<Option<ObjRef>, Failure> {
     let store = store_of(interp, receiver)?;
     // r[class.queue.at]: a queue's `at` takes one argument, and a second is
-    // 93.926 however many items the queue holds. An Array, its own store,
-    // takes a subscript per dimension.
-    if store != receiver && args.len() > 1 {
+    // 93.926 however many items the queue holds.
+    if args.len() > 1 && is_queue(interp, receiver) {
         return Err(Raised::too_many_subscripts(1).into());
     }
     if let [Some(only)] = args {

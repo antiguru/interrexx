@@ -1,4 +1,4 @@
-//! An omitted argument at a built-in method (#68): each documented instance
+//! An omitted argument at a built-in method: each documented instance
 //! method of a class with a construction program in
 //! `corpus/docs/class-set.txt` is sent argument lists with a hole in them,
 //! `(,'a')`, `('a',)` and `(,,'a')`, and the error each raises, or `ok`, is
@@ -8,8 +8,11 @@
 //!
 //! One case file per class under `tests/omitted_arguments/`, named after the
 //! class, whose `sends` case lists `method arguments` lines. The receiver
-//! is the class's construction program, built afresh for every send so that
-//! one send cannot change what the next is sent to.
+//! is the class's construction program, run afresh for every send. Some
+//! construction programs answer a shared object (`.Class~package`,
+//! `.Object~method('objectName')`, `.routines~r`, `.RexxInfo`), so a send
+//! that succeeds and changes its receiver's state would reach the later
+//! sends; the methods that would are left out ([`SKIPPED_METHODS`]).
 //!
 //! Recording: `OMITTED_ARGUMENTS_RECORD=1 REWRITE=1` runs the cases on the
 //! oracle (`REXX_ORACLE_ROOT`), each with an `XDG_RUNTIME_DIR` of its own.
@@ -74,11 +77,22 @@ const SKIPPED_ROWS: &[(&str, &str, &str)] = &[
 ];
 
 /// Methods left out of every probed class, each with why.
-const SKIPPED_METHODS: &[(&str, &str)] = &[(
-    "setSecurityManager",
-    "the receivers that have it are shared objects (a package, a routine, a method), so a \
-     manager it sets would intercept every later send",
-)];
+const SKIPPED_METHODS: &[(&str, &str)] = &[
+    (
+        "setSecurityManager",
+        "the receivers that have it are shared objects (a package, a routine, a method), so \
+         a manager it sets would intercept every later send",
+    ),
+    (
+        "start",
+        "a send it accepts starts an activity that runs on past the send and raises in its \
+         own time, as the classes left out for starting activities would",
+    ),
+    (
+        "startWith",
+        "as `start`: a send it accepts starts an activity that runs on past the send",
+    ),
+];
 
 /// The methods [`SKIPPED_ROWS`] applies to: `compareTo` and the comparison
 /// operators.
@@ -245,15 +259,20 @@ fn the_cases_cover_every_method_of_every_probed_class() {
             .expect("a name")
             .to_string();
         let text = std::fs::read_to_string(&path).expect("a case file");
-        let input: Vec<String> = text
-            .split("----")
-            .next()
-            .expect("a case")
-            .lines()
-            .skip_while(|line| line.starts_with('#') || line.trim() != "sends")
-            .skip(1)
-            .map(str::to_string)
-            .collect();
+        // Every case's input, in order: each `sends` line opens one, and its
+        // `----` closes it.
+        let mut input = Vec::new();
+        let mut lines = text.lines();
+        while let Some(line) = lines.next() {
+            if line.trim() == "sends" {
+                input.extend(
+                    lines
+                        .by_ref()
+                        .take_while(|line| *line != "----")
+                        .map(str::to_string),
+                );
+            }
+        }
         let expected: Vec<String> = methods(&class)
             .iter()
             .flat_map(|method| {
