@@ -1,5 +1,6 @@
 /* Hash-store iteration: 200 passes of ALLINDEXES, SUPPLIER and DO OVER over a
    10,000-entry StringTable. */
+numeric digits 18
 s = .stringtable~new
 do i = 1 to 10000
     s[i] = i

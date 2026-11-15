@@ -1,6 +1,6 @@
 /* Hash-store growth: a Table built from empty to 200,000 string keys, and a
    second to 50,000 keys of a class whose HASHCODE answers its string's, so
-   every insertion crosses the rebuild thresholds and the second also
+   the table crosses its rebuild thresholds repeatedly and the second also
    dispatches a user method per probe. Three passes. */
 n = 3
 do n

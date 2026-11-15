@@ -1,5 +1,6 @@
 /* Stem tails: 50,000 tails, 4,000,000 DROP and re-assign cycles over them,
    then one DO OVER. */
+numeric digits 18
 a. = 0
 do i = 1 to 50000
     a.i = i
