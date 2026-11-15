@@ -848,15 +848,21 @@ fn row_in_both_modes(
     (normal, judged, hung)
 }
 
-/// The complete passing population of `TRACE_TraceObject`.
-/// The table printed beside it reports each test's compared outcome.
-const TRACE_OBJECT_PASSING: &[&str] = &[
-    "TEST_CALLER_STACK_FRAME",
+/// The tests of `TRACE_TraceObject` that assert the wording of the trace
+/// announcements, which is unspecified (`r[conv.error.text]`), and so differ.
+const TRACE_OBJECT_WORDING: &[&str] = &[
     "TEST_CALLER_STACK_FRAME_REPLY_START",
     "TEST_OBJECT_AND_SCOPE",
+    "TEST_TRACEOBJECT_COLLECTOR",
+];
+
+/// The complete passing population of `TRACE_TraceObject`: every test but
+/// [`TRACE_OBJECT_WORDING`]'s. The table printed beside it reports each test's
+/// compared outcome.
+const TRACE_OBJECT_PASSING: &[&str] = &[
+    "TEST_CALLER_STACK_FRAME",
     "TEST_RECEIVER",
     "TEST_SETMAKESTRING_WITH_METHOD_OBJECT",
-    "TEST_TRACEOBJECT_COLLECTOR",
     "TEST_TRACEOBJECT_COLLECTOR_AND_NOTIFY_CLASS_ATTRIBUTES",
     "TEST_TRACEOBJECT_OPTION",
     "TEST_TRACEOBJECT_OPTION_INVALID",
@@ -877,7 +883,10 @@ fn the_outcome_table_of_the_trace_object_group() {
         SwitchMode::None,
         |_| true,
     );
-    assert_eq!(results.len(), TRACE_OBJECT_PASSING.len());
+    assert_eq!(
+        results.len(),
+        TRACE_OBJECT_PASSING.len() + TRACE_OBJECT_WORDING.len()
+    );
     let passing: Vec<&str> = results
         .iter()
         .filter(|row| matches!(row.outcome, Outcome::Pass))
