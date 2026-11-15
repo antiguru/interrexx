@@ -5237,6 +5237,10 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 /// interpreter's root context, which is kept ([`ThreadContext::make_root`]).
 /// Where it has none, nothing is attached and the answer is false.
 ///
+/// Unless the thread runs a native call of the interpreter, no library of the
+/// process is unmapped from then on, whatever the answer
+/// ([`crate::load::leave_libraries_mapped`]).
+///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made, and a non-null
 /// `attached` is valid for a write.
@@ -5244,7 +5248,15 @@ unsafe extern "C" fn attach_thread(
     instance: *mut RexxInstance_,
     attached: *mut *mut RexxThreadContext_,
 ) -> logical_t {
-    let context = match call_here(instance) {
+    let in_call = call_here(instance);
+    // A thread in a native call is counted in its library until the call
+    // returns, which a close waits out. Any other is not, and this comes
+    // before anything is answered, so that the thread cannot be returning
+    // into a library's code before a close can see it.
+    if in_call.is_none() {
+        crate::load::leave_libraries_mapped();
+    }
+    let context = match in_call {
         Some(context) => Some(context),
         None => match attached_to(instance) {
             Some(context) => {
@@ -6838,7 +6850,8 @@ mod tests {
     /// no root context yet it answers false and writes null, and once a
     /// context is made the root it answers that context, kept so a thread
     /// that read it from the instance never addresses freed memory. A second
-    /// context does not replace the root and is not kept.
+    /// context does not replace the root and is not kept. The first call,
+    /// though it attaches nothing, leaves every library mapped from then on.
     #[test]
     fn attach_thread_reaches_the_kept_root_and_nothing_before_it() {
         let table = super::ThreadTable::new();
@@ -6859,8 +6872,11 @@ mod tests {
         };
 
         let root = ThreadContext::linking(&table);
+        assert!(!crate::load::libraries_left_mapped());
         assert_eq!(attach(), (0, std::ptr::null_mut()));
         assert!(!kept(&root));
+        // An attach that answers nothing leaves libraries mapped too.
+        assert!(crate::load::libraries_left_mapped());
 
         root.make_root();
         assert!(kept(&root));

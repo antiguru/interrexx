@@ -899,8 +899,13 @@ impl Interp {
     /// ended the walk if one did. For example, a condition raised inside an
     /// unloader ends the walk, reports nothing, leaves the exit status alone
     /// and leaves that library and every later one open. A refusal ends it too.
+    ///
+    /// The libraries are those of every instance of the process, and they are
+    /// walked only where this interpreter is the last live instance
+    /// (`r[native.loading.unload]`).
     fn run_package_unloaders(&mut self) -> Option<Loud> {
-        for (_, library) in self.libraries.in_unload_order() {
+        for (_, unload) in self.libraries.end() {
+            let library = unload.library();
             match self.run_package_hook(&library, Hook::Unloader) {
                 Ok(()) => {
                     // A registered handler's code may be in this library, and

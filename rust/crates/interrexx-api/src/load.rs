@@ -106,6 +106,9 @@ struct Mapping {
     /// `None` for this image's own stubs, which nothing closes, and once
     /// closed.
     handle: Mutex<Option<libloading::Library>>,
+    /// The `dlopen` handle's address, the same for every load of one file
+    /// while it stays loaded, or `0` for no handle.
+    identity: usize,
     open: AtomicBool,
     /// Calls into the mapping in flight, which a close waits out by refusing.
     calls: AtomicUsize,
@@ -113,8 +116,19 @@ struct Mapping {
 
 impl Mapping {
     fn new(handle: Option<libloading::Library>) -> Arc<Mapping> {
+        let (handle, identity) = match handle {
+            Some(handle) => {
+                let raw = libloading::os::unix::Library::from(handle).into_raw();
+                // SAFETY: `raw` came from `into_raw` just above and is turned back into the one
+                // owner it was, so the reference `dlopen` counted is still held once.
+                let handle = unsafe { libloading::os::unix::Library::from_raw(raw) };
+                (Some(handle.into()), raw as usize)
+            }
+            None => (None, 0),
+        };
         Arc::new(Mapping {
             handle: Mutex::new(handle),
+            identity,
             open: AtomicBool::new(true),
             calls: AtomicUsize::new(0),
         })
@@ -154,37 +168,58 @@ impl Mapping {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .take();
         if let Some(handle) = handle {
-            keep_mapped(handle);
+            release(handle);
         }
         true
     }
 }
 
-/// The `dlopen` handles of libraries closed and kept mapped, by address.
-static KEPT_MAPPED: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+/// A handle not closed keeps its reference until the mapping goes, which
+/// releases it as a close does.
+impl Drop for Mapping {
+    fn drop(&mut self) {
+        let handle = self
+            .handle
+            .get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
+        if let Some(handle) = handle {
+            release(handle);
+        }
+    }
+}
 
-/// Leaves `handle`'s library mapped until the process exits, as classic
-/// libraries are, though nothing calls into it from here on. Code the library
-/// started on a thread of its own, such as an attached thread that is still
-/// returning from its last call, may still be running in it, and nothing here
-/// tracks that code, so the unmapping goes (`r[native.threads.end]`).
-///
-/// Loading the same file again answers the same `dlopen` handle, so a
-/// handle already kept is released instead, which leaves the number of
-/// references the process holds, and this list, at one per distinct library
-/// however many interpreters load it.
-fn keep_mapped(handle: libloading::Library) {
-    let raw = libloading::os::unix::Library::from(handle).into_raw();
-    let address = raw as usize;
-    let mut kept = KEPT_MAPPED
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    if kept.contains(&address) {
-        // SAFETY: `raw` came from `into_raw` just above and is used once, here;
-        // a reference from an earlier close keeps the library mapped.
-        drop(unsafe { libloading::os::unix::Library::from_raw(raw) });
+/// Whether a thread has called `AttachThread` in this process.
+static LEAVE_MAPPED: AtomicBool = AtomicBool::new(false);
+
+/// From now on, no library of this process is unmapped: a handle released
+/// later keeps its reference until the process exits. `AttachThread` calls it
+/// before it answers.
+#[doc(hidden)]
+pub fn leave_libraries_mapped() {
+    LEAVE_MAPPED.store(true, Ordering::SeqCst);
+}
+
+/// Whether [`leave_libraries_mapped`] has been called.
+#[cfg(test)]
+pub(crate) fn libraries_left_mapped() -> bool {
+    LEAVE_MAPPED.load(Ordering::SeqCst)
+}
+
+/// Gives up the process's reference to `handle`, which unmaps the library
+/// where it was the last one.
+fn release(handle: libloading::Library) {
+    // An attached thread can still be returning from its last call into the
+    // interpreter, or from `DetachThread`, into the library's code when the
+    // last instance ends, and nothing here can wait for it
+    // (`r[native.threads.end]`). Leaving the code mapped is allowed
+    // (`r[native.loading.static]`), so once a thread has attached, nothing is
+    // unmapped. A thread the library started that never attaches is its
+    // unloader's to stop.
+    if LEAVE_MAPPED.load(Ordering::SeqCst) {
+        std::mem::forget(handle);
     } else {
-        kept.push(address);
+        drop(handle);
     }
 }
 
@@ -2618,6 +2653,44 @@ pub struct Library {
     thread: Option<ThreadContext>,
 }
 
+/// A library's unloader and its mapping, without its rows, which an
+/// interpreter that did not load the library holds to run the unloader and
+/// close the library. It can be sent between threads.
+#[derive(Clone)]
+pub struct Unload {
+    /// Private for the reason `entry_point` is.
+    unloader: Option<PackageHook>,
+    mapping: Arc<Mapping>,
+}
+
+impl Unload {
+    /// A library with no rows and no loader, whose unloader and mapping are
+    /// these, for the interpreter that runs the unloader.
+    #[must_use]
+    pub fn library(&self) -> Library {
+        Library {
+            name: None,
+            version: None,
+            methods: Vec::new(),
+            routines: Vec::new(),
+            loader: None,
+            unloader: self.unloader,
+            mapping: Arc::clone(&self.mapping),
+            thread: None,
+        }
+    }
+}
+
+impl std::fmt::Debug for Unload {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Unload")
+            .field("unloader", &self.unloader.is_some())
+            .field("mapping", &self.mapping)
+            .finish()
+    }
+}
+
 impl std::fmt::Debug for Library {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -2691,10 +2764,45 @@ impl Library {
 
     /// Closes the library, after which none of its rows
     /// or hooks calls in, and answers whether it closed, which it does not
-    /// while a call into it is in flight. The file stays mapped until the
-    /// process exits.
+    /// while a call into it is in flight. The file is unmapped where nothing
+    /// else holds it, unless a thread has attached ([`leave_libraries_mapped`]).
     pub fn close(&self) -> bool {
         self.mapping.close()
+    }
+
+    /// The file the library was loaded from: two libraries loaded from one
+    /// file while it stays loaded answer the same number, and two from
+    /// different files different ones. `0` for a library with no `dlopen`
+    /// handle of its own.
+    #[must_use]
+    pub fn identity(&self) -> usize {
+        self.mapping.identity
+    }
+
+    /// What an instance other than the one that loaded this library needs
+    /// to run its unloader and close it, which keeps the file loaded.
+    #[must_use]
+    pub fn unload(&self) -> Unload {
+        Unload {
+            unloader: self.unloader,
+            mapping: Arc::clone(&self.mapping),
+        }
+    }
+
+    /// Whether `unload` came from this library or one sharing its rows.
+    #[must_use]
+    pub fn is_unloaded_by(&self, unload: &Unload) -> bool {
+        Arc::ptr_eq(&self.mapping, &unload.mapping)
+    }
+
+    /// Keeps the thread context [`Library::keep_thread_context`] kept for the
+    /// rest of the process, for a library that stays loaded after the
+    /// interpreter that loaded it has ended: the library's code may call
+    /// through the context it was handed as long as it is loaded.
+    pub fn keep_thread_context_for_process(&self) {
+        if let Some(thread) = &self.thread {
+            thread.keep();
+        }
     }
 
     /// Whether [`Library::close`] has not yet closed it.
@@ -3248,20 +3356,21 @@ mod tests {
         assert_eq!(found(&library, b"Foo"), Some(3));
     }
 
-    /// Loading and closing one file again and again keeps one entry in the list of kept
-    /// libraries, so a process that creates interpreters in a loop does not grow.
+    /// Two loads of one file have one identity while it stays loaded, and another file has
+    /// another.
     #[test]
-    fn closing_the_same_library_repeatedly_keeps_one_entry() {
-        let load_and_close = || {
-            // SAFETY: `libm` is a system library this process already links, so its
+    fn one_file_has_one_identity() {
+        let mapping = |file: &str| {
+            // SAFETY: both are system libraries this process already links, so their
             // initialisers have run.
-            let handle = unsafe { libloading::Library::new("libm.so.6") }.expect("libm opens");
-            assert!(super::Mapping::new(Some(handle)).close());
-            super::KEPT_MAPPED.lock().unwrap().len()
+            let handle = unsafe { libloading::Library::new(file) }.expect("the library opens");
+            super::Mapping::new(Some(handle))
         };
-        let first = load_and_close();
-        for _ in 0..50 {
-            assert_eq!(load_and_close(), first);
-        }
+        let first = mapping("libm.so.6");
+        let second = mapping("libm.so.6");
+        assert_ne!(first.identity, 0);
+        assert_eq!(first.identity, second.identity);
+        assert_ne!(first.identity, mapping("libc.so.6").identity);
+        assert_eq!(super::Mapping::new(None).identity, 0);
     }
 }

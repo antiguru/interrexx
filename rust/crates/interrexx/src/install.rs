@@ -2258,8 +2258,13 @@ impl Interp {
         match opened {
             Ok(Some(mut library)) => {
                 library.keep_thread_context(&self.thread_context());
-                let held = self.libraries.hold(name, Rc::new(library));
+                let (held, loads) = self.libraries.hold(name, Rc::new(library));
                 self.register_package_routines(name, &held);
+                // A live instance has loaded it already, and its loader ran
+                // there (`r[native.loading.shared]`).
+                if !loads {
+                    return LibraryLoad::Loaded(held);
+                }
                 // For example, a loader that raises leaves the library held
                 // with its routines callable, and the ask raises.
                 match self.run_package_hook(&held, interrexx_api::load::Hook::Loader) {

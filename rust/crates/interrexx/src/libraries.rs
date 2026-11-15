@@ -1,12 +1,14 @@
-//! What each library name has resolved to.
+//! What each library name has resolved to, and the libraries the process
+//! has loaded for the instances that are live.
 //!
 //! A module of its own so that the map is private to the write rule below and
 //! not to whichever module happens to resolve libraries.
 
 use rustc_hash::FxHashMap;
 use std::rc::Rc;
+use std::sync::{LazyLock, Mutex};
 
-use interrexx_api::load::Library;
+use interrexx_api::load::{Library, Unload};
 
 /// Every library name that has loaded, with the library it loaded.
 ///
@@ -21,19 +23,56 @@ use interrexx_api::load::Library;
 /// entry point resolved out of the package tables, so a library released
 /// while an object of a class it contributed a method to is still reachable
 /// leaves the finalizer sweep calling an unmapped address.
+///
+/// Each one counts as a live instance of the process ([`Round`]) from its
+/// creation until [`Libraries::end`], or its drop where nothing ended it.
 pub(crate) struct Libraries {
     held: FxHashMap<Vec<u8>, Rc<Library>>,
-    order: PackageTable,
     /// The names held, in the order they loaded.
     loaded: Vec<Vec<u8>>,
+    /// Whether this interpreter still counts as live.
+    live: bool,
+    /// The libraries of the process, in the order they loaded, where this
+    /// interpreter was the last live one: its drop closes them.
+    last: Vec<Unload>,
+}
+
+/// The libraries loaded for the instances live in the process, from the first
+/// instance's creation to the end of the last one
+/// (`r[native.loading.shared]`, `r[native.loading.unload]`).
+struct Round {
+    /// The instances live.
+    live: usize,
+    /// The names asked for, as the package table holds them, which is the
+    /// order the unloaders run in.
+    order: PackageTable,
+    /// Every library loaded, in the order it loaded: its name, the file it
+    /// came from ([`Library::identity`]) and what its unloader needs.
+    loaded: Vec<(Vec<u8>, usize, Unload)>,
+}
+
+static ROUND: LazyLock<Mutex<Round>> = LazyLock::new(|| {
+    Mutex::new(Round {
+        live: 0,
+        order: PackageTable::new(),
+        loaded: Vec::new(),
+    })
+});
+
+fn round() -> std::sync::MutexGuard<'static, Round> {
+    ROUND
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 impl Libraries {
     pub(crate) fn new() -> Libraries {
+        round().live += 1;
         Libraries {
             held: FxHashMap::default(),
-            order: PackageTable::new(),
             loaded: Vec::new(),
+            live: true,
+            last: Vec::new(),
         }
     }
 
@@ -44,39 +83,98 @@ impl Libraries {
 
     /// Holds `library` for `name` where nothing is held yet, and answers what
     /// is held afterwards, which for a name already held is the earlier
-    /// library and not `library`.
-    pub(crate) fn hold(&mut self, name: &[u8], library: Rc<Library>) -> Rc<Library> {
-        let (order, loaded) = (&mut self.order, &mut self.loaded);
-        Rc::clone(self.held.entry(name.to_vec()).or_insert_with(|| {
-            order.put(name);
-            loaded.push(name.to_vec());
-            library
-        }))
+    /// library and not `library`, with whether its loader is to run: it is
+    /// where no live instance has loaded the same file under that name
+    /// (`r[native.loading.shared]`).
+    pub(crate) fn hold(&mut self, name: &[u8], library: Rc<Library>) -> (Rc<Library>, bool) {
+        if let Some(held) = self.held.get(name) {
+            return (Rc::clone(held), false);
+        }
+        let identity = library.identity();
+        let first = {
+            let mut round = round();
+            round.order.put(name);
+            let known = round
+                .loaded
+                .iter()
+                .any(|(known, file, _)| known == name && *file == identity);
+            if !known {
+                round
+                    .loaded
+                    .push((name.to_vec(), identity, library.unload()));
+            }
+            !known
+        };
+        self.loaded.push(name.to_vec());
+        self.held.insert(name.to_vec(), Rc::clone(&library));
+        (library, first)
     }
 
     /// Records an ask for `name` that loaded nothing, which the table sees as a
     /// put and then a remove.
-    pub(crate) fn missed(&mut self, name: &[u8]) {
-        if !self.order.contains(name) {
-            self.order.put(name);
-            self.order.remove(name);
+    pub(crate) fn missed(&self, name: &[u8]) {
+        let mut round = round();
+        if !round.order.contains(name) {
+            round.order.put(name);
+            round.order.remove(name);
         }
     }
 
-    /// Every held library with its name, in the order their unloaders run.
-    pub(crate) fn in_unload_order(&self) -> Vec<(Vec<u8>, Rc<Library>)> {
-        self.order
+    /// Ends this interpreter's count as a live instance. Where it was the
+    /// last, answers every library the process loaded, with its name, in the
+    /// order their unloaders run, and the next instance starts afresh
+    /// (`r[native.loading.again]`); its drop closes them all. Otherwise
+    /// answers nothing, and the libraries stay loaded for the instances still
+    /// live. Answers nothing once ended.
+    pub(crate) fn end(&mut self) -> Vec<(Vec<u8>, Unload)> {
+        if !std::mem::replace(&mut self.live, false) {
+            return Vec::new();
+        }
+        let mut round = round();
+        round.live -= 1;
+        if round.live > 0 {
+            // The library may call through the context its loader was
+            // handed until it is closed, after this interpreter has gone.
+            for (_, _, unload) in &round.loaded {
+                for library in self.held.values() {
+                    if library.is_unloaded_by(unload) {
+                        library.keep_thread_context_for_process();
+                    }
+                }
+            }
+            return Vec::new();
+        }
+        let loaded = std::mem::take(&mut round.loaded);
+        let order = std::mem::replace(&mut round.order, PackageTable::new());
+        drop(round);
+        let walk = order
             .names()
-            .filter_map(|name| Some((name.to_vec(), Rc::clone(self.held.get(name)?))))
-            .collect()
+            .flat_map(|name| {
+                loaded
+                    .iter()
+                    .filter(move |(known, _, _)| known == name)
+                    .map(|(known, _, unload)| (known.clone(), unload.clone()))
+            })
+            .collect();
+        self.last = loaded.into_iter().map(|(_, _, unload)| unload).collect();
+        walk
     }
 }
 
-/// Closes every library termination left open, in the order they loaded, which
-/// is the order process exit runs their destructors in, after an unloader
-/// raised too.
+/// Ends the count of an interpreter that nothing ended, and closes every
+/// library termination left open, in the order they loaded, which is the
+/// order process exit runs their destructors in, after an unloader raised
+/// too. An interpreter that was not the last live one closes nothing: the
+/// libraries stay loaded for the others.
 impl Drop for Libraries {
     fn drop(&mut self) {
+        let _ = self.end();
+        for unload in &self.last {
+            unload.library().close();
+        }
+        if self.last.is_empty() {
+            return;
+        }
         for name in &self.loaded {
             if let Some(library) = self.held.get(name) {
                 library.close();
@@ -248,10 +346,11 @@ mod tests {
         let mut libraries = Libraries::new();
         let first = Rc::new(interrexx_api::load::hooks_only(None, None));
         let second = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let held = libraries.hold(b"lib", Rc::clone(&first));
+        let (held, _) = libraries.hold(b"lib", Rc::clone(&first));
         assert!(Rc::ptr_eq(&held, &first));
-        let again = libraries.hold(b"lib", second);
+        let (again, loads) = libraries.hold(b"lib", second);
         assert!(Rc::ptr_eq(&again, &first));
+        assert!(!loads);
         assert!(
             libraries
                 .get(b"lib")
@@ -263,17 +362,17 @@ mod tests {
     /// miss on `REXXUTIL` leaves them as they were.
     #[test]
     fn the_table_starts_with_the_internal_packages_keys() {
-        let mut libraries = Libraries::new();
-        let names = |libraries: &Libraries| {
-            libraries
+        let libraries = Libraries::new();
+        let names = || {
+            super::round()
                 .order
                 .names()
                 .map(<[u8]>::to_vec)
                 .collect::<Vec<_>>()
         };
-        assert_eq!(names(&libraries), [b"rexxutil".to_vec(), b"REXX".to_vec()]);
+        assert_eq!(names(), [b"rexxutil".to_vec(), b"REXX".to_vec()]);
         libraries.missed(b"REXXUTIL");
-        assert_eq!(names(&libraries), [b"rexxutil".to_vec(), b"REXX".to_vec()]);
-        assert!(!libraries.order.contains(b"REXXUTIL"));
+        assert_eq!(names(), [b"rexxutil".to_vec(), b"REXX".to_vec()]);
+        assert!(!super::round().order.contains(b"REXXUTIL"));
     }
 }

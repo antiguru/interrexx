@@ -106,9 +106,14 @@ Raising and throwing differ, as in ooRexx:
 * The package entry is the exported `RexxGetPackage`. A `requiredVersion` above the interpreter's
   raises 98.982. Routines and methods are registered from its tables; its `loader` hook runs after
   registration, and `unloader` hooks run at termination in ooRexx's table order.
-* A library the interpreter closes at termination, after its unloader, stays mapped until the
-  process exits, since a thread it started may still be running in it. The process holds one
-  reference per distinct library, however many interpreters load it.
+* A library is loaded for the process: the instances live at one time share one load of each
+  file, its `loader` runs at the first, and the last instance to be terminated runs every
+  library's `unloader` and closes it. An instance created after that loads afresh
+  (`r[native.loading.shared]`, `r[native.loading.unload]`, `r[native.loading.again]`).
+* A closed library is unmapped, unless a thread that runs no native call has called
+  `AttachThread` in the process: from then on no library is unmapped, since an attached thread
+  may still be returning into its code when the last instance ends (`r[native.loading.static]`).
+  A thread inside a native call is counted in its library until the call returns.
 * A `::REQUIRES ... LIBRARY` naming a missing library is 98.903 before the first clause; an
   `EXTERNAL` naming a missing entry is 90.998 for a method and 90.999 for a routine;
   `Package~loadLibrary` answers 1 or 0; a missing library through `.Object~package~loadLibrary`
