@@ -135,9 +135,14 @@ end. ooRexx preempts both and they complete.
 
 ## 19. Callback from a foreign thread
 
-A callback into the interpreter from a thread that runs no native call waits
-for a native call that holds the interpreter; if that call joins the thread,
-the program hangs. ooRexx aborts. Both fail.
+A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. ooRexx aborts the process.
 
 A callback through the context of an attached thread, made after that thread
 detached from it, does not wait: it is refused at once and answers the failure

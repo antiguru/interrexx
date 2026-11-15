@@ -39,18 +39,24 @@ statics of `unsafe extern "C" fn` slots.
 
 * Each activity has its own thread context and native-handle stack; each native activation has its
   own method or call context.
-* The interpreter's `RexxInstance`, and the thread context of the activity that loaded a library,
-  outlive that activity, because libraries keep them.
+* An interpreter has one `RexxInstance`, which every activity's thread context links: the main
+  program's, one that `REPLY` or `start` makes, and an attached thread's. It sits in a block with
+  its owner record and is never freed, so an extension may keep the pointer past `Terminate`. Its
+  members act on the interpreter from any thread: `Halt` and `SetTrace` post a request for the whole
+  interpreter through its inbox, and `GetApplicationData` reads the shared block.
+* The thread context of the activity that loaded a library outlives that activity, because
+  libraries keep it.
 * An interpreter keeps some memory for the rest of the process, because an extension may call
-  through its instance or its root thread context after it has ended. Every interpreter keeps its
+  through its instance or a thread context after it has ended. Every interpreter keeps its
   `RexxInstance` and the owner beside it. Once the main activity has made a native call or run a
-  package hook, the interpreter also keeps that activity's thread context, which a thread running
-  none of its native calls attaches to, and what the context holds: its copy of the thread
-  interface table, the requester (a handle on the baton and on the inbox) and anything left in the
-  inbox when the interpreter ended. Nothing is posted to the inbox after the end. Classic
-  `RexxStart` makes an interpreter for each run, so a process that calls it again and again keeps
-  an instance for each run, and a thread context with what it holds for each run whose program
-  loads a native library and calls into it. That memory grows without bound in such a process.
+  package hook, the interpreter also keeps that activity's thread context and what the context
+  holds: its copy of the thread interface table, the requester (a handle on the baton and on the
+  inbox) and anything left in the inbox when the interpreter ended. Nothing is posted to the inbox
+  after the end. Each thread context `AttachThread` builds is kept too, as its thread holds the
+  address until it detaches. Classic `RexxStart` makes an interpreter for each run, so a process
+  that calls it again and again keeps an instance for each run, and a thread context with what it
+  holds for each run whose program loads a native library and calls into it. That memory grows
+  without bound in such a process.
 * A callback from a thread other than the one running that activity's native call raises
   `Error_Execution_invalid_thread`.
 * A callback made while the interpreter's baton is held elsewhere takes the baton, or is run on
@@ -100,6 +106,9 @@ Raising and throwing differ, as in ooRexx:
 * The package entry is the exported `RexxGetPackage`. A `requiredVersion` above the interpreter's
   raises 98.982. Routines and methods are registered from its tables; its `loader` hook runs after
   registration, and `unloader` hooks run at termination in ooRexx's table order.
+* A library the interpreter closes at termination, after its unloader, stays mapped until the
+  process exits, since a thread it started may still be running in it. The process holds one
+  reference per distinct library, however many interpreters load it.
 * A `::REQUIRES ... LIBRARY` naming a missing library is 98.903 before the first clause; an
   `EXTERNAL` naming a missing entry is 90.998 for a method and 90.999 for a routine;
   `Package~loadLibrary` answers 1 or 0; a missing library through `.Object~package~loadLibrary`
@@ -120,7 +129,33 @@ Raising and throwing differ, as in ooRexx:
   interpreter it is running in.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic
   run other threads can halt or trace. `RexxCreateInterpreter` makes an instance; several may
-  exist in one process, each isolated. `AttachThread` joins a foreign thread to an instance as a
-  new activity, and `AddCommandEnvironment` registers a command handler for it.
+  exist in one process, each isolated. `AttachThread` joins a foreign thread to an instance (see
+  Attached threads), and `AddCommandEnvironment` registers a command handler for it.
+* A program run through `RexxStart` or `RexxCreateInterpreter` is marked as run by an outside host,
+  which turns off the refusal of waits nothing can end (see `architecture.md`, Concurrency). The
+  `rexx` executable and the in-process test harnesses do not set the mark.
+
+## Attached threads
+
+`AttachThread` answers a thread that runs a native call of the interpreter with that call's context,
+and a thread already attached with its context again, counted. Any other thread gets an attached
+activity of its own. Its context is built without the baton and put on the instance's pending list,
+and the interpreter files the activity, a scheduler slot with a base native frame for local
+references, at the first callback through the context. So an attach answers even while the only
+activity runs a native call that waits for the attaching thread.
+
+Each callback through an attached context opens an entry on the attached thread's stack for the
+length of the member, and the Rexx code it reaches runs there as the running activity, with its own
+`.context~thread` number. The last `DetachThread` from the attaching thread ends the activity: its
+references, strings and buffers are released, its number is freed, and its context goes on the
+instance's free list, which the next `AttachThread` takes from before it builds one. A detach made
+inside a callback through the context ends the activity once that callback returns. `DetachThread`,
+`HaltThread` and `SetThreadTrace` through the context from another thread return at once and do
+nothing (Deviation 175).
+
+An idle attached activity does not hold the program's end, and one running a message does. After
+`Terminate`, a callback through an attached context is refused with the member's failure value
+(Deviation 174), as is one after the thread detached (Deviation 19). How a callback shares the
+interpreter with the other activities is in `architecture.md`, Concurrency.
 * `hostemu` and `orxncurses` are built unmodified against these two libraries by
   `scripts/build-extensions.sh` and run without ooRexx's libraries on the search path.
