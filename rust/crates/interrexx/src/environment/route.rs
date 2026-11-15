@@ -491,6 +491,8 @@ impl Interp {
                     CallerFrame::Of(frame) => self.frame_table(Some(frame))?,
                     CallerFrame::Spawner => self.spawner_table()?,
                 };
+                let wrong = self.counted(99);
+                crate::dispatch::hash::directory_put(self, table, b"LINE", wrong)?;
                 self.trace_object_put(object, b"CALLERSTACKFRAME", table)?;
             }
             if let Some((key, guarded, reserved)) = method {
