@@ -5,8 +5,9 @@
 //! comma-separated `dir/group` names it lists.
 //!
 //! Each side runs from its own copy: [`group_runner::fresh_copy_from`], the
-//! group file's namesakes elsewhere in the copy deleted, and each test's start
-//! marked in [`marker`]'s file. Each run has an API service of its own
+//! group file's namesakes elsewhere in the copy deleted, the assertions its
+//! Unspecified rows name guarded ([`suite_rows::guard_assertions`]), and each
+//! test's start marked in [`marker`]'s file. Each run has an API service of its own
 //! ([`private_service`]), stopped after it. A run of this crate that a
 //! refusal, a crash, a timeout or the memory cap ends has its last started test
 //! renamed out, and runs again.
@@ -484,9 +485,9 @@ fn work_dir(group: &str, side: &str) -> PathBuf {
     ))
 }
 
-/// Lays out the copy `run` of `group` with `left_out` renamed out, each
-/// test's start marked in [`marker`]'s file, which is emptied, and answers its
-/// group file.
+/// Lays out the copy `run` of `group` with `left_out` renamed out, the
+/// assertions the group's Unspecified rows name guarded, each test's start
+/// marked in [`marker`]'s file, which is emptied, and answers its group file.
 fn prepare(
     root: &Path,
     run: &Path,
@@ -510,6 +511,9 @@ fn prepare(
         }
     }
     skip(&group_file, group, left_out);
+    let (rows, malformed) = read_rows();
+    assert!(malformed.is_empty(), "the row files: {malformed:#?}");
+    suite_rows::guard_assertions(&group_file, &suite_rows::guarded_assertions(&rows, &path));
     let marker = marker(run);
     if marker.exists() {
         fs::remove_file(&marker)
@@ -743,7 +747,8 @@ fn renamed_out_by_rows(group: &str, rows: &[&Row]) -> BTreeSet<String> {
 }
 
 /// Judges this crate's run `ours` of a group whose rows are `rows`, its
-/// `expected` already the enumeration less the rows, and the oracle's run
+/// `expected` already the enumeration less the rows other than Unspecified
+/// rows, and the oracle's run
 /// `oracle` against the rows: each reason the group is not green.
 pub fn judge(oracle: &GroupRun, ours: &GroupRun, rows: &[&Row]) -> Vec<String> {
     let rowed: BTreeSet<&String> = rows.iter().map(|row| &row.test).collect();
@@ -894,7 +899,12 @@ fn l3_core_suite() {
             &renamed_out_by_rows(group, &group_rows),
         );
         let mut expected = expected_set(dir, group);
-        for row in &group_rows {
+        // An Unspecified row's test stays expected: only the assertions the
+        // row names are kept from running, in the copy.
+        for row in group_rows
+            .iter()
+            .filter(|row| row.owner != Owner::Unspecified)
+        {
             expected.remove(&row.test);
         }
         oracle.expected = expected.clone();
