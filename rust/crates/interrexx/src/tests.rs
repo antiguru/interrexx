@@ -1459,7 +1459,7 @@ fn a_constant_expressions_method_traces_its_entry_before_the_guard_wait() {
     );
     let trace = String::from_utf8_lossy(&outcome.stderr);
     let entry = trace
-        .find(">I> Method \"ZZ\"")
+        .find(&format!(">I> {}", expand("⟨101.19¦ZZ¦C¦/w/t.rex⟩")))
         .expect("the run announces itself");
     let held = trace
         .find("*-* say 'hold end'")

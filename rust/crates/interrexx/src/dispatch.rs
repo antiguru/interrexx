@@ -2048,7 +2048,7 @@ impl Interp {
     /// `~id` for a class object -- the name it was declared with, case
     /// unmodified -- and `.NIL` for the `.nil` scope a method `setMethod` or
     /// `run` installed carries, which is how the `>I>` line and traceback name
-    /// it: `>I> Method "HM" with scope ".NIL"`.
+    /// it: `.NIL` is the scope insert of 101.19 for such a method `HM`.
     pub(crate) fn class_id_text(&self, class: ObjRef) -> &str {
         if class == ObjRef::NIL {
             return ".NIL";
