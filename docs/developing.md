@@ -151,12 +151,13 @@ From `rust/`, under the memory cap:
   the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
   test cannot leave the filter unnoticed. The `build`, `shard`, `doctest` and `clippy` CI jobs
   run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
-  asserting that before it starts, and `build` and `doctest` keep a cargo cache of their own that
-  no job with the submodule saved. So a build script or test that reads the tree fails there. The
-  six shards run this profile over the archive that `build` made without the submodule; the
+  asserting that before it starts, and `build`, `doctest`, `clippy` and `msrv-standalone` keep a
+  cargo cache of their own that no job with the submodule saved, where `shard` keeps none. So a
+  build script or test that reads the tree fails there. The six shards run this profile over the archive that `build` made without the submodule; the
   `upstream-tier` job runs the complement, `--ignore-default-filter -E 'not default()'`, on a
-  checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target and runs this profile's unit tests
-  (`--lib`) on the toolchain `rust-version` declares, on a checkout with no submodule.
+  checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target,
+  runs this profile's unit tests (`--lib`) and the doc tests on the toolchain `rust-version`
+  declares, on a checkout with no submodule.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
