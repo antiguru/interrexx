@@ -448,3 +448,44 @@ fn a_dash_e_program_gets_its_argument_as_a_file_does() {
     assert_eq!(stdout(&["-e", text, " ", "x"]), "[  x] 1\n");
     remove(&dir);
 }
+
+// spec: instr.say.deviation.40, env.invocation.unbuffered
+/// Standard output and error sharing one pipe: buffered, the error line lands first and standard
+/// output at the end; with `-u` or `REXX_UNBUFFERED` set to anything but the empty string, each
+/// write lands as it is made, partial lines too, as ooRexx writes them. The order unbuffered was
+/// measured on the oracle with the same program.
+#[test]
+fn unbuffered_output_lands_in_the_order_it_is_written() {
+    let ours = Path::new(env!("CARGO_BIN_EXE_rexx"));
+    let dir = fixture("unbuffered");
+    std::fs::write(
+        dir.join("u.rex"),
+        "call charout , 'a'\ncall charout 'STDERR', 'b'\nsay 'c'\ncall lineout 'STDERR', 'd'\n",
+    )
+    .expect("the program");
+    let merged = |args: &[&str], env: Option<&str>| {
+        let mut command = Command::new("bash");
+        command
+            .arg("-c")
+            .arg("exec \"$0\" \"$@\" 2>&1")
+            .arg(env!("CARGO_BIN_EXE_bounded-run"))
+            .args(["-k", "5", "20"])
+            .arg(ours)
+            .args(args)
+            .current_dir(&dir)
+            .env_remove("REXX_PATH")
+            .env_remove(interrexx::UNBUFFERED_ENV)
+            .stdin(Stdio::null());
+        if let Some(value) = env {
+            command.env(interrexx::UNBUFFERED_ENV, value);
+        }
+        let output = command.output().expect("the binary starts");
+        assert!(output.status.success(), "{output:?}");
+        String::from_utf8(output.stdout).expect("text")
+    };
+    assert_eq!(merged(&["u.rex"], None), "bd\nac\n");
+    assert_eq!(merged(&["u.rex"], Some("")), "bd\nac\n");
+    assert_eq!(merged(&["-u", "u.rex"], None), "abc\nd\n");
+    assert_eq!(merged(&["u.rex"], Some("1")), "abc\nd\n");
+    remove(&dir);
+}

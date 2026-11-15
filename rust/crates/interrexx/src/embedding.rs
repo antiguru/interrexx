@@ -210,6 +210,7 @@ pub fn rexx_start(start: Start) -> Started {
                 std::io::stderr().write_all(bytes)
             }),
             stdout_terminal: std::io::stdout().is_terminal(),
+            unbuffered: crate::unbuffered_requested(),
             own_descriptors: true,
         })
         .with_arguments(arguments)

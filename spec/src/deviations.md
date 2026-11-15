@@ -284,15 +284,18 @@ ooRexx raises `35.1` at the colon.
 
 A standard output that is a pipe or a file is buffered and handed over
 before a read, before the program idles, before an ADDRESS command, at 64 KiB
-and at exit. It is also handed over before native code runs: an external
-routine or method, a classic function or subcommand handler, a context command
-handler, a system exit, and a package's loader. And it is handed over when a
-call native code made returns to it: `CallProgram`, `CallRoutine`,
-`SendMessage`, `LoadPackage`, `LoadPackageFromData` and `RexxCallBack`.
-ooRexx writes each line at once, so here output still buffered at a kill or
-crash is lost, and standard output and standard error sharing one pipe
-interleave differently. A write error on a buffered standard output is
-reported by the writes after the hand-over that met it.
+and at exit. While it is buffered, the order of its text against what native
+code writes to the same descriptor itself, an external routine, a handler, an
+exit or the program that embeds the interpreter, is unspecified, except that
+what native code wrote through C's standard streams before the program's text
+lands before it. ooRexx writes each line at once, so here output still
+buffered at a kill or crash is lost, and standard output and standard error
+sharing one pipe interleave differently. The environment variable
+`REXX_UNBUFFERED`, set to anything but the empty string, or `rexx -u`, makes
+both streams unbuffered, which is ooRexx's order, and `.output~flush` hands the
+buffer over from a program (the owner's ruling on #721, 2026-11-15). A write
+error on a buffered standard output is reported by the writes after the
+hand-over that met it.
 
 ## 41. A damaged compiled image
 

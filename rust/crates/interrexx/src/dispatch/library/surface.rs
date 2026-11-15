@@ -310,11 +310,7 @@ impl Surface for Interp {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()> {
         let caller = self.caller();
-        let answered = self.send_message(receiver, name, scope, arguments, caller);
-        // What the method wrote reaches the descriptors before the native
-        // caller writes again (r[instr.say.deviation.40]).
-        self.hand_over_output();
-        match answered {
+        match self.send_message(receiver, name, scope, arguments, caller) {
             Ok(answer) => {
                 if let Some(answer) = answer {
                     self.roots.activity_mut().push_temp(answer);
@@ -461,11 +457,7 @@ impl Surface for Interp {
         label: &[u8],
         arguments: &[Option<Vec<u8>>],
     ) -> interrexx_api::callbacks::CallBack {
-        let answered = Interp::call_back(self, label, arguments);
-        // What the code wrote reaches the descriptors before the native
-        // caller writes again (r[instr.say.deviation.40]).
-        self.hand_over_output();
-        answered
+        Interp::call_back(self, label, arguments)
     }
 
     fn share_session_queue(&mut self) {
@@ -627,9 +619,6 @@ impl Surface for Interp {
 
     fn load_package(&mut self, name: &[u8]) -> Option<ObjRef> {
         let loaded = self.load_package_global(name);
-        // What the code wrote reaches the descriptors before the native
-        // caller writes again (r[instr.say.deviation.40]).
-        self.hand_over_output();
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)
@@ -637,9 +626,6 @@ impl Surface for Interp {
 
     fn load_package_source(&mut self, name: &[u8], lines: &[Vec<u8>]) -> Option<ObjRef> {
         let loaded = self.package_from_source(name, lines, None, true);
-        // What the code wrote reaches the descriptors before the native
-        // caller writes again (r[instr.say.deviation.40]).
-        self.hand_over_output();
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)
@@ -1087,9 +1073,6 @@ impl Interp {
             .push(crate::activity::ApiBase { below, native });
         let ran = run(self);
         self.activity.api_bases.pop();
-        // What the code wrote reaches the descriptors before the native
-        // caller writes again (r[instr.say.deviation.40]).
-        self.hand_over_output();
         ran
     }
 

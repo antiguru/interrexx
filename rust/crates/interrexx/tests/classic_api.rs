@@ -806,16 +806,17 @@ fn run_binary(
     files: &[(&str, &str)],
     arguments: &[&str],
 ) -> std::process::Output {
-    run_binary_with(binary, name, files, arguments, |_| {})
+    run_binary_with(binary, name, files, arguments, &[], |_| {})
 }
 
-/// [`run_binary`], with `prepare` run on the driver's directory once `files` are in it, and
-/// that directory on `LD_LIBRARY_PATH`, so a library `prepare` builds there is found.
+/// [`run_binary`], with `env` set, `prepare` run on the driver's directory once `files` are in
+/// it, and that directory on `LD_LIBRARY_PATH`, so a library `prepare` builds there is found.
 fn run_binary_with(
     binary: &Path,
     name: &str,
     files: &[(&str, &str)],
     arguments: &[&str],
+    env: &[(&str, &str)],
     prepare: impl FnOnce(&Path),
 ) -> std::process::Output {
     let dir = scratch().join(format!("driver-{name}"));
@@ -832,6 +833,7 @@ fn run_binary_with(
         .args(arguments)
         .current_dir(&dir)
         .env("LD_LIBRARY_PATH", &dir)
+        .envs(env.iter().copied())
         .env("REXX_API_DIR", &api)
         .env("MALLOC_PERTURB_", "165")
         .stdin(Stdio::null())
@@ -941,12 +943,12 @@ fn c_stdio_and_rexx_output_keep_their_order_in_files() {
 }
 
 // spec: instr.say.deviation.40
-/// With standard output not a terminal, what a program wrote lands before what native code writes
-/// next: after `CallProgram`, `SendMessage`, `LoadPackage`, `LoadPackageFromData` and
-/// `RexxCallBack` return, and in a native routine, a classic function, a context command
-/// handler, a termination exit and a package's loader. A partial line on standard error lands
-/// before a classic function's error line. Measured on the oracle with the same driver; ours
-/// held the program's output until the instance ended.
+/// With `REXX_UNBUFFERED` set and standard output not a terminal, what a program wrote lands
+/// before what native code writes next, as ooRexx writes it: after `CallProgram`,
+/// `SendMessage`, `LoadPackage`, `LoadPackageFromData` and `RexxCallBack` return, and in a
+/// native routine, a classic function, a context command handler, a termination exit and a
+/// package's loader. A partial line on standard error lands before a classic function's error
+/// line. Measured on the oracle with the same driver.
 #[test]
 fn rexx_output_lands_before_the_native_code_that_follows() {
     let output = run_binary_with(
@@ -968,6 +970,7 @@ fn rexx_output_lands_before_the_native_code_that_follows() {
             ("lp.rex", "say 'rexx prologue'\n"),
         ],
         &[],
+        &[(interrexx::UNBUFFERED_ENV, "1")],
         |dir| {
             let source =
                 Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/classic_api/hooklib.cpp");

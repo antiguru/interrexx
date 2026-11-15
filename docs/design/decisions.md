@@ -35,6 +35,13 @@ page records why they are the way they are.
   only what is specified (`docs/design/testing.md`).
   Whether a built-in method is a level of a traceback is unspecified, because a build may not
   have it (2026-11-14, #388); comparisons drop those frame lines.
+* **Standard output is buffered, with a switch to write it unbuffered** (2026-11-15, #706,
+  #721). A standard output that is not a terminal is handed over in blocks, and its order against
+  what native code writes itself is unspecified (Deviation 40). `REXX_UNBUFFERED` or `rexx -u`
+  writes each write as it is made, which is ooRexx's order. Python draws the line in the same
+  place, with `PYTHONUNBUFFERED` and `-u`. Handing the buffer over at every entry into native
+  code and every return from it would keep ooRexx's order unasked, but costs a write per call,
+  and per clause where an RXHLT or RXTRC exit is registered.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.

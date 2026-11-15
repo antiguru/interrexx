@@ -47,6 +47,7 @@ fn main() -> ExitCode {
             }),
             stderr: Box::new(|bytes| std::io::stderr().write_all(bytes)),
             stdout_terminal: std::io::stdout().is_terminal(),
+            unbuffered: run.unbuffered || interrexx::unbuffered_requested(),
             own_descriptors: true,
         });
 
