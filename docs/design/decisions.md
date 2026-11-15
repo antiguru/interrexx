@@ -42,6 +42,10 @@ page records why they are the way they are.
   place, with `PYTHONUNBUFFERED` and `-u`. Handing the buffer over at every entry into native
   code and every return from it would keep ooRexx's order unasked, but costs a write per call,
   and per clause where an RXHLT or RXTRC exit is registered.
+* **A collection finds the very object it stores without asking `==`** (2026-11-15, #74,
+  Deviation 78 withdrawn). A lookup or a search compares identity first and sends `==` only to
+  another object, as ooRexx does, and as Python's containers and Java's `HashMap` do: an object
+  is taken to equal itself, whatever its `==` answers.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.

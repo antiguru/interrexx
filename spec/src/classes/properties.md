@@ -2,7 +2,7 @@
 element: "Properties"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33, 78, 109, 123, 124]
+deviations: [29, 33, 109, 123, 124]
 ---
 
 # Properties
@@ -912,12 +912,12 @@ entries read by upper-case name (`entry`, `hasEntry`, `setEntry`,
 `items`, `isEmpty`, `empty`, `copy`, `supplier`, `allIndexes`, `allItems`,
 `makeArray`, `unknown` and `setMethod` and `unsetMethod`, and those of the
 mixins, `of`, `putAll` and the set operations, and each behaves as the page of
-`Directory` says, of a properties object and of an instance of a subclass of
-it. The copy is a `Properties`. The `unknown` that reads and sets the entries
-by message name does not check the value ([the unchecked
-rule](r:class.properties.unchecked)). A search for the very item stored sends
-its `==` as for any other item ([the Properties
-rule](r:class.properties.deviation.78)). Its string value is `a Properties`.
+`Directory` says, of a properties object and of an instance of a subclass of it.
+The copy is a `Properties`. The `unknown` that reads and sets the entries by
+message name does not check the value ([the unchecked
+rule](r:class.properties.unchecked)). A search for the very item stored finds it
+without a `==` sent to it ([the identity rule](r:class.collection.identity)).
+Its string value is `a Properties`.
 
 ```rexx
 p = .many~new
@@ -1054,52 +1054,6 @@ say t~lines~sort~makeString('L', '|')
 
 ```output
 one=1|three=3|two=2
-```
-
-r[class.properties.deviation.78]
-A search for an item that was stored by `setEntry` or through `unknown`, a
-string or not, with the very object that is stored, by `hasItem`, `index` or
-`removeItem`, sends that object's `==` as for any other item, so an object
-whose `==` answers false is not found even at its own entry ([the Directory
-rule](r:class.directory.deviation.78)). ooRexx compares identity first, finds
-it and sends nothing. `put` stores a string of the value's characters, so the
-object given to `put` is not the object stored. See [Deviation
-78](../deviations.md).
-
-```rexx
-.local~n = 0
-p = .properties~new
-q = .thing~new
-p~setEntry('k', q)
-say p~hasItem(q) .local~n
-say (p~index(q) == .nil) .local~n
-say (.nil == p~removeItem(q)) .local~n p~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 1
-1 2
-1 3 1
-```
-
-```rexx
-.local~n = 0
-p = .properties~new
-s = .ls~new('v')
-p~setEntry('k', s)
-say p~hasItem(s) .local~n
-::class ls subclass string
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 1
 ```
 
 r[class.properties.deviation.109]

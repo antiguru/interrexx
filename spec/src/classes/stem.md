@@ -2,7 +2,7 @@
 element: "Stem"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Stem Class; Builtin Classes > Collection Classes > Stem Class > new (Class Method); Builtin Classes > Collection Classes > Stem Class > []; Builtin Classes > Collection Classes > Stem Class > []=; Builtin Classes > Collection Classes > Stem Class > allIndexes; Builtin Classes > Collection Classes > Stem Class > allItems; Builtin Classes > Collection Classes > Stem Class > at; Builtin Classes > Collection Classes > Stem Class > empty; Builtin Classes > Collection Classes > Stem Class > hasIndex; Builtin Classes > Collection Classes > Stem Class > hasItem; Builtin Classes > Collection Classes > Stem Class > index; Builtin Classes > Collection Classes > Stem Class > isEmpty; Builtin Classes > Collection Classes > Stem Class > items; Builtin Classes > Collection Classes > Stem Class > makeArray; Builtin Classes > Collection Classes > Stem Class > put; Builtin Classes > Collection Classes > Stem Class > remove; Builtin Classes > Collection Classes > Stem Class > removeItem; Builtin Classes > Collection Classes > Stem Class > request; Builtin Classes > Collection Classes > Stem Class > supplier; Builtin Classes > Collection Classes > Stem Class > toDirectory; Builtin Classes > Collection Classes > Stem Class > unknown"
-deviations: [1, 68, 78, 109, 118, 124]
+deviations: [1, 68, 109, 118, 124]
 ---
 
 # Stem
@@ -961,11 +961,10 @@ r[class.stem.hasitem.sends]
 `hasItem(item)`, `index(item)` and `removeItem(item)` send `==` to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, `hashCode` included; when none matches, every item is
-compared. The order in which the items are compared is not specified ([the
-order rule](r:class.stem.deviation.1)). The search with the very object that
-is stored is no exception: its `==` is sent as for any other item ([the
-deviation rule](r:class.stem.deviation.78)). The messages sent to an index are
-those of [the tails rule](r:class.stem.tails).
+compared. The order in which the items are compared is not specified ([the order
+rule](r:class.stem.deviation.1)). The very object that is stored is found
+without a `==` sent to it ([the identity rule](r:class.collection.identity)).
+The messages sent to an index are those of [the tails rule](r:class.stem.tails).
 
 ```rexx
 .local~n = 0
@@ -1040,33 +1039,6 @@ say s~length s~foo(1, 2)
 
 ```output
 asked for LENGTH 0 asked for FOO 2
-```
-
-r[class.stem.deviation.78]
-A search for an item with the very object that is stored, by `hasItem`,
-`index` or `removeItem`, sends that object's `==` as for any other item, so an
-object whose `==` answers false is not found even at its own tail. ooRexx
-compares identity first, finds it and sends nothing. See [Deviation
-78](../deviations.md).
-
-```rexx
-.local~n = 0
-s = .stem~new('N.')
-q = .thing~new
-s['k'] = q
-say s~hasItem(q) .local~n
-say (s~index(q) == .nil) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 1
-1 2
-1 3 1
 ```
 
 r[class.stem.deviation.109]

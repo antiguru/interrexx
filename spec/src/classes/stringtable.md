@@ -2,7 +2,7 @@
 element: "StringTable"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > StringTable Class; Builtin Classes > Collection Classes > StringTable Class > new (Class Method); Builtin Classes > Collection Classes > StringTable Class > []; Builtin Classes > Collection Classes > StringTable Class > []=; Builtin Classes > Collection Classes > StringTable Class > allIndexes; Builtin Classes > Collection Classes > StringTable Class > allItems; Builtin Classes > Collection Classes > StringTable Class > at; Builtin Classes > Collection Classes > StringTable Class > empty; Builtin Classes > Collection Classes > StringTable Class > entry; Builtin Classes > Collection Classes > StringTable Class > hasEntry; Builtin Classes > Collection Classes > StringTable Class > hasIndex; Builtin Classes > Collection Classes > StringTable Class > hasItem; Builtin Classes > Collection Classes > StringTable Class > index; Builtin Classes > Collection Classes > StringTable Class > isEmpty; Builtin Classes > Collection Classes > StringTable Class > items; Builtin Classes > Collection Classes > StringTable Class > makeArray; Builtin Classes > Collection Classes > StringTable Class > put; Builtin Classes > Collection Classes > StringTable Class > remove; Builtin Classes > Collection Classes > StringTable Class > removeEntry; Builtin Classes > Collection Classes > StringTable Class > removeItem; Builtin Classes > Collection Classes > StringTable Class > setEntry; Builtin Classes > Collection Classes > StringTable Class > supplier; Builtin Classes > Collection Classes > StringTable Class > unknown"
-deviations: [29, 33, 78, 84, 109, 118, 124]
+deviations: [29, 33, 84, 109, 118, 124]
 ---
 
 # StringTable
@@ -435,11 +435,10 @@ t~index(1, 2) => 93.902
 r[class.stringtable.hasitem.sends]
 `hasItem`, `index` and `removeItem` send `==` to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the items are visited in an order that is not
-specified, so the number of messages is specified only when no item matches,
-as then every item is visited. The search with the very object that is stored
-is no exception: its `==` is sent as for any other item ([the deviation
-rule](r:class.stringtable.deviation.78)).
+and send nothing else; the items are visited in an order that is not specified,
+so the number of messages is specified only when no item matches, as then every
+item is visited. The very object that is stored is found without a `==` sent to
+it ([the identity rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -893,33 +892,6 @@ say t~items t~makeArray~items
 one,three,two
 1,2,3
 3 3
-```
-
-r[class.stringtable.deviation.78]
-A search for an item with the very object that is stored, by `hasItem`,
-`index` or `removeItem`, sends that object's `==` as for any other item, so an
-object whose `==` answers false is not found even at its own entry. ooRexx
-compares identity first, finds it and sends nothing. See [Deviation
-78](../deviations.md).
-
-```rexx
-.local~n = 0
-t = .stringtable~new
-q = .thing~new
-t~put(q, 'k')
-say t~hasItem(q) .local~n
-say (t~index(q) == .nil) .local~n
-say (t~removeItem(q) == .nil) .local~n t~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 1
-1 2
-1 3 1
 ```
 
 r[class.stringtable.deviation.84]
