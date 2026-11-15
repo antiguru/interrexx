@@ -373,7 +373,7 @@ impl Interp {
     #[inline(never)]
     fn trace_variable_line(&mut self, indent: usize, tag: &[u8], value: &[u8], object: ObjRef) {
         let start = self.trace.len();
-        push_tagged(&mut self.trace, ">V>", indent, false, tag, " => ", value);
+        push_tagged(&mut self.trace, ">W>", indent, false, tag, " => ", value);
         self.traced_variable = Some(TracedVariable::of(tag, object, false));
         self.route_trace_line(start);
         self.traced_variable = None;
