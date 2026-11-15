@@ -567,15 +567,6 @@ fn cell(outcome: &Outcome) -> (String, String) {
 /// The features of the derived list that the second stage covers.
 const S3_FEATURES: &[&str] = &["GUARD", "semaphore class", "Sys*Sem", "Alarm", "Ticker"];
 
-/// The rows whose run under `EveryOpportunity` need not agree with the
-/// shipped scheduler's, as `group test`, each with its reason. A listed row
-/// that agrees fails the check, so that the entry goes when it is not needed.
-const MODES_DIFFER: &[(&str, &str)] = &[(
-    "base/class/MutexSemaphore.testGroup TEST_EXCLUSION",
-    "the test's own race: the oracle hangs in it when that schedule is forced \
-     (SysSleep 0.01 after step = 6), and this crate finds the wait that nothing can end",
-)];
-
 /// Where the both-modes table of the second-stage rows is written when set.
 const S3_TABLE_ENV: &str = "REXX_CRITERION_ONE_S3_TABLE";
 
@@ -631,16 +622,11 @@ fn rows_in_both_modes(
     );
     let mut table = String::from("group\ttest\tnormal against the oracle\tevery against normal\n");
     let mut differing = Vec::new();
-    let mut listed_agreeing = Vec::new();
     let mut stuck = Vec::new();
     for ((file, test), (normal, modes, hung)) in rows.iter().zip(results) {
         stuck.extend(hung);
-        let row = format!("{file} {test}");
-        let listed = MODES_DIFFER.iter().any(|(listed, _)| *listed == row);
-        match (modes.1, listed) {
-            (false, false) => differing.push(row),
-            (true, true) => listed_agreeing.push(row),
-            _ => {}
+        if !modes.1 {
+            differing.push(format!("{file} {test}"));
         }
         let show = |(key, detail): &(String, String)| {
             if detail.is_empty() {
@@ -659,10 +645,6 @@ fn rows_in_both_modes(
     assert!(
         differing.is_empty(),
         "tests differing between the modes: {differing:?}"
-    );
-    assert!(
-        listed_agreeing.is_empty(),
-        "listed as differing between the modes, agreeing: {listed_agreeing:?}"
     );
 }
 
