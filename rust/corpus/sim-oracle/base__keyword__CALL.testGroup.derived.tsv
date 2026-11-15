@@ -1,4 +1,5 @@
-# The oracle's outcomes of base/keyword/CALL.testGroup derived, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/keyword/CALL.testGroup derived, 15 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	bde06625c94e58ed	pass, assertions 18, rc 0, last started TEST_4, failing []
 5	0	ca03ec7dbab86c23	pass, assertions 18, rc 0, last started TEST_4, failing []
+5	0	9167fce881d759a1	pass, assertions 18, rc 0, last started TEST_4, failing []
