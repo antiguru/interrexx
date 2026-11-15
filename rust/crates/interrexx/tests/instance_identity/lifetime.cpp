@@ -2,6 +2,12 @@
 // It keeps nothing in static storage, whose state across loads is unspecified
 // (`r[native.loading.static]`). Built as the extension `lifetime`.
 //
+// Where the environment variable LIFETIME_SLOW names `loader` or `unloader`, that hook is slow
+// instead: it prints `loader start` (or `unloader start`), creates the file `hook-started` in the
+// current directory, sleeps for a second and prints `loader end` (or `unloader end`). Where
+// LIFETIME_NESTED is set, the loader, after printing `loader`, creates an instance of its own that
+// loads `lifetime` too, prints `created inner`, terminates it and prints `terminated inner`.
+//
 // Built with -DDRIVER it is also a program, which does not link the extension: it creates
 // interpreter instances that each load `lifetime` with LOAD_REQUIRED_LIBRARY, and prints a line
 // after each creation and each `Terminate`, so that the extension's lines fall between them.
@@ -9,21 +15,72 @@
 //   three        as `two`, then creates C and terminates it
 //   attached     as `three`, with a thread of its own attached to A and detached before A is
 //                terminated
+//   loading      with a slow loader, creates A on a thread of its own and, once the loader has
+//                started, creates B; then terminates A and B
+//   unloading    with a slow unloader, creates A, terminates it on a thread of its own and, once
+//                the unloader has started, creates B; then terminates B, whose unloader is slow
+//                too
+//   nested       with LIFETIME_NESTED set, creates A and terminates it
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "oorexxapi.h"
+
+// Runs the hook `name`: prints its name, or, where LIFETIME_SLOW names it, runs it slowly.
+static void hook(const char *name)
+{
+    const char *slow = getenv("LIFETIME_SLOW");
+    if (slow == NULL || strcmp(slow, name) != 0)
+    {
+        printf("%s\n", name);
+        fflush(stdout);
+        return;
+    }
+    printf("%s start\n", name);
+    fflush(stdout);
+    FILE *started = fopen("hook-started", "w");
+    if (started != NULL)
+    {
+        fclose(started);
+    }
+    sleep(1);
+    printf("%s end\n", name);
+    fflush(stdout);
+}
+
+// Creates an instance that loads `lifetime`, from inside the loader, and terminates it.
+static void inner(void)
+{
+    RexxOption options[2];
+    options[0].optionName = LOAD_REQUIRED_LIBRARY;
+    options[0].option = "lifetime";
+    options[1].optionName = NULL;
+    RexxInstance *instance;
+    RexxThreadContext *thread;
+    if (!RexxCreateInterpreter(&instance, &thread, options))
+    {
+        printf("create inner failed\n");
+        return;
+    }
+    printf("created inner\n");
+    instance->Terminate();
+    printf("terminated inner\n");
+}
 
 static void RexxEntry LifetimeLoader(RexxThreadContext *)
 {
-    printf("loader\n");
-    fflush(stdout);
+    hook("loader");
+    if (getenv("LIFETIME_NESTED") != NULL)
+    {
+        inner();
+    }
 }
 
 static void RexxEntry LifetimeUnloader(RexxThreadContext *)
 {
-    printf("unloader\n");
-    fflush(stdout);
+    hook("unloader");
 }
 
 RexxPackageEntry lifetime_package_entry = {
@@ -76,6 +133,32 @@ static void terminate(RexxInstance *instance, const char *name)
     printf("terminated %s\n", name);
 }
 
+static void *create_a(void *)
+{
+    return create("A");
+}
+
+static void *terminate_a(void *instance)
+{
+    terminate((RexxInstance *)instance, "A");
+    return instance;
+}
+
+// Waits, for at most ten seconds, until a slow hook has created `hook-started`.
+static int hook_started(void)
+{
+    for (int tries = 0; tries < 1000; tries++)
+    {
+        if (access("hook-started", F_OK) == 0)
+        {
+            return 1;
+        }
+        usleep(10000);
+    }
+    printf("the hook did not start\n");
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -84,6 +167,52 @@ int main(int argc, char **argv)
         return 2;
     }
     const char *scenario = argv[1];
+    if (strcmp(scenario, "loading") == 0)
+    {
+        setenv("LIFETIME_SLOW", "loader", 1);
+        pthread_t thread;
+        void *a = NULL;
+        if (pthread_create(&thread, NULL, create_a, NULL) != 0 || !hook_started())
+        {
+            return 1;
+        }
+        RexxInstance *b = create("B");
+        if (pthread_join(thread, &a) != 0 || a == NULL || b == NULL)
+        {
+            return 1;
+        }
+        terminate((RexxInstance *)a, "A");
+        terminate(b, "B");
+        return 0;
+    }
+    if (strcmp(scenario, "nested") == 0)
+    {
+        setenv("LIFETIME_NESTED", "1", 1);
+        RexxInstance *a = create("A");
+        if (a == NULL)
+        {
+            return 1;
+        }
+        terminate(a, "A");
+        return 0;
+    }
+    if (strcmp(scenario, "unloading") == 0)
+    {
+        setenv("LIFETIME_SLOW", "unloader", 1);
+        RexxInstance *a = create("A");
+        pthread_t thread;
+        if (a == NULL || pthread_create(&thread, NULL, terminate_a, a) != 0 || !hook_started())
+        {
+            return 1;
+        }
+        RexxInstance *b = create("B");
+        if (pthread_join(thread, NULL) != 0 || b == NULL)
+        {
+            return 1;
+        }
+        terminate(b, "B");
+        return 0;
+    }
     RexxInstance *a = create("A");
     RexxInstance *b = create("B");
     if (a == NULL || b == NULL)

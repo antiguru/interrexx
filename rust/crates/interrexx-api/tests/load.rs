@@ -161,33 +161,21 @@ fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
     }
 }
 
-/// Whether `librxregexp.so` is mapped into this process, which only [`open_rxregexp`] maps.
-fn rxregexp_mapped() -> bool {
-    std::fs::read_to_string("/proc/self/maps")
-        .expect("the process's maps")
-        .contains("librxregexp.so")
-}
-
-/// A closed library that nothing else holds is unmapped while no thread has attached.
+/// A closed library stays mapped until the process exits, after its last handle is dropped too, so
+/// code of its own still running in it does not fault (`r[native.threads.end]`,
+/// `r[native.loading.static]`, #683).
 #[test]
-fn a_closed_library_is_unmapped() {
+fn a_closed_library_stays_mapped() {
+    let mapped = || {
+        std::fs::read_to_string("/proc/self/maps")
+            .expect("the process's maps")
+            .contains("librxregexp.so")
+    };
     let library = open_rxregexp();
-    assert!(rxregexp_mapped());
+    assert!(mapped());
     assert!(library.close());
     assert!(!library.is_open());
-    assert!(!rxregexp_mapped());
-}
-
-/// Once a thread has attached, a closed library stays mapped until the process exits, so an
-/// attached thread still returning into its code does not fault (`r[native.threads.end]`, #683).
-#[test]
-fn a_closed_library_stays_mapped_once_a_thread_has_attached() {
-    load::leave_libraries_mapped();
-    let library = open_rxregexp();
-    assert!(rxregexp_mapped());
-    assert!(library.close());
-    assert!(!library.is_open());
-    assert!(rxregexp_mapped());
+    assert!(mapped());
     drop(library);
-    assert!(rxregexp_mapped());
+    assert!(mapped());
 }

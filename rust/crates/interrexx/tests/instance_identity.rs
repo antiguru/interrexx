@@ -18,7 +18,8 @@
 //! `tests/instance_identity/lifetime.cpp` prints `loader` from its loader and `unloader` from its
 //! unloader. Built as a program, it creates instances that each load it and prints a line after
 //! each creation and each `Terminate`. Under `REXX_CORPUS_GATE` the same program built against the
-//! oracle's library prints the same.
+//! oracle's library prints the same, or, where threads make the order of some lines open, meets
+//! the same checks.
 
 #![cfg(target_os = "linux")]
 
@@ -36,6 +37,9 @@ const MEMORY: &str = "2G";
 
 /// The address-space limit in KiB where `memcap` is not on `PATH`.
 const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+
+/// The seconds after which `timeout` kills a run, so that one that hangs fails.
+const DEADLINE: &str = "120";
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
@@ -105,6 +109,7 @@ fn run(
         command
     };
     let output = command
+        .args(["timeout", "-s", "KILL", DEADLINE])
         .arg(binary)
         .args(program)
         .args(argument)
@@ -509,6 +514,16 @@ fn halt_and_set_trace_after_the_interpreter_ended_return() {
 /// `scenario`. Under `REXX_CORPUS_GATE` the driver is built again against the oracle's library,
 /// and must print the same.
 fn run_lifetime(name: &str, scenario: &str) -> Answer {
+    let mut runs = lifetime_runs(name, scenario).into_iter();
+    let ours = runs.next().expect("this workspace's run");
+    if let Some(theirs) = runs.next() {
+        assert_eq!(theirs, ours, "the oracle");
+    }
+    ours
+}
+
+/// [`run_lifetime`]'s runs: this workspace's, and under `REXX_CORPUS_GATE` the oracle's after it.
+fn lifetime_runs(name: &str, scenario: &str) -> Vec<Answer> {
     let dir = fresh_dir(name);
     compile(
         "lifetime.cpp",
@@ -544,13 +559,16 @@ fn run_lifetime(name: &str, scenario: &str) -> Answer {
     };
     let driver = dir.join("ltdriver");
     link(&driver, &dir);
-    let ours = run(&driver, &dir, None, Some(scenario));
+    let mut runs = vec![run(&driver, &dir, None, Some(scenario))];
     if gate_mode() {
+        // A slow hook's mark, which the oracle's run makes again.
+        let _ = fs::remove_file(dir.join("hook-started"));
         let oracle = support::oracle::locate();
         let theirs_driver = dir.join("ltdriver-oracle");
         link(&theirs_driver, oracle.lib_dir());
         let output = Command::new("memcap")
             .arg(MEMORY)
+            .args(["timeout", "-s", "KILL", DEADLINE])
             .arg(&theirs_driver)
             .arg(scenario)
             .current_dir(&dir)
@@ -562,18 +580,40 @@ fn run_lifetime(name: &str, scenario: &str) -> Answer {
             .stdin(Stdio::null())
             .output()
             .expect("memcap runs, which every run of this test is under");
-        assert_eq!(
-            (
-                String::from_utf8_lossy(&output.stdout).into_owned(),
-                String::from_utf8_lossy(&output.stderr).into_owned(),
-                output.status.code().unwrap_or(-1),
-            ),
-            ours,
-            "the oracle"
-        );
+        runs.push((
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            String::from_utf8_lossy(&output.stderr).into_owned(),
+            output.status.code().unwrap_or(-1),
+        ));
     }
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
-    ours
+    runs
+}
+
+/// Checks that `stdout` is `first`, then `middle` in any order, then `last`, answering the lines
+/// of `middle` in the order they came.
+fn lines_in_order<'a>(
+    stdout: &'a str,
+    first: &[&str],
+    middle: &[&str],
+    last: &[&str],
+) -> Vec<&'a str> {
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(
+        lines.len(),
+        first.len() + middle.len() + last.len(),
+        "{stdout}"
+    );
+    let (head, rest) = lines.split_at(first.len());
+    let (between, tail) = rest.split_at(middle.len());
+    assert_eq!(head, first, "{stdout}");
+    assert_eq!(tail, last, "{stdout}");
+    let mut sorted = between.to_vec();
+    sorted.sort_unstable();
+    let mut expected = middle.to_vec();
+    expected.sort_unstable();
+    assert_eq!(sorted, expected, "{stdout}");
+    between.to_vec()
 }
 
 /// Two instances that are live together and each load the library run its loader once, when the
@@ -632,6 +672,58 @@ fn an_instance_after_an_attached_thread_loads_the_library_again() {
         (
             "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n\
              loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An instance created while another instance's loader for a library is still running completes
+/// its load of the library only once that loader has returned: the loader runs once, and both
+/// creations come after its end.
+// spec: native.loading.shared
+#[test]
+fn a_load_during_another_instances_loader_waits_for_it() {
+    for (stdout, stderr, code) in lifetime_runs("lifetime-loading", "loading") {
+        assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+        lines_in_order(
+            &stdout,
+            &["loader start", "loader end"],
+            &["created A", "created B"],
+            &["terminated A", "unloader", "terminated B"],
+        );
+    }
+}
+
+/// An instance created while the last instance's unloader is still running is created only once
+/// that unloader has returned, so its loader runs after the unloader's end, and its own last end
+/// runs the unloader again.
+// spec: native.loading.again
+#[test]
+fn an_instance_created_during_the_last_unloader_waits_for_it() {
+    for (stdout, stderr, code) in lifetime_runs("lifetime-unloading", "unloading") {
+        assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+        let middle = lines_in_order(
+            &stdout,
+            &["loader", "created A", "unloader start", "unloader end"],
+            &["terminated A", "loader", "created B"],
+            &["unloader start", "unloader end", "terminated B"],
+        );
+        let at = |line: &str| middle.iter().position(|held| *held == line);
+        assert!(at("loader") < at("created B"), "{stdout}");
+    }
+}
+
+/// A loader that creates an instance loading the same library does not wait for itself: the
+/// inner instance shares the load whose loader is running, and runs no loader of its own.
+// spec: native.loading.shared
+#[test]
+fn an_instance_a_loader_creates_shares_the_load_in_progress() {
+    assert_eq!(
+        run_lifetime("lifetime-nested", "nested"),
+        (
+            "loader\ncreated inner\nterminated inner\ncreated A\nunloader\nterminated A\n"
                 .to_owned(),
             String::new(),
             0
