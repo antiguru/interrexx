@@ -265,9 +265,13 @@ loader runs once, when the first instance of the process loads the library. An
 instance that loads the library while another instance that loaded it is still
 live runs no loader: the two use one copy of the library, its static storage
 included. Such a load completes only once the loader has returned, so no
-instance calls a routine of the library before its loader has finished. Whether
-two live instances share one load when the same name finds a different file for
-each is unspecified.
+instance calls a routine of the library before its loader has finished, except
+where [the re-entrancy rule](r:native.loading.reentrant) lets it go on. A load
+waits for the loader of that library only: a load of another library, which no
+thread is loading, does not wait for it. While a load waits, other threads may
+call into the instance it is made through, the thread running the loader
+included. Whether two live instances share one load when the same name finds a
+different file for each is unspecified.
 
 > For example, a host creates two instances, and each loads the test library
 > before the host terminates either. The test library prints `loader` once,
@@ -278,7 +282,10 @@ A library's unloader runs once, when the last live instance of the process is
 terminated, after that instance's last-chance `UNINIT` methods. Terminating an
 instance while another is still live runs no unloader, whichever of them loaded
 the library. The instance that is terminated last runs the unloaders of every
-library the process loaded, each once. Where a program that the command-line
+library the process loaded, each once. A library that one of these unloaders
+loads, and that the process had not loaded before, is among them: its loader
+runs inside that unloader, and its unloader runs later in the same
+termination. Where a program that the command-line
 interpreter runs is the only instance of its process, as it is unless an
 extension creates another, the unloaders of its libraries run when it ends.
 
@@ -287,12 +294,13 @@ extension creates another, the unloaders of its libraries run when it ends.
 > `unloader` once, while the second instance is terminated.
 
 r[native.loading.again]
-Once the last live instance of a process has been terminated, no instance holds
-a library. When an instance created after that loads a library,
-the library's loader runs again, and its unloader runs again when the last
-instance live with it is terminated. An instance that another thread creates while the
-last one's unloaders are still running is created only once they have returned,
-so a loader of the later instance never runs inside an unloader of the earlier
+The last live instance of a process stays live until the unloaders its
+termination runs have returned. Once they have, no instance holds a library.
+When an instance created after that loads a library, the library's loader runs
+again, and its unloader runs again when the last instance live with it is
+terminated. An instance that another thread creates while the last one's
+unloaders are still running is created only once they have returned, so a
+loader of the later instance never runs inside an unloader of the earlier
 ones.
 
 > For example, after the two instances of the [unload
@@ -310,14 +318,22 @@ library loaded: the load completes at once and runs no loader. A loader or an
 unloader that loads another library, or creates an instance that loads a
 library, gets that load and that creation without waiting. Where the load is the
 first of the library in the process, the library's own loader runs inside the
-hook that asked for it, and where the library is already loading on that thread
-or on the thread that created the instance, the load finds it and runs no second
-loader. An instance a hook creates is created without waiting, and is a live
-instance like any other. Whether the instance an unloader of the last instance
-creates runs the loaders and unloaders of the libraries it loads, or finds them
-still loaded, is unspecified. A hook that starts a thread of its own and waits
-for it must not have that thread create an instance or load a library: the rules
-above make that thread wait for the hook, and the two would wait for each other.
+hook that asked for it. Where the library is already loading on that thread, or
+on a thread that created the instance, directly or through instances created in
+turn, the load finds it and runs no second loader. An instance a hook creates is
+created without waiting, and is a live instance like any other. An instance that
+an unloader of the last instance creates shares the libraries that instance
+holds, as the last instance is still live: a library it loads that the process
+holds runs no loader, and its termination is not the last and runs no unloader.
+A load does not wait for a loader where the thread running that loader waits,
+directly or through other such waits, for the loading thread, or for a thread
+that created its instance: the load finds the library loaded and runs no
+loader. Two loaders that each load the other's library therefore do not wait
+for each other. In the same way, an instance created while the last instance's
+unloaders run is not made to wait for them where the thread running them waits
+so: it shares the libraries, as an instance an unloader creates does. A hook that starts a thread of its own and waits for it must not
+have that thread create an instance or load a library: the rules above make that
+thread wait for the hook, and the two would wait for each other.
 
 > For example, a loader of the test library creates an instance that loads the
 > test library, and terminates it. The host sees `loader` and then the lines of
