@@ -274,20 +274,47 @@ jobs:
         # script with their reasons.
         run: python3 ../scripts/names-diff.py ../third_party/ooRexx/api ../include
 
+  # The toolchain floor the workspace declares. `rust-version` in Cargo.toml is its only source.
+  msrv:
+    name: determine MSRV
+    runs-on: ubuntu-24.04
+    outputs:
+      msrv: ${{ steps.msrv.outputs.msrv }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: msrv
+        # An empty answer would fall back to the channel of rust-toolchain.toml and pass
+        # without testing the floor, so it fails the job instead.
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)
+          test -n "$msrv"
+          echo "msrv=$msrv" >> "$GITHUB_OUTPUT"
+
   # The regular suite on a checkout without the submodule: no `third_party/ooRexx`, no oracle
   # build, no `build` link. It proves the workspace builds, lints, and tests with only the
   # files this repository owns plus the ootest and oodocs checkouts. Tests that need the pinned
   # tree stay in the jobs above; the `standalone` nextest profile filters them out.
+  # It runs on stable and on the declared MSRV.
   standalone:
-    name: standalone (no submodule)
-    needs: [third-party]
+    name: standalone (no submodule, rust ${{ matrix.toolchain }})
+    needs: [third-party, msrv]
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - stable
+          - ${{ needs.msrv.outputs.msrv }}
+    env:
+      # Overrides the `stable` channel of rust-toolchain.toml for every cargo call below.
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: false
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
+          toolchain: ${{ matrix.toolchain }}
           components: clippy
           # No cargo cache: a `target/` from a job that had the submodule could hold a build
           # script's output for an input that is gone here, and the build would pass anyway.
@@ -330,12 +357,15 @@ jobs:
       - name: Cargo build
         run: cargo build --locked --workspace
       - name: Cargo clippy
+        # Lints change between releases; the MSRV leg checks that the code builds and passes.
+        if: matrix.toolchain == 'stable'
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo nextest
         run: cargo nextest run --locked --workspace --profile standalone
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
       - name: Compile the headers in include/ as C and as C++
+        if: matrix.toolchain == 'stable'
         # Each header on its own, with the warnings an embedder's build commonly turns on.
         # `-Wextern-c-compat` flags a C++ handle type declared inside an `extern "C"` block,
         # which the header generator must keep outside it.
