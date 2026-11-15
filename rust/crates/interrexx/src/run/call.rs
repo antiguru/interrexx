@@ -1120,7 +1120,9 @@ impl Interp {
             }
             if let Some(classic) = self.classic_routine_entry(installed) {
                 return self
-                    .call_classic_entry(classic, name, &arguments[from..])
+                    .call_classic_entry(name, &arguments[from..], |name, arguments, queue| {
+                        classic.call_function(name, arguments, queue)
+                    })
                     .map(|value| Begun::Done(Ended::Returned(value)));
             }
         }

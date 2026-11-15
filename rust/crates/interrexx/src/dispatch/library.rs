@@ -325,9 +325,11 @@ impl Interp {
         {
             return self.run_rust_routine(body, code, name, args, executable);
         }
-        if let Some(classic) = entry.classic_entry() {
+        if let Some(held) = entry.held_classic() {
             return self
-                .call_classic_entry(classic, name, args)
+                .call_classic_entry(name, args, |name, arguments, queue| {
+                    held.call_function(name, arguments, queue)
+                })
                 .map(Started::Ran);
         }
         let held = HeldCall::Routine(entry.held());
