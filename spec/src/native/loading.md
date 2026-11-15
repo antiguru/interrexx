@@ -245,6 +245,74 @@ say fxclassicjoin('a', , 'c')
 FXCLASSICJOIN:3:a,(),c
 ```
 
+## The lifetime of a library
+
+A process can hold more than one interpreter instance at a time: the
+command-line interpreter creates one for the program it runs, and a host
+creates as many as it likes through the interpreter's C interface. The
+reference for that interface fixes when a library's loader and unloader run in
+terms of these instances, in its description of the `packageLoader` and
+`packageUnloader` fields of `RexxPackageEntry`. The rules below say what that
+means for a library with a package entry. Their examples need two instances in
+one process, which a single Rexx program cannot create, so each is told in
+words, and the tests that cite the rule run it with a library of their own,
+not one of [the fixture libraries](index.md#the-fixture-libraries), whose
+loader prints the line `loader` and whose unloader prints `unloader`.
+
+r[native.loading.shared]
+A library is loaded for the process, not for one instance. Its package entry's
+loader runs once, when the first instance of the process loads the library. An
+instance that loads the library while another instance that loaded it is still
+live runs no loader: the two use one copy of the library, its static storage
+included. Whether two live instances share one load when the same name finds a
+different file for each is unspecified.
+
+For example, a host creates two instances, and each loads the fixture library
+before the host terminates either. The test library prints `loader` once,
+while the first instance loads it.
+
+r[native.loading.unload]
+A library's unloader runs once, when the last live instance of the process is
+terminated, after that instance's last-chance `UNINIT` methods. Terminating an
+instance while another is still live runs no unloader, whichever of them loaded
+the library. The instance that is terminated last runs the unloaders of every
+library the process loaded, each once. A program that the command-line
+interpreter runs has the only instance of its process, so the unloaders of its
+libraries run when it ends.
+
+For example, the host of the [shared-load example](r:native.loading.shared)
+terminates the first instance and then the second. The test library prints
+`unloader` once, while the second instance is terminated.
+
+r[native.loading.again]
+Once the last live instance of a process has been terminated, no library is
+loaded. An instance created after that loads a library as the first instance
+did: the library's loader runs again, and its unloader runs again when the last
+instance live with it is terminated.
+
+For example, after the two instances of the [unload
+example](r:native.loading.unload) have been terminated, the host creates a
+third instance, which loads the test library, and terminates it. The host
+sees `loader`, `unloader`, `loader`, `unloader` in that order, and no other
+line of the library's.
+
+r[native.loading.static]
+Whether a library's static storage starts afresh when [a later
+instance](r:native.loading.again) loads it again is unspecified. The process
+may keep the library's code and data in memory from one load to the next, for
+example while code of the library may still be running on a thread of its own.
+A library that needs its static storage in a known state sets it in its loader
+and releases what it holds in its unloader. The reference gives a library
+without a package entry, whose functions RXFUNCADD or the C interface register,
+no loader and no unloader, and says nothing of when it is unloaded: whether it
+stays loaded after the instance that registered its functions ends is
+unspecified too.
+
+For example, a library that counted its loads in a static variable could print
+`2` or `1` at the third instance's load in the [later-instance
+example](r:native.loading.again). The test library therefore prints its lines
+without counting.
+
 ## Classic functions
 
 r[native.loading.classic]
