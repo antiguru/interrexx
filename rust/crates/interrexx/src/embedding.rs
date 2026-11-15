@@ -626,10 +626,14 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     let shared = std::sync::Arc::new(Shared::default());
     let starting = std::sync::Arc::clone(&shared);
     let ending = std::sync::Arc::clone(&shared);
+    // This thread waits for the instance to start, so the instance must not
+    // wait for a library hook this thread is running.
+    let lineage = crate::libraries::lineage();
     let spawned = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(crate::INTERPRETER_STACK_BYTES)
         .spawn(move || {
+            crate::libraries::adopt(lineage);
             crate::signal::receive();
             let (outcome, kept) = crate::run_instance(
                 options,

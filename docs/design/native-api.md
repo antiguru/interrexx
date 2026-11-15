@@ -108,11 +108,17 @@ Raising and throwing differ, as in ooRexx:
   registration, and `unloader` hooks run at termination in ooRexx's table order.
 * A library is loaded for the process: the instances live at one time share one load of each
   file, its `loader` runs at the first, and the last instance to be terminated runs every
-  library's `unloader` and closes it. An instance created after that loads afresh
+  library's `unloader` and closes it. An instance created after that runs the `loader` again
   (`r[native.loading.shared]`, `r[native.loading.unload]`, `r[native.loading.again]`).
-* A closed library is unmapped, unless a thread that runs no native call has called
-  `AttachThread` in the process: from then on no library is unmapped, since an attached thread
-  may still be returning into its code when the last instance ends (`r[native.loading.static]`).
+* `libraries.rs` keeps that round process-wide. A load of a library whose `loader` another thread
+  is running waits for it, and a load that would run a `loader` waits while another thread runs
+  any, so two loaders never wait on each other. An instance is created only once the last round's
+  unloaders have returned. A thread never waits for a hook running on itself or on a thread that
+  created its instance (`RexxCreateInterpreter` hands the new instance's thread that lineage), so
+  a hook that creates an instance or loads a library does not wait for itself.
+* A closed library is never unmapped: an attached thread, or a thread the library started, may
+  still be returning into its code when the last instance ends (`r[native.loading.static]`).
+  A later load by name finds the copy already mapped.
   A thread inside a native call is counted in its library until the call returns.
 * A `::REQUIRES ... LIBRARY` naming a missing library is 98.903 before the first clause; an
   `EXTERNAL` naming a missing entry is 90.998 for a method and 90.999 for a routine;

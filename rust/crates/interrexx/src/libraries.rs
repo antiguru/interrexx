@@ -5,8 +5,10 @@
 //! not to whichever module happens to resolve libraries.
 
 use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Condvar, LazyLock, Mutex, MutexGuard};
+use std::thread::ThreadId;
 
 use interrexx_api::load::{Library, Unload};
 
@@ -46,9 +48,26 @@ struct Round {
     /// The names asked for, as the package table holds them, which is the
     /// order the unloaders run in.
     order: PackageTable,
-    /// Every library loaded, in the order it loaded: its name, the file it
-    /// came from ([`Library::identity`]) and what its unloader needs.
-    loaded: Vec<(Vec<u8>, usize, Unload)>,
+    /// Every library loaded, in the order it loaded.
+    loaded: Vec<Loaded>,
+    /// The threads running the unloaders of a round that has ended, one entry
+    /// for each such round, until they have returned.
+    unloading: Vec<ThreadId>,
+    /// The number the next entry of `loaded` is known by.
+    next: u64,
+}
+
+/// One library a round has loaded.
+struct Loaded {
+    /// What [`Loading`] finds it by.
+    id: u64,
+    name: Vec<u8>,
+    /// The file it came from ([`Library::identity`]).
+    identity: usize,
+    /// What its unloader needs.
+    unload: Unload,
+    /// The thread running its loader, until the loader has returned.
+    loading: Option<ThreadId>,
 }
 
 static ROUND: LazyLock<Mutex<Round>> = LazyLock::new(|| {
@@ -56,18 +75,102 @@ static ROUND: LazyLock<Mutex<Round>> = LazyLock::new(|| {
         live: 0,
         order: PackageTable::new(),
         loaded: Vec::new(),
+        unloading: Vec::new(),
+        next: 0,
     })
 });
 
-fn round() -> std::sync::MutexGuard<'static, Round> {
+/// Signalled whenever a loader or a round's unloaders return, which is what a
+/// thread waiting in [`Libraries::new`] or [`Libraries::hold`] waits for.
+static SETTLED: Condvar = Condvar::new();
+
+fn round() -> MutexGuard<'static, Round> {
     ROUND
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+fn wait(round: MutexGuard<'static, Round>) -> MutexGuard<'static, Round> {
+    SETTLED
+        .wait(round)
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+thread_local! {
+    /// The threads whose loaders and unloaders this thread does not wait for:
+    /// those that created the instance it runs, directly or through instances
+    /// in between ([`lineage`]).
+    static ANCESTORS: RefCell<Vec<ThreadId>> = const { RefCell::new(Vec::new()) };
+}
+
+/// This thread and the threads it does not wait for, which a thread that runs
+/// an instance this thread creates is to [`adopt`].
+pub(crate) fn lineage() -> Vec<ThreadId> {
+    let mut lineage = ANCESTORS.with_borrow(Clone::clone);
+    lineage.push(std::thread::current().id());
+    lineage
+}
+
+/// Makes this thread, which runs an instance created on another, not wait for
+/// the threads of `lineage`.
+pub(crate) fn adopt(lineage: Vec<ThreadId>) {
+    ANCESTORS.set(lineage);
+}
+
+/// Whether this thread is to go on while `holder` runs a loader or unloaders.
+fn waits_for(holder: ThreadId) -> bool {
+    // A hook that creates an instance or loads a library itself waits for
+    // that instance to start or that load to end, so the thread doing either
+    // for it must not wait for the hook in turn.
+    holder != std::thread::current().id()
+        && !ANCESTORS.with_borrow(|ancestors| ancestors.contains(&holder))
+}
+
+/// A load whose loader the holder runs: dropping it, once the loader has
+/// returned or unwound, lets the loads waiting for it go on.
+#[must_use]
+pub(crate) struct Loading {
+    id: u64,
+}
+
+impl Drop for Loading {
+    fn drop(&mut self) {
+        let mut round = round();
+        if let Some(loaded) = round.loaded.iter_mut().find(|loaded| loaded.id == self.id) {
+            loaded.loading = None;
+        }
+        drop(round);
+        SETTLED.notify_all();
+    }
+}
+
+/// The unloaders of a round that has ended, which the holder runs: dropping it,
+/// once they have returned, lets the instances waiting to be created go on.
+#[must_use]
+pub(crate) struct Unloading {
+    thread: ThreadId,
+}
+
+impl Drop for Unloading {
+    fn drop(&mut self) {
+        let mut round = round();
+        if let Some(at) = round.unloading.iter().position(|held| *held == self.thread) {
+            round.unloading.remove(at);
+        }
+        drop(round);
+        SETTLED.notify_all();
+    }
+}
+
 impl Libraries {
+    /// Counts a live instance, once no round's unloaders run on a thread this
+    /// one waits for (`r[native.loading.again]`).
     pub(crate) fn new() -> Libraries {
-        round().live += 1;
+        let mut round = round();
+        while round.unloading.iter().any(|holder| waits_for(*holder)) {
+            round = wait(round);
+        }
+        round.live += 1;
         Libraries {
             held: FxHashMap::default(),
             loaded: Vec::new(),
@@ -83,31 +186,62 @@ impl Libraries {
 
     /// Holds `library` for `name` where nothing is held yet, and answers what
     /// is held afterwards, which for a name already held is the earlier
-    /// library and not `library`, with whether its loader is to run: it is
-    /// where no live instance has loaded the same file under that name
-    /// (`r[native.loading.shared]`).
-    pub(crate) fn hold(&mut self, name: &[u8], library: Rc<Library>) -> (Rc<Library>, bool) {
+    /// library and not `library`, with a [`Loading`] where its loader is to
+    /// run: it is where no live instance has loaded the same file under that
+    /// name (`r[native.loading.shared]`).
+    ///
+    /// Where another thread runs the loader of that load, this answers once it
+    /// has returned. A load that would run a loader waits too while another
+    /// thread runs any loader, so two threads never each wait inside a loader
+    /// for the other's.
+    pub(crate) fn hold(
+        &mut self,
+        name: &[u8],
+        library: Rc<Library>,
+    ) -> (Rc<Library>, Option<Loading>) {
         if let Some(held) = self.held.get(name) {
-            return (Rc::clone(held), false);
+            return (Rc::clone(held), None);
         }
         let identity = library.identity();
-        let first = {
+        let loading = {
             let mut round = round();
-            round.order.put(name);
-            let known = round
-                .loaded
-                .iter()
-                .any(|(known, file, _)| known == name && *file == identity);
-            if !known {
-                round
+            let id = loop {
+                let known = round
                     .loaded
-                    .push((name.to_vec(), identity, library.unload()));
+                    .iter()
+                    .find(|loaded| loaded.name == name && loaded.identity == identity);
+                let waits = match known {
+                    Some(known) => known.loading.is_some_and(waits_for),
+                    None => round
+                        .loaded
+                        .iter()
+                        .any(|loaded| loaded.loading.is_some_and(waits_for)),
+                };
+                if !waits {
+                    break known.map(|known| known.id);
+                }
+                round = wait(round);
+            };
+            round.order.put(name);
+            match id {
+                Some(_) => None,
+                None => {
+                    let id = round.next;
+                    round.next += 1;
+                    round.loaded.push(Loaded {
+                        id,
+                        name: name.to_vec(),
+                        identity,
+                        unload: library.unload(),
+                        loading: Some(std::thread::current().id()),
+                    });
+                    Some(Loading { id })
+                }
             }
-            !known
         };
         self.loaded.push(name.to_vec());
         self.held.insert(name.to_vec(), Rc::clone(&library));
-        (library, first)
+        (library, loading)
     }
 
     /// Records an ask for `name` that loaded nothing, which the table sees as a
@@ -122,28 +256,36 @@ impl Libraries {
 
     /// Ends this interpreter's count as a live instance. Where it was the
     /// last, answers every library the process loaded, with its name, in the
-    /// order their unloaders run, and the next instance starts afresh
-    /// (`r[native.loading.again]`); its drop closes them all. Otherwise
-    /// answers nothing, and the libraries stay loaded for the instances still
-    /// live. Answers nothing once ended.
-    pub(crate) fn end(&mut self) -> Vec<(Vec<u8>, Unload)> {
+    /// order their unloaders run, and an [`Unloading`] to hold while they run.
+    /// The next instance starts afresh (`r[native.loading.again]`) once that
+    /// is dropped, and this interpreter's drop closes the libraries.
+    /// Otherwise answers nothing, and the libraries stay loaded for the
+    /// instances still live. Answers nothing once ended.
+    pub(crate) fn end(&mut self) -> (Vec<(Vec<u8>, Unload)>, Option<Unloading>) {
         if !std::mem::replace(&mut self.live, false) {
-            return Vec::new();
+            return (Vec::new(), None);
         }
         let mut round = round();
         round.live -= 1;
         if round.live > 0 {
             // The library may call through the context its loader was
             // handed until it is closed, after this interpreter has gone.
-            for (_, _, unload) in &round.loaded {
+            // Only the instance whose load a round recorded keeps one, so an
+            // instance keeps at most one context per library it loaded first,
+            // beside the root context and the instance block that every
+            // instance keeps for the process. A load from the main activity
+            // was handed that root, so it keeps nothing more.
+            for loaded in &round.loaded {
                 for library in self.held.values() {
-                    if library.is_unloaded_by(unload) {
+                    if library.is_unloaded_by(&loaded.unload) {
                         library.keep_thread_context_for_process();
                     }
                 }
             }
-            return Vec::new();
+            return (Vec::new(), None);
         }
+        let thread = std::thread::current().id();
+        round.unloading.push(thread);
         let loaded = std::mem::take(&mut round.loaded);
         let order = std::mem::replace(&mut round.order, PackageTable::new());
         drop(round);
@@ -152,12 +294,12 @@ impl Libraries {
             .flat_map(|name| {
                 loaded
                     .iter()
-                    .filter(move |(known, _, _)| known == name)
-                    .map(|(known, _, unload)| (known.clone(), unload.clone()))
+                    .filter(move |loaded| loaded.name == name)
+                    .map(|loaded| (loaded.name.clone(), loaded.unload.clone()))
             })
             .collect();
-        self.last = loaded.into_iter().map(|(_, _, unload)| unload).collect();
-        walk
+        self.last = loaded.into_iter().map(|loaded| loaded.unload).collect();
+        (walk, Some(Unloading { thread }))
     }
 }
 
@@ -168,6 +310,9 @@ impl Libraries {
 /// libraries stay loaded for the others.
 impl Drop for Libraries {
     fn drop(&mut self) {
+        // No unloader runs here: outside the unit tests, an interpreter that
+        // nothing terminated is dropped only while a panic unwinds out of its
+        // run, when its state is not one extension code can call back into.
         let _ = self.end();
         for unload in &self.last {
             unload.library().close();
@@ -350,7 +495,7 @@ mod tests {
         assert!(Rc::ptr_eq(&held, &first));
         let (again, loads) = libraries.hold(b"lib", second);
         assert!(Rc::ptr_eq(&again, &first));
-        assert!(!loads);
+        assert!(loads.is_none());
         assert!(
             libraries
                 .get(b"lib")
@@ -360,6 +505,9 @@ mod tests {
 
     /// The internal packages' keys, in the order the table iterates them; a
     /// miss on `REXXUTIL` leaves them as they were.
+    ///
+    /// The table is the process's, so this needs a process in which no
+    /// interpreter has asked for a library yet, which nextest gives each test.
     #[test]
     fn the_table_starts_with_the_internal_packages_keys() {
         let libraries = Libraries::new();

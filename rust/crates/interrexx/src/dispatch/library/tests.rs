@@ -657,6 +657,7 @@ fn unload_order(input: &str) -> String {
     let order: Vec<String> = interp
         .libraries
         .end()
+        .0
         .into_iter()
         .map(|(name, _)| String::from_utf8(name).expect("a case's names are ASCII"))
         .collect();

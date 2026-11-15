@@ -2258,16 +2258,20 @@ impl Interp {
         match opened {
             Ok(Some(mut library)) => {
                 library.keep_thread_context(&self.thread_context());
-                let (held, loads) = self.libraries.hold(name, Rc::new(library));
+                let (held, loading) = self.libraries.hold(name, Rc::new(library));
                 self.register_package_routines(name, &held);
                 // A live instance has loaded it already, and its loader ran
                 // there (`r[native.loading.shared]`).
-                if !loads {
+                let Some(loading) = loading else {
                     return LibraryLoad::Loaded(held);
-                }
+                };
                 // For example, a loader that raises leaves the library held
                 // with its routines callable, and the ask raises.
-                match self.run_package_hook(&held, interrexx_api::load::Hook::Loader) {
+                let ran = self.run_package_hook(&held, interrexx_api::load::Hook::Loader);
+                // The loads of other instances waiting for this loader go on,
+                // whether it returned or raised.
+                drop(loading);
+                match ran {
                     Ok(()) => LibraryLoad::Loaded(held),
                     Err(failure) => LibraryLoad::Raised(failure),
                 }
@@ -2278,7 +2282,8 @@ impl Interp {
             }
             Err(mut refused) => {
                 refused.library.keep_thread_context(&self.thread_context());
-                self.libraries.hold(name, Rc::from(refused.library));
+                // A refused library runs no loader, so nothing waits on it.
+                let _ = self.libraries.hold(name, Rc::from(refused.library));
                 LibraryLoad::Version
             }
         }

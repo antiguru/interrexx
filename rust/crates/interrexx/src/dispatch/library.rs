@@ -904,7 +904,10 @@ impl Interp {
     /// walked only where this interpreter is the last live instance
     /// (`r[native.loading.unload]`).
     fn run_package_unloaders(&mut self) -> Option<Loud> {
-        for (_, unload) in self.libraries.end() {
+        // Held until the walk ends, however it ends, so that no instance is
+        // created while an unloader runs (`r[native.loading.again]`).
+        let (walk, _unloading) = self.libraries.end();
+        for (_, unload) in walk {
             let library = unload.library();
             match self.run_package_hook(&library, Hook::Unloader) {
                 Ok(()) => {

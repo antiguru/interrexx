@@ -189,38 +189,18 @@ impl Drop for Mapping {
     }
 }
 
-/// Whether a thread has called `AttachThread` in this process.
-static LEAVE_MAPPED: AtomicBool = AtomicBool::new(false);
-
-/// From now on, no library of this process is unmapped: a handle released
-/// later keeps its reference until the process exits. `AttachThread` calls it
-/// before it answers.
-#[doc(hidden)]
-pub fn leave_libraries_mapped() {
-    LEAVE_MAPPED.store(true, Ordering::SeqCst);
-}
-
-/// Whether [`leave_libraries_mapped`] has been called.
-#[cfg(test)]
-pub(crate) fn libraries_left_mapped() -> bool {
-    LEAVE_MAPPED.load(Ordering::SeqCst)
-}
-
-/// Gives up the process's reference to `handle`, which unmaps the library
-/// where it was the last one.
+/// Gives up the process's use of `handle` without unmapping its library, which
+/// stays mapped until the process exits.
 fn release(handle: libloading::Library) {
     // An attached thread can still be returning from its last call into the
     // interpreter, or from `DetachThread`, into the library's code when the
-    // last instance ends, and nothing here can wait for it
+    // last instance ends, and so can a thread the library started that never
+    // attached, and nothing here can wait for either
     // (`r[native.threads.end]`). Leaving the code mapped is allowed
-    // (`r[native.loading.static]`), so once a thread has attached, nothing is
-    // unmapped. A thread the library started that never attaches is its
-    // unloader's to stop.
-    if LEAVE_MAPPED.load(Ordering::SeqCst) {
-        std::mem::forget(handle);
-    } else {
-        drop(handle);
-    }
+    // (`r[native.loading.static]`), so nothing is unmapped. Loading the file
+    // again answers the same `dlopen` handle, so the process holds one mapping
+    // per distinct library however many interpreters load it.
+    std::mem::forget(handle);
 }
 
 impl std::fmt::Debug for Mapping {
@@ -2764,8 +2744,8 @@ impl Library {
 
     /// Closes the library, after which none of its rows
     /// or hooks calls in, and answers whether it closed, which it does not
-    /// while a call into it is in flight. The file is unmapped where nothing
-    /// else holds it, unless a thread has attached ([`leave_libraries_mapped`]).
+    /// while a call into it is in flight. The file stays mapped until the
+    /// process exits.
     pub fn close(&self) -> bool {
         self.mapping.close()
     }
