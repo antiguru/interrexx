@@ -9,8 +9,8 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo::rerun-if-changed=data/errors.tsv");
     println!("cargo::rerun-if-changed=data/builtins.txt");
-    // A new `messages/<major>.tsv` changes the directory, an edit changes a
-    // file.
+    // Cargo scans a directory named here for a change to any file in it, so
+    // a new `messages/<major>.tsv` and an edit to one both rerun this script.
     println!("cargo::rerun-if-changed=messages");
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
     let table = errors::Table::from_tsv(&read("data/errors.tsv"));
@@ -28,9 +28,6 @@ fn load_messages(table: &errors::Table) -> HashMap<(u16, u16), String> {
     let dir = std::path::Path::new("messages");
     let texts = messages::load_dir(dir)
         .unwrap_or_else(|problems| panic!("messages/ is not sound:\n{}", problems.join("\n")));
-    for text in &texts {
-        println!("cargo::rerun-if-changed=messages/{}.tsv", text.major);
-    }
     let mut problems = messages::validate(table, &texts);
     problems.extend(messages::missing(table, &texts));
     assert!(
