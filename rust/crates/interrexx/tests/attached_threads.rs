@@ -83,18 +83,18 @@ fn run_timed(name: &str, program: &str) -> (Answer, std::time::Duration) {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked, SECONDS)
+    run_against(name, program, asked, SECONDS, &[])
 }
 
 /// [`run`] where the oracle is not asked even under `REXX_CORPUS_GATE`: it aborts the program,
 /// or what the program reports is a property of our memory use that the oracle does not share.
 fn run_ours(name: &str, program: &str) -> Answer {
-    run_against(name, program, Oracle::Not, SECONDS).0
+    run_against(name, program, Oracle::Not, SECONDS, &[]).0
 }
 
 /// [`run_ours`], killed after `seconds` rather than [`SECONDS`]: the program waits for ever.
 fn run_ours_for(name: &str, program: &str, seconds: &str) -> Answer {
-    run_against(name, program, Oracle::Not, seconds).0
+    run_against(name, program, Oracle::Not, seconds, &[]).0
 }
 
 /// [`run`] where the oracle, under `REXX_CORPUS_GATE`, must answer the same stderr and exit status
@@ -105,7 +105,7 @@ fn run_agreeing_on_status(name: &str, program: &str) -> Answer {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked, SECONDS).0
+    run_against(name, program, asked, SECONDS, &[]).0
 }
 
 /// [`run`] where the oracle, under `REXX_CORPUS_GATE`, must answer the same stdout only: its
@@ -116,7 +116,7 @@ fn run_agreeing_on_stdout(name: &str, program: &str) -> Answer {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked, SECONDS).0
+    run_against(name, program, asked, SECONDS, &[]).0
 }
 
 /// [`run`] of a program that our run ends with the refusal of a wait nothing can end, where the
@@ -128,7 +128,7 @@ fn run_up_to_refusal(name: &str, program: &str) -> Answer {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked, SECONDS).0
+    run_against(name, program, asked, SECONDS, &[]).0
 }
 
 /// What of a run the oracle is asked to answer the same.
@@ -143,7 +143,8 @@ enum Oracle {
     UpToRefusal,
 }
 
-/// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds`.
+/// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds` and given
+/// the environment variables `environment` besides.
 #[expect(
     clippy::disallowed_methods,
     reason = "the run's wall time is what an idle thread must not stretch"
@@ -153,6 +154,7 @@ fn run_against(
     program: &str,
     oracle: Oracle,
     seconds: &str,
+    environment: &[(&str, &str)],
 ) -> (Answer, std::time::Duration) {
     let dir = build(name);
     let program = fixture(program);
@@ -165,6 +167,7 @@ fn run_against(
         .current_dir(&dir)
         .env("LD_LIBRARY_PATH", &dir)
         .env("REXX_API_DIR", dir.join("api"))
+        .envs(environment.iter().copied())
         .stdin(Stdio::null())
         .output()
         .expect("memcap runs, which every run of this test is under");
@@ -1358,4 +1361,88 @@ fn the_switch_survives_rxfuncdrop() {
     );
     assert_eq!(stdout, "0\n1\n0\nwaiting\n");
     assert!(!stderr.contains(UNENDING_WAIT), "stderr {stderr:?}");
+}
+
+/// An attached thread's message loops for ever while the main program is in a call into the
+/// extension, which calls `Halt` through the instance: the message takes the HALT condition, which
+/// it does not trap, so the thread's `CheckCondition` finds SYNTAX, and the main program traps its
+/// own HALT once the call returns.
+// spec: native.threads.halt
+#[test]
+fn halt_reaches_a_running_attached_callback() {
+    assert_eq!(
+        run("halt-running", "haltrun.rex"),
+        (
+            "main halted\ncondition SYNTAX\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An attached thread's message calls `HaltThread` on its attachment's thread context, from the
+/// thread running the message: the message takes the HALT condition at its next clause, and the
+/// thread finds SYNTAX, while the main program, which was not asked, runs on to `main done`.
+// spec: native.threads.halt
+#[test]
+fn halt_thread_halts_only_its_attached_activity() {
+    assert_eq!(
+        run("halt-thread", "haltself.rex"),
+        ("condition SYNTAX\nmain done\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A thread attaches and stays idle while the main program calls `Halt` through the instance, then
+/// sends a method of three clauses: the halt asked nothing of the idle activity, as the oracle
+/// shows, so the method runs to its end and leaves no condition.
+// spec: native.threads.halt
+#[test]
+fn an_idle_attached_activity_drops_a_halt_per_the_probe() {
+    assert_eq!(
+        run("halt-idle", "idlehalt.rex"),
+        (
+            "main halted\none\ntwo\nthree\nno condition\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// [`an_idle_attached_activity_drops_a_halt_per_the_probe`] with `SetTrace(1)` instead of `Halt`:
+/// the method runs untraced, as the oracle shows, so no trace line names `ticks.cls`. The main
+/// program's own trace lines name the program's path, so the oracle is asked for the stdout only.
+// spec: native.threads.trace
+#[test]
+fn an_idle_attached_activity_is_not_traced_per_the_probe() {
+    let (stdout, stderr, code) = run_agreeing_on_stdout("trace-idle", "idletrace.rex");
+    assert_eq!(
+        (stdout.as_str(), code),
+        ("one\ntwo\nthree\nno condition\n", 0),
+        "{stderr}"
+    );
+    assert!(stderr.contains("call AtOpen"), "main is traced: {stderr}");
+    assert!(
+        !stderr.contains("say 'one'"),
+        "the method is traced: {stderr}"
+    );
+}
+
+/// A thread that attaches in the simulation mode is refused, whose timing is real, and the run
+/// fails at the next clause boundary. Not asked of the oracle, which has no simulation mode.
+// spec: native.threads.attach
+#[test]
+fn attach_from_a_foreign_thread_is_refused_in_simulation() {
+    let ((stdout, stderr, code), _) = run_against(
+        "sim-attach",
+        "simattach.rex",
+        Oracle::Not,
+        SECONDS,
+        &[("REXX_SWITCH_MODE", "sim")],
+    );
+    assert!(
+        stderr.contains("attaching a thread in the simulation mode is not implemented"),
+        "stdout {stdout:?} stderr {stderr:?}"
+    );
+    assert_ne!(code, 0, "stdout {stdout:?} stderr {stderr:?}");
+    assert!(!stdout.contains("ticked"), "stdout {stdout:?}");
 }

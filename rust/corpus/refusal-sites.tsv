@@ -315,6 +315,7 @@ Loud	signal_op_off_its_node	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	
 Loud	sim_blocked_command	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_blocked_native	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_endless_wait	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
+Loud	sim_foreign_attach	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_foreign_post	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_replay_diverged	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_trace_unwritten	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-

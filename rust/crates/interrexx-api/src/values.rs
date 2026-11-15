@@ -733,6 +733,12 @@ pub trait Baton {
         false
     }
 
+    /// Whether the host refuses a thread running none of its native calls
+    /// that attaches, which then attaches to nothing and takes no baton.
+    fn refuses_attach(&self) -> bool {
+        false
+    }
+
     /// The last `DetachThread` of the attached activity whose thread context
     /// is at `context`: the host ends that activity, answering whether it
     /// did. A host that has ended, or files no such activity, ends nothing.

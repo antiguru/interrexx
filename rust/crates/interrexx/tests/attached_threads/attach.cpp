@@ -52,6 +52,15 @@
 //   `HasMethod`, asks the package for its classes and routines, and the routine and the method
 //   for their packages. It answers an array of one line per member, the member's name and what it
 //   answered, `null` for a null object.
+// * `AtSendReporting(target, name)` sends the message `name`, and reports the condition the send
+//   left, `condition NAME` or `no condition`, then clears it.
+// * `AtAttachIdle(target, name)` attaches and stays idle until `AtOpen` is called, then does what
+//   `AtSendReporting` does. `AtAttached` answers 1 once that thread has attached, and 0 before.
+// * `AtHalt(milliseconds)` blocks for `milliseconds`, then calls `Halt` through the instance the
+//   call's thread context links, and answers 1. `AtTrace(on)` calls `SetTrace` through it.
+// * `AtHaltIdle(milliseconds)` blocks for `milliseconds`, then calls `HaltThread`, and
+//   `AtTraceIdle(on)` calls `SetThreadTrace`, on the thread context of the thread `AtAttachIdle`
+//   started, which has attached, from the thread running the call.
 #include <atomic>
 #include <pthread.h>
 #include <stdint.h>
@@ -74,7 +83,9 @@ enum Job
     BUFFERS,
     INNER,
     JOIN,
-    NAMED
+    NAMED,
+    REPORTED,
+    IDLE_REPORTED
 };
 
 struct Thread
@@ -89,6 +100,27 @@ struct Thread
 
 static std::atomic<int> finished(0);
 static char report[128] = "";
+// The thread context of the thread `AtAttachIdle` started, once it has attached, and whether
+// `AtOpen` has let it send.
+static std::atomic<RexxThreadContext *> idle_context(NULL);
+static std::atomic<int> gate_open(0);
+
+// Sends `name` to `target` and reports the condition the send left, which it clears.
+static void send_reporting(RexxThreadContext *thread, RexxObjectPtr target, const char *name)
+{
+    thread->SendMessage0(target, name);
+    if (!thread->CheckCondition())
+    {
+        snprintf(report, sizeof report, "no condition");
+        return;
+    }
+    RexxDirectoryObject info = thread->GetConditionInfo();
+    RexxObjectPtr condition =
+        info != NULLOBJECT ? thread->DirectoryAt(info, "CONDITION") : NULLOBJECT;
+    snprintf(report, sizeof report, "condition %s",
+             condition != NULLOBJECT ? thread->CString(condition) : "unknown");
+    thread->ClearCondition();
+}
 
 static void run(RexxThreadContext *thread, Thread *self)
 {
@@ -151,6 +183,17 @@ static void run(RexxThreadContext *thread, Thread *self)
             break;
         case NAMED:
             thread->SendMessage0(self->target, self->name);
+            break;
+        case REPORTED:
+            send_reporting(thread, self->target, self->name);
+            break;
+        case IDLE_REPORTED:
+            idle_context = thread;
+            while (gate_open == 0)
+            {
+                usleep(1000);
+            }
+            send_reporting(thread, self->target, self->name);
             break;
         case BUFFERS:
         {
@@ -412,6 +455,53 @@ RexxRoutine3(logical_t, AtSendAfter, RexxObjectPtr, target, CSTRING, name, posit
              milliseconds)
 {
     return start_with(context, target, NAMED, (size_t)milliseconds, body, name);
+}
+
+RexxRoutine2(logical_t, AtSendReporting, RexxObjectPtr, target, CSTRING, name)
+{
+    return start_with(context, target, REPORTED, 0, body, name);
+}
+
+RexxRoutine2(logical_t, AtAttachIdle, RexxObjectPtr, target, CSTRING, name)
+{
+    return start_with(context, target, IDLE_REPORTED, 0, body, name);
+}
+
+RexxRoutine0(int, AtAttached)
+{
+    return idle_context != NULL ? 1 : 0;
+}
+
+RexxRoutine0(int, AtOpen)
+{
+    gate_open = 1;
+    return 1;
+}
+
+RexxRoutine1(int, AtHalt, wholenumber_t, milliseconds)
+{
+    usleep((useconds_t)(milliseconds * 1000));
+    context->threadContext->instance->Halt();
+    return 1;
+}
+
+RexxRoutine1(int, AtTrace, logical_t, on)
+{
+    context->threadContext->instance->SetTrace(on);
+    return 1;
+}
+
+RexxRoutine1(int, AtHaltIdle, wholenumber_t, milliseconds)
+{
+    usleep((useconds_t)(milliseconds * 1000));
+    idle_context.load()->HaltThread();
+    return 1;
+}
+
+RexxRoutine1(int, AtTraceIdle, logical_t, on)
+{
+    idle_context.load()->SetThreadTrace(on);
+    return 1;
 }
 
 RexxRoutine1(int, AtPause, positive_wholenumber_t, milliseconds)
@@ -684,6 +774,14 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtCallTick, AtCallTick),
     REXX_TYPED_ROUTINE(AtPutTick, AtPutTick),
     REXX_TYPED_ROUTINE(AtMembers, AtMembers),
+    REXX_TYPED_ROUTINE(AtSendReporting, AtSendReporting),
+    REXX_TYPED_ROUTINE(AtAttachIdle, AtAttachIdle),
+    REXX_TYPED_ROUTINE(AtAttached, AtAttached),
+    REXX_TYPED_ROUTINE(AtOpen, AtOpen),
+    REXX_TYPED_ROUTINE(AtHalt, AtHalt),
+    REXX_TYPED_ROUTINE(AtTrace, AtTrace),
+    REXX_TYPED_ROUTINE(AtHaltIdle, AtHaltIdle),
+    REXX_TYPED_ROUTINE(AtTraceIdle, AtTraceIdle),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()

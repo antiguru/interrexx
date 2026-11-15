@@ -1904,6 +1904,17 @@ impl interrexx_api::values::Baton for Requester {
         true
     }
 
+    /// In the simulation mode, where the attach's timing is real, noting it
+    /// for the baton's holder to refuse at its next clause boundary.
+    fn refuses_attach(&self) -> bool {
+        let requests = self.inbox.requests();
+        if !requests.pending(crate::timer::SIM) {
+            return false;
+        }
+        requests.set(crate::timer::ATTACH);
+        true
+    }
+
     fn post_halt(&self) {
         self.inbox.post_halt();
     }

@@ -5209,7 +5209,7 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 /// that waits for the attaching thread. An attached activity's context is
 /// kept, so a `DetachThread` at any time reads live memory. A thread the
 /// interpreter refuses
-/// ([`crate::values::Baton::refuses_foreign`]) is not attached, and the answer
+/// ([`crate::values::Baton::refuses_attach`]) is not attached, and the answer
 /// is false.
 ///
 /// An instance whose table has no requester attaches the thread to the
@@ -5234,7 +5234,7 @@ unsafe extern "C" fn attach_thread(
             None => match unsafe { live_requester(instance) } {
                 // A thread attaching to an interpreter that has ended gets
                 // nothing (`r[native.threads.end]`).
-                Some(requester) if requester.refuses_foreign() || requester.ended() => None,
+                Some(requester) if requester.refuses_attach() || requester.ended() => None,
                 // SAFETY: the caller guarantees `instance`.
                 Some(requester) => unsafe { build_attached(instance, requester) }
                     .inspect(|&context| attach_here(context as usize)),

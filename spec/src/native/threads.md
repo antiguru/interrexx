@@ -224,7 +224,9 @@ Native code may ask the interpreter to halt every activity, or only the
 activity whose call is running it. Each activity that is asked takes the
 [HALT condition](../conditions/halt.md) at its next clause, which for the
 activity of the call is the first clause after the call returns, and an
-activity that was not asked runs on. In the examples a second activity loops
+activity that was not asked runs on. An [attached thread](r:native.threads.attach)
+whose activity runs no message when the interpreter is asked to halt every
+activity is not asked: the next message it sends runs unhalted. In the examples a second activity loops
 with a short sleep and records whether it was halted.
 
 ```rexx
@@ -315,8 +317,10 @@ for the lines that [Deviation 166](r:native.threads.trace.deviation.166) leaves
 out of code that was already running. The setting is that of the code each
 activity is running: a method or a `::ROUTINE` it calls afterwards starts with
 its own, as [the scope of the setting](r:bif.trace.scope) says. Turned off,
-every activity runs on untraced from its next clause. A request made after the
-interpreter has ended does nothing. The trace lines name the program's path,
+every activity runs on untraced from its next clause. An [attached
+thread](r:native.threads.attach) whose activity runs no message when the trace
+is turned on or off is not reached: the next message it sends runs with its
+method's own setting. A request made after the interpreter has ended does nothing. The trace lines name the program's path,
 so the tests that witness this rule compare them outside this page.
 
 r[native.threads.trace.deviation.166]
