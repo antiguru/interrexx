@@ -332,15 +332,23 @@ pub fn without_rxfuncquery(frm: &Path) {
     fs::write(frm, kept.join(&b'\n')).expect("cannot rewrite the copied ooTest.frm");
 }
 
+/// The line that reports the interpreter's version, whose last three words are
+/// the date it was built.
+const VERSIONED: &str = "Interpreter:";
+
 /// `stdout` with what differs between any two runs of one side masked: each
-/// timing line's duration and each detail header's timestamp. The message text
-/// of an error report is cut as well, since it is not specified.
+/// timing line's duration, each detail header's timestamp and the build date
+/// the version line ends with. The message text of an error report is cut as
+/// well, since it is not specified.
 pub fn masked(stdout: &[u8]) -> Vec<u8> {
     let stdout = crate::support::error_text::cut_error_texts(stdout);
     let text = String::from_utf8_lossy(&stdout);
     let lines: Vec<&str> = text
         .split('\n')
         .map(|line| {
+            if line.starts_with(VERSIONED) {
+                return line.trim_end().rsplitn(4, ' ').last().unwrap_or(line);
+            }
             TIMINGS
                 .iter()
                 .chain(STAMPED)
