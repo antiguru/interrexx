@@ -47541,7 +47541,8 @@ the index has no item, because the slot is empty or lies beyond the array, the
 answer is <code>.nil</code> and nothing changes. It works on arrays of any number of
 dimensions, so the indexes are read as <a href="classes/array.html#r-class.array.indexes">the index rule</a>
 says, and it checks no argument count of its own: no argument raises
-<code>SYNTAX 93.901</code>, and two on a one-dimensional array raise <code>SYNTAX 93.926</code>.</p>
+<code>SYNTAX 93.901</code>, and two on a one-dimensional array raise <code>SYNTAX 93.926</code>.
+An instance of a subclass of Array reads its indexes as an Array does.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', 'c')
 say a~remove(2) a~size a~items a~hasIndex(2) (a~remove(2) == .nil)
 say a~remove(9) a~size
@@ -47566,6 +47567,13 @@ x 0 4
 a~remove =&gt; 93.901
 a~remove(1, 2) =&gt; 93.926
 a~remove(0) =&gt; 93.907
+</code></pre>
+<pre><code class="language-rexx">g = .grid~new(2, 2)
+g[1, 2] = 'x'
+say g~remove(1, 2) g~items
+::class grid subclass array
+</code></pre>
+<pre><code class="language-output">x 0
 </code></pre>
 <div class="rule" id="r-class.array.removeitem"><a href="classes/array.html#r-class.array.removeitem">[class.array.removeitem]</a></div>
 <p><code>removeItem(item)</code> takes out the first item that is equal to the argument, in
@@ -47631,7 +47639,8 @@ dimension yet. A slot that holds <code>.nil</code> holds an item. The indexes ar
 <a href="classes/array.html#r-class.array.indexes">the index rule</a> says, so the method takes no argument
 count of its own: no argument raises <code>SYNTAX 93.901</code>, and an index that is not
 a whole number of at least 1 raises <code>SYNTAX 93.907</code>, or <code>SYNTAX 93.924</code> in a
-multi-dimensional array.</p>
+multi-dimensional array. An instance of a subclass of Array reads its indexes
+as an Array does.</p>
 <pre><code class="language-rexx">a = .array~of('a', , .nil)
 say a~hasIndex(1) a~hasIndex(2) a~hasIndex(3) a~hasIndex(4)
 say .array~new~hasIndex(1) .array~new(3)~hasIndex(1)
@@ -47660,6 +47669,13 @@ a~hasIndex(0) =&gt; 93.907
 a~hasIndex(.nil) =&gt; 93.907
 b~hasIndex(1) =&gt; 93.925
 b~hasIndex(0, 1) =&gt; 93.924
+</code></pre>
+<pre><code class="language-rexx">g = .grid~new(2, 2)
+g[1, 2] = 'x'
+say g~hasIndex(1, 2) g~hasIndex(2, 2)
+::class grid subclass array
+</code></pre>
+<pre><code class="language-output">1 0
 </code></pre>
 <div class="rule" id="r-class.array.hasitem"><a href="classes/array.html#r-class.array.hasitem">[class.array.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers 1 when some item of the array is equal to the argument
@@ -47787,7 +47803,9 @@ beyond the array answers as <a href="classes/array.html#r-class.array.next.beyon
 the array</a> says. The index is
 read as <a href="classes/array.html#r-class.array.indexes">the index rule</a> says, with <code>SYNTAX 93.901</code> for
 no index and <code>SYNTAX 93.907</code> for an index that is not a whole number of at
-least 1; so index 0 is an error, and <code>previous(1)</code> is <code>.nil</code>.</p>
+least 1; so index 0 is an error, and <code>previous(1)</code> is <code>.nil</code>. An instance of
+a subclass of Array reads its index as an Array does, a subscript per
+dimension.</p>
 <pre><code class="language-rexx">a = .array~of('a', , , 'd', 'e')
 say a~next(1) a~next(2) a~next(4) (a~next(5) == .nil) (a~next(9) == .nil)
 say a~previous(5) a~previous(4) (a~previous(1) == .nil) a~previous(3)
@@ -47812,6 +47830,14 @@ a~next =&gt; 93.901
 a~next(0) =&gt; 93.907
 a~previous(.nil) =&gt; 93.907
 a~next(1, 2) =&gt; 93.926
+</code></pre>
+<pre><code class="language-rexx">g = .grid~new(2, 2)
+g[1, 2] = 'x'
+g[2, 2] = 'y'
+say g~next(1, 1)~makeString(, ',') g~previous(2, 2)~makeString(, ',')
+::class grid subclass array
+</code></pre>
+<pre><code class="language-output">1,2 1,2
 </code></pre>
 <div class="rule" id="r-class.array.next.beyond"><a href="classes/array.html#r-class.array.next.beyond">[class.array.next.beyond]</a></div>
 <p><code>previous</code> of an index with a component beyond its dimension, whether one
@@ -50033,6 +50059,8 @@ call try 'q~at'
 call try 'q~at(1, 1)'
 call try 'q[]'
 call try 'q[1, 1]'
+call try '.queue~new~at(, 1)'
+call try '.queue~new[, 1]'
 x = .twin~new
 x~append('p')
 say x~at(1) x[1]
@@ -50055,6 +50083,8 @@ q~at =&gt; 93.901
 q~at(1, 1) =&gt; 93.926
 q[] =&gt; 93.901
 q[1, 1] =&gt; 93.926
+.queue~new~at(, 1) =&gt; 93.926
+.queue~new[, 1] =&gt; 93.926
 at override bracket override
 </code></pre>
 <div class="rule" id="r-class.queue.put"><a href="classes/queue.html#r-class.queue.put">[class.queue.put]</a></div>
@@ -50321,6 +50351,7 @@ say q~hasIndex(1) q~hasIndex(2) q~hasIndex(3) q~hasIndex('1')
 say q~hasIndex(' 2 ') q~hasIndex(.array~of(2)) .queue~new~hasIndex(1)
 call try 'q~hasIndex'
 call try 'q~hasIndex(1, 1)'
+call try '.queue~new~hasIndex(, 1)'
 call try 'q~hasIndex(0)'
 call try 'q~hasIndex(-1)'
 call try 'q~hasIndex(.nil)'
@@ -50339,6 +50370,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 1 1 0
 q~hasIndex =&gt; 93.901
 q~hasIndex(1, 1) =&gt; 93.926
+.queue~new~hasIndex(, 1) =&gt; 93.926
 q~hasIndex(0) =&gt; 93.907
 q~hasIndex(-1) =&gt; 93.907
 q~hasIndex(.nil) =&gt; 93.907
@@ -50452,6 +50484,8 @@ call try 'q~next(-1)'
 call try 'q~next(.nil)'
 call try 'q~previous("x")'
 call try 'q~previous(1.5)'
+call try '.queue~new~next(, 1)'
+call try '.queue~new~previous(, 1)'
 exit
 try:
   signal on syntax name bad
@@ -50476,6 +50510,8 @@ q~next(-1) =&gt; 93.907
 q~next(.nil) =&gt; 93.907
 q~previous("x") =&gt; 93.907
 q~previous(1.5) =&gt; 93.907
+.queue~new~next(, 1) =&gt; 93.926
+.queue~new~previous(, 1) =&gt; 93.926
 </code></pre>
 <h2 id="size-and-emptying-1"><a class="header" href="#size-and-emptying-1">Size and emptying</a></h2>
 <div class="rule" id="r-class.queue.items"><a href="classes/queue.html#r-class.queue.items">[class.queue.items]</a></div>
