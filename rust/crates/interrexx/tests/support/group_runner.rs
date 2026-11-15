@@ -334,7 +334,9 @@ pub fn without_rxfuncquery(frm: &Path) {
 
 /// `stdout` with what differs between any two runs of one side masked: each
 /// timing line's duration and each detail header's timestamp. The message text
-/// of an error report is cut as well, since it is not specified.
+/// of an error report is cut as well, since it is not specified: ooTest, the
+/// program here, writes the traceback of an error its tests meet to stdout,
+/// and it is not this repository's to change.
 pub fn masked(stdout: &[u8]) -> Vec<u8> {
     let stdout = crate::support::error_text::cut_error_texts(stdout);
     let text = String::from_utf8_lossy(&stdout);

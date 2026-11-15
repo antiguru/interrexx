@@ -109,10 +109,11 @@ impl Side {
         }
         let output = command.output().expect("the binary starts");
         // The message text of an error report is not specified, so a recorded
-        // answer holds the code and subcode of each report and not its text.
+        // answer holds the code and subcode of each report on stderr and not
+        // its text.
         let rendered = render(
             &self.dir,
-            &error_text::cut_error_texts(&output.stdout),
+            &output.stdout,
             &error_text::cut_error_texts(&output.stderr),
             output.status.code(),
         );
@@ -276,7 +277,7 @@ fn ours_on(side: &Side, image: &str, bytes: &[u8]) -> String {
         .expect("rexx starts");
     render(
         &side.dir,
-        &error_text::cut_error_texts(&output.stdout),
+        &output.stdout,
         &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )
@@ -360,7 +361,7 @@ fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
     // (`r[conv.error.text]`).
     render(
         &side.dir,
-        &error_text::cut_error_texts(&output.stdout),
+        &output.stdout,
         &error_text::cut_error_texts(&output.stderr),
         output.status.code(),
     )

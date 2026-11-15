@@ -30,11 +30,12 @@ fn call_program(call: &str, answer: &str) -> String {
 fn transcript(text: String) -> String {
     let outcome = watchdog::run_bounded(PATH, text.into_bytes(), Invocation::none());
     // The message text of an error report is not specified, so a recorded
-    // answer holds the code and subcode of each report and not its text.
+    // answer holds the code and subcode of each report on stderr and not its
+    // text.
     format!(
         "rc {}\n[stdout]\n{}[stderr]\n{}",
         outcome.exit_code,
-        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stdout)),
+        String::from_utf8_lossy(&outcome.stdout),
         String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr))
             .replace(PATH, "PROGRAM"),
     )

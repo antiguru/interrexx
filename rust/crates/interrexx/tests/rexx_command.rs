@@ -264,8 +264,13 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
     let stderr = usage_masked(stderr, status);
     for (tag, bytes) in [("out", stdout), ("err", &stderr[..])] {
         // The message text of an error report is not specified, so a recorded
-        // answer holds the code and subcode of each report and not its text.
-        let bytes = error_text::cut_error_texts(bytes);
+        // answer holds the code and subcode of each report on stderr and not
+        // its text.
+        let bytes = if tag == "err" {
+            error_text::cut_error_texts(bytes)
+        } else {
+            bytes.to_vec()
+        };
         let text = escaped(&bytes).replace(&dir, "DIR");
         for line in banner::recorded(text.lines(), oracle) {
             rendered.push_str(&format!("{tag}> {line}\n"));

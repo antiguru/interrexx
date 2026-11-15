@@ -88,11 +88,11 @@ fn rxmath_answers_as_the_oracle_does() {
                     let outcome = run(format!("{}\n", case.input.trim_end()));
                     // The message text of an error report is not specified, so
                     // a recorded answer holds the code and subcode of each
-                    // report and not its text.
+                    // report on stderr and not its text.
                     format!(
                         "rc {}\n[stdout]\n{}[stderr]\n{}",
                         outcome.exit_code,
-                        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stdout))
+                        String::from_utf8_lossy(&outcome.stdout)
                             .replace(env!("CARGO_PKG_VERSION"), "<version>"),
                         String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr)),
                     )

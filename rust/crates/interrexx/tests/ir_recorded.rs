@@ -709,11 +709,10 @@ fn render_engine(program: &str) -> String {
     assert_eq!(outcome.chunks_refused, 0, "the compiler refused this body");
 
     // The message text of an error report is not specified, so a recorded
-    // answer holds the code and subcode of each report and not its text.
+    // answer holds the code and subcode of each report on stderr and not its
+    // text.
     let mut out = format!("rc> {}\n", outcome.exit_code);
-    for line in
-        String::from_utf8_lossy(&support::error_text::cut_error_texts(&outcome.stdout)).lines()
-    {
+    for line in String::from_utf8_lossy(&outcome.stdout).lines() {
         out.push_str(&format!("out> {line}\n"));
     }
     for line in

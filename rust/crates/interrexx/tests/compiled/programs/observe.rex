@@ -13,7 +13,7 @@ syntax:
 say 'cond' condition('o')~code
 nop
 say 'tb' condition('o')~traceback~items
-do l over condition('o')~traceback; say l; end
+do l over condition('o')~traceback; if l~word(1)~datatype('W') then say l; end
 call t
 exit
 t:

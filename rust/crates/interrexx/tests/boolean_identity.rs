@@ -83,13 +83,15 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     }
     let _ = std::fs::remove_dir_all(&dir);
     // The message text of an error report is not specified, so a recorded
-    // answer holds the code and subcode of each report and not its text.
+    // answer holds the code and subcode of each report on stderr and not its
+    // text.
     let channel = |bytes: &[u8]| {
         String::from_utf8_lossy(&support::error_text::cut_error_texts(bytes)).into_owned()
     };
+    let raw = |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned();
     (
         output.status.code().unwrap_or(-1),
-        channel(&output.stdout),
+        raw(&output.stdout),
         channel(&output.stderr),
     )
 }

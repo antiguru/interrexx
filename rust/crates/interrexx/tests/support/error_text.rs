@@ -1,18 +1,20 @@
 //! Drops the message text of an error report, and what a build may word or
-//! level differently, from a run's output.
+//! level differently, from a run's error stream.
 //!
 //! The text of a message is not specified (`r[conv.error.text]`): its code and
 //! subcode are. Whether a built-in method is a level of the traceback is not
 //! specified either (`r[class.stackframe.builtin]`). A comparison of this
-//! crate's output with the oracle's applies [`cut_error_texts`] to both sides,
-//! so that a difference in wording, or in which built-in levels a build shows,
-//! is not a difference in behaviour. The cut recognises a line by its
-//! structure, which the specification fixes, and never by a wording. A file of
-//! its own, so that a test binary without the rest of `support` can include it
-//! with `#[path]`.
+//! crate's output with the oracle's applies [`cut_error_texts`] to both sides'
+//! stderr, so that a difference in wording, or in which built-in levels a
+//! build shows, is not a difference in behaviour. Standard output is compared
+//! whole: a program that prints a message prints its code instead. The cut
+//! recognises a line by its structure, which the specification fixes, and
+//! never by a wording. A file of its own, so that a test binary without the
+//! rest of `support` can include it with `#[path]`.
 
-/// `bytes` with the message text of every error report dropped, so that only
-/// an error's code and subcode are observable (`r[conv.error.text]`). An
+/// `bytes`, a run's stderr, with the message text of every error report
+/// dropped, so that only an error's code and subcode are observable
+/// (`r[conv.error.text]`). An
 /// error is reported by two lines,
 /// `Error <code> running <file> line <n>:  <text>` and
 /// `Error <code>.<subcode>:  <text>` (`Error <code>:  <text>` where it fails
