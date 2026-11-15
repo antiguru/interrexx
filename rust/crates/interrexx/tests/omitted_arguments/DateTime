@@ -1,0 +1,647 @@
+# DateTime: each documented instance method, sent each argument list with a hole.
+
+sends
+init (,'a')
+init ('a',)
+init (,,'a')
+----
+init (,'a') => 93.903
+init ('a',) => 40.19
+init (,,'a') => 93.903
+
+sends
++ (,'a')
++ ('a',)
++ (,,'a')
+----
++ (,'a') => 93.902
++ ('a',) => 93.948
++ (,,'a') => 93.902
+
+sends
+- (,'a')
+- ('a',)
+- (,,'a')
+----
+- (,'a') => 93.902
+- ('a',) => 88.914
+- (,,'a') => 93.902
+
+sends
+addDays (,'a')
+addDays ('a',)
+addDays (,,'a')
+----
+addDays (,'a') => 93.902
+addDays ('a',) => 88.902
+addDays (,,'a') => 93.902
+
+sends
+addHours (,'a')
+addHours ('a',)
+addHours (,,'a')
+----
+addHours (,'a') => 93.902
+addHours ('a',) => 88.902
+addHours (,,'a') => 93.902
+
+sends
+addMicroseconds (,'a')
+addMicroseconds ('a',)
+addMicroseconds (,,'a')
+----
+addMicroseconds (,'a') => 93.902
+addMicroseconds ('a',) => 88.902
+addMicroseconds (,,'a') => 93.902
+
+sends
+addMinutes (,'a')
+addMinutes ('a',)
+addMinutes (,,'a')
+----
+addMinutes (,'a') => 93.902
+addMinutes ('a',) => 88.902
+addMinutes (,,'a') => 93.902
+
+sends
+addSeconds (,'a')
+addSeconds ('a',)
+addSeconds (,,'a')
+----
+addSeconds (,'a') => 93.902
+addSeconds ('a',) => 88.902
+addSeconds (,,'a') => 93.902
+
+sends
+addWeeks (,'a')
+addWeeks ('a',)
+addWeeks (,,'a')
+----
+addWeeks (,'a') => 93.902
+addWeeks ('a',) => 88.902
+addWeeks (,,'a') => 93.902
+
+sends
+addYears (,'a')
+addYears ('a',)
+addYears (,,'a')
+----
+addYears (,'a') => 93.902
+addYears ('a',) => 88.903
+addYears (,,'a') => 93.902
+
+sends
+baseDate (,'a')
+baseDate ('a',)
+baseDate (,,'a')
+----
+baseDate (,'a') => 93.902
+baseDate ('a',) => 93.902
+baseDate (,,'a') => 93.902
+
+sends
+civilTime (,'a')
+civilTime ('a',)
+civilTime (,,'a')
+----
+civilTime (,'a') => 93.902
+civilTime ('a',) => 93.902
+civilTime (,,'a') => 93.902
+
+sends
+compareTo (,'a')
+compareTo (,,'a')
+----
+compareTo (,'a') => 93.902
+compareTo (,,'a') => 93.902
+
+sends
+date (,'a')
+date ('a',)
+date (,,'a')
+----
+date (,'a') => 93.902
+date ('a',) => 93.902
+date (,,'a') => 93.902
+
+sends
+day (,'a')
+day ('a',)
+day (,,'a')
+----
+day (,'a') => 93.902
+day ('a',) => 93.902
+day (,,'a') => 93.902
+
+sends
+dayMicroseconds (,'a')
+dayMicroseconds ('a',)
+dayMicroseconds (,,'a')
+----
+dayMicroseconds (,'a') => 93.902
+dayMicroseconds ('a',) => 93.902
+dayMicroseconds (,,'a') => 93.902
+
+sends
+dayMinutes (,'a')
+dayMinutes ('a',)
+dayMinutes (,,'a')
+----
+dayMinutes (,'a') => 93.902
+dayMinutes ('a',) => 93.902
+dayMinutes (,,'a') => 93.902
+
+sends
+dayName (,'a')
+dayName ('a',)
+dayName (,,'a')
+----
+dayName (,'a') => 93.902
+dayName ('a',) => 93.902
+dayName (,,'a') => 93.902
+
+sends
+daySeconds (,'a')
+daySeconds ('a',)
+daySeconds (,,'a')
+----
+daySeconds (,'a') => 93.902
+daySeconds ('a',) => 93.902
+daySeconds (,,'a') => 93.902
+
+sends
+daysInMonth (,'a')
+daysInMonth ('a',)
+daysInMonth (,,'a')
+----
+daysInMonth (,'a') => 93.902
+daysInMonth ('a',) => 93.902
+daysInMonth (,,'a') => 93.902
+
+sends
+daysInYear (,'a')
+daysInYear ('a',)
+daysInYear (,,'a')
+----
+daysInYear (,'a') => 93.902
+daysInYear ('a',) => 93.902
+daysInYear (,,'a') => 93.902
+
+sends
+elapsed (,'a')
+elapsed ('a',)
+elapsed (,,'a')
+----
+elapsed (,'a') => 93.902
+elapsed ('a',) => 93.902
+elapsed (,,'a') => 93.902
+
+sends
+europeanDate (,'a')
+europeanDate ('a',)
+europeanDate (,,'a')
+----
+europeanDate (,'a') => 93.902
+europeanDate ('a',) => 40.43
+europeanDate (,,'a') => 93.902
+
+sends
+fullDate (,'a')
+fullDate ('a',)
+fullDate (,,'a')
+----
+fullDate (,'a') => 93.902
+fullDate ('a',) => 93.902
+fullDate (,,'a') => 93.902
+
+sends
+hashCode (,'a')
+hashCode ('a',)
+hashCode (,,'a')
+----
+hashCode (,'a') => 93.902
+hashCode ('a',) => 93.902
+hashCode (,,'a') => 93.902
+
+sends
+hours (,'a')
+hours ('a',)
+hours (,,'a')
+----
+hours (,'a') => 93.902
+hours ('a',) => 93.902
+hours (,,'a') => 93.902
+
+sends
+isLeapYear (,'a')
+isLeapYear ('a',)
+isLeapYear (,,'a')
+----
+isLeapYear (,'a') => 93.902
+isLeapYear ('a',) => 93.902
+isLeapYear (,,'a') => 93.902
+
+sends
+isoDate (,'a')
+isoDate ('a',)
+isoDate (,,'a')
+----
+isoDate (,'a') => 93.902
+isoDate ('a',) => 93.902
+isoDate (,,'a') => 93.902
+
+sends
+languageDate (,'a')
+languageDate ('a',)
+languageDate (,,'a')
+----
+languageDate (,'a') => 93.902
+languageDate ('a',) => 93.902
+languageDate (,,'a') => 93.902
+
+sends
+longTime (,'a')
+longTime ('a',)
+longTime (,,'a')
+----
+longTime (,'a') => 93.902
+longTime ('a',) => 93.902
+longTime (,,'a') => 93.902
+
+sends
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+----
+makeString (,'a') => 93.902
+makeString ('a',) => 93.902
+makeString (,,'a') => 93.902
+
+sends
+microseconds (,'a')
+microseconds ('a',)
+microseconds (,,'a')
+----
+microseconds (,'a') => 93.902
+microseconds ('a',) => 93.902
+microseconds (,,'a') => 93.902
+
+sends
+minutes (,'a')
+minutes ('a',)
+minutes (,,'a')
+----
+minutes (,'a') => 93.902
+minutes ('a',) => 93.902
+minutes (,,'a') => 93.902
+
+sends
+month (,'a')
+month ('a',)
+month (,,'a')
+----
+month (,'a') => 93.902
+month ('a',) => 93.902
+month (,,'a') => 93.902
+
+sends
+monthName (,'a')
+monthName ('a',)
+monthName (,,'a')
+----
+monthName (,'a') => 93.902
+monthName ('a',) => 93.902
+monthName (,,'a') => 93.902
+
+sends
+normalDate (,'a')
+normalDate ('a',)
+normalDate (,,'a')
+----
+normalDate (,'a') => 93.902
+normalDate ('a',) => 40.43
+normalDate (,,'a') => 93.902
+
+sends
+normalTime (,'a')
+normalTime ('a',)
+normalTime (,,'a')
+----
+normalTime (,'a') => 93.902
+normalTime ('a',) => 93.902
+normalTime (,,'a') => 93.902
+
+sends
+offset (,'a')
+offset ('a',)
+offset (,,'a')
+----
+offset (,'a') => 93.902
+offset ('a',) => 93.902
+offset (,,'a') => 93.902
+
+sends
+orderedDate (,'a')
+orderedDate ('a',)
+orderedDate (,,'a')
+----
+orderedDate (,'a') => 93.902
+orderedDate ('a',) => 40.43
+orderedDate (,,'a') => 93.902
+
+sends
+ordinalDate (,'a')
+ordinalDate ('a',)
+ordinalDate (,,'a')
+----
+ordinalDate (,'a') => 93.902
+ordinalDate ('a',) => 93.902
+ordinalDate (,,'a') => 93.902
+
+sends
+seconds (,'a')
+seconds ('a',)
+seconds (,,'a')
+----
+seconds (,'a') => 93.902
+seconds ('a',) => 93.902
+seconds (,,'a') => 93.902
+
+sends
+standardDate (,'a')
+standardDate ('a',)
+standardDate (,,'a')
+----
+standardDate (,'a') => 93.902
+standardDate ('a',) => 40.43
+standardDate (,,'a') => 93.902
+
+sends
+string (,'a')
+string ('a',)
+string (,,'a')
+----
+string (,'a') => 93.902
+string ('a',) => 93.902
+string (,,'a') => 93.902
+
+sends
+ticks (,'a')
+ticks ('a',)
+ticks (,,'a')
+----
+ticks (,'a') => 93.902
+ticks ('a',) => 93.902
+ticks (,,'a') => 93.902
+
+sends
+timeOfDay (,'a')
+timeOfDay ('a',)
+timeOfDay (,,'a')
+----
+timeOfDay (,'a') => 93.902
+timeOfDay ('a',) => 93.902
+timeOfDay (,,'a') => 93.902
+
+sends
+toLocalTime (,'a')
+toLocalTime ('a',)
+toLocalTime (,,'a')
+----
+toLocalTime (,'a') => 93.902
+toLocalTime ('a',) => 93.902
+toLocalTime (,,'a') => 93.902
+
+sends
+toTimezone (,'a')
+toTimezone ('a',)
+toTimezone (,,'a')
+----
+toTimezone (,'a') => 93.902
+toTimezone ('a',) => 41.1
+toTimezone (,,'a') => 93.902
+
+sends
+toUtcTime (,'a')
+toUtcTime ('a',)
+toUtcTime (,,'a')
+----
+toUtcTime (,'a') => 93.902
+toUtcTime ('a',) => 93.902
+toUtcTime (,,'a') => 93.902
+
+sends
+usaDate (,'a')
+usaDate ('a',)
+usaDate (,,'a')
+----
+usaDate (,'a') => 93.902
+usaDate ('a',) => 40.43
+usaDate (,,'a') => 93.902
+
+sends
+utcDate (,'a')
+utcDate ('a',)
+utcDate (,,'a')
+----
+utcDate (,'a') => 93.902
+utcDate ('a',) => 93.902
+utcDate (,,'a') => 93.902
+
+sends
+utcIsoDate (,'a')
+utcIsoDate ('a',)
+utcIsoDate (,,'a')
+----
+utcIsoDate (,'a') => 93.902
+utcIsoDate ('a',) => 93.902
+utcIsoDate (,,'a') => 93.902
+
+sends
+weekDay (,'a')
+weekDay ('a',)
+weekDay (,,'a')
+----
+weekDay (,'a') => 93.902
+weekDay ('a',) => 93.902
+weekDay (,,'a') => 93.902
+
+sends
+weekNumber (,'a')
+weekNumber ('a',)
+weekNumber (,,'a')
+----
+weekNumber (,'a') => 93.902
+weekNumber ('a',) => 93.902
+weekNumber (,,'a') => 93.902
+
+sends
+weekNumberDate (,'a')
+weekNumberDate ('a',)
+weekNumberDate (,,'a')
+----
+weekNumberDate (,'a') => 93.902
+weekNumberDate ('a',) => 93.902
+weekNumberDate (,,'a') => 93.902
+
+sends
+weekNumberYear (,'a')
+weekNumberYear ('a',)
+weekNumberYear (,,'a')
+----
+weekNumberYear (,'a') => 93.902
+weekNumberYear ('a',) => 93.902
+weekNumberYear (,,'a') => 93.902
+
+sends
+weeksInYear (,'a')
+weeksInYear ('a',)
+weeksInYear (,,'a')
+----
+weeksInYear (,'a') => 93.902
+weeksInYear ('a',) => 93.902
+weeksInYear (,,'a') => 93.902
+
+sends
+year (,'a')
+year ('a',)
+year (,,'a')
+----
+year (,'a') => 93.902
+year ('a',) => 93.902
+year (,,'a') => 93.902
+
+sends
+yearDay (,'a')
+yearDay ('a',)
+yearDay (,,'a')
+----
+yearDay (,'a') => 93.902
+yearDay ('a',) => 93.902
+yearDay (,,'a') => 93.902
+
+sends
+= (,'a')
+= (,,'a')
+----
+= (,'a') => 93.902
+= (,,'a') => 93.902
+
+sends
+== (,'a')
+== (,,'a')
+----
+== (,'a') => 93.902
+== (,,'a') => 93.902
+
+sends
+< (,'a')
+< (,,'a')
+----
+< (,'a') => 93.902
+< (,,'a') => 93.902
+
+sends
+<= (,'a')
+<= (,,'a')
+----
+<= (,'a') => 93.902
+<= (,,'a') => 93.902
+
+sends
+<< (,'a')
+<< (,,'a')
+----
+<< (,'a') => 93.902
+<< (,,'a') => 93.902
+
+sends
+<<= (,'a')
+<<= (,,'a')
+----
+<<= (,'a') => 93.902
+<<= (,,'a') => 93.902
+
+sends
+<> (,'a')
+<> (,,'a')
+----
+<> (,'a') => 93.902
+<> (,,'a') => 93.902
+
+sends
+> (,'a')
+> (,,'a')
+----
+> (,'a') => 93.902
+> (,,'a') => 93.902
+
+sends
+>= (,'a')
+>= (,,'a')
+----
+>= (,'a') => 93.902
+>= (,,'a') => 93.902
+
+sends
+>< (,'a')
+>< (,,'a')
+----
+>< (,'a') => 93.902
+>< (,,'a') => 93.902
+
+sends
+>> (,'a')
+>> (,,'a')
+----
+>> (,'a') => 93.902
+>> (,,'a') => 93.902
+
+sends
+>>= (,'a')
+>>= (,,'a')
+----
+>>= (,'a') => 93.902
+>>= (,,'a') => 93.902
+
+sends
+\= (,'a')
+\= (,,'a')
+----
+\= (,'a') => 93.902
+\= (,,'a') => 93.902
+
+sends
+\== (,'a')
+\== (,,'a')
+----
+\== (,'a') => 93.902
+\== (,,'a') => 93.902
+
+sends
+\< (,'a')
+\< (,,'a')
+----
+\< (,'a') => 93.902
+\< (,,'a') => 93.902
+
+sends
+\<< (,'a')
+\<< (,,'a')
+----
+\<< (,'a') => 93.902
+\<< (,,'a') => 93.902
+
+sends
+\> (,'a')
+\> (,,'a')
+----
+\> (,'a') => 93.902
+\> (,,'a') => 93.902
+
+sends
+\>> (,'a')
+\>> (,,'a')
+----
+\>> (,'a') => 93.902
+\>> (,,'a') => 93.902

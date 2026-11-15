@@ -1,0 +1,10 @@
+# Comparator: each documented instance method, sent each argument list with a hole.
+
+sends
+compare (,'a')
+compare ('a',)
+compare (,,'a')
+----
+compare (,'a') => 93.903
+compare ('a',) => 93.901
+compare (,,'a') => 93.902

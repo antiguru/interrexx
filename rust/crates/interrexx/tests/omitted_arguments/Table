@@ -1,0 +1,217 @@
+# Table: each documented instance method, sent each argument list with a hole.
+
+sends
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+----
+[] (,'a') => 93.902
+[] ('a',) => ok
+[] (,,'a') => 93.902
+
+sends
+[]= (,'a')
+[]= ('a',)
+[]= (,,'a')
+----
+[]= (,'a') => 88.901
+[]= ('a',) => 88.901
+[]= (,,'a') => 93.902
+
+sends
+allIndexes (,'a')
+allIndexes ('a',)
+allIndexes (,,'a')
+----
+allIndexes (,'a') => 93.902
+allIndexes ('a',) => 93.902
+allIndexes (,,'a') => 93.902
+
+sends
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+----
+allItems (,'a') => 93.902
+allItems ('a',) => 93.902
+allItems (,,'a') => 93.902
+
+sends
+at (,'a')
+at ('a',)
+at (,,'a')
+----
+at (,'a') => 93.902
+at ('a',) => ok
+at (,,'a') => 93.902
+
+sends
+empty (,'a')
+empty ('a',)
+empty (,,'a')
+----
+empty (,'a') => 93.902
+empty ('a',) => 93.902
+empty (,,'a') => 93.902
+
+sends
+hasIndex (,'a')
+hasIndex ('a',)
+hasIndex (,,'a')
+----
+hasIndex (,'a') => 93.902
+hasIndex ('a',) => ok
+hasIndex (,,'a') => 93.902
+
+sends
+hasItem (,'a')
+hasItem ('a',)
+hasItem (,,'a')
+----
+hasItem (,'a') => 93.902
+hasItem ('a',) => ok
+hasItem (,,'a') => 93.902
+
+sends
+index (,'a')
+index ('a',)
+index (,,'a')
+----
+index (,'a') => 93.902
+index ('a',) => ok
+index (,,'a') => 93.902
+
+sends
+isEmpty (,'a')
+isEmpty ('a',)
+isEmpty (,,'a')
+----
+isEmpty (,'a') => 93.902
+isEmpty ('a',) => 93.902
+isEmpty (,,'a') => 93.902
+
+sends
+items (,'a')
+items ('a',)
+items (,,'a')
+----
+items (,'a') => 93.902
+items ('a',) => 93.902
+items (,,'a') => 93.902
+
+sends
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+----
+makeArray (,'a') => 93.902
+makeArray ('a',) => 93.902
+makeArray (,,'a') => 93.902
+
+sends
+put (,'a')
+put ('a',)
+put (,,'a')
+----
+put (,'a') => 88.901
+put ('a',) => 88.901
+put (,,'a') => 93.902
+
+sends
+remove (,'a')
+remove ('a',)
+remove (,,'a')
+----
+remove (,'a') => 93.902
+remove ('a',) => ok
+remove (,,'a') => 93.902
+
+sends
+removeItem (,'a')
+removeItem ('a',)
+removeItem (,,'a')
+----
+removeItem (,'a') => 93.902
+removeItem ('a',) => ok
+removeItem (,,'a') => 93.902
+
+sends
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+----
+supplier (,'a') => 93.902
+supplier ('a',) => 93.902
+supplier (,,'a') => 93.902
+
+sends
+difference (,'a')
+difference ('a',)
+difference (,,'a')
+----
+difference (,'a') => 93.902
+difference ('a',) => 93.948
+difference (,,'a') => 93.902
+
+sends
+disjoint (,'a')
+disjoint ('a',)
+disjoint (,,'a')
+----
+disjoint (,'a') => 93.902
+disjoint ('a',) => ok
+disjoint (,,'a') => 93.902
+
+sends
+equivalent (,'a')
+equivalent ('a',)
+equivalent (,,'a')
+----
+equivalent (,'a') => 93.902
+equivalent ('a',) => 97.1
+equivalent (,,'a') => 93.902
+
+sends
+intersection (,'a')
+intersection ('a',)
+intersection (,,'a')
+----
+intersection (,'a') => 93.902
+intersection ('a',) => ok
+intersection (,,'a') => 93.902
+
+sends
+subset (,'a')
+subset ('a',)
+subset (,,'a')
+----
+subset (,'a') => 93.902
+subset ('a',) => 93.948
+subset (,,'a') => 93.902
+
+sends
+union (,'a')
+union ('a',)
+union (,,'a')
+----
+union (,'a') => 93.902
+union ('a',) => ok
+union (,,'a') => 93.902
+
+sends
+xor (,'a')
+xor ('a',)
+xor (,,'a')
+----
+xor (,'a') => 93.902
+xor ('a',) => ok
+xor (,,'a') => 93.902
+
+sends
+putAll (,'a')
+putAll ('a',)
+putAll (,,'a')
+----
+putAll (,'a') => 93.902
+putAll ('a',) => 93.948
+putAll (,,'a') => 93.902

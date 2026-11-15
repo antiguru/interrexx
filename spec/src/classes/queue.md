@@ -289,6 +289,8 @@ call try 'q~at'
 call try 'q~at(1, 1)'
 call try 'q[]'
 call try 'q[1, 1]'
+call try '.queue~new~at(, 1)'
+call try '.queue~new[, 1]'
 x = .twin~new
 x~append('p')
 say x~at(1) x[1]
@@ -313,6 +315,8 @@ q~at => 93.901
 q~at(1, 1) => 93.926
 q[] => 93.901
 q[1, 1] => 93.926
+.queue~new~at(, 1) => 93.926
+.queue~new[, 1] => 93.926
 at override bracket override
 ```
 
@@ -613,6 +617,7 @@ say q~hasIndex(1) q~hasIndex(2) q~hasIndex(3) q~hasIndex('1')
 say q~hasIndex(' 2 ') q~hasIndex(.array~of(2)) .queue~new~hasIndex(1)
 call try 'q~hasIndex'
 call try 'q~hasIndex(1, 1)'
+call try '.queue~new~hasIndex(, 1)'
 call try 'q~hasIndex(0)'
 call try 'q~hasIndex(-1)'
 call try 'q~hasIndex(.nil)'
@@ -633,6 +638,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 1 0
 q~hasIndex => 93.901
 q~hasIndex(1, 1) => 93.926
+.queue~new~hasIndex(, 1) => 93.926
 q~hasIndex(0) => 93.907
 q~hasIndex(-1) => 93.907
 q~hasIndex(.nil) => 93.907
@@ -760,6 +766,8 @@ call try 'q~next(-1)'
 call try 'q~next(.nil)'
 call try 'q~previous("x")'
 call try 'q~previous(1.5)'
+call try '.queue~new~next(, 1)'
+call try '.queue~new~previous(, 1)'
 exit
 try:
   signal on syntax name bad
@@ -786,6 +794,8 @@ q~next(-1) => 93.907
 q~next(.nil) => 93.907
 q~previous("x") => 93.907
 q~previous(1.5) => 93.907
+.queue~new~next(, 1) => 93.926
+.queue~new~previous(, 1) => 93.926
 ```
 
 ## Size and emptying

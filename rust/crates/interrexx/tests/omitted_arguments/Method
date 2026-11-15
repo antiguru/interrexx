@@ -1,0 +1,145 @@
+# Method: each documented instance method, sent each argument list with a hole.
+
+sends
+annotation (,'a')
+annotation ('a',)
+annotation (,,'a')
+----
+annotation (,'a') => 93.902
+annotation ('a',) => ok
+annotation (,,'a') => 93.902
+
+sends
+annotations (,'a')
+annotations ('a',)
+annotations (,,'a')
+----
+annotations (,'a') => 93.902
+annotations ('a',) => 93.902
+annotations (,,'a') => 93.902
+
+sends
+isAbstract (,'a')
+isAbstract ('a',)
+isAbstract (,,'a')
+----
+isAbstract (,'a') => 93.902
+isAbstract ('a',) => 93.902
+isAbstract (,,'a') => 93.902
+
+sends
+isAttribute (,'a')
+isAttribute ('a',)
+isAttribute (,,'a')
+----
+isAttribute (,'a') => 93.902
+isAttribute ('a',) => 93.902
+isAttribute (,,'a') => 93.902
+
+sends
+isConstant (,'a')
+isConstant ('a',)
+isConstant (,,'a')
+----
+isConstant (,'a') => 93.902
+isConstant ('a',) => 93.902
+isConstant (,,'a') => 93.902
+
+sends
+isGuarded (,'a')
+isGuarded ('a',)
+isGuarded (,,'a')
+----
+isGuarded (,'a') => 93.902
+isGuarded ('a',) => 93.902
+isGuarded (,,'a') => 93.902
+
+sends
+isPackage (,'a')
+isPackage ('a',)
+isPackage (,,'a')
+----
+isPackage (,'a') => 93.902
+isPackage ('a',) => 93.902
+isPackage (,,'a') => 93.902
+
+sends
+isPrivate (,'a')
+isPrivate ('a',)
+isPrivate (,,'a')
+----
+isPrivate (,'a') => 93.902
+isPrivate ('a',) => 93.902
+isPrivate (,,'a') => 93.902
+
+sends
+isProtected (,'a')
+isProtected ('a',)
+isProtected (,,'a')
+----
+isProtected (,'a') => 93.902
+isProtected ('a',) => 93.902
+isProtected (,,'a') => 93.902
+
+sends
+package (,'a')
+package ('a',)
+package (,,'a')
+----
+package (,'a') => 93.902
+package ('a',) => 93.902
+package (,,'a') => 93.902
+
+sends
+scope (,'a')
+scope ('a',)
+scope (,,'a')
+----
+scope (,'a') => 93.902
+scope ('a',) => 93.902
+scope (,,'a') => 93.902
+
+sends
+setGuarded (,'a')
+setGuarded ('a',)
+setGuarded (,,'a')
+----
+setGuarded (,'a') => 93.902
+setGuarded ('a',) => 93.902
+setGuarded (,,'a') => 93.902
+
+sends
+setPrivate (,'a')
+setPrivate ('a',)
+setPrivate (,,'a')
+----
+setPrivate (,'a') => 93.902
+setPrivate ('a',) => 93.902
+setPrivate (,,'a') => 93.902
+
+sends
+setProtected (,'a')
+setProtected ('a',)
+setProtected (,,'a')
+----
+setProtected (,'a') => 93.902
+setProtected ('a',) => 93.902
+setProtected (,,'a') => 93.902
+
+sends
+setUnguarded (,'a')
+setUnguarded ('a',)
+setUnguarded (,,'a')
+----
+setUnguarded (,'a') => 93.902
+setUnguarded ('a',) => 93.902
+setUnguarded (,,'a') => 93.902
+
+sends
+source (,'a')
+source ('a',)
+source (,,'a')
+----
+source (,'a') => 93.902
+source ('a',) => 93.902
+source (,,'a') => 93.902

@@ -1,0 +1,386 @@
+# TimeSpan: each documented instance method, sent each argument list with a hole.
+
+sends
+init (,'a')
+init ('a',)
+init (,,'a')
+----
+init (,'a') => 93.903
+init ('a',) => 88.903
+init (,,'a') => 93.903
+
+sends
++ (,'a')
++ ('a',)
++ (,,'a')
+----
++ (,'a') => 93.902
++ ('a',) => 88.914
++ (,,'a') => 93.902
+
+sends
+- (,'a')
+- ('a',)
+- (,,'a')
+----
+- (,'a') => 93.902
+- ('a',) => 93.948
+- (,,'a') => 93.902
+
+sends
+* (,'a')
+* ('a',)
+* (,,'a')
+----
+* (,'a') => 93.902
+* ('a',) => 41.1
+* (,,'a') => 93.902
+
+sends
+/ (,'a')
+/ ('a',)
+/ (,,'a')
+----
+/ (,'a') => 93.902
+/ ('a',) => 41.1
+/ (,,'a') => 93.902
+
+sends
+// (,'a')
+// ('a',)
+// (,,'a')
+----
+// (,'a') => 93.902
+// ('a',) => 41.1
+// (,,'a') => 93.902
+
+sends
+% (,'a')
+% ('a',)
+% (,,'a')
+----
+% (,'a') => 93.902
+% ('a',) => 41.1
+% (,,'a') => 93.902
+
+sends
+addDays (,'a')
+addDays ('a',)
+addDays (,,'a')
+----
+addDays (,'a') => 93.902
+addDays ('a',) => 88.902
+addDays (,,'a') => 93.902
+
+sends
+addHours (,'a')
+addHours ('a',)
+addHours (,,'a')
+----
+addHours (,'a') => 93.902
+addHours ('a',) => 88.902
+addHours (,,'a') => 93.902
+
+sends
+addMicroseconds (,'a')
+addMicroseconds ('a',)
+addMicroseconds (,,'a')
+----
+addMicroseconds (,'a') => 93.902
+addMicroseconds ('a',) => 88.902
+addMicroseconds (,,'a') => 93.902
+
+sends
+addMinutes (,'a')
+addMinutes ('a',)
+addMinutes (,,'a')
+----
+addMinutes (,'a') => 93.902
+addMinutes ('a',) => 88.902
+addMinutes (,,'a') => 93.902
+
+sends
+addSeconds (,'a')
+addSeconds ('a',)
+addSeconds (,,'a')
+----
+addSeconds (,'a') => 93.902
+addSeconds ('a',) => 88.902
+addSeconds (,,'a') => 93.902
+
+sends
+addWeeks (,'a')
+addWeeks ('a',)
+addWeeks (,,'a')
+----
+addWeeks (,'a') => 93.902
+addWeeks ('a',) => 88.902
+addWeeks (,,'a') => 93.902
+
+sends
+compareTo (,'a')
+compareTo (,,'a')
+----
+compareTo (,'a') => 93.902
+compareTo (,,'a') => 93.902
+
+sends
+days (,'a')
+days ('a',)
+days (,,'a')
+----
+days (,'a') => 93.902
+days ('a',) => 93.902
+days (,,'a') => 93.902
+
+sends
+duration (,'a')
+duration ('a',)
+duration (,,'a')
+----
+duration (,'a') => 93.902
+duration ('a',) => 93.902
+duration (,,'a') => 93.902
+
+sends
+hashCode (,'a')
+hashCode ('a',)
+hashCode (,,'a')
+----
+hashCode (,'a') => 93.902
+hashCode ('a',) => 93.902
+hashCode (,,'a') => 93.902
+
+sends
+hours (,'a')
+hours ('a',)
+hours (,,'a')
+----
+hours (,'a') => 93.902
+hours ('a',) => 93.902
+hours (,,'a') => 93.902
+
+sends
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+----
+makeString (,'a') => 93.902
+makeString ('a',) => 93.902
+makeString (,,'a') => 93.902
+
+sends
+microseconds (,'a')
+microseconds ('a',)
+microseconds (,,'a')
+----
+microseconds (,'a') => 93.902
+microseconds ('a',) => 93.902
+microseconds (,,'a') => 93.902
+
+sends
+minutes (,'a')
+minutes ('a',)
+minutes (,,'a')
+----
+minutes (,'a') => 93.902
+minutes ('a',) => 93.902
+minutes (,,'a') => 93.902
+
+sends
+seconds (,'a')
+seconds ('a',)
+seconds (,,'a')
+----
+seconds (,'a') => 93.902
+seconds ('a',) => 93.902
+seconds (,,'a') => 93.902
+
+sends
+sign (,'a')
+sign ('a',)
+sign (,,'a')
+----
+sign (,'a') => 93.902
+sign ('a',) => 93.902
+sign (,,'a') => 93.902
+
+sends
+string (,'a')
+string ('a',)
+string (,,'a')
+----
+string (,'a') => 93.902
+string ('a',) => 93.902
+string (,,'a') => 93.902
+
+sends
+totalDays (,'a')
+totalDays ('a',)
+totalDays (,,'a')
+----
+totalDays (,'a') => 93.902
+totalDays ('a',) => 93.902
+totalDays (,,'a') => 93.902
+
+sends
+totalHours (,'a')
+totalHours ('a',)
+totalHours (,,'a')
+----
+totalHours (,'a') => 93.902
+totalHours ('a',) => 93.902
+totalHours (,,'a') => 93.902
+
+sends
+totalMicroseconds (,'a')
+totalMicroseconds ('a',)
+totalMicroseconds (,,'a')
+----
+totalMicroseconds (,'a') => 93.902
+totalMicroseconds ('a',) => 93.902
+totalMicroseconds (,,'a') => 93.902
+
+sends
+totalMinutes (,'a')
+totalMinutes ('a',)
+totalMinutes (,,'a')
+----
+totalMinutes (,'a') => 93.902
+totalMinutes ('a',) => 93.902
+totalMinutes (,,'a') => 93.902
+
+sends
+totalSeconds (,'a')
+totalSeconds ('a',)
+totalSeconds (,,'a')
+----
+totalSeconds (,'a') => 93.902
+totalSeconds ('a',) => 93.902
+totalSeconds (,,'a') => 93.902
+
+sends
+= (,'a')
+= (,,'a')
+----
+= (,'a') => 93.902
+= (,,'a') => 93.902
+
+sends
+== (,'a')
+== (,,'a')
+----
+== (,'a') => 93.902
+== (,,'a') => 93.902
+
+sends
+< (,'a')
+< (,,'a')
+----
+< (,'a') => 93.902
+< (,,'a') => 93.902
+
+sends
+<= (,'a')
+<= (,,'a')
+----
+<= (,'a') => 93.902
+<= (,,'a') => 93.902
+
+sends
+<< (,'a')
+<< (,,'a')
+----
+<< (,'a') => 93.902
+<< (,,'a') => 93.902
+
+sends
+<<= (,'a')
+<<= (,,'a')
+----
+<<= (,'a') => 93.902
+<<= (,,'a') => 93.902
+
+sends
+<> (,'a')
+<> (,,'a')
+----
+<> (,'a') => 93.902
+<> (,,'a') => 93.902
+
+sends
+> (,'a')
+> (,,'a')
+----
+> (,'a') => 93.902
+> (,,'a') => 93.902
+
+sends
+>= (,'a')
+>= (,,'a')
+----
+>= (,'a') => 93.902
+>= (,,'a') => 93.902
+
+sends
+>< (,'a')
+>< (,,'a')
+----
+>< (,'a') => 93.902
+>< (,,'a') => 93.902
+
+sends
+>> (,'a')
+>> (,,'a')
+----
+>> (,'a') => 93.902
+>> (,,'a') => 93.902
+
+sends
+>>= (,'a')
+>>= (,,'a')
+----
+>>= (,'a') => 93.902
+>>= (,,'a') => 93.902
+
+sends
+\= (,'a')
+\= (,,'a')
+----
+\= (,'a') => 93.902
+\= (,,'a') => 93.902
+
+sends
+\== (,'a')
+\== (,,'a')
+----
+\== (,'a') => 93.902
+\== (,,'a') => 93.902
+
+sends
+\< (,'a')
+\< (,,'a')
+----
+\< (,'a') => 93.902
+\< (,,'a') => 93.902
+
+sends
+\<< (,'a')
+\<< (,,'a')
+----
+\<< (,'a') => 93.902
+\<< (,,'a') => 93.902
+
+sends
+\> (,'a')
+\> (,,'a')
+----
+\> (,'a') => 93.902
+\> (,,'a') => 93.902
+
+sends
+\>> (,'a')
+\>> (,,'a')
+----
+\>> (,'a') => 93.902
+\>> (,,'a') => 93.902
