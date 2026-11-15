@@ -3,11 +3,8 @@
 # Environment row's reason ends `record: PATH`, the committed oracle run naming
 # the test. An Unspecified row's reason starts `assertions LINES; `, the lines
 # of the group file whose assertions check what the specification leaves
-# unspecified, or `conditions LINES as EXPRESSION; `, IF lines whose condition
-# tests such a thing and that the test runs with EXPRESSION as their condition,
-# or both in that order; it then cites the rule as `r[ID]`. The test's other
-# assertions are gated. LINES are line numbers and FIRST-LAST ranges, separated
-# by spaces.
+# unspecified, and cites that rule as `r[ID]`; the test's other assertions are
+# gated. LINES are line numbers and FIRST-LAST ranges, separated by spaces.
 # ootest revision 13347
 API/oo/CONVERSION	TESTISSTRING	Deviation 173	the second and third assertions expect the oracle's false from IsString for 80+1 and 1+.1, numbers an operator made
 API/oo/METHOD	TESTDECODECONDITION03	Deviation 173	the third assertion expects no description from DecodeConditionInfo for 2 + 3, a number an operator made
@@ -48,7 +45,7 @@ base/keyword/TRACE	TEST_TRACE_NUMERIC_DEBUG	Unspecified	assertions 195; the help
 base/keyword/TRACE	TEST_TRACE_OTHER_ENTRYPOINT	Unspecified	assertions 195; the helper's comparison of a trace line other than a method announcement checks the wording of the >I> and <I< routine announcements, messages 101.18 and 101.19, r[conv.error.text]; the count of lines stays gated
 base/keyword/TRACE_TraceObject	TEST_CALLER_STACK_FRAME_REPLY_START	Unspecified	assertions 694; each call compares a trace line, an announcement whose wording is that of message 101.18 or 101.19, r[conv.error.text], and with it the order of the lines under option P; the CALLERSTACKFRAME and THREAD entries stay gated
 base/keyword/TRACE_TraceObject	TEST_OBJECT_AND_SCOPE	Unspecified	assertions 525; each call compares a TRACELINE entry, which for an announcement holds the wording of message 101.18 or 101.19, r[conv.error.text], and with it the clause lines and their order; the count of trace objects and which have a target and a scope stay gated
-base/keyword/TRACE_TraceObject	TEST_TRACEOBJECT_COLLECTOR	Unspecified	assertions 276 409; conditions 350 378 as trObj~attributepool~isNil; each call checks that a sorted trace line starts with an expected one, the announcements' wording that of messages 101.18 and 101.19, r[conv.error.text], together with the clause lines; each condition picks the routine or the method form of the S and F prefix by the wording of a routine announcement or by a clause with a return, so the test picks it by whether the object has an ATTRIBUTEPOOL entry, which a line traced in a method has; the entries, the counts and the T, S and F formats stay gated
+base/keyword/TRACE_TraceObject	TEST_TRACEOBJECT_COLLECTOR	Unspecified	assertions 276 409; each call checks that a sorted trace line starts with an expected one, the announcements' wording that of messages 101.18 and 101.19, r[conv.error.text], together with the clause lines; the entries, the counts and the T, S and F formats stay gated
 base/rexxutil/SysSleep	TEST_SLEEP_CONCURRENT	Flaky	common.txt: SYSSLEEP.testGroup/TEST_SLEEP_CONCURRENT
 base/rexxutil/SysSleep	TEST_SLEEP_DURATION	Flaky	common.txt: SYSSLEEP.testGroup/TEST_SLEEP_DURATION
 base/source.file/SourceFile	TEST_LOGICALNOT08	Unspecified	assertions 297; the call compares the 35.1 line of the error report, code and wording in one string, and the wording is unspecified, r[conv.error.text]; the line count, the word Error on the third line and exit status 221 stay gated

@@ -6,8 +6,7 @@
 //!
 //! Each side runs from its own copy: [`group_runner::fresh_copy_from`], the
 //! group file's namesakes elsewhere in the copy deleted, the assertions its
-//! Unspecified rows name guarded ([`suite_rows::guards::guard_assertions`]), the
-//! conditions they name replaced ([`suite_rows::guards::guard_conditions`]), and each
+//! Unspecified rows name guarded ([`suite_rows::guards::guard_assertions`]), and each
 //! test's start marked in [`marker`]'s file. Each run has an API service of its own
 //! ([`private_service`]), stopped after it. A run of this crate that a
 //! refusal, a crash, a timeout or the memory cap ends has its last started test
@@ -517,10 +516,6 @@ fn prepare(
     suite_rows::guards::guard_assertions(
         &group_file,
         &suite_rows::guards::guarded_assertions(&rows, &path),
-    );
-    suite_rows::guards::guard_conditions(
-        &group_file,
-        &suite_rows::guards::guarded_conditions(&rows, &path),
     );
     let marker = marker(run);
     if marker.exists() {

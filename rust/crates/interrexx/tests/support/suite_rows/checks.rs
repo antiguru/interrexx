@@ -45,29 +45,18 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
     }
 }
 
-/// Each line an Unspecified row names is in the group file, in the row's test
-/// or in a method or routine that is no other test of the group, and is of the
-/// kind its part of the reason names: an assertion or an IF of one, or an IF
-/// ending in THEN.
+/// Each line an Unspecified row names is in the group file and starts an
+/// assertion, in the row's test or in a method or routine that is no other
+/// test of the group.
 fn check_assertions(row: &Row, text: &str, context: &Context) -> Result<(), String> {
     let (dir, group) = row.group.rsplit_once('/').unwrap_or(("", &row.group));
     let tests = source_test_names_in(&context.root, dir, group);
     let source: Vec<&str> = text.lines().collect();
-    let named = named_lines(&row.reason)?;
-    let lines = named
-        .assertions
-        .iter()
-        .map(|line| (*line, false))
-        .chain(named.conditions.iter().map(|line| (*line, true)));
-    for (line, condition) in lines {
+    for line in assertion_lines(&row.reason)? {
         let Some(clause) = source.get(line - 1) else {
             return Err(format!("the group file has no line {line}"));
         };
-        if condition {
-            if condition_span(clause.as_bytes()).is_none() {
-                return Err(format!("line {line} is no IF ending in THEN"));
-            }
-        } else if !guardable(
+        if !guardable(
             clause.as_bytes(),
             source.get(line).map(|next| next.as_bytes()),
         ) {
