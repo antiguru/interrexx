@@ -1,4 +1,4 @@
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 changestr(o, 'a', 'b')
 ----
@@ -8,8 +8,10 @@ rc 168
      2 *-* say changestr(o, 'a', 'b')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 2 (2 of 2 runs)
 refuses string=object
 changestr('a', 'a', o)
 ----
@@ -19,8 +21,10 @@ rc 168
      2 *-* say changestr('a', 'a', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 countstr(o, 'zaz')
 ----
@@ -30,8 +34,10 @@ rc 168
      2 *-* say countstr(o, 'zaz')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 pos(o, 'zzz')
 ----
@@ -41,8 +47,10 @@ rc 168
      2 *-* say pos(o, 'zzz')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 lastpos(o, 'zzz')
 ----
@@ -52,8 +60,10 @@ rc 168
      2 *-* say lastpos(o, 'zzz')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 overlay(o, 'abc')
 ----
@@ -63,8 +73,10 @@ rc 168
      2 *-* say overlay(o, 'abc')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 insert(o, 'abc')
 ----
@@ -74,8 +86,10 @@ rc 168
      2 *-* say insert(o, 'abc')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 translate('abc', o, 'abc')
 ----
@@ -85,8 +99,10 @@ rc 168
      2 *-* say translate('abc', o, 'abc')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 verify('abc', o)
 ----
@@ -96,8 +112,10 @@ rc 168
      2 *-* say verify('abc', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 2 (2 of 2 runs)
 refuses string=object
 verify('abc', 'a', o)
 ----
@@ -107,8 +125,10 @@ rc 168
      2 *-* say verify('abc', 'a', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 strip('zz', o)
 ----
@@ -118,8 +138,10 @@ rc 168
      2 *-* say strip('zz', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 2 (2 of 2 runs)
 refuses string=object
 strip('zabz', 'B', o)
 ----
@@ -129,8 +151,10 @@ rc 168
      2 *-* say strip('zabz', 'B', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 compare('zzz', o)
 ----
@@ -140,8 +164,10 @@ rc 168
      2 *-* say compare('zzz', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 abbrev('zzz', o)
 ----
@@ -151,8 +177,10 @@ rc 168
      2 *-* say abbrev('zzz', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 wordpos(o, 'a zzz b')
 ----
@@ -162,8 +190,10 @@ rc 168
      2 *-* say wordpos(o, 'a zzz b')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 bitand('a', o)
 ----
@@ -173,8 +203,10 @@ rc 168
      2 *-* say bitand('a', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 datatype('1', o)
 ----
@@ -184,6 +216,8 @@ rc 168
      2 *-* say datatype('1', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -195,6 +229,8 @@ rc 158
      2 *-* say insert('a', 'b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -206,6 +242,8 @@ rc 158
      2 *-* say space('a b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -217,6 +255,8 @@ rc 158
      2 *-* say copies('a', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -228,6 +268,8 @@ rc 158
      2 *-* say d2x(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -239,6 +281,8 @@ rc 158
      2 *-* say c2d('a', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -250,6 +294,8 @@ rc 158
      2 *-* say format(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -261,6 +307,8 @@ rc 158
      2 *-* say trunc(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -272,6 +320,8 @@ rc 158
      2 *-* say random(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -283,6 +333,8 @@ rc 158
      2 *-* say random(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -294,6 +346,8 @@ rc 158
      2 *-* say random(1, 2, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -305,6 +359,8 @@ rc 158
      2 *-* say sourceline(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -316,6 +372,8 @@ rc 158
      2 *-* say errortext(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -327,6 +385,8 @@ rc 158
      2 *-* say arg(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -338,6 +398,8 @@ rc 158
      2 *-* say changestr('a', 'a', 'b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -349,6 +411,8 @@ rc 158
      2 *-* say pos('z', 'zz', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -360,6 +424,8 @@ rc 158
      2 *-* say pos('z', 'zz', 1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -371,6 +437,8 @@ rc 158
      2 *-* say substr('abc', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -382,6 +450,8 @@ rc 158
      2 *-* say left('abc', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -393,6 +463,8 @@ rc 158
      2 *-* say abbrev('zz', 'z', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -404,6 +476,8 @@ rc 158
      2 *-* say wordindex('a b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -415,6 +489,8 @@ rc 158
      2 *-* say wordlength('a b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=object
@@ -426,6 +502,8 @@ rc 158
      2 *-* say overlay('a', 'b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=object
@@ -437,6 +515,8 @@ rc 158
      2 *-* say space('a b', 1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=object
@@ -448,6 +528,8 @@ rc 158
      2 *-* say substr('abc', 1, 1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=object
@@ -459,6 +541,8 @@ rc 158
      2 *-* say center('a', 5, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=object
@@ -470,6 +554,8 @@ rc 158
      2 *-* say translate('abc', 'x', 'y', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=object
@@ -481,6 +567,8 @@ rc 158
      2 *-* say compare('a', 'b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.19 (2 of 2 runs)
 refuses string=object
@@ -492,6 +580,8 @@ rc 158
      2 *-* say date('N', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.19 (2 of 2 runs)
 refuses string=object
@@ -503,6 +593,8 @@ rc 158
      2 *-* say time('N', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.28 (2 of 2 runs)
 refuses string=object
@@ -514,6 +606,8 @@ rc 158
      2 *-* say xrange(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.904 (2 of 2 runs)
 refuses string=object
@@ -525,6 +619,8 @@ rc 158
      2 *-* say condition(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 93.904 (2 of 2 runs)
 refuses string=object
@@ -536,8 +632,10 @@ rc 158
      2 *-* say max(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 2 (2 of 2 runs)
 refuses string=directory
 changestr('a', 'a', o)
 ----
@@ -547,8 +645,10 @@ rc 168
      2 *-* say changestr('a', 'a', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 2 (2 of 2 runs)
 refuses string=directory
 strip('zabz', 'B', o)
 ----
@@ -558,8 +658,10 @@ rc 168
      2 *-* say strip('zabz', 'B', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=directory
 datatype('1', o)
 ----
@@ -569,6 +671,8 @@ rc 168
      2 *-* say datatype('1', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=directory
@@ -580,6 +684,8 @@ rc 158
      2 *-* say copies('a', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs)
 refuses string=directory
@@ -591,6 +697,8 @@ rc 158
      2 *-* say random(1, 2, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=directory
@@ -602,6 +710,8 @@ rc 158
      2 *-* say substr('abc', 1, 1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.23 (2 of 2 runs)
 refuses string=directory
@@ -613,6 +723,8 @@ rc 158
      2 *-* say compare('a', 'b', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.19 (2 of 2 runs)
 refuses string=directory
@@ -624,6 +736,8 @@ rc 158
      2 *-* say date('N', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.28 (2 of 2 runs)
 refuses string=directory
@@ -635,6 +749,8 @@ rc 158
      2 *-* say xrange(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.904 (2 of 2 runs)
 refuses string=directory
@@ -646,6 +762,8 @@ rc 158
      2 *-* say condition(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 93.904 (2 of 2 runs)
 refuses string=directory
@@ -657,6 +775,8 @@ rc 158
      2 *-* say max(1, o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # refused; oracle Error 40.12 (2 of 2 runs); interrexx converts every argument before it checks one, so it reports the string answer first
 refuses string=object
@@ -668,6 +788,8 @@ rc 168
      2 *-* say changestr('a', 'a', o, 'x')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
 # refused; oracle Error 40.12 (2 of 2 runs); interrexx converts every argument before it checks one, so it reports the string answer first
 refuses string=object
@@ -679,8 +801,10 @@ rc 168
      2 *-* say pos(o, 'zz', 'x')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 verify('abc', o, 'Q')
 ----
@@ -690,8 +814,10 @@ rc 168
      2 *-* say verify('abc', o, 'Q')
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 insert(o, 'b', -1)
 ----
@@ -701,8 +827,10 @@ rc 168
      2 *-* say insert(o, 'b', -1)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
-# refused; oracle Error 88.909 (2 of 2 runs)
+# refused; oracle Error 88.909, argument 1 (2 of 2 runs)
 refuses string=object
 lastpos(o, 'zz', 0)
 ----
@@ -712,6 +840,8 @@ rc 168
      2 *-* say lastpos(o, 'zz', 0)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 1
 
 # refused; oracle Error 93.915 (2 of 2 runs); interrexx converts every argument before it checks one, so it reports the string answer first
 refuses string=object
@@ -723,6 +853,8 @@ rc 168
      2 *-* say strip('zz', 'Q', o)
 Error 88 running PROGRAM line 2:
 Error 88.909:
+[trapped]
+88.909 2
 
 # a .nil the program passes is its own string value, armed, oracle 2 of 2 runs
 call string=object
@@ -778,6 +910,8 @@ rc 158
      2 *-* say changestr('a', o, 'b')
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # a target position: oracle 1190 rc 0, a layout read
 refuses string=object
@@ -789,6 +923,8 @@ rc 158
      2 *-* say pos('z', o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
 
 # a target position: oracle 93.943 found "The NIL object"
 refuses string=directory
@@ -800,3 +936,5 @@ rc 158
      2 *-* say trunc(o)
 Error 98 running PROGRAM line 2:
 Error 98.973:
+[trapped]
+98.973
