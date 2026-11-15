@@ -10,8 +10,8 @@ say 'not reached'
 syntax:
   c = condition('o')
   say 'trapped' c~code c~position m~hasError m~completed m~errorCondition~code
-  do l over c~traceback
-    say ' ' l
+  do l over c~traceback -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
+    if l~word(1)~datatype('W') then say ' ' l
   end
 ::class t
 ::method boom

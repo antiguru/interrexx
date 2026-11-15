@@ -14,8 +14,8 @@ syntax:
   c = condition('o')
   e = m~errorCondition
   say 'notified' notified 'items' c~traceback~items e~traceback~items 'pos' e~position
-  do l over e~traceback
-    say ' ' l
+  do l over e~traceback -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
+    if l~word(1)~datatype('W') then say ' ' l
   end
   return
 outer:

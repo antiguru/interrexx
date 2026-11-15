@@ -25,7 +25,7 @@ try: procedure expose c
 syntax:
   o = condition('O')
   say o~code
-  do l over o~traceback; say ' ' l; end
+  do l over o~traceback; if l~word(1)~datatype('W') then say ' ' l; end -- numbered levels only: a built-in one may be absent, r[class.stackframe.builtin]
   return
 ::class Meta subclass class
 ::method init
