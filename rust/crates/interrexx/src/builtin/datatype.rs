@@ -187,13 +187,23 @@ pub(crate) fn datatype(
         };
         return Ok(interp.text(kind));
     };
-    let text = required_string(interp, args, 1);
     // An empty option's first byte is `0x00`, which matches none of the
     // thirteen letters below and falls straight to the `None` arm -- the same
     // path a bad letter takes, and the byte `error.rs`'s `displayable`
     // turns into `?` when the report line it landed in gets printed.
     let letter = option.first().copied().unwrap_or(0).to_ascii_uppercase();
-    let Some(matched) = datatype_matches(interp, &text, letter)? else {
+    let plain = {
+        let text = super::required_render(interp, args, 1);
+        datatype_letter_matches(text.text(interp), letter)
+    };
+    let matched = match plain {
+        Some(matched) => matched,
+        None => {
+            let text = required_string(interp, args, 1);
+            Some(datatype_whole(interp, &text)?)
+        }
+    };
+    let Some(matched) = matched else {
         return Err(Raised::invalid_option(DATATYPE_OPTIONS, &[letter]).into());
     };
     Ok(interp.text(if matched { b"1" } else { b"0" }))
@@ -208,14 +218,32 @@ pub(crate) fn datatype_kind(text: &[u8]) -> &'static [u8] {
     }
 }
 
+/// `DATATYPE`'s `W` test, the one letter that reads the running settings and
+/// can raise, shared with `String~dataType`.
+pub(crate) fn datatype_whole(interp: &mut Interp, text: &[u8]) -> Result<bool, Failure> {
+    // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
+    // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
+    // of zero under the current settings and asks whether the result is an
+    // integer, with no bound from a machine integer. That `plus` is an
+    // operator, so it raises LOSTDIGITS and 42 as one.
+    Ok(match parse_number(text) {
+        Some(number) => {
+            let digits = interp.activation().settings.digits();
+            interp.lostdigits_check_with(&number, |_| text.to_vec())?;
+            number
+                .add(&Number::zero(), digits)
+                .map_err(Raised::from)?
+                .is_integer(digits)
+        }
+        None => false,
+    })
+}
+
 /// Whether `text` is of the kind `letter` names, shared with
-/// `String~dataType`, or `None` when `letter` is not one of the thirteen.
-/// Fails only for `W`, whose rounding is arithmetic.
-pub(crate) fn datatype_matches(
-    interp: &mut Interp,
-    text: &[u8],
-    letter: u8,
-) -> Result<Option<bool>, Failure> {
+/// `String~dataType`, for every letter but `W`: `None` for `W`, which
+/// [`datatype_whole`] answers, and `Some(None)` for a letter that is not one
+/// of the thirteen.
+pub(crate) fn datatype_letter_matches(text: &[u8], letter: u8) -> Option<Option<bool>> {
     let matched = match letter {
         b'A' => !text.is_empty() && text.iter().all(u8::is_ascii_alphanumeric),
         b'B' => text.is_empty() || grouped(text, |b| matches!(b, b'0' | b'1'), 4),
@@ -232,29 +260,14 @@ pub(crate) fn datatype_matches(
             classify(text),
             SymbolKind::Name | SymbolKind::Stem | SymbolKind::CompoundName
         ),
-        // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
-        // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
-        // of zero under the current settings and asks whether the result is an
-        // integer, with no bound from a machine integer. That `plus` is an
-        // operator, so it raises LOSTDIGITS and 42 as one.
-        b'W' => match parse_number(text) {
-            Some(number) => {
-                let digits = interp.activation().settings.digits();
-                interp.lostdigits_check_with(&number, |_| text.to_vec())?;
-                number
-                    .add(&Number::zero(), digits)
-                    .map_err(Raised::from)?
-                    .is_integer(digits)
-            }
-            None => false,
-        },
+        b'W' => return None,
         b'X' => text.is_empty() || grouped(text, |b| b.is_ascii_hexdigit(), 2),
         b'9' => parse_number(text)
             .and_then(|n| n.whole_value(interrexx_num::DEFAULT_DIGITS as usize))
             .is_some(),
-        _ => return Ok(None),
+        _ => return Some(None),
     };
-    Ok(Some(matched))
+    Some(Some(matched))
 }
 
 /// Whether `name`'s own slot currently holds a value, growing the slot if it

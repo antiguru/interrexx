@@ -17,7 +17,7 @@ use interrexx_core::ObjRef;
 
 use super::{
     Args, arg, buffer, fresh_buffer, length_of, optional_string, pad_byte, required_render,
-    required_string, whole_number,
+    whole_number,
 };
 use crate::Interp;
 use crate::error::{Failure, Notation, Raised};
@@ -440,7 +440,6 @@ fn x2d_c2d(
     args: Args<'_>,
     character: bool,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let requested = whole_number(interp, name, args, 2)?;
     // The length's range check runs before anything looks at the string,
     // which is the one ordering a program can see: measured, `x2d('ZZ',-1)`
@@ -451,23 +450,29 @@ fn x2d_c2d(
         Some(value) => Some(length_of(value)?),
         None => None,
     };
-    x2d_c2d_over(interp, &string, requested, character)
+    let (text, digits) = {
+        let string = required_render(interp, args, 1);
+        x2d_c2d_text(interp, string.text(interp), requested, character)?
+    };
+    Ok(interp.integer_text_cow(text, digits))
 }
 
 /// `X2D`'s and `C2D`'s answer once the string and the length are read, shared
-/// with `String~x2d` and `String~c2d`.
-pub(crate) fn x2d_c2d_over(
-    interp: &mut Interp,
+/// with `String~x2d` and `String~c2d`: its decimal digits and the `NUMERIC
+/// DIGITS` they were computed under, which the caller makes an integer of. It
+/// reads `string` through a shared borrow of the interpreter.
+pub(crate) fn x2d_c2d_text(
+    interp: &Interp,
     string: &[u8],
     requested: Option<usize>,
     character: bool,
-) -> Result<ObjRef, Failure> {
+) -> Result<(std::borrow::Cow<'static, [u8]>, u64), Failure> {
     let digits = current_digits(interp);
     // A length of zero answers zero without validating anything at all --
     // measured, `x2d('zz',0)` is `0`, not an error.
     let result_size = requested.unwrap_or(string.len());
     if result_size == 0 {
-        return Ok(interp.integer_text(b"0".to_vec(), digits));
+        return Ok((std::borrow::Cow::Borrowed(b"0"), digits));
     }
 
     let packed;
@@ -549,8 +554,7 @@ pub(crate) fn x2d_c2d_over(
             }
         }
     }
-    let rendered = render_decimal(&accumulator, negative);
-    Ok(interp.integer_text(rendered, digits))
+    Ok((render_decimal(&accumulator, negative).into(), digits))
 }
 
 /// `C2D(string [,n])`: the argument's bytes read as a binary integer.
