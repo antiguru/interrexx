@@ -19,12 +19,16 @@ use interrexx_api::load::{Library, Unload};
 ///
 /// A name's library is written once and afterwards neither removed nor
 /// replaced, so a library this hands an [`Rc`] out for stays loaded as long as
-/// the interpreter does. That is a correctness constraint:
-/// dropping the last reference runs `dlclose`, and the mapping it takes away
-/// holds the extension's `UNINIT`, the block a `CSELF` addresses and every
-/// entry point resolved out of the package tables, so a library released
-/// while an object of a class it contributed a method to is still reachable
-/// leaves the finalizer sweep calling an unmapped address.
+/// the interpreter does. That is a correctness constraint: an object of a
+/// class the library contributed a method to can stay reachable, and the
+/// finalizer sweep then calls the library's `UNINIT`, the block a `CSELF`
+/// addresses and entry points resolved out of the package tables.
+///
+/// Dropping the interpreter that was the last live one closes its libraries,
+/// after which no row or hook of theirs is called. Closing never unmaps the
+/// code (`r[native.loading.static]`), so an address of a library stays
+/// callable for the rest of the process. The unloaders run at termination
+/// ([`Libraries::end`]), not at the drop.
 ///
 /// Each one counts as a live instance of the process ([`Round`]) from its
 /// creation until [`Libraries::end`], or its drop where nothing ended it.
