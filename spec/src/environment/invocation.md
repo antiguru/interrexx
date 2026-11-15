@@ -596,13 +596,17 @@ r[env.invocation.deviation.153]
 An image that ends too early, one that has bytes after its end, and one that
 has a changed byte in its header, the second byte of 0 of the binary form
 included, are refused with the error `3.903` and the status 253, before any of
-its code runs. So is an image with any other byte changed: `rexxc` writes a
-SHA-256 digest of the image into it, and `rexx` refuses an image whose bytes
-do not give that digest. interrexx does not check the digest yet (issue #235),
-and no test covers that part. An encoded image whose base64 text does not decode whole,
-because characters follow the `=` that closes it, an `=` stands inside it, or
-it ends with a group of fewer than four characters, is refused with the error
-`3.905` and the status 253. ooRexx runs an image that has bytes after its end,
+its code runs. So is an image with any other changed byte of the decoded image
+after the `#!` line: `rexxc` writes a SHA-256 digest of everything after the
+image's header into it, and `rexx` refuses an image whose bytes do not give
+that digest. The `#!` line is not read, and neither are the line ends between
+the groups of four characters of an encoded image. An encoded image whose
+base64 text does not decode whole, because characters follow the `=` that
+closes it, an `=` stands inside it, it ends with a group of fewer than four
+characters, or a group closed by `=` has bits left over that are not zero, is
+refused with the error `3.905` and the status 253. For an encoded image that
+rule decides first: one cut inside a group of four is `3.905`, and one cut
+between groups is `3.903`. ooRexx runs an image that has bytes after its end,
 ignores some changed header bytes and crashes on others, and crashes on an
 image that ends too early ([Deviation
 153](../deviations.md#153-a-damaged-compiled-image-is-refused)).
