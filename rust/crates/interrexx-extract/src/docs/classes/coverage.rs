@@ -1,5 +1,5 @@
 //! A class row's coverage: the construction measurements, read together
-//! with the reference's own sentences saying a class cannot be constructed.
+//! with the reference's own passages saying a class cannot be constructed.
 
 use std::collections::BTreeMap;
 
@@ -8,30 +8,34 @@ use super::{
     UNCONSTRUCTIBLE, UNCONSTRUCTIBLE_BOOK,
 };
 
-/// Re-reads each [`UNCONSTRUCTIBLE`] quotation at the lines it cites, so a
-/// citation that has gone stale reddens rather than being carried.
+/// Re-reads each [`UNCONSTRUCTIBLE`] passage at the lines it cites and
+/// compares its [`digest`] with the committed one, so a citation that has
+/// gone stale or been reworded reddens rather than being carried.
 pub(super) fn unconstructible_index(
     books: &[Book],
-) -> BTreeMap<&'static str, (usize, usize, &'static str, Status)> {
+) -> BTreeMap<&'static str, (usize, usize, Status)> {
     let book = books
         .iter()
         .find(|b| b.name == UNCONSTRUCTIBLE_BOOK)
         .unwrap_or_else(|| panic!("{UNCONSTRUCTIBLE_BOOK} is not among the books"));
     let lines: Vec<&str> = book.text.lines().collect();
     let mut out = BTreeMap::new();
-    for &(class, first, last, sentence, status) in UNCONSTRUCTIBLE {
+    for &(class, first, last, expected, status) in UNCONSTRUCTIBLE {
         let span = lines
             .get(first - 1..last)
             .unwrap_or_else(|| panic!("{UNCONSTRUCTIBLE_BOOK} has no lines {first}-{last}"))
             .join(" ");
         let plain = collapse(&strip_tags(&span));
+        let actual = digest(&plain);
         assert!(
-            plain.contains(sentence),
-            "{UNCONSTRUCTIBLE_BOOK}:{first}-{last} no longer reads {sentence:?}; it reads \
-             {plain:?}. This citation grounds {class}'s status, and a status grounded in a \
-             sentence that moved is grounded in nothing"
+            actual == expected,
+            "{UNCONSTRUCTIBLE_BOOK}:{first}-{last} no longer matches its committed digest \
+             {expected:#018x}; it now hashes to {actual:#018x} and reads {plain:?}. Re-read \
+             the passage: this citation grounds {class}'s status, and a status grounded in a \
+             passage that moved or changed is grounded in nothing. Commit the new digest \
+             only if the status still follows"
         );
-        out.insert(class, (first, last, sentence, status));
+        out.insert(class, (first, last, status));
     }
     out
 }
@@ -55,10 +59,19 @@ fn collapse(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// A class's coverage and the sentence `class-set.txt` states it in.
+/// FNV-1a over the bytes of a normalised passage. It is fixed by its
+/// definition rather than by a toolchain release, so a committed value stays
+/// comparable. It detects drift and does not resist a deliberate collision.
+fn digest(plain: &str) -> u64 {
+    plain.bytes().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+    })
+}
+
+/// A class's coverage and the reason `class-set.txt` states it in.
 pub(super) fn coverage_of(
     name: &str,
-    sentence: Option<(usize, usize, &'static str, Status)>,
+    passage: Option<(usize, usize, Status)>,
 ) -> (Coverage, String) {
     let upper = name.to_ascii_uppercase();
     let construction = CONSTRUCTION
@@ -87,13 +100,13 @@ pub(super) fn coverage_of(
         expression: expression.to_string(),
         directive: directive.clone(),
     };
-    if let Some((first, last, text, status)) = sentence {
+    if let Some((first, last, status)) = passage {
         let at = if first == last {
             format!("{first}")
         } else {
             format!("{first}-{last}")
         };
-        let cited = format!("{UNCONSTRUCTIBLE_BOOK}:{at} \"{text}\"");
+        let cited = format!("{UNCONSTRUCTIBLE_BOOK}:{at}");
         if status == Status::Unreachable {
             assert!(
                 program.is_none(),

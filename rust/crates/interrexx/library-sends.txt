@@ -38,7 +38,9 @@ input.rs linein_line crate::dispatch::LINEIN
 input.rs pull_line b"PULL"
 install.rs install_class_at dispatch::INIT
 install.rs install_directives dispatch::ACTIVATE
+redirect.rs begin_target b"CLOSE"
 redirect.rs begin_target b"EMPTY"
+redirect.rs begin_target b"OPEN"
 redirect.rs close_named b"CLOSE"
 redirect.rs file_object_path b"ABSOLUTEPATH"
 redirect.rs gather_input b"CLOSE"

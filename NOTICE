@@ -2,10 +2,14 @@ interrexx is licensed under MIT OR Apache-2.0.
 
 ooRexx (third_party/ooRexx, a pinned unmodified submodule) is not part of this
 repository's source, and built binaries contain none of its code. Its
-interpreter is the reference the tests compare against. interrexx-classes and
-interrexx-inventory generate tables of interface facts (class and method
-names, arities, error numbers and error message texts) from Setup.cpp,
-BuiltinFunctions.cpp and rexxmsg.xml at build time.
+interpreter is the reference the tests compare against. A regular build does
+not read the submodule. interrexx-classes and interrexx-inventory build from
+checked-in tables of interface facts (class and method names, arities, error
+numbers and the names of the built-in functions), which `interrexx-upstream`
+derived from Setup.cpp, BuiltinFunctions.cpp and rexxmsg.xml when the pinned
+revision changed. The directive options table of the extracted documentation
+derives from DirectiveParser.cpp. The texts of the error messages are
+interrexx's own.
 
 ooTest and the ooRexx documentation are fetched by scripts/setup-third-party.sh
 and are not redistributed here.

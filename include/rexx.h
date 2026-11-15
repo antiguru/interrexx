@@ -203,7 +203,7 @@ struct _RXFNCCAL_PARM {
     const char *rxfnc_que;
     unsigned short rxfnc_quel;
     unsigned short rxfnc_argc;
-    const CONSTRXSTRING *rxfnc_argv;
+    CONSTRXSTRING *rxfnc_argv;
     RXSTRING rxfnc_retc;
 };
 

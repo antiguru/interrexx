@@ -529,16 +529,10 @@ default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.
 
-## 78. Search for the identical index or item
+## 78. Withdrawn
 
-A lookup or PUT with the very index object already stored sends that object's
-`==`. So does a search for an item with the very item object stored: `hasItem`,
-`index`, `removeItem` and `allIndex` of the hash collections, and `hasItem`,
-`index` and `removeItem` of an `Array`, `List`, `Queue` or `CircularQueue`. So
-do a Relation's `uniqueIndexes` for an index object stored more than once, and
-the check of a Set's or Bag's `put` and `[]=` that the index equals the item
-when both are the very same object. ooRexx compares identity first and sends
-nothing.
+A collection finds the very object it stores without sending it `==`, as ooRexx
+does.
 
 ## 79. APPEND write positions
 

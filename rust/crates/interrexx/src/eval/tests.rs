@@ -503,7 +503,7 @@ fn remainder_by_zero_also_raises_42_3() {
 
 #[test]
 fn a_nonnumeric_operand_raises_41_1_with_its_own_text() {
-    // say 'abc' + 1 -> Error 41.1, "Nonnumeric value (\"abc\")"
+    // say 'abc' + 1 -> Error 41.1, first insert `abc`
     let mut interp = Interp::new();
     let failure = eval_source(&mut interp, b"say 'abc'+1").unwrap_err();
     let Failure::Raised(raised) = failure else {

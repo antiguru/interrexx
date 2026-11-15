@@ -120,6 +120,7 @@ lang/event_semaphore_wait_not_a_number.rex
 lang/mutex_semaphore_nesting_and_close.rex
 lang/mutex_semaphore_released_when_its_activity_ends.rex
 lang/mutex_semaphore_end_hands_over_to_a_waiter.rex
+lang/mutex_semaphore_reacquired_before_its_activity_ends.rex
 lang/mutex_semaphore_stays_with_the_replier.rex
 lang/mutex_semaphore_timed_acquire.rex
 lang/sys_semaphores_unnamed.rex

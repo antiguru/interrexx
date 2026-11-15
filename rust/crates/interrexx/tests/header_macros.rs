@@ -156,3 +156,44 @@ fn the_macros_compiled_as_cxx_declare_what_the_interpreter_calls() {
     );
     fs::remove_dir_all(&dir).expect("removing the scratch directory");
 }
+
+/// `REXX_TYPED_ROUTINE_PROTOTYPE` and `REXX_METHOD_PROTOTYPE` end in a semicolon, so a use
+/// compiles with and without its own, in C and in C++, under the warnings of the other builds.
+#[test]
+fn a_prototype_macro_use_compiles_with_and_without_its_own_semicolon() {
+    let dir = scratch("prototype-semicolon");
+    let include = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../include");
+    for (flag, standard) in [("c", "-std=c11"), ("c++", "-std=c++17")] {
+        let compiler = if flag == "c" { "cc" } else { "c++" };
+        for (case, terminator) in [("bare", ""), ("semicolon", ";")] {
+            // A declaration follows each use, so a missing semicolon in the macro would
+            // merge the two into one malformed declaration.
+            let source = dir.join(format!("{}-{case}.src", flag.replace('+', "x")));
+            fs::write(
+                &source,
+                format!(
+                    "#include \"oorexxapi.h\"\n\
+                     REXX_TYPED_ROUTINE_PROTOTYPE(HmProtoRoutine){terminator}\n\
+                     int hm_after_routine;\n\
+                     REXX_METHOD_PROTOTYPE(HmProtoMethod){terminator}\n\
+                     int hm_after_method;\n"
+                ),
+            )
+            .expect("the source");
+            let output = Command::new(compiler)
+                .args(["-x", flag, standard, "-fsyntax-only"])
+                .args(["-Wall", "-Wextra", "-Werror"])
+                .arg(format!("-I{}", include.display()))
+                .arg(format!("-I{}", include.join("platform/unix").display()))
+                .arg(&source)
+                .output()
+                .unwrap_or_else(|e| panic!("{compiler} runs: {e}"));
+            assert!(
+                output.status.success(),
+                "a {case} use does not compile as {flag}:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+    fs::remove_dir_all(&dir).expect("removing the scratch directory");
+}

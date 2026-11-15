@@ -2,7 +2,7 @@
 element: "Set"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Set Class; Builtin Classes > Collection Classes > Set Class > new (Class Method); Builtin Classes > Collection Classes > Set Class > of (Class Method); Builtin Classes > Collection Classes > Set Class > []; Builtin Classes > Collection Classes > Set Class > []=; Builtin Classes > Collection Classes > Set Class > allIndexes; Builtin Classes > Collection Classes > Set Class > allItems; Builtin Classes > Collection Classes > Set Class > at; Builtin Classes > Collection Classes > Set Class > empty; Builtin Classes > Collection Classes > Set Class > hasIndex; Builtin Classes > Collection Classes > Set Class > hasItem; Builtin Classes > Collection Classes > Set Class > index; Builtin Classes > Collection Classes > Set Class > intersection; Builtin Classes > Collection Classes > Set Class > isEmpty; Builtin Classes > Collection Classes > Set Class > items; Builtin Classes > Collection Classes > Set Class > makeArray; Builtin Classes > Collection Classes > Set Class > put; Builtin Classes > Collection Classes > Set Class > putAll; Builtin Classes > Collection Classes > Set Class > remove; Builtin Classes > Collection Classes > Set Class > removeItem; Builtin Classes > Collection Classes > Set Class > subset; Builtin Classes > Collection Classes > Set Class > supplier; Builtin Classes > Collection Classes > Set Class > union; Builtin Classes > Collection Classes > Set Class > xor"
-deviations: [33, 78, 84, 109, 125]
+deviations: [33, 84, 109, 125]
 ---
 
 # Set
@@ -242,9 +242,9 @@ objects that have the same hash code, until one answers true; each of those is
 compared before the lookup gives up. Which further stored objects are compared,
 by `==` or `hashCode`, and how often, is not specified ([the hash order
 rule](r:class.set.deviation.33)); when the set is empty, the only message is
-`hashCode`. The very object that is stored is no exception to the `==` ([the
-deviation rule](r:class.set.deviation.78)). `put` and `[]=` with an index first
-send `==` to the item with the index as argument ([the put
+`hashCode`. The very object that is stored is found without a `==` sent to it
+([the identity rule](r:class.collection.identity)). `put` and `[]=` with an
+index first send `==` to the item with the index as argument ([the put
 rule](r:class.set.put)). In the example every member hashes to the same string,
 so each stored member is compared.
 
@@ -1303,48 +1303,6 @@ say s~items s~makeArray~items
 1,2,3
 1,2,3
 3 3
-```
-
-r[class.set.deviation.78]
-A lookup, a `put` or a `remove` with the very object that is stored sends that
-object's `==` as for any other argument, and so does a search with the very
-object that is stored by `hasItem`, `index` or `removeItem`, so an object
-whose `==` answers false is not found even at its own entry. A `put` or `[]=`
-that names an index sends `==` to the item with the index as argument also
-when the two are the same object. ooRexx compares identity first, finds the
-object and sends nothing but `hashCode` for the lookup, and nothing for the
-index. See [Deviation 78](../deviations.md).
-
-```rexx
-.local~n = 0
-s = .set~new
-q = .thing~new
-s~put(q)
-say s~hasItem(q) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-.local~n = 0
-say s~at(q) .local~n
-.local~n = 0
-x = .loud~new
-.set~new~put(x, x)
-say .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-::class loud
-::method '=='
-  .local~n += 1
-  return 1
-```
-
-```output
-0 1
-1 2 1
-The NIL object 1
-1
 ```
 
 r[class.set.deviation.84]

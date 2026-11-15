@@ -562,6 +562,66 @@ say o.0 o.1 o.2 o.3 o.4
 4 q r 5 viaMS
 ```
 
+r[instr.address.with.same]
+An output or error target that is also the command's input, the same stem,
+the same stream object, or a file of the same name whether `STREAM` or a File
+object of `USING` names it, is neither emptied nor written until the command
+has ended, so the command reads what the file or stem held before. A file
+that cannot be opened for writing still keeps the command from running. When
+the output and the error are both that target, everything the command wrote
+to either is written to it twice, the second time after the first.
+
+```rexx
+f = 'spec-address-same.tmp'
+call fill
+address system 'grep -v "^$"' with input stream (f) output stream (f)
+say show()
+call fill
+address system 'grep -v "^$"' with input stream (f) output stream ('./'f)
+say show()
+call fill
+address system 'grep -v "^$"' with input stream (f) output using (.File~new(f))
+say show()
+call fill
+address system 'grep -v "^$" >&2' with input stream (f) error stream (f)
+say show()
+call fill
+address system 'grep -v "^$"' with input stream (f) output append stream (f)
+say show()
+call fill
+address system 'cat; echo e >&2' with input stream (f) output stream (f) error stream (f)
+say show()
+i.0 = 2
+i.1 = 'x'
+i.2 = 'y'
+address system 'cat; echo e >&2' with input stem i. output stem i. error stem i.
+say i.0 i.1 i.2 i.3 i.4 i.5 i.6
+call sysfiledelete f
+exit
+fill:
+  s = .stream~new(f)
+  s~open('write replace')
+  s~arrayout(('l1', '', 'l3'))
+  s~close
+  return
+show:
+  s = .stream~new(f)
+  s~open('read shared')
+  lines = s~arrayIn
+  s~close
+  return lines~items lines~toString(, '|')
+```
+
+```output
+2 l1|l3
+2 l1|l3
+2 l1|l3
+2 l1|l3
+5 l1||l3|l1|l3
+8 l1||l3|e|l1||l3|e
+6 x y e x y e
+```
+
 r[instr.address.with.once]
 A redirection written on a clause with a command applies to that command and
 to no other. The streams the clause does not name keep what they had, which

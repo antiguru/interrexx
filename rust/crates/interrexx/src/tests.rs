@@ -1898,12 +1898,11 @@ fn a_stems_string_sends_string_to_its_default_and_a_trace_line_names_it() {
     );
 }
 
-/// rexxref (collclasses.xml, Table `at` and `put`): "Index equality is
-/// determined by using the `==` method of index", so storing at and reading
-/// the identical index sends its `==`. The oracle compares identity first and
-/// sends none (t8.7c/probes/hashid/hash-identity-first-idq.rex).
+/// `r[class.collection.identity]`: storing at and reading the identical index
+/// finds its entry without sending its `==`; another object of the same hash
+/// code is compared with `==`.
 #[test]
-fn a_hash_lookup_sends_the_identical_indexs_equality() {
+fn a_hash_lookup_finds_the_identical_index_without_its_equality() {
     assert_eq!(
         clean_stdout(
             "/w/h.rex",
@@ -1912,8 +1911,7 @@ fn a_hash_lookup_sends_the_identical_indexs_equality() {
               ::class k\n::method hashCode; return 'x'\n\
               ::method '=='; say '  == called'; return 1\n"
         ),
-        "second put same object\n  == called\nat same object\n  == called\nother object\n\
-         \x20 == called\n1\n"
+        "second put same object\nat same object\nother object\n  == called\n1\n"
     );
 }
 

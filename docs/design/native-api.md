@@ -1,9 +1,22 @@
 # The native API
 
-interrexx implements ooRexx's C API against its frozen public headers (`api/` in
-`third_party/ooRexx`): an extension or embedder written for ooRexx recompiles without source
-changes. Extensions link nothing from the interpreter, since everything crosses through function
+interrexx implements ooRexx's C API through the headers in `include/` of this repository, which
+declare the names of ooRexx's frozen public headers: an extension or embedder written for ooRexx
+recompiles without source changes. Extensions link nothing from the interpreter, since everything crosses through function
 tables handed in at call time, so an ooRexx-built extension `.so` also loads unchanged.
+
+## The headers
+
+`include/` holds the header set an extension or embedder compiles against (`spec/src/native/header.md`
+states what it declares). Each file is hand-written text around sections between `BEGIN GENERATED`
+and `END GENERATED` lines, which `interrexx-api/src/header.rs` renders from the `#[repr(C)]`
+definitions of `interrexx-api/src/layout.rs`, the constants and the exports, so a change to a Rust
+definition changes the header. The headers of the platform sit under `include/platform/<platform>/`;
+only `unix` exists. The `headers_are_current` test of `interrexx-api` checks every file, and
+`REXX_HEADERS_REFRESH=1` writes the generated sections. The ABI dump (`tests/abi_dump.rs`) compiles
+a program against the headers and measures each offset and size against the Rust layout. The tests
+that compile this repository's own native code build against `include/`, not against ooRexx's
+headers.
 
 ## Where it lives
 

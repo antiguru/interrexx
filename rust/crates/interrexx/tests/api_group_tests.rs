@@ -66,7 +66,12 @@ const RECORDED: &[(&str, bool)] = &[
 /// a failure's or an error's detail differs, as `GROUP.TEST`, each recorded as
 /// [`RECORDED`]'s are; `true` where the detail differs in the whole-group run
 /// too, which then leaves the test out as it does a recorded one.
-const DETAIL_DIFFERS: &[(&str, bool)] = &[];
+const DETAIL_DIFFERS: &[(&str, bool)] = &[
+    // Run alone, the test meets an unset `B.0` on both sides, and ooTest
+    // prints the message text of the condition, which is not specified
+    // (`r[conv.error.text]`). The whole-group run passes on both sides.
+    ("FUNCTION.TEST_BUFFERED_INPUT", false),
+];
 
 /// The tests a whole-group run leaves out.
 fn left_out() -> BTreeSet<&'static str> {

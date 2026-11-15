@@ -118,14 +118,14 @@ Object	new	class	exempt	the oracle refuses an argument here -- measured, .Object
 Object	objectName	instance	agree	rc0
 Object	objectName=	instance	no-value	rc0, the send returned no result to compare
 Object	request	instance	agree	rc0
-Object	run	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'RUN' from this context, and self~run from inside one works
+Object	run	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, and self~run from inside one works
 Object	send	instance	agree	rc0
 Object	sendWith	instance	agree	rc0
-Object	setMethod	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'SETMETHOD' from this context, and self~setMethod from inside one works
+Object	setMethod	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, and self~setMethod from inside one works
 Object	start	instance	agree	rc0
 Object	startWith	instance	agree	rc0
 Object	string	instance	agree	rc0
-Object	unsetMethod	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, Object 'a K' cannot accept private message 'UNSETMETHOD' from this context, and self~unsetMethod from inside one works
+Object	unsetMethod	instance	exempt	private on Object -- measured, a send from outside a method answers 97.2, and self~unsetMethod from inside one works
 Object	||	instance	agree	rc0
 Package	addClass	instance	agree	rc0
 Package	addPackage	instance	agree	rc0

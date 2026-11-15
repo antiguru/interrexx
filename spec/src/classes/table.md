@@ -2,7 +2,7 @@
 element: "Table"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Table Class; Builtin Classes > Collection Classes > Table Class > new (Class Method); Builtin Classes > Collection Classes > Table Class > []; Builtin Classes > Collection Classes > Table Class > []=; Builtin Classes > Collection Classes > Table Class > allIndexes; Builtin Classes > Collection Classes > Table Class > allItems; Builtin Classes > Collection Classes > Table Class > at; Builtin Classes > Collection Classes > Table Class > empty; Builtin Classes > Collection Classes > Table Class > hasIndex; Builtin Classes > Collection Classes > Table Class > hasItem; Builtin Classes > Collection Classes > Table Class > index; Builtin Classes > Collection Classes > Table Class > isEmpty; Builtin Classes > Collection Classes > Table Class > items; Builtin Classes > Collection Classes > Table Class > makeArray; Builtin Classes > Collection Classes > Table Class > put; Builtin Classes > Collection Classes > Table Class > remove; Builtin Classes > Collection Classes > Table Class > removeItem; Builtin Classes > Collection Classes > Table Class > supplier"
-deviations: [33, 78, 84, 109]
+deviations: [33, 84, 109]
 ---
 
 # Table
@@ -177,14 +177,14 @@ first
 
 r[class.table.indexes.sends]
 `at`, `[]`, `hasIndex`, `put`, `[]=` and `remove` look the index up by sending
-`hashCode` to the index argument, once, and then `==` to the index argument
-with a stored index as the argument, for stored indexes that have the same hash
-code, until one answers true; each of those is compared before the lookup gives
-up. Which further stored indexes are compared, by `==` or `hashCode`, and how
-often, is not specified ([the hash order rule](r:class.table.deviation.33));
-when the table is empty, the only message is `hashCode`. The very object that
-is stored is no exception to the `==` ([the deviation
-rule](r:class.table.deviation.78)). In the example every index hashes to the
+`hashCode` to the index argument, once, and then `==` to the index argument with
+a stored index as the argument, for stored indexes that have the same hash code,
+until one answers true; each of those is compared before the lookup gives up.
+Which further stored indexes are compared, by `==` or `hashCode`, and how often,
+is not specified ([the hash order rule](r:class.table.deviation.33)); when the
+table is empty, the only message is `hashCode`. The very object that is stored
+is found without a `==` sent to it ([the identity
+rule](r:class.collection.identity)). In the example every index hashes to the
 same string, so each stored index is compared.
 
 ```rexx
@@ -377,9 +377,8 @@ the argument, item by item, until one answers true, and send nothing else,
 `hashCode` included. The items are visited in an order that is not specified;
 every item is compared at least once when none matches, and how often `==` is
 sent with the same item is not specified ([the hash order
-rule](r:class.table.deviation.33)). The search with the very object that is
-stored is no exception: its `==` is sent as for any other item ([the deviation
-rule](r:class.table.deviation.78)).
+rule](r:class.table.deviation.33)). The very object that is stored is found
+without a `==` sent to it ([the identity rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -831,41 +830,6 @@ say t~items t~makeArray~items
 one,three,two
 1,2,3
 3 3
-```
-
-r[class.table.deviation.78]
-A lookup, a `put` or a `remove` with the very object that is stored as the
-index sends that object's `==` as for any other index, and a search for an
-item with the very object that is stored, by `hasItem`, `index` or
-`removeItem`, sends that object's `==` as for any other item, so an object
-whose `==` answers false is not found even at its own entry. ooRexx compares
-identity first, finds it and sends nothing but `hashCode`. See [Deviation
-78](../deviations.md).
-
-```rexx
-.local~n = 0
-t = .table~new
-q = .thing~new
-t~put(q, 'k')
-say t~hasItem(q) .local~n
-say (t~index(q) == .nil) .local~n
-say (t~removeItem(q) == .nil) .local~n t~items
-t~put('v', q)
-.local~n = 0
-say t~at(q) .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-```
-
-```output
-0 1
-1 2
-1 3 1
-The NIL object 1
 ```
 
 r[class.table.deviation.84]

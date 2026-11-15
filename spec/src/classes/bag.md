@@ -2,7 +2,7 @@
 element: "Bag"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Bag Class; Builtin Classes > Collection Classes > Bag Class > new (Class Method); Builtin Classes > Collection Classes > Bag Class > of (Class Method); Builtin Classes > Collection Classes > Bag Class > []; Builtin Classes > Collection Classes > Bag Class > []=; Builtin Classes > Collection Classes > Bag Class > allAt; Builtin Classes > Collection Classes > Bag Class > allIndex; Builtin Classes > Collection Classes > Bag Class > allIndexes; Builtin Classes > Collection Classes > Bag Class > allItems; Builtin Classes > Collection Classes > Bag Class > at; Builtin Classes > Collection Classes > Bag Class > difference; Builtin Classes > Collection Classes > Bag Class > empty; Builtin Classes > Collection Classes > Bag Class > hasIndex; Builtin Classes > Collection Classes > Bag Class > hasItem; Builtin Classes > Collection Classes > Bag Class > index; Builtin Classes > Collection Classes > Bag Class > intersection; Builtin Classes > Collection Classes > Bag Class > isEmpty; Builtin Classes > Collection Classes > Bag Class > items; Builtin Classes > Collection Classes > Bag Class > makeArray; Builtin Classes > Collection Classes > Bag Class > put; Builtin Classes > Collection Classes > Bag Class > putAll; Builtin Classes > Collection Classes > Bag Class > remove; Builtin Classes > Collection Classes > Bag Class > removeAll; Builtin Classes > Collection Classes > Bag Class > removeItem; Builtin Classes > Collection Classes > Bag Class > subset; Builtin Classes > Collection Classes > Bag Class > supplier; Builtin Classes > Collection Classes > Bag Class > union; Builtin Classes > Collection Classes > Bag Class > uniqueIndexes; Builtin Classes > Collection Classes > Bag Class > xor"
-deviations: [33, 45, 78, 84, 109, 125]
+deviations: [33, 45, 84, 109, 125]
 ---
 
 # Bag
@@ -244,11 +244,11 @@ being left open by [the hash order rule](r:class.bag.deviation.33). `put` and
 `[]=` send `hashCode` to the item and nothing else: no `==` is sent, as a member
 is added whether or not an equal one is there; with an index they send `==` to
 the item first ([the put rule](r:class.bag.put)). The very object that is stored
-is no exception to the `==` ([the deviation rule](r:class.bag.deviation.78)). In
-the example every member hashes to the same string, so each stored member is
-compared; `index` is shown by [the item rule](r:class.bag.hasitem.sends), and
-the messages of `uniqueIndexes` are left open by [the hash order
-rule](r:class.bag.deviation.33).
+is found without a `==` sent to it ([the identity
+rule](r:class.collection.identity)). In the example every member hashes to the
+same string, so each stored member is compared; `index` is shown by [the item
+rule](r:class.bag.hasitem.sends), and the messages of `uniqueIndexes` are left
+open by [the hash order rule](r:class.bag.deviation.33).
 
 ```rexx
 .local~log = .array~new
@@ -582,10 +582,9 @@ r[class.bag.hasitem.sends]
 `hasItem(item)` and `removeItem(item)` look the item up as [the lookup
 rule](r:class.bag.members.sends) says, with `hashCode` and `==` to the argument,
 and `hasItem(item, index)` and `removeItem(item, index)` send `==` to the item
-with the index as argument first. A search with the very object that is stored
-is no exception: its `==` is sent as for any other item ([the deviation
-rule](r:class.bag.deviation.78)). `index(item)` sends what `hasItem(item)`
-sends.
+with the index as argument first. The very object that is stored is found
+without a `==` sent to it ([the identity rule](r:class.collection.identity)).
+`index(item)` sends what `hasItem(item)` sends.
 
 ```rexx
 .local~log = .array~new
@@ -1564,48 +1563,6 @@ say .bag~of(1, 1, 1)~hasItem(1, 2) .bag~of('a')~hasItem('a', 'A')
 
 ```output
 0 0
-```
-
-r[class.bag.deviation.78]
-A lookup, a `put` or a `remove` with the very object that is stored sends that
-object's `==` as for any other argument, and so does a search with the very
-object that is stored by `hasItem`, `index`, `allIndex` or `removeItem`, so an
-object whose `==` answers false is not found even at its own entry. A `put` or
-`[]=` that names an index sends `==` to the item with the index as argument
-also when the two are the same object. ooRexx compares identity first, finds
-the object and sends nothing but `hashCode` for the lookup, and nothing for
-the index. See [Deviation 78](../deviations.md).
-
-```rexx
-.local~n = 0
-b = .bag~new
-q = .thing~new
-b~put(q)
-say b~hasItem(q) .local~n
-say (b~removeItem(q) == .nil) .local~n b~items
-.local~n = 0
-say b~at(q) .local~n
-.local~n = 0
-x = .loud~new
-.bag~new~put(x, x)
-say .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-::class loud
-::method '=='
-  .local~n += 1
-  return 1
-```
-
-```output
-0 1
-1 2 1
-The NIL object 1
-1
 ```
 
 r[class.bag.deviation.84]

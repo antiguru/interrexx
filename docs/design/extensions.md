@@ -4,8 +4,9 @@
 packages: naming them binds to Rust before any `dlopen`, and no `.so` is involved. The Rexx
 packages that ship with them (`rxregexp.cls`, `socket.cls`, `streamsocket.cls`, `mime.cls`,
 `smtp.cls`) are written for interrexx and found the way any `::REQUIRES` file is. `hostemu` and
-`orxncurses` stay C extensions, built unmodified from `third_party/ooRexx` by
-`scripts/build-extensions.sh` and loaded through the native API.
+`orxncurses` stay C extensions, built unmodified from `third_party/ooRexx` against `include/` by
+`scripts/build-extensions.sh` and loaded through the native API. Only the upstream tier of the tests
+builds them.
 
 OS calls go through `rustix` or safe crates (`nix`, `dns-lookup`, `if-addrs`). The granted
 `unsafe` is `interrexx/src/builtin/rxsock_sys.rs` (raw socket options on a borrowed descriptor) and

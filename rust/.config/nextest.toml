@@ -105,7 +105,11 @@ retries = 1
 # interrexx::timing_witnesses: oracle: runs or reads the oracle build (third_party/oracle) (1 test)
 # interrexx::unreachable_classes: oracle: runs or reads the oracle build (third_party/oracle) (1 test)
 [profile.standalone]
-fail-fast = false
+# Retries, the slow timeout and the retry list are the `ci` profile's, so the shards lose
+# nothing against it. The `upstream-tier` CI job runs the complement with
+# `--ignore-default-filter -E 'not default()'`, which is this filter negated, so the filter is
+# written once.
+inherits = "ci"
 default-filter = '''
 not (
   binary_id(=interrexx-api::invoke)
@@ -115,6 +119,7 @@ not (
   | (binary_id(=interrexx::classic_api) & test(=the_rexx_call_back_group_passes))
   | (binary_id(=interrexx::classic_api) & test(=the_rxsubcom_group_runs_its_library_tests))
   | (binary_id(=interrexx::classic_api) & test(=a_failing_classic_function_raises_40_1))
+  | (binary_id(=interrexx::classic_api) & test(=a_group_signal_halts_both_interpreters_waiting_on_commands))
   | (binary_id(=interrexx::classic_api) & test(=a_group_signal_before_the_outer_command_halts_both_interpreters))
   | (binary_id(=interrexx::classic_api) & test(=a_macrospace_change_through_the_c_api_reaches_a_resolved_call_site))
   | (binary_id(=interrexx::classic_api) & test(=the_c_api_and_the_program_share_the_session_queue))
@@ -332,12 +337,6 @@ not (
   | (binary_id(=interrexx::unreachable_classes) & test(=a_class_marked_unreachable_still_has_no_route_to_an_instance))
 )
 '''
-
-# The `ci` profile's retry list, restricted to the test that stays in this profile. The other five
-# tests of that list are in `classic_api`, which the filter holds out (source tier).
-[[profile.standalone.overrides]]
-filter = 'test(=a_valued_reply_ends_the_same_program)'
-retries = 1
 
 [scripts.setup.method-bodies-api]
 command = '.config/scripts/method-bodies-api.sh'

@@ -2,7 +2,7 @@
 element: "Relation"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Relation Class; Builtin Classes > Collection Classes > Relation Class > new (Class Method); Builtin Classes > Collection Classes > Relation Class > []; Builtin Classes > Collection Classes > Relation Class > []=; Builtin Classes > Collection Classes > Relation Class > allAt; Builtin Classes > Collection Classes > Relation Class > allIndex; Builtin Classes > Collection Classes > Relation Class > allIndexes; Builtin Classes > Collection Classes > Relation Class > allItems; Builtin Classes > Collection Classes > Relation Class > at; Builtin Classes > Collection Classes > Relation Class > difference; Builtin Classes > Collection Classes > Relation Class > empty; Builtin Classes > Collection Classes > Relation Class > hasIndex; Builtin Classes > Collection Classes > Relation Class > hasItem; Builtin Classes > Collection Classes > Relation Class > index; Builtin Classes > Collection Classes > Relation Class > intersection; Builtin Classes > Collection Classes > Relation Class > isEmpty; Builtin Classes > Collection Classes > Relation Class > items; Builtin Classes > Collection Classes > Relation Class > makeArray; Builtin Classes > Collection Classes > Relation Class > put; Builtin Classes > Collection Classes > Relation Class > remove; Builtin Classes > Collection Classes > Relation Class > removeAll; Builtin Classes > Collection Classes > Relation Class > removeItem; Builtin Classes > Collection Classes > Relation Class > subset; Builtin Classes > Collection Classes > Relation Class > supplier; Builtin Classes > Collection Classes > Relation Class > union; Builtin Classes > Collection Classes > Relation Class > uniqueIndexes; Builtin Classes > Collection Classes > Relation Class > xor"
-deviations: [33, 78, 84, 109, 118]
+deviations: [33, 84, 109, 118]
 ---
 
 # Relation
@@ -182,9 +182,9 @@ lookup gives up. Which further stored indexes are compared, by `==` or
 rule](r:class.relation.deviation.33)); when the relation is empty, the only
 message is `hashCode`. `put` and `[]=` send `hashCode` to the index and nothing
 else: no `==` is sent, as an entry is added whether or not an equal index is
-there. The very object that is stored is no exception to the `==` ([the
-deviation rule](r:class.relation.deviation.78)). In the example every index
-hashes to the same string, so each stored index is compared.
+there. The very object that is stored is found without a `==` sent to it ([the
+identity rule](r:class.collection.identity)). In the example every index hashes
+to the same string, so each stored index is compared.
 
 ```rexx
 .local~log = .array~new
@@ -496,9 +496,9 @@ when none matches, and for `allIndex` always. `hasItem(item, index)` and
 `removeItem(item, index)` first look the index up as [the lookup
 rule](r:class.relation.indexes.sends) says, and then send `==` to the item
 argument with the item of each entry whose index matches, at least once for
-each, and no message when no index matches. The search with the very object
-that is stored is no exception: its `==` is sent as for any other item ([the
-deviation rule](r:class.relation.deviation.78)).
+each, and no message when no index matches. The very object that is stored is
+found without a `==` sent to it ([the identity
+rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -825,15 +825,15 @@ r~makeArray(1) => 93.902
 r[class.relation.uniqueindexes]
 `uniqueIndexes` answers a new `Array` with one index for each group of equal
 indexes in the relation, equal as [the index rule](r:class.relation.indexes)
-says, so an index that is in several entries appears once, and two index
-objects with different hash codes are two indexes even when `==` answers true
-for them. Which of several equal index objects is answered is not specified,
-and so is the order ([the hash order rule](r:class.relation.deviation.33)).
-An index object that is stored in more than one entry is compared as any other
-([the deviation rule](r:class.relation.deviation.78)). `uniqueIndexes` compares
-the stored indexes with each other by sending `==` to a stored index with
-another stored index as the argument; which stored indexes it sends `==` and
-`hashCode` to, and how often, is not specified ([the hash order
+says, so an index that is in several entries appears once, and two index objects
+with different hash codes are two indexes even when `==` answers true for them.
+Which of several equal index objects is answered is not specified, and so is the
+order ([the hash order rule](r:class.relation.deviation.33)). An index object
+that is stored in more than one entry is one index, without a `==` sent to it
+([the identity rule](r:class.collection.identity)). `uniqueIndexes` compares the
+stored indexes with each other by sending `==` to a stored index with another
+stored index as the argument; which stored indexes it sends `==` and `hashCode`
+to, and how often, is not specified ([the hash order
 rule](r:class.relation.deviation.33)). The answer is an instance of `Array` for
 a subclass receiver too, and does not follow later changes. `uniqueIndexes`
 takes no argument: one raises `SYNTAX 93.902`.
@@ -1662,48 +1662,6 @@ say r~uniqueIndexes~items r~items r~makeArray~items
 one,three,three,two
 1,2,3,4
 3 4 4
-```
-
-r[class.relation.deviation.78]
-A lookup or a `remove` with the very object that is stored as an index sends
-that object's `==` as for any other index, and a search for an item with the
-very object that is stored, by `hasItem`, `index`, `allIndex` or `removeItem`,
-sends that object's `==` as for any other item, so an object whose `==`
-answers false is not found even at its own entry. `uniqueIndexes` does the
-same for an index object that is stored in more than one entry, so one whose
-`==` answers false counts once for each of those entries. ooRexx compares
-identity first, finds it and sends nothing but `hashCode`, and counts such an
-index object once. See [Deviation 78](../deviations.md).
-
-```rexx
-.local~n = 0
-r = .relation~new
-q = .thing~new
-r~put(q, 'k')
-say r~hasItem(q) .local~n
-say (r~index(q) == .nil) .local~n
-say (r~removeItem(q) == .nil) .local~n r~items
-r~put('v', q)
-.local~n = 0
-say r~at(q) .local~n
-r2 = .relation~new
-r2~put('v1', q)
-r2~put('v2', q)
-say r2~uniqueIndexes~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-```
-
-```output
-0 1
-1 2
-1 3 1
-The NIL object 1
-2
 ```
 
 r[class.relation.deviation.84]

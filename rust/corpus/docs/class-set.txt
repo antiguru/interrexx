@@ -18,9 +18,9 @@
 # ~new constructs, or one opted in with a committed construction
 # program. `not-covered` says no construction program is committed and
 # CARRIES NO CLAIM ABOUT THE ORACLE. `unreachable` is grounded in a
-# sentence of the reference itself and belongs to the classes whose
-# sentence says instances come only from native code; each such
-# sentence is re-read at the line it cites on every run.
+# passage of the reference itself and belongs to the classes whose
+# passage says instances come only from native code; each such
+# passage is re-read at the line it cites on every run.
 #
 # `construction` is the Rexx expression a method row's instance arm binds
 # `o` to, and it is what `covered` claims: every `covered` row carries one
@@ -71,7 +71,7 @@ StringTable	class	clsStringTable	collclasses.xml:8504	covered	a bare ~new constr
 Table	class	clsTable	collclasses.xml:9048	covered	a bare ~new constructs an instance on the oracle	.Table~new	-	-
 Alarm	class	clsAlarm	utilityclasses.xml:51	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Alarm~new(99999, .Message~new(.Object~new, 'STRING'))~~cancel	-	-
 AlarmNotification	class	clsAlarmNotification	utilityclasses.xml:322	covered	a bare ~new constructs an instance on the oracle	.AlarmNotification~new	-	-
-Buffer	class	clsBuffer	utilityclasses.xml:421	unreachable	the reference says instances come only from native code -- utilityclasses.xml:429 "can only be created using the native code application programming interfaces."	-	-	-
+Buffer	class	clsBuffer	utilityclasses.xml:421	unreachable	the reference says instances come only from native code -- utilityclasses.xml:429	-	-	-
 CommandContext	class	clsCommandContext	utilityclasses.xml:482	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	gatekc()	::routine gatekc; .CommandHandler~register('GATEKC', .gatekc~new); address GATEKC 'x'; return .local~gatekc; ::class gatekc subclass CommandHandler; ::method command; use arg , context; .local~gatekc = context; return 0	-
 CommandHandler	class	clsCommandHandler	utilityclasses.xml:927	covered	a bare ~new constructs an instance on the oracle	.CommandHandler~new	-	-
 CommandInput	class	clsCommandInput	utilityclasses.xml:1179	not-covered	no construction program is committed; a bare ~new raises 93.901 on the oracle	-	-	-
@@ -94,19 +94,19 @@ MutableBuffer	class	clsMutableBuffer	utilityclasses.xml:5624	covered	a bare ~new
 MutexSemaphore	class	clsMutexSemaphore	utilityclasses.xml:7246	covered	a bare ~new constructs an instance on the oracle	.MutexSemaphore~new	-	-
 NativeCommandHandler	class	clsNativeCommandHandler	utilityclasses.xml:7445	covered	a committed construction program answers an instance; a bare ~new raises 97.2 on the oracle	.CommandHandler~handler('SYSTEM')	-	-
 Orderable	class	clsOrderable	utilityclasses.xml:7583	covered	a bare ~new constructs an instance on the oracle	.Orderable~new	-	-
-Pointer	class	clsPointer	utilityclasses.xml:7836	unreachable	the reference says instances come only from native code -- utilityclasses.xml:7844 "can only be created using the native code application programming interfaces."	-	-	-
-RexxContext	class	clsRexxContext	utilityclasses.xml:8467	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:8479 "They cannot be directly created by the user."	.context	-	-
-RexxInfo	instance	clsRexxInfo	utilityclasses.xml:8868	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:8876 "other instances cannot be created or copied."	.RexxInfo	-	-
+Pointer	class	clsPointer	utilityclasses.xml:7836	unreachable	the reference says instances come only from native code -- utilityclasses.xml:7844	-	-	-
+RexxContext	class	clsRexxContext	utilityclasses.xml:8467	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:8479	.context	-	-
+RexxInfo	instance	clsRexxInfo	utilityclasses.xml:8868	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:8876	.RexxInfo	-	-
 RexxQueue	class	clsRexxQueue	utilityclasses.xml:9745	covered	a bare ~new constructs an instance on the oracle	.RexxQueue~new	-	-
 Singleton	class	clsSingleton	utilityclasses.xml:10194	not-covered	no construction program is committed; a bare ~new raises 93.901 on the oracle	-	-	-
-StackFrame	class	clsStackFrame	utilityclasses.xml:10330	not-covered	no construction program is committed; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:10341 "StackFrame instances cannot be directly created by the user."	-	-	rexxcontext-stackframes
+StackFrame	class	clsStackFrame	utilityclasses.xml:10330	not-covered	no construction program is committed; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:10341	-	-	rexxcontext-stackframes
 StreamSupplier	class	clsStreamSupplier	utilityclasses.xml:10688	covered	a committed construction program answers an instance; a bare ~new raises 97.1 on the oracle	.Stream~new(filespec('path', .context~package~name) || '../fixtures/streamsupplier_seed.txt')~supplier	-	-
 Supplier	class	clsSupplier	utilityclasses.xml:10837	covered	a committed construction program answers an instance; a bare ~new raises 93.903 on the oracle	.Supplier~new(.Array~new, .Array~new)	-	-
 Ticker	class	clsTicker	utilityclasses.xml:11103	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Ticker~new(99999, .Message~new(.Object~new, 'STRING'))~~cancel	-	-
 TimeSpan	class	clsTimeSpan	utilityclasses.xml:11376	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.TimeSpan~new(1)	-	-
 TraceObject	class	clsTraceObject	utilityclasses.xml:12235	covered	a bare ~new constructs an instance on the oracle	.TraceObject~new	-	-
 Validate	class	clsValidate	utilityclasses.xml:13135	covered	a bare ~new constructs an instance on the oracle	.Validate~new	-	-
-VariableReference	class	clsVariableReference	utilityclasses.xml:13482	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:13490-13491 "Calling the new method to create a VariableReference instance is not allowed."	>vr	-	-
+VariableReference	class	clsVariableReference	utilityclasses.xml:13482	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:13490-13491	>vr	-	-
 WeakReference	class	clsWeakReference	utilityclasses.xml:13632	covered	a committed construction program answers an instance; a bare ~new raises 93.903 on the oracle	.WeakReference~new(.Object~new)	-	-
 InputOutputStream	class	clsInputOutputStream	streamclasses.xml:57	covered	a bare ~new constructs an instance on the oracle	.InputOutputStream~new	-	-
 InputStream	class	clsInputStream	streamclasses.xml:103	covered	a bare ~new constructs an instance on the oracle	.InputStream~new	-	-

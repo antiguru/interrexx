@@ -35,11 +35,12 @@ fn compile_for_test_under(source: &[u8], trace: ChunkTrace) -> Result<Chunk, Chu
     super::compile(&program.main, &plan, trace)
 }
 
-/// The setting `TRACE R` puts in force, as far as compilation can see it.
+/// The setting `TRACE I` puts in force, as far as compilation can see it.
 fn intermediates() -> ChunkTrace {
     ChunkTrace::of(crate::trace::mode_from_setting(b"i").expect("I is a valid TRACE setting"))
 }
 
+/// The setting `TRACE R` puts in force, as far as compilation can see it.
 fn traced() -> ChunkTrace {
     ChunkTrace::of(crate::trace::mode_from_setting(b"r").expect("R is a valid TRACE setting"))
 }

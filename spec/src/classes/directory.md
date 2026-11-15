@@ -2,7 +2,7 @@
 element: "Directory"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Directory Class; Builtin Classes > Collection Classes > Directory Class > new (Class Method); Builtin Classes > Collection Classes > Directory Class > []; Builtin Classes > Collection Classes > Directory Class > []=; Builtin Classes > Collection Classes > Directory Class > allIndexes; Builtin Classes > Collection Classes > Directory Class > allItems; Builtin Classes > Collection Classes > Directory Class > at; Builtin Classes > Collection Classes > Directory Class > empty; Builtin Classes > Collection Classes > Directory Class > entry; Builtin Classes > Collection Classes > Directory Class > hasEntry; Builtin Classes > Collection Classes > Directory Class > hasIndex; Builtin Classes > Collection Classes > Directory Class > hasItem; Builtin Classes > Collection Classes > Directory Class > index; Builtin Classes > Collection Classes > Directory Class > isEmpty; Builtin Classes > Collection Classes > Directory Class > items; Builtin Classes > Collection Classes > Directory Class > makeArray; Builtin Classes > Collection Classes > Directory Class > put; Builtin Classes > Collection Classes > Directory Class > remove; Builtin Classes > Collection Classes > Directory Class > removeEntry; Builtin Classes > Collection Classes > Directory Class > removeItem; Builtin Classes > Collection Classes > Directory Class > setEntry; Builtin Classes > Collection Classes > Directory Class > setMethod; Builtin Classes > Collection Classes > Directory Class > supplier; Builtin Classes > Collection Classes > Directory Class > unknown; Builtin Classes > Collection Classes > Directory Class > unsetMethod"
-deviations: [29, 33, 78, 109, 118, 123, 124]
+deviations: [29, 33, 109, 118, 123, 124]
 ---
 
 # Directory
@@ -421,9 +421,8 @@ item that is searched, with that item as the argument, until one answers true,
 and send nothing else; the stored items are visited first, in an order that is
 not specified, and then the answers of the methods, in an order that is not
 specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The search with the very object that
-is stored is no exception: its `==` is sent as for any other item ([the
-deviation rule](r:class.directory.deviation.78)).
+matches, as then every item is visited. The very object that is stored is found
+without a `==` sent to it ([the identity rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -1125,33 +1124,6 @@ say d~items d~makeArray~items
 one,three,two
 1,2,3
 3 3
-```
-
-r[class.directory.deviation.78]
-A search for an item with the very object that is stored, by `hasItem`,
-`index` or `removeItem`, sends that object's `==` as for any other item, so an
-object whose `==` answers false is not found even at its own entry. ooRexx
-compares identity first, finds it and sends nothing. See [Deviation
-78](../deviations.md).
-
-```rexx
-.local~n = 0
-d = .directory~new
-q = .thing~new
-d~put(q, 'k')
-say d~hasItem(q) .local~n
-say (d~index(q) == .nil) .local~n
-say (d~removeItem(q) == .nil) .local~n d~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 1
-1 2
-1 3 1
 ```
 
 r[class.directory.deviation.109]

@@ -90,6 +90,37 @@ check of the program's own that no recorded ooRexx outcome shares. Known excepti
 `rust/corpus/sim-oracle/`, and differences from them are reported, never gating. A failing run
 prints a replay line naming the group, part, seed and policy.
 
+## Test tiers
+
+A test belongs to one of three tiers, by what it needs. The regular tier needs only files of this
+repository and the ooTest and `oodocs` checkouts. The source tier also reads files of the pinned
+`third_party/ooRexx` submodule: the `api/` headers, the builtin function and directive parser
+sources, and the `testbinaries/`, `extensions/` and `samples/` programs that the upstream-built
+tests compile or run. The oracle tier runs or loads the built ooRexx, `third_party/oracle` and its
+`build/lib` extension libraries. The source and oracle tiers together are the upstream tier.
+
+* The `standalone` nextest profile runs the regular tier. The `build` CI job compiles the test
+  archive and the six `shard` jobs run this profile over it, all on a checkout with no submodule
+  and no oracle build.
+* The `upstream-tier` CI job runs the rest of the archive, the upstream tier, with the same
+  profile and `--ignore-default-filter -E 'not default()'`, on a checkout with the submodule and
+  the oracle build. The `ci` profile still runs every test in one go. The `spec-oracle` job runs
+  the specification's examples on the oracle, and the `pinning` job runs the pinning reports.
+* The `upstream-interface` CI job needs the submodule and no oracle. It checks the generated
+  tables against the pinned sources, the internal routine names, the ABI dump against the pinned
+  headers, and the names of `include/` against them.
+* The gates (`REXX_CORPUS_GATE`, `REXX_SUITE_GATE` and the others in the environment table) compare
+  against the oracle, so they need the oracle tier. Gate mode runs under `cargo test`, not
+  nextest.
+
+A test that needs the submodule or the oracle fails loudly when it is absent; it does not skip.
+The one exception is a test that compares against the oracle only in gate mode: two of them
+(`an_unreadable_console_is_end_of_input` and
+`a_program_that_never_finishes_reddens_at_the_deadline_instead_of_hanging`) print `*** SKIPPED`
+and return when their gate variable is unset. The
+`standalone` profile's `default-filter` keeps it out of the regular run, and a comment beside the
+filter in `rust/.config/nextest.toml` records each entry's tier and the path it needs.
+
 ## Test runners
 
 CI runs `cargo nextest run --workspace --profile ci` and then `cargo test --workspace --doc`.
