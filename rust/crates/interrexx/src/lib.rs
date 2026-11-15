@@ -1204,11 +1204,11 @@ struct Interp {
     /// that could assign a tail variable.
     shared_key: Vec<u8>,
     shared_key_for: Option<SymbolId>,
-    /// The stem and the tail's ordinal the same read found, where the tail
-    /// held a value of its own: what the write uses in place of the key, see
-    /// [`Interp::stem_set_held`]. Read only beside `shared_key_for`, so every
-    /// rule that drops the key drops this with it.
-    shared_tail: Option<(ObjRef, usize)>,
+    /// The stem, the tail's ordinal and its epoch the same read found, where
+    /// the tail held a value of its own: what the write uses in place of the
+    /// key, see [`Interp::stem_set_held`]. Read only beside `shared_key_for`,
+    /// so every rule that drops the key drops this with it.
+    shared_tail: Option<crate::stem::HeldTail>,
     /// What a `.local~novalue` hook a read sent came to, answered or failed,
     /// held from that read to the `novalue_check` after it.
     novalue_hooked: std::cell::Cell<Option<Result<(), Failure>>>,
