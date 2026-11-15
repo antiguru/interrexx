@@ -747,7 +747,7 @@ fn the_differing_tests_are_read_from_every_key() {
     for (group, test) in [
         ("base/bif/STREAM", "TEST_RELATIVE_FILE_EXISTS2"),
         ("base/bif/STREAM", "TEST_WRONG_TOO_MANY_ARGS_S"),
-        ("base/keyword/TRACE", "TEST_TRACE_DROP"),
+        ("base/keyword/TRACE", "TEST_TRACE_NUMERIC_DEBUG"),
         ("base/class/RexxContext", "TESTRS01"),
     ] {
         assert!(
