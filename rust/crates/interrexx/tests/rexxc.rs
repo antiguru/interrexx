@@ -535,10 +535,10 @@ fn the_oracle_refuses_this_crates_images_as_another_versions() {
     std::fs::remove_dir_all(&dir).expect("the directory is removed");
 }
 
-/// r[env.invocation.rexxc.damaged]: an image with one byte of its source
-/// changed after `rexxc` wrote it is refused with 3.903 and status 253 before
-/// any of its code runs, in the binary and in the encoded form, where the
-/// unchanged image runs.
+// spec: env.invocation.rexxc.damaged
+/// An image with one byte of its source changed after `rexxc` wrote it is
+/// refused with 3.903 and status 253 before any of its code runs, in the binary
+/// and in the encoded form, where the unchanged image runs.
 #[test]
 fn a_changed_image_is_refused_before_it_runs() {
     let dir = scratch("changed-image");

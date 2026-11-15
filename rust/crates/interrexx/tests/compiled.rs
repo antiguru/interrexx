@@ -273,7 +273,8 @@ fn a_foreign_or_damaged_image_is_refused() {
     };
     let binary = compile("b.rxo", &[]);
     let encoded = compile("e.rxo", &["-e"]);
-    // The `#!` line, then the 48-byte header, then the source.
+    // The `#!` line, then the 48-byte header, then the digest, the name and
+    // the source.
     let header = 20 + 48;
     let body = 20 + "/**/@REXX@\n".len();
 
@@ -284,8 +285,9 @@ fn a_foreign_or_damaged_image_is_refused() {
         ("line.rxo", encoded[..body + 73].to_vec(), 903),
         // Inside a line, on a quartet boundary.
         ("boundary.rxo", encoded[..body + 8].to_vec(), 903),
-        // Inside a quartet.
-        ("quartet.rxo", encoded[..body + 6].to_vec(), 903),
+        // Inside a quartet: base64 that ends inside a group does not decode
+        // whole.
+        ("quartet.rxo", encoded[..body + 6].to_vec(), 905),
     ];
     let mut broken = encoded.clone();
     broken[body + 5] = b'!';

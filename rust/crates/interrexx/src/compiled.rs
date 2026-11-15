@@ -3,8 +3,9 @@
 //! SHA-256 digest of everything after it, then the name of the routine the
 //! image holds, as a 4-byte little-endian length and its bytes, then the
 //! checked source. An image whose bytes after the digest do not give it is
-//! refused (r[env.invocation.rexxc.damaged]), so an image changed after `rexxc`
-//! wrote it never runs as if `rexxc` had. No compatibility is promised between
+//! refused (r[env.invocation.rexxc.damaged]), so a damaged image does not run.
+//! The digest is not keyed: it catches damage, and an image edited on purpose
+//! can carry a digest of its own. No compatibility is promised between
 //! versions of this crate.
 
 use interrexx_inventory::errors::{E3_903, E3_905};
@@ -219,19 +220,27 @@ fn decode(text: &[u8]) -> Option<Vec<u8>> {
     let mut digit = 0;
     let mut held = 0u8;
     let mut index = 0;
+    let mut padded = false;
     while index < text.len() {
         let byte = text[index];
         index += 1;
         let Some(value) = base64_digit(byte) else {
+            // The bits a padded group leaves over are zero in the one
+            // spelling `rexxc` writes, so a changed pad digit is refused
+            // rather than decoding as the bytes it stood for.
             match (byte, digit) {
                 (b'=', 2) => {
-                    if text.get(index) != Some(&b'=') {
+                    if text.get(index) != Some(&b'=') || held != 0 {
                         return None;
                     }
                     index += 1;
+                    padded = true;
                     break;
                 }
-                (b'=', 3) => break,
+                (b'=', 3) if held == 0 => {
+                    padded = true;
+                    break;
+                }
                 (b'\n' | b'\r', 0) => continue,
                 _ => return None,
             }
@@ -249,6 +258,11 @@ fn decode(text: &[u8]) -> Option<Vec<u8>> {
             _ => out.push(held | value),
         }
         digit = (digit + 1) % 4;
+    }
+    // Text that ends inside a group of four, with no `=` closing it, does not
+    // decode whole.
+    if !padded && digit != 0 {
+        return None;
     }
     text[index..]
         .iter()
@@ -353,8 +367,9 @@ mod tests {
         assert!(matches!(restore(&encoded), Restore::Compiled { .. }));
     }
 
-    /// r[env.invocation.rexxc.damaged]: any one byte changed after the header,
-    /// in the digest, the name or the source, is refused, in either form.
+    // spec: env.invocation.rexxc.damaged
+    /// Any one byte changed after the header, in the digest, the name or the
+    /// source, is refused, in either form.
     #[test]
     fn a_changed_byte_after_the_header_is_rejected() {
         let image = write_image(SOURCE, NAME, false);
@@ -398,6 +413,36 @@ mod tests {
         let mut split = encoded.clone();
         split.insert(at, b'\n');
         assert_eq!(restore(&split), Restore::Undecodable);
+    }
+
+    // spec: env.invocation.rexxc.damaged
+    /// Base64 text that does not decode whole: a final group of fewer than
+    /// four digits with no `=` to close it, and a padded group whose leftover
+    /// bits are not zero, which another digit would also have decoded to.
+    #[test]
+    fn base64_that_ends_inside_a_group_or_carries_pad_bits_is_refused() {
+        assert_eq!(decode(b"QUJD"), Some(b"ABC".to_vec()));
+        assert_eq!(decode(b"QUI="), Some(b"AB".to_vec()));
+        assert_eq!(decode(b"QQ=="), Some(b"A".to_vec()));
+        for text in [&b"QUJ"[..], b"Q", b"QUJDQ", b"QUJDQU", b"QR==", b"QUJ="] {
+            assert_eq!(decode(text), None, "{}", String::from_utf8_lossy(text));
+        }
+        // An image whose closing padding is dropped, which decoded to the same
+        // bytes before the final group was required to be whole.
+        let mut source = SOURCE.to_vec();
+        let encoded = loop {
+            let encoded = write_image(&source, NAME, true);
+            if encoded.ends_with(b"=\n") {
+                break encoded;
+            }
+            source.push(b' ');
+        };
+        let mut unpadded = encoded.clone();
+        while matches!(unpadded.last(), Some(b'=' | b'\n')) {
+            unpadded.pop();
+        }
+        assert_ne!(restore(&encoded), Restore::Undecodable);
+        assert_eq!(restore(&unpadded), Restore::Undecodable);
     }
 
     #[test]
