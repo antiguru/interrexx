@@ -1615,6 +1615,9 @@ struct Interp {
     /// The same for any other write to `out`, which a terminal also takes at
     /// a line end.
     out_bound: usize,
+    /// The length past which `trace` is handed to the stderr sink between the
+    /// line ends that always hand it over: `0` when unbuffered.
+    err_bound: usize,
     /// Whether standard output is a terminal.
     out_lines: bool,
     /// Collect-on-every-allocation stress mode: when true, [`Interp::alloc_with`] collects before every
@@ -2437,6 +2440,7 @@ impl Interp {
             trace: Vec::new(),
             say_bound: usize::MAX,
             out_bound: usize::MAX,
+            err_bound: OUTPUT_BOUND,
             out_lines: false,
             next_activation_id: 0,
             next_invocation: 0,
@@ -3150,6 +3154,21 @@ impl Interp {
         self.cwd = cwd;
     }
 
+    /// How the two buffers are handed to their sinks: a terminal takes each
+    /// line of standard output, unbuffered output takes every write of both,
+    /// and anything else takes standard output in blocks
+    /// (r[instr.say.deviation.40]).
+    fn set_buffering(&mut self, terminal: bool, unbuffered: bool) {
+        self.out_lines = terminal || unbuffered;
+        self.out_bound = if unbuffered { 0 } else { OUTPUT_BOUND };
+        self.say_bound = if terminal || unbuffered {
+            0
+        } else {
+            OUTPUT_BOUND
+        };
+        self.err_bound = if unbuffered { 0 } else { OUTPUT_BOUND };
+    }
+
     /// Appends bytes to what the program has written on standard output --
     /// the same buffer `SAY` appends to, so anything written here interleaves
     /// with it in program order.
@@ -3175,7 +3194,7 @@ impl Interp {
     /// interleave with trace output and never with `SAY`'s.
     pub(crate) fn write_err(&mut self, bytes: &[u8]) {
         self.trace.extend_from_slice(bytes);
-        if ends_a_line(bytes) || self.trace.len() > OUTPUT_BOUND {
+        if ends_a_line(bytes) || self.trace.len() > self.err_bound {
             self.hand_over_stderr();
         }
     }
@@ -3552,6 +3571,7 @@ impl Interp {
             trace: _,
             say_bound: _,
             out_bound: _,
+            err_bound: _,
             out_lines: _,
             stress_collect: _,
             collect_due: _,
@@ -3965,6 +3985,23 @@ impl Interp {
 }
 
 // ---- the public entry point ----
+
+/// The environment variable that asks for standard output to be handed over
+/// a line at a time, as ooRexx writes it, rather than in blocks: any value but
+/// the empty string (r[instr.say.deviation.40]).
+pub const UNBUFFERED_ENV: &str = "REXX_UNBUFFERED";
+
+/// Writes out what native code left in C's standard streams, for a sink to
+/// call before it writes, so that what C wrote first lands first
+/// (r[instr.say.deviation.40]).
+pub fn flush_c_streams() {
+    signal::flush_c_streams();
+}
+
+/// Whether [`UNBUFFERED_ENV`] is set to anything but the empty string.
+pub fn unbuffered_requested() -> bool {
+    std::env::var_os(UNBUFFERED_ENV).is_some_and(|value| !value.is_empty())
+}
 
 /// Installs the SIGINT, SIGTERM and SIGHUP handlers that halt every live
 /// interpreter, once per process: for
@@ -4396,13 +4433,7 @@ fn execute_kept(
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
-        interp.out_lines = sinks.stdout_terminal;
-        interp.out_bound = OUTPUT_BOUND;
-        interp.say_bound = if sinks.stdout_terminal {
-            0
-        } else {
-            OUTPUT_BOUND
-        };
+        interp.set_buffering(sinks.stdout_terminal, sinks.unbuffered);
     }
     interp.sinks = parts.sinks;
     interp.command_words = parts.words;
@@ -4688,9 +4719,8 @@ pub(crate) fn run_instance(
     interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);
     interp.input = Input::new(ProgramInput::Stdin);
     let stdout_terminal = std::io::IsTerminal::is_terminal(&std::io::stdout());
-    interp.out_lines = stdout_terminal;
-    interp.out_bound = OUTPUT_BOUND;
-    interp.say_bound = if stdout_terminal { 0 } else { OUTPUT_BOUND };
+    let unbuffered = unbuffered_requested();
+    interp.set_buffering(stdout_terminal, unbuffered);
     // After what the embedding C program wrote through stdio, in that order.
     interp.sinks = Some(Sinks {
         stdout: Box::new(|bytes| {
@@ -4705,6 +4735,7 @@ pub(crate) fn run_instance(
             std::io::stderr().write_all(bytes)
         }),
         stdout_terminal,
+        unbuffered,
         own_descriptors: true,
     });
     let result = interp.bootstrap_library().and_then(|()| {

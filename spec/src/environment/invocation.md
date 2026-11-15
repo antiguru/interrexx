@@ -44,7 +44,8 @@ minus sign; the first word that does not is the program name, and every word
 after it is an argument, even one that begins with a minus sign. Only the
 letter after the minus sign of an option word says which option it is, in
 either case: `e` is [the expression option](r:env.invocation.expression), `o`
-is [the options option](r:env.invocation.optstring), and `v` is [the version
+is [the options option](r:env.invocation.optstring), `u` is [the unbuffered
+option](r:env.invocation.unbuffered), and `v` is [the version
 option](r:env.invocation.version). Any later letter of the word is ignored,
 except the `d` that may follow `o`, so `-ev` is an expression option and `-vo`
 a version option. An option word whose letter is none of these, a minus sign
@@ -61,6 +62,17 @@ What the banner says is [stated below](r:env.invocation.deviation.96). A `-v`
 that stands after the program name, or is the word after `-e`, is not an
 option word: the first is an argument and the second is the text of the
 program, and neither prints the banner.
+
+r[env.invocation.unbuffered]
+An option word `-u`, in either case, makes the program's standard output and
+standard error unbuffered: each write reaches its stream as it is made,
+partial lines too, as it does when the environment variable `REXX_UNBUFFERED`
+is set to anything but the empty string. Without either, a standard output that
+is not a terminal is buffered, as [Deviation
+40](../deviations.md#40-buffered-standard-output) says. `-u` takes [the place
+of an option word in `.syscargs`](r:env.invocation.syscargs). ooRexx writes
+unbuffered output whatever the words say, and ignores `-u` as an option word
+it does not know.
 
 ## Running a string
 

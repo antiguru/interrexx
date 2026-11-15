@@ -40,13 +40,19 @@ fn main() -> ExitCode {
             std::fs::metadata(format!("/proc/self/fd/{fd}"))
                 .is_ok_and(|meta| meta.file_type().is_char_device() || meta.file_type().is_fifo())
         }))
+        // After what native code wrote through C's streams, in that order.
         .with_sinks(interrexx::Sinks {
             stdout: Box::new(|bytes| {
+                interrexx::flush_c_streams();
                 let mut stdout = std::io::stdout();
                 stdout.write_all(bytes).and_then(|()| stdout.flush())
             }),
-            stderr: Box::new(|bytes| std::io::stderr().write_all(bytes)),
+            stderr: Box::new(|bytes| {
+                interrexx::flush_c_streams();
+                std::io::stderr().write_all(bytes)
+            }),
             stdout_terminal: std::io::stdout().is_terminal(),
+            unbuffered: run.unbuffered || interrexx::unbuffered_requested(),
             own_descriptors: true,
         });
 
@@ -114,7 +120,9 @@ fn main() -> ExitCode {
         }
     };
 
-    // What the sinks did not already take.
+    // What the sinks did not already take, after what native code left in
+    // C's streams.
+    interrexx::flush_c_streams();
     let _ = std::io::stdout().write_all(&outcome.stdout);
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().write_all(&outcome.stderr);

@@ -244,7 +244,9 @@ r[instr.say.deviation.40]
 SAY and the builtins that write to the standard output share one stream, and
 the text of all of them appears in the order the program wrote it. A standard
 output that is a pipe or a file is buffered, and it is handed over at the
-points that [Deviation 40](../deviations.md) names. ooRexx writes each line
+points that [Deviation 40](../deviations.md) names, unless
+[`rexx -u`](r:env.invocation.unbuffered) or `REXX_UNBUFFERED` makes it
+unbuffered. ooRexx writes each line
 at once, so text still buffered when the process is killed or crashes is lost
 here and is not lost there.
 
