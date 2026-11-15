@@ -764,6 +764,25 @@ fn a_run_agrees_but_for_the_count_only_when_the_rest_agrees() {
     ));
 }
 
+/// An ooTest group's stdout is compared whole except the lines of an error
+/// report and a built-in level: a trace announcement, a trace value line and a
+/// summary line that differ between the sides are a difference.
+#[test]
+fn a_group_stdout_line_that_is_no_report_or_traceback_line_is_compared() {
+    let a = |stdout: &str| masked(stdout.as_bytes());
+    assert_eq!(
+        a("Error 93 running x line 2:  One.\nError 93.1:  Two.\n       *-* Words \"R\".\n"),
+        a("Error 93 running x line 2:  Else.\nError 93.1:  More.\n"),
+    );
+    for (ours, theirs) in [
+        ("       >I> One.\n", "       >I> Two.\n"),
+        ("       >V>   X => \"1\"\n", "       >V>   X => \"2\"\n"),
+        ("Passed: 3\n", "Passed: 4\n"),
+    ] {
+        assert_ne!(a(ours), a(theirs), "{ours}");
+    }
+}
+
 #[test]
 fn one_oracle_outcome_is_not_counted_only() {
     assert!(!counted_only(&[&summary_run(12, 0, "", 0)]));
@@ -896,7 +915,8 @@ mod sim_gate {
     use std::time::Duration;
 
     use super::super::super::group_runner::{
-        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked, outcome, run_crate_process,
+        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked, masked_with_announcements_cut,
+        outcome, run_crate_process,
         run_crate_sim, run_oracle_within,
     };
     use super::super::super::support::{error_text, oracle, sidecar};
@@ -1393,10 +1413,15 @@ mod sim_gate {
             .find_map(|word| word.strip_prefix(name)?.strip_prefix('='))
     }
 
-    /// `run` as compared: stdout masked, `rexx-sim: ` lines dropped.
-    fn compared(run: &Run) -> Run {
+    /// `run` of `row` as compared: stdout masked, `rexx-sim: ` lines dropped.
+    /// A program row's stdout keeps the wider cut until #733.
+    fn compared(row: &Row, run: &Run) -> Run {
         Run {
-            stdout: masked(&run.stdout),
+            stdout: if row.program() {
+                masked_with_announcements_cut(&run.stdout)
+            } else {
+                masked(&run.stdout)
+            },
             stderr: sim_masked(&run.stderr),
             status: run.status,
         }
@@ -1862,12 +1887,12 @@ mod sim_gate {
                 if reds.is_empty() {
                     "passed".to_string()
                 } else {
-                    format!("failed {}", outcome_key(&unit.row, &compared(&ran.run)))
+                    format!("failed {}", outcome_key(&unit.row, &compared(&unit.row, &ran.run)))
                 }
             ));
             reds = after_rerun(&unit.row, first, reds);
         }
-        let mine = compared(&ran.run);
+        let mine = compared(&unit.row, &ran.run);
         let compared = (!unit.row.injects()).then(|| {
             let digest = digest(&mine);
             seen.as_deref()
@@ -2030,8 +2055,8 @@ mod sim_gate {
             };
             let same = hash(first).is_some()
                 && hash(first) == hash(second)
-                && compared(&first.run).stdout == compared(&second.run).stdout
-                && compared(&first.run).stderr == compared(&second.run).stderr
+                && compared(&unit.row, &first.run).stdout == compared(&unit.row, &second.run).stdout
+                && compared(&unit.row, &first.run).stderr == compared(&unit.row, &second.run).stderr
                 && first.run.status == second.run.status;
             eprintln!(
                 "self-test {}: trace {:?} {:?}, {}",
@@ -2044,8 +2069,8 @@ mod sim_gate {
                 broken.push(format!(
                     "{}: {} / {}\n  replay: {}",
                     unit.name(),
-                    outcome_key(&unit.row, &compared(&first.run)),
-                    outcome_key(&unit.row, &compared(&second.run)),
+                    outcome_key(&unit.row, &compared(&unit.row, &first.run)),
+                    outcome_key(&unit.row, &compared(&unit.row, &second.run)),
                     unit.replay()
                 ));
             }
@@ -2111,11 +2136,12 @@ mod sim_gate {
             let oracle_runs = |runs: std::ops::Range<usize>| {
                 at_once(&runs.collect::<Vec<_>>(), |k| {
                     let run = run_oracle(&oracle, row, &derived, &dir.join(format!("o{k}")));
-                    compared(&run)
+                    compared(row, &run)
                 })
             };
             let mut runs = oracle_runs(0..ORACLE_RUNS);
             let mine = compared(
+                row,
                 &run_here(
                     row,
                     &derived,

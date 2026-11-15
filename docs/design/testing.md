@@ -37,10 +37,12 @@ keep `+++` and the code, a trace announcement keeps its flag, and a traceback li
 level (blank number column, `*-*`, a text that names it in double quotes and ends with a period) is
 dropped. A numbered traceback line whose text names the package `REXX` as its last quoted string is
 a library level and is normalised to a placeholder. Stdout is compared whole, except where the
-group runner masks it (an ooTest group's holds the traceback of an error a test meets; the
-simulation gate masks a program's the same way), so a program in this corpus prints the codes,
-flags and Rexx levels of a run and never the wording of a message, an announcement or a built-in
-level.
+group runner masks it (an ooTest group's holds the traceback of an error a test meets, so the
+runner cuts the lines of an error report and the built-in levels of a traceback and compares every
+other line whole; the simulation gate masks a program row's stdout with the wider cut that also
+drops the text of a trace announcement, until #733 narrows it), so a program in this corpus
+prints the codes, flags and Rexx levels of a run and never the wording of a message, an
+announcement or a built-in level.
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,

@@ -37,6 +37,20 @@
 /// and so does an unnumbered line of any other text. Every other line is a
 /// separate comparison and stays exact.
 pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
+    cut(bytes, true)
+}
+
+/// [`cut_error_texts`] without the cut of a trace announcement: only the lines
+/// of an error report and the built-in levels of a traceback are touched, and
+/// every other line, a trace line included, stays whole. For a program's
+/// stdout, where trace output is compared.
+pub fn cut_report_lines(bytes: &[u8]) -> Vec<u8> {
+    cut(bytes, false)
+}
+
+/// The shared body of [`cut_error_texts`] and [`cut_report_lines`];
+/// `announcements` says whether the text of a trace announcement is cut too.
+fn cut(bytes: &[u8], announcements: bool) -> Vec<u8> {
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
     if had_trailing_newline {
@@ -45,7 +59,13 @@ pub fn cut_error_texts(bytes: &[u8]) -> Vec<u8> {
     let out: Vec<Vec<u8>> = lines
         .into_iter()
         .filter(|line| !is_built_in_frame_line(line))
-        .map(|line| error_report_without_text(&announcement_without_text(line)))
+        .map(|line| {
+            if announcements {
+                error_report_without_text(&announcement_without_text(line))
+            } else {
+                error_report_without_text(line)
+            }
+        })
         .collect();
     let mut joined = out.join(&b'\n');
     if had_trailing_newline {
@@ -281,5 +301,23 @@ mod tests {
         assert_ne!(cut_error_texts(one), cut_error_texts(flag));
         let value = b"       >V>   X => \"1\"\n";
         assert_eq!(cut_error_texts(value), value.to_vec());
+    }
+
+    /// The stdout cut touches error-report lines and built-in levels, and
+    /// leaves a trace announcement, a trace value line and any other text
+    /// whole.
+    #[test]
+    fn cut_report_lines_leaves_every_other_line_whole() {
+        use super::{cut_error_texts, cut_report_lines};
+        let report = b"       *-* Words \"R\".\nError 93 running /t/x.rex line 2:  Text.\nError 93.902:  Text.\n";
+        assert_eq!(cut_report_lines(report), cut_error_texts(report));
+        let announcement = b"       >I> Some words.\n       <I< Other.\n";
+        assert_eq!(cut_report_lines(announcement), announcement.to_vec());
+        assert_ne!(
+            cut_report_lines(announcement),
+            cut_report_lines(b"       >I> Different words.\n       <I< Other.\n")
+        );
+        let other = b"Passed: 3\n    >V> X => \"1\"\n";
+        assert_eq!(cut_report_lines(other), other.to_vec());
     }
 }
