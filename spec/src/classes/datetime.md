@@ -2298,12 +2298,14 @@ argument and precedes `utcDate` and every other message. An equality operator
 not equal, as ooRexx does: `=` and `==` answer 0, the others 1. It sends
 `compareTo` as for any argument, and the argument is sent nothing but the `isA`
 of `compareTo`; an override of `compareTo` that forwards to this one gets the
-same answer. An operator whose argument is `.nil` sends no `compareTo` and does
-as [the `.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself
-raises for `.nil`. ooRexx answers 1 or -1 from `compareTo` for such an argument,
-and an ordering operator answers from that, whatever the receiver is, so the
-answer says nothing about the two values. In the example the last line is a
-probe that answers false to `isA` and gets nothing else.
+same answer. Only an equality operator sent to the same receiver counts: the
+`compareTo` of a `DateTime` that the comparison of another object sends raises.
+An operator whose argument is `.nil` sends no `compareTo` and does as [the
+`.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises
+for `.nil`. ooRexx answers 1 or -1 from `compareTo` for such an argument, and an
+ordering operator answers from that, whatever the receiver is, so the answer
+says nothing about the two values. In the example the last line is a probe that
+answers false to `isA` and gets nothing else.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)

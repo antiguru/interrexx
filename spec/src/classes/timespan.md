@@ -1672,16 +1672,17 @@ operator (`=`, `==`, `\=`, `\==`, `<>` and `><`) with such an argument answers
 that it is not equal, as ooRexx does: `=` and `==` answer 0, the others 1. It
 sends `compareTo` as for any argument, and the argument is sent nothing but the
 `isA` of `compareTo`; an override of `compareTo` that forwards to this one gets
-the same answer. An 88.914 that `compareTo` raises for an argument that is a
-`TimeSpan` is raised by the operator too. An operator whose argument is `.nil`
-sends no `compareTo` and does as [the `.nil`
-rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
-`.nil`. ooRexx answers 1 or -1 from `compareTo` for such an argument, and an
-ordering operator answers from that, whatever the receiver is, so the answer
-says nothing about the two values. In the example the last line is a probe that
-answers false to `isA` and gets nothing else. A hash collection that holds a
-`TimeSpan` and an index of another class with the same hash code compares them
-with `==`, and finds them unequal.
+the same answer. Only an equality operator sent to the same receiver counts: the
+`compareTo` of a `TimeSpan` that the comparison of another object sends raises.
+An 88.914 that `compareTo` raises for an argument that is a `TimeSpan` is raised
+by the operator too. An operator whose argument is `.nil` sends no `compareTo`
+and does as [the `.nil` rule](r:class.orderable.compare.nil) says, and
+`compareTo` itself raises for `.nil`. ooRexx answers 1 or -1 from `compareTo`
+for such an argument, and an ordering operator answers from that, whatever the
+receiver is, so the answer says nothing about the two values. In the example the
+last line is a probe that answers false to `isA` and gets nothing else. A hash
+collection that holds a `TimeSpan` and an index of another class with the same
+hash code compares them with `==`, and finds them unequal.
 
 ```rexx
 a = .timespan~new(1, 2, 3)
@@ -1705,6 +1706,7 @@ say t~items t['1'] t[.timespan~new(1)]
 call try '.picky~new(1) = .picky~new(1)'
 call try '.relay~new(1) = 5'
 call try '.own~new(1) = 5'
+call try '.asker~new = 5'
 .local~log = ''
 call try 'a~compareTo(.probe~new)'
 say 'sent:' .local~log
@@ -1717,6 +1719,9 @@ try:
 bad: say arg(1) '=>' condition('o')~code
   return
 ::class sub subclass timespan
+::class asker inherit orderable
+::method compareTo
+  return .timespan~new(1)~compareTo('x')
 ::class own subclass timespan
 ::method '='
   return self~compareTo(arg(1)) = 0
@@ -1753,6 +1758,7 @@ a~compareTo(a~copy) => 0
 .picky~new(1) = .picky~new(1) => 88.914
 .relay~new(1) = 5 => 0
 .own~new(1) = 5 => 88.914
+.asker~new = 5 => 88.914
 a~compareTo(.probe~new) => 88.914
 sent:  ISA(TimeSpan)
 ```

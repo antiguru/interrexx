@@ -918,7 +918,7 @@ weeks: procedure
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
   if \other~isA(.DateTime) then do
-    if askedForEquality() then return 1
+    if askedForEquality(self) then return 1
     raise syntax 88.914 array(1, 'DateTime')
   end
   return sign(stamp - zone - other~utcDate)

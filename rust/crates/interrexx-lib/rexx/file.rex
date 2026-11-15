@@ -262,7 +262,7 @@
 ::method compareTo
   use strict arg other
   if \other~isA(.File) then do
-    if askedForEquality() then return 1
+    if askedForEquality(self) then return 1
     raise syntax 88.914 array('other', 'File')
   end
   caseSensitive = self~isCaseSensitive
