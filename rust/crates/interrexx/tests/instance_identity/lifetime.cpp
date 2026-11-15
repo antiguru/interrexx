@@ -11,7 +11,9 @@
 // thread context it is handed and prints `reloaded 1` or `reloaded 0` for the answer. Where
 // LIFETIME_OTHER is set, it loads the library `lifetime2` the same way and prints `other 1` or
 // `other 0`. Where LIFETIME_UNLOADER_CREATES is set, the unloader, after printing `unloader`,
-// unsets it and does what LIFETIME_NESTED makes the loader do.
+// unsets it and does what LIFETIME_NESTED makes the loader do. Where LIFETIME_UNLOADER_OTHER is
+// set, the unloader, after printing `unloader`, unsets it, loads `lifetime2` through the thread
+// context it is handed and prints `unloader other 1` or `unloader other 0`.
 //
 // Built with -DOTHER it is the extension `lifetime2` instead, a library whose hooks print `other
 // loader` and `other unloader`, which does nothing else.
@@ -32,6 +34,10 @@
 //   reload       with LIFETIME_RELOAD set, creates A and terminates it
 //   other        with LIFETIME_OTHER set, creates A and terminates it
 //   unloadernew  with LIFETIME_UNLOADER_CREATES set, creates A and terminates it
+//   unloaderother
+//                with LIFETIME_UNLOADER_OTHER set, creates A and terminates it, then creates C,
+//                loads `lifetime2` through C's thread context, prints `C other` with the answer
+//                and terminates C
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,7 +122,7 @@ static void RexxEntry LifetimeLoader(RexxThreadContext *context)
 #endif
 }
 
-static void RexxEntry LifetimeUnloader(RexxThreadContext *)
+static void RexxEntry LifetimeUnloader(RexxThreadContext *context)
 {
     hook("unloader");
 #ifndef OTHER
@@ -125,6 +131,12 @@ static void RexxEntry LifetimeUnloader(RexxThreadContext *)
         // Once, so that the instance this creates does not create another in its own unloader.
         unsetenv("LIFETIME_UNLOADER_CREATES");
         inner();
+    }
+    if (getenv("LIFETIME_UNLOADER_OTHER") != NULL)
+    {
+        // Once, so that the later instance's unloader loads nothing.
+        unsetenv("LIFETIME_UNLOADER_OTHER");
+        load_through(context, "lifetime2", "unloader other");
     }
 #endif
 }
@@ -249,6 +261,31 @@ int main(int argc, char **argv)
             return 1;
         }
         terminate(a, "A");
+        return 0;
+    }
+    if (strcmp(scenario, "unloaderother") == 0)
+    {
+        setenv("LIFETIME_UNLOADER_OTHER", "1", 1);
+        RexxInstance *a = create("A");
+        if (a == NULL)
+        {
+            return 1;
+        }
+        terminate(a, "A");
+        RexxOption options[2];
+        options[0].optionName = LOAD_REQUIRED_LIBRARY;
+        options[0].option = "lifetime";
+        options[1].optionName = NULL;
+        RexxInstance *c;
+        RexxThreadContext *thread;
+        if (!RexxCreateInterpreter(&c, &thread, options))
+        {
+            printf("create C failed\n");
+            return 1;
+        }
+        printf("created C\n");
+        load_through(thread, "lifetime2", "C other");
+        terminate(c, "C");
         return 0;
     }
     if (strcmp(scenario, "unloading") == 0)
