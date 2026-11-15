@@ -475,6 +475,58 @@ quiet made Routine
 .package~new("e4", "return 5")~class~id => Package
 ```
 
+r[class.package.new.untranslated]
+A package whose translation raised is not answered by `new`, but the `PACKAGE`
+entry of [the condition object](r:cond.information.object) of that error is
+the package of the text that did not translate, and a program that traps the
+condition can hold it. The package is an ordinary one that was never
+installed: its `name` is the name given to `new`, `source` answers the lines
+that were read, and `routines`, `classes`, `publicRoutines` and `publicClasses`
+are empty, whatever directives came before the line that failed. Every method
+of `Package` works on it as on any other package: `addRoutine`,
+`addPublicRoutine`, `addClass` and `addPackage` add to it as their rules say,
+and answer it, what was added is found by `findRoutine` and listed by
+`routines`, and a package that imports it finds the public routines that were
+added. Each translation makes its own package, so the packages of two
+translations of the same source are not `==`, and neither is `==` to the
+package that ran the code.
+
+```rexx
+src = .array~of('::class k', '::routine zz', '  return 1', 'if then')
+f1 = failed(src)
+f2 = failed(src)
+say f1~class~id f1~name f1~source~items f1~routines~items f1~classes~items f1~publicRoutines~items
+say (f1 == f2) (f1 == f1) (f1 == .context~package)
+x = .routine~new('xr', 'return "xr called"')
+say (f1~addPublicRoutine('xr', x) == f1) f1~routines~items f1~publicRoutines~items f1~findRoutine('XR')~call
+say f2~routines~items
+say (f1~addClass('late', .object~subclass('late')) == f1) f1~classes~items f1~publicClasses~items
+q = .package~new('q', 'return 1')
+say (q~addPackage(f1) == q) q~importedPackages~items q~findRoutine('XR')~call
+say (f1~addPackage(f1) == f1) f1~importedPackages~items
+exit
+failed: procedure
+  signal on syntax name bad
+  .package~new('broken', arg(1))
+  return .nil
+bad:
+  c = condition('o')
+  say c~code c~package~name
+  return c~package
+```
+
+```output
+35.929 broken
+35.929 broken
+Package broken 4 0 0 0
+0 1 0
+1 1 1 xr called
+0
+1 1 0
+1 1 xr called
+1 1
+```
+
 ### defaultOptions
 
 r[class.package.defaultoptions]
