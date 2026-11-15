@@ -42823,7 +42823,7 @@ done
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="collection"><a class="header" href="#collection">Collection</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Collection Class; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; [] (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; []= (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; allIndexes (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; allItems (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; at (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; difference; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; disjoint; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; equivalent; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; index (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; put (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; xor</p>
-<p class="deviations">Deviations: D78, D109, D118</p>
+<p class="deviations">Deviations: D109, D118</p>
 <p><code>Collection</code> is the mixin class that all the collection classes have in
 common. It defines nineteen methods. Seven of them are abstract: they name
 what a collection has to be able to do, reading and writing an entry by its
@@ -42992,12 +42992,12 @@ any object
 <div class="rule" id="r-class.collection.hasitem"><a href="classes/collection.html#r-class.collection.hasitem">[class.collection.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers what the answer of <code>allItems</code> answers to <code>hasItem</code> for
 the same argument, unchanged, and takes exactly one argument, as <code>hasIndex</code>
-does: none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>, in
-both cases before <code>allItems</code> is sent. Whether two items count as the same is
-decided by the object <code>allItems</code> answers: for an array that is the strict
-equality of <code>==</code>, under which <code>1</code> and <code>1.0</code> are different items (for the very
-object that is stored, see <a href="classes/array.html#r-class.array.deviation.78">the Array deviation
-rule</a>).</p>
+does: none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>, in both
+cases before <code>allItems</code> is sent. Whether two items count as the same is decided
+by the object <code>allItems</code> answers: for an array that is the strict equality of
+<code>==</code>, under which <code>1</code> and <code>1.0</code> are different items (the very object that is
+stored is found without a <code>==</code> sent to it, as <a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a> says).</p>
 <pre><code class="language-rexx">b = .box~new(.array~of('1', 'Ab', 'x'))
 say b~hasItem(1) b~hasItem(1.0) b~hasItem('ab') b~hasItem('Ab')
 signal on syntax name bad
@@ -43044,6 +43044,43 @@ say c~hasItem('v')
 <pre><code class="language-output">allItems 0
 hasItem v
 any object
+</code></pre>
+<div class="rule" id="r-class.collection.identity"><a href="classes/collection.html#r-class.collection.identity">[class.collection.identity]</a></div>
+<p>A collection of this book that compares an index or an item with <code>==</code> takes the
+very object it stores as equal to the object searched for, without sending
+<code>==</code>: a lookup, <code>put</code> and <code>[]=</code> with the stored index, and a search by
+<code>hasItem</code>, <code>index</code>, <code>removeItem</code> or <code>allIndex</code> for the stored item, of the hash
+collections and of <code>Array</code>, <code>List</code>, <code>Queue</code> and <code>CircularQueue</code>; a Relation's
+<code>uniqueIndexes</code> for an index object stored in more than one entry; and the check
+of a Set's or Bag's <code>put</code> and <code>[]=</code> that the index equals the item, when both are
+the same object. An object is found at its own entry whatever its <code>==</code> answers.
+Any other stored object is compared with <code>==</code> as the page of the class says.</p>
+<pre><code class="language-rexx">x = .liar~new
+.local~n = 0
+t = .table~new
+t[x] = 'found'
+say t[x] t~hasIndex(x) .local~n
+t2 = .table~new
+t2['k'] = x
+say t2~hasItem(x) t2~index(x) .local~n
+a = .array~of('a', x)
+say a~hasItem(x) a~index(x) .local~n
+s = .set~of(x)
+say s~hasIndex(x) .local~n
+y = .liar~new
+say a~hasItem(y) t~hasIndex(y) .local~n
+::class liar
+::method '=='
+  .local~n = .local~n + 1
+  return .false
+::method hashCode
+  return 'h'
+</code></pre>
+<pre><code class="language-output">found 1 0
+1 k 0
+1 2 2
+1 2
+0 0 5
 </code></pre>
 <div class="rule" id="r-class.collection.items"><a href="classes/collection.html#r-class.collection.items">[class.collection.items]</a></div>
 <p><code>items</code> answers what the answer of <code>allIndexes</code> answers to <code>items</code>,
@@ -44902,30 +44939,6 @@ count = 2
 34.6
 </code></pre>
 <h2 id="deviations-35"><a class="header" href="#deviations-35">Deviations</a></h2>
-<div class="rule" id="r-class.collection.deviation.78"><a href="classes/collection.html#r-class.collection.deviation.78">[class.collection.deviation.78]</a></div>
-<p><code>hasItem</code> forwards the argument to the answer of <code>allItems</code>, so a search for
-the very object that is stored in that answer follows <a href="classes/array.html#r-class.array.deviation.78">the Array
-rule</a>: the object's <code>==</code> is sent as for any other
-item, and an object whose <code>==</code> answers false is not found. ooRexx finds the
-very object without sending it <code>==</code>. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">x = .liar~new
-b = .box~new(.array~of('a', x, 'b'))
-.local~n = 0
-say b~hasItem(x) .local~n
-::class box inherit collection
-::method init
-  expose a
-  use arg a
-::method allItems
-  expose a
-  return a
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-</code></pre>
 <div class="rule" id="r-class.collection.deviation.109"><a href="classes/collection.html#r-class.collection.deviation.109">[class.collection.deviation.109]</a></div>
 <p>An instance of a subclass of <code>String</code> that is compared by <code>subset</code> or
 <code>equivalent</code> is read by its own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are
@@ -47149,7 +47162,7 @@ end
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="array"><a class="header" href="#array">Array</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Array Class; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Array Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Array Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; append; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; dimension; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; dimensions; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; fill; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; first; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; last; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; makeString; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; next; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; section; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; size; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; sort; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; sortWith; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; stableSort; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; stableSortWith; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; toString</p>
-<p class="deviations">Deviations: D78, D107, D109, D120</p>
+<p class="deviations">Deviations: D107, D109, D120</p>
 <p>An <code>Array</code> is an ordered collection whose entries are addressed by positive
 whole numbers. Its indexes may have gaps, so an array can hold items at 1 and
 5 and nothing between, and it may have more than one dimension, in which case
@@ -47663,11 +47676,12 @@ a~removeItem =&gt; 93.903
 a~removeItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.array.removeitem.sends"><a href="classes/array.html#r-class.array.removeitem.sends">[class.array.removeitem.sends]</a></div>
-<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item in index order,
-with that item as the argument, until one answers true, and sends nothing
-else. <code>hasItem</code> and <code>index</code> make the same search, and their rules say so. For
-the very object that is stored, see <a href="classes/array.html#r-class.array.deviation.78">the deviation
-rule</a>.</p>
+<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item in index order, with
+that item as the argument, until one answers true, and sends nothing else.
+<code>hasItem</code> and <code>index</code> make the same search, and their rules say so. The search
+ends at the very object that is searched for without a <code>==</code> sent to it; the
+items before it are compared as any other (<a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">a = .array~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
 x = a~removeItem(.thing~new('q'))
 say x~name a~items
@@ -48611,32 +48625,6 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <pre><code class="language-output">37 calls, 0 sent more than one message to the receiver
 </code></pre>
 <h2 id="deviations-38"><a class="header" href="#deviations-38">Deviations</a></h2>
-<div class="rule" id="r-class.array.deviation.78"><a href="classes/array.html#r-class.array.deviation.78">[class.array.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
-an object whose <code>==</code> answers false is not found even at its own entry.
-ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
-for the items before it. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-x = .liar~new
-c = .array~new
-c~append('a')
-c~append(x)
-c~append('b')
-say c~hasItem(x) .n
-.local~n = 0
-say (c~index(x) == .nil) .n
-.local~n = 0
-say (.nil == c~removeItem(x)) c~items .n
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-1 3
-1 3 3
-</code></pre>
 <div class="rule" id="r-class.array.deviation.107"><a href="classes/array.html#r-class.array.deviation.107">[class.array.deviation.107]</a></div>
 <p>An item whose <code>objectName</code> answers a string that names a number is written
 by <code>makeString</code> and <code>toString</code> as the characters of that string, however the
@@ -48701,7 +48689,7 @@ say b~previous(4, 1)~makeString('L', ',') b~previous(1, 5)~makeString('L', ',')
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="list"><a class="header" href="#list">List</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; List Class; Builtin Classes &gt; Collection Classes &gt; List Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; List Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; List Class &gt; []; Builtin Classes &gt; Collection Classes &gt; List Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; List Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; List Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; List Class &gt; append; Builtin Classes &gt; Collection Classes &gt; List Class &gt; at; Builtin Classes &gt; Collection Classes &gt; List Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; List Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; List Class &gt; first; Builtin Classes &gt; Collection Classes &gt; List Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; List Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; index; Builtin Classes &gt; Collection Classes &gt; List Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; List Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; List Class &gt; items; Builtin Classes &gt; Collection Classes &gt; List Class &gt; last; Builtin Classes &gt; Collection Classes &gt; List Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; List Class &gt; next; Builtin Classes &gt; Collection Classes &gt; List Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; List Class &gt; put; Builtin Classes &gt; Collection Classes &gt; List Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; List Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; section; Builtin Classes &gt; Collection Classes &gt; List Class &gt; supplier</p>
-<p class="deviations">Deviations: D78, D109, D118, D172</p>
+<p class="deviations">Deviations: D109, D118, D172</p>
 <p>A <code>List</code> is an ordered collection that grows and shrinks at any point. Its
 entries are addressed by indexes that the list chooses and hands back when an
 item is added: an index is a handle that names an entry for as long as the entry
@@ -49149,10 +49137,11 @@ l~removeItem(, 1) =&gt; 93.902
 l~removeItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.list.removeitem.sends"><a href="classes/list.html#r-class.list.removeitem.sends">[class.list.removeitem.sends]</a></div>
-<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item in list order,
-with that item as the argument, until one answers true, and sends nothing
-else. <code>hasItem</code> and <code>index</code> make the same search. For the very object that is
-stored, see <a href="classes/list.html#r-class.list.deviation.78">the deviation rule</a>.</p>
+<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item in list order, with
+that item as the argument, until one answers true, and sends nothing else.
+<code>hasItem</code> and <code>index</code> make the same search. The search ends at the very object
+that is searched for without a <code>==</code> sent to it; the items before it are compared
+as any other (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">l = .list~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
 x = l~removeItem(.thing~new('q'))
 say x~name l~items
@@ -49767,32 +49756,6 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <pre><code class="language-output">27 calls, 0 sent more than one message to the receiver
 </code></pre>
 <h2 id="deviations-39"><a class="header" href="#deviations-39">Deviations</a></h2>
-<div class="rule" id="r-class.list.deviation.78"><a href="classes/list.html#r-class.list.deviation.78">[class.list.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
-an object whose <code>==</code> answers false is not found even at its own entry.
-ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
-for the items before it. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-x = .liar~new
-c = .list~new
-c~append('a')
-c~append(x)
-c~append('b')
-say c~hasItem(x) .n
-.local~n = 0
-say (c~index(x) == .nil) .n
-.local~n = 0
-say (.nil == c~removeItem(x)) c~items .n
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-1 3
-1 3 3
-</code></pre>
 <div class="rule" id="r-class.list.deviation.109"><a href="classes/list.html#r-class.list.deviation.109">[class.list.deviation.109]</a></div>
 <p>An index, a count or the size hint of <code>new</code> that is an instance of a subclass of
 <code>String</code> is read by its own
@@ -49866,7 +49829,7 @@ c
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="queue-1"><a class="header" href="#queue-1">Queue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Queue Class; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; append; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; first; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; last; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; next; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; peek; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; pull; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; push; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; queue; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; section; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; size; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; supplier</p>
-<p class="deviations">Deviations: D78, D109, D121</p>
+<p class="deviations">Deviations: D109, D121</p>
 <p>A <code>Queue</code> is an ordered collection that is addressed by position: the item at
 the head is at index 1, the next at index 2, and so on up to the number of
 items, so an index is where an item stands now, not a name for it. Adding an
@@ -50365,10 +50328,11 @@ q~removeItem(, 1) =&gt; 93.902
 q~removeItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.queue.removeitem.sends"><a href="classes/queue.html#r-class.queue.removeitem.sends">[class.queue.removeitem.sends]</a></div>
-<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item from the head,
-with that item as the argument, until one answers true, and sends nothing
-else. <code>hasItem</code> and <code>index</code> make the same search. For the very object that is
-stored, see <a href="classes/queue.html#r-class.queue.deviation.78">the deviation rule</a>.</p>
+<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item from the head, with
+that item as the argument, until one answers true, and sends nothing else.
+<code>hasItem</code> and <code>index</code> make the same search. The search ends at the very object
+that is searched for without a <code>==</code> sent to it; the items before it are compared
+as any other (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">q = .queue~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
 x = q~removeItem(.thing~new('q'))
 say x~name q~items
@@ -51024,32 +50988,6 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <pre><code class="language-output">32 calls, 0 sent more than one message to the receiver
 </code></pre>
 <h2 id="deviations-40"><a class="header" href="#deviations-40">Deviations</a></h2>
-<div class="rule" id="r-class.queue.deviation.78"><a href="classes/queue.html#r-class.queue.deviation.78">[class.queue.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
-an object whose <code>==</code> answers false is not found even at its own entry.
-ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
-for the items before it. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-x = .liar~new
-c = .queue~new
-c~append('a')
-c~append(x)
-c~append('b')
-say c~hasItem(x) .n
-.local~n = 0
-say (c~index(x) == .nil) .n
-.local~n = 0
-say (.nil == c~removeItem(x)) c~items .n
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-1 3
-1 3 3
-</code></pre>
 <div class="rule" id="r-class.queue.deviation.109"><a href="classes/queue.html#r-class.queue.deviation.109">[class.queue.deviation.109]</a></div>
 <p>An index or a count that is an instance of a subclass of <code>String</code> is read by
 its own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are not sent to it
@@ -51094,7 +51032,7 @@ a,b,c
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="circularqueue"><a class="header" href="#circularqueue">CircularQueue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; CircularQueue Class; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; init; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; append; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; makeString; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; push; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; queue; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; resize; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; section; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; size; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; string; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; union; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; xor</p>
-<p class="deviations">Deviations: D78, D109, D121</p>
+<p class="deviations">Deviations: D109, D121</p>
 <p>A <code>CircularQueue</code> is a <a href="classes/queue.html"><code>Queue</code></a> that has a size, fixed when it is
 made and changed by <code>resize</code>: it never holds more items than that. An item
 added to a full queue pushes another out at the opposite end, so a circular
@@ -51452,14 +51390,13 @@ q~append(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.circularqueue.queue.sends"><a href="classes/circularqueue.html#r-class.circularqueue.queue.sends">[class.circularqueue.queue.sends]</a></div>
 <p><code>queue</code> and <code>push</code> send, to the receiver, <code>items</code> before the item is added and,
 when the answer is not less than the size, <code>pull</code> for <code>queue</code> or, for <code>push</code>,
-<code>items</code> again and <code>remove</code> with that answer as the index; then the item is added.
-With the option <code>Unique</code> they send
-<code>hasItem</code> with the item first and, for as long as it answers true, <code>removeItem</code>
-with the item and <code>hasItem</code> again, and only then the <code>items</code>. The strict <code>==</code> of
-that search is the one of <a href="classes/queue.html#r-class.queue.removeitem.sends">the Queue search
-rule</a>: the first example shows the order. For
-the very object that is stored, see <a href="classes/circularqueue.html#r-class.circularqueue.deviation.78">the deviation
-rule</a>. The option is sent
+<code>items</code> again and <code>remove</code> with that answer as the index; then the item is
+added. With the option <code>Unique</code> they send <code>hasItem</code> with the item first and, for
+as long as it answers true, <code>removeItem</code> with the item and <code>hasItem</code> again, and
+only then the <code>items</code>. The strict <code>==</code> of that search is the one of <a href="classes/queue.html#r-class.queue.removeitem.sends">the Queue
+search rule</a>: the first example shows the order.
+The search ends at the very object that is searched for without a <code>==</code> sent to
+it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>). The option is sent
 <code>caselessMatchChar</code> with the arguments 1 and <code>u</code>, whose answer is read as a
 logical value: neither 0 nor 1 raises <code>SYNTAX 34.1</code>, and an option that does not
 understand the message raises <code>SYNTAX 97.1</code>, <code>.nil</code> included. The second example
@@ -52743,32 +52680,6 @@ a~allItems
   allItems()
 </code></pre>
 <h2 id="deviations-41"><a class="header" href="#deviations-41">Deviations</a></h2>
-<div class="rule" id="r-class.circularqueue.deviation.78"><a href="classes/circularqueue.html#r-class.circularqueue.deviation.78">[class.circularqueue.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
-an object whose <code>==</code> answers false is not found even at its own entry.
-ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
-for the items before it. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-x = .liar~new
-c = .circularqueue~new(5)
-c~append('a')
-c~append(x)
-c~append('b')
-say c~hasItem(x) .n
-.local~n = 0
-say (c~index(x) == .nil) .n
-.local~n = 0
-say (.nil == c~removeItem(x)) c~items .n
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-1 3
-1 3 3
-</code></pre>
 <div class="rule" id="r-class.circularqueue.deviation.109"><a href="classes/circularqueue.html#r-class.circularqueue.deviation.109">[class.circularqueue.deviation.109]</a></div>
 <p>An index, a count, a size given to <code>new</code> or <code>resize</code>, or a delimiter that is
 an instance of a subclass of <code>String</code> is read by its own characters, and
@@ -52828,7 +52739,7 @@ a,b,c
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="directory"><a class="header" href="#directory">Directory</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Directory Class; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; entry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; removeEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; setEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; setMethod; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; unknown; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; unsetMethod</p>
-<p class="deviations">Deviations: D29, D33, D78, D109, D118, D123, D124</p>
+<p class="deviations">Deviations: D29, D33, D109, D118, D123, D124</p>
 <p>A <code>Directory</code> maps string indexes to items. An index is a string compared in
 full and by its exact characters, so <code>ab</code> and <code>AB</code> are two indexes, and an
 item is any object. A directory can also hold methods: a method that
@@ -53190,9 +53101,8 @@ item that is searched, with that item as the argument, until one answers true,
 and send nothing else; the stored items are visited first, in an order that is
 not specified, and then the answers of the methods, in an order that is not
 specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The search with the very object that
-is stored is no exception: its <code>==</code> is sent as for any other item (<a href="classes/directory.html#r-class.directory.deviation.78">the
-deviation rule</a>).</p>
+matches, as then every item is visited. The very object that is stored is found
+without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 d = .directory~new
 d~put('s', 'k1')
@@ -53797,28 +53707,6 @@ say d~items d~makeArray~items
 1,2,3
 3 3
 </code></pre>
-<div class="rule" id="r-class.directory.deviation.78"><a href="classes/directory.html#r-class.directory.deviation.78">[class.directory.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
-object whose <code>==</code> answers false is not found even at its own entry. ooRexx
-compares identity first, finds it and sends nothing. See <a href="classes/../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-d = .directory~new
-q = .thing~new
-d~put(q, 'k')
-say d~hasItem(q) .local~n
-say (d~index(q) == .nil) .local~n
-say (d~removeItem(q) == .nil) .local~n d~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-</code></pre>
 <div class="rule" id="r-class.directory.deviation.109"><a href="classes/directory.html#r-class.directory.deviation.109">[class.directory.deviation.109]</a></div>
 <p>A name, an index or the size argument of <code>new</code> that is an instance of a
 subclass of <code>String</code> is read by its own characters, and <code>REQUEST</code> and
@@ -53906,7 +53794,7 @@ d~unknown('Q', .ans~new) =&gt; 98.913
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stringtable"><a class="header" href="#stringtable">StringTable</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; StringTable Class; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; []; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; at; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; entry; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; hasEntry; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; index; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; items; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; put; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; removeEntry; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; setEntry; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; StringTable Class &gt; unknown</p>
-<p class="deviations">Deviations: D29, D33, D78, D84, D109, D118, D124</p>
+<p class="deviations">Deviations: D29, D33, D84, D109, D118, D124</p>
 <p>A <code>StringTable</code> maps string indexes to items, as a <a href="classes/directory.html"><code>Directory</code></a>
 does, and has the same entry methods, but it holds nothing else: no method can
 be associated with a name, and there is no <code>UNKNOWN</code> method. An index is a
@@ -54277,11 +54165,10 @@ t~index(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.stringtable.hasitem.sends"><a href="classes/stringtable.html#r-class.stringtable.hasitem.sends">[class.stringtable.hasitem.sends]</a></div>
 <p><code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code> to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the items are visited in an order that is not
-specified, so the number of messages is specified only when no item matches,
-as then every item is visited. The search with the very object that is stored
-is no exception: its <code>==</code> is sent as for any other item (<a href="classes/stringtable.html#r-class.stringtable.deviation.78">the deviation
-rule</a>).</p>
+and send nothing else; the items are visited in an order that is not specified,
+so the number of messages is specified only when no item matches, as then every
+item is visited. The very object that is stored is found without a <code>==</code> sent to
+it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 t = .stringtable~new
 t~put('s', 'k1')
@@ -54662,28 +54549,6 @@ say t~items t~makeArray~items
 1,2,3
 3 3
 </code></pre>
-<div class="rule" id="r-class.stringtable.deviation.78"><a href="classes/stringtable.html#r-class.stringtable.deviation.78">[class.stringtable.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
-object whose <code>==</code> answers false is not found even at its own entry. ooRexx
-compares identity first, finds it and sends nothing. See <a href="classes/../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-t = .stringtable~new
-q = .thing~new
-t~put(q, 'k')
-say t~hasItem(q) .local~n
-say (t~index(q) == .nil) .local~n
-say (t~removeItem(q) == .nil) .local~n t~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-</code></pre>
 <div class="rule" id="r-class.stringtable.deviation.84"><a href="classes/stringtable.html#r-class.stringtable.deviation.84">[class.stringtable.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>removeItem</code> sends to its argument empties the string table,
 <code>items</code> answers 0 afterwards and the method answers <code>.nil</code>. ooRexx's <code>items</code>
@@ -54767,7 +54632,7 @@ t~unknown('Q', .ans~new) =&gt; 98.913
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="properties"><a class="header" href="#properties">Properties</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Properties Class; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; new (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getWhole; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; save; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setWhole</p>
-<p class="deviations">Deviations: D29, D33, D78, D109, D123, D124</p>
+<p class="deviations">Deviations: D29, D33, D109, D123, D124</p>
 <p>A <code>Properties</code> is a <a href="classes/directory.html"><code>Directory</code></a> whose items are strings, with
 methods to read and write them as text, as logical values and as whole
 numbers, and to load and save them as lines of a file. It inherits
@@ -55586,12 +55451,12 @@ entries read by upper-case name (<code>entry</code>, <code>hasEntry</code>, <cod
 <code>items</code>, <code>isEmpty</code>, <code>empty</code>, <code>copy</code>, <code>supplier</code>, <code>allIndexes</code>, <code>allItems</code>,
 <code>makeArray</code>, <code>unknown</code> and <code>setMethod</code> and <code>unsetMethod</code>, and those of the
 mixins, <code>of</code>, <code>putAll</code> and the set operations, and each behaves as the page of
-<code>Directory</code> says, of a properties object and of an instance of a subclass of
-it. The copy is a <code>Properties</code>. The <code>unknown</code> that reads and sets the entries
-by message name does not check the value (<a href="classes/properties.html#r-class.properties.unchecked">the unchecked
-rule</a>). A search for the very item stored sends
-its <code>==</code> as for any other item (<a href="classes/properties.html#r-class.properties.deviation.78">the Properties
-rule</a>). Its string value is <code>a Properties</code>.</p>
+<code>Directory</code> says, of a properties object and of an instance of a subclass of it.
+The copy is a <code>Properties</code>. The <code>unknown</code> that reads and sets the entries by
+message name does not check the value (<a href="classes/properties.html#r-class.properties.unchecked">the unchecked
+rule</a>). A search for the very item stored finds it
+without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).
+Its string value is <code>a Properties</code>.</p>
 <pre><code class="language-rexx">p = .many~new
 p~put('v', 'k')
 p~setMethod('m', 'return "computed"')
@@ -55708,43 +55573,6 @@ say t~lines~sort~makeString('L', '|')
 </code></pre>
 <pre><code class="language-output">one=1|three=3|two=2
 </code></pre>
-<div class="rule" id="r-class.properties.deviation.78"><a href="classes/properties.html#r-class.properties.deviation.78">[class.properties.deviation.78]</a></div>
-<p>A search for an item that was stored by <code>setEntry</code> or through <code>unknown</code>, a
-string or not, with the very object that is stored, by <code>hasItem</code>, <code>index</code> or
-<code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an object
-whose <code>==</code> answers false is not found even at its own entry (<a href="classes/directory.html#r-class.directory.deviation.78">the Directory
-rule</a>). ooRexx compares identity first, finds
-it and sends nothing. <code>put</code> stores a string of the value's characters, so the
-object given to <code>put</code> is not the object stored. See <a href="classes/../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-p = .properties~new
-q = .thing~new
-p~setEntry('k', q)
-say p~hasItem(q) .local~n
-say (p~index(q) == .nil) .local~n
-say (.nil == p~removeItem(q)) .local~n p~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-</code></pre>
-<pre><code class="language-rexx">.local~n = 0
-p = .properties~new
-s = .ls~new('v')
-p~setEntry('k', s)
-say p~hasItem(s) .local~n
-::class ls subclass string
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-</code></pre>
 <div class="rule" id="r-class.properties.deviation.109"><a href="classes/properties.html#r-class.properties.deviation.109">[class.properties.deviation.109]</a></div>
 <p>A value that is an instance of a subclass of <code>String</code> is read by its own
 characters by <code>put</code>, <code>[]=</code>, <code>setProperty</code>, <code>setLogical</code> and <code>setWhole</code>, and
@@ -55808,7 +55636,7 @@ p~unknown('Q', .ans~new) =&gt; 98.913
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="table"><a class="header" href="#table">Table</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Table Class; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Table Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Table Class &gt; supplier</p>
-<p class="deviations">Deviations: D33, D78, D84, D109</p>
+<p class="deviations">Deviations: D33, D84, D109</p>
 <p>A <code>Table</code> maps indexes to items. Both are any objects: an index is found by
 the <code>hashCode</code> and the <code>==</code> that it answers to, so two indexes are one entry
 when they hash alike and compare equal, and a table holds at most one item for
@@ -55959,13 +55787,13 @@ first
 </code></pre>
 <div class="rule" id="r-class.table.indexes.sends"><a href="classes/table.html#r-class.table.indexes.sends">[class.table.indexes.sends]</a></div>
 <p><code>at</code>, <code>[]</code>, <code>hasIndex</code>, <code>put</code>, <code>[]=</code> and <code>remove</code> look the index up by sending
-<code>hashCode</code> to the index argument, once, and then <code>==</code> to the index argument
-with a stored index as the argument, for stored indexes that have the same hash
-code, until one answers true; each of those is compared before the lookup gives
-up. Which further stored indexes are compared, by <code>==</code> or <code>hashCode</code>, and how
-often, is not specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>);
-when the table is empty, the only message is <code>hashCode</code>. The very object that
-is stored is no exception to the <code>==</code> (<a href="classes/table.html#r-class.table.deviation.78">the deviation
+<code>hashCode</code> to the index argument, once, and then <code>==</code> to the index argument with
+a stored index as the argument, for stored indexes that have the same hash code,
+until one answers true; each of those is compared before the lookup gives up.
+Which further stored indexes are compared, by <code>==</code> or <code>hashCode</code>, and how often,
+is not specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>); when the
+table is empty, the only message is <code>hashCode</code>. The very object that is stored
+is found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity
 rule</a>). In the example every index hashes to the
 same string, so each stored index is compared.</p>
 <pre><code class="language-rexx">.local~log = .array~new
@@ -56132,9 +55960,8 @@ the argument, item by item, until one answers true, and send nothing else,
 <code>hashCode</code> included. The items are visited in an order that is not specified;
 every item is compared at least once when none matches, and how often <code>==</code> is
 sent with the same item is not specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order
-rule</a>). The search with the very object that is
-stored is no exception: its <code>==</code> is sent as for any other item (<a href="classes/table.html#r-class.table.deviation.78">the deviation
-rule</a>).</p>
+rule</a>). The very object that is stored is found
+without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 t = .table~new
 t~put('s', 'k1')
@@ -56516,36 +56343,6 @@ say t~items t~makeArray~items
 <pre><code class="language-output">one,three,two
 1,2,3
 3 3
-</code></pre>
-<div class="rule" id="r-class.table.deviation.78"><a href="classes/table.html#r-class.table.deviation.78">[class.table.deviation.78]</a></div>
-<p>A lookup, a <code>put</code> or a <code>remove</code> with the very object that is stored as the
-index sends that object's <code>==</code> as for any other index, and a search for an
-item with the very object that is stored, by <code>hasItem</code>, <code>index</code> or
-<code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an object
-whose <code>==</code> answers false is not found even at its own entry. ooRexx compares
-identity first, finds it and sends nothing but <code>hashCode</code>. See <a href="classes/../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-t = .table~new
-q = .thing~new
-t~put(q, 'k')
-say t~hasItem(q) .local~n
-say (t~index(q) == .nil) .local~n
-say (t~removeItem(q) == .nil) .local~n t~items
-t~put('v', q)
-.local~n = 0
-say t~at(q) .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-The NIL object 1
 </code></pre>
 <div class="rule" id="r-class.table.deviation.84"><a href="classes/table.html#r-class.table.deviation.84">[class.table.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> sends to an index, or that <code>removeItem</code> sends to
@@ -57323,7 +57120,7 @@ another text.</p>
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="relation"><a class="header" href="#relation">Relation</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Relation Class; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allAt; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allIndex; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; difference; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; removeAll; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; uniqueIndexes; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; xor</p>
-<p class="deviations">Deviations: D33, D78, D84, D109, D118</p>
+<p class="deviations">Deviations: D33, D84, D109, D118</p>
 <p>A <code>Relation</code> is a <a href="classes/table.html"><code>Table</code></a> that keeps every item put at an index:
 it holds entries, each a pair of an index and an item, and <code>put</code> always adds
 an entry, so one index, or one item, can occur in many entries, and the same
@@ -57479,9 +57276,9 @@ lookup gives up. Which further stored indexes are compared, by <code>==</code> o
 rule</a>); when the relation is empty, the only
 message is <code>hashCode</code>. <code>put</code> and <code>[]=</code> send <code>hashCode</code> to the index and nothing
 else: no <code>==</code> is sent, as an entry is added whether or not an equal index is
-there. The very object that is stored is no exception to the <code>==</code> (<a href="classes/relation.html#r-class.relation.deviation.78">the
-deviation rule</a>). In the example every index
-hashes to the same string, so each stored index is compared.</p>
+there. The very object that is stored is found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the
+identity rule</a>). In the example every index hashes
+to the same string, so each stored index is compared.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 say 'empty:' .relation~new~at(.k~new('p')) .local~log~makeString('L', ' | ')
 calls = 'r~at(.k~new("p"))|r[.k~new("p")]|r~hasIndex(.k~new("p"))',
@@ -57755,9 +57552,9 @@ when none matches, and for <code>allIndex</code> always. <code>hasItem(item, ind
 <code>removeItem(item, index)</code> first look the index up as <a href="classes/relation.html#r-class.relation.indexes.sends">the lookup
 rule</a> says, and then send <code>==</code> to the item
 argument with the item of each entry whose index matches, at least once for
-each, and no message when no index matches. The search with the very object
-that is stored is no exception: its <code>==</code> is sent as for any other item (<a href="classes/relation.html#r-class.relation.deviation.78">the
-deviation rule</a>).</p>
+each, and no message when no index matches. The very object that is stored is
+found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 .local~h = 0
 r = .relation~new
@@ -58044,15 +57841,15 @@ r~makeArray(1) =&gt; 93.902
 <div class="rule" id="r-class.relation.uniqueindexes"><a href="classes/relation.html#r-class.relation.uniqueindexes">[class.relation.uniqueindexes]</a></div>
 <p><code>uniqueIndexes</code> answers a new <code>Array</code> with one index for each group of equal
 indexes in the relation, equal as <a href="classes/relation.html#r-class.relation.indexes">the index rule</a>
-says, so an index that is in several entries appears once, and two index
-objects with different hash codes are two indexes even when <code>==</code> answers true
-for them. Which of several equal index objects is answered is not specified,
-and so is the order (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>).
-An index object that is stored in more than one entry is compared as any other
-(<a href="classes/relation.html#r-class.relation.deviation.78">the deviation rule</a>). <code>uniqueIndexes</code> compares
-the stored indexes with each other by sending <code>==</code> to a stored index with
-another stored index as the argument; which stored indexes it sends <code>==</code> and
-<code>hashCode</code> to, and how often, is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+says, so an index that is in several entries appears once, and two index objects
+with different hash codes are two indexes even when <code>==</code> answers true for them.
+Which of several equal index objects is answered is not specified, and so is the
+order (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>). An index object
+that is stored in more than one entry is one index, without a <code>==</code> sent to it
+(<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>). <code>uniqueIndexes</code> compares the
+stored indexes with each other by sending <code>==</code> to a stored index with another
+stored index as the argument; which stored indexes it sends <code>==</code> and <code>hashCode</code>
+to, and how often, is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
 rule</a>). The answer is an instance of <code>Array</code> for
 a subclass receiver too, and does not follow later changes. <code>uniqueIndexes</code>
 takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
@@ -58804,43 +58601,6 @@ say r~uniqueIndexes~items r~items r~makeArray~items
 1,2,3,4
 3 4 4
 </code></pre>
-<div class="rule" id="r-class.relation.deviation.78"><a href="classes/relation.html#r-class.relation.deviation.78">[class.relation.deviation.78]</a></div>
-<p>A lookup or a <code>remove</code> with the very object that is stored as an index sends
-that object's <code>==</code> as for any other index, and a search for an item with the
-very object that is stored, by <code>hasItem</code>, <code>index</code>, <code>allIndex</code> or <code>removeItem</code>,
-sends that object's <code>==</code> as for any other item, so an object whose <code>==</code>
-answers false is not found even at its own entry. <code>uniqueIndexes</code> does the
-same for an index object that is stored in more than one entry, so one whose
-<code>==</code> answers false counts once for each of those entries. ooRexx compares
-identity first, finds it and sends nothing but <code>hashCode</code>, and counts such an
-index object once. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-r = .relation~new
-q = .thing~new
-r~put(q, 'k')
-say r~hasItem(q) .local~n
-say (r~index(q) == .nil) .local~n
-say (r~removeItem(q) == .nil) .local~n r~items
-r~put('v', q)
-.local~n = 0
-say r~at(q) .local~n
-r2 = .relation~new
-r2~put('v1', q)
-r2~put('v2', q)
-say r2~uniqueIndexes~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-The NIL object 1
-2
-</code></pre>
 <div class="rule" id="r-class.relation.deviation.84"><a href="classes/relation.html#r-class.relation.deviation.84">[class.relation.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> sends to an index, or that <code>removeItem</code> sends to
 its argument, empties the relation, <code>items</code> answers 0 afterwards and the method
@@ -58934,7 +58694,7 @@ another text.</p>
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bag"><a class="header" href="#bag">Bag</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Bag Class; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; allAt; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; allIndex; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; difference; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; putAll; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; removeAll; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; uniqueIndexes; Builtin Classes &gt; Collection Classes &gt; Bag Class &gt; xor</p>
-<p class="deviations">Deviations: D33, D45, D78, D84, D109, D125</p>
+<p class="deviations">Deviations: D33, D45, D84, D109, D125</p>
 <p>A <code>Bag</code> holds members, each an object that is its own index, and keeps every
 object that is put: <code>put</code> always adds, so one object can be a member many
 times, and <code>items</code> counts them all. Members are found as a
@@ -59147,11 +58907,11 @@ being left open by <a href="classes/bag.html#r-class.bag.deviation.33">the hash 
 <code>[]=</code> send <code>hashCode</code> to the item and nothing else: no <code>==</code> is sent, as a member
 is added whether or not an equal one is there; with an index they send <code>==</code> to
 the item first (<a href="classes/bag.html#r-class.bag.put">the put rule</a>). The very object that is stored
-is no exception to the <code>==</code> (<a href="classes/bag.html#r-class.bag.deviation.78">the deviation rule</a>). In
-the example every member hashes to the same string, so each stored member is
-compared; <code>index</code> is shown by <a href="classes/bag.html#r-class.bag.hasitem.sends">the item rule</a>, and
-the messages of <code>uniqueIndexes</code> are left open by <a href="classes/bag.html#r-class.bag.deviation.33">the hash order
-rule</a>.</p>
+is found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a>). In the example every member hashes to the
+same string, so each stored member is compared; <code>index</code> is shown by <a href="classes/bag.html#r-class.bag.hasitem.sends">the item
+rule</a>, and the messages of <code>uniqueIndexes</code> are left
+open by <a href="classes/bag.html#r-class.bag.deviation.33">the hash order rule</a>.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 say 'empty:' .bag~new~at(.k~new('p')) .local~log~makeString('L', ' | ')
 calls = 'b~at(.k~new("p"))|b[.k~new("p")]|b~hasIndex(.k~new("p"))',
@@ -59444,10 +59204,9 @@ b~index(, 1) =&gt; 93.902
 <p><code>hasItem(item)</code> and <code>removeItem(item)</code> look the item up as <a href="classes/bag.html#r-class.bag.members.sends">the lookup
 rule</a> says, with <code>hashCode</code> and <code>==</code> to the argument,
 and <code>hasItem(item, index)</code> and <code>removeItem(item, index)</code> send <code>==</code> to the item
-with the index as argument first. A search with the very object that is stored
-is no exception: its <code>==</code> is sent as for any other item (<a href="classes/bag.html#r-class.bag.deviation.78">the deviation
-rule</a>). <code>index(item)</code> sends what <code>hasItem(item)</code>
-sends.</p>
+with the index as argument first. The very object that is stored is found
+without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).
+<code>index(item)</code> sends what <code>hasItem(item)</code> sends.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 b = .bag~new
 b~put(.k~new('s1'))
@@ -60297,43 +60056,6 @@ ooRexx answers <code>.nil</code>. See <a href="classes/../deviations.html">Devia
 </code></pre>
 <pre><code class="language-output">0 0
 </code></pre>
-<div class="rule" id="r-class.bag.deviation.78"><a href="classes/bag.html#r-class.bag.deviation.78">[class.bag.deviation.78]</a></div>
-<p>A lookup, a <code>put</code> or a <code>remove</code> with the very object that is stored sends that
-object's <code>==</code> as for any other argument, and so does a search with the very
-object that is stored by <code>hasItem</code>, <code>index</code>, <code>allIndex</code> or <code>removeItem</code>, so an
-object whose <code>==</code> answers false is not found even at its own entry. A <code>put</code> or
-<code>[]=</code> that names an index sends <code>==</code> to the item with the index as argument
-also when the two are the same object. ooRexx compares identity first, finds
-the object and sends nothing but <code>hashCode</code> for the lookup, and nothing for
-the index. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-b = .bag~new
-q = .thing~new
-b~put(q)
-say b~hasItem(q) .local~n
-say (b~removeItem(q) == .nil) .local~n b~items
-.local~n = 0
-say b~at(q) .local~n
-.local~n = 0
-x = .loud~new
-.bag~new~put(x, x)
-say .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-::class loud
-::method '=='
-  .local~n += 1
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2 1
-The NIL object 1
-1
-</code></pre>
 <div class="rule" id="r-class.bag.deviation.84"><a href="classes/bag.html#r-class.bag.deviation.84">[class.bag.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> or <code>removeItem</code> sends to its argument, or that
 <code>removeAll</code> or <code>allAt</code> sends, empties the bag, the search ends and <code>items</code>
@@ -60405,7 +60127,7 @@ say d~items
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="set"><a class="header" href="#set">Set</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Set Class; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Set Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Set Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; putAll; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; xor</p>
-<p class="deviations">Deviations: D33, D78, D84, D109, D125</p>
+<p class="deviations">Deviations: D33, D84, D109, D125</p>
 <p>A <code>Set</code> holds members, each an object that is its own index: <code>put</code> stores an
 item and the item is the index it is found by, so a member occurs once however
 often it is put. Members are found as a <a href="classes/table.html">table</a> finds its indexes,
@@ -60616,9 +60338,9 @@ objects that have the same hash code, until one answers true; each of those is
 compared before the lookup gives up. Which further stored objects are compared,
 by <code>==</code> or <code>hashCode</code>, and how often, is not specified (<a href="classes/set.html#r-class.set.deviation.33">the hash order
 rule</a>); when the set is empty, the only message is
-<code>hashCode</code>. The very object that is stored is no exception to the <code>==</code> (<a href="classes/set.html#r-class.set.deviation.78">the
-deviation rule</a>). <code>put</code> and <code>[]=</code> with an index first
-send <code>==</code> to the item with the index as argument (<a href="classes/set.html#r-class.set.put">the put
+<code>hashCode</code>. The very object that is stored is found without a <code>==</code> sent to it
+(<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>). <code>put</code> and <code>[]=</code> with an
+index first send <code>==</code> to the item with the index as argument (<a href="classes/set.html#r-class.set.put">the put
 rule</a>). In the example every member hashes to the same string,
 so each stored member is compared.</p>
 <pre><code class="language-rexx">.local~log = .array~new
@@ -61540,43 +61262,6 @@ say s~items s~makeArray~items
 1,2,3
 3 3
 </code></pre>
-<div class="rule" id="r-class.set.deviation.78"><a href="classes/set.html#r-class.set.deviation.78">[class.set.deviation.78]</a></div>
-<p>A lookup, a <code>put</code> or a <code>remove</code> with the very object that is stored sends that
-object's <code>==</code> as for any other argument, and so does a search with the very
-object that is stored by <code>hasItem</code>, <code>index</code> or <code>removeItem</code>, so an object
-whose <code>==</code> answers false is not found even at its own entry. A <code>put</code> or <code>[]=</code>
-that names an index sends <code>==</code> to the item with the index as argument also
-when the two are the same object. ooRexx compares identity first, finds the
-object and sends nothing but <code>hashCode</code> for the lookup, and nothing for the
-index. See <a href="classes/../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-s = .set~new
-q = .thing~new
-s~put(q)
-say s~hasItem(q) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-.local~n = 0
-say s~at(q) .local~n
-.local~n = 0
-x = .loud~new
-.set~new~put(x, x)
-say .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-::class loud
-::method '=='
-  .local~n += 1
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2 1
-The NIL object 1
-1
-</code></pre>
 <div class="rule" id="r-class.set.deviation.84"><a href="classes/set.html#r-class.set.deviation.84">[class.set.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> or <code>removeItem</code> sends to its argument empties the
 set, the search ends: the method answers <code>.nil</code> and <code>items</code> answers 0
@@ -61643,7 +61328,7 @@ say .set~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stem"><a class="header" href="#stem">Stem</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Stem Class; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; request; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; toDirectory; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; unknown</p>
-<p class="deviations">Deviations: D1, D68, D78, D109, D118, D124</p>
+<p class="deviations">Deviations: D1, D68, D109, D118, D124</p>
 <p>A <code>Stem</code> is the collection that a stem symbol names: <a href="classes/../expressions/variables.html#r-expr.variables.stem">the value of a stem
 symbol</a> is a <code>Stem</code> object, and the compound variables
 of the stem are its entries. An entry is a tail, a string, and the item stored
@@ -62459,11 +62144,10 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <p><code>hasItem(item)</code>, <code>index(item)</code> and <code>removeItem(item)</code> send <code>==</code> to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, <code>hashCode</code> included; when none matches, every item is
-compared. The order in which the items are compared is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the
-order rule</a>). The search with the very object that
-is stored is no exception: its <code>==</code> is sent as for any other item (<a href="classes/stem.html#r-class.stem.deviation.78">the
-deviation rule</a>). The messages sent to an index are
-those of <a href="classes/stem.html#r-class.stem.tails">the tails rule</a>.</p>
+compared. The order in which the items are compared is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the order
+rule</a>). The very object that is stored is found
+without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).
+The messages sent to an index are those of <a href="classes/stem.html#r-class.stem.tails">the tails rule</a>.</p>
 <pre><code class="language-rexx">.local~n = 0
 s = .stem~new('N.')
 s['a'] = 's'
@@ -62523,28 +62207,6 @@ say s~length s~foo(1, 2)
   return 'asked for' name args~items
 </code></pre>
 <pre><code class="language-output">asked for LENGTH 0 asked for FOO 2
-</code></pre>
-<div class="rule" id="r-class.stem.deviation.78"><a href="classes/stem.html#r-class.stem.deviation.78">[class.stem.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
-object whose <code>==</code> answers false is not found even at its own tail. ooRexx
-compares identity first, finds it and sends nothing. See <a href="classes/../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-s = .stem~new('N.')
-q = .thing~new
-s['k'] = q
-say s~hasItem(q) .local~n
-say (s~index(q) == .nil) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.109"><a href="classes/stem.html#r-class.stem.deviation.109">[class.stem.deviation.109]</a></div>
 <p>A name given to <code>new</code> and an index that are instances of a subclass of
@@ -128662,15 +128324,9 @@ running package. ooRexx names another package object.</p>
 default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.</p>
-<h2 id="78-search-for-the-identical-index-or-item"><a class="header" href="#78-search-for-the-identical-index-or-item">78. Search for the identical index or item</a></h2>
-<p>A lookup or PUT with the very index object already stored sends that object's
-<code>==</code>. So does a search for an item with the very item object stored: <code>hasItem</code>,
-<code>index</code>, <code>removeItem</code> and <code>allIndex</code> of the hash collections, and <code>hasItem</code>,
-<code>index</code> and <code>removeItem</code> of an <code>Array</code>, <code>List</code>, <code>Queue</code> or <code>CircularQueue</code>. So
-do a Relation's <code>uniqueIndexes</code> for an index object stored more than once, and
-the check of a Set's or Bag's <code>put</code> and <code>[]=</code> that the index equals the item
-when both are the very same object. ooRexx compares identity first and sends
-nothing.</p>
+<h2 id="78-withdrawn"><a class="header" href="#78-withdrawn">78. Withdrawn</a></h2>
+<p>A collection finds the very object it stores without sending it <code>==</code>, as ooRexx
+does.</p>
 <h2 id="79-append-write-positions"><a class="header" href="#79-append-write-positions">79. APPEND write positions</a></h2>
 <p>On a stream opened APPEND, every write goes after the last character, and
 the write position cannot be moved into the file as it was when opened: such

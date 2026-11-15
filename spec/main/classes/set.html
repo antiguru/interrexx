@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="set"><a class="header" href="#set">Set</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Set Class; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Set Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Set Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; putAll; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Set Class &gt; xor</p>
-<p class="deviations">Deviations: D33, D78, D84, D109, D125</p>
+<p class="deviations">Deviations: D33, D84, D109, D125</p>
 <p>A <code>Set</code> holds members, each an object that is its own index: <code>put</code> stores an
 item and the item is the index it is found by, so a member occurs once however
 often it is put. Members are found as a <a href="table.html">table</a> finds its indexes,
@@ -386,9 +386,9 @@ objects that have the same hash code, until one answers true; each of those is
 compared before the lookup gives up. Which further stored objects are compared,
 by <code>==</code> or <code>hashCode</code>, and how often, is not specified (<a href="#r-class.set.deviation.33">the hash order
 rule</a>); when the set is empty, the only message is
-<code>hashCode</code>. The very object that is stored is no exception to the <code>==</code> (<a href="#r-class.set.deviation.78">the
-deviation rule</a>). <code>put</code> and <code>[]=</code> with an index first
-send <code>==</code> to the item with the index as argument (<a href="#r-class.set.put">the put
+<code>hashCode</code>. The very object that is stored is found without a <code>==</code> sent to it
+(<a href="collection.html#r-class.collection.identity">the identity rule</a>). <code>put</code> and <code>[]=</code> with an
+index first send <code>==</code> to the item with the index as argument (<a href="#r-class.set.put">the put
 rule</a>). In the example every member hashes to the same string,
 so each stored member is compared.</p>
 <pre><code class="language-rexx">.local~log = .array~new
@@ -1309,43 +1309,6 @@ say s~items s~makeArray~items
 <pre><code class="language-output">1,2,3
 1,2,3
 3 3
-</code></pre>
-<div class="rule" id="r-class.set.deviation.78"><a href="#r-class.set.deviation.78">[class.set.deviation.78]</a></div>
-<p>A lookup, a <code>put</code> or a <code>remove</code> with the very object that is stored sends that
-object's <code>==</code> as for any other argument, and so does a search with the very
-object that is stored by <code>hasItem</code>, <code>index</code> or <code>removeItem</code>, so an object
-whose <code>==</code> answers false is not found even at its own entry. A <code>put</code> or <code>[]=</code>
-that names an index sends <code>==</code> to the item with the index as argument also
-when the two are the same object. ooRexx compares identity first, finds the
-object and sends nothing but <code>hashCode</code> for the lookup, and nothing for the
-index. See <a href="../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-s = .set~new
-q = .thing~new
-s~put(q)
-say s~hasItem(q) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-.local~n = 0
-say s~at(q) .local~n
-.local~n = 0
-x = .loud~new
-.set~new~put(x, x)
-say .local~n
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-::class loud
-::method '=='
-  .local~n += 1
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2 1
-The NIL object 1
-1
 </code></pre>
 <div class="rule" id="r-class.set.deviation.84"><a href="#r-class.set.deviation.84">[class.set.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> or <code>removeItem</code> sends to its argument empties the

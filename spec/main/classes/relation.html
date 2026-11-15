@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="relation"><a class="header" href="#relation">Relation</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Relation Class; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allAt; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allIndex; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; difference; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; removeAll; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; uniqueIndexes; Builtin Classes &gt; Collection Classes &gt; Relation Class &gt; xor</p>
-<p class="deviations">Deviations: D33, D78, D84, D109, D118</p>
+<p class="deviations">Deviations: D33, D84, D109, D118</p>
 <p>A <code>Relation</code> is a <a href="table.html"><code>Table</code></a> that keeps every item put at an index:
 it holds entries, each a pair of an index and an item, and <code>put</code> always adds
 an entry, so one index, or one item, can occur in many entries, and the same
@@ -331,9 +331,9 @@ lookup gives up. Which further stored indexes are compared, by <code>==</code> o
 rule</a>); when the relation is empty, the only
 message is <code>hashCode</code>. <code>put</code> and <code>[]=</code> send <code>hashCode</code> to the index and nothing
 else: no <code>==</code> is sent, as an entry is added whether or not an equal index is
-there. The very object that is stored is no exception to the <code>==</code> (<a href="#r-class.relation.deviation.78">the
-deviation rule</a>). In the example every index
-hashes to the same string, so each stored index is compared.</p>
+there. The very object that is stored is found without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the
+identity rule</a>). In the example every index hashes
+to the same string, so each stored index is compared.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 say 'empty:' .relation~new~at(.k~new('p')) .local~log~makeString('L', ' | ')
 calls = 'r~at(.k~new("p"))|r[.k~new("p")]|r~hasIndex(.k~new("p"))',
@@ -607,9 +607,9 @@ when none matches, and for <code>allIndex</code> always. <code>hasItem(item, ind
 <code>removeItem(item, index)</code> first look the index up as <a href="#r-class.relation.indexes.sends">the lookup
 rule</a> says, and then send <code>==</code> to the item
 argument with the item of each entry whose index matches, at least once for
-each, and no message when no index matches. The search with the very object
-that is stored is no exception: its <code>==</code> is sent as for any other item (<a href="#r-class.relation.deviation.78">the
-deviation rule</a>).</p>
+each, and no message when no index matches. The very object that is stored is
+found without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 .local~h = 0
 r = .relation~new
@@ -896,15 +896,15 @@ r~makeArray(1) =&gt; 93.902
 <div class="rule" id="r-class.relation.uniqueindexes"><a href="#r-class.relation.uniqueindexes">[class.relation.uniqueindexes]</a></div>
 <p><code>uniqueIndexes</code> answers a new <code>Array</code> with one index for each group of equal
 indexes in the relation, equal as <a href="#r-class.relation.indexes">the index rule</a>
-says, so an index that is in several entries appears once, and two index
-objects with different hash codes are two indexes even when <code>==</code> answers true
-for them. Which of several equal index objects is answered is not specified,
-and so is the order (<a href="#r-class.relation.deviation.33">the hash order rule</a>).
-An index object that is stored in more than one entry is compared as any other
-(<a href="#r-class.relation.deviation.78">the deviation rule</a>). <code>uniqueIndexes</code> compares
-the stored indexes with each other by sending <code>==</code> to a stored index with
-another stored index as the argument; which stored indexes it sends <code>==</code> and
-<code>hashCode</code> to, and how often, is not specified (<a href="#r-class.relation.deviation.33">the hash order
+says, so an index that is in several entries appears once, and two index objects
+with different hash codes are two indexes even when <code>==</code> answers true for them.
+Which of several equal index objects is answered is not specified, and so is the
+order (<a href="#r-class.relation.deviation.33">the hash order rule</a>). An index object
+that is stored in more than one entry is one index, without a <code>==</code> sent to it
+(<a href="collection.html#r-class.collection.identity">the identity rule</a>). <code>uniqueIndexes</code> compares the
+stored indexes with each other by sending <code>==</code> to a stored index with another
+stored index as the argument; which stored indexes it sends <code>==</code> and <code>hashCode</code>
+to, and how often, is not specified (<a href="#r-class.relation.deviation.33">the hash order
 rule</a>). The answer is an instance of <code>Array</code> for
 a subclass receiver too, and does not follow later changes. <code>uniqueIndexes</code>
 takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
@@ -1655,43 +1655,6 @@ say r~uniqueIndexes~items r~items r~makeArray~items
 <pre><code class="language-output">one,three,three,two
 1,2,3,4
 3 4 4
-</code></pre>
-<div class="rule" id="r-class.relation.deviation.78"><a href="#r-class.relation.deviation.78">[class.relation.deviation.78]</a></div>
-<p>A lookup or a <code>remove</code> with the very object that is stored as an index sends
-that object's <code>==</code> as for any other index, and a search for an item with the
-very object that is stored, by <code>hasItem</code>, <code>index</code>, <code>allIndex</code> or <code>removeItem</code>,
-sends that object's <code>==</code> as for any other item, so an object whose <code>==</code>
-answers false is not found even at its own entry. <code>uniqueIndexes</code> does the
-same for an index object that is stored in more than one entry, so one whose
-<code>==</code> answers false counts once for each of those entries. ooRexx compares
-identity first, finds it and sends nothing but <code>hashCode</code>, and counts such an
-index object once. See <a href="../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-r = .relation~new
-q = .thing~new
-r~put(q, 'k')
-say r~hasItem(q) .local~n
-say (r~index(q) == .nil) .local~n
-say (r~removeItem(q) == .nil) .local~n r~items
-r~put('v', q)
-.local~n = 0
-say r~at(q) .local~n
-r2 = .relation~new
-r2~put('v1', q)
-r2~put('v2', q)
-say r2~uniqueIndexes~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-::method hashCode
-  return 1
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
-The NIL object 1
-2
 </code></pre>
 <div class="rule" id="r-class.relation.deviation.84"><a href="#r-class.relation.deviation.84">[class.relation.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> sends to an index, or that <code>removeItem</code> sends to

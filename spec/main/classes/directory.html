@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="directory"><a class="header" href="#directory">Directory</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Directory Class; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; entry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; removeEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; setEntry; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; setMethod; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; unknown; Builtin Classes &gt; Collection Classes &gt; Directory Class &gt; unsetMethod</p>
-<p class="deviations">Deviations: D29, D33, D78, D109, D118, D123, D124</p>
+<p class="deviations">Deviations: D29, D33, D109, D118, D123, D124</p>
 <p>A <code>Directory</code> maps string indexes to items. An index is a string compared in
 full and by its exact characters, so <code>ab</code> and <code>AB</code> are two indexes, and an
 item is any object. A directory can also hold methods: a method that
@@ -537,9 +537,8 @@ item that is searched, with that item as the argument, until one answers true,
 and send nothing else; the stored items are visited first, in an order that is
 not specified, and then the answers of the methods, in an order that is not
 specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The search with the very object that
-is stored is no exception: its <code>==</code> is sent as for any other item (<a href="#r-class.directory.deviation.78">the
-deviation rule</a>).</p>
+matches, as then every item is visited. The very object that is stored is found
+without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 d = .directory~new
 d~put('s', 'k1')
@@ -1143,28 +1142,6 @@ say d~items d~makeArray~items
 <pre><code class="language-output">one,three,two
 1,2,3
 3 3
-</code></pre>
-<div class="rule" id="r-class.directory.deviation.78"><a href="#r-class.directory.deviation.78">[class.directory.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
-object whose <code>==</code> answers false is not found even at its own entry. ooRexx
-compares identity first, finds it and sends nothing. See <a href="../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-d = .directory~new
-q = .thing~new
-d~put(q, 'k')
-say d~hasItem(q) .local~n
-say (d~index(q) == .nil) .local~n
-say (d~removeItem(q) == .nil) .local~n d~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.109"><a href="#r-class.directory.deviation.109">[class.directory.deviation.109]</a></div>
 <p>A name, an index or the size argument of <code>new</code> that is an instance of a

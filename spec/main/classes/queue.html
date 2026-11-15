@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="queue"><a class="header" href="#queue">Queue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Queue Class; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; append; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; first; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; last; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; next; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; peek; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; pull; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; push; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; queue; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; section; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; size; Builtin Classes &gt; Collection Classes &gt; Queue Class &gt; supplier</p>
-<p class="deviations">Deviations: D78, D109, D121</p>
+<p class="deviations">Deviations: D109, D121</p>
 <p>A <code>Queue</code> is an ordered collection that is addressed by position: the item at
 the head is at index 1, the next at index 2, and so on up to the number of
 items, so an index is where an item stands now, not a name for it. Adding an
@@ -674,10 +674,11 @@ q~removeItem(, 1) =&gt; 93.902
 q~removeItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.queue.removeitem.sends"><a href="#r-class.queue.removeitem.sends">[class.queue.removeitem.sends]</a></div>
-<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item from the head,
-with that item as the argument, until one answers true, and sends nothing
-else. <code>hasItem</code> and <code>index</code> make the same search. For the very object that is
-stored, see <a href="#r-class.queue.deviation.78">the deviation rule</a>.</p>
+<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item from the head, with
+that item as the argument, until one answers true, and sends nothing else.
+<code>hasItem</code> and <code>index</code> make the same search. The search ends at the very object
+that is searched for without a <code>==</code> sent to it; the items before it are compared
+as any other (<a href="collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">q = .queue~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
 x = q~removeItem(.thing~new('q'))
 say x~name q~items
@@ -1333,32 +1334,6 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <pre><code class="language-output">32 calls, 0 sent more than one message to the receiver
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
-<div class="rule" id="r-class.queue.deviation.78"><a href="#r-class.queue.deviation.78">[class.queue.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
-an object whose <code>==</code> answers false is not found even at its own entry.
-ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
-for the items before it. See <a href="../deviations.html">Deviation 78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-x = .liar~new
-c = .queue~new
-c~append('a')
-c~append(x)
-c~append('b')
-say c~hasItem(x) .n
-.local~n = 0
-say (c~index(x) == .nil) .n
-.local~n = 0
-say (.nil == c~removeItem(x)) c~items .n
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 3
-1 3
-1 3 3
-</code></pre>
 <div class="rule" id="r-class.queue.deviation.109"><a href="#r-class.queue.deviation.109">[class.queue.deviation.109]</a></div>
 <p>An index or a count that is an instance of a subclass of <code>String</code> is read by
 its own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are not sent to it

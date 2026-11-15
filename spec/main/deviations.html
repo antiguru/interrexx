@@ -541,15 +541,9 @@ running package. ooRexx names another package object.</p>
 default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.</p>
-<h2 id="78-search-for-the-identical-index-or-item"><a class="header" href="#78-search-for-the-identical-index-or-item">78. Search for the identical index or item</a></h2>
-<p>A lookup or PUT with the very index object already stored sends that object's
-<code>==</code>. So does a search for an item with the very item object stored: <code>hasItem</code>,
-<code>index</code>, <code>removeItem</code> and <code>allIndex</code> of the hash collections, and <code>hasItem</code>,
-<code>index</code> and <code>removeItem</code> of an <code>Array</code>, <code>List</code>, <code>Queue</code> or <code>CircularQueue</code>. So
-do a Relation's <code>uniqueIndexes</code> for an index object stored more than once, and
-the check of a Set's or Bag's <code>put</code> and <code>[]=</code> that the index equals the item
-when both are the very same object. ooRexx compares identity first and sends
-nothing.</p>
+<h2 id="78-withdrawn"><a class="header" href="#78-withdrawn">78. Withdrawn</a></h2>
+<p>A collection finds the very object it stores without sending it <code>==</code>, as ooRexx
+does.</p>
 <h2 id="79-append-write-positions"><a class="header" href="#79-append-write-positions">79. APPEND write positions</a></h2>
 <p>On a stream opened APPEND, every write goes after the last character, and
 the write position cannot be moved into the file as it was when opened: such

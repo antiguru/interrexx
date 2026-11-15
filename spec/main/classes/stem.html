@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="stem"><a class="header" href="#stem">Stem</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Stem Class; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; request; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; toDirectory; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; unknown</p>
-<p class="deviations">Deviations: D1, D68, D78, D109, D118, D124</p>
+<p class="deviations">Deviations: D1, D68, D109, D118, D124</p>
 <p>A <code>Stem</code> is the collection that a stem symbol names: <a href="../expressions/variables.html#r-expr.variables.stem">the value of a stem
 symbol</a> is a <code>Stem</code> object, and the compound variables
 of the stem are its entries. An entry is a tail, a string, and the item stored
@@ -991,11 +991,10 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <p><code>hasItem(item)</code>, <code>index(item)</code> and <code>removeItem(item)</code> send <code>==</code> to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, <code>hashCode</code> included; when none matches, every item is
-compared. The order in which the items are compared is not specified (<a href="#r-class.stem.deviation.1">the
-order rule</a>). The search with the very object that
-is stored is no exception: its <code>==</code> is sent as for any other item (<a href="#r-class.stem.deviation.78">the
-deviation rule</a>). The messages sent to an index are
-those of <a href="#r-class.stem.tails">the tails rule</a>.</p>
+compared. The order in which the items are compared is not specified (<a href="#r-class.stem.deviation.1">the order
+rule</a>). The very object that is stored is found
+without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity rule</a>).
+The messages sent to an index are those of <a href="#r-class.stem.tails">the tails rule</a>.</p>
 <pre><code class="language-rexx">.local~n = 0
 s = .stem~new('N.')
 s['a'] = 's'
@@ -1055,28 +1054,6 @@ say s~length s~foo(1, 2)
   return 'asked for' name args~items
 </code></pre>
 <pre><code class="language-output">asked for LENGTH 0 asked for FOO 2
-</code></pre>
-<div class="rule" id="r-class.stem.deviation.78"><a href="#r-class.stem.deviation.78">[class.stem.deviation.78]</a></div>
-<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
-<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
-object whose <code>==</code> answers false is not found even at its own tail. ooRexx
-compares identity first, finds it and sends nothing. See <a href="../deviations.html">Deviation
-78</a>.</p>
-<pre><code class="language-rexx">.local~n = 0
-s = .stem~new('N.')
-q = .thing~new
-s['k'] = q
-say s~hasItem(q) .local~n
-say (s~index(q) == .nil) .local~n
-say (s~removeItem(q) == .nil) .local~n s~items
-::class thing
-::method '=='
-  .local~n += 1
-  return 0
-</code></pre>
-<pre><code class="language-output">0 1
-1 2
-1 3 1
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.109"><a href="#r-class.stem.deviation.109">[class.stem.deviation.109]</a></div>
 <p>A name given to <code>new</code> and an index that are instances of a subclass of
