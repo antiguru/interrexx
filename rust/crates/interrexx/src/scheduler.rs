@@ -549,8 +549,12 @@ pub(crate) enum DrainAt {
     /// At a clause boundary in the middle of its run, which goes on once the
     /// drain returns.
     MidRun,
-    /// Stopped: a loop's own activity, parked, or one a loop ran that has
-    /// parked, ended or come to its slice's end.
+    /// Stopped: a loop's own activity, parked, or ready where it yields
+    /// mid-run to a round of the others (a pinned yield, or the yield after a
+    /// notifier's failure), its frames buried below that round; or one a loop
+    /// ran that has parked, ended or come to its slice's end. A recall served
+    /// here marks the activity it runs above as buried, which a loop above
+    /// sets aside while it is ready.
     Stopped,
 }
 
@@ -2013,6 +2017,14 @@ impl Interp {
     /// is ready whose frames lie below a loop on the stack, which only that
     /// loop can run, or where a recall below this loop interrupted an
     /// activity, which runs on only once that recall's lend returns.
+    ///
+    /// Both are a best guess at what the blocked wait is for: neither asks
+    /// whether the activity below could end it. Any interrupted owner below
+    /// makes the wait inverted, even one nothing could end, as any activity
+    /// set aside does; telling the two apart would need to know which
+    /// activity each wait's end depends on, which the loop does not track.
+    /// The refusal and exit code are the same either way, only the text and
+    /// the inverted-wait count differ.
     fn blocked(&self, level: usize) -> Waited {
         let table = &self.activities;
         let interrupted = table.owners[..level]

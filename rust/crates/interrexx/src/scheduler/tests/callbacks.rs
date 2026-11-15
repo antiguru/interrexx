@@ -313,8 +313,9 @@ fn two_activities_in_native_calls_with_interleaved_callbacks() {
 /// callback's wait for the one it interrupted is refused as an inverted wait.
 /// B waits in `AWAITTHENSEND` for the file that A's first callback writes
 /// before it spins until B's recall is served on top of it, which is the only
-/// way the spin ends. This is a refusal pending the scheduling question of
-/// #694.
+/// way the spin ends. Whether such a wait should instead run the interrupted
+/// activity, whose run goes on only once the recall's lend returns, is an
+/// open scheduling question; until it is settled the wait is refused.
 #[test]
 fn a_wait_for_a_callback_a_boundary_recall_interrupted_is_refused_as_inverted() {
     let path = std::env::temp_dir().join(format!("rexx-boundary-recall-{}", std::process::id()));
@@ -351,6 +352,9 @@ fn a_wait_for_a_callback_a_boundary_recall_interrupted_is_refused_as_inverted() 
 /// and sends only once the other exists, which main writes in the clause that
 /// parks it in its wait for B's result, so no clause boundary can serve B's
 /// recall before main parks. B's callback waits for a message nothing sends.
+/// The text is the same with or without the inverted-wait rule for
+/// interrupted activities: the test guards that a recall a loop serves marks
+/// the activity below it buried, not interrupted.
 #[test]
 fn a_wait_above_a_recall_served_while_the_last_activity_parks_is_refused_as_unending() {
     let dir = std::env::temp_dir();
@@ -377,6 +381,45 @@ fn a_wait_above_a_recall_served_while_the_last_activity_parks_is_refused_as_unen
     assert_eq!(
         ran.stderr(),
         "interrexx: a wait that nothing left to run can end is not implemented\n"
+    );
+}
+
+/// A wait above a recall served at a clause boundary of an activity that is
+/// mid-run is refused as an inverted wait even where nothing, the
+/// interrupted activity included, could end it: the text is a best guess
+/// that does not ask what the wait is for. B's `SIGNALAWAITSEND` writes one
+/// file once it is in flight and sends only once the other exists, which
+/// main writes before it spins without parking, and stream output runs on
+/// the baton, so main never parks once B can send: only a clause boundary of
+/// main's spin can serve B's recall. B's callback waits for a message
+/// nothing sends.
+#[test]
+fn a_wait_nothing_can_end_above_a_boundary_recall_is_refused_as_inverted() {
+    let dir = std::env::temp_dir();
+    let id = std::process::id();
+    let entered = dir.join(format!("rexx-spin-recall-entered-{id}"));
+    let signal = dir.join(format!("rexx-spin-recall-{id}"));
+    let _ = std::fs::remove_file(&entered);
+    let _ = std::fs::remove_file(&signal);
+    let ran = run(&format!(
+        "b = .t~new~start('waits', .side~new)\n\
+         do while stream('{entered}', 'c', 'query exists') == ''\n  call SysSleep 0.01\nend\n\
+         call lineout '{signal}', 'go'\ndo forever\nend\n\
+         ::requires 'callbacktest' LIBRARY\n\
+         ::class t\n::method waits\n  use arg side\n  \
+         return SIGNALAWAITSEND('{entered}', '{signal}', side, 'FIRST')\n\
+         ::class side\n::method first\n  return .message~new('abc', 'length')~result\n",
+        entered = entered.display(),
+        signal = signal.display()
+    ));
+    let _ = std::fs::remove_file(&entered);
+    let _ = std::fs::remove_file(&signal);
+    assert_eq!(ran.outcome.exit_code, 120, "{}", ran.stderr());
+    assert_eq!(ran.stdout(), "");
+    assert_eq!(
+        ran.stderr(),
+        "interrexx: a pinned wait for a message's completion that only an activity pinned \
+         below it can end is not implemented\n"
     );
 }
 
