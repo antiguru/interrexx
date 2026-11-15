@@ -107,14 +107,16 @@ pub(crate) fn queued(
     Ok(answer.unwrap_or_else(|| interp.text(b"0")))
 }
 
+/// The values `GC`'s option may take, as its 40.904 names them.
+pub(crate) const GC_OPTIONS: &str = "\"force\", \"Force\", \"f\", \"F\"";
+
 /// `GC()` / `GC('Force')`: whether a collection was run.
 pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    const VALID: &str = "\"force\", \"Force\", \"f\", \"F\"";
     let Some(text) = optional_string(interp, args, 1) else {
         return Ok(crate::eval::logical(false));
     };
     if !matches!(text.first(), Some(b'f' | b'F')) {
-        return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
+        return Err(Raised::argument_not_in_list(name, 1, GC_OPTIONS, &text).into());
     }
     // Really collect, the way a collect-and-uninit does, rather than report `.true`
     // for something that did not happen. Safe at exactly the point every
@@ -313,6 +315,9 @@ pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
     }
 }
 
+/// The letters `CONDITION`'s option may begin with.
+pub(crate) const CONDITION_OPTIONS: &str = "ACDEIORS";
+
 /// `CONDITION()` and `CONDITION(option)`: what the handler now running was
 /// entered for.
 /// ```text
@@ -338,8 +343,7 @@ pub(crate) fn condition(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    const VALID: &str = "ACDEIORS";
-    let style = option_letter(interp, name, args, 1, VALID)?.unwrap_or(b'I');
+    let style = option_letter(interp, name, args, 1, CONDITION_OPTIONS)?.unwrap_or(b'I');
     // Resolved before the option is answered, because two of the options
     // have a distinct answer when there is no condition at all and the rest
     // share one.
@@ -417,7 +421,7 @@ pub(crate) fn condition(
         }
         _ => {
             let found = optional_string(interp, args, 1).unwrap_or_default();
-            Err(Raised::argument_not_in_list(name, 1, VALID, &found).into())
+            Err(Raised::argument_not_in_list(name, 1, CONDITION_OPTIONS, &found).into())
         }
     }
 }

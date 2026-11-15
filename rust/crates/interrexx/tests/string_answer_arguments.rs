@@ -2,13 +2,15 @@
 //! string value (Deviations 30 and 169). Each `call` and `refuses` case runs
 //! `say <call>` with `o` an instance whose `STRING` answers the `string=`
 //! object; `program` runs its input as the whole program. A `call` or
-//! `program` case records the oracle's rc, stdout and stderr. A `refuses`
-//! case records this crate's answer, and its comment the oracle's: SYNTAX 88.909
-//! where the call's argument is one the builtin reads as a string, and SYNTAX
-//! 98.973 at a position the builtin reads as a number, a character or an
-//! option (`r[conv.string.deviation.169]`). It records as well what a trap of
-//! the error sees: the code, and for 88.909 the argument's position
-//! (`r[conv.string.builtin-argument]`).
+//! `program` case records the oracle's rc, stdout and stderr, except where its
+//! comment gives the oracle's answer as another. A `refuses` case records this
+//! crate's answer, and its comment the oracle's: SYNTAX 88.909 where the call's
+//! argument is one the builtin reads as a string
+//! (`r[conv.string.builtin-argument]`), the error of the argument's own check
+//! where the builtin reads it as a number, a character, an option or a stream
+//! name (`r[conv.string.argument-kind]`), and SYNTAX 98.973 for the string the
+//! builtin works on (`r[conv.string.deviation.169]`). It records as well what a
+//! trap of the error sees: the code, and for 88.909 the argument's position.
 
 use interrexx::Invocation;
 

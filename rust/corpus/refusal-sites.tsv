@@ -167,6 +167,7 @@ Raised	invalid_routine_option	body	crates/interrexx/src/error.rs	off-send-surfac
 Raised	invalid_stream_name	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Loud	inverted_wait	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Loud	jump_out_of_range	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
+Raised	kind_refusal	body	crates/interrexx/src/builtin/argument_kinds.rs	off-send-surface	-	-	-
 Raised	label_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	length_required_for_negative	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	library_not_loaded	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
@@ -182,6 +183,7 @@ Raised	message_reuse	send	crates/interrexx/src/error.rs	agrees	yes	98.915	m~send
 Raised	metaclass_new_not_a_class	send	crates/interrexx/src/error.rs	recorded	yes	98.900	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return 'x' the oracle crashes, recorded as Deviation 114
 Loud	metaclass_new_reused_class	send	crates/interrexx/src/lib.rs	recorded	yes	a metaclass NEW answering a class	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return .array the oracle id Array, recorded as Deviation 32
 Raised	metaclass_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
+Raised	method_argument_needs_a_string_value	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	method_argument_not_a_number	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	method_argument_not_in_list	send	crates/interrexx/src/error.rs	agrees	yes	93.914	.Package~defaultOptions('FORM')
 Raised	method_argument_not_positive	send	crates/interrexx/src/error.rs	agrees	yes	93.907	(1,2,3)~at(0)

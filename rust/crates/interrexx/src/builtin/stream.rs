@@ -10,6 +10,12 @@ use super::{Args, arg, optional_string, required_string};
 use crate::error::Raised;
 use crate::{Failure, Interp};
 
+/// The letters `LINES`'s option may begin with.
+pub(crate) const LINES_OPTIONS: &str = "CN";
+
+/// The letters `STREAM`'s operation may begin with.
+pub(crate) const STREAM_OPTIONS: &str = "SDC";
+
 /// Resolves `args`' first argument and sends `message` the rest of them.
 /// `added` says whether a miss may leave the stream in the table.
 fn send_to_stream(
@@ -212,7 +218,7 @@ pub(crate) fn lines(
             Some(byte) if byte.eq_ignore_ascii_case(&b'N') => b'N',
             _ => {
                 let shown = required_string(interp, args, 2);
-                return Err(Raised::argument_not_in_list(name, 2, "CN", &shown).into());
+                return Err(Raised::argument_not_in_list(name, 2, LINES_OPTIONS, &shown).into());
             }
         },
     };
@@ -283,7 +289,7 @@ pub(crate) fn stream(
             Some(byte) if byte.eq_ignore_ascii_case(&b'S') => b'S',
             Some(byte) if byte.eq_ignore_ascii_case(&b'D') => b'D',
             Some(byte) if byte.eq_ignore_ascii_case(&b'C') => b'C',
-            _ => return Err(Raised::argument_not_in_list(name, 2, "SDC", text).into()),
+            _ => return Err(Raised::argument_not_in_list(name, 2, STREAM_OPTIONS, text).into()),
         },
     };
     if letter == b'C' {

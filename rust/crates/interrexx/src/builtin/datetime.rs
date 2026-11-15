@@ -885,11 +885,12 @@ fn elapsed_reading(interp: &mut Interp, reading: i64, reset: bool) -> Vec<u8> {
 
 /// `DATE`'s output-style letters, exactly as its own 40.904 message spells
 /// them.
-const DATE_OPTIONS1: &str = "BDEFILMNOSTUW";
+pub(crate) const DATE_OPTIONS1: &str = "BDEFILMNOSTUW";
 /// `DATE`'s input-style letters -- ten, not thirteen: no `L`, `M` or `W`,
 /// since a month or weekday *name* is not itself a parseable date.
 const DATE_OPTIONS2: &str = "BDEFINOSTU";
-const TIME_OPTIONS1: &str = "CEFHLMNORST";
+/// `TIME`'s output-style letters.
+pub(crate) const TIME_OPTIONS1: &str = "CEFHLMNORST";
 const TIME_OPTIONS2: &str = "CFHLMNOST";
 
 /// Reads the option-letter argument at `position`, upcasing its first byte.
