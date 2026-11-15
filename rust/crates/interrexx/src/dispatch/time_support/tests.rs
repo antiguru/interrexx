@@ -105,6 +105,31 @@ fn a_post_ends_the_remainder_or_the_current_day() {
     );
 }
 
+/// A guarded stop that waits for its object's guard lock, held by another
+/// activity, posts the timer once the lock is granted and yields to the
+/// waiter it woke, as a cancel's guarded `!stopTimer` does: the yield parks
+/// the stopping activity again after its guard wait, and the stop answers
+/// once that park ends, also where a native method, a message's `send`, made
+/// the stop's send and takes its answer.
+#[test]
+fn a_guarded_stop_that_waited_for_its_lock_yields_to_the_waiter_it_woke() {
+    check(
+        "o = .g~new\nm = o~start('alarmStart', 0, 20000)\ncall waitStarted o\n\
+         h = o~start('hold')\ndo while \\o~holding\n  call SysSleep 0.01\nend\n\
+         say o~stopGuarded(o~handle)\nsay m~result\nsay h~completed\n\
+         p = .g~new\nm = p~start('alarmStart', 0, 20000)\ncall waitStarted p\n\
+         h = p~start('hold')\ndo while \\p~holding\n  call SysSleep 0.01\nend\n\
+         s = .message~new(p, 'STOPGUARDED', 'I', p~handle)\n\
+         say s~send s~completed s~result m~result\n",
+        "\n::class g subclass t\n\
+         ::method stopGuarded external 'LIBRARY REXX alarm_stopTimer'\n\
+         ::method hold\n  expose holding\n  holding = 1\n  call SysSleep 0.3\n  return\n\
+         ::method holding unguarded\n  expose holding\n  return holding == 1\n",
+        "0\n0\n1\n0 1 0 0\n",
+        Duration::from_millis(500),
+    );
+}
+
 /// A stop once an alarm's wait is over reaches nothing: its timer has ended,
 /// and a later timer's wait runs its full time through it.
 #[test]

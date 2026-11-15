@@ -597,8 +597,12 @@ fn resume_guarded_send(interp: &mut Interp, _receiver: ObjRef) -> Result<Option<
             }
             Ok(value)
         }
+        // The method parked again, as a timer's stop does to let the
+        // activities it woke run first: the activity waits once more, and
+        // the method's answer comes when that park ends.
+        Started::Entered if interp.activity.native_park.is_some() => Ok(None),
         Started::Entered => Err(Loud::scheduler_inconsistency(
-            "a guarded method that parked again after its guard wait",
+            "a guarded method that entered after its guard wait without a park",
         )
         .into()),
     }
@@ -3541,6 +3545,15 @@ impl Interp {
                 sent
             }
         };
+        // The continuation parked again: this park's work comes after that
+        // park's, which the caller waits on before anything is answered.
+        if sent.is_ok()
+            && let Some(again) = self.activity.native_park.as_mut()
+        {
+            again.thens.extend(thens);
+            self.roots.activity_mut().pop_frame(frame);
+            return Ok(None);
+        }
         for (then, blame) in thens {
             if let Ok(Some(value)) = sent {
                 self.roots.activity_mut().push_temp(value);

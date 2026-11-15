@@ -2164,6 +2164,10 @@ impl Interp {
                             return Ok(Stopped::Parked);
                         }
                         let sent = self.resume_parked(None);
+                        if let Some(reason) = self.parked_by_resume(&sent) {
+                            self.park(reason);
+                            return Ok(Stopped::Parked);
+                        }
                         let Some(floor) = self.activity.drive_floor.take() else {
                             break 'resumed sent;
                         };
@@ -2324,6 +2328,15 @@ impl Interp {
         true
     }
 
+    /// The reason of the park the running activity's continuation recorded
+    /// while it resumed, where it parked again rather than answering `sent`.
+    fn parked_by_resume(&self, sent: &Result<Option<ObjRef>, Failure>) -> Option<ParkReason> {
+        if sent.is_err() {
+            return None;
+        }
+        self.activity.native_park.as_ref().map(|park| park.reason())
+    }
+
     /// The running activity's park, resumed now that it has woken.
     fn resume_parked(&mut self, failure: Option<Failure>) -> Result<Option<ObjRef>, Failure> {
         let failure = failure.or_else(|| {
@@ -2413,6 +2426,11 @@ impl Interp {
             (None, failure) => match self.activity.drive_floor.take() {
                 Some(floor) => {
                     let sent = self.resume_parked(failure);
+                    if let Some(reason) = self.parked_by_resume(&sent) {
+                        self.activity.drive_floor = Some(floor);
+                        self.park(reason);
+                        return;
+                    }
                     self.drive_from(DriveStart::Woken { floor, sent }, true)
                 }
                 None => Err(Loud::scheduler_inconsistency("a main with no continuation").into()),
