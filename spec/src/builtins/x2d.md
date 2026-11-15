@@ -147,6 +147,26 @@ say x2d('8', 1) x2d('7', 1) x2d('f', 2) x2d('ffff', 1) x2d('f ff', 2),
 -8 7 15 -1 -1 -32768
 ```
 
+```rexx
+do h over .array~of('f ff', '18f', '1 23 45', 'ff ff ff', '8 00', 'a7f3', '7 ff ff')
+  line = left(h, 9)
+  do n = 1 to 7
+    line = line x2d(h, n)
+  end
+  say line
+end
+```
+
+```output
+f ff      -1 -1 -1 4095 4095 4095 4095
+18f       -1 -113 399 399 399 399 399
+1 23 45   5 69 837 9029 74565 74565 74565
+ff ff ff  -1 -1 -1 -1 -1 -1 16777215
+8 00      0 0 -2048 2048 2048 2048 2048
+a7f3      3 -13 2035 -22541 42995 42995 42995
+7 ff ff   -1 -1 -1 -1 524287 524287 524287
+```
+
 r[bif.x2d.n.default]
 When `n` is omitted, the leftmost bit does not make the number negative:
 every string is read as a number with no sign. An omitted `n` is not an

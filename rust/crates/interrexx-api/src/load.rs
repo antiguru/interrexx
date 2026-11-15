@@ -610,6 +610,90 @@ pub unsafe extern "C-unwind" fn await_send_twice(
     std::ptr::null_mut()
 }
 
+/// Waits up to thirty seconds for a file at `path`, a bound only a test
+/// whose file never appears reaches.
+fn await_file_long(path: &CStr) {
+    let path = std::path::PathBuf::from(path.to_string_lossy().into_owned());
+    let _ = (0..3000).any(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        path.exists()
+    });
+}
+
+/// `AWAITTHENSEND(path, object, message)`: waits for a file at `path`, then
+/// sends `message` to `object` through the call's thread context, answering
+/// what it answered: a native whose callback starts when a test says, for a
+/// test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn await_then_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments.
+    unsafe {
+        await_file_long(CStr::from_ptr((*arguments.add(1)).value.value_CSTRING));
+        let thread = (*context).threadContext;
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(2)).value.value_RexxObjectPtr,
+            (*arguments.add(3)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `SIGNALAWAITSEND(signal, path, object, message)`: writes a file at
+/// `signal`, then [`await_then_send`]'s `AWAITTHENSEND(path, object,
+/// message)`: a native that says when it is in flight, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn signal_await_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 6] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares four arguments.
+    unsafe {
+        let signal = CStr::from_ptr((*arguments.add(1)).value.value_CSTRING);
+        std::fs::write(&*signal.to_string_lossy(), "go").expect("the test's file is written");
+        await_file_long(CStr::from_ptr((*arguments.add(2)).value.value_CSTRING));
+        let thread = (*context).threadContext;
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(3)).value.value_RexxObjectPtr,
+            (*arguments.add(4)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
 /// `SENDKEEPING(object, message)`: sends `message` to `object` through the
 /// call's thread context with that context as a `.Pointer`, then sleeps half
 /// a second outside any callback: a native whose context another call may
@@ -1270,6 +1354,26 @@ impl NativeRoutineEntry {
         !self.entry_point.is_null()
     }
 
+    /// A `ROUTINE_CLASSIC_STYLE` row held for one call of the classic
+    /// `RexxFunctionHandler` it names, which keeps the library open until the
+    /// hold drops; `None` for any other row and for a closed library.
+    #[must_use]
+    pub fn held_classic(&self) -> Option<HeldClassic> {
+        if self.style != ROUTINE_CLASSIC_STYLE {
+            return None;
+        }
+        let held = Held::new(&self.mapping, || {
+            if !self.mapping.is_open() {
+                return None;
+            }
+            // SAFETY: `REXX_CLASSIC_ROUTINE` fills a classic row with a
+            // `RexxFunctionHandler`, in a mapping this hold, counted before
+            // `open` was read, keeps open for every call made through it.
+            unsafe { ClassicEntry::new(self.entry_point) }
+        });
+        held.stub.is_some().then_some(HeldClassic { held })
+    }
+
     /// The row's address as the typed stub it names, or `None` for a row that
     /// carries none, for a row of any style but `ROUTINE_TYPED_STYLE`, and for
     /// a row whose library has been closed.
@@ -1369,6 +1473,26 @@ impl HeldMethod {
     }
 }
 
+/// A classic routine row held for one call ([`NativeRoutineEntry::held_classic`]).
+pub struct HeldClassic {
+    held: Held<ClassicEntry>,
+}
+
+impl HeldClassic {
+    /// [`ClassicEntry::call_function`] of the held row, its library open for
+    /// the call.
+    #[must_use]
+    pub fn call_function(
+        &self,
+        name: &[u8],
+        arguments: &[Option<&[u8]>],
+        queue: &[u8],
+    ) -> Option<ClassicResult<usize>> {
+        let entry = self.held.stub?;
+        entry.call_function(name, arguments, queue)
+    }
+}
+
 /// A routine row held for one call ([`NativeRoutineEntry::held`]).
 pub struct HeldRoutine {
     /// The row's `style`.
@@ -1409,7 +1533,9 @@ impl HeldRoutine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClassicEntry(std::ptr::NonNull<c_void>);
 
-// SAFETY: the address names code mapped for the process's life, which any thread may call.
+// SAFETY: the address names code mapped for every call made through it (`new`), which any
+// thread may call: a registered handler's library is never closed, and a package's classic
+// row is called only through a `HeldClassic`, which keeps its mapping open for the call.
 unsafe impl Send for ClassicEntry {}
 // SAFETY: as `Send`; the address is never written through.
 unsafe impl Sync for ClassicEntry {}
@@ -1419,7 +1545,7 @@ impl ClassicEntry {
     ///
     /// # Safety
     /// A non-null `address` is the entry point of a handler of the C signature the registry it
-    /// is registered in declares, mapped until the process ends.
+    /// is registered in declares, mapped for every call made through the entry.
     #[must_use]
     pub unsafe fn new(address: *mut c_void) -> Option<ClassicEntry> {
         std::ptr::NonNull::new(address).map(ClassicEntry)

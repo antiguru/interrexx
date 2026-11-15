@@ -1,0 +1,424 @@
+# CircularQueue: each documented instance method, sent each argument list with a hole.
+
+sends
+append (,'a')
+append ('a',)
+append (,,'a')
+----
+append (,'a') => 93.902
+append ('a',) => ok
+append (,,'a') => 93.902
+
+sends
+init (,'a')
+init ('a',)
+init (,,'a')
+----
+init (,'a') => 93.902
+init ('a',) => 93.906
+init (,,'a') => 93.902
+
+sends
+insert (,'a')
+insert ('a',)
+insert (,,'a')
+----
+insert (,'a') => 93.907
+insert ('a',) => ok
+insert (,,'a') => 93.902
+
+sends
+intersection (,'a')
+intersection ('a',)
+intersection (,,'a')
+----
+intersection (,'a') => 93.902
+intersection ('a',) => ok
+intersection (,,'a') => 93.902
+
+sends
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+----
+makeArray (,'a') => 93.902
+makeArray ('a',) => 93.914
+makeArray (,,'a') => 93.902
+
+sends
+makeString (,'a')
+makeString ('a',)
+makeString (,,'a')
+----
+makeString (,'a') => 93.914
+makeString ('a',) => ok
+makeString (,,'a') => 93.902
+
+sends
+push (,'a')
+push ('a',)
+push (,,'a')
+----
+push (,'a') => 93.903
+push ('a',) => ok
+push (,,'a') => 93.902
+
+sends
+queue (,'a')
+queue ('a',)
+queue (,,'a')
+----
+queue (,'a') => 93.903
+queue ('a',) => ok
+queue (,,'a') => 93.902
+
+sends
+resize (,'a')
+resize ('a',)
+resize (,,'a')
+----
+resize (,'a') => 93.903
+resize ('a',) => 93.906
+resize (,,'a') => 93.902
+
+sends
+section (,'a')
+section ('a',)
+section (,,'a')
+----
+section (,'a') => 93.903
+section ('a',) => 93.907
+section (,,'a') => 93.902
+
+sends
+size (,'a')
+size ('a',)
+size (,,'a')
+----
+size (,'a') => 93.902
+size ('a',) => 93.902
+size (,,'a') => 93.902
+
+sends
+string (,'a')
+string ('a',)
+string (,,'a')
+----
+string (,'a') => 93.914
+string ('a',) => ok
+string (,,'a') => 93.902
+
+sends
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+----
+supplier (,'a') => 93.902
+supplier ('a',) => 93.914
+supplier (,,'a') => 93.902
+
+sends
+union (,'a')
+union ('a',)
+union (,,'a')
+----
+union (,'a') => 93.902
+union ('a',) => ok
+union (,,'a') => 93.902
+
+sends
+xor (,'a')
+xor ('a',)
+xor (,,'a')
+----
+xor (,'a') => 93.902
+xor ('a',) => ok
+xor (,,'a') => 93.902
+
+sends
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+----
+[] (,'a') => 93.926
+[] ('a',) => 93.907
+[] (,,'a') => 93.926
+
+sends
+[]= (,'a')
+[]= ('a',)
+[]= (,,'a')
+----
+[]= (,'a') => 93.903
+[]= ('a',) => 93.903
+[]= (,,'a') => 93.902
+
+sends
+allIndexes (,'a')
+allIndexes ('a',)
+allIndexes (,,'a')
+----
+allIndexes (,'a') => 93.902
+allIndexes ('a',) => 93.902
+allIndexes (,,'a') => 93.902
+
+sends
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+----
+allItems (,'a') => 93.902
+allItems ('a',) => 93.902
+allItems (,,'a') => 93.902
+
+sends
+at (,'a')
+at ('a',)
+at (,,'a')
+----
+at (,'a') => 93.926
+at ('a',) => 93.907
+at (,,'a') => 93.926
+
+sends
+difference (,'a')
+difference ('a',)
+difference (,,'a')
+----
+difference (,'a') => 93.902
+difference ('a',) => ok
+difference (,,'a') => 93.902
+
+sends
+disjoint (,'a')
+disjoint ('a',)
+disjoint (,,'a')
+----
+disjoint (,'a') => 93.902
+disjoint ('a',) => ok
+disjoint (,,'a') => 93.902
+
+sends
+equivalent (,'a')
+equivalent ('a',)
+equivalent (,,'a')
+----
+equivalent (,'a') => 93.902
+equivalent ('a',) => 97.1
+equivalent (,,'a') => 93.902
+
+sends
+hasIndex (,'a')
+hasIndex ('a',)
+hasIndex (,,'a')
+----
+hasIndex (,'a') => 93.926
+hasIndex ('a',) => 93.907
+hasIndex (,,'a') => 93.926
+
+sends
+hasItem (,'a')
+hasItem ('a',)
+hasItem (,,'a')
+----
+hasItem (,'a') => 93.902
+hasItem ('a',) => ok
+hasItem (,,'a') => 93.902
+
+sends
+index (,'a')
+index ('a',)
+index (,,'a')
+----
+index (,'a') => 93.902
+index ('a',) => ok
+index (,,'a') => 93.902
+
+sends
+items (,'a')
+items ('a',)
+items (,,'a')
+----
+items (,'a') => 93.902
+items ('a',) => 93.902
+items (,,'a') => 93.902
+
+sends
+put (,'a')
+put ('a',)
+put (,,'a')
+----
+put (,'a') => 93.903
+put ('a',) => 93.903
+put (,,'a') => 93.902
+
+sends
+subset (,'a')
+subset ('a',)
+subset (,,'a')
+----
+subset (,'a') => 93.902
+subset ('a',) => ok
+subset (,,'a') => 93.902
+
+sends
+appendAll (,'a')
+appendAll ('a',)
+appendAll (,,'a')
+----
+appendAll (,'a') => 93.902
+appendAll ('a',) => 93.948
+appendAll (,,'a') => 93.902
+
+sends
+delete (,'a')
+delete ('a',)
+delete (,,'a')
+----
+delete (,'a') => 93.902
+delete ('a',) => 93.907
+delete (,,'a') => 93.902
+
+sends
+first (,'a')
+first ('a',)
+first (,,'a')
+----
+first (,'a') => 93.902
+first ('a',) => 93.902
+first (,,'a') => 93.902
+
+sends
+firstItem (,'a')
+firstItem ('a',)
+firstItem (,,'a')
+----
+firstItem (,'a') => 93.902
+firstItem ('a',) => 93.902
+firstItem (,,'a') => 93.902
+
+sends
+last (,'a')
+last ('a',)
+last (,,'a')
+----
+last (,'a') => 93.902
+last ('a',) => 93.902
+last (,,'a') => 93.902
+
+sends
+lastItem (,'a')
+lastItem ('a',)
+lastItem (,,'a')
+----
+lastItem (,'a') => 93.902
+lastItem ('a',) => 93.902
+lastItem (,,'a') => 93.902
+
+sends
+next (,'a')
+next ('a',)
+next (,,'a')
+----
+next (,'a') => 93.926
+next ('a',) => 93.907
+next (,,'a') => 93.926
+
+sends
+previous (,'a')
+previous ('a',)
+previous (,,'a')
+----
+previous (,'a') => 93.926
+previous ('a',) => 93.907
+previous (,,'a') => 93.926
+
+sends
+sort (,'a')
+sort ('a',)
+sort (,,'a')
+----
+sort (,'a') => 93.902
+sort ('a',) => 93.902
+sort (,,'a') => 93.902
+
+sends
+sortWith (,'a')
+sortWith ('a',)
+sortWith (,,'a')
+----
+sortWith (,'a') => 93.902
+sortWith ('a',) => ok
+sortWith (,,'a') => 93.902
+
+sends
+stableSort (,'a')
+stableSort ('a',)
+stableSort (,,'a')
+----
+stableSort (,'a') => 93.902
+stableSort ('a',) => 93.902
+stableSort (,,'a') => 93.902
+
+sends
+stableSortWith (,'a')
+stableSortWith ('a',)
+stableSortWith (,,'a')
+----
+stableSortWith (,'a') => 93.902
+stableSortWith ('a',) => ok
+stableSortWith (,,'a') => 93.902
+
+sends
+empty (,'a')
+empty ('a',)
+empty (,,'a')
+----
+empty (,'a') => 93.902
+empty ('a',) => 93.902
+empty (,,'a') => 93.902
+
+sends
+isEmpty (,'a')
+isEmpty ('a',)
+isEmpty (,,'a')
+----
+isEmpty (,'a') => 93.902
+isEmpty ('a',) => 93.902
+isEmpty (,,'a') => 93.902
+
+sends
+peek (,'a')
+peek ('a',)
+peek (,,'a')
+----
+peek (,'a') => 93.902
+peek ('a',) => 93.902
+peek (,,'a') => 93.902
+
+sends
+pull (,'a')
+pull ('a',)
+pull (,,'a')
+----
+pull (,'a') => 93.902
+pull ('a',) => 93.902
+pull (,,'a') => 93.902
+
+sends
+remove (,'a')
+remove ('a',)
+remove (,,'a')
+----
+remove (,'a') => 93.902
+remove ('a',) => 93.907
+remove (,,'a') => 93.902
+
+sends
+removeItem (,'a')
+removeItem ('a',)
+removeItem (,,'a')
+----
+removeItem (,'a') => 93.902
+removeItem ('a',) => ok
+removeItem (,,'a') => 93.902

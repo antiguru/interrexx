@@ -1264,8 +1264,9 @@ fn native_string_center(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (width, pad) = pad_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    match crate::builtin::string::center_bytes(interp, &bytes, width, pad)? {
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    match crate::builtin::string::center_bytes(interp, bytes, width, pad)? {
         Some(out) => Ok(Some(interp.text_built(out))),
         None => Ok(Some(receiver)),
     }
@@ -1279,8 +1280,9 @@ fn native_string_left(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (size, pad) = pad_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let out = crate::builtin::string::left_bytes(interp, &bytes, size, pad)?;
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let out = crate::builtin::string::left_bytes(interp, bytes, size, pad)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1292,8 +1294,9 @@ fn native_string_right(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (size, pad) = pad_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    match crate::builtin::string::right_bytes(interp, &bytes, size, pad)? {
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    match crate::builtin::string::right_bytes(interp, bytes, size, pad)? {
         Some(out) => Ok(Some(interp.text_built(out))),
         None => Ok(Some(receiver)),
     }
@@ -1307,8 +1310,9 @@ fn native_string_copies(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let count = copies_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    match crate::builtin::string::copies_bytes(interp, &bytes, count)? {
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    match crate::builtin::string::copies_bytes(interp, bytes, count)? {
         Some(out) => Ok(Some(interp.text_built(out))),
         None => Ok(Some(receiver)),
     }
@@ -1322,12 +1326,14 @@ fn native_string_strip(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (option, set) = strip_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let kept = crate::builtin::string::strip_bytes(&bytes, option, set.as_deref());
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let kept = crate::builtin::string::strip_bytes(bytes, option, set.as_deref());
     if kept.len() == bytes.len() && !kept.is_empty() {
         return Ok(Some(receiver));
     }
-    Ok(Some(interp.text(kept)))
+    let out = crate::builtin::string::unchanged(interp, kept)?;
+    Ok(Some(interp.text_built(out)))
 }
 
 /// `String~"ABBREV"`.
@@ -1338,8 +1344,9 @@ fn native_string_abbrev(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (info, minimum) = abbrev_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let holds = crate::builtin::string::abbrev_holds(&bytes, &info, minimum);
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let holds = crate::builtin::string::abbrev_holds(bytes, &info, minimum);
     let answer = interp.text(if holds { b"1" } else { b"0" });
     interp.give_result_buffer(info);
     Ok(Some(answer))
@@ -1353,8 +1360,9 @@ fn native_string_compare(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (other, pad) = compare_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let at = crate::builtin::string::compare_at(&bytes, &other, pad);
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let at = crate::builtin::string::compare_at(bytes, &other, pad);
     let answer = interp.counted(at);
     interp.give_result_buffer(other);
     Ok(Some(answer))
@@ -1367,8 +1375,9 @@ fn native_string_b2x(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let bytes = interp.to_text(receiver).to_vec();
-    let out = crate::builtin::convert::b2x_bytes(interp, &bytes)?;
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let out = crate::builtin::convert::b2x_bytes(interp, bytes)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1379,8 +1388,9 @@ fn native_string_c2x(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let bytes = interp.to_text(receiver).to_vec();
-    let out = crate::builtin::convert::c2x_bytes(interp, &bytes)?;
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let out = crate::builtin::convert::c2x_bytes(interp, bytes)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1391,8 +1401,9 @@ fn native_string_x2b(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let bytes = interp.to_text(receiver).to_vec();
-    let out = crate::builtin::convert::x2b_bytes(interp, &bytes)?;
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let out = crate::builtin::convert::x2b_bytes(interp, bytes)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1403,8 +1414,9 @@ fn native_string_x2c(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let bytes = interp.to_text(receiver).to_vec();
-    let out = crate::builtin::convert::x2c_bytes(&bytes)?;
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let out = crate::builtin::convert::x2c_bytes(bytes)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1416,9 +1428,11 @@ fn native_string_c2d(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let requested = conversion_length_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let value = crate::builtin::convert::x2d_c2d_over(interp, &bytes, requested, true)?;
-    Ok(Some(value))
+    let (text, digits) = {
+        let rendered = interp.render(receiver);
+        crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, true)?
+    };
+    Ok(Some(interp.integer_text_cow(text, digits)))
 }
 
 /// `String~"X2D"`.
@@ -1429,9 +1443,11 @@ fn native_string_x2d(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let requested = conversion_length_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let value = crate::builtin::convert::x2d_c2d_over(interp, &bytes, requested, false)?;
-    Ok(Some(value))
+    let (text, digits) = {
+        let rendered = interp.render(receiver);
+        crate::builtin::convert::x2d_c2d_text(interp, rendered.text(interp), requested, false)?
+    };
+    Ok(Some(interp.integer_text_cow(text, digits)))
 }
 
 /// `String~"D2C"`.
@@ -1510,10 +1526,10 @@ fn string_bit_operation(
     default_pad: u8,
 ) -> Result<Option<ObjRef>, Failure> {
     let (other, pad) = bit_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
+    let rendered = interp.render(receiver);
     let out = convert::bit_operation_over(
         interp,
-        &bytes,
+        rendered.text(interp),
         &other,
         pad.unwrap_or(default_pad),
         operation,
@@ -1531,12 +1547,22 @@ fn native_string_datatype(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let letter = datatype_option_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
     let Some(letter) = letter else {
-        let kind = crate::builtin::datatype::datatype_kind(&bytes);
+        let kind = {
+            let rendered = interp.render(receiver);
+            crate::builtin::datatype::datatype_kind(rendered.text(interp))
+        };
         return Ok(Some(interp.text(kind)));
     };
-    let Some(matched) = crate::builtin::datatype::datatype_matches(interp, &bytes, letter)? else {
+    let plain = {
+        let rendered = interp.render(receiver);
+        crate::builtin::datatype::datatype_letter_matches(rendered.text(interp), letter)
+    };
+    let matched = match plain {
+        Some(matched) => matched,
+        None => Some(crate::builtin::datatype::datatype_whole(interp, receiver)?),
+    };
+    let Some(matched) = matched else {
         return Err(Raised::method_option_not_recognised(
             crate::builtin::datatype::DATATYPE_OPTIONS,
             &[letter],
@@ -1780,8 +1806,9 @@ fn native_string_caseless_abbrev(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (info, minimum) = abbrev_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let holds = crate::builtin::string::caseless_abbrev_holds(&bytes, &info, minimum);
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let holds = crate::builtin::string::caseless_abbrev_holds(bytes, &info, minimum);
     let answer = interp.text(if holds { b"1" } else { b"0" });
     interp.give_result_buffer(info);
     Ok(Some(answer))
@@ -1795,8 +1822,9 @@ fn native_string_caseless_compare(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (other, pad) = compare_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
-    let at = crate::builtin::string::caseless_compare_at(&bytes, &other, pad);
+    let rendered = interp.render(receiver);
+    let bytes = rendered.text(interp);
+    let at = crate::builtin::string::caseless_compare_at(bytes, &other, pad);
     let answer = interp.counted(at);
     interp.give_result_buffer(other);
     Ok(Some(answer))

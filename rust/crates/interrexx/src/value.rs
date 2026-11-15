@@ -210,6 +210,18 @@ impl Interp {
         self.text_built(bytes)
     }
 
+    /// [`Interp::integer_text`] for digits that may be a constant, which is
+    /// answered without a buffer of its own.
+    pub(crate) fn integer_text_cow(&mut self, bytes: Cow<'_, [u8]>, digits: u64) -> ObjRef {
+        match bytes {
+            Cow::Owned(bytes) => self.integer_text(bytes, digits),
+            Cow::Borrowed(bytes) => match rendered_small_int(bytes, digits) {
+                Some(handle) => handle,
+                None => self.text(bytes),
+            },
+        }
+    }
+
     pub(crate) fn text_built(&mut self, bytes: Vec<u8>) -> ObjRef {
         if bytes.len() <= INLINE_BYTES {
             let value = self.text(&bytes);
@@ -929,7 +941,9 @@ impl Interp {
                 ..
             } => self.try_text(*default),
             Body::Stem { name, .. } => Some(name),
-            Body::Native(native) => Some(native.rendered()),
+            // The string value `to_text` answers, which only `StackFrame`
+            // separates from the default name.
+            Body::Native(native) => Some(native.string_value()),
             // Joined on demand by `to_text` and held nowhere, which is one of
             // the causes of `None` this function's doc names.
             Body::Array { .. } => None,

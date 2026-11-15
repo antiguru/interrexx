@@ -32,12 +32,16 @@ fn sleeper_checks_only_its_fixture_directory() {
     };
     let unrelated_child = sleeper(&unrelated);
     assert!(
+        grandchild_starts_within(&unrelated, Duration::from_secs(10)),
+        "the unrelated sleeper must be detected in its own directory"
+    );
+    assert!(
         !grandchild_sleeps(&owned),
         "another fixture's sleeper is unrelated"
     );
     let owned_child = sleeper(&owned);
     assert!(
-        grandchild_sleeps(&owned),
+        grandchild_starts_within(&owned, Duration::from_secs(10)),
         "the live owned sleeper must be detected"
     );
     assert!(

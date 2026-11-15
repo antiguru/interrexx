@@ -13,7 +13,7 @@ use super::{Args, arg, required_string};
 use crate::Interp;
 use crate::LibraryLoad;
 use crate::capi;
-use crate::error::Failure;
+use crate::error::{Failure, Raised};
 use crate::internal_routines::{self, Package};
 use crate::rxapi_client;
 
@@ -36,11 +36,14 @@ pub(crate) fn rxfuncadd(
     _name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let upper = required_string(interp, args, 1).to_ascii_uppercase();
+    let name = required_string(interp, args, 1);
+    let upper = name.to_ascii_uppercase();
     let module = required_string(interp, args, 2);
+    // r[native.loading.classic]: an omitted procedure is the name as it is
+    // spelled, which the lookup tries before its capitals.
     let procedure = match arg(args, 3) {
         Some(value) => interp.to_text(value).into_owned(),
-        None => upper.clone(),
+        None => name,
     };
     if interp.function_loaded(&upper) || interp.classic_functions.contains_key(&upper) {
         return Ok(boolean(interp, false));
@@ -55,7 +58,10 @@ pub(crate) fn rxfuncadd(
             return Ok(boolean(interp, !loaded));
         }
         LibraryLoad::Raised(failure) => return Err(failure),
-        LibraryLoad::Missing | LibraryLoad::Version => {}
+        // r[native.loading.version]: a first load of a library that needs a
+        // newer interpreter is refused here as everywhere else.
+        LibraryLoad::Version => return Err(Raised::library_version(&module).into()),
+        LibraryLoad::Missing => {}
     }
     register_function(&upper, &module, &procedure);
     let resolved = interp.resolve_classic_function(&upper);

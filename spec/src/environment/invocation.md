@@ -44,7 +44,8 @@ minus sign; the first word that does not is the program name, and every word
 after it is an argument, even one that begins with a minus sign. Only the
 letter after the minus sign of an option word says which option it is, in
 either case: `e` is [the expression option](r:env.invocation.expression), `o`
-is [the options option](r:env.invocation.optstring), and `v` is [the version
+is [the options option](r:env.invocation.optstring), `u` is [the unbuffered
+option](r:env.invocation.unbuffered), and `v` is [the version
 option](r:env.invocation.version). Any later letter of the word is ignored,
 except the `d` that may follow `o`, so `-ev` is an expression option and `-vo`
 a version option. An option word whose letter is none of these, a minus sign
@@ -61,6 +62,17 @@ What the banner says is [stated below](r:env.invocation.deviation.96). A `-v`
 that stands after the program name, or is the word after `-e`, is not an
 option word: the first is an argument and the second is the text of the
 program, and neither prints the banner.
+
+r[env.invocation.unbuffered]
+An option word `-u`, in either case, makes the program's standard output and
+standard error unbuffered: each write reaches its stream as it is made,
+partial lines too, as it does when the environment variable `REXX_UNBUFFERED`
+is set to anything but the empty string. Without either, a standard output that
+is not a terminal is buffered, as [Deviation
+40](../deviations.md#40-buffered-standard-output) says. `-u` takes [the place
+of an option word in `.syscargs`](r:env.invocation.syscargs). ooRexx writes
+unbuffered output whatever the words say, and ignores `-u` as an option word
+it does not know.
 
 ## Running a string
 
@@ -596,13 +608,17 @@ r[env.invocation.deviation.153]
 An image that ends too early, one that has bytes after its end, and one that
 has a changed byte in its header, the second byte of 0 of the binary form
 included, are refused with the error `3.903` and the status 253, before any of
-its code runs. So is an image with any other byte changed: `rexxc` writes a
-SHA-256 digest of the image into it, and `rexx` refuses an image whose bytes
-do not give that digest. interrexx does not check the digest yet (issue #235),
-and no test covers that part. An encoded image whose base64 text does not decode whole,
-because characters follow the `=` that closes it, an `=` stands inside it, or
-it ends with a group of fewer than four characters, is refused with the error
-`3.905` and the status 253. ooRexx runs an image that has bytes after its end,
+its code runs. So is an image with any other changed byte of the decoded image
+after the `#!` line: `rexxc` writes a SHA-256 digest of everything after the
+image's header into it, and `rexx` refuses an image whose bytes do not give
+that digest. The `#!` line is not read, and neither are the line ends between
+the groups of four characters of an encoded image. An encoded image whose
+base64 text does not decode whole, because characters follow the `=` that
+closes it, an `=` stands inside it, it ends with a group of fewer than four
+characters, or a group closed by `=` has bits left over that are not zero, is
+refused with the error `3.905` and the status 253. For an encoded image that
+rule decides first: one cut inside a group of four is `3.905`, and one cut
+between groups is `3.903`. ooRexx runs an image that has bytes after its end,
 ignores some changed header bytes and crashes on others, and crashes on an
 image that ends too early ([Deviation
 153](../deviations.md#153-a-damaged-compiled-image-is-refused)).

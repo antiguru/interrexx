@@ -34,6 +34,8 @@ pub struct Run {
     pub syscargs_base: usize,
     /// The `::OPTIONS` directive and override count `-o` and `-od` give.
     pub default_options: Option<(Vec<u8>, i64)>,
+    /// Whether `-u` asked for standard output a line at a time.
+    pub unbuffered: bool,
 }
 
 /// Where a program's text comes from.
@@ -66,6 +68,7 @@ pub fn parse(args: &[Vec<u8>]) -> Command {
     let mut real_argument = true;
     let mut words = Vec::new();
     let mut default_options = None;
+    let mut unbuffered = false;
     let mut i = 1;
     while i < argc {
         let arg = &args[i - 1];
@@ -90,6 +93,11 @@ pub fn parse(args: &[Vec<u8>]) -> Command {
                     }
                 }
                 Some(b'v' | b'V') => return Command::Version,
+                // An option word as any other unknown one is, for `.SYSCARGS`.
+                Some(b'u' | b'U') => {
+                    unbuffered = true;
+                    argc_base += 1;
+                }
                 _ => argc_base += 1,
             }
         } else {
@@ -112,6 +120,7 @@ pub fn parse(args: &[Vec<u8>]) -> Command {
         syscargs,
         syscargs_base: argc_base - 1,
         default_options,
+        unbuffered,
     })
 }
 
@@ -421,6 +430,27 @@ mod tests {
         }
         assert_eq!(parse(&words(&["-?", "-v"])), Command::Version);
         assert_eq!(parse(&words(&["-vx"])), Command::Version);
+    }
+
+    /// `-u` asks for unbuffered output and counts as an option word for
+    /// `.SYSCARGS`, as an unknown one does; after the program name it is an
+    /// argument.
+    #[test]
+    fn dash_u_is_unbuffered_and_an_option_word() {
+        let run = |args: &[&str]| match parse(&words(args)) {
+            Command::Run(run) => run,
+            other => panic!("{other:?}"),
+        };
+        let unbuffered = run(&["-u", "p", "a"]);
+        let unknown = run(&["-x", "p", "a"]);
+        assert!(unbuffered.unbuffered);
+        assert!(run(&["-U", "p"]).unbuffered);
+        assert!(!unknown.unbuffered);
+        assert_eq!(unbuffered.syscargs_base, unknown.syscargs_base);
+        assert_eq!(unbuffered.syscargs, unknown.syscargs);
+        let after = run(&["p", "-u"]);
+        assert!(!after.unbuffered);
+        assert_eq!(after.words, words(&["-u"]));
     }
 
     #[test]

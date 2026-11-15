@@ -1,0 +1,307 @@
+# OrderedCollection: each documented instance method, sent each argument list with a hole.
+
+sends
+append (,'a')
+append ('a',)
+append (,,'a')
+----
+append (,'a') => 93.965
+append ('a',) => 93.965
+append (,,'a') => 93.965
+
+sends
+appendAll (,'a')
+appendAll ('a',)
+appendAll (,,'a')
+----
+appendAll (,'a') => 93.902
+appendAll ('a',) => 93.948
+appendAll (,,'a') => 93.902
+
+sends
+delete (,'a')
+delete ('a',)
+delete (,,'a')
+----
+delete (,'a') => 93.965
+delete ('a',) => 93.965
+delete (,,'a') => 93.965
+
+sends
+difference (,'a')
+difference ('a',)
+difference (,,'a')
+----
+difference (,'a') => 93.902
+difference ('a',) => 93.948
+difference (,,'a') => 93.902
+
+sends
+first (,'a')
+first ('a',)
+first (,,'a')
+----
+first (,'a') => 93.965
+first ('a',) => 93.965
+first (,,'a') => 93.965
+
+sends
+firstItem (,'a')
+firstItem ('a',)
+firstItem (,,'a')
+----
+firstItem (,'a') => 93.965
+firstItem ('a',) => 93.965
+firstItem (,,'a') => 93.965
+
+sends
+insert (,'a')
+insert ('a',)
+insert (,,'a')
+----
+insert (,'a') => 93.965
+insert ('a',) => 93.965
+insert (,,'a') => 93.965
+
+sends
+intersection (,'a')
+intersection ('a',)
+intersection (,,'a')
+----
+intersection (,'a') => 93.902
+intersection ('a',) => 93.965
+intersection (,,'a') => 93.902
+
+sends
+last (,'a')
+last ('a',)
+last (,,'a')
+----
+last (,'a') => 93.965
+last ('a',) => 93.965
+last (,,'a') => 93.965
+
+sends
+lastItem (,'a')
+lastItem ('a',)
+lastItem (,,'a')
+----
+lastItem (,'a') => 93.965
+lastItem ('a',) => 93.965
+lastItem (,,'a') => 93.965
+
+sends
+next (,'a')
+next ('a',)
+next (,,'a')
+----
+next (,'a') => 93.965
+next ('a',) => 93.965
+next (,,'a') => 93.965
+
+sends
+previous (,'a')
+previous ('a',)
+previous (,,'a')
+----
+previous (,'a') => 93.965
+previous ('a',) => 93.965
+previous (,,'a') => 93.965
+
+sends
+section (,'a')
+section ('a',)
+section (,,'a')
+----
+section (,'a') => 93.965
+section ('a',) => 93.965
+section (,,'a') => 93.965
+
+sends
+sort (,'a')
+sort ('a',)
+sort (,,'a')
+----
+sort (,'a') => 93.902
+sort ('a',) => 93.902
+sort (,,'a') => 93.902
+
+sends
+sortWith (,'a')
+sortWith ('a',)
+sortWith (,,'a')
+----
+sortWith (,'a') => 93.902
+sortWith ('a',) => 93.965
+sortWith (,,'a') => 93.902
+
+sends
+stableSort (,'a')
+stableSort ('a',)
+stableSort (,,'a')
+----
+stableSort (,'a') => 93.902
+stableSort ('a',) => 93.902
+stableSort (,,'a') => 93.902
+
+sends
+stableSortWith (,'a')
+stableSortWith ('a',)
+stableSortWith (,,'a')
+----
+stableSortWith (,'a') => 93.902
+stableSortWith ('a',) => 93.965
+stableSortWith (,,'a') => 93.902
+
+sends
+subset (,'a')
+subset ('a',)
+subset (,,'a')
+----
+subset (,'a') => 93.902
+subset ('a',) => 93.948
+subset (,,'a') => 93.902
+
+sends
+union (,'a')
+union ('a',)
+union (,,'a')
+----
+union (,'a') => 93.902
+union ('a',) => 93.965
+union (,,'a') => 93.902
+
+sends
+xor (,'a')
+xor ('a',)
+xor (,,'a')
+----
+xor (,'a') => 93.902
+xor ('a',) => 93.965
+xor (,,'a') => 93.902
+
+sends
+[] (,'a')
+[] ('a',)
+[] (,,'a')
+----
+[] (,'a') => 93.965
+[] ('a',) => 93.965
+[] (,,'a') => 93.965
+
+sends
+[]= (,'a')
+[]= ('a',)
+[]= (,,'a')
+----
+[]= (,'a') => 93.965
+[]= ('a',) => 93.965
+[]= (,,'a') => 93.965
+
+sends
+allIndexes (,'a')
+allIndexes ('a',)
+allIndexes (,,'a')
+----
+allIndexes (,'a') => 93.965
+allIndexes ('a',) => 93.965
+allIndexes (,,'a') => 93.965
+
+sends
+allItems (,'a')
+allItems ('a',)
+allItems (,,'a')
+----
+allItems (,'a') => 93.965
+allItems ('a',) => 93.965
+allItems (,,'a') => 93.965
+
+sends
+at (,'a')
+at ('a',)
+at (,,'a')
+----
+at (,'a') => 93.965
+at ('a',) => 93.965
+at (,,'a') => 93.965
+
+sends
+disjoint (,'a')
+disjoint ('a',)
+disjoint (,,'a')
+----
+disjoint (,'a') => 93.902
+disjoint ('a',) => 93.965
+disjoint (,,'a') => 93.902
+
+sends
+equivalent (,'a')
+equivalent ('a',)
+equivalent (,,'a')
+----
+equivalent (,'a') => 93.902
+equivalent ('a',) => 93.965
+equivalent (,,'a') => 93.902
+
+sends
+hasIndex (,'a')
+hasIndex ('a',)
+hasIndex (,,'a')
+----
+hasIndex (,'a') => 93.902
+hasIndex ('a',) => 93.965
+hasIndex (,,'a') => 93.902
+
+sends
+hasItem (,'a')
+hasItem ('a',)
+hasItem (,,'a')
+----
+hasItem (,'a') => 93.902
+hasItem ('a',) => 93.965
+hasItem (,,'a') => 93.902
+
+sends
+index (,'a')
+index ('a',)
+index (,,'a')
+----
+index (,'a') => 93.965
+index ('a',) => 93.965
+index (,,'a') => 93.965
+
+sends
+items (,'a')
+items ('a',)
+items (,,'a')
+----
+items (,'a') => 93.965
+items ('a',) => 93.965
+items (,,'a') => 93.965
+
+sends
+makeArray (,'a')
+makeArray ('a',)
+makeArray (,,'a')
+----
+makeArray (,'a') => 93.965
+makeArray ('a',) => 93.965
+makeArray (,,'a') => 93.965
+
+sends
+put (,'a')
+put ('a',)
+put (,,'a')
+----
+put (,'a') => 93.965
+put ('a',) => 93.965
+put (,,'a') => 93.965
+
+sends
+supplier (,'a')
+supplier ('a',)
+supplier (,,'a')
+----
+supplier (,'a') => 93.965
+supplier ('a',) => 93.965
+supplier (,,'a') => 93.965

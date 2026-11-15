@@ -551,3 +551,62 @@ fn the_oracle_refuses_this_crates_images_as_another_versions() {
     }
     std::fs::remove_dir_all(&dir).expect("the directory is removed");
 }
+
+// spec: env.invocation.rexxc.damaged
+/// An image with one byte of its source changed after `rexxc` wrote it is
+/// refused with 3.903 and status 253 before any of its code runs, in the binary
+/// and in the encoded form, where the unchanged image runs.
+#[test]
+fn a_changed_image_is_refused_before_it_runs() {
+    let dir = scratch("changed-image");
+    std::fs::write(dir.join("p.rex"), "say 'ran'\nexit 3\n").expect("the program");
+    let rexx = Path::new(env!("CARGO_BIN_EXE_rexx"));
+    for (image, flags) in [("b.rxo", &[][..]), ("e.rxo", &["-e"][..])] {
+        let written = command(Path::new(env!("CARGO_BIN_EXE_rexxc")), &dir, false)
+            .args(["p.rex", image, "-s"])
+            .args(flags)
+            .output()
+            .expect("rexxc starts");
+        assert_eq!(written.status.code(), Some(0), "{image}");
+        let ran = command(rexx, &dir, false)
+            .arg(image)
+            .output()
+            .expect("rexx starts");
+        assert_eq!(
+            render(&dir, &ran.stdout, &ran.stderr, ran.status.code(), false),
+            "rc> 3\nout> ran\n",
+            "{image} unchanged"
+        );
+        let bytes = std::fs::read(dir.join(image)).expect("the image");
+        let changed = if flags.is_empty() {
+            // `exit 3` becomes `exit 2`.
+            let at = bytes
+                .windows(6)
+                .rposition(|window| window == b"exit 3")
+                .expect("the source is in the image");
+            let mut changed = bytes.clone();
+            changed[at + 5] = b'2';
+            changed
+        } else {
+            // A base64 digit halfway through the image, changed to another
+            // digit, so the text still decodes whole.
+            let mut changed = bytes.clone();
+            let at = (changed.len() / 2..changed.len())
+                .find(|&at| changed[at].is_ascii_alphanumeric())
+                .expect("a base64 digit");
+            changed[at] = if changed[at] == b'A' { b'B' } else { b'A' };
+            changed
+        };
+        std::fs::write(dir.join(image), changed).expect("the changed image");
+        let ran = command(rexx, &dir, false)
+            .arg(image)
+            .output()
+            .expect("rexx starts");
+        assert_eq!(
+            render(&dir, &ran.stdout, &ran.stderr, ran.status.code(), false),
+            "rc> 253\nerr> Error 3:\nerr> Error 3.903:\n",
+            "{image} changed"
+        );
+    }
+    std::fs::remove_dir_all(&dir).expect("the directory is removed");
+}

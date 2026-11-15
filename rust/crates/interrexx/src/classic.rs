@@ -1,7 +1,7 @@
 //! Classic C handlers: a registered function's `RexxFunctionHandler` and a registered
 //! environment's `RexxSubcomHandler`, resolved through the API and kept once found.
 
-use interrexx_api::load::ClassicEntry;
+use interrexx_api::load::{ClassicEntry, ClassicResult};
 use interrexx_core::ObjRef;
 
 use crate::capi::{self, Registry};
@@ -63,6 +63,22 @@ impl Interp {
         let Some(entry) = self.classic_function(name) else {
             return Err(Raised::routine_not_found(name).into());
         };
+        self.call_classic_entry(name, arguments, |name, borrowed, queue| {
+            entry.call_function(name, borrowed, queue)
+        })
+    }
+
+    /// Calls a classic `RexxFunctionHandler` through `call` as the function
+    /// `name`, as [`Interp::call_classic_function`] calls a registered one: a
+    /// row of a package's routine table of the classic style is called the
+    /// same way (r[native.loading.classic-row]). `call` gets the name, the
+    /// arguments as strings and the queue's name.
+    pub(crate) fn call_classic_entry(
+        &mut self,
+        name: &[u8],
+        arguments: &[Option<ObjRef>],
+        call: impl FnOnce(&[u8], &[Option<&[u8]>], &[u8]) -> Option<ClassicResult<usize>>,
+    ) -> Result<Option<ObjRef>, Failure> {
         let mut texts = Vec::with_capacity(arguments.len());
         for argument in arguments {
             texts.push(match argument {
@@ -72,9 +88,11 @@ impl Interp {
         }
         let queue = self.current_queue_name()?;
         let borrowed: Vec<Option<&[u8]>> = texts.iter().map(Option::as_deref).collect();
-        let called = self.run_classic_handler(name, arguments, || {
-            entry.call_function(name, &borrowed, &queue)
-        })?;
+        // r[native.loading.classic-call]: the handler gets the function's name
+        // in capitals, however the call spelled it.
+        let upper = name.to_ascii_uppercase();
+        let called =
+            self.run_classic_handler(&upper, arguments, || call(&upper, &borrowed, &queue))?;
         if called.rc != 0 {
             self.blame_native_routine(name, None, arguments, crate::RoutineObject::OfCode, None);
             return Err(Raised::routine_failed(name).into());

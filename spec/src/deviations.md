@@ -283,11 +283,19 @@ ooRexx raises `35.1` at the colon.
 ## 40. Buffered standard output
 
 A standard output that is a pipe or a file is buffered and handed over
-before a read, before the program idles, before an ADDRESS command, at 64
-KiB and at exit. ooRexx writes each line at once, so here output still
+before a read, before the program idles, before an ADDRESS command, at 64 KiB
+and at exit. While it is buffered, the order of its text against what native
+code writes to the same descriptor itself, an external routine, a handler, an
+exit or the program that embeds the interpreter, is unspecified, except that
+what native code wrote through C's standard streams before the program's text
+lands before it. ooRexx writes each line at once, so here output still
 buffered at a kill or crash is lost, and standard output and standard error
-sharing one pipe interleave differently. A write error on a buffered
-standard output is reported by the writes after the hand-over that met it.
+sharing one pipe interleave differently. The environment variable
+`REXX_UNBUFFERED`, set to anything but the empty string, or `rexx -u`, makes
+both streams unbuffered, which is ooRexx's order, and `.output~flush` hands the
+buffer over from a program (the owner's ruling on #721, 2026-11-15). A write
+error on a buffered standard output is reported by the writes after the
+hand-over that met it.
 
 ## 41. A damaged compiled image
 
@@ -1176,8 +1184,9 @@ line.
 ## 153. A damaged compiled image is refused
 
 An image that ends too early, one that has bytes after its end, and one that
-has any changed byte are refused with `3.903`, rc 253 (the image carries a
-SHA-256 digest of itself; interrexx issue #235), and an encoded
+has any changed byte of the decoded image after its `#!` line are refused with
+`3.903`, rc 253 (the image carries a SHA-256 digest of everything after its
+header), and an encoded
 image whose base64 text does not decode whole is refused with `3.905`, rc 253.
 ooRexx runs an image with bytes after its end and ignores some changed header
 bytes; it crashes on a truncated image and on other changed header bytes.
@@ -1362,3 +1371,24 @@ such as `3.5` and `'0'`. The same test decides whether its
 `DecodeConditionInfo` reports a condition's description: interrexx reports a
 description that is any instance of String, where ooRexx reports none for a
 description such as `2 + 3`.
+
+## 174. An operand made by an operation takes part with the digits it shows
+
+An operand that an earlier arithmetic operation produced takes part in the next
+one with the digits of the number it is written as, trailing zeros included, as
+a literal with the same characters does. ooRexx keeps such a result as its
+significant digits and an exponent and carries that form into the next
+operation, so a product or a sum rounded at NUMERIC DIGITS can differ: under
+NUMERIC DIGITS 18, `999999999 * (9999E8 + 0)` is `9.99899999000100000E+20`
+here, as `999999999 * 999900000000` is, and `9.998999990001E+20` on ooRexx.
+Ruled by the owner on 2026-11-14 (#522).
+
+## 175. LOSTDIGITS counts the digits an operand made by an operation shows
+
+The digits that LOSTDIGITS counts in an operand that an earlier arithmetic
+operation produced, in an arithmetic operation or a numeric comparison, are
+those of the number it is written as, trailing zeros included. ooRexx counts the
+significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
+DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
+3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
+the owner on 2026-11-14 (#554).

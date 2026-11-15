@@ -180,16 +180,30 @@ pub(crate) fn datatype(
     _name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
     let Some(option) = optional_string(interp, args, 2) else {
-        return Ok(interp.text(datatype_kind(&text)));
+        let kind = {
+            let text = super::required_render(interp, args, 1);
+            datatype_kind(text.text(interp))
+        };
+        return Ok(interp.text(kind));
     };
     // An empty option's first byte is `0x00`, which matches none of the
     // thirteen letters below and falls straight to the `None` arm -- the same
     // path a bad letter takes, and the byte `error.rs`'s `displayable`
     // turns into `?` when the report line it landed in gets printed.
     let letter = option.first().copied().unwrap_or(0).to_ascii_uppercase();
-    let Some(matched) = datatype_matches(interp, &text, letter)? else {
+    let plain = {
+        let text = super::required_render(interp, args, 1);
+        datatype_letter_matches(text.text(interp), letter)
+    };
+    let matched = match plain {
+        Some(matched) => matched,
+        None => {
+            let value = arg(args, 1).expect("check_arity admitted the string");
+            Some(datatype_whole(interp, value)?)
+        }
+    };
+    let Some(matched) = matched else {
         return Err(Raised::invalid_option(DATATYPE_OPTIONS, &[letter]).into());
     };
     Ok(interp.text(if matched { b"1" } else { b"0" }))
@@ -204,14 +218,38 @@ pub(crate) fn datatype_kind(text: &[u8]) -> &'static [u8] {
     }
 }
 
+/// `DATATYPE`'s `W` test of `value`'s text, the one letter that reads the
+/// running settings and can raise, shared with `String~dataType`. The text is
+/// read through a borrow, and rendered again only for a LOSTDIGITS condition
+/// to name.
+pub(crate) fn datatype_whole(interp: &mut Interp, value: ObjRef) -> Result<bool, Failure> {
+    // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
+    // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
+    // of zero under the current settings and asks whether the result is an
+    // integer, with no bound from a machine integer. That `plus` is an
+    // operator, so it raises LOSTDIGITS and 42 as one.
+    let number = {
+        let text = interp.render(value);
+        parse_number(text.text(interp))
+    };
+    Ok(match number {
+        Some(number) => {
+            let digits = interp.activation().settings.digits();
+            interp.lostdigits_check_with(&number, |interp| interp.to_text(value).into_owned())?;
+            number
+                .add(&Number::zero(), digits)
+                .map_err(Raised::from)?
+                .is_integer(digits)
+        }
+        None => false,
+    })
+}
+
 /// Whether `text` is of the kind `letter` names, shared with
-/// `String~dataType`, or `None` when `letter` is not one of the thirteen.
-/// Fails only for `W`, whose rounding is arithmetic.
-pub(crate) fn datatype_matches(
-    interp: &mut Interp,
-    text: &[u8],
-    letter: u8,
-) -> Result<Option<bool>, Failure> {
+/// `String~dataType`, for every letter but `W`: `None` for `W`, which
+/// [`datatype_whole`] answers, and `Some(None)` for a letter that is not one
+/// of the thirteen.
+pub(crate) fn datatype_letter_matches(text: &[u8], letter: u8) -> Option<Option<bool>> {
     let matched = match letter {
         b'A' => !text.is_empty() && text.iter().all(u8::is_ascii_alphanumeric),
         b'B' => text.is_empty() || grouped(text, |b| matches!(b, b'0' | b'1'), 4),
@@ -228,29 +266,14 @@ pub(crate) fn datatype_matches(
             classify(text),
             SymbolKind::Name | SymbolKind::Stem | SymbolKind::CompoundName
         ),
-        // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
-        // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
-        // of zero under the current settings and asks whether the result is an
-        // integer, with no bound from a machine integer. That `plus` is an
-        // operator, so it raises LOSTDIGITS and 42 as one.
-        b'W' => match parse_number(text) {
-            Some(number) => {
-                let digits = interp.activation().settings.digits();
-                interp.lostdigits_check_with(&number, |_| text.to_vec())?;
-                number
-                    .add(&Number::zero(), digits)
-                    .map_err(Raised::from)?
-                    .is_integer(digits)
-            }
-            None => false,
-        },
+        b'W' => return None,
         b'X' => text.is_empty() || grouped(text, |b| b.is_ascii_hexdigit(), 2),
         b'9' => parse_number(text)
             .and_then(|n| n.whole_value(interrexx_num::DEFAULT_DIGITS as usize))
             .is_some(),
-        _ => return Ok(None),
+        _ => return Some(None),
     };
-    Ok(Some(matched))
+    Some(Some(matched))
 }
 
 /// Whether `name`'s own slot currently holds a value, growing the slot if it
@@ -298,8 +321,7 @@ fn compound_tail_exists(interp: &mut Interp, name: &[u8]) -> bool {
 
 /// `SYMBOL(name)`: what kind of symbol `name` is -- `BAD`, `LIT` or `VAR`.
 pub(crate) fn symbol(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
     let result: &[u8] = match classify(&upper) {
         SymbolKind::Bad => b"BAD",
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => b"LIT",
@@ -321,11 +343,17 @@ pub(crate) fn symbol(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Resul
     Ok(interp.text(result))
 }
 
+/// The first argument uppercased, the one copy of it that `SYMBOL`, `VAR` and
+/// `VALUE` classify and look up, built from a borrow of the argument.
+fn upper_name(interp: &mut Interp, args: Args<'_>) -> Vec<u8> {
+    let text = super::required_render(interp, args, 1);
+    text.text(interp).to_ascii_uppercase()
+}
+
 /// `VAR(name)`: whether `name` is a variable (simple, stem or compound) that
 /// currently has a value.
 pub(crate) fn var(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
     let exists = match classify(&upper) {
         SymbolKind::Bad | SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
             false
@@ -353,18 +381,20 @@ pub(crate) fn value(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
         let selector = interp.to_text(selector).into_owned();
         return super::platform::value_selector(interp, args, &selector);
     }
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
+    // The call's own spelling, for the errors that name it; rendered again only
+    // there.
+    let text = |interp: &mut Interp| required_string(interp, args, 1);
     let newvalue = arg(args, 2);
     match classify(&upper) {
         // `found` is the call's own spelling, not the upcased text just used to
         // classify it -- see `Raised::argument_not_a_symbol`'s own doc for the
         // aliasing mistake that makes those two different call sites in the
         // reference implementation and one call site here.
-        SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text).into()),
+        SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text(interp)).into()),
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
             if newvalue.is_some() {
-                return Err(Raised::argument_not_a_symbol(name, 1, &text).into());
+                return Err(Raised::argument_not_a_symbol(name, 1, &text(interp)).into());
             }
             literal_value(interp, &upper)
         }

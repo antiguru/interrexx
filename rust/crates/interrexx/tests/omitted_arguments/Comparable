@@ -1,0 +1,10 @@
+# Comparable: each documented instance method, sent each argument list with a hole.
+
+sends
+compareTo (,'a')
+compareTo ('a',)
+compareTo (,,'a')
+----
+compareTo (,'a') => 93.902
+compareTo ('a',) => ok
+compareTo (,,'a') => 93.902

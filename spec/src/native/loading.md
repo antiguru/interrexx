@@ -158,7 +158,7 @@ a: say condition('o')~code
 call rxfuncdrop 'FxNewer'
 ```
 
-```output defect=#614
+```output
 98.982
 ```
 
@@ -241,7 +241,7 @@ say fxclassicjoin('a', , 'c')
 ::requires 'specfixture' LIBRARY
 ```
 
-```output defect=#581
+```output
 FXCLASSICJOIN:3:a,(),c
 ```
 
@@ -289,7 +289,7 @@ say fxclassicjoin('x')
 say rxfuncdrop('FxClassicJoin')
 ```
 
-```output defect=#579
+```output
 0
 FXCLASSICJOIN:1:x
 0
@@ -341,7 +341,7 @@ say 'MyJoin'('a') 'myjoin'()
 call rxfuncdrop 'MyJoin'
 ```
 
-```output defect=#582
+```output
 MYJOIN:1:a MYJOIN:0:
 ```
 
@@ -363,11 +363,24 @@ say n1zqrr(3)
 ::routine n1zqrr external "REGISTERED specclassic FxClassicJoin"
 ```
 
-```output defect=#580
+```output
 0
 N1ZQRR:2:1,2
 0 1
 N1ZQRR:1:3
+```
+
+```rexx
+r = .context~package~findRoutine('n1zqrc')
+say r~call(1, 2) r~callWith(.array~of('a'))
+call rxfuncdrop 'n1zqrc'
+say r~call(3)
+::routine n1zqrc external "REGISTERED specclassic FxClassicJoin"
+```
+
+```output
+N1ZQRC:2:1,2 N1ZQRC:1:a
+N1ZQRC:1:3
 ```
 
 ```rexx

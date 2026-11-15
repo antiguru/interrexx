@@ -806,18 +806,34 @@ fn run_binary(
     files: &[(&str, &str)],
     arguments: &[&str],
 ) -> std::process::Output {
+    run_binary_with(binary, name, files, arguments, &[], |_| {})
+}
+
+/// [`run_binary`], with `env` set, `prepare` run on the driver's directory once `files` are in
+/// it, and that directory on `LD_LIBRARY_PATH`, so a library `prepare` builds there is found.
+fn run_binary_with(
+    binary: &Path,
+    name: &str,
+    files: &[(&str, &str)],
+    arguments: &[&str],
+    env: &[(&str, &str)],
+    prepare: impl FnOnce(&Path),
+) -> std::process::Output {
     let dir = scratch().join(format!("driver-{name}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("the driver's directory");
     for (file, text) in files {
         std::fs::write(dir.join(file), text).expect("a program written");
     }
+    prepare(&dir);
     let api = scratch().join(format!("api-{name}"));
     let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "60"])
         .arg(binary)
         .args(arguments)
         .current_dir(&dir)
+        .env("LD_LIBRARY_PATH", &dir)
+        .envs(env.iter().copied())
         .env("REXX_API_DIR", &api)
         .env("MALLOC_PERTURB_", "165")
         .stdin(Stdio::null())
@@ -924,6 +940,68 @@ fn c_stdio_and_rexx_output_keep_their_order_in_files() {
         std::fs::read_to_string(&err).expect("the error output"),
         "c err one\nrexx err one\nrexx err two\n"
     );
+}
+
+// spec: instr.say.deviation.40
+/// With `REXX_UNBUFFERED` set and standard output not a terminal, what a program wrote lands
+/// before what native code writes next, as ooRexx writes it: after `CallProgram`,
+/// `SendMessage`, `LoadPackage`, `LoadPackageFromData` and `RexxCallBack` return, and in a
+/// native routine, a classic function, a context command handler, a termination exit and a
+/// package's loader. A partial line on standard error lands before a classic function's error
+/// line. Measured on the oracle with the same driver.
+#[test]
+fn rexx_output_lands_before_the_native_code_that_follows() {
+    let output = run_binary_with(
+        &driver("callprogram_stdio"),
+        "callprogram_stdio",
+        &[
+            ("p.rex", "say 'rexx p'\n"),
+            (
+                "q.rex",
+                "say 'rexx before'\ncall cprint\nsay 'rexx after'\n::requires 'clib' LIBRARY\n",
+            ),
+            (
+                "s.rex",
+                "say 'rexx classic'\ncall cfunc\nsay 'rexx command'\naddress CENV 'x'\n\
+                 call charout 'STDERR', 'e '\ncall cerr\nsay 'rexx hook'\n\
+                 p = .package~new('hp', \"::requires 'hooklib' LIBRARY\")\ncall cback\n\
+                 say 'rexx end'\nexit\nlbl: say 'rexx callback'; return 0\n",
+            ),
+            ("lp.rex", "say 'rexx prologue'\n"),
+        ],
+        &[],
+        &[(interrexx::UNBUFFERED_ENV, "1")],
+        |dir| {
+            let source =
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/classic_api/hooklib.cpp");
+            let api = repository().join("include");
+            let built = Command::new("c++")
+                .args(["-shared", "-fPIC", "-Wall", "-Werror"])
+                .arg(format!("-I{}", api.display()))
+                .arg(format!("-I{}", api.join("platform/unix").display()))
+                .arg(&source)
+                .arg("-o")
+                .arg(dir.join("libhooklib.so"))
+                .output()
+                .expect("c++ runs");
+            assert!(
+                built.status.success(),
+                "{}",
+                String::from_utf8_lossy(&built.stderr)
+            );
+        },
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "c one\nrexx p\nc two\nrexx before\nc inside\nrexx after\nc three\nrexx send\nc send\n\
+         rexx prologue\nc after load\nrexx data prologue\nc after data\nc four\nrexx classic\n\
+         c classic\nrexx command\nc command\nrexx hook\nc loader\nc exit\nrexx callback\n\
+         c after callback\nrexx end\nc exit\nc after program\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "e c err\n");
 }
 
 /// `RexxStart`'s result into a caller's buffer: one exactly the result's length gets a new block

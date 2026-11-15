@@ -1,11 +1,18 @@
 //! The golden shape of the interpreter's own library, its provenance, the
 //! messages Rust sends to library classes, and the leak guards.
 //!
-//! Three committed files back these tests, next to `Cargo.toml`:
+//! Four committed files back these tests, next to `Cargo.toml`:
 //!
 //! * `library-shape.txt`: one row per class and per method of each class
-//!   scope, with the class and method flags, then `.environment`'s and
+//!   scope, with the class and method flags and whether `.environment` holds
+//!   the class itself under its name (`env=same`), another object
+//!   (`env=other`), an entry the library names but never stored (`env=owed`)
+//!   or nothing (`env=none`), then `.environment`'s and
 //!   `.local`'s indexes in order.
+//! * `library-resolution.txt`: per class, every message an instance and the
+//!   class object resolve through the whole inheritance chain, one line per
+//!   scope that answers, so that a method lost or answered from another scope
+//!   changes a line.
 //! * `library-origin.txt`: for the same rows, where each method comes from:
 //!   `native` (a Rust method table), `entry:<name>` (a `LIBRARY REXX` entry
 //!   point), `replacement:<file>` (a directive of the library's source file
@@ -21,7 +28,7 @@
 //!
 //! **Regenerating** is local: run
 //! `REXX_UPDATE_GOLDEN=1 cargo nextest run -p interrexx library_shape`
-//! and read the diff of the three files. On a mismatch without that variable
+//! and read the diff of the four files. On a mismatch without that variable
 //! each test prints the whole new table.
 //!
 //! Every row is names and flags. No library source text is read or printed.
@@ -167,6 +174,31 @@ impl Probe {
         }
     }
 
+    /// What `.environment` holds under the class name `name`: `same` for
+    /// `class` itself, `other` for another object, `owed` for an entry the
+    /// library names but never stored, `none` for nothing. Read as the
+    /// directory's own lookup reads it, so an owed entry is not resolved.
+    fn environment_entry(&mut self, name: &str, class: ObjRef) -> &'static str {
+        use crate::dispatch::hash::{DirectoryEntry, Key, directory_get};
+        let environment = self
+            .interp
+            .dot_variable(b".ENVIRONMENT")
+            .expect("a directory");
+        match directory_get(
+            &mut self.interp,
+            environment,
+            Key::new(name.as_bytes()),
+            None,
+        ) {
+            Ok((DirectoryEntry::Found(entry), _)) if entry == class => "same",
+            Ok((DirectoryEntry::Found(entry), _)) if entry == ObjRef::NIL => "none",
+            Ok((DirectoryEntry::Found(_), _)) => "other",
+            Ok((DirectoryEntry::Owed, _)) => "owed",
+            Ok((DirectoryEntry::Absent, _)) => "none",
+            Err(failure) => panic!("reading .environment's {name}: {failure:?}"),
+        }
+    }
+
     /// Where `method` comes from: `"native"` for a method with no program.
     fn origin(&self, method: ObjRef) -> String {
         let Some(record) = self.interp.executable_sources.get(&method).copied() else {
@@ -237,8 +269,8 @@ impl Probe {
     }
 }
 
-/// Both tables, built from one interpreter.
-fn tables() -> (String, String) {
+/// The shape, origin and resolution tables, built from one interpreter.
+fn tables() -> (String, String, String) {
     let mut probe = Probe::new();
     let frame = probe.interp.roots.activity_mut().push_frame();
     let classes = probe.classes();
@@ -294,6 +326,10 @@ fn tables() -> (String, String) {
     );
     let mut origin =
         String::from("# Where each library method comes from. Generated: see library_shape.rs.\n");
+    let mut resolution = String::from(
+        "# What each library class's instances and class object resolve, by the scope that \
+         answers. Generated: see library_shape.rs.\n",
+    );
     let mut first_row: std::collections::HashMap<interrexx_core::MethodId, (String, u8)> =
         std::collections::HashMap::new();
     let mut rows: Vec<(String, Option<interrexx_core::MethodId>, String)> = Vec::new();
@@ -302,6 +338,7 @@ fn tables() -> (String, String) {
         let abstract_ = u8::from(probe.interp.classes().is_abstract(*class));
         let public = probe.is_public(name);
         let identity = u8::from(references[name].len() == 1);
+        let env = probe.environment_entry(name, *class);
         let annotations = probe.send(*class, "ANNOTATIONS", &[]);
         let indexes = probe.send(annotations, "ALLINDEXES", &[]);
         let mut notes = Vec::new();
@@ -320,10 +357,47 @@ fn tables() -> (String, String) {
         let _ = writeln!(
             shape,
             "class {name} public={public} mixin={mixin} abstract={abstract_} metaclass={} \
-             supers={} annotations={notes} identity={identity}",
+             supers={} annotations={notes} identity={identity} env={env}",
             metaclasses[name],
             if supers.is_empty() { "-" } else { &supers },
         );
+        let _ = writeln!(resolution, "class {name}");
+        for (side, label) in [(false, "instance"), (true, "class")] {
+            let resolved = if side {
+                probe.interp.classes().class_method_names(*class)
+            } else {
+                probe.interp.classes().instance_method_names(*class)
+            };
+            let mut by_scope: BTreeMap<String, Vec<String>> = BTreeMap::new();
+            for method_name in resolved {
+                let found = if side {
+                    probe
+                        .interp
+                        .classes()
+                        .lookup_class_method(*class, &method_name)
+                } else {
+                    probe
+                        .interp
+                        .classes()
+                        .lookup_instance_method(*class, &method_name)
+                };
+                let scope = match found {
+                    Some((scope, _)) => probe.class_name(scope),
+                    None => "-".to_string(),
+                };
+                // The blank and abuttal operators' names are a blank and
+                // nothing, quoted so that a line still splits into its names.
+                let shown = if method_name.is_empty() || method_name.contains(' ') {
+                    format!("\"{method_name}\"")
+                } else {
+                    method_name
+                };
+                by_scope.entry(scope).or_default().push(shown);
+            }
+            for (scope, names) in by_scope {
+                let _ = writeln!(resolution, "  {label} from {scope}: {}", names.join(" "));
+            }
+        }
         for (side, label) in [(false, "instance"), (true, "class")] {
             let names = if side {
                 probe.interp.classes().own_class_method_names(*class)
@@ -430,23 +504,25 @@ fn tables() -> (String, String) {
         }
     }
     probe.interp.roots.activity_mut().pop_frame(frame);
-    (shape, origin)
+    (shape, origin, resolution)
 }
 
-/// The library's classes, methods and flags, and where each method comes
-/// from, are what the two committed files say.
+/// The library's classes, methods and flags, where each method comes from, and
+/// what each class resolves, are what the three committed files say.
 #[test]
 fn library_shape_and_origin_match_the_goldens() {
-    let (shape, origin) = tables();
+    let (shape, origin, resolution) = tables();
     check_golden("library-shape.txt", &shape);
     check_golden("library-origin.txt", &origin);
+    check_golden("library-resolution.txt", &resolution);
 }
 
 /// The tables are not empty, and every library method's directive lies in one
 /// of the library's source files.
 #[test]
 fn library_shape_is_not_empty() {
-    let (shape, origin) = tables();
+    let (shape, origin, resolution) = tables();
+    assert!(resolution.lines().filter(|l| l.contains(" from ")).count() > 100);
     assert!(shape.lines().filter(|l| l.starts_with("class ")).count() > 40);
     assert!(origin.lines().count() > 500);
     assert!(shape.lines().any(|l| l.starts_with("environment ")));

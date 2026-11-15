@@ -1,0 +1,278 @@
+# Object: each documented instance method, sent each argument list with a hole.
+
+sends
+= (,'a')
+= ('a',)
+= (,,'a')
+----
+= (,'a') => 93.902
+= ('a',) => ok
+= (,,'a') => 93.902
+
+sends
+== (,'a')
+== ('a',)
+== (,,'a')
+----
+== (,'a') => 93.902
+== ('a',) => ok
+== (,,'a') => 93.902
+
+sends
+<> (,'a')
+<> ('a',)
+<> (,,'a')
+----
+<> (,'a') => 93.902
+<> ('a',) => ok
+<> (,,'a') => 93.902
+
+sends
+>< (,'a')
+>< ('a',)
+>< (,,'a')
+----
+>< (,'a') => 93.902
+>< ('a',) => ok
+>< (,,'a') => 93.902
+
+sends
+\= (,'a')
+\= ('a',)
+\= (,,'a')
+----
+\= (,'a') => 93.902
+\= ('a',) => ok
+\= (,,'a') => 93.902
+
+sends
+\== (,'a')
+\== ('a',)
+\== (,,'a')
+----
+\== (,'a') => 93.902
+\== ('a',) => ok
+\== (,,'a') => 93.902
+
+sends
+(abuttal) (,'a')
+(abuttal) ('a',)
+(abuttal) (,,'a')
+----
+(abuttal) (,'a') => 97.1
+(abuttal) ('a',) => 97.1
+(abuttal) (,,'a') => 97.1
+
+sends
+|| (,'a')
+|| ('a',)
+|| (,,'a')
+----
+|| (,'a') => 93.902
+|| ('a',) => ok
+|| (,,'a') => 93.902
+
+sends
+(blank) (,'a')
+(blank) ('a',)
+(blank) (,,'a')
+----
+(blank) (,'a') => 97.1
+(blank) ('a',) => 97.1
+(blank) (,,'a') => 97.1
+
+sends
+class (,'a')
+class ('a',)
+class (,,'a')
+----
+class (,'a') => 93.902
+class ('a',) => 93.902
+class (,,'a') => 93.902
+
+sends
+copy (,'a')
+copy ('a',)
+copy (,,'a')
+----
+copy (,'a') => 93.902
+copy ('a',) => 93.902
+copy (,,'a') => 93.902
+
+sends
+defaultName (,'a')
+defaultName ('a',)
+defaultName (,,'a')
+----
+defaultName (,'a') => 93.902
+defaultName ('a',) => 93.902
+defaultName (,,'a') => 93.902
+
+sends
+hashCode (,'a')
+hashCode ('a',)
+hashCode (,,'a')
+----
+hashCode (,'a') => 93.902
+hashCode ('a',) => 93.902
+hashCode (,,'a') => 93.902
+
+sends
+hasMethod (,'a')
+hasMethod ('a',)
+hasMethod (,,'a')
+----
+hasMethod (,'a') => 93.902
+hasMethod ('a',) => ok
+hasMethod (,,'a') => 93.902
+
+sends
+identityHash (,'a')
+identityHash ('a',)
+identityHash (,,'a')
+----
+identityHash (,'a') => 93.902
+identityHash ('a',) => 93.902
+identityHash (,,'a') => 93.902
+
+sends
+instanceMethod (,'a')
+instanceMethod ('a',)
+instanceMethod (,,'a')
+----
+instanceMethod (,'a') => 93.902
+instanceMethod ('a',) => ok
+instanceMethod (,,'a') => 93.902
+
+sends
+instanceMethods (,'a')
+instanceMethods ('a',)
+instanceMethods (,,'a')
+----
+instanceMethods (,'a') => 93.902
+instanceMethods ('a',) => ok
+instanceMethods (,,'a') => 93.902
+
+sends
+isA (,'a')
+isA ('a',)
+isA (,,'a')
+----
+isA (,'a') => 93.902
+isA ('a',) => 88.914
+isA (,,'a') => 93.902
+
+sends
+isInstanceOf (,'a')
+isInstanceOf ('a',)
+isInstanceOf (,,'a')
+----
+isInstanceOf (,'a') => 93.902
+isInstanceOf ('a',) => 88.914
+isInstanceOf (,,'a') => 93.902
+
+sends
+isNil (,'a')
+isNil ('a',)
+isNil (,,'a')
+----
+isNil (,'a') => 93.902
+isNil ('a',) => 93.902
+isNil (,,'a') => 93.902
+
+sends
+objectName (,'a')
+objectName ('a',)
+objectName (,,'a')
+----
+objectName (,'a') => 93.902
+objectName ('a',) => 93.902
+objectName (,,'a') => 93.902
+
+sends
+objectName= (,'a')
+objectName= ('a',)
+objectName= (,,'a')
+----
+objectName= (,'a') => 93.902
+objectName= ('a',) => ok
+objectName= (,,'a') => 93.902
+
+sends
+request (,'a')
+request ('a',)
+request (,,'a')
+----
+request (,'a') => 93.902
+request ('a',) => ok
+request (,,'a') => 93.902
+
+sends
+run (,'a')
+run ('a',)
+run (,,'a')
+----
+run (,'a') => 97.2
+run ('a',) => 97.2
+run (,,'a') => 97.2
+
+sends
+send (,'a')
+send ('a',)
+send (,,'a')
+----
+send (,'a') => 88.901
+send ('a',) => 97.1
+send (,,'a') => 88.901
+
+sends
+sendWith (,'a')
+sendWith ('a',)
+sendWith (,,'a')
+----
+sendWith (,'a') => 88.901
+sendWith ('a',) => 88.901
+sendWith (,,'a') => 93.902
+
+sends
+setMethod (,'a')
+setMethod ('a',)
+setMethod (,,'a')
+----
+setMethod (,'a') => 97.2
+setMethod ('a',) => 97.2
+setMethod (,,'a') => 97.2
+
+sends
+start (,'a')
+start (,,'a')
+----
+start (,'a') => 88.901
+start (,,'a') => 88.901
+
+sends
+startWith (,'a')
+startWith ('a',)
+startWith (,,'a')
+----
+startWith (,'a') => 88.901
+startWith ('a',) => 93.903
+startWith (,,'a') => 93.902
+
+sends
+string (,'a')
+string ('a',)
+string (,,'a')
+----
+string (,'a') => 93.902
+string ('a',) => 93.902
+string (,,'a') => 93.902
+
+sends
+unsetMethod (,'a')
+unsetMethod ('a',)
+unsetMethod (,,'a')
+----
+unsetMethod (,'a') => 97.2
+unsetMethod ('a',) => 97.2
+unsetMethod (,,'a') => 97.2
