@@ -9,12 +9,12 @@ say x
 copies fill=a
 y = strip(x)
 ----
-1.00
+0.00
 
 copies fill=a
 y = strip(x, 'L')
 ----
-1.00
+0.00
 
 copies fill=a
 y = left(x, 10)
@@ -125,3 +125,83 @@ copies fill=1
 y = x~b2x
 ----
 0.25
+
+copies fill=a
+y = c2x(x)
+----
+2.00
+
+copies fill=a
+y = x2c(x)
+----
+0.50
+
+copies fill=a
+y = x2b(x)
+----
+4.00
+
+copies fill=1
+y = b2x(x)
+----
+0.25
+
+copies fill=a
+y = bitand(x)
+----
+1.00
+
+copies fill=a
+y = bitor(x, 'b')
+----
+1.00
+
+copies fill=a
+y = bitxor(x, , 'b')
+----
+1.00
+
+copies fill=a
+y = x~bitAnd
+----
+1.00
+
+copies fill=a
+y = countstr('b', x) lastpos('b', x) verify(x, 'a')
+----
+0.00
+
+copies fill=a
+y = compare(x, x)
+----
+0.00
+
+copies fill=a
+y = abbrev(x, 'a')
+----
+0.00
+
+copies fill=a
+y = datatype(x) x~datatype
+----
+0.00
+
+copies fill=a
+y = words(x) wordpos('b', x)
+----
+0.00
+
+copies fill=a
+y = center(x, 64000000)
+----
+0.00
+
+copies fill=a
+y = right(x, 64000000)
+----
+0.00
+
+copies fill=a
+y = copies(x, 1)
+----
+0.00

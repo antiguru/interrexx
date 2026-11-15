@@ -275,8 +275,10 @@ fn wordpos_with(
 
 /// `WORDS(string)`: how many blank-delimited words the argument holds.
 pub(crate) fn words(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let count = word_count(&string);
+    let count = {
+        let string = required_render(interp, args, 1);
+        word_count(string.text(interp))
+    };
     Ok(interp.counted(count))
 }
 
@@ -498,14 +500,16 @@ pub(crate) fn word_pos(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let phrase = required_string(interp, args, 1);
-    let string = required_string(interp, args, 2);
     let start = match whole_number(interp, name, args, 3)? {
         Some(value) => position_of(value)?,
         None => 1,
     };
 
-    let found = wordpos_bytes(&phrase, &string, start);
+    let found = {
+        let phrase = required_render(interp, args, 1);
+        let string = required_render(interp, args, 2);
+        wordpos_bytes(phrase.text(interp), string.text(interp), start)
+    };
     Ok(interp.counted(found))
 }
 

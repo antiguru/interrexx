@@ -180,10 +180,14 @@ pub(crate) fn datatype(
     _name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
     let Some(option) = optional_string(interp, args, 2) else {
-        return Ok(interp.text(datatype_kind(&text)));
+        let kind = {
+            let text = super::required_render(interp, args, 1);
+            datatype_kind(text.text(interp))
+        };
+        return Ok(interp.text(kind));
     };
+    let text = required_string(interp, args, 1);
     // An empty option's first byte is `0x00`, which matches none of the
     // thirteen letters below and falls straight to the `None` arm -- the same
     // path a bad letter takes, and the byte `error.rs`'s `displayable`
