@@ -2,7 +2,7 @@
 element: "Collection"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Collection Class; Builtin Classes > Collection Classes > Collection Class > [] (Abstract Method); Builtin Classes > Collection Classes > Collection Class > []= (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allIndexes (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allItems (Abstract Method); Builtin Classes > Collection Classes > Collection Class > at (Abstract Method); Builtin Classes > Collection Classes > Collection Class > difference; Builtin Classes > Collection Classes > Collection Class > disjoint; Builtin Classes > Collection Classes > Collection Class > equivalent; Builtin Classes > Collection Classes > Collection Class > hasIndex; Builtin Classes > Collection Classes > Collection Class > hasItem; Builtin Classes > Collection Classes > Collection Class > index (Abstract Method); Builtin Classes > Collection Classes > Collection Class > intersection; Builtin Classes > Collection Classes > Collection Class > items; Builtin Classes > Collection Classes > Collection Class > makeArray; Builtin Classes > Collection Classes > Collection Class > put (Abstract Method); Builtin Classes > Collection Classes > Collection Class > subset; Builtin Classes > Collection Classes > Collection Class > supplier; Builtin Classes > Collection Classes > Collection Class > union; Builtin Classes > Collection Classes > Collection Class > xor"
-deviations: [78, 109, 118]
+deviations: [109, 118]
 ---
 
 # Collection
@@ -201,12 +201,12 @@ any object
 r[class.collection.hasitem]
 `hasItem(item)` answers what the answer of `allItems` answers to `hasItem` for
 the same argument, unchanged, and takes exactly one argument, as `hasIndex`
-does: none raises `SYNTAX 93.901` and a second raises `SYNTAX 93.902`, in
-both cases before `allItems` is sent. Whether two items count as the same is
-decided by the object `allItems` answers: for an array that is the strict
-equality of `==`, under which `1` and `1.0` are different items (for the very
-object that is stored, see [the Array deviation
-rule](r:class.array.deviation.78)).
+does: none raises `SYNTAX 93.901` and a second raises `SYNTAX 93.902`, in both
+cases before `allItems` is sent. Whether two items count as the same is decided
+by the object `allItems` answers: for an array that is the strict equality of
+`==`, under which `1` and `1.0` are different items (the very object that is
+stored is found without a `==` sent to it, as [the identity
+rule](r:class.collection.identity) says).
 
 ```rexx
 b = .box~new(.array~of('1', 'Ab', 'x'))
@@ -262,6 +262,48 @@ say c~hasItem('v')
 allItems 0
 hasItem v
 any object
+```
+
+r[class.collection.identity]
+A collection of this book that compares an index or an item with `==` takes the
+very object it stores as equal to the object searched for, without sending
+`==`: a lookup, `put` and `[]=` with the stored index, and a search by
+`hasItem`, `index`, `removeItem` or `allIndex` for the stored item, of the hash
+collections and of `Array`, `List`, `Queue` and `CircularQueue`; a Relation's
+`uniqueIndexes` for an index object stored in more than one entry; and the check
+of a Set's or Bag's `put` and `[]=` that the index equals the item, when both are
+the same object. An object is found at its own entry whatever its `==` answers.
+Any other stored object is compared with `==` as the page of the class says.
+
+```rexx
+x = .liar~new
+.local~n = 0
+t = .table~new
+t[x] = 'found'
+say t[x] t~hasIndex(x) .local~n
+t2 = .table~new
+t2['k'] = x
+say t2~hasItem(x) t2~index(x) .local~n
+a = .array~of('a', x)
+say a~hasItem(x) a~index(x) .local~n
+s = .set~of(x)
+say s~hasIndex(x) .local~n
+y = .liar~new
+say a~hasItem(y) t~hasIndex(y) .local~n
+::class liar
+::method '=='
+  .local~n = .local~n + 1
+  return .false
+::method hashCode
+  return 'h'
+```
+
+```output
+found 1 0
+1 k 0
+1 2 2
+1 2
+0 0 5
 ```
 
 r[class.collection.items]
@@ -2267,35 +2309,6 @@ count = 2
 ```
 
 ## Deviations
-
-r[class.collection.deviation.78]
-`hasItem` forwards the argument to the answer of `allItems`, so a search for
-the very object that is stored in that answer follows [the Array
-rule](r:class.array.deviation.78): the object's `==` is sent as for any other
-item, and an object whose `==` answers false is not found. ooRexx finds the
-very object without sending it `==`. See [Deviation 78](../deviations.md).
-
-```rexx
-x = .liar~new
-b = .box~new(.array~of('a', x, 'b'))
-.local~n = 0
-say b~hasItem(x) .local~n
-::class box inherit collection
-::method init
-  expose a
-  use arg a
-::method allItems
-  expose a
-  return a
-::class liar
-::method '=='
-  .local~n += 1
-  return 0
-```
-
-```output
-0 3
-```
 
 r[class.collection.deviation.109]
 An instance of a subclass of `String` that is compared by `subset` or

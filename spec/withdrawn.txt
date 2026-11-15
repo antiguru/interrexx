@@ -1,1 +1,14 @@
 # Rule IDs that were withdrawn and may never be reused, one per line.
+class.collection.deviation.78
+class.array.deviation.78
+class.list.deviation.78
+class.queue.deviation.78
+class.circularqueue.deviation.78
+class.table.deviation.78
+class.set.deviation.78
+class.bag.deviation.78
+class.relation.deviation.78
+class.directory.deviation.78
+class.stringtable.deviation.78
+class.properties.deviation.78
+class.stem.deviation.78
