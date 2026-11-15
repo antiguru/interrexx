@@ -1975,7 +1975,13 @@ impl Interp {
         };
         let running = self.activities.running;
         let lend = (self.activities.lends.iter().rev()).find(|lend| lend.lendee == running);
-        if let (true, true, Some(lend)) = (endless, self.activity.attached, lend) {
+        // An instance's root call waits until `Terminate` whatever the lend
+        // does, so the callback does not stop anything there that was making
+        // progress, and a line naming it would point at nothing frozen.
+        let root = self.root_call_in_flight().map(|(activity, _)| activity);
+        if let (true, true, Some(lend)) = (endless, self.activity.attached, lend)
+            && root != Some(lend.lender)
+        {
             let lender = lend.lender;
             self.activities.stall = Some(Stall {
                 due: self.now() + STALL_REPORT,
@@ -2374,6 +2380,15 @@ impl Interp {
     /// `Terminate`.
     pub(crate) fn note_root_call(&mut self, frame: u64) {
         self.activities.root_call = Some((self.activities.running, frame));
+    }
+
+    /// Ends the embedding instance's root call where the running activity's
+    /// native call in its native frame `frame` is that call, once its
+    /// completion is drained or abandoned.
+    pub(crate) fn end_root_call(&mut self, frame: u64) {
+        if self.activities.root_call == Some((self.activities.running, frame)) {
+            self.activities.root_call = None;
+        }
     }
 
     /// Marks the running activity as a callback that runs, as a lend to it

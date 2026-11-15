@@ -1,7 +1,7 @@
 // An embedding host whose program waits on something only the host can end.
 //
-// Usage: hostwait instance | hostwait terminate | hostwait self | hostwait attached
-//        | hostwait nested | hostwait start <program>.
+// Usage: hostwait instance | hostwait terminate | hostwait self | hostwait selfclear
+//        | hostwait attached | hostwait nested | hostwait stall <ms> | hostwait start <program>.
 //
 // * `instance`: the host creates an instance, makes an event semaphore in it, and starts a thread
 //   that waits a while, attaches and posts the semaphore. The creating thread meanwhile calls a
@@ -11,6 +11,8 @@
 // * `self`: the host creates an instance and calls a routine that sends a message whose method
 //   waits for that message's own result before it replies. It prints what the routine answered
 //   and whether the call left a condition, and calls `Terminate`.
+// * `selfclear`: as `self`, but the creating thread clears the condition before it calls
+//   `Terminate`.
 // * `attached`: as `self`, but a thread the host starts attaches and calls the routine, while the
 //   creating thread waits for it outside any call. The thread prints what the routine answered and
 //   whether the call left a condition, and detaches. The creating thread then calls `Terminate`.
@@ -18,10 +20,15 @@
 //   event semaphore. Once its own call has answered, the attached thread clears the condition and
 //   posts the semaphore. The creating thread prints what its routine answered, and calls
 //   `Terminate`.
+// * `stall`: the host creates an instance and makes an event semaphore in it. One thread attaches
+//   and calls a routine that waits on the semaphore, and another waits `<ms>` milliseconds,
+//   attaches and posts it, while the creating thread waits for both outside any call. Then it
+//   calls `Terminate`.
 // * `start`: the host starts a thread that waits a while and halts the thread `RexxStart` runs
 //   `<program>` on, then runs it there and prints what it answered.
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 #include <unistd.h>
@@ -104,6 +111,81 @@ static int self_wait()
     printf("routine %s condition %d\n", result == NULLOBJECT ? "(none)" : context->CString(result),
            context->CheckCondition() ? 1 : 0);
     fflush(stdout);
+    instance->Terminate();
+    printf("terminated\n");
+    fflush(stdout);
+    return 0;
+}
+
+static int self_wait_clear()
+{
+    RexxInstance *instance = NULL;
+    RexxThreadContext *context = NULL;
+    if (RexxCreateInterpreter(&instance, &context, NULL) != 1)
+    {
+        return 1;
+    }
+    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", self_waiter, strlen(self_waiter));
+    RexxObjectPtr result = context->CallRoutine(routine, context->NewArray(0));
+    printf("routine %s condition %d\n", result == NULLOBJECT ? "(none)" : context->CString(result),
+           context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    context->ClearCondition();
+    printf("cleared condition %d\n", context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    instance->Terminate();
+    printf("terminated\n");
+    fflush(stdout);
+    return 0;
+}
+
+static RexxObjectPtr stall_semaphore;
+
+static void stall_waiter(RexxInstance *instance)
+{
+    RexxThreadContext *context = NULL;
+    if (!instance->AttachThread(&context))
+    {
+        printf("attach failed\n");
+        fflush(stdout);
+        return;
+    }
+    const char *source = "use arg semaphore\nsemaphore~wait\nreturn 'posted'\n";
+    RexxRoutineObject routine = context->NewRoutine("W", source, strlen(source));
+    RexxObjectPtr result = context->CallRoutine(routine, context->ArrayOfOne(stall_semaphore));
+    printf("waiter %s\n", result == NULLOBJECT ? "(none)" : context->CString(result));
+    fflush(stdout);
+    context->DetachThread();
+}
+
+static void stall_poster(RexxInstance *instance, int milliseconds)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+    RexxThreadContext *context = NULL;
+    if (!instance->AttachThread(&context))
+    {
+        printf("attach failed\n");
+        fflush(stdout);
+        return;
+    }
+    context->SendMessage0(stall_semaphore, "POST");
+    context->DetachThread();
+}
+
+static int stall(int milliseconds)
+{
+    RexxInstance *instance = NULL;
+    RexxThreadContext *context = NULL;
+    if (RexxCreateInterpreter(&instance, &context, NULL) != 1)
+    {
+        return 1;
+    }
+    stall_semaphore = context->RequestGlobalReference(
+        context->SendMessage0(context->FindClass("EVENTSEMAPHORE"), "NEW"));
+    std::thread waiter(stall_waiter, instance);
+    std::thread poster(stall_poster, instance, milliseconds);
+    waiter.join();
+    poster.join();
     instance->Terminate();
     printf("terminated\n");
     fflush(stdout);
@@ -222,6 +304,14 @@ int main(int argc, char **argv)
     if (argc >= 2 && strcmp(argv[1], "self") == 0)
     {
         return self_wait();
+    }
+    if (argc >= 2 && strcmp(argv[1], "selfclear") == 0)
+    {
+        return self_wait_clear();
+    }
+    if (argc >= 3 && strcmp(argv[1], "stall") == 0)
+    {
+        return stall(atoi(argv[2]));
     }
     if (argc >= 2 && strcmp(argv[1], "attached") == 0)
     {

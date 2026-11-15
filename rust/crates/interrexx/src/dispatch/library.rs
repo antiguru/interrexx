@@ -698,6 +698,7 @@ impl Interp {
             self.activity.native_call.take().ok_or_else(|| {
                 Loud::scheduler_inconsistency("a native call resumed with no record")
             })?;
+        self.end_root_call(call.frame());
         let Stage::Completed(completion) = std::mem::replace(&mut call.stage, Stage::Prepared)
         else {
             return Err(
@@ -741,6 +742,7 @@ impl Interp {
         let Some(call) = self.activity.native_call.take() else {
             return;
         };
+        self.end_root_call(call.frame());
         let scope = self.native_frame().scope;
         let popped = if call.unstarted() {
             // No native body can still use kept objects or lent buffers.

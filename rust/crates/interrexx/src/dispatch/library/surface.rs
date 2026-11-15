@@ -20,6 +20,15 @@ use crate::{Failure, Interp};
 
 impl Surface for Interp {
     fn clear_condition(&mut self) {
+        // A refusal is not a Rexx condition, so clearing does not take it
+        // back: the end of the run reports it whether or not the host cleared
+        // it. A message an attached thread sent had its refusal kept when it
+        // was held, so only the frames that were not kept then are kept now.
+        let kept_when_held = self.activity.attached && self.activity.native_handles.len() == 1;
+        if !kept_when_held && let Some(Failure::Loud(loud)) = &self.native_frame().raised {
+            let loud = loud.clone();
+            self.keep_late_failure(Failure::Loud(loud));
+        }
         let frame = self.native_frame_mut();
         frame.raised = None;
         frame.additional = None;

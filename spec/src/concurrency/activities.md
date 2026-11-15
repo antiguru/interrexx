@@ -859,9 +859,8 @@ refusal ends the run, even where native code could still end another
 activity's wait. A call that a host makes on an instance it created with
 `RexxCreateInterpreter`, from any thread, answers no result and leaves a
 condition pending, and the instance takes further calls until `Terminate`.
-The refusal's text is written when the host terminates the instance, unless
-the call came from the thread that created the instance and the host cleared
-the condition. The refusal claims only that the wait can never be satisfied.
+The refusal's text is written when the host terminates the instance, or at the
+end of the run, whether or not the host cleared the condition. The refusal claims only that the wait can never be satisfied.
 After a `reply` the result is settled, and the method's own `result` and
 `wait` answer at once.
 A wait that would close a ring of waits between activities raises `SYNTAX

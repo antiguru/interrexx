@@ -1154,6 +1154,36 @@ fn a_wait_on_the_activitys_own_message_in_a_hosts_call_is_refused() {
     );
 }
 
+/// As in the hosts-call case, but the thread that created the instance clears the condition
+/// before it calls `Terminate`: a refusal is not a Rexx condition, so the refusal is still
+/// reported at `Terminate`.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_refusal_the_creating_thread_cleared_is_still_reported_at_terminate() {
+    assert_eq!(
+        run_driver("hostwait", &["selfclear"]),
+        (
+            "in run\nroutine (none) condition 1\ncleared condition 0\nterminated\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
+            0
+        )
+    );
+}
+
+/// A callback an attached thread makes on an instance waits for an event semaphore another
+/// attached thread posts only after more than the stall bound, while the thread that created the
+/// instance is outside any call: that thread's root call waits for `Terminate` whatever the
+/// callback does, so stderr does not report it as stopped.
+// spec: native.threads.attach
+#[test]
+fn a_callback_wait_is_not_reported_as_stalling_the_instances_root_call() {
+    let (stdout, stderr, status) = run_driver_for("hostwait", &["stall", "7000"], "60");
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), status),
+        ("waiter posted\nterminated\n", "", 0)
+    );
+}
+
 /// A thread of an embedding host attaches to an instance the host created and calls a routine that
 /// sends a message whose method waits for that message's own result before it replies, while the
 /// thread that created the instance is outside any call: the wait is refused, the call answers no
