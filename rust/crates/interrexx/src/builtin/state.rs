@@ -203,6 +203,9 @@ pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
             .map_err(crate::trace::raised_invalid_trace_letter)?;
         let merged = crate::trace::applied(before, &request);
         interp.set_trace_mode(merged);
+        // A call with an argument ends the stop a typed line runs in
+        // (`r[env.debugging.input.trace]`); one without ends nothing.
+        interp.end_debug_stop();
         if !before.debug && merged.debug {
             // The clause that called the function is followed by a stop at
             // once. The hot clause exit asks `clause_exits`, so raising it

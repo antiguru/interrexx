@@ -1762,7 +1762,7 @@ body:
   return ''
 ```
 
-```output defect=#223
+```output
 trace ?a           reads 3 setting ?A
 trace ??           reads 3 setting ?A
 x = trace("?i")    reads 3 setting ?I
