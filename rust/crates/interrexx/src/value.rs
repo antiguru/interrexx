@@ -1253,9 +1253,9 @@ impl Interp {
             // **The marker whatever they render as**, because an operator is
             // sent to its left operand as a message and neither answers one: `a
             // = (1,); say a + 1` and `o~objectName = '123'; say o + 1` both
-            // raise 97.1 even though each
-            // renders as a number, and the comparisons `say (a = 1)` and `say
-            // (o = 123)` are both `0` where parsing that rendering gives `1`.
+            // raise 97.1 even though each renders as a number, and the
+            // comparisons `say (a = 1)` and `say (o = 123)` are both `0` where
+            // parsing that rendering gives `1`.
             // `Interp::operator_operand_gap` is what reports them, and it is
             // reached only where this answers `NotNumeric` -- the premise
             // `a_value_the_operator_gap_names_parses_as_no_number` holds. A

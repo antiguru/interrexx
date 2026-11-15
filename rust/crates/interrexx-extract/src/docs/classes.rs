@@ -261,38 +261,51 @@ pub fn method_waits_on(name: &str) -> &'static str {
 }
 
 /// A passage of the reference saying the user cannot construct a class: the
-/// lines it is on, a short locator found there (a fragment, not the sentence,
-/// which the reference holds and this table does not repeat), and the status
-/// it grounds.
-pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, &str, Status)] = &[
-    ("Buffer", 429, 429, "native code", Status::Unreachable),
-    ("Pointer", 7844, 7844, "native code", Status::Unreachable),
+/// lines it is on, the [`digest`] of its normalised text (the reference holds
+/// the sentence and this table does not repeat it), and the status it
+/// grounds. Any rewording of the cited lines changes the digest, so the
+/// check in `coverage.rs` asks for a re-read.
+pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, u64, Status)] = &[
+    (
+        "Buffer",
+        429,
+        429,
+        0x64cc_59f0_c30f_68a6,
+        Status::Unreachable,
+    ),
+    (
+        "Pointer",
+        7844,
+        7844,
+        0xb184_ad6a_ba2e_0335,
+        Status::Unreachable,
+    ),
     (
         "RexxContext",
         8479,
         8479,
-        "directly created",
+        0x2483_8a93_6825_d0a0,
         Status::NotCovered,
     ),
     (
         "RexxInfo",
         8876,
         8876,
-        "created or copied",
+        0x0679_4370_edd5_9c54,
         Status::NotCovered,
     ),
     (
         "StackFrame",
         10341,
         10341,
-        "directly created",
+        0x14dc_afab_6908_063f,
         Status::NotCovered,
     ),
     (
         "VariableReference",
         13490,
         13491,
-        "is not allowed",
+        0xfc72_ceb3_abda_08cc,
         Status::NotCovered,
     ),
 ];
