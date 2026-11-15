@@ -92,7 +92,7 @@ REXX_HEADERS_REFRESH=1 cargo test -p interrexx-api --test headers
 ```
 
 Without the switch the same test fails when a header differs from what the definitions render. The
-`standalone` CI job also compiles `rexx.h` and `oorexxapi.h` with clang as C and as C++ under
+`build` CI job also compiles `rexx.h` and `oorexxapi.h` with clang as C and as C++ under
 `-Wall -Wextra -Werror -Wextern-c-compat`.
 
 ## What correct means
@@ -149,9 +149,13 @@ From `rust/`, under the memory cap:
   exception. A new test that reads the submodule or runs the
   oracle is added to the filter with its tier and reason. The `build` CI job checks every name in
   the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
-  test cannot leave the filter unnoticed. The `standalone` CI job runs this profile, `cargo build`,
-  clippy and the doc tests on a checkout with no submodule, no `third_party/` directory, no `build`
-  link and no cargo cache, so a build script or test that reads the tree fails there.
+  test cannot leave the filter unnoticed. The `build`, `shard`, `doctest` and `clippy` CI jobs
+  run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
+  asserting that before it starts, and `build` and `doctest` keep a cargo cache of their own that
+  no job with the submodule saved. So a build script or test that reads the tree fails there. The
+  six shards run this profile over the archive that `build` made without the submodule; the
+  `upstream-tier` job runs the complement, `--ignore-default-filter -E 'not default()'`, on a
+  checkout with the submodule and the oracle build.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
