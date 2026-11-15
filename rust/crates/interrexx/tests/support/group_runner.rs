@@ -373,15 +373,6 @@ pub fn masked(stdout: &[u8]) -> Vec<u8> {
     mask_timings(&crate::support::error_text::cut_report_lines(stdout))
 }
 
-/// [`masked`] with the whole cut of `cut_error_texts`, which also
-/// drops the text of a trace announcement. The simulation gate masks the
-/// stdout of a program row with it until #733 narrows that cut: narrowing it
-/// changes the digests of the program rows whose stdout the wider cut touches,
-/// which needs a full `REXX_SIM_ORACLE_REFRESH=1`.
-pub fn masked_with_announcements_cut(stdout: &[u8]) -> Vec<u8> {
-    mask_timings(&crate::support::error_text::cut_error_texts(stdout))
-}
-
 fn mask_timings(stdout: &[u8]) -> Vec<u8> {
     let text = String::from_utf8_lossy(stdout);
     let lines: Vec<&str> = text
