@@ -264,8 +264,10 @@ A library is loaded for the process, not for one instance. Its package entry's
 loader runs once, when the first instance of the process loads the library. An
 instance that loads the library while another instance that loaded it is still
 live runs no loader: the two use one copy of the library, its static storage
-included. Whether two live instances share one load when the same name finds a
-different file for each is unspecified.
+included. Such a load completes only once the loader has returned, so no
+instance calls a routine of the library before its loader has finished. Whether
+two live instances share one load when the same name finds a different file for
+each is unspecified.
 
 > For example, a host creates two instances, and each loads the test library
 > before the host terminates either. The test library prints `loader` once,
@@ -276,19 +278,21 @@ A library's unloader runs once, when the last live instance of the process is
 terminated, after that instance's last-chance `UNINIT` methods. Terminating an
 instance while another is still live runs no unloader, whichever of them loaded
 the library. The instance that is terminated last runs the unloaders of every
-library the process loaded, each once. A program that the command-line
-interpreter runs has the only instance of its process, so the unloaders of its
-libraries run when it ends.
+library the process loaded, each once. Where a program that the command-line
+interpreter runs is the only instance of its process, as it is unless an
+extension creates another, the unloaders of its libraries run when it ends.
 
 > For example, the host of the [shared-load example](r:native.loading.shared)
 > terminates the first instance and then the second. The test library prints
 > `unloader` once, while the second instance is terminated.
 
 r[native.loading.again]
-Once the last live instance of a process has been terminated, no library is
-loaded. An instance created after that loads a library as the first instance
-did: the library's loader runs again, and its unloader runs again when the last
-instance live with it is terminated.
+Once the last live instance of a process has been terminated, no instance holds
+a library. When an instance created after that loads a library,
+the library's loader runs again, and its unloader runs again when the last
+instance live with it is terminated. An instance created while the last one's
+unloaders are still running is created only once they have returned, so a
+loader of the later instance never runs inside an unloader of the earlier ones.
 
 > For example, after the two instances of the [unload
 > example](r:native.loading.unload) have been terminated, the host creates a
@@ -302,11 +306,14 @@ instance](r:native.loading.again) loads it again is unspecified. The process
 may keep the library's code and data in memory from one load to the next, for
 example while code of the library may still be running on a thread of its own.
 A library that needs its static storage in a known state sets it in its loader
-and releases what it holds in its unloader. The reference gives a library
-without a package entry, whose functions RXFUNCADD or the C interface register,
-no loader and no unloader, and says nothing of when it is unloaded: whether it
-stays loaded after the instance that registered its functions ends is
-unspecified too.
+and releases what it holds in its unloader. Once a library has been loaded in
+the process, a later load by the same name may find that copy again, even where
+the name would no longer lead to it, for instance after the search path has
+changed: whether a later load looks the name up afresh is unspecified. The
+reference gives a library without a package entry, whose functions RXFUNCADD or
+the C interface register, no loader and no unloader, and says nothing of when it
+is unloaded: whether it stays loaded after the instance that registered its
+functions ends is unspecified too.
 
 > For example, a library that counted its loads in a static variable could print
 > `2` or `1` at the third instance's load in the [later-instance
