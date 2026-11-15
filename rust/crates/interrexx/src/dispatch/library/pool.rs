@@ -408,13 +408,13 @@ impl Interp {
         for (name, value) in entries {
             let stem = match self.heap.get(value).map(|object| &object.body) {
                 Some(Body::Stem { default, tails, .. }) => {
-                    let mut held: Vec<(usize, Vec<u8>, ObjRef)> = tails
-                        .iter()
-                        .filter_map(|(tail, ordinal, value)| {
-                            value.map(|value| (ordinal, tail.to_vec(), value))
-                        })
+                    // RXSHV tail order is the order the tails were first
+                    // assigned (`r[class.stem.deviation.1]`).
+                    let held: Vec<(Vec<u8>, ObjRef)> = tails
+                        .in_order()
+                        .into_iter()
+                        .filter_map(|(tail, value)| Some((tail.to_vec(), value?)))
                         .collect();
-                    held.sort_by_key(|(ordinal, _, _)| *ordinal);
                     Some((*default, held))
                 }
                 _ => None,
@@ -430,7 +430,7 @@ impl Interp {
                 answered.push((name.clone(), text.clone()));
             }
             let lone = tails.is_empty();
-            for (_, tail, value) in tails {
+            for (tail, value) in tails {
                 if let Some(text) = self.pool_text(value) {
                     let mut compound = name.clone();
                     compound.extend_from_slice(&tail);

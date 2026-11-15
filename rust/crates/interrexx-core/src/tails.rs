@@ -196,7 +196,7 @@ impl Tails {
 
     /// Sets the tail `key` to `value`, a tombstone where `value` is `None`.
     /// A tail that holds a value, or is written a tombstone, keeps its
-    /// ordinal; a tombstone given a value, and a new tail, take the next
+    /// ordinal. A tombstone given a value, and a new tail, take the next
     /// ordinal at the end of the order. Answers the tail's ordinal, which a
     /// compaction this write caused has already renumbered.
     #[inline]
@@ -432,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn the_slab_holds_one_slot_per_tail_under_churn() {
+    fn the_slab_stays_bounded_under_churn_on_many_tails() {
         let mut tails = Tails::new();
         for i in 0..1_000_000u32 {
             let key = (i % 1000).to_string().into_bytes();

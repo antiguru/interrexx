@@ -23,12 +23,13 @@ an enclosing construct restores it.
 
 ## 1. DO OVER order on a stem
 
-DO OVER on a stem visits its tails in an order this book does not specify,
-and so do the `Stem` methods that list or search its tails: `allIndexes`,
-`allItems`, `makeArray` and `supplier`, the tail that `index` and `removeItem`
-choose, and the order in which `hasItem`, `index` and `removeItem` compare the
-items. ooRexx visits them in an order fixed by its internal storage, which is
-neither insertion nor sorted order.
+DO OVER on a stem and the `Stem` methods that list or search its tails
+(`allIndexes`, `allItems`, `makeArray`, `supplier`, `index`, `removeItem` and
+`hasItem`) visit the tails in the order they were first assigned. A dropped
+tail keeps its place, and a tail assigned again after a drop goes to the end.
+`index` and `removeItem` choose the first match in that order. ooRexx visits
+them in an order fixed by its internal storage, which is neither insertion nor
+sorted order.
 
 ## 2. Withdrawn
 

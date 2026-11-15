@@ -77,14 +77,11 @@ pub enum Body {
     Stem {
         name: Box<[u8]>,
         default: Option<ObjRef>,
-        /// **Each tail's insertion ordinal is load-bearing.** A stem's tails are held in a balanced tree keyed
-        /// on (length, bytes) and walked in POST-ORDER, so the order
-        /// `allIndexes` and `supplier` answer in depends on the shape the
-        /// insertions built and not on the tail names alone -- measured, the
-        /// same five tails inserted forwards and backwards answer
-        /// `Q,MANGO,LONGKEYNAME,ZEBRA,APPLE` and
-        /// `APPLE,Q,ZEBRA,LONGKEYNAME,MANGO`. A `HashMap` cannot say which came
-        /// first, so [`crate::Tails`] keeps the ordinal with the value.
+        /// **Each tail's insertion ordinal is load-bearing.** `allIndexes`,
+        /// `supplier` and the other listings answer the tails in the order
+        /// they were first assigned (`r[class.stem.deviation.1]`), and a
+        /// `HashMap` cannot say which came first, so [`crate::Tails`] keeps
+        /// the ordinal with the value.
         tails: crate::Tails,
         /// The tails an `EXPOSE` or `PROCEDURE EXPOSE` made another stem's,
         /// each naming that stem: an exposed compound element's real element.

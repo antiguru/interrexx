@@ -2370,19 +2370,13 @@ impl Interp {
         values.push(Some(item));
     }
 
-    /// A stem's assigned tails, ordered
-    /// length first and bytes second.
+    /// A stem's assigned tails, in the order they were first assigned
+    /// (`r[class.stem.deviation.1]`).
     fn stem_assigned_tails(&self, value: ObjRef) -> Vec<Vec<u8>> {
-        let Some(Body::Stem { tails, .. }) = self.heap.get(value).map(|object| &object.body) else {
-            return Vec::new();
-        };
-        let mut names: Vec<Vec<u8>> = tails
-            .iter()
-            .filter(|(_, _, held)| held.is_some())
-            .map(|(name, _, _)| name.to_vec())
-            .collect();
-        names.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
-        names
+        self.stem_live_tails(value)
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect()
     }
 
     /// Everything a `RETURN` or an `EXIT` does once its expression has been

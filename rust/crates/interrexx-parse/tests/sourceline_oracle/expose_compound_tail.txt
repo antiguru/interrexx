@@ -72,7 +72,7 @@ p3: procedure expose a. a.1
 ::method order
   expose c.2
   c.9 = 'n'; c.3 = 't'; c.10 = 'x'; c.2 = 'e'
-  say 'order' c.~allIndexes~makestring('l', ',') c.~items c.~hasIndex(2) c.[2] c.~hasItem('e') c.~index('e')
+  say 'order' c.~allIndexes~sort~makestring('l', ',') c.~items c.~hasIndex(2) c.[2] c.~hasItem('e') c.~index('e')
   cp = c.~copy
   say 'copy' cp~items cp[2] cp~hasIndex(2)
   say 'remove' c.~remove(2) c.2
@@ -108,7 +108,7 @@ inner: procedure expose f.1
   say a.i
 ::method show
   expose a.
-  say 'show' a.~items a.1 a.2 a.~allIndexes~makestring('l',',')
+  say 'show' a.~items a.1 a.2 a.~allIndexes~sort~makestring('l',',')
 ::method peek
   expose a.1
   return a.1 a.2 a.~items
@@ -129,7 +129,7 @@ inner: procedure expose f.1
 ::method fill
   expose g.
   g.1 = 'a'; g.5 = 'e'; g.3 = 'c'; g.2 = 'b'; g.4 = 'd'
-  say 'order' g.~allIndexes~makestring('l', ',')
+  say 'order' g.~allIndexes~sort~makestring('l', ',')
 ::method locempty
   expose h.1
   h.1 = 'obj'
@@ -148,4 +148,4 @@ inner: procedure expose f.1
 ::method count
   expose d.
   d. ~ put('x', 9)
-  say 'count' d.~items d.~allIndexes~makestring('l', ',')
+  say 'count' d.~items d.~allIndexes~sort~makestring('l', ',')
