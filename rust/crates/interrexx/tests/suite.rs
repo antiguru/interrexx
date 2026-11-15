@@ -1353,6 +1353,7 @@ mod row_checks {
         "base/bif/CHAROUT",
         "base/bif/ERRORTEXT",
         "base/keyword/TRACE",
+        "base/keyword/TRACE_TraceObject",
         "base/class/RexxQueue",
         "extensions/json/json",
         "extensions/rxmath/RxMath",
@@ -1387,6 +1388,15 @@ mod row_checks {
         (
             LICENCES,
             "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 188; asserts a wording, r[conv.error.text]",
+        ),
+        // IF lines of the row's test, with and without assertions.
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 350 378 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tassertions 276; conditions 350 as x; r[conv.error.text]",
         ),
         (
             LICENCES,
@@ -1469,6 +1479,32 @@ mod row_checks {
         (
             LICENCES,
             "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1190; r[conv.error.text]",
+        ),
+        // A condition line that is not there, is no IF, is a DO, is in another
+        // test, or is named as an assertion too; and a malformed replacement.
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 9999 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 352 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 351 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 618 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tassertions 350; conditions 350 as x; r[conv.error.text]",
+        ),
+        (
+            LICENCES,
+            "base/keyword/TRACE_TraceObject\tTEST_TRACEOBJECT_COLLECTOR\tUnspecified\tconditions 350 r[conv.error.text]",
         ),
         (
             LICENCES,
