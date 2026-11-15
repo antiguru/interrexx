@@ -62,13 +62,31 @@ page records why they are the way they are.
   reference manual and the ANSI standard by section. A short name with no other natural wording
   may coincide with ooRexx's (2026-11-08).
 * **Error message texts are interrexx's own data** (2026-11-14, #388). The texts live in the
-  inventory crate's message files. A message that states a fact mechanically, or that comes from
-  the ANSI standard, may keep its wording; distinctive prose is written fresh. Tools that compared
-  texts against ooRexx's catalogue while the texts were written do not stay in the source.
+  inventory crate's message files, written to `STYLE.md`. A text keeps ooRexx's wording only where
+  it is ANSI's, is one of the canonical phrases with names filled in, or is a plain statement a
+  writer given only the code's meaning would produce nearly word for word; every other text is
+  written fresh, even where ooRexx's sentence reads well. Kinds of fault that several codes share
+  use one phrase, even where ANSI or ooRexx word them differently. The tools that compared texts
+  with ooRexx's catalogue while the texts were written do not stay in the source, and no tool
+  compares them afterwards: a one-time scan found the remaining quotations, and its method and
+  limit are in `docs/developing.md`.
+* **Recorded oracle runs hold no text of ooRexx's** (2026-11-14, #388). An error line in a recorded
+  run keeps its code and drops the text after it, which is the part the comparisons ignore.
+  Comparisons cut the same parts of a live run by structure, never by matching ooRexx's wording.
 * **A regular build does not read `third_party/`** (2026-11-13, #388). Tables derived from ooRexx
   are checked in, with a CI job that checks them against the pinned revision. The C and C++
   headers in `include/` are generated from the Rust layout definitions, in a per-platform layout
-  that holds Unix content only so far.
+  that holds Unix content only so far. The `standalone` CI job builds, lints and tests on a
+  checkout without the submodule and without a cargo cache, so a build script that reads the tree
+  fails there. Tests that need the tree are held out of that run by a filter that names each one
+  with its reason, not skipped at run time.
+* **`include/` declares the names of ooRexx's headers, and no others** (2026-11-14, #650, #712).
+  A CI job diffs every name both ways and fails on a difference that the script does not list with
+  a reason. The eight exports the pinned headers leave undeclared stay undeclared in `include/`;
+  the libraries export them, and `interrexx-capi/tests/link.rs` finds them by symbol, since the ABI
+  dump has no declaration to measure. Declaring them would add names that ooRexx's headers lack,
+  which the diff exists to prevent. `RexxConditionData` is declared, with a `repr(C)` twin that the
+  ABI dump measures.
 * **C gets declarations, C++ gets contexts** (2026-11-14, #661). C code may use the headers'
   declarations, entry tables and routines that need no context; a library that calls the
   interpreter through a context is written in C++. ooRexx's own headers already stop C at the
