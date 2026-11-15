@@ -219,12 +219,12 @@ y = x~c2d(3)
 copies fill=a
 y = x2d(x, 4)
 ----
-0.50
+0.00
 
 copies fill=a
 y = x~x2d(4)
 ----
-0.50
+0.00
 
 copies fill=a
 y = datatype(x, 'A')
@@ -235,3 +235,28 @@ copies fill=a
 y = x~datatype('A')
 ----
 0.00
+
+copies fill=0
+y = x2d(x)
+----
+0.50
+
+copies fill=1
+y = datatype(x, 'W')
+----
+1.00
+
+copies fill=1
+y = x~datatype('W')
+----
+1.00
+
+copies fill=a
+y = symbol(substr(x, 1, 200)) symbol(x)
+----
+1.00
+
+copies fill=a
+y = var(x)
+----
+1.00

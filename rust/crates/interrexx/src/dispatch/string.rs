@@ -1560,10 +1560,7 @@ fn native_string_datatype(
     };
     let matched = match plain {
         Some(matched) => matched,
-        None => {
-            let bytes = interp.to_text(receiver).to_vec();
-            Some(crate::builtin::datatype::datatype_whole(interp, &bytes)?)
-        }
+        None => Some(crate::builtin::datatype::datatype_whole(interp, receiver)?),
     };
     let Some(matched) = matched else {
         return Err(Raised::method_option_not_recognised(

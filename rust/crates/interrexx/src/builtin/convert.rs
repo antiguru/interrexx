@@ -114,13 +114,33 @@ fn digits_of(text: &[u8], notation: Notation) -> impl Iterator<Item = u8> + '_ {
 
 /// Packs a validated hexadecimal string into bytes, two nibbles at a time.
 fn pack_hex(text: &[u8]) -> Result<Vec<u8>, Failure> {
+    pack_hex_tail(text, None)
+}
+
+/// [`pack_hex`] of the last `keep` bytes the whole string packs into, or of
+/// all of them for `None`. Every character is validated either way; only the
+/// bytes kept are built.
+fn pack_hex_tail(text: &[u8], keep: Option<usize>) -> Result<Vec<u8>, Failure> {
     if text.is_empty() {
         return Ok(Vec::new());
     }
     let nibbles = validate_grouped(text, Notation::Hex)?;
-    let mut out = fresh_buffer(nibbles.div_ceil(2))?;
+    let total = nibbles.div_ceil(2);
+    let start = keep.map_or(0, |keep| total.saturating_sub(keep));
+    let mut out = fresh_buffer(total - start)?;
     let mut digits = digits_of(text, Notation::Hex);
-    let mut remaining = nibbles;
+    let odd = nibbles % 2 == 1;
+    // An odd count leaves the first byte one nibble, so byte `start` begins
+    // one nibble earlier than it would otherwise.
+    let skipped = match start {
+        0 => 0,
+        start if odd => 2 * start - 1,
+        start => 2 * start,
+    };
+    if skipped > 0 {
+        digits.nth(skipped - 1);
+    }
+    let mut remaining = nibbles - skipped;
     if remaining % 2 == 1 {
         out.push(digits.next().expect("the scan counted this digit"));
         remaining -= 1;
@@ -475,11 +495,23 @@ pub(crate) fn x2d_c2d_text(
         return Ok((std::borrow::Cow::Borrowed(b"0"), digits));
     }
 
+    // The bytes the length selects: a hexadecimal length counts nibbles, so an
+    // odd one keeps half a byte and moves the sign bit from 0x80 to 0x08.
+    let mut odd_nibble = false;
+    let size = requested.map(|length| {
+        if character {
+            length
+        } else {
+            odd_nibble = length % 2 != 0;
+            length / 2 + usize::from(odd_nibble)
+        }
+    });
+    // Only the bytes the window can reach are packed.
     let packed;
     let bytes: &[u8] = if character {
         string
     } else {
-        packed = pack_hex(string)?;
+        packed = pack_hex_tail(string, size)?;
         &packed
     };
 
@@ -487,16 +519,7 @@ pub(crate) fn x2d_c2d_text(
     // that window has to be masked off afterwards.
     let mut window_start = 0usize;
     let mut negative = false;
-    let mut odd_nibble = false;
-    if let Some(length) = requested {
-        let size = if character {
-            length
-        } else {
-            // A hexadecimal length counts nibbles, so an odd one keeps half a
-            // byte and moves the sign bit from 0x80 to 0x08.
-            odd_nibble = length % 2 != 0;
-            length / 2 + usize::from(odd_nibble)
-        };
+    if let Some(size) = size {
         if size <= bytes.len() {
             window_start = bytes.len() - size;
             let top = bytes[window_start];
@@ -511,26 +534,31 @@ pub(crate) fn x2d_c2d_text(
         }
     }
 
-    // A copy, because both the negation and the mask write into it.
-    let mut window = buffer(interp, bytes.len() - window_start)?;
-    window.extend_from_slice(&bytes[window_start..]);
-    if negative {
-        for byte in window.iter_mut() {
-            *byte ^= 0xff;
-        }
-        for byte in window.iter_mut().rev() {
-            *byte = byte.wrapping_add(1);
-            if *byte != 0 {
-                break;
+    // A copy only where the negation or the mask writes into it.
+    let window: std::borrow::Cow<'_, [u8]> = if negative || odd_nibble {
+        let mut window = buffer(interp, bytes.len() - window_start)?;
+        window.extend_from_slice(&bytes[window_start..]);
+        if negative {
+            for byte in window.iter_mut() {
+                *byte ^= 0xff;
+            }
+            for byte in window.iter_mut().rev() {
+                *byte = byte.wrapping_add(1);
+                if *byte != 0 {
+                    break;
+                }
             }
         }
-    }
-    // After the negation, not before: measured, `x2d('18f',1)` is `-1`, which
-    // needs the complement of `8f` masked down to `1` rather than the mask
-    // applied to `8f` first.
-    if odd_nibble && let Some(top) = window.first_mut() {
-        *top &= 0x0f;
-    }
+        // After the negation, not before: measured, `x2d('18f',1)` is `-1`,
+        // which needs the complement of `8f` masked down to `1` rather than the
+        // mask applied to `8f` first.
+        if odd_nibble && let Some(top) = window.first_mut() {
+            *top &= 0x0f;
+        }
+        window.into()
+    } else {
+        bytes[window_start..].into()
+    };
 
     // This buffer is asked for before anything accumulates, so an absurd
     // `NUMERIC DIGITS` is refused rather than computed.
@@ -542,7 +570,7 @@ pub(crate) fn x2d_c2d_text(
     )?);
 
     let mut accumulator: Vec<u8> = Vec::new();
-    for byte in window {
+    for &byte in window.iter() {
         for nibble in [byte >> 4, byte & 0x0f] {
             shift_in(&mut accumulator, 10, 16, u32::from(nibble));
             if u64::try_from(digit_count(&accumulator)).unwrap_or(u64::MAX) > digits {

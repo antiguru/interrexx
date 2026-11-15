@@ -199,8 +199,8 @@ pub(crate) fn datatype(
     let matched = match plain {
         Some(matched) => matched,
         None => {
-            let text = required_string(interp, args, 1);
-            Some(datatype_whole(interp, &text)?)
+            let value = arg(args, 1).expect("check_arity admitted the string");
+            Some(datatype_whole(interp, value)?)
         }
     };
     let Some(matched) = matched else {
@@ -218,18 +218,24 @@ pub(crate) fn datatype_kind(text: &[u8]) -> &'static [u8] {
     }
 }
 
-/// `DATATYPE`'s `W` test, the one letter that reads the running settings and
-/// can raise, shared with `String~dataType`.
-pub(crate) fn datatype_whole(interp: &mut Interp, text: &[u8]) -> Result<bool, Failure> {
+/// `DATATYPE`'s `W` test of `value`'s text, the one letter that reads the
+/// running settings and can raise, shared with `String~dataType`. The text is
+/// read through a borrow, and rendered again only for a LOSTDIGITS condition
+/// to name.
+pub(crate) fn datatype_whole(interp: &mut Interp, value: ObjRef) -> Result<bool, Failure> {
     // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
     // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
     // of zero under the current settings and asks whether the result is an
     // integer, with no bound from a machine integer. That `plus` is an
     // operator, so it raises LOSTDIGITS and 42 as one.
-    Ok(match parse_number(text) {
+    let number = {
+        let text = interp.render(value);
+        parse_number(text.text(interp))
+    };
+    Ok(match number {
         Some(number) => {
             let digits = interp.activation().settings.digits();
-            interp.lostdigits_check_with(&number, |_| text.to_vec())?;
+            interp.lostdigits_check_with(&number, |interp| interp.to_text(value).into_owned())?;
             number
                 .add(&Number::zero(), digits)
                 .map_err(Raised::from)?
@@ -315,8 +321,7 @@ fn compound_tail_exists(interp: &mut Interp, name: &[u8]) -> bool {
 
 /// `SYMBOL(name)`: what kind of symbol `name` is -- `BAD`, `LIT` or `VAR`.
 pub(crate) fn symbol(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
     let result: &[u8] = match classify(&upper) {
         SymbolKind::Bad => b"BAD",
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => b"LIT",
@@ -338,11 +343,17 @@ pub(crate) fn symbol(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Resul
     Ok(interp.text(result))
 }
 
+/// The first argument uppercased, the one copy of it that `SYMBOL`, `VAR` and
+/// `VALUE` classify and look up, built from a borrow of the argument.
+fn upper_name(interp: &mut Interp, args: Args<'_>) -> Vec<u8> {
+    let text = super::required_render(interp, args, 1);
+    text.text(interp).to_ascii_uppercase()
+}
+
 /// `VAR(name)`: whether `name` is a variable (simple, stem or compound) that
 /// currently has a value.
 pub(crate) fn var(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
     let exists = match classify(&upper) {
         SymbolKind::Bad | SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
             false
@@ -370,18 +381,20 @@ pub(crate) fn value(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
         let selector = interp.to_text(selector).into_owned();
         return super::platform::value_selector(interp, args, &selector);
     }
-    let text = required_string(interp, args, 1);
-    let upper = text.to_ascii_uppercase();
+    let upper = upper_name(interp, args);
+    // The call's own spelling, for the errors that name it; rendered again only
+    // there.
+    let text = |interp: &mut Interp| required_string(interp, args, 1);
     let newvalue = arg(args, 2);
     match classify(&upper) {
         // `found` is the call's own spelling, not the upcased text just used to
         // classify it -- see `Raised::argument_not_a_symbol`'s own doc for the
         // aliasing mistake that makes those two different call sites in the
         // reference implementation and one call site here.
-        SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text).into()),
+        SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text(interp)).into()),
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
             if newvalue.is_some() {
-                return Err(Raised::argument_not_a_symbol(name, 1, &text).into());
+                return Err(Raised::argument_not_a_symbol(name, 1, &text(interp)).into());
             }
             literal_value(interp, &upper)
         }
