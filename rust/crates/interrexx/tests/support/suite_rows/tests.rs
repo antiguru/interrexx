@@ -1,3 +1,4 @@
+use super::guards::guard_assertions;
 use super::*;
 use crate::group_runner::RUNNING_TEST;
 

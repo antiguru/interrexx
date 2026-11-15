@@ -85,7 +85,7 @@ pub enum Owner {
     /// Assertions of the test check behaviour the specification leaves
     /// unspecified: the reason names their lines ([`assertion_lines`]) and
     /// cites the rule that says so, as `r[ID]`. The test stays expected; only
-    /// the named assertions are kept from running ([`guard_assertions`]).
+    /// the named assertions are kept from running ([`guards::guard_assertions`]).
     Unspecified,
 }
 
@@ -386,8 +386,8 @@ pub fn check_rows(rows: &[Row], context: &Context) -> Vec<String> {
 mod checks;
 use checks::check_not_run;
 pub use checks::check_row;
-mod guards;
-pub use guards::{assertion_lines, enclosing, guard_assertions, guardable, guarded_assertions};
+pub mod guards;
+use guards::{assertion_lines, enclosing, guardable};
 
 /// The rows the group files alone determine, one line each as the files hold
 /// them: every test of a group below [`WINDOWS_DIR`]; every test of another

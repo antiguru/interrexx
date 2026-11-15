@@ -107,9 +107,9 @@ pub fn enclosing(text: &str, line: usize) -> Option<(String, String)> {
 /// Rewrites each line of the copied `group_file` that `guards` names so that
 /// its clause, an assertion or an IF of one ([`guardable`]), does not run
 /// while one of the line's tests runs, by [`RUNNING_TEST`], and runs as before
-/// otherwise. The guard goes in front
-/// of the clause on the same line, so no line number changes, and it is an IF
-/// with its own ELSE, so an ELSE on a later line binds as before.
+/// otherwise. The guard goes in front of the clause on the same line, so no
+/// line number changes, and it is an IF with its own ELSE, so an ELSE on a
+/// later line binds as before.
 pub fn guard_assertions(group_file: &Path, guards: &BTreeMap<usize, BTreeSet<String>>) {
     if guards.is_empty() {
         return;
@@ -130,16 +130,14 @@ pub fn guard_assertions(group_file: &Path, guards: &BTreeMap<usize, BTreeSet<Str
             at + 1
         );
         let names: Vec<&str> = tests.iter().map(String::as_str).collect();
+        // The names are words of a quoted string.
         assert!(
-            names.iter().all(|name| name
+            names.iter().all(|name| !name
                 .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')),
-            "test names of letters, digits and underscores: {names:?}"
+                .any(|byte| byte == b'\'' || byte.is_ascii_whitespace())),
+            "test names without a quote or a blank: {names:?}"
         );
-        let indent = line
-            .iter()
-            .position(|byte| !byte.is_ascii_whitespace())
-            .unwrap_or(line.len());
+        let indent = line.len() - clause_of(line).len();
         rewritten.extend_from_slice(&line[..indent]);
         rewritten.extend_from_slice(
             format!(
