@@ -56,6 +56,19 @@ fn reserve(out: &mut Vec<u8>, additional: usize) -> Result<(), Raised> {
         .map_err(|_| Raised::system_resources())
 }
 
+/// The argument at 1-based `position` itself where it is a string object, for
+/// an answer that is the argument's whole text: the same immutable string,
+/// with no second copy of it. Any other value is answered by a copy of its
+/// text.
+fn whole_argument(interp: &Interp, args: Args<'_>, position: usize) -> Option<ObjRef> {
+    let value = arg(args, position)?;
+    matches!(
+        interp.heap.get(value).map(|object| &object.body),
+        Some(interrexx_core::Body::Text { .. })
+    )
+    .then_some(value)
+}
+
 /// `bytes` copied into the result buffer, for an answer that is a piece of a
 /// borrowed argument, or a system-resources failure where there is no room.
 pub(crate) fn unchanged(interp: &Interp, bytes: &[u8]) -> Result<Vec<u8>, Raised> {
@@ -293,7 +306,10 @@ pub(crate) fn center(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let string = string.text(interp);
     let out = match center_bytes(interp, string, width, pad)? {
         Some(out) => out,
-        None => unchanged(interp, string)?,
+        None => match whole_argument(interp, args, 1) {
+            Some(whole) => return Ok(whole),
+            None => unchanged(interp, string)?,
+        },
     };
     Ok(interp.text_built(out))
 }
@@ -365,7 +381,10 @@ pub(crate) fn right(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     let string = string.text(interp);
     let out = match right_bytes(interp, string, size, pad)? {
         Some(out) => out,
-        None => unchanged(interp, string)?,
+        None => match whole_argument(interp, args, 1) {
+            Some(whole) => return Ok(whole),
+            None => unchanged(interp, string)?,
+        },
     };
     Ok(interp.text_built(out))
 }
@@ -583,20 +602,18 @@ pub(crate) fn pos(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
 
 /// `LASTPOS(needle, haystack [,start] [,range])`.
 pub(crate) fn lastpos(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let needle = required_string(interp, args, 1);
-    let haystack = required_string(interp, args, 2);
     let start = whole_number(interp, name, args, 3)?;
     let requested = whole_number(interp, name, args, 4)?;
-
-    let start = match start {
-        Some(value) => position_of(value)?,
-        None => haystack.len(),
+    let start = start.map(position_of).transpose()?;
+    let requested = requested.map(length_of).transpose()?;
+    let found = {
+        let needle = required_render(interp, args, 1);
+        let haystack = required_render(interp, args, 2);
+        let (needle, haystack) = (needle.text(interp), haystack.text(interp));
+        let start = start.unwrap_or(haystack.len());
+        let range = requested.unwrap_or(haystack.len());
+        find_backward(haystack, needle, start, range)
     };
-    let range = match requested {
-        Some(value) => length_of(value)?,
-        None => haystack.len(),
-    };
-    let found = find_backward(&haystack, &needle, start, range);
     Ok(interp.counted(found))
 }
 
@@ -618,7 +635,13 @@ pub(crate) fn strip(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
 
     let option = option_letter(option.as_deref(), "BLT")?.unwrap_or(b'B');
     let string = required_render(interp, args, 1);
-    let kept = strip_bytes(string.text(interp), option, set.as_deref());
+    let text = string.text(interp);
+    let kept = strip_bytes(text, option, set.as_deref());
+    if kept.len() == text.len()
+        && let Some(whole) = whole_argument(interp, args, 1)
+    {
+        return Ok(whole);
+    }
     let out = unchanged(interp, kept)?;
     Ok(interp.text_built(out))
 }
@@ -688,13 +711,18 @@ pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
 
 /// `COPIES(string, n)`.
 pub(crate) fn copies(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let count = whole_number(interp, name, args, 2)?.expect("check_arity admitted the count");
     let count = count_of(count, 1)?;
-    match copies_bytes(interp, &string, count)? {
-        Some(out) => Ok(interp.text_built(out)),
-        None => Ok(interp.text_built(string)),
-    }
+    let string = required_render(interp, args, 1);
+    let string = string.text(interp);
+    let out = match copies_bytes(interp, string, count)? {
+        Some(out) => out,
+        None => match whole_argument(interp, args, 1) {
+            Some(whole) => return Ok(whole),
+            None => unchanged(interp, string)?,
+        },
+    };
+    Ok(interp.text_built(out))
 }
 
 /// `COPIES`'s answer once its count is checked, shared with `String~copies`.
@@ -727,15 +755,17 @@ pub(crate) fn copies_bytes(
 /// `ABBREV(information, info [,length])`: whether `info` is a prefix of
 /// `information` at least `length` bytes long.
 pub(crate) fn abbrev(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let information = required_string(interp, args, 1);
-    let info = required_string(interp, args, 2);
     let requested = whole_number(interp, name, args, 3)?;
 
     let minimum = match requested {
         Some(value) => Some(length_of(value)?),
         None => None,
     };
-    let answer = abbrev_holds(&information, &info, minimum);
+    let answer = {
+        let information = required_render(interp, args, 1);
+        let info = required_render(interp, args, 2);
+        abbrev_holds(information.text(interp), info.text(interp), minimum)
+    };
     Ok(interp.text(if answer { b"1" } else { b"0" }))
 }
 
@@ -779,11 +809,13 @@ fn abbrev_holds_over(
 /// `COMPARE(string1, string2 [,pad])`: the 1-based offset of the first byte
 /// at which the two differ once the shorter is padded out, or 0.
 pub(crate) fn compare(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let first = required_string(interp, args, 1);
-    let second = required_string(interp, args, 2);
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
-
-    Ok(interp.counted(compare_at(&first, &second, pad)))
+    let at = {
+        let first = required_render(interp, args, 1);
+        let second = required_render(interp, args, 2);
+        compare_at(first.text(interp), second.text(interp), pad)
+    };
+    Ok(interp.counted(at))
 }
 
 /// `COMPARE`'s answer once its two strings and its pad are read, shared with
@@ -871,9 +903,11 @@ pub(crate) fn countstr(
     _name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let needle = required_string(interp, args, 1);
-    let haystack = required_string(interp, args, 2);
-    let count = count_occurrences(&haystack, &needle, usize::MAX);
+    let count = {
+        let needle = required_render(interp, args, 1);
+        let haystack = required_render(interp, args, 2);
+        count_occurrences(haystack.text(interp), needle.text(interp), usize::MAX)
+    };
     Ok(interp.counted(count))
 }
 
@@ -1066,8 +1100,6 @@ fn window(bytes: &mut [u8], start: usize, range: Option<usize>) -> Option<&mut [
 
 /// `VERIFY(string, reference [,option] [,start] [,range])`.
 pub(crate) fn verify(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let reference = required_string(interp, args, 2);
     let option = optional_string(interp, args, 3);
     let start = whole_number(interp, name, args, 4)?;
     let range = whole_number(interp, name, args, 5)?;
@@ -1079,12 +1111,18 @@ pub(crate) fn verify(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     } - 1;
     let range = range.map(length_of).transpose()?;
 
+    let answer = {
+        let string = required_render(interp, args, 1);
+        let reference = required_render(interp, args, 2);
+        let string = string.text(interp);
+        (start < string.len())
+            .then(|| verify_bytes(string, reference.text(interp), option, start, range))
+    };
     // Answered as text rather than through `counted`, unlike every other
     // zero this function answers.
-    if start >= string.len() {
+    let Some(answer) = answer else {
         return Ok(interp.text(b"0"));
-    }
-    let answer = verify_bytes(&string, &reference, option, start, range);
+    };
     Ok(interp.counted(answer))
 }
 

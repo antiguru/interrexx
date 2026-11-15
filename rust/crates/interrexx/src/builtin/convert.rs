@@ -16,8 +16,8 @@
 use interrexx_core::ObjRef;
 
 use super::{
-    Args, arg, buffer, fresh_buffer, length_of, optional_string, pad_byte, required_string,
-    whole_number,
+    Args, arg, buffer, fresh_buffer, length_of, optional_string, pad_byte, required_render,
+    required_string, whole_number,
 };
 use crate::Interp;
 use crate::error::{Failure, Notation, Raised};
@@ -144,13 +144,16 @@ fn bit_operation(
     operation: fn(u8, u8) -> u8,
     default_pad: u8,
 ) -> Result<ObjRef, Failure> {
-    let first = required_string(interp, args, 1);
     // An omitted second string is the null string rather than a repeat of the
     // first: measured, `c2x(bitand('ffff'x))` is `FFFF` -- every byte reaches
     // the pad path and the default pad leaves it alone.
-    let second = optional_string(interp, args, 2).unwrap_or_default();
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(default_pad);
-    let out = bit_operation_over(interp, &first, &second, pad, operation)?;
+    let first = required_render(interp, args, 1);
+    let second = arg(args, 2).map(|second| interp.render(second));
+    let second = second
+        .as_ref()
+        .map_or(&b""[..], |second| second.text(interp));
+    let out = bit_operation_over(interp, first.text(interp), second, pad, operation)?;
     Ok(interp.text_built(out))
 }
 
@@ -219,8 +222,8 @@ pub(crate) fn c2x(
     _name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let out = c2x_bytes(interp, &string)?;
+    let string = required_render(interp, args, 1);
+    let out = c2x_bytes(interp, string.text(interp))?;
     Ok(interp.text_built(out))
 }
 
@@ -242,8 +245,8 @@ pub(crate) fn x2c(
     _name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let packed = x2c_bytes(&string)?;
+    let string = required_render(interp, args, 1);
+    let packed = x2c_bytes(string.text(interp))?;
     Ok(interp.text_built(packed))
 }
 
@@ -258,8 +261,8 @@ pub(crate) fn x2b(
     _name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let out = x2b_bytes(interp, &string)?;
+    let string = required_render(interp, args, 1);
+    let out = x2b_bytes(interp, string.text(interp))?;
     Ok(interp.text_built(out))
 }
 
@@ -285,8 +288,8 @@ pub(crate) fn b2x(
     _name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
-    let out = b2x_bytes(interp, &string)?;
+    let string = required_render(interp, args, 1);
+    let out = b2x_bytes(interp, string.text(interp))?;
     Ok(interp.text_built(out))
 }
 /// RFC 2045's alphabet, which is the one with `+` and `/` rather than the

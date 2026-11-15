@@ -1522,10 +1522,10 @@ fn string_bit_operation(
     default_pad: u8,
 ) -> Result<Option<ObjRef>, Failure> {
     let (other, pad) = bit_arguments(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
+    let rendered = interp.render(receiver);
     let out = convert::bit_operation_over(
         interp,
-        &bytes,
+        rendered.text(interp),
         &other,
         pad.unwrap_or(default_pad),
         operation,
@@ -1543,11 +1543,14 @@ fn native_string_datatype(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let letter = datatype_option_argument(interp, args)?;
-    let bytes = interp.to_text(receiver).to_vec();
     let Some(letter) = letter else {
-        let kind = crate::builtin::datatype::datatype_kind(&bytes);
+        let kind = {
+            let rendered = interp.render(receiver);
+            crate::builtin::datatype::datatype_kind(rendered.text(interp))
+        };
         return Ok(Some(interp.text(kind)));
     };
+    let bytes = interp.to_text(receiver).to_vec();
     let Some(matched) = crate::builtin::datatype::datatype_matches(interp, &bytes, letter)? else {
         return Err(Raised::method_option_not_recognised(
             crate::builtin::datatype::DATATYPE_OPTIONS,
