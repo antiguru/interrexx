@@ -1270,6 +1270,26 @@ impl NativeRoutineEntry {
         !self.entry_point.is_null()
     }
 
+    /// A `ROUTINE_CLASSIC_STYLE` row held for one call of the classic
+    /// `RexxFunctionHandler` it names, which keeps the library open until the
+    /// hold drops; `None` for any other row and for a closed library.
+    #[must_use]
+    pub fn held_classic(&self) -> Option<HeldClassic> {
+        if self.style != ROUTINE_CLASSIC_STYLE {
+            return None;
+        }
+        let held = Held::new(&self.mapping, || {
+            if !self.mapping.is_open() {
+                return None;
+            }
+            // SAFETY: `REXX_CLASSIC_ROUTINE` fills a classic row with a
+            // `RexxFunctionHandler`, in a mapping this hold, counted before
+            // `open` was read, keeps open for every call made through it.
+            unsafe { ClassicEntry::new(self.entry_point) }
+        });
+        held.stub.is_some().then_some(HeldClassic { held })
+    }
+
     /// The row's address as the typed stub it names, or `None` for a row that
     /// carries none, for a row of any style but `ROUTINE_TYPED_STYLE`, and for
     /// a row whose library has been closed.
@@ -1369,6 +1389,26 @@ impl HeldMethod {
     }
 }
 
+/// A classic routine row held for one call ([`NativeRoutineEntry::held_classic`]).
+pub struct HeldClassic {
+    held: Held<ClassicEntry>,
+}
+
+impl HeldClassic {
+    /// [`ClassicEntry::call_function`] of the held row, its library open for
+    /// the call.
+    #[must_use]
+    pub fn call_function(
+        &self,
+        name: &[u8],
+        arguments: &[Option<&[u8]>],
+        queue: &[u8],
+    ) -> Option<ClassicResult<usize>> {
+        let entry = self.held.stub?;
+        entry.call_function(name, arguments, queue)
+    }
+}
+
 /// A routine row held for one call ([`NativeRoutineEntry::held`]).
 pub struct HeldRoutine {
     /// The row's `style`.
@@ -1409,7 +1449,9 @@ impl HeldRoutine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClassicEntry(std::ptr::NonNull<c_void>);
 
-// SAFETY: the address names code mapped for the process's life, which any thread may call.
+// SAFETY: the address names code mapped for every call made through it (`new`), which any
+// thread may call: a registered handler's library is never closed, and a package's classic
+// row is called only through a `HeldClassic`, which keeps its mapping open for the call.
 unsafe impl Send for ClassicEntry {}
 // SAFETY: as `Send`; the address is never written through.
 unsafe impl Sync for ClassicEntry {}
@@ -1419,7 +1461,7 @@ impl ClassicEntry {
     ///
     /// # Safety
     /// A non-null `address` is the entry point of a handler of the C signature the registry it
-    /// is registered in declares, mapped until the process ends.
+    /// is registered in declares, mapped for every call made through the entry.
     #[must_use]
     pub unsafe fn new(address: *mut c_void) -> Option<ClassicEntry> {
         std::ptr::NonNull::new(address).map(ClassicEntry)

@@ -234,7 +234,7 @@ impl Interp {
             // shared code is bound to this package as its directive resolves,
             // where nothing bound it first, so a later directive's refusal
             // leaves the binding in place.
-            let (keys, internal) = match self.resolve_external(&directive.kind) {
+            let (keys, internal, classic) = match self.resolve_external(&directive.kind) {
                 Ok(resolved) => resolved,
                 Err(refusal) => {
                     if refusal.echoes {
@@ -257,6 +257,9 @@ impl Interp {
             }
             if let Some(row) = internal {
                 rexx_routines.push((installed, row));
+            }
+            if let Some(classic) = classic {
+                self.classic_routine_entries.insert(installed, classic);
             }
         }
         if !routines.is_empty() || !public_routines.is_empty() {
@@ -2399,6 +2402,7 @@ impl Interp {
         (
             Vec<LibraryCodeKey>,
             Option<&'static internal_routines::InternalRoutine>,
+            Option<interrexx_api::load::ClassicEntry>,
         ),
         ExternalRefusal,
     > {
@@ -2409,14 +2413,34 @@ impl Interp {
             _ => false,
         };
         if !external {
-            return Ok((Vec::new(), None));
+            return Ok((Vec::new(), None, None));
         }
         let refuse = |failure: Failure, echoes| ExternalRefusal { failure, echoes };
         if let DirectiveKind::Routine(routine) = kind
             && let Some(spec) = routine.external.as_ref().filter(|spec| spec.registered)
         {
+            // r[native.loading.registered]: registered as RXFUNCADD of the
+            // routine's name, the library and the entry registers it, and the
+            // routine is the function that resolves, kept for it whatever
+            // RXFUNCDROP later removes.
             let entry = spec.entry.as_deref().unwrap_or(&routine.name);
             crate::builtin::registrations::register_function(&routine.name, &spec.library, entry);
+            let upper = routine.name.to_ascii_uppercase();
+            // Only a library without a package entry exports classic functions:
+            // a packaged library's exports are its typed stubs, and an entry
+            // naming one is 90.999 (r[dir.routine.deviation.143]).
+            let classic_library = match self.resolve_library(&spec.library) {
+                LibraryLoad::Missing => true,
+                LibraryLoad::Raised(failure) => return Err(refuse(failure, true)),
+                LibraryLoad::Loaded(_) | LibraryLoad::Version => false,
+            };
+            if classic_library
+                && self.resolve_classic_function(&upper)
+                && let Some(classic) = self.classic_functions.get(&upper).copied()
+            {
+                self.routines_changed();
+                return Ok((Vec::new(), None, Some(classic)));
+            }
             let raised = Raised::external_routine_not_found(entry);
             return Err(refuse(raised.into(), true));
         }
@@ -2437,7 +2461,7 @@ impl Interp {
             };
             internal = Some(row);
         }
-        Ok((keys, internal))
+        Ok((keys, internal, None))
     }
 
     /// The library and the procedures one directive's `EXTERNAL` names,
@@ -2515,6 +2539,15 @@ impl Interp {
     /// directive bound, or `None` for any other routine.
     pub(crate) fn library_routine_code(&self, installed: InstalledRoutine) -> Option<usize> {
         self.library_routine_codes.get(&installed).copied()
+    }
+
+    /// The classic function an `EXTERNAL "REGISTERED ..."` `::ROUTINE`
+    /// directive bound, or `None` for any other routine.
+    pub(crate) fn classic_routine_entry(
+        &self,
+        installed: InstalledRoutine,
+    ) -> Option<interrexx_api::load::ClassicEntry> {
+        self.classic_routine_entries.get(&installed).copied()
     }
 
     /// The internal package routine a `::ROUTINE` directive bound, or `None`

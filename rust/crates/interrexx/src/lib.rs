@@ -1573,6 +1573,9 @@ struct Interp {
     /// The internal package routine each `::ROUTINE ... EXTERNAL "LIBRARY
     /// REXX"` or `"LIBRARY rexxutil"` directive bound.
     rexx_routine_rows: FxHashMap<InstalledRoutine, &'static internal_routines::InternalRoutine>,
+    /// The classic function each `EXTERNAL "REGISTERED ..."` `::ROUTINE`
+    /// directive bound, kept for the routine after RXFUNCDROP.
+    classic_routine_entries: FxHashMap<InstalledRoutine, interrexx_api::load::ClassicEntry>,
     /// The [`Interp::library_codes`] row of each method a `~define` installed
     /// from a `loadExternalMethod` answer, which is the package it reports.
     defined_library_codes: FxHashMap<MethodId, usize>,
@@ -2413,6 +2416,7 @@ impl Interp {
             library_routine_codes: FxHashMap::default(),
             defined_library_codes: FxHashMap::default(),
             rexx_routine_rows: FxHashMap::default(),
+            classic_routine_entries: FxHashMap::default(),
             package_routines: FxHashMap::default(),
             package_routine_codes: Vec::new(),
             routine_generation: 0,
@@ -3539,6 +3543,7 @@ impl Interp {
             library_routine_codes: _,
             defined_library_codes: _,
             rexx_routine_rows: _,
+            classic_routine_entries: _,
             // Routine names and row indices.
             package_routines: _,
             package_routine_codes: _,
@@ -3903,6 +3908,8 @@ impl Interp {
         self.library_routine_codes
             .retain(|installed, _| !dead(&installed.program));
         self.rexx_routine_rows
+            .retain(|installed, _| !dead(&installed.program));
+        self.classic_routine_entries
             .retain(|installed, _| !dead(&installed.program));
         self.executable_sources
             .retain(|_, record| !record.names_program(dead));
