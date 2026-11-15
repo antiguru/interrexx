@@ -13,8 +13,8 @@ fn main() {
     println!("cargo::rerun-if-env-changed=REXX_UPSTREAM");
     println!("cargo::rerun-if-changed=data/errors.tsv");
     println!("cargo::rerun-if-changed=data/builtins.txt");
-    // A new `messages/<major>.tsv` changes the directory, an edit changes a
-    // file.
+    // Cargo scans a directory for any change to a file in it, so this covers
+    // an edit to a `messages/<major>.tsv` as well as a new one.
     println!("cargo::rerun-if-changed=messages");
     let messages_xml = PathBuf::from(
         std::env::var_os("REXX_UPSTREAM")
@@ -40,9 +40,6 @@ fn validate_messages(table: &errors::Table) {
     let dir = std::path::Path::new("messages");
     let texts = messages::load_dir(dir)
         .unwrap_or_else(|problems| panic!("messages/ is not sound:\n{}", problems.join("\n")));
-    for text in &texts {
-        println!("cargo::rerun-if-changed=messages/{}.tsv", text.major);
-    }
     let problems = messages::validate(table, &texts);
     assert!(
         problems.is_empty(),
