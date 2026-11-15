@@ -481,7 +481,7 @@ entry of [the condition object](r:cond.information.object) of that error is
 the package of the text that did not translate, and a program that traps the
 condition can hold it. The package is an ordinary one that was never
 installed: its `name` is the name given to `new`, `source` answers the lines
-that were read, and `routines`, `classes`, `publicRoutines` and `publicClasses`
+given to `new`, and `routines`, `classes`, `publicRoutines` and `publicClasses`
 are empty, whatever directives came before the line that failed. Every method
 of `Package` works on it as on any other package: `addRoutine`,
 `addPublicRoutine`, `addClass` and `addPackage` add to it as their rules say,
@@ -500,6 +500,10 @@ say (f1 == f2) (f1 == f1) (f1 == .context~package)
 x = .routine~new('xr', 'return "xr called"')
 say (f1~addPublicRoutine('xr', x) == f1) f1~routines~items f1~publicRoutines~items f1~findRoutine('XR')~call
 say f2~routines~items
+y = .routine~new('yr', 'return "yr called"')
+say (f2~addRoutine('yr', y) == f2) f2~routines~items f2~publicRoutines~items f2~findRoutine('YR')~call
+q2 = .package~new('q2', 'return 1')
+say (q2~addPackage(f2) == q2) q2~findRoutine('YR')~isNil
 say (f1~addClass('late', .object~subclass('late')) == f1) f1~classes~items f1~publicClasses~items
 q = .package~new('q', 'return 1')
 say (q~addPackage(f1) == q) q~importedPackages~items q~findRoutine('XR')~call
@@ -522,6 +526,8 @@ Package broken 4 0 0 0
 0 1 0
 1 1 1 xr called
 0
+1 1 0 yr called
+1 1
 1 1 0
 1 1 xr called
 1 1
