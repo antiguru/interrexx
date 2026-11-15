@@ -117,7 +117,7 @@ lang/event_semaphore_post_reset_wait.rex
 lang/event_semaphore_post_wakes_every_waiter.rex
 lang/event_semaphore_timed_wait_ended_by_a_post.rex
 lang/event_semaphore_wait_not_a_number.rex
-lang/mutex_semaphore_nesting_and_close.rex
+lang/mutex_semaphore_nesting.rex
 lang/mutex_semaphore_released_when_its_activity_ends.rex
 lang/mutex_semaphore_end_hands_over_to_a_waiter.rex
 lang/mutex_semaphore_reacquired_before_its_activity_ends.rex

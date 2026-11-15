@@ -1,3 +1,0 @@
-# The oracle's outcomes of corpus/lang/mutex_semaphore_nesting_and_close.rex program, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
-# count, status, digest of the compared descriptors, key.
-30	0	6d5582491fac9a8a	rc 0, stdout 6 lines, stderr 0 lines
