@@ -516,9 +516,8 @@ fn a_parked_callback_holds_program_end() {
 
 /// [`a_running_callback_holds_program_end`]'s program a hundred times in a row. Program end ends
 /// the attached thread's message and returns while the thread is still leaving the extension, so
-/// the extension has to stay mapped until the process exits, or a run in about thirty crashes in
-/// it (#683).
-// spec: native.threads.end
+/// the extension stays mapped once a thread has attached, or a run can crash in it (#683).
+// spec: native.threads.end, native.loading.static
 #[test]
 #[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
 fn a_running_callback_holds_program_end_a_hundred_times() {

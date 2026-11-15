@@ -12,6 +12,13 @@
 //! instance and calls `Halt` and `SetTrace` through it from a thread of its own; the programs
 //! beside it are run under `rexx` and, under `REXX_CORPUS_GATE`, under the oracle, which must print
 //! the same. Built as a program, it calls the members after the interpreter has ended.
+//!
+//! **The lifetime of a library across instances** (`r[native.loading.shared]`,
+//! `r[native.loading.unload]`, `r[native.loading.again]`). The extension
+//! `tests/instance_identity/lifetime.cpp` prints `loader` from its loader and `unloader` from its
+//! unloader. Built as a program, it creates instances that each load it and prints a line after
+//! each creation and each `Terminate`. Under `REXX_CORPUS_GATE` the same program built against the
+//! oracle's library prints the same.
 
 #![cfg(target_os = "linux")]
 
@@ -495,4 +502,139 @@ fn halt_and_set_trace_after_the_interpreter_ended_return() {
         ("returned\n".to_owned(), String::new(), 0)
     );
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// Builds `lifetime.cpp` as the extension `lifetime` and as the driver, linked against this
+/// workspace's `librexx.so.4`, into a fresh directory named for `name`, and runs the driver with
+/// `scenario`. Under `REXX_CORPUS_GATE` the driver is built again against the oracle's library,
+/// and must print the same.
+fn run_lifetime(name: &str, scenario: &str) -> Answer {
+    let dir = fresh_dir(name);
+    compile(
+        "lifetime.cpp",
+        &[
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-o",
+            &dir.join("liblifetime.so").to_string_lossy(),
+        ],
+    );
+    for library in [cdylibs::librexx(), cdylibs::librexxapi()] {
+        let name = library.file_name().expect("a library name").to_owned();
+        let mut versioned = name.clone();
+        versioned.push(".4");
+        fs::copy(&library, dir.join(&versioned)).expect("a copy of the library");
+        std::os::unix::fs::symlink(&versioned, dir.join(&name)).expect("the link name");
+    }
+    let link = |driver: &Path, libraries: &Path| {
+        compile(
+            "lifetime.cpp",
+            &[
+                "-DDRIVER",
+                "-pthread",
+                "-o",
+                &driver.to_string_lossy(),
+                &format!("-L{}", libraries.display()),
+                &format!("-Wl,-rpath,{}", libraries.display()),
+                "-lrexx",
+                "-lrexxapi",
+            ],
+        );
+    };
+    let driver = dir.join("ltdriver");
+    link(&driver, &dir);
+    let ours = run(&driver, &dir, None, Some(scenario));
+    if gate_mode() {
+        let oracle = support::oracle::locate();
+        let theirs_driver = dir.join("ltdriver-oracle");
+        link(&theirs_driver, oracle.lib_dir());
+        let output = Command::new("memcap")
+            .arg(MEMORY)
+            .arg(&theirs_driver)
+            .arg(scenario)
+            .current_dir(&dir)
+            .env(
+                "LD_LIBRARY_PATH",
+                format!("{}:{}", oracle.lib_dir().display(), dir.display()),
+            )
+            .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
+            .stdin(Stdio::null())
+            .output()
+            .expect("memcap runs, which every run of this test is under");
+        assert_eq!(
+            (
+                String::from_utf8_lossy(&output.stdout).into_owned(),
+                String::from_utf8_lossy(&output.stderr).into_owned(),
+                output.status.code().unwrap_or(-1),
+            ),
+            ours,
+            "the oracle"
+        );
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    ours
+}
+
+/// Two instances that are live together and each load the library run its loader once, when the
+/// first loads it.
+// spec: native.loading.shared
+#[test]
+fn live_instances_share_one_load_of_a_library() {
+    let (stdout, stderr, code) = run_lifetime("lifetime-shared", "two");
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    assert!(
+        stdout.starts_with("loader\ncreated A\ncreated B\n"),
+        "{stdout}"
+    );
+}
+
+/// Terminating the first of two live instances runs no unloader; terminating the second, the
+/// last live one, runs it once, whichever instance loaded the library.
+// spec: native.loading.unload
+#[test]
+fn the_unloader_runs_once_when_the_last_instance_ends() {
+    assert_eq!(
+        run_lifetime("lifetime-unload", "two"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An instance created after the last live one has ended loads the library again: its loader and
+/// its unloader each run once more.
+// spec: native.loading.again
+#[test]
+fn an_instance_after_the_last_one_loads_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-again", "three"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// A thread that attached to the first instance and detached, after which no library of the
+/// process is unmapped, leaves the loader and the unloader running as often: a later instance
+/// still runs both again.
+// spec: native.loading.again, native.loading.static
+#[test]
+fn an_instance_after_an_attached_thread_loads_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-attached", "attached"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
 }
