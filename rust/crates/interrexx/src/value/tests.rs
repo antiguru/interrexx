@@ -996,3 +996,21 @@ fn a_short_fraction_is_its_rendering_in_the_handle() {
         assert_eq!(interp.to_text(handle).as_ref(), rendered.as_bytes());
     }
 }
+
+/// A native object whose string value is not its default name, as a
+/// `StackFrame`'s is, reads the same through `render` as through `to_text`:
+/// the string value, which is what a builtin or `SAY` reading it through a
+/// shared borrow shows.
+#[test]
+fn a_native_renders_its_string_value_as_to_text_does() {
+    let mut interp = Interp::new();
+    let method = interp.method_class();
+    let object = interp.native_instance(method);
+    let Some(Body::Native(native)) = interp.heap.get_mut(object).map(|held| &mut held.body) else {
+        unreachable!("native_instance allocates a Body::Native")
+    };
+    native.set_string_value(b"the string value");
+    assert_eq!(&*interp.to_text(object), b"the string value");
+    let rendered = interp.render(object);
+    assert_eq!(rendered.text(&interp), b"the string value");
+}

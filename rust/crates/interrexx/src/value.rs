@@ -929,7 +929,9 @@ impl Interp {
                 ..
             } => self.try_text(*default),
             Body::Stem { name, .. } => Some(name),
-            Body::Native(native) => Some(native.rendered()),
+            // The string value `to_text` answers, which only `StackFrame`
+            // separates from the default name.
+            Body::Native(native) => Some(native.string_value()),
             // Joined on demand by `to_text` and held nowhere, which is one of
             // the causes of `None` this function's doc names.
             Body::Array { .. } => None,
