@@ -332,14 +332,14 @@ impl Interp {
             while !self.deadline_expired() && Instant::now() < at {
                 let posted = self.timer.idle_until(at);
                 if !posted.is_empty() {
-                    self.file_completions(posted);
+                    self.file_completions(posted, crate::scheduler::DrainAt::Stopped);
                     return Ok(());
                 }
             }
             return Err(self.expire_deadline());
         }
         let posted = self.timer.idle_until(due);
-        self.file_completions(posted);
+        self.file_completions(posted, crate::scheduler::DrainAt::Stopped);
         Ok(())
     }
 
@@ -355,7 +355,7 @@ impl Interp {
         self.disarm_while_idle();
         self.hand_over_output();
         let posted = self.timer.idle();
-        self.file_completions(posted);
+        self.file_completions(posted, crate::scheduler::DrainAt::Stopped);
         Ok(())
     }
 

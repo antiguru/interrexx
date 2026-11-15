@@ -610,6 +610,90 @@ pub unsafe extern "C-unwind" fn await_send_twice(
     std::ptr::null_mut()
 }
 
+/// Waits up to thirty seconds for a file at `path`, a bound only a test
+/// whose file never appears reaches.
+fn await_file_long(path: &CStr) {
+    let path = std::path::PathBuf::from(path.to_string_lossy().into_owned());
+    let _ = (0..3000).any(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        path.exists()
+    });
+}
+
+/// `AWAITTHENSEND(path, object, message)`: waits for a file at `path`, then
+/// sends `message` to `object` through the call's thread context, answering
+/// what it answered: a native whose callback starts when a test says, for a
+/// test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn await_then_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments.
+    unsafe {
+        await_file_long(CStr::from_ptr((*arguments.add(1)).value.value_CSTRING));
+        let thread = (*context).threadContext;
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(2)).value.value_RexxObjectPtr,
+            (*arguments.add(3)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `SIGNALAWAITSEND(signal, path, object, message)`: writes a file at
+/// `signal`, then [`await_then_send`]'s `AWAITTHENSEND(path, object,
+/// message)`: a native that says when it is in flight, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn signal_await_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 6] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares four arguments.
+    unsafe {
+        let signal = CStr::from_ptr((*arguments.add(1)).value.value_CSTRING);
+        std::fs::write(&*signal.to_string_lossy(), "go").expect("the test's file is written");
+        await_file_long(CStr::from_ptr((*arguments.add(2)).value.value_CSTRING));
+        let thread = (*context).threadContext;
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(3)).value.value_RexxObjectPtr,
+            (*arguments.add(4)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
 /// `SENDKEEPING(object, message)`: sends `message` to `object` through the
 /// call's thread context with that context as a `.Pointer`, then sleeps half
 /// a second outside any callback: a native whose context another call may
