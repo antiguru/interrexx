@@ -26,11 +26,15 @@ bump without regeneration and a hand-edited row both fail.
 The same job compares `include/` with the pinned `api/` headers. The ABI dump of
 `interrexx-api/tests/abi_dump.rs` is compiled against `api/` (`REXX_UPSTREAM` set, tests
 `..._upstream_headers_...`), and `scripts/names-diff.py third_party/ooRexx/api include` diffs every
-declared name both ways: macros from the preprocessor, types, fields, functions and C++ methods
-(full signature, default arguments included) from clang's syntax tree. A difference fails unless
-`EXCEPTIONS` in the script lists it with its reason. Types are compared with typedef names resolved,
-so a typedef swapped at a use site is caught by the ABI dump, not by the diff. The script needs
-`clang++`, which the CI image has.
+declared name both ways. Each header of both trees is read twice, as C++17 and as C11, so what sits
+under `#ifndef __cplusplus` is compared too. Macros come from the preprocessor with their expansion
+(a changed value or body differs, two spellings of one value do not); types, fields, functions and
+C++ methods come from clang's syntax tree, a function with its full signature, storage class,
+`inline` and default arguments, a member of an anonymous record with the position of that record.
+The list of headers is diffed as well. A difference fails unless `EXCEPTIONS` in the script lists
+it with its reason. Types are compared with typedef names resolved, so a typedef swapped at a use
+site is caught by the ABI dump, not by the diff. The script needs `clang` and `clang++`, which the
+CI image has.
 
 The text of each error message is in `rust/crates/interrexx-inventory/messages/<major>.tsv`, written
 to the style sheet `STYLE.md` beside them. The build requires a text for every row of `errors.tsv`
