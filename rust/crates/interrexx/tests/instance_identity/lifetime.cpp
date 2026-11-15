@@ -13,7 +13,10 @@
 // `other 0`. Where LIFETIME_UNLOADER_CREATES is set, the unloader, after printing `unloader`,
 // unsets it and does what LIFETIME_NESTED makes the loader do. Where LIFETIME_UNLOADER_OTHER is
 // set, the unloader, after printing `unloader`, unsets it, loads `lifetime2` through the thread
-// context it is handed and prints `unloader other 1` or `unloader other 0`.
+// context it is handed and prints `unloader other 1` or `unloader other 0`. Where
+// LIFETIME_UNLOADER_KEEPS is set, the unloader, after printing `unloader`, unsets it, creates an
+// instance that loads `lifetime`, prints `created inner` and leaves the instance live, with its
+// address in the environment variable LIFETIME_KEPT.
 //
 // Built with -DOTHER it is the extension `lifetime2` instead, a library whose hooks print `other
 // loader` and `other unloader`, which does nothing else.
@@ -38,6 +41,9 @@
 //                with LIFETIME_UNLOADER_OTHER set, creates A and terminates it, then creates C,
 //                loads `lifetime2` through C's thread context, prints `C other` with the answer
 //                and terminates C
+//   unloaderkeep with LIFETIME_UNLOADER_KEEPS set, creates A and terminates it, then terminates
+//                the instance the unloader left live and prints `terminated inner`, then creates
+//                C and terminates it
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,8 +83,8 @@ static void hook(const char *name)
     fflush(stdout);
 }
 
-// Creates an instance that loads `lifetime`, from inside the loader, and terminates it.
-static void inner(void)
+// Creates an instance that loads `lifetime`, from inside a hook, and prints `created inner`.
+static RexxInstance *create_inner(void)
 {
     RexxOption options[2];
     options[0].optionName = LOAD_REQUIRED_LIBRARY;
@@ -89,9 +95,20 @@ static void inner(void)
     if (!RexxCreateInterpreter(&instance, &thread, options))
     {
         printf("create inner failed\n");
-        return;
+        return NULL;
     }
     printf("created inner\n");
+    return instance;
+}
+
+// Creates an instance that loads `lifetime`, from inside a hook, and terminates it.
+static void inner(void)
+{
+    RexxInstance *instance = create_inner();
+    if (instance == NULL)
+    {
+        return;
+    }
     instance->Terminate();
     printf("terminated inner\n");
 }
@@ -137,6 +154,18 @@ static void RexxEntry LifetimeUnloader(RexxThreadContext *context)
         // Once, so that the later instance's unloader loads nothing.
         unsetenv("LIFETIME_UNLOADER_OTHER");
         load_through(context, "lifetime2", "unloader other");
+    }
+    if (getenv("LIFETIME_UNLOADER_KEEPS") != NULL)
+    {
+        // Once, so that the kept instance does not keep another in its own unloader.
+        unsetenv("LIFETIME_UNLOADER_KEEPS");
+        RexxInstance *instance = create_inner();
+        if (instance != NULL)
+        {
+            char address[32];
+            snprintf(address, sizeof address, "%p", (void *)instance);
+            setenv("LIFETIME_KEPT", address, 1);
+        }
     }
 #endif
 }
@@ -285,6 +314,31 @@ int main(int argc, char **argv)
         }
         printf("created C\n");
         load_through(thread, "lifetime2", "C other");
+        terminate(c, "C");
+        return 0;
+    }
+    if (strcmp(scenario, "unloaderkeep") == 0)
+    {
+        setenv("LIFETIME_UNLOADER_KEEPS", "1", 1);
+        RexxInstance *a = create("A");
+        if (a == NULL)
+        {
+            return 1;
+        }
+        terminate(a, "A");
+        const char *address = getenv("LIFETIME_KEPT");
+        RexxInstance *kept = NULL;
+        if (address == NULL || sscanf(address, "%p", (void **)&kept) != 1 || kept == NULL)
+        {
+            printf("nothing kept\n");
+            return 1;
+        }
+        terminate(kept, "inner");
+        RexxInstance *c = create("C");
+        if (c == NULL)
+        {
+            return 1;
+        }
         terminate(c, "C");
         return 0;
     }

@@ -1,4 +1,4 @@
-// Two libraries and a program that loads them from two instances at once, where the first
+// Three libraries and a program that loads them from two instances at once, where the first
 // library's loader calls into the second instance.
 //
 // Built with -DSLOW it is the extension `crossslow`: its loader prints `slow loader start`, creates
@@ -8,7 +8,12 @@
 //
 // Built with -DQUICK it is the extension `crossquick`, whose loader prints `quick loader`.
 //
-// Built with -DDRIVER it is a program, which links neither extension. It creates the instances
+// Built with -DOUTER it is the extension `crossouter`. Its loader prints `outer loader start`,
+// attaches to the instance whose address the environment variable CROSSLOAD_FIRST holds, loads
+// `crossslow` there, prints `outer loaded crossslow` with the answer, detaches and prints
+// `outer loader end`.
+//
+// Built with -DDRIVER it is a program, which links none of the extensions. It creates the instances
 // `first` and `second` and prints a line after each. A thread of its own attaches to `first` and
 // loads `crossslow` there. Once that loader has started, the main thread loads a library through
 // `second`'s thread context and prints `main` with the library's name and the answer. The thread
@@ -16,6 +21,8 @@
 // instances and prints `terminated`.
 //   other  the main thread loads `crossquick`
 //   same   the main thread loads `crossslow`
+//   hook   the main thread loads `crossouter`, whose loader, running on `second`, waits for the
+//          loader of `crossslow`, which calls into `second`
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,6 +94,43 @@ RexxPackageEntry crossquick_package_entry = {
 OOREXX_GET_PACKAGE(crossquick);
 #endif
 
+#ifdef OUTER
+static void RexxEntry OuterLoader(RexxThreadContext *)
+{
+    printf("outer loader start\n");
+    fflush(stdout);
+    const char *address = getenv("CROSSLOAD_FIRST");
+    RexxInstance *first = NULL;
+    if (address != NULL)
+    {
+        sscanf(address, "%p", (void **)&first);
+    }
+    RexxThreadContext *context = NULL;
+    if (first == NULL || !first->AttachThread(&context))
+    {
+        printf("outer loader did not attach\n");
+        return;
+    }
+    printf("outer loaded crossslow %d\n", context->LoadLibrary("crossslow") ? 1 : 0);
+    context->DetachThread();
+    printf("outer loader end\n");
+    fflush(stdout);
+}
+
+RexxPackageEntry crossouter_package_entry = {
+    STANDARD_PACKAGE_HEADER
+    REXX_INTERPRETER_4_0_0,
+    "crossouter",
+    "1.0",
+    OuterLoader,
+    NULL,
+    NULL,
+    NULL
+};
+
+OOREXX_GET_PACKAGE(crossouter);
+#endif
+
 #ifdef DRIVER
 static RexxInstance *first;
 
@@ -126,7 +170,9 @@ int main(int argc, char **argv)
     {
         return 2;
     }
-    const char *library = strcmp(argv[1], "same") == 0 ? "crossslow" : "crossquick";
+    const char *library = strcmp(argv[1], "same") == 0   ? "crossslow"
+                          : strcmp(argv[1], "hook") == 0 ? "crossouter"
+                                                         : "crossquick";
     unlink("hook-started");
     RexxThreadContext *first_context;
     if (!RexxCreateInterpreter(&first, &first_context, NULL))
@@ -144,6 +190,8 @@ int main(int argc, char **argv)
     char address[32];
     snprintf(address, sizeof address, "%p", (void *)second);
     setenv("CROSSLOAD_SECOND", address, 1);
+    snprintf(address, sizeof address, "%p", (void *)first);
+    setenv("CROSSLOAD_FIRST", address, 1);
     pthread_t thread;
     if (pthread_create(&thread, NULL, load_slow, NULL) != 0 || !hook_started())
     {

@@ -809,6 +809,25 @@ fn an_instance_an_unloader_creates_shares_the_load_being_unloaded() {
     );
 }
 
+/// An instance that an unloader creates and leaves live outlives the instance whose termination
+/// ran the unloader, without the libraries whose unloaders that termination ran: its own
+/// termination, now the last, runs no unloader of theirs again. An instance created afterwards
+/// loads the library afresh.
+// spec: native.loading.reentrant
+#[test]
+fn an_instance_an_unloader_leaves_live_does_not_unload_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-unloaderkeep", "unloaderkeep"),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\nterminated inner\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
 /// An unloader that loads a library new to the process runs that library's loader inside it, and
 /// the same termination runs the new library's unloader too. An instance created afterwards loads
 /// both afresh, and its termination unloads both.
@@ -828,8 +847,9 @@ fn a_library_an_unloader_loads_is_unloaded_in_the_same_termination() {
     );
 }
 
-/// Builds `crossload.cpp` as the extensions `crossslow` and `crossquick` and as the driver, and
-/// runs the driver with `scenario`, and where `oracle` is true the oracle's driver after it.
+/// Builds `crossload.cpp` as the extensions `crossslow`, `crossquick` and `crossouter` and as the
+/// driver, and runs the driver with `scenario`, and where `oracle` is true the oracle's driver
+/// after it.
 fn crossload_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
     driver_runs(
         name,
@@ -837,6 +857,7 @@ fn crossload_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
         &[
             (Some("-DSLOW"), "crossslow"),
             (Some("-DQUICK"), "crossquick"),
+            (Some("-DOUTER"), "crossouter"),
         ],
         scenario,
         oracle,
@@ -886,6 +907,46 @@ fn a_load_waiting_for_a_loader_lets_it_call_into_the_waiting_instance() {
         ],
         &["main crossslow 1", "thread crossslow 1"],
         &["terminated"],
+    );
+}
+
+/// A loader runs with its instance's baton vacated, as an external call does, so a load it makes
+/// through another instance may wait for a loader that calls into the first instance: the main
+/// thread runs `crossouter`'s loader on `second`, and that loader waits for `crossslow`'s loader,
+/// which calls into `second` meanwhile. Each load completes once its loader has returned. The
+/// oracle does not wait for the loader, so the run is not compared with it.
+// spec: native.loading.shared
+#[test]
+fn a_loader_waiting_for_a_loader_lets_it_call_into_the_instance_running_the_first() {
+    let (stdout, stderr, code) = crossload_runs("crossload-hook", "hook", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let middle = lines_in_order(
+        &stdout,
+        &[
+            "created first",
+            "created second",
+            "slow loader start",
+            "outer loader start",
+            "slow loader callback 3",
+        ],
+        &[
+            "outer loaded crossslow 1",
+            "outer loader end",
+            "main crossouter 1",
+            "thread crossslow 1",
+        ],
+        &["terminated"],
+    );
+    let at = |line: &str| {
+        middle
+            .iter()
+            .position(|held| *held == line)
+            .expect("lines_in_order checked every line is there")
+    };
+    assert!(
+        at("outer loaded crossslow 1") < at("outer loader end")
+            && at("outer loader end") < at("main crossouter 1"),
+        "{stdout}"
     );
 }
 

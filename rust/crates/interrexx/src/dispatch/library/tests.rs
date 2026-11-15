@@ -748,8 +748,14 @@ extern "C-unwind" fn program_unloader(_thread: *mut interrexx_api::layout::RexxT
     PROGRAM_HOOKS.lock().expect("unpoisoned").push("unloader");
 }
 
+/// How many times [`a_programs_end_runs_its_librarys_unloader`]'s run
+/// vacated the baton, counted on its interpreter thread.
+static PROGRAM_VACATES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// **A program's end runs the unloader of a library it required**, through
-/// the whole run, not only through [`Interp::terminate`].
+/// the whole run, not only through [`Interp::terminate`]. Each hook runs with
+/// the baton vacated, as an external call does, and the program makes no
+/// other native call, so the run vacates it twice.
 #[test]
 fn a_programs_end_runs_its_librarys_unloader() {
     PROGRAM_HOOKS.lock().expect("unpoisoned").clear();
@@ -762,6 +768,10 @@ fn a_programs_end_runs_its_librarys_unloader() {
             b"say 'main'\n::requires 'hooked' LIBRARY\n".to_vec(),
             false,
             crate::Invocation::none(),
+        );
+        PROGRAM_VACATES.store(
+            crate::scheduler::vacates(),
+            std::sync::atomic::Ordering::SeqCst,
         );
         (outcome, None)
     });
@@ -778,6 +788,7 @@ fn a_programs_end_runs_its_librarys_unloader() {
         *PROGRAM_HOOKS.lock().expect("unpoisoned"),
         vec!["loader", "unloader"]
     );
+    assert_eq!(PROGRAM_VACATES.load(std::sync::atomic::Ordering::SeqCst), 2);
 }
 
 /// A library termination left open is closed when the interpreter's
