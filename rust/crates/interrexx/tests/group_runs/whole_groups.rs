@@ -1066,8 +1066,8 @@ mod sim_gate {
     use std::time::Duration;
 
     use super::super::super::group_runner::{
-        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked,
-        outcome, run_crate_process, run_crate_sim, run_oracle_within,
+        Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked, outcome, run_crate_process,
+        run_crate_sim, run_oracle_within,
     };
     use super::super::super::support::{error_text, oracle, sidecar};
     use super::{
@@ -2410,7 +2410,10 @@ mod sim_gate {
         };
         let row = program_row();
         for (one, other) in [
-            ("Error 93 running x line 2:  One.\n", "Error 93 running x line 2:  Two.\n"),
+            (
+                "Error 93 running x line 2:  One.\n",
+                "Error 93 running x line 2:  Two.\n",
+            ),
             ("       >I> One.\n", "       >I> Two.\n"),
             ("       *-* Words \"R\".\n", "\n"),
         ] {
