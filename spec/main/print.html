@@ -99331,7 +99331,8 @@ the values of elements 1 to <code>N</code>, each read as its parameter's code, s
 the result in element 0 as the result's code, and answers a null pointer.
 <code>REXX_TYPED_ROUTINE_PROTOTYPE(name)</code> and <code>REXX_METHOD_PROTOTYPE(name)</code>
 declare such an entry, for a table in another source file than the
-declaration.</p>
+declaration. Both expand to a declaration that ends in a semicolon, so a use
+compiles with or without a semicolon of its own.</p>
 <div class="rule" id="r-native.header.argument-exists"><a href="native/header.html#r-native.header.argument-exists">[native.header.argument-exists]</a></div>
 <p>In the code of a routine or method, <code>argumentExists(i)</code> is whether the
 argument of descriptor <code>i</code> was given, and <code>argumentOmitted(i)</code> whether it was
