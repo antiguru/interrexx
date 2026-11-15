@@ -18,8 +18,8 @@
 //! `tests/instance_identity/lifetime.cpp` prints `loader` from its loader and `unloader` from its
 //! unloader. Built as a program, it creates instances that each load it and prints a line after
 //! each creation and each `Terminate`. Under `REXX_CORPUS_GATE` the same program built against the
-//! oracle's library prints the same, or, where threads make the order of some lines open, meets
-//! the same checks.
+//! oracle's library prints the same, except in the scenarios where one instance is created while
+//! another runs a hook, which the oracle does not wait for.
 
 #![cfg(target_os = "linux")]
 
@@ -514,7 +514,7 @@ fn halt_and_set_trace_after_the_interpreter_ended_return() {
 /// `scenario`. Under `REXX_CORPUS_GATE` the driver is built again against the oracle's library,
 /// and must print the same.
 fn run_lifetime(name: &str, scenario: &str) -> Answer {
-    let mut runs = lifetime_runs(name, scenario).into_iter();
+    let mut runs = lifetime_runs(name, scenario, gate_mode()).into_iter();
     let ours = runs.next().expect("this workspace's run");
     if let Some(theirs) = runs.next() {
         assert_eq!(theirs, ours, "the oracle");
@@ -522,8 +522,8 @@ fn run_lifetime(name: &str, scenario: &str) -> Answer {
     ours
 }
 
-/// [`run_lifetime`]'s runs: this workspace's, and under `REXX_CORPUS_GATE` the oracle's after it.
-fn lifetime_runs(name: &str, scenario: &str) -> Vec<Answer> {
+/// [`run_lifetime`]'s runs: this workspace's, and where `oracle` is true the oracle's after it.
+fn lifetime_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
     let dir = fresh_dir(name);
     compile(
         "lifetime.cpp",
@@ -560,7 +560,7 @@ fn lifetime_runs(name: &str, scenario: &str) -> Vec<Answer> {
     let driver = dir.join("ltdriver");
     link(&driver, &dir);
     let mut runs = vec![run(&driver, &dir, None, Some(scenario))];
-    if gate_mode() {
+    if oracle {
         // A slow hook's mark, which the oracle's run makes again.
         let _ = fs::remove_file(dir.join("hook-started"));
         let oracle = support::oracle::locate();
@@ -592,6 +592,10 @@ fn lifetime_runs(name: &str, scenario: &str) -> Vec<Answer> {
 
 /// Checks that `stdout` is `first`, then `middle` in any order, then `last`, answering the lines
 /// of `middle` in the order they came.
+///
+/// The two scenarios that check this are not compared with the oracle: it creates the second
+/// instance while the first one's loader or unloader is still running, and in the `unloading`
+/// scenario that instance then runs neither the loader nor the unloader.
 fn lines_in_order<'a>(
     stdout: &'a str,
     first: &[&str],
@@ -685,15 +689,14 @@ fn an_instance_after_an_attached_thread_loads_the_library_again() {
 // spec: native.loading.shared
 #[test]
 fn a_load_during_another_instances_loader_waits_for_it() {
-    for (stdout, stderr, code) in lifetime_runs("lifetime-loading", "loading") {
-        assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
-        lines_in_order(
-            &stdout,
-            &["loader start", "loader end"],
-            &["created A", "created B"],
-            &["terminated A", "unloader", "terminated B"],
-        );
-    }
+    let (stdout, stderr, code) = lifetime_runs("lifetime-loading", "loading", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    lines_in_order(
+        &stdout,
+        &["loader start", "loader end"],
+        &["created A", "created B"],
+        &["terminated A", "unloader", "terminated B"],
+    );
 }
 
 /// An instance created while the last instance's unloader is still running is created only once
@@ -702,17 +705,16 @@ fn a_load_during_another_instances_loader_waits_for_it() {
 // spec: native.loading.again
 #[test]
 fn an_instance_created_during_the_last_unloader_waits_for_it() {
-    for (stdout, stderr, code) in lifetime_runs("lifetime-unloading", "unloading") {
-        assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
-        let middle = lines_in_order(
-            &stdout,
-            &["loader", "created A", "unloader start", "unloader end"],
-            &["terminated A", "loader", "created B"],
-            &["unloader start", "unloader end", "terminated B"],
-        );
-        let at = |line: &str| middle.iter().position(|held| *held == line);
-        assert!(at("loader") < at("created B"), "{stdout}");
-    }
+    let (stdout, stderr, code) = lifetime_runs("lifetime-unloading", "unloading", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let middle = lines_in_order(
+        &stdout,
+        &["loader", "created A", "unloader start", "unloader end"],
+        &["terminated A", "loader", "created B"],
+        &["unloader start", "unloader end", "terminated B"],
+    );
+    let at = |line: &str| middle.iter().position(|held| *held == line);
+    assert!(at("loader") < at("created B"), "{stdout}");
 }
 
 /// A loader that creates an instance loading the same library does not wait for itself: the
