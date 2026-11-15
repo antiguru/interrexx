@@ -1796,7 +1796,13 @@ methods the changes add. The fourth runs the examples of
 [the rule on a running method](r:class.methods.running) and
 [the rule on a change seen whole](r:class.methods.whole) on one object `O`
 made before the changes: its second `M` runs the replacement, and the method
-on the other activity finds the new `A` and `B` for it.
+on the other activity finds the new `A` and `B` for it. The fifth makes a
+subclass `ASUB` of `A` in the `INIT` of the metaclass of `A`, so before the
+`::METHOD` directives of `A` are installed, and sends `M1` to an instance of
+`ASUB`: the directives are changes to the table of `A`, so `ASUB` answers both
+methods. ooRexx takes the table of `A` into `ASUB` when `ASUB` is made, so its
+`ASUB` has neither method: both `hasMethod` calls answer `0` and the send of
+`M1` raises error 97.1.
 
 ```rexx
 a = .k~new
@@ -2007,6 +2013,26 @@ new
 two ran on
 -
 a1 b1 -> a2 b2
+```
+
+```rexx
+o = .asub~new
+say o~hasMethod('M1') o~hasMethod('M2')
+say o~m1 o~m2
+::class Meta subclass class
+::method init
+  forward class (super) continue
+  if self~id = 'A' then .environment~asub = self~subclass('ASUB')
+::class A metaclass Meta
+::method m1
+  return 'a1'
+::method m2
+  return 'a2'
+```
+
+```output
+1 1
+a1 a2
 ```
 
 r[class.methods.deviation.117]
