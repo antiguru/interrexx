@@ -948,12 +948,13 @@ for those values rather than the items of the list: an item can be missed and
 
 ## 126. compareTo with an argument of another class
 
-`compareTo` of a `DateTime`, a `TimeSpan` or a `File`, and every comparison
+`compareTo` of a `DateTime`, a `TimeSpan` or a `File`, and every ordering
 operator that sends it, raises `SYNTAX 88.914` when the argument is not an
 instance of `DateTime`, `TimeSpan` or `File` respectively (an instance of a
 subclass is one). The error follows the `isA` that is sent to the argument and
 precedes every other message. ooRexx answers 1 or -1 for an argument of another
-class, whatever the receiver is.
+class, whatever the receiver is. The equality operators answer that such an
+argument is not equal, as ooRexx does.
 
 ## 127. Adding a span to a DateTime keeps the offset of the DateTime
 

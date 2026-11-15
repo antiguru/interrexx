@@ -42,6 +42,11 @@ page records why they are the way they are.
   place, with `PYTHONUNBUFFERED` and `-u`. Handing the buffer over at every entry into native
   code and every return from it would keep ooRexx's order unasked, but costs a write per call,
   and per clause where an RXHLT or RXTRC exit is registered.
+* **Comparing a `DateTime`, `TimeSpan` or `File` with an object of another class** (2026-11-15,
+  #74, Deviation 126). `compareTo` and the ordering operators raise `SYNTAX 88.914`, since any
+  order between the two would be arbitrary. The equality operators answer not equal, as ooRexx
+  does: a hash collection compares the indexes whose hash codes collide with `==`, so a raise there
+  would make holding such an object beside one of another class fail by chance.
 * **A collection finds the very object it stores without asking `==`** (2026-11-15, #74,
   Deviation 78 withdrawn). A lookup or a search compares identity first and sends `==` only to
   another object, as ooRexx does, and as Python's containers and Java's `HashMap` do: an object

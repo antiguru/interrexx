@@ -100,6 +100,28 @@
   return self~'<<='(other)
 
 
+/* r[class.timespan.deviation.126], r[class.datetime.deviation.126],
+   r[class.file.deviation.126]: whether the compareTo of receiver that calls
+   this, refusing an argument of another class, was sent by an equality
+   operator of Orderable to that same receiver, which then answers not equal.
+   Frames of compareTo between the two are those of an override that forwards,
+   on the same receiver. The frames' targets are matched by identity through an
+   IdentityTable, which sends them nothing. */
+::routine askedForEquality
+  use arg receiver
+  same = .IdentityTable~new
+  same[receiver] = .true
+  frames = .context~stackFrames
+  do i = 3 to frames~items
+    frame = frames[i]
+    if \same~hasIndex(frame~target) then return .false
+    if frame~name == 'COMPARETO' then iterate
+    if frame~type \== 'METHOD' then return .false
+    if frame~executable~scope \== .Orderable then return .false
+    return wordpos(frame~name, '= == \= \==') > 0
+  end
+  return .false
+
 ::class "Comparable" public mixinclass Object
 
 -- r[class.comparable.compareto]

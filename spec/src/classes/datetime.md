@@ -1538,9 +1538,10 @@ instants in UTC, so that two instances with different fields and different
 offsets can be equal. The argument is sent `isA` with `DateTime`, and a
 `DateTime` is then sent `utcDate`; an argument that is no `DateTime` raises
 `SYNTAX 88.914` as soon as `isA` has answered ([Deviation
-126](r:class.datetime.deviation.126)), and the comparison operators raise it for
-such an argument too, except that an operator whose argument is `.nil` does as
-[the `.nil` rule](r:class.orderable.compare.nil) says, without `compareTo`. The
+126](r:class.datetime.deviation.126)), and so do the ordering operators, except
+that an operator whose argument is `.nil` does as [the `.nil`
+rule](r:class.orderable.compare.nil) says, without `compareTo`; the equality
+operators answer that such an argument is not equal. The
 comparison operators `=`, `==`, `<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`,
 `<<`, `<<=`, `>>`, `>>=` and `\<`, `\>`, `\<<`, `\>>` are those of
 [`Orderable`](r:class.orderable.compare), which answer from `compareTo` of the
@@ -2289,14 +2290,22 @@ sends 0
 
 r[class.datetime.deviation.126]
 `compareTo` of a `DateTime` with an argument that is not a `DateTime` (an
-instance of a subclass is one), and a comparison operator with such an argument,
-raise `SYNTAX 88.914`. The error follows the `isA` that the method sends to the
-argument and precedes `utcDate` and every other message; an operator whose
-argument is `.nil` sends no `compareTo` and does as [the `.nil`
-rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
-`.nil`. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
-so the answer says nothing about the two values. In the example the last line is
-a probe that answers false to `isA` and gets nothing else.
+instance of a subclass is one), and an ordering operator (`<`, `<=`, `>`, `>=`,
+`<<`, `<<=`, `>>`, `>>=`, `\<`, `\>`, `\<<` and `\>>`) with such an argument,
+raise `SYNTAX 88.914`. The error follows the `isA` that `compareTo` sends to the
+argument and precedes `utcDate` and every other message. An equality operator
+(`=`, `==`, `\=`, `\==`, `<>` and `><`) with such an argument answers that it is
+not equal, as ooRexx does: `=` and `==` answer 0, the others 1. It sends
+`compareTo` as for any argument, and the argument is sent nothing but the `isA`
+of `compareTo`; an override of `compareTo` that forwards to this one gets the
+same answer. Only an equality operator sent to the same receiver counts: the
+`compareTo` of a `DateTime` that the comparison of another object sends raises.
+An operator whose argument is `.nil` sends no `compareTo` and does as [the
+`.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises
+for `.nil`. ooRexx answers 1 or -1 from `compareTo` for such an argument, and an
+ordering operator answers from that, whatever the receiver is, so the answer
+says nothing about the two values. In the example the last line is a probe that
+answers false to `isA` and gets nothing else.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
@@ -2342,8 +2351,8 @@ d~compareTo(5) => 88.914
 d~compareTo(.nil) => 88.914
 d < .timespan~fromHours(2) => 88.914
 d <<= "x" => 88.914
-d = 5 => 88.914
-d \== .object~new => 88.914
+d = 5 => 0
+d \== .object~new => 1
 d = .nil => 0
 d < .nil => 93.973
 d~compareTo(.sub~new(2017, 6, 30, 5, 6, 7, 8, 0)) => 0
