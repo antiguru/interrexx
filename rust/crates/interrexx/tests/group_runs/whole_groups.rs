@@ -1067,8 +1067,7 @@ mod sim_gate {
 
     use super::super::super::group_runner::{
         Ended, GATE_ENV, ProcessRun, Run, VERBOSITY, gate_mode, masked,
-        masked_with_announcements_cut, outcome, run_crate_process, run_crate_sim,
-        run_oracle_within,
+        outcome, run_crate_process, run_crate_sim, run_oracle_within,
     };
     use super::super::super::support::{error_text, oracle, sidecar};
     use super::{
@@ -1564,12 +1563,14 @@ mod sim_gate {
             .find_map(|word| word.strip_prefix(name)?.strip_prefix('='))
     }
 
-    /// `run` of `row` as compared: stdout masked, `rexx-sim: ` lines dropped.
-    /// A program row's stdout keeps the wider cut until #733.
+    /// `run` of `row` as compared: `rexx-sim: ` lines dropped, a group part's
+    /// stdout masked (ooTest writes the traceback of an error a test meets to
+    /// stdout) and a program row's stdout kept whole, so a program prints the
+    /// codes and flags it means to compare and never a message text.
     fn compared(row: &Row, run: &Run) -> Run {
         Run {
             stdout: if row.program() {
-                masked_with_announcements_cut(&run.stdout)
+                run.stdout.clone()
             } else {
                 masked(&run.stdout)
             },
@@ -2388,6 +2389,43 @@ mod sim_gate {
         assert_eq!(sim_field(&line, "contended"), Some("2"));
         assert_eq!(sim_field(&line, "trace"), Some("00000000000000ff"));
         assert_eq!(sim_line(b"rexx-sim: x\ninterrexx: y\n"), None);
+    }
+
+    fn program_row() -> Row {
+        Row {
+            part: "program".to_string(),
+            ..group_row("corpus/lang/x.rexx")
+        }
+    }
+
+    /// A program row's stdout is compared whole: a line the group cut hides
+    /// (an error-report line, a built-in traceback level, a trace
+    /// announcement) is a difference, while a group part's stays cut.
+    #[test]
+    fn a_program_rows_stdout_is_compared_whole() {
+        let run = |stdout: &str| Run {
+            stdout: stdout.as_bytes().to_vec(),
+            stderr: Vec::new(),
+            status: Some(0),
+        };
+        let row = program_row();
+        for (one, other) in [
+            ("Error 93 running x line 2:  One.\n", "Error 93 running x line 2:  Two.\n"),
+            ("       >I> One.\n", "       >I> Two.\n"),
+            ("       *-* Words \"R\".\n", "\n"),
+        ] {
+            assert_ne!(
+                digest(&compared(&row, &run(one))),
+                digest(&compared(&row, &run(other))),
+                "{one}"
+            );
+            assert_eq!(compared(&row, &run(one)).stdout, one.as_bytes());
+        }
+        let group = group_row("base/x/Y.testGroup");
+        assert_eq!(
+            compared(&group, &run("Error 93 running x line 2:  One.\n")),
+            compared(&group, &run("Error 93 running x line 2:  Two.\n")),
+        );
     }
 
     /// A finished run of a group part: `stdout`, the started test `T`
