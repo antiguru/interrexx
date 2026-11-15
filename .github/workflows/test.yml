@@ -311,7 +311,7 @@ jobs:
           rmdir third_party/ooRexx
           rmdir third_party
           test ! -e third_party
-          test ! -e build
+          test ! -e build && test ! -L build
           test -d ootest
           test -d oodocs
       - name: Provide memcap
