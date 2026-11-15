@@ -2423,8 +2423,8 @@ mod sim_gate {
         }
         let group = group_row("base/x/Y.testGroup");
         assert_eq!(
-            compared(&group, &run("Error 93 running x line 2:  One.\n")),
-            compared(&group, &run("Error 93 running x line 2:  Two.\n")),
+            compared(&group, &run("Error 93 running x line 2:  One.\n")).stdout,
+            compared(&group, &run("Error 93 running x line 2:  Two.\n")).stdout,
         );
     }
 
