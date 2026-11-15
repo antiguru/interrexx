@@ -13,7 +13,6 @@
 mod build_date;
 
 fn main() {
-    std::fs::read("../../../third_party/ooRexx/x").expect("control: reads the submodule");
     println!("cargo:rustc-link-arg-bin=rexx=-Wl,--export-dynamic-symbol=Rexx*");
     println!("cargo:rustc-link-arg-tests=-Wl,--export-dynamic-symbol=Rexx*");
     println!("cargo:rerun-if-changed=build.rs");
