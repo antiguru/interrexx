@@ -17,7 +17,7 @@
 101	15	October
 101	16	November
 101	17	December
-101	18	Invoked routine "&1" of package "&2".
+101	18	Routine "&1", package "&2".
 101	19	Method "&1", scope "&2", package "&3".
 101	20	Built-in method "&1", scope "&2".
 101	21	Built-in routine "&1".
