@@ -56,6 +56,15 @@ fn reserve(out: &mut Vec<u8>, additional: usize) -> Result<(), Raised> {
         .map_err(|_| Raised::system_resources())
 }
 
+/// `bytes` copied into the result buffer, for an answer that is a piece of a
+/// borrowed argument, or a system-resources failure where there is no room.
+pub(crate) fn unchanged(interp: &Interp, bytes: &[u8]) -> Result<Vec<u8>, Raised> {
+    let mut out = interp.take_result_buffer();
+    reserve(&mut out, bytes.len())?;
+    out.extend_from_slice(bytes);
+    Ok(out)
+}
+
 /// Deletes `range` bytes at 0-based `begin`, or everything from `begin` on
 /// for `None`; a `begin` at or past the end deletes nothing.
 pub(crate) fn delete_range(bytes: &mut Vec<u8>, begin: usize, range: Option<usize>) {
@@ -277,14 +286,16 @@ fn in_set(byte: u8, set: &[u8]) -> bool {
 
 /// `CENTER(string, length [,pad])`, and `CENTRE` under its other spelling.
 pub(crate) fn center(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let width = whole_number(interp, name, args, 2)?.expect("check_arity admitted the width");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
     let width = length_of(width)?;
-    match center_bytes(interp, &string, width, pad)? {
-        Some(out) => Ok(interp.text_built(out)),
-        None => Ok(interp.text_built(string)),
-    }
+    let string = required_render(interp, args, 1);
+    let string = string.text(interp);
+    let out = match center_bytes(interp, string, width, pad)? {
+        Some(out) => out,
+        None => unchanged(interp, string)?,
+    };
+    Ok(interp.text_built(out))
 }
 
 /// `CENTER`'s answer once its two arguments are checked, shared with
@@ -318,11 +329,11 @@ pub(crate) fn center_bytes(
 /// `LEFT(string, length [,pad])`: the leading `length` bytes, padded on the
 /// right.
 pub(crate) fn left(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let size = whole_number(interp, name, args, 2)?.expect("check_arity admitted the length");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
     let size = length_of(size)?;
-    let out = left_bytes(interp, &string, size, pad)?;
+    let string = required_render(interp, args, 1);
+    let out = left_bytes(interp, string.text(interp), size, pad)?;
     Ok(interp.text_built(out))
 }
 
@@ -347,14 +358,16 @@ pub(crate) fn left_bytes(
 /// `RIGHT(string, length [,pad])`: the trailing `length` bytes, padded on the
 /// left.
 pub(crate) fn right(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let size = whole_number(interp, name, args, 2)?.expect("check_arity admitted the length");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
     let size = length_of(size)?;
-    match right_bytes(interp, &string, size, pad)? {
-        Some(out) => Ok(interp.text_built(out)),
-        None => Ok(interp.text_built(string)),
-    }
+    let string = required_render(interp, args, 1);
+    let string = string.text(interp);
+    let out = match right_bytes(interp, string, size, pad)? {
+        Some(out) => out,
+        None => unchanged(interp, string)?,
+    };
+    Ok(interp.text_built(out))
 }
 
 /// `RIGHT`'s answer once its two arguments are checked, shared with
@@ -465,8 +478,6 @@ pub(crate) fn insert_bytes(
 
 /// `INSERT(new, target [,n] [,length] [,pad])`.
 pub(crate) fn insert(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let new = required_string(interp, args, 1);
-    let target = required_string(interp, args, 2);
     let start = whole_number(interp, name, args, 3)?;
     let requested = whole_number(interp, name, args, 4)?;
     let pad = pad_byte(interp, name, args, 5)?.unwrap_or(b' ');
@@ -476,8 +487,17 @@ pub(crate) fn insert(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
         None => 0,
     };
     let length = requested.map(length_of).transpose()?;
+    let new = required_render(interp, args, 1);
+    let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
-    insert_bytes(&mut out, &target, &new, start, length, pad)?;
+    insert_bytes(
+        &mut out,
+        target.text(interp),
+        new.text(interp),
+        start,
+        length,
+        pad,
+    )?;
     Ok(interp.text_built(out))
 }
 
@@ -514,8 +534,6 @@ pub(crate) fn overlay_bytes(
 
 /// `OVERLAY(new, target [,n] [,length] [,pad])`.
 pub(crate) fn overlay(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let new = required_string(interp, args, 1);
-    let target = required_string(interp, args, 2);
     let start = whole_number(interp, name, args, 3)?;
     let requested = whole_number(interp, name, args, 4)?;
     let pad = pad_byte(interp, name, args, 5)?.unwrap_or(b' ');
@@ -525,8 +543,17 @@ pub(crate) fn overlay(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
         None => 1,
     } - 1;
     let length = requested.map(length_of).transpose()?;
+    let new = required_render(interp, args, 1);
+    let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
-    overlay_bytes(&mut out, &target, &new, start, length, pad)?;
+    overlay_bytes(
+        &mut out,
+        target.text(interp),
+        new.text(interp),
+        start,
+        length,
+        pad,
+    )?;
     Ok(interp.text_built(out))
 }
 
@@ -586,13 +613,14 @@ pub(crate) fn reverse(
 
 /// `STRIP(string [,option] [,chars])`.
 pub(crate) fn strip(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let option = optional_string(interp, args, 2);
     let set = optional_string(interp, args, 3);
 
     let option = option_letter(option.as_deref(), "BLT")?.unwrap_or(b'B');
-    let kept = strip_bytes(&string, option, set.as_deref());
-    Ok(interp.text(kept))
+    let string = required_render(interp, args, 1);
+    let kept = strip_bytes(string.text(interp), option, set.as_deref());
+    let out = unchanged(interp, kept)?;
+    Ok(interp.text_built(out))
 }
 
 /// `STRIP`'s answer once its option and set are read, shared with
@@ -645,7 +673,6 @@ pub(crate) fn space_bytes(
 /// `SPACE(string [,n] [,pad])`: the words of `string` rejoined with `n`
 /// copies of `pad`.
 pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
     let requested = whole_number(interp, name, args, 2)?;
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
 
@@ -653,8 +680,9 @@ pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
         Some(value) => length_of(value)?,
         None => 1,
     };
+    let string = required_render(interp, args, 1);
     let mut out = interp.take_result_buffer();
-    space_bytes(&mut out, &string, gap, pad)?;
+    space_bytes(&mut out, string.text(interp), gap, pad)?;
     Ok(interp.text_built(out))
 }
 

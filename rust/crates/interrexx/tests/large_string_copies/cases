@@ -1,0 +1,127 @@
+# Copies of x held at the peak beyond x itself, to the nearest quarter, by
+# each program run over x of the fill.
+
+copies fill=a
+say x
+----
+1.00
+
+copies fill=a
+y = strip(x)
+----
+1.00
+
+copies fill=a
+y = strip(x, 'L')
+----
+1.00
+
+copies fill=a
+y = left(x, 10)
+----
+0.00
+
+copies fill=a
+y = left(x, 64000000)
+----
+1.00
+
+copies fill=a
+y = right(x, 10)
+----
+0.00
+
+copies fill=a
+y = center(x, 10)
+----
+0.00
+
+copies fill=a
+y = overlay('b', x)
+----
+1.00
+
+copies fill=a
+y = insert('b', x)
+----
+1.00
+
+copies fill=a
+y = subword(x, 1)
+----
+1.00
+
+copies fill=a
+y = space(x)
+----
+1.00
+
+copies fill=a
+y = wordlength(x, 1) wordindex(x, 1)
+----
+0.00
+
+copies fill=a
+y = x~left(10)
+----
+0.00
+
+copies fill=a
+y = x~right(10)
+----
+0.00
+
+copies fill=a
+y = x~center(10)
+----
+0.00
+
+copies fill=a
+y = x~copies(1)
+----
+0.00
+
+copies fill=a
+y = x~strip
+----
+0.00
+
+copies fill=a
+y = x~abbrev('a')
+----
+0.00
+
+copies fill=a
+y = x~caselessAbbrev('a')
+----
+0.00
+
+copies fill=a
+y = x~compare(x)
+----
+1.00
+
+copies fill=a
+y = x~caselessCompare(x)
+----
+1.00
+
+copies fill=a
+y = x~c2x
+----
+2.00
+
+copies fill=a
+y = x~x2c
+----
+0.50
+
+copies fill=a
+y = x~x2b
+----
+4.00
+
+copies fill=1
+y = x~b2x
+----
+0.25
