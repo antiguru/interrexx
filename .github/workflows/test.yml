@@ -274,22 +274,97 @@ jobs:
         # script with their reasons.
         run: python3 ../scripts/names-diff.py ../third_party/ooRexx/api ../include
 
+  # The regular suite on a checkout without the submodule: no `third_party/ooRexx`, no oracle
+  # build, no `build` link. It proves the workspace builds, lints, and tests with only the
+  # files this repository owns plus the ootest and oodocs checkouts. Tests that need the pinned
+  # tree stay in the jobs above; the `standalone` nextest profile filters them out.
+  standalone:
+    name: standalone (no submodule)
+    needs: [third-party]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          components: clippy
+          # No cargo cache: a `target/` from a job that had the submodule could hold a build
+          # script's output for an input that is gone here, and the build would pass anyway.
+          cache: false
+      - uses: actions/cache/restore@v6
+        with:
+          # The same paths as the job that saved it, because the paths are part of the cache
+          # version. Only ootest and oodocs are kept below.
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Remove everything of the upstream tier
+        working-directory: .
+        run: |
+          rm -rf third_party/oracle build
+          # The gitlink checks out as an empty directory without the submodule.
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+          test -d ootest
+          test -d oodocs
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install nextest
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: nextest@0.9.150
+      - name: Install svn
+        # The extractor tests ask the oodocs working copy for its revision.
+        run: sudo apt-get update && sudo apt-get install -y subversion
+      - name: Cargo build
+        run: cargo build --locked --workspace
+      - name: Cargo clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Cargo nextest
+        run: cargo nextest run --locked --workspace --profile standalone
+      - name: Cargo doc tests
+        run: cargo test --locked --workspace --doc
+      - name: Compile the headers in include/ as C and as C++
+        # Each header on its own, with the warnings an embedder's build commonly turns on.
+        # `-Wextern-c-compat` flags a C++ handle type declared inside an `extern "C"` block,
+        # which the header generator must keep outside it.
+        working-directory: .
+        run: |
+          for lang in c c++; do
+            for header in rexx.h oorexxapi.h; do
+              echo "#include \"$header\"" | clang -x "$lang" -fsyntax-only -Iinclude -Iinclude/platform/unix \
+                -Wall -Wextra -Werror -Wextern-c-compat -
+            done
+          done
+
   # The check branch protection requires; it passes when every job above did.
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, spec-oracle, doctest, pinning, upstream-interface]
+    needs: [shard, spec-oracle, doctest, pinning, upstream-interface, standalone]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}"
+          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, standalone: ${{ needs.standalone.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.spec-oracle.result }}" = success
           test "${{ needs.doctest.result }}" = success
           test "${{ needs.pinning.result }}" = success
           test "${{ needs.upstream-interface.result }}" = success
+          test "${{ needs.standalone.result }}" = success
 
   fmt:
     name: Cargo fmt
