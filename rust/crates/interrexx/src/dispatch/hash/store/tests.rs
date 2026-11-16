@@ -326,6 +326,28 @@ fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
     );
 }
 
+/// A `Bag`'s `hasItem` and `removeItem` stop at the first equal member: with
+/// every member equal, each sends `==` once, so emptying the bag one
+/// `removeItem` at a time sends as many as it held, not a count that grows
+/// with the square of it.
+#[test]
+fn a_bag_search_stops_at_the_first_equal_member() {
+    let out = output_of(
+        ".local~count = 0\n\
+         b = .bag~new\n\
+         do i = 1 to 200\n  b~put(.key~new)\nend\n\
+         .local~count = 0\n\
+         say b~hasItem(.key~new) .count\n\
+         .local~count = 0\n\
+         do while b~removeItem(.key~new) \\= .nil\nend\n\
+         say b~items .count\n\
+         ::class key\n\
+         ::method hashCode\n  return 'same'\n\
+         ::method '=='\n  .local~count = .count + 1\n  return .true\n",
+    );
+    assert_eq!(out, "1 1\n0 200\n");
+}
+
 /// The slots of `collection`'s store that file an entry.
 fn filed_slots(interp: &mut Interp, collection: ObjRef) -> Vec<usize> {
     let store = store_of(interp, collection).expect("the collection has a store");
