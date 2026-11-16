@@ -1,0 +1,11 @@
+# BSF4ooRexx test groups expected to fail on interrexx, for scripts/run-bsf4oorexx.sh. One group per
+# line, its path under bsf4oorexx.dev/testUnits, then the reason. A listed group that passes fails
+# the run, so an entry goes as soon as its cause is gone. An entry covers failed tests only: a listed
+# group that crashes, is killed, times out or runs no tests fails the run too.
+
+# A second interpreter instance in the process cannot reach the objects of the first (Deviation 85).
+bsf4rexx/rgf/G_misc/07_rexx_JSR_223.testGroup #731
+bsf4rexx/rgf/H_850/05_redirectingHandler.testGroup #731
+bsf4rexx/rgf/H_850/06_redirectingHandler_preconfigured.testGroup #731
+bsf4rexx/rgf_multithreading/80_test_MultiThreading_via_Java_threads.testGroup #731
+bsf4rexx/rgf_multithreading/81_test_MultiThreading_via_Java_threads.testGroup #731

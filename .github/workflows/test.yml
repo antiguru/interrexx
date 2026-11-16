@@ -259,6 +259,99 @@ jobs:
           cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
           -E 'package(interrexx) & (binary(attached_threads) | binary(instance_identity))' --run-ignored ignored-only --profile ci
 
+  # BSF4ooRexx's test suite on a release build, through its JNI library compiled against
+  # include/. The groups in ci/bsf-expected-failures.txt fail (#731); any other group that does
+  # not pass fails the job, and so does a listed group that passes.
+  bsf4oorexx:
+    name: BSF4ooRexx test suite
+    needs: [third-party]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      # No symbols: the release profile's debug info changes no code and only slows the build.
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+      BSF_SOURCES: ${{ github.workspace }}/bsf4oorexx/sources
+      BSF_WORK: ${{ github.workspace }}/bsf4oorexx/work
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+          # No other job builds the release profile, so this one keeps its own cache. It holds the
+          # compiled dependencies only, not the workspace crates, and only main saves it: pull
+          # requests restore main's and add none.
+          cache-key: bsf4oorexx-release
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/cache/restore@v6
+        with:
+          # Only ootest is kept below.
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Remove everything of the upstream tier
+        # The JNI library compiles against include/ only, so no ooRexx header may be there to find.
+        working-directory: .
+        run: |
+          rm -rf third_party/oracle build
+          # The gitlink checks out as an empty directory without the submodule.
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+          test -d ootest
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: revision
+        working-directory: .
+        run: echo "revision=$(scripts/run-bsf4oorexx.sh --revision)" >> "$GITHUB_OUTPUT"
+      - id: sources
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.BSF_SOURCES }}
+          key: bsf4oorexx-sources-r${{ steps.revision.outputs.revision }}
+      - name: Install svn
+        if: steps.sources.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y subversion
+      - id: fetch
+        name: Export the BSF4ooRexx sources
+        if: steps.sources.outputs.cache-hit != 'true'
+        working-directory: .
+        run: scripts/run-bsf4oorexx.sh --fetch
+      - uses: actions/cache/save@v6
+        # Saved as soon as the export succeeds, so a failing run later in the job keeps it.
+        if: steps.fetch.outcome == 'success'
+        with:
+          path: ${{ env.BSF_SOURCES }}
+          key: bsf4oorexx-sources-r${{ steps.revision.outputs.revision }}
+      - name: Release build
+        run: >
+          cargo build --locked --release
+          -p interrexx -p interrexx-capi -p interrexx-capi-rxapi -p interrexx-rxapi
+      - name: BSF4ooRexx test groups
+        working-directory: .
+        run: scripts/run-bsf4oorexx.sh
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: bsf4oorexx-logs
+          path: ${{ env.BSF_WORK }}/logs
+          retention-days: 7
+          if-no-files-found: ignore
+
   doctest:
     name: cargo doc tests
     runs-on: ubuntu-24.04
@@ -497,18 +590,19 @@ jobs:
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, doctest, pinning, upstream-interface, clippy, fmt]
+    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}"
+          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.upstream-tier.result }}" = success
           test "${{ needs.msrv-standalone.result }}" = success
           test "${{ needs.spec-oracle.result }}" = success
           test "${{ needs.attached-stress.result }}" = success
+          test "${{ needs.bsf4oorexx.result }}" = success
           test "${{ needs.doctest.result }}" = success
           test "${{ needs.pinning.result }}" = success
           test "${{ needs.upstream-interface.result }}" = success
