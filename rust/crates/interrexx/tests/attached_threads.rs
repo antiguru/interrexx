@@ -923,18 +923,100 @@ fn a_callback_waiting_for_a_result_the_main_program_gives_is_refused() {
 }
 
 /// A started activity's call into the extension calls a routine back through its own call's
-/// context while the main program runs Rexx clauses for ever, so the callback interrupts the main
-/// program. The routine waits for the result of a message nothing sends, which only the main
-/// program, interrupted below it, could go on to give: the wait is inverted, and an external
-/// library being loaded does not stop it from being refused at once (Deviation 14), so the program
-/// ends with rc 120. The oracle runs for ever, so it is not asked; the run is bounded so that a
-/// wait not refused fails the test.
+/// context while the main program runs Rexx clauses until a flag is set, so the callback
+/// interrupts the main program. The routine waits on an event semaphore that a thread of the
+/// extension attaches and posts a second later. The wait is inverted, but with an external library
+/// loaded it goes on (Deviation 14), and the post ends it before stderr would say that it waits.
+/// The oracle prints the same.
 // spec: conc.locks.deviation.14
 #[test]
-fn an_inverted_wait_above_an_interrupted_activity_is_refused_with_a_library_loaded() {
+fn an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded() {
     assert_eq!(
-        run_ours_for("attach-pausecall", "pausecall.rex", "30"),
-        (String::new(), inverted_wait("a message's completion"), 120)
+        run("attach-pausecall", "pausecall.rex"),
+        (
+            "main saw done, result posted\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// [`an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded`] with the post
+/// six seconds after the wait begins. After five seconds stderr says that the callback waits
+/// while the main program it stopped makes no progress, and the post then ends the wait: stdout
+/// and the exit status are those of the run without the line. The oracle prints the same stdout.
+// spec: conc.locks.deviation.14
+#[test]
+fn an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-pausestall", "pausestall.rex");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("main saw done, result posted\n", 0)
+    );
+    assert_stalled(
+        &stderr,
+        "a callback",
+        "a semaphore",
+        "the main program, which it stopped",
+    );
+}
+
+/// A routine called back as in
+/// [`an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded`] waits on an
+/// event semaphore nothing posts, while the main program runs Rexx clauses for ever. The inverted
+/// wait goes on and is reported, and six seconds in a thread of the extension attaches and sends
+/// a message that calls `Halt` through the instance: the HALT still ends the wait, the routine
+/// traps it, and the main program traps its own. The oracle leaves such a wait waiting for ever
+/// (Deviation 10), so it is not asked.
+// spec: conc.locks.deviation.14, conc.halt.signal
+#[test]
+fn a_halt_ends_an_inverted_wait_that_goes_on() {
+    let (stdout, stderr, status) = run_ours_for("attach-pausehalt", "pausehalt.rex", "30");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("main halted\nwaiter halted\n", 0)
+    );
+    assert_stalled(
+        &stderr,
+        "a callback",
+        "a semaphore",
+        "the main program, which it stopped",
+    );
+}
+
+/// The main program waits in a comparator for a message a started activity sends. The activity
+/// then waits on an event semaphore in a comparator of its own, so the main program, ready again
+/// with its frames below that wait, is set aside, and the wait is inverted. With an external
+/// library loaded it goes on (Deviation 14). After five seconds stderr says so, naming the main
+/// program as the activity it keeps from running, and a thread of the extension that attaches
+/// six seconds in posts the semaphore and ends it. The oracle prints the same stdout.
+// spec: conc.locks.deviation.14
+#[test]
+fn an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-setaside", "setaside.rex");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("main got 3\nmain sorted\nrun posted\n", 0)
+    );
+    assert_stalled(
+        &stderr,
+        "a pinned wait",
+        "a semaphore",
+        "the main program, which it keeps from running",
+    );
+}
+
+/// Asserts that `stderr` is the one line that reports `waiter`'s wait for `what` while `stopped`
+/// makes no progress, written once the wait was five seconds old and less than seven.
+fn assert_stalled(stderr: &str, waiter: &str, what: &str, stopped: &str) {
+    let waited = stderr
+        .strip_prefix(&format!("interrexx: {waiter} has waited "))
+        .and_then(|rest| rest.split_once(&format!(" s for {what} while {stopped}, ")))
+        .filter(|(_, rest)| *rest == "makes no progress\n")
+        .and_then(|(seconds, _)| seconds.parse::<u64>().ok());
+    assert!(
+        waited.is_some_and(|seconds| (5..7).contains(&seconds)),
+        "stderr: {stderr}"
     );
 }
 

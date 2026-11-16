@@ -415,8 +415,8 @@ pub(crate) struct Activities {
     /// guard lock, each with that lock, until the callback's next recall.
     retrying: Vec<(usize, crate::guards::GuardKey)>,
     /// When the innermost callback wait that only an activity a lend stopped
-    /// may end is reported on stderr, unless it has ended by then
-    /// ([`Interp::report_stall`]).
+    /// may end, or the innermost inverted wait that goes on, is reported on
+    /// stderr, unless it has ended by then ([`Interp::report_stall`]).
     stall: Option<Stall>,
 }
 
@@ -430,17 +430,22 @@ struct Lend {
     waiting: bool,
 }
 
-/// A callback's wait that only an activity a lend stopped may end, and when
-/// it is reported.
+/// A callback's wait that only an activity a lend stopped may end, or a
+/// pinned wait that is reported only once it is inverted, and when it is
+/// reported.
 #[derive(Clone, Copy)]
 struct Stall {
     due: Instant,
     reason: ParkReason,
-    lender: ActivityId,
+    /// The activity the callback's lend stopped, or `None` for a pinned wait
+    /// that is reported only where it is inverted (Deviation 14), naming the
+    /// activity below it that it keeps from running.
+    lender: Option<ActivityId>,
 }
 
 /// How long a callback waits, for something only an activity a lend stopped
-/// can give, before stderr says so.
+/// can give, or an inverted wait that is not refused goes on, before stderr
+/// says so.
 const STALL_REPORT: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
@@ -1961,8 +1966,10 @@ impl Interp {
 
     /// Starts watching a pinned wait for `reason` of the running activity,
     /// where it is an attached activity's callback and only an activity its
-    /// lend stopped may end it, answering the watch it replaces. Waits that
-    /// end by themselves, a sleep's or a timed one's, are not watched.
+    /// lend stopped may end it, or where waits are not refused as unending
+    /// ([`Interp::refuses_unending_waits`]) and it may turn out to be an
+    /// inverted wait, answering the watch it replaces. Waits that end by
+    /// themselves, a sleep's or a timed one's, are not watched.
     fn watch_stall(&mut self, reason: ParkReason) -> Option<Stall> {
         let previous = self.activities.stall;
         let endless = match reason {
@@ -1986,39 +1993,92 @@ impl Interp {
             self.activities.stall = Some(Stall {
                 due: self.now() + STALL_REPORT,
                 reason,
-                lender,
+                lender: Some(lender),
+            });
+        } else if endless && !self.refuses_unending_waits() {
+            // An inverted wait goes on where native code from outside may
+            // end it (Deviation 14). Whether it is inverted shows only once
+            // the loop has nothing to run, so the watch counts only then.
+            self.activities.stall = Some(Stall {
+                due: self.now() + STALL_REPORT,
+                reason,
+                lender: None,
             });
         }
         previous
     }
 
-    /// Writes one line on stderr for the watched wait once it is due and
-    /// nothing but a stopped activity can end it any more, naming what it
-    /// waits for and the activity its callback stopped, and stops watching
-    /// it. The wait goes on.
-    fn report_stall(&mut self) {
-        let Some(stall) = self.activities.stall else {
+    /// The watched wait of the loop at `level`, where it counts: a
+    /// callback's wait, or a pinned wait that is inverted there, with nothing
+    /// but a stopped activity left that could end it.
+    fn counted_stall(&self, level: usize) -> Option<Stall> {
+        (self.activities.stall).filter(|stall| {
+            (stall.lender.is_some() || self.stopped_below(level).is_some())
+                && self.only_stopped_activities_remain()
+        })
+    }
+
+    /// The activity the loop at `level` keeps from running where a wait in
+    /// it is inverted, as [`Interp::blocked`] counts it: one a recall
+    /// interrupted below the loop, the innermost, else one set aside. An
+    /// embedding instance's root activity is not one.
+    fn stopped_below(&self, level: usize) -> Option<ActivityId> {
+        let table = &self.activities;
+        // The root's call waits until `Terminate` whatever the loop does, as
+        // in [`Interp::watch_stall`], so a line naming it would point at
+        // nothing frozen.
+        let root = self.root_call_in_flight().map(|(activity, _)| activity);
+        (table.owners[..level].iter().rev())
+            .find(|&&(_, below)| below == Below::Interrupted)
+            .map(|&(owner, _)| owner)
+            .or_else(|| table.set_aside.first().map(|&(activity, _)| activity))
+            .filter(|&activity| Some(activity) != root)
+    }
+
+    /// Writes one line on stderr for the watched wait of the loop at `level`
+    /// once it is due and counts ([`Interp::counted_stall`]), naming what it
+    /// waits for and the activity it stopped, and stops watching it. The
+    /// wait goes on.
+    fn report_stall(&mut self, level: usize) {
+        let Some(stall) = self.counted_stall(level) else {
             return;
         };
-        if self.now() < stall.due || !self.only_stopped_activities_remain() {
+        if self.now() < stall.due {
             return;
         }
+        let Some(lender) = stall.lender.or_else(|| self.stopped_below(level)) else {
+            return;
+        };
         self.activities.stall = None;
-        let stopped = if stall.lender == MAIN {
+        let stopped = if lender == MAIN {
             "the main program".to_owned()
         } else {
-            format!("activity {}", stall.lender.0)
+            format!("activity {}", lender.0)
         };
         // The time the wait has gone on, which is past the bound where
         // something else that could end it, such as a call in flight, did
         // not end it in time.
         let began = stall.due.checked_sub(STALL_REPORT).unwrap_or(stall.due);
         let waited = self.now().saturating_duration_since(began).as_secs();
-        let line = format!(
-            "interrexx: a callback has waited {waited} s for {} while {stopped}, which it \
-             stopped, makes no progress\n",
-            stall.reason.waits_for(),
-        );
+        // A callback stops the activity its lend interrupted. A pinned wait
+        // that is not a callback's keeps the activity set aside below it from
+        // running.
+        let line = if stall.lender.is_some()
+            || (self.activities.owners[..level].iter())
+                .any(|&(owner, below)| owner == lender && below == Below::Interrupted)
+        {
+            format!(
+                "interrexx: a callback has waited {waited} s for {} while {stopped}, which it \
+                 stopped, makes no progress\n",
+                stall.reason.waits_for(),
+            )
+        } else {
+            format!(
+                "interrexx: a pinned wait has waited {waited} s for {} while {stopped}, which \
+                 it keeps from running, makes no progress\n",
+                stall.reason.waits_for(),
+            )
+        };
         self.write_err(line.as_bytes());
     }
 
@@ -2894,27 +2954,27 @@ impl Interp {
     /// Whether the loop at `level`, with nothing to run and nothing in
     /// flight, waits for a post rather than answering that it is blocked:
     /// where waits are not refused as unending
-    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait,
-    /// above an activity set aside or interrupted, a wait on the waiting
-    /// activity's own message ([`Interp::waits_on_its_own_message`]), the
-    /// loop of the program's end and the simulation mode.
+    /// ([`Interp::refuses_unending_waits`]), an inverted wait above an
+    /// activity set aside or interrupted included, except for a wait on the
+    /// waiting activity's own message
+    /// ([`Interp::waits_on_its_own_message`]), the loop of the program's end
+    /// and the simulation mode.
     fn waits_for_attaching_threads(&self, level: usize) -> bool {
         // A thread an external library started may attach later and end the
-        // wait (Deviation 20). An inverted wait stays refused whatever was
-        // loaded, since only a loop below can run what it waits on (Deviation
-        // 14): one an activity set aside makes, and one an activity a recall
-        // interrupted below this loop makes, as [`Interp::blocked`] counts
-        // them. The program's end loop answers that it is blocked, and waits
-        // for posts itself only while an activity waits
-        // ([`Interp::run_to_end`]). The simulation mode refuses every attach,
-        // so nothing can post there. No thread can end an activity's wait on
-        // its own message, so the loop refuses it whatever was loaded.
+        // wait (Deviation 20). An inverted wait, one an activity set aside
+        // makes or one an activity a recall interrupted below this loop
+        // makes, as [`Interp::blocked`] counts them, follows the same switch
+        // (Deviation 14): such a thread may end what it waits on too, and
+        // the loop below runs once it has. Where it goes on, stderr says so
+        // once it has waited a while ([`Interp::report_stall`]). The
+        // program's end loop answers that it is blocked, and waits for posts
+        // itself only while an activity waits ([`Interp::run_to_end`]). The
+        // simulation mode refuses every attach, so nothing can post there. No
+        // thread can end an activity's wait on its own message, so the loop
+        // refuses it whatever was loaded.
         !self.refuses_unending_waits()
             && self.sim.is_none()
             && !self.waits_on_its_own_message()
-            && self.activities.set_aside.is_empty()
-            && !(self.activities.owners[..level].iter())
-                .any(|&(_, below)| below == Below::Interrupted)
             && self.activities.end_level != Some(level)
     }
 
@@ -2962,15 +3022,13 @@ impl Interp {
                 // end it, so a sleeper, which may, keeps it unreported. A
                 // sleeper a lend stopped may not, so it does not hold the
                 // report back to its wake.
-                let stall = (self.activities.stall)
-                    .filter(|_| self.only_stopped_activities_remain())
-                    .map(|stall| stall.due);
+                let stall = self.counted_stall(level).map(|stall| stall.due);
                 match (sleeper, stall) {
                     (Some(sleeper), Some(stall)) => self.idle_until(sleeper.min(stall))?,
                     (Some(due), None) | (None, Some(due)) => self.idle_until(due)?,
                     (None, None) => self.idle_for_posts()?,
                 }
-                self.report_stall();
+                self.report_stall(level);
                 continue;
             };
             let buried = self
