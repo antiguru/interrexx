@@ -16,7 +16,8 @@
 //   `Terminate`.
 // * `attached`: as `self`, but a thread the host starts attaches and calls the routine, while the
 //   creating thread waits for it outside any call. The thread prints what the routine answered,
-//   whether the call left a condition and what `.environment~ran` holds, and detaches. The creating thread then calls `Terminate`.
+//   whether the call left a condition and what `.environment~ran` holds, and detaches. The
+//   creating thread then calls `Terminate`.
 // * `nested`: as `attached`, but the creating thread meanwhile calls a routine that waits on an
 //   event semaphore. Once its own call has answered, the attached thread clears the condition and
 //   posts the semaphore. The creating thread prints what its routine answered, and calls

@@ -131,10 +131,10 @@ Raising and throwing differ, as in ooRexx:
   thread runs waits for it as a load through another instance does. The loader's guard is
   released before the baton is taken back, because such a load may hold a lend above the
   vacancy.
-* A closed library is never unmapped: an attached thread, or a thread the library started, may
-  still be returning into its code when the last instance ends (`r[native.loading.static]`).
-  A later load by name finds the copy already mapped.
-  A thread inside a native call is counted in its library until the call returns.
+* A closed library is never unmapped: an attached thread, or a thread the library started, may still
+  be returning into its code when the last instance ends (`r[native.loading.static]`). A later load
+  by name finds the copy already mapped. A thread inside a native call is counted in its library
+  until the call returns.
 * A `::REQUIRES ... LIBRARY` naming a missing library is 98.903 before the first clause; an
   `EXTERNAL` naming a missing entry is 90.998 for a method and 90.999 for a routine;
   `Package~loadLibrary` answers 1 or 0; a missing library through `.Object~package~loadLibrary`

@@ -6,8 +6,7 @@
 // `AtDone` answers how many threads have finished, which the programs wait for with `SysSleep`, so
 // every thread has detached before the program ends. `AtAwaitDone` blocks until one thread has
 // finished and answers how many have, so a traced program waits in one clause however long that
-// takes. `AtReport` answers what the last thread that
-// reports saw.
+// takes. `AtReport` answers what the last thread that reports saw.
 //
 // * `AtTicker(target, count)` sends `TICK` to `target` `count` times.
 // * `AtRaising(target)` sends `BOOM`, which raises a condition, checks and clears the condition
