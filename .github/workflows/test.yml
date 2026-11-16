@@ -569,9 +569,9 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
-  # macOS: every target built and linted on Apple's toolchain, on a checkout without the
+  # macOS: every target built, linked and linted on Apple's toolchain, on a checkout without the
   # submodule. Code that only one host compiles (`cfg`) is checked by this job and `clippy`
-  # between them.
+  # between them. The tests run on macOS nightly (`macos-nightly.yml`), not per pull request.
   macos-build:
     name: macOS build and clippy
     runs-on: macos-15
@@ -597,59 +597,6 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo build
         run: cargo build --locked --workspace --all-targets
-
-  # macOS: the `standalone` profile, as the shards run it on Linux. The port is in progress, so
-  # a failure here is reported and does not fail the run; the `test` gate does not wait for it.
-  macos-standalone:
-    name: macOS standalone tests (port in progress)
-    needs: [third-party]
-    runs-on: macos-15
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: false
-      - uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          cache-workspaces: rust
-          cache-key: macos-no-submodule
-      - uses: actions/cache/restore@v6
-        with:
-          # Saved on Linux; only ootest and oodocs, which are plain files, are kept below.
-          path: |
-            third_party/oracle
-            build
-            ootest
-            oodocs
-          key: ${{ needs.third-party.outputs.key }}
-          enableCrossOsArchive: true
-          fail-on-cache-miss: true
-      - name: Remove everything of the upstream tier
-        # See the shard job.
-        working-directory: .
-        run: |
-          rm -rf third_party/oracle build
-          rmdir third_party/ooRexx
-          rmdir third_party
-          test ! -e third_party
-          test ! -e build && test ! -L build
-          test -d ootest
-          test -d oodocs
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Install nextest
-        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
-        with:
-          tool: nextest@0.9.150
-      - name: Install svn
-        # The extractor tests ask the oodocs working copy for its revision.
-        run: brew install subversion
-      - name: Cargo nextest
-        run: cargo nextest run --locked --workspace --profile standalone --no-fail-fast
 
   # The check branch protection requires; it passes when every job above did.
   test:

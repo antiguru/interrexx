@@ -238,9 +238,10 @@ its behaviour. Windows is not supported yet (#215).
   the supplementary groups there and a process giving up its privileges must not keep them.
 * Tests that read `/proc`, set another process's limits or use GNU `env` are compiled on Linux
   only, each with the reason beside its `cfg`.
-* The `macos-build` CI job builds and lints every target on macOS and is part of the required
-  gate; `macos-standalone` runs the `standalone` profile there and reports without gating while
-  the port is in progress.
+* On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and
+  is part of the required gate; the tests run on Linux. The `standalone` profile runs on macOS
+  nightly (`.github/workflows/macos-nightly.yml`), which fetches the ooTest and documentation
+  checkouts itself and needs nothing of `third_party/`.
 
 ## Standing decisions
 
