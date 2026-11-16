@@ -152,9 +152,11 @@ returns. It first waits for the interpreter while another thread holds it. A
 call into a native library that is not built into the interpreter leaves it
 free while it runs, so such a call may wait for that thread, but a handler of
 a system exit holds it, and if the handler waits for the thread, the program
-hangs. A call of a library built into the interpreter, such as RexxUtil or
-RxSock, holds it too, and the callback waits until that call returns. ooRexx
-aborts the process.
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
+too for its whole run, and the callback waits until that call returns, while
+`SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx aborts the process.
 
 A callback through the context of an attached thread, made after that thread
 detached from it, does not wait: it is refused at once and answers the failure
