@@ -1311,18 +1311,11 @@ otherwise ([the kind rule](r:conv.string.argument-kind)). The
 [conventions](r:conv.string.deviation.169) state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.
 
-## 170. A builtin converts every argument before it checks any
+## 170. Withdrawn
 
-A builtin whose page calls an argument a string converts each such argument
-that is an object other than a string, sending `STRING` (or `REQUEST` and
-`MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
-to right, before it checks any argument, when the call has no fault. The
-conversion is part of the builtin's checks: when the call has a fault, which
-error it raises, and whether and to how many arguments it sends `STRING`, are
-unspecified ([the precedence rule](r:conv.error.precedence)). ooRexx converts
-an argument as it checks it and stops at the first one in error, so that the
-method of a later argument never runs. The difference shows only in what such
-a method does: counting, input or output, or raising a condition of its own.
+A builtin's conversion of its arguments is part of its checks, and a call with
+no fault converts them from the left before the checks, as ooRexx does
+([the conversion rule](r:bif.index.call.convert)); no difference remains.
 
 ## 171. QUERY POSITION SYS of a stream just opened for reading
 

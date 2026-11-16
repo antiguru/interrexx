@@ -70,8 +70,8 @@ a subclass of `String` is a string here, whether it is passed directly or is
 what `REQUEST` answers: the builtin works on its own characters, and no message
 is sent to it for that ([Deviation 109](r:class.string.deviation.109)). A
 builtin that reads several such arguments reads them from left to right, before
-it checks any of them, when the call has no fault ([Deviation
-170](r:bif.index.call.convert.deviation.170)). An argument that a builtin reads
+it checks any of them, when the call has no fault ([the conversion
+rule](r:bif.index.call.convert)). An argument that a builtin reads
 as a whole number or as a number is read this way too, and the replacement must
 then be a number. A builtin whose page links [the native call
 rule](r:bif.index.call.native) has no fallback to `STRING`, as that rule says,
@@ -446,7 +446,7 @@ is raised at that point, and nothing after it is evaluated. Each control
 expression of a DO is an operation of its own: the instruction evaluates and
 checks them one at a time, in the order they are written ([the DO
 rule](r:instr.do.control.check)). A builtin's
-[conversion](r:bif.index.call.convert.deviation.170) of the arguments that are
+[conversion](r:bif.index.call.convert) of the arguments that are
 objects, by sending them `STRING`, is part of its checks: a call that has no
 fault sends `STRING` to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one

@@ -3,7 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4, 98, 99, 170]
+deviations: [4, 98, 99]
 ---
 
 # Built-in functions
@@ -200,15 +200,13 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 z q
 ```
 
-r[bif.index.call.convert.deviation.170]
+r[bif.index.call.convert]
 A builtin's conversion of every argument that its page calls a string and
 that is an object other than a string is part of its checks. A call that has
 no fault converts those arguments from left to right before it checks any
 argument. When the call has a fault, which error it raises, and whether and to
 how many arguments it sends `STRING`, are unspecified, as [the precedence
-rule](r:conv.error.precedence) says. ooRexx converts an argument as it checks
-it and stops at the first that is in error, so a `STRING` method of a later
-argument does not run.
+rule](r:conv.error.precedence) says.
 
 ```rexx
 say substr('abcdef', .c~new('n'), .c~new('length'))
