@@ -460,7 +460,11 @@ impl Drop for Libraries {
         // No unloader runs here: outside the unit tests, an interpreter that
         // nothing terminated is dropped only while a panic unwinds out of its
         // run, when its state is not one extension code can call back into.
-        if let Some(unloading) = self.end() {
+        if let Some(mut unloading) = self.end() {
+            // The walk runs without its unloaders, so that what it answers,
+            // which leaves out a library still loading on another thread, is
+            // closed below.
+            while !unloading.next().is_empty() {}
             self.unloaded(unloading);
         }
         for unload in &self.last {
