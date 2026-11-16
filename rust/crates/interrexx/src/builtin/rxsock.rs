@@ -1553,7 +1553,9 @@ fn finish_recv(
 
 // --- Options and control ----------------------------------------------------
 
-/// The option names and their Linux numbers.
+/// The option names and the numbers that identify them here, which are
+/// Linux's; an option passed to the kernel by number takes the host's
+/// ([`raw_option`]).
 const OPTIONS: &[(&str, i32)] = &[
     ("SO_DEBUG", 1),
     ("SO_REUSEADDR", 2),
@@ -1594,6 +1596,18 @@ fn check_level(interp: &Interp, level: &[u8]) -> Result<()> {
 /// `SO_USELOOPBACK` passes.
 const RAW_OPTIONS: [i32; 4] = [1, 18, 19, 64];
 
+/// The host's number for the raw option `option` identifies. On Apple's
+/// systems the option numbers are not Linux's (`SO_RCVLOWAT` is 0x1004, not
+/// 18); 64 is passed as itself on every host.
+fn raw_option(option: i32) -> i32 {
+    match option {
+        1 => libc::SO_DEBUG,
+        18 => libc::SO_RCVLOWAT,
+        19 => libc::SO_SNDLOWAT,
+        other => other,
+    }
+}
+
 fn timeval_millis(seconds: i64, micros: i64) -> i64 {
     seconds * 1000 + micros / 1000
 }
@@ -1612,7 +1626,8 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
     let read: Os<String> = match option {
         None => Err(ENOPROTOOPT),
         Some(option) if RAW_OPTIONS.contains(&option) => with_socket(fd, |socket| {
-            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, option).map(|on| on.to_string())
+            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, raw_option(option))
+                .map(|on| on.to_string())
         }),
         Some(option) => with_socket(fd, |socket| {
             match option {
@@ -1696,7 +1711,12 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
         let size = numeric as u32 as usize;
         let set = match option {
             option if RAW_OPTIONS.contains(&option) => {
-                return rxsock_sys::set_int_option(socket, libc::SOL_SOCKET, option, numeric);
+                return rxsock_sys::set_int_option(
+                    socket,
+                    libc::SOL_SOCKET,
+                    raw_option(option),
+                    numeric,
+                );
             }
             2 => setsockopt(&socket, sockopt::ReuseAddr, &on),
             5 => setsockopt(&socket, sockopt::DontRoute, &on),

@@ -552,7 +552,10 @@ mod tests {
     /// platform's limit, including a path that fills `sun_path` with no room for the NUL.
     #[test]
     fn a_directory_is_taken_exactly_when_its_socket_binds() {
-        let root = std::env::temp_dir().join(format!("rxapi-fit-{}", std::process::id()));
+        // Under the temp directory with its links resolved, so the path bound is the path
+        // measured: macOS's lies under `/var`, a link to `/private/var`.
+        let temp = fs::canonicalize(std::env::temp_dir()).expect("the temp directory");
+        let root = temp.join(format!("rxapi-fit-{}", std::process::id()));
         let (mut taken, mut passed) = (0, 0);
         for length in 96..=116 {
             let base = root.join(length.to_string());

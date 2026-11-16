@@ -3,7 +3,8 @@
 //! routines change process state (the umask, the root, the session), from a
 //! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
 //! (`uname -s`), which `SysUname` answers, `{null_rdev}` `/dev/null`'s device number, and `{ENAME}` in a program the host's number for the
-//! error `ENAME`.
+//! error `ENAME`. A file named `<name>.<host>` holds answers the host decides, and runs only on
+//! that host.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
 //!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
@@ -25,6 +26,8 @@
 //! cases on this crate. The oracle's `rxapi` daemons it starts are left
 //! running and are the recorder's to stop.
 
+#[path = "support/host_cases.rs"]
+mod host_cases;
 mod support;
 
 use std::os::unix::fs::PermissionsExt;
@@ -138,26 +141,30 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
 fn rxunixsys_answers_as_the_oracle_does() {
     let record = std::env::var_os("RXUNIXSYS_RECORD").is_some();
     let mut cases = 0;
-    datadriven::walk(CASES, |file| {
-        file.run(|case| {
-            cases += 1;
-            let lines: Vec<&str> = case.input.lines().collect();
-            match case.directive.as_str() {
-                "eval" => {
-                    let (rc, stdout, stderr) = run(cases, &eval_program(&lines), record);
-                    assert_eq!(rc, 0, "{stderr}");
-                    stdout
+    datadriven::walk_exclusive(
+        CASES,
+        |file| {
+            file.run(|case| {
+                cases += 1;
+                let lines: Vec<&str> = case.input.lines().collect();
+                match case.directive.as_str() {
+                    "eval" => {
+                        let (rc, stdout, stderr) = run(cases, &eval_program(&lines), record);
+                        assert_eq!(rc, 0, "{stderr}");
+                        stdout
+                    }
+                    "program" | "ruled" => {
+                        let oracle = record && case.directive == "program";
+                        let (rc, stdout, stderr) =
+                            run(cases, &format!("{}\n", case.input.trim_end()), oracle);
+                        format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
+                    }
+                    other => panic!("unknown directive {other}"),
                 }
-                "program" | "ruled" => {
-                    let oracle = record && case.directive == "program";
-                    let (rc, stdout, stderr) =
-                        run(cases, &format!("{}\n", case.input.trim_end()), oracle);
-                    format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
-                }
-                other => panic!("unknown directive {other}"),
-            }
-        });
-    });
+            });
+        },
+        host_cases::for_another_host,
+    );
     assert!(cases > 0, "no case ran");
     rexx_service::remove_scratch("rxunixsys");
 }
