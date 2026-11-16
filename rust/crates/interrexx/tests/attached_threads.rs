@@ -1175,7 +1175,7 @@ fn a_wait_on_the_activitys_own_message_in_a_hosts_call_is_refused() {
     assert_eq!(
         run_driver("hostwait", &["self"]),
         (
-            "in run\nroutine (none) condition 1\nterminated\n".to_owned(),
+            "routine (none) condition 1 ran 1\nterminated\n".to_owned(),
             UNENDING_WAIT.to_owned(),
             0
         )
@@ -1191,7 +1191,7 @@ fn a_refusal_the_creating_thread_cleared_is_still_reported_at_terminate() {
     assert_eq!(
         run_driver("hostwait", &["selfclear"]),
         (
-            "in run\nroutine (none) condition 1\ncleared condition 0\nterminated\n".to_owned(),
+            "routine (none) condition 1 ran 1\ncleared condition 0\nterminated\n".to_owned(),
             UNENDING_WAIT.to_owned(),
             0
         )
@@ -1221,21 +1221,13 @@ fn a_callback_wait_is_not_reported_as_stalling_the_instances_root_call() {
 fn a_wait_on_the_activitys_own_message_in_an_attached_hosts_call_is_refused() {
     // The instance's root call stays in flight until `Terminate`, and its end resumes nothing
     // before the callback returns, so it does not hold the refusal back.
-    let (stdout, stderr, status) = run_driver("hostwait", &["attached"]);
-    // The method's `SAY` reaches stdout once the interpreter's thread idles, which races the
-    // attached thread's own line after its call returns, so only the host's lines keep an order.
-    let host = stdout.replacen("in run\n", "", 1);
+    // The host reads `.environment~ran` once the call has returned, where a `SAY` of the method
+    // would reach stdout only once the interpreter's thread idles, so every line keeps its order.
     assert_eq!(
+        run_driver("hostwait", &["attached"]),
         (
-            stdout.contains("in run\n"),
-            host.as_str(),
-            stderr.as_str(),
-            status
-        ),
-        (
-            true,
-            "thread routine (none) condition 1\njoined\nterminated\n",
-            UNENDING_WAIT,
+            "thread routine (none) condition 1 ran 1\njoined\nterminated\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
             0
         )
     );
@@ -1250,20 +1242,11 @@ fn a_wait_on_the_activitys_own_message_in_an_attached_hosts_call_is_refused() {
 fn a_wait_on_the_activitys_own_message_in_a_call_nested_in_a_hosts_call_is_refused() {
     // Two lends are out, the host's and the attached thread's, and the root call is counted below
     // them once.
-    let (stdout, stderr, status) = run_driver("hostwait", &["nested"]);
-    // The method's `SAY` races the attached thread's line, as in the attached case.
-    let host = stdout.replacen("in run\n", "", 1);
     assert_eq!(
+        run_driver("hostwait", &["nested"]),
         (
-            stdout.contains("in run\n"),
-            host.as_str(),
-            stderr.as_str(),
-            status
-        ),
-        (
-            true,
-            "thread routine (none) condition 1\nroutine posted\nterminated\n",
-            UNENDING_WAIT,
+            "thread routine (none) condition 1 ran 1\nroutine posted\nterminated\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
             0
         )
     );
