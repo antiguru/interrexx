@@ -426,7 +426,7 @@ impl StackSpan {
 
 /// A construct this crate does not implement, on its way to becoming an exit
 /// code and a line on stderr.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Loud {
     message: String,
 }
@@ -964,6 +964,16 @@ impl Loud {
         }
     }
 
+    /// A callback's send whose thread gives the baton back to send again
+    /// once it is granted a guard lock in the turn its wait took
+    /// ([`Interp::retries_entry_guard`]). Nothing
+    /// reports it: the send answers no one.
+    fn retried_send() -> Loud {
+        Loud {
+            message: "a callback's send given back to wait for a guard lock".to_string(),
+        }
+    }
+
     /// A `REPLY` with Rust frames between its method body's driver and
     /// itself, which cannot move to a new activity.
     fn immovable_reply() -> Loud {
@@ -1308,6 +1318,9 @@ struct Interp {
     timer: crate::timer::Registration,
     /// The right to touch this interpreter's state.
     baton: crate::sync::Arc<crate::island::InterpBaton>,
+    /// Closes `baton` when the interpreter is dropped, waking a callback
+    /// whose recall nothing served (`r[native.threads.end]`).
+    _closing: crate::island::Closing,
     /// The deterministic switch mode, where a test set one.
     switch: Option<crate::scheduler::Switch>,
     /// The simulation mode's state, where the switch mode is `Sim`.
@@ -1489,6 +1502,11 @@ struct Interp {
     /// load and asked for again; a library whose version check refused is,
     /// because that check raises between the `put` and the `remove`.
     libraries: Libraries,
+    /// Whether native code from outside the interpreter may run in this run:
+    /// an external native library has loaded, or a host outside the
+    /// interpreter runs it. [`Interp::refuses_unending_waits`] answers the
+    /// opposite. Never reset.
+    external_native_code: bool,
     /// The thread context [`Interp::terminate`] ran on, which an extension
     /// may have kept. Declared after `libraries`, so a library's destructor
     /// run when they drop still finds it allocated.
@@ -2316,8 +2334,17 @@ impl Interp {
         baton.acquire();
         let timer = crate::timer::Registration::new();
         let requester = crate::dispatch::library::Requester::new(&baton, timer.inbox());
-        let thread_table =
-            interrexx_api::ffi::ThreadTable::requesting(crate::sync::Arc::new(requester));
+        let constants = crate::dispatch::library::constant_objects();
+        let handle = interrexx_api::handles::handle_of;
+        let thread_table = interrexx_api::ffi::ThreadTable::requesting(
+            crate::sync::Arc::new(requester),
+            interrexx_api::values::Constants {
+                nil: handle(constants.nil),
+                true_object: handle(constants.true_object),
+                false_object: handle(constants.false_object),
+                null_string: handle(constants.null_string),
+            },
+        );
         Interp {
             heap: Heap::new(),
             roots: RootSet::new(),
@@ -2355,6 +2382,7 @@ impl Interp {
             stack_base: 0,
             stack_room: usize::MAX,
             timer,
+            _closing: crate::island::Closing(crate::sync::Arc::clone(&baton)),
             baton,
             switch: None,
             sim: None,
@@ -2404,6 +2432,7 @@ impl Interp {
             native_externals: FxHashMap::default(),
             guarded_externals: rustc_hash::FxHashSet::default(),
             libraries: Libraries::new(),
+            external_native_code: false,
             termination_thread: None,
             #[cfg(test)]
             library_open_attempts: 0,
@@ -3440,6 +3469,8 @@ impl Interp {
             stack_room: _,
             timer: _,
             baton: _,
+            // The baton again, which it closes when dropped.
+            _closing: _,
             pool: _,
             switch: _,
             sim: _,
@@ -3531,6 +3562,7 @@ impl Interp {
             guarded_externals: _,
             // Library handles and procedure names, no `ObjRef` in either.
             libraries: _,
+            external_native_code: _,
             termination_thread: _,
             #[cfg(test)]
                 library_open_attempts: _,
@@ -4253,10 +4285,14 @@ fn on_thread_of(
     body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
 ) -> Outcome {
     let (deliver, delivered) = std::sync::mpsc::channel();
+    #[cfg(test)]
+    let family = libraries::round_gate::family();
     let interpreter = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(stack)
         .spawn(move || {
+            #[cfg(test)]
+            libraries::round_gate::started_by(family);
             signal::receive();
             let (outcome, kept) = body();
             let _ = deliver.send(outcome);
@@ -4454,6 +4490,10 @@ fn execute_kept(
     let _classic = parts.classic_thread.map(|caller| {
         embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
     });
+    // The host's native code may end a wait nothing in the program can.
+    if parts.hosted {
+        interp.note_outside_host();
+    }
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4738,6 +4778,9 @@ pub(crate) fn run_instance(
     ))
     .unwrap_or_else(|_| panic!("the instance's root program parses"));
     let mut interp = Interp::new();
+    // Only `RexxCreateInterpreter` creates an instance, for a host that holds
+    // it and may attach a thread at any time (Deviation 20).
+    interp.note_outside_host();
     interp.measure_stack(base, INTERPRETER_STACK_BYTES);
     interp.program_path = b"RexxCreateInterpreter".to_vec();
     interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);

@@ -1627,7 +1627,13 @@ pub(super) fn native_message_result(
 /// of waits, on the running one.
 fn check_message_deadlock(interp: &Interp, message: ObjRef) -> Result<(), Failure> {
     match interp.message_runner(message) {
-        Some(runner) if interp.deadlocks(runner) => Err(crate::error::Raised::deadlock().into()),
+        // Where the running activity runs that send itself, the wait parks
+        // like any other, so the other activities still run, and it is
+        // refused once nothing else can run, whatever was loaded
+        // ([`Interp::waits_on_its_own_message`], Deviation 20).
+        Some(runner) if runner != interp.running_activity() && interp.deadlocks(runner) => {
+            Err(crate::error::Raised::deadlock().into())
+        }
         _ => Ok(()),
     }
 }

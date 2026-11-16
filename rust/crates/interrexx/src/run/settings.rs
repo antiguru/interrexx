@@ -187,6 +187,9 @@ impl Interp {
         }
         self.activation_mut().trace_entry = TraceEntry::Done;
         self.activation_mut().debug.source_traced = true;
+        if self.entry_traced_before_retry() {
+            return;
+        }
         let package = self
             .program_display_name(self.activation().program_id)
             .to_vec();
@@ -204,6 +207,9 @@ impl Interp {
         };
         self.activation_mut().trace_entry = TraceEntry::Done;
         self.activation_mut().debug.source_traced = true;
+        if self.entry_traced_before_retry() {
+            return;
+        }
         let package = self
             .program_display_name(self.activation().program_id)
             .to_vec();

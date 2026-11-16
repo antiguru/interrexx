@@ -284,6 +284,253 @@ fn a_started_wait_nothing_can_end_is_refused_at_the_programs_end() {
     );
 }
 
+/// The worktree's `build/lib`, which holds the extensions built from the
+/// oracle's test sources.
+fn build_libraries() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../build/lib")
+        .canonicalize()
+        .expect("the worktree's build/lib is three directories above this crate")
+}
+
+/// Once an external native library has loaded, a wait nothing left to run
+/// can end is not refused (Deviation 20): a thread the library started may
+/// attach later and end it. The run goes on until its deadline, where a
+/// program that loaded no such library is refused at once
+/// ([`the_result_of_a_message_never_sent_is_refused`]), both by main's own
+/// wait and by a started activity's at the program's end.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the run must last until its deadline"
+)]
+fn a_wait_after_an_external_library_loaded_is_not_refused() {
+    let environment = vec![(
+        b"LD_LIBRARY_PATH".to_vec(),
+        build_libraries().into_os_string().into_encoded_bytes(),
+    )];
+    for source in [
+        "say 'waits'\nsay .message~new('abc', 'length')~result\n\
+         ::requires 'orxmethod' LIBRARY\n",
+        ".w~new~start('WAITON', .message~new('abc', 'length'))\nsay 'main done'\n\
+         ::requires 'orxmethod' LIBRARY\n\
+         ::class w\n::method waiton\n  use arg m\n  say 'waits'\n  return m~result\n",
+    ] {
+        let began = std::time::Instant::now();
+        let outcome = run_with(
+            source,
+            Invocation::none()
+                .with_environment(environment.clone())
+                .with_deadline(std::time::Duration::from_secs(2)),
+        );
+        assert!(
+            began.elapsed() >= std::time::Duration::from_secs(2),
+            "the wait ended before the deadline: {} {}",
+            outcome.exit_code,
+            stderr(&outcome)
+        );
+        assert!(
+            !stderr(&outcome).contains("a wait that nothing left to run can end"),
+            "{}",
+            stderr(&outcome)
+        );
+        assert!(stdout(&outcome).contains("waits\n"), "{}", stdout(&outcome));
+    }
+}
+
+/// Whether waits are refused as unending: a library built into the
+/// interpreter leaves it on, a classic library's load turns it off, and the
+/// interpreter's dropping of the function, which `RxFuncDrop` does besides
+/// the service's registration, does not turn it on again.
+#[test]
+fn the_switch_stays_off_after_a_classic_load_and_drop() {
+    let mut interp = Interp::new();
+    interp.adopt_environment(vec![(
+        b"LD_LIBRARY_PATH".to_vec(),
+        build_libraries().into_os_string().into_encoded_bytes(),
+    )]);
+    assert!(interp.refuses_unending_waits());
+    assert!(matches!(
+        interp.resolve_library(b"rxmath"),
+        crate::LibraryLoad::Loaded(_)
+    ));
+    assert!(
+        interp.refuses_unending_waits(),
+        "a library built into the interpreter counted"
+    );
+    let entry = interp.load_classic_procedure(b"orxclassic1", b"MyTestExtFunc");
+    assert!(
+        entry.is_some(),
+        "liborxclassic1.so did not load from build/lib"
+    );
+    assert!(!interp.refuses_unending_waits());
+    interp
+        .classic_functions
+        .insert(b"MYTESTEXTFUNC".to_vec(), entry.expect("loaded"));
+    interp.classic_functions.remove(b"MYTESTEXTFUNC".as_slice());
+    interp.routines_changed();
+    assert!(!interp.refuses_unending_waits());
+}
+
+/// A run of `source` with `build/lib` on the library path, bounded by a
+/// deadline, with `library` (a `::REQUIRES` directive or nothing) after it.
+fn run_loading(source: &str, library: &str) -> Outcome {
+    run_with(
+        &format!("{source}{library}"),
+        Invocation::none()
+            .with_environment(vec![(
+                b"LD_LIBRARY_PATH".to_vec(),
+                build_libraries().into_os_string().into_encoded_bytes(),
+            )])
+            .with_deadline(std::time::Duration::from_secs(10)),
+    )
+}
+
+/// The `::REQUIRES` of an external native library, and none.
+const LOADED_OR_NOT: [&str; 2] = ["::requires 'orxmethod' LIBRARY\n", ""];
+
+/// A wait, with `result` or `wait`, for a message whose send the waiting
+/// activity itself runs and has not replied to is refused, rc 120, whether or
+/// not an external native library has loaded (Deviation 20).
+#[test]
+fn a_wait_on_the_activitys_own_unreplied_message_is_refused_whatever_was_loaded() {
+    // The message completes only when its method returns, and its method is
+    // what waits, so a thread the library starts could not end the wait.
+    for source in [
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~send\nsay 'not reached'\n\
+         ::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n",
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~send\nsay 'not reached'\n\
+         ::class k\n::method run\n  say 'in run'\n  .environment~mm~wait\n",
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~start\nsay 'main ends'\n\
+         ::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n",
+    ] {
+        for library in LOADED_OR_NOT {
+            let outcome = run_loading(source, library);
+            assert_eq!(
+                (outcome.exit_code, stderr(&outcome).as_str()),
+                (
+                    120,
+                    "interrexx: a wait that nothing left to run can end is not implemented\n"
+                ),
+                "{source}{library}"
+            );
+            assert!(
+                stdout(&outcome).contains("in run\n") && !stdout(&outcome).contains("not reached"),
+                "{source}{library}: {}",
+                stdout(&outcome)
+            );
+        }
+    }
+}
+
+/// A started activity's wait on its own unreplied message lets the other
+/// activities run on, whether or not an external native library has loaded
+/// (Deviation 20): the main program prints all its lines, or reports its
+/// error, before the wait is refused, rc 120.
+#[test]
+fn a_wait_on_the_activitys_own_message_is_refused_once_nothing_else_runs() {
+    let method = "::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n";
+    let start = "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~start\n";
+    let printing = format!(
+        "{start}do i = 1 to 3\n  call SysSleep 0.1\n  say 'main' i\nend\nsay 'main done'\n{method}"
+    );
+    let raising = format!("{start}call SysSleep 0.2\nsay 'main' 1\nx = 1 + 'a'\n{method}");
+    let refusal = "interrexx: a wait that nothing left to run can end is not implemented\n";
+    for library in LOADED_OR_NOT {
+        let outcome = run_loading(&printing, library);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome), stderr(&outcome)),
+            (
+                120,
+                "in run\nmain 1\nmain 2\nmain 3\nmain done\n".to_owned(),
+                refusal.to_owned()
+            ),
+            "{library}"
+        );
+        let outcome = run_loading(&raising, library);
+        let error = stderr(&outcome);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome)),
+            (120, "in run\nmain 1\n".to_owned()),
+            "{library}: {error}"
+        );
+        assert!(
+            error.contains("Error 41.1:") && error.ends_with(refusal),
+            "{library}: {error}"
+        );
+    }
+}
+
+/// Once its method has replied, a message's `result` and `wait` from that
+/// method's continuation answer at once: the reply settled the result.
+#[test]
+fn a_wait_on_the_activitys_own_replied_message_answers() {
+    let source = ".environment~done = .eventsemaphore~new\n\
+                  m = .message~new(.k~new, 'run')\n.environment~mm = m\nr = m~send\n\
+                  .environment~done~wait\nsay 'sent' r\n\
+                  ::class k\n::method run\n  reply 'r'\n  say 'result' .environment~mm~result\n\
+                  .environment~mm~wait\n  say 'waited'\n  .environment~done~post\n";
+    for library in LOADED_OR_NOT {
+        let outcome = run_loading(source, library);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome), stderr(&outcome)),
+            (0, "result r\nwaited\nsent r\n".to_owned(), String::new()),
+            "{library}"
+        );
+    }
+}
+
+/// A ring of two activities, each waiting for the result of the message the
+/// other runs, raises 98.905 in the one whose wait closes it, also after an
+/// external native library has loaded, where a wait nothing can end is no
+/// longer refused (`r[conc.locks.deadlock]`).
+#[test]
+fn a_ring_of_message_waits_raises_after_a_library_loaded() {
+    let source = ".environment~ma = .message~new(.k~new, 'waitfor', 'i', 'MB')\n\
+                  .environment~mb = .message~new(.k~new, 'waitfor', 'i', 'MA')\n\
+                  .environment~ma~start\n.environment~mb~start\ncall SysSleep 1\n\
+                  say 'a' .environment~ma~completed .environment~ma~hasError\n\
+                  say 'b' .environment~mb~completed .environment~mb~hasError\n\
+                  ::class k\n::method waitfor\n  use arg other\n  call SysSleep 0.1\n\
+                  return .environment~entry(other)~result\n";
+    let outcome = run_loading(source, LOADED_OR_NOT[0]);
+    assert_eq!(
+        (outcome.exit_code, stdout(&outcome)),
+        (0, "a 1 1\nb 1 1\n".to_owned()),
+        "{}",
+        stderr(&outcome)
+    );
+    assert_eq!(
+        stderr(&outcome).matches("Error 98.905:").count(),
+        2,
+        "{}",
+        stderr(&outcome)
+    );
+}
+
+/// A library a host registers with the interpreter counts as an external one
+/// loaded: waits are no longer refused as unending (Deviation 20). The
+/// instance's own root library does not count.
+#[test]
+fn a_library_a_host_registers_turns_the_switch_off() {
+    use interrexx_api::callbacks::Surface as _;
+    fn nothing(_: usize) {}
+    let mut interp = Interp::new();
+    assert!(interp.register_library(
+        crate::INSTANCE_LIBRARY,
+        Ok(Some(interrexx_api::load::embedding_library(nothing)))
+    ));
+    assert!(
+        interp.refuses_unending_waits(),
+        "the instance's root library counted"
+    );
+    assert!(interp.register_library(
+        b"HOSTLIB",
+        Ok(Some(interrexx_api::load::embedding_library(nothing)))
+    ));
+    assert!(!interp.refuses_unending_waits());
+}
+
 /// An ended activity's thread context stays with the interpreter, so an
 /// address an extension took from it during a native call stays valid; a
 /// native call on a started activity reads the instance through it.
@@ -406,6 +653,25 @@ fn a_halt_or_trace_request_to_a_closed_inbox_posts_nothing() {
     assert!(
         !inbox.requests().pending(crate::timer::HALT),
         "a closed inbox's request flag was set"
+    );
+}
+
+/// A thread running no native call attaches through the instance while the
+/// interpreter is live, and gets nothing once it has terminated, though the
+/// instance still has its root context (`r[native.threads.end]`).
+#[test]
+fn a_thread_attaching_after_termination_gets_nothing() {
+    let mut interp = Interp::new();
+    let table = interp.activities.thread_table.clone();
+    let _root = interp.thread_context();
+    assert!(
+        table.attaches_from_another_thread(),
+        "a live interpreter refused the attach"
+    );
+    assert!(interp.terminate().is_empty());
+    assert!(
+        !table.attaches_from_another_thread(),
+        "a terminated interpreter attached the thread"
     );
 }
 
@@ -1705,3 +1971,85 @@ mod native;
 mod pool;
 
 mod spawn_failure;
+
+/// A callback whose send is to be sent again counts as held, so a loop with nothing else to run
+/// does not take its wait for one nothing can end before the recall arrives
+/// (`r[native.threads.attach.deviation.178]`).
+#[test]
+fn a_send_to_be_sent_again_counts_as_a_message_held() {
+    let mut interp = Interp::new();
+    assert!(
+        interp.only_stopped_activities_remain(),
+        "an interpreter with nothing to run still has something held"
+    );
+    assert!(interp.activities.nothing_held_or_in_flight());
+    let key = crate::guards::GuardKey {
+        object: interrexx_core::ObjRef::heap(1, 0),
+        scope: interrexx_core::ObjRef::NIL,
+    };
+    interp.activities.retrying.push((0, key));
+    assert!(
+        !interp.only_stopped_activities_remain(),
+        "a send to be sent again was not counted as held"
+    );
+    assert!(
+        !interp.activities.nothing_held_or_in_flight(),
+        "the stall check and the refusal check do not count the send"
+    );
+}
+
+/// A callback sent again that is still held when the interpreter's termination begins is refused
+/// when it is served, and the guard lock its place was granted passes on to the next waiter, so a
+/// guard wait in a last-chance `UNINIT` gets the lock and termination does not hang on it
+/// (`r[native.threads.attach.deviation.178]`, `r[native.threads.end]`).
+#[test]
+fn a_refused_recall_of_a_send_again_passes_its_lock_on() {
+    use crate::guards::GuardKey;
+    use crate::scheduler::{ActivityId, DrainAt, Recall, Recaller};
+
+    let mut interp = Interp::new();
+    let (held, waiter) = (ActivityId::test(1), ActivityId::test(2));
+    let key = GuardKey {
+        object: interrexx_core::ObjRef::heap(1, 0),
+        scope: interrexx_core::ObjRef::NIL,
+    };
+    // The held send's place, granted the lock unreserved, and a wait behind it.
+    interp.activities.guards.queue_retry(key, held, None);
+    interp.activities.guards.enqueue(key, waiter);
+    assert!(interp.activities.guards.granted_unreserved(key, held));
+    // The callback's thread waits for the lend that refusing its recall makes, and gives the
+    // baton straight back.
+    let baton = std::sync::Arc::clone(&interp.baton);
+    let thread = std::thread::spawn({
+        let baton = std::sync::Arc::clone(&baton);
+        move || {
+            baton.await_lend();
+            baton.give_back();
+            std::thread::current().id()
+        }
+    });
+    let recall = Recall {
+        by: Recaller::Context(1),
+        thread: thread.thread().id(),
+        base: None,
+        room: None,
+    };
+    interp
+        .activities
+        .held
+        .push_back((recall, Some((key, held))));
+    interp.timer.inbox().end();
+    interp.serve_held(DrainAt::Stopped);
+    thread
+        .join()
+        .expect("the callback's thread gave the baton back");
+    assert!(
+        interp.activities.held.is_empty(),
+        "the held recall was not served"
+    );
+    assert_eq!(
+        interp.activities.guards.owner(key),
+        Some(waiter),
+        "the lock was not passed on after the recall was refused"
+    );
+}

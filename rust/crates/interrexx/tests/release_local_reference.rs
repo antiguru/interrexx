@@ -184,6 +184,30 @@ fn releases_answer_as_the_oracles_do() {
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
 
+/// **A buffer string released inside a call is still finished from what was
+/// written into its area.** The area of an ordinary call lasts to the call's
+/// end, as the string pool does, so `ReleaseLocalReference` drops the handle
+/// and not the bytes the extension wrote. The harness runs no oracle.
+#[test]
+fn a_released_buffer_string_keeps_its_bytes_until_the_call_returns() {
+    let dir = fresh_dir("release-buffer");
+    build_library(&dir, "relsem");
+    let ours = run_in(
+        &dir,
+        "say RelBuffer()\nsay 'end'\n::requires 'relsem' LIBRARY\n",
+        false,
+    );
+    assert_eq!(
+        (
+            String::from_utf8_lossy(&ours.stdout).into_owned(),
+            String::from_utf8_lossy(&ours.stderr).into_owned(),
+            ours.exit_code
+        ),
+        ("bytes\nend\n".to_owned(), String::new(), 0)
+    );
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
 /// **Under a collection at every allocation, a released string goes and the
 /// one held beside it stays.** The answers that read no released object
 /// after an allocation are the oracle's; `RelTwice`'s released string is

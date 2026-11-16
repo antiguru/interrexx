@@ -216,7 +216,8 @@ pub fn rexx_start(start: Start) -> Started {
         .with_arguments(arguments)
         .with_start(start)
         .with_exits(exits)
-        .with_classic_thread(crate::signal::current_thread());
+        .with_classic_thread(crate::signal::current_thread())
+        .with_outside_host();
     if let Some(environment) = environment {
         invocation = invocation.with_address(environment);
     }
@@ -625,10 +626,14 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     let shared = std::sync::Arc::new(Shared::default());
     let starting = std::sync::Arc::clone(&shared);
     let ending = std::sync::Arc::clone(&shared);
+    // This thread waits for the instance to start, so the instance must not
+    // wait for a library hook this thread is running.
+    let lineage = crate::libraries::lineage();
     let spawned = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(crate::INTERPRETER_STACK_BYTES)
         .spawn(move || {
+            crate::libraries::adopt(lineage);
             crate::signal::receive();
             let (outcome, kept) = crate::run_instance(
                 options,
@@ -760,5 +765,48 @@ impl interrexx_api::ffi::Embedder for Embedder {
             inbox.post_trace_all(on);
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use interrexx_api::ffi::Embedder as _;
+
+    /// An instance a host created, live in the process, leaves the refusal of a wait nothing can
+    /// end on in another interpreter of the same process, which no host runs (Deviation 20).
+    #[test]
+    fn an_instance_leaves_the_refusal_on_in_another_interpreter() {
+        // The instance installs the signal handlers, which stay for the
+        // process, and holds the round while it lives.
+        if !crate::test_process::alone(
+            "embedding::tests::an_instance_leaves_the_refusal_on_in_another_interpreter",
+        ) {
+            return;
+        }
+        assert!(super::create_instance(super::InstanceOptions::default()).is_some());
+        let outcome = crate::run_program(
+            "refused.rex",
+            b"say 'waits'\nsay .message~new(.object~new, 'string')~result\n".to_vec(),
+            // A bound, so that a wait not refused fails the test rather than hanging it.
+            crate::Invocation::none().with_deadline(std::time::Duration::from_secs(10)),
+        );
+        let address = super::instances()
+            .first()
+            .map(|(address, _)| *address)
+            .expect("the instance is live while the other interpreter runs");
+        assert!(super::EMBEDDER.terminate(address));
+        assert_eq!(
+            (
+                outcome.exit_code,
+                String::from_utf8_lossy(&outcome.stdout).into_owned(),
+                String::from_utf8_lossy(&outcome.stderr).into_owned(),
+            ),
+            (
+                120,
+                "waits\n".to_owned(),
+                "interrexx: a wait that nothing left to run can end is not implemented\n"
+                    .to_owned(),
+            )
+        );
     }
 }

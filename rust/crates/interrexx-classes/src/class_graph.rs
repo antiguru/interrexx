@@ -1670,6 +1670,12 @@ impl ClassGraph {
             .lookup_from_scope(name, start_scope)
     }
 
+    /// The scopes folded into a specific handle's dictionary -- see
+    /// [`MethodDict::scopes`].
+    pub fn scopes_at(&self, handle: BehaviourHandle) -> &[ObjRef] {
+        self.behaviours[handle.index()].dict.scopes()
+    }
+
     /// The immediate superscope of `scope` within a specific handle's own
     /// ordering -- see [`MethodDict::resolve_super_scope`].
     pub fn resolve_super_scope_at(&self, handle: BehaviourHandle, scope: ObjRef) -> Option<ObjRef> {

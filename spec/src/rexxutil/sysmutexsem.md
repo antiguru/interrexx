@@ -355,7 +355,8 @@ e: say condition('o')~code
 r[util.sysmutexsem.deviation.20]
 A call of SysRequestMutexSem that has no limit, and finds the lock held, while
 no other activity or timer of the program can free it, ends the program at
-once, with exit code `120` and a message on the error stream ([Deviation
+once, with exit code `120` and a message on the error stream, unless native
+code from outside the interpreter can run ([Deviation
 20](../deviations.md#20-a-wait-nothing-can-end)). ooRexx waits for ever. In
 the example the program asks twice for a lock that it holds itself.
 

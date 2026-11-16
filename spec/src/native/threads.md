@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166]
+deviations: [166, 176, 177, 178]
 ---
 
 # Threads and halting
@@ -18,7 +18,9 @@ r[native.threads.attach]
 A thread that native code starts may attach to the interpreter. It is then an
 [activity](../concurrency/activities.md) of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
-and it leaves the interpreter when it detaches. The fixture's thread posts an
+except the one each message interrupts, which [Deviation
+178](r:native.threads.attach.deviation.178) stops, and it leaves the
+interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.
 
 ```rexx
@@ -41,11 +43,55 @@ end
 call sysfiledelete 'n3zqattach.rex'
 ```
 
-```output defect=#621
+```output
 rc 0
 1
 posted
 ```
+
+r[native.threads.attach.deviation.178]
+While a message that an attached thread sends runs, the activity that was
+running when it arrived makes no progress in Rexx clauses ([Deviation
+178](../deviations.md#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
+The message runs at that activity's next clause boundary, or during its wait or
+its call into a native library that is not built in, and the activity goes on
+only once the message has finished. A message that arrives while another runs is
+held until that one returns, waits or calls into such a library, the earliest
+first. One that arrives while another waits runs on top of it, and the earlier
+goes on only once the later has finished. A message the thread sends with
+`SendMessage` or one of its variants, whose method needs at its entry a guard
+lock a stopped activity holds, waits for it as in ooRexx, is sent again in the
+place in the lock's queue that its wait took when it began, and `TRACE`
+announces the method's entry once. A guard lock that a stopped activity acquires
+after a message began to wait for it counts from then as one it holds. Any other
+wait counts as one of a message that has begun, including the wait of a routine
+the thread calls with `CallRoutine` or of a method another API call sends to,
+such as the `MAKESTRING` that `ObjectToString` sends. Once a message has begun,
+a wait of it for something only a stopped activity can give never ends. A wait
+for a guard lock such an activity holds and no other message does, or for the
+completion of a message whose send it runs, is refused at once, and the program
+ends with exit code 120. Any other, such as a `GUARD WHEN`, goes on for ever,
+with a line on stderr, which says how long it has waited, once it has waited
+five seconds and nothing but a stopped activity is left to end it. In ooRexx the
+thread's messages run alongside the other activities. The tests of this rule
+need an extension of their own that sends messages by name, so they run outside
+this page.
+
+r[native.threads.attach.deviation.177]
+`DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second `DetachThread` from the thread that attached it ([Deviation
+177](../deviations.md#177-an-attached-threads-context-used-from-another-thread)).
+The attachment stays as it was, and its next message runs, neither halted nor
+traced by the call. The call does not wait for a message the attached thread
+runs, so it returns even where that message waits for the calling thread.
+Native code on another thread halts or traces the interpreter through the
+instance's `Halt` and `SetTrace` instead, as [the halt
+rule](r:native.threads.halt) and [the trace rule](r:native.threads.trace) say.
+A message sent after the thread did detach is not covered here but by
+[Deviation 19](../deviations.md#19-callback-from-a-foreign-thread), which
+refuses it. ooRexx aborts the process or hangs on each of these misuses, so
+there is no example.
 
 r[native.threads.end]
 The end of a program waits for an attached thread only while that thread's
@@ -87,7 +133,7 @@ end
 call sysfiledelete 'n3zqend.rex'
 ```
 
-```output defect=#621
+```output
 rc 0
 thread ran
 ```
@@ -113,10 +159,20 @@ end
 call sysfiledelete 'n3zqidle.rex'
 ```
 
-```output defect=#621
+```output
 rc 0 waited 0
 main ends
 ```
+
+r[native.threads.end.deviation.176]
+A thread that is still attached when the embedding calls `Terminate` can send
+no message afterwards: each send through its context is refused, answers the
+failure value of the member and runs nothing, and `DetachThread` from that
+thread returns ([Deviation
+176](../deviations.md#176-a-callback-after-the-embedding-ends-the-interpreter)).
+ooRexx runs the message and answers its result. The example needs an
+embedding that calls `Terminate`, which the `rexx` command does not, so the
+tests of this rule run one instead.
 
 r[native.threads.instance]
 Every activity of one interpreter is given the same interpreter instance by
@@ -168,6 +224,21 @@ start 1
 > that created it, which for a program run by `rexx` is `rexx` itself, so what
 > native code that asks for the end achieves is not specified.
 
+r[native.threads.members]
+The members of the thread interface that store into or fetch from an array, a
+stem, a supplier, a directory or a string table, that ask an object whether it
+is an instance of a class or has a method, or that ask a package, a routine or
+a method for what it holds, send the object no message. Each runs the
+interpreter's own method for what it does, found by a search that starts in
+the receiver's class order at the last class of the interpreter's library
+ahead of the first class a program made. So a method a program's class defines
+under the matching name, such as `PUT`, `ISINSTANCEOF` or `HASMETHOD`, does
+not run, nor does a method the object was given with `setMethod`, while a
+subclass the interpreter's own library defines, such as that of the supplier a
+stream answers, keeps its own methods. The members act the same on every
+thread, attached or not. Their tests need an extension that calls them by
+name, so they run outside this page.
+
 ## Halting
 
 r[native.threads.halt]
@@ -175,8 +246,14 @@ Native code may ask the interpreter to halt every activity, or only the
 activity whose call is running it. Each activity that is asked takes the
 [HALT condition](../conditions/halt.md) at its next clause, which for the
 activity of the call is the first clause after the call returns, and an
-activity that was not asked runs on. In the examples a second activity loops
-with a short sleep and records whether it was halted.
+activity that was not asked runs on. An [attached
+thread](r:native.threads.attach) whose activity runs no message when the
+interpreter is asked to halt every activity is not asked: the next message it
+sends runs unhalted. A message that has arrived but is held under [Deviation
+178](r:native.threads.attach.deviation.178) has not begun, so its activity
+runs no message and is not asked either: the message runs to its end once it
+is let go. In the examples a second activity loops with a short sleep and
+records whether it was halted.
 
 ```rexx
 w = .n3zqw~new
@@ -266,9 +343,12 @@ for the lines that [Deviation 166](r:native.threads.trace.deviation.166) leaves
 out of code that was already running. The setting is that of the code each
 activity is running: a method or a `::ROUTINE` it calls afterwards starts with
 its own, as [the scope of the setting](r:bif.trace.scope) says. Turned off,
-every activity runs on untraced from its next clause. A request made after the
-interpreter has ended does nothing. The trace lines name the program's path,
-so the tests that witness this rule compare them outside this page.
+every activity runs on untraced from its next clause. An [attached
+thread](r:native.threads.attach) whose activity runs no message when the trace
+is turned on or off is not reached: the next message it sends runs with its
+method's own setting. A request made after the interpreter has ended does
+nothing. The trace lines name the program's path, so the tests that witness
+this rule compare them outside this page.
 
 r[native.threads.trace.deviation.166]
 Code that was already running when native code first turned the external trace

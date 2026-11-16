@@ -2033,3 +2033,21 @@ fn a_pointer_string_is_read_as_sscanf_reads_0x_p() {
         assert_eq!(pointer_string(text.as_bytes()), read, "{text:?}");
     }
 }
+
+/// **A second writable area for a string replaces the first** and many
+/// strings keep one each: the lookups answer the newest area of each.
+#[test]
+fn a_writable_area_made_again_for_a_string_replaces_its_area() {
+    let mut pool = interrexx_api::values::CStringPool::new();
+    let strings: Vec<ObjRef> = (0..100).map(|at| ObjRef::heap(at, 0)).collect();
+    for (length, string) in strings.iter().enumerate() {
+        pool.writable(*string, length);
+    }
+    pool.writable(strings[7], 500);
+    assert_eq!(pool.writable_length(strings[7]), Some(500));
+    for (length, string) in strings.iter().enumerate().filter(|(at, _)| *at != 7) {
+        assert_eq!(pool.writable_length(*string), Some(length));
+    }
+    pool.forget(strings[7]);
+    assert_eq!(pool.writable_length(strings[7]), None);
+}

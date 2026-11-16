@@ -9,6 +9,9 @@ replied = o~seen
 started = o~start('plain')~result
 if replied == main & started == main then say 'same'
 else say main '|' replied '|' started
+/* The interpreter holds what a program says until the program ends or waits, so the driver's own
+   line, written once the call returns, can overtake it. Handing it over here fixes the order. */
+.stdout~flush
 if arg(1) == 'data' then return main
 ::requires 'inst' LIBRARY
 ::class instwatch

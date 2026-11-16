@@ -12,6 +12,17 @@
 //! instance and calls `Halt` and `SetTrace` through it from a thread of its own; the programs
 //! beside it are run under `rexx` and, under `REXX_CORPUS_GATE`, under the oracle, which must print
 //! the same. Built as a program, it calls the members after the interpreter has ended.
+//!
+//! **The lifetime of a library across instances** (`r[native.loading.shared]`,
+//! `r[native.loading.unload]`, `r[native.loading.again]`,
+//! `r[native.loading.reentrant]`). The extension
+//! `tests/instance_identity/lifetime.cpp` prints `loader` from its loader and `unloader` from its
+//! unloader. Built as a program, it creates instances that each load it and prints a line after
+//! each creation and each `Terminate`. Under `REXX_CORPUS_GATE` the same program built against the
+//! oracle's library prints the same, except in the scenarios where one instance is created while
+//! another runs a hook, which the oracle does not wait for. The fixtures
+//! `tests/instance_identity/crossload.cpp` and `tests/instance_identity/cycle.cpp` load libraries
+//! from two instances at once, while a loader runs on another thread.
 
 #![cfg(target_os = "linux")]
 
@@ -29,6 +40,9 @@ const MEMORY: &str = "2G";
 
 /// The address-space limit in KiB where `memcap` is not on `PATH`.
 const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+
+/// The seconds after which `timeout` kills a run, so that one that hangs fails.
+const DEADLINE: &str = "120";
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
@@ -77,15 +91,9 @@ fn compile(source: &str, arguments: &[&str]) {
     assert!(built.success(), "the fixture did not build: {arguments:?}");
 }
 
-/// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
-/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
-/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
-fn run(
-    binary: &Path,
-    dir: &Path,
-    program: Option<&Path>,
-    argument: Option<&str>,
-) -> (String, String, i32) {
+/// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
+/// `memcap` is not on `PATH`, and killed by `timeout` after [`DEADLINE`].
+fn capped() -> Command {
     let mut command = if on_path("memcap") {
         let mut command = Command::new("memcap");
         command.arg(MEMORY);
@@ -97,7 +105,20 @@ fn run(
         ));
         command
     };
-    let output = command
+    command.args(["timeout", "-s", "KILL", DEADLINE]);
+    command
+}
+
+/// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
+/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
+/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
+fn run(
+    binary: &Path,
+    dir: &Path,
+    program: Option<&Path>,
+    argument: Option<&str>,
+) -> (String, String, i32) {
+    let output = capped()
         .arg(binary)
         .args(program)
         .args(argument)
@@ -495,4 +516,660 @@ fn halt_and_set_trace_after_the_interpreter_ended_return() {
         ("returned\n".to_owned(), String::new(), 0)
     );
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// Builds `lifetime.cpp` as the extension `lifetime` and as the driver, linked against this
+/// workspace's `librexx.so.4`, into a fresh directory named for `name`, and runs the driver with
+/// `scenario`. Under `REXX_CORPUS_GATE` the driver is built again against the oracle's library,
+/// and must print the same.
+fn run_lifetime(name: &str, scenario: &str) -> Answer {
+    let mut runs = lifetime_runs(name, scenario, gate_mode()).into_iter();
+    let ours = runs.next().expect("this workspace's run");
+    if let Some(theirs) = runs.next() {
+        assert_eq!(theirs, ours, "the oracle");
+    }
+    ours
+}
+
+/// [`run_lifetime`]'s runs: this workspace's, and where `oracle` is true the oracle's after it.
+fn lifetime_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
+    // The second library is the one the scenarios `other` and `unloaderother` load from a hook.
+    driver_runs(
+        name,
+        "lifetime.cpp",
+        &[(None, "lifetime"), (Some("-DOTHER"), "lifetime2")],
+        scenario,
+        oracle,
+    )
+}
+
+/// Builds the fixture `source` once for each of `extensions`, with its macro where one is given,
+/// as the extension it names, and as the driver, linked against this workspace's `librexx.so.4`,
+/// into a fresh directory named for `name`. Runs the driver with `scenario`, and where `oracle` is
+/// true runs it again built against the oracle's library. Answers the runs, this workspace's
+/// first.
+fn driver_runs(
+    name: &str,
+    source: &str,
+    extensions: &[(Option<&str>, &str)],
+    scenario: &str,
+    oracle: bool,
+) -> Vec<Answer> {
+    let (dir, driver) = build_driver(name, source, extensions);
+    let mut runs = vec![run(&driver, &dir, None, Some(scenario))];
+    if oracle {
+        // A slow hook's marks, which the oracle's run makes again.
+        for mark in ["hook-started", "cyclefirst-started", "cyclesecond-started"] {
+            let _ = fs::remove_file(dir.join(mark));
+        }
+        let oracle = support::oracle::locate();
+        let theirs_driver = dir.join("ltdriver-oracle");
+        link_driver(source, &theirs_driver, oracle.lib_dir());
+        let output = capped()
+            .arg(&theirs_driver)
+            .arg(scenario)
+            .current_dir(&dir)
+            .env(
+                "LD_LIBRARY_PATH",
+                format!("{}:{}", oracle.lib_dir().display(), dir.display()),
+            )
+            .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
+            .stdin(Stdio::null())
+            .output()
+            .expect("the capped run spawns");
+        // The oracle's run starts its `rxapi` inside the run's `memcap` group, so `memcap` may
+        // report that it left the group behind. That line is the harness's, not the program's.
+        let stderr: String = String::from_utf8_lossy(&output.stderr)
+            .lines()
+            .filter(|line| !(line.starts_with("memcap: left ") && line.ends_with(" exit")))
+            .map(|line| format!("{line}\n"))
+            .collect();
+        runs.push((
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            stderr,
+            output.status.code().unwrap_or(-1),
+        ));
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    runs
+}
+
+/// Builds what [`driver_runs`] runs: the fixture `source` as each of `extensions` and as the
+/// driver linked against this workspace's `librexx.so.4`, into a fresh directory named for `name`.
+/// Answers the directory and the driver.
+fn build_driver(
+    name: &str,
+    source: &str,
+    extensions: &[(Option<&str>, &str)],
+) -> (PathBuf, PathBuf) {
+    let dir = fresh_dir(name);
+    for (define, extension) in extensions {
+        let output = dir.join(format!("lib{extension}.so"));
+        let mut arguments: Vec<&str> = define.iter().copied().collect();
+        arguments.extend(["-shared", "-fPIC", "-O1", "-o"]);
+        let output = output.to_string_lossy();
+        arguments.push(&output);
+        compile(source, &arguments);
+    }
+    for library in [cdylibs::librexx(), cdylibs::librexxapi()] {
+        let name = library.file_name().expect("a library name").to_owned();
+        let mut versioned = name.clone();
+        versioned.push(".4");
+        fs::copy(&library, dir.join(&versioned)).expect("a copy of the library");
+        std::os::unix::fs::symlink(&versioned, dir.join(&name)).expect("the link name");
+    }
+    let driver = dir.join("ltdriver");
+    link_driver(source, &driver, &dir);
+    (dir, driver)
+}
+
+/// Builds the fixture `source` as the driver `driver`, linked against the `librexx` and
+/// `librexxapi` in `libraries`.
+fn link_driver(source: &str, driver: &Path, libraries: &Path) {
+    compile(
+        source,
+        &[
+            "-DDRIVER",
+            "-pthread",
+            "-o",
+            &driver.to_string_lossy(),
+            &format!("-L{}", libraries.display()),
+            &format!("-Wl,-rpath,{}", libraries.display()),
+            "-lrexx",
+            "-lrexxapi",
+        ],
+    );
+}
+
+/// Checks that `stdout` is `first`, then `middle` in any order, then `last`, answering the lines
+/// of `middle` in the order they came.
+///
+/// The scenarios that check this are not compared with the oracle. In `loading` and `unloading` it
+/// creates the second instance while the first one's loader or unloader is still running, and in
+/// `unloading` that instance then runs neither the loader nor the unloader. In the scenarios of
+/// `crossload.cpp` and `cycle.cpp` it does not wait for a loader that another thread runs.
+fn lines_in_order<'a>(
+    stdout: &'a str,
+    first: &[&str],
+    middle: &[&str],
+    last: &[&str],
+) -> Vec<&'a str> {
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(
+        lines.len(),
+        first.len() + middle.len() + last.len(),
+        "{stdout}"
+    );
+    let (head, rest) = lines.split_at(first.len());
+    let (between, tail) = rest.split_at(middle.len());
+    assert_eq!(head, first, "{stdout}");
+    assert_eq!(tail, last, "{stdout}");
+    let mut sorted = between.to_vec();
+    sorted.sort_unstable();
+    let mut expected = middle.to_vec();
+    expected.sort_unstable();
+    assert_eq!(sorted, expected, "{stdout}");
+    between.to_vec()
+}
+
+/// Two instances that are live together and each load the library run its loader once, when the
+/// first loads it.
+// spec: native.loading.shared
+#[test]
+fn live_instances_share_one_load_of_a_library() {
+    let (stdout, stderr, code) = run_lifetime("lifetime-shared", "two");
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    assert!(
+        stdout.starts_with("loader\ncreated A\ncreated B\n"),
+        "{stdout}"
+    );
+}
+
+/// Terminating the first of two live instances runs no unloader; terminating the second, the
+/// last live one, runs it once, whichever instance loaded the library.
+// spec: native.loading.unload
+#[test]
+fn the_unloader_runs_once_when_the_last_instance_ends() {
+    assert_eq!(
+        run_lifetime("lifetime-unload", "two"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An instance created after the last live one has ended loads the library again: its loader and
+/// its unloader each run once more.
+// spec: native.loading.again
+#[test]
+fn an_instance_after_the_last_one_loads_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-again", "three"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// A thread that attached to the first instance and detached, after which no library of the
+/// process is unmapped, leaves the loader and the unloader running as often: a later instance
+/// still runs both again.
+// spec: native.loading.again, native.loading.static
+#[test]
+fn an_instance_after_an_attached_thread_loads_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-attached", "attached"),
+        (
+            "loader\ncreated A\ncreated B\nterminated A\nunloader\nterminated B\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An instance created while another instance's loader for a library is still running completes
+/// its load of the library only once that loader has returned: the loader runs once, and both
+/// creations come after its end.
+// spec: native.loading.shared
+#[test]
+fn a_load_during_another_instances_loader_waits_for_it() {
+    let (stdout, stderr, code) = lifetime_runs("lifetime-loading", "loading", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    lines_in_order(
+        &stdout,
+        &["loader start", "loader end"],
+        &["created A", "created B"],
+        &["terminated A", "unloader", "terminated B"],
+    );
+}
+
+/// An instance created while the last instance's unloader is still running is created only once
+/// that unloader has returned, so its loader runs after the unloader's end, and its own last end
+/// runs the unloader again.
+// spec: native.loading.again
+#[test]
+fn an_instance_created_during_the_last_unloader_waits_for_it() {
+    let (stdout, stderr, code) = lifetime_runs("lifetime-unloading", "unloading", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let middle = lines_in_order(
+        &stdout,
+        &["loader", "created A", "unloader start", "unloader end"],
+        &["terminated A", "loader", "created B"],
+        &["unloader start", "unloader end", "terminated B"],
+    );
+    let at = |line: &str| middle.iter().position(|held| *held == line);
+    assert!(at("loader") < at("created B"), "{stdout}");
+}
+
+/// A loader that creates an instance loading the same library does not wait for itself: the
+/// inner instance shares the load whose loader is running, and runs no loader of its own.
+// spec: native.loading.shared
+#[test]
+fn an_instance_a_loader_creates_shares_the_load_in_progress() {
+    assert_eq!(
+        run_lifetime("lifetime-nested", "nested"),
+        (
+            "loader\ncreated inner\nterminated inner\ncreated A\nunloader\nterminated A\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// A loader that loads, through its thread context, the library whose loader it is finds it
+/// loaded: the load answers true at once and runs no second loader.
+// spec: native.loading.reentrant
+#[test]
+fn a_loader_loading_its_own_library_finds_it_loaded() {
+    assert_eq!(
+        run_lifetime("lifetime-reload", "reload"),
+        (
+            "loader\nreloaded 1\ncreated A\nunloader\nterminated A\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// A loader that loads another library gets the load without waiting, and the other library's
+/// loader runs inside it. Both unloaders run, in the order the libraries were asked for, when the
+/// instance ends.
+// spec: native.loading.reentrant
+#[test]
+fn a_loader_loading_another_library_runs_that_loader_inside_its_own() {
+    assert_eq!(
+        run_lifetime("lifetime-other", "other"),
+        (
+            "loader\nother loader\nother 1\ncreated A\nunloader\nother unloader\nterminated A\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An unloader that creates an instance, which loads the library, does not wait for itself: the
+/// instance is created and terminated inside the unloader. The terminating instance is still live
+/// while its unloaders run, so the inner instance shares its load and runs no loader, and its
+/// termination is not the last one and runs no unloader.
+// spec: native.loading.reentrant
+#[test]
+fn an_instance_an_unloader_creates_shares_the_load_being_unloaded() {
+    assert_eq!(
+        run_lifetime("lifetime-unloadernew", "unloadernew"),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated inner\nterminated A\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// An instance that an unloader creates and leaves live outlives the instance whose termination
+/// ran the unloader, without the libraries whose unloaders that termination ran: its own
+/// termination, now the last, runs no unloader of theirs again. An instance created afterwards
+/// loads the library afresh.
+// spec: native.loading.reentrant
+#[test]
+fn an_instance_an_unloader_leaves_live_does_not_unload_the_library_again() {
+    assert_eq!(
+        run_lifetime("lifetime-unloaderkeep", "unloaderkeep"),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\nterminated inner\n\
+             loader\ncreated C\nunloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// The instance an unloader left live loaded the library from the same file while its round's
+/// unloaders ran, so the library closes with that round (`r[native.loading.again]`): attached to
+/// after the termination that ran the unloader, the instance no longer runs the library's routine.
+/// The oracle agrees under the gate.
+// spec: native.loading.again
+#[test]
+fn an_instance_an_unloader_leaves_live_runs_no_routine_of_the_closed_library() {
+    assert_eq!(
+        run_lifetime("lifetime-unloaderprobe", "unloaderprobe"),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\nprobe after -1\n\
+             terminated inner\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// [`an_instance_an_unloader_leaves_live_runs_no_routine_of_the_closed_library`] with a command
+/// to the environment the library's own handler serves in the instance the unloader left live:
+/// the handler went with the library, so the environment is unknown, and the command's RC is 30
+/// with its failure traced. The oracle's run of this crashes in the closed library, so it is not
+/// asked.
+// spec: native.loading.again
+#[test]
+fn an_instance_an_unloader_leaves_live_runs_no_handler_of_the_closed_library() {
+    let (stdout, stderr, code) = lifetime_runs("ltcmd", "unloadercommand", false).remove(0);
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), code),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\ncommand after 30\n\
+             terminated inner\n",
+            "     1 *-* address lifetime 'x';\n       >>>   \"x\"\n       +++   \"RC(30)\"\n",
+            0
+        )
+    );
+}
+
+/// An unloader that creates an instance, leaves it live and starts a thread that loads a second
+/// library through it, with a slow loader, returns once that loader has started. The termination
+/// that ran the unloader leaves the second library to the live instance: it runs no unloader of
+/// it, neither during its loader nor after, and does not close it. The live instance's own
+/// termination, the last, runs that library's unloader once, after its loader has returned. The
+/// run is not compared with the oracle, which does not wait for loaders (see [`lines_in_order`]).
+// spec: native.loading.unload, native.loading.reentrant
+#[test]
+fn a_library_loading_on_another_thread_is_left_to_the_instance_that_holds_it() {
+    let (stdout, stderr, code) =
+        lifetime_runs("lifetime-unloaderthread", "unloaderthread", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    lines_in_order(
+        &stdout,
+        &[
+            "loader",
+            "created A",
+            "unloader",
+            "created inner",
+            "other loader start",
+        ],
+        &["terminated A", "other loader end"],
+        &["thread other 1", "other unloader", "terminated inner"],
+    );
+}
+
+/// An unloader that loads a library new to the process runs that library's loader inside it, and
+/// the same termination runs the new library's unloader too. An instance created afterwards loads
+/// both afresh, and its termination unloads both.
+// spec: native.loading.unload, native.loading.again
+#[test]
+fn a_library_an_unloader_loads_is_unloaded_in_the_same_termination() {
+    assert_eq!(
+        run_lifetime("lifetime-unloaderother", "unloaderother"),
+        (
+            "loader\ncreated A\nunloader\nother loader\nunloader other 1\nother unloader\n\
+             terminated A\nloader\ncreated C\nother loader\nC other 1\nunloader\n\
+             other unloader\nterminated C\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// The lines of one run of the scenario `callrace` that the rules fix: it completes, the loader and
+/// the unloader each run once, and a call by name made after the load has returned answers. The
+/// calls made while the loader runs may answer or raise, which is the program's concern, so the
+/// `race` line is checked to be there and nothing more.
+fn check_callrace((stdout, stderr, code): &Answer) {
+    assert_eq!((stderr.as_str(), *code), ("", 0), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    for once in [
+        "created A",
+        "loader start",
+        "loader end",
+        "after 1",
+        "unloader",
+    ] {
+        assert_eq!(
+            lines.iter().filter(|line| **line == once).count(),
+            1,
+            "{once}: {stdout}"
+        );
+    }
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| line.starts_with("race "))
+            .count(),
+        1,
+        "{stdout}"
+    );
+    assert_eq!(lines.last(), Some(&"terminated A"), "{stdout}");
+}
+
+/// A routine of the library that one activity calls by name, again and again, while another
+/// activity of the same instance runs the library's loader with the baton vacated, leaves the
+/// interpreter sound: the run completes, the loader and the unloader each run once, a call made
+/// after the load has returned answers, and `Terminate` returns. What the calls made during the
+/// loader answer is unspecified, so it is not checked, and the run is not compared with the
+/// oracle.
+// spec: native.loading.shared
+#[test]
+fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound() {
+    check_callrace(&lifetime_runs("lifetime-callrace", "callrace", false).remove(0));
+}
+
+/// [`a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound`]'s scenario a
+/// hundred times in a row, each run a process of its own under the test's deadline, so that a
+/// crash, a panic, a hang or a corrupted state that the race reaches only now and then fails it.
+// spec: native.loading.shared
+#[test]
+#[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
+fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound_a_hundred_times() {
+    // A short name, as the API service's socket path under the run's directory must fit a
+    // socket address, or the service says on stderr that it is not used.
+    let (dir, driver) = build_driver(
+        "lifetime-race100",
+        "lifetime.cpp",
+        &[(None, "lifetime"), (Some("-DOTHER"), "lifetime2")],
+    );
+    for _ in 0..100 {
+        check_callrace(&run(&driver, &dir, None, Some("callrace")));
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// A thread attached to the last instance before the embedding terminates it, which calls into the
+/// instance while that termination runs the library's unloader, does not crash or hang the
+/// termination: its send is refused and answers no object, the unloader returns and `Terminate`
+/// returns. Under `REXX_CORPUS_GATE` the oracle prints the same, except that it runs the send and
+/// answers `3`, as Deviation 176 (`native.threads.end.deviation.176`) records.
+// spec: native.loading.unload, native.loading.reentrant, native.threads.end.deviation.176
+#[test]
+fn a_thread_calling_in_during_the_last_unloader_is_refused() {
+    let mut runs = lifetime_runs("lifetime-unloadercall", "unloadercall", gate_mode()).into_iter();
+    let ours = runs.next().expect("this workspace's run");
+    let expected = |answer: &str| {
+        format!(
+            "loader\ncreated A\nunloader start\nthread callback {answer}\nunloader end\n\
+             terminated A\njoined\n"
+        )
+    };
+    assert_eq!(ours, (expected("none"), String::new(), 0));
+    if let Some(theirs) = runs.next() {
+        assert_eq!(theirs, (expected("3"), String::new(), 0), "the oracle");
+    }
+}
+
+/// Builds `crossload.cpp` as the extensions `crossslow`, `crossquick` and `crossouter` and as the
+/// driver, and runs the driver with `scenario`, and where `oracle` is true the oracle's driver
+/// after it.
+fn crossload_runs(name: &str, scenario: &str, oracle: bool) -> Vec<Answer> {
+    driver_runs(
+        name,
+        "crossload.cpp",
+        &[
+            (Some("-DSLOW"), "crossslow"),
+            (Some("-DQUICK"), "crossquick"),
+            (Some("-DOUTER"), "crossouter"),
+        ],
+        scenario,
+        oracle,
+    )
+}
+
+/// A load of a library nobody is loading does not wait for the loader of another library, here
+/// one that another thread runs and that calls into the instance the load is made through: the
+/// load completes, with its own loader, while the other loader sleeps, and that loader's call then
+/// completes too.
+// spec: native.loading.shared
+#[test]
+fn a_load_does_not_wait_for_the_loader_of_another_library() {
+    let mut runs = crossload_runs("crossload-other", "other", gate_mode()).into_iter();
+    let ours = runs.next().expect("this workspace's run");
+    assert_eq!(
+        ours,
+        (
+            "created first\ncreated second\nslow loader start\nquick loader\nmain crossquick 1\n\
+             slow loader callback 3\nthread crossslow 1\nterminated\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+    if let Some(theirs) = runs.next() {
+        assert_eq!(theirs, ours, "the oracle");
+    }
+}
+
+/// A load that waits for another thread's loader of the same library does not keep that loader
+/// from calling into the instance the load is made through: the loader's call completes, and the
+/// load completes once the loader has returned. The oracle does not wait for the loader, so the
+/// run is not compared with it.
+// spec: native.loading.shared
+#[test]
+fn a_load_waiting_for_a_loader_lets_it_call_into_the_waiting_instance() {
+    let (stdout, stderr, code) = crossload_runs("crossload-same", "same", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    lines_in_order(
+        &stdout,
+        &[
+            "created first",
+            "created second",
+            "slow loader start",
+            "slow loader callback 3",
+        ],
+        &["main crossslow 1", "thread crossslow 1"],
+        &["terminated"],
+    );
+}
+
+/// A loader runs with its instance's baton vacated, as an external call does, so a load it makes
+/// through another instance may wait for a loader that calls into the first instance: the main
+/// thread runs `crossouter`'s loader on `second`, and that loader waits for `crossslow`'s loader,
+/// which calls into `second` meanwhile. Each load completes once its loader has returned. The
+/// oracle does not wait for the loader, so the run is not compared with it.
+// spec: native.loading.shared
+#[test]
+fn a_loader_waiting_for_a_loader_lets_it_call_into_the_instance_running_the_first() {
+    let (stdout, stderr, code) = crossload_runs("crossload-hook", "hook", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let middle = lines_in_order(
+        &stdout,
+        &[
+            "created first",
+            "created second",
+            "slow loader start",
+            "outer loader start",
+            "slow loader callback 3",
+        ],
+        &[
+            "outer loaded crossslow 1",
+            "outer loader end",
+            "main crossouter 1",
+            "thread crossslow 1",
+        ],
+        &["terminated"],
+    );
+    let at = |line: &str| {
+        middle
+            .iter()
+            .position(|held| *held == line)
+            .expect("lines_in_order checked every line is there")
+    };
+    assert!(
+        at("outer loaded crossslow 1") < at("outer loader end")
+            && at("outer loader end") < at("main crossouter 1"),
+        "{stdout}"
+    );
+}
+
+/// Two loaders, running at once on two threads, that each load the other's library do not wait
+/// for each other. The load of the second to ask would close the cycle, so it finds the library
+/// loaded and does not wait, and the first's load waits for the second's loader to return. The
+/// oracle waits for neither loader, so the run is not compared with it.
+// spec: native.loading.reentrant
+#[test]
+fn loaders_loading_each_others_library_do_not_wait_for_each_other() {
+    let (stdout, stderr, code) = driver_runs(
+        "cycle",
+        "cycle.cpp",
+        &[
+            (Some("-DFIRST"), "cyclefirst"),
+            (Some("-DSECOND"), "cyclesecond"),
+        ],
+        "cycle",
+        false,
+    )
+    .remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    let middle = lines_in_order(
+        &stdout,
+        &[
+            "cyclefirst loader start",
+            "cyclesecond loader start",
+            "cyclesecond loaded cyclefirst 1",
+            "cyclesecond loader end",
+        ],
+        &[
+            "main cyclesecond 1",
+            "cyclefirst loaded cyclesecond 1",
+            "cyclefirst loader end",
+            "thread cyclefirst 1",
+        ],
+        &["terminated"],
+    );
+    let at = |line: &str| {
+        middle
+            .iter()
+            .position(|held| *held == line)
+            .expect("lines_in_order checked every line is there")
+    };
+    assert!(
+        at("cyclefirst loaded cyclesecond 1") < at("cyclefirst loader end")
+            && at("cyclefirst loader end") < at("thread cyclefirst 1"),
+        "{stdout}"
+    );
 }

@@ -117,6 +117,51 @@ impl Drop for Lent<'_> {
     }
 }
 
+/// Waits until the baton is lent to this thread, which has posted a recall
+/// for it. Where the baton is vacated by a native call running off it
+/// ([`crate::baton::Baton::vacate`]) and nobody serves that recall, this
+/// thread claims the vacancy and hands it to a pool thread it starts to run
+/// the interpreter until the call returns, which serves the recall. Where
+/// the pool gives none, the vacancy is freed again and this thread waits for
+/// the vacating thread to serve it. `None` where `unless_closed` and the
+/// interpreter is gone first, so nothing will lend the baton ([`Closing`]).
+pub(crate) fn wait_served(baton: &InterpBaton, unless_closed: bool) -> Option<Lent<'_>> {
+    let mut claim = true;
+    loop {
+        match baton.await_lend_or_vacancy(claim, unless_closed) {
+            crate::baton::Awaited::Lent(island) => return Some(Lent { baton, island }),
+            crate::baton::Awaited::Closed => return None,
+            crate::baton::Awaited::Vacancy(island) => {
+                // SAFETY: the vacating thread derived the pointer from its
+                // own `&mut Interp` ([`Island::of`]) before it vacated, and
+                // touches the interpreter again only once it has reclaimed
+                // the vacancy, which waits while this thread holds it by its
+                // claim. No other thread holds the baton meanwhile. The borrow
+                // ends before the vacancy is handed on or freed below.
+                let started = unsafe { island.0.as_ref() }.start_vacancy_server();
+                match started {
+                    Some(server) => baton.hand_vacancy(server),
+                    None => {
+                        baton.free_vacancy();
+                        claim = false;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Closes the baton it holds when it drops, as the interpreter holding it
+/// does: a thread still waiting for a lend, a callback whose recall nothing
+/// served, wakes and is refused.
+pub(crate) struct Closing(pub(crate) crate::sync::Arc<InterpBaton>);
+
+impl Drop for Closing {
+    fn drop(&mut self) {
+        self.0.close();
+    }
+}
+
 // The interpreter moves to another thread only as an `Islanded` payload, and a
 // frame not at all (static_assertions' `assert_not_impl_any`).
 trait AmbiguousIfSend<A> {

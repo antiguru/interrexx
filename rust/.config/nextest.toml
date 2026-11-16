@@ -16,7 +16,8 @@ slow-timeout = { period = "60s" }
 # JUnit output stays off; a path here would turn it on.
 
 # Tests whose assertion is a wall-clock boundary (a signal inside a sleep, a halt before a
-# program ends, a prompt before a read, a watchdog's deadline, a replayed clock). Each waits on
+# program ends, a prompt before a read, a watchdog's deadline, a replayed clock, a wait reported
+# as stalled after five seconds or ended before then). Each waits on
 # time, so they run one at a time and claim four test threads each, which keeps a saturated
 # machine from stretching the window they measure.
 [test-groups.wall-clock]
@@ -30,9 +31,50 @@ filter = '''
   & !test(/^support::/)
 | test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
 | (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
+| binary(attached_threads) & (
+  test(=a_callback_sent_again_for_a_guard_does_not_pass_the_activities_queued_before_it)
+  | test(=a_callback_sent_again_for_a_guard_others_keep_taking_runs_before_they_stop)
+  | test(=a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waiting)
+  | test(=a_callback_sent_again_once_its_lender_has_the_guard_keeps_its_place_ahead_of_later_waiters)
+  | test(=a_callback_wait_is_not_reported_as_stalling_the_instances_root_call)
+  | test(=a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once)
+  | test(=a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported)
+  | test(=a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop)
+  | test(=a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever)
+  | test(=a_callback_waiting_for_a_post_after_a_native_call_is_not_refused)
+  | test(=a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported)
+  | test(=a_callbacks_wait_within_its_message_for_a_guard_its_lender_is_granted_is_refused)
+  | test(=a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it)
+  | test(=a_halt_ends_a_trace_delivery_that_goes_on)
+  | test(=a_halt_ends_an_inverted_wait_that_goes_on)
+  | test(=a_halt_while_a_callback_waits_for_a_guard_its_lender_is_granted_ends_the_program)
+  | test(=a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it)
+)
 '''
 test-group = 'wall-clock'
 threads-required = 4
+
+# Tests whose assertions read the libraries loaded for the process's live instances, which the
+# process shares, such as whether an unloader ran (`r[native.loading.unload]`). Under `cargo test`
+# each holds a gate that keeps every other interpreter of the process from being live meanwhile
+# (`libraries::round_gate`); here each runs in a process of its own, and one at a time.
+[test-groups.library-round]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = '''
+binary_id(=interrexx) & (
+  test(=dispatch::library::tests::a_loaded_librarys_loader_and_unloader_run)
+  | test(=dispatch::library::tests::a_programs_end_runs_its_librarys_unloader)
+  | test(=dispatch::library::tests::a_registered_handler_answers_until_a_library_closes)
+  | test(=dispatch::library::tests::dropping_the_libraries_closes_what_termination_left_open)
+  | test(=dispatch::library::tests::unloaders_run_in_the_oracles_table_order)
+  | test(/^libraries::tests::/)
+)
+'''
+test-group = 'library-round'
 
 # These tests missed their time window on a loaded host while the suite ran. Each is run again
 # once; the run reports a pass on the second attempt as flaky and a second miss fails it.
@@ -46,6 +88,27 @@ test(=a_valued_reply_ends_the_same_program)
 | test(=a_sigint_during_rexx_start_halts_the_program_not_the_process)
 | test(=the_classic_family_answers_as_the_oracle_does)
 | test(=two_instances_keep_their_environments_and_both_take_a_halt)
+| binary(attached_threads) & (
+  test(=a_callback_sent_again_for_a_guard_does_not_pass_the_activities_queued_before_it)
+  | test(=a_callback_sent_again_for_a_guard_others_keep_taking_runs_before_they_stop)
+  | test(=a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waiting)
+  | test(=a_callback_sent_again_once_its_lender_has_the_guard_keeps_its_place_ahead_of_later_waiters)
+  | test(=a_callback_wait_is_not_reported_as_stalling_the_instances_root_call)
+  | test(=a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once)
+  | test(=a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported)
+  | test(=a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop)
+  | test(=a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever)
+  | test(=a_callback_waiting_for_a_post_after_a_native_call_is_not_refused)
+  | test(=a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported)
+  | test(=a_callbacks_wait_within_its_message_for_a_guard_its_lender_is_granted_is_refused)
+  | test(=a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it)
+  | test(=a_halt_ends_a_trace_delivery_that_goes_on)
+  | test(=a_halt_ends_an_inverted_wait_that_goes_on)
+  | test(=a_halt_while_a_callback_waits_for_a_guard_its_lender_is_granted_ends_the_program)
+  | test(=a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it)
+)
 '''
 retries = 1
 
@@ -70,11 +133,11 @@ retries = 1
 # every binary: oracle: runs the oracle (the arity identity test compiled into about 40 binaries)
 # interrexx-capi::exports, interrexx-capi-rxapi::exports: oracle: compare the exported names with the oracle's librexx.so.4 and librexxapi.so.4 (fail loudly without them)
 # interrexx: source: reads the builtin function sources of the submodule (interpreter/expression) (1 test)
-# interrexx: oracle: loads oracle-built extension libraries through build/lib (37 tests)
+# interrexx: oracle: loads oracle-built extension libraries through build/lib (45 tests)
 # interrexx-api::context: oracle: loads oracle-built extension libraries through build/lib (10 tests)
 # interrexx-api::abi_dump: source: compiles a dump program against the api/ headers of the submodule (2 tests)
 # interrexx-api::layout: source: reads the api/ header of the submodule (5 tests)
-# interrexx-api::load: oracle: loads oracle-built extension libraries through build/lib (5 tests)
+# interrexx-api::load: oracle: loads oracle-built extension libraries through build/lib (6 tests)
 # interrexx-extract::extract_docs: source: reads the directive parser sources of the submodule (interpreter/parser) (1 test)
 # interrexx-parse::errors: source: reads interpreter/parser sources and samples/ of the submodule (2 tests)
 # interrexx::builtin_status: oracle: runs or reads the oracle build (third_party/oracle) (2 tests)
@@ -160,18 +223,25 @@ not (
   | (binary_id(=interrexx) & test(=run::tests::routines::a_routine_a_required_library_exports_runs_rather_than_answering_43_1))
   | (binary_id(=interrexx) & test(=run::tests::routines::an_extension_reading_the_instance_reaches_its_table))
   | (binary_id(=interrexx) & test(=run::tests::routines::an_extensions_raise_with_substitutions_is_the_calls_condition))
+  | (binary_id(=interrexx) & test(=scheduler::tests::a_ring_of_message_waits_raises_after_a_library_loaded))
+  | (binary_id(=interrexx) & test(=scheduler::tests::a_wait_after_an_external_library_loaded_is_not_refused))
+  | (binary_id(=interrexx) & test(=scheduler::tests::a_wait_on_the_activitys_own_message_is_refused_once_nothing_else_runs))
+  | (binary_id(=interrexx) & test(=scheduler::tests::a_wait_on_the_activitys_own_replied_message_answers))
+  | (binary_id(=interrexx) & test(=scheduler::tests::a_wait_on_the_activitys_own_unreplied_message_is_refused_whatever_was_loaded))
   | (binary_id(=interrexx) & test(=scheduler::tests::an_ended_activitys_thread_context_is_kept))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_callback_during_an_off_baton_call_takes_the_baton))
-  | (binary_id(=interrexx) & test(=scheduler::tests::native::a_callbacks_wait_on_a_call_below_it_is_refused))
+  | (binary_id(=interrexx) & test(=scheduler::tests::native::a_callbacks_wait_on_a_call_below_it_goes_on))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_failure_ending_a_native_park_abandons_the_call))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_function_whose_call_left_its_driver_and_answered_nothing_is_44_1))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_guarded_library_method_runs_after_its_guard_wait))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_library_routine_called_again_reaches_the_row_its_name_finds))
+  | (binary_id(=interrexx) & test(=scheduler::tests::native::a_lone_activitys_external_call_vacates_the_baton))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_lone_activitys_native_call_keeps_its_driver))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_native_call_in_the_simulation_mode_spawns_no_pool_thread))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_native_call_only_another_activity_can_end_is_refused_after_its_bound))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_native_call_where_another_activity_lives_leaves_its_driver))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::a_pinned_wait_is_satisfied_by_an_activity_returning_from_a_native_call))
+  | (binary_id(=interrexx) & test(=scheduler::tests::native::a_program_with_no_external_library_never_vacates_the_baton))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::collect_stress_across_a_native_calls_driver_exit))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::completed_native_calls_repeat_independently_of_host_descheduling))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::only_a_timed_out_native_watch_refuses_a_completed_call))
@@ -182,6 +252,7 @@ not (
   | (binary_id(=interrexx) & test(=scheduler::tests::pool::deep_pinned_recursion_on_a_pool_thread_raises_11))
   | (binary_id(=interrexx) & test(=scheduler::tests::pool::the_translator_on_a_pool_thread_has_the_interpreter_threads_stack))
   | (binary_id(=interrexx) & test(=scheduler::tests::spawn_failure::guarded_native_spawn_failure_releases_receiver_for_progress))
+  | (binary_id(=interrexx) & test(=scheduler::tests::the_switch_stays_off_after_a_classic_load_and_drop))
   | (binary_id(=interrexx-api::context) & test(=a_collection_inside_the_call_leaves_the_cself_intact))
   | (binary_id(=interrexx-api::context) & test(=cself_survives_a_collection_between_two_calls))
   | (binary_id(=interrexx-api::context) & test(=drop_object_variable_unbinds_the_name))
@@ -199,6 +270,7 @@ not (
   | (binary_id(=interrexx-api::layout) & test(=the_scan_reads_one_struct_at_a_time))
   | (binary_id(=interrexx-api::layout) & test(=the_test_extensions_reach_only_members_that_answer))
   | (binary_id(=interrexx-api::layout) & test(=the_wrapper_scan_follows_one_wrapper_into_another))
+  | (binary_id(=interrexx-api::load) & test(=a_closed_library_stays_mapped))
   | (binary_id(=interrexx-api::load) & test(=a_method_is_found_without_regard_to_case))
   | (binary_id(=interrexx-api::load) & test(=a_search_directory_resolves_a_name_the_undecorated_attempt_misses))
   | (binary_id(=interrexx-api::load) & test(=the_extension_declares_no_routines))

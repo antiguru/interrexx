@@ -110,7 +110,17 @@ activity that has not yet started to run.
 An activity waiting inside a nested construct, such as INTERPRET or a method
 that `run` runs, for something, such as a lock, a result or the change of a
 variable, that only an activity suspended beneath it can provide is refused,
-exit code 120. ooRexx runs each activity on its own thread and completes.
+exit code 120. ooRexx runs each activity on its own thread and completes. The
+refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+[the rule of Deviation 20](r:conc.activities.deviation.20) defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds with nothing else left to run, a
+line on stderr says so, and the program otherwise runs as it would without the
+line. A HALT the host asks for ends such a wait where it ends the same wait
+elsewhere. A trace line's delivery that holds a guard and spins until another
+activity acts ([the locks page's rule](r:conc.locks.trace.deviation.14))
+follows the same switch: it is refused only while no such code is present.
 
 ## 15. Withdrawn
 
@@ -135,15 +145,48 @@ end. ooRexx preempts both and they complete.
 
 ## 19. Callback from a foreign thread
 
-A callback into the interpreter from a thread that runs no native call waits
-for a native call that holds the interpreter; if that call joins the thread,
-the program hangs. ooRexx aborts. Both fail.
+A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
+too for its whole run, and the callback waits until that call returns, while
+`SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx aborts the process.
+
+A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.
 
 ## 20. A wait nothing can end
 
 A wait that no other activity, timer or call can end, such as the result of
 a message never sent or a GUARD WHEN nothing can make true, is refused, exit
-code 120. ooRexx blocks for ever.
+code 120, while no native code from outside the interpreter can run. ooRexx
+blocks for ever. Such code is an external library a program loads, through
+`::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`,
+`~loadLibrary` or a call by name of a function another process registered with
+the API service, or behind a registered subcommand environment or a registered
+exit, and it is the host of an embedding, which runs the program through
+`RexxStart` or `RexxCreateInterpreter`, together with the libraries it
+registers. Each may start a thread that attaches later and ends the wait, so
+once one is present, interrexx waits as ooRexx does, for the rest of the run,
+also after a library is dropped. Neither SIGINT nor SIGTERM ends such a wait
+for the result of a message never sent, as Deviation 10 says of a wait for a
+message. The libraries that come with interrexx, such
+as RexxUtil, start no such thread and do not count, and the `rexx` command
+runs a program with no host. A wait for the result or the completion of a
+message whose method the waiting activity itself runs, and has not yet
+replied from, is refused whatever was loaded: the message completes only when
+that method returns, and the method is what waits. The refusal comes once
+nothing else can run, after the other activities' output and errors, also
+inside a message an attached thread sends or a routine an embedding host
+calls. ooRexx blocks for ever there too.
 
 ## 21. Activities at program end
 
@@ -1379,3 +1422,64 @@ significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
 DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
 3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
 the owner on 2026-11-14 (#554).
+
+## 176. A callback after the embedding ends the interpreter
+
+A thread that stays attached after the embedding calls `Terminate` can still
+make callbacks through its context, and each one is refused: it answers the
+failure value of the member, runs nothing, and does not wait. The interpreter
+no longer exists once `Terminate` returns. ooRexx runs such a callback and
+answers its result.
+
+## 177. An attached thread's context used from another thread
+
+`DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second `DetachThread` from the thread that attached it. The attachment
+stays as the first detach left it, or as it was, and the call never waits for
+a message the attached thread runs. Halting or tracing the interpreter from
+another thread remains the work of the instance's `Halt` and `SetTrace`.
+ooRexx aborts the process or hangs in these cases.
+
+## 178. A message from an attached thread stops the activity it interrupts
+
+While a message that a thread attached to the interpreter sends runs, the
+activity that was running when it arrived, the main program or another, makes
+no progress in Rexx clauses. The message runs at that activity's next clause
+boundary, or during a wait of the activity, such as `SysSleep`, a semaphore's
+`wait`, a guard or a message's `result`, or during a call it makes into a
+native library that is not built into the interpreter. The activity goes on
+only once the message has finished, even where its wait or its call ended
+first. A message that arrives while another runs is held until that one has
+returned, waits or calls into such a library, the earliest held first. One
+that arrives while another waits runs on top of it, and the earlier goes on
+only once the later has finished. A message the thread sends with
+`SendMessage` or one of its variants, whose method needs at its entry a guard
+lock that a stopped activity holds, waits for the lock as in ooRexx: nothing of
+the message has run yet, so the interpreter sends it again, in the place in the
+lock's queue that its wait took when it began, and `TRACE` announces its
+method's entry once. A guard lock that a stopped activity acquires after a
+message began to wait for it counts from then as one it holds. Any other wait
+for a guard lock counts as one of a message that has begun: a wait in a method
+or routine the message's own code reaches, and a wait of a routine the thread
+calls with `CallRoutine` or of a method that another of the thread's API calls
+sends to, such as the `MAKESTRING` that `ObjectToString` sends. Once a message
+has begun, a wait of it for something only a stopped activity can give never
+ends. Where it waits for a guard lock that such an activity holds and no other
+message does, or for the completion of a message whose send such an activity
+runs, directly or through a chain of such waits, the wait is refused at once as
+[Deviation 14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an
+inverted wait: the thread's send answers nothing, and the program, which runs
+on to its end, ends with exit code 120. Any other such wait, such as a `GUARD
+WHEN`, a semaphore's `wait` with no timeout, or a wait for a guard lock another
+message holds, goes on for ever. Once it has waited five seconds, and nothing
+else is left that could end it, a line on stderr says so and says how many
+seconds it has waited: no activity is ready, none is asleep but one a message
+stopped, no message is held or to be sent again, and no call is in flight but
+those the waiting messages run above. A stopped activity's sleep does not hold
+the line back, since the activity cannot go on when it wakes. A wait that
+another sleeping activity or a call in flight may still end is not reported
+until they are gone. A loop that polls for such a change runs for ever, and
+nothing is said. ooRexx runs each attached thread's messages on that thread,
+alongside the other activities, and each such program completes. Issue #681
+tracks doing the same.

@@ -127,6 +127,33 @@ ooRexx method table, not guessed.
 * **Pinning.** An activity with Rust frames between the scheduler and its driver (a native
   re-entry, a sort comparator, a trap handler, `INTERPRET`) is pinned and waits on a nested
   scheduler on its own stack. A wait that inverts that nesting is refused loudly.
+* **External calls give up the baton.** Outside the simulation mode, a call into an external
+  library, or a classic handler, that runs on its activity's thread runs with the baton vacated. The
+  first thread that calls back from elsewhere meanwhile starts a pool thread, which runs the
+  scheduler until the call returns. A call nobody calls back from starts none, so a program with one
+  activity pays nothing. System exit handlers and the libraries built into the interpreter run on
+  the baton.
+* **Attached activities.** A callback through an attached thread's context recalls the baton. The
+  holder lends it at its running activity's next clause boundary, during that activity's wait, or
+  during its call into an external library, and the callback's Rexx code runs on the attached
+  thread's stack. The interrupted activity makes no progress in Rexx clauses until the callback's
+  member finishes (Deviation 178). A callback that arrives while another runs Rexx clauses is held
+  until that one returns, waits or calls an external library, the earliest first. A send whose
+  method needs at its entry a guard lock that a stopped activity holds gives the baton back and is
+  sent again in the place in the lock's queue that its wait took when it began. A wait of a running
+  callback that only a stopped activity can end is refused where that is provable, and otherwise
+  goes on, with a line on stderr once it has waited five seconds and nothing else can end it.
+* **Waits nothing can end.** Where nothing is ready, asleep or in flight, the scheduler refuses the
+  wait (Deviation 20), while no external native library has loaded and no outside host runs the
+  program. Once either holds, the switch stays off for the rest of the run, and the scheduler waits
+  for a post instead, since a thread such code started may attach later and end the wait. An
+  inverted wait, which waits above an activity set aside or interrupted by a recall, follows the
+  same switch (Deviation 14): where it goes on, the stall watch writes its line on stderr once it
+  has waited five seconds and nothing else can run, naming the activity it keeps from running,
+  and a HALT still ends it. A trace line's delivery that holds a guard and spins with another
+  activity ready follows the switch too: refused after a bound of slices while it is on, and
+  otherwise going on with one line on stderr. A wait on a message the waiting activity itself
+  runs, and any wait in the simulation mode, are refused whatever was loaded.
 * **Scheduling** is round-robin: a ready queue in arrival order, timed sleepers in a deadline heap,
   FIFO guard waiters. A timer thread sets the slice bit every 24 ms; the switch happens at the next
   clause boundary. HALT, trace toggles and raises from elsewhere set request bits that the target
@@ -137,7 +164,8 @@ ooRexx method table, not guessed.
 * **Rexx semantics.** Guard locks per object and scope, FIFO, with deadlock detection raising
   98.905; `GUARD WHEN` re-evaluates on a set or drop of a variable it names; `REPLY` splits the
   continuation into a new activity, moving its frames; `.context~thread` numbers reuse freed ones
-  oldest first; program end waits for every activity, then collects and runs uninits.
+  oldest first; program end waits for every activity but an idle attached one, then collects and
+  runs uninits.
 * **Per-activation state.** Settings, the elapsed clock, the `RANDOM` seed and `SETLOCAL` follow
   ooRexx's activation rules: internal calls copy the caller's settings in, `INTERPRET` shares them,
   methods, routines and started activities start fresh.

@@ -1097,6 +1097,10 @@ impl Interp {
             requests.clear(crate::timer::FOREIGN);
             return Err(Loud::sim_foreign_post("a callback").into());
         }
+        if requests.pending(crate::timer::ATTACH) {
+            requests.clear(crate::timer::ATTACH);
+            return Err(Loud::sim_foreign_attach().into());
+        }
         if let Some(sim) = self.sim.as_deref_mut()
             && std::mem::take(&mut sim.blocked_native)
         {
@@ -1225,6 +1229,7 @@ impl Interp {
                 Posted::SocketWaited { .. } => "a socket wait's end",
                 Posted::Input(_) => "a standard input chunk",
                 Posted::Panicked(_) => "a pool thread's panic",
+                Posted::Returned { .. } => "a native call's return off the baton",
             };
             sim.breach.get_or_insert(what);
         }
@@ -1330,6 +1335,14 @@ impl Loud {
             message: crate::owned_message(&format!(
                 "{what} from another thread in the simulation mode"
             )),
+        }
+    }
+
+    /// An attach in the simulation mode from a thread running none of the
+    /// interpreter's native calls, whose timing is real.
+    pub(crate) fn sim_foreign_attach() -> Loud {
+        Loud {
+            message: crate::owned_message("attaching a thread in the simulation mode"),
         }
     }
 

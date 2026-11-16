@@ -89,6 +89,11 @@ fn a_library_named_twice_is_opened_once() {
 /// same name answers nothing.
 #[test]
 fn the_search_path_is_what_makes_the_name_resolve() {
+    if !crate::test_process::alone(
+        "dispatch::library::tests::the_search_path_is_what_makes_the_name_resolve",
+    ) {
+        return;
+    }
     let mut bare = Interp::new();
     bare.adopt_environment(Vec::new());
     assert!(
@@ -112,6 +117,11 @@ fn the_search_path_is_what_makes_the_name_resolve() {
 /// at the start.
 #[test]
 fn a_search_directory_written_after_the_start_is_not_searched() {
+    if !crate::test_process::alone(
+        "dispatch::library::tests::a_search_directory_written_after_the_start_is_not_searched",
+    ) {
+        return;
+    }
     let directory = worktree_library_directory()
         .into_os_string()
         .into_encoded_bytes();
@@ -409,14 +419,15 @@ fn a_reused_native_frame_holds_nothing_of_the_call_before() {
 /// a second write dropping the interpreter's own reference to it.
 #[test]
 fn a_held_library_is_not_replaced_by_a_later_answer() {
-    let (first, second) = (Rc::new(open_rxregexp()), Rc::new(open_rxregexp()));
     let mut libraries = crate::Libraries::new();
+    let (first, _) = libraries
+        .hold(b"rxregexp", Box::new(open_rxregexp()))
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
     assert!(Rc::ptr_eq(
-        &libraries.hold(b"rxregexp", Rc::clone(&first)),
-        &first
-    ));
-    assert!(Rc::ptr_eq(
-        &libraries.hold(b"rxregexp", Rc::clone(&second)),
+        &libraries
+            .hold(b"rxregexp", Box::new(open_rxregexp()))
+            .unwrap_or_else(|_| panic!("nothing else loads it"))
+            .0,
         &first
     ));
     assert!(Rc::ptr_eq(
@@ -425,9 +436,13 @@ fn a_held_library_is_not_replaced_by_a_later_answer() {
     ));
     // The control that says the second library was refused rather than
     // never built: under a name nothing is held for it is taken.
+    let (other, _) = libraries
+        .hold(b"zorkolib", Box::new(open_rxregexp()))
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
+    assert!(!Rc::ptr_eq(&other, &first));
     assert!(Rc::ptr_eq(
-        &libraries.hold(b"zorkolib", Rc::clone(&second)),
-        &second
+        libraries.get(b"zorkolib").expect("a library was held"),
+        &other
     ));
 }
 
@@ -656,7 +671,9 @@ fn unload_order(input: &str) -> String {
     }
     let order: Vec<String> = interp
         .libraries
-        .in_unload_order()
+        .end()
+        .expect("the only live instance ends last")
+        .next()
         .into_iter()
         .map(|(name, _)| String::from_utf8(name).expect("a case's names are ASCII"))
         .collect();
@@ -665,6 +682,7 @@ fn unload_order(input: &str) -> String {
 
 #[test]
 fn unloaders_run_in_the_oracles_table_order() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut cases = 0;
     datadriven::walk(UNLOAD_ORDER_CASES, |file| {
         file.run(|case| {
@@ -701,6 +719,7 @@ extern "C-unwind" fn recording_unloader(thread: *mut interrexx_api::layout::Rexx
 /// declares a hook that does anything observable, so the entry is in memory.
 #[test]
 fn a_loaded_librarys_loader_and_unloader_run() {
+    let _round = crate::libraries::round_gate::exclusive();
     HOOKS_RAN.with(|ran| ran.borrow_mut().clear());
     let mut interp = Interp::new();
     let library = interrexx_api::load::hooks_only(Some(recording_loader), Some(recording_unloader));
@@ -737,10 +756,17 @@ extern "C-unwind" fn program_unloader(_thread: *mut interrexx_api::layout::RexxT
     PROGRAM_HOOKS.lock().expect("unpoisoned").push("unloader");
 }
 
+/// How many times [`a_programs_end_runs_its_librarys_unloader`]'s run
+/// vacated the baton, counted on its interpreter thread.
+static PROGRAM_VACATES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// **A program's end runs the unloader of a library it required**, through
-/// the whole run, not only through [`Interp::terminate`].
+/// the whole run, not only through [`Interp::terminate`]. Each hook runs with
+/// the baton vacated, as an external call does, and the program makes no
+/// other native call, so the run vacates it twice.
 #[test]
 fn a_programs_end_runs_its_librarys_unloader() {
+    let _round = crate::libraries::round_gate::exclusive();
     PROGRAM_HOOKS.lock().expect("unpoisoned").clear();
     let outcome = crate::on_interpreter_thread(|| {
         crate::install::offer_library(b"hooked", || {
@@ -751,6 +777,10 @@ fn a_programs_end_runs_its_librarys_unloader() {
             b"say 'main'\n::requires 'hooked' LIBRARY\n".to_vec(),
             false,
             crate::Invocation::none(),
+        );
+        PROGRAM_VACATES.store(
+            crate::scheduler::vacates(),
+            std::sync::atomic::Ordering::SeqCst,
         );
         (outcome, None)
     });
@@ -767,17 +797,21 @@ fn a_programs_end_runs_its_librarys_unloader() {
         *PROGRAM_HOOKS.lock().expect("unpoisoned"),
         vec!["loader", "unloader"]
     );
+    assert_eq!(PROGRAM_VACATES.load(std::sync::atomic::Ordering::SeqCst), 2);
 }
 
 /// A library termination left open is closed when the interpreter's
 /// libraries go, whoever else still holds it.
 #[test]
 fn dropping_the_libraries_closes_what_termination_left_open() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut libraries = crate::Libraries::new();
-    let held = libraries.hold(
-        b"hooked",
-        Rc::new(interrexx_api::load::hooks_only(None, None)),
-    );
+    let (held, _) = libraries
+        .hold(
+            b"hooked",
+            Box::new(interrexx_api::load::hooks_only(None, None)),
+        )
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
     assert!(held.is_open());
     drop(libraries);
     assert!(!held.is_open(), "dropping the libraries left one open");
@@ -1012,6 +1046,7 @@ fn handle_carried_copies_are_pruned_without_a_collection() {
 /// handler's code to the library that registered it.
 #[test]
 fn a_registered_handler_answers_until_a_library_closes() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut interp = Interp::new();
     assert!(matches!(
         interp.settle_library(
@@ -1096,4 +1131,109 @@ fn a_native_buffers_bytes_are_charged_and_held() {
         held >= N,
         "held_bytes reports the buffer's {N} bytes, got {held}"
     );
+}
+
+/// A callback from a thread running no native call, through `context`, on a
+/// thread of its own, which has posted its recall once this returns.
+fn pending_callback(
+    interp: &Interp,
+    context: usize,
+) -> std::thread::JoinHandle<interrexx_api::values::TakeFor> {
+    use interrexx_api::values::Baton as _;
+    let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+    let inbox = interp.timer.inbox();
+    let waiting = std::thread::spawn(move || requester.take_for(context));
+    while !inbox.requests().pending(crate::timer::INBOX) {
+        std::thread::yield_now();
+    }
+    waiting
+}
+
+/// **A callback whose recall is posted and waiting for the baton when the
+/// interpreter ends is woken and refused** (`r[native.threads.end]`), in both
+/// ways the end can find it: the interpreter terminates and is dropped with
+/// the recall unserved, or it serves the recall after it terminated.
+#[test]
+fn a_pending_callback_at_end_is_refused() {
+    use interrexx_api::values::TakeFor;
+    let mut interp = Interp::new();
+    let unserved = pending_callback(&interp, 1);
+    assert!(interp.terminate().is_empty());
+    drop(interp);
+    assert_eq!(unserved.join().expect("no panic"), TakeFor::Refused);
+
+    let mut interp = Interp::new();
+    // A context `AttachThread` built, so that serving the recall as a live
+    // interpreter's would file an attached activity for it.
+    let context = interp
+        .pending_attached_context()
+        .expect("a live interpreter with a requester builds one");
+    let served = pending_callback(&interp, context);
+    assert!(interp.terminate().is_empty());
+    interp.drain_completions(crate::scheduler::DrainAt::Stopped);
+    assert_eq!(served.join().expect("no panic"), TakeFor::Refused);
+    // The refused recall filed no attached activity: serving it as one of a
+    // live interpreter would have.
+    assert_eq!(interp.attached_count(), 0);
+    // One posted after the end is refused without a wait.
+    let late = pending_callback_unposted(&interp, 1);
+    assert_eq!(late, TakeFor::Refused);
+}
+
+/// [`pending_callback`]'s callback made on this thread after the
+/// interpreter has terminated, when nothing is posted.
+fn pending_callback_unposted(interp: &Interp, context: usize) -> interrexx_api::values::TakeFor {
+    use interrexx_api::values::Baton as _;
+    let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| requester.take_for(context))
+            .join()
+            .expect("no panic")
+    })
+}
+
+/// **A callback that arrives while another runs is held, and the held ones
+/// are served first come, first served, once it has stopped running**
+/// (`r[native.threads.attach.deviation.178]`). Three threads attached to
+/// contexts of their own post their recalls one after another while the
+/// running activity is marked as a callback that runs: draining serves none.
+/// Once it no longer runs, one drain serves all three in the order they
+/// arrived.
+#[test]
+fn callbacks_held_while_one_runs_are_served_in_arrival_order() {
+    use interrexx_api::values::{Baton as _, TakeFor};
+    let mut interp = Interp::new();
+    interp.pretend_callback_runs(true);
+    let served = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let inbox = interp.timer.inbox();
+    let mut threads = Vec::new();
+    for arrival in 0..3 {
+        let context = interp
+            .pending_attached_context()
+            .expect("a live interpreter with a requester builds one");
+        let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+        let served = std::sync::Arc::clone(&served);
+        threads.push(std::thread::spawn(move || {
+            let taken = requester.take_for(context);
+            if taken == TakeFor::Taken {
+                served.lock().expect("no panic").push(arrival);
+                requester.release();
+            }
+            taken
+        }));
+        while !inbox.requests().pending(crate::timer::INBOX) {
+            std::thread::yield_now();
+        }
+        interp.drain_completions(crate::scheduler::DrainAt::Stopped);
+        assert_eq!(interp.activities.held.len(), arrival + 1);
+    }
+    assert!(served.lock().expect("no panic").is_empty());
+    interp.pretend_callback_runs(false);
+    interp.drain_completions(crate::scheduler::DrainAt::Stopped);
+    for thread in threads {
+        assert_eq!(thread.join().expect("no panic"), TakeFor::Taken);
+    }
+    assert_eq!(*served.lock().expect("no panic"), [0, 1, 2]);
+    assert!(interp.activities.held.is_empty());
 }

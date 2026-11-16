@@ -14,7 +14,7 @@ use interrexx_api::load::{CommandHandler, HeldMethod, HeldRoutine, Hook, Library
 use interrexx_api::redirect::Redirector;
 use interrexx_api::values::{
     Activation, CStringPool, Class, Constants, Conversion, Failure as Refused, Host, HostRef,
-    Numeric, Raised as Condition,
+    Numeric, Raised as Condition, TakeFor,
 };
 use interrexx_core::{BehaviourId, Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
@@ -334,7 +334,7 @@ impl Interp {
         }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
-        self.leave_next_native = false;
+        let root = std::mem::take(&mut self.leave_next_native);
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
         self.native_frame_mut().executable = executable;
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -343,6 +343,12 @@ impl Interp {
         let Some((answered, pending)) =
             self.native_call(held, args, exits, ObjRef::NIL, resume_library_routine)
         else {
+            // The call the root program makes first is the instance's root
+            // call, which `leave_next_native` sends off the baton.
+            if root && let Some(frame) = self.activity.native_call.as_ref().map(|call| call.frame())
+            {
+                self.note_root_call(frame);
+            }
             return Ok(Started::Entered);
         };
         self.end_library_routine(answered, pending, name, program, args)
@@ -517,6 +523,17 @@ impl Interp {
             let _reachable = crate::embedding::OtherRun::enter(self.timer.inbox_ref());
             let stress = self.stress_collect;
             let pool = self.opens_variable_pool(&held);
+            // A deterministic switch mode runs every native call on the baton.
+            if self.switch.is_none() {
+                return Some(self.vacated_native_call(
+                    &held,
+                    args,
+                    &thread,
+                    frame,
+                    (pool, stress),
+                    &mut strings,
+                ));
+            }
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
@@ -586,6 +603,81 @@ impl Interp {
         None
     }
 
+    /// [`Interp::native_call`]'s call `held` on the baton, in the native frame
+    /// `frame` of the running activity whose thread context is `thread`, with
+    /// the baton vacated while the stub runs (`r[native.threads.attach]`): a
+    /// thread the stub waits for may call back meanwhile. Its signature, its
+    /// arguments and its result are converted on the baton. `opens` says
+    /// whether the call opens the variable pool and whether it collects
+    /// between its halves.
+    fn vacated_native_call(
+        &mut self,
+        held: &HeldCall,
+        args: &[Option<ObjRef>],
+        thread: &interrexx_api::ffi::ThreadContext,
+        frame: u64,
+        opens: (bool, bool),
+        strings: &mut CStringPool,
+    ) -> (Result<Option<ObjRef>, Refused>, Option<usize>) {
+        let (pool, stress) = opens;
+        let vacated = self.vacated(frame);
+        let (answered, pending) = {
+            let activation = Activation::new(Conversion {
+                host: HostRef::through(&vacated),
+                strings,
+            });
+            activation.set_frame(frame);
+            activation.set_between_halves(stress);
+            if pool {
+                activation.open_variable_pool();
+            }
+            let answered = thread.enter(&activation, |contexts| {
+                let mut native = NativeCall::empty();
+                let signature = match held {
+                    HeldCall::Method(held, _) => invoke::held_signature(held, &contexts.method()),
+                    HeldCall::Routine(held) => {
+                        invoke::held_routine_signature(held, &contexts.call())
+                    }
+                }?;
+                invoke::prepare(&mut native, &signature, &activation, args)?;
+                if activation.between_halves() {
+                    activation.conversion().host.between_halves();
+                }
+                let completion = vacated.around(|| held.call(&mut native, contexts));
+                if activation.between_halves() {
+                    activation.conversion().host.between_halves();
+                }
+                invoke::finish(&activation, completion)
+            });
+            (answered, activation.pending())
+        };
+        drop(vacated);
+        self.pop_vacancy(frame);
+        (answered, pending)
+    }
+
+    /// The baton as the running activity's native call in the native frame
+    /// `frame` vacates it, recorded ([`Interp::push_vacancy`]) until
+    /// [`Interp::pop_vacancy`]. The first thread that recalls the baton from
+    /// elsewhere while it is vacated starts a pool thread to serve it
+    /// ([`crate::island::wait_served`]). A call nobody calls back from
+    /// elsewhere starts none.
+    ///
+    /// The interpreter is reached through the answer only, until it drops:
+    /// its root pointer is derived last, from this borrow.
+    pub(crate) fn vacated(&mut self, frame: u64) -> Vacated {
+        self.push_vacancy(frame);
+        Vacated {
+            baton: Arc::clone(&self.baton),
+            inbox: self.timer.inbox(),
+            activity: self.running_activity(),
+            frame,
+            stack: (self.stack_base, self.stack_room),
+            depth: std::cell::Cell::new(None),
+            own: crate::island::Island::of(self),
+        }
+    }
+
     /// Whether a native call made now leaves its driver: from a resumable entry nothing pins, and where another activity
     /// is alive or a test mode asks for every exit. A lone activity's call
     /// runs on the baton, which costs a single-activity program nothing.
@@ -606,6 +698,7 @@ impl Interp {
             self.activity.native_call.take().ok_or_else(|| {
                 Loud::scheduler_inconsistency("a native call resumed with no record")
             })?;
+        self.end_root_call(call.frame());
         let Stage::Completed(completion) = std::mem::replace(&mut call.stage, Stage::Prepared)
         else {
             return Err(
@@ -649,6 +742,7 @@ impl Interp {
         let Some(call) = self.activity.native_call.take() else {
             return;
         };
+        self.end_root_call(call.frame());
         let scope = self.native_frame().scope;
         let popped = if call.unstarted() {
             // No native body can still use kept objects or lent buffers.
@@ -668,7 +762,12 @@ impl Interp {
     }
 
     /// Runs `library`'s `hook` in a native frame of its own, as
-    /// `Activity::run` runs a callback dispatcher.
+    /// `Activity::run` runs a callback dispatcher, with the baton vacated
+    /// while the hook runs (`r[native.loading.reentrant]`), as an external
+    /// call runs: a thread the hook waits for may call into this interpreter
+    /// meanwhile. A deterministic switch mode keeps the baton, as it does for
+    /// every native call. `loading`, the guard of a loader's load, is
+    /// dropped as soon as the hook has returned or unwound.
     ///
     /// # Errors
     /// The condition the hook raised, and [`Loud`] for an interface member it
@@ -677,17 +776,48 @@ impl Interp {
         &mut self,
         library: &Library,
         hook: Hook,
+        loading: Option<crate::libraries::Loading>,
     ) -> Result<(), Failure> {
         if !library.has_hook(hook) {
             return Ok(());
         }
+        // Dropped before the baton is taken back: a load waiting for this
+        // loader may hold a lend above the vacancy, through a thread the
+        // loader called into this interpreter for, and the baton comes back
+        // only once that lend has ended (`r[native.loading.shared]`).
+        let returned = move |ran| {
+            drop(loading);
+            ran
+        };
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
         pin_enter!(self, crate::pinning::PinKind::LibraryEntry);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
         let inbox = self.timer.inbox();
-        let (ran, pending) = {
-            let frame = self.native_token();
+        let frame = self.native_token();
+        // A loader or unloader is external code, so it runs as
+        // `run_classic_handler` runs a classic handler. The vacancy's root
+        // pointer is derived from this borrow of the whole interpreter, as
+        // the last use of `self` until it is popped, so every callback the
+        // hook makes reaches the interpreter through it.
+        let (ran, pending) = if self.switch.is_none() {
+            let vacated = self.vacated(frame);
+            let ran = {
+                let activation = Activation::new(Conversion {
+                    host: HostRef::through(&vacated),
+                    strings: &mut strings,
+                });
+                activation.set_frame(frame);
+                let _reachable = crate::embedding::OtherRun::enter(&inbox);
+                let ran = thread.enter(&activation, |contexts| {
+                    vacated.around(|| returned(invoke::hook(library, hook, contexts, &activation)))
+                });
+                (ran, activation.pending())
+            };
+            drop(vacated);
+            self.pop_vacancy(frame);
+            ran
+        } else {
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
@@ -695,7 +825,7 @@ impl Interp {
             activation.set_frame(frame);
             let _reachable = crate::embedding::OtherRun::enter(&inbox);
             let ran = thread.enter(&activation, |contexts| {
-                invoke::hook(library, hook, contexts, &activation)
+                returned(invoke::hook(library, hook, contexts, &activation))
             });
             (ran, activation.pending())
         };
@@ -783,6 +913,12 @@ impl Interp {
     /// length of the two steps, so the first native call or hook among them
     /// makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
+        // A thread that attaches or calls back from now on is not served: the
+        // attached activities end with the interpreter (`r[native.threads.end]`).
+        // A `Halt` or `SetTrace` through the instance still reaches the
+        // last-chance `UNINIT`s and the unloaders, and posts nothing once
+        // they have run.
+        self.timer.inbox().end();
         let running = self.activity.thread.take();
         if let Some(running) = &running {
             running.retire();
@@ -793,8 +929,6 @@ impl Interp {
         if terminated.is_some() {
             self.termination_thread = terminated;
         }
-        // Nothing serves the inbox from here on: a `Halt` or `SetTrace` through
-        // the instance posts nothing (`r[native.threads.trace]`).
         self.timer.inbox().close();
         refused
     }
@@ -804,22 +938,70 @@ impl Interp {
     /// ended the walk if one did. For example, a condition raised inside an
     /// unloader ends the walk, reports nothing, leaves the exit status alone
     /// and leaves that library and every later one open. A refusal ends it too.
+    ///
+    /// The libraries are those of every instance of the process, and they are
+    /// walked only where this interpreter is the last live instance
+    /// (`r[native.loading.unload]`).
     fn run_package_unloaders(&mut self) -> Option<Loud> {
-        for (_, library) in self.libraries.in_unload_order() {
-            match self.run_package_hook(&library, Hook::Unloader) {
-                Ok(()) => {
-                    // A registered handler's code may be in this library, and
-                    // nothing ties the two together.
-                    if library.close() {
-                        self.command_handlers.clear();
-                        self.environments.close_registered();
+        // Held until the walk ends, however it ends, so that no instance is
+        // created while an unloader runs (`r[native.loading.again]`).
+        let mut unloading = self.libraries.end()?;
+        // A library an unloader loads is walked after the ones before it, in
+        // the same termination (`r[native.loading.unload]`).
+        let refused = 'walk: loop {
+            let mut batch = unloading.next();
+            if batch.is_empty() {
+                match unloading.finish() {
+                    crate::libraries::Finish::Done => break None,
+                    crate::libraries::Finish::More(more) => batch = more,
+                    // A loader another thread runs through this instance may
+                    // call into it, so the wait vacates the baton.
+                    crate::libraries::Finish::Wait(holders) => {
+                        self.wait_vacated(|| crate::libraries::await_holders(holders));
+                        continue;
                     }
                 }
-                Err(Failure::Loud(loud)) => return Some(*loud),
-                Err(_) => return None,
             }
+            for (_, unload) in batch {
+                let library = unload.library();
+                match self.run_package_hook(&library, Hook::Unloader, None) {
+                    Ok(()) => {
+                        // A registered handler's code may be in this library, and
+                        // nothing ties the two together.
+                        if library.close() {
+                            self.command_handlers.clear();
+                            self.environments.close_registered();
+                            self.libraries.note_closed();
+                        }
+                    }
+                    Err(Failure::Loud(loud)) => break 'walk Some(*loud),
+                    Err(_) => break 'walk None,
+                }
+            }
+        };
+        self.libraries.unloaded(unloading);
+        refused
+    }
+
+    /// Runs `wait`, which must not touch this interpreter, with the baton
+    /// vacated (`r[native.threads.attach]`), in a native frame of its own, as
+    /// an external call runs: a thread that `wait` waits for may call into
+    /// this interpreter meanwhile. A deterministic switch mode keeps the
+    /// baton, as it does for every native call.
+    pub(crate) fn wait_vacated(&mut self, wait: impl FnOnce()) {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        if self.switch.is_none() {
+            let frame = self.native_token();
+            let vacated = self.vacated(frame);
+            vacated.around(wait);
+            drop(vacated);
+            self.pop_vacancy(frame);
+        } else {
+            wait();
         }
-        None
+        let _ = self.pop_native_frame();
+        pin_leave!(self);
     }
 
     /// What a native call answers once its frame is off the stack: the value,
@@ -1064,6 +1246,22 @@ impl Interp {
             self.clause_exits = true;
         }
         answer
+    }
+
+    /// Pushes the base native frame of an attached activity, the running one,
+    /// which has no Rexx caller: the frame every callback through its thread
+    /// context runs in, holding the references they make and the condition
+    /// one leaves (`r[native.threads.attach]`).
+    pub(crate) fn push_attached_frame(&mut self) {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    }
+
+    /// Pops [`Interp::push_attached_frame`]'s frame off the running activity,
+    /// releasing what it holds.
+    pub(crate) fn pop_attached_frame(&mut self) {
+        if let Some(mut frame) = self.activity.native_handles.pop() {
+            self.end_native_frame(&mut frame);
+        }
     }
 
     /// Releases what the native frame of an abandoned call, named by the
@@ -1331,6 +1529,12 @@ impl NativeInFlight {
     /// Whether no native body has run or can still access the frame.
     fn unstarted(&self) -> bool {
         matches!(self.stage, Stage::Prepared | Stage::SpawnFailed(_))
+    }
+
+    /// Whether the call has left its driver and its completion is not yet
+    /// drained.
+    pub(crate) fn left(&self) -> bool {
+        matches!(self.stage, Stage::Left)
     }
 
     /// Whether the call waits for its driver exit.
@@ -1614,7 +1818,91 @@ impl<'p> Recalling<'p> {
             base: Some(self.base),
             room: None,
         }));
-        Lent::wait(self.baton)
+        crate::island::wait_served(self.baton, false).expect("a wait that is never closed")
+    }
+}
+
+/// The baton as a native call made on it reaches it while it runs with the
+/// baton vacated ([`Interp::vacated`]): the call's own thread takes the
+/// vacancy back for a callback where nobody holds it, as a kernel lock is
+/// taken, and recalls the baton from the thread serving the vacancy where one
+/// does, as a pool thread recalls it for a callback of its call.
+pub(crate) struct Vacated {
+    baton: Arc<InterpBaton>,
+    inbox: Arc<Inbox<Posted>>,
+    activity: ActivityId,
+    frame: u64,
+    /// The calling thread's stack base and room, for Rexx code a callback
+    /// runs under the serving thread's lend.
+    stack: (usize, usize),
+    /// The vacancy's depth while the stub runs.
+    depth: std::cell::Cell<Option<usize>>,
+    /// The interpreter's root pointer, derived from the calling thread's own
+    /// borrow, which reaches it until this drops.
+    own: crate::island::Island,
+}
+
+impl Vacated {
+    /// Runs `call`, which touches nothing of the interpreter's but through
+    /// callbacks, with the baton vacated, and takes it back: directly where
+    /// it is free, else once the thread it was handed to has seen the call
+    /// return and given it back.
+    pub(crate) fn around<R>(&self, call: impl FnOnce() -> R) -> R {
+        let depth = self.baton.vacate(self.own);
+        self.depth.set(Some(depth));
+        let answer = call();
+        if !self.baton.reclaim_free(depth) {
+            self.inbox.post(Posted::Returned {
+                activity: self.activity,
+                frame: self.frame,
+            });
+            self.baton.await_return(depth);
+        }
+        self.depth.set(None);
+        answer
+    }
+}
+
+impl interrexx_api::values::Baton for Vacated {
+    fn take_unless_held(&self) -> bool {
+        if self.baton.held_here() {
+            return false;
+        }
+        // A thread that claimed the vacancy may find no pool thread to hand it
+        // to and free it again. Only a thread that serves the vacancy, or
+        // holds a lend above it, serves a recall, so the recall is posted only
+        // then, and this thread, whose call the vacancy is, never claims it.
+        if let Some(depth) = self.depth.get()
+            && self.baton.take_vacancy(depth)
+        {
+            return true;
+        }
+        self.inbox.post(Posted::Recall(Recall {
+            by: Recaller::Call {
+                activity: self.activity,
+                frame: self.frame,
+            },
+            thread: std::thread::current().id(),
+            base: Some(self.stack.0),
+            room: Some(self.stack.1),
+        }));
+        std::mem::forget(crate::island::Lent::wait(&self.baton));
+        true
+    }
+
+    fn release(&self) {
+        self.baton.give_back_or_free();
+    }
+
+    fn held_here(&self) -> bool {
+        self.baton.held_here()
+    }
+
+    /// The host lent with a lend above the vacancy, a serving thread's for a
+    /// callback, else the calling thread's own.
+    fn host(&self) -> Option<std::ptr::NonNull<dyn interrexx_api::values::Host>> {
+        let lent = (self.depth.get()).and_then(|depth| self.baton.lent_above(depth));
+        Some(lent.unwrap_or(self.own).host())
     }
 }
 
@@ -1637,26 +1925,51 @@ impl Requester {
 
 impl interrexx_api::values::Baton for Requester {
     fn take_unless_held(&self) -> bool {
-        self.take_for(0)
-    }
-
-    fn take_for(&self, context: usize) -> bool {
         if self.baton.held_here() {
             return false;
         }
         #[cfg(test)]
         self.baton.count_take();
-        // A thread attached to an embedding instance runs Rexx code on its
-        // own stack, as far as the part of it below a quarter's reserve.
-        let stack = interrexx_api::ffi::attached_stack();
-        self.inbox.post(Posted::Recall(Recall {
-            by: Recaller::Context(context),
-            thread: std::thread::current().id(),
-            base: stack.map(|(top, _)| top),
-            room: stack.map(|(_, size)| size - size / 4),
-        }));
-        std::mem::forget(Lent::wait(&self.baton));
+        self.inbox.post(self.recall(0));
+        std::mem::forget(
+            crate::island::wait_served(&self.baton, false).expect("a wait that is never closed"),
+        );
         true
+    }
+
+    /// Refused where the interpreter has terminated: the inbox is closed, so
+    /// nothing is posted, or it closed before the recall was served, so the
+    /// baton lent for it is given straight back, or the interpreter was
+    /// dropped with the recall unserved, so nothing will lend the baton
+    /// (`r[native.threads.end]`).
+    fn take_for(&self, context: usize) -> TakeFor {
+        if self.baton.held_here() {
+            return TakeFor::Held;
+        }
+        #[cfg(test)]
+        self.baton.count_take();
+        if !self.inbox.post_unless_closed(self.recall(context)) {
+            return TakeFor::Refused;
+        }
+        let Some(lent) = crate::island::wait_served(&self.baton, true) else {
+            return TakeFor::Refused;
+        };
+        // The holder ends the inbox, and it lends nothing while it does, so
+        // this reads what it was when the lend was made.
+        if self.inbox.is_ending() {
+            drop(lent);
+            return TakeFor::Refused;
+        }
+        std::mem::forget(lent);
+        TakeFor::Taken
+    }
+
+    fn ended(&self) -> bool {
+        self.inbox.is_closed()
+    }
+
+    fn ending(&self) -> bool {
+        self.inbox.is_ending()
     }
 
     fn release(&self) {
@@ -1682,9 +1995,15 @@ impl interrexx_api::values::Baton for Requester {
         true
     }
 
-    /// Once the interpreter has terminated, whose inbox nothing reads from then on.
-    fn ended(&self) -> bool {
-        self.inbox.is_closed()
+    /// In the simulation mode, where the attach's timing is real, noting it
+    /// for the baton's holder to refuse at its next clause boundary.
+    fn refuses_attach(&self) -> bool {
+        let requests = self.inbox.requests();
+        if !requests.pending(crate::timer::SIM) {
+            return false;
+        }
+        requests.set(crate::timer::ATTACH);
+        true
     }
 
     fn post_halt(&self) {
@@ -1693,6 +2012,51 @@ impl interrexx_api::values::Baton for Requester {
 
     fn post_trace(&self, on: bool) {
         self.inbox.post_trace_all(on);
+    }
+
+    /// Recalls the baton as a callback does, with the running activity left
+    /// as it is, and ends the attached activity under the lend.
+    fn detach_activity(&self, context: usize) -> bool {
+        self.lend_here()
+            .is_some_and(|mut lent| lent.interp().detach_activity(context))
+    }
+}
+
+impl Requester {
+    /// The recall a callback through the context at `context` posts, `0`
+    /// for one that leaves the running activity as it is. A thread attached
+    /// to an embedding instance runs Rexx code on its own stack, as far as
+    /// the part of it below a quarter's reserve.
+    fn recall(&self, context: usize) -> Posted {
+        let stack = interrexx_api::ffi::attached_stack();
+        Posted::Recall(Recall {
+            by: Recaller::Context(context),
+            thread: std::thread::current().id(),
+            base: stack.map(|(top, _)| top),
+            room: stack.map(|(_, size)| size - size / 4),
+        })
+    }
+
+    /// The baton, recalled from its holder and lent to this thread with the
+    /// running activity left as it is, until the answer drops. `None` where
+    /// this thread holds it already, or the interpreter has terminated, so
+    /// nothing would lend it.
+    fn lend_here(&self) -> Option<Lent<'_>> {
+        if self.baton.held_here() {
+            return None;
+        }
+        let posted = self.inbox.post_unless_closed(Posted::Recall(Recall {
+            by: Recaller::Context(0),
+            thread: std::thread::current().id(),
+            base: None,
+            room: None,
+        }));
+        if !posted {
+            return None;
+        }
+        // Posted just before the interpreter closed its inbox, and dropped
+        // with it unserved: nothing lends the baton.
+        crate::island::wait_served(&self.baton, true)
     }
 }
 
@@ -1824,13 +2188,7 @@ impl Host for Interp {
     }
 
     fn constants(&mut self) -> Constants<ObjRef> {
-        Constants {
-            nil: ObjRef::NIL,
-            // #599, ruling D15: the handles of `.true` and `.false`.
-            true_object: crate::eval::LOGICAL_TRUE,
-            false_object: crate::eval::LOGICAL_FALSE,
-            null_string: self.text(b""),
-        }
+        constant_objects()
     }
 
     fn set_object_variable(&mut self, name: &[u8], value: Option<ObjRef>) {
@@ -2227,6 +2585,15 @@ impl Interp {
             _ => None,
         };
         let failure = refused.unwrap_or(failure);
+        // A refusal in a message an attached thread sent has no call whose
+        // return would end the program with it, so the program's end reports
+        // it, as it does another activity's (`r[native.threads.attach]`).
+        if let Failure::Loud(loud) = &failure
+            && self.activity.attached
+            && self.activity.native_handles.len() == 1
+        {
+            self.keep_late_failure(Failure::Loud(loud.clone()));
+        }
         let levels = self.take_failure_levels();
         let frame = self
             .activity
@@ -2469,4 +2836,17 @@ fn terminated(bytes: &[u8]) -> Box<[u8]> {
 /// under.
 fn pinned_copy_key(copy: ObjRef) -> String {
     format!("a Routine copy a call site keeps, {}", copy.bits())
+}
+
+/// The interpreter's constants a thread table's data members carry: `.nil`,
+/// `.true`, `.false` and the null string, each an immediate, so the same for
+/// every interpreter and from its start.
+pub(crate) fn constant_objects() -> Constants<ObjRef> {
+    Constants {
+        nil: ObjRef::NIL,
+        // #599, ruling D15: the handles of `.true` and `.false`.
+        true_object: crate::eval::LOGICAL_TRUE,
+        false_object: crate::eval::LOGICAL_FALSE,
+        null_string: ObjRef::inline_text(b"").expect("the null string is inline"),
+    }
 }

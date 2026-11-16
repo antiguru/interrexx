@@ -737,6 +737,9 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
         .filter(|(index, _)| index % SIDECAR_SHARDS == shard)
         .map(|(_, stem)| stem)
         .collect();
+    // The halves the oracle is blind to, which this interpreter is asked about.
+    let mut asked = Vec::new();
+    let mut dirs = Vec::new();
     for stem in &stems {
         let rel_path = format!("{LANG_SUBDIR}/{stem}.rex");
         let abs = fs::canonicalize(corpus_dir.join(&rel_path))
@@ -754,13 +757,7 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
             let cwd = prepare_run_directory(&dir, sidecar);
             oracle.run_in_with(&abs, &cwd, &borrowed, sidecar.stdin.as_deref())
         };
-        let run_crate = |sidecar: &Sidecar| {
-            let overrides = resolved_environment(sidecar, &dir);
-            let cwd = prepare_run_directory(&dir, sidecar);
-            run_rust_alone(&abs, &cwd, &overrides, sidecar.stdin.as_deref())
-        };
         let oracle_with = run_oracle(&sidecar);
-        let mut crate_with = None;
         for half in sidecar.halves() {
             let partial = sidecar.without(&half);
             // **All three descriptors.** A sidecar whose whole effect is on
@@ -773,18 +770,54 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
             {
                 continue;
             }
-            let with = crate_with.get_or_insert_with(|| run_crate(&sidecar));
-            let without = run_crate(&partial);
-            assert!(
-                with.stdout != without.stdout
-                    || with.stderr != without.stderr
-                    || with.exit_code != without.exit_code,
-                "{rel_path}: neither interpreter answers differently without its {half:?}, so \
-                 that part of the sidecar is not load-bearing and the witness would stay green \
-                 if it were deleted"
-            );
+            asked.push((rel_path.clone(), abs.clone(), dirs.len(), half, partial));
         }
-        empty_run_directory(&dir);
+        dirs.push((dir, sidecar));
+    }
+
+    let run_crate = |at: usize, abs: &Path, sidecar: &Sidecar| {
+        let dir = &dirs[at].0;
+        let overrides = resolved_environment(sidecar, dir);
+        let cwd = prepare_run_directory(dir, sidecar);
+        run_rust_alone(abs, &cwd, &overrides, sidecar.stdin.as_deref())
+    };
+    // **Runs that are to miss a library come first.** These runs share one
+    // process, and once a run has loaded a library, a later load by the same
+    // name may find that copy even where its own search no longer reaches it
+    // (`r[native.loading.static]`), so a run with the whole sidecar can make a
+    // run without its `LD_LIBRARY_PATH` answer as if it had it. Every run
+    // without a half therefore comes before any run with a whole sidecar, and
+    // of those, a run whose environment names no `LD_LIBRARY_PATH` before one
+    // that does. That relies only on the process having loaded nothing before
+    // this test, which nextest's process per test gives.
+    let mut order: Vec<usize> = (0..asked.len()).collect();
+    order.sort_by_key(|&at| {
+        asked[at]
+            .4
+            .environment
+            .iter()
+            .any(|(name, _)| name == "LD_LIBRARY_PATH")
+    });
+    let mut without: Vec<Option<Outcome>> = asked.iter().map(|_| None).collect();
+    for at in order {
+        let (_, abs, dir, _, partial) = &asked[at];
+        without[at] = Some(run_crate(*dir, abs, partial));
+    }
+    let mut with: Vec<Option<Outcome>> = dirs.iter().map(|_| None).collect();
+    for ((rel_path, abs, dir, half, _), without) in asked.iter().zip(without) {
+        let with = with[*dir].get_or_insert_with(|| run_crate(*dir, abs, &dirs[*dir].1));
+        let without = without.expect("every run without a half ran");
+        assert!(
+            with.stdout != without.stdout
+                || with.stderr != without.stderr
+                || with.exit_code != without.exit_code,
+            "{rel_path}: neither interpreter answers differently without its {half:?}, so \
+             that part of the sidecar is not load-bearing and the witness would stay green \
+             if it were deleted"
+        );
+    }
+    for (dir, _) in &dirs {
+        empty_run_directory(dir);
     }
 }
 
