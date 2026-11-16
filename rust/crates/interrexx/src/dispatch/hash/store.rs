@@ -4,11 +4,21 @@
 //! A store is a compact table. Its entries sit in dense arrays in the order
 //! they were added, and a sparse slot index, open-addressed, maps a hash to
 //! the entries filed under it. A new entry goes at the end of the entry
-//! arrays; a removed one leaves a hole there and a deleted marker in its slot.
-//! When the entry arrays fill, the store is rebuilt into fresh arrays that
-//! keep the live entries in their order and re-slot them from each entry's
-//! cached hash, so a rebuild sends nothing. Iteration walks the entry arrays,
-//! which is what makes every enumeration answer insertion order.
+//! arrays; a removed one leaves a hole there. When the entry arrays fill, the
+//! store is rebuilt into fresh arrays that keep the live entries in their
+//! order and re-slot them from each entry's cached hash, so a rebuild sends
+//! nothing. Iteration walks the entry arrays, which is what makes every
+//! enumeration answer insertion order.
+//!
+//! **The live entries of one code are one chain**, filed at one slot: the
+//! slot names the oldest of them, each links to the next, oldest first, and
+//! the oldest also names the newest, so an append joins its chain without
+//! walking it. Duplicates of one index share a code, so however many a
+//! `Relation` or `Bag` holds, a lookup reaches the oldest at the chain's head
+//! and an append or a removal of the oldest passes over no other. Distinct
+//! indexes whose hashes fold alike share a chain too, and a lookup compares
+//! them by `==` in the chain's order. A slot whose chain has lost its last
+//! entry is marked deleted.
 //!
 //! **Within one set of arrays, a position holds at most one entry in its
 //! life**: entries are only appended, a hole is never filled again, and every
@@ -22,9 +32,10 @@ use super::*;
 
 /// The five pool entries a hash store is, bound in the receiver's own pool
 /// under the `MapCollection` class as scope: the entries' indexes, their
-/// items and their cached hashes ([`code_of`], `None` for a hole), all in
-/// insertion order; the slot index ([`EMPTY`], [`DELETED`], or an entry's
-/// position plus one); and how many entry positions are used, holes included.
+/// items and their [`FIELDS`] (cached hash and chain links), all in
+/// insertion order; the slot index ([`EMPTY`], [`DELETED`], or the position
+/// of a chain's oldest entry plus one); and how many entry positions are
+/// used, holes included.
 pub(super) const HASH_INDEXES: &[u8] = b"HASHINDEXES";
 pub(super) const HASH_ITEMS: &[u8] = b"HASHITEMS";
 pub(super) const HASH_NEXT: &[u8] = b"HASHNEXT";
@@ -74,9 +85,24 @@ pub(super) const UNKNOWN_METHOD: &[u8] = b"METHODUNKNOWN";
 /// A slot no entry has been filed in since the slots were built: a probe
 /// that reaches one has seen every entry of its hash.
 const EMPTY: i64 = 0;
-/// A slot whose entry was removed: a probe passes over it, and an append
-/// does not reuse it, so the entries of one hash meet a probe oldest first.
+/// A slot whose chain lost its last entry: a probe passes over it, and a new
+/// chain may take it once the probe has found no chain of its code.
 const DELETED: i64 = -1;
+
+/// The fields each entry has in the codes array, at `position * FIELDS`:
+/// its [`CODE`], the position of the [`NEXT`] entry of its chain, and, for
+/// the oldest entry of a chain, the position of the chain's [`TAIL`]. The
+/// links reuse the codes array rather than a sixth pool entry, so that the
+/// store stays five names that `copy`, a rebuild and `EMPTY` already treat
+/// as one: a copy duplicates the links with the codes, and fresh arrays
+/// start with none.
+const FIELDS: usize = 3;
+/// The entry's [`code_of`], `None` for a hole.
+const CODE: usize = 0;
+/// The next entry of the chain, `None` for its newest.
+const NEXT: usize = 1;
+/// At a chain's oldest entry, the chain's newest; `None` elsewhere.
+const TAIL: usize = 2;
 
 /// The fewest slots a store has.
 const MINIMUM_SLOTS: usize = 8;
@@ -177,10 +203,61 @@ pub(super) fn mark_in(slots: &[Option<ObjRef>], slot: usize) -> Mark {
 
 /// The code cached for the entry at a position, `None` for a hole.
 pub(super) fn code_in(codes: &[Option<ObjRef>], position: usize) -> Option<u64> {
-    match codes.get(position).copied().flatten().map(ObjRef::decode) {
-        Some(Decoded::SmallInt(code)) if code >= 0 => Some(code as u64),
+    field_in(codes, position, CODE).map(|code| code as u64)
+}
+
+/// The entry after the one at `position` in its chain, `None` for the newest.
+pub(super) fn next_in(codes: &[Option<ObjRef>], position: usize) -> Option<usize> {
+    field_in(codes, position, NEXT).map(|next| next as usize)
+}
+
+/// The newest entry of the chain whose oldest is at `head`.
+fn tail_in(codes: &[Option<ObjRef>], head: usize) -> usize {
+    field_in(codes, head, TAIL).map_or(head, |tail| tail as usize)
+}
+
+fn field_in(codes: &[Option<ObjRef>], position: usize, field: usize) -> Option<i64> {
+    match codes
+        .get(position * FIELDS + field)
+        .copied()
+        .flatten()
+        .map(ObjRef::decode)
+    {
+        Some(Decoded::SmallInt(value)) if value >= 0 => Some(value),
         _ => None,
     }
+}
+
+/// Where the chain of `code` is: its slot and the position of its oldest
+/// entry. When the store holds no entry of that code, `Err` with the slot a
+/// new chain takes: the first deleted one the probe passed, or the empty one
+/// it ended at.
+pub(super) fn chain_in(
+    slots: &[Option<ObjRef>],
+    codes: &[Option<ObjRef>],
+    code: u64,
+) -> Result<(usize, usize), usize> {
+    let mut sequence = Sequence::new(code, slots.len());
+    let mut free = None;
+    loop {
+        match mark_in(slots, sequence.at()) {
+            Mark::Empty => return Err(free.unwrap_or(sequence.at())),
+            Mark::Deleted => {
+                free.get_or_insert(sequence.at());
+            }
+            Mark::Entry(head) => {
+                if code_in(codes, head) == Some(code) {
+                    return Ok((sequence.at(), head));
+                }
+            }
+        }
+        sequence.advance();
+    }
+}
+
+/// The positions of the chain whose oldest entry is at `head`, oldest first.
+pub(super) fn chain_from(codes: &[Option<ObjRef>], head: usize) -> impl Iterator<Item = usize> {
+    std::iter::successors(Some(head), |&position| next_in(codes, position))
 }
 
 /// A SmallInt handle for a value known to be in range: a code, a mark or a
@@ -275,17 +352,20 @@ fn build(
     let scope = hash_scope(interp);
     let mut index_slots = vec![None; capacity];
     let mut item_slots = vec![None; capacity];
-    let mut code_slots = vec![None; capacity];
+    let mut code_slots = vec![None; capacity * FIELDS];
     let mut marks = vec![Some(small(EMPTY)); slot_count];
     for (position, &(index, item, code)) in entries.iter().enumerate() {
         index_slots[position] = Some(index);
         item_slots[position] = item;
-        code_slots[position] = Some(small(code as i64));
-        let mut sequence = Sequence::new(code, slot_count);
-        while mark_in(&marks, sequence.at()) != Mark::Empty {
-            sequence.advance();
+        code_slots[position * FIELDS + CODE] = Some(small(code as i64));
+        match chain_in(&marks, &code_slots, code) {
+            Ok((_, head)) => {
+                let tail = tail_in(&code_slots, head);
+                code_slots[tail * FIELDS + NEXT] = Some(small(position as i64));
+                code_slots[head * FIELDS + TAIL] = Some(small(position as i64));
+            }
+            Err(slot) => marks[slot] = Some(small(position as i64 + 1)),
         }
-        marks[sequence.at()] = Some(small(position as i64 + 1));
     }
     // Each array is rooted as soon as it exists: the next allocation may
     // collect. The entries copied in stay reachable through the arrays still
@@ -655,23 +735,6 @@ pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure>
         .count())
 }
 
-/// The slot that files the entry at `position`, found along its code's
-/// sequence.
-fn slot_of(interp: &Interp, store: &Store, position: usize) -> Result<Option<usize>, Failure> {
-    let Some(code) = code_in(array_slots(interp, store.codes)?, position) else {
-        return Ok(None);
-    };
-    let slots = array_slots(interp, store.slots)?;
-    let mut sequence = Sequence::new(code, slots.len());
-    loop {
-        match mark_in(slots, sequence.at()) {
-            Mark::Empty => return Ok(None),
-            Mark::Entry(held) if held == position => return Ok(Some(sequence.at())),
-            _ => sequence.advance(),
-        }
-    }
-}
-
 /// Compacts the live entries, in their order, into fresh arrays sized for
 /// `capacity`, and files them again from their cached codes. Sends nothing.
 pub(super) fn rebuild(
@@ -712,36 +775,120 @@ pub(super) fn append(
         store = rebuild(interp, receiver, half, regrown(live))?;
     }
     let position = store.used;
-    let slot = {
+    let chain = {
         let slots = array_slots(interp, store.slots)?;
-        let mut sequence = Sequence::new(code, slots.len());
-        while mark_in(slots, sequence.at()) != Mark::Empty {
-            sequence.advance();
-        }
-        sequence.at()
+        let codes = array_slots(interp, store.codes)?;
+        chain_in(slots, codes, code).map(|(_, head)| (head, tail_in(codes, head)))
     };
     write_slot(interp, store.indexes, position, Some(index));
     write_slot(interp, store.items, position, item);
-    write_slot(interp, store.codes, position, Some(small(code as i64)));
-    write_slot(interp, store.slots, slot, Some(small(position as i64 + 1)));
+    write_field(interp, &store, position, CODE, Some(code as usize));
+    match chain {
+        Ok((head, tail)) => {
+            write_field(interp, &store, tail, NEXT, Some(position));
+            write_field(interp, &store, head, TAIL, Some(position));
+        }
+        Err(slot) => write_slot(interp, store.slots, slot, Some(small(position as i64 + 1))),
+    }
     set_used(interp, receiver, half, position + 1);
     Ok(())
 }
 
-/// Takes the entry at `position` out: a hole in the entry arrays, and a
-/// deleted mark in its slot. Answers the item it held.
+/// Writes one of the [`FIELDS`] of the entry at `position`.
+fn write_field(
+    interp: &mut Interp,
+    store: &Store,
+    position: usize,
+    field: usize,
+    value: Option<usize>,
+) {
+    let value = value.map(|value| small(value as i64));
+    write_slot(interp, store.codes, position * FIELDS + field, value);
+}
+
+/// How taking the entry at a position out relinks its chain.
+enum Unlink {
+    /// It was the oldest: its slot names the next one, which takes over the
+    /// chain's tail, or is marked deleted when it was the only one.
+    Head {
+        slot: usize,
+        next: Option<usize>,
+        tail: usize,
+    },
+    /// It followed `previous`, which now links past it, and the chain's
+    /// oldest, at `head`, names `previous` as its tail if it was the tail.
+    After {
+        head: usize,
+        previous: usize,
+        next: Option<usize>,
+        was_tail: bool,
+    },
+}
+
+/// Takes the entry at `position` out: a hole in the entry arrays, and its
+/// chain relinked past it. Answers the item it held.
 pub(super) fn remove_entry(
     interp: &mut Interp,
     store: &Store,
     position: usize,
 ) -> Result<Option<ObjRef>, Failure> {
     let item = slot_at(interp, store.items, position)?;
-    if let Some(slot) = slot_of(interp, store, position)? {
-        write_slot(interp, store.slots, slot, Some(small(DELETED)));
+    let unlink = {
+        let slots = array_slots(interp, store.slots)?;
+        let codes = array_slots(interp, store.codes)?;
+        code_in(codes, position)
+            .and_then(|code| chain_in(slots, codes, code).ok())
+            .and_then(|(slot, head)| {
+                let next = next_in(codes, position);
+                if head == position {
+                    return Some(Unlink::Head {
+                        slot,
+                        next,
+                        tail: tail_in(codes, head),
+                    });
+                }
+                let previous =
+                    chain_from(codes, head).find(|&at| next_in(codes, at) == Some(position))?;
+                Some(Unlink::After {
+                    head,
+                    previous,
+                    next,
+                    was_tail: tail_in(codes, head) == position,
+                })
+            })
+    };
+    match unlink {
+        Some(Unlink::Head {
+            slot,
+            next: Some(next),
+            tail,
+        }) => {
+            write_slot(interp, store.slots, slot, Some(small(next as i64 + 1)));
+            write_field(interp, store, next, TAIL, Some(tail));
+        }
+        Some(Unlink::Head {
+            slot, next: None, ..
+        }) => {
+            write_slot(interp, store.slots, slot, Some(small(DELETED)));
+        }
+        Some(Unlink::After {
+            head,
+            previous,
+            next,
+            was_tail,
+        }) => {
+            write_field(interp, store, previous, NEXT, next);
+            if was_tail {
+                write_field(interp, store, head, TAIL, Some(previous));
+            }
+        }
+        None => {}
     }
     write_slot(interp, store.indexes, position, None);
     write_slot(interp, store.items, position, None);
-    write_slot(interp, store.codes, position, None);
+    for field in [CODE, NEXT, TAIL] {
+        write_field(interp, store, position, field, None);
+    }
     Ok(item)
 }
 
@@ -754,7 +901,9 @@ pub(super) fn clear(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result
     for position in 0..store.used.min(store.capacity) {
         write_slot(interp, store.indexes, position, None);
         write_slot(interp, store.items, position, None);
-        write_slot(interp, store.codes, position, None);
+        for field in [CODE, NEXT, TAIL] {
+            write_field(interp, &store, position, field, None);
+        }
     }
     let slot_count = array_slots(interp, store.slots)?.len();
     for slot in 0..slot_count {

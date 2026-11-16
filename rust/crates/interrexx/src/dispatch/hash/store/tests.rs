@@ -152,10 +152,10 @@ fn a_mid_probe_remove_of_the_compared_entry_does_not_lose_the_put() {
     assert_eq!(out, "x 2\n");
 }
 
-/// The probe sequence can pass one slot more than once before it reaches an
-/// empty one: an entry it meets twice is still one entry under its index.
+/// Distinct indexes whose hashes are alike share one chain: each entry of it
+/// is still one entry under its own index.
 #[test]
-fn a_slot_met_twice_is_one_entry() {
+fn distinct_indexes_of_one_hash_are_one_entry_each() {
     let out = output_of(
         "r = .relation~new\n\
          do i = 1 to 12\n  r~put('v'i, .key~new('L'i))\nend\n\
@@ -255,4 +255,46 @@ fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
         "allAt 0 1\nitems 0 1\nsupplier 0 1\nremoveAll 0 1\nhasItem 0 1\n\
          removeItem The NIL object 1\nbag hasItem 0 1\nbag removeItem The NIL object 1\n"
     );
+}
+
+/// The slots of `collection`'s store that file an entry.
+fn filed_slots(interp: &mut Interp, collection: ObjRef) -> Vec<usize> {
+    let store = store_of(interp, collection).expect("the collection has a store");
+    let slots = array_slots(interp, store.slots).expect("slots");
+    (0..slots.len())
+        .filter_map(|slot| match mark_in(slots, slot) {
+            Mark::Entry(position) => Some(position),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Duplicates of one index are one chain behind the oldest of them: however
+/// many a `Relation` or `Bag` holds under one index, they take one slot, and
+/// that slot files the oldest live one, through removals of the oldest and
+/// through growth.
+#[test]
+fn duplicates_of_one_index_take_one_slot() {
+    for (class, put, other) in [
+        ("relation", "r~put(i, 'dup')", "r~put(0, 'other')"),
+        ("bag", "r~put('dup')", "r~put('other')"),
+    ] {
+        let mut interp = Interp::new();
+        let collection = run_returning(
+            &mut interp,
+            &format!(
+                "r = .{class}~new\n\
+                 do i = 1 to 100\n  {put}\nend\n\
+                 {other}\n\
+                 r~remove('dup')\n\
+                 r~remove('dup')\n\
+                 return r\n"
+            ),
+        );
+        // Positions 0 and 1 are the two removed; the 100 puts grew the store,
+        // which kept every entry in its order.
+        let mut filed = filed_slots(&mut interp, collection);
+        filed.sort_unstable();
+        assert_eq!(filed, [2, 100], "{class}");
+    }
 }

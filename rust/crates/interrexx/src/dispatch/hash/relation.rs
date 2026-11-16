@@ -26,36 +26,22 @@ fn slots_for(
     for array in [store.indexes, store.items, store.codes, store.slots] {
         interp.roots.activity_mut().push_temp(array);
     }
-    // The candidates and their indexes, read before any comparison sends.
+    // The candidates and their indexes, read before any comparison sends:
+    // the chain of the index's code, which lists each entry of that code
+    // once, oldest first.
     let mut candidates = Vec::new();
     {
         let slots = super::array_slots(interp, store.slots)?;
         let codes = super::array_slots(interp, store.codes)?;
         let indexes = super::array_slots(interp, store.indexes)?;
-        let mut sequence = super::Sequence::new(code, slots.len());
-        loop {
-            match super::mark_in(slots, sequence.at()) {
-                super::Mark::Empty => break,
-                super::Mark::Deleted => {}
-                super::Mark::Entry(position) => {
-                    if super::code_in(codes, position) == Some(code)
-                        && let Some(held) = indexes.get(position).copied().flatten()
-                    {
-                        candidates.push((position, held));
-                    }
+        if let Ok((_, head)) = super::chain_in(slots, codes, code) {
+            for position in super::chain_from(codes, head) {
+                if let Some(held) = indexes.get(position).copied().flatten() {
+                    candidates.push((position, held));
                 }
             }
-            sequence.advance();
         }
     }
-    // The sequence can pass one slot more than once before it reaches an
-    // empty one, so a candidate can be met twice: each entry is counted
-    // once. Entries of one code first meet the sequence in the order they
-    // were added, since an append files at the first empty slot and never
-    // reuses a deleted one; sorted all the same, so the order rests on
-    // positions.
-    candidates.sort_unstable_by_key(|&(position, _)| position);
-    candidates.dedup_by_key(|&mut (position, _)| position);
     for &(_, held) in &candidates {
         interp.roots.activity_mut().push_temp(held);
     }

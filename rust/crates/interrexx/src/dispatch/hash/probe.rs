@@ -17,7 +17,7 @@ pub(super) fn probe(
 }
 
 /// [`probe`] against a store the caller has already read, so that a
-/// `Directory`'s method table can be searched with the same slot walk.
+/// `Directory`'s method table can be searched with the same chain walk.
 #[inline]
 pub(super) fn probe_in(
     interp: &mut Interp,
@@ -90,26 +90,21 @@ pub(super) fn find_text(
     if let Some(found) = find_plain_string(interp, store, code, wanted) {
         return Ok(found);
     }
-    let slot_count = array_slots(interp, store.slots)?.len();
-    let mut sequence = Sequence::new(code, slot_count);
-    loop {
-        let mark = mark_in(array_slots(interp, store.slots)?, sequence.at());
-        let position = match mark {
-            Mark::Empty => return Ok(None),
-            Mark::Deleted => {
-                sequence.advance();
-                continue;
-            }
-            Mark::Entry(position) => position,
-        };
-        if code_in(array_slots(interp, store.codes)?, position) == Some(code)
-            && let Some(held) = slot_at(interp, store.indexes, position)?
+    let chain = chain_in(
+        array_slots(interp, store.slots)?,
+        array_slots(interp, store.codes)?,
+        code,
+    );
+    let mut at = chain.ok().map(|(_, head)| head);
+    while let Some(position) = at {
+        if let Some(held) = slot_at(interp, store.indexes, position)?
             && *interp.to_text(held) == *wanted
         {
             return Ok(Some(position));
         }
-        sequence.advance();
+        at = next_in(array_slots(interp, store.codes)?, position);
     }
+    Ok(None)
 }
 
 fn probe_by_protocol(
@@ -126,26 +121,18 @@ fn probe_by_protocol(
         store = store_in(interp, receiver, half)?;
     }
     'search: loop {
-        let mut sequence = Sequence::new(code, array_slots(interp, store.slots)?.len());
-        loop {
-            let position = match mark_in(array_slots(interp, store.slots)?, sequence.at()) {
-                Mark::Empty => {
-                    return Ok((store, Probe { found: None, code }));
-                }
-                Mark::Deleted => {
-                    sequence.advance();
-                    continue;
-                }
-                Mark::Entry(position) => position,
-            };
-            // A differing cached code is a different index for every key that
-            // keeps the hash contract, and nothing is sent to it.
-            if code_in(array_slots(interp, store.codes)?, position) != Some(code) {
-                sequence.advance();
-                continue;
-            }
+        // A differing cached code is a different index for every key that
+        // keeps the hash contract, and nothing is sent to it: only the chain
+        // of the index's own code is compared.
+        let chain = chain_in(
+            array_slots(interp, store.slots)?,
+            array_slots(interp, store.codes)?,
+            code,
+        );
+        let mut at = chain.ok().map(|(_, head)| head);
+        while let Some(position) = at {
             let Some(held) = slot_at(interp, store.indexes, position)? else {
-                sequence.advance();
+                at = next_in(array_slots(interp, store.codes)?, position);
                 continue;
             };
             let generation = interp.store_generation;
@@ -171,12 +158,14 @@ fn probe_by_protocol(
                     },
                 ));
             }
-            sequence.advance();
+            // Read after the comparison: a removal it made relinked the chain.
+            at = next_in(array_slots(interp, store.codes)?, position);
         }
+        return Ok((store, Probe { found: None, code }));
     }
 }
 
-/// [`find_text`]'s slot walk with the arrays borrowed once, for a plain
+/// [`find_text`]'s chain walk with the arrays borrowed once, for a plain
 /// string `wanted` and candidates whose every index is one too: inline or a
 /// `Body::Text`, whose bytes are what `to_text` would answer. `None`, and the
 /// one-by-one walk instead, for anything else -- a candidate index of another
@@ -190,22 +179,17 @@ fn find_plain_string(
     let slots = array_slots(interp, store.slots).ok()?;
     let codes = array_slots(interp, store.codes).ok()?;
     let indexes = array_slots(interp, store.indexes).ok()?;
-    let mut sequence = Sequence::new(code, slots.len());
-    loop {
-        match mark_in(slots, sequence.at()) {
-            Mark::Empty => return Some(None),
-            Mark::Deleted => {}
-            Mark::Entry(position) => {
-                if code_in(codes, position) == Some(code)
-                    && let Some(held) = indexes.get(position).copied().flatten()
-                    && plain_text_is(interp, held, wanted)?
-                {
-                    return Some(Some(position));
-                }
-            }
+    let Ok((_, head)) = chain_in(slots, codes, code) else {
+        return Some(None);
+    };
+    for position in chain_from(codes, head) {
+        if let Some(held) = indexes.get(position).copied().flatten()
+            && plain_text_is(interp, held, wanted)?
+        {
+            return Some(Some(position));
         }
-        sequence.advance();
     }
+    Some(None)
 }
 
 /// Whether `held`'s string value is `wanted`, for a plain string only: the
