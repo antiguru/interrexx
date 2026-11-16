@@ -108,6 +108,8 @@ directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 `::REQUIRES` directive raises nothing, `loadLibrary` answers `1`, RXFUNCADD
 answers `1`, and none of its routines can be called.
+Whether the refused library's unloader runs when the instance ends is
+unspecified, and the loader never runs.
 
 ```rexx
 say 'not reached'
