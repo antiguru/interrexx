@@ -136,20 +136,18 @@ say 'done'
 ```
 
 r[bif.beep.order]
-A third argument raises `SYNTAX 88.922` even when an argument before it is
-missing, is not a whole number or is out of range, as [the native call
-rule](r:bif.index.call.native) says: the count comes first. A call with no
-third argument that has more than one fault, such as a frequency that is not a
-whole number and a missing duration, raises the error of one of them, as [the
-precedence rule](r:conv.error.precedence) says.
+A call with more than one fault, such as a third argument together with a
+frequency out of range, or a frequency that is not a whole number together
+with a missing duration, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name d
-x = beep(36, 0, 1)
+x = beep(100, 0, 1)
 d: say condition('o')~code
 signal on syntax name e
-x = beep(100, 60001, 1)
-e: say condition('o')~code
+x = beep(36, 0, 1)
+e: say wordpos(condition('o')~code, '88.922 88.907') > 0
 signal on syntax name f
 x = beep('x', )
 f: say wordpos(condition('o')~code, '88.907 88.901') > 0
@@ -157,7 +155,7 @@ f: say wordpos(condition('o')~code, '88.907 88.901') > 0
 
 ```output
 88.922
-88.922
+1
 1
 ```
 

@@ -89,7 +89,7 @@ return
 ```
 
 r[util.sysfilesearch.order]
-The count of the arguments is checked first. The conversion of the arguments to
+The count of the arguments is checked, the conversion of the arguments to
 strings can raise `88.9xx`, `options` raises `SYNTAX 40.900` for a character
 that is not an option letter, a blank included, and the name of the stem raises
 `SYNTAX 40.925` for the names that [SysFileTree](r:util.sysfiletree.stem.name)

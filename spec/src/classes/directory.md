@@ -195,11 +195,12 @@ there is none. When the name is the name of a method that
 [`setMethod`](r:class.directory.setmethod) associated, the method runs, with
 the directory as `self` and no argument, and the answer is what it returns, so
 it is run again for each read, and `.nil` when it returns nothing. When there
-is neither an item nor a method and the directory has an `UNKNOWN` method,
-that method runs with the name as its only argument, as the name was given,
-and its answer is the answer of `at`. The methods take exactly one argument:
-none, or an omitted one, raises `SYNTAX 88.901`, and a second raises
-`SYNTAX 93.902`; the number of arguments is checked before the name is read.
+is neither an item nor a method and the directory has an `UNKNOWN` method, that
+method runs with the name as its only argument, as the name was given, and its
+answer is the answer of `at`. The methods take exactly one argument: none, or
+an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`;
+with a second argument, whether the name is read is unspecified, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 d = .directory~new
@@ -209,7 +210,7 @@ say d~at('k') d['k'] d~at('K') d~at('CALC') d~at('calc')
 d~setMethod('unknown', .method~new('', 'return "none:" arg(1)'))
 say d~at('missing') d['MISSING'] d~at('k')
 call try 'd~at'
-call try 'd~at(, "x")'
+call try 'd~at("x", "x")'
 call try 'd~at("a", "b")'
 call try 'd[]'
 exit
@@ -226,7 +227,7 @@ bad: say arg(1) '=>' condition('o')~code
 item item The NIL object Directory 0 The NIL object
 none: missing none: MISSING item
 d~at => 88.901
-d~at(, "x") => 93.902
+d~at("x", "x") => 93.902
 d~at("a", "b") => 93.902
 d[] => 88.901
 ```
@@ -394,7 +395,7 @@ say d~hasItem('x') d~hasItem('X') d~hasItem(.nil) d~hasItem('computed')
 say d~index('x') d~index('computed') d~index(.nil) (d~index('q') == .nil)
 call try 'd~hasItem'
 call try 'd~index'
-call try 'd~hasItem(, 1)'
+call try 'd~hasItem(1, 1)'
 call try 'd~index(1, 2)'
 exit
 try:
@@ -411,7 +412,7 @@ bad: say arg(1) '=>' condition('o')~code
 k1 CALC k2 1
 d~hasItem => 93.903
 d~index => 93.903
-d~hasItem(, 1) => 93.902
+d~hasItem(1, 1) => 93.902
 d~index(1, 2) => 93.902
 ```
 

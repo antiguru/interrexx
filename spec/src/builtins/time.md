@@ -632,17 +632,15 @@ c: say condition('o')~code
 
 r[bif.time.order]
 A call can fail these checks: the [argument count](r:bif.index.call.count); a
-missing `string` that an `informat` needs ([40.5](r:bif.index.dt.convert));
-the options E and R with a `string` ([40.29](r:bif.time.elapsed.convert)); the
+missing `string` that an `informat` needs ([40.5](r:bif.index.dt.convert)); the
+options E and R with a `string` ([40.29](r:bif.time.elapsed.convert)); the
 letter of `informat`; the string itself (`40.19`); and the letter of `option`.
-A wrong count raises its error whatever else is wrong, as [the call
-rules](r:bif.index.call.order.count-before-values) say. A call that fails more
-than one of the other checks raises the error of one of them, as [the
-precedence rule](r:conv.error.precedence) says.
+A call that fails more than one of these checks raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say time('X', 'junk', 'Q', 1)
+say time('N', '13:05:09', 'N', 1)
 a: say condition('o')~code
 signal on syntax name b
 say time('E', , 'N')

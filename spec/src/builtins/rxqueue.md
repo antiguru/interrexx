@@ -33,13 +33,12 @@ number of arguments, with the fewest and the most depending on the option,
 which the rules below give: a call with no argument, or with only omitted
 places, raises `SYNTAX 40.3`; a call of at most two arguments whose first is
 omitted but whose second is present raises `SYNTAX 40.5`. The number of
-arguments is checked first against the bounds that hold for every function: at
-most two arguments, so that `rxqueue(, 'a', 'b')` raises `SYNTAX 40.4`, and
-then an `option`. The [first character of `option`](r:bif.rxqueue.option)
-picks a function, and the number of arguments is checked against its bounds
-before [`queuename`](r:bif.rxqueue.name) is. A call whose `option` and
-`queuename` are both in error raises the error of one of them, as [the
-precedence rule](r:conv.error.precedence) says.
+arguments is checked against the bounds that hold for every function, at most
+two arguments, and against the bounds of the function that the [first
+character of `option`](r:bif.rxqueue.option) picks. A call with more than one
+fault, such as `rxqueue(, 'a', 'b')` or an `option` and a
+[`queuename`](r:bif.rxqueue.name) that are both in error, raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -52,20 +51,14 @@ signal on syntax name c
 say 'Get'~rxqueue
 c: say condition('o')~code
 signal on syntax name d
-say rxqueue('X', 'a', 'b')
+say rxqueue('Get', 'a', 'b')
 d: say condition('o')~code
 signal on syntax name e
 say rxqueue('X', 'a')
 e: say condition('o')~code
 signal on syntax name f
-say rxqueue('Get', 'a b')
+say rxqueue('Get', 'a')
 f: say condition('o')~code
-signal on syntax name g
-say rxqueue(, 'a b')
-g: say condition('o')~code
-signal on syntax name h
-say rxqueue(, 'a', 'b')
-h: say condition('o')~code
 signal off syntax
 say rxqueue('Get', )
 ```
@@ -76,8 +69,6 @@ say rxqueue('Get', )
 97.1
 40.4
 40.904
-40.4
-40.5
 40.4
 SESSION
 ```

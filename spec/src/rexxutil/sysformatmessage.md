@@ -21,13 +21,13 @@ r[util.sysformatmessage.args]
 missing or omitted raises `SYNTAX 88.901`, and a third argument raises `SYNTAX
 88.922`; an omitted place at the end of the call adds nothing to the count
 ([the argument rule](r:util.index.args), and for the order of the checks
-[Deviation 101](r:util.index.deviation.101)). A third argument is reported
-before any other error, and a call whose `message` and `substitutions` are both
-in error raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says. `message` is read as a string as [the
-argument rule](r:util.index.args) says: `.nil`, and an object that has no
-`MAKESTRING` method, raise `SYNTAX 88.909`, and an object with only a `STRING`
-method is such an object. A mutable buffer is read as the string that it holds.
+[Deviation 101](r:util.index.deviation.101)). A call with more than one fault,
+among a third argument, `message` and `substitutions`, raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says. `message` is
+read as a string as [the argument rule](r:util.index.args) says: `.nil`, and an
+object that has no `MAKESTRING` method, raise `SYNTAX 88.909`, and an object
+with only a `STRING` method is such an object. A mutable buffer is read as the
+string that it holds.
 
 ```rexx
 call try "SysFormatMessage()"

@@ -3,7 +3,7 @@ element: "Arithmetic"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10"
 rexxref: "Numbers and Arithmetic > Arithmetic"
-deviations: [53, 102, 174, 175]
+deviations: [53, 174, 175]
 ---
 
 # Arithmetic
@@ -514,29 +514,6 @@ d: say condition('d')
 1.234E3
 1.234E3
 1234.5
-```
-
-r[num.arithmetic.deviation.102]
-When LOSTDIGITS is trapped, an operand that is wider than NUMERIC DIGITS
-raises it before the operator checks a zero divisor or an exponent that is
-not a whole number. ooRexx checks the right operand first and raises
-`SYNTAX 42.3` or `SYNTAX 26.8` instead.
-
-```rexx
-numeric digits 3
-signal on lostdigits name a
-signal on syntax name a
-say 1234 / 0
-a: say condition('c')
-signal on lostdigits name b
-signal on syntax name b
-say 1234 ** 0.5
-b: say condition('c')
-```
-
-```output
-LOSTDIGITS
-LOSTDIGITS
 ```
 
 r[num.arithmetic.deviation.174]

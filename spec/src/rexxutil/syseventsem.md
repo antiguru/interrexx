@@ -385,21 +385,18 @@ say SysCloseEventSem(h) SysCloseEventSem(h)
 
 r[util.syseventsem.open]
 SysOpenEventSem takes the name of a semaphore and answers its handle, or `0`
-for a name that it cannot open. The name is required: a call without one
-raises `SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that
-has no string value `SYNTAX 88.909`. The null string is no name of a
-semaphore, so that the call answers `0`. A name that is not the null string is
-refused ([Deviation 43](r:util.syseventsem.deviation.43)). An omitted name and
-an object that has no string value are reported before an argument that
-follows them: `SysOpenEventSem(, 1)` raises `SYNTAX 88.901` and
-`SysOpenEventSem(.nil, 1)` `SYNTAX 88.909`.
+for a name that it cannot open. The name is required: a call without one raises
+`SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that has no
+string value `SYNTAX 88.909`. The null string is no name of a semaphore, so
+that the call answers `0`. A name that is not the null string is refused
+([Deviation 43](r:util.syseventsem.deviation.43)). A call with a second
+argument and an omitted name, or a name that has no string value, raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 call try "SysOpenEventSem()"
 call try "SysOpenEventSem(,)"
 call try "SysOpenEventSem('', 1)"
-call try "SysOpenEventSem(, 1)"
-call try "SysOpenEventSem(.nil, 1)"
 call try "SysOpenEventSem(.nil)"
 call try "SysOpenEventSem('')"
 call try "SysOpenEventSem(.mutablebuffer~new)"
@@ -417,8 +414,6 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
-88.901
-88.909
 88.909
 0
 0

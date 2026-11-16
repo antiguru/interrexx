@@ -95,7 +95,7 @@ signal on syntax name d
 say filespec('X', .nil)
 d: say wordpos(condition('o')~code, '40.904 88.909') > 0
 signal on syntax name e
-say filespec('X', f, 'x')
+say filespec('N', f, 'x')
 e: say condition('o')~code
 signal on syntax name g
 say filespec('X')

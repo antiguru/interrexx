@@ -106,9 +106,9 @@ rule](r:class.directory.indexes)), and `.nil` as the name raises `SYNTAX
 `setProperty` to the receiver. `put` and `setProperty` take exactly two
 arguments and `[]=` is the assignment `[name] = value`: fewer raises `SYNTAX
 93.901`, an omitted place before the last argument given raises `SYNTAX
-93.903`, and a third argument raises `SYNTAX 93.902`. The count is checked
-first, and a call whose value and name are both in error raises the error of
-one of them, as [the precedence rule](r:conv.error.precedence) says.
+93.903`, and a third argument raises `SYNTAX 93.902`. A call with more than one
+fault, among the count, the value and the name, raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 p = .properties~new

@@ -388,10 +388,11 @@ r[class.bag.at]
 `at(index)` and `[index]` answer the stored object that is equal to the index,
 and `.nil` when there is none; when several members are equal, which one is
 answered is not specified ([the hash order rule](r:class.bag.deviation.33)).
-The methods take exactly one argument: none, or an omitted one, raises
-`SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; the number of arguments
-is checked before the index is looked up. An error that the `hashCode` of the
-index raises is the error of the message.
+The methods take exactly one argument: none, or an omitted one, raises `SYNTAX
+88.901`, and a second raises `SYNTAX 93.902`; with a second argument, whether
+the index is looked up is unspecified, as [the precedence
+rule](r:conv.error.precedence) says. An error that the `hashCode` of the index
+raises is the error of the message.
 
 ```rexx
 b = .bag~new
@@ -400,7 +401,7 @@ b~put('item')
 say b~at('item') b['item'] b~at('ITEM') (b~at('zz') == .nil),
   (b~at(.nil) == .nil)
 call try 'b~at'
-call try 'b~at(, "x")'
+call try 'b~at("x", "x")'
 call try 'b~at("a", "b")'
 call try 'b[]'
 call try 'b~at(.hostile~new)'
@@ -420,7 +421,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 item item The NIL object 1 1
 b~at => 88.901
-b~at(, "x") => 93.902
+b~at("x", "x") => 93.902
 b~at("a", "b") => 93.902
 b[] => 88.901
 b~at(.hostile~new) => 93.900
@@ -451,7 +452,7 @@ b~put('a')
 say x~items b~allAt('a')~items
 call try 'b~allAt'
 call try 'b~allIndex'
-call try 'b~allAt(, 1)'
+call try 'b~allAt(1, 1)'
 call try 'b~allIndex(1, 2)'
 exit
 try:
@@ -470,7 +471,7 @@ a,a,a a,a,a
 3 4
 b~allAt => 93.903
 b~allIndex => 93.903
-b~allAt(, 1) => 93.902
+b~allAt(1, 1) => 93.902
 b~allIndex(1, 2) => 93.902
 ```
 
@@ -537,15 +538,16 @@ b~isEmpty(1) => 93.902
 
 r[class.bag.hasitem]
 `hasItem(item)` answers 1 when a member is equal to the item and 0 otherwise;
-for a bag it is the same question as `hasIndex`. `index(item)` looks the item up
-as an index, as [the lookup rule](r:class.bag.members.sends) says, and answers
-the stored object it finds, and `.nil` when there is none. `index` takes exactly
-one argument and `hasItem` one or two: for each, none, or an omitted first one,
-raises `SYNTAX 93.903`, and a surplus argument raises `SYNTAX 93.902`; the count
-is checked first, so `index(, 1)` raises `SYNTAX 93.902`. The second argument of
-`hasItem` is an index, which may be given only as another name for the item; an
-index equal to the item gives the answer of `hasItem(item)`, and an unequal one
-answers 0 ([the deviation rule](r:class.bag.deviation.45)).
+for a bag it is the same question as `hasIndex`. `index(item)` looks the item
+up as an index, as [the lookup rule](r:class.bag.members.sends) says, and
+answers the stored object it finds, and `.nil` when there is none. `index`
+takes exactly one argument and `hasItem` one or two: for each, none, or an
+omitted first one, raises `SYNTAX 93.903`, and a surplus argument raises
+`SYNTAX 93.902`; `index(, 1)` raises one of the two, as [the precedence
+rule](r:conv.error.precedence) says. The second argument of `hasItem` is an
+index, which may be given only as another name for the item; an index equal to
+the item gives the answer of `hasItem(item)`, and an unequal one answers 0
+([the deviation rule](r:class.bag.deviation.45)).
 
 ```rexx
 b = .bag~of('x', .nil, 'x')
@@ -556,7 +558,7 @@ call try 'b~index'
 call try 'b~hasItem(, 1)'
 call try 'b~hasItem(1, 1, 1)'
 call try 'b~index(1, 2)'
-call try 'b~index(, 1)'
+call try 'b~index(1, 1)'
 exit
 try:
   signal on syntax name bad
@@ -575,7 +577,7 @@ b~index => 93.903
 b~hasItem(, 1) => 93.903
 b~hasItem(1, 1, 1) => 93.902
 b~index(1, 2) => 93.902
-b~index(, 1) => 93.902
+b~index(1, 1) => 93.902
 ```
 
 r[class.bag.hasitem.sends]
@@ -731,7 +733,7 @@ x = b~removeAll('a')
 say x~class~id x~items x~makeString('L', ',') b~items b~hasIndex('a')
 say b~removeAll('zz')~items b~removeAll('a')~items b~items
 call try 'b~removeAll'
-call try 'b~removeAll(, 1)'
+call try 'b~removeAll(1, 1)'
 call try 'b~removeAll("a", "b")'
 exit
 try:
@@ -748,7 +750,7 @@ bad: say arg(1) '=>' condition('o')~code
 Array 3 a,a,a 1 0
 0 0 1
 b~removeAll => 93.903
-b~removeAll(, 1) => 93.902
+b~removeAll(1, 1) => 93.902
 b~removeAll("a", "b") => 93.902
 ```
 

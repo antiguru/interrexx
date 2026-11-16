@@ -60,15 +60,15 @@ c: say condition('o')~code
 
 r[bif.index.call.too-many]
 A call whose argument count is greater than the number of arguments on the
-syntax line raises `SYNTAX 40.4`, whatever the values of the arguments,
-and even when the arguments before the last are omitted.
+syntax line raises `SYNTAX 40.4`, also when arguments before the last are
+omitted places that are not required.
 
 ```rexx
 signal on syntax name a
 say word('a b', 1, 2)
 a: say condition('o')~code
 signal on syntax name b
-say substr(, , , , 1)
+say substr('abc', 1, , , 1)
 b: say condition('o')~code
 ```
 
@@ -96,63 +96,56 @@ b: say condition('o')~code
 ```
 
 r[bif.index.call.order.count-before-missing]
-A call whose argument count is wrong raises the
+A call whose argument count is wrong and that also omits a [required
+argument](r:bif.index.call.missing) raises the error of one of them, the
 [too-few](r:bif.index.call.too-few) or [too-many](r:bif.index.call.too-many)
-error even when it also omits a [required argument](r:bif.index.call.missing).
+error or `SYNTAX 40.5`, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
 say word(, 1, 2)
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.4 40.5') > 0
 ```
 
 ```output
-40.4
+1
 ```
 
 r[bif.index.call.order.count-before-values]
-A call whose argument count is wrong raises the too-few or too-many error
-even when an argument it does pass would fail its own check.
+A call whose argument count is wrong and that passes an argument that would
+fail its own check raises the error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say substr('abc', 'x', 1, '**', 5)
+say substr('abc', 1, 1, '*', 5)
 a: say condition('o')~code
 signal on syntax name b
 say word('a b', 0, 2)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.4 93.924') > 0
 ```
 
 ```output
 40.4
-40.4
+1
 ```
 
 r[bif.index.call.order.missing-before-values]
-A call whose argument count is right but that omits a
-[required argument](r:bif.index.call.missing) raises `SYNTAX 40.5` even when an
-argument it passes after the omitted one would fail its own check, a
-[form check](r:conv.check.order) or a range check.
+A call whose argument count is right but that omits a [required
+argument](r:bif.index.call.missing) and passes another that would fail its
+own check, a [form check](r:conv.check.order) or a range check, raises the
+error of one of them, `SYNTAX 40.5` or the other argument's, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
 say substr(, 'x')
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.5 40.12') > 0
 signal on syntax name b
-say subword(, 0)
+say substr(, 1)
 b: say condition('o')~code
-signal on syntax name c
-say wordpos(, 'a', 0)
-c: say condition('o')~code
-signal on syntax name d
-say verify('abc', , 'Y')
-d: say condition('o')~code
 ```
 
 ```output
-40.5
-40.5
-40.5
+1
 40.5
 ```
 
@@ -166,8 +159,8 @@ number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
 their errors](r:bif.index.call.order.missing-before-values); its errors for
 them are of the 88.9xx family. A required argument that is omitted, whether
 the call stops short of it or leaves its place empty, raises `SYNTAX 88.901`.
-An argument past the last one on the syntax line raises `SYNTAX 88.922`, even
-when the arguments before it are omitted. As [for the other
+An argument past the last one on the syntax line raises `SYNTAX 88.922`, also
+when the arguments before it are omitted places that are not required. As [for the other
 builtins](r:bif.index.call.count), a trailing omitted place adds nothing to
 the count. An argument that such a page calls a string and that is an object
 other than a string is replaced by the string that `request` with the argument
@@ -175,10 +168,10 @@ other than a string is replaced by the string that `request` with the argument
 [for the other builtins](r:conv.string.object), but there is no fallback to
 the `STRING` method: an object whose `request` answers no string, such as one
 with no `MAKESTRING` method, raises
-`SYNTAX 88.909`, whatever its `STRING` method answers. As for the other
-builtins, the count comes first: a call that has an argument past the last
-one on the syntax line raises 88.922 even when an argument before it is
-omitted or fails its own check (see [Deviation
+`SYNTAX 88.909`, whatever its `STRING` method answers. A call that has an
+argument past the last one on the syntax line and an argument before it that
+is omitted or fails its own check raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says (see [Deviation
 101](r:bif.index.call.native.deviation.101)).
 
 ```rexx
@@ -1790,14 +1783,14 @@ r[bif.index.stream.args]
 A start, a count and a line number are [whole-number
 arguments](r:conv.whole.form) with the [value](r:bif.index.stream.value) that
 the next rule gives; they are not checked as the position and length arguments
-of [the String methods](r:conv.method) are. The count of arguments comes
-first, by the [call rules](r:bif.index.call.count). The form and the value of
-such an argument raise `SYNTAX 40.12`, a count that is negative raises
-`SYNTAX 88.907`, a count that the builtin's page does not allow raises the
-error that page names, and a [start](r:bif.index.stream.start) or line number
-that is below 1 raises `SYNTAX 93.907`. A call that fails more than one of
-these checks raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says.
+of [the String methods](r:conv.method) are. The count of arguments is checked
+by the [call rules](r:bif.index.call.count). The form and the value of such an
+argument raise `SYNTAX 40.12`, a count that is negative raises `SYNTAX 88.907`,
+a count that the builtin's page does not allow raises the error that page
+names, and a [start](r:bif.index.stream.start) or line number that is below 1
+raises `SYNTAX 93.907`. A call that fails more than one of these checks raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says.
 
 ```rexx
 f = 'spec-streams-args.tmp'

@@ -33,7 +33,7 @@ letter](r:bif.index.dt.letter), and `osep` and `isep` are
 ```rexx
 say date('S', '1 Jan 2000') date(, '1 Jan 2000') date('S', '20000101', 'S', , )
 signal on syntax name a
-say date('S', '1 Jan 2000', 'N', '', '', 1)
+say date('S', '1 Jan 2000', 'N', , , 1)
 a: say condition('o')~code
 signal on syntax name b
 say 'S'~date
@@ -629,10 +629,8 @@ missing `string` that an `informat` or `isep` needs
 apply it](r:bif.date.sep.in.informat); the form of `osep`; an `isep` with an
 `informat` that does not apply it; the form of `isep`
 ([40.43](r:bif.date.sep.char)); the letter of `informat`; the string itself
-(`40.19`, or `40.44` with an `isep`); and the letter of `option`. A wrong
-count raises its error whatever else is wrong, as [the call
-rules](r:bif.index.call.order.count-before-values) say. A call that fails more
-than one of the other checks raises the error of one of them, as [the
+(`40.19`, or `40.44` with an `isep`); and the letter of `option`. A call that
+fails more than one of these checks raises the error of one of them, as [the
 precedence rule](r:conv.error.precedence) says.
 
 ```rexx
@@ -643,7 +641,7 @@ signal on syntax name b
 say date('X', '1 Jan 2000')
 b: say condition('o')~code
 signal on syntax name c
-say date('X', 'junk', 'Q', , '-', 1)
+say date('S', '1 Jan 2000', 'N', , , 1)
 c: say condition('o')~code
 ```
 

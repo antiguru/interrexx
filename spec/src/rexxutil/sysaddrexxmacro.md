@@ -20,12 +20,13 @@ the omission of an argument, and an object in the place of one, follow [the
 argument rule](r:util.index.args): a call with no `name` or no `file`, or with
 either one omitted, raises `SYNTAX 88.901`, a fourth argument raises `SYNTAX
 88.922`, and `.nil` raises `SYNTAX 88.909`. An object that is not a string but
-has a string value is read by that value. The rules for what a `name` is are
-on [the page of the macrospace](r:util.macrospace.names). A `file` that is the
+has a string value is read by that value. The rules for what a `name` is are on
+[the page of the macrospace](r:util.macrospace.names). A `file` that is the
 null string names no file that can be read, so the call answers `7`. When more
-than one check fails, the count and the omission come first, then the `order`
-(the next rule), and only then is the file read, so that a bad `order` is
-reported for a file that is not there.
+than one check fails, including that of the `order` (the next rule), the call
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The file is read only after the checks, so
+a bad `order` is reported for a file that is not there.
 
 ```rexx
 call lineout 'c4zqargs.rex', 'return "x"'

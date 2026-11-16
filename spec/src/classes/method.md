@@ -423,19 +423,18 @@ required (`SYNTAX 88.901`) and is a string, or an object that [gives
 one](r:class.index.string) (`.nil` and others that give none raise `88.909`),
 and the context is the second argument, with the same values and the same error
 `40.904` as for [`new`](r:class.method.new.context). `newFile` takes no other
-argument: a third raises `SYNTAX 93.902` before the file is looked for. A file
-that cannot be read raises `SYNTAX 3.1`, and a file that does not translate
-raises its translation error. A call that fails more than one check after the
-count raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says. The method's package is named by the file
-name as it was given, and its source is the lines of the file that come before
-its first directive, except that a first line that begins with `#!` is not part
-of the source. A directive in the file still makes the classes and routines of
-the method's package, which the package answers to `classes` and `routines`,
-and the code of the method sees them. The context is used as for `new`. The
-file is not searched for ([the newFile rule](r:env.search.newfile)). `newFile`
-sends `init` with no argument to the new object, and a subclass of `Method`
-makes instances of itself.
+argument: a third raises `SYNTAX 93.902`. A file that cannot be read raises
+`SYNTAX 3.1`, and a file that does not translate raises its translation error.
+A call that fails more than one check raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. The method's package is named
+by the file name as it was given, and its source is the lines of the file that
+come before its first directive, except that a first line that begins with `#!`
+is not part of the source. A directive in the file still makes the classes and
+routines of the method's package, which the package answers to `classes` and
+`routines`, and the code of the method sees them. The context is used as for
+`new`. The file is not searched for ([the newFile rule](r:env.search.newfile)).
+`newFile` sends `init` with no argument to the new object, and a subclass of
+`Method` makes instances of itself.
 
 ```rexx
 f = 'class_method_newfile_zq.tmp'
@@ -452,13 +451,13 @@ say m~package~classes~items m~package~classes~allindexes~makearray~items
 .runner~define('GO', m)
 say .runner~new~go('x')
 say .mine~newFile(f)~class~id
-call sysfiledelete f
 call try '.method~newFile("class_method_newfile_none.tmp")'
 call try '.method~newFile()'
 call try '.method~newFile(.nil)'
 call try '.method~newFile(f, "PROGRAMSCOPE", 1)'
 call try '.method~newFile(f, "bad")'
 call try '.method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE")'
+call sysfiledelete f
 exit
 try:
   signal on syntax name bad

@@ -74,8 +74,8 @@ say sysfiletree(.mutablebuffer~new('c2zqft01*'), 'f.', .array~of('D'))
 ```
 
 r[util.sysfiletree.order]
-The number of arguments is checked first. The conversion of each argument to a
-string can raise `88.9xx`, the name of the stem can raise `SYNTAX 40.925`, a
+The number of arguments is checked, the conversion of each argument to a string
+can raise `88.9xx`, the name of the stem can raise `SYNTAX 40.925`, a
 `filespec` that is the null string `SYNTAX 40.21`, `options` `SYNTAX 40.21` for
 the null string and `SYNTAX 40.900` for a letter that is not an option, and the
 two attribute masks `SYNTAX 40.900`. A call that fails more than one of these

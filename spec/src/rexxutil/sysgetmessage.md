@@ -34,12 +34,12 @@ and a multiple of 4294967296 names no message, which [the answer
 rule](r:util.sysgetmessage.answer) covers. A `filename` of `.nil` raises
 `SYNTAX 88.909`. A call with more than nine inserts raises `SYNTAX 40.1`. A
 call whose `num` and `filename` are both in error raises the error of one of
-them, as [the precedence rule](r:conv.error.precedence) says, and either one is
-reported before too many inserts. An omitted place at the end of the call adds
-nothing to the count. `filename` is read from an object that is not a string as
-[the argument rule](r:util.index.args) says, so an object whose `request`
-answers no string raises `SYNTAX 88.909`. `num` and the inserts have a
-fallback. An object that is not a string is replaced by the string that its
+them, as [the precedence rule](r:conv.error.precedence) says, and so does one
+with too many inserts and another fault. An omitted place at the end of the
+call adds nothing to the count. `filename` is read from an object that is not a
+string as [the argument rule](r:util.index.args) says, so an object whose
+`request` answers no string raises `SYNTAX 88.909`. `num` and the inserts have
+a fallback. An object that is not a string is replaced by the string that its
 `request` with the argument `STRING` answers. When that answer is not a string,
 the object is replaced by the answer of its `STRING` method. So `.object~new`,
 whose `STRING` answers `an Object`, raises `SYNTAX 88.905` as `num` and is put
@@ -59,8 +59,6 @@ call try "SysGetMessage(.object~new)"
 call try "SysGetMessage(100, .object~new)"
 call try "SysGetMessage(.c6zqs~new, 'rexx.cat') == SysGetMessage(2, 'rexx.cat')"
 call try "SysGetMessage(100, .nil)"
-call try "SysGetMessage(1, .nil, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
-call try "SysGetMessage('x', 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
 call try "SysGetMessage('1000000000000000000')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', , ) == SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c')"
@@ -96,8 +94,6 @@ e: say condition('o')~code
 88.909
 1
 88.909
-88.909
-88.905
 88.905
 40.1
 1

@@ -1008,11 +1008,10 @@ whose `request` with `STRING` answers `.nil`, as an instance of a subclass of
 error from `define`. A name is required (`88.901`), a name that is no string
 and has no string value raises `88.909`, and a third argument raises `93.902`.
 The classes of the class library accept no `define` ([the library
-rule](r:class.methods.library)), which raises `98.985`. The number of arguments
-is checked before the arguments, and a call that fails more than one check
-raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says. The examples use objects made after the
-change.
+rule](r:class.methods.library)), which raises `98.985`. A call that fails more
+than one check, the number of arguments among them, raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The examples use
+objects made after the change.
 
 ```rexx
 .k~define('A1', 'return 1')
@@ -1163,10 +1162,9 @@ the indexes of an array are the names `1`, `2` and so on. An object that has no
 `supplier` answers need not be a `Supplier` ([Deviation
 108](r:class.class.deviation.108)). The argument is required (`88.901`) and a
 second raises `93.902`. The method answers no value, and the classes of the
-class library accept it as little as `define`: they raise `98.985`. The number
-of arguments is checked before the argument, and a call that fails more than
-one check raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says.
+class library accept it as little as `define`: they raise `98.985`. A call that
+fails more than one check, the number of arguments among them, raises the error
+of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 t = .directory~new
@@ -1300,10 +1298,9 @@ table does not hold is not an error and changes nothing, and `delete` does not
 remove a method that only a class behind holds. The name is required (`SYNTAX
 88.901`), `.nil` raises `88.909`, and a second argument raises `93.902`. The
 classes of the class library accept no `delete` ([the library
-rule](r:class.methods.library)); they raise `98.985`. The number of arguments
-is checked before the name, and a call that fails more than one check raises
-the error of one of them, as [the precedence rule](r:conv.error.precedence)
-says.
+rule](r:class.methods.library)); they raise `98.985`. A call that fails more
+than one check, the number of arguments among them, raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 .sub~define('M2', 'return "sub m2"')
@@ -1325,7 +1322,7 @@ call try '.sub~delete'
 call try '.sub~delete(.nil)'
 call try '.sub~delete("m2", 1)'
 call try '.array~delete("items")'
-call try '.sub~delete(, 1)'
+call try '.sub~delete(1, 1)'
 exit
 try:
   signal on syntax name bad
@@ -1355,7 +1352,7 @@ r = .sub~delete("m2") => 91.999
 .sub~delete(.nil) => 88.909
 .sub~delete("m2", 1) => 93.902
 .array~delete("items") => 98.985
-.sub~delete(, 1) => 93.902
+.sub~delete(1, 1) => 93.902
 ```
 
 r[class.class.inherit]
@@ -1373,10 +1370,9 @@ superclass of the class or one of its ancestors raises `98.943`. A second
 argument that is not in the list of superclasses, `.nil` included, raises
 `98.945`. The first argument is required (`88.901`) and a third raises
 `93.902`. A class of the class library accepts no `inherit` ([the library
-rule](r:class.methods.library)); it raises `98.985`. The number of arguments is
-checked before the arguments, and a call that fails more than one check raises
-the error of one of them, as [the precedence rule](r:conv.error.precedence)
-says.
+rule](r:class.methods.library)); it raises `98.985`. A call that fails more
+than one check, the number of arguments among them, raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 call show 'start'
@@ -1463,9 +1459,9 @@ raises `SYNTAX 98.942`, and a mixin class that the list does not hold, or that
 stands first in it, so that it is the superclass, raises `98.945`. The argument
 is required (`88.901`) and a second raises `93.902`. A class of the class
 library accepts no `uninherit` ([the library rule](r:class.methods.library));
-it raises `98.985`. The number of arguments is checked before the argument, and
-a call that fails more than one check raises the error of one of them, as [the
-precedence rule](r:conv.error.precedence) says.
+it raises `98.985`. A call that fails more than one check, the number of
+arguments among them, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 .c~inherit(.m1)
@@ -1546,12 +1542,11 @@ third argument is a collection of class methods, given as `defineMethods` takes
 its argument, and the new class gets them as class methods of its own, which
 its subclasses inherit as they inherit any class method. The new class is not a
 mixin class and not abstract, whatever the receiver is, and it has no package.
-A fourth argument raises `93.902`. The number of arguments is checked first,
-and a call whose metaclass, id and collection fail more than one check raises
-the error of one of them, as [the precedence rule](r:conv.error.precedence)
-says. When an error is raised, the receiver has no new subclass. The method
-does not check whether the receiver may have subclasses, so a subclass of a
-library class is made like any other.
+A fourth argument raises `93.902`. A call that fails more than one check, the
+number of arguments among them, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. When an error is raised, the
+receiver has no new subclass. The method does not check whether the receiver
+may have subclasses, so a subclass of a library class is made like any other.
 
 ```rexx
 s = .k~subclass('Sub One')
@@ -1787,7 +1782,7 @@ call try '.k~mixinClass(.nil)'
 call try '.k~mixinClass("X", 1)'
 call try '.k~mixinClass("X", .k)'
 call try '.k~mixinClass("X", .class, 1)'
-call try '.k~mixinClass("X", , 1, 2)'
+call try '.k~mixinClass("X", , .directory~new, 2)'
 call try '.string~inherit(m)'
 exit
 try:
@@ -1812,7 +1807,7 @@ META 1
 .k~mixinClass("X", 1) => 99.927
 .k~mixinClass("X", .k) => 99.927
 .k~mixinClass("X", .class, 1) => 97.1
-.k~mixinClass("X", , 1, 2) => 93.902
+.k~mixinClass("X", , .directory~new, 2) => 93.902
 .string~inherit(m) => 98.985
 ```
 

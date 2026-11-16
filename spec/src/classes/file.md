@@ -278,30 +278,31 @@ writeChars string  [request STRING makeString]
 ```
 
 r[class.file.args.order]
-A method of `File` checks the number of its arguments before it reads an
-argument or sends a message to one. More arguments than the method takes raise
-`SYNTAX 93.902` and fewer than it needs `93.901`, and an omitted argument that
-the method needs before a given one raises `93.903` for `new`, `writeChars`,
-`writeLines` and `searchPath`. An omitted place at the end adds nothing to the
-count, so `.file~readChars(, )` has no argument. The values are checked after
-the count: in the example no probe is sent a message, and the log is empty.
+More arguments than a method of `File` takes raise `SYNTAX 93.902` and fewer
+than it needs `93.901`, and an omitted argument that the method needs before a
+given one raises `93.903` for `new`, `writeChars`, `writeLines` and
+`searchPath`. An omitted place at the end adds nothing to the count, so
+`.file~readChars(, )` has no argument. A call with a wrong count and another
+fault raises the error of one of them, and whether the checks after the first
+fault are made, with the messages they send, is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
-.environment~log = .array~new
 f = 'spec-file-args.tmp'
 o = .file~new(f)
-call try 'o~renameTo(.spy~new, 1)'
-call try 'o~compareTo(.spy~new, 1)'
-call try 'o~"LASTMODIFIED="(.spy~new, 1)'
-call try 'o~"LASTACCESSED="(.spy~new, 1)'
-call try '.file~new(.spy~new, .spy~new, 1)'
-call try '.file~readChars(.spy~new, 1)'
-call try '.file~readLines(.spy~new, 1)'
-call try '.file~searchPath(.spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeLines(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new)'
-call try '.file~writeLines(.spy~new)'
+d = .datetime~new
+call try 'o~renameTo(o, 1)'
+call try 'o~compareTo(o, 1)'
+call try 'o~"LASTMODIFIED="(d, 1)'
+call try 'o~"LASTACCESSED="(d, 1)'
+call try '.file~new(f, ".", 1)'
+call try '.file~readChars(f, 1)'
+call try '.file~readLines(f, 1)'
+call try '.file~searchPath(f, ".", 1)'
+call try '.file~writeChars(f, "x", "A", 1)'
+call try '.file~writeLines(f, .array~new, "A", 1)'
+call try '.file~writeChars(f)'
+call try '.file~writeLines(f)'
 call try '.file~writeChars(, "x")'
 call try '.file~writeChars(f, , "A")'
 call try '.file~writeLines(, .array~of("x"))'
@@ -309,7 +310,6 @@ call try '.file~writeLines(f, , "A")'
 call try '.file~searchPath(, ".")'
 call try '.file~readChars(, )'
 call try 'o~renameTo(, )'
-say '['.environment~log~toString(,' ')']'
 exit
 try:
   signal on syntax name bad
@@ -318,37 +318,21 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
-::class spy
-::method isA
-  .environment~log~append('isA')
-  return 0
-::method strip
-  .environment~log~append('strip')
-  return 'A'
-::method absolutePath
-  .environment~log~append('absolutePath')
-  return 'x'
-::method makeString
-  .environment~log~append('makeString')
-  return 'x'
-::method request
-  .environment~log~append('request')
-  return .nil
 ```
 
 ```output
-o~renameTo(.spy~new, 1) => 93.902
-o~compareTo(.spy~new, 1) => 93.902
-o~"LASTMODIFIED="(.spy~new, 1) => 93.902
-o~"LASTACCESSED="(.spy~new, 1) => 93.902
-.file~new(.spy~new, .spy~new, 1) => 93.902
-.file~readChars(.spy~new, 1) => 93.902
-.file~readLines(.spy~new, 1) => 93.902
-.file~searchPath(.spy~new, .spy~new, 1) => 93.902
-.file~writeChars(.spy~new, .spy~new, .spy~new, 1) => 93.902
-.file~writeLines(.spy~new, .spy~new, .spy~new, 1) => 93.902
-.file~writeChars(.spy~new) => 93.901
-.file~writeLines(.spy~new) => 93.901
+o~renameTo(o, 1) => 93.902
+o~compareTo(o, 1) => 93.902
+o~"LASTMODIFIED="(d, 1) => 93.902
+o~"LASTACCESSED="(d, 1) => 93.902
+.file~new(f, ".", 1) => 93.902
+.file~readChars(f, 1) => 93.902
+.file~readLines(f, 1) => 93.902
+.file~searchPath(f, ".", 1) => 93.902
+.file~writeChars(f, "x", "A", 1) => 93.902
+.file~writeLines(f, .array~new, "A", 1) => 93.902
+.file~writeChars(f) => 93.901
+.file~writeLines(f) => 93.901
 .file~writeChars(, "x") => 93.903
 .file~writeChars(f, , "A") => 93.903
 .file~writeLines(, .array~of("x")) => 93.903
@@ -356,7 +340,6 @@ o~"LASTACCESSED="(.spy~new, 1) => 93.902
 .file~searchPath(, ".") => 93.903
 .file~readChars(, ) => 93.901
 o~renameTo(, ) => 93.901
-[]
 ```
 
 ## The path and its text
@@ -1402,7 +1385,7 @@ signal on syntax name b2
 f~"LASTACCESSED="
 b2: say condition('o')~code
 signal on syntax name b3
-f~"LASTACCESSED="(1, 2)
+f~"LASTACCESSED="(.datetime~new, 2)
 b3: say condition('o')~code
 junk = f~delete
 ```
@@ -2055,7 +2038,6 @@ call try '.file~readLines'
 call try '.file~readLines(f, 1)'
 call try '.file~readLines(.nil)'
 call try '.file~readLines(.object~new)'
-call try '.file~readLines(.nil, 1)'
 exit
 try:
   signal on syntax name bad
@@ -2081,7 +2063,6 @@ Array 5 1
 .file~readLines(f, 1) => 93.902
 .file~readLines(.nil) => 93.938
 .file~readLines(.object~new) => 93.938
-.file~readLines(.nil, 1) => 93.902
 ```
 
 r[class.file.writechars]

@@ -1818,11 +1818,11 @@ public, and answers the package. The name is required (`SYNTAX 88.901`), an
 object that [gives no string](r:class.index.string), `.nil` among them, raises
 `88.909`, and the class is required too (`88.901`) and must be a class (`SYNTAX
 88.914`; `.nil`, a number and an instance that is not a class do not qualify);
-a third argument raises `93.902`. The count of arguments is checked first, and
-a call whose name and class are both in error raises the error of one of them,
-as [the precedence rule](r:conv.error.precedence) says. The name is taken in
-upper case, any string is a name, and a class that is added under a name that
-the package holds replaces the class that was there. The class is in `classes`,
+a third argument raises `93.902`. A call with more than one fault, among the
+count, the name and the class, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. The name is taken in upper
+case, any string is a name, and a class that is added under a name that the
+package holds replaces the class that was there. The class is in `classes`,
 `findClass` finds it, and the code of the package names it with `.name`; it is
 not in `publicClasses`.
 

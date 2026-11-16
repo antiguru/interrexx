@@ -38,7 +38,7 @@ signal on syntax name d
 say copies('abc', )
 d: say condition('o')~code
 signal on syntax name e
-say copies('abc', 'x', 1)
+say copies('abc', 2, 1)
 e: say condition('o')~code
 ```
 

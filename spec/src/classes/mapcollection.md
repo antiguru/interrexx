@@ -389,7 +389,7 @@ r = s~putAll(src)
 say (r == s) '|' s
 say s~putAll(.array~of('X'))
 call try 's~putAll'
-call try 's~putAll(1, 2)'
+call try 's~putAll(.directory~new, 2)'
 exit
 try:
   signal on syntax name bad
@@ -417,7 +417,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 | 1=a 2=b 3=c
 1=X 2=b 3=c
 s~putAll => 93.901
-s~putAll(1, 2) => 93.902
+s~putAll(.directory~new, 2) => 93.902
 ```
 
 r[class.mapcollection.putall.sends]

@@ -83,14 +83,14 @@ among their items. The counts are fixed: two arguments for `number` and
 range checks. A call with fewer raises `SYNTAX 93.901`, one with more `93.902`,
 and one that leaves out a required argument before the last one given `93.903`;
 omitted arguments at the end count as not given. The `ADDITIONAL` items of
-these three errors are [unspecified](r:conv.error.additional). The argument
-count is checked first, and a call whose `digits` and value are both in error
-raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says. Every value and bound is read as a string
-as [the conversion rule](r:conv.string.object) says. A check that fails raises
-the `SYNTAX` error of its method, which the rules below give. The second
-example asks every check, with no argument, for one fewer than it needs, for
-the first one left out and for one more than it takes.
+these three errors are [unspecified](r:conv.error.additional). A call with more
+than one fault, among the argument count, `digits` and the value, raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
+Every value and bound is read as a string as [the conversion
+rule](r:conv.string.object) says. A check that fails raises the `SYNTAX` error
+of its method, which the rules below give. The second example asks every check,
+with no argument, for one fewer than it needs, for the first one left out and
+for one more than it takes.
 
 ```rexx
 call t 'number', 'N', 'x'

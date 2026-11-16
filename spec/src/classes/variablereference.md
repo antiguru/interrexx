@@ -271,22 +271,22 @@ the reference does understand, `class`, `copy`, `hasMethod` and the others of
 itself. `unknown` is the method that does the sending: `unknown(name,
 arguments)` sends the message `name` to the value with the arguments that
 `arguments` holds. It takes exactly two arguments, and a third raises `SYNTAX
-93.902` before anything else is checked. An omitted `name` raises `SYNTAX
-93.903`, and one with no string value, `.nil` included, `SYNTAX 88.909`. The
-message name is used as written: a name that is not in upper case names no
-method of the value, which handles it as a message it does not understand, and
-the null string is a name like any other, the abuttal's ([the joining
-rule](r:class.object.concat)). An omitted `arguments` raises `SYNTAX 93.903`;
-any other is sent `request` with `ARRAY`, and an answer that is an instance of
-`Array`, or of a subclass of it, with one dimension is the array of arguments,
-while any other answer raises `SYNTAX 98.913`, so `.nil`, an `Object` and an
-array of two dimensions raise it and a string gives an array of its lines. A
-position that holds nothing is an omitted argument. An instance of a subclass
-of `List` given as `arguments` is sent `request` as any other object is
-([Deviation 118](r:class.variablereference.deviation.118)). A value that does
-not understand the message raises `SYNTAX 97.1`, as it would for any other
-sender. A call whose `name` and `arguments` are both in error raises the error
-of one of them, as [the precedence rule](r:conv.error.precedence) says.
+93.902`. An omitted `name` raises `SYNTAX 93.903`, and one with no string
+value, `.nil` included, `SYNTAX 88.909`. The message name is used as written: a
+name that is not in upper case names no method of the value, which handles it
+as a message it does not understand, and the null string is a name like any
+other, the abuttal's ([the joining rule](r:class.object.concat)). An omitted
+`arguments` raises `SYNTAX 93.903`; any other is sent `request` with `ARRAY`,
+and an answer that is an instance of `Array`, or of a subclass of it, with one
+dimension is the array of arguments, while any other answer raises `SYNTAX
+98.913`, so `.nil`, an `Object` and an array of two dimensions raise it and a
+string gives an array of its lines. A position that holds nothing is an omitted
+argument. An instance of a subclass of `List` given as `arguments` is sent
+`request` as any other object is ([Deviation
+118](r:class.variablereference.deviation.118)). A value that does not
+understand the message raises `SYNTAX 97.1`, as it would for any other sender.
+A call whose `name` and `arguments` are both in error raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 text = 'hello world'
@@ -311,7 +311,7 @@ call try "r~unknown('LENGTH', .array~new, 1)"
 call try 'r~unknown(.nil, .array~new)'
 call try "r~unknown('', .array~new)"
 call try "r~unknown('LENGTH', .nil)"
-call try "r~unknown(.nil, .nil, 1)"
+call try "r~unknown('LENGTH', .array~new, 1)"
 call try "r~unknown('LENGTH', .object~new)"
 exit
 try:
@@ -339,7 +339,7 @@ r~unknown('LENGTH', .array~new, 1) => 93.902
 r~unknown(.nil, .array~new) => 88.909
 r~unknown('', .array~new) => 93.903
 r~unknown('LENGTH', .nil) => 98.913
-r~unknown(.nil, .nil, 1) => 93.902
+r~unknown('LENGTH', .array~new, 1) => 93.902
 r~unknown('LENGTH', .object~new) => 98.913
 ```
 

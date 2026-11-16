@@ -12,3 +12,4 @@ class.directory.deviation.78
 class.stringtable.deviation.78
 class.properties.deviation.78
 class.stem.deviation.78
+num.arithmetic.deviation.102

@@ -445,17 +445,20 @@ order the language gives: both operands of an operator, the left before the
 right, before either is checked, and the arguments of a call from left to
 right, before the call is made. An error raised while an operand or an argument
 is evaluated is raised at that point, and nothing after it is evaluated. A
-builtin then checks the number of its arguments and that every argument it
-requires is there ([the call
-rules](r:bif.index.call.order.count-before-values)), and
-[converts](r:bif.index.call.convert.deviation.170) the arguments that are
-objects, before it checks any argument's value. When the checks of one
-operation, which is one operator, one call of a builtin or a method, or the
-checks of one instruction, find one fault, the operation raises the error that
-the rule for that fault gives. When they find more than one, the operation
-raises the error of one of them, and which one is unspecified. A page that
-lists the checks of an operation lists what is checked, not an order among
-them.
+builtin [converts](r:bif.index.call.convert.deviation.170) the arguments that
+are objects, sending them `STRING`, before it checks their values; these sends
+belong to the evaluation and keep its order. When the checks of one operation,
+which is one operator, one call of a builtin or a method, or the checks of one
+instruction, find one fault, the operation raises the error that the rule for
+that fault gives; a `STRING` answer that has no string value is such a fault.
+When they find more than one, a wrong number of arguments or an omitted
+required argument among them, the operation raises the error of one of them,
+and which one is unspecified. Whether the checks after the first fault found
+are made, and so whether the messages they would send are sent, is unspecified
+too. When one operation finds a fault that raises a condition, such as
+LOSTDIGITS, and another that raises an error, which of the two it raises first
+is unspecified, and so whether a trap for the condition runs. A page that lists
+the checks of an operation lists what is checked, not an order among them.
 
 ```rexx
 signal on syntax name a
@@ -470,6 +473,9 @@ c: say condition('o')~code
 signal on syntax name d
 say substr('abc', 0, 'x')
 d: say wordpos(condition('o')~code, '93.924 40.12') > 0
+signal on syntax name e
+say substr('abc', 'x', 1, ' ', 5)
+e: say wordpos(condition('o')~code, '40.4 40.12') > 0
 exit
 f: say 'f ran'
 return 'y'
@@ -480,6 +486,7 @@ return 'y'
 40.12
 f ran
 41.1
+1
 1
 ```
 

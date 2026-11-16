@@ -710,12 +710,10 @@ negative semaphore handle, which it reports before the count. SysOpenEventSem
 and SysOpenMutexSem are the exception: in both engines they report an omitted
 name and an object that has no string value before the count.
 
-## 102. LOSTDIGITS before the right operand's errors
+## 102. Withdrawn
 
-When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
-before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
-for an exponent that is not a whole number, as the ANSI standard orders the
-operations. ooRexx raises the error for the right operand first.
+Which of LOSTDIGITS and the error of the same operator is raised first is
+unspecified ([the precedence rule](r:conv.error.precedence)).
 
 ## 103. TRACE() under ::OPTIONS TRACE ?
 

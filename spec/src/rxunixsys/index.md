@@ -98,13 +98,13 @@ r[rxunixsys.index.args]
 The functions follow [the native call rule](r:bif.index.call.native), as the
 [RexxUtil](../rexxutil/index.md) functions do. A required argument that is not
 given, or is omitted, raises `SYNTAX 88.901`. An argument past the last one of
-the function raises `SYNTAX 88.922`, and the count is checked before the
-arguments are read. An omitted place at the end of the call adds nothing to the
-count. An argument that is an object other than a string is replaced by the
-string that its `request` with the argument `STRING` answers, and a name or an
-option for which an object has none raises `SYNTAX 88.909`. A name of a file,
-user or group is read as far as its first null character, so that a string whose
-null character comes before the end names what the part before it names.
+the function raises `SYNTAX 88.922`. An omitted place at the end of the call
+adds nothing to the count. An argument that is an object other than a string is
+replaced by the string that its `request` with the argument `STRING` answers,
+and a name or an option for which an object has none raises `SYNTAX 88.909`. A
+name of a file, user or group is read as far as its first null character, so
+that a string whose null character comes before the end names what the part
+before it names.
 
 ```rexx
 call try "SysUnlink()"
@@ -245,9 +245,9 @@ its first character alone, in either case, so that `p`, `P` and `Permissions`
 are one option. A call whose option has a first character that the function
 does not know, or is the null string, raises `SYNTAX 40.1`, and so does a call
 of `SysStat`, `SysGetpwnam` or `SysGetgrnam` whose name is the null string: the
-call fails and nothing is made, whatever the other arguments are. The count is
-checked first, and a call whose option and a whole-number argument are both
-wrong raises the error of one of them, as [the precedence
+call fails and nothing is made, whatever the other arguments are. A call with
+more than one fault, among the count, the option and a whole-number argument,
+raises the error of one of them, as [the precedence
 rule](r:conv.error.precedence) says. A name that is not the null string and
 that the system does not know does not raise: it is a failed call, as [the
 answer rule](r:rxunixsys.index.answer) says.

@@ -22,21 +22,26 @@ page records why they are the way they are.
   unspecified under `r[conv.error.additional]`.
 * **Evaluation order is specified; error precedence is not** (2026-11-16, #395, #757). Operands are
   evaluated left before right, both before either is checked; arguments are evaluated from the
-  left; a builtin sends `STRING` to its arguments before it checks them (Deviation 170); and the
-  argument count is checked before the arguments (ANSI 7.4, 9.2.1). An error raised while an
-  operand or an argument is evaluated is raised at that point. These stay specified because Rexx
-  side effects are observable: a function call in an operand or a `STRING` method of an argument
-  runs or does not run. When the checks of one operation (one operator, one builtin or method
-  invocation, one instruction's checks) find more than one fault, which of their errors is raised
-  is unspecified; it is the error of one of the faults. This replaces the precise order of
-  2026-11-12, which took ANSI's results (ANSI 4.1 makes them normative) and ooRexx's order where
-  ANSI is silent. ooRexx follows ANSI's evaluation order but not its precedence: `LEFT`, `VERIFY`,
-  `X2D`, `FORMAT` and `STRIP` check a later argument first, and it does not keep ANSI's subcodes
-  either, raising 41.1 for `1 + 'b'` where ANSI gives 41.2. Java, Python and Rust libraries,
-  Haskell's imprecise exceptions and SQL do not specify which of several faults is reported.
-  interrexx keeps ooRexx's precedence where it has it, so that comparisons stay quiet, but that is
-  a convenience, not part of the contract. Together with the entry below, the contract of an error
-  ends here: a fault is reported, by the code and subcode of a fault that is present.
+  left; and a builtin sends `STRING` to its arguments before it checks them (Deviation 170) (ANSI
+  7.4, 9.2.1). An error raised while an operand or an argument is evaluated is raised at that
+  point. These stay specified because Rexx side effects are observable: a function call in an
+  operand or a `STRING` method of an argument runs or does not run. When the checks of one
+  operation (one operator, one builtin or method invocation, one instruction's checks) find more
+  than one fault, which of their errors is raised is unspecified; it is the error of one of the
+  faults. The faults include a wrong argument count, an omitted required argument and a `STRING`
+  answer that has no string value. Whether the checks after the first fault are made, and so
+  whether the messages they send are sent, is unspecified too; and when an operation finds a fault
+  that raises a condition, such as LOSTDIGITS, and one that raises an error, which comes first is
+  unspecified, so Deviation 102 is withdrawn. This replaces the precise order of 2026-11-12, which
+  took ANSI's results (ANSI 4.1 makes them normative) and ooRexx's order where ANSI is silent.
+  ooRexx follows ANSI's evaluation order but not its precedence: `LEFT`, `VERIFY`, `X2D`, `FORMAT`
+  and `STRIP` check a later argument first, several methods and RexxUtil functions check arguments
+  before their count, and it does not keep ANSI's subcodes either, raising 41.1 for `1 + 'b'` where
+  ANSI gives 41.2. Java, Python and Rust libraries, Haskell's imprecise exceptions and SQL do not
+  specify which of several faults is reported. interrexx keeps ooRexx's precedence where it has it,
+  so that comparisons stay quiet, but that is a convenience, not part of the contract. Together
+  with the entry below, the contract of an error ends here: a fault is reported, by the code and
+  subcode of a fault that is present.
 * **An error's contract is its code and subcode** (2026-11-14, #388, #672). The error number and,
   where the specification states one, the subcode are specified. The message text is not, and
   the items of `ADDITIONAL` for an error the interpreter raises are not unless a rule states one.

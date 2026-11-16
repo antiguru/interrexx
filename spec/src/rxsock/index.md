@@ -115,13 +115,12 @@ r[rxsock.index.args]
 The functions follow [the native call rule](r:bif.index.call.native), as the
 [RexxUtil](../rexxutil/index.md) functions do. A required argument that is not
 given, or is omitted, raises `SYNTAX 88.901`, and an argument past the last one
-of the function raises `SYNTAX 88.922`; the count is checked before the arguments
-are read. A socket, a flag and a count are given as [whole
-numbers](r:rxunixsys.index.whole), and one that is not raises `SYNTAX 88.907`.
-A name of a domain, a type, a protocol, a level or an option is read in either
-case. One that the function does not know raises `SYNTAX 40.1` where the page of
-the function says so, and is otherwise a failed call that [the error
-rule](r:rxsock.index.errors) describes.
+of the function raises `SYNTAX 88.922`. A socket, a flag and a count are given
+as [whole numbers](r:rxunixsys.index.whole), and one that is not raises `SYNTAX
+88.907`. A name of a domain, a type, a protocol, a level or an option is read
+in either case. One that the function does not know raises `SYNTAX 40.1` where
+the page of the function says so, and is otherwise a failed call that [the
+error rule](r:rxsock.index.errors) describes.
 
 ```rexx
 call try "SockSocket('AF_INET', 'SOCK_STREAM')"

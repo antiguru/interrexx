@@ -235,16 +235,17 @@ t~remove(.k~new("s1")) => hash s1 | == s1 s1
 r[class.table.at]
 `at(index)` and `[index]` answer the item stored at the index, and `.nil` when
 there is none. The methods take exactly one argument: none, or an omitted one,
-raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; the number of
-arguments is checked before the index is looked up. An error that the
-`hashCode` of the index raises is the error of the message.
+raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; with a second
+argument, whether the index is looked up is unspecified, as [the precedence
+rule](r:conv.error.precedence) says. An error that the `hashCode` of the index
+raises is the error of the message.
 
 ```rexx
 t = .table~new
 t~put('item', 'k')
 say t~at('k') t['k'] t~at('K') (t~at('zz') == .nil) (t~at(.nil) == .nil)
 call try 't~at'
-call try 't~at(, "x")'
+call try 't~at("x", "x")'
 call try 't~at("a", "b")'
 call try 't[]'
 call try 't~at(.hostile~new)'
@@ -264,7 +265,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 item item The NIL object 1 1
 t~at => 88.901
-t~at(, "x") => 93.902
+t~at("x", "x") => 93.902
 t~at("a", "b") => 93.902
 t[] => 88.901
 t~at(.hostile~new) => 93.900
@@ -350,7 +351,7 @@ say t~hasItem('x') t~hasItem('X') t~hasItem(.nil) t~hasItem('zz')
 say t~index('x') t~index(.nil) (t~index('q') == .nil)
 call try 't~hasItem'
 call try 't~index'
-call try 't~hasItem(, 1)'
+call try 't~hasItem(1, 1)'
 call try 't~index(1, 2)'
 exit
 try:
@@ -367,7 +368,7 @@ bad: say arg(1) '=>' condition('o')~code
 k1 k2 1
 t~hasItem => 93.903
 t~index => 93.903
-t~hasItem(, 1) => 93.902
+t~hasItem(1, 1) => 93.902
 t~index(1, 2) => 93.902
 ```
 

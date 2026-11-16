@@ -350,8 +350,9 @@ r[class.set.at]
 `at(index)` and `[index]` answer the stored item that is equal to the index,
 and `.nil` when there is none. The methods take exactly one argument: none, or
 an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`;
-the number of arguments is checked before the index is looked up. An error
-that the `hashCode` of the index raises is the error of the message.
+with a second argument, whether the index is looked up is unspecified, as [the
+precedence rule](r:conv.error.precedence) says. An error that the `hashCode` of
+the index raises is the error of the message.
 
 ```rexx
 s = .set~new
@@ -359,7 +360,7 @@ s~put('item')
 say s~at('item') s['item'] s~at('ITEM') (s~at('zz') == .nil),
   (s~at(.nil) == .nil)
 call try 's~at'
-call try 's~at(, "x")'
+call try 's~at("x", "x")'
 call try 's~at("a", "b")'
 call try 's[]'
 call try 's~at(.hostile~new)'
@@ -379,7 +380,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 item item The NIL object 1 1
 s~at => 88.901
-s~at(, "x") => 93.902
+s~at("x", "x") => 93.902
 s~at("a", "b") => 93.902
 s[] => 88.901
 s~at(.hostile~new) => 93.900
@@ -429,7 +430,7 @@ say s~hasItem('x') s~hasItem('X') s~hasItem(.nil) s~hasItem('zz')
 say s~index('x') (s~index('q') == .nil) s~hasItem('x', )
 call try 's~hasItem'
 call try 's~index'
-call try 's~hasItem(, 1)'
+call try 's~hasItem(1, 1)'
 call try 's~index(1, 2)'
 exit
 try:
@@ -446,7 +447,7 @@ bad: say arg(1) '=>' condition('o')~code
 x 1 1
 s~hasItem => 88.901
 s~index => 93.903
-s~hasItem(, 1) => 93.902
+s~hasItem(1, 1) => 93.902
 s~index(1, 2) => 93.902
 ```
 

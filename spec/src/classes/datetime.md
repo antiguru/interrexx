@@ -446,7 +446,7 @@ r[class.datetime.today]
 default offset or the one its optional argument gives ([the offset
 rule](r:class.datetime.offset)). The day is the current one and is not
 specified, so the example checks the time of day and the offset only. It takes
-at most one argument: a second raises `SYNTAX 93.902`, whatever the first is.
+at most one argument: a second raises `SYNTAX 93.902`.
 
 ```rexx
 t = .datetime~today
@@ -456,7 +456,7 @@ signal on syntax name bad
 say .datetime~today(901)
 bad: say condition('o')~code
 signal on syntax name bad2
-say .datetime~today(901, 1)
+say .datetime~today(90, 1)
 bad2: say condition('o')~code
 ```
 

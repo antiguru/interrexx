@@ -1578,17 +1578,17 @@ The method that the receiver gets runs the code of a method object that is
 given, with the scope that [the scope rule](r:class.methods.object.scope) says.
 It is not specified whether the method object that the receiver holds is the
 argument itself or a copy of it, and what scope the argument object answers
-afterwards is not specified either. The number of arguments is checked before
-the arguments, and a call that fails more than one check raises the error of
-one of them, as [the precedence rule](r:conv.error.precedence) says. With no
-second argument the name is hidden for the receiver. The third argument is the
-scope, `FLOAT` or `OBJECT` as [the scope rule](r:class.methods.object.scope)
-says; another value raises `88.916`, and `.nil` raises `88.909`. A fourth
-argument raises `93.902`. A source that does not translate raises the
-translation error from `setMethod`. The code of a method made from a source
-runs with the scope `FLOAT`, whose object variables are separate from those of
-any class: the methods that the receiver got by `setMethod` with `FLOAT`, by
-`run` and by `enhanced` share one set, which is kept for the receiver.
+afterwards is not specified either. A call that fails more than one check, the
+number of arguments among them, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. With no second argument the
+name is hidden for the receiver. The third argument is the scope, `FLOAT` or
+`OBJECT` as [the scope rule](r:class.methods.object.scope) says; another value
+raises `88.916`, and `.nil` raises `88.909`. A fourth argument raises `93.902`.
+A source that does not translate raises the translation error from `setMethod`.
+The code of a method made from a source runs with the scope `FLOAT`, whose
+object variables are separate from those of any class: the methods that the
+receiver got by `setMethod` with `FLOAT`, by `run` and by `enhanced` share one
+set, which is kept for the receiver.
 
 ```rexx
 o = .w~new
@@ -1609,7 +1609,7 @@ call try 'o~sm("a8")'
 say o~hasMethod('a8') o~hasMethod('a1')
 call try 'o~sm("a9", .nil)'
 call try 'o~sm("a9", .object~new)'
-call try 'o~sm("a9", "return 1", "f", 4)'
+call try 'o~sm("a9", "return 1", "FLOAT", 4)'
 call try 'o~sm'
 call try 'o~sm(.nil)'
 call try 'o~sm("a9", "if then")'
@@ -1664,7 +1664,7 @@ o~sm("a8") => no error
 0 1
 o~sm("a9", .nil) => 93.974
 o~sm("a9", .object~new) => 93.974
-o~sm("a9", "return 1", "f", 4) => 93.902
+o~sm("a9", "return 1", "FLOAT", 4) => 93.902
 o~sm => 88.901
 o~sm(.nil) => 88.909
 o~sm("a9", "if then") => 35.929
@@ -1746,18 +1746,18 @@ made by string
 ```
 
 r[class.object.unsetmethod]
-`unsetMethod` takes the name off the receiver again, as
-[the object method rule](r:class.methods.object) says, and answers no value.
-It is private with the restriction of
-[the access rule](r:class.methods.object.access). The argument is the name,
-required (`SYNTAX 88.901`), and a value that is no string raises `88.909`. A
-second argument raises `93.902`, and the number of arguments is checked first,
-so a second argument raises it even when the name is missing. The name is
-taken in upper case. A name for which the receiver has no method of its own is
-not an error and changes nothing, and so does a name that only a class holds:
-the class's method stays. A name that `setMethod` replaced twice is taken off
-with one `unsetMethod`. A method that [`enhanced`](r:class.methods.enhanced)
-added to the receiver is not taken off by it, and the receiver keeps it.
+`unsetMethod` takes the name off the receiver again, as [the object method
+rule](r:class.methods.object) says, and answers no value. It is private with
+the restriction of [the access rule](r:class.methods.object.access). The
+argument is the name, required (`SYNTAX 88.901`), and a value that is no string
+raises `88.909`. A second argument raises `93.902`, and with the name missing
+too the call raises one of the two errors, as [the precedence
+rule](r:conv.error.precedence) says. The name is taken in upper case. A name
+for which the receiver has no method of its own is not an error and changes
+nothing, and so does a name that only a class holds: the class's method stays.
+A name that `setMethod` replaced twice is taken off with one `unsetMethod`. A
+method that [`enhanced`](r:class.methods.enhanced) added to the receiver is not
+taken off by it, and the receiver keeps it.
 
 ```rexx
 o = .w~new
@@ -1781,7 +1781,7 @@ say e~extra e~hasMethod('extra')
 call try 'o~um'
 call try 'o~um(.nil)'
 call try 'o~um("a1", 2)'
-call try 'o~um(, 2)'
+call try 'o~um(2, 2)'
 call try 'o~unsetMethod("outside")'
 exit
 try:
@@ -1818,7 +1818,7 @@ added 1
 o~um => 88.901
 o~um(.nil) => 88.909
 o~um("a1", 2) => 93.902
-o~um(, 2) => 93.902
+o~um(2, 2) => 93.902
 o~unsetMethod("outside") => 97.2
 ```
 

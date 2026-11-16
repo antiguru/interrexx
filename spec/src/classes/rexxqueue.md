@@ -897,17 +897,18 @@ SESSION
 
 r[class.rexxqueue.set]
 `set(name)` switches the object to the queue of that name and answers the name
-of the queue it worked with before, in upper case. `name` is required
-(`SYNTAX 93.901`) and the method takes no other argument (`SYNTAX 93.902`),
-both checked before anything else. `set` does not look for the queue: a name
-of a queue that does not exist is taken, and [the missing queue
+of the queue it worked with before, in upper case. `name` is required (`SYNTAX
+93.901`) and the method takes no other argument (`SYNTAX 93.902`); a call with
+one of these faults and another raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. `set` does not look for the
+queue: a name of a queue that does not exist is taken, and [the missing queue
 rule](r:class.rexxqueue.missing) says what the object then does. The name is
 decided as `init` does: the argument is sent `upper`, and an object without
 that method raises `SYNTAX 97.1`, `.nil` and an `Object` among them. Then
 `objectName=` is sent to the receiver with the upper-case name ([the sends
 rule](r:class.rexxqueue.set.sends)). Only the object changes: the queue that
-the program uses with its instructions is not switched, and another object
-that holds the same name is not changed.
+the program uses with its instructions is not switched, and another object that
+holds the same name is not changed.
 
 ```rexx
 q = .rexxqueue~new('spec_rq_set_a')

@@ -227,12 +227,12 @@ say r~class~id r~source~items (r~package~name == f)
 say r~package~classes~items r~package~routines~items
 say r~call('x')
 say .mine~newFile(f)~class~id
-call sysfiledelete f
 call try '.routine~newFile("class_routine_newfile_none.tmp")'
 call try '.routine~newFile()'
 call try '.routine~newFile(.nil)'
 call try '.routine~newFile(f, "PROGRAMSCOPE", 1)'
 call try '.routine~newFile(f, "bad")'
+call sysfiledelete f
 exit
 try:
   signal on syntax name bad

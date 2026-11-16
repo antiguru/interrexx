@@ -78,12 +78,11 @@ d: say condition('o')~code
 ```
 
 r[bif.x2d.errors]
-The call checks the argument count first; then the form of `n` as a [whole
+The call checks the argument count; the form of `n` as a [whole
 number](r:conv.whole.form), `SYNTAX 40.12`; the sign of `n`, `SYNTAX 93.923`;
 the digits of `hex_string`; and the number of digits of the answer, `SYNTAX
-93.935`. A call that fails more than one of the checks after the count raises
-the error of one of them, as [the precedence rule](r:conv.error.precedence)
-says.
+93.935`. A call that fails more than one of these checks raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a

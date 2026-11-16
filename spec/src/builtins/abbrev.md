@@ -43,7 +43,7 @@ signal on syntax name e
 say abbrev(, 'ab')
 e: say condition('o')~code
 signal on syntax name f
-say abbrev('abc', 'a', 'x', 1)
+say abbrev('abc', 'a', 1, 1)
 f: say condition('o')~code
 signal on syntax name g
 say abbrev('abc', , -1)
