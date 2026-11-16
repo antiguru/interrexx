@@ -528,8 +528,8 @@ mod tests {
         assert!(!tails.set_at(2, None));
     }
 
-    /// The map hashes a tail's bytes with the seed's keyed hash, the one a
-    /// string's hash code is.
+    /// The map hashes a tail's bytes alone with the hash keyed from the
+    /// seed.
     #[test]
     fn a_tail_hashes_as_the_keyed_hash_of_its_bytes_alone() {
         let mut tails = Tails::new();
