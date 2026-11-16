@@ -266,10 +266,13 @@ fn a_search_whose_comparison_always_adds_an_entry_ends() {
 }
 
 /// [`a_search_whose_comparison_always_adds_an_entry_ends`] for the searches
-/// that compare indexes: a `Relation` searched by index and a `Bag`, whose
-/// item is its index. Every index collides and every comparison of the armed
-/// index adds a colliding entry, so a search that restarts on a change never
-/// ends; each must compare the one candidate it began with once.
+/// that compare indexes: a `Relation` searched by index, a `Bag`, whose item
+/// is its index, and the keyed lookup of `at`, `put` and `remove`. Every index collides
+/// and every comparison of the armed index adds a colliding entry, so a
+/// search that restarts on a change never ends. A search must compare the one
+/// candidate it began with once. A keyed lookup compares the candidates the
+/// chain held when a comparison first changed the collection, here the one it
+/// began with and the one that comparison added, each once.
 #[test]
 fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
     let outcome = crate::run_program(
@@ -290,6 +293,15 @@ fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
           say 'bag hasItem' b~hasItem(q) q~calls\n\
           b = fresh(.bag); q = .grow~new(b, 1)\n\
           say 'bag removeItem' b~removeItem(q) q~calls\n\
+          t = fresh(.table); q = .grow~new(t, 1)\n\
+          say 'table at' t[q] q~calls\n\
+          t = fresh(.table); q = .grow~new(t, 1)\n\
+          t[q] = 'b'\n\
+          say 'table put' t~items q~calls\n\
+          t = fresh(.table); q = .grow~new(t, 1)\n\
+          say 'table remove' t~remove(q) q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'relation at' r~at(q) q~calls\n\
           exit\n\
           fresh: procedure\n  use arg class\n  c = class~new\n  \
           k = .grow~new(c, 0)\n  if class == .bag then c~put(k)\n  else c~put('a', k)\n  \
@@ -309,7 +321,8 @@ fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
     assert_eq!(
         String::from_utf8_lossy(&outcome.stdout),
         "allAt 0 1\nitems 0 1\nsupplier 0 1\nremoveAll 0 1\nhasItem 0 1\n\
-         removeItem The NIL object 1\nbag hasItem 0 1\nbag removeItem The NIL object 1\n"
+         removeItem The NIL object 1\nbag hasItem 0 1\nbag removeItem The NIL object 1\n\
+         table at The NIL object 2\ntable put 4 2\ntable remove The NIL object 2\nrelation at The NIL object 2\n"
     );
 }
 

@@ -127,6 +127,71 @@ fn find_text_in(
     Ok(Err(place))
 }
 
+/// What a lookup knows once one of its comparisons has written a store: the
+/// candidates the chain of the index's code held then, and the answer of each
+/// comparison sent since. From then on each of those candidates is compared at
+/// most once and an entry put after is not compared, so the lookup ends
+/// whatever the comparisons do.
+struct Guard {
+    candidates: Vec<ObjRef>,
+    compared: Vec<(ObjRef, bool)>,
+}
+
+/// What a [`Guard`] says of one candidate.
+enum Seen {
+    /// Compared since the guard began, with this answer.
+    Compared(bool),
+    /// In the chain when the guard began, and not compared since.
+    Pending,
+    /// Put after the guard began.
+    Unseen,
+}
+
+impl Guard {
+    /// The guard of a lookup whose comparison of `held` answered `matches`
+    /// and wrote a store, with `store` the receiver's store after it.
+    fn began(
+        interp: &mut Interp,
+        store: &Store,
+        code: u64,
+        held: ObjRef,
+        matches: bool,
+    ) -> Result<Guard, Failure> {
+        let mut candidates = Vec::new();
+        {
+            let (slots, codes) = codes_of(interp, store)?;
+            let indexes = array_slots(interp, store.indexes)?;
+            if let Ok((_, head)) = chain_in(slots, codes, code) {
+                for position in codes.chain(head) {
+                    if let Some(candidate) = indexes.get(position).copied().flatten() {
+                        candidates.push(candidate);
+                    }
+                }
+            }
+        }
+        // A candidate a later comparison removes must not be swept and its
+        // handle reused by an entry put after.
+        interp.roots.activity_mut().push_temp(held);
+        for &candidate in &candidates {
+            interp.roots.activity_mut().push_temp(candidate);
+        }
+        Ok(Guard {
+            candidates,
+            compared: vec![(held, matches)],
+        })
+    }
+
+    fn seen(&self, held: ObjRef) -> Seen {
+        if let Some(&(_, matches)) = self.compared.iter().find(|(object, _)| *object == held) {
+            Seen::Compared(matches)
+        } else if self.candidates.contains(&held) {
+            Seen::Pending
+        } else {
+            Seen::Unseen
+        }
+    }
+}
+
 fn probe_by_protocol(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -140,6 +205,9 @@ fn probe_by_protocol(
     if generation != interp.store_generation {
         store = store_in(interp, receiver, half)?;
     }
+    // None until a comparison writes a store, so a lookup whose comparisons
+    // write nothing keeps nothing beside its walk.
+    let mut guard: Option<Guard> = None;
     'search: loop {
         // A differing cached code is a different index for every key that
         // keeps the hash contract, and nothing is sent to it: only the chain
@@ -153,20 +221,42 @@ fn probe_by_protocol(
                 at = codes_of(interp, &store)?.1.next(position);
                 continue;
             };
-            let generation = interp.store_generation;
-            let writes = interp.store_writes;
-            let matches = same_index(interp, &store, keys, position, index)?;
-            if generation != interp.store_generation || writes != interp.store_writes {
-                // The comparison ran code that wrote a store. New arrays, or a
-                // new entry, start the search again; in the same arrays a
-                // position keeps its entry while it is live, so the answer
-                // stands unless the compared entry has gone.
-                let current = store_in(interp, receiver, half)?;
-                if current != store || slot_at(interp, current.indexes, position)? != Some(held) {
-                    store = current;
-                    continue 'search;
+            let known = match guard.as_ref().map(|guard| guard.seen(held)) {
+                None | Some(Seen::Pending) => None,
+                Some(Seen::Compared(matches)) => Some(matches),
+                Some(Seen::Unseen) => {
+                    at = codes_of(interp, &store)?.1.next(position);
+                    continue;
                 }
-            }
+            };
+            let matches = match known {
+                Some(matches) => matches,
+                None => {
+                    let generation = interp.store_generation;
+                    let writes = interp.store_writes;
+                    let matches = same_index(interp, &store, keys, position, index)?;
+                    if let Some(guard) = guard.as_mut() {
+                        guard.compared.push((held, matches));
+                    }
+                    if generation != interp.store_generation || writes != interp.store_writes {
+                        // The comparison ran code that wrote a store. New
+                        // arrays, or the compared entry gone, start the walk
+                        // again; in the same arrays a position keeps its entry
+                        // while it is live, so the answer stands.
+                        let current = store_in(interp, receiver, half)?;
+                        if guard.is_none() {
+                            guard = Some(Guard::began(interp, &current, code, held, matches)?);
+                        }
+                        if current != store
+                            || slot_at(interp, current.indexes, position)? != Some(held)
+                        {
+                            store = current;
+                            continue 'search;
+                        }
+                    }
+                    matches
+                }
+            };
             if matches {
                 return Ok((
                     store,
