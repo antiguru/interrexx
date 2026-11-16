@@ -257,16 +257,7 @@ impl<'a> Codes<'a> {
     /// The code cached for the entry at a position, `None` for a hole.
     #[inline]
     pub(super) fn code(&self, position: usize) -> Option<u64> {
-        match self
-            .fields
-            .get(position * self.stride + CODE)
-            .copied()
-            .flatten()
-            .map(ObjRef::decode)
-        {
-            Some(Decoded::SmallInt(code)) if code >= 0 => Some(code as u64),
-            _ => None,
-        }
+        self.field(position, CODE).map(|code| code as u64)
     }
 
     /// The entry after the one at `position` in its chain, `None` for the
@@ -875,7 +866,7 @@ pub(super) fn rebuild(
 /// `put`. `code` is the index's [`code_of`]. A full store is rebuilt first.
 ///
 /// `known` is where a probe of the receiver's store, as it is now, last
-/// found the chain of `code` ([`Probe::place`]).
+/// found the chain of `code` ([`Probe::at`]).
 pub(super) fn append(
     interp: &mut Interp,
     receiver: ObjRef,
