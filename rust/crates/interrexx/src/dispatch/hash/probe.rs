@@ -241,7 +241,7 @@ fn probe_by_protocol(
                     if generation != interp.store_generation || writes != interp.store_writes {
                         // The comparison ran code that wrote a store. New
                         // arrays, or the compared entry gone, start the walk
-                        // again; in the same arrays a position keeps its entry
+                        // again. In the same arrays a position keeps its entry
                         // while it is live, so the answer stands.
                         let current = store_in(interp, receiver, half)?;
                         if guard.is_none() {

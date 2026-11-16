@@ -245,7 +245,7 @@ impl<'a> Codes<'a> {
     #[inline]
     pub(super) fn new(fields: &'a [Option<ObjRef>], slot_count: usize) -> Codes<'a> {
         // An unlinked array has one field per entry position, fewer than the
-        // slots; a linked one has [`FIELDS`], at least as many as the slots.
+        // slots. A linked one has [`FIELDS`], at least as many as the slots.
         let stride = if fields.len() >= slot_count {
             FIELDS
         } else {
@@ -759,9 +759,9 @@ pub(super) fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<
     // **A `Body::Native` receiver is not this store's**, and the check has to
     // be here because the two are one method. `IdentityTable`'s `At`, `Put` and
     // `[]` rows are donated to `StringTable` and then `StringTable`'s whole set
-    // to `Directory`, so all four classes share one method identity and one
-    // body -- which is why registering these names for `Table` alone reached a
-    // `StringTable` during the bootstrap. `Directory`, `StringTable` and
+    // to `Directory`, so `Table`, `IdentityTable`, `StringTable` and `Directory`
+    // share one method identity and one body -- which is why registering these
+    // names for `Table` alone reached a `StringTable` during the bootstrap. `Directory`, `StringTable` and
     // `Properties` keep the entry map they already have until the task that
     // owns them.
     if matches!(
