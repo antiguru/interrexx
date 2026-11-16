@@ -46,9 +46,11 @@ fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-/// A fresh directory of this run's own, named for `name`.
+/// A fresh directory of this run's own, named for `name`. The process is written in hex, which
+/// keeps the API service's socket path below `api/` within the platform's bound.
 fn fresh_dir(name: &str) -> PathBuf {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{}", std::process::id()));
+    let dir =
+        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{:x}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("a directory of this run's own");
     dir
