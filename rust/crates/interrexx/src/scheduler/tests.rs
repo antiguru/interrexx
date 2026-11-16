@@ -392,6 +392,23 @@ fn a_request_through_the_instance_after_termination_posts_nothing() {
     assert_eq!(inbox.drain().len(), 0, "a dropped interpreter's inbox grew");
 }
 
+/// A request that reaches a closed inbox is not posted, so one that a `Halt`
+/// racing the close got past the instance's check posts nothing either
+/// (`r[native.threads.trace]`).
+#[test]
+fn a_halt_or_trace_request_to_a_closed_inbox_posts_nothing() {
+    let interp = Interp::new();
+    let inbox = interp.timer.inbox();
+    inbox.close();
+    inbox.post_halt();
+    inbox.post_trace_all(true);
+    assert_eq!(inbox.drain().len(), 0, "a closed inbox took a request");
+    assert!(
+        !inbox.requests().pending(crate::timer::HALT),
+        "a closed inbox's request flag was set"
+    );
+}
+
 /// An interpreter dropped without terminating posts nothing either.
 #[test]
 fn a_request_through_the_instance_of_a_dropped_interpreter_posts_nothing() {

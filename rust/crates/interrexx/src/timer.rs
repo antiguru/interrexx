@@ -120,8 +120,22 @@ impl<T> Inbox<T> {
         self.arrived.notify_one();
     }
 
-    /// Closes the inbox: the interpreter has terminated, and nothing serves a
-    /// request posted to it.
+    /// [`Inbox::post`], unless the inbox is closed. Answers whether it
+    /// posted.
+    pub(crate) fn post_unless_closed(&self, item: T) -> bool {
+        let mut queue = lock(&self.queue);
+        if queue.closed {
+            return false;
+        }
+        queue.posted.push_back(item);
+        self.requests.set(INBOX);
+        drop(queue);
+        self.arrived.notify_one();
+        true
+    }
+
+    /// Closes the inbox to [`Inbox::post_unless_closed`]: the interpreter has
+    /// terminated, and nothing serves a request that waits for it.
     pub(crate) fn close(&self) {
         lock(&self.queue).closed = true;
     }

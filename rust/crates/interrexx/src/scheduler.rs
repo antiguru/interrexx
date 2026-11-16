@@ -198,16 +198,18 @@ impl crate::timer::Inbox<Posted> {
     /// `RexxSetHalt` naming a run. A native call that finds the request pending when
     /// it returns has the calling clause's boundary serve it.
     pub(crate) fn post_halt(&self) {
-        self.post(Posted::Halt);
-        self.requests()
-            .set(crate::timer::HALT | crate::timer::BOUNDARY);
+        if self.post_unless_closed(Posted::Halt) {
+            self.requests()
+                .set(crate::timer::HALT | crate::timer::BOUNDARY);
+        }
     }
 
     /// Asks every activity of the interpreter to turn its external trace on or off
     /// (`r[native.threads.trace]`), served as [`Self::post_halt`]'s request is.
     pub(crate) fn post_trace_all(&self, on: bool) {
-        self.post(Posted::TraceAll(on));
-        self.requests().set(crate::timer::BOUNDARY);
+        if self.post_unless_closed(Posted::TraceAll(on)) {
+            self.requests().set(crate::timer::BOUNDARY);
+        }
     }
 }
 
