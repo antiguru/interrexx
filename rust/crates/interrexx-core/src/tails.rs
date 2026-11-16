@@ -25,8 +25,10 @@
 //! choose tails that all collide in it without knowing the seed. The order
 //! comes from the slab, so the seed never shows in it.
 
-use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
+
+use hashbrown::HashMap;
+use hashbrown::hash_map::EntryRef;
 
 use crate::{HashSeed, ObjRef};
 
@@ -256,11 +258,12 @@ impl Tails {
     #[inline]
     pub fn set(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) -> usize {
         let store = self.0.get_or_insert_with(|| Box::new(Store::new(seed)));
-        // **Looked up before it is inserted, because the key is already there
-        // on all but the first write to a tail**: inserting needs an owned
-        // key whether or not the map keeps it.
-        match store.ordinals.get_mut(key) {
-            Some(ordinal) => {
+        // **One lookup serves an existing tail and a new one alike**: the
+        // entry borrows the key, so a write to an existing tail allocates
+        // nothing, and a new tail is hashed once and copied only when filed.
+        match store.ordinals.entry_ref(key) {
+            EntryRef::Occupied(mut entry) => {
+                let ordinal = entry.get_mut();
                 let Some(slot) = store.values.get_mut(*ordinal) else {
                     unreachable!("a mapped ordinal is a slot of the slab");
                 };
@@ -280,9 +283,9 @@ impl Tails {
                     moved
                 }
             }
-            None => {
+            EntryRef::Vacant(entry) => {
                 let ordinal = store.values.len();
-                store.ordinals.insert(key.to_vec(), ordinal);
+                entry.insert(ordinal);
                 store.values.push(Slot::of(value));
                 ordinal
             }
@@ -292,8 +295,10 @@ impl Tails {
     /// Adds the tail `key` holding `value` where the stem has no such tail,
     /// and leaves an existing one, tombstone or not, as it is.
     pub fn insert_if_absent(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) {
-        if !self.contains_key(key) {
-            self.set(seed, key, value);
+        let store = self.0.get_or_insert_with(|| Box::new(Store::new(seed)));
+        if let EntryRef::Vacant(entry) = store.ordinals.entry_ref(key) {
+            entry.insert(store.values.len());
+            store.values.push(Slot::of(value));
         }
     }
 

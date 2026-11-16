@@ -67,11 +67,15 @@ fn probe_string_value(
         },
         _ => None,
     };
+    // The plain index's code, kept for the general search below: that
+    // search reads the same bytes, so it need not hash them again.
+    let mut plain_code = None;
     if let Some(wanted) = plain {
         let code = code_of(super::super::string_hash(interp.hash_seed, wanted));
         if let Some(at) = find_plain_string(interp, &store, code, wanted) {
             return Ok((store, Probe { at, code }));
         }
+        plain_code = Some(code);
     }
     let short;
     let owned;
@@ -85,7 +89,13 @@ fn probe_string_value(
             &owned
         }
     };
-    let code = code_of(super::super::string_hash(interp.hash_seed, wanted));
+    let code =
+        plain_code.unwrap_or_else(|| code_of(super::super::string_hash(interp.hash_seed, wanted)));
+    debug_assert_eq!(
+        code,
+        code_of(super::super::string_hash(interp.hash_seed, wanted)),
+        "a plain index's string value is its bytes"
+    );
     let at = find_text_in(interp, &store, code, wanted)?;
     Ok((store, Probe { at, code }))
 }

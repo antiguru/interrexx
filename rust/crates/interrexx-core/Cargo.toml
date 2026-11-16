@@ -21,6 +21,11 @@ rustc-hash = "2.1.2"
 # stem's tail map, seeded per interpreter against chosen collisions.
 siphasher = { version = "1.0.4", default-features = false }
 
+# The table behind std's `HashMap`, used directly for a stem's tail map: its
+# `entry_ref` finds or files a borrowed key with one hash, where std needs a
+# lookup and then an insert. No default features, so it brings no hasher.
+hashbrown = { version = "0.16.1", default-features = false }
+
 [features]
 # The sharing-fraction instrument's tags, `Heap::sharing_counts`.
 sharing = []
