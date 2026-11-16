@@ -40,6 +40,11 @@
 // * `AtSend(target, name)` sends the message `name`, with no arguments.
 // * `AtSendAfter(target, name, milliseconds)` waits `milliseconds` before it attaches, then does
 //   what `AtSend` does.
+// * `AtRaiseAfter(milliseconds)` starts a thread that waits `milliseconds` and raises a flag of
+//   the extension's own, which it holds outside the interpreter, without attaching. `AtRaised`
+//   answers 1 once the flag is raised, and 0 before.
+// * `AtHaltAfter(milliseconds)` starts a thread that waits `milliseconds` and then calls `Halt`
+//   through the instance the call's thread context links, without attaching.
 // * `AtPause(milliseconds)` blocks for `milliseconds` and answers 1, starting no thread.
 // * `AtPauseCall(milliseconds, routine)` blocks for `milliseconds`, then calls `routine` with no
 //   arguments through `CallRoutine` on its own call's thread context, and answers what it
@@ -885,6 +890,66 @@ RexxRoutine0(CSTRING, AtReport)
     return report;
 }
 
+// The flag `AtRaiseAfter` raises.
+static std::atomic<int> raised(0);
+
+static void *raise_after(void *argument)
+{
+    usleep((useconds_t)((intptr_t)argument * 1000));
+    raised = 1;
+    return NULL;
+}
+
+// What the thread `AtHaltAfter` starts is given: the instance to halt, and how many milliseconds
+// to wait first.
+struct HaltAfter
+{
+    RexxInstance *instance;
+    size_t milliseconds;
+};
+
+static void *halt_after(void *argument)
+{
+    HaltAfter *halt = (HaltAfter *)argument;
+    usleep((useconds_t)(halt->milliseconds * 1000));
+    halt->instance->Halt();
+    delete halt;
+    return NULL;
+}
+
+// Starts a detached thread running `entry` with `argument`, and answers 1 where it started.
+static logical_t start_detached(void *(*entry)(void *), void *argument)
+{
+    pthread_t thread;
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
+    int started = pthread_create(&thread, &attributes, entry, argument);
+    pthread_attr_destroy(&attributes);
+    return started == 0 ? 1 : 0;
+}
+
+RexxRoutine1(logical_t, AtRaiseAfter, positive_wholenumber_t, milliseconds)
+{
+    return start_detached(raise_after, (void *)(intptr_t)milliseconds);
+}
+
+RexxRoutine0(int, AtRaised)
+{
+    return raised;
+}
+
+RexxRoutine1(logical_t, AtHaltAfter, positive_wholenumber_t, milliseconds)
+{
+    HaltAfter *halt = new HaltAfter{context->threadContext->instance, (size_t)milliseconds};
+    if (!start_detached(halt_after, halt))
+    {
+        delete halt;
+        return 0;
+    }
+    return 1;
+}
+
 static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtTicker, AtTicker),
     REXX_TYPED_ROUTINE(AtRaising, AtRaising),
@@ -926,6 +991,9 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtAwaitDone, AtAwaitDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
+    REXX_TYPED_ROUTINE(AtRaiseAfter, AtRaiseAfter),
+    REXX_TYPED_ROUTINE(AtRaised, AtRaised),
+    REXX_TYPED_ROUTINE(AtHaltAfter, AtHaltAfter),
     REXX_LAST_ROUTINE()
 };
 

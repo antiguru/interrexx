@@ -983,8 +983,9 @@ impl Scheduler for Interp {
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 /// The slices that fall due while a trace delivery holds a guard, with another
-/// activity ready, before the delivery is refused as an inverted wait: about
-/// six seconds, past what a destination that is doing work takes.
+/// activity ready, before the delivery is refused as an inverted wait, or,
+/// where waits are not refused as unending, reported on stderr: about six
+/// seconds, past what a destination that is doing work takes.
 const GUARDED_DELIVERY_SLICES: u32 = 250;
 
 impl Interp {
@@ -3517,7 +3518,11 @@ impl Interp {
         // A delivery that holds a guard never yields (a second delivery
         // waiting for that guard would be an inverted wait), so one that
         // waits for another activity to act spins. After a bound of slices
-        // it is refused as the inverted wait it is (Deviation 14).
+        // it is refused as the inverted wait it is (Deviation 14), where
+        // waits are refused as unending. Where they are not, a thread that
+        // native code from outside started may still end the spin, so it
+        // goes on, and stderr says so once.
+        let refuses = self.refuses_unending_waits();
         if fresh
             && self.slice_deferred
             && self.activity.routing_trace
@@ -3525,11 +3530,17 @@ impl Interp {
             && self.delivery_holds_a_guard()
             && let Some(delivery) = self.deliveries.last_mut()
         {
-            delivery.guarded_slices += 1;
-            if delivery.guarded_slices > GUARDED_DELIVERY_SLICES {
+            delivery.guarded_slices = delivery.guarded_slices.saturating_add(1);
+            if delivery.guarded_slices > GUARDED_DELIVERY_SLICES && refuses {
                 self.slice_deferred = false;
                 inverted_wait!(self, ParkReason::GuardWhen);
                 return Err(Loud::inverted_wait("a guard").into());
+            }
+            if delivery.guarded_slices == GUARDED_DELIVERY_SLICES + 1 {
+                self.write_err(
+                    b"interrexx: a trace line's delivery holds a guard and has kept the \
+                      activities ready to run from running for several seconds\n",
+                );
             }
         }
         if fresh && !self.slice_deferred {
