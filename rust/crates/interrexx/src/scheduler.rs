@@ -1327,17 +1327,20 @@ impl Interp {
     /// for at its entry, before it has run anything, is held by an activity
     /// a lend to a callback stopped, and the callback's member sends again
     /// when asked. If so, the callback's thread is asked to give the baton
-    /// back and send again, and its next recall is held until a release
-    /// grants it the lock in its turn ([`Interp::queue_held_retry`]), as
-    /// ooRexx has the send wait for the lock
-    /// (`r[native.threads.attach.deviation.178]`). The caller then fails the
-    /// send with [`Loud::retried_send`], which the send answers no one.
-    /// `entered` says whether the running activation is the method whose
-    /// entry waits, rather than one the wait comes in the middle of.
+    /// back and send again, its attached activity keeps the place in `key`'s
+    /// queue that the wait took when it began, at `place` for a wait that
+    /// had queued, and its next recall is held until a release grants it the
+    /// lock in that turn ([`Interp::queue_held_retry`]), as ooRexx has the
+    /// send wait for the lock (`r[native.threads.attach.deviation.178]`).
+    /// The caller then fails the send with [`Loud::retried_send`], which the
+    /// send answers no one. `entered` says whether the running activation is
+    /// the method whose entry waits, rather than one the wait comes in the
+    /// middle of.
     pub(crate) fn retries_entry_guard(
         &mut self,
         key: crate::guards::GuardKey,
         entered: bool,
+        place: Option<usize>,
     ) -> bool {
         // Nothing of the callback's message has run only where no activation
         // lies below the wait, and none is running but the one it enters: a
@@ -1359,6 +1362,8 @@ impl Interp {
         }
         let address = thread.address();
         self.activities.retrying.push((address, key));
+        let me = self.running_activity();
+        self.activities.guards.queue_retry(key, me, place);
         // The send runs again from its entry, which announces the method once
         // per message: this run leaves without `<I<`, and the next enters
         // without `>I>`.
@@ -1642,6 +1647,7 @@ impl Interp {
     pub(crate) fn pinned_wait(&mut self, reason: ParkReason) -> Option<Failure> {
         pinned_park!(self, reason);
         self.activity.lock_to_lender = false;
+        self.activity.kept_place = None;
         self.park(reason);
         if self.sim_fails_wait() {
             pinned_unpark!(self);
@@ -1695,6 +1701,7 @@ impl Interp {
         self.activity.when_parked = false;
         self.activity.socket_wait = None;
         self.activities.guards.withdraw(running);
+        self.activity.kept_place = self.activities.guards.give_up_place(running);
         self.activity.guard_waits.retain(|wait| !wait.queued);
         self.activity.guarded_send = None;
         for waiters in self.activities.waiters.values_mut() {
@@ -2108,8 +2115,9 @@ impl Interp {
     }
 
     /// Whether nothing the loop could run or wait for remains: no activity
-    /// ready, none asleep but one a lend stopped, no callback held, and no
-    /// call in flight but those a lend's callback runs above. Only an
+    /// ready, none asleep but one a lend stopped, no callback held or to be
+    /// sent again, and no call in flight but those a lend's callback runs
+    /// above. Only an
     /// activity a lend stopped, or a callback that is yet to arrive, can then
     /// end a wait.
     fn only_stopped_activities_remain(&self) -> bool {
@@ -2123,13 +2131,14 @@ impl Interp {
         table.ready.is_empty()
             && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))
             && table.held.is_empty()
+            && table.retrying.is_empty()
             && table.in_flight == table.runs_below.len()
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
     /// holds it any more: one waiting for a guard lock once a release has
-    /// granted it the lock, in its turn behind the activities queued before
-    /// it. `drain` is where the drain serving them finds the running
+    /// granted it the lock, in the turn its wait took in the lock's queue.
+    /// `drain` is where the drain serving them finds the running
     /// activity.
     fn serve_held(&mut self, drain: DrainAt) {
         let mut at = 0;
@@ -2169,31 +2178,22 @@ impl Interp {
 
     /// Files `recall`, the next recall of a callback whose send gave the
     /// baton back to be sent again once it is granted `key`
-    /// ([`Interp::retries_entry_guard`]): its attached activity joins the
-    /// back of `key`'s queue as any waiter does, so it is granted the lock in
-    /// its turn, and the recall is held until then.
+    /// ([`Interp::retries_entry_guard`]): its attached activity has kept its
+    /// place in `key`'s queue, or been granted the lock from it, and the
+    /// recall is held until the lock is granted.
     fn queue_held_retry(&mut self, recall: Recall, address: usize, key: crate::guards::GuardKey) {
         let waited = self.context_owner(address).map(|held| {
-            self.activities.guards.queue_retry(key, held);
+            self.activities.guards.queue_retry(key, held, None);
             (key, held)
         });
         self.activities.held.push_back((recall, waited));
     }
 
-    /// Whether `activity` is the attached activity of a held send queued for
-    /// `key` ([`Interp::queue_held_retry`]).
-    pub(crate) fn holds_retry_for(
-        &self,
-        key: crate::guards::GuardKey,
-        activity: ActivityId,
-    ) -> bool {
-        (self.activities.held.iter()).any(|(_, waited)| *waited == Some((key, activity)))
-    }
-
     /// Ends the guard waits for `key` of the callbacks whose lends stopped
     /// `granted`, which a release has just made its owner: `granted` runs
     /// only once those callbacks have ended, so their waits would never end.
-    /// A wait ended so is sent again or refused by its caller, as one that
+    /// A wait ended so keeps its place in the lock's queue until it ends, and
+    /// is sent again from that place or refused by its caller, as one that
     /// found the lock held so at its start is (Deviation 178). A lender that
     /// is an attached activity's callback leaves the waits as they are, as
     /// at their start.
@@ -2216,7 +2216,7 @@ impl Interp {
             })
             .collect();
         for lendee in stopped {
-            self.activities.guards.withdraw(lendee);
+            self.activities.guards.keep_place(lendee);
             if let Some(record) = self.record_of(lendee) {
                 record.lock_to_lender = true;
             }
@@ -3109,10 +3109,14 @@ impl Interp {
                 // (`r[native.threads.attach.deviation.178]`).
                 // No callback can end this loop's own wait on a message its
                 // activity runs, so that wait is refused even inside a
-                // callback, a host's call included (Deviation 20).
+                // callback, a host's call included (Deviation 20). A callback
+                // whose send is to be sent again counts as held before its
+                // recall arrives, as its place in a guard lock's queue may
+                // be the turn the other waits wait for.
                 if sleeper.is_none()
                     && self.activities.in_flight == self.activities.runs_below.len()
                     && self.activities.held.is_empty()
+                    && self.activities.retrying.is_empty()
                     && (self.waits_on_a_message_it_runs(me)
                         || (self.activities.callbacks_lent == 0
                             && !self.waits_for_attaching_threads(level)))

@@ -814,8 +814,8 @@ fn a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waitin
 
 /// The main program holds an object's guard while two started activities queue for it, and an
 /// attached thread's guarded `POKE` arrives while the main program runs. `POKE` is sent again
-/// behind the two, so they get the guard first, as in the oracle, which agrees under the gate. A
-/// retry that went ahead of the queue would run before them.
+/// from the place its wait took, behind the two, so they get the guard first, as in the oracle,
+/// which agrees under the gate. A retry that went ahead of the queue would run before them.
 // spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_sent_again_for_a_guard_does_not_pass_the_activities_queued_before_it() {
@@ -827,15 +827,15 @@ fn a_callback_sent_again_for_a_guard_does_not_pass_the_activities_queued_before_
 
 /// [`a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it`] with
 /// two started activities that queue for the guard after `POKE` has arrived. `POKE`, sent again
-/// once the main program has the guard, joins the queue behind them, so they get the guard first
-/// (Deviation 178). A retry that went ahead of the queue would run before them. The oracle keeps
-/// `POKE` where it queued when it arrived and runs it before them, so it is not asked.
+/// once the main program has the guard, keeps the place its wait took when it arrived, ahead of
+/// them, so it gets the guard before them (Deviation 178). A retry that joined the back of the
+/// queue would run after them. The oracle agrees under the gate.
 // spec: native.threads.attach.deviation.178
 #[test]
-fn a_callback_sent_again_once_its_lender_has_the_guard_queues_behind_the_activities_waiting_then() {
+fn a_callback_sent_again_once_its_lender_has_the_guard_keeps_its_place_ahead_of_later_waiters() {
     assert_eq!(
-        run_ours("attach-handoffbehind", "handoffbehind.rex"),
-        ("hold\ng\nM\nN\npoke\n".to_owned(), String::new(), 0)
+        run("attach-handoffbehind", "handoffbehind.rex"),
+        ("hold\ng\npoke\nM\nN\n".to_owned(), String::new(), 0)
     );
 }
 

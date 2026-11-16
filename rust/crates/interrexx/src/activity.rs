@@ -384,6 +384,10 @@ pub(crate) struct Activity {
     /// waited for to an activity the callback's lend stopped, which ended
     /// the wait (`Interp::release_guard`), until its next pinned wait.
     pub(crate) lock_to_lender: bool,
+    /// Where, in the queue of the guard lock that [`Activity::lock_to_lender`]
+    /// says went to a lender, the wait it ended had its place, given up when
+    /// the wait ended (`Interp::cancel_wait`), until its next pinned wait.
+    pub(crate) kept_place: Option<usize>,
     /// The methods other than Rexx bodies and attributes that are running on
     /// this activity's Rust stack, innermost last.
     pub(crate) running_methods: Vec<interrexx_classes::MethodId>,
@@ -648,6 +652,7 @@ impl Activity {
             guarded_send: None,
             retraced: None,
             lock_to_lender: false,
+            kept_place: None,
             running_methods: Vec::new(),
             guard_exec: None,
             guard_posted: false,
@@ -838,6 +843,7 @@ impl Activity {
             guarded_send,
             retraced,
             lock_to_lender: _,
+            kept_place: _,
             running_methods: _,
             guard_exec,
             guard_posted: _,

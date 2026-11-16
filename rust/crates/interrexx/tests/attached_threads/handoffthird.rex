@@ -1,6 +1,6 @@
 /* handoff.rex with a third activity that queues for the guard after the main program and before
    the attached thread's POKE arrives: the guard goes to the main program, then to the third
-   activity, and POKE, sent again, joins the queue behind both.
+   activity, and POKE, sent again, keeps its place behind both.
    spec: native.threads.attach.deviation.178 */
 o = .handoff~new
 o~start('HOLD')

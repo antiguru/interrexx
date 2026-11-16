@@ -3204,7 +3204,7 @@ impl Interp {
         if self.deadlocks(owner) {
             return Err(Raised::deadlock().into());
         }
-        if self.retries_entry_guard(send.key, false) {
+        if self.retries_entry_guard(send.key, false, None) {
             return Err(crate::Loud::retried_send().into());
         }
         let (key, receiver) = (send.key, send.receiver);

@@ -1,8 +1,8 @@
 /* Two started activities take turns with the guard of an object, each sleeping while it holds it
    and between its turns, so the guard is never free while both run, until the attached thread's
    POKE, which needs the guard too, has run or each has taken the guard five hundred times. POKE,
-   sent again behind the queue, gets its turn while they take theirs, so each loop ends because
-   POKE ran.
+   sent again from its place in the queue, gets its turn while they take theirs, so each loop ends
+   because POKE ran.
    spec: native.threads.attach.deviation.178 */
 o = .contended~new
 call AtSendAfter o, 'POKE', 200

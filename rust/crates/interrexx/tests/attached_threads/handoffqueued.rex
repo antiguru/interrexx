@@ -1,7 +1,7 @@
 /* The main program holds the guard of an object, waking every 50 milliseconds, while two started
    activities queue for it, and an attached thread's POKE, which needs the guard too, arrives during
-   one of those wakes. POKE gives the interpreter back before it runs anything and is sent again,
-   queued behind the two, so the guard goes to them in turn before POKE.
+   one of those wakes. POKE gives the interpreter back before it runs anything and is sent again
+   from the place its wait took, behind the two, so the guard goes to them in turn before POKE.
    spec: native.threads.attach.deviation.178 */
 o = .held~new
 .queued~new~start('RUN', o, 'A', 0.1)

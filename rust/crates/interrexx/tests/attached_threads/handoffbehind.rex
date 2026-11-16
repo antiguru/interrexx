@@ -1,7 +1,7 @@
 /* handoff.rex with two started activities that queue for the guard after POKE has arrived and
    before the started activity releases it. The release grants the guard to the main program, which
-   POKE's message stopped, and POKE, sent again once the main program has it, joins the queue behind
-   the two, so they get the guard before POKE.
+   POKE's message stopped, and POKE, sent again once the main program has it, keeps the place its
+   wait took when it arrived, ahead of the two, so it gets the guard before them.
    spec: native.threads.attach.deviation.178 */
 o = .handoff~new
 o~start('HOLD')
