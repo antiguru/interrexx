@@ -26,6 +26,7 @@
 //! comes from the slab, so the seed never shows in it.
 
 use std::collections::HashMap;
+use std::hash::{BuildHasher, Hasher};
 
 use crate::{HashSeed, ObjRef};
 
@@ -36,13 +37,47 @@ pub struct Tails(Option<Box<Store>>);
 
 #[derive(Clone, Debug)]
 struct Store {
-    ordinals: HashMap<Vec<u8>, usize, HashSeed>,
+    ordinals: HashMap<Vec<u8>, usize, TailHasher>,
     /// Indexed by ordinal: one slot per entry of `ordinals`, and the holes.
     values: Slab,
     /// How many slots of `values` are holes.
     holes: usize,
     /// Changed whenever ordinals are renumbered or dropped wholesale.
     epoch: u64,
+}
+
+/// The map's hasher: the interpreter's keyed hash of a tail's bytes. A key
+/// is a byte string, compared whole when its hash matches, so the length a
+/// slice writes ahead of its bytes is left out of the hash.
+#[derive(Clone, Copy, Debug)]
+struct TailHasher(HashSeed);
+
+impl BuildHasher for TailHasher {
+    type Hasher = BytesHasher;
+
+    #[inline]
+    fn build_hasher(&self) -> BytesHasher {
+        BytesHasher(self.0.build_hasher())
+    }
+}
+
+/// [`TailHasher`]'s hasher: the keyed hasher, passing over the length
+/// prefix, which is the only `usize` a byte string writes.
+struct BytesHasher(<HashSeed as BuildHasher>::Hasher);
+
+impl Hasher for BytesHasher {
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write(bytes);
+    }
+
+    #[inline]
+    fn write_usize(&mut self, _length: usize) {}
+
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0.finish()
+    }
 }
 
 /// How many values a stem keeps beside its map before it allocates for
@@ -131,7 +166,7 @@ impl Store {
     /// No tails, its map hashing under `seed`.
     fn new(seed: HashSeed) -> Store {
         Store {
-            ordinals: HashMap::with_hasher(seed),
+            ordinals: HashMap::with_hasher(TailHasher(seed)),
             values: Slab::default(),
             holes: 0,
             epoch: 0,
@@ -299,7 +334,7 @@ impl Tails {
         if let Some(store) = self.0.as_deref_mut() {
             *store = Store {
                 epoch: store.epoch.wrapping_add(1),
-                ..Store::new(*store.ordinals.hasher())
+                ..Store::new(store.ordinals.hasher().0)
             };
         }
     }
@@ -357,7 +392,6 @@ impl Tails {
     /// The hash the map gives `key`.
     #[cfg(test)]
     fn tail_hash(&self, key: &[u8]) -> Option<u64> {
-        use std::hash::BuildHasher;
         let store = self.0.as_deref()?;
         Some(store.ordinals.hasher().hash_one(key))
     }
@@ -485,6 +519,17 @@ mod tests {
         assert!(tails.set_at(1, Some(ObjRef::NIL)));
         assert_eq!(tails.value_at(1), Some(ObjRef::NIL));
         assert!(!tails.set_at(2, None));
+    }
+
+    /// The map hashes a tail's bytes with the seed's keyed hash, the one a
+    /// string's hash code is.
+    #[test]
+    fn a_tail_hashes_as_the_seeds_hash_of_its_bytes() {
+        let mut tails = Tails::new();
+        for key in [&b"X"[..], b"LONGER.THAN.EIGHT", b""] {
+            tails.set(SEED, key, None);
+            assert_eq!(tails.tail_hash(key), Some(SEED.hash(key)));
+        }
     }
 
     /// The map hashes a tail under the seed its first tail was set with.
