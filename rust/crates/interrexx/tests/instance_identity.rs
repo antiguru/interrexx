@@ -945,8 +945,10 @@ fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound() {
 #[test]
 #[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
 fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound_a_hundred_times() {
+    // A short name, as the API service's socket path under the run's directory must fit a
+    // socket address, or the service says on stderr that it is not used.
     let (dir, driver) = build_driver(
-        "lifetime-callrace-stress",
+        "lifetime-race100",
         "lifetime.cpp",
         &[(None, "lifetime"), (Some("-DOTHER"), "lifetime2")],
     );
