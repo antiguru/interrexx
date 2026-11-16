@@ -372,11 +372,15 @@ pub(super) struct Store {
     pub(super) slots: ObjRef,
     /// Entry positions used, holes included: where the next entry goes.
     pub(super) used: usize,
-    /// Entry positions the arrays have.
-    pub(super) capacity: usize,
 }
 
 impl Store {
+    /// Entry positions the arrays have. Read off the indexes array when
+    /// asked, since only an append and a relink need it.
+    pub(super) fn capacity(&self, interp: &Interp) -> Result<usize, Failure> {
+        Ok(array_slots(interp, self.indexes)?.len())
+    }
+
     /// Whether `other` is these same arrays, whatever their count: the same
     /// positions holding the same entries. The codes array is left out,
     /// since [`relink`] replaces it alone and moves no entry.
@@ -520,7 +524,6 @@ fn build(
         codes,
         slots,
         used,
-        capacity,
     }
 }
 
@@ -536,7 +539,7 @@ pub(super) fn read_store(
     } else {
         parts.methods
     };
-    found.store(interp)
+    Ok(found.store())
 }
 
 /// One half's pool entries, as [`read_parts`] found them.
@@ -553,21 +556,19 @@ pub(super) struct Found {
 
 impl Found {
     /// The store these entries make, or `None` when any is missing.
-    pub(super) fn store(self, interp: &Interp) -> Result<Option<Store>, Failure> {
+    pub(super) fn store(self) -> Option<Store> {
         let (Some(indexes), Some(items), Some(codes), Some(slots), Some(used)) =
             (self.indexes, self.items, self.codes, self.slots, self.used)
         else {
-            return Ok(None);
+            return None;
         };
-        let capacity = array_slots(interp, indexes)?.len();
-        Ok(Some(Store {
+        Some(Store {
             indexes,
             items,
             codes,
             slots,
             used,
-            capacity,
-        }))
+        })
     }
 
     /// The capacity a store not built yet is to be built at, if one was
@@ -693,12 +694,12 @@ pub(super) fn store_in(
 
 pub(super) fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
     if let Some(found) = leading_contents(interp, receiver)
-        && let Some(store) = found.store(interp)?
+        && let Some(store) = found.store()
     {
         return Ok(store);
     }
     let parts = read_parts(interp, receiver);
-    if let Some(store) = parts.contents.store(interp)? {
+    if let Some(store) = parts.contents.store() {
         return Ok(store);
     }
     refuse_storeless(interp, receiver)?;
@@ -715,12 +716,12 @@ pub(super) fn store_if_built(
     receiver: ObjRef,
 ) -> Result<Option<Store>, Failure> {
     if let Some(found) = leading_contents(interp, receiver)
-        && let Some(store) = found.store(interp)?
+        && let Some(store) = found.store()
     {
         return Ok(Some(store));
     }
     let parts = read_parts(interp, receiver);
-    if let Some(store) = parts.contents.store(interp)? {
+    if let Some(store) = parts.contents.store() {
         return Ok(Some(store));
     }
     refuse_storeless(interp, receiver)?;
@@ -906,7 +907,7 @@ pub(super) fn append(
         }
         None => (store_in(interp, receiver, half)?, None),
     };
-    if store.used >= store.capacity {
+    if store.used >= store.capacity(interp)? {
         let live = count_in(interp, &store)?;
         store = rebuild(interp, receiver, half, regrown(live))?;
         known = None;
@@ -942,7 +943,7 @@ fn relink(
     half: Half,
     store: &Store,
 ) -> Result<Store, Failure> {
-    let mut fields = vec![None; store.capacity * FIELDS];
+    let mut fields = vec![None; store.capacity(interp)? * FIELDS];
     {
         let (_, codes) = codes_of(interp, store)?;
         for position in 0..store.used {
@@ -1104,7 +1105,7 @@ pub(super) fn clear(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result
     // Active lookups retain these contents through callbacks and growth. EMPTY
     // clears that contents in place, and then installs fresh arrays, so that
     // no position of these arrays is ever filled a second time.
-    for position in 0..store.used.min(store.capacity) {
+    for position in 0..store.used.min(store.capacity(interp)?) {
         write_slot(interp, store.indexes, position, None);
         write_slot(interp, store.items, position, None);
         for field in 0..stride {

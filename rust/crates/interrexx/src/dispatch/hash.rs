@@ -598,7 +598,7 @@ fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> 
     // A receiver `store_of` would build an empty store for holds nothing, and
     // is left without one until something is put in it, with the size that
     // store would have had kept.
-    let count = match parts.contents.store(interp)? {
+    let count = match parts.contents.store() {
         Some(store) => count_in(interp, &store)?,
         None => {
             refuse_storeless(interp, receiver)?;
@@ -608,7 +608,7 @@ fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> 
             0
         }
     };
-    match parts.methods.store(interp)? {
+    match parts.methods.store() {
         Some(methods) => Ok(count + count_in(interp, &methods)?),
         None => Ok(count),
     }
@@ -1107,11 +1107,11 @@ pub(crate) struct StoreView {
 
 fn read_view(interp: &mut Interp, directory: ObjRef) -> Result<StoreView, Failure> {
     let parts = read_parts(interp, directory);
-    let contents = match parts.contents.store(interp)? {
+    let contents = match parts.contents.store() {
         Some(store) => store,
         None => store_of(interp, directory)?,
     };
-    let methods = parts.methods.store(interp)?;
+    let methods = parts.methods.store();
     Ok(StoreView {
         generation: interp.store_generation,
         contents,

@@ -82,7 +82,10 @@ fn churn_stays_bounded() {
          return t\n",
     );
     let store = store_of(&mut interp, table).expect("the table has a store");
-    assert_eq!(store.capacity, capacity_of(MINIMUM_SLOTS));
+    assert_eq!(
+        store.capacity(&interp).expect("capacity"),
+        capacity_of(MINIMUM_SLOTS)
+    );
     let slots = array_slots(&interp, store.slots).expect("slots").len();
     assert_eq!(slots, MINIMUM_SLOTS);
     assert_eq!(count_in(&interp, &store).expect("count"), 1);
