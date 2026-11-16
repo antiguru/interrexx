@@ -297,6 +297,13 @@ left to the instance that still holds it, and its unloader runs when that
 instance is the last to be terminated. Where a program that the command-line
 interpreter runs is the only instance of its process, as it is unless an
 extension creates another, the unloaders of its libraries run when it ends.
+An unloader runs as part of that last instance's termination, so what it writes
+goes to that instance's output and error streams. A host that runs several
+programs in one process through the `interrexx` Rust crate runs each as an
+instance of the process, and they share one round of loads. The process holds
+one copy of a library and of its static storage, as [the shared-load
+rule](r:native.loading.shared) says, so a library is loaded once for all of
+them, and its unloader runs at the end of whichever of them ends last.
 
 > For example, the host of the [shared-load example](r:native.loading.shared)
 > terminates the first instance and then the second. The test library prints

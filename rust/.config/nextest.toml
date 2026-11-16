@@ -34,6 +34,26 @@ filter = '''
 test-group = 'wall-clock'
 threads-required = 4
 
+# Tests whose assertions read the libraries loaded for the process's live instances, which the
+# process shares, such as whether an unloader ran (`r[native.loading.unload]`). Under `cargo test`
+# each holds a gate that keeps every other interpreter of the process from being live meanwhile
+# (`libraries::round_gate`); here each runs in a process of its own, and one at a time.
+[test-groups.library-round]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = '''
+binary_id(=interrexx) & (
+  test(=dispatch::library::tests::a_loaded_librarys_loader_and_unloader_run)
+  | test(=dispatch::library::tests::a_programs_end_runs_its_librarys_unloader)
+  | test(=dispatch::library::tests::a_registered_handler_answers_until_a_library_closes)
+  | test(=dispatch::library::tests::dropping_the_libraries_closes_what_termination_left_open)
+  | test(=dispatch::library::tests::unloaders_run_in_the_oracles_table_order)
+  | test(/^libraries::tests::/)
+)
+'''
+test-group = 'library-round'
+
 # These tests missed their time window on a loaded host while the suite ran. Each is run again
 # once; the run reports a pass on the second attempt as flaky and a second miss fails it.
 # Tests that rerun a mismatch themselves (signals, stdin_contention) and the Ctrl-C witnesses

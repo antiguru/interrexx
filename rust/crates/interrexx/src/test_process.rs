@@ -67,3 +67,32 @@ pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     assert!(status.success(), "isolated test failed: {status}");
     true
 }
+
+/// Set in the process a test runs its case in alone ([`alone`]).
+const ALONE: &str = "REXX_TEST_CASE_ALONE";
+
+/// Whether this is the process the unit test `name`, its full path, runs its
+/// case in. Elsewhere it runs this binary again for that test alone and
+/// asserts that it passed, so that what a process keeps for the rest of its
+/// life, such as a library mapped (`r[native.loading.static]`) or the signal
+/// handlers an instance installs, is that case's alone under `cargo test`,
+/// as it is under nextest.
+pub(crate) fn alone(name: &str) -> bool {
+    if std::env::var(ALONE).as_deref() == Ok(name) {
+        return true;
+    }
+    let output = Command::new(std::env::current_exe().expect("test executable"))
+        .args(["--exact", name, "--test-threads=1"])
+        .env(ALONE, name)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the case's own process");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{stdout}{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(stdout.contains("1 passed"), "{stdout}");
+    false
+}

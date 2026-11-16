@@ -776,6 +776,13 @@ mod tests {
     /// end on in another interpreter of the same process, which no host runs (Deviation 20).
     #[test]
     fn an_instance_leaves_the_refusal_on_in_another_interpreter() {
+        // The instance installs the signal handlers, which stay for the
+        // process, and holds the round while it lives.
+        if !crate::test_process::alone(
+            "embedding::tests::an_instance_leaves_the_refusal_on_in_another_interpreter",
+        ) {
+            return;
+        }
         assert!(super::create_instance(super::InstanceOptions::default()).is_some());
         let outcome = crate::run_program(
             "refused.rex",

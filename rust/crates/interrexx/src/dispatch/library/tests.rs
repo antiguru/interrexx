@@ -89,6 +89,11 @@ fn a_library_named_twice_is_opened_once() {
 /// same name answers nothing.
 #[test]
 fn the_search_path_is_what_makes_the_name_resolve() {
+    if !crate::test_process::alone(
+        "dispatch::library::tests::the_search_path_is_what_makes_the_name_resolve",
+    ) {
+        return;
+    }
     let mut bare = Interp::new();
     bare.adopt_environment(Vec::new());
     assert!(
@@ -112,6 +117,11 @@ fn the_search_path_is_what_makes_the_name_resolve() {
 /// at the start.
 #[test]
 fn a_search_directory_written_after_the_start_is_not_searched() {
+    if !crate::test_process::alone(
+        "dispatch::library::tests::a_search_directory_written_after_the_start_is_not_searched",
+    ) {
+        return;
+    }
     let directory = worktree_library_directory()
         .into_os_string()
         .into_encoded_bytes();
@@ -676,6 +686,7 @@ fn unload_order(input: &str) -> String {
 
 #[test]
 fn unloaders_run_in_the_oracles_table_order() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut cases = 0;
     datadriven::walk(UNLOAD_ORDER_CASES, |file| {
         file.run(|case| {
@@ -712,6 +723,7 @@ extern "C-unwind" fn recording_unloader(thread: *mut interrexx_api::layout::Rexx
 /// declares a hook that does anything observable, so the entry is in memory.
 #[test]
 fn a_loaded_librarys_loader_and_unloader_run() {
+    let _round = crate::libraries::round_gate::exclusive();
     HOOKS_RAN.with(|ran| ran.borrow_mut().clear());
     let mut interp = Interp::new();
     let library = interrexx_api::load::hooks_only(Some(recording_loader), Some(recording_unloader));
@@ -758,6 +770,7 @@ static PROGRAM_VACATES: std::sync::atomic::AtomicU64 = std::sync::atomic::Atomic
 /// other native call, so the run vacates it twice.
 #[test]
 fn a_programs_end_runs_its_librarys_unloader() {
+    let _round = crate::libraries::round_gate::exclusive();
     PROGRAM_HOOKS.lock().expect("unpoisoned").clear();
     let outcome = crate::on_interpreter_thread(|| {
         crate::install::offer_library(b"hooked", || {
@@ -795,6 +808,7 @@ fn a_programs_end_runs_its_librarys_unloader() {
 /// libraries go, whoever else still holds it.
 #[test]
 fn dropping_the_libraries_closes_what_termination_left_open() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut libraries = crate::Libraries::new();
     let (held, _) = libraries
         .hold(
@@ -1036,6 +1050,7 @@ fn handle_carried_copies_are_pruned_without_a_collection() {
 /// handler's code to the library that registered it.
 #[test]
 fn a_registered_handler_answers_until_a_library_closes() {
+    let _round = crate::libraries::round_gate::exclusive();
     let mut interp = Interp::new();
     assert!(matches!(
         interp.settle_library(

@@ -49,6 +49,10 @@ pub(crate) struct Libraries {
     /// Whether a library it holds was found closed, which takes the command
     /// handlers extensions registered out of use once.
     closed_seen: bool,
+    /// The thread this interpreter entered [`round_gate`] on, until it
+    /// leaves.
+    #[cfg(test)]
+    gate: Option<ThreadId>,
 }
 
 /// The libraries loaded for the instances live in the process, from the first
@@ -318,6 +322,8 @@ impl Libraries {
     /// Counts a live instance, once no round's unloaders run on a thread this
     /// one waits for (`r[native.loading.again]`).
     pub(crate) fn new() -> Libraries {
+        #[cfg(test)]
+        let gate = Some(round_gate::enter());
         let mut round = round();
         loop {
             let holders: Vec<ThreadId> = (round.unloading.iter().copied())
@@ -344,6 +350,8 @@ impl Libraries {
             last: Vec::new(),
             recorded: Vec::new(),
             closed_seen: false,
+            #[cfg(test)]
+            gate,
         }
     }
 
@@ -435,6 +443,8 @@ impl Libraries {
         let mut round = round();
         if round.live > 1 {
             round.live -= 1;
+            #[cfg(test)]
+            self.leave_gate();
             // The library may call through the context its loader was
             // handed until it is closed, after this interpreter has gone.
             // Only the instance whose load a round recorded keeps one, so an
@@ -485,6 +495,17 @@ impl Libraries {
     /// which this interpreter's drop closes every library it walked.
     pub(crate) fn unloaded(&mut self, unloading: Unloading) {
         self.last = unloading.libraries();
+        drop(unloading);
+        #[cfg(test)]
+        self.leave_gate();
+    }
+
+    /// Leaves [`round_gate`] where this interpreter is still in it.
+    #[cfg(test)]
+    fn leave_gate(&mut self) {
+        if let Some(thread) = self.gate.take() {
+            round_gate::leave(thread);
+        }
     }
 }
 
@@ -507,6 +528,8 @@ impl Drop for Libraries {
             while !unloading.next().is_empty() {}
             self.unloaded(unloading);
         }
+        #[cfg(test)]
+        self.leave_gate();
         for unload in &self.last {
             unload.library().close();
         }
@@ -670,6 +693,138 @@ fn string_hash(name: &[u8]) -> u64 {
     })
 }
 
+/// The round is the process's, so a test whose assertions read it, such as
+/// one that asks whether an unloader ran, sees every other interpreter of a
+/// `cargo test` process that is live meanwhile. Such a test holds
+/// [`round_gate::exclusive`] for its length: it waits until no other
+/// interpreter is live, and no interpreter is created meanwhile but its own
+/// and those of the threads it started. nextest runs each test in a process
+/// of its own and these one at a time besides.
+#[cfg(test)]
+pub(crate) mod round_gate {
+    use std::sync::{Condvar, Mutex, MutexGuard};
+    use std::thread::ThreadId;
+    use std::time::Duration;
+
+    struct Gate {
+        /// The thread of the test holding the gate.
+        exclusive: Option<ThreadId>,
+        /// How many tests wait to hold it.
+        waiting: usize,
+        /// The thread each live interpreter entered on, one entry each.
+        live: Vec<ThreadId>,
+    }
+
+    static GATE: Mutex<Gate> = Mutex::new(Gate {
+        exclusive: None,
+        waiting: 0,
+        live: Vec::new(),
+    });
+
+    static CHANGED: Condvar = Condvar::new();
+
+    /// How long a test waits for the other interpreters to end before it
+    /// fails, rather than hang where one of them never ends.
+    const PATIENCE: Duration = Duration::from_secs(120);
+
+    std::thread_local! {
+        /// The threads that started this one, through
+        /// [`crate::on_interpreter_thread`] or a [`super::lineage`], which a
+        /// test's gate treats as the test's own.
+        static STARTED_BY: std::cell::RefCell<Vec<ThreadId>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn gate() -> MutexGuard<'static, Gate> {
+        GATE.lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// This thread and the threads that started it.
+    pub(crate) fn family() -> Vec<ThreadId> {
+        let mut family = super::lineage();
+        STARTED_BY.with_borrow(|started| family.extend(started.iter().copied()));
+        family
+    }
+
+    /// Makes `family`, the starting thread's, this thread's own starters.
+    pub(crate) fn started_by(family: Vec<ThreadId>) {
+        STARTED_BY.set(family);
+    }
+
+    /// Enters an interpreter created on this thread: at once where a thread of
+    /// its family holds the gate or runs a live interpreter, and otherwise
+    /// once no test holds the gate or waits for it.
+    pub(super) fn enter() -> ThreadId {
+        let family = family();
+        let mut gate = gate();
+        loop {
+            let ours = gate.exclusive.is_some_and(|held| family.contains(&held))
+                || gate.live.iter().any(|live| family.contains(live));
+            if ours || (gate.exclusive.is_none() && gate.waiting == 0) {
+                break;
+            }
+            gate = CHANGED
+                .wait(gate)
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+        let thread = std::thread::current().id();
+        gate.live.push(thread);
+        thread
+    }
+
+    /// Leaves for an interpreter that [`enter`] answered `thread` for.
+    pub(super) fn leave(thread: ThreadId) {
+        let mut gate = gate();
+        if let Some(at) = gate.live.iter().position(|live| *live == thread) {
+            gate.live.swap_remove(at);
+        }
+        drop(gate);
+        CHANGED.notify_all();
+    }
+
+    /// Holds the gate until dropped.
+    pub(crate) struct Exclusive;
+
+    /// Waits until no other interpreter is live and no other test holds the
+    /// gate, and holds it.
+    ///
+    /// # Panics
+    ///
+    /// Where that has not happened within [`PATIENCE`].
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "a bound on how long a test waits for others, in real time"
+    )]
+    pub(crate) fn exclusive() -> Exclusive {
+        let mut gate = gate();
+        gate.waiting += 1;
+        let began = std::time::Instant::now();
+        while gate.exclusive.is_some() || !gate.live.is_empty() {
+            gate = CHANGED
+                .wait_timeout(gate, Duration::from_millis(100))
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .0;
+            if began.elapsed() >= PATIENCE {
+                gate.waiting -= 1;
+                drop(gate);
+                CHANGED.notify_all();
+                panic!("another test's interpreter stayed live");
+            }
+        }
+        gate.waiting -= 1;
+        gate.exclusive = Some(std::thread::current().id());
+        Exclusive
+    }
+
+    impl Drop for Exclusive {
+        fn drop(&mut self) {
+            gate().exclusive = None;
+            CHANGED.notify_all();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -681,6 +836,7 @@ mod tests {
     /// interpreter's life.
     #[test]
     fn a_held_name_keeps_its_first_library() {
+        let _round = super::round_gate::exclusive();
         let mut libraries = Libraries::new();
         let first = Rc::new(interrexx_api::load::hooks_only(None, None));
         let second = Rc::new(interrexx_api::load::hooks_only(None, None));
@@ -705,10 +861,10 @@ mod tests {
     /// drop to close leave it out too, also once that loader has returned:
     /// the library belongs to an instance that outlives the termination.
     ///
-    /// The round is the process's, so this needs a process of its own, which
-    /// nextest gives each test.
+    /// The round is the process's, so this holds [`super::round_gate`].
     #[test]
     fn the_walk_leaves_a_library_loading_on_another_thread() {
+        let _round = super::round_gate::exclusive();
         let mut libraries = Libraries::new();
         let walked = Rc::new(interrexx_api::load::hooks_only(None, None));
         let (_, loading) = libraries
@@ -747,10 +903,11 @@ mod tests {
     /// The internal packages' keys, in the order the table iterates them; a
     /// miss on `REXXUTIL` leaves them as they were.
     ///
-    /// The table is the process's, so this needs a process in which no
-    /// interpreter has asked for a library yet, which nextest gives each test.
+    /// The table is the process's, so this needs a round no other live
+    /// interpreter is in, which [`super::round_gate`] gives it.
     #[test]
     fn the_table_starts_with_the_internal_packages_keys() {
+        let _round = super::round_gate::exclusive();
         let libraries = Libraries::new();
         let names = || {
             super::round()

@@ -4284,10 +4284,14 @@ fn on_thread_of(
     body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
 ) -> Outcome {
     let (deliver, delivered) = std::sync::mpsc::channel();
+    #[cfg(test)]
+    let family = libraries::round_gate::family();
     let interpreter = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(stack)
         .spawn(move || {
+            #[cfg(test)]
+            libraries::round_gate::started_by(family);
             signal::receive();
             let (outcome, kept) = body();
             let _ = deliver.send(outcome);
