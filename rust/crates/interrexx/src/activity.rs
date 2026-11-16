@@ -335,7 +335,11 @@ pub(crate) struct Activity {
     /// settles it.
     pub(crate) blocked: crate::command::Blocks,
     /// Whether a park's continuation is running, outside every driver, so a
-    /// native call it makes does not leave one.
+    /// native call it makes does not leave one and a Rust routine it runs
+    /// waits pinned. A primitive method it runs may still park
+    /// (`Interp::park_native`): the park replaces the one resumed, whose
+    /// remaining work moves onto it, and the driver parks the activity again
+    /// (`Interp::resume_native_park`).
     pub(crate) resuming: bool,
     /// A new activity's first step, until it runs.
     pub(crate) first: Option<crate::scheduler::First>,
