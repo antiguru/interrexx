@@ -793,6 +793,9 @@ impl Interp {
         if terminated.is_some() {
             self.termination_thread = terminated;
         }
+        // Nothing serves the inbox from here on: a `Halt` or `SetTrace` through
+        // the instance posts nothing (`r[native.threads.trace]`).
+        self.timer.inbox().close();
         refused
     }
 
@@ -1677,6 +1680,19 @@ impl interrexx_api::values::Baton for Requester {
         }
         requests.set(crate::timer::FOREIGN);
         true
+    }
+
+    /// Once the interpreter has terminated, whose inbox nothing reads from then on.
+    fn ended(&self) -> bool {
+        self.inbox.is_closed()
+    }
+
+    fn post_halt(&self) {
+        self.inbox.post_halt();
+    }
+
+    fn post_trace(&self, on: bool) {
+        self.inbox.post_trace_all(on);
     }
 }
 

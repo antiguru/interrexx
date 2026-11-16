@@ -1276,6 +1276,20 @@ letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
 
+## 166. Trace lines of code already running when native code first switches the trace
+
+When native code first turns the external trace of the interpreter, or of one
+activity, on or off, each run of a program, method, `::ROUTINE` or internal
+routine that an activity had begun, a caller that waits for a call to return
+included, may print fewer trace lines than the trace asks for until that run
+ends. It can leave out the `>K>` lines of a `DO` or `LOOP` header for `TO`,
+`BY`, `FOR`, `OVER` and `WITH`, and the `>L>`, `>V>`, `>E>`, `>O>`, `>P>` and
+`>A>` lines that `TRACE I` asks for once it is set at an interactive pause. A
+line is left out only at a clause where the setting the run began under, as
+the run's own TRACE instructions change it, did not print that line. Code
+entered after that first request prints every line. ooRexx prints every line
+in both.
+
 ## 167. The line of a position after a last line with no line end
 
 The line that a position is in is one more than the number of line ends before

@@ -364,6 +364,62 @@ fn an_activity_without_a_native_call_retains_no_thread_context() {
     assert_eq!(kept, 0, "an ended activity's unmade context was kept");
 }
 
+/// `Halt` and `SetTrace` through the instance reach the interpreter while it
+/// is live and post nothing once it has terminated, though the kept root
+/// context still holds its requester (`r[native.threads.trace]`).
+#[test]
+fn a_request_through_the_instance_after_termination_posts_nothing() {
+    let mut interp = Interp::new();
+    let table = interp.activities.thread_table.clone();
+    let root = interp.thread_context();
+    let inbox = interp.timer.inbox();
+    table.halt_and_set_trace_through_instance(true);
+    assert_eq!(
+        inbox.drain().len(),
+        2,
+        "a live interpreter's inbox missed a request"
+    );
+    assert!(interp.terminate().is_empty());
+    table.halt_and_set_trace_through_instance(true);
+    assert_eq!(
+        inbox.drain().len(),
+        0,
+        "a terminated interpreter's inbox grew"
+    );
+    drop(interp);
+    drop(root);
+    table.halt_and_set_trace_through_instance(false);
+    assert_eq!(inbox.drain().len(), 0, "a dropped interpreter's inbox grew");
+}
+
+/// A request that reaches a closed inbox is not posted, so one that a `Halt`
+/// racing the close got past the instance's check posts nothing either
+/// (`r[native.threads.trace]`).
+#[test]
+fn a_halt_or_trace_request_to_a_closed_inbox_posts_nothing() {
+    let interp = Interp::new();
+    let inbox = interp.timer.inbox();
+    inbox.close();
+    inbox.post_halt();
+    inbox.post_trace_all(true);
+    assert_eq!(inbox.drain().len(), 0, "a closed inbox took a request");
+    assert!(
+        !inbox.requests().pending(crate::timer::HALT),
+        "a closed inbox's request flag was set"
+    );
+}
+
+/// An interpreter dropped without terminating posts nothing either.
+#[test]
+fn a_request_through_the_instance_of_a_dropped_interpreter_posts_nothing() {
+    let interp = Interp::new();
+    let table = interp.activities.thread_table.clone();
+    let inbox = interp.timer.inbox();
+    drop(interp);
+    table.halt_and_set_trace_through_instance(true);
+    assert_eq!(inbox.drain().len(), 0, "a dropped interpreter's inbox grew");
+}
+
 fn run_with(source: &str, invocation: Invocation) -> Outcome {
     run_program("/tmp/scheduler.rex", source.as_bytes().to_vec(), invocation)
 }

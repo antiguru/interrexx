@@ -41,6 +41,16 @@ statics of `unsafe extern "C" fn` slots.
   own method or call context.
 * The interpreter's `RexxInstance`, and the thread context of the activity that loaded a library,
   outlive that activity, because libraries keep them.
+* An interpreter keeps some memory for the rest of the process, because an extension may call
+  through its instance or its root thread context after it has ended. Every interpreter keeps its
+  `RexxInstance` and the owner beside it. Once the main activity has made a native call or run a
+  package hook, the interpreter also keeps that activity's thread context, which a thread running
+  none of its native calls attaches to, and what the context holds: its copy of the thread
+  interface table, the requester (a handle on the baton and on the inbox) and anything left in the
+  inbox when the interpreter ended. Nothing is posted to the inbox after the end. Classic
+  `RexxStart` makes an interpreter for each run, so a process that calls it again and again keeps
+  an instance for each run, and a thread context with what it holds for each run whose program
+  loads a native library and calls into it. That memory grows without bound in such a process.
 * A callback from a thread other than the one running that activity's native call raises
   `Error_Execution_invalid_thread`.
 * A callback made while the interpreter's baton is held elsewhere takes the baton, or is run on

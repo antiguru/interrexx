@@ -693,6 +693,10 @@ pub(crate) struct Chunk {
     /// the key it is cached under and the thing the driver compares the
     /// setting in force against.
     trace: ChunkTrace,
+    /// Whether `trace_flow` settled each clause's setting at compile time and
+    /// left out the echoes it found would not print (`compile`), rather than
+    /// keeping every echo behind its run-time gate (`compile_unsettled`).
+    settled: bool,
     /// One entry per instruction, in instruction order: every instruction
     /// compiles, so an instruction no specialised op covers still gets one.
     ops: valid::ValidOps,
@@ -798,6 +802,12 @@ impl Chunk {
     /// The setting this chunk's trace ops were emitted for.
     fn trace(&self) -> ChunkTrace {
         self.trace
+    }
+
+    /// Whether this stream was compiled with each clause's setting settled
+    /// ([`Chunk::settled`]).
+    pub(crate) fn settled(&self) -> bool {
+        self.settled
     }
 
     /// What the analysis answered for instruction `index`.

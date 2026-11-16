@@ -1317,6 +1317,10 @@ struct Interp {
     /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
     /// setting the chunk was compiled under**.
     chunks: NameMap<(BodyKey, ChunkTrace), Rc<crate::ir::Chunk>>,
+    /// The chunks [`Interp::make_trace_switchable`] took out of `chunks`, kept until their
+    /// program is freed: a frame may still run one, and its interned literals, pinned copies
+    /// and call-site holds are released with the program's rows, as a cached chunk's are.
+    retired_chunks: Vec<(BodyKey, Rc<crate::ir::Chunk>)>,
     /// How many times `chunk_for` has refused a body because it does not fit
     /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
     /// never because a body contains a construct the compiler does not
@@ -1515,7 +1519,8 @@ struct Interp {
     /// boundary.
     pub(crate) clause_exits: bool,
     /// Whether another thread can switch the trace of this run at a clause boundary
-    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    /// (`RexxSetTrace`, or `SetTrace` through the instance once it has been served), so that
+    /// no chunk compiled from then on settles a clause's trace setting at compile time.
     pub(crate) trace_switchable: bool,
     /// A native call posted to this interpreter's own inbox, which the clause boundary that
     /// ends the calling clause serves: the activation depth of that clause. It sets
@@ -2355,6 +2360,7 @@ impl Interp {
             sim: None,
             slice_deferred: false,
             chunks: NameMap::default(),
+            retired_chunks: Vec::new(),
             chunks_refused: 0,
             routines_written: false,
             routines_tables: false,
@@ -3441,6 +3447,7 @@ impl Interp {
             // A chunk's interned literals are allocated immortal, and
             // released when the chunk is dropped.
             chunks: _,
+            retired_chunks: _,
             chunks_refused: _,
             routines_written: _,
             routines_tables: _,
@@ -3840,12 +3847,22 @@ impl Interp {
         let mut interned = Vec::new();
         let mut pinned = Vec::new();
         let mut holds = 0;
+        let mut release = |chunk: &crate::ir::Chunk| {
+            interned.extend(chunk.interned_values());
+            pinned.extend(chunk.pinned_copies());
+            holds += chunk.site_holds().count() as u32;
+        };
         self.chunks.retain(|(key, _), chunk| {
             let keep = !dead(&key.program);
             if !keep {
-                interned.extend(chunk.interned_values());
-                pinned.extend(chunk.pinned_copies());
-                holds += chunk.site_holds().count() as u32;
+                release(chunk);
+            }
+            keep
+        });
+        self.retired_chunks.retain(|(key, chunk)| {
+            let keep = !dead(&key.program);
+            if !keep {
+                release(chunk);
             }
             keep
         });
@@ -4705,12 +4722,12 @@ const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
 
 /// Everything an embedding instance's interpreter thread does: the
 /// interpreter is built and bootstrapped, `options` applied, `started` told
-/// the root thread context and the inbox, and the root activity waits in a
+/// the root thread context, the instance and the inbox, and the root activity waits in a
 /// native call that leaves the driver free to serve the attached threads'
 /// callbacks; once it returns, the run ends as a program's does.
 pub(crate) fn run_instance(
     options: embedding::InstanceOptions,
-    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+    started: Box<dyn FnOnce(usize, usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
 ) -> (Outcome, Option<Interp>) {
     use interrexx_api::callbacks::Surface as _;
     let probe = 0u8;
@@ -4772,7 +4789,11 @@ pub(crate) fn run_instance(
         let thread = interp.thread_context();
         thread.keep();
         thread.set_application_data(options.application_data);
-        started(thread.address(), interp.timer.inbox());
+        started(
+            thread.address(),
+            thread.instance_address(),
+            interp.timer.inbox(),
+        );
         interp.leave_next_native = true;
         let program = Rc::new(program);
         let program_id = interp.load_program(Rc::clone(&program));

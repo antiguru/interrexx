@@ -1,6 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
+deviations: [166]
 ---
 
 # Threads and halting
@@ -152,7 +153,7 @@ say 'start' (o~start('plain')~result == main)
   return fxinstance()
 ```
 
-```output defect=#628
+```output
 main 1
 reply 1
 start 1
@@ -252,3 +253,34 @@ h: how = 'halted'
 ```output
 main HALT / worker not halted
 ```
+
+## Tracing
+
+r[native.threads.trace]
+Native code may turn the external trace of the interpreter on or off from any
+thread, whether or not that thread runs a call of the interpreter. Turned on,
+every activity of the interpreter that runs Rexx code, the main one and the
+ones that [`start`](r:conc.activities.creation) made, idle or not, traces from
+its next clause as under `TRACE ?R`, with the pause of interactive trace, except
+for the lines that [Deviation 166](r:native.threads.trace.deviation.166) leaves
+out of code that was already running. The setting is that of the code each
+activity is running: a method or a `::ROUTINE` it calls afterwards starts with
+its own, as [the scope of the setting](r:bif.trace.scope) says. Turned off,
+every activity runs on untraced from its next clause. A request made after the
+interpreter has ended does nothing. The trace lines name the program's path,
+so the tests that witness this rule compare them outside this page.
+
+r[native.threads.trace.deviation.166]
+Code that was already running when native code first turned the external trace
+of the interpreter, or of one activity, on or off ([Deviation
+166](../deviations.md#166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace))
+may leave out some of the lines the trace asks for, up to the end of its run.
+That code is each run of a program, method, `::ROUTINE` or internal routine
+that an activity had begun, a caller that waits for a call to return included.
+The lines it may leave out are the `>K>` lines of a `DO` or `LOOP` header for
+`TO`, `BY`, `FOR`, `OVER` and `WITH`, and the `>L>`, `>V>`, `>E>`, `>O>`, `>P>`
+and `>A>` lines that `TRACE I`, set at an interactive pause, asks for. Code
+entered after that first request prints every line, as ooRexx does. ooRexx
+prints every line in code that was already running too. The trace lines name
+the program's path, so the tests that witness this rule compare them outside
+this page.

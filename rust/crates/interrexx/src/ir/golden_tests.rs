@@ -445,6 +445,67 @@ fn one_body_under_two_trace_settings_is_two_cached_chunks() {
     );
 }
 
+/// **The first `SetTrace` retires the cache** (`r[native.threads.trace]`): a body compiled
+/// settled before it is compiled again, unsettled, the next time it is looked up, and the settled
+/// chunk is kept beside the cache until its program is freed, when its rows go with the
+/// program's. The plan is the cached one, as a running activation's is, so the lookup ahead of
+/// the cache is forgotten too.
+#[test]
+fn making_the_trace_switchable_recompiles_each_body_unsettled() {
+    use super::trace_flow::Setting;
+    let program = parse_program(b"x = 1\nsay x\n".to_vec()).expect("test program parses");
+    let key = BodyKey {
+        program: ProgramId::nth(0),
+        directive: None,
+    };
+    let plan = Rc::new(Plan::build(
+        &program.main,
+        &program.symbols,
+        Some(&program.source),
+        BodyKind::Plain,
+    ));
+    let untraced = ChunkTrace::of(TraceMode::NORMAL);
+
+    let mut interp = Interp::new();
+    interp.plans.insert(key, Rc::clone(&plan));
+    let settled = interp
+        .chunk_for(key, untraced, &program.main, &plan)
+        .expect("compiles");
+    assert_eq!(settled.setting_at(0), Some(Setting::Known(untraced)));
+
+    interp.make_trace_switchable();
+    let unsettled = interp
+        .chunk_for(key, untraced, &program.main, &plan)
+        .expect("compiles");
+    assert!(
+        !Rc::ptr_eq(&settled, &unsettled),
+        "the lookup after the switch answered the chunk compiled before it"
+    );
+    assert_eq!(unsettled.setting_at(0), Some(Setting::Unknown));
+    assert!(
+        Rc::ptr_eq(
+            &unsettled,
+            &interp
+                .chunk_for(key, untraced, &program.main, &plan)
+                .expect("cached")
+        ),
+        "the unsettled chunk was not cached"
+    );
+    assert!(
+        interp
+            .retired_chunks
+            .iter()
+            .any(|(retired, chunk)| *retired == key && Rc::ptr_eq(chunk, &settled)),
+        "the settled chunk was dropped rather than retired"
+    );
+
+    interp.prune_program_rows(&[key.program]);
+    assert!(
+        interp.retired_chunks.is_empty(),
+        "a freed program's retired chunk outlived it"
+    );
+}
+
 /// **A `RETURN` whose expression is outside the native set keeps its own op**,
 /// with one [`super::Op::EvalExpr`] in front of it -- which is the `SAY`
 /// fallback and **not** the `IF` one.

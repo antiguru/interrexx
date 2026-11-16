@@ -791,8 +791,11 @@ impl Surface for Interp {
     }
 
     /// The running Rexx frame's external trace, `TRACE ?R` on and `TRACE O`
-    /// off. An idle activity's frame is not reached.
+    /// off. An idle activity's frame is not reached. From the first such request on, every
+    /// body compiles without settling a clause's trace setting, as after a `SetTrace`
+    /// ([`Interp::make_trace_switchable`], `r[native.threads.trace.deviation.166]`).
     fn set_trace(&mut self, _all: bool, on: bool) {
+        self.make_trace_switchable();
         self.set_external_trace(on);
     }
 
