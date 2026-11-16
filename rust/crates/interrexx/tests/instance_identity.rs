@@ -853,6 +853,45 @@ fn an_instance_an_unloader_leaves_live_does_not_unload_the_library_again() {
     );
 }
 
+/// The instance an unloader left live loaded the library from the same file while its round's
+/// unloaders ran, so the library closes with that round (`r[native.loading.again]`): attached to
+/// after the termination that ran the unloader, the instance no longer runs the library's routine.
+/// The oracle agrees under the gate.
+// spec: native.loading.again
+#[test]
+fn an_instance_an_unloader_leaves_live_runs_no_routine_of_the_closed_library() {
+    assert_eq!(
+        run_lifetime("lifetime-unloaderprobe", "unloaderprobe"),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\nprobe after -1\n\
+             terminated inner\n"
+                .to_owned(),
+            String::new(),
+            0
+        )
+    );
+}
+
+/// [`an_instance_an_unloader_leaves_live_runs_no_routine_of_the_closed_library`] with a command
+/// to the environment the library's own handler serves in the instance the unloader left live:
+/// the handler went with the library, so the environment is unknown, and the command's RC is 30
+/// with its failure traced. The oracle's run of this crashes in the closed library, so it is not
+/// asked.
+// spec: native.loading.again
+#[test]
+fn an_instance_an_unloader_leaves_live_runs_no_handler_of_the_closed_library() {
+    let (stdout, stderr, code) = lifetime_runs("ltcmd", "unloadercommand", false).remove(0);
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), code),
+        (
+            "loader\ncreated A\nunloader\ncreated inner\nterminated A\ncommand after 30\n\
+             terminated inner\n",
+            "     1 *-* address lifetime 'x';\n       >>>   \"x\"\n       +++   \"RC(30)\"\n",
+            0
+        )
+    );
+}
+
 /// An unloader that creates an instance, leaves it live and starts a thread that loads a second
 /// library through it, with a slow loader, returns once that loader has started. The termination
 /// that ran the unloader leaves the second library to the live instance: it runs no unloader of

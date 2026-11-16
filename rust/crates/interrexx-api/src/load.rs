@@ -2775,6 +2775,23 @@ impl Library {
         Arc::ptr_eq(&self.mapping, &unload.mapping)
     }
 
+    /// Makes this library, loaded from the file `unload`'s library was
+    /// loaded from, use that library's mapping for its rows and hooks
+    /// instead of its own, which goes. Closing either then stops both, and a
+    /// close waits out the calls in flight through either.
+    pub fn share_mapping(&mut self, unload: &Unload) {
+        if Arc::ptr_eq(&self.mapping, &unload.mapping) {
+            return;
+        }
+        for method in &mut self.methods {
+            method.mapping = Arc::clone(&unload.mapping);
+        }
+        for routine in &mut self.routines {
+            routine.mapping = Arc::clone(&unload.mapping);
+        }
+        self.mapping = Arc::clone(&unload.mapping);
+    }
+
     /// Keeps the thread context [`Library::keep_thread_context`] kept for the
     /// rest of the process, for a library that stays loaded after the
     /// interpreter that loaded it has ended: the library's code may call

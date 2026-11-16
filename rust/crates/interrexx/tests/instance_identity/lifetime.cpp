@@ -16,7 +16,9 @@
 // context it is handed and prints `unloader other 1` or `unloader other 0`. Where
 // LIFETIME_UNLOADER_KEEPS is set, the unloader, after printing `unloader`, unsets it, creates an
 // instance that loads `lifetime`, prints `created inner` and leaves the instance live, with its
-// address in the environment variable LIFETIME_KEPT. Where LIFETIME_UNLOADER_THREAD is set, the
+// address in the environment variable LIFETIME_KEPT, and adds the command environment `LIFETIME`,
+// whose handler is the library's own and sets `RC` to 7, through the instance's thread context.
+// Where LIFETIME_UNLOADER_THREAD is set, the
 // unloader, after printing `unloader`, unsets it, creates and keeps an instance as
 // LIFETIME_UNLOADER_KEEPS makes it do, sets LIFETIME_SLOW to `loader` and starts a thread of its
 // own. The thread attaches to the kept instance, loads `lifetime2` through it, prints `thread
@@ -51,6 +53,15 @@
 //   unloaderkeep with LIFETIME_UNLOADER_KEEPS set, creates A and terminates it, then terminates
 //                the instance the unloader left live and prints `terminated inner`, then creates
 //                C and terminates it
+//   unloaderprobe
+//                with LIFETIME_UNLOADER_KEEPS set, creates A and terminates it. Then it attaches to
+//                the instance the unloader left live, calls `LifetimeProbe` by name there and
+//                prints `probe after` with the answer, or -1 where the call raised a condition,
+//                detaches, and terminates that instance and prints `terminated inner`
+//   unloadercommand
+//                as `unloaderprobe`, but where that calls `LifetimeProbe` it runs the command `x`
+//                to `LIFETIME` and prints `command after` with `RC`, or with -1 where the command
+//                raised a condition
 //   unloaderthread
 //                with LIFETIME_UNLOADER_THREAD set, creates A and terminates it, waits until the
 //                unloader's thread has created `thread-done`, then terminates the instance the
@@ -108,16 +119,21 @@ static void hook(const char *name)
     fflush(stdout);
 }
 
-// Creates an instance that loads `lifetime`, from inside a hook, and prints `created inner`.
-static RexxInstance *create_inner(void)
+// Creates an instance that loads `lifetime`, from inside a hook, prints `created inner` and
+// answers the instance, with its thread context in `thread` where that is not null.
+static RexxInstance *create_inner(RexxThreadContext **thread = NULL)
 {
     RexxOption options[2];
     options[0].optionName = LOAD_REQUIRED_LIBRARY;
     options[0].option = "lifetime";
     options[1].optionName = NULL;
     RexxInstance *instance;
-    RexxThreadContext *thread;
-    if (!RexxCreateInterpreter(&instance, &thread, options))
+    RexxThreadContext *created;
+    if (thread == NULL)
+    {
+        thread = &created;
+    }
+    if (!RexxCreateInterpreter(&instance, thread, options))
     {
         printf("create inner failed\n");
         return NULL;
@@ -202,13 +218,24 @@ static int appeared(const char *name)
     return 0;
 }
 
-// Creates an instance that loads `lifetime`, from inside a hook, leaves it live with its address in
-// LIFETIME_KEPT, and answers it.
+// The handler of the command environment `LIFETIME`, which sets `RC` to 7.
+static RexxObjectPtr RexxEntry lifetime_handler(RexxExitContext *context, RexxStringObject,
+                                                RexxStringObject)
+{
+    return context->String("7");
+}
+
+// Creates an instance that loads `lifetime`, from inside a hook, adds the command environment
+// `LIFETIME` through its thread context, leaves it live with its address in LIFETIME_KEPT, and
+// answers it.
 static RexxInstance *keep_inner(void)
 {
-    RexxInstance *instance = create_inner();
+    RexxThreadContext *thread;
+    RexxInstance *instance = create_inner(&thread);
     if (instance != NULL)
     {
+        thread->AddCommandEnvironment("LIFETIME", (REXXPFN)lifetime_handler,
+                                      DIRECT_COMMAND_ENVIRONMENT);
         char address[32];
         snprintf(address, sizeof address, "%p", (void *)instance);
         setenv("LIFETIME_KEPT", address, 1);
@@ -358,11 +385,10 @@ static void *load_lifetime(void *argument)
     return argument;
 }
 
-// Calls `LifetimeProbe` by name through `context`, answering what it answered, or -1 where the call
-// raised a condition, which it clears.
-static int call_probe(RexxThreadContext *context)
+// Runs `source` as a routine made with `NewRoutine` through `context`, answering the whole number
+// it returned, or -1 where it raised a condition, which it clears.
+static int call_source(RexxThreadContext *context, const char *source)
 {
-    const char *source = "return LifetimeProbe()";
     RexxRoutineObject routine = context->NewRoutine("probe", source, strlen(source));
     if (routine == NULLOBJECT)
     {
@@ -377,6 +403,13 @@ static int call_probe(RexxThreadContext *context)
     }
     wholenumber_t number = 0;
     return context->WholeNumber(answer, &number) ? (int)number : -1;
+}
+
+// Calls `LifetimeProbe` by name through `context`, answering what it answered, or -1 where the call
+// raised a condition, which it clears.
+static int call_probe(RexxThreadContext *context)
+{
+    return call_source(context, "return LifetimeProbe()");
 }
 
 // Set once the thread `unloadercall` starts has attached.
@@ -590,6 +623,36 @@ int main(int argc, char **argv)
             return 1;
         }
         terminate(c, "C");
+        return 0;
+    }
+    if (strcmp(scenario, "unloaderprobe") == 0 || strcmp(scenario, "unloadercommand") == 0)
+    {
+        setenv("LIFETIME_UNLOADER_KEEPS", "1", 1);
+        RexxInstance *a = create("A");
+        if (a == NULL)
+        {
+            return 1;
+        }
+        terminate(a, "A");
+        const char *address = getenv("LIFETIME_KEPT");
+        RexxInstance *kept = NULL;
+        RexxThreadContext *context;
+        if (address == NULL || sscanf(address, "%p", (void **)&kept) != 1 || kept == NULL
+            || !kept->AttachThread(&context))
+        {
+            printf("nothing kept\n");
+            return 1;
+        }
+        if (strcmp(scenario, "unloaderprobe") == 0)
+        {
+            printf("probe after %d\n", call_probe(context));
+        }
+        else
+        {
+            printf("command after %d\n", call_source(context, "address lifetime 'x'; return rc"));
+        }
+        context->DetachThread();
+        terminate(kept, "inner");
         return 0;
     }
     if (strcmp(scenario, "unloaderthread") == 0)

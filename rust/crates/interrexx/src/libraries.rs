@@ -42,6 +42,13 @@ pub(crate) struct Libraries {
     /// loaded, where this interpreter was the last live one: its drop closes
     /// them.
     last: Vec<Unload>,
+    /// The round's numbers of the libraries this interpreter loaded first
+    /// in the round, with their names: their loaders were handed its
+    /// context.
+    recorded: Vec<(u64, Vec<u8>)>,
+    /// Whether a library it holds was found closed, which takes the command
+    /// handlers extensions registered out of use once.
+    closed_seen: bool,
 }
 
 /// The libraries loaded for the instances live in the process, from the first
@@ -335,6 +342,8 @@ impl Libraries {
             loaded: Vec::new(),
             live: true,
             last: Vec::new(),
+            recorded: Vec::new(),
+            closed_seen: false,
         }
     }
 
@@ -347,7 +356,9 @@ impl Libraries {
     /// is held afterwards, which for a name already held is the earlier
     /// library and not `library`, with a [`Loading`] where its loader is to
     /// run: it is where no live instance has loaded the same file under that
-    /// name (`r[native.loading.shared]`).
+    /// name (`r[native.loading.shared]`). Where one has, `library` takes the
+    /// mapping of the round's library instead of its own, so that it closes
+    /// with the round (`r[native.loading.again]`).
     ///
     /// Answers `library` back as the error, holding nothing, where another
     /// thread runs the loader of that load and this thread is to wait for it
@@ -355,7 +366,7 @@ impl Libraries {
     pub(crate) fn hold(
         &mut self,
         name: &[u8],
-        library: Rc<Library>,
+        mut library: Rc<Library>,
     ) -> Result<(Rc<Library>, Option<Loading>), Rc<Library>> {
         if let Some(held) = self.held.get(name) {
             return Ok((Rc::clone(held), None));
@@ -366,14 +377,20 @@ impl Libraries {
             if loader_to_wait_for(&round, name, identity).is_some() {
                 return Err(library);
             }
-            let id = round
+            let known = round
                 .loaded
                 .iter()
                 .find(|loaded| loaded.name == name && loaded.identity == identity)
-                .map(|known| known.id);
+                .map(|known| known.unload.clone());
             round.order.put(name);
-            match id {
-                Some(_) => None,
+            match known {
+                Some(unload) => {
+                    // Freshly opened, so this is its only holder.
+                    if let Some(own) = Rc::get_mut(&mut library) {
+                        own.share_mapping(&unload);
+                    }
+                    None
+                }
                 None => {
                     let id = round.next;
                     round.next += 1;
@@ -384,6 +401,7 @@ impl Libraries {
                         unload: library.unload(),
                         loading: Some(std::thread::current().id()),
                     });
+                    self.recorded.push((id, name.to_vec()));
                     Some(Loading { id })
                 }
             }
@@ -424,11 +442,11 @@ impl Libraries {
             // beside the root context and the instance block that every
             // instance keeps for the process. A load from the main activity
             // was handed that root, so it keeps nothing more.
-            for loaded in &round.loaded {
-                for library in self.held.values() {
-                    if library.is_unloaded_by(&loaded.unload) {
-                        library.keep_thread_context_for_process();
-                    }
+            for (id, name) in &self.recorded {
+                if round.loaded.iter().any(|loaded| loaded.id == *id)
+                    && let Some(library) = self.held.get(name)
+                {
+                    library.keep_thread_context_for_process();
                 }
             }
             return None;
@@ -441,6 +459,26 @@ impl Libraries {
             thread,
             walked: Vec::new(),
         })
+    }
+
+    /// Whether a library this interpreter holds has been closed since the
+    /// first time this answered true, which it does once: a library of the
+    /// round closes with the round, whichever instance's termination closes
+    /// it, and its first close takes the command handlers extensions
+    /// registered out of use, as [`Interp::run_package_unloaders`] does for
+    /// the instance that closes it.
+    pub(crate) fn first_closed(&mut self) -> bool {
+        if self.closed_seen || self.held.values().all(|library| library.is_open()) {
+            return false;
+        }
+        self.closed_seen = true;
+        true
+    }
+
+    /// Records that this interpreter's own termination closed a library and
+    /// took the command handlers out of use ([`Libraries::first_closed`]).
+    pub(crate) fn note_closed(&mut self) {
+        self.closed_seen = true;
     }
 
     /// Takes `unloading` once its unloaders have run, and drops it, after

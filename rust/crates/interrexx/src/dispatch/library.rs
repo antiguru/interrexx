@@ -959,6 +959,7 @@ impl Interp {
                         if library.close() {
                             self.command_handlers.clear();
                             self.environments.close_registered();
+                            self.libraries.note_closed();
                         }
                     }
                     Err(Failure::Loud(loud)) => break 'walk Some(*loud),
