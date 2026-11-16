@@ -18,6 +18,8 @@
 // instance that loads `lifetime`, prints `created inner` and leaves the instance live, with its
 // address in the environment variable LIFETIME_KEPT.
 //
+// The extension has one routine, `LifetimeProbe`, which answers 1 and prints nothing.
+//
 // Built with -DOTHER it is the extension `lifetime2` instead, a library whose hooks print `other
 // loader` and `other unloader`, which does nothing else.
 //
@@ -44,6 +46,20 @@
 //   unloaderkeep with LIFETIME_UNLOADER_KEEPS set, creates A and terminates it, then terminates
 //                the instance the unloader left live and prints `terminated inner`, then creates
 //                C and terminates it
+//   callrace     with a slow loader, creates A without loading `lifetime`. A thread of its own
+//                attaches to A, loads `lifetime` there, prints `thread lifetime` with the answer
+//                and detaches. Once the loader has started, the main thread calls `LifetimeProbe`
+//                by name through A, from a routine it makes with `NewRoutine`, again and again
+//                until that load has returned, and prints `race` with how many calls answered and
+//                how many raised a condition. Then it calls `LifetimeProbe` by name once more,
+//                prints `after` with the answer, or `after none` where the call raised a
+//                condition, and terminates A
+//   unloadercall with a slow unloader, creates A, and a thread of its own attaches to A. The main
+//                thread terminates A. Once the unloader has started, the thread sends `LENGTH` to
+//                the string `abc` through A, prints `thread callback` with the answer, or
+//                `thread callback none` where the send answered no object, and detaches. The
+//                program prints `joined` once the thread has ended
+#include <atomic>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -170,6 +186,21 @@ static void RexxEntry LifetimeUnloader(RexxThreadContext *context)
 #endif
 }
 
+#ifndef OTHER
+RexxRoutine0(int, LifetimeProbe)
+{
+    return 1;
+}
+
+static RexxRoutineEntry routines[] = {
+    REXX_TYPED_ROUTINE(LifetimeProbe, LifetimeProbe),
+    REXX_LAST_ROUTINE()
+};
+#define ROUTINES routines
+#else
+#define ROUTINES NULL
+#endif
+
 RexxPackageEntry ENTRY = {
     STANDARD_PACKAGE_HEADER
     REXX_INTERPRETER_4_0_0,
@@ -177,7 +208,7 @@ RexxPackageEntry ENTRY = {
     "1.0",
     LifetimeLoader,
     LifetimeUnloader,
-    NULL,
+    ROUTINES,
     NULL
 };
 
@@ -215,6 +246,85 @@ static void *attach_and_detach(void *argument)
         return NULL;
     }
     attached->DetachThread();
+    return argument;
+}
+
+// Creates the instance `name`, which loads no library, and answers it with its thread context in
+// `thread`.
+static RexxInstance *create_bare(const char *name, RexxThreadContext **thread)
+{
+    RexxInstance *instance;
+    if (!RexxCreateInterpreter(&instance, thread, NULL))
+    {
+        printf("create %s failed\n", name);
+        return NULL;
+    }
+    printf("created %s\n", name);
+    return instance;
+}
+
+// Set once the thread `callrace` starts has finished its load of `lifetime`.
+static std::atomic<bool> race_loaded(false);
+
+// Attaches to the instance `argument`, loads `lifetime` there, prints the answer and detaches.
+static void *load_lifetime(void *argument)
+{
+    RexxThreadContext *context;
+    if (!((RexxInstance *)argument)->AttachThread(&context))
+    {
+        printf("thread did not attach\n");
+        race_loaded = true;
+        return NULL;
+    }
+    printf("thread lifetime %d\n", context->LoadLibrary("lifetime") ? 1 : 0);
+    race_loaded = true;
+    context->DetachThread();
+    return argument;
+}
+
+// Calls `LifetimeProbe` by name through `context`, answering what it answered, or -1 where the call
+// raised a condition, which it clears.
+static int call_probe(RexxThreadContext *context)
+{
+    const char *source = "return LifetimeProbe()";
+    RexxRoutineObject routine = context->NewRoutine("probe", source, strlen(source));
+    if (routine == NULLOBJECT)
+    {
+        context->ClearCondition();
+        return -1;
+    }
+    RexxObjectPtr answer = context->CallRoutine(routine, context->NewArray(0));
+    if (context->CheckCondition() || answer == NULLOBJECT)
+    {
+        context->ClearCondition();
+        return -1;
+    }
+    wholenumber_t number = 0;
+    return context->WholeNumber(answer, &number) ? (int)number : -1;
+}
+
+// Set once the thread `unloadercall` starts has attached.
+static std::atomic<bool> callback_attached(false);
+
+static int hook_started(void);
+
+// Attaches to the instance `argument`, and once a slow hook has started sends `LENGTH` to `abc`
+// through it, prints the answer and detaches.
+static void *call_during_unloader(void *argument)
+{
+    RexxThreadContext *context;
+    if (!((RexxInstance *)argument)->AttachThread(&context))
+    {
+        printf("thread did not attach\n");
+        callback_attached = true;
+        return NULL;
+    }
+    callback_attached = true;
+    hook_started();
+    RexxObjectPtr length = context->SendMessage0(context->NewStringFromAsciiz("abc"), "LENGTH");
+    printf("thread callback %s\n",
+           length != NULLOBJECT ? context->ObjectToStringValue(length) : "none");
+    context->DetachThread();
     return argument;
 }
 
@@ -258,6 +368,70 @@ int main(int argc, char **argv)
         return 2;
     }
     const char *scenario = argv[1];
+    if (strcmp(scenario, "callrace") == 0)
+    {
+        setenv("LIFETIME_SLOW", "loader", 1);
+        unlink("hook-started");
+        RexxThreadContext *context;
+        RexxInstance *a = create_bare("A", &context);
+        pthread_t thread;
+        if (a == NULL || pthread_create(&thread, NULL, load_lifetime, a) != 0 || !hook_started())
+        {
+            return 1;
+        }
+        int answered = 0;
+        int raised = 0;
+        do
+        {
+            if (call_probe(context) < 0)
+            {
+                raised++;
+            }
+            else
+            {
+                answered++;
+            }
+        } while (!race_loaded);
+        void *loaded = NULL;
+        if (pthread_join(thread, &loaded) != 0 || loaded == NULL)
+        {
+            return 1;
+        }
+        printf("race %d %d\n", answered, raised);
+        int after = call_probe(context);
+        if (after < 0)
+        {
+            printf("after none\n");
+        }
+        else
+        {
+            printf("after %d\n", after);
+        }
+        terminate(a, "A");
+        return 0;
+    }
+    if (strcmp(scenario, "unloadercall") == 0)
+    {
+        setenv("LIFETIME_SLOW", "unloader", 1);
+        unlink("hook-started");
+        RexxInstance *a = create("A");
+        pthread_t thread;
+        if (a == NULL || pthread_create(&thread, NULL, call_during_unloader, a) != 0)
+        {
+            return 1;
+        }
+        while (!callback_attached)
+        {
+            usleep(1000);
+        }
+        terminate(a, "A");
+        if (pthread_join(thread, NULL) != 0)
+        {
+            return 1;
+        }
+        printf("joined\n");
+        return 0;
+    }
     if (strcmp(scenario, "loading") == 0)
     {
         setenv("LIFETIME_SLOW", "loader", 1);

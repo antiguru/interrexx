@@ -549,6 +549,55 @@ fn driver_runs(
     scenario: &str,
     oracle: bool,
 ) -> Vec<Answer> {
+    let (dir, driver) = build_driver(name, source, extensions);
+    let mut runs = vec![run(&driver, &dir, None, Some(scenario))];
+    if oracle {
+        // A slow hook's marks, which the oracle's run makes again.
+        for mark in ["hook-started", "cyclefirst-started", "cyclesecond-started"] {
+            let _ = fs::remove_file(dir.join(mark));
+        }
+        let oracle = support::oracle::locate();
+        let theirs_driver = dir.join("ltdriver-oracle");
+        link_driver(source, &theirs_driver, oracle.lib_dir());
+        let output = Command::new("memcap")
+            .arg(MEMORY)
+            .args(["timeout", "-s", "KILL", DEADLINE])
+            .arg(&theirs_driver)
+            .arg(scenario)
+            .current_dir(&dir)
+            .env(
+                "LD_LIBRARY_PATH",
+                format!("{}:{}", oracle.lib_dir().display(), dir.display()),
+            )
+            .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
+            .stdin(Stdio::null())
+            .output()
+            .expect("memcap runs, which every run of this test is under");
+        // The oracle's run starts its `rxapi` inside the run's `memcap` group, so `memcap` may
+        // report that it left the group behind. That line is the harness's, not the program's.
+        let stderr: String = String::from_utf8_lossy(&output.stderr)
+            .lines()
+            .filter(|line| !(line.starts_with("memcap: left ") && line.ends_with(" exit")))
+            .map(|line| format!("{line}\n"))
+            .collect();
+        runs.push((
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            stderr,
+            output.status.code().unwrap_or(-1),
+        ));
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    runs
+}
+
+/// Builds what [`driver_runs`] runs: the fixture `source` as each of `extensions` and as the
+/// driver linked against this workspace's `librexx.so.4`, into a fresh directory named for `name`.
+/// Answers the directory and the driver.
+fn build_driver(
+    name: &str,
+    source: &str,
+    extensions: &[(Option<&str>, &str)],
+) -> (PathBuf, PathBuf) {
     let dir = fresh_dir(name);
     for (define, extension) in extensions {
         let output = dir.join(format!("lib{extension}.so"));
@@ -565,54 +614,27 @@ fn driver_runs(
         fs::copy(&library, dir.join(&versioned)).expect("a copy of the library");
         std::os::unix::fs::symlink(&versioned, dir.join(&name)).expect("the link name");
     }
-    let link = |driver: &Path, libraries: &Path| {
-        compile(
-            source,
-            &[
-                "-DDRIVER",
-                "-pthread",
-                "-o",
-                &driver.to_string_lossy(),
-                &format!("-L{}", libraries.display()),
-                &format!("-Wl,-rpath,{}", libraries.display()),
-                "-lrexx",
-                "-lrexxapi",
-            ],
-        );
-    };
     let driver = dir.join("ltdriver");
-    link(&driver, &dir);
-    let mut runs = vec![run(&driver, &dir, None, Some(scenario))];
-    if oracle {
-        // A slow hook's marks, which the oracle's run makes again.
-        for mark in ["hook-started", "cyclefirst-started", "cyclesecond-started"] {
-            let _ = fs::remove_file(dir.join(mark));
-        }
-        let oracle = support::oracle::locate();
-        let theirs_driver = dir.join("ltdriver-oracle");
-        link(&theirs_driver, oracle.lib_dir());
-        let output = Command::new("memcap")
-            .arg(MEMORY)
-            .args(["timeout", "-s", "KILL", DEADLINE])
-            .arg(&theirs_driver)
-            .arg(scenario)
-            .current_dir(&dir)
-            .env(
-                "LD_LIBRARY_PATH",
-                format!("{}:{}", oracle.lib_dir().display(), dir.display()),
-            )
-            .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
-            .stdin(Stdio::null())
-            .output()
-            .expect("memcap runs, which every run of this test is under");
-        runs.push((
-            String::from_utf8_lossy(&output.stdout).into_owned(),
-            String::from_utf8_lossy(&output.stderr).into_owned(),
-            output.status.code().unwrap_or(-1),
-        ));
-    }
-    fs::remove_dir_all(&dir).expect("the run's directory is removable");
-    runs
+    link_driver(source, &driver, &dir);
+    (dir, driver)
+}
+
+/// Builds the fixture `source` as the driver `driver`, linked against the `librexx` and
+/// `librexxapi` in `libraries`.
+fn link_driver(source: &str, driver: &Path, libraries: &Path) {
+    compile(
+        source,
+        &[
+            "-DDRIVER",
+            "-pthread",
+            "-o",
+            &driver.to_string_lossy(),
+            &format!("-L{}", libraries.display()),
+            &format!("-Wl,-rpath,{}", libraries.display()),
+            "-lrexx",
+            "-lrexxapi",
+        ],
+    );
 }
 
 /// Checks that `stdout` is `first`, then `middle` in any order, then `last`, answering the lines
@@ -845,6 +867,89 @@ fn a_library_an_unloader_loads_is_unloaded_in_the_same_termination() {
             0
         )
     );
+}
+
+/// The lines of one run of the scenario `callrace` that the rules fix: it completes, the loader and
+/// the unloader each run once, and a call by name made after the load has returned answers. The
+/// calls made while the loader runs may answer or raise, which is the program's concern, so the
+/// `race` line is checked to be there and nothing more.
+fn check_callrace((stdout, stderr, code): &Answer) {
+    assert_eq!((stderr.as_str(), *code), ("", 0), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    for once in [
+        "created A",
+        "loader start",
+        "loader end",
+        "after 1",
+        "unloader",
+    ] {
+        assert_eq!(
+            lines.iter().filter(|line| **line == once).count(),
+            1,
+            "{once}: {stdout}"
+        );
+    }
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| line.starts_with("race "))
+            .count(),
+        1,
+        "{stdout}"
+    );
+    assert_eq!(lines.last(), Some(&"terminated A"), "{stdout}");
+}
+
+/// A routine of the library that one activity calls by name, again and again, while another
+/// activity of the same instance runs the library's loader with the baton vacated, leaves the
+/// interpreter sound: the run completes, the loader and the unloader each run once, a call made
+/// after the load has returned answers, and `Terminate` returns. What the calls made during the
+/// loader answer is unspecified, so it is not checked, and the run is not compared with the
+/// oracle.
+// spec: native.loading.shared
+#[test]
+fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound() {
+    check_callrace(&lifetime_runs("lifetime-callrace", "callrace", false).remove(0));
+}
+
+/// [`a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound`]'s scenario a
+/// hundred times in a row, each run a process of its own under the test's deadline, so that a
+/// crash, a panic, a hang or a corrupted state that the race reaches only now and then fails it.
+// spec: native.loading.shared
+#[test]
+#[ignore = "a hundred runs; run it with --run-ignored ignored-only"]
+fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound_a_hundred_times() {
+    let (dir, driver) = build_driver(
+        "lifetime-callrace-stress",
+        "lifetime.cpp",
+        &[(None, "lifetime"), (Some("-DOTHER"), "lifetime2")],
+    );
+    for _ in 0..100 {
+        check_callrace(&run(&driver, &dir, None, Some("callrace")));
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// A thread attached to the last instance before the embedding terminates it, which calls into the
+/// instance while that termination runs the library's unloader, does not crash or hang the
+/// termination: its send is refused and answers no object, the unloader returns and `Terminate`
+/// returns. Under `REXX_CORPUS_GATE` the oracle prints the same, except that it runs the send and
+/// answers `3`, as Deviation 174 (`native.threads.end.deviation.174`) records.
+// spec: native.loading.unload, native.loading.reentrant, native.threads.end.deviation.174
+#[test]
+fn a_thread_calling_in_during_the_last_unloader_is_refused() {
+    let mut runs = lifetime_runs("lifetime-unloadercall", "unloadercall", gate_mode()).into_iter();
+    let ours = runs.next().expect("this workspace's run");
+    let expected = |answer: &str| {
+        format!(
+            "loader\ncreated A\nunloader start\nthread callback {answer}\nunloader end\n\
+             terminated A\njoined\n"
+        )
+    };
+    assert_eq!(ours, (expected("none"), String::new(), 0));
+    if let Some(theirs) = runs.next() {
+        assert_eq!(theirs, (expected("3"), String::new(), 0), "the oracle");
+    }
 }
 
 /// Builds `crossload.cpp` as the extensions `crossslow`, `crossquick` and `crossouter` and as the
