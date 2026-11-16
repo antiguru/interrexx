@@ -130,6 +130,32 @@ fn a_mid_probe_put_does_not_find_a_wrong_entry() {
     );
 }
 
+/// A key whose `==` puts a hundred entries while a `put` of an index the
+/// table does not hold is probing, which rebuilds the store under the probe:
+/// the new entry goes into the store the table has afterwards, where a lookup
+/// finds it, and not into the arrays the rebuild left behind.
+#[test]
+fn a_put_whose_probe_rebuilt_the_store_lands_in_the_new_one() {
+    let out = output_of(
+        "t = .table~new\n\
+         t[.key~new('a', t)] = 1\n\
+         k = .key~new('k', t)\nk~arm\n\
+         t[k] = 'x'\n\
+         say t[k] t~items t~hasIndex(k)\n\
+         ::class key\n\
+         ::method init\n  expose v t armed\n  use arg v, t\n  armed = .false\n\
+         ::method arm\n  expose armed\n  armed = .true\n\
+         ::method v\n  expose v\n  return v\n\
+         ::method hashCode\n  return 'same'\n\
+         ::method '=='\n  expose v t armed\n  use arg other\n\
+         \x20 if armed then do\n    armed = .false\n    n = t~items\n    \
+         do i = n to n + 99\n      t[i] = i\n    end\n  end\n\
+         \x20 if \\other~isA(.key) then return .false\n\
+         \x20 return v == other~v\n",
+    );
+    assert_eq!(out, "x 102 1\n");
+}
+
 /// A key whose `==` removes the very entry it is being compared with, adding
 /// nothing, and then answers true: the probe must not answer the hole that
 /// removal left, or the `put` would write its item into the hole and be lost.
