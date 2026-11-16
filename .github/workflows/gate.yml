@@ -63,6 +63,12 @@ jobs:
     if: needs.decide.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    env:
+      # Without debug info: with it, the workspace's test binaries take more than 19 GB, more
+      # than a runner has free. `debug_assert` stays on, as it is tied to the profile's
+      # `debug-assertions`, not to debug info.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
       - uses: actions/checkout@v7
         with:
