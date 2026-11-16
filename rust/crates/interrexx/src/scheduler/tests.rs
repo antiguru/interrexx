@@ -1971,3 +1971,29 @@ mod native;
 mod pool;
 
 mod spawn_failure;
+
+/// A callback whose send is to be sent again counts as held, so a loop with nothing else to run
+/// does not take its wait for one nothing can end before the recall arrives
+/// (`r[native.threads.attach.deviation.178]`).
+#[test]
+fn a_send_to_be_sent_again_counts_as_a_message_held() {
+    let mut interp = Interp::new();
+    assert!(
+        interp.only_stopped_activities_remain(),
+        "an interpreter with nothing to run still has something held"
+    );
+    assert!(interp.activities.nothing_held_or_in_flight());
+    let key = crate::guards::GuardKey {
+        object: interrexx_core::ObjRef::heap(1, 0),
+        scope: interrexx_core::ObjRef::NIL,
+    };
+    interp.activities.retrying.push((0, key));
+    assert!(
+        !interp.only_stopped_activities_remain(),
+        "a send to be sent again was not counted as held"
+    );
+    assert!(
+        !interp.activities.nothing_held_or_in_flight(),
+        "the stall check and the refusal check do not count the send"
+    );
+}

@@ -640,6 +640,12 @@ impl Activities {
         self.in_flight > 0
     }
 
+    /// Whether no message is held or to be sent again, and no call is in flight but those a
+    /// lend's callback runs above (`r[native.threads.attach.deviation.178]`).
+    fn nothing_held_or_in_flight(&self) -> bool {
+        self.in_flight == self.runs_below.len() && self.held.is_empty() && self.retrying.is_empty()
+    }
+
     #[cfg(test)]
     pub(crate) fn retired(&self) -> &[interrexx_api::ffi::ThreadContext] {
         &self.retired
@@ -2130,9 +2136,7 @@ impl Interp {
         };
         table.ready.is_empty()
             && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))
-            && table.held.is_empty()
-            && table.retrying.is_empty()
-            && table.in_flight == table.runs_below.len()
+            && table.nothing_held_or_in_flight()
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
@@ -3114,9 +3118,7 @@ impl Interp {
                 // recall arrives, as its place in a guard lock's queue may
                 // be the turn the other waits wait for.
                 if sleeper.is_none()
-                    && self.activities.in_flight == self.activities.runs_below.len()
-                    && self.activities.held.is_empty()
-                    && self.activities.retrying.is_empty()
+                    && self.activities.nothing_held_or_in_flight()
                     && (self.waits_on_a_message_it_runs(me)
                         || (self.activities.callbacks_lent == 0
                             && !self.waits_for_attaching_threads(level)))
