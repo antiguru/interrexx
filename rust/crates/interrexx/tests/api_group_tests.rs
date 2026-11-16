@@ -21,6 +21,10 @@
 #[path = "support/group_runner.rs"]
 mod group_runner;
 
+/// What [`group_runner::fresh_copy_from`] does to each copy after making it:
+/// nothing here.
+const COPY_HOOK: Option<fn(&std::path::Path, &str)> = None;
+
 // The C API, compiled in and exported as `rexx` does (`build.rs`), so a test
 // library this process loads binds to this process's interpreter rather than
 // to the oracle's `librexx.so.4` and `librexxapi.so.4`.

@@ -223,48 +223,6 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "pass, assertions 18, rc 0, last started TEST_REPLY__CODE_RETURN, failing []",
         "every continuation runs before the program ends; the oracle races them with its end",
     ),
-    (
-        "base/keyword/TRACE.testGroup",
-        "whole",
-        "normal",
-        "error, assertions 113, rc 2, last started TEST_TRACE_VALUE_NUMERIC_INVALID, failing [TEST_TRACE_EXIT TEST_TRACE_LABEL_WITH_FORWARD TEST_TRACE_NUMERIC_DEBUG TEST_TRACE_OTHER_ENTRYPOINT TEST_TRACE_EXPOSE]",
-        "tests that assert the wording of the trace announcements or of the notice of interactive tracing, unspecified (r[conv.error.text]): TEST_TRACE_EXIT, TEST_TRACE_EXPOSE, TEST_TRACE_LABEL_WITH_FORWARD, TEST_TRACE_NUMERIC_DEBUG and TEST_TRACE_OTHER_ENTRYPOINT, licensed in suite-licences.txt",
-    ),
-    (
-        "base/keyword/TRACE.testGroup",
-        "whole",
-        "every",
-        "error, assertions 113, rc 2, last started TEST_TRACE_VALUE_NUMERIC_INVALID, failing [TEST_TRACE_EXIT TEST_TRACE_LABEL_WITH_FORWARD TEST_TRACE_NUMERIC_DEBUG TEST_TRACE_OTHER_ENTRYPOINT TEST_TRACE_EXPOSE]",
-        "tests that assert the wording of the trace announcements or of the notice of interactive tracing, unspecified (r[conv.error.text]): TEST_TRACE_EXIT, TEST_TRACE_EXPOSE, TEST_TRACE_LABEL_WITH_FORWARD, TEST_TRACE_NUMERIC_DEBUG and TEST_TRACE_OTHER_ENTRYPOINT, licensed in suite-licences.txt",
-    ),
-    (
-        "base/keyword/TRACE_TraceObject.testGroup",
-        "whole",
-        "normal",
-        "failure, assertions 489, rc 1, last started TEST_VARIABLE, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_OBJECT_AND_SCOPE TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START, TEST_OBJECT_AND_SCOPE and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
-    ),
-    (
-        "base/keyword/TRACE_TraceObject.testGroup",
-        "whole",
-        "every",
-        "failure, assertions 489, rc 1, last started TEST_VARIABLE, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_OBJECT_AND_SCOPE TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START, TEST_OBJECT_AND_SCOPE and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
-    ),
-    (
-        "base/keyword/TRACE_TraceObject.testGroup",
-        "derived",
-        "normal",
-        "failure, assertions 2, rc 1, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
-    ),
-    (
-        "base/keyword/TRACE_TraceObject.testGroup",
-        "derived",
-        "every",
-        "failure, assertions 2, rc 1, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that assert the wording of the trace announcements in TRACELINE, unspecified (r[conv.error.text]): TEST_CALLER_STACK_FRAME_REPLY_START and TEST_TRACEOBJECT_COLLECTOR, licensed in suite-licences.txt",
-    ),
 ];
 
 /// A run's refusal or summary, its status, the last test it started
@@ -747,7 +705,6 @@ fn the_differing_tests_are_read_from_every_key() {
     for (group, test) in [
         ("base/bif/STREAM", "TEST_RELATIVE_FILE_EXISTS2"),
         ("base/bif/STREAM", "TEST_WRONG_TOO_MANY_ARGS_S"),
-        ("base/keyword/TRACE", "TEST_TRACE_NUMERIC_DEBUG"),
         ("base/class/RexxContext", "TESTRS01"),
     ] {
         assert!(

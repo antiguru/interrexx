@@ -22,6 +22,14 @@
 // Pulled in by more than one test binary, each of which uses part of it.
 #![allow(dead_code)]
 
+/// The `.local` entry name of [`RUNNING_TEST`], as a literal, so that the
+/// framework lines that set it are spelled from the same text.
+macro_rules! running_test {
+    () => {
+        "INTERREXX_SUITE_TEST"
+    };
+}
+
 #[path = "group_runner/bytes/mod.rs"]
 mod bytes;
 #[cfg(test)]
@@ -303,6 +311,9 @@ pub fn fresh_copy_from(run: &Path, root: &Path, dir: &str) {
         run.join("rxregexp.cls"),
     )
     .expect("cannot copy rxregexp.cls");
+    if let Some(hook) = crate::COPY_HOOK {
+        hook(run, dir);
+    }
 }
 
 /// Removes each `rxfuncquery` test from the copied `ooTest.frm`, with the
@@ -834,16 +845,51 @@ pub fn skip<S: AsRef<str> + Ord>(group_file: &Path, group: &str, left_out: &BTre
 /// writes `started NAME` to stderr, so line numbers are unchanged.
 const START_LINE: &[u8] = b"  aTestResult~startTest(self)       -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
 const START_MARKED: &[u8] = b"  aTestResult~startTest(self); .error~say('started' fName) -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
+/// [`START_MARKED`] for a copy that [`name_running_tests`] named.
+const START_MARKED_NAMED: &[u8] = concat!(
+    "  .local~setEntry('",
+    running_test!(),
+    "', fName~upper); aTestResult~startTest(self); .error~say('started' fName) -- remember test started\n",
+    "  self~setUp                        -- make sure setup is invoked before test\n"
+)
+.as_bytes();
+/// [`START_LINE`] that also sets [`RUNNING_TEST`], with nothing written,
+/// on as many lines, so no line of the framework moves.
+const START_NAMED: &[u8] = concat!(
+    "  .local~setEntry('",
+    running_test!(),
+    "', fName~upper); aTestResult~startTest(self) -- remember test started\n",
+    "  self~setUp                        -- make sure setup is invoked before test\n"
+)
+.as_bytes();
+
+/// Makes the copy at `at` set [`RUNNING_TEST`] as each test starts, and
+/// nothing else, for a copy whose group file is guarded. A later
+/// [`mark_starts`] or [`mark_starts_in_file`] replaces it and sets it too.
+pub fn name_running_tests(at: &Path) {
+    mark_starts_with(at, START_NAMED);
+}
 
 /// Makes the copy at `at` write `started NAME` to stderr as each test
 /// starts. The file is read and written as bytes.
 pub fn mark_starts(at: &Path) {
-    mark_starts_with(at, START_MARKED);
+    let named = contains(
+        &read_bytes(&at.join("framework/OOREXXUNIT.CLS")),
+        START_NAMED,
+    );
+    mark_starts_with(
+        at,
+        if named {
+            START_MARKED_NAMED
+        } else {
+            START_MARKED
+        },
+    );
 }
 
 /// The `.local` entry that [`mark_starts_in_file`]'s copy sets to the name of
 /// the test that is starting, upper case, before its `setUp` runs.
-pub const RUNNING_TEST: &str = "INTERREXX_SUITE_TEST";
+pub const RUNNING_TEST: &str = running_test!();
 
 /// Makes the copy at `at` append `started NAME` to `marker` as each test
 /// starts, closing it after each line, so the line is on disk before the
@@ -863,15 +909,18 @@ pub fn mark_starts_in_file(at: &Path, marker: &Path) {
 fn mark_starts_with(at: &Path, marked: &[u8]) {
     let file = at.join("framework/OOREXXUNIT.CLS");
     let text = read_bytes(&file);
-    let hits: Vec<usize> = text
-        .windows(START_LINE.len())
-        .enumerate()
-        .filter(|(_, window)| *window == START_LINE)
-        .map(|(at, _)| at)
+    let found: Vec<(usize, usize)> = [START_LINE, START_NAMED]
+        .iter()
+        .flat_map(|line| {
+            text.windows(line.len())
+                .enumerate()
+                .filter(move |(_, window)| window == line)
+                .map(move |(at, _)| (at, line.len()))
+        })
         .collect();
-    assert_eq!(hits.len(), 1, "one test start in {}", file.display());
-    let at = hits[0];
-    let marked = [&text[..at], marked, &text[at + START_LINE.len()..]].concat();
+    assert_eq!(found.len(), 1, "one test start in {}", file.display());
+    let (at, len) = found[0];
+    let marked = [&text[..at], marked, &text[at + len..]].concat();
     fs::write(&file, marked).expect("cannot rewrite the copied OOREXXUNIT.CLS");
 }
 
