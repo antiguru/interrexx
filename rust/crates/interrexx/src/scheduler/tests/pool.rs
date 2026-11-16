@@ -433,7 +433,8 @@ fn a_call_on_a_pool_thread_with_no_thread_free_runs_on_its_lend() {
 /// With every pool thread busy, a command whose child waits for another
 /// activity's command runs on a thread beyond the bound, so the other
 /// activity runs and the two children meet at the fifo. Run on the baton,
-/// the reader's `timeout` ends it first and the writer's ends it after.
+/// the reader's time limit (Perl's `alarm`, which survives the `exec`) ends it first and the
+/// writer's ends it after.
 #[test]
 fn a_command_at_a_full_pool_runs_beyond_the_bound() {
     let path = std::env::temp_dir().join(format!("rexx-full-pool-{}", std::process::id()));
@@ -447,7 +448,7 @@ do i = 1 to 2
 end
              call SysSleep 0.3
 w = .w~new~start('write')
-             address system 'timeout 5 cat {path}'
+             address system 'perl -e ''alarm 5; exec @ARGV'' cat {path}'
 say 'read' rc
 say w~result
              ::class s
@@ -456,7 +457,7 @@ say w~result
              ::class w
 ::method write
   call SysSleep 0.1
-               address system 'timeout 5 sh -c \"echo hi > {path}\"'
+               address system 'perl -e ''alarm 5; exec @ARGV'' sh -c \"echo hi > {path}\"'
   return 'wrote' rc
 "
         ),
