@@ -1,5 +1,5 @@
 //! **Attached threads** (`r[native.threads.attach]`). The extension
-//! `tests/attached_threads/attach.cpp`, compiled with `g++` against this worktree's `api/` into a
+//! `tests/attached_threads/attach.cpp`, compiled with `g++` against this worktree's `include/` into a
 //! directory of this run's own, starts threads that attach to the interpreter through the
 //! instance a call's thread context links, send messages, and detach. The programs beside it start
 //! them and run Rexx code, waiting with `SysSleep` until every thread has detached, then print what
@@ -14,16 +14,90 @@ mod support;
 mod cdylibs;
 
 use std::fs;
+use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 /// The `memcap` limit each run is under.
 const MEMORY: &str = "2G";
 
+/// The address-space limit in KiB where `memcap` is not on `PATH`.
+const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+
 /// The seconds `timeout` gives each run before it kills it, so a run that deadlocks fails
-/// instead of hanging. It runs inside `memcap`, so the signal reaches `rexx` itself. An oracle run
-/// whose output is compared gets the same.
+/// instead of hanging. It runs inside the memory cap, so the signal reaches `rexx` itself. An
+/// oracle run whose output is compared gets the same.
 const SECONDS: &str = "120";
+
+/// The exit status a run answers: its exit code, or 128 plus the signal that killed it, as a
+/// shell reports it. A run `timeout` kills dies by SIGKILL, which reads 137 whether `timeout`
+/// itself or a shell between it and this test reports it.
+const KILLED: i32 = 137;
+
+/// Whether `name` is an executable file on this process's `PATH`.
+fn on_path(name: &str) -> bool {
+    std::env::var_os("PATH")
+        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
+}
+
+/// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
+/// `memcap` is not on `PATH`, and killed by `timeout` after `seconds`.
+fn capped(seconds: &str) -> Command {
+    let mut command = if on_path("memcap") {
+        let mut command = Command::new("memcap");
+        command.arg(MEMORY);
+        command
+    } else {
+        let mut command = Command::new("bash");
+        command.arg("-c").arg(format!(
+            "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
+        ));
+        command
+    };
+    command.args(["timeout", "-s", "KILL", seconds]);
+    command
+}
+
+/// The processes below `pid`, children first.
+fn descendants(pid: u32) -> Vec<u32> {
+    let children =
+        fs::read_to_string(format!("/proc/{pid}/task/{pid}/children")).unwrap_or_default();
+    let mut found = Vec::new();
+    for child in children.split_whitespace() {
+        let child: u32 = child.parse().expect("a process id");
+        found.push(child);
+        found.extend(descendants(child));
+    }
+    found
+}
+
+/// The command name of the process `pid`, while it lives.
+fn process_name(pid: u32) -> Option<String> {
+    fs::read_to_string(format!("/proc/{pid}/comm"))
+        .ok()
+        .map(|name| name.trim_end().to_owned())
+}
+
+/// `status` as a shell reports it: the exit code, or 128 plus the signal that ended the process.
+fn exit_status(status: ExitStatus) -> i32 {
+    status
+        .code()
+        .or_else(|| status.signal().map(|signal| 128 + signal))
+        .unwrap_or(-1)
+}
+
+/// `g++` compiling the fixture `source` against this worktree's `include/`, with `arguments` after
+/// the source.
+fn compile(source: &str, arguments: &[&str]) -> Command {
+    let include = worktree().join("include");
+    let mut command = Command::new("g++");
+    command
+        .arg(format!("-I{}", include.display()))
+        .arg(format!("-I{}", include.join("platform/unix").display()))
+        .arg(fixture(source))
+        .args(arguments);
+    command
+}
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
@@ -46,22 +120,20 @@ fn build(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("a directory of this run's own");
-    let api = worktree().join("third_party/ooRexx/api");
-    let built = Command::new("g++")
-        .arg(format!("-I{}", api.display()))
-        .arg(format!("-I{}", api.join("platform/unix").display()))
-        .arg(fixture("attach.cpp"))
-        .args([
+    let built = compile(
+        "attach.cpp",
+        &[
             "-shared",
             "-fPIC",
             "-O1",
             "-static-libstdc++",
             "-pthread",
             "-o",
-        ])
-        .arg(dir.join("libattach.so"))
-        .status()
-        .expect("g++ runs, which this test needs to build its fixture");
+        ],
+    )
+    .arg(dir.join("libattach.so"))
+    .status()
+    .expect("g++ runs, which this test needs to build its fixture");
     assert!(built.success(), "the fixture did not build");
     dir
 }
@@ -69,7 +141,7 @@ fn build(name: &str) -> PathBuf {
 /// What a run answered: stdout, stderr and the exit status.
 type Answer = (String, String, i32);
 
-/// Runs the fixture program `program` under `rexx`, memory-capped by `memcap` and limited in time
+/// Runs the fixture program `program` under `rexx`, memory-capped ([`capped`]) and limited in time
 /// by `timeout`, from a directory holding the extension, answering its stdout, stderr and exit
 /// status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the same directory and
 /// must answer the same.
@@ -147,10 +219,6 @@ enum Oracle {
 /// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds` and given
 /// the environment variables `environment` besides. Each comparison of stderr with the oracle's
 /// cuts the message texts of both sides ([`support::error_text::cut_error_texts`]).
-#[expect(
-    clippy::disallowed_methods,
-    reason = "the run's wall time is what an idle thread must not stretch"
-)]
 fn run_against(
     name: &str,
     program: &str,
@@ -159,20 +227,41 @@ fn run_against(
     environment: &[(&str, &str)],
 ) -> (Answer, std::time::Duration) {
     let dir = build(name);
+    let answer = run_in(&dir, program, oracle, seconds, environment);
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    answer
+}
+
+/// [`run_ours`] of `program` from `dir`, which [`build`] made and the caller removes, so that a
+/// test running the program many times builds the extension once.
+fn run_built(dir: &Path, program: &str) -> Answer {
+    run_in(dir, program, Oracle::Not, SECONDS, &[]).0
+}
+
+/// [`run_against`] from `dir`, which [`build`] made and the caller removes.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the run's wall time is what an idle thread must not stretch"
+)]
+fn run_in(
+    dir: &Path,
+    program: &str,
+    oracle: Oracle,
+    seconds: &str,
+    environment: &[(&str, &str)],
+) -> (Answer, std::time::Duration) {
     let program = fixture(program);
     let began = std::time::Instant::now();
-    let output = Command::new("memcap")
-        .arg(MEMORY)
-        .args(["timeout", "-s", "KILL", seconds])
+    let output = capped(seconds)
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
-        .current_dir(&dir)
-        .env("LD_LIBRARY_PATH", &dir)
+        .current_dir(dir)
+        .env("LD_LIBRARY_PATH", dir)
         .env("REXX_API_DIR", dir.join("api"))
         .envs(environment.iter().copied())
         .stdin(Stdio::null())
         .output()
-        .expect("memcap runs, which every run of this test is under");
+        .expect("the capped run spawns");
     let took = began.elapsed();
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
@@ -181,7 +270,7 @@ fn run_against(
     let ours = (
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
-        output.status.code().unwrap_or(-1),
+        exit_status(output.status),
     );
     if oracle != Oracle::Not {
         let located = support::oracle::locate();
@@ -196,7 +285,7 @@ fn run_against(
         };
         let theirs = located.run_in_within(
             &program,
-            &dir,
+            dir,
             &[("LD_LIBRARY_PATH", &library_path)],
             None,
             deadline,
@@ -222,7 +311,6 @@ fn run_against(
                 (ours.0.as_str(), cut(before)),
                 "the oracle, up to the refusal"
             );
-            fs::remove_dir_all(&dir).expect("the run's directory is removable");
             return (ours, took);
         }
         let theirs = (
@@ -245,7 +333,6 @@ fn run_against(
             Oracle::Not | Oracle::UpToRefusal => {}
         }
     }
-    fs::remove_dir_all(&dir).expect("the run's directory is removable");
     (ours, took)
 }
 
@@ -264,13 +351,8 @@ fn build_driver(name: &str) -> (PathBuf, PathBuf) {
         std::os::unix::fs::symlink(format!("{library}.so.4"), dir.join(format!("{library}.so")))
             .expect("the library's link");
     }
-    let api = worktree().join("third_party/ooRexx/api");
     let binary = dir.join(name);
-    let built = Command::new("g++")
-        .arg(format!("-I{}", api.display()))
-        .arg(format!("-I{}", api.join("platform/unix").display()))
-        .arg(fixture(&format!("{name}.cpp")))
-        .arg("-o")
+    let built = compile(&format!("{name}.cpp"), &["-o"])
         .arg(&binary)
         .arg(format!("-L{}", dir.display()))
         .arg(format!("-Wl,-rpath,{}", dir.display()))
@@ -290,16 +372,14 @@ fn run_driver(name: &str, arguments: &[&str]) -> Answer {
 /// [`run_driver`], killed after `seconds` rather than [`SECONDS`]: the driver waits for ever.
 fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
     let (dir, binary) = build_driver(name);
-    let output = Command::new("memcap")
-        .arg(MEMORY)
-        .args(["timeout", "-s", "KILL", seconds])
+    let output = capped(seconds)
         .arg(&binary)
         .args(arguments)
         .current_dir(&dir)
         .env("REXX_API_DIR", dir.join("api"))
         .stdin(Stdio::null())
         .output()
-        .expect("memcap runs, which every run of this test is under");
+        .expect("the capped run spawns");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
         .env("REXX_API_DIR", dir.join("api"))
@@ -307,7 +387,7 @@ fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
     let answer = (
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
-        output.status.code().unwrap_or(-1),
+        exit_status(output.status),
     );
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
     answer
@@ -369,13 +449,15 @@ fn two_attached_threads_call_back_concurrently_two_hundred_times() {
 /// Runs [`two_attached_threads_call_back_concurrently`]'s program `runs` times in a row, each
 /// expected to tick ten times.
 fn call_back_concurrently(runs: usize) {
+    let dir = build("attach-two-stress");
     for run in 0..runs {
         assert_eq!(
-            run_ours("attach-two-stress", "two.rex"),
+            run_built(&dir, "two.rex"),
             ("ticked 10\n".to_owned(), String::new(), 0),
             "run {run}"
         );
     }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
 
 /// A second attached thread's `TICK` arrives while the first thread's message runs Rexx code in a
@@ -580,13 +662,15 @@ fn a_parked_callback_holds_program_end() {
 #[test]
 #[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
 fn a_running_callback_holds_program_end_a_hundred_times() {
+    let dir = build("attach-slow-stress");
     for run in 0..100 {
         assert_eq!(
-            run_ours("attach-slow", "slow.rex"),
+            run_built(&dir, "slow.rex"),
             ("slow done\nmain ends\n".to_owned(), String::new(), 0),
             "run {run}"
         );
     }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
 
 /// A message an attached thread sent sleeps a second while the main program loops on
@@ -925,7 +1009,7 @@ fn a_callback_waiting_for_a_post_after_a_native_call_is_not_refused() {
 #[test]
 fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
     let (stdout, stderr, status) = run_ours_for("attach-flag", "flag.rex", "10");
-    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_eq!((stdout.as_str(), status), ("", KILLED));
     assert_stalled_on_flag(&stderr);
 }
 
@@ -937,7 +1021,7 @@ fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
 #[test]
 fn a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported() {
     let (stdout, stderr, status) = run_ours_for("attach-flagsleep", "flagsleep.rex", "10");
-    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_eq!((stdout.as_str(), status), ("", KILLED));
     assert_stalled_on_flag(&stderr);
 }
 
@@ -950,7 +1034,7 @@ fn a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported() {
 #[test]
 fn a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop() {
     let (stdout, stderr, status) = run_ours_for("attach-flagpinned", "flagpinned.rex", "10");
-    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_eq!((stdout.as_str(), status), ("", KILLED));
     assert_stalled_on_flag(&stderr);
 }
 
@@ -965,7 +1049,7 @@ fn a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once() 
     let (stdout, stderr, status) = run_ours_for("attach-flagrelease", "flagrelease.rex", "20");
     assert_eq!(
         (stdout.as_str(), status),
-        ("release sent\npinner released\n", 137),
+        ("release sent\npinner released\n", KILLED),
         "stderr: {stderr}"
     );
     let waited = assert_stalled_on_flag(&stderr);
@@ -1277,7 +1361,7 @@ fn an_embedding_hosts_terminate_waits_for_a_wait_nothing_ends() {
     let (stdout, stderr, status) = run_driver_for("hostwait", &["terminate"], "3");
     assert_eq!(
         (stdout.as_str(), status),
-        ("routine started\n", 137),
+        ("routine started\n", KILLED),
         "{stderr}"
     );
     assert!(!stderr.contains(UNENDING_WAIT), "{stderr}");
@@ -1524,19 +1608,12 @@ fn guard_when_and_message_result_follow_the_switch() {
 )]
 fn the_switch_survives_rxfuncdrop() {
     let dir = build("attach-classic");
-    let api = worktree().join("third_party/ooRexx/api");
-    let built = Command::new("g++")
-        .arg(format!("-I{}", api.display()))
-        .arg(format!("-I{}", api.join("platform/unix").display()))
-        .arg(fixture("classic.cpp"))
-        .args(["-shared", "-fPIC", "-O1", "-o"])
+    let built = compile("classic.cpp", &["-shared", "-fPIC", "-O1", "-o"])
         .arg(dir.join("libattachclassic.so"))
         .status()
         .expect("g++ runs, which this test needs to build its fixture");
     assert!(built.success(), "the classic fixture did not build");
-    let mut child = Command::new("memcap")
-        .arg(MEMORY)
-        .args(["timeout", "-s", "KILL", SECONDS])
+    let mut child = capped(SECONDS)
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(fixture("classic.rex"))
         .current_dir(&dir)
@@ -1546,19 +1623,18 @@ fn the_switch_survives_rxfuncdrop() {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("memcap runs, which every run of this test is under");
+        .expect("the capped run spawns");
     std::thread::sleep(std::time::Duration::from_secs(2));
     let still_running = child.try_wait().expect("the run's status").is_none();
-    // `memcap` runs `timeout` as its child, and `timeout` runs `rexx` as its own: killing `rexx`
-    // ends all three.
-    let children = |pid: u32| {
-        fs::read_to_string(format!("/proc/{pid}/task/{pid}/children")).unwrap_or_default()
-    };
-    for timeout in children(child.id()).split_whitespace() {
-        let timeout: u32 = timeout.parse().expect("a process id");
-        for rexx in children(timeout).split_whitespace() {
-            let _ = Command::new("kill").args(["-KILL", rexx]).status();
-        }
+    // The memory cap may run `timeout` as a child or exec it, and `timeout` runs `rexx` as its
+    // own child: killing `rexx`, wherever it is below the spawned process, ends them all.
+    for rexx in descendants(child.id())
+        .into_iter()
+        .filter(|pid| process_name(*pid).as_deref() == Some("rexx"))
+    {
+        let _ = Command::new("kill")
+            .args(["-KILL", &rexx.to_string()])
+            .status();
     }
     let output = child.wait_with_output().expect("the run's output");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
