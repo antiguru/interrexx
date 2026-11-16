@@ -1,10 +1,11 @@
+/* Which and how many stored indexes and items a search compares, and in what order, are unspecified: r[class.relation.deviation.33] */
 r = .relation~new
 r~put('tail', .key~new(r, 'old-tail'))
 r~put('head', .key~new(r, 'old-head'))
 q = .key~new(r, 'query')
 q~arm
 say 'answer' r~hasItem('new-tail', q) 'items' r~items
-say 'calls' q~hashes q~equals
+say 'calls' q~hashes
 exit
 ::class key
 ::attribute label
@@ -27,7 +28,6 @@ exit
   expose table armed equals label
   use arg held
   equals += 1
-  if label == 'query' then say 'index' held~label
   if armed then do
     armed = 0
     table~empty

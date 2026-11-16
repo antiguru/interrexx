@@ -1,9 +1,10 @@
+/* Which and how many stored indexes and items a search compares, and in what order, are unspecified: r[class.relation.deviation.33] */
 r = .relation~new
 r~put('tail', 'key')
 r~put('head', 'key')
 q = .wanted~new(r)
 say 'answer' r~hasItem(q, 'key') 'items' r~items
-say 'calls' q~calls
+say 'compared' (q~calls > 0)
 exit
 ::class wanted
 ::attribute calls
@@ -15,7 +16,6 @@ exit
   expose table calls
   use arg held
   calls += 1
-  say 'item' held
   if calls = 1 then do
     table~empty
     table~put('new-tail', 'key')

@@ -126,3 +126,49 @@ fn a_mid_probe_put_does_not_find_a_wrong_entry() {
         "item5\n103\nThe NIL object\n203\nnew 303\nitem6 0 402\n"
     );
 }
+
+/// A key whose `==` removes the very entry it is being compared with, adding
+/// nothing, and then answers true: the probe must not answer the hole that
+/// removal left, or the `put` would write its item into the hole and be lost.
+#[test]
+fn a_mid_probe_remove_of_the_compared_entry_does_not_lose_the_put() {
+    let out = output_of(
+        "t = .table~new\n\
+         t[.key~new('a', t)] = 1\n\
+         t[.key~new('b', t)] = 2\n\
+         k = .key~new('b', t)\nk~arm\n\
+         t[k] = 'x'\n\
+         say t[k] t~items\n\
+         ::class key\n\
+         ::method init\n  expose v t armed\n  use arg v, t\n  armed = .false\n\
+         ::method arm\n  expose armed\n  armed = .true\n\
+         ::method v\n  expose v\n  return v\n\
+         ::method hashCode\n  return 'same'\n\
+         ::method '=='\n  expose v t armed\n  use arg other\n\
+         \x20 if \\other~isA(.key) then return .false\n\
+         \x20 if armed & other~v == v then do\n    armed = .false\n    t~remove(other)\n  end\n\
+         \x20 return v == other~v\n",
+    );
+    assert_eq!(out, "x 2\n");
+}
+
+/// The probe sequence can pass one slot more than once before it reaches an
+/// empty one: an entry it meets twice is still one entry under its index.
+#[test]
+fn a_slot_met_twice_is_one_entry() {
+    let out = output_of(
+        "r = .relation~new\n\
+         do i = 1 to 12\n  r~put('v'i, .key~new('L'i))\nend\n\
+         line = ''\n\
+         do i = 1 to 12\n  k = .key~new('L'i)\n  \
+         line = line r~items(k)r~allAt(k)~items\nend\n\
+         say line\n\
+         say r~removeAll(.key~new('L5'))~items r~items\n\
+         ::class key\n\
+         ::attribute label\n\
+         ::method init\n  expose label\n  use arg label\n\
+         ::method hashCode\n  return 'same hash'\n\
+         ::method '=='\n  expose label\n  use arg other\n  return label == other~label\n",
+    );
+    assert_eq!(out, " 11 11 11 11 11 11 11 11 11 11 11 11\n1 11\n");
+}

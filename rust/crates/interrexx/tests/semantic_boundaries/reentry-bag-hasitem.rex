@@ -1,9 +1,10 @@
+/* Which and how many stored indexes and items a search compares, and in what order, are unspecified: r[class.bag.deviation.33] */
 b = .bag~new
 b~put(.key~new(b, 'old'))
 q = .key~new(b, 'query')
 q~arm
 say 'answer' b~hasItem(q) 'items' b~items
-say 'calls' q~hashes q~equals
+say 'calls' q~hashes
 exit
 ::class key
 ::attribute label
@@ -26,7 +27,6 @@ exit
   expose bag armed equals label
   use arg held
   equals += 1
-  if label == 'query' then say 'equal' held~label
   if armed then do
     armed = 0
     bag~empty

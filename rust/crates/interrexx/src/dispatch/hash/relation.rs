@@ -43,10 +43,14 @@ fn slots_for(
                 sequence.advance();
             }
         }
-        // Entries of one code meet the sequence in the order they were added,
-        // since an append files at the first empty slot and never reuses a
-        // deleted one; sorted all the same, so the order rests on positions.
+        // The sequence can pass one slot more than once before it reaches an
+        // empty one, so a candidate can be met twice: each entry is counted
+        // once. Entries of one code first meet the sequence in the order they
+        // were added, since an append files at the first empty slot and never
+        // reuses a deleted one; sorted all the same, so the order rests on
+        // positions.
         candidates.sort_unstable_by_key(|&(position, _)| position);
+        candidates.dedup_by_key(|&mut (position, _)| position);
         for &(_, held) in &candidates {
             interp.roots.activity_mut().push_temp(held);
         }
@@ -265,36 +269,44 @@ fn native_relation_has_item(
         return Ok(Some(crate::eval::logical(false)));
     }
     let under = if bag { Some(wanted) } else { supplied_index };
-    let (store, candidates) = match under {
-        Some(index) => slots_for(interp, receiver, index)?,
-        None => {
-            let store = store_of(interp, receiver)?;
-            let all = super::entries(interp, &store)?;
-            (store, all)
-        }
-    };
-    if bag && !candidates.is_empty() {
-        return Ok(Some(crate::eval::logical(true)));
-    }
-    // The active lookup keeps its hash store through growth. These arrays are
-    // actually read after callbacks, even if a rebuild detached them from the
-    // receiver. EMPTY clears them in place.
-    for array in [store.indexes, store.items, store.codes, store.slots] {
-        interp.roots.activity_mut().push_temp(array);
-    }
-    for position in candidates {
-        // A callback may empty this location or replace its value.
-        // Read the selected contents' current item only if it is live.
-        if slot_at(interp, store.indexes, position)?.is_none() {
-            continue;
-        }
-        if let Some(item) = slot_at(interp, store.items, position)?
-            && super::collection::same_item(interp, wanted, item)?
-        {
+    'search: loop {
+        let (store, candidates) = match under {
+            Some(index) => slots_for(interp, receiver, index)?,
+            None => {
+                let store = store_of(interp, receiver)?;
+                let all = super::entries(interp, &store)?;
+                (store, all)
+            }
+        };
+        if bag && !candidates.is_empty() {
             return Ok(Some(crate::eval::logical(true)));
         }
+        // The active lookup keeps its hash store through growth. These arrays
+        // are actually read after callbacks, even if a rebuild detached them
+        // from the receiver. EMPTY clears them in place.
+        for array in [store.indexes, store.items, store.codes, store.slots] {
+            interp.roots.activity_mut().push_temp(array);
+        }
+        for position in candidates {
+            // A callback may empty this location or replace its value.
+            // Read the selected contents' current item only if it is live.
+            if slot_at(interp, store.indexes, position)?.is_none() {
+                continue;
+            }
+            if let Some(item) = slot_at(interp, store.items, position)?
+                && super::collection::same_item(interp, wanted, item)?
+            {
+                return Ok(Some(crate::eval::logical(true)));
+            }
+            // A comparison that gave the receiver new arrays or new entries
+            // leaves the saved candidates short of them: search again, as
+            // `removeItem` does.
+            if store_of(interp, receiver)? != store {
+                continue 'search;
+            }
+        }
+        return Ok(Some(crate::eval::logical(false)));
     }
-    Ok(Some(crate::eval::logical(false)))
 }
 
 /// `Relation~removeItem(item [, index])`: takes out the first entry holding
