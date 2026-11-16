@@ -4054,29 +4054,67 @@ impl Interp {
 pub const UNBUFFERED_ENV: &str = "REXX_UNBUFFERED";
 
 /// The environment variable that fixes the seed of the keyed string hash, so
-/// that a run's `hashCode` answers can be had again: a decimal number.
+/// that a run's `hashCode` answers can be had again: decimal digits naming a
+/// number below 2**64. The empty string is the same as no value.
 pub const HASH_SEED_ENV: &str = "REXX_HASH_SEED";
 
-/// The number a [`HASH_SEED_ENV`] value names, `None` where it is not a
-/// decimal number that fits 64 bits.
-pub fn parse_hash_seed(value: &[u8]) -> Option<u64> {
-    std::str::from_utf8(value).ok()?.parse().ok()
+/// What a [`HASH_SEED_ENV`] value says: `Ok(None)` for the empty string, which
+/// leaves the seed unset, `Ok(Some(seed))` for decimal digits, with no sign,
+/// naming a number below 2**64, and otherwise `Err` with the message that
+/// refuses it.
+pub fn parse_hash_seed(value: &[u8]) -> Result<Option<u64>, String> {
+    if value.is_empty() {
+        return Ok(None);
+    }
+    std::str::from_utf8(value)
+        .ok()
+        .filter(|text| text.bytes().all(|byte| byte.is_ascii_digit()))
+        .and_then(|text| text.parse().ok())
+        .map(Some)
+        .ok_or_else(|| {
+            format!(
+                "{HASH_SEED_ENV} must be empty or decimal digits naming a number below \
+                 2**64, not `{}`",
+                String::from_utf8_lossy(value)
+            )
+        })
+}
+
+/// The [`HASH_SEED_ENV`] value of `environment`, as [`parse_hash_seed`] reads
+/// it, `Ok(None)` where there is none.
+fn named_hash_seed(environment: &[(Vec<u8>, Vec<u8>)]) -> Result<Option<u64>, String> {
+    environment
+        .iter()
+        .find(|(name, _)| name == HASH_SEED_ENV.as_bytes())
+        .map_or(Ok(None), |(_, value)| parse_hash_seed(value))
 }
 
 /// The hash seed of a run: the one [`HASH_SEED_ENV`] in `environment` names,
-/// else the simulation seed's, else a random one.
+/// else the simulation seed's, else a random one. A value
+/// [`parse_hash_seed`] refuses counts as unset, and
+/// [`Interp::warn_of_refused_hash_seed`] says so where the run can.
 fn hash_seed_of(
     environment: &[(Vec<u8>, Vec<u8>)],
     sim: Option<&SimConfig>,
 ) -> interrexx_core::HashSeed {
-    let named = environment
-        .iter()
-        .find(|(name, _)| name == HASH_SEED_ENV.as_bytes())
-        .and_then(|(_, value)| parse_hash_seed(value));
-    match (named, sim) {
+    match (named_hash_seed(environment).ok().flatten(), sim) {
         (Some(seed), _) => interrexx_core::HashSeed::from_u64(seed),
         (None, Some(config)) => crate::sim::hash_seed(config),
         (None, None) => interrexx_core::HashSeed::random(),
+    }
+}
+
+impl Interp {
+    /// Writes to the run's standard error that its [`HASH_SEED_ENV`] value
+    /// was refused, and the seed drawn as if it were unset, where it was: an
+    /// embedding cannot be refused a run the way the `rexx` command refuses
+    /// one.
+    fn warn_of_refused_hash_seed(&mut self) {
+        if let Err(message) = named_hash_seed(&self.env) {
+            self.write_err(
+                format!("interrexx: {message}; the seed is drawn as if unset\n").as_bytes(),
+            );
+        }
     }
 }
 
@@ -4550,6 +4588,7 @@ fn execute_kept(
         _ => None,
     };
     interp.hash_seed = hash_seed_of(&interp.env, sim_config);
+    interp.warn_of_refused_hash_seed();
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
     // below runs clauses of its own and is inside the bound, which is what a
@@ -4846,6 +4885,7 @@ pub(crate) fn run_instance(
         unbuffered,
         own_descriptors: true,
     });
+    interp.warn_of_refused_hash_seed();
     let result = interp.bootstrap_library().and_then(|()| {
         interp.default_address = options.initial_address.as_deref().map(Rc::from);
         interp.call_search = require::Instance {

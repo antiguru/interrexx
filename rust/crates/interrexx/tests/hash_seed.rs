@@ -77,8 +77,52 @@ fn a_named_seed_wins_over_the_simulation_seed() {
 }
 
 #[test]
-fn a_seed_that_is_not_a_number_is_refused() {
-    let output = run(CODE, &[("REXX_HASH_SEED", "x1")]);
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+fn a_seed_that_is_not_decimal_digits_below_2_64_is_refused() {
+    for value in ["x1", "+5", "-5", " 5", "18446744073709551616"] {
+        let output = run(CODE, &[("REXX_HASH_SEED", value)]);
+        assert_eq!(output.status.code(), Some(2), "{value}");
+        assert!(output.stdout.is_empty(), "{value}");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains("REXX_HASH_SEED"), "{value}: {stderr}");
+    }
+    assert_eq!(
+        stdout(CODE, &[("REXX_HASH_SEED", "18446744073709551615")]),
+        stdout(CODE, &[("REXX_HASH_SEED", "18446744073709551615")])
+    );
+}
+
+/// An empty value is the same as none: the seed is drawn for each run.
+#[test]
+fn an_empty_seed_is_unset() {
+    assert_ne!(
+        stdout(CODE, &[("REXX_HASH_SEED", "")]),
+        stdout(CODE, &[("REXX_HASH_SEED", "")])
+    );
+}
+
+/// An embedded run cannot be refused, so a value the `rexx` command refuses
+/// runs with a drawn seed and a warning on the run's standard error.
+#[test]
+fn an_embedded_run_warns_of_a_refused_seed_and_draws_one() {
+    let run = |value: &str| {
+        interrexx::run_program(
+            "/t.rex",
+            CODE.as_bytes().to_vec(),
+            interrexx::Invocation::none().with_environment(vec![(
+                b"REXX_HASH_SEED".to_vec(),
+                value.as_bytes().to_vec(),
+            )]),
+        )
+    };
+    let (first, second) = (run("+5"), run("+5"));
+    for outcome in [&first, &second] {
+        assert_eq!(outcome.exit_code, 0);
+        let stderr = String::from_utf8_lossy(&outcome.stderr);
+        assert!(
+            stderr.contains("REXX_HASH_SEED") && stderr.contains("`+5`"),
+            "{stderr}"
+        );
+    }
+    assert_ne!(first.stdout, second.stdout);
+    assert!(run("5").stderr.is_empty());
 }
