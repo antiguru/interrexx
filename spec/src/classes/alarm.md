@@ -611,7 +611,10 @@ target's method returns. So `triggered` sent to the alarm, and `cancel` sent
 to it, wait until then when another activity sends them, and the target's
 method, which runs on the alarm's activity, can send them itself without
 waiting. The other methods of the alarm do not wait. A `cancel` that waited
-finds the alarm gone off, sends the target nothing and changes nothing.
+finds the alarm gone off, sends the target nothing and changes nothing. A
+target's method that waits for another activity which sends the alarm
+`triggered` or `cancel` would wait for ever: that send raises `SYNTAX 98.905`
+on the other activity, as [the deadlock rule](r:conc.locks.deadlock) says.
 
 ```rexx
 n = .note~new
