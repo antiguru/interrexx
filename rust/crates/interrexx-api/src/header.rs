@@ -35,7 +35,8 @@ use crate::layout::{
     RexxRedirectingEnvironment, RexxRegisteredEnvironment, RexxRoutineEntry, RexxThreadContext_,
     RexxThreadInterface, SHVBLOCK, THREAD_ALIASES, THREAD_INSTANCE_FIELDS,
     THREAD_INSTANCE_FORWARDS, THREAD_ONLY, THREAD_RESPELLED, THREAD_UNNAMED,
-    THREAD_VALUE_ACCESSORS, VALUE_ASSIGNMENTS, ValueDescriptor, ValueUnion, c_type,
+    THREAD_VALUE_ACCESSORS, VALUE_ASSIGNMENTS, VALUE_CONVERSIONS, ValueDescriptor, ValueUnion,
+    c_type,
 };
 use crate::values::rows;
 use std::fmt::Write as _;
@@ -83,6 +84,7 @@ pub const PLATFORMS: &[Platform] = &[Platform {
         fields: REXXDATETIME::C_FIELDS,
         retype: &[],
         assignments: &[],
+        conversions: &[],
     }],
     defines: &[("REXXENTRY", ""), ("REXXEXPORT", "")],
 }];
@@ -111,6 +113,10 @@ pub struct Struct {
     /// The C++ assignments the struct defines: for each, the Rust type tokens
     /// of the value and the name of the value code it is stored as.
     pub assignments: &'static [(&'static str, &'static str)],
+    /// The C++ conversions the struct defines: for each, the Rust type tokens
+    /// of the type converted to and the name of the value code whose member
+    /// it answers.
+    pub conversions: &'static [(&'static str, &'static str)],
 }
 
 /// A struct with a tag of its name preceded by an underscore.
@@ -121,6 +127,7 @@ const fn named(name: &'static str, tag: &'static str, fields: &'static [CField])
         fields,
         retype: &[],
         assignments: &[],
+        conversions: &[],
     }
 }
 
@@ -132,6 +139,7 @@ const fn anonymous(name: &'static str, fields: &'static [CField]) -> Struct {
         fields,
         retype: &[],
         assignments: &[],
+        conversions: &[],
     }
 }
 
@@ -164,6 +172,7 @@ const EXIT_STRUCTS: &[Struct] = &[
         fields: RXOFNCCAL_PARM::C_FIELDS,
         retype: &[("RXOFNC_FLAGS", "RXEXF_FLAGS")],
         assignments: &[],
+        conversions: &[],
     },
     named("RXCMDHST_PARM", "_RXCMDHST_PARM", RXCMDHST_PARM::C_FIELDS),
     named("RXMSQPSH_PARM", "_RXMSQPSH_PARM", RXMSQPSH_PARM::C_FIELDS),
@@ -196,6 +205,7 @@ const API_STRUCTS: &[Struct] = &[
         fields: ValueDescriptor::C_FIELDS,
         retype: &[],
         assignments: VALUE_ASSIGNMENTS,
+        conversions: VALUE_CONVERSIONS,
     },
     anonymous("RexxCondition", RexxCondition::C_FIELDS),
     named(
@@ -642,15 +652,29 @@ fn fields(out: &mut String, fields: &[CField], retype: &[(&str, &str)], indent: 
     }
 }
 
-/// The C++ assignment operators of `list`, each storing its value in the union
-/// member of its value code and setting `type` to that code. The code is
-/// written as a number: the `REXX_VALUE_` names are defined after the structs.
-fn assignments(out: &mut String, list: &[(&str, &str)]) {
-    if list.is_empty() {
+/// The C++ conversion operators of `conversions`, each answering the union
+/// member of its value code, then the assignment operators of `assignments`,
+/// each storing its value in the union member of its value code and setting
+/// `type` to that code. The code is written as a number: the `REXX_VALUE_`
+/// names are defined after the structs.
+fn operators(out: &mut String, conversions: &[(&str, &str)], assignments: &[(&str, &str)]) {
+    if conversions.is_empty() && assignments.is_empty() {
         return;
     }
     out.push_str("#ifdef __cplusplus\n");
-    for (tokens, name) in list {
+    for (tokens, name) in conversions {
+        assert!(
+            rows().any(|(_, row)| row == *name),
+            "the conversion table has no code {name}"
+        );
+        writeln!(
+            out,
+            "    operator {}() {{ return value.value_{name}; }}",
+            c_type(tokens)
+        )
+        .unwrap();
+    }
+    for (tokens, name) in assignments {
         let Some((code, _)) = rows().find(|(_, row)| row == name) else {
             panic!("the conversion table has no code {name}");
         };
@@ -679,7 +703,7 @@ fn structs(list: &[Struct]) -> String {
             Tag::Named(tag) => {
                 writeln!(out, "struct {tag} {{").unwrap();
                 fields(&mut out, s.fields, s.retype, "    ");
-                assignments(&mut out, s.assignments);
+                operators(&mut out, s.conversions, s.assignments);
                 out.push_str("};\n");
             }
             Tag::Anonymous => {
