@@ -143,6 +143,7 @@ fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
             .map(|index| String::from_utf8_lossy(&interp.to_text(index)).into_owned())
             .collect();
         assert_eq!(names, pinned, "{}", String::from_utf8_lossy(dotted));
+        let seed = interp.hash_seed;
         let owed: Vec<&str> = sequence
             .iter()
             .copied()
@@ -151,7 +152,7 @@ fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
                     hash::directory_get(
                         &mut interp,
                         directory,
-                        hash::Key::new(name.as_bytes()),
+                        hash::Key::new(seed, name.as_bytes()),
                         None
                     ),
                     Ok((hash::DirectoryEntry::Owed, _))

@@ -540,6 +540,8 @@ pub(crate) struct Streams {
     pub(crate) children: Rng,
     /// The starting states of each activity's `RANDOM` generator.
     pub(crate) random: Rng,
+    /// The seed of the keyed string hash.
+    hash: Rng,
 }
 
 impl Streams {
@@ -552,8 +554,17 @@ impl Streams {
             gc: Rng::split(&mut state),
             children: Rng::split(&mut state),
             random: Rng::split(&mut state),
+            hash: Rng::split(&mut state),
         }
     }
+}
+
+/// The seed of the keyed string hash in the simulation mode, from the hash
+/// stream of `config`'s seed. Called before the run starts, since every
+/// string hashed in the run is hashed under it.
+pub(crate) fn hash_seed(config: &SimConfig) -> interrexx_core::HashSeed {
+    let mut stream = Streams::new(config.seed).hash;
+    interrexx_core::HashSeed::new(stream.next_u64(), stream.next_u64())
 }
 
 /// Virtual time: the instant and the wall time it started at, and how far

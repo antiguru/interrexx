@@ -1,0 +1,36 @@
+# An index is found when its `hashCode` answers the same string as the stored
+# index's and `==` answers true. A string's hash code is keyed by a seed drawn
+# for each run, and an object whose `hashCode` answers a string's hash code
+# still finds that string, and the string finds the object.
+
+# an object delegating hashCode to a string finds the string and the reverse
+program
+do v over .array~of('abc', '', 'a', 'a longer string than eight', 'ff80'x)
+  k = .key~new(v)
+  t = .table~new; t[v] = 'string item'
+  s = .set~of(v)
+  t2 = .table~new; t2[k] = 'object item'
+  r = .relation~new; r[v] = 'related'
+  say '['c2x(v)']' t[k] s~hasIndex(k) t2[v] r[k]
+end
+::class key
+::attribute v
+::method init
+  expose v
+  use arg v
+::method hashCode
+  expose v
+  return v~hashCode
+::method '=='
+  expose v
+  use arg other
+  return v == other~string
+::method string
+  expose v
+  return v
+----
+[616263] string item 1 object item related
+[] string item 1 object item related
+[61] string item 1 object item related
+[61206C6F6E67657220737472696E67207468616E206569676874] string item 1 object item related
+[FF80] string item 1 object item related

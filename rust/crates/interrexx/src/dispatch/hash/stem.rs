@@ -503,7 +503,7 @@ fn stem_write(interp: &mut Interp, receiver: ObjRef, tail: Vec<u8>, value: Optio
     if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(receiver).map(|held| &mut held.body)
     {
         // The ordinal survives a drop and an overwrite -- see `Body::Stem`.
-        tails.set(&tail, value);
+        tails.set(interp.hash_seed, &tail, value);
         interp.stem_changed(receiver);
     }
 }

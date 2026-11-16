@@ -56,6 +56,20 @@ fn main() -> ExitCode {
             own_descriptors: true,
         });
 
+    // `REXX_HASH_SEED` fixes the seed of the keyed string hash. The
+    // interpreter reads it, and passes over a value it cannot read, so that
+    // value is refused here.
+    if let Some(value) = std::env::var_os(interrexx::HASH_SEED_ENV)
+        && interrexx::parse_hash_seed(value.as_bytes()).is_none()
+    {
+        eprintln!(
+            "rexx: {} is a decimal number, not `{}`",
+            interrexx::HASH_SEED_ENV,
+            value.to_string_lossy()
+        );
+        return ExitCode::from(2);
+    }
+
     // `REXX_SWITCH_MODE` is the deterministic switch mode, for tests:
     // `every`, `at:K` for the program's K-th clause, or the simulation mode,
     // `sim`, `sim:SEED[,...]` or `sim:replay=FILE[,trace=FILE]`.

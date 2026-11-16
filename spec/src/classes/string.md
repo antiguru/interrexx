@@ -360,7 +360,9 @@ takes no argument (`SYNTAX 93.902`). Strings with the same characters have the
 same hash code, including an instance of a subclass and a plain string, and
 the collection classes that hash their indexes use it with `==`, as [the
 object rule](r:class.object.hashcode) says. Strings with different characters
-may have equal codes. The characters of the answer are not specified.
+may have equal codes. The characters of the answer are not specified: they
+are the same throughout one run of the interpreter and may differ between
+runs, so that a program cannot choose many strings that share one code.
 
 ```rexx
 a = 'ab' || 'c'

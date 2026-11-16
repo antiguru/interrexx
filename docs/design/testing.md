@@ -201,5 +201,6 @@ Unset, the gate switches below report and exit 0; set to `1`, a mismatch fails t
 | `REXX_HEADERS_REFRESH` | writes the generated sections of the C headers in `include/` from the Rust definitions |
 | `REXX_TEST_THREAD_SANITIZER` | adapts tests to a ThreadSanitizer build |
 | `REXX_SWITCH_MODE` | read by `rexx`: the switch mode, including `sim:...` |
+| `REXX_HASH_SEED` | a decimal number that fixes the seed of the keyed string hash, which is otherwise drawn for each run, or in the simulation mode from the simulation seed |
 | `REXX_API_DIR`, `XDG_RUNTIME_DIR` | set by `rust/.cargo/config.toml` so tests reach private API services, interrexx's and ooRexx's, never the user's |
 | `REXX_UPSTREAM`, `REXX_ORACLE_ROOT` | set by `rust/.cargo/config.toml`: the ooRexx source tree and its build |

@@ -1218,7 +1218,7 @@ impl Interp {
             self.set_tail(home, key, Some(value));
             return;
         }
-        tails.set(key, Some(value));
+        tails.set(self.hash_seed, key, Some(value));
     }
 
     /// Drops every tail **in place**, leaving the stem's default and the

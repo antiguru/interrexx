@@ -1325,6 +1325,9 @@ struct Interp {
     switch: Option<crate::scheduler::Switch>,
     /// The simulation mode's state, where the switch mode is `Sim`.
     sim: Option<Box<crate::sim::Sim>>,
+    /// The seed every string's hash is keyed with (`r[class.string.hashcode]`),
+    /// and every stem's tail map. Fixed before the first string is hashed.
+    hash_seed: interrexx_core::HashSeed,
     /// Whether the pending `SLICE` has been counted as deferred.
     slice_deferred: bool,
     /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
@@ -2329,6 +2332,7 @@ impl Interp {
                 .collect()
         };
         with_session_variable(&mut env);
+        let hash_seed = hash_seed_of(&env, None);
         // The creating thread holds the baton until a driver exit releases it.
         let baton = crate::sync::Arc::new(crate::island::InterpBaton::new());
         baton.acquire();
@@ -2386,6 +2390,7 @@ impl Interp {
             baton,
             switch: None,
             sim: None,
+            hash_seed,
             slice_deferred: false,
             chunks: NameMap::default(),
             retired_chunks: Vec::new(),
@@ -3474,6 +3479,7 @@ impl Interp {
             pool: _,
             switch: _,
             sim: _,
+            hash_seed: _,
             slice_deferred: _,
             // A chunk's interned literals are allocated immortal, and
             // released when the chunk is dropped.
@@ -4047,6 +4053,33 @@ impl Interp {
 /// the empty string (r[instr.say.deviation.40]).
 pub const UNBUFFERED_ENV: &str = "REXX_UNBUFFERED";
 
+/// The environment variable that fixes the seed of the keyed string hash, so
+/// that a run's `hashCode` answers can be had again: a decimal number.
+pub const HASH_SEED_ENV: &str = "REXX_HASH_SEED";
+
+/// The number a [`HASH_SEED_ENV`] value names, `None` where it is not a
+/// decimal number that fits 64 bits.
+pub fn parse_hash_seed(value: &[u8]) -> Option<u64> {
+    std::str::from_utf8(value).ok()?.parse().ok()
+}
+
+/// The hash seed of a run: the one [`HASH_SEED_ENV`] in `environment` names,
+/// else the simulation seed's, else a random one.
+fn hash_seed_of(
+    environment: &[(Vec<u8>, Vec<u8>)],
+    sim: Option<&SimConfig>,
+) -> interrexx_core::HashSeed {
+    let named = environment
+        .iter()
+        .find(|(name, _)| name == HASH_SEED_ENV.as_bytes())
+        .and_then(|(_, value)| parse_hash_seed(value));
+    match (named, sim) {
+        (Some(seed), _) => interrexx_core::HashSeed::from_u64(seed),
+        (None, Some(config)) => crate::sim::hash_seed(config),
+        (None, None) => interrexx_core::HashSeed::random(),
+    }
+}
+
 /// Writes out what native code left in C's standard streams, for a sink to
 /// call before it writes, so that what C wrote first lands first
 /// (r[instr.say.deviation.40]).
@@ -4509,6 +4542,14 @@ fn execute_kept(
     if let Some(environment) = parts.environment {
         interp.adopt_environment(environment);
     }
+    // Before the bootstrap, which hashes the first strings: a store holds
+    // hashes made under the seed of its time, so the seed never changes once
+    // one is made.
+    let sim_config = match &switch_mode {
+        Some(SwitchMode::Sim(config)) => Some(config),
+        _ => None,
+    };
+    interp.hash_seed = hash_seed_of(&interp.env, sim_config);
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
     // below runs clauses of its own and is inside the bound, which is what a

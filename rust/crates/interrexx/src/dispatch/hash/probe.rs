@@ -68,7 +68,7 @@ fn probe_string_value(
         _ => None,
     };
     if let Some(wanted) = plain {
-        let code = code_of(super::super::string_hash(wanted));
+        let code = code_of(super::super::string_hash(interp.hash_seed, wanted));
         if let Some(at) = find_plain_string(interp, &store, code, wanted) {
             return Ok((store, Probe { at, code }));
         }
@@ -85,7 +85,7 @@ fn probe_string_value(
             &owned
         }
     };
-    let code = code_of(super::super::string_hash(wanted));
+    let code = code_of(super::super::string_hash(interp.hash_seed, wanted));
     let at = find_text_in(interp, &store, code, wanted)?;
     Ok((store, Probe { at, code }))
 }
