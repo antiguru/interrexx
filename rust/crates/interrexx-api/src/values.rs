@@ -706,6 +706,12 @@ pub trait Baton {
         self.take_unless_held()
     }
 
+    /// Whether the host has ended, so a request posted to it
+    /// ([`Baton::post_halt`], [`Baton::post_trace`]) would reach nothing.
+    fn ended(&self) -> bool {
+        false
+    }
+
     /// Whether the host refuses a callback from a thread running none of its
     /// native calls, which then does nothing and takes no baton.
     fn refuses_foreign(&self) -> bool {

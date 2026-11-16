@@ -90,6 +90,8 @@ struct Queue<T> {
     posted: VecDeque<T>,
     /// The timer found the holder's idle deadline due.
     woken: bool,
+    /// The interpreter has terminated ([`Inbox::close`]).
+    closed: bool,
 }
 
 impl<T> Inbox<T> {
@@ -99,6 +101,7 @@ impl<T> Inbox<T> {
             queue: Mutex::new(Queue {
                 posted: VecDeque::new(),
                 woken: false,
+                closed: false,
             }),
             arrived: Condvar::new(),
         }
@@ -115,6 +118,17 @@ impl<T> Inbox<T> {
         self.requests.set(INBOX);
         drop(queue);
         self.arrived.notify_one();
+    }
+
+    /// Closes the inbox: the interpreter has terminated, and nothing serves a
+    /// request posted to it.
+    pub(crate) fn close(&self) {
+        lock(&self.queue).closed = true;
+    }
+
+    /// Whether [`Inbox::close`] closed the inbox.
+    pub(crate) fn is_closed(&self) -> bool {
+        lock(&self.queue).closed
     }
 
     /// Puts `items`, taken by the holder and not yet served, back ahead of
@@ -412,6 +426,7 @@ pub(crate) fn join_timer() {
 
 impl Drop for Registration {
     fn drop(&mut self) {
+        self.inbox.close();
         live().live.retain(|entry| entry.id != self.id);
         registry().wake.notify();
     }

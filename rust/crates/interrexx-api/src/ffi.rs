@@ -620,9 +620,11 @@ struct InstanceBlock {
 /// What the instance members act through, reached from the instance pointer
 /// on any thread ([`owner_of_instance`]).
 struct InstanceOwner {
-    /// The baton of the interpreter, while it is live: a thread running no
-    /// native call of the interpreter takes it, and `Halt` and `SetTrace`
-    /// post their requests through it.
+    /// The baton of the interpreter: a thread running no native call of the
+    /// interpreter takes it, and `Halt` and `SetTrace` post their requests
+    /// through it until it has ended ([`live_requester`]). The kept root
+    /// context holds the requester, so once there is a root this upgrades for
+    /// the rest of the process, and the end is read from the requester.
     requester: Option<std::sync::Weak<dyn crate::values::Baton + Send + Sync>>,
     /// The address of the root activity's thread context
     /// ([`ThreadContext::make_root`]), null while there is none: the key an
@@ -698,6 +700,19 @@ impl ThreadTable {
         // reads and writes nothing; the pointer keeps the whole block's
         // provenance.
         unsafe { (&raw mut (*block).instance).cast() }
+    }
+
+    /// `Halt`, then `SetTrace` with `trace`, called through this table's
+    /// instance, as an extension that kept the instance pointer calls them.
+    #[doc(hidden)]
+    pub fn halt_and_set_trace_through_instance(&self, trace: bool) {
+        let instance = self.instance();
+        // SAFETY: `instance` is the never-freed instance `with` made, whose
+        // table is the static `INSTANCE`.
+        unsafe {
+            ((*(*instance).functions).Halt)(instance);
+            ((*(*instance).functions).SetTrace)(instance, logical_t::from(trace));
+        }
     }
 }
 
@@ -4631,8 +4646,9 @@ unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t)
     }
 }
 
-/// The requester of the interpreter whose instance is `instance`, while the
-/// interpreter is live.
+/// The requester of the interpreter whose instance is `instance`, unless the
+/// interpreter has ended ([`crate::values::Baton::ended`]): a request posted
+/// after that would wait in an inbox nothing reads.
 ///
 /// # Safety
 /// As [`owner_of_instance`].
@@ -4642,6 +4658,7 @@ unsafe fn live_requester(instance: *mut RexxInstance_) -> Option<Requester> {
         .requester
         .as_ref()?
         .upgrade()
+        .filter(|requester| !requester.ended())
 }
 
 /// The members a redirecting command handler reads and writes its streams
