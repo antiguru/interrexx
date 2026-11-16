@@ -21,8 +21,8 @@ and `string`, its first argument, is the receiver; `n` and `length` become the
 message's arguments, in that order. `string` is a
 [string](r:conv.string.null), `n` is a [word
 number](r:bif.index.words.number), and `length` is a
-[length](r:conv.length.check) that counts words. The arguments are checked in
-the [order](r:conv.check.order) the conventions give, and the argument count
+[length](r:conv.length.check) that counts words. The arguments are checked as
+[the conventions](r:conv.check.order) give, and the argument count
 by the [builtin call rules](r:bif.index.call.count): two are required and
 three is the most.
 
@@ -44,11 +44,11 @@ signal on syntax name e
 say delword(, 1)
 e: say condition('o')~code
 signal on syntax name f
-say delword('a b', 'x', -1)
+say delword('a b', 'x')
 f: say condition('o')~code
 signal on syntax name g
 say delword('a b', 0, -1)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.924 93.923') > 0
 signal on syntax name h
 say delword('a b', )
 h: say condition('o')~code
@@ -62,7 +62,7 @@ Pack box jugs Pack box jugs [Pack ]
 40.4
 40.5
 40.12
-93.924
+1
 40.3
 ```
 

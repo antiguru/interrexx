@@ -1333,11 +1333,12 @@ to right, after it has checked the number of its arguments and that every
 argument it requires is there, and before it checks any argument. An omitted
 argument that the builtin requires is therefore reported before any conversion
 runs, as in ooRexx. A `STRING` method of a later argument therefore runs even
-when an earlier argument is in error, and the call raises the same error as in
-ooRexx, which converts an argument as it checks it and stops at the first one
-in error, so that the method of a later argument never runs. The difference
-shows only in what such a method does: counting, input or output, or raising a
-condition of its own.
+when an earlier argument is in error. ooRexx converts an argument as it checks
+it and stops at the first one in error, so that the method of a later argument
+never runs. The difference shows only in what such a method does: counting,
+input or output, or raising a condition of its own. Which error a call with
+more than one argument in error raises is not part of this Deviation: [the
+precedence rule](r:conv.error.precedence) leaves it unspecified.
 
 ## 171. QUERY POSITION SYS of a stream just opened for reading
 

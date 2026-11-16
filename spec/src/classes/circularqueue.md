@@ -729,14 +729,16 @@ for `start`, which is `.nil`, and the positions after it are 1, 2 and so on.
 The `start` is read as [the Queue index rule](r:class.queue.indexes) says;
 `count` must be a whole number from 0 up, or `SYNTAX 93.906` is raised, `.nil`
 raising `SYNTAX 97.1`. No `start` raises `SYNTAX 93.901`, an omitted one
-`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The arguments are counted
-first, an omitted `start` among them, so that it is refused before `count` is
-sent anything. `count` is then checked with the messages and conditions of
-[the new rule](r:class.circularqueue.new.sends), after which its string value
-is read once more; that second value is the count, and one below 0 or not a
-whole number raises `SYNTAX 93.906`, so a count whose string value is `-1` is
-refused even when its `<` answers 0. `start` is read last.
-The answer is not the receiver, and the receiver is not changed.
+`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The arguments are
+counted first, an omitted `start` among them, so that it is refused before
+`count` is sent anything. `count` is then checked with the messages and
+conditions of [the new rule](r:class.circularqueue.new.sends), after which its
+string value is read once more; that second value is the count, and one below 0
+or not a whole number raises `SYNTAX 93.906`, so a count whose string value is
+`-1` is refused even when its `<` answers 0. A call whose `start` and `count`
+are both wrong raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The answer is not the receiver, and the
+receiver is not changed.
 
 ```rexx
 q = .circularqueue~of('a', 'b', 'c', 'd')
@@ -760,7 +762,6 @@ call try 'q~section(, .loud~new(0, "1"))'
 call try 'q~section(0)'
 call try 'q~section(.nil)'
 call try 'q~section("x")'
-call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, 1.5)'
@@ -813,7 +814,6 @@ q~section(, .loud~new(0, "1")) => 93.903
 q~section(0) => 93.907
 q~section(.nil) => 93.907
 q~section("x") => 93.907
-q~section(0, -1) => 93.906
 q~section(1, -1) => 93.906
 q~section(1, "x") => 93.906
 q~section(1, 1.5) => 93.906

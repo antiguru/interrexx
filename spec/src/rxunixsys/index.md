@@ -245,10 +245,12 @@ its first character alone, in either case, so that `p`, `P` and `Permissions`
 are one option. A call whose option has a first character that the function
 does not know, or is the null string, raises `SYNTAX 40.1`, and so does a call
 of `SysStat`, `SysGetpwnam` or `SysGetgrnam` whose name is the null string: the
-call fails and nothing is made, whatever the other arguments are. The count and
-the whole numbers of the arguments are checked first. A name that is not the
-null string and that the system does not know does not raise: it is a failed
-call, as [the answer rule](r:rxunixsys.index.answer) says.
+call fails and nothing is made, whatever the other arguments are. The count is
+checked first, and a call whose option and a whole-number argument are both
+wrong raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. A name that is not the null string and
+that the system does not know does not raise: it is a failed call, as [the
+answer rule](r:rxunixsys.index.answer) says.
 
 ```rexx
 call lineout 'c1zqf1', 'x'
@@ -267,7 +269,6 @@ call try "SysChmod('', 'rw-rw-rw-')"
 call try "SysChmod('c1zqnone', '')"
 call try "SysSignal(0, 'x')"
 call try "SysSignal(0, '')"
-call try "SysSignal('x', 'x')"
 call try "SysGetpwnam('', 'n')"
 call try "SysGetpwnam('root', '')"
 call try "SysGetpwnam('root', 'x')"
@@ -296,7 +297,6 @@ SysChmod('', 'rw-rw-rw-') => -1
 SysChmod('c1zqnone', '') -> 40.1
 SysSignal(0, 'x') -> 40.1
 SysSignal(0, '') -> 40.1
-SysSignal('x', 'x') -> 88.907
 SysGetpwnam('', 'n') -> 40.1
 SysGetpwnam('root', '') -> 40.1
 SysGetpwnam('root', 'x') -> 40.1

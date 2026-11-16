@@ -77,18 +77,20 @@ error: it may be any string, a name or a text. In the error of a failed check
 it is the first item of the condition's `ADDITIONAL` array, so that a program
 can tell which argument failed; each rule below says which other items are
 stated. The errors of the argument count and of `digits` below have no name
-among their items. The counts are fixed: two arguments for `number` and `logical`, two and an optional
-`digits` for the other number checks, three for `classType` and
-`requestClassType`, and four and an optional `digits` for the range checks. A
-call with fewer raises `SYNTAX 93.901`, one with more `93.902`, and one that
-leaves out a required argument before the last one given `93.903`; omitted
-arguments at the end count as not given. The `ADDITIONAL` items of these three
-errors are [unspecified](r:conv.error.additional). The argument count is
-checked first, then `digits`, and the value last. Every value and bound is read
-as a string as [the conversion rule](r:conv.string.object) says. A check that
-fails raises the `SYNTAX` error of its method, which the rules below give.
-The second example asks every check, with no argument, for one fewer than it
-needs, for the first one left out and for one more than it takes.
+among their items. The counts are fixed: two arguments for `number` and
+`logical`, two and an optional `digits` for the other number checks, three for
+`classType` and `requestClassType`, and four and an optional `digits` for the
+range checks. A call with fewer raises `SYNTAX 93.901`, one with more `93.902`,
+and one that leaves out a required argument before the last one given `93.903`;
+omitted arguments at the end count as not given. The `ADDITIONAL` items of
+these three errors are [unspecified](r:conv.error.additional). The argument
+count is checked first, and a call whose `digits` and value are both in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. Every value and bound is read as a string
+as [the conversion rule](r:conv.string.object) says. A check that fails raises
+the `SYNTAX` error of its method, which the rules below give. The second
+example asks every check, with no argument, for one fewer than it needs, for
+the first one left out and for one more than it takes.
 
 ```rexx
 call t 'number', 'N', 'x'
@@ -101,7 +103,7 @@ call t 'numberRange', 'N', 5, , 9
 call t 'classType', 'N', , .string
 call t 'numberRange', 'N', 5, 1
 call t 'numberRange', 'N', 5, 1, 9, 9, 9
-call t 'wholeNumber', 'N', 'x', 0
+call t 'wholeNumber', 'N', 5, 0
 call t 'wholeNumber', 'N', 'x', 5, 6
 call t 'classType', 'N', 1
 call u 'number("N", )'

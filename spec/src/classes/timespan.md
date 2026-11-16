@@ -183,28 +183,25 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.timespan.new.checks]
-The values are checked in this order, and the first that fails raises its error.
 With one argument it must be a whole number, read here and below by [the form
 rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits) with the
 codes of this rule in place of SYNTAX 40.12 ([Deviation
-130](r:class.timespan.deviation.130)): another value raises `SYNTAX 88.903`, and
-so does a count of 1000000000000000000 or more, or of that size below zero; a
-count of a smaller size that is outside the range of [the value
-rule](r:class.timespan.value) raises `SYNTAX 40.19`. In the forms of two to five
-arguments the days, when given, are checked first: they must be a whole number
-from 0 to 999999999, or `SYNTAX 88.904` is raised. Hours (0 to 23), minutes (0
-to 59), seconds (0 to 59) and microseconds (0 to 999999) are checked next, in
-the order of the arguments, each a whole number in its range; a value outside
-it, one that is no number and one that is not whole, such as 1.5, raise `SYNTAX
-88.907`. Last, a total outside the range of the class raises `SYNTAX 40.19`:
-3652059 days with every other part in range is refused so, and the same days
-with an hour of 99 are refused for the hour.
+130](r:class.timespan.deviation.130)): another value raises `SYNTAX 88.903`,
+and so does a count of 1000000000000000000 or more, or of that size below zero;
+a count of a smaller size that is outside the range of [the value
+rule](r:class.timespan.value) raises `SYNTAX 40.19`. In the forms of two to
+five arguments the days, when given, must be a whole number from 0 to
+999999999, or `SYNTAX 88.904` is raised. Hours (0 to 23), minutes (0 to 59),
+seconds (0 to 59) and microseconds (0 to 999999) are each a whole number in its
+range; a value outside it, one that is no number and one that is not whole,
+such as 1.5, raise `SYNTAX 88.907`. A total outside the range of the class
+raises `SYNTAX 40.19`, as 3652059 days with every other part in range is. A
+call that fails more than one of these checks raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 call try '.timespan~new(3652058, 23, 59, 59, 999999)'
 call try '.timespan~new(3652059, 0, 0, 0, 0)'
-call try '.timespan~new(3652059, 99, 0, 0, 0)'
-call try '.timespan~new(x, 99, 0, 0, 0)'
 call try '.timespan~new(-1, 0, 0, 0, 0)'
 call try '.timespan~new(1.5, 0, 0, 0, 0)'
 call try '.timespan~new(999999999, 0, 0, 0)'
@@ -238,8 +235,6 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 .timespan~new(3652058, 23, 59, 59, 999999) => 3652058.23:59:59.999999
 .timespan~new(3652059, 0, 0, 0, 0) => 40.19
-.timespan~new(3652059, 99, 0, 0, 0) => 88.907
-.timespan~new(x, 99, 0, 0, 0) => 88.904
 .timespan~new(-1, 0, 0, 0, 0) => 88.904
 .timespan~new(1.5, 0, 0, 0, 0) => 88.904
 .timespan~new(999999999, 0, 0, 0) => 40.19

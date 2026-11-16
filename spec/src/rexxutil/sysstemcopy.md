@@ -417,35 +417,31 @@ show: procedure expose s.
 0 6 : a b a b c d
 ```
 
-## Order of the checks
+## The checks
 
 r[util.sysstemcopy.order]
-When several things are wrong, the call raises the condition of the first of
-these checks that fails. `fromstem` and then `tostem` raise `SYNTAX 88.901`
-when missing and `SYNTAX 40.919` when not a name; then `from`, `to` and
-`count`, in that order, raise `SYNTAX 88.905` or `SYNTAX 88.904`; then
-`option` raises `SYNTAX 40.920`; then the tail `0` of the source raises
-`SYNTAX 40.922`; then the items to be read raise `SYNTAX 40.923` when they are
-not all in the source; then the tail `0` of the target raises
-`SYNTAX 40.922`; then `to` raises `SYNTAX 40.923` when it is more than one
-past the count of the target; and last the items themselves raise
-`SYNTAX 40.924` when one has no value: with `I`, first an item of the target
-that the call moves, and then the items of the source as they are copied.
+The call can fail these checks: `fromstem` and `tostem` raise `SYNTAX 88.901`
+when missing and `SYNTAX 40.919` when not a name; `from`, `to` and `count`
+raise `SYNTAX 88.905` or `SYNTAX 88.904`; `option` raises `SYNTAX 40.920`; the
+tail `0` of the source raises `SYNTAX 40.922`; the items to be read raise
+`SYNTAX 40.923` when they are not all in the source; the tail `0` of the target
+raises `SYNTAX 40.922`; `to` raises `SYNTAX 40.923` when it is more than one
+past the count of the target; and the items themselves raise `SYNTAX 40.924`
+when one has no value: with `I`, an item of the target that the call moves, and
+the items of the source as they are copied. When several of them fail, the call
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
-call try "SysStemCopy('s-.')", ""
-call try "SysStemCopy(, 't-.')", ""
-call try "SysStemCopy('s.', , 0)", ""
-call try "SysStemCopy('s.a', 't.a', 'x')", ""
-call try "SysStemCopy('s.', 't.', 0, 0, -1)", ""
-call try "SysStemCopy('s.', 't.', 1, 'x', 'x')", ""
-call try "SysStemCopy('s.', 't.', 1, 1, -1, 'x')", ""
-call try "SysStemCopy('s.', 't.', 1, 1, 1, 'x')", "drop s.0"
-call try "SysStemCopy('s.', 't.', 1, 1, 9)", "drop s.0"
-call try "SysStemCopy('s.', 't.', 1, 1, 9)", "t.0 = 'x'"
-call try "SysStemCopy('s.', 't.', 1, 9, 1)", "t.0 = 'x'"
-call try "SysStemCopy('s.', 't.', 1, 9, 4)", "drop s.3"
-call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3; t.0 = 'x'"
+call try "SysStemCopy(, 't.')", ""
+call try "SysStemCopy('s-.', 't.')", ""
+call try "SysStemCopy('s.', 't.', 0)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, -1)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, 1, 'x')", ""
+call try "SysStemCopy('s.', 't.')", "drop s.0"
+call try "SysStemCopy('s.', 't.', 1, 1, 9)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, 1)", "t.0 = 'x'"
+call try "SysStemCopy('s.', 't.', 1, 9, 1)", ""
 call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3"
 call try "SysStemCopy('s.', 't.', 1, 1, 4, 'I')", "drop t.2"
 exit
@@ -463,11 +459,8 @@ e: say condition('o')~code
 ```
 
 ```output
-40.919
-88.901
 88.901
 40.919
-88.905
 88.905
 88.904
 40.920
@@ -475,7 +468,6 @@ e: say condition('o')~code
 40.923
 40.922
 40.923
-40.922
 40.924
 40.924
 ```

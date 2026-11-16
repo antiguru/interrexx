@@ -86,8 +86,7 @@ r[bif.arg.option.check]
 answers, and every character after the first is ignored. The letters are
 `A`, `E`, `N` and `O`. Any other first character, and the null string,
 raises `SYNTAX 40.904`. When
-`option` is given and `n` is omitted, the call raises `SYNTAX 40.5`. `n` is
-checked before `option`.
+`option` is given and `n` is omitted, the call raises `SYNTAX 40.5`.
 
 ```rexx
 call show 'a'
@@ -107,7 +106,7 @@ signal on syntax name d
 say arg(, 'e')
 d: say condition('o')~code
 signal on syntax name e
-say arg(0, 'x')
+say arg(0, 'e')
 e: say condition('o')~code
 signal on syntax name f
 say arg(1, 1)

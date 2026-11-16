@@ -54,8 +54,10 @@ two | one
 r[bif.linein.count]
 `count` is 0 or 1, and 1 when it is omitted. A count of 1 reads a line and a
 count of 0 [reads nothing](r:bif.linein.zero). A `count` that is greater than 1
-raises `SYNTAX 93.0`, before the `line` is checked; a negative `count` raises
-`SYNTAX 88.907`, as [the stream rule](r:bif.index.stream.args) says.
+raises `SYNTAX 93.0`; a negative `count` raises `SYNTAX 88.907`, as [the stream
+rule](r:bif.index.stream.args) says. A call whose `line` is also in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 f = 'spec-linein-count.tmp'
@@ -67,7 +69,7 @@ say linein(f, 1, 2)
 a: say condition('o')~code
 signal on syntax name b
 say linein(f, 0, 2)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '93.0 93.907') > 0
 signal on syntax name c
 say linein(f, 1, -1)
 c: say condition('o')~code
@@ -77,7 +79,7 @@ call sysfiledelete f
 
 ```output
 93.0
-93.0
+1
 88.907
 one one
 ```

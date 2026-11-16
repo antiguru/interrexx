@@ -19,8 +19,8 @@ LEFT is a builtin that runs as a [String method](r:class.string.builtins), and
 `string`, its first argument, is the receiver; `length` and `pad` become the
 message's arguments, in that order. `string` is a
 [string](r:conv.string.null), `length` is a [length](r:conv.length.check), and
-`pad` is a [pad](r:conv.pad). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+`pad` is a [pad](r:conv.pad). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most. Unlike [SUBSTR](substr.md), LEFT does not default `length`: it is
 a required argument, so a call without it fails by the call rules, with
@@ -50,7 +50,7 @@ say left('abc', 2, '..')
 f: say condition('o')~code
 signal on syntax name g
 say left('abc', -1, '..')
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.923 40.23') > 0
 signal on syntax name h
 say left()
 h: say condition('o')~code
@@ -64,7 +64,7 @@ hi yo   | hi yo..
 40.12
 93.923
 40.23
-40.23
+1
 40.3
 ```
 

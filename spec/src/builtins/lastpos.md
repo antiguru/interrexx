@@ -22,8 +22,8 @@ and `haystack`, its second argument, is the receiver; `needle`, `start` and
 `length` become the message's arguments, in that order. `needle` and
 `haystack` are [strings](r:conv.string.null), `start` is a
 [position](r:conv.position.check) and `length` is a
-[length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+[length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and four is
 the most.
 
@@ -48,11 +48,11 @@ signal on syntax name f
 say lastpos('a', 'a', 'x')
 f: say condition('o')~code
 signal on syntax name g
-say lastpos('a', 'a', 0, 'x')
+say lastpos('a', 'a', 1, 'x')
 g: say condition('o')~code
 signal on syntax name h
 say lastpos('a', 'a', 0, -1)
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '93.924 93.923') > 0
 ```
 
 ```output
@@ -64,7 +64,7 @@ h: say condition('o')~code
 93.923
 40.12
 40.12
-93.924
+1
 ```
 
 r[bif.lastpos.start.default]

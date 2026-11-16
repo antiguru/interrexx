@@ -46,8 +46,8 @@ c: say condition('o')~code
 r[bif.d2x.errors]
 The errors of the arguments are [those of the decimal
 argument](r:bif.index.conv.decimal), which raises `SYNTAX 93.928` in D2X, and
-those of [the length](r:bif.index.conv.length), and they are checked in
-[the order](r:bif.index.conv.decimal.order) the shared rules give.
+those of [the length](r:bif.index.conv.length), as [the shared
+rules](r:bif.index.conv.decimal.order) give.
 
 ```rexx
 signal on syntax name a
@@ -61,14 +61,14 @@ say d2x(65, -1)
 c: say condition('o')~code
 signal on syntax name d
 say d2x('abc', -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '93.928 93.923') > 0
 ```
 
 ```output
 93.928
 40.12
 93.923
-93.928
+1
 ```
 
 ## The result

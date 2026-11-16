@@ -340,16 +340,17 @@ fn format_honours_numeric_form() {
     );
 }
 
-/// The three validation layers run in the oracle's own order, which a
-/// program can tell apart because each names a different number.
+/// Each of the three validation layers names a different number when it is
+/// the only fault of the call; which of several faults is raised is
+/// unspecified (`r[conv.error.precedence]`).
 #[test]
-fn the_three_validation_layers_run_in_the_oracles_order() {
+fn each_validation_layer_raises_its_own_code() {
     assert_eq!(
-        raised(b"TRUNC", &[Some(b"AB.CD"), Some(b"V")]),
+        raised(b"TRUNC", &[Some(b"1.5"), Some(b"V")]),
         (40, 12, subs(&[b"TRUNC", b"2", b"V"]))
     );
     assert_eq!(
-        raised(b"TRUNC", &[Some(b"AB.CD"), Some(b"-1")]),
+        raised(b"TRUNC", &[Some(b"AB.CD"), Some(b"1")]),
         (93, 943, subs(&[b"TRUNC", b"AB.CD"]))
     );
     assert_eq!(
@@ -362,20 +363,15 @@ fn the_three_validation_layers_run_in_the_oracles_order() {
         (40, 12, subs(&[b"FORMAT", b"2", b"x"]))
     );
     assert_eq!(
-        raised(b"FORMAT", &[Some(b"a"), Some(b"-1")]),
+        raised(b"FORMAT", &[Some(b"a"), Some(b"1")]),
         (93, 943, subs(&[b"FORMAT", b"a"]))
     );
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"-1")]),
         (93, 906, subs(&[b"1", b"-1"]))
     );
-    // All four optional positions are type-checked before the target,
-    // in call order, and each names its own method position when it is
-    // the range that is wrong.
-    assert_eq!(
-        raised(b"FORMAT", &[Some(b"a"), Some(b"x"), Some(b"y")]),
-        (40, 12, subs(&[b"FORMAT", b"2", b"x"]))
-    );
+    // Each of the four optional positions names its own method position
+    // when it is the range that is wrong.
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"1"), Some(b"y")]),
         (40, 12, subs(&[b"FORMAT", b"3", b"y"]))

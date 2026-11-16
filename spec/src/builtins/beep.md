@@ -71,8 +71,7 @@ fractional part other than zero, that is out of its range, or that is the null
 string raises `SYNTAX 88.907`, and so does an object whose string value fails
 these checks, such as `.nil`. A rounded value whose magnitude is 10\*\*18 or
 more is not a whole number for this purpose, whichever sign it has: it fails
-the form check, which comes before the range checks, as [the order
-rule](r:bif.beep.order) shows.
+the form check.
 
 ```rexx
 signal on syntax name a
@@ -137,26 +136,14 @@ say 'done'
 ```
 
 r[bif.beep.order]
-A call with no third argument checks the frequency first and the duration
-next, each for being present and a whole number, and only then checks the
-ranges: a frequency that is not a whole number is reported before a missing
-duration, and a missing duration before a frequency out of range. A frequency
-of magnitude 10\*\*18 or more is not a whole number, so it is reported before
-a missing duration, while a frequency below that magnitude that is out of
-range is reported after it. A third argument is reported before any other
-error, as [the native call rule](r:bif.index.call.native) says: before an
-argument that is missing, that is not a whole number or that is out of range.
+A third argument raises `SYNTAX 88.922` even when an argument before it is
+missing, is not a whole number or is out of range, as [the native call
+rule](r:bif.index.call.native) says: the count comes first. A call with no
+third argument that has more than one fault, such as a frequency that is not a
+whole number and a missing duration, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
-signal on syntax name a
-x = beep('x', )
-a: say condition('o')~code
-signal on syntax name b
-x = beep(36, )
-b: say condition('o')~code
-signal on syntax name c
-x = beep(, 'x')
-c: say condition('o')~code
 signal on syntax name d
 x = beep(36, 0, 1)
 d: say condition('o')~code
@@ -164,29 +151,14 @@ signal on syntax name e
 x = beep(100, 60001, 1)
 e: say condition('o')~code
 signal on syntax name f
-x = beep(1E18, )
-f: say condition('o')~code
-signal on syntax name g
-x = beep(999999999999999999, )
-g: say condition('o')~code
-signal on syntax name h
-x = beep('-1E18')
-h: say condition('o')~code
-signal on syntax name i
-x = beep(36)
-i: say condition('o')~code
+x = beep('x', )
+f: say wordpos(condition('o')~code, '88.907 88.901') > 0
 ```
 
 ```output
-88.907
-88.901
-88.901
 88.922
 88.922
-88.907
-88.901
-88.907
-88.901
+1
 ```
 
 ## The result

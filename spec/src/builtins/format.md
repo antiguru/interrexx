@@ -46,14 +46,15 @@ c: say condition('o')~code
 ```
 
 r[bif.format.errors]
-The checks run in this order, and the first that fails is raised: the
-[form](r:conv.whole.form) and [value](r:conv.whole.digits) of `before`,
-`after`, `expp` and `expt`, from left to right, which raise `SYNTAX 40.12`;
-that `number` is a [number](r:bif.index.num.arg), `SYNTAX 93.943`; that none
-of the four counts is negative, from left to right, `SYNTAX 93.906`; and
-last the fit of the result: that the exponent has at most `expp` digits,
-`SYNTAX 93.941`, and then that the integer part has at most `before`
-characters, `SYNTAX 93.942`. The null string is not [omitted](r:conv.arg.empty)
+The call checks the [form](r:conv.whole.form) and
+[value](r:conv.whole.digits) of `before`, `after`, `expp` and `expt`, which
+raise `SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg),
+`SYNTAX 93.943`; that none of the four counts is negative, `SYNTAX 93.906`;
+and the fit of the result: that the exponent has at most `expp` digits,
+`SYNTAX 93.941`, and that the integer part has at most `before` characters,
+`SYNTAX 93.942`. A call that fails more than one check raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. The null
+string is not [omitted](r:conv.arg.empty)
 and raises 40.12, and `-0` is 0.
 
 ```rexx
@@ -62,10 +63,10 @@ signal on syntax name a
 say format(5, , '')
 a: say condition('o')~code
 signal on syntax name b
-say format('x', 'y', -1)
+say format(5, 'y')
 b: say condition('o')~code
 signal on syntax name c
-say format('x', -1)
+say format('x', 1)
 c: say condition('o')~code
 signal on syntax name d
 say format(5, 1, -1, -1)
@@ -74,7 +75,7 @@ signal on syntax name e
 say format(5, , 1.5)
 e: say condition('o')~code
 signal on syntax name f
-say format('1e15', 0, , 1)
+say format('1e15', 1, , 1)
 f: say condition('o')~code
 signal on syntax name g
 say format('1e15', 1, , 0)

@@ -255,9 +255,9 @@ say length(xrange(, , , )) length(xrange(, , 'a'))
 ```
 
 r[bif.xrange.errors]
-The groups are read from left to right and the first group that has an
-error decides: an error in a later argument is raised even when the groups
-before it are valid, and no argument after the failing one is read.
+An argument in error raises its error even when the groups before it are
+valid. A call with more than one argument in error raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -265,10 +265,7 @@ say xrange('a', 'b', 'zz')
 a: say condition('o')~code
 signal on syntax name b
 say xrange('a', '', 'zz')
-b: say condition('o')~code
-signal on syntax name c
-say xrange('zz', 'a', '')
-c: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.23 40.28') > 0
 signal on syntax name d
 say xrange('digit', 'a', 'b', 'q', 'r', 'rs')
 d: say condition('o')~code
@@ -276,8 +273,7 @@ d: say condition('o')~code
 
 ```output
 40.28
-40.23
-40.28
+1
 40.28
 ```
 

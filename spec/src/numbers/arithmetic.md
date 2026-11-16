@@ -23,16 +23,17 @@ expressions chapter](../expressions/arithmetic.md).
 r[num.arithmetic.operand]
 Each operand of an arithmetic operator must be a [number](r:num.index.form),
 and a string that is not one raises `SYNTAX 41.1`, as [the use
-rule](r:num.index.use) says. Both operands, and the operand of a prefix
-operator, are checked before the operator does anything else, so a bad operand
-wins over a zero divisor or any other error that the operator would otherwise
-find. The right operand of `**` is the exception: it is the exponent and is
-checked by [its own rule](r:num.arithmetic.exponent). A string whose exponent
-is out of [range](r:num.limits.not-number) is not a number either.
+rule](r:num.index.use) says. An operation that has a bad operand and another
+fault, a second bad operand, a zero divisor or any other error that the
+operator would find, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The right operand of `**` is the
+exception: it is the exponent and is checked by [its own
+rule](r:num.arithmetic.exponent). A string whose exponent is out of
+[range](r:num.limits.not-number) is not a number either.
 
 ```rexx
 signal on syntax name a
-say 'ten' / 0
+say 'ten' / 2
 a: say condition('o')~code
 signal on syntax name b
 say 10 % 'x'
@@ -243,9 +244,9 @@ The right operand of `**` must be a whole number of at most DIGITS digits,
 after it is rounded to DIGITS digits as `exponent + 0` would round it, and
 its value may be negative. A string that is not a number at all, a number
 with a fraction after that rounding, and a number of more than DIGITS digits
-raise `SYNTAX 26.8` where the other operators raise `SYNTAX 41.1`. The
-base is checked first, so a base that is not a number raises 41.1 even when
-the exponent is bad too.
+raise `SYNTAX 26.8` where the other operators raise `SYNTAX 41.1`. A power
+whose base and exponent are both bad raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 3
@@ -260,7 +261,7 @@ signal on syntax name c
 say 2 ** 1000
 c: say condition('o')~code
 signal on syntax name d
-say 'x' ** 'y'
+say 'x' ** 2
 d: say condition('o')~code
 signal on syntax name e
 say 2 ** ''

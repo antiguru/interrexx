@@ -1241,25 +1241,24 @@ a~supplier(1) => 93.902
 ## The items as text
 
 r[class.array.makestring]
-`makeString(mode, separator)` answers a string made from the items of the
-array in the order of the slots, with the first dimension changing fastest,
-and `toString` is the same method under another name. The first letter of
-`mode`, in either case, chooses the form and nothing after it counts: `L` puts
-the separator between one item and the next, and is the form when `mode` is
+`makeString(mode, separator)` answers a string made from the items of the array
+in the order of the slots, with the first dimension changing fastest, and
+`toString` is the same method under another name. The first letter of `mode`,
+in either case, chooses the form and nothing after it counts: `L` puts the
+separator between one item and the next, and is the form when `mode` is
 omitted, and `C` joins the items directly. The separator is read from its
-string value and is the line end `'0A'x` when it is omitted; it may be the
-null string. A `mode` that does not begin with `L` or `C` raises
-`SYNTAX 93.915`; a separator with `C`, even a null one, raises
-`SYNTAX 93.902`, as a third argument does; a mode or a separator that has no
-string value raises `SYNTAX 88.909`. The mode is checked first, its string
-value and then its letter, and the separator after it. An item that is a string
-is used as it is, and
-any other object, `.nil` included, gives the answer of its `objectName`
-message (a whole-number answer is written as its digits, [Deviation
-107](r:class.array.deviation.107)). An empty slot gives nothing, and no
-separator is added for it, but an
-item that is the null string still takes its separator. An array with no item
-answers the null string.
+string value and is the line end `'0A'x` when it is omitted; it may be the null
+string. A `mode` that does not begin with `L` or `C` raises `SYNTAX 93.915`; a
+separator with `C`, even a null one, raises `SYNTAX 93.902`, as a third
+argument does; a mode or a separator that has no string value raises `SYNTAX
+88.909`. The string value of the mode is read before that of the separator. A
+call whose mode and separator are both in error raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. An item that is a
+string is used as it is, and any other object, `.nil` included, gives the
+answer of its `objectName` message (a whole-number answer is written as its
+digits, [Deviation 107](r:class.array.deviation.107)). An empty slot gives
+nothing, and no separator is added for it, but an item that is the null string
+still takes its separator. An array with no item answers the null string.
 
 ```rexx
 a = .array~of(1, 2, 3)

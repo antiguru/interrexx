@@ -1901,19 +1901,18 @@ show:
 r[class.file.searchpath.order]
 `searchPath` reads its `path` before its `name`. A `path` that is no string is
 sent `request` with `ARRAY` first, and an answer that is no array raises
-`SYNTAX 98.913` whatever the `name` is, so `.nil` as `name` raises `88.909`
-only after the `path` was read. All the items of an array `path` are read as
-strings before any directory is searched, so a `.nil` item raises `SYNTAX
-88.909` even when a directory before it holds the file. A string `path` that
-is not empty is read after the class is sent `pathSeparator`, and before the
-`name` is read. How often an array `path` sends `pathSeparator` is not
-specified.
+`SYNTAX 98.913`. A call whose `path` and `name` are both wrong raises the error
+of one of them, as [the precedence rule](r:conv.error.precedence) says. All the
+items of an array `path` are read as strings before any directory is searched,
+so a `.nil` item raises `SYNTAX 88.909` even when a directory before it holds
+the file. A string `path` that is not empty is read after the class is sent
+`pathSeparator`, and before the `name` is read. How often an array `path` sends
+`pathSeparator` is not specified.
 
 ```rexx
 junk = .file~new('spec-file-sp-order.tmp')
 call lineout 'spec-file-sp-order.tmp', 'x'
 call lineout 'spec-file-sp-order.tmp'
-call try '.file~searchPath(.nil, .object~new)'
 call try '.file~searchPath(.nil, ".")'
 call try '.file~searchPath(.nil, .array~of("."))'
 call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil))'
@@ -1952,7 +1951,6 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-.file~searchPath(.nil, .object~new) => 98.913
 .file~searchPath(.nil, ".") => 88.909
 .file~searchPath(.nil, .array~of(".")) => 88.909
 .file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil)) => 88.909
@@ -2091,18 +2089,19 @@ r[class.file.writechars]
 writes the string to the file, bytes unchanged, creating the file when it does
 not exist. It answers nothing, so a program that uses what it answers raises
 `SYNTAX 91.999`. The `mode` is sent `strip`, and the first character of the
-string that answers, in upper or lower case, decides: `A` appends the string
-to the content of the file and `R` replaces the content, whatever follows the
+string that answers, in upper or lower case, decides: `A` appends the string to
+the content of the file and `R` replaces the content, whatever follows the
 letter, so `Replace`, `r` and `repl!` replace. An omitted `mode` appends. Any
-other `mode`, the empty string among them, raises `SYNTAX 88.916`, and one
-that does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The
-name is read as [`readChars`](r:class.file.readchars) reads it, with the same
-error, after the `mode` has been checked. The string is read as the string
-value of an argument ([the string rule](r:class.index.string)), so `.nil` is
-written as `The NIL object` and no object is refused. A file that cannot be
-opened is not written, and nothing is reported. No argument raises
-`SYNTAX 93.901`, a call with only the name `93.901` as well, and a fourth
-argument `93.902`.
+other `mode`, the empty string among them, raises `SYNTAX 88.916`, and one that
+does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The name is
+read as [`readChars`](r:class.file.readchars) reads it, with the same error,
+and a call whose name and `mode` are both wrong raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The string is
+read as the string value of an argument ([the string
+rule](r:class.index.string)), so `.nil` is written as `The NIL object` and no
+object is refused. A file that cannot be opened is not written, and nothing is
+reported. No argument raises `SYNTAX 93.901`, a call with only the name
+`93.901` as well, and a fourth argument `93.902`.
 
 ```rexx
 f = 'spec-file-writechars.tmp'
@@ -2127,7 +2126,6 @@ say .file~new('spec-file-writechars-none.tmp')~exists
 call try '.file~writeChars(f, "x", "")'
 call try '.file~writeChars(f, "x", "Q")'
 call try '.file~writeChars(f, "x", .nil)'
-call try '.file~writeChars(.nil, "x", "Q")'
 call try '.file~writeChars(.nil, "x")'
 call try '.file~writeChars'
 call try '.file~writeChars(f)'
@@ -2155,7 +2153,6 @@ The NIL object12
 .file~writeChars(f, "x", "") => 88.916
 .file~writeChars(f, "x", "Q") => 88.916
 .file~writeChars(f, "x", .nil) => 97.1
-.file~writeChars(.nil, "x", "Q") => 88.916
 .file~writeChars(.nil, "x") => 93.938
 .file~writeChars => 93.901
 .file~writeChars(f) => 93.901
@@ -2167,22 +2164,22 @@ r[class.file.writelines]
 `writeLines` takes the name of a file, an ordered collection and an optional
 `mode`, and writes each item of the collection to the file followed by a line
 feed, creating the file when it does not exist. It answers nothing, as
-[`writeChars`](r:class.file.writechars) does, reads the `mode` as it does,
-with the same error, and appends when `mode` is omitted. The collection is
-sent `isA` with `.OrderedCollection`; one that answers false raises
-`SYNTAX 88.914`, as do a string, `.nil`, a `Set`, a `Bag`, a `Directory`, a
-`Table`, a `Stem` and a `MutableBuffer`. The checks are made in this order:
-the collection, the `mode`, the name, with the error of
-[`readChars`](r:class.file.readchars) for the name. The collection is then
-sent `request` with the argument `ARRAY`, a `List` subclass among them
+[`writeChars`](r:class.file.writechars) does, reads the `mode` as it does, with
+the same error, and appends when `mode` is omitted. The collection is sent
+`isA` with `.OrderedCollection`; one that answers false raises `SYNTAX 88.914`,
+as do a string, `.nil`, a `Set`, a `Bag`, a `Directory`, a `Table`, a `Stem`
+and a `MutableBuffer`. The name has the error of
+[`readChars`](r:class.file.readchars). A call that fails more than one of the
+checks of the collection, the `mode` and the name raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The collection is
+then sent `request` with the argument `ARRAY`, a `List` subclass among them
 ([Deviation 118](r:class.file.deviation.118)), and the items of the array that
 answers are written in order, each as its string value ([the string
 rule](r:class.index.string)); a position with no item is left out, and an
 answer that is not an array raises `SYNTAX 98.913`. An `Array`, a `List` and a
-`Queue` are ordered collections. With `Replace` an empty collection empties
-the file, and with `Append` it leaves it as it was. No argument raises
-`SYNTAX 93.901`, one with only the name `93.901` too, and a fourth argument
-`93.902`.
+`Queue` are ordered collections. With `Replace` an empty collection empties the
+file, and with `Append` it leaves it as it was. No argument raises `SYNTAX
+93.901`, one with only the name `93.901` too, and a fourth argument `93.902`.
 
 ```rexx
 f = 'spec-file-writelines.tmp'
@@ -2211,8 +2208,6 @@ call try '.file~writeLines(f, .bag~of("s"))'
 call try '.file~writeLines(f, .table~new)'
 call try '.file~writeLines(f, .stem~new)'
 call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
-call try '.file~writeLines(.nil, "text", "Q")'
-call try '.file~writeLines(.nil, .array~of("a"), "Q")'
 call try '.file~writeLines(.nil, .array~of("a"))'
 call try '.file~writeLines(f, .array~of("a"), "")'
 call try '.file~writeLines(f, .array~of("a"), .nil)'
@@ -2263,8 +2258,6 @@ an Object
 .file~writeLines(f, .table~new) => 88.914
 .file~writeLines(f, .stem~new) => 88.914
 .file~writeLines(f, .mutablebuffer~new("abc")) => 88.914
-.file~writeLines(.nil, "text", "Q") => 88.914
-.file~writeLines(.nil, .array~of("a"), "Q") => 88.916
 .file~writeLines(.nil, .array~of("a")) => 93.938
 .file~writeLines(f, .array~of("a"), "") => 88.916
 .file~writeLines(f, .array~of("a"), .nil) => 97.1

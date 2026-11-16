@@ -27,19 +27,20 @@ required: it must be neither omitted nor null. `operation` is a string that
 chooses what STREAM does, and `command` is a string, the command that the
 operation `C` carries out. STREAM is not a [String
 method](r:class.string.builtins). It takes three arguments at the most, by the
-[call rules](r:bif.index.call.too-many). The call is checked in this order.
-The count of arguments comes first, by the [call
-rules](r:bif.index.call.count). An omitted `name` then raises `SYNTAX 40.5`
-and a null one `SYNTAX 40.27`; an `operation` that is [none of those of the
-next rule](r:bif.stream.operation) raises `SYNTAX 40.904`. Last, a `command`
-that is missing for the operation `C` raises `SYNTAX 40.3`, and a `command`
-given for any other operation raises `SYNTAX 40.4`.
+[call rules](r:bif.index.call.too-many). The count of arguments comes first,
+by the [call rules](r:bif.index.call.count), and an omitted `name` then raises
+`SYNTAX 40.5`. A null `name` raises `SYNTAX 40.27`; an `operation` that is
+[none of those of the next rule](r:bif.stream.operation) raises `SYNTAX
+40.904`; a `command` that is missing for the operation `C` raises `SYNTAX
+40.3`, and a `command` given for any other operation raises `SYNTAX 40.4`. A
+call that fails more than one of these checks raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 f = 'spec-stream-args.tmp'
-do e over "stream()", "stream(,'s')", "stream('','s')", "stream(f,'x')", "stream('','x')",,
+do e over "stream()", "stream(,'s')", "stream('','s')", "stream(f,'x')",,
           "stream(f,'c')", "stream(f,'s','close')", "stream(f,'d','close')",,
-          "stream(f,'c','close','x')", "stream(f,,'close')", "stream(f,'x','close')",,
+          "stream(f,'c','close','x')", "stream(f,,'close')",,
           "stream(f,'c','query exists')"
   say left(e, 28) '=>' try(e)
 end
@@ -55,13 +56,11 @@ stream()                     => 40.3
 stream(,'s')                 => 40.5
 stream('','s')               => 40.27
 stream(f,'x')                => 40.904
-stream('','x')               => 40.27
 stream(f,'c')                => 40.3
 stream(f,'s','close')        => 40.4
 stream(f,'d','close')        => 40.4
 stream(f,'c','close','x')    => 40.4
 stream(f,,'close')           => 40.4
-stream(f,'x','close')        => 40.904
 stream(f,'c','query exists') => no error
 ```
 

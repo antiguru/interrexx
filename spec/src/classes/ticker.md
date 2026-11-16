@@ -76,19 +76,21 @@ b~cancel
 ## Making a ticker
 
 r[class.ticker.init]
-`new` sends `init(interval, target, attachment)`, and `init` sets the ticker up.
-It needs the first two arguments, so `new` with none or only the first raises
-`SYNTAX 93.901` and an omitted first or second argument raises `SYNTAX 93.903`;
-a fourth argument raises `SYNTAX 93.902`. The checks of the arguments that are
-present are made in this order: first the target, which must be an
+`new` sends `init(interval, target, attachment)`, and `init` sets the ticker
+up. It needs the first two arguments, so `new` with none or only the first
+raises `SYNTAX 93.901` and an omitted first or second argument raises `SYNTAX
+93.903`; a fourth argument raises `SYNTAX 93.902`. The target must be an
 implementation of [`AlarmNotification`](r:class.alarmnotification.creation) or
-`SYNTAX 88.914` is raised, and then the interval, which raises `SYNTAX 93.951`
-for every value that [the rule below](r:class.ticker.init.interval) does not
-accept, except the very large ones for which it names other errors. So a target
-that is no implementation is reported even when the interval is wrong too, and a
-refused ticker is not set. `attachment` can be any object, and is `.nil` when it
-is omitted. The ticker is set when `init` ends normally. A subclass whose `init`
-does not send `init` to its superclass makes a ticker that is not set
+`SYNTAX 88.914` is raised, and the interval raises `SYNTAX 93.951` for every
+value that [the rule below](r:class.ticker.init.interval) does not accept,
+except the very large ones for which it names other errors. The target's `isA`
+is sent first, as [the sends rule](r:class.ticker.init.sends) gives, and a
+refused target sends the interval nothing. An interval that is a string is sent
+nothing, and a call whose target and string interval are both wrong raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says. A
+refused ticker is not set. `attachment` can be any object, and is `.nil` when
+it is omitted. The ticker is set when `init` ends normally. A subclass whose
+`init` does not send `init` to its superclass makes a ticker that is not set
 ([Deviation 135](r:class.ticker.deviation.135)). A second `init`, sent after
 the one that `new` sent, is refused, as [Deviation
 162](r:conc.halt.deviation.162) says.
@@ -100,7 +102,7 @@ call try ".ticker~new(60)"
 call try ".ticker~new(, n)"
 call try ".ticker~new(60, , 'x')"
 call try ".ticker~new(60, n, 'x', 'y')"
-call try ".ticker~new('abc', .nil)"
+call try ".ticker~new(60, .nil)"
 call try ".ticker~new('abc', n)"
 call try ".ticker~new(60, n)"
 call try ".ticker~new(60, n, .nil)"
@@ -125,7 +127,7 @@ bad: say arg(1) '=>' condition('o')~code
 .ticker~new(, n) => 93.903
 .ticker~new(60, , 'x') => 93.903
 .ticker~new(60, n, 'x', 'y') => 93.902
-.ticker~new('abc', .nil) => 88.914
+.ticker~new(60, .nil) => 88.914
 .ticker~new('abc', n) => 93.951
 .ticker~new(60, n) => ok
 .ticker~new(60, n, .nil) => ok
@@ -134,21 +136,22 @@ bad: say arg(1) '=>' condition('o')~code
 
 r[class.ticker.init.interval]
 An interval that is a string is a number of seconds. It is read as a number as
-[the DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either end
-are allowed and a decimal point or an exponent is too, and it has to be zero or
-more: a string that is no number, the empty string and a negative number raise
-`SYNTAX 93.951`. An interval that is a `TimeSpan` is that length, and must not
-be negative. An interval longer than the longest `TimeSpan`, 315537897599.999999
-seconds, raises `SYNTAX 40.19`, whether it is positive or negative. A number of
-`10**12` or more, or of `-10**12` or less, once it is rounded as said below,
-raises `SYNTAX 88.903`. Nothing else is an interval, so
-`SYNTAX 93.951` is raised for a `DateTime`, for a string with a time of day such
-as `12:00:00`, for `.nil`, for an array and for an instance of `Object`. The
-interval is kept to the microsecond: a longer fraction is cut off and not
-rounded, and the number is cut before its sign is checked, so `-0.0000001` is an
-interval of zero; a number with more than 18 significant digits is first rounded
-to 18, so `1.999999999999999999` is 2 seconds. The number is read in full
-whatever the NUMERIC DIGITS setting. `interval` answers the interval, as
+[the DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either
+end are allowed and a decimal point or an exponent is too, and it has to be
+zero or more: a string that is no number, the empty string and a negative
+number raise `SYNTAX 93.951`. An interval that is a `TimeSpan` is that length,
+and must not be negative. An interval longer than the longest `TimeSpan`,
+315537897599.999999 seconds, raises `SYNTAX 40.19`. A number of `10**12` or
+more, once it is rounded as said below, raises `SYNTAX 88.903`. A negative
+number that is also that long raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. Nothing else is an interval, so
+`SYNTAX 93.951` is raised for a `DateTime`, for a string with a time of day
+such as `12:00:00`, for `.nil`, for an array and for an instance of `Object`.
+The interval is kept to the microsecond: a longer fraction is cut off and not
+rounded, and the number is cut before its sign is checked, so `-0.0000001` is
+an interval of zero; a number with more than 18 significant digits is first
+rounded to 18, so `1.999999999999999999` is 2 seconds. The number is read in
+full whatever the NUMERIC DIGITS setting. `interval` answers the interval, as
 [the next rule](r:class.ticker.interval) says. The example makes tickers whose
 intervals are too long to end before they are cancelled.
 
@@ -163,9 +166,7 @@ call try 'string -1', '-1'
 call try 'string -0.0000001', '-0.0000001'
 call try 'string 1.999999999999999999', '1.999999999999999999'
 call try 'string 315537897600', '315537897600'
-call try 'string -315537897600', '-315537897600'
 call try 'string 1e12', '1e12'
-call try 'string -1e12', '-1e12'
 call try 'string 12:00:00', '12:00:00'
 call try 'span of 600 s', .timespan~fromSeconds(600)
 call try 'span of -600 s', .timespan~fromSeconds(-600)
@@ -199,9 +200,7 @@ string -1 => 93.951
 string -0.0000001 => ok 00:00:00.000000
 string 1.999999999999999999 => ok 00:00:02.000000
 string 315537897600 => 40.19
-string -315537897600 => 40.19
 string 1e12 => 88.903
-string -1e12 => 88.903
 string 12:00:00 => 93.951
 span of 600 s => ok 00:10:00.000000
 span of -600 s => 93.951

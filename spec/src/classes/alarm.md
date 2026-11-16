@@ -84,19 +84,20 @@ r[class.alarm.init]
 `new` sends `init(atime, target, attachment)`, and `init` sets the alarm up. It
 needs the first two arguments, so `new` with none or only the first raises
 `SYNTAX 93.901` and an omitted first or second argument raises `SYNTAX 93.903`;
-a fourth argument raises `SYNTAX 93.902`. The checks of the arguments that are
-present are made in this order: first the target, which must be an
-implementation of [`AlarmNotification`](r:class.alarmnotification.creation) or
-`SYNTAX 88.914` is raised, and then the time, which raises `SYNTAX 93.951` for
-every value that [the rules below](r:class.alarm.init.seconds) do not accept,
-except the very large ones for which they name other errors. So a target that is
-no implementation is reported even when the time is wrong too, and a refused
-alarm is not set. `attachment` can be any object, and is `.nil` when it is
-omitted. The alarm is set when `init` ends normally. A subclass whose `init`
-does not send `init` to its superclass makes an alarm that is not set
-([Deviation 135](r:class.alarm.deviation.135)). A second `init`, sent after
-the one that `new` sent, is refused, as [Deviation
-162](r:conc.halt.deviation.162) says.
+a fourth argument raises `SYNTAX 93.902`. The target must be an implementation
+of [`AlarmNotification`](r:class.alarmnotification.creation) or `SYNTAX 88.914`
+is raised, and the time raises `SYNTAX 93.951` for every value that [the rules
+below](r:class.alarm.init.seconds) do not accept, except the very large ones
+for which they name other errors. The target's `isA` is sent first, as [the
+sends rule](r:class.alarm.init.sends) gives, and a refused target sends the
+time nothing. A time that is a string is sent nothing, and a call whose target
+and string time are both wrong raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. A refused alarm is not set.
+`attachment` can be any object, and is `.nil` when it is omitted. The alarm is
+set when `init` ends normally. A subclass whose `init` does not send `init` to
+its superclass makes an alarm that is not set ([Deviation
+135](r:class.alarm.deviation.135)). A second `init`, sent after the one that
+`new` sent, is refused, as [Deviation 162](r:conc.halt.deviation.162) says.
 
 ```rexx
 n = .note~new
@@ -105,7 +106,7 @@ call try ".alarm~new(60)"
 call try ".alarm~new(, n)"
 call try ".alarm~new(60, , 'x')"
 call try ".alarm~new(60, n, 'x', 'y')"
-call try ".alarm~new('abc', .nil)"
+call try ".alarm~new(60, .nil)"
 call try ".alarm~new('abc', n)"
 call try ".alarm~new(60, n)"
 call try ".alarm~new(60, n, .nil)"
@@ -130,7 +131,7 @@ bad: say arg(1) '=>' condition('o')~code
 .alarm~new(, n) => 93.903
 .alarm~new(60, , 'x') => 93.903
 .alarm~new(60, n, 'x', 'y') => 93.902
-.alarm~new('abc', .nil) => 88.914
+.alarm~new(60, .nil) => 88.914
 .alarm~new('abc', n) => 93.951
 .alarm~new(60, n) => ok
 .alarm~new(60, n, .nil) => ok
@@ -145,19 +146,21 @@ it has to be zero or more: a string that is no number, the empty string and a
 negative number raise `SYNTAX 93.951`. The number is cut to the microsecond
 before its sign is checked, so `-0.0000001` is a time of zero. A number with
 more than 18 significant digits is first rounded to 18, and the number is read
-in full whatever the NUMERIC DIGITS setting. A number of `10**12` or more, or of
-`-10**12` or less, once it is rounded as said above, raises `SYNTAX 88.903`
-instead, and one for which the date and time of the moment in the host's
-offset, as `scheduledTime` would answer it, would fall after 31 December 9999 at
-23:59:59.999999 or before 1 January 0001 at 00:00:00.000000
-([the limits of `DateTime`](r:class.datetime.limits)) raises `SYNTAX 40.19`,
-which is checked before the sign. The largest and smallest times accepted so
-depend on the host's offset, as they do for [`addSeconds`](r:class.datetime.add)
-of a `DateTime` of now. A `TimeSpan` that does so raises `SYNTAX 40.19` too.
-The alarm is set for the moment that many seconds after `init` read the clock,
-to the microsecond. The example reads the scheduled time back, with the bounds a
-clock cannot break, and prints only whether they hold; under NUMERIC DIGITS 3 it
-shows the alarm of a number of five digits set in full.
+in full whatever the NUMERIC DIGITS setting. A number of `10**12` or more, once
+it is rounded as said above, raises `SYNTAX 88.903` instead, and one for which
+the date and time of the moment in the host's offset, as `scheduledTime` would
+answer it, would fall after 31 December 9999 at 23:59:59.999999 or before 1
+January 0001 at 00:00:00.000000 ([the limits of
+`DateTime`](r:class.datetime.limits)) raises `SYNTAX 40.19`. A negative number
+that is also that large raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The largest and smallest times accepted so
+depend on the host's offset, as they do for
+[`addSeconds`](r:class.datetime.add) of a `DateTime` of now. A `TimeSpan` that
+does so raises `SYNTAX 40.19` too. The alarm is set for the moment that many
+seconds after `init` read the clock, to the microsecond. The example reads the
+scheduled time back, with the bounds a clock cannot break, and prints only
+whether they hold; under NUMERIC DIGITS 3 it shows the alarm of a number of
+five digits set in full.
 
 ```rexx
 n = .note~new
@@ -169,9 +172,7 @@ call try '1x'
 call try '-1'
 call try '--1'
 call try '2.6e11'
-call try '-2e11'
 call try '1e12'
-call try '-1e12'
 numeric digits 3
 before = .datetime~new
 a = .alarm~new('12345', n)
@@ -204,9 +205,7 @@ bad: say '"'arg(1)'" =>' condition('o')~code
 "-1" => 93.951
 "--1" => 93.951
 "2.6e11" => 40.19
-"-2e11" => 40.19
 "1e12" => 88.903
-"-1e12" => 88.903
 digits 3: 3 25 45
 ```
 

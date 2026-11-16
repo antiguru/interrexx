@@ -63,19 +63,18 @@ Object 1
 
 r[class.routine.new]
 `new` makes a routine from a name, a source and a context, with the same
-arguments, the same checks, in the same order, and the same errors as
-[the `new` of `Method`](r:class.method.new): the name and the source are
-required (`SYNTAX 88.901`), a name that [gives no string](r:class.index.string),
-`.nil` among
+arguments, the same checks and the same errors as [the `new` of
+`Method`](r:class.method.new): the name and the source are required (`SYNTAX
+88.901`), a name that [gives no string](r:class.index.string), `.nil` among
 them, raises `88.909`, a context that is not `PROGRAMSCOPE`, a `Method`, a
 `Routine` or a `Package` raises `40.904`, and a source that does not translate
 raises its translation error, and the code does not run. The source is read as
-[the source rule](r:class.method.new.source) says, with the messages of
-[the sends rule](r:class.method.new.sends), and the context decides what the
-routine finds as [the context rule](r:class.method.new.context) says. The
-arguments from the fourth on are passed to `init` of the new object, and the
-class that received `new` is the class of the answer, as for a method. The
-name is the name of the routine's package.
+[the source rule](r:class.method.new.source) says, with the messages of [the
+sends rule](r:class.method.new.sends), and the context decides what the routine
+finds as [the context rule](r:class.method.new.context) says. The arguments
+from the fourth on are passed to `init` of the new object, and the class that
+received `new` is the class of the answer, as for a method. The name is the
+name of the routine's package.
 
 ```rexx
 r = .routine~new('who', 'return "I am" .context~executable~class~id')
@@ -125,7 +124,7 @@ MINE
 ```
 
 ```rexx
-call try '.routine~new("n", .nil, 7)'
+call try '.routine~new("n", .nil)'
 call try '.routine~new("n", "nop", 7)'
 exit
 try:
@@ -138,7 +137,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-.routine~new("n", .nil, 7) => 93.961
+.routine~new("n", .nil) => 93.961
 .routine~new("n", "nop", 7) => 40.904
 ```
 
@@ -201,13 +200,12 @@ init 0
 
 r[class.routine.newfile]
 `newFile` makes a routine from the lines of a file, with the arguments, the
-checks, their order and the errors of [the `newFile` of
-`Method`](r:class.method.newfile): the file name and an optional context, no
-third argument (`SYNTAX 93.902`), `.nil` or an object that [gives no
-string](r:class.index.string) as the name raises `88.909`, a context that does
-not fit raises `40.904` before the file is looked for, and a file that cannot
-be read raises `SYNTAX 3.1`. The routine's package is named by the file name
-as it was given. Its source is the lines of the file before the first
+checks and the errors of [the `newFile` of `Method`](r:class.method.newfile):
+the file name and an optional context, no third argument (`SYNTAX 93.902`),
+`.nil` or an object that [gives no string](r:class.index.string) as the name
+raises `88.909`, a context that does not fit raises `40.904`, and a file that
+cannot be read raises `SYNTAX 3.1`. The routine's package is named by the file
+name as it was given. Its source is the lines of the file before the first
 directive, except that a first line that begins with `#!` is not part of it,
 and the directives of the file still make the classes and routines of its
 package, which its code can name. `call` runs the lines before the first
@@ -234,7 +232,7 @@ call try '.routine~newFile("class_routine_newfile_none.tmp")'
 call try '.routine~newFile()'
 call try '.routine~newFile(.nil)'
 call try '.routine~newFile(f, "PROGRAMSCOPE", 1)'
-call try '.routine~newFile("class_routine_newfile_none.tmp", "bad")'
+call try '.routine~newFile(f, "bad")'
 exit
 try:
   signal on syntax name bad
@@ -259,7 +257,7 @@ MINE
 .routine~newFile() => 88.901
 .routine~newFile(.nil) => 88.909
 .routine~newFile(f, "PROGRAMSCOPE", 1) => 93.902
-.routine~newFile("class_routine_newfile_none.tmp", "bad") => 40.904
+.routine~newFile(f, "bad") => 40.904
 ```
 
 ```rexx

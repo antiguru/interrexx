@@ -216,27 +216,26 @@ show: procedure expose s.
 40.922 -1 :
 ```
 
-## Order of the checks
+## The checks
 
 r[util.sysstemdelete.order]
-When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises `SYNTAX 88.901` when it
-is missing and `SYNTAX 40.919` when it is not a name; then `start` raises
+The call can fail these checks: the name of the stem raises `SYNTAX 88.901`
+when it is missing and `SYNTAX 40.919` when it is not a name; `start` raises
 `SYNTAX 88.901` when it is missing and `SYNTAX 88.905` when it is not a whole
-number of at least `1`; then `count` raises `SYNTAX 88.905`; then the tail `0`
-of the stem raises `SYNTAX 40.922`; then the range raises
-`SYNTAX 40.923`; and last an item that has to move and has no value raises
-`SYNTAX 40.924`.
+number of at least `1`; `count` raises `SYNTAX 88.905`; the tail `0` of the
+stem raises `SYNTAX 40.922`; the range raises `SYNTAX 40.923`; and an item that
+has to move and has no value raises `SYNTAX 40.924`. When several of them fail,
+the call raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
-call try "SysStemDelete('s-.')", ""
-call try "SysStemDelete('s.', , 'x')", ""
-call try "SysStemDelete('s.a', 'x')", ""
-call try "SysStemDelete('s.', 0, -1)", ""
+call try "SysStemDelete(, 1)", ""
+call try "SysStemDelete('s-.', 1)", ""
+call try "SysStemDelete('s.')", ""
+call try "SysStemDelete('s.', 0)", ""
 call try "SysStemDelete('s.', 1, 'x')", ""
-call try "SysStemDelete('s.', 0)", "drop s.0"
-call try "SysStemDelete('s.', 9)", "drop s.0"
-call try "SysStemDelete('s.', 9)", "drop s.2"
+call try "SysStemDelete('s.', 1)", "drop s.0"
+call try "SysStemDelete('s.', 9)", ""
 call try "SysStemDelete('s.', 1)", "drop s.2"
 exit
 try:
@@ -252,10 +251,9 @@ e: say condition('o')~code
 ```
 
 ```output
-40.919
 88.901
 40.919
-88.905
+88.901
 88.905
 88.905
 40.922

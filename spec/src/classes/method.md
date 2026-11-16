@@ -70,23 +70,21 @@ hello world
 
 r[class.method.new]
 `new` makes a method object from a name, a source and a context. The name is
-required (`SYNTAX 88.901`), and is a string, or the string that its
-argument [gives](r:class.index.string): an object that gives no string, `.nil`
-among them, raises
-`88.909`, and a number is a name like any other string. The name becomes the
-name of the method's package, which `package` shows. The source is required
-too (`88.901`) and is read as [the source rule](r:class.method.new.source)
-says. The context is `PROGRAMSCOPE` in any case, or omitted, or a `Method`, a
-`Routine` or a `Package` object, and decides what the code can see, as
-[the context rule](r:class.method.new.context) says; another value raises
-`40.904`. The checks run in this order: the name, the source, the context, and
-then the source is translated, so a source of `.nil` raises `93.961` whatever
-the context is, and a source that does not translate raises its translation
-error (`35.1` for an invalid expression, `13.1` for an invalid character)
-after the context has been accepted, and `new` runs none of the code. The
-arguments from the fourth on are passed to `init` as
-[the sends rule](r:class.method.new.sends) says. The answer is the new method
-object.
+required (`SYNTAX 88.901`), and is a string, or the string that its argument
+[gives](r:class.index.string): an object that gives no string, `.nil` among
+them, raises `88.909`, and a number is a name like any other string. The name
+becomes the name of the method's package, which `package` shows. The source is
+required too (`88.901`) and is read as [the source
+rule](r:class.method.new.source) says. The context is `PROGRAMSCOPE` in any
+case, or omitted, or a `Method`, a `Routine` or a `Package` object, and decides
+what the code can see, as [the context rule](r:class.method.new.context) says;
+another value raises `40.904`. A source that does not translate raises its
+translation error (`35.1` for an invalid expression, `13.1` for an invalid
+character), and `new` runs none of the code. A call that fails more than one of
+these checks raises the error of one of them, as [the order
+rule](r:class.method.new.order) says. The arguments from the fourth on are
+passed to `init` as [the sends rule](r:class.method.new.sends) says. The answer
+is the new method object.
 
 ```rexx
 m = .method~new('greet', 'return "hello" arg(1)')
@@ -133,13 +131,14 @@ Method greet return "hello" arg(1)
 ```
 
 r[class.method.new.order]
-`new` checks the source before the context: a source that is neither a string
-nor an array and a context that is not valid together raise the source's
-`SYNTAX 93.961`, and the context's `SYNTAX 40.904` only follows a valid source.
-`Routine~new` checks in the same order.
+A call to `new` whose name, source or context fails more than one check, such
+as a source that is neither a string nor an array (`SYNTAX 93.961`) with a
+context that is not valid (`SYNTAX 40.904`), raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says. The same holds for
+`Routine~new`.
 
 ```rexx
-call try '.method~new("n", .nil, 7)'
+call try '.method~new("n", .nil)'
 call try '.method~new("n", "nop", 7)'
 exit
 try:
@@ -152,7 +151,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-.method~new("n", .nil, 7) => 93.961
+.method~new("n", .nil) => 93.961
 .method~new("n", "nop", 7) => 40.904
 ```
 
@@ -422,21 +421,21 @@ r[class.method.newfile]
 `newFile` makes a method object from the lines of a file. The file name is
 required (`SYNTAX 88.901`) and is a string, or an object that [gives
 one](r:class.index.string) (`.nil` and others that give none raise `88.909`),
-and the context is the
-second argument, with the same values and the same error `40.904` as for
-[`new`](r:class.method.new.context). `newFile` takes no other argument: a
-third raises `SYNTAX 93.902` before the file is looked for. The checks run in
-this order: the number of arguments, the name, the context, and then the file
-is found and read; a file that cannot be read raises `SYNTAX 3.1`, and a file
-that does not translate raises its translation error. The method's package is
-named by the file name as it was given, and its source is the lines of the
-file that come before its first directive, except that a first line that
-begins with `#!` is not part of the source. A directive in the file still
-makes the classes and routines of the method's package, which the package
-answers to `classes` and `routines`, and the code of the method sees them. The
-context is used as for `new`. The file is not searched for ([the newFile
-rule](r:env.search.newfile)). `newFile` sends `init` with no argument to the
-new object, and a subclass of `Method` makes instances of itself.
+and the context is the second argument, with the same values and the same error
+`40.904` as for [`new`](r:class.method.new.context). `newFile` takes no other
+argument: a third raises `SYNTAX 93.902` before the file is looked for. A file
+that cannot be read raises `SYNTAX 3.1`, and a file that does not translate
+raises its translation error. A call that fails more than one check after the
+count raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The method's package is named by the file
+name as it was given, and its source is the lines of the file that come before
+its first directive, except that a first line that begins with `#!` is not part
+of the source. A directive in the file still makes the classes and routines of
+the method's package, which the package answers to `classes` and `routines`,
+and the code of the method sees them. The context is used as for `new`. The
+file is not searched for ([the newFile rule](r:env.search.newfile)). `newFile`
+sends `init` with no argument to the new object, and a subclass of `Method`
+makes instances of itself.
 
 ```rexx
 f = 'class_method_newfile_zq.tmp'
@@ -458,7 +457,7 @@ call try '.method~newFile("class_method_newfile_none.tmp")'
 call try '.method~newFile()'
 call try '.method~newFile(.nil)'
 call try '.method~newFile(f, "PROGRAMSCOPE", 1)'
-call try '.method~newFile("class_method_newfile_none.tmp", "bad")'
+call try '.method~newFile(f, "bad")'
 call try '.method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE")'
 exit
 try:
@@ -485,7 +484,7 @@ MINE
 .method~newFile() => 88.901
 .method~newFile(.nil) => 88.909
 .method~newFile(f, "PROGRAMSCOPE", 1) => 93.902
-.method~newFile("class_method_newfile_none.tmp", "bad") => 40.904
+.method~newFile(f, "bad") => 40.904
 .method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE") => 3.1
 ```
 

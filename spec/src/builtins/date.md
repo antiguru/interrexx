@@ -620,68 +620,41 @@ h: say condition('o')~code
 40.904
 ```
 
-## The order of the checks
+## The checks
 
 r[bif.date.order]
-A call is checked in this order, and the first failure is the one raised: the
-[argument count](r:bif.index.call.count); a missing `string` that an
-`informat` or `isep` needs ([40.5](r:bif.index.dt.convert)); an `osep` with an
-`option` that [does not apply it](r:bif.date.sep.in.informat); the form of
-`osep`; an `isep` with an `informat` that does not apply it; the form of
-`isep` ([40.43](r:bif.date.sep.char)); the letter of `informat`; the string
-itself (`40.19`, or `40.44` with an `isep`); and, last, the letter of
-`option`. So an `option` that is not a letter is raised only when the rest of
-the call is right.
+A call can fail these checks: the [argument count](r:bif.index.call.count); a
+missing `string` that an `informat` or `isep` needs
+([40.5](r:bif.index.dt.convert)); an `osep` with an `option` that [does not
+apply it](r:bif.date.sep.in.informat); the form of `osep`; an `isep` with an
+`informat` that does not apply it; the form of `isep`
+([40.43](r:bif.date.sep.char)); the letter of `informat`; the string itself
+(`40.19`, or `40.44` with an `isep`); and the letter of `option`. A wrong
+count raises its error whatever else is wrong, as [the call
+rules](r:bif.index.call.order.count-before-values) say. A call that fails more
+than one of the other checks raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say date('B', 'junk', 'Q', 'ab', '-')
-a: say condition('o')~code
+say date('S', 'junk', 'Q', , 'ab')
+a: say wordpos(condition('o')~code, '40.43 40.904 40.19 40.44') > 0
 signal on syntax name b
-say date('S', 'junk', 'Q', 'ab', '-')
+say date('X', '1 Jan 2000')
 b: say condition('o')~code
 signal on syntax name c
-say date('S', '5', 'B', 'ab', '-')
+say date('X', 'junk', 'Q', , '-', 1)
 c: say condition('o')~code
-signal on syntax name d
-say date('S', '5', 'B', , 'ab')
-d: say condition('o')~code
-signal on syntax name e
-say date('S', 'junk', 'Q', , 'ab')
-e: say condition('o')~code
-signal on syntax name f
-say date('S', 'junk', 'Q')
-f: say condition('o')~code
-signal on syntax name g
-say date('X', 'junk')
-g: say condition('o')~code
-signal on syntax name h
-say date('X', '1 Jan 2000')
-h: say condition('o')~code
-signal on syntax name i
-say date('X', , 'Q')
-i: say condition('o')~code
-signal on syntax name j
-say date('S', 'junk', 'N', , '-')
-j: say condition('o')~code
 ```
 
 ```output
-40.44
-40.43
-40.43
-40.44
-40.43
+1
 40.904
-40.19
-40.904
-40.5
-40.44
+40.4
 ```
 
 > **Note.** The ANSI draft (9.8.1) has neither separators nor the options F,
-> I, L and T. The reference manual does not give the order of the checks; this
-> rule matches ooRexx.
+> I, L and T.
 
 ## Deviations
 

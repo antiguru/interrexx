@@ -20,19 +20,33 @@ page records why they are the way they are.
   number parse error that carries the string that failed to parse, an item is stated only where it
   is needed to understand the error and the program cannot get it otherwise; the rest is
   unspecified under `r[conv.error.additional]`.
-* **Errors are checked in a precise order** (2026-11-12, #395). Operands are checked left before
-  right and a builtin checks its argument count before its arguments, from the left (ANSI 7.4,
-  9.2.1), with ooRexx's order where ANSI is silent. Which fault a program sees is part of the
-  contract. A relaxed order is a design for an optimising transpiler, which would declare its own
-  Deviation; the interpreter keeps the precise one.
+* **Evaluation order is specified; error precedence is not** (2026-11-16, #395, #PRNUM). Operands
+  are evaluated left before right, both before either is checked; arguments are evaluated from the
+  left; a builtin sends `STRING` to its arguments before it checks them (Deviation 170); and the
+  argument count is checked before the arguments (ANSI 7.4, 9.2.1). An error raised while an
+  operand or an argument is evaluated is raised at that point. These stay specified because Rexx
+  side effects are observable: a function call in an operand or a `STRING` method of an argument
+  runs or does not run. When the checks of one operation (one operator, one builtin or method
+  invocation, one instruction's checks) find more than one fault, which of their errors is raised
+  is unspecified; it is the error of one of the faults. This replaces the precise order of
+  2026-11-12, which took ANSI's results (ANSI 4.1 makes them normative) and ooRexx's order where
+  ANSI is silent. ooRexx follows ANSI's evaluation order but not its precedence: `LEFT`, `VERIFY`,
+  `X2D`, `FORMAT` and `STRIP` check a later argument first, and it does not keep ANSI's subcodes
+  either, raising 41.1 for `1 + 'b'` where ANSI gives 41.2. Java, Python and Rust libraries,
+  Haskell's imprecise exceptions and SQL do not specify which of several faults is reported.
+  interrexx keeps ooRexx's precedence where it has it, so that comparisons stay quiet, but that is
+  a convenience, not part of the contract. Together with the entry below, the contract of an error
+  ends here: a fault is reported, by the code and subcode of a fault that is present.
 * **An error's contract is its code and subcode** (2026-11-14, #388, #672). The error number and,
   where the specification states one, the subcode are specified. The message text is not, and
   the items of `ADDITIONAL` for an error the interpreter raises are not unless a rule states one.
   Java, Python and Ruby draw the line in the same place: the exception's class and subclass are
   the contract, its message is not, and structured data on it is specified only through a
-  documented accessor. Objects a program supplies to `RAISE` may be specified to reach the
-  condition unchanged; the array the interpreter builds around them is not. Comparisons check
-  only what is specified (`docs/design/testing.md`).
+  documented accessor. A fault that is present is reported by its code and subcode; where an
+  operation has several, which of them is reported is unspecified (2026-11-16, see above).
+  Objects a program supplies to `RAISE` may be specified to reach the condition unchanged; the
+  array the interpreter builds around them is not. Comparisons check only what is specified
+  (`docs/design/testing.md`).
   Whether a built-in method is a level of a traceback is unspecified, because a build may not
   have it (2026-11-14, #388); comparisons drop those frame lines.
 * **Standard output is buffered, with a switch to write it unbuffered** (2026-11-15, #706,

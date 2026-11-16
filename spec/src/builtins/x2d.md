@@ -78,22 +78,22 @@ d: say condition('o')~code
 ```
 
 r[bif.x2d.errors]
-The checks of the call run in this order: the argument count; the form of
-`n` as a [whole number](r:conv.whole.form), `SYNTAX 40.12`; the sign of `n`,
-`SYNTAX 93.923`; then the digits of `hex_string`; and last the number of
-digits of the answer, `SYNTAX 93.935`. A negative `n` is therefore raised even
-when `hex_string` has a character that is not a digit or the answer would not
-fit, and a non-whole `n` before that.
+The call checks the argument count first; then the form of `n` as a [whole
+number](r:conv.whole.form), `SYNTAX 40.12`; the sign of `n`, `SYNTAX 93.923`;
+the digits of `hex_string`; and the number of digits of the answer, `SYNTAX
+93.935`. A call that fails more than one of the checks after the count raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says.
 
 ```rexx
 signal on syntax name a
-say x2d('zz', 'x')
+say x2d('ff', 'x')
 a: say condition('o')~code
 signal on syntax name b
 say x2d('zz', -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '93.923 93.933') > 0
 signal on syntax name c
-say x2d('ffffffffff', -1)
+say x2d('ff', -1)
 c: say condition('o')~code
 signal on syntax name d
 say x2d('zz')
@@ -105,7 +105,7 @@ e: say condition('o')~code
 
 ```output
 40.12
-93.923
+1
 93.923
 93.933
 93.935

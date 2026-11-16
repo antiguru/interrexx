@@ -89,23 +89,23 @@ return
 ```
 
 r[util.sysfilesearch.order]
-The arguments are checked in this order: the count and the conversion of the
-arguments to strings (`88.9xx`); `options` (`SYNTAX 40.900` for a character
-that is not an option letter, a blank included); the name of the stem (`SYNTAX
-40.925`, with the names that [SysFileTree](r:util.sysfiletree.stem.name)
-rejects). Only then is the file opened, so a stem or an option that is wrong
-raises its error whether or not the file exists. An `options` that is the null
-string is allowed and means no option.
+The count of the arguments is checked first. The conversion of the arguments to
+strings can raise `88.9xx`, `options` raises `SYNTAX 40.900` for a character
+that is not an option letter, a blank included, and the name of the stem raises
+`SYNTAX 40.925` for the names that [SysFileTree](r:util.sysfiletree.stem.name)
+rejects; a call in which more than one is wrong raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The file is
+opened only after these checks, so a stem or an option that is wrong raises its
+error whether or not the file exists. An `options` that is the null string is
+allowed and means no option.
 
 ```rexx
-call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', 'X')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', 'X')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', 'N')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', '')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', ' ')"
-call try "sysfilesearch('a', 'c2zqfs06.none', .nil, 'X')"
-call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', .nil)"
+call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', .nil)"
 call try "sysfilesearch('a', 'c2zqfs06.none', '')"
 exit
 try: procedure
@@ -119,14 +119,12 @@ return
 ```
 
 ```output
-sysfilesearch('a', 'c2zqfs06.none', 'a b', 'X') -> 40.900
 sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N') -> 40.925
 sysfilesearch('a', 'c2zqfs06.none', 'f.', 'X') -> 40.900
 sysfilesearch('a', 'c2zqfs06.none', 'f.', 'N') -> 3
 sysfilesearch('a', 'c2zqfs06.none', 'f.', '') -> 3
 sysfilesearch('a', 'c2zqfs06.none', 'f.', ' ') -> 40.900
-sysfilesearch('a', 'c2zqfs06.none', .nil, 'X') -> 40.900
-sysfilesearch('a', 'c2zqfs06.none', 'a b', .nil) -> 88.909
+sysfilesearch('a', 'c2zqfs06.none', 'f.', .nil) -> 88.909
 sysfilesearch('a', 'c2zqfs06.none', '') -> 40.925
 ```
 

@@ -1321,15 +1321,16 @@ w count
 
 r[class.object.sendwith]
 `sendWith` is `send` with the arguments of the message in an array. The first
-argument names the message as for [`send`](r:class.object.send), and is
-checked first. The second argument is an array, or an object that answers an
-array to the message `request` with the argument `ARRAY`, which is what
-`sendWith` sends it; an object that answers anything but an array, including
-`.nil`, and an array of more than one dimension, raise `SYNTAX 88.913`. The
-items of the array are the arguments in order; a place of a sparse array that
-holds nothing is an omitted argument, and the argument count is the position
-of the last item that is present. Both arguments are required (`88.901`, one
-missing) and a third raises `93.902`.
+argument names the message as for [`send`](r:class.object.send). The second
+argument is an array, or an object that answers an array to the message
+`request` with the argument `ARRAY`, which is what `sendWith` sends it; an
+object that answers anything but an array, including `.nil`, and an array of
+more than one dimension, raise `SYNTAX 88.913`. The items of the array are the
+arguments in order; a place of a sparse array that holds nothing is an omitted
+argument, and the argument count is the position of the last item that is
+present. Both arguments are required (`88.901`, one missing) and a third raises
+`93.902`. A call whose two arguments are both in error raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 o = .w~new
@@ -1346,7 +1347,6 @@ call try 'o~sendWith("count", .nil)'
 call try 'o~sendWith("count", .object~new)'
 call try 'o~sendWith("count", .array~new(2, 2))'
 call try 'o~sendWith("count", .array~new, 3)'
-call try 'o~sendWith(.nil, .nil)'
 call try 'o~sendWith("nosuchzz", .nil)'
 exit
 try:
@@ -1381,7 +1381,6 @@ o~sendWith("count", .nil) => 88.913
 o~sendWith("count", .object~new) => 88.913
 o~sendWith("count", .array~new(2, 2)) => 88.913
 o~sendWith("count", .array~new, 3) => 93.902
-o~sendWith(.nil, .nil) => 93.972
 o~sendWith("nosuchzz", .nil) => 88.913
 ```
 
@@ -1478,15 +1477,14 @@ o~start(.array~of("count", 1)) => 88.914
 ```
 
 r[class.object.startwith]
-`startWith` is `start` with the arguments of the message in an array: the
-first argument names the message and is checked first, the second is an array
-or an object that answers one to `request('ARRAY')`, which is how the
-arguments are read, as for [`sendWith`](r:class.object.sendwith). It answers
-the message object at once. The errors of the array are raised at the call,
-with two differences from `sendWith`: an object that answers no array raises
-`SYNTAX 98.913`, where `sendWith` raises `88.913`, and a missing array raises
-`93.903`, where `sendWith` raises `88.901`. With no argument at all the error
-is `88.901`.
+`startWith` is `start` with the arguments of the message in an array: the first
+argument names the message, the second is an array or an object that answers
+one to `request('ARRAY')`, which is how the arguments are read, as for
+[`sendWith`](r:class.object.sendwith). It answers the message object at once.
+The errors of the array are raised at the call, with two differences from
+`sendWith`: an object that answers no array raises `SYNTAX 98.913`, where
+`sendWith` raises `88.913`, and a missing array raises `93.903`, where
+`sendWith` raises `88.901`. With no argument at all the error is `88.901`.
 
 ```rexx
 o = .w~new
@@ -1560,36 +1558,37 @@ count got 2
 r[class.object.setmethod]
 `setMethod` gives the receiver a method of its own, as [the object method
 rule](r:class.methods.object) says, and answers no value. It is private, with
-the restriction that [the access rule](r:class.methods.object.access) gives. The
-first argument is the name and is required (`SYNTAX 88.901`); an object that is
-no string and whose `request` with the argument `STRING` answers no string
-raises `88.909`. The second is the method: a method object, a string that holds
-the source of a method, or an array, whose items are read as [the source
-rule](r:class.method.new.source) reads them, so an item that gives no string
-raises `SYNTAX 93.952`. These are instances of `Method`, `String` and `Array`
-themselves; an instance of a subclass of one of them, `Method` included, is
-converted as any other object is. Any other object is sent `request` with the
-argument `ARRAY`, and the array it answers is used; when it answers no array, it
-is sent `request` with the argument `STRING`, and a string answer is used as the
-source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and an object
-whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`, so a
-subclass of `Method` that declares neither `MAKEARRAY` nor `MAKESTRING` is
-refused. When that `request` answers an object that is not a string, the result
-is not specified. The method that the receiver gets runs the code of a method
-object that is given, with the scope that [the scope
-rule](r:class.methods.object.scope) says. It is not specified whether the method
-object that the receiver holds is the argument itself or a copy of it, and what
-scope the argument object answers afterwards is not specified either. The checks
-run in this order: the number of arguments, the name, the method, the scope.
-With no second argument the name is hidden for the receiver. The third argument
-is the scope, `FLOAT` or `OBJECT` as [the scope
-rule](r:class.methods.object.scope) says; another value raises `88.916`, and
-`.nil` raises `88.909`. A fourth argument raises `93.902`. A source that does
-not translate raises the translation error from `setMethod`. The code of a
-method made from a source runs with the scope `FLOAT`, whose object variables
-are separate from those of any class: the methods that the receiver got by
-`setMethod` with `FLOAT`, by `run` and by `enhanced` share one set, which is
-kept for the receiver.
+the restriction that [the access rule](r:class.methods.object.access) gives.
+The first argument is the name and is required (`SYNTAX 88.901`); an object
+that is no string and whose `request` with the argument `STRING` answers no
+string raises `88.909`. The second is the method: a method object, a string
+that holds the source of a method, or an array, whose items are read as [the
+source rule](r:class.method.new.source) reads them, so an item that gives no
+string raises `SYNTAX 93.952`. These are instances of `Method`, `String` and
+`Array` themselves; an instance of a subclass of one of them, `Method`
+included, is converted as any other object is. Any other object is sent
+`request` with the argument `ARRAY`, and the array it answers is used; when it
+answers no array, it is sent `request` with the argument `STRING`, and a string
+answer is used as the source ([the sends
+rule](r:class.object.setmethod.sends)). `.nil`, and an object whose `request`
+with `STRING` answers `.nil`, raise `SYNTAX 93.974`, so a subclass of `Method`
+that declares neither `MAKEARRAY` nor `MAKESTRING` is refused. When that
+`request` answers an object that is not a string, the result is not specified.
+The method that the receiver gets runs the code of a method object that is
+given, with the scope that [the scope rule](r:class.methods.object.scope) says.
+It is not specified whether the method object that the receiver holds is the
+argument itself or a copy of it, and what scope the argument object answers
+afterwards is not specified either. The number of arguments is checked before
+the arguments, and a call that fails more than one check raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. With no
+second argument the name is hidden for the receiver. The third argument is the
+scope, `FLOAT` or `OBJECT` as [the scope rule](r:class.methods.object.scope)
+says; another value raises `88.916`, and `.nil` raises `88.909`. A fourth
+argument raises `93.902`. A source that does not translate raises the
+translation error from `setMethod`. The code of a method made from a source
+runs with the scope `FLOAT`, whose object variables are separate from those of
+any class: the methods that the receiver got by `setMethod` with `FLOAT`, by
+`run` and by `enhanced` share one set, which is kept for the receiver.
 
 ```rexx
 o = .w~new
@@ -1614,9 +1613,6 @@ call try 'o~sm("a9", "return 1", "f", 4)'
 call try 'o~sm'
 call try 'o~sm(.nil)'
 call try 'o~sm("a9", "if then")'
-call try 'o~sm(.nil, .nil)'
-call try 'o~sm("a9", .nil, "x")'
-call try 'o~sm("a9", "if then", "x")'
 call try 'o~sm("a9", .lmeth~new("", "return 1"))'
 m = .method~new("", 'return "mobj"')
 o~sm('M1', m)
@@ -1672,9 +1668,6 @@ o~sm("a9", "return 1", "f", 4) => 93.902
 o~sm => 88.901
 o~sm(.nil) => 88.909
 o~sm("a9", "if then") => 35.929
-o~sm(.nil, .nil) => 88.909
-o~sm("a9", .nil, "x") => 93.974
-o~sm("a9", "if then", "x") => 35.929
 o~sm("a9", .lmeth~new("", "return 1")) => 93.974
 mobj mobj
 41 42 class x
@@ -1831,15 +1824,15 @@ o~unsetMethod("outside") => 97.2
 
 r[class.object.run]
 `run` runs a method on the receiver once and answers what that method answers.
-It is private, with the restriction of
-[the access rule](r:class.methods.object.access). The first argument is the
-method: a method object, a string that holds the source of a method, or an
-array of strings, one for each line, which `run` turns into a method as
-`setMethod` does ([the argument rule](r:class.object.setmethod)), with the
-same conversions and the same errors for a value that is no method or fails to
-translate, and `SYNTAX 88.901` when the argument is missing. The method is not
-kept. The second argument is an option, whose first letter counts and the rest
-is ignored: `I` passes the remaining arguments to the method one for each, in
+It is private, with the restriction of [the access
+rule](r:class.methods.object.access). The first argument is the method: a
+method object, a string that holds the source of a method, or an array of
+strings, one for each line, which `run` turns into a method as `setMethod` does
+([the argument rule](r:class.object.setmethod)), with the same conversions and
+the same errors for a value that is no method or fails to translate, and
+`SYNTAX 88.901` when the argument is missing. The method is not kept. The
+second argument is an option, whose first letter counts and the rest is
+ignored: `I` passes the remaining arguments to the method one for each, in
 order, with omitted ones omitted, and `A` passes the items of the third
 argument, converted as [`sendWith`](r:class.object.sendwith) converts its
 array: a missing array raises `SYNTAX 88.901`, and one that converts to no
@@ -1847,10 +1840,11 @@ array, or to an array of more than one dimension, raises `88.913`. A sparse
 array's empty places are omitted arguments. Without an option the method gets
 no arguments, and arguments after an omitted option raise `88.901`. Any other
 option, the null string included, raises `SYNTAX 93.915`; `.nil` raises
-`88.909`. The checks run in this order: the method, the option, the array. The
-code runs with the scope `FLOAT`: its object variables are those of
-`setMethod`'s floating methods, not those of any class. When the method
-answers nothing, `run` answers nothing.
+`88.909`. A call that fails more than one of these checks raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. The code
+runs with the scope `FLOAT`: its object variables are those of `setMethod`'s
+floating methods, not those of any class. When the method answers nothing,
+`run` answers nothing.
 
 ```rexx
 o = .w~new
@@ -1879,7 +1873,6 @@ call try 'o~go("return 1", "A")'
 call try 'o~go("return 1", "A", .nil)'
 call try 'o~go("return 1", "A", .array~new(2, 2))'
 call try 'o~go2("return arg()", 1)'
-call try 'o~go(.object~new, "x")'
 call try 'o~go("return 1", "x", .nil)'
 call try 'o~go(.lmeth~new("", "return 1"))'
 call try 'o~go("return 1", "I", 1, 2)'
@@ -1934,7 +1927,6 @@ o~go("return 1", "A") => 88.901
 o~go("return 1", "A", .nil) => 88.913
 o~go("return 1", "A", .array~new(2, 2)) => 88.913
 o~go2("return arg()", 1) => 88.901
-o~go(.object~new, "x") => 93.974
 o~go("return 1", "x", .nil) => 93.915
 o~go(.lmeth~new("", "return 1")) => 93.974
 o~go("return 1", "I", 1, 2) => 1

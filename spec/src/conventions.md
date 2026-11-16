@@ -310,7 +310,7 @@ arguments, usually the first and for a few builtins the second, is the
 receiver; the others become the message's arguments, in their order. The
 builtin and the message then give the same result for the same arguments. A
 builtin page says when its builtin is one of these. The range checks below,
-and the [order of the checks](r:conv.check.order), are rules for these
+and [the checks they belong to](r:conv.check.order), are rules for these
 builtins only; any other builtin's page states its own range checks.
 
 ```rexx
@@ -439,49 +439,86 @@ b: say condition('o')~code
 
 ## The order of the checks
 
-r[conv.check.order]
-In a builtin that runs as a String method, when more than one argument
-fails, the form checks run first: the
-whole-number checks of [form](r:conv.whole.form) and
-[value](r:conv.whole.digits), and the [pad](r:conv.pad) check, applied to
-the arguments from left to right, and the first failure is raised. Only when
-every argument passes them do the range checks of
-[positions](r:conv.position.check) and [lengths](r:conv.length.check) run,
-again from left to right. A builtin page that has checks of its own states
-where they fall in this order.
+r[conv.error.precedence]
+What an operation works on is evaluated before the operation checks it, in the
+order the language gives: both operands of an operator, the left before the
+right, before either is checked, and the arguments of a call from left to
+right, before the call is made. An error raised while an operand or an argument
+is evaluated is raised at that point, and nothing after it is evaluated. A
+builtin then checks the number of its arguments and that every argument it
+requires is there ([the call
+rules](r:bif.index.call.order.count-before-values)), and
+[converts](r:bif.index.call.convert.deviation.170) the arguments that are
+objects, before it checks any argument's value. When the checks of one
+operation, which is one operator, one call of a builtin or a method, or the
+checks of one instruction, find one fault, the operation raises the error that
+the rule for that fault gives. When they find more than one, the operation
+raises the error of one of them, and which one is unspecified. A page that
+lists the checks of an operation lists what is checked, not an order among
+them.
 
 ```rexx
 signal on syntax name a
-say substr('abc', 0, 'x')
+say substr('abc', 0)
 a: say condition('o')~code
 signal on syntax name b
-say substr('abc', 0, 1, '**')
+say substr('abc', 1, 'x')
 b: say condition('o')~code
 signal on syntax name c
-say substr('abc', 'x', 1, '**')
+say 'x' + f()
 c: say condition('o')~code
 signal on syntax name d
-say translate('abc', , , '**', 'x')
-d: say condition('o')~code
-signal on syntax name f
-say substr('abc', 0, -1)
-f: say condition('o')~code
+say substr('abc', 0, 'x')
+d: say wordpos(condition('o')~code, '93.924 40.12') > 0
+exit
+f: say 'f ran'
+return 'y'
 ```
 
 ```output
-40.12
-40.23
-40.12
-40.23
 93.924
+40.12
+f ran
+41.1
+1
 ```
 
-> **Note.** The range checks come last because they belong to the String
-> method, which runs only once the call has been made. The reference manual
-> does not say that the function call checks the form of its arguments, under
-> error 40, before it sends the message; that part matches ooRexx. The ANSI
-> draft (9.2.1) checks each argument's form and range together, one argument
-> at a time.
+r[conv.check.order]
+In a builtin that runs as a String method, the arguments have the form checks
+of a [whole number](r:conv.whole.form), its [value](r:conv.whole.digits) and a
+[pad](r:conv.pad), and the range checks of [positions](r:conv.position.check)
+and [lengths](r:conv.length.check). A builtin page that has checks of its own
+names them. A call with one argument in error raises that argument's error.
+When more than one argument fails, or one argument fails more than one check,
+the call raises one of their errors, as [the precedence
+rule](r:conv.error.precedence) says.
+
+```rexx
+signal on syntax name a
+say substr('abc', 1, 2, '**')
+a: say condition('o')~code
+signal on syntax name b
+say translate('abc', , , '**')
+b: say condition('o')~code
+signal on syntax name f
+say substr('abc', 1, -1)
+f: say condition('o')~code
+signal on syntax name g
+say substr('abc', 'x', -1, '**')
+g: say wordpos(condition('o')~code, '40.12 93.923 40.23') > 0
+```
+
+```output
+40.23
+40.23
+93.923
+1
+```
+
+> **Note.** ANSI (9.2.1) checks each argument's form and range together, one
+> argument at a time, and gives which fault of several a call raises. ooRexx
+> departs from that order, and interrexx keeps ooRexx's where they differ, so
+> neither is part of this book.
 
 ## Errors and results
 

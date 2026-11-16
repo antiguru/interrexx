@@ -100,14 +100,15 @@ value as [the string-value rule](r:conv.string.object) says, which sends it
 text that its `makeString` gives; `.nil` and an object with no `makeString`
 raise `SYNTAX 93.938`. An instance of a subclass of `String` is stored as its
 own characters ([the deviation rule](r:class.properties.deviation.109)). The
-name is read as a string as for a directory ([the
-index rule](r:class.directory.indexes)), and `.nil` as the name raises
-`SYNTAX 88.909`. The three answer nothing, and none of them sends `put`, `[]=`
-or `setProperty` to the receiver. `put` and `setProperty` take exactly two
-arguments and `[]=` is the assignment `[name] = value`: fewer raises
-`SYNTAX 93.901`, an omitted place before the last argument given raises
-`SYNTAX 93.903`, and a third argument raises `SYNTAX 93.902`. The count is
-checked first, then the value, then the name.
+name is read as a string as for a directory ([the index
+rule](r:class.directory.indexes)), and `.nil` as the name raises `SYNTAX
+88.909`. The three answer nothing, and none of them sends `put`, `[]=` or
+`setProperty` to the receiver. `put` and `setProperty` take exactly two
+arguments and `[]=` is the assignment `[name] = value`: fewer raises `SYNTAX
+93.901`, an omitted place before the last argument given raises `SYNTAX
+93.903`, and a third argument raises `SYNTAX 93.902`. The count is checked
+first, and a call whose value and name are both in error raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 p = .properties~new
@@ -128,8 +129,6 @@ call try 'p~put(, "x")'
 call try 'p~setProperty("x")'
 call try 'p~setProperty(, "x")'
 call try 'p~put("x", "y", "z")'
-call try 'p~put(.nil, .nil)'
-call try 'p~setProperty(.nil, .nil)'
 exit
 try:
   signal on syntax name bad
@@ -159,8 +158,6 @@ p~put(, "x") => 93.903
 p~setProperty("x") => 93.901
 p~setProperty(, "x") => 93.903
 p~put("x", "y", "z") => 93.902
-p~put(.nil, .nil) => 93.938
-p~setProperty(.nil, .nil) => 93.938
 ```
 
 r[class.properties.unchecked]
@@ -436,10 +433,11 @@ text. A string is accepted only as `0` or `1`, and a logical value `.true` or
 raise `SYNTAX 34.901`. A value that has no `datatype` method, `.nil` and an
 instance of a class that does not understand the message among them, raises
 `SYNTAX 97.1`; one whose `datatype` answers 1 but that is not a logical value
-raises `SYNTAX 34.1`, and one that answers 0 raises `SYNTAX 34.901`. The
-method answers nothing and takes exactly two arguments, counted as for `put`:
-fewer raises `SYNTAX 93.901`, an omitted name before the value `SYNTAX 93.903`
-and a third `SYNTAX 93.902`; the value is checked before the name.
+raises `SYNTAX 34.1`, and one that answers 0 raises `SYNTAX 34.901`. The method
+answers nothing and takes exactly two arguments, counted as for `put`: fewer
+raises `SYNTAX 93.901`, an omitted name before the value `SYNTAX 93.903` and a
+third `SYNTAX 93.902`. A call whose value and name are both in error raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 p = .properties~new
@@ -458,7 +456,6 @@ call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
 call try 'p~setLogical("k")', 'one argument'
 call try 'p~setLogical("k", 1, 2)', 'three'
 call try 'p~setLogical(, 1)', 'omitted name'
-call try 'p~setLogical(.nil, .nil)', 'both nil'
 call try 'p~setLogical(.nil, 1)', 'name nil'
 exit
 try:
@@ -496,7 +493,6 @@ answers 0 => 34.901
 one argument => 93.901
 three => 93.902
 omitted name => 93.903
-both nil => 97.1
 name nil => 88.909
 ```
 
@@ -529,7 +525,6 @@ call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
 call try 'p~setWhole("k")', 'one argument'
 call try 'p~setWhole("k", 1, 2)', 'three'
 call try 'p~setWhole(, 1)', 'omitted name'
-call try 'p~setWhole(.nil, .nil)', 'both nil'
 call try 'p~setWhole(.nil, 1)', 'name nil'
 exit
 try:
@@ -565,7 +560,6 @@ answers 0 => 93.905
 one argument => 93.901
 three => 93.902
 omitted name => 93.903
-both nil => 97.1
 name nil => 88.909
 ```
 

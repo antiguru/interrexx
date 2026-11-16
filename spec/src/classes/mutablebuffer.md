@@ -68,14 +68,16 @@ rule](r:class.index.string) says, and defaults to the null string; an object
 with no string value, `.nil` included, raises `SYNTAX 88.909`. The second
 argument, the size, is read after the first and must be a non-negative whole
 number, or the call raises `SYNTAX 93.923`; it defaults to 256 when it is
-omitted. A whole-number argument of a method of this class is read as that of
-a builtin is ([the form rule](r:conv.whole.form), [the digits
+omitted. A whole-number argument of a method of this class is read as that of a
+builtin is ([the form rule](r:conv.whole.form), [the digits
 rule](r:conv.whole.digits)), so NUMERIC DIGITS plays no part, and only the
 error code differs. The buffer holds the text and has the size given, except
 that a size smaller than the length of the text is raised to that length. A
-subclass receiver gets an instance of itself. Both arguments are checked
-before `init` is sent, so a failing `new` runs no `init`, and the reading of
-the first argument comes before the check of the second.
+subclass receiver gets an instance of itself. Both arguments are checked before
+`init` is sent, so a failing `new` runs no `init`, and the reading of the first
+argument comes before the check of the second. A call whose two arguments are
+both wrong raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 call show .mutablebuffer~new
@@ -89,7 +91,6 @@ call try ".mutablebuffer~new('a', 'x')"
 call try ".mutablebuffer~new('a', -1)"
 call try ".mutablebuffer~new('a', 1.5)"
 call try ".mutablebuffer~new(.nil)"
-call try ".mutablebuffer~new(.nil, 'x')"
 call try ".mutablebuffer~new('a', 1, 2)"
 exit
 show: procedure
@@ -117,7 +118,6 @@ bad: say arg(1) '=>' condition('o')~code
 .mutablebuffer~new('a', -1) => 93.923
 .mutablebuffer~new('a', 1.5) => 93.923
 .mutablebuffer~new(.nil) => 88.909
-.mutablebuffer~new(.nil, 'x') => 88.909
 .mutablebuffer~new('a', 1, 2) => 93.902
 ```
 

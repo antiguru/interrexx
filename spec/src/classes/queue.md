@@ -838,18 +838,19 @@ q~empty(1) => 93.902
 ## Taking part of a queue
 
 r[class.queue.section]
-`section(start, count)` answers a new queue that holds the items from the
-index `start` on: `count` of them, or all of them up to the tail when `count`
-is omitted or runs past the tail. A `count` of 0, or a `start` above the
-number of items, gives an empty queue. The new queue has its own indexes from
-1, the items are the receiver's own objects, and the receiver is not changed.
-The `start` is read as [the index rule](r:class.queue.indexes) says; the
-`count` must be a whole number that is not negative, read as the hint of
+`section(start, count)` answers a new queue that holds the items from the index
+`start` on: `count` of them, or all of them up to the tail when `count` is
+omitted or runs past the tail. A `count` of 0, or a `start` above the number of
+items, gives an empty queue. The new queue has its own indexes from 1, the
+items are the receiver's own objects, and the receiver is not changed. The
+`start` is read as [the index rule](r:class.queue.indexes) says; the `count`
+must be a whole number that is not negative, read as the hint of
 [`new`](r:class.queue.new) is, or `SYNTAX 93.923` is raised. No `start`, or an
 omitted one, raises `SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The
 answer is an instance of the class of the receiver, so that a subclass gets a
-queue of its own class back.
-The arguments are counted first, then `start` is read, then `count`.
+queue of its own class back. The arguments are counted first, and a call whose
+`start` and `count` are both wrong raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 q = .queue~of('a', 'b', 'c', 'd')
@@ -868,7 +869,6 @@ call try 'q~section(.nil)'
 call try 'q~section("x")'
 call try 'q~section(1.5)'
 call try 'q~section(.array~of(1, 2))'
-call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, .nil)'
@@ -901,7 +901,6 @@ q~section(.nil) => 93.907
 q~section("x") => 93.907
 q~section(1.5) => 93.907
 q~section(.array~of(1, 2)) => 93.907
-q~section(0, -1) => 93.907
 q~section(1, -1) => 93.923
 q~section(1, "x") => 93.923
 q~section(1, .nil) => 93.923

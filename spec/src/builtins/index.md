@@ -249,11 +249,11 @@ A builtin converts every argument that its page calls a string and that is an
 object other than a string, from left to right and after it has checked the
 number of its arguments and that every argument it requires is there, before it
 checks any argument: a `STRING` method of
-a later argument runs even when an earlier argument is in error. The error the
-call raises is the one the checks give, as [the order of the
-checks](r:conv.check.order) says, whatever the conversions ran. ooRexx converts an argument as it checks
-it and stops at the first that is in error, so a `STRING` method of a later
-argument does not run.
+a later argument runs even when an earlier argument is in error. The
+conversions do not decide which error the call raises: that is the error of a
+check that fails, as [the precedence rule](r:conv.error.precedence) says.
+ooRexx converts an argument as it checks it and stops at the first that is in
+error, so a `STRING` method of a later argument does not run.
 
 ```rexx
 .local~n = 0
@@ -814,38 +814,28 @@ say d2x(999) d2x('1E2') d2x('-0') d2x('0099.90E1')
 ```
 
 r[bif.index.conv.decimal.order]
-The checks of a D2C or D2X call run in this order, and the first that fails
-is raised: the form of `n` ([whole-number form](r:conv.whole.form), `SYNTAX
-40.12`); whether the decimal argument is a number at all; the sign of `n`
-(`SYNTAX 93.923`); and last whether the decimal argument is a whole number
-with at most NUMERIC DIGITS digits. A decimal argument that is not a number
-is therefore raised even when `n` is negative, and a number that is not
-whole, or has too many digits, is raised only when `n` is not negative.
+A D2C or D2X call checks the form of `n` ([whole-number
+form](r:conv.whole.form), `SYNTAX 40.12`), the sign of `n` (`SYNTAX 93.923`)
+and the decimal argument ([the decimal rule](r:bif.index.conv.decimal)). A
+call that fails more than one of these checks raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say d2c('x', 'y')
+say d2c(65, 'y')
 a: say condition('o')~code
 signal on syntax name b
-say d2c('x', -1)
+say d2c(65, -1)
 b: say condition('o')~code
 signal on syntax name c
-say d2c('1234567890', -1)
-c: say condition('o')~code
-signal on syntax name d
 say d2x('1.5', -1)
-d: say condition('o')~code
-signal on syntax name e
-say d2x('x', -1)
-e: say condition('o')~code
+c: say wordpos(condition('o')~code, '93.923 93.928') > 0
 ```
 
 ```output
 40.12
-93.929
 93.923
-93.923
-93.928
+1
 ```
 
 r[bif.index.conv.digits-limit]
@@ -1030,12 +1020,10 @@ of ten higher than the first digit of the number. When that power is above
 999999999, the call raises `SYNTAX 42.901`, although the number is within
 the [limits](r:bif.index.num.limit) before it is rounded. SIGN raises it
 too, for the same numbers, although its answer does not otherwise depend on
-NUMERIC DIGITS. In TRUNC and FORMAT the error comes after the checks of the
-arguments that their pages list, and in FORMAT before the checks of the fit
-of its result.
-In MAX and MIN it is the rounding of the receiver, and it comes before the
-checks of the other arguments, so a later argument that is not a number does
-not hide it. The same holds for the method forms of these calls.
+NUMERIC DIGITS. In MAX and MIN it is the rounding of the receiver. The same
+holds for the method forms of these calls. A call that also fails another
+check raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 1
@@ -1051,7 +1039,7 @@ say format('99999e999999995', 0)
 c: say condition('o')~code
 signal on syntax name d
 say format('99999e999999995', -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '42.901 93.906') > 0
 numeric digits 9
 signal on syntax name e
 say abs('9.999999995e999999999')
@@ -1063,7 +1051,7 @@ e: say condition('o')~code
 42.901
 42.901
 42.901
-93.906
+1
 42.901
 ```
 
@@ -1077,7 +1065,7 @@ say max('95e999999998')
 b: say condition('o')~code
 signal on syntax name c
 say min('95e999999998', 'x')
-c: say condition('o')~code
+c: say wordpos(condition('o')~code, '42.901 93.904') > 0
 signal on syntax name d
 say '99999e999999995'~abs
 d: say condition('o')~code
@@ -1092,18 +1080,18 @@ say '99999e999999995'~trunc
 g: say condition('o')~code
 signal on syntax name h
 say '95e999999998'~max('x')
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '42.901 93.904') > 0
 ```
 
 ```output
 42.901
 42.901
+1
 42.901
 42.901
 42.901
 42.901
-42.901
-42.901
+1
 ```
 
 r[bif.index.num.write]
@@ -1172,15 +1160,16 @@ say abs('-1234567890') abs('2e11') abs('1.5e-19') abs('12345678e10')
 
 r[bif.index.num.list]
 The arguments of a call that takes a list of numbers are each a
-[number](r:bif.index.num.arg) that the call checks before it compares
-anything: first the receiver, which raises `SYNTAX 93.943` when it is not a
-number, and then the other arguments in order, the first one that is not a
-number raising `SYNTAX 93.904`. This includes a number outside the [exponent
-range](r:bif.index.num.limit), which for a later argument raises 93.904 where
-the receiver, and the other builtins, raise 93.943. The list has no upper
-limit on its length. Its argument count is checked by the [builtin call
-rules](r:bif.index.call.count), with one required argument and no most, so a
-call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
+[number](r:bif.index.num.arg) that the call checks before it compares anything:
+the receiver raises `SYNTAX 93.943` when it is not a number, and another
+argument that is not a number raises `SYNTAX 93.904`. A call with more than one
+argument that is not a number raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. This includes a number outside
+the [exponent range](r:bif.index.num.limit), which for a later argument raises
+93.904 where the receiver, and the other builtins, raise 93.943. The list has
+no upper limit on its length. Its argument count is checked by the [builtin
+call rules](r:bif.index.call.count), with one required argument and no most, so
+a call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
 an omitted first argument raises `SYNTAX 40.5`. A function call that omits an
 argument after the first but passes one after it raises `SYNTAX 40.5` too, as
 Deviation 53 says for [MAX](r:bif.max.deviation.53) and
@@ -1196,7 +1185,7 @@ signal on syntax name b
 say max(, 4)
 b: say condition('o')~code
 signal on syntax name c
-say min('one', 2, 'three')
+say min('one', 2, 3)
 c: say condition('o')~code
 signal on syntax name d
 say min(2, 'three', 'one')
@@ -1206,7 +1195,7 @@ say min(2, 3, .nil)
 e: say condition('o')~code
 signal on syntax name f
 say max('x', 3, 'y')
-f: say condition('o')~code
+f: say wordpos(condition('o')~code, '93.943 93.904') > 0
 signal on syntax name g
 say max(3, '')
 g: say condition('o')~code
@@ -1225,7 +1214,7 @@ i: say condition('o')~code
 93.943
 93.904
 93.904
-93.943
+1
 93.904
 93.904
 93.943
@@ -1486,10 +1475,10 @@ one two three four
 r[bif.index.stream.transient]
 A standard stream that is connected to a pipe is transient: it has no
 positions. A start or line number given to a transient stream raises
-`SYNTAX 93.958`, whatever its value: after the checks of [the argument
-rule](r:bif.index.stream.args) on the argument count, the form of the
-arguments and the count, and in place of that rule's check that the start is 1
-or more. CHAROUT given the name `STDIN` and a start is the exception: the
+`SYNTAX 93.958`, whatever its value, in place of [the argument
+rule](r:bif.index.stream.args)'s check that the start is 1 or more. A call
+that also fails another check of that rule raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says. CHAROUT given the name `STDIN` and a start is the exception: the
 start is not checked beyond its form, and the call [fails as any write to the
 standard input does](r:bif.charout.fail), with NOTREADY and the number of
 characters it did not write as its answer. The examples of
@@ -1510,14 +1499,14 @@ say charout(, 'x', 5)
 c: say condition('o')~code
 signal on syntax name d
 say charin(, 0, -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '88.907 93.958') > 0
 ```
 
 ```output
 93.958
 93.958
 93.958
-88.907
+1
 ```
 
 r[bif.index.stream.open]
@@ -1801,24 +1790,24 @@ r[bif.index.stream.args]
 A start, a count and a line number are [whole-number
 arguments](r:conv.whole.form) with the [value](r:bif.index.stream.value) that
 the next rule gives; they are not checked as the position and length arguments
-of [the String methods](r:conv.method) are. The call is checked in this order.
-The count of arguments comes first, by the [call
-rules](r:bif.index.call.count). Then the form and the value of every such
-argument, from left to right, raise `SYNTAX 40.12`. Then a count that is
-negative raises `SYNTAX 88.907`, and a count that the builtin's page does not
-allow raises the error that page names. Last, a
-[start](r:bif.index.stream.start) or line number that is below 1 raises
-`SYNTAX 93.907`.
+of [the String methods](r:conv.method) are. The count of arguments comes
+first, by the [call rules](r:bif.index.call.count). The form and the value of
+such an argument raise `SYNTAX 40.12`, a count that is negative raises
+`SYNTAX 88.907`, a count that the builtin's page does not allow raises the
+error that page names, and a [start](r:bif.index.stream.start) or line number
+that is below 1 raises `SYNTAX 93.907`. A call that fails more than one of
+these checks raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 f = 'spec-streams-args.tmp'
 call charout f, 'abc'
 signal on syntax name a
-say charin(f, 0, 'x')
+say charin(f, 1, 'x')
 a: say condition('o')~code
 signal on syntax name b
 say charin(f, 0, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '88.907 93.907') > 0
 signal on syntax name c
 say charin(f, 0, 1)
 c: say condition('o')~code
@@ -1831,7 +1820,7 @@ call sysfiledelete f
 
 ```output
 40.12
-88.907
+1
 93.907
 88.907
 ```

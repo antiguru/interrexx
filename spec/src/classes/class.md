@@ -986,32 +986,33 @@ r = .plain~activate => 91.999
 
 r[class.class.define]
 `define` gives the class an instance method, or hides a name, for every
-instance of the class, those that exist already included, as
-[the rule on changes](r:class.methods.late) and
-[the hidden-name rule](r:class.methods.hidden) say, and the search finds it as
-[the search rule](r:class.methods.search) says, and answers no value. The
-first argument is the name, taken in upper case, and may be any string, a
-number included. The second is the method, in the forms that `setMethod`
-takes: a method object, a string that is the source of a method, or an array
-of strings, one for each line, converted as
-[the `setMethod` rule](r:class.object.setmethod) says and with the messages of
-[the sends rule](r:class.class.define.sends). The method that the class holds
-runs the code of the method object that is given, with the class as its scope.
-It is not specified whether the method object that the class holds is the
-argument itself or a copy of it, and what scope the argument object answers
-afterwards is not specified either. A method replaces what the table held for
-the name. With no second argument the name is hidden; with `.nil` as the
-second argument the name is hidden from the search as well, but the table no
-longer holds an entry for it that `method` could answer. An object whose
-`request` with `STRING` answers `.nil`, as an instance of a subclass of
+instance of the class, those that exist already included, as [the rule on
+changes](r:class.methods.late) and [the hidden-name
+rule](r:class.methods.hidden) say, and the search finds it as [the search
+rule](r:class.methods.search) says, and answers no value. The first argument is
+the name, taken in upper case, and may be any string, a number included. The
+second is the method, in the forms that `setMethod` takes: a method object, a
+string that is the source of a method, or an array of strings, one for each
+line, converted as [the `setMethod` rule](r:class.object.setmethod) says and
+with the messages of [the sends rule](r:class.class.define.sends). The method
+that the class holds runs the code of the method object that is given, with the
+class as its scope. It is not specified whether the method object that the
+class holds is the argument itself or a copy of it, and what scope the argument
+object answers afterwards is not specified either. A method replaces what the
+table held for the name. With no second argument the name is hidden; with
+`.nil` as the second argument the name is hidden from the search as well, but
+the table no longer holds an entry for it that `method` could answer. An object
+whose `request` with `STRING` answers `.nil`, as an instance of a subclass of
 `Method` that declares neither `MAKEARRAY` nor `MAKESTRING` does, raises
 `SYNTAX 93.974`, and a source that does not translate raises its translation
 error from `define`. A name is required (`88.901`), a name that is no string
 and has no string value raises `88.909`, and a third argument raises `93.902`.
-The number of arguments is checked first, then the class, then the name, then
-the method. The classes of the class library accept no `define`
-([the library rule](r:class.methods.library)), which raises `98.985` before
-any argument is checked. The examples use objects made after the change.
+The classes of the class library accept no `define` ([the library
+rule](r:class.methods.library)), which raises `98.985`. The number of arguments
+is checked before the arguments, and a call that fails more than one check
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The examples use objects made after the
+change.
 
 ```rexx
 .k~define('A1', 'return 1')
@@ -1033,16 +1034,12 @@ say .k~new~hasMethod('bar')
 call try 'x = .k~method("bar")'
 call try '.k~define("x", 1, 2)'
 call try '.k~define("x", .object~new)'
-call try '.k~define(.nil, .object~new)'
 call try '.k~define("x", "if then")'
 call try '.k~define'
 call try '.k~define(.nil)'
 call try '.k~define(.nil, "return 1")'
 call try 'r = .k~define("y", "return 1")'
 call try '.string~define("y", "return 1")'
-call try '.string~define("y", 1, 2)'
-call try '.string~define(.nil)'
-call try '.string~define'
 call try '.k~define("z", .lmeth~new("", "return 1"))'
 m = .method~new('', 'return "mobj"')
 .k~define('M2', m)
@@ -1094,16 +1091,12 @@ back
 x = .k~method("bar") => 97.1
 .k~define("x", 1, 2) => 93.902
 .k~define("x", .object~new) => 93.974
-.k~define(.nil, .object~new) => 88.909
 .k~define("x", "if then") => 35.929
 .k~define => 88.901
 .k~define(.nil) => 88.909
 .k~define(.nil, "return 1") => 88.909
 r = .k~define("y", "return 1") => 91.999
 .string~define("y", "return 1") => 98.985
-.string~define("y", 1, 2) => 93.902
-.string~define(.nil) => 98.985
-.string~define => 98.985
 .k~define("z", .lmeth~new("", "return 1")) => 93.974
 mobj mobj 1 1
 n 1
@@ -1151,28 +1144,29 @@ made by string
 ```
 
 r[class.class.definemethods]
-`defineMethods` gives the class every method of a collection, as `define`
-gives one. The argument is a collection whose indexes are the method names and
-whose items are method objects, strings or arrays of strings, as `define`
-takes them, or `.nil` to hide the name, converted as
-[`define`](r:class.class.define) converts its method, with the same errors for
-an item that is no method (`SYNTAX 93.974`). A method object item is installed
-as [`define`](r:class.class.define) installs a method object: the class holds
-a method that runs the code of the item with the class as its scope, and it is
-not specified whether that is the item itself or a copy, or what scope the
-item answers afterwards. Every item is made into a method before any is
-defined, so an error leaves the class unchanged. The names are taken in upper
-case. A name that the class holds is replaced. The method sends the argument
-the message `supplier`, with no argument, once, and takes the pairs of what
-the supplier answers one after the other, so any object that answers a
-supplier will do, and the indexes of an array are the names `1`, `2` and so
-on. An object that has no `supplier` method raises `SYNTAX 97.1`, as `.nil`
-does. The object that `supplier` answers need not be a `Supplier`
-([Deviation 108](r:class.class.deviation.108)). The argument is required
-(`88.901`) and a second raises `93.902`. The number of arguments is checked
-first, then the class, then the argument. The method answers no value, and the
-classes of the class library accept it as little as `define`: they raise
-`98.985` before the argument is checked.
+`defineMethods` gives the class every method of a collection, as `define` gives
+one. The argument is a collection whose indexes are the method names and whose
+items are method objects, strings or arrays of strings, as `define` takes them,
+or `.nil` to hide the name, converted as [`define`](r:class.class.define)
+converts its method, with the same errors for an item that is no method
+(`SYNTAX 93.974`). A method object item is installed as
+[`define`](r:class.class.define) installs a method object: the class holds a
+method that runs the code of the item with the class as its scope, and it is
+not specified whether that is the item itself or a copy, or what scope the item
+answers afterwards. Every item is made into a method before any is defined, so
+an error leaves the class unchanged. The names are taken in upper case. A name
+that the class holds is replaced. The method sends the argument the message
+`supplier`, with no argument, once, and takes the pairs of what the supplier
+answers one after the other, so any object that answers a supplier will do, and
+the indexes of an array are the names `1`, `2` and so on. An object that has no
+`supplier` method raises `SYNTAX 97.1`, as `.nil` does. The object that
+`supplier` answers need not be a `Supplier` ([Deviation
+108](r:class.class.deviation.108)). The argument is required (`88.901`) and a
+second raises `93.902`. The method answers no value, and the classes of the
+class library accept it as little as `define`: they raise `98.985`. The number
+of arguments is checked before the argument, and a call that fails more than
+one check raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 t = .directory~new
@@ -1199,8 +1193,6 @@ u = .directory~new
 u['U1'] = .object~new
 call try '.k~defineMethods(u)'
 call try '.object~defineMethods(.directory~new)'
-call try '.object~defineMethods'
-call try '.object~defineMethods(.nil, 2)'
 x = .array~new(4)~~put("return 3", 3)
 call try '.k~defineMethods(x~~put(.object~new, 4))'
 say .k~new~hasMethod('3')
@@ -1245,8 +1237,6 @@ spa
 .k~defineMethods(.directory~new, 1) => 93.902
 .k~defineMethods(u) => 93.974
 .object~defineMethods(.directory~new) => 98.985
-.object~defineMethods => 98.985
-.object~defineMethods(.nil, 2) => 93.902
 .k~defineMethods(x~~put(.object~new, 4)) => 93.974
 0
 .k~defineMethods(x~~put("if then", 4)) => 35.929
@@ -1300,18 +1290,20 @@ supplier sent 0
 ```
 
 r[class.class.delete]
-`delete` removes the entry that the class's own table holds for a name, taken in
-upper case, whether the entry is a method or a mark that hides the name, and
+`delete` removes the entry that the class's own table holds for a name, taken
+in upper case, whether the entry is a method or a mark that hides the name, and
 answers no value. A name that `define` hid with `.nil` as the method is hidden
 by such a mark too, and `delete` ends the hiding at once ([Deviation
 117](r:class.methods.deviation.117)). The name is then looked up in the classes
 behind, as [the hidden-name rule](r:class.methods.hidden) says. A name that the
 table does not hold is not an error and changes nothing, and `delete` does not
-remove a method that only a class behind holds. The name is required
-(`SYNTAX 88.901`), `.nil` raises `88.909`, and a second argument raises
-`93.902`. The number of arguments is checked first, then the class, then the
-name. The classes of the class library accept no `delete` ([the library
-rule](r:class.methods.library)); they raise `98.985` before the name is checked.
+remove a method that only a class behind holds. The name is required (`SYNTAX
+88.901`), `.nil` raises `88.909`, and a second argument raises `93.902`. The
+classes of the class library accept no `delete` ([the library
+rule](r:class.methods.library)); they raise `98.985`. The number of arguments
+is checked before the name, and a call that fails more than one check raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says.
 
 ```rexx
 .sub~define('M2', 'return "sub m2"')
@@ -1333,8 +1325,6 @@ call try '.sub~delete'
 call try '.sub~delete(.nil)'
 call try '.sub~delete("m2", 1)'
 call try '.array~delete("items")'
-call try '.array~delete("items", 1)'
-call try '.array~delete'
 call try '.sub~delete(, 1)'
 exit
 try:
@@ -1365,8 +1355,6 @@ r = .sub~delete("m2") => 91.999
 .sub~delete(.nil) => 88.909
 .sub~delete("m2", 1) => 93.902
 .array~delete("items") => 98.985
-.array~delete("items", 1) => 93.902
-.array~delete => 98.985
 .sub~delete(, 1) => 93.902
 ```
 
@@ -1375,19 +1363,20 @@ r[class.class.inherit]
 directive does, and answers no value. The first argument is the mixin class.
 The second, if given, is a class in the class's list of superclasses, and the
 mixin class is put immediately in front of it; without it the mixin class is
-put at the end of the list. How that changes the order of the class, and so
-the search, is specified by [the change rule](r:class.methods.order.change).
-An argument that is no mixin class, `.nil` and a string among them, raises
-`SYNTAX 98.942`, and so does a class that is not a mixin class. A mixin class
-that is already inherited, or that is an ancestor of the class or has the
-class among its ancestors, raises `98.944`. A mixin class whose base class is
-not the superclass of the class or one of its ancestors raises `98.943`. A
-second argument that is not in the list of superclasses, `.nil` included,
-raises `98.945`. The first argument is required (`88.901`) and a third raises
-`93.902`. The checks run in this order: the number of arguments, the class,
-then `98.942`, `98.944`, `98.943` and `98.945`. A class of the class library
-accepts no `inherit` ([the library rule](r:class.methods.library)); it raises
-`98.985` before the arguments are checked.
+put at the end of the list. How that changes the order of the class, and so the
+search, is specified by [the change rule](r:class.methods.order.change). An
+argument that is no mixin class, `.nil` and a string among them, raises `SYNTAX
+98.942`, and so does a class that is not a mixin class. A mixin class that is
+already inherited, or that is an ancestor of the class or has the class among
+its ancestors, raises `98.944`. A mixin class whose base class is not the
+superclass of the class or one of its ancestors raises `98.943`. A second
+argument that is not in the list of superclasses, `.nil` included, raises
+`98.945`. The first argument is required (`88.901`) and a third raises
+`93.902`. A class of the class library accepts no `inherit` ([the library
+rule](r:class.methods.library)); it raises `98.985`. The number of arguments is
+checked before the arguments, and a call that fails more than one check raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says.
 
 ```rexx
 call show 'start'
@@ -1410,15 +1399,9 @@ call try '.c~inherit(1)'
 call try '.c~inherit(.object~new)'
 call try '.c~inherit'
 call try '.c~inherit(.m4, .plain, 1)'
-call try '.c~inherit(.m1, .nil)'
-call try '.c~inherit(.mstr, .nil)'
-call try '.c~inherit(.m6, .mstr)'
-call try '.c~inherit(.nil, .nil)'
-call try '.string~inherit'
-call try '.string~inherit(.nil, .nil, 3)'
 call try '.c2~inherit(.m5)'
 call try '.c2~inherit(.mstr)'
-call try '.string~inherit(.m1)'
+call try '.string~inherit(.m5)'
 exit
 show:
   s = ''
@@ -1467,15 +1450,9 @@ m3 before m2: M3 M2 PLAIN M1
 .c~inherit(.object~new) => 98.942
 .c~inherit => 88.901
 .c~inherit(.m4, .plain, 1) => 93.902
-.c~inherit(.m1, .nil) => 98.944
-.c~inherit(.mstr, .nil) => 98.943
-.c~inherit(.m6, .mstr) => 98.944
-.c~inherit(.nil, .nil) => 98.942
-.string~inherit => 98.985
-.string~inherit(.nil, .nil, 3) => 93.902
 .c2~inherit(.m5) => no error
 .c2~inherit(.mstr) => 98.943
-.string~inherit(.m1) => 98.985
+.string~inherit(.m5) => 98.985
 ```
 
 r[class.class.uninherit]
@@ -1483,12 +1460,12 @@ r[class.class.uninherit]
 answers no value. How that changes the order of the class is specified by [the
 change rule](r:class.methods.order.change). An argument that is no mixin class
 raises `SYNTAX 98.942`, and a mixin class that the list does not hold, or that
-stands first in it, so that it is the superclass, raises `98.945`. The
-argument is required (`88.901`) and a second raises `93.902`. The number of
-arguments is checked first, then the class, then the argument. A class of the
-class library accepts no `uninherit` ([the library
-rule](r:class.methods.library)); it raises `98.985` before the argument is
-checked.
+stands first in it, so that it is the superclass, raises `98.945`. The argument
+is required (`88.901`) and a second raises `93.902`. A class of the class
+library accepts no `uninherit` ([the library rule](r:class.methods.library));
+it raises `98.985`. The number of arguments is checked before the argument, and
+a call that fails more than one check raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 .c~inherit(.m1)
@@ -1509,9 +1486,7 @@ call show 'end'
 call try '.c~inherit(.m3, .plain)'
 call show 'm3 first'
 call try '.c~uninherit(.m3)'
-call try '.string~uninherit(.m1)'
-call try '.string~uninherit(.nil, 2)'
-call try '.string~uninherit'
+call try '.string~uninherit(.comparable)'
 exit
 show:
   s = ''
@@ -1551,9 +1526,7 @@ end: PLAIN
 .c~inherit(.m3, .plain) => no error
 m3 first: M3 PLAIN
 .c~uninherit(.m3) => 98.945
-.string~uninherit(.m1) => 98.985
-.string~uninherit(.nil, 2) => 93.902
-.string~uninherit => 98.985
+.string~uninherit(.comparable) => 98.985
 ```
 
 ### Making classes and objects
@@ -1561,24 +1534,24 @@ m3 first: M3 PLAIN
 r[class.class.subclass]
 `subclass` makes a new class that has the receiver as its superclass and
 answers it. The first argument is the id of the class, which `id` answers, a
-string or an object whose `request` with the argument `STRING` answers one: none
-raises
-`SYNTAX 88.901`, and `.nil` and an object with no string value raise `88.909`.
-The null string and a number are allowed, the id need not be unique, and the
-class is not entered in `.environment`. The second argument is the metaclass,
-a class that is `Class` or a subclass of it; the new class is an instance of
-it. When the argument is omitted, the metaclass is the one of the receiver, as
-[`metaClass`](r:class.class.metaclass) says. Any other value, `.nil` and a
-class that is no metaclass included, raises `SYNTAX 99.927`. The third
-argument is a collection of class methods, given as `defineMethods` takes its
-argument, and the new class gets them as class methods of its own, which its
-subclasses inherit as they inherit any class method. The new class is not a
+string or an object whose `request` with the argument `STRING` answers one:
+none raises `SYNTAX 88.901`, and `.nil` and an object with no string value
+raise `88.909`. The null string and a number are allowed, the id need not be
+unique, and the class is not entered in `.environment`. The second argument is
+the metaclass, a class that is `Class` or a subclass of it; the new class is an
+instance of it. When the argument is omitted, the metaclass is the one of the
+receiver, as [`metaClass`](r:class.class.metaclass) says. Any other value,
+`.nil` and a class that is no metaclass included, raises `SYNTAX 99.927`. The
+third argument is a collection of class methods, given as `defineMethods` takes
+its argument, and the new class gets them as class methods of its own, which
+its subclasses inherit as they inherit any class method. The new class is not a
 mixin class and not abstract, whatever the receiver is, and it has no package.
-A fourth argument raises `93.902`. The arguments are checked in the order:
-their number (`93.902`), the metaclass, the id, then the collection. When an
-error is raised, the receiver has no new subclass. The method does not check
-whether the receiver may have subclasses, so a subclass of a library class is
-made like any other.
+A fourth argument raises `93.902`. The number of arguments is checked first,
+and a call whose metaclass, id and collection fail more than one check raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says. When an error is raised, the receiver has no new subclass. The method
+does not check whether the receiver may have subclasses, so a subclass of a
+library class is made like any other.
 
 ```rexx
 s = .k~subclass('Sub One')
@@ -1596,7 +1569,6 @@ say .string~subclass('MyString')~new('abc')~class~id
 say .k~subclass(12)~id .k~subclass('')~id .k~subclass(.mk~new)~id
 call try '.k~subclass'
 call try '.k~subclass(.nil)'
-call try '.k~subclass(.nil, 1)'
 call try '.k~subclass(.object~new)'
 call try '.k~subclass("X", .nil)'
 call try '.k~subclass("X", 1)'
@@ -1638,7 +1610,6 @@ MyString
 12  FromMk
 .k~subclass => 88.901
 .k~subclass(.nil) => 88.909
-.k~subclass(.nil, 1) => 99.927
 .k~subclass(.object~new) => 88.909
 .k~subclass("X", .nil) => 99.927
 .k~subclass("X", 1) => 99.927

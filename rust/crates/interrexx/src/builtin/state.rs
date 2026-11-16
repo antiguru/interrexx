@@ -713,22 +713,22 @@ mod tests {
         );
     }
 
-    /// The order of `ARG`'s three checks, one probe per adjacent pair.
+    /// Each of `ARG`'s checks raises its own code when it is the only fault of
+    /// the call; which of several faults is raised is unspecified
+    /// (`r[conv.error.precedence]`).
     #[test]
-    fn args_three_checks_run_in_the_oracles_order() {
-        // A bad *type* in position 1 beats everything after it.
+    fn each_of_args_checks_raises_its_own_code() {
+        // A bad type in position 1.
         assert_eq!(
-            raised(b"ARG", &[b"x", b"q"]),
+            raised(b"ARG", &[b"x"]),
             (40, 12, vec![b"ARG".to_vec(), b"1".to_vec(), b"x".to_vec()])
         );
-        // A bad *range* in position 1 beats the option switch ...
+        // A bad range in position 1.
         assert_eq!(
-            raised(b"ARG", &[b"0", b""]),
+            raised(b"ARG", &[b"0", b"e"]),
             (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
         );
-        // ... and with the position good, that same empty option is the
-        // switch's own 40.904. Same two arguments, one changed, opposite
-        // answers: this is the pair, not two independent checks.
+        // An empty option with a good position.
         assert_eq!(
             raised(b"ARG", &[b"1", b""]),
             (
