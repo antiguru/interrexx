@@ -1335,7 +1335,7 @@ fn send_flags(text: &[u8], oob: bool) -> SendFlags {
             ("MSG_DONTROUTE", SendFlags::DONTROUTE.bits()),
         ],
     );
-    SendFlags::from_bits_retain(bits) | SendFlags::NOSIGNAL
+    SendFlags::from_bits_retain(bits)
 }
 
 fn recv_flags(text: &[u8]) -> RecvFlags {
@@ -1360,6 +1360,7 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     // raises HALT on the `SockSend` line.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
+            let flags = flags | crate::host::send_without_sigpipe(socket);
             rustix::net::send(socket, &bytes, flags)
                 .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
                 .map_err(os)
@@ -1391,6 +1392,7 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     // As `SockSend`: a halting signal ends a blocked send at this clause.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
+            let flags = flags | crate::host::send_without_sigpipe(socket);
             let count = match target(address) {
                 Target::Inet(v4) | Target::Unspec(v4) => {
                     rustix::net::sendto(socket, &bytes, flags, &v4)
@@ -1457,7 +1459,7 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
     // can never come.
     let waits = !flags.contains(RecvFlags::OOB)
         && with_socket(fd, |socket| {
-            Ok(blocks(socket) && !rustix::net::sockopt::socket_acceptconn(socket).unwrap_or(false))
+            Ok(blocks(socket) && !crate::host::is_listening(socket))
         })
         .unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);

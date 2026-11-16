@@ -9,7 +9,7 @@ type Routes<'a> = (&'a (dyn Fn(Piece, Vec<u8>) + Sync), Piece, Option<Piece>);
 /// Reads `reader` to its end, into `kept`, or piece by piece into `written`
 /// as `piece` where there is one.
 ///
-/// With `ended`, the child's pidfd, reading stops once the child has ended,
+/// With `ended`, a descriptor that watches the child ([`crate::host::exit_watch`]), reading stops once the child has ended,
 /// which `ended` reports by becoming readable: what the pipe holds then is read,
 /// and the rest, which only a process the command left running can write, is
 /// read and dropped by a thread of its own, so that process's writes do not
@@ -90,11 +90,7 @@ pub(super) fn collect(
     let err_route = routes.and_then(|(written, _, err)| Some((written, err?)));
     // The readers poll it for the child's end, which reaps nothing; the reap
     // comes after them. Without one, every pipe is read to its end.
-    let ended = i32::try_from(running.id())
-        .ok()
-        .and_then(rustix::process::Pid::from_raw)
-        .and_then(|pid| rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty()).ok())
-        .map(interrexx_rxapi::reserved::reserve);
+    let ended = crate::host::exit_watch(&running).map(interrexx_rxapi::reserved::reserve);
     let ended_reader = ended.as_deref();
     let mut out = Vec::new();
     let mut err = Vec::new();

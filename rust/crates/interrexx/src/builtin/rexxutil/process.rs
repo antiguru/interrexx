@@ -207,6 +207,33 @@ struct Usage {
 }
 
 impl Usage {
+    /// The usage `getrusage` reports, where no `/proc` keeps it. Apple's
+    /// `ru_maxrss` counts bytes, where Linux's counts kilobytes.
+    #[cfg(not(target_os = "linux"))]
+    fn of_this_process() -> Result<Usage, Errno> {
+        use nix::sys::resource::{UsageWho, getrusage};
+        let usage = getrusage(UsageWho::RUSAGE_SELF)
+            .map_err(|error| Errno::from_raw_os_error(error as i32))?;
+        let time = |value: nix::sys::time::TimeVal| {
+            (
+                u64::try_from(value.tv_sec()).unwrap_or(0),
+                u64::try_from(value.tv_usec()).unwrap_or(0),
+            )
+        };
+        let max_rss = u64::try_from(usage.max_rss()).unwrap_or(0);
+        let max_rss = if cfg!(target_vendor = "apple") {
+            max_rss / 1024
+        } else {
+            max_rss
+        };
+        Ok(Usage {
+            user: time(usage.user_time()),
+            system: time(usage.system_time()),
+            max_rss,
+        })
+    }
+
+    #[cfg(target_os = "linux")]
     fn of_this_process() -> Result<Usage, Errno> {
         let read = |path: &str| {
             std::fs::read(path).map_err(|error| {

@@ -186,6 +186,10 @@ mod require;
 // condition.
 mod command;
 
+// What differs from one host system to the next, behind one interface per
+// concern, with an implementation for each host.
+mod host;
+
 // The condition object `CONDITION('O')` answers: the Directory a
 // raise builds, whose indexes depend on the condition's own kind.
 mod condition;

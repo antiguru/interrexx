@@ -114,6 +114,10 @@ systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 COMMAND
 interpreter stack before running anything, so under the same `ulimit -v` it has 512 MiB less to
 allocate than ooRexx.
 
+macOS has neither: there is no `systemd-run`, and its kernel does not enforce `ulimit -v`. Until
+interrexx has a cap of its own for macOS, its tests run there only on CI runners
+(`docs/design/architecture.md`, Hosts).
+
 * Probe from a fresh empty directory, with absolute paths: the current directory is on the external
   routine search path, and a stray `.rex` there runs instead of a typo'd name.
 * Give each ooRexx run its own `XDG_RUNTIME_DIR`, so its `rxapi` daemon is private, and each

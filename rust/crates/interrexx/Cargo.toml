@@ -97,7 +97,11 @@ tz-rs = "0.7.3"
 # with its seconds when off, the timeouts and buffer sizes as the kernel's
 # numbers) from `socket`, and the interface list `SockGetHostId` reads from
 # `net` (`getifaddrs`).
-nix = { version = "0.31.3", default-features = false, features = ["net", "process", "socket", "user"] }
+#
+# `event` is `kqueue`, which tells a command's end where there is no pidfd
+# (`src/host.rs`), and `resource` is `getrusage`, which `SysQueryProcess`
+# reads where there is no `/proc`.
+nix = { version = "0.31.3", default-features = false, features = ["event", "net", "process", "resource", "socket", "user"] }
 # The resolver half of `rxsock`'s host lookups: `getaddrinfo` with the
 # canonical name and `getnameinfo`, which glibc's `gethostbyname` and
 # `gethostbyaddr` reach the DNS through and which no safe crate offers

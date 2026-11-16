@@ -1164,6 +1164,12 @@ pub fn attached_stack() -> Option<(usize, usize)> {
     if ATTACHED.with_borrow(Vec::is_empty) {
         return None;
     }
+    current_stack()
+}
+
+/// The calling thread's stack, its highest address and its size.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn current_stack() -> Option<(usize, usize)> {
     // SAFETY: `pthread_getattr_np` fills the zeroed attribute object for the
     // calling thread, which `pthread_attr_getstack` reads and
     // `pthread_attr_destroy` releases; every pointer is to a live local.
@@ -1178,6 +1184,28 @@ pub fn attached_stack() -> Option<(usize, usize)> {
         libc::pthread_attr_destroy(&raw mut attributes);
         (read == 0).then(|| (low as usize + size, size))
     }
+}
+
+/// The calling thread's stack, its highest address and its size. Apple's
+/// `pthread_get_stackaddr_np` answers the high end, where the stack starts.
+#[cfg(target_vendor = "apple")]
+fn current_stack() -> Option<(usize, usize)> {
+    // SAFETY: both functions read the calling thread's own descriptor, which
+    // `pthread_self` names and which lives as long as the thread does.
+    let (high, size) = unsafe {
+        let this = libc::pthread_self();
+        (
+            libc::pthread_get_stackaddr_np(this) as usize,
+            libc::pthread_get_stacksize_np(this),
+        )
+    };
+    (high != 0 && size != 0).then_some((high, size))
+}
+
+/// Hosts with no stack query: the caller goes without the bound.
+#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
+fn current_stack() -> Option<(usize, usize)> {
+    None
 }
 
 /// Attaches this thread to the thread context at `context`, as

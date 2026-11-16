@@ -16,7 +16,6 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use rustix::fs::{Access, access};
-use rustix::net::sockopt::socket_peercred;
 use rustix::net::{SendFlags, send};
 
 use super::{CancelToken, Transport, TransportError};
@@ -118,8 +117,42 @@ fn own_uid() -> u32 {
 }
 
 /// The user whose process is at the other end of `stream`.
+#[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
-    Ok(socket_peercred(stream)?.uid.as_raw())
+    Ok(rustix::net::sockopt::socket_peercred(stream)?.uid.as_raw())
+}
+
+/// The user whose process is at the other end of `stream`.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
+    let (uid, _) = nix::unistd::getpeereid(stream).map_err(io::Error::from)?;
+    Ok(uid.as_raw())
+}
+
+/// The flags of every client write: no `SIGPIPE` where a flag can say so.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+const SEND_FLAGS: SendFlags = SendFlags::NOSIGNAL;
+
+/// The flags of every client write; [`no_sigpipe`] keeps `SIGPIPE` away instead.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+const SEND_FLAGS: SendFlags = SendFlags::empty();
+
+/// Makes writes to `stream` fail with `EPIPE` instead of raising `SIGPIPE`, where the socket and
+/// not the write carries that choice.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the socket option can fail on other hosts"
+)]
+fn no_sigpipe(_stream: &UnixStream) -> io::Result<()> {
+    Ok(())
+}
+
+/// Makes writes to `stream` fail with `EPIPE` instead of raising `SIGPIPE`, where the socket and
+/// not the write carries that choice.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+fn no_sigpipe(stream: &UnixStream) -> io::Result<()> {
+    Ok(rustix::net::sockopt::set_socket_nosigpipe(stream, true)?)
 }
 
 /// The first `rxapi` that can run, beside this executable, else on `PATH`. The answer is absolute
@@ -209,7 +242,7 @@ fn pause() {
 /// Writes all of `bytes` without raising `SIGPIPE` in the embedding process.
 fn send_all(stream: &UnixStream, mut bytes: &[u8]) -> io::Result<()> {
     while !bytes.is_empty() {
-        match send(stream, bytes, SendFlags::NOSIGNAL) {
+        match send(stream, bytes, SEND_FLAGS) {
             Ok(sent) => bytes = &bytes[sent..],
             Err(rustix::io::Errno::INTR) => {}
             Err(error) => return Err(error.into()),
@@ -335,6 +368,7 @@ impl Unix {
         let stream = reserve(
             UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?,
         );
+        no_sigpipe(&stream).map_err(ConnectFailure::Absent)?;
         let peer = peer_uid(&stream).map_err(ConnectFailure::Absent)?;
         if peer != uid {
             return Err(ConnectFailure::Foreign { uid: peer });

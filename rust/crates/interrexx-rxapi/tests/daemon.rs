@@ -1,6 +1,7 @@
 //! A real daemon, each test in its own `REXX_API_DIR`.
 
 use std::io::{ErrorKind, Read, Write};
+#[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -16,7 +17,9 @@ use interrexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
 use interrexx_rxapi::message::{FIFO, NO_WAIT, Registry, Reply, Request, Timestamp, WAIT};
 use interrexx_rxapi::transport::unix::{Unix, lock_path, prepare_dir, socket_path};
 use interrexx_rxapi::transport::{CancelToken, Transport, TransportError};
+#[cfg(target_os = "linux")]
 use rustix::io::{FdFlags, fcntl_setfd};
+#[cfg(target_os = "linux")]
 use rustix::process::{Pid, Resource, Rlimit, getrlimit, prlimit};
 
 const DAEMON: &str = env!("CARGO_BIN_EXE_rxapi");
@@ -165,10 +168,22 @@ fn cancellable_pull(
     }
 }
 
+#[cfg(target_os = "linux")]
 fn is_running(pid: u32) -> bool {
     Path::new(&format!("/proc/{pid}/comm")).exists()
         && std::fs::read_to_string(format!("/proc/{pid}/stat"))
             .is_ok_and(|stat| !stat.contains(") Z "))
+}
+
+/// Whether `pid` runs and is not a zombie, as `ps` reports its state.
+#[cfg(not(target_os = "linux"))]
+fn is_running(pid: u32) -> bool {
+    Command::new("ps")
+        .args(["-o", "stat=", "-p", &pid.to_string()])
+        .output()
+        .is_ok_and(|out| {
+            out.status.success() && !String::from_utf8_lossy(&out.stdout).trim().starts_with('Z')
+        })
 }
 
 fn kill(pid: u32) {
@@ -330,8 +345,10 @@ fn a_killed_daemon_gives_clean_errors_and_the_next_connect_restarts() {
 
 /// A daemon that is a child of this test, killed outright if the test ends without it having
 /// stopped.
+#[cfg(target_os = "linux")]
 struct OwnDaemon(Child);
 
+#[cfg(target_os = "linux")]
 impl Drop for OwnDaemon {
     fn drop(&mut self) {
         let _ = self.0.kill();
@@ -341,7 +358,9 @@ impl Drop for OwnDaemon {
 
 /// A daemon a client started can hold `SIGTERM` blocked or ignored, because both survive an
 /// `exec`: the signal then stopped nothing. It stops the daemon cleanly, with its socket removed,
-/// whichever of the two it was started with.
+/// whichever of the two it was started with. GNU `env` sets the signal's disposition, and the
+/// daemon's environment is read from `/proc`.
+#[cfg(target_os = "linux")]
 #[test]
 fn sigterm_stops_a_daemon_that_started_with_it_blocked_or_ignored() {
     for how in ["--block-signal=TERM", "--ignore-signal=TERM"] {
@@ -529,12 +548,15 @@ fn a_connection_from_another_user_is_dropped() {
     assert!(matches!(refused, Err(TransportError::Unavailable(_))));
 }
 
+#[cfg(target_os = "linux")]
 fn limit_threads(pid: u32, limit: Rlimit) {
     let pid = Pid::from_raw(pid as i32).expect("a positive pid");
     prlimit(Some(pid), Resource::Nproc, limit).expect("prlimit");
 }
 
 /// `RLIMIT_NPROC` counts the whole user, so a limit of 0 fails every `clone` in that daemon alone.
+/// Setting another process's limit needs `prlimit`.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_daemon_out_of_threads_drops_that_connection_and_keeps_serving() {
     let service = ServiceDir::new();
@@ -668,7 +690,9 @@ fn the_search_continues_past_an_rxapi_that_cannot_run() {
     assert!(start_from_path(&service, "first/bare:first:bin"));
 }
 
-/// A daemon a client started keeps none of the client's descriptors.
+/// A daemon a client started keeps none of the client's descriptors. Its descriptors are listed
+/// from `/proc`.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_started_daemon_does_not_keep_inherited_descriptors() {
     let service = ServiceDir::new();

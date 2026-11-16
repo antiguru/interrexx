@@ -229,8 +229,13 @@ pub(crate) fn getegid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
 pub(crate) fn setuid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let uid = int(interp, args, 1)?;
-    let dropped = nix::unistd::setgroups(&[]).map_err(nix_errno);
-    kept(interp, dropped);
+    let dropped = crate::host::drop_supplementary_groups();
+    // A host that cannot drop the groups does not change the user either, so
+    // a process giving up its privileges never keeps the old user's groups.
+    if dropped == Err(nix::errno::Errno::ENOSYS) {
+        return Ok(code(interp, dropped.map_err(nix_errno)));
+    }
+    kept(interp, dropped.map_err(nix_errno));
     let set = nix::unistd::setuid(nix::unistd::Uid::from_raw(unsigned(uid))).map_err(nix_errno);
     Ok(code(interp, set))
 }
@@ -344,7 +349,9 @@ pub(crate) fn signal(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 pub(crate) fn umask(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let mask = int(interp, args, 1)?;
-    let previous = rustix::process::umask(rustix::fs::Mode::from_raw_mode(unsigned(mask) & 0o777));
+    let previous = rustix::process::umask(rustix::fs::Mode::from_raw_mode(crate::host::raw_mode(
+        unsigned(mask) & 0o777,
+    )));
     Ok(number(interp, previous.as_raw_mode()))
 }
 
@@ -432,8 +439,7 @@ fn access_with(interp: &mut Interp, args: &[Option<ObjRef>], effective: bool) ->
     let requested = unsigned(int(interp, args, 2)?);
     // r[rxunixsys.files.euidaccess]: SysEuidaccess reads only bits 1, 2 and 4
     // of its mode; SysAccess passes the mode on and so refuses other bits.
-    let mode =
-        rustix::fs::Access::from_bits_retain(if effective { requested & 7 } else { requested });
+    let mode = crate::host::access_mode(if effective { requested & 7 } else { requested });
     let flags = if effective {
         rustix::fs::AtFlags::EACCESS
     } else {
@@ -455,7 +461,8 @@ pub(crate) fn euidaccess(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
 pub(crate) fn mkdir(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let name = path(interp, args, 1)?;
-    let mode = rustix::fs::Mode::from_raw_mode(unsigned(int(interp, args, 2)?));
+    let mode =
+        rustix::fs::Mode::from_raw_mode(crate::host::raw_mode(unsigned(int(interp, args, 2)?)));
     let made = rustix::fs::mkdir(name.as_slice(), mode).map_err(os);
     Ok(code(interp, made))
 }
@@ -509,8 +516,11 @@ pub(crate) fn chmod(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjR
     let Some(mode) = permissions(&text) else {
         return Err(failed(interp));
     };
-    let changed =
-        rustix::fs::chmod(name.as_slice(), rustix::fs::Mode::from_raw_mode(mode)).map_err(os);
+    let changed = rustix::fs::chmod(
+        name.as_slice(),
+        rustix::fs::Mode::from_raw_mode(crate::host::raw_mode(mode)),
+    )
+    .map_err(os);
     Ok(code(interp, changed))
 }
 
@@ -601,7 +611,7 @@ pub(crate) fn stat(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
             string(interp, &text)
         }
         Some(b'P') => {
-            let text = permission_text(stat.st_mode);
+            let text = permission_text(crate::host::mode_bits(stat.st_mode));
             string(interp, &text)
         }
         _ => return Err(failed(interp)),

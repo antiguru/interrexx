@@ -344,7 +344,7 @@ fn entry_line(
         out.push_str(&format!("{:10}  ", stat.st_size.min(9_999_999_999)));
     }
     let mut out = out.into_bytes();
-    out.extend_from_slice(&mode_string(kind, stat.st_mode));
+    out.extend_from_slice(&mode_string(kind, crate::host::mode_bits(stat.st_mode)));
     out.extend_from_slice(b"  ");
     out.extend_from_slice(&path);
     Some(out)

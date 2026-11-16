@@ -569,17 +569,99 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
+  # macOS: every target built and linted on Apple's toolchain, on a checkout without the
+  # submodule. Code that only one host compiles (`cfg`) is checked by this job and `clippy`
+  # between them.
+  macos-build:
+    name: macOS build and clippy
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          components: clippy
+          cache-workspaces: rust
+          # See the build job.
+          cache-key: macos-no-submodule
+      - name: Assert the upstream tier is absent
+        # See the build job.
+        working-directory: .
+        run: |
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+      - name: Cargo clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Cargo build
+        run: cargo build --locked --workspace --all-targets
+
+  # macOS: the `standalone` profile, as the shards run it on Linux. The port is in progress, so
+  # a failure here is reported and does not fail the run; the `test` gate does not wait for it.
+  macos-standalone:
+    name: macOS standalone tests (port in progress)
+    needs: [third-party]
+    runs-on: macos-15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+          cache-key: macos-no-submodule
+      - uses: actions/cache/restore@v6
+        with:
+          # Saved on Linux; only ootest and oodocs, which are plain files, are kept below.
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Remove everything of the upstream tier
+        # See the shard job.
+        working-directory: .
+        run: |
+          rm -rf third_party/oracle build
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+          test -d ootest
+          test -d oodocs
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install nextest
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: nextest@0.9.150
+      - name: Install svn
+        # The extractor tests ask the oodocs working copy for its revision.
+        run: brew install subversion
+      - name: Cargo nextest
+        run: cargo nextest run --locked --workspace --profile standalone --no-fail-fast
+
   # The check branch protection requires; it passes when every job above did.
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit]
+    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}"
+          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}, macOS build: ${{ needs.macos-build.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.upstream-tier.result }}" = success
           test "${{ needs.msrv-standalone.result }}" = success
@@ -592,6 +674,7 @@ jobs:
           test "${{ needs.clippy.result }}" = success
           test "${{ needs.fmt.result }}" = success
           test "${{ needs.jit.result }}" = success
+          test "${{ needs.macos-build.result }}" = success
 
   # The `jit` feature (Cranelift), which no other job builds: clippy with it, and the JIT's
   # own tests in debug, where the Cranelift verifier runs on every loop compiled, a refused
