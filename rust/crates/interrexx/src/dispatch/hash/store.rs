@@ -857,21 +857,20 @@ pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure>
         .count())
 }
 
-/// Compacts the live entries, in their order, into fresh arrays sized for
-/// `capacity`, and files them again from their cached codes. Sends nothing.
-/// The store stays linked or unlinked as it was.
-pub(super) fn rebuild(
+/// Compacts the live entries of `store`, the receiver's, in their order, into
+/// fresh arrays sized for [`regrown`] of them, and files them again from their
+/// cached codes. Sends nothing. The store stays linked or unlinked as it was.
+fn rebuild(
     interp: &mut Interp,
     receiver: ObjRef,
     half: Half,
-    capacity: usize,
+    store: &Store,
 ) -> Result<Store, Failure> {
-    let store = store_in(interp, receiver, half)?;
     let indexes = array_slots(interp, store.indexes)?;
     let items = array_slots(interp, store.items)?;
-    let (_, codes) = codes_of(interp, &store)?;
+    let (_, codes) = codes_of(interp, store)?;
     let linked = codes.linked();
-    let mut live = Vec::new();
+    let mut live = Vec::with_capacity(store.used);
     for (position, index) in indexes.iter().enumerate().take(store.used) {
         if let Some(index) = *index
             && let Some(code) = codes.code(position)
@@ -879,6 +878,7 @@ pub(super) fn rebuild(
             live.push((index, items.get(position).copied().flatten(), code));
         }
     }
+    let capacity = regrown(live.len());
     Ok(build(interp, receiver, half, &live, capacity, linked))
 }
 
@@ -908,8 +908,7 @@ pub(super) fn append(
         None => (store_in(interp, receiver, half)?, None),
     };
     if store.used >= store.capacity(interp)? {
-        let live = count_in(interp, &store)?;
-        store = rebuild(interp, receiver, half, regrown(live))?;
+        store = rebuild(interp, receiver, half, &store)?;
         known = None;
     }
     let (mut chain, mut stride) = chain_for_append(interp, &store, code, known)?;
