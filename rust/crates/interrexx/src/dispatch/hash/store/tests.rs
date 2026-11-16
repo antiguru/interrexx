@@ -152,6 +152,33 @@ fn a_mid_probe_remove_of_the_compared_entry_does_not_lose_the_put() {
     assert_eq!(out, "x 2\n");
 }
 
+/// A key whose `==`, met with the second entry of its chain, removes the
+/// chain's oldest and answers false: the `put` that follows the probe must
+/// join the chain at the entry that is its oldest now, not at the hole, or
+/// the new entry would be linked from the hole and lost to every lookup.
+#[test]
+fn a_put_after_its_probe_removed_the_oldest_of_its_chain_is_found() {
+    let out = output_of(
+        "t = .table~new\n\
+         t[.key~new('a', t)] = 1\n\
+         t[.key~new('b', t)] = 2\n\
+         k = .key~new('k', t)\nk~arm\n\
+         t[k] = 'x'\n\
+         t[.key~new('m', t)] = 'y'\n\
+         say t[k] t[.key~new('m', t)] t[.key~new('b', t)] t~items t~hasIndex(.key~new('a', t))\n\
+         ::class key\n\
+         ::method init\n  expose v t armed\n  use arg v, t\n  armed = .false\n\
+         ::method arm\n  expose armed\n  armed = .true\n\
+         ::method v\n  expose v\n  return v\n\
+         ::method hashCode\n  return 'same'\n\
+         ::method '=='\n  expose v t armed\n  use arg other\n\
+         \x20 if \\other~isA(.key) then return .false\n\
+         \x20 if armed & other~v == 'b' then do\n    armed = .false\n    t~remove(.key~new('a', t))\n  end\n\
+         \x20 return v == other~v\n",
+    );
+    assert_eq!(out, "x y 2 3 0\n");
+}
+
 /// Distinct indexes whose hashes are alike share one chain: each entry of it
 /// is still one entry under its own index.
 #[test]

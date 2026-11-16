@@ -5,6 +5,11 @@ use super::*;
 pub(super) struct Probe {
     pub(super) found: Option<usize>,
     pub(super) code: u64,
+    /// Where the chain of `code` was when the probe last walked the slots of
+    /// the store it answers with: the chain's slot and oldest entry, or the
+    /// slot a new chain takes. An append that follows with nothing sent in
+    /// between starts from it rather than walking the slots again.
+    pub(super) chain: Result<(usize, usize), usize>,
 }
 
 pub(super) fn probe(
@@ -57,8 +62,8 @@ fn probe_string_value(
     };
     if let Some(wanted) = plain {
         let code = code_of(super::super::string_hash(wanted));
-        if let Some(found) = find_plain_string(interp, &store, code, wanted) {
-            return Ok((store, Probe { found, code }));
+        if let Some((found, chain)) = find_plain_string(interp, &store, code, wanted) {
+            return Ok((store, Probe { found, code, chain }));
         }
     }
     let short;
@@ -74,8 +79,8 @@ fn probe_string_value(
         }
     };
     let code = code_of(super::super::string_hash(wanted));
-    let found = find_text(interp, &store, code, wanted)?;
-    Ok((store, Probe { found, code }))
+    let (found, chain) = find_text_in(interp, &store, code, wanted)?;
+    Ok((store, Probe { found, code, chain }))
 }
 
 /// The position of the entry whose index's string value is `wanted`, in a
@@ -87,20 +92,31 @@ pub(super) fn find_text(
     code: u64,
     wanted: &[u8],
 ) -> Result<Option<usize>, Failure> {
+    Ok(find_text_in(interp, store, code, wanted)?.0)
+}
+
+/// [`find_text`], and where the chain of `code` is, as [`Probe::chain`].
+fn find_text_in(
+    interp: &mut Interp,
+    store: &Store,
+    code: u64,
+    wanted: &[u8],
+) -> Result<(Option<usize>, Result<(usize, usize), usize>), Failure> {
     if let Some(found) = find_plain_string(interp, store, code, wanted) {
         return Ok(found);
     }
     let (slots, codes) = codes_of(interp, store)?;
-    let mut at = chain_in(slots, codes, code).ok().map(|(_, head)| head);
+    let chain = chain_in(slots, codes, code);
+    let mut at = chain.ok().map(|(_, head)| head);
     while let Some(position) = at {
         if let Some(held) = slot_at(interp, store.indexes, position)?
             && *interp.to_text(held) == *wanted
         {
-            return Ok(Some(position));
+            return Ok((Some(position), chain));
         }
         at = codes_of(interp, store)?.1.next(position);
     }
-    Ok(None)
+    Ok((None, chain))
 }
 
 fn probe_by_protocol(
@@ -121,7 +137,8 @@ fn probe_by_protocol(
         // keeps the hash contract, and nothing is sent to it: only the chain
         // of the index's own code is compared.
         let (slots, codes) = codes_of(interp, &store)?;
-        let mut at = chain_in(slots, codes, code).ok().map(|(_, head)| head);
+        let chain = chain_in(slots, codes, code);
+        let mut at = chain.ok().map(|(_, head)| head);
         while let Some(position) = at {
             let Some(held) = slot_at(interp, store.indexes, position)? else {
                 at = codes_of(interp, &store)?.1.next(position);
@@ -147,13 +164,21 @@ fn probe_by_protocol(
                     Probe {
                         found: Some(position),
                         code,
+                        chain,
                     },
                 ));
             }
             // Read after the comparison: a removal it made relinked the chain.
             at = codes_of(interp, &store)?.1.next(position);
         }
-        return Ok((store, Probe { found: None, code }));
+        return Ok((
+            store,
+            Probe {
+                found: None,
+                code,
+                chain,
+            },
+        ));
     }
 }
 
@@ -167,20 +192,21 @@ fn find_plain_string(
     store: &Store,
     code: u64,
     wanted: &[u8],
-) -> Option<Option<usize>> {
+) -> Option<(Option<usize>, Result<(usize, usize), usize>)> {
     let (slots, codes) = codes_of(interp, store).ok()?;
     let indexes = array_slots(interp, store.indexes).ok()?;
-    let Ok((_, head)) = chain_in(slots, codes, code) else {
-        return Some(None);
+    let chain = chain_in(slots, codes, code);
+    let Ok((_, head)) = chain else {
+        return Some((None, chain));
     };
     for position in codes.chain(head) {
         if let Some(held) = indexes.get(position).copied().flatten()
             && plain_text_is(interp, held, wanted)?
         {
-            return Some(Some(position));
+            return Some((Some(position), chain));
         }
     }
-    Some(None)
+    Some((None, chain))
 }
 
 /// Whether `held`'s string value is `wanted`, for a plain string only: the

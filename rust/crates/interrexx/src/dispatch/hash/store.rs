@@ -219,6 +219,7 @@ pub(super) struct Codes<'a> {
 
 impl<'a> Codes<'a> {
     /// The codes array `fields` of a store with `slot_count` slots.
+    #[inline]
     pub(super) fn new(fields: &'a [Option<ObjRef>], slot_count: usize) -> Codes<'a> {
         let stride = if fields.len() > capacity_of(slot_count) {
             FIELDS
@@ -228,10 +229,12 @@ impl<'a> Codes<'a> {
         Codes { fields, stride }
     }
 
+    #[inline]
     fn linked(&self) -> bool {
         self.stride == FIELDS
     }
 
+    #[inline]
     fn field(&self, position: usize, field: usize) -> Option<i64> {
         if field >= self.stride {
             return None;
@@ -249,17 +252,20 @@ impl<'a> Codes<'a> {
     }
 
     /// The code cached for the entry at a position, `None` for a hole.
+    #[inline]
     pub(super) fn code(&self, position: usize) -> Option<u64> {
         self.field(position, CODE).map(|code| code as u64)
     }
 
     /// The entry after the one at `position` in its chain, `None` for the
     /// newest.
+    #[inline]
     pub(super) fn next(&self, position: usize) -> Option<usize> {
         self.field(position, NEXT).map(|next| next as usize)
     }
 
     /// The newest entry of the chain whose oldest is at `head`.
+    #[inline]
     fn tail(&self, head: usize) -> usize {
         self.field(head, TAIL).map_or(head, |tail| tail as usize)
     }
@@ -275,6 +281,7 @@ impl<'a> Codes<'a> {
 /// entry. When the store holds no entry of that code, `Err` with the slot a
 /// new chain takes: the first deleted one the probe passed, or the empty one
 /// it ended at.
+#[inline]
 pub(super) fn chain_in(
     slots: &[Option<ObjRef>],
     codes: Codes<'_>,
@@ -299,6 +306,7 @@ pub(super) fn chain_in(
 }
 
 /// A store's codes array and slot index, read together.
+#[inline]
 pub(super) fn codes_of<'a>(
     interp: &'a Interp,
     store: &Store,
@@ -815,6 +823,9 @@ pub(super) fn rebuild(
 /// Adds an entry after every other, without looking for an index the store
 /// already holds -- the append half of `put`, and the whole of a multi-value
 /// `put`. `code` is the index's [`code_of`]. A full store is rebuilt first.
+///
+/// `known` is where a probe of the receiver's store, as it is now, last
+/// found the chain of `code` ([`Probe::chain`]).
 pub(super) fn append(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -822,17 +833,20 @@ pub(super) fn append(
     index: ObjRef,
     item: Option<ObjRef>,
     code: u64,
+    mut known: Option<Result<(usize, usize), usize>>,
 ) -> Result<(), Failure> {
     let mut store = store_in(interp, receiver, half)?;
     if store.used >= store.capacity {
         let live = count_in(interp, &store)?;
         store = rebuild(interp, receiver, half, regrown(live))?;
+        known = None;
     }
-    let (mut chain, mut stride) = chain_for_append(interp, &store, code)?;
+    let (mut chain, mut stride) = chain_for_append(interp, &store, code, known)?;
     if chain.is_ok() && stride != FIELDS {
-        // The first entry to join a chain: the store becomes linked.
+        // The first entry to join a chain: the store becomes linked. Its
+        // slots and positions stay, so the chain found stays where it is.
         store = relink(interp, receiver, half, &store)?;
-        (chain, stride) = chain_for_append(interp, &store, code)?;
+        (chain, stride) = chain_for_append(interp, &store, code, None)?;
     }
     let position = store.used;
     write_slot(interp, store.indexes, position, Some(index));
@@ -877,14 +891,35 @@ fn relink(
 
 /// What [`append`] joins for `code`: the oldest and newest entry of its
 /// chain, or the slot a new chain takes; and the store's stride.
+///
+/// `known` is read again at its slot rather than trusted: the probe's
+/// comparisons may have removed entries since it walked the slots, which
+/// moves a chain's oldest entry or marks its slot deleted, though, without
+/// an append, it neither fills a free slot nor starts a chain. Only a slot
+/// that no longer reads as `known` said sends the walk round again.
+#[inline]
 fn chain_for_append(
     interp: &Interp,
     store: &Store,
     code: u64,
+    known: Option<Result<(usize, usize), usize>>,
 ) -> Result<(Result<(usize, usize), usize>, usize), Failure> {
     let (slots, codes) = codes_of(interp, store)?;
-    let chain = chain_in(slots, codes, code).map(|(_, head)| (head, codes.tail(head)));
-    Ok((chain, codes.stride))
+    let reread = known.and_then(|known| {
+        let slot = match known {
+            Ok((slot, _)) | Err(slot) => slot,
+        };
+        match (known, mark_in(slots, slot)) {
+            (Ok(_), Mark::Entry(head)) if codes.code(head) == Some(code) => Some(Ok(head)),
+            (Ok(_), Mark::Deleted) | (Err(_), Mark::Empty | Mark::Deleted) => Some(Err(slot)),
+            _ => None,
+        }
+    });
+    let chain = match reread {
+        Some(chain) => chain,
+        None => chain_in(slots, codes, code).map(|(_, head)| head),
+    };
+    Ok((chain.map(|head| (head, codes.tail(head))), codes.stride))
 }
 
 /// Writes one of the fields of the entry at `position`, in a codes array of
@@ -1046,8 +1081,17 @@ pub(super) fn insert_in(
         return Ok(());
     }
     // The probe sent nothing after its last look at the store, so the index
-    // is still absent; the append reads the store afresh and sends nothing.
-    append(interp, receiver, half, index, item, found.code)
+    // is still absent and its chain where the probe found it; the append
+    // reads the store afresh and sends nothing.
+    append(
+        interp,
+        receiver,
+        half,
+        index,
+        item,
+        found.code,
+        Some(found.chain),
+    )
 }
 
 /// A multi-value `put`: another entry under `index`, after every other,
@@ -1060,7 +1104,7 @@ pub(super) fn insert_duplicate(
 ) -> Result<(), Failure> {
     let keys = keys_of(interp, receiver);
     let code = code_of(hash_of(interp, keys, index)?);
-    append(interp, receiver, CONTENTS, index, item, code)
+    append(interp, receiver, CONTENTS, index, item, code, None)
 }
 
 #[cfg(test)]
