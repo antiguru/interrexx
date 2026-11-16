@@ -21,7 +21,8 @@ use std::process::{Command, Stdio};
 const MEMORY: &str = "2G";
 
 /// The seconds `timeout` gives each run before it kills it, so a run that deadlocks fails
-/// instead of hanging. It runs inside `memcap`, so the signal reaches `rexx` itself.
+/// instead of hanging. It runs inside `memcap`, so the signal reaches `rexx` itself. An oracle run
+/// whose output is compared gets the same.
 const SECONDS: &str = "120";
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
@@ -185,7 +186,21 @@ fn run_against(
     if oracle != Oracle::Not {
         let located = support::oracle::locate();
         let library_path = format!("{}:{}", located.lib_dir().display(), dir.display());
-        let theirs = located.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
+        // A run whose output is compared must end, so the oracle gets the bound our run gets,
+        // which some programs here need past the oracle's usual one. A run that must still be
+        // waiting keeps the usual bound.
+        let deadline = if oracle == Oracle::UpToRefusal {
+            support::oracle::ORACLE_DEADLINE
+        } else {
+            std::time::Duration::from_secs(seconds.parse().expect("a whole number of seconds"))
+        };
+        let theirs = located.run_in_within(
+            &program,
+            &dir,
+            &[("LD_LIBRARY_PATH", &library_path)],
+            None,
+            deadline,
+        );
         let cut = |stderr: &str| {
             String::from_utf8_lossy(&support::error_text::cut_error_texts(stderr.as_bytes()))
                 .into_owned()
@@ -972,7 +987,7 @@ fn an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded(
 }
 
 /// [`an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded`] with the post
-/// six seconds after the wait begins. After five seconds stderr says that the callback waits
+/// fifteen seconds after the wait begins. After five seconds stderr says that the callback waits
 /// while the main program it stopped makes no progress, and the post then ends the wait: stdout
 /// and the exit status are those of the run without the line. The oracle prints the same stdout.
 // spec: conc.locks.deviation.14
@@ -994,10 +1009,10 @@ fn an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it() {
 /// A routine called back as in
 /// [`an_inverted_wait_above_an_interrupted_activity_goes_on_with_a_library_loaded`] waits on an
 /// event semaphore nothing posts, while the main program runs Rexx clauses for ever. The inverted
-/// wait goes on and is reported, and six seconds in a thread of the extension attaches and sends
-/// a message that calls `Halt` through the instance: the HALT still ends the wait, the routine
-/// traps it, and the main program traps its own. The oracle leaves such a wait waiting for ever
-/// (Deviation 10), so it is not asked.
+/// wait goes on and is reported, and fifteen seconds in a thread of the extension attaches and
+/// sends a message that calls `Halt` through the instance: the HALT still ends the wait, the
+/// routine traps it, and the main program traps its own. The oracle leaves such a wait waiting for
+/// ever (Deviation 10), so it is not asked.
 // spec: conc.locks.deviation.14, conc.halt.signal
 #[test]
 fn a_halt_ends_an_inverted_wait_that_goes_on() {
@@ -1019,7 +1034,7 @@ fn a_halt_ends_an_inverted_wait_that_goes_on() {
 /// with its frames below that wait, is set aside, and the wait is inverted. With an external
 /// library loaded it goes on (Deviation 14). After five seconds stderr says so, naming the main
 /// program as the activity it keeps from running, and a thread of the extension that attaches
-/// six seconds in posts the semaphore and ends it. The oracle prints the same stdout.
+/// fifteen seconds in posts the semaphore and ends it. The oracle prints the same stdout.
 // spec: conc.locks.deviation.14
 #[test]
 fn an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded() {
@@ -1038,7 +1053,7 @@ fn an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded() 
 
 /// The example of `conc.locks.trace.deviation.14` with the extension loaded: a trace line's
 /// destination, whose guarded `LINEOUT` holds its guard while a started activity is ready, loops
-/// until a thread of the extension that never attaches raises a flag eight seconds in. The
+/// until a thread of the extension that never attaches raises a flag twenty seconds in. The
 /// delivery goes on (Deviation 14), stderr says once that it holds the others back, and the flag
 /// ends it. The oracle prints the same stdout.
 // spec: conc.locks.trace.deviation.14
@@ -1052,7 +1067,7 @@ fn a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded() {
 }
 
 /// [`a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded`] with a destination that
-/// loops for ever, and a thread of the extension that calls `Halt` through the instance eight
+/// loops for ever, and a thread of the extension that calls `Halt` through the instance twenty
 /// seconds in: the HALT ends the delivery's loop, which traps it. The oracle's started activity has
 /// ended before the HALT, ours is ready below the delivery and traps one too, so the oracle is
 /// asked for the stdout only.
