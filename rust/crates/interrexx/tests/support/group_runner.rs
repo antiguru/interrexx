@@ -22,6 +22,14 @@
 // Pulled in by more than one test binary, each of which uses part of it.
 #![allow(dead_code)]
 
+/// The `.local` entry name of [`RUNNING_TEST`], as a literal, so that the
+/// framework lines that set it are spelled from the same text.
+macro_rules! running_test {
+    () => {
+        "INTERREXX_SUITE_TEST"
+    };
+}
+
 #[path = "group_runner/bytes/mod.rs"]
 mod bytes;
 #[cfg(test)]
@@ -838,10 +846,22 @@ pub fn skip<S: AsRef<str> + Ord>(group_file: &Path, group: &str, left_out: &BTre
 const START_LINE: &[u8] = b"  aTestResult~startTest(self)       -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
 const START_MARKED: &[u8] = b"  aTestResult~startTest(self); .error~say('started' fName) -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
 /// [`START_MARKED`] for a copy that [`name_running_tests`] named.
-const START_MARKED_NAMED: &[u8] = b"  .local~setEntry('INTERREXX_SUITE_TEST', fName~upper); aTestResult~startTest(self); .error~say('started' fName) -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
+const START_MARKED_NAMED: &[u8] = concat!(
+    "  .local~setEntry('",
+    running_test!(),
+    "', fName~upper); aTestResult~startTest(self); .error~say('started' fName) -- remember test started\n",
+    "  self~setUp                        -- make sure setup is invoked before test\n"
+)
+.as_bytes();
 /// [`START_LINE`] that also sets [`RUNNING_TEST`], with nothing written,
 /// on as many lines, so no line of the framework moves.
-const START_NAMED: &[u8] = b"  .local~setEntry('INTERREXX_SUITE_TEST', fName~upper); aTestResult~startTest(self) -- remember test started\n  self~setUp                        -- make sure setup is invoked before test\n";
+const START_NAMED: &[u8] = concat!(
+    "  .local~setEntry('",
+    running_test!(),
+    "', fName~upper); aTestResult~startTest(self) -- remember test started\n",
+    "  self~setUp                        -- make sure setup is invoked before test\n"
+)
+.as_bytes();
 
 /// Makes the copy at `at` set [`RUNNING_TEST`] as each test starts, and
 /// nothing else, for a copy whose group file is guarded. A later
@@ -869,7 +889,7 @@ pub fn mark_starts(at: &Path) {
 
 /// The `.local` entry that [`mark_starts_in_file`]'s copy sets to the name of
 /// the test that is starting, upper case, before its `setUp` runs.
-pub const RUNNING_TEST: &str = "INTERREXX_SUITE_TEST";
+pub const RUNNING_TEST: &str = running_test!();
 
 /// Makes the copy at `at` append `started NAME` to `marker` as each test
 /// starts, closing it after each line, so the line is on disk before the

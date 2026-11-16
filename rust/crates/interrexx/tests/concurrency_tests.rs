@@ -564,6 +564,7 @@ const COPY_HOOK: Option<fn(&Path, &str)> = Some(guard_unspecified);
 /// it starts, which the guards read, where one is guarded. The oracle runs
 /// the same copy.
 fn guard_unspecified(run: &Path, dir: &str) {
+    assert!(!dir.is_empty(), "a copy of one directory below ooRexx");
     let (rows, malformed) = suite_rows::read_rows();
     assert!(malformed.is_empty(), "the row files: {malformed:#?}");
     let groups: BTreeSet<&str> = rows
