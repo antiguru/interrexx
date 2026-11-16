@@ -1997,3 +1997,59 @@ fn a_send_to_be_sent_again_counts_as_a_message_held() {
         "the stall check and the refusal check do not count the send"
     );
 }
+
+/// A callback sent again that is still held when the interpreter's termination begins is refused
+/// when it is served, and the guard lock its place was granted passes on to the next waiter, so a
+/// guard wait in a last-chance `UNINIT` gets the lock and termination does not hang on it
+/// (`r[native.threads.attach.deviation.178]`, `r[native.threads.end]`).
+#[test]
+fn a_refused_recall_of_a_send_again_passes_its_lock_on() {
+    use crate::guards::GuardKey;
+    use crate::scheduler::{ActivityId, DrainAt, Recall, Recaller};
+
+    let mut interp = Interp::new();
+    let (held, waiter) = (ActivityId::test(1), ActivityId::test(2));
+    let key = GuardKey {
+        object: interrexx_core::ObjRef::heap(1, 0),
+        scope: interrexx_core::ObjRef::NIL,
+    };
+    // The held send's place, granted the lock unreserved, and a wait behind it.
+    interp.activities.guards.queue_retry(key, held, None);
+    interp.activities.guards.enqueue(key, waiter);
+    assert!(interp.activities.guards.granted_unreserved(key, held));
+    // The callback's thread waits for the lend that refusing its recall makes, and gives the
+    // baton straight back.
+    let baton = std::sync::Arc::clone(&interp.baton);
+    let thread = std::thread::spawn({
+        let baton = std::sync::Arc::clone(&baton);
+        move || {
+            baton.await_lend();
+            baton.give_back();
+            std::thread::current().id()
+        }
+    });
+    let recall = Recall {
+        by: Recaller::Context(1),
+        thread: thread.thread().id(),
+        base: None,
+        room: None,
+    };
+    interp
+        .activities
+        .held
+        .push_back((recall, Some((key, held))));
+    interp.timer.inbox().end();
+    interp.serve_held(DrainAt::Stopped);
+    thread
+        .join()
+        .expect("the callback's thread gave the baton back");
+    assert!(
+        interp.activities.held.is_empty(),
+        "the held recall was not served"
+    );
+    assert_eq!(
+        interp.activities.guards.owner(key),
+        Some(waiter),
+        "the lock was not passed on after the recall was refused"
+    );
+}
