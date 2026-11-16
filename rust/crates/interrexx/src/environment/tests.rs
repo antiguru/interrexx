@@ -39,7 +39,7 @@ fn the_default_object_name_picks_its_article_by_the_ids_first_letter() {
 #[test]
 fn every_name_the_oracle_answers_resolves_or_is_loud() {
     let mut interp = Interp::new();
-    for name in ORACLE_ENVIRONMENT.iter().chain(ORACLE_LOCAL.iter()) {
+    for name in ENVIRONMENT_SEQUENCE.iter().chain(LOCAL_SEQUENCE.iter()) {
         let dotted = format!(".{name}").into_bytes();
         match interp.dot_variable(&dotted) {
             Err(Failure::Loud(_)) => {}
@@ -101,17 +101,34 @@ fn the_environment_holds_the_native_classes_and_the_hand_registered_entries() {
     assert_ne!(environment, local);
 }
 /// The names and order the bootstrap leaves in both directories are the
-/// oracle's, and no entry is still owed.
+/// insertion sequence, and no entry is still owed.
+///
+/// The expected order is read from `sequence/`, a copy that is
+/// independent of [`ENVIRONMENT_SEQUENCE`] and [`LOCAL_SEQUENCE`] so that a
+/// change to either list is noticed. It pins this implementation's own
+/// sequence as an implementation check. The spec declares the order of the
+/// interpreter's own entries unspecified, so a change of the order updates
+/// these files and is no spec change.
 #[test]
-fn the_bootstrap_leaves_the_oracles_names_in_the_oracles_order() {
+fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
     let mut interp = Interp::new();
     interp
         .bootstrap_library()
         .expect("the library bootstrap runs");
-    for (dotted, oracle) in [
-        (b".ENVIRONMENT".as_slice(), ORACLE_ENVIRONMENT),
-        (b".LOCAL".as_slice(), ORACLE_LOCAL),
+    for (dotted, pinned, oracle) in [
+        (
+            b".ENVIRONMENT".as_slice(),
+            include_str!("sequence/environment.txt"),
+            ENVIRONMENT_SEQUENCE,
+        ),
+        (
+            b".LOCAL".as_slice(),
+            include_str!("sequence/local.txt"),
+            LOCAL_SEQUENCE,
+        ),
     ] {
+        let pinned: Vec<&str> = pinned.lines().collect();
+        assert_eq!(pinned, oracle, "the lists and the pinned files agree");
         let directory = interp.dot_variable(dotted).expect("resolves");
         let caller = interp.caller();
         let indexes = interp
@@ -125,7 +142,7 @@ fn the_bootstrap_leaves_the_oracles_names_in_the_oracles_order() {
             .flatten()
             .map(|index| String::from_utf8_lossy(&interp.to_text(index)).into_owned())
             .collect();
-        assert_eq!(names, oracle, "{}", String::from_utf8_lossy(dotted));
+        assert_eq!(names, pinned, "{}", String::from_utf8_lossy(dotted));
         let owed: Vec<&str> = oracle
             .iter()
             .copied()
@@ -226,13 +243,12 @@ fn every_directory_method_answers_on_both_directories_as_on_a_copy() {
                   \x20   return out\n\
                   \x20 end\n\
                   \x20 return value~string\n";
-    for (directory, oracle, capacity, prepare) in [
-        ("environment", ORACLE_ENVIRONMENT, ENVIRONMENT_CAPACITY, ""),
-        ("local", ORACLE_LOCAL, 0, ".local['STDQUE'] = 'q'\n"),
+    for (directory, oracle, prepare) in [
+        ("environment", ENVIRONMENT_SEQUENCE, ""),
+        ("local", LOCAL_SEQUENCE, ".local['STDQUE'] = 'q'\n"),
     ] {
-        // The copy is filled from the oracle's list at the directory's own
-        // size, each value read as `.NAME` rather than by a send to the
-        // directory, and `LOCAL` -- `.environment`'s method-table entry --
+        // The copy is filled from the sequence list, each value read as `.NAME`
+        // rather than by a send to the directory, and `LOCAL` -- `.environment`'s method-table entry --
         // goes in as a method.
         let contents: Vec<&str> = oracle
             .iter()
@@ -246,7 +262,7 @@ fn every_directory_method_answers_on_both_directories_as_on_a_copy() {
         };
         let copy = format!(
             "list = '{}'\n\
-             r = .Directory~new({capacity})\n\
+             r = .Directory~new\n\
              do i = 1 to words(list)\n\
              \x20 name = word(list, i)\n\
              \x20 if name == 'STDQUE' then r[name] = 'q'\n\

@@ -155,8 +155,9 @@ pub(super) const MINIMUM_ENTRIES: usize = 0;
 /// The capacity a rebuild gives a store holding `live` entries in `used`
 /// positions: room for as many appends again before the next rebuild, or,
 /// when more of the positions are holes than entries, for three times as
-/// many. Sized by the live entries alone, so a store that churns through few
-/// of them stays small however many it has removed.
+/// many. The capacity is a multiple of `live` that only `used` chooses, so
+/// the number of removals a store has seen does not grow it: a store that
+/// churns through few live entries stays small however many it has removed.
 fn regrown(live: usize, used: usize) -> usize {
     // A store whose removals keep pace with its appends would otherwise be
     // rebuilt after as many appends as it has entries, and a rebuild costs
@@ -535,7 +536,8 @@ fn build(
     }
 }
 
-/// The receiver's store, built at the minimum size on demand.
+/// The receiver's store, or `None` when it has none yet. Builds nothing, which
+/// [`store_in`] does.
 pub(super) fn read_store(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -907,8 +909,9 @@ pub(super) fn append(
 ) -> Result<(), Failure> {
     let (mut store, mut known) = match known {
         Some((store, place)) => {
+            // `read_store`, not `store_in`: the check must not build a store.
             debug_assert!(
-                store_in(interp, receiver, half).ok() == Some(store),
+                read_store(interp, receiver, half).ok().flatten() == Some(store),
                 "a known store is the receiver's current one"
             );
             (store, Some(place))

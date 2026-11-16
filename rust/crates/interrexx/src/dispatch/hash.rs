@@ -978,8 +978,7 @@ fn entry_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef, Fa
 }
 
 /// Every index the receiver's store holds, in the store's own order, or an
-/// empty list for a receiver that has no store -- what
-/// [`crate::Interp::native_keys`] reads for a method table a program built.
+/// empty list for a receiver that has no store.
 pub(crate) fn store_indexes(interp: &mut Interp, receiver: ObjRef) -> Vec<ObjRef> {
     let scope = hash_scope(interp);
     if pool_variable(interp, receiver, scope, HASH_INDEXES).is_none() {

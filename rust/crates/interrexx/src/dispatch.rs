@@ -1406,12 +1406,6 @@ impl ObjectModel {
         self.classes.class_references(class, out);
     }
 
-    /// The hash-collection class a `DO OVER` target may be, for a caller
-    /// asking whether an object is one.
-    pub(crate) fn iterable_collection_class(&self) -> ObjRef {
-        self.string_table
-    }
-
     /// The native class set, plus the lookup from each implemented
     /// method's minted identity to its code.
     fn bootstrap(mint: &mut dyn FnMut() -> ObjRef) -> ObjectModel {

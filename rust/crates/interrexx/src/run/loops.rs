@@ -812,39 +812,19 @@ impl Interp {
         )
     }
 
-    /// Whether `value` is a `StringTable` or a `Directory` built on
-    /// `NativeObject`'s map.
-    fn is_hash_collection(&mut self, value: ObjRef) -> bool {
-        let Some(Body::Native(native)) = self.heap.get(value).map(|object| &object.body) else {
-            return false;
-        };
-        let class = native.class();
-        class == self.object_model().iterable_collection_class()
-            || self.receiver_class_id(value).as_deref() == Some("Directory")
-    }
-
     /// The values a `DO OVER` binds its control variable to: the **non-empty**
     /// slots of what [`Interp::over_target_array`] converts the target into.
     fn over_snapshot(&mut self, value: ObjRef) -> Result<(ObjRef, Vec<ObjRef>), Failure> {
-        // The collections whose order is this crate's own, a native
-        // `StringTable` or `Directory`, answer from their own walk -- see
-        // [`Interp::hash_collection_indexes`] for why it is sorted and what
-        // that costs. It cannot go through `MAKEARRAY` either: a `Body::Native`
-        // receiver is not the store `hash.rs` owns.
-        let items: Vec<ObjRef> = if self.is_hash_collection(value) {
-            self.hash_collection_indexes(value)
-        } else {
-            let array = self.over_target_array(value)?;
-            // Rooted before its slots are read out: a converted array is a
-            // different object from the target the source named, and its items
-            // are reachable only through it.
-            if array != value {
-                self.roots.activity_mut().push_temp(array);
-            }
-            match self.heap.get(array).map(|object| &object.body) {
-                Some(Body::Array { slots, .. }) => slots.iter().flatten().copied().collect(),
-                _ => vec![array],
-            }
+        let array = self.over_target_array(value)?;
+        // Rooted before its slots are read out: a converted array is a
+        // different object from the target the source named, and its items
+        // are reachable only through it.
+        if array != value {
+            self.roots.activity_mut().push_temp(array);
+        }
+        let items: Vec<ObjRef> = match self.heap.get(array).map(|object| &object.body) {
+            Some(Body::Array { slots, .. }) => slots.iter().flatten().copied().collect(),
+            _ => vec![array],
         };
         // Every item is already reachable here, which is what `alloc_with`
         // collecting before it allocates asks of this site.
@@ -867,23 +847,6 @@ impl Interp {
             "a DO OVER's cursor is not the snapshot's own slots, so the snapshot does not root it"
         );
         Ok((snapshot, items))
-    }
-
-    /// A native `StringTable`'s or `Directory`'s indexes, as the values a `DO
-    /// OVER` binds in turn.
-    fn hash_collection_indexes(&mut self, table: ObjRef) -> Vec<ObjRef> {
-        let Some(Body::Native(native)) = self.heap.get(table).map(|object| &object.body) else {
-            return Vec::new();
-        };
-        let mut keys = native.keys();
-        keys.sort_unstable();
-        let mut items = Vec::with_capacity(keys.len());
-        for key in &keys {
-            let item = self.text(key);
-            self.roots.activity_mut().push_temp(item);
-            items.push(item);
-        }
-        items
     }
 
     /// One controlled-loop header value as the `Number` the loop runs on:
