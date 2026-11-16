@@ -28,8 +28,7 @@ rule](r:util.index.stemname) says, and may name the same stem. `from`, `to`,
 `from` and `to` are `1`, `count` is the number of items of the source from
 `from` to its end, and `option` is `O`. The call follows [the argument
 rule](r:util.index.args): a missing required argument raises `SYNTAX 88.901`
-and an argument past the sixth raises `SYNTAX 88.922` ([Deviation
-101](r:util.index.deviation.101) is about which of the two comes first).
+and an argument past the sixth raises `SYNTAX 88.922` ([the precedence rule](r:conv.error.precedence) says which of the two a call with both raises).
 `from` and `to` are read as whole numbers that are at least `1`, and an
 argument that is `0`, negative, fractional, text, the null string or too large
 raises `SYNTAX 88.905`. `count` is read as a whole number that is at least

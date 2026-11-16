@@ -33,9 +33,7 @@ third example shows these. Whitespace after a sign is the subject of
 and any other number above `2147483`, raises `SYNTAX 88.907`, and so does
 `2147483.4`: the largest delay is `2147483`. A delay of `0`, or of a fraction
 too small to count, is allowed, and so is a negative number too small in size
-for that format, as `-1e-400`, which is the delay `0`. When an argument past
-the last one comes with an omitted or wrong argument, [Deviation
-101](r:util.index.deviation.101) says which error is raised. An object that
+for that format, as `-1e-400`, which is the delay `0`. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised. An object that
 has no string value, as `.nil` is, raises `SYNTAX 88.909`, and so does an
 object that has only a `STRING` method, and no `MAKESTRING` method; the second
 and third examples show them.

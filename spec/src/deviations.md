@@ -691,24 +691,11 @@ characters there.
 `QUERY POSITION` of a transient standard stream answers the null string,
 because a transient stream has no position. ooRexx answers 1.
 
-## 101. Argument checks of the native builtins
+## 101. Withdrawn
 
-DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
-SysFileDelete and SysStemSort, check their arguments in the order that every
-other builtin follows, the ANSI order: the count of arguments first, so that
-an argument past the last one raises `SYNTAX 88.922` before an omitted or
-wrong argument is reported. ooRexx reports an omitted argument, an object
-whose `request` with the argument `STRING` answers no string and an argument
-that is not a whole number before the count, and so does the substitutions
-argument of SysFormatMessage when it has no `MAKEARRAY` method. It also
-reports these before the count: the stem name of SysStemCopy, SysStemDelete
-and SysStemInsert when it fails its check, and a whole-number argument of
-SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
-a number out of range among them. It reports the count before an argument's
-value: an option it does not allow, or any other number out of range, except a
-negative semaphore handle, which it reports before the count. SysOpenEventSem
-and SysOpenMutexSem are the exception: in both engines they report an omitted
-name and an object that has no string value before the count.
+Which of the argument count and another fault of a native builtin or a
+RexxUtil function is reported is unspecified ([the precedence
+rule](r:conv.error.precedence)).
 
 ## 102. Withdrawn
 

@@ -28,11 +28,11 @@ are not numbers here. A call without `delta`, such as `SysSetPriority(1)`,
 raises `SYNTAX 88.901`, and one whose `class` is also wrong raises the error of
 one of them, as [the precedence rule](r:conv.error.precedence) says; three
 arguments raise `SYNTAX 88.922`. When an argument past the last one comes with
-an omitted or wrong argument, [Deviation 101](r:util.index.deviation.101) says
-which error is raised. An object that is not a string is read by the string
-that its `STRING` method answers, not by its `request`, so that `.nil` raises
-`SYNTAX 88.907` and an object whose `STRING` answers a whole number is that
-number; the second example shows it.
+an omitted or wrong argument, [the precedence rule](r:conv.error.precedence)
+says which error is raised. An object that is not a string is read by the
+string that its `STRING` method answers, not by its `request`, so that `.nil`
+raises `SYNTAX 88.907` and an object whose `STRING` answers a whole number is
+that number; the second example shows it.
 
 ```rexx
 call try "SysSetPriority()"

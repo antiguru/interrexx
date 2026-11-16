@@ -31,9 +31,7 @@ than the null string, or an object whose string value is such a string, asks
 for a semaphore that other programs can open, which
 [Deviation 43](r:util.sysmutexsem.deviation.43) says is refused. A name that
 is an object with no string value, as `.nil` is, raises `SYNTAX 88.909`; the
-second example shows it. Which handle a call answers is not specified. When
-an argument past the last one comes with an omitted or wrong argument,
-[Deviation 101](r:util.index.deviation.101) says which error is raised.
+second example shows it. Which handle a call answers is not specified. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised.
 
 ```rexx
 numeric digits 20
@@ -225,9 +223,7 @@ The functions that take a handle read it as [the handle rule of the event
 semaphore functions](r:util.syseventsem.handle) says, and raise the same
 errors for the same values: a missing handle `SYNTAX 88.901`, a second
 argument of SysReleaseMutexSem or SysCloseMutexSem `SYNTAX 88.922`, and a
-value that is no whole number in range `SYNTAX 88.907`. When an argument past
-the last one comes with an omitted or wrong argument, [Deviation
-101](r:util.index.deviation.101) says which error is raised. A whole number
+value that is no whole number in range `SYNTAX 88.907`. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised. A whole number
 that is not the handle of an open semaphore is answered as [Deviation
 158](r:util.sysmutexsem.deviation.158) says.
 

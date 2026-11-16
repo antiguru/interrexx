@@ -3,7 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4, 98, 99, 101, 170]
+deviations: [4, 98, 99, 170]
 ---
 
 # Built-in functions
@@ -157,22 +157,20 @@ r[bif.index.call.native]
 A builtin whose page links this rule does not follow the rules above for the
 number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
 their errors](r:bif.index.call.order.missing-before-values); its errors for
-them are of the 88.9xx family. A required argument that is omitted, whether
-the call stops short of it or leaves its place empty, raises `SYNTAX 88.901`.
-An argument past the last one on the syntax line raises `SYNTAX 88.922`, also
-when the arguments before it are omitted places that are not required. As [for the other
-builtins](r:bif.index.call.count), a trailing omitted place adds nothing to
-the count. An argument that such a page calls a string and that is an object
+them are of the 88.9xx family. A required argument that is omitted, whether the
+call stops short of it or leaves its place empty, raises `SYNTAX 88.901`. An
+argument past the last one on the syntax line raises `SYNTAX 88.922`, also when
+the arguments before it are omitted places that are not required. As [for the
+other builtins](r:bif.index.call.count), a trailing omitted place adds nothing
+to the count. An argument that such a page calls a string and that is an object
 other than a string is replaced by the string that `request` with the argument
-`STRING` answers, as
-[for the other builtins](r:conv.string.object), but there is no fallback to
-the `STRING` method: an object whose `request` answers no string, such as one
-with no `MAKESTRING` method, raises
-`SYNTAX 88.909`, whatever its `STRING` method answers. A call that has an
-argument past the last one on the syntax line and an argument before it that
-is omitted or fails its own check raises the error of one of them, as [the
-precedence rule](r:conv.error.precedence) says (see [Deviation
-101](r:bif.index.call.native.deviation.101)).
+`STRING` answers, as [for the other builtins](r:conv.string.object), but there
+is no fallback to the `STRING` method: an object whose `request` answers no
+string, such as one with no `MAKESTRING` method, raises `SYNTAX 88.909`,
+whatever its `STRING` method answers. A call that has an argument past the last
+one on the syntax line and an argument before it that is omitted or fails its
+own check raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -200,41 +198,6 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 88.922
 88.909
 z q
-```
-
-r[bif.index.call.native.deviation.101]
-A builtin that follows the native call rule checks the count of its arguments
-before the arguments themselves, as [the other
-builtins](r:bif.index.call.order.count-before-values) do: a call that has an
-argument past the last one on the syntax line raises `SYNTAX 88.922` even when
-an argument before it is omitted, is an object whose `request` answers no
-string, or
-fails a check that its page gives. ooRexx reports an omitted argument, an
-object whose `request` answers no string and an argument that is not a whole
-number
-before the count, and the count before an argument's value: an option it does
-not allow or a number out of range.
-
-```rexx
-signal on syntax name a
-say filespec(, 'a/b', 'c')
-a: say condition('o')~code
-signal on syntax name b
-say filespec('N', .nil, 'c')
-b: say condition('o')~code
-signal on syntax name c
-say directory(.nil, 'x')
-c: say condition('o')~code
-signal on syntax name d
-say beep('x', 0, 1)
-d: say condition('o')~code
-```
-
-```output
-88.922
-88.922
-88.922
-88.922
 ```
 
 r[bif.index.call.convert.deviation.170]

@@ -38,10 +38,7 @@ first argument that is a string other than the null string, or an object whose
 string value is such a string, is a name, and asks for a semaphore that other
 programs can open, which [Deviation 43](r:util.syseventsem.deviation.43) says
 is refused. A first argument that is an object with no string value, as `.nil`
-is, raises `SYNTAX 88.909`; the third example shows it. Which handle a call
-answers is not specified. When an argument past the last one comes with an
-omitted or wrong argument, [Deviation 101](r:util.index.deviation.101) says
-which error is raised.
+is, raises `SYNTAX 88.909`; the third example shows it. Which handle a call answers is not specified. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised.
 
 ```rexx
 numeric digits 20
@@ -278,9 +275,7 @@ range raises `SYNTAX 88.907`: a word, the null string, a negative number, a
 number with a fraction and `.nil`. An object that is not a string is read by
 the string that its `STRING` method answers, as for `.nil`, so that an object
 whose `STRING` answers an open handle names that semaphore; the last example
-shows it. When an argument past the last one comes with an omitted or wrong
-argument, [Deviation 101](r:util.index.deviation.101) says which error is
-raised. A whole number that is not the handle of an open semaphore is answered
+shows it. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised. A whole number that is not the handle of an open semaphore is answered
 as [Deviation 158](r:util.syseventsem.deviation.158) says.
 
 ```rexx

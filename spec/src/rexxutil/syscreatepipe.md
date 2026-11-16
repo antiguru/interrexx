@@ -17,14 +17,14 @@ SysCreatePipe takes no argument. One argument that is a string raises `SYNTAX
 40.920`, an object that has no string value raises `SYNTAX 88.909`, and two
 arguments or more raise `SYNTAX 88.922`; an omitted place that is followed by
 no argument is not one. ([The argument rule](r:util.index.args) says that an
-argument past the last one of a function raises `88.922`; [Deviation
-101](r:util.index.deviation.101) is about the order of that check.)
+argument past the last one of a function raises `88.922`; [the precedence
+rule](r:conv.error.precedence) says which error a call with that and another
+fault raises.)
 
 ```rexx
 call try "SysCreatePipe('x')"
 call try "SysCreatePipe('')"
 call try "SysCreatePipe(.nil)"
-call try "SysCreatePipe(1, 2)"
 call try "SysCreatePipe(, 1)"
 say words(SysCreatePipe(,))
 exit
@@ -40,7 +40,6 @@ e: say condition('o')~code
 40.920
 40.920
 88.909
-88.922
 88.922
 2
 ```

@@ -28,8 +28,7 @@ argument takes its default: `order` is `A`, `type` is `C`, `start` is `1`,
 each item. `stem` names a stem as [the stem name rule](r:util.index.stemname)
 says, with the addition of [the next rule](r:util.sysstemsort.name). The call
 follows [the argument rule](r:util.index.args): a missing `stem` raises
-`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922` ([Deviation
-101](r:util.index.deviation.101) is about which of the two comes first).
+`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922` ([the precedence rule](r:conv.error.precedence) says which of the two a call with both raises).
 `start`, `end`, `firstcol` and `lastcol` are read as whole numbers that are at
 least `1`, with their blanks, a leading plus sign, a decimal point and an
 exponent. The value is read as [the whole-number rule](r:util.index.whole)
