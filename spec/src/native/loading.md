@@ -304,16 +304,17 @@ extension creates another, the unloaders of its libraries run when it ends.
 
 r[native.loading.again]
 The last live instance of a process stays live until the unloaders its
-termination runs have returned. Once they have, the process holds no library
-whose unloader ran, though an instance that an unloader created and left live
-still holds the libraries it loaded, as [the re-entrancy
-rule](r:native.loading.reentrant) says. When an instance created after that
-loads a library whose unloader ran, the library's loader runs again, and its
-unloader runs again when the last instance live with it is terminated. An
-instance that another thread creates while the last one's unloaders are still
-running is created only once they have returned, so a loader of the later
-instance never runs inside an unloader of the earlier ones, except where the
-re-entrancy rule lets it go on.
+termination runs have returned. Once they have, every library whose unloader
+ran is closed. That holds also where an unloader created an instance and left
+it live, as [the re-entrancy rule](r:native.loading.reentrant) lets it: the
+libraries that instance shared with the last instance are closed with the
+others, and its own termination does not run their unloaders again. When an
+instance created after that loads a library whose unloader ran, the library's
+loader runs again, and its unloader runs again when the last instance live with
+it is terminated. An instance that another thread creates while the last one's
+unloaders are still running is created only once they have returned, so a
+loader of the later instance never runs inside an unloader of the earlier ones,
+except where the re-entrancy rule lets it go on.
 
 > For example, after the two instances of the [unload
 > example](r:native.loading.unload) have been terminated, the host creates a
@@ -325,9 +326,10 @@ r[native.loading.reentrant]
 A thread that is running a loader or an unloader never waits for its own hook.
 What the [shared](r:native.loading.shared) and [again](r:native.loading.again)
 rules make other threads wait for, it goes on without. A thread's lineage is
-that thread and the threads that created the instance it runs: a thread that
-runs an instance another thread created has that thread's lineage too, so the
-lineage passes through every instance created in turn. While a loader or an
+that thread, and for the thread an instance runs on, the lineage of the thread
+that created the instance too, so the lineage passes through every instance
+created in turn. An [attached](r:native.threads.attach) thread does not take on
+the lineage of the thread that created its instance. While a loader or an
 unloader runs, the instance running it is in a call into a native library, in
 the sense of [Deviation 178](r:native.threads.attach.deviation.178): a message
 that an attached thread sends to that instance meanwhile runs without waiting
