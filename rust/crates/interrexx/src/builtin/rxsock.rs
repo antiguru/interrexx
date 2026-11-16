@@ -44,14 +44,14 @@ use crate::{Failure, Interp};
 
 type Result<T> = std::result::Result<T, Failure>;
 
-const EINTR: i32 = 4;
-const EAGAIN: i32 = 11;
-const EBADF: i32 = 9;
-const EINVAL: i32 = 22;
-const EDOM: i32 = 33;
-const ENOPROTOOPT: i32 = 92;
-const EAFNOSUPPORT: i32 = 97;
-const EINPROGRESS: i32 = 115;
+const EINTR: i32 = libc::EINTR;
+const EAGAIN: i32 = libc::EAGAIN;
+const EBADF: i32 = libc::EBADF;
+const EINVAL: i32 = libc::EINVAL;
+const EDOM: i32 = libc::EDOM;
+const ENOPROTOOPT: i32 = libc::ENOPROTOOPT;
+const EAFNOSUPPORT: i32 = libc::EAFNOSUPPORT;
+const EINPROGRESS: i32 = libc::EINPROGRESS;
 
 /// How often a waiting call polls its sockets.
 const WAIT_POLL: Duration = Duration::from_millis(5);
@@ -60,41 +60,41 @@ const WAIT_POLL: Duration = Duration::from_millis(5);
 /// out of its polls for reporting what does not answer its wait.
 const MUTED_RECHECK: Duration = Duration::from_millis(50);
 
-/// The `errno` values the variable names symbolically; any other is set in
-/// decimal.
+/// The `errno` values the variable names symbolically, by the host's number
+/// for each name; any other is set in decimal.
 const ERRNO_NAMES: &[(i32, &str)] = &[
-    (11, "EWOULDBLOCK"),
-    (115, "EINPROGRESS"),
-    (114, "EALREADY"),
-    (88, "ENOTSOCK"),
-    (89, "EDESTADDRREQ"),
-    (90, "EMSGSIZE"),
-    (91, "EPROTOTYPE"),
-    (92, "ENOPROTOOPT"),
-    (93, "EPROTONOSUPPORT"),
-    (94, "ESOCKTNOSUPPORT"),
-    (95, "EOPNOTSUPP"),
-    (96, "EPFNOSUPPORT"),
-    (97, "EAFNOSUPPORT"),
-    (98, "EADDRINUSE"),
-    (99, "EADDRNOTAVAIL"),
-    (100, "ENETDOWN"),
-    (101, "ENETUNREACH"),
-    (102, "ENETRESET"),
-    (103, "ECONNABORTED"),
-    (104, "ECONNRESET"),
-    (105, "ENOBUFS"),
-    (106, "EISCONN"),
-    (107, "ENOTCONN"),
-    (108, "ESHUTDOWN"),
-    (109, "ETOOMANYREFS"),
-    (110, "ETIMEDOUT"),
-    (111, "ECONNREFUSED"),
-    (40, "ELOOP"),
-    (36, "ENAMETOOLONG"),
-    (112, "EHOSTDOWN"),
-    (113, "EHOSTUNREACH"),
-    (39, "ENOTEMPTY"),
+    (libc::EWOULDBLOCK, "EWOULDBLOCK"),
+    (libc::EINPROGRESS, "EINPROGRESS"),
+    (libc::EALREADY, "EALREADY"),
+    (libc::ENOTSOCK, "ENOTSOCK"),
+    (libc::EDESTADDRREQ, "EDESTADDRREQ"),
+    (libc::EMSGSIZE, "EMSGSIZE"),
+    (libc::EPROTOTYPE, "EPROTOTYPE"),
+    (libc::ENOPROTOOPT, "ENOPROTOOPT"),
+    (libc::EPROTONOSUPPORT, "EPROTONOSUPPORT"),
+    (libc::ESOCKTNOSUPPORT, "ESOCKTNOSUPPORT"),
+    (libc::EOPNOTSUPP, "EOPNOTSUPP"),
+    (libc::EPFNOSUPPORT, "EPFNOSUPPORT"),
+    (libc::EAFNOSUPPORT, "EAFNOSUPPORT"),
+    (libc::EADDRINUSE, "EADDRINUSE"),
+    (libc::EADDRNOTAVAIL, "EADDRNOTAVAIL"),
+    (libc::ENETDOWN, "ENETDOWN"),
+    (libc::ENETUNREACH, "ENETUNREACH"),
+    (libc::ENETRESET, "ENETRESET"),
+    (libc::ECONNABORTED, "ECONNABORTED"),
+    (libc::ECONNRESET, "ECONNRESET"),
+    (libc::ENOBUFS, "ENOBUFS"),
+    (libc::EISCONN, "EISCONN"),
+    (libc::ENOTCONN, "ENOTCONN"),
+    (libc::ESHUTDOWN, "ESHUTDOWN"),
+    (libc::ETOOMANYREFS, "ETOOMANYREFS"),
+    (libc::ETIMEDOUT, "ETIMEDOUT"),
+    (libc::ECONNREFUSED, "ECONNREFUSED"),
+    (libc::ELOOP, "ELOOP"),
+    (libc::ENAMETOOLONG, "ENAMETOOLONG"),
+    (libc::EHOSTDOWN, "EHOSTDOWN"),
+    (libc::EHOSTUNREACH, "EHOSTUNREACH"),
+    (libc::ENOTEMPTY, "ENOTEMPTY"),
 ];
 
 /// The text the `errno` variable gets for `errno`.
@@ -1300,15 +1300,20 @@ pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resul
                 .and_then(|address| address.as_sockaddr_in().map(|v4| v4.ip()))
         })
         .collect();
-    let examined = addresses.len().saturating_sub(1);
-    match addresses[..examined]
-        .iter()
-        .map(Ipv4Addr::to_string)
-        .find(|text| !text.starts_with("127"))
-    {
+    match host_id(&addresses) {
         Some(text) => Ok(interp.text_built(text.into_bytes())),
         None => Err(failed(interp)),
     }
+}
+
+/// [`get_host_id`]'s choice among the interfaces' IPv4 `addresses`, in list
+/// order: the first whose text does not begin `127`, the last never examined.
+fn host_id(addresses: &[Ipv4Addr]) -> Option<String> {
+    let examined = addresses.len().saturating_sub(1);
+    addresses[..examined]
+        .iter()
+        .map(Ipv4Addr::to_string)
+        .find(|text| !text.starts_with("127"))
 }
 
 // --- Data -------------------------------------------------------------------
@@ -1901,7 +1906,25 @@ fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
 mod tests {
     use std::os::fd::AsRawFd as _;
 
-    use super::{EAGAIN, blocks, try_accept, with_socket};
+    use std::net::Ipv4Addr;
+
+    use super::{EAGAIN, blocks, host_id, try_accept, with_socket};
+
+    /// `SockGetHostId` answers the first address not beginning `127`, and
+    /// never examines the last interface, so an address there alone is not
+    /// found.
+    #[test]
+    fn the_host_id_skips_loopback_and_never_examines_the_last_interface() {
+        let lo = Ipv4Addr::new(127, 0, 0, 1);
+        let a = Ipv4Addr::new(10, 0, 0, 5);
+        let b = Ipv4Addr::new(192, 168, 1, 2);
+        assert_eq!(host_id(&[lo, a, b]).as_deref(), Some("10.0.0.5"));
+        assert_eq!(host_id(&[a, b]).as_deref(), Some("10.0.0.5"));
+        assert_eq!(host_id(&[lo, a]), None);
+        assert_eq!(host_id(&[a]), None);
+        assert_eq!(host_id(&[]), None);
+        assert_eq!(host_id(&[lo, Ipv4Addr::new(127, 9, 9, 9), a]), None);
+    }
 
     /// A blocking listening socket whose connection another accept took is
     /// tried without blocking (PR 4 review M3): `EAGAIN` at once, the socket

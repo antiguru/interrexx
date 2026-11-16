@@ -15,8 +15,8 @@ use crate::{Failure, Interp};
 
 /// `EEXIST`, which the copy and the move answer for a source and target that
 /// are one file, and the move for a target that is a file already.
-const EEXIST: i32 = 17;
-const EISDIR: i32 = 21;
+const EEXIST: i32 = libc::EEXIST;
+const EISDIR: i32 = libc::EISDIR;
 
 /// The type of whatever `path` names, following a symbolic link.
 fn file_type(path: &[u8]) -> Option<FileType> {

@@ -62,8 +62,15 @@ fn a_dangling_link_is_listed_by_its_own_status() {
     let options = TreeOptions::parse(b"F").expect("valid");
     let zone = tz::TimeZone::utc();
     let line = entry_line(options, &zone, b"/x/dangling".to_vec(), stat).expect("a file");
+    // A link's own permissions are the host's: Linux gives every link all of them, Apple's
+    // systems the creating process's umask.
+    let mode = if cfg!(target_os = "linux") {
+        "lrwxrwxrwx"
+    } else {
+        "lrwxr-xr-x"
+    };
     assert!(
-        line.ends_with(b"           7  lrwxrwxrwx  /x/dangling"),
+        line.ends_with(format!("           7  {mode}  /x/dangling").as_bytes()),
         "{}",
         String::from_utf8_lossy(&line)
     );

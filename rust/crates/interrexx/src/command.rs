@@ -366,8 +366,8 @@ fn change_directory(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcom
 /// The directory `chdir(target)` would enter, by its physical path, or the
 /// `errno` it would fail with.
 fn physical_directory(interp: &Interp, target: &[u8]) -> Result<std::path::PathBuf, i32> {
-    const ENOENT: i32 = 2;
-    const ENOTDIR: i32 = 20;
+    const ENOENT: i32 = libc::ENOENT;
+    const ENOTDIR: i32 = libc::ENOTDIR;
     if target.is_empty() {
         return Err(ENOENT);
     }

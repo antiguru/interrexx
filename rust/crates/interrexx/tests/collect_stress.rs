@@ -1660,12 +1660,13 @@ fn a_dropped_package_is_collected() {
 
 /// Runs `read` after an external routine's public routines were merged into
 /// the main program's package by a call from a procedure, and a loop that
-/// allocates, and asserts it printed `expected`.
+/// allocates, and asserts it printed `expected`. The routine is called by its file's exact name,
+/// so the package name it prints is the file's on a file system that ignores case too.
 fn assert_external_merge_prints(label: &str, read: &str, expected: &str) {
     let ext5 = "return 1\n::routine pubr public\n  return .context~package~name~right(8)\n";
     let program = format!(
         "call sub\ndo zi = 1 to 3\n  zz = copies('x', 100000)\nend\n{read}exit\n\
-         sub: procedure\n  x = ext5()\n  return\n"
+         sub: procedure\n  x = 'ext5'()\n  return\n"
     );
     assert_stress_prints_beside(label, &[("ext5.rex", ext5)], &program, expected);
 }
