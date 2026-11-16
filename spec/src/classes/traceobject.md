@@ -244,9 +244,9 @@ describes the level that produced the line with the entries `ARGUMENTS`,
 `EXECUTABLE`, `INVOCATION`, `LINE`, `NAME`, `TARGET`, `TRACELINE` and `TYPE`,
 which answer what the [`StackFrame`](stackframe.md) methods of the same names
 answer. A line traced in a method adds `ATTRIBUTEPOOL`, `HASSCOPELOCK`,
-`ISGUARDED`, `RECEIVER` and `SCOPELOCKCOUNT`, and the line that announces the
-method, flagged `>I>`, adds `CALLERSTACKFRAME`, the frame of the code that
-called it. A line that shows a variable being read or assigned adds `VARIABLE`,
+`ISGUARDED`, `RECEIVER` and `SCOPELOCKCOUNT`, and the line that announces a
+method or a routine, flagged `>I>`, adds `CALLERSTACKFRAME`, the frame of the
+code that called it. A line that shows a variable being read or assigned adds `VARIABLE`,
 a `StringTable` with the entries `NAME`, `VALUE` and `ASSIGNMENT`, which is `1`
 for an assignment and `0` for a read. Which clause the `STACKFRAME` of the `>I>`
 line shows, in its `LINE` and its `TRACELINE`, and the values of `HASSCOPELOCK`
