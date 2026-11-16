@@ -993,7 +993,18 @@ The same holds for the destination of a trace line (an object set with
 that only another activity can make: a delivery that holds a guard does not
 give the kernel to another activity, so such a wait is refused after the delivery
 has gone on for several seconds with another activity ready, and the program
-ends with exit code 120. In the example the destination loops until a started
+ends with exit code 120.
+The refusal follows the same switch as the waits above: it comes only while no
+native code from outside the interpreter can run, as [the rule of Deviation
+20](r:conc.activities.deviation.20) defines such code. The refusal rests on
+time, not on a proof that the wait never ends, and once such code is present a
+thread it started may change what the destination waits for without the kernel.
+So the delivery goes on instead, a line on stderr says once that it keeps the
+activities that are ready from running, and apart from that line the program
+runs as it would without it. A HALT the host asks for reaches the delivery's
+clauses as [the host's request](r:conc.halt.signal) reaches any running
+activity's.
+In the example, which loads no library, the destination loops until a started
 activity sets a flag.
 
 ```rexx

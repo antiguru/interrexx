@@ -150,8 +150,10 @@ ooRexx method table, not guessed.
   inverted wait, which waits above an activity set aside or interrupted by a recall, follows the
   same switch (Deviation 14): where it goes on, the stall watch writes its line on stderr once it
   has waited five seconds and nothing else can run, naming the activity it keeps from running,
-  and a HALT still ends it. A wait on a message the waiting activity itself runs, and any wait in
-  the simulation mode, are refused whatever was loaded.
+  and a HALT still ends it. A trace line's delivery that holds a guard and spins with another
+  activity ready follows the switch too: refused after a bound of slices while it is on, and
+  otherwise going on with one line on stderr. A wait on a message the waiting activity itself
+  runs, and any wait in the simulation mode, are refused whatever was loaded.
 * **Scheduling** is round-robin: a ready queue in arrival order, timed sleepers in a deadline heap,
   FIFO guard waiters. A timer thread sets the slice bit every 24 ms; the switch happens at the next
   clause boundary. HALT, trace toggles and raises from elsewhere set request bits that the target
