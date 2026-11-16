@@ -20,8 +20,8 @@ page records why they are the way they are.
   number parse error that carries the string that failed to parse, an item is stated only where it
   is needed to understand the error and the program cannot get it otherwise; the rest is
   unspecified under `r[conv.error.additional]`.
-* **Evaluation order is specified; error precedence is not** (2026-11-16, #395, #PRNUM). Operands
-  are evaluated left before right, both before either is checked; arguments are evaluated from the
+* **Evaluation order is specified; error precedence is not** (2026-11-16, #395, #757). Operands are
+  evaluated left before right, both before either is checked; arguments are evaluated from the
   left; a builtin sends `STRING` to its arguments before it checks them (Deviation 170); and the
   argument count is checked before the arguments (ANSI 7.4, 9.2.1). An error raised while an
   operand or an argument is evaluated is raised at that point. These stay specified because Rexx
