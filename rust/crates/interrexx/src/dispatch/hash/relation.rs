@@ -44,7 +44,7 @@ fn slots_for(
     for &(_, held) in &candidates {
         interp.roots.activity_mut().push_temp(held);
     }
-    let mut found = Vec::new();
+    let mut found = Vec::with_capacity(candidates.len());
     for &(position, held) in &candidates {
         // An earlier comparison may have removed this candidate: one that no
         // longer holds its entry is skipped. A position is filled once, so a
