@@ -1460,28 +1460,26 @@ the message has run yet, so the interpreter sends it again, in the place in the
 lock's queue that its wait took when it began, and `TRACE` announces its
 method's entry once. A guard lock that a stopped activity acquires after a
 message began to wait for it counts from then as one it holds. Any other wait
-for a guard
-lock counts as one of a message that has begun: a wait in a method or routine
-the message's own code reaches, and a wait of a routine the thread calls with
-`CallRoutine` or of a method that another of the thread's API calls sends to,
-such as the `MAKESTRING` that `ObjectToString` sends. Once a message has
-begun, a wait of it for something only
-a stopped activity can give never ends. Where it waits for a guard lock that
-such an activity holds and no other message does, or for the completion of a
-message whose send such an activity runs, directly or through a chain of such
-waits, the wait is refused at once as [Deviation
-14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an inverted wait:
-the thread's send answers nothing, and the program, which runs on to its end,
-ends with exit code 120. Any other such wait, such as a `GUARD WHEN`, a
-semaphore's `wait` with no timeout, or a wait for a guard lock another message
-holds, goes on for ever. Once it has waited five seconds, and nothing else is
-left that could end it, a line on stderr says so and says how many seconds it
-has waited: no activity is ready, none is asleep but one a message stopped, no
-message is held, and no call is in flight but those the waiting messages run
-above. A stopped activity's sleep does not hold the line back, since the
-activity cannot go on when it wakes. A wait that another sleeping activity or a
-call in flight may still end is not reported until they are gone. A loop that
-polls for such a change runs for ever,
-and nothing is said. ooRexx
-runs each attached thread's messages on that thread, alongside the other
-activities, and each such program completes. Issue #681 tracks doing the same.
+for a guard lock counts as one of a message that has begun: a wait in a method
+or routine the message's own code reaches, and a wait of a routine the thread
+calls with `CallRoutine` or of a method that another of the thread's API calls
+sends to, such as the `MAKESTRING` that `ObjectToString` sends. Once a message
+has begun, a wait of it for something only a stopped activity can give never
+ends. Where it waits for a guard lock that such an activity holds and no other
+message does, or for the completion of a message whose send such an activity
+runs, directly or through a chain of such waits, the wait is refused at once as
+[Deviation 14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an
+inverted wait: the thread's send answers nothing, and the program, which runs
+on to its end, ends with exit code 120. Any other such wait, such as a `GUARD
+WHEN`, a semaphore's `wait` with no timeout, or a wait for a guard lock another
+message holds, goes on for ever. Once it has waited five seconds, and nothing
+else is left that could end it, a line on stderr says so and says how many
+seconds it has waited: no activity is ready, none is asleep but one a message
+stopped, no message is held or to be sent again, and no call is in flight but
+those the waiting messages run above. A stopped activity's sleep does not hold
+the line back, since the activity cannot go on when it wakes. A wait that
+another sleeping activity or a call in flight may still end is not reported
+until they are gone. A loop that polls for such a change runs for ever, and
+nothing is said. ooRexx runs each attached thread's messages on that thread,
+alongside the other activities, and each such program completes. Issue #681
+tracks doing the same.
