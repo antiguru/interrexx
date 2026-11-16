@@ -144,7 +144,8 @@ enum Oracle {
 }
 
 /// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds` and given
-/// the environment variables `environment` besides.
+/// the environment variables `environment` besides. Each comparison of stderr with the oracle's
+/// cuts the message texts of both sides ([`support::error_text::cut_error_texts`]).
 #[expect(
     clippy::disallowed_methods,
     reason = "the run's wall time is what an idle thread must not stretch"
@@ -185,6 +186,10 @@ fn run_against(
         let located = support::oracle::locate();
         let library_path = format!("{}:{}", located.lib_dir().display(), dir.display());
         let theirs = located.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
+        let cut = |stderr: &str| {
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(stderr.as_bytes()))
+                .into_owned()
+        };
         if oracle == Oracle::UpToRefusal {
             assert!(
                 support::oracle::did_not_finish(&theirs),
@@ -197,9 +202,9 @@ fn run_against(
             assert_eq!(
                 (
                     String::from_utf8_lossy(&theirs.stdout).as_ref(),
-                    String::from_utf8_lossy(&theirs.stderr).as_ref()
+                    cut(&String::from_utf8_lossy(&theirs.stderr))
                 ),
-                (ours.0.as_str(), before),
+                (ours.0.as_str(), cut(before)),
                 "the oracle, up to the refusal"
             );
             fs::remove_dir_all(&dir).expect("the run's directory is removable");
@@ -211,10 +216,14 @@ fn run_against(
             theirs.expect_exit_code(),
         );
         match oracle {
-            Oracle::Whole => assert_eq!(theirs, ours, "the oracle"),
+            Oracle::Whole => assert_eq!(
+                (&theirs.0, cut(&theirs.1), theirs.2),
+                (&ours.0, cut(&ours.1), ours.2),
+                "the oracle"
+            ),
             Oracle::Status => assert_eq!(
-                (&theirs.1, theirs.2),
-                (&ours.1, ours.2),
+                (cut(&theirs.1), theirs.2),
+                (cut(&ours.1), ours.2),
                 "the oracle's status"
             ),
             Oracle::Stdout => assert_eq!(theirs.0, ours.0, "the oracle's stdout"),
@@ -1116,8 +1125,9 @@ fn a_wait_on_the_activitys_own_message_leaves_the_others_errors_reported() {
         .unwrap_or_else(|| panic!("the run did not end with the refusal: {stderr}"));
     assert!(
         error.starts_with("    10 *-* x = 1 + 'a'\nError 41 running ")
-            && error
-                .ends_with("Error 41.1:  Nonnumeric value (\"a\") used in arithmetic operation.\n"),
+            && error.ends_with(
+                "Error 41.1:  Non-numeric value (\"a\") used in arithmetic operation.\n"
+            ),
         "{stderr}"
     );
 }
