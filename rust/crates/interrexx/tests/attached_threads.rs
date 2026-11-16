@@ -40,6 +40,21 @@ fn on_path(name: &str) -> bool {
         .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
 }
 
+/// The `rxapi` service binary beside `rexx`, which `rexx` starts for an API call that needs it.
+/// Cargo builds it only for a workspace build, and a per-package build leaves it out, so a run
+/// that finds it missing fails here instead of as an error from the first `RxFuncAdd`.
+// spec: native.threads.attach
+fn rxapi() -> PathBuf {
+    let path = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+    assert!(
+        path.is_file(),
+        "the `rxapi` binary is missing beside `rexx` ({}): build it with `cargo build --workspace` \
+         or `cargo build -p interrexx-rxapi` before running these tests",
+        path.display()
+    );
+    path
+}
+
 /// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
 /// `memcap` is not on `PATH`, and killed by `timeout` after `seconds`.
 fn capped(seconds: &str) -> Command {
@@ -264,6 +279,7 @@ fn run_in(
     environment: &[(&str, &str)],
 ) -> (Answer, std::time::Duration) {
     let program = fixture(program);
+    drop(rxapi());
     let began = std::time::Instant::now();
     let output = capped(seconds)
         .arg(env!("CARGO_BIN_EXE_rexx"))
@@ -276,7 +292,7 @@ fn run_in(
         .output()
         .expect("the capped run spawns");
     let took = began.elapsed();
-    let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
+    let _ = Command::new(rxapi())
         .arg("--stop")
         .env("REXX_API_DIR", support::api_socket::api_dir(dir))
         .output();
@@ -407,6 +423,7 @@ fn run_driver_with(name: &str, arguments: &[&str], seconds: &str, extension: boo
         .expect("g++ runs, which this test needs to build its fixture");
         assert!(built.success(), "the fixture did not build");
     }
+    drop(rxapi());
     let output = capped(seconds)
         .arg(&binary)
         .args(arguments)
@@ -416,7 +433,7 @@ fn run_driver_with(name: &str, arguments: &[&str], seconds: &str, extension: boo
         .stdin(Stdio::null())
         .output()
         .expect("the capped run spawns");
-    let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
+    let _ = Command::new(rxapi())
         .arg("--stop")
         .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .output();
@@ -1786,6 +1803,7 @@ fn the_switch_survives_rxfuncdrop() {
         .status()
         .expect("g++ runs, which this test needs to build its fixture");
     assert!(built.success(), "the classic fixture did not build");
+    drop(rxapi());
     let mut child = capped(SECONDS)
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(fixture("classic.rex"))
@@ -1810,7 +1828,7 @@ fn the_switch_survives_rxfuncdrop() {
             .status();
     }
     let output = child.wait_with_output().expect("the run's output");
-    let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
+    let _ = Command::new(rxapi())
         .arg("--stop")
         .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .output();
