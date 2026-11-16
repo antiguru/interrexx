@@ -455,8 +455,8 @@ impl Libraries {
 /// nothing terminated it, in the order they loaded, which is the order
 /// process exit runs their destructors in, after an unloader raised too. A
 /// library still loading on another thread, and one a walk that ended early
-/// did not reach, is not closed here. An interpreter that was not the last live one
-/// closes nothing: the libraries stay loaded for the others.
+/// did not reach, is not closed here. An interpreter that was not the last
+/// live one closes nothing: the libraries stay loaded for the others.
 impl Drop for Libraries {
     fn drop(&mut self) {
         // No unloader runs here: outside the unit tests, an interpreter that

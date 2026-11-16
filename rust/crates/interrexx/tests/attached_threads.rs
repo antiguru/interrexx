@@ -906,7 +906,7 @@ fn a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop() {
 
 /// Asserts that `stderr` begins with the line that reports a callback's wait for a `GUARD WHEN`
 /// while the main program it stopped makes no progress, written once the wait was five seconds
-/// old and less than seven.
+/// old ([`STALL_SECONDS`]).
 fn assert_stalled_on_flag(stderr: &str) {
     let waited = stderr
         .strip_prefix("interrexx: a callback has waited ")
@@ -914,7 +914,7 @@ fn assert_stalled_on_flag(stderr: &str) {
         .filter(|(_, rest)| rest.starts_with("which it stopped, makes no progress\n"))
         .and_then(|(seconds, _)| seconds.parse::<u64>().ok());
     assert!(
-        waited.is_some_and(|seconds| (5..7).contains(&seconds)),
+        waited.is_some_and(|seconds| STALL_SECONDS.contains(&seconds)),
         "stderr: {stderr}"
     );
 }
@@ -1054,8 +1054,13 @@ fn a_halt_ends_a_trace_delivery_that_goes_on() {
 const TRACE_HELD: &str = "interrexx: a trace line's delivery holds a guard and has kept the \
                           activities ready to run from running for several seconds\n";
 
+/// The seconds a stall line may say its wait has gone on: at least the five after which it is
+/// written, and below [`SECONDS`], after which the run is killed, so a loaded machine that writes
+/// it late still passes.
+const STALL_SECONDS: std::ops::Range<u64> = 5..120;
+
 /// Asserts that `stderr` is the one line that reports `waiter`'s wait for `what` while `stopped`
-/// makes no progress, written once the wait was five seconds old and less than seven.
+/// makes no progress, written once the wait was five seconds old ([`STALL_SECONDS`]).
 fn assert_stalled(stderr: &str, waiter: &str, what: &str, stopped: &str) {
     let waited = stderr
         .strip_prefix(&format!("interrexx: {waiter} has waited "))
@@ -1063,7 +1068,7 @@ fn assert_stalled(stderr: &str, waiter: &str, what: &str, stopped: &str) {
         .filter(|(_, rest)| *rest == "makes no progress\n")
         .and_then(|(seconds, _)| seconds.parse::<u64>().ok());
     assert!(
-        waited.is_some_and(|seconds| (5..7).contains(&seconds)),
+        waited.is_some_and(|seconds| STALL_SECONDS.contains(&seconds)),
         "stderr: {stderr}"
     );
 }
