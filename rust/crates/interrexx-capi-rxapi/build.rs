@@ -47,16 +47,12 @@ fn apple(names: &library_names::ApiLibraries, out: &Path) {
         names.librexxapi
     );
     // An empty library whose install name is `librexx` beside this one, which the link records
-    // as a load command. `-needed_library` keeps it although no symbol binds to it.
+    // as a load command. `-needed_library` keeps it although no symbol binds to it. Apple's
+    // linker requires every dylib to link `libSystem`, so it keeps the C library.
     let stub = out.join("librexx.dylib");
     stub_library(
         &stub,
-        &[
-            "-dynamiclib",
-            "-nostdlib",
-            "-install_name",
-            names.librexx_beside,
-        ],
+        &["-dynamiclib", "-install_name", names.librexx_beside],
     );
     println!(
         "cargo:rustc-cdylib-link-arg=-Wl,-needed_library,{}",
