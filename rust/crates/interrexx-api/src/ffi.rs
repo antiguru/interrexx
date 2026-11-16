@@ -780,6 +780,30 @@ impl ThreadTable {
         }
     }
 
+    /// Whether `AttachThread` through this table's instance, called from a
+    /// thread of its own that runs no native call, attached that thread; the
+    /// thread detaches again where it did.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn attaches_from_another_thread(&self) -> bool {
+        let instance = self.instance() as usize;
+        std::thread::spawn(move || {
+            let instance = instance as *mut RexxInstance_;
+            let mut context = std::ptr::null_mut();
+            // SAFETY: `instance` is the never-freed instance `with` made, and
+            // a context `AttachThread` answers is kept, so it is live.
+            unsafe {
+                let attached = ((*(*instance).functions).AttachThread)(instance, &raw mut context);
+                if attached != 0 {
+                    ((*(*context).functions).DetachThread)(context);
+                }
+                attached != 0
+            }
+        })
+        .join()
+        .expect("the attaching thread did not panic")
+    }
+
     /// The address of a context built as `AttachThread` builds one for a
     /// thread with no activity of this interpreter, on the pending list until
     /// a callback through it files it, or `None` where the table has no
@@ -1116,12 +1140,6 @@ unsafe fn foreign_to_attached(context: *mut RexxThreadContext_) -> bool {
     cell.attached.get()
         && !attached_here(context as usize)
         && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
-}
-
-/// Ends one attach of this thread to `context`, answering whether it was
-/// attached.
-fn detach_here(context: usize) -> bool {
-    detach_counted(context).is_some()
 }
 
 /// Ends one attach of this thread to `context`, answering the attaches left,
@@ -5250,7 +5268,7 @@ unsafe extern "C" fn attach_thread(
                 Some(context)
             }
             // SAFETY: the caller guarantees `instance`.
-            None => match unsafe { live_requester(instance) } {
+            None => match unsafe { requester_of(instance) } {
                 // A thread attaching to an interpreter that has ended gets
                 // nothing (`r[native.threads.end]`).
                 Some(requester) if requester.refuses_attach() || requester.ended() => None,
@@ -5276,10 +5294,10 @@ unsafe extern "C" fn attach_thread(
 /// `AddCommandEnvironment`: `handler` becomes the handler of the environment
 /// `name`, replacing the one
 /// that name had, built-in ones included. A type the header does not define,
-/// a null name or a null handler registers nothing.
-/// # Panics
-/// Called from a thread running no native call of the instance's interpreter,
-/// where no call of the root activity is in flight.
+/// a null name or a null handler registers nothing. A thread running no
+/// native call of the interpreter and attached to none of its contexts is
+/// attached for the length of the call ([`command_environment`]).
+///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made, a non-null
 /// `name` is NUL-terminated, and a non-null `handler` is a function of the
@@ -5297,9 +5315,6 @@ unsafe extern "C" fn add_command_environment(
 /// `StackCommandEnvironment`: as `AddCommandEnvironment`, the handler
 /// covering the one in use under `name`; true where it was added.
 ///
-/// # Panics
-/// As [`add_command_environment`].
-///
 /// # Safety
 /// As [`add_command_environment`].
 unsafe extern "C" fn stack_command_environment(
@@ -5314,9 +5329,10 @@ unsafe extern "C" fn stack_command_environment(
 
 /// The two command-environment members: on the context of the native call
 /// this thread runs of the instance's interpreter, or else on the context of
-/// it this thread is attached to, and from any other thread on the root
-/// context, attached for the length of the call where it is not already.
-/// Answers whether a handler was added.
+/// it this thread is attached to, and from any other thread on the context
+/// [`attach_thread`] attaches it to for the length of the call, an activity
+/// of its own (`r[native.threads.attach]`). Answers whether a handler was
+/// added.
 ///
 /// # Safety
 /// As [`add_command_environment`].
@@ -5329,15 +5345,16 @@ unsafe fn command_environment(
 ) -> bool {
     let (context, visiting) = match call_here(instance).or_else(|| attached_to(instance)) {
         Some(context) => (context, false),
-        // SAFETY: the caller guarantees `instance`.
-        None => match unsafe { root_of(instance) } {
-            Some(root) => (root, !attached_here(root as usize)),
-            None => return false,
-        },
+        None => {
+            let mut attached = std::ptr::null_mut();
+            // SAFETY: the caller guarantees `instance`, and `attached` is a
+            // local.
+            if unsafe { attach_thread(instance, &raw mut attached) } == 0 {
+                return false;
+            }
+            (attached, true)
+        }
     };
-    if visiting {
-        attach_here(context as usize);
-    }
     let added = (|| {
         let mut room = Room::new();
         // SAFETY: the caller guarantees the terminator.
@@ -5363,7 +5380,9 @@ unsafe fn command_environment(
         true
     })();
     if visiting {
-        detach_here(context as usize);
+        // SAFETY: `context` is the one `attach_thread` attached this thread
+        // to, which is kept.
+        unsafe { detach_thread(context) };
     }
     added
 }
@@ -5428,11 +5447,20 @@ unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t)
 /// As [`owner_of_instance`].
 unsafe fn live_requester(instance: *mut RexxInstance_) -> Option<Requester> {
     // SAFETY: the caller's guarantee.
+    unsafe { requester_of(instance) }.filter(|requester| !requester.ended())
+}
+
+/// The requester of the interpreter whose instance is `instance`, ended or
+/// not, where its table has one.
+///
+/// # Safety
+/// As [`owner_of_instance`].
+unsafe fn requester_of(instance: *mut RexxInstance_) -> Option<Requester> {
+    // SAFETY: the caller's guarantee.
     unsafe { owner_of_instance(instance) }?
         .requester
         .as_ref()?
         .upgrade()
-        .filter(|requester| !requester.ended())
 }
 
 /// The members a redirecting command handler reads and writes its streams

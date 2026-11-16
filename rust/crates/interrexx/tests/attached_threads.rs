@@ -475,6 +475,41 @@ fn a_thread_a_native_call_joins_attaches_and_detaches() {
     );
 }
 
+/// A native call of a started activity starts a thread that attaches, makes a string through the
+/// context its attach answered and reads it back, and joins it: the thread attaches to an activity
+/// of its own, whether or not the main activity has made a native call (`joinstarted.rex`, where
+/// it has, and `joinregistered.rex`, where only the started activity calls a routine `RxFuncAdd`
+/// registered).
+// spec: native.threads.attach
+#[test]
+fn a_thread_a_started_activitys_native_call_joins_attaches_to_an_activity_of_its_own() {
+    assert_eq!(
+        run("join-str", "joinstarted.rex"),
+        ("main 0\nx\n".to_owned(), String::new(), 0)
+    );
+    assert_eq!(
+        run("join-str-rxf", "joinregistered.rex"),
+        ("x\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A native call of a started activity starts a thread, attached to nothing, that adds a command
+/// environment through the instance, and joins it: the environment is added, and a command to it
+/// from the started activity sets `RC` to what its handler answered, whether or not the main
+/// activity has made a native call.
+// spec: native.threads.attach
+#[test]
+fn a_thread_a_started_activitys_native_call_joins_adds_a_command_environment() {
+    assert_eq!(
+        run("join-cmd", "joincommand.rex"),
+        ("main 0\n7\n".to_owned(), String::new(), 0)
+    );
+    assert_eq!(
+        run("join-cmd-rxf", "joincommandregistered.rex"),
+        ("7\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// A native call starts a thread that attaches, sends `TICK` and detaches, and joins it before it
 /// returns: the message runs while the call blocks, with main's the only activity, and the program
 /// says the count after the call.

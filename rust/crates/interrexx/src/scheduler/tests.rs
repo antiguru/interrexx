@@ -656,6 +656,25 @@ fn a_halt_or_trace_request_to_a_closed_inbox_posts_nothing() {
     );
 }
 
+/// A thread running no native call attaches through the instance while the
+/// interpreter is live, and gets nothing once it has terminated, though the
+/// instance still has its root context (`r[native.threads.end]`).
+#[test]
+fn a_thread_attaching_after_termination_gets_nothing() {
+    let mut interp = Interp::new();
+    let table = interp.activities.thread_table.clone();
+    let _root = interp.thread_context();
+    assert!(
+        table.attaches_from_another_thread(),
+        "a live interpreter refused the attach"
+    );
+    assert!(interp.terminate().is_empty());
+    assert!(
+        !table.attaches_from_another_thread(),
+        "a terminated interpreter attached the thread"
+    );
+}
+
 /// An interpreter dropped without terminating posts nothing either.
 #[test]
 fn a_request_through_the_instance_of_a_dropped_interpreter_posts_nothing() {

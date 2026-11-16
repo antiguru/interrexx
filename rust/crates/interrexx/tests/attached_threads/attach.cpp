@@ -19,6 +19,12 @@
 //   finishes it, and sends `SHOW` with it as its argument.
 // * `AtJoin()` starts a thread that attaches and detaches, joins it while the call runs, and
 //   answers whether it attached.
+// * `AtJoinString()` starts a thread that attaches, makes the string `x` through the context its
+//   attach answered, reads it back and detaches, joins it while the call runs, and answers what
+//   the thread read, or `not attached`.
+// * `AtJoinCommand()` starts a thread that attaches to nothing and adds the command environment
+//   `ATJOINED` through the instance the call's thread context links, joins it while the call runs,
+//   and answers 1. A command to `ATJOINED` sets `RC` to 7.
 // * `AtIdle(target)` sends `TICK`, then stays attached, sending nothing, for two seconds before it
 //   detaches.
 // * `AtSlow(target)` sends `SLOW`, which runs past the main program's end, and detaches.
@@ -868,6 +874,57 @@ RexxRoutine0(int, AtJoin)
     return (int)(intptr_t)attached;
 }
 
+// What the thread `AtJoinString` starts read back, or `not attached`.
+static char joined_read[32];
+
+static void *attach_and_read(void *argument)
+{
+    RexxThreadContext *thread = NULL;
+    if (!((RexxInstance *)argument)->AttachThread(&thread))
+    {
+        snprintf(joined_read, sizeof joined_read, "not attached");
+        return NULL;
+    }
+    snprintf(joined_read, sizeof joined_read, "%s", thread->CString(thread->String("x")));
+    thread->DetachThread();
+    return NULL;
+}
+
+RexxRoutine0(RexxStringObject, AtJoinString)
+{
+    snprintf(joined_read, sizeof joined_read, "not started");
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, attach_and_read, context->threadContext->instance) == 0)
+    {
+        pthread_join(thread, NULL);
+    }
+    return context->String(joined_read);
+}
+
+static RexxObjectPtr RexxEntry joined_handler(RexxExitContext *context, RexxStringObject address,
+                                              RexxStringObject command)
+{
+    return context->String("7");
+}
+
+static void *add_joined_environment(void *argument)
+{
+    ((RexxInstance *)argument)
+        ->AddCommandEnvironment("ATJOINED", (REXXPFN)joined_handler, DIRECT_COMMAND_ENVIRONMENT);
+    return NULL;
+}
+
+RexxRoutine0(int, AtJoinCommand)
+{
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, add_joined_environment, context->threadContext->instance) != 0)
+    {
+        return -1;
+    }
+    pthread_join(thread, NULL);
+    return 1;
+}
+
 RexxRoutine0(int, AtDone)
 {
     return finished;
@@ -957,6 +1014,8 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtString, AtString),
     REXX_TYPED_ROUTINE(AtBuffer, AtBuffer),
     REXX_TYPED_ROUTINE(AtJoin, AtJoin),
+    REXX_TYPED_ROUTINE(AtJoinString, AtJoinString),
+    REXX_TYPED_ROUTINE(AtJoinCommand, AtJoinCommand),
     REXX_TYPED_ROUTINE(AtIdle, AtIdle),
     REXX_TYPED_ROUTINE(AtSlow, AtSlow),
     REXX_TYPED_ROUTINE(AtCycles, AtCycles),
