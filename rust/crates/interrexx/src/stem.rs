@@ -960,6 +960,28 @@ mod tests {
         assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
     }
 
+    /// The write by ordinal refuses, writing nothing, where the stem was
+    /// emptied in place since the read and another tail was assigned at the
+    /// held ordinal.
+    #[test]
+    fn a_held_tail_is_not_written_after_a_clear_reused_its_ordinal() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let one = interp.text(b"one");
+        let two = interp.text(b"two");
+        interp.stem_set(b"T.", b"A", one);
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        let stem = held.0;
+        if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(stem).map(|o| &mut o.body) {
+            tails.clear();
+        }
+        // B is the first tail after the clear, so it takes A's held ordinal.
+        interp.stem_set(b"T.", b"B", one);
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+        assert_eq!(interp.stem_get(b"T.", b"B").0, one);
+        assert_eq!(interp.stem_get(b"T.", b"A").1, Novalue::Unset);
+    }
+
     /// The write by ordinal refuses, writing nothing, where the stem's tails
     /// were renumbered since the read: a compaction between them may have
     /// moved another tail to the held ordinal.
