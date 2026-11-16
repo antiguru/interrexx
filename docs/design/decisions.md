@@ -31,7 +31,7 @@ page records why they are the way they are.
   it is the error of one of the faults. The faults include a wrong argument count, an omitted
   required argument and a `STRING` answer that has no string value. A builtin's conversion of its
   arguments by `STRING` is part of its checks: a call with no fault sends `STRING` to each argument
-  from the left before the other checks (Deviation 170), and for a call with a fault, whether and
+  from the left before the other checks (`r[bif.index.call.convert]`), and for a call with a fault, whether and
   how many `STRING` sends happen is unspecified. Whether the checks after the first fault are made,
   and so whether the messages they send are sent, is unspecified too; and when an operation finds a
   fault that raises a condition, such as LOSTDIGITS, and one that raises an error, which comes
@@ -73,6 +73,10 @@ page records why they are the way they are.
   Deviation 78 withdrawn). A lookup or a search compares identity first and sends `==` only to
   another object, as ooRexx does, and as Python's containers and Java's `HashMap` do: an object
   is taken to equal itself, whatever its `==` answers.
+* **A builtin's conversion of its arguments is part of its checks** (2026-11-16, Deviation 170
+  withdrawn). A call with no fault sends `STRING` to each object argument from the left before the
+  other checks, as ooRexx does; a sweep of the no-fault calls found no difference in the sends.
+  For a call with a fault, whether and how many sends happen stays unspecified.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.
