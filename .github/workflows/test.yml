@@ -257,7 +257,7 @@ jobs:
       - name: Ignored attached-thread tests
         run: >
           cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
-          -E 'package(interrexx) & binary(attached_threads)' --run-ignored ignored-only --profile ci
+          -E 'package(interrexx) & (binary(attached_threads) | binary(instance_identity))' --run-ignored ignored-only --profile ci
 
   doctest:
     name: cargo doc tests

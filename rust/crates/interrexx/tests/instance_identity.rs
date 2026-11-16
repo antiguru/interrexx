@@ -943,7 +943,7 @@ fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound() {
 /// crash, a panic, a hang or a corrupted state that the race reaches only now and then fails it.
 // spec: native.loading.shared
 #[test]
-#[ignore = "a hundred runs; run it with --run-ignored ignored-only"]
+#[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
 fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound_a_hundred_times() {
     let (dir, driver) = build_driver(
         "lifetime-callrace-stress",
