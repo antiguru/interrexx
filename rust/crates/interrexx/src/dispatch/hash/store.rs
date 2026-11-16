@@ -878,8 +878,8 @@ pub(super) fn rebuild(
 /// already holds -- the append half of `put`, and the whole of a multi-value
 /// `put`. `code` is the index's [`code_of`]. A full store is rebuilt first.
 ///
-/// `known` is where a probe of the receiver's store, as it is now, last
-/// found the chain of `code` ([`Probe::at`]).
+/// `known` is the receiver's store as it is now, as a probe answered it, and
+/// where that probe last found the chain of `code` ([`Probe::at`]).
 pub(super) fn append(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -887,9 +887,18 @@ pub(super) fn append(
     index: ObjRef,
     item: Option<ObjRef>,
     code: u64,
-    mut known: Option<Place>,
+    known: Option<(Store, Place)>,
 ) -> Result<(), Failure> {
-    let mut store = store_in(interp, receiver, half)?;
+    let (mut store, mut known) = match known {
+        Some((store, place)) => {
+            debug_assert!(
+                store_in(interp, receiver, half).ok() == Some(store),
+                "a known store is the receiver's current one"
+            );
+            (store, Some(place))
+        }
+        None => (store_in(interp, receiver, half)?, None),
+    };
     if store.used >= store.capacity {
         let live = count_in(interp, &store)?;
         store = rebuild(interp, receiver, half, regrown(live))?;
@@ -1139,10 +1148,18 @@ pub(super) fn insert_in(
         }
         Err(place) => place,
     };
-    // The probe sent nothing after its last look at the store, so the index
-    // is still absent and its chain where the probe found it; the append
-    // reads the store afresh and sends nothing.
-    append(interp, receiver, half, index, item, found.code, Some(place))
+    // The probe sent nothing after its last look at the store, so the store
+    // it answered is the receiver's, the index is still absent and its chain
+    // where the probe found it; the append sends nothing.
+    append(
+        interp,
+        receiver,
+        half,
+        index,
+        item,
+        found.code,
+        Some((store, place)),
+    )
 }
 
 /// A multi-value `put`: another entry under `index`, after every other,
