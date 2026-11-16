@@ -265,11 +265,14 @@ loader runs once, when the first instance of the process loads the library. An
 instance that loads the library while another instance that loaded it is still
 live runs no loader: the two use one copy of the library, its static storage
 included. Such a load, and a load that another thread makes through the
-instance running the loader, completes only once the loader has returned, so no
-instance calls a routine of the library before its loader has finished, except
-where [the re-entrancy rule](r:native.loading.reentrant) lets it go on. A load
-waits for the loader of that library only: a load of another library, which no
-thread is loading, does not wait for it. While a load waits, other threads may
+instance running the loader, completes only once the loader has returned, except
+where [the re-entrancy rule](r:native.loading.reentrant) lets it go on. Only a
+load waits: what a call by name of one of the library's routines does while the
+loader is still running on another thread is unspecified for the program, and
+the routine may find the library not yet set up, but the interpreter does not
+crash, corrupt its own state or deadlock for it. A load waits for the loader of
+that library only: a load of another library, which no thread is loading, does
+not wait for it. While a load waits, other threads may
 call into the instance it is made through, the thread running the loader
 included. Whether two live instances share one load when the same name finds a
 different file for each is unspecified.
