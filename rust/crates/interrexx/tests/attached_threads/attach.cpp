@@ -4,7 +4,9 @@
 // Each routine that starts a thread answers at once, and the thread attaches through the instance
 // the call's thread context links, sends its messages, detaches, and counts itself finished.
 // `AtDone` answers how many threads have finished, which the programs wait for with `SysSleep`, so
-// every thread has detached before the program ends. `AtReport` answers what the last thread that
+// every thread has detached before the program ends. `AtAwaitDone` blocks until one thread has
+// finished and answers how many have, so a traced program waits in one clause however long that
+// takes. `AtReport` answers what the last thread that
 // reports saw.
 //
 // * `AtTicker(target, count)` sends `TICK` to `target` `count` times.
@@ -116,6 +118,9 @@ struct Thread
 };
 
 static std::atomic<int> finished(0);
+// Held while `finished` grows, which `AtAwaitDone` waits on.
+static pthread_mutex_t finished_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t finished_grew = PTHREAD_COND_INITIALIZER;
 static char report[128] = "";
 // The thread context of the thread `AtAttachIdle` or `AtSendReporting` started, once it has
 // attached, and whether `AtOpen` has let it send.
@@ -128,6 +133,15 @@ static std::atomic<int> released(0);
 // is about to send.
 static std::atomic<int> held_open(0);
 static std::atomic<int> held_sending(0);
+
+// Counts a thread as finished and wakes `AtAwaitDone`.
+static void finish(void)
+{
+    pthread_mutex_lock(&finished_lock);
+    finished++;
+    pthread_cond_broadcast(&finished_grew);
+    pthread_mutex_unlock(&finished_lock);
+}
 
 // Sends `name` to `target` and reports the condition the send left, which it clears.
 static void send_reporting(RexxThreadContext *thread, RexxObjectPtr target, const char *name)
@@ -343,7 +357,7 @@ static void *cycles(void *argument)
     }
     snprintf(report, sizeof report, "contexts %s", distinct <= 2 ? "bounded" : "grew");
     delete self;
-    finished++;
+    finish();
     return NULL;
 }
 
@@ -374,7 +388,7 @@ static void *body(void *argument)
         }
     }
     delete self;
-    finished++;
+    finish();
     return NULL;
 }
 
@@ -693,7 +707,7 @@ static void *call_or_put_then_tick(void *argument)
         thread->DetachThread();
     }
     delete then;
-    finished++;
+    finish();
     return NULL;
 }
 
@@ -855,6 +869,18 @@ RexxRoutine0(int, AtDone)
     return finished;
 }
 
+RexxRoutine0(int, AtAwaitDone)
+{
+    pthread_mutex_lock(&finished_lock);
+    while (finished < 1)
+    {
+        pthread_cond_wait(&finished_grew, &finished_lock);
+    }
+    int count = finished;
+    pthread_mutex_unlock(&finished_lock);
+    return count;
+}
+
 RexxRoutine0(CSTRING, AtReport)
 {
     return report;
@@ -899,6 +925,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtMisuse, AtMisuse),
     REXX_TYPED_ROUTINE(AtAwaitRelease, AtAwaitRelease),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
+    REXX_TYPED_ROUTINE(AtAwaitDone, AtAwaitDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()
 };

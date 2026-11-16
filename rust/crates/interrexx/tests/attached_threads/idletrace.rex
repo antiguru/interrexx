@@ -8,9 +8,7 @@ do while AtAttached() = 0
 end
 call AtTrace 1
 call AtOpen
-do while AtDone() < 1
-  call SysSleep 0.05
-end
+call AtAwaitDone
 call AtTrace 0
 say AtReport()
 ::requires 'ticks.cls'
