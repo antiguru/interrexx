@@ -78,8 +78,9 @@
 //   sends `name` without reporting.
 // * `AtHalt(milliseconds)` blocks for `milliseconds`, then calls `Halt` through the instance the
 //   call's thread context links, and answers 1. `AtTrace(on)` calls `SetTrace` through it.
-// * `AtStart()`, called by a method, notes that the method has started. `AtHaltStarted()` blocks
-//   until a method has called `AtStart`, then does what `AtHalt(0)` does.
+// * `AtStart()`, called by a method, notes that the method has started. `AtHaltStarted()` opens
+//   what `AtOpen` opens, blocks until a method has called `AtStart`, then does what `AtHalt(0)`
+//   does.
 // * `AtHaltHeld()` opens what `AtOpen` opens and blocks until a method has called `AtStart`. Then
 //   it lets the thread `AtAttachHeld` started go on, blocks until that thread is about to send,
 //   and a further 300 milliseconds, and then does what `AtHalt(0)` does.
@@ -575,6 +576,7 @@ RexxRoutine0(int, AtStart)
 
 RexxRoutine0(int, AtHaltStarted)
 {
+    gate_open = 1;
     await_start();
     context->threadContext->instance->Halt();
     return 1;
