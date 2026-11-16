@@ -16,7 +16,8 @@ slow-timeout = { period = "60s" }
 # JUnit output stays off; a path here would turn it on.
 
 # Tests whose assertion is a wall-clock boundary (a signal inside a sleep, a halt before a
-# program ends, a prompt before a read, a watchdog's deadline, a replayed clock). Each waits on
+# program ends, a prompt before a read, a watchdog's deadline, a replayed clock, a wait reported
+# as stalled after five seconds or ended before then). Each waits on
 # time, so they run one at a time and claim four test threads each, which keeps a saturated
 # machine from stretching the window they measure.
 [test-groups.wall-clock]
@@ -30,6 +31,24 @@ filter = '''
   & !test(/^support::/)
 | test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
 | (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
+| binary(attached_threads) & (
+  test(=a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waiting)
+  | test(=a_callback_wait_is_not_reported_as_stalling_the_instances_root_call)
+  | test(=a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once)
+  | test(=a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported)
+  | test(=a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop)
+  | test(=a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever)
+  | test(=a_callback_waiting_for_a_post_after_a_native_call_is_not_refused)
+  | test(=a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported)
+  | test(=a_callbacks_wait_within_its_message_for_a_guard_its_lender_is_granted_is_refused)
+  | test(=a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it)
+  | test(=a_halt_ends_a_trace_delivery_that_goes_on)
+  | test(=a_halt_ends_an_inverted_wait_that_goes_on)
+  | test(=a_halt_while_a_callback_waits_for_a_guard_its_lender_is_granted_ends_the_program)
+  | test(=a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it)
+)
 '''
 test-group = 'wall-clock'
 threads-required = 4
@@ -66,6 +85,24 @@ test(=a_valued_reply_ends_the_same_program)
 | test(=a_sigint_during_rexx_start_halts_the_program_not_the_process)
 | test(=the_classic_family_answers_as_the_oracle_does)
 | test(=two_instances_keep_their_environments_and_both_take_a_halt)
+| binary(attached_threads) & (
+  test(=a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waiting)
+  | test(=a_callback_wait_is_not_reported_as_stalling_the_instances_root_call)
+  | test(=a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once)
+  | test(=a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported)
+  | test(=a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop)
+  | test(=a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever)
+  | test(=a_callback_waiting_for_a_post_after_a_native_call_is_not_refused)
+  | test(=a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported)
+  | test(=a_callbacks_wait_within_its_message_for_a_guard_its_lender_is_granted_is_refused)
+  | test(=a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it)
+  | test(=a_halt_ends_a_trace_delivery_that_goes_on)
+  | test(=a_halt_ends_an_inverted_wait_that_goes_on)
+  | test(=a_halt_while_a_callback_waits_for_a_guard_its_lender_is_granted_ends_the_program)
+  | test(=a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded)
+  | test(=an_inverted_wait_that_goes_on_is_reported_and_a_later_post_ends_it)
+)
 '''
 retries = 1
 
