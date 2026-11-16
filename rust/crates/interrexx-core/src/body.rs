@@ -1263,11 +1263,6 @@ impl NativeObject {
         self.entries.remove(key);
     }
 
-    /// Every key this object holds, as owned copies.
-    pub fn keys(&self) -> Vec<Box<[u8]>> {
-        self.entries.keys().cloned().collect()
-    }
-
     /// The `StringTable` this object's `~annotations` answers, or `None` for
     /// an object whose builder gave it none.
     pub fn annotations(&self) -> Option<ObjRef> {

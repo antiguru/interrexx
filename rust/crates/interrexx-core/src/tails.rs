@@ -355,19 +355,6 @@ impl Tails {
         })
     }
 
-    /// Every tail's bytes, ordinal and value, in no particular order.
-    pub fn iter(&self) -> impl Iterator<Item = (&[u8], usize, Option<ObjRef>)> + '_ {
-        self.0.as_deref().into_iter().flat_map(|store| {
-            store.ordinals.iter().map(|(key, &ordinal)| {
-                (
-                    key.as_slice(),
-                    ordinal,
-                    store.values.get(ordinal).and_then(Slot::value),
-                )
-            })
-        })
-    }
-
     /// Every tail's bytes and value, tombstones as `None`, in ordinal order.
     pub fn in_order(&self) -> Vec<(&[u8], Option<ObjRef>)> {
         let Some(store) = self.0.as_deref() else {
