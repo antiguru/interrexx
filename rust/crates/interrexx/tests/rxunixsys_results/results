@@ -114,11 +114,11 @@ ERR 88.907
 # SysGeterrnomsg answers the platform's text for every number but 0, never
 # the null string (`r[rxunixsys.index.errno]`); the oracle answers from a table of its own, and
 # `Unknown` for a number outside it. The texts of the numbers below are those
-# every platform words alike.
+# every platform words alike; `{ENAME}` is the host's number for the error.
 ruled
 say SysGeterrnomsg(0)
-say SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13) '|' SysGeterrnomsg(17)
-say SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22) '|' SysGeterrnomsg(39)
+say SysGeterrnomsg({EPERM}) '|' SysGeterrnomsg({ENOENT}) '|' SysGeterrnomsg({EACCES}) '|' SysGeterrnomsg({EEXIST})
+say SysGeterrnomsg({ENOTDIR}) '|' SysGeterrnomsg({EISDIR}) '|' SysGeterrnomsg({EINVAL}) '|' SysGeterrnomsg({ENOTEMPTY})
 empty = ''
 do n = -1 to 140
   if SysGeterrnomsg(n) == '' then empty = empty n

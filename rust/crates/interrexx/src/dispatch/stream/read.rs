@@ -37,8 +37,9 @@ pub(super) fn read_at(
 
 /// Whether data waits on a transient stream, found without reading it: the
 /// byte count `FIONREAD` reports for a pipe, FIFO or terminal (rexxref
-/// iostrms.xml:189-193). A device that refuses `FIONREAD` has no way to tell
-/// but a read, so a `poll` that finds nothing readable is 0, and otherwise
+/// iostrms.xml:189-193) where it is above 0. A device that refuses
+/// `FIONREAD` or counts 0 is asked by a `poll`: one that finds nothing
+/// readable is 0, and otherwise
 /// one byte is read and kept for the next read, which returns it first; a
 /// read at the end of input finds none, and is 0. A state that cannot be
 /// learned answers 1.
@@ -48,8 +49,11 @@ pub(super) fn transient_has_data(open: &mut interrexx_core::OpenFile) -> bool {
     if open.pending.is_some() {
         return true;
     }
-    if let Ok(waiting) = rustix::io::ioctl_fionread(open.file()) {
-        return waiting > 0;
+    // A count says there is data; a zero is not believed, since Apple's
+    // FIONREAD on a FIFO open for both reading and writing answers 0 with
+    // bytes waiting. The poll below decides then.
+    if rustix::io::ioctl_fionread(open.file()).is_ok_and(|waiting| waiting > 0) {
+        return true;
     }
     let zero = Timespec {
         tv_sec: 0,

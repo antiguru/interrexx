@@ -20,7 +20,10 @@ pub(crate) fn isolated(name: &str) -> bool {
 pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     const CHILD: &str = "REXX_POOL_FAILURE_CHILD";
     if std::env::var(CHILD).as_deref() == Ok(name) {
-        let pool = crate::scheduler::Pool::new(1 << 46, 1);
+        // A stack larger than any 64-bit host's address space, so the spawn
+        // fails whether or not the address cap below is enforced (macOS
+        // enforces none, and has room for 64 TiB).
+        let pool = crate::scheduler::Pool::new(1 << 62, 1);
         match pool.reserve() {
             Err(_) => assert_eq!(pool.threads(), 0),
             Ok(Some(worker)) => {

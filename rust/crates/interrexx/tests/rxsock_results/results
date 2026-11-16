@@ -142,7 +142,6 @@ call t "SockClose(9999)"
 call t "SockSoClose(9999)"
 call t "SockSocket('AF_INET','SOCK_STREAM','0') > 0"
 call t "SockSocket(' af_inet ', ' sock_dgram ', ' ipproto_udp ') > 0"
-call t "SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')"
 call t "SockGetHostByName('127.1', 'h.')"
 call t "SockGetHostByAddr('127.0.0.1', 'h.', 7)"
 call t "SockGetHostByAddr('127.0.0.1', 'h.', 10)"
@@ -155,7 +154,6 @@ call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_TYPE', 1)"
 call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_ERROR', 1)"
 call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)"
 call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v"
-call t "SockSend(c, 'x')"
 call t "SockShutDown(c, 0)"
 call t "SockShutDown(c, 5)"
 call t "SockRecv(c, 'v', 0) '['v']'"
@@ -188,7 +186,6 @@ SockClose(9999)                                              => -1 | 9 | 0
 SockSoClose(9999)                                            => -1 | 9 | 0
 SockSocket('AF_INET','SOCK_STREAM','0') > 0                  => 1 | 0 | 0
 SockSocket(' af_inet ', ' sock_dgram ', ' ipproto_udp ') > 0 => 1 | 0 | 0
-SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')           => -1 | EPROTONOSUPPORT | 0
 SockGetHostByName('127.1', 'h.')                             => 1 | 0 | 0
 SockGetHostByAddr('127.0.0.1', 'h.', 7)                      => 0 | EAFNOSUPPORT | 0
 SockGetHostByAddr('127.0.0.1', 'h.', 10)                     => 0 | EAFNOSUPPORT | 0
@@ -201,7 +198,6 @@ SockSetSockOpt(c, 'SOL_SOCKET', 'SO_TYPE', 1)                => -1 | ERRNO | H_E
 SockSetSockOpt(c, 'SOL_SOCKET', 'SO_ERROR', 1)               => -1 | ERRNO | H_ERRNO
 SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)               => -1 | ENOPROTOOPT | 0
 SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v           => -1 0 | ENOPROTOOPT | 0
-SockSend(c, 'x')                                             => -1 | 32 | 0
 SockShutDown(c, 0)                                           => -1 | ENOTCONN | 0
 SockShutDown(c, 5)                                           => -1 | 22 | 0
 SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0

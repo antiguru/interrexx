@@ -9,6 +9,9 @@
     reason = "this harness times or bounds real runs"
 )]
 
+#[path = "support/host_process.rs"]
+mod host_process;
+
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -56,8 +59,7 @@ fn render(label: &str, case: &datadriven::TestCase) -> String {
     std::fs::create_dir_all(&dir).expect("the probe directory");
     let file = dir.join("p.rex");
     std::fs::write(&file, &case.input).expect("the probe");
-    let mut child = Command::new("env")
-        .arg("--default-signal=INT,TERM,HUP")
+    let mut child = host_process::with_default_halting_signals()
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&file)
         .current_dir(&dir)

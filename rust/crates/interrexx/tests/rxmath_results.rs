@@ -20,20 +20,11 @@ use interrexx::Invocation;
 
 #[path = "support/error_text.rs"]
 mod error_text;
+#[path = "support/host_cases.rs"]
+mod host_cases;
 mod watchdog;
 
 const CASES: &str = "tests/rxmath_results";
-
-/// Whether `file` holds the answers of a host other than this one: a file named `<name>.<host>`,
-/// for a host Rust names (`linux`, `macos`), holds that host's.
-fn for_another_host(file: &datadriven::TestFile) -> bool {
-    let host = std::path::Path::new(&file.filename)
-        .extension()
-        .and_then(|extension| extension.to_str());
-    host.is_some_and(|host| {
-        ["linux", "macos", "windows"].contains(&host) && host != std::env::consts::OS
-    })
-}
 
 /// The path every case runs as.
 const PATH: &str = "probe.rex";
@@ -116,7 +107,7 @@ fn rxmath_answers_as_the_oracle_does() {
                 }
             });
         },
-        for_another_host,
+        host_cases::for_another_host,
     );
     assert!(cases > 0, "no case ran");
 }

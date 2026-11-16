@@ -77,23 +77,6 @@ struct Ended {
     stderr: String,
 }
 
-/// A command that runs its arguments with SIGINT, SIGTERM and SIGHUP at their default action,
-/// whatever this process's are: GNU `env` on Linux, and Perl, which macOS ships, elsewhere.
-fn with_default_halting_signals() -> Command {
-    if cfg!(target_os = "linux") {
-        let mut command = Command::new("env");
-        command.arg("--default-signal=INT,TERM,HUP");
-        command
-    } else {
-        let mut command = Command::new("perl");
-        command.args([
-            "-e",
-            "$SIG{$_} = 'DEFAULT' for qw(INT TERM HUP); exec { $ARGV[0] } @ARGV or die $!",
-        ]);
-        command
-    }
-}
-
 /// Sends the signal named `name` (`INT`, `TERM`, `HUP`) to process `pid`, or to its process
 /// group where `launch` started one: whether it was sent.
 fn send(name: &str, launch: &Launch, pid: u32) -> bool {
@@ -128,7 +111,7 @@ fn run_steps(
     std::fs::create_dir_all(&dir).expect("the probe directory");
     let file = dir.join(format!("{name}.rex"));
     std::fs::write(&file, source).expect("the probe");
-    let mut command = with_default_halting_signals();
+    let mut command = host_process::with_default_halting_signals();
     match launch {
         Launch::Nohup => {
             command.arg("nohup");

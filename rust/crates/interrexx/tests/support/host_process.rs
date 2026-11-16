@@ -4,7 +4,6 @@
 #![allow(dead_code, reason = "each test uses some of these")]
 
 use std::path::Path;
-#[cfg(not(target_os = "linux"))]
 use std::process::Command;
 
 /// This process's peak resident set, in KiB.
@@ -122,4 +121,21 @@ pub fn runs_in(args: &[&str], cwd: &Path) -> bool {
                         .any(|dir| Path::new(dir) == cwd)
                 })
         })
+}
+
+/// A command that runs its arguments with SIGINT, SIGTERM and SIGHUP at their default action,
+/// whatever this process's are: GNU `env` on Linux, and Perl, which macOS ships, elsewhere.
+pub fn with_default_halting_signals() -> Command {
+    if cfg!(target_os = "linux") {
+        let mut command = Command::new("env");
+        command.arg("--default-signal=INT,TERM,HUP");
+        command
+    } else {
+        let mut command = Command::new("perl");
+        command.args([
+            "-e",
+            "$SIG{$_} = 'DEFAULT' for qw(INT TERM HUP); exec { $ARGV[0] } @ARGV or die $!",
+        ]);
+        command
+    }
 }

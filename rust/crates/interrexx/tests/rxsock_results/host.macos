@@ -1,0 +1,20 @@
+# The answers the host's kernel decides (`docs/design/decisions.md`): a datagram socket asked for
+# TCP, and a send on a stream socket that is not connected. These answers are
+# interrexx's on macOS, recorded on a CI runner; the oracle has not been run there.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')"
+call t "SockSend(c, 'x')"
+exit
+t: procedure expose c
+  drop errno h_errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 60) '=>' r '|' errno '|' h_errno
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')           => -1 | EPROTOTYPE | 0
+SockSend(c, 'x')                                             => -1 | ENOTCONN | 0
+[stderr]

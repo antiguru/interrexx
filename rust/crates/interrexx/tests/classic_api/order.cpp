@@ -30,9 +30,16 @@ int main() {
     result.strlength = sizeof buffer;
     short rc = -99;
 #ifdef FIND_REXXSTART
-    void *librexx = dlopen("librexx.so.4", RTLD_NOW | RTLD_NOLOAD);
+    // The name librexx records for itself, which the loader mapped it by: its SONAME, or on
+    // Apple's hosts its install name.
+#ifdef __APPLE__
+    const char *name = "@rpath/librexx.4.dylib";
+#else
+    const char *name = "librexx.so.4";
+#endif
+    void *librexx = dlopen(name, RTLD_NOW | RTLD_NOLOAD);
     if (librexx == NULL) {
-        printf("librexx.so.4 not loaded\n");
+        printf("%s not loaded\n", name);
         return 1;
     }
     typedef int (RexxEntry *Start)(size_t, PCONSTRXSTRING, const char *, PRXSTRING, const char *,

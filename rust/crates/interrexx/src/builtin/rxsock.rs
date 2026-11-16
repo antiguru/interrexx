@@ -1131,6 +1131,16 @@ fn try_accept(fd: i32) -> Os<Accepted> {
     })
 }
 
+/// Whether a receive on `socket` can never be answered by data: a listening
+/// socket, and off Linux, whose poll does not report it hung up, a stream
+/// socket with no peer.
+fn unconnected_stream(socket: std::os::fd::BorrowedFd<'_>) -> bool {
+    crate::host::is_listening(socket)
+        || (!cfg!(any(target_os = "linux", target_os = "android"))
+            && rustix::net::sockopt::socket_type(socket) == Ok(rustix::net::SocketType::STREAM)
+            && rustix::net::getpeername(socket) == Err(rustix::io::Errno::NOTCONN))
+}
+
 /// The deadline a socket's `SO_RCVTIMEO` (`Timeout::Recv`) or `SO_SNDTIMEO`
 /// (`Timeout::Send`) sets for a wait starting now; `None` where it is 0.
 fn socket_deadline(
@@ -1459,12 +1469,14 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
         return Ok(number(interp, 0));
     }
     let flags = recv_flags(&flags);
-    // A listening socket is not connected: the receive fails at once with
-    // ENOTCONN (r[rxsock.sockets.stream]) instead of waiting for data that
-    // can never come.
+    // A stream socket that is not connected, a listening one included, fails
+    // at once with ENOTCONN (r[rxsock.sockets.stream]) instead of waiting for
+    // data that can never come. Linux's poll reports a socket never connected
+    // as hung up, which ends its wait at once; Apple's does not, so there it
+    // is asked here.
     let waits = !flags.contains(RecvFlags::OOB)
         && with_socket(fd, |socket| {
-            Ok(blocks(socket) && !crate::host::is_listening(socket))
+            Ok(blocks(socket) && !unconnected_stream(socket))
         })
         .unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);

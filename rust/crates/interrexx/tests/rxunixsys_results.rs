@@ -2,7 +2,8 @@
 //! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
 //! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
-//! (`uname -s`), which `SysUname` answers.
+//! (`uname -s`), which `SysUname` answers, and `{ENAME}` in a program the host's number for the
+//! error `ENAME`.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
 //!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
@@ -67,7 +68,20 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     // The recorded modes are the file's own, not the inherited umask's.
     std::fs::set_permissions(dir.join("f"), PermissionsExt::from_mode(0o664))
         .expect("the case file's mode");
-    let program = program.replace("{dir}", &dir.display().to_string());
+    let mut program = program.replace("{dir}", &dir.display().to_string());
+    // An error a case names, `{ENAME}`, is the host's number for it (`docs/design/decisions.md`).
+    for (name, number) in [
+        ("EPERM", libc::EPERM),
+        ("ENOENT", libc::ENOENT),
+        ("EACCES", libc::EACCES),
+        ("EEXIST", libc::EEXIST),
+        ("ENOTDIR", libc::ENOTDIR),
+        ("EISDIR", libc::EISDIR),
+        ("EINVAL", libc::EINVAL),
+        ("ENOTEMPTY", libc::ENOTEMPTY),
+    ] {
+        program = program.replace(&format!("{{{name}}}"), &number.to_string());
+    }
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
     let api = rexx_service::service_dir(&root, name);
