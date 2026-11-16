@@ -2004,7 +2004,7 @@ impl Interp {
         // activity goes on only once the callback that stopped it has
         // finished.
         let stopped = |sleeper: ActivityId| {
-            (table.owners.iter()).any(|&(owner, buried)| owner == sleeper && buried)
+            (table.owners.iter()).any(|&(owner, below)| owner == sleeper && below != Below::Free)
         };
         table.ready.is_empty()
             && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))

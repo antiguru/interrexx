@@ -1190,12 +1190,12 @@ fn callbacks_held_while_one_runs_are_served_in_arrival_order() {
         while !inbox.requests().pending(crate::timer::INBOX) {
             std::thread::yield_now();
         }
-        interp.drain_completions();
+        interp.drain_completions(crate::scheduler::DrainAt::Stopped);
         assert_eq!(interp.activities.held.len(), arrival + 1);
     }
     assert!(served.lock().expect("no panic").is_empty());
     interp.pretend_callback_runs(false);
-    interp.drain_completions();
+    interp.drain_completions(crate::scheduler::DrainAt::Stopped);
     for thread in threads {
         assert_eq!(thread.join().expect("no panic"), TakeFor::Taken);
     }
