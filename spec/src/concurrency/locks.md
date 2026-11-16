@@ -923,11 +923,21 @@ such as a lock, a result or the change of a variable, that only an activity
 that is suspended beneath it can provide is refused, and the program ends with
 exit code 120. ooRexx runs each activity on a thread of its own, so the
 activity that waits is not in the way of the one that must go on, and the
-program ends normally. In the first example the first message waits in an
-INTERPRET until a flag is set; the second sets the flag and then waits, in an
-INTERPRET, for the first one's result. In the second a method that `run` runs
-keeps the lock of the object and waits for a flag; the method that sets the
-flag then asks, in a method that `run` runs, for the same lock.
+program ends normally.
+The refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+[the rule of Deviation 20](r:conc.activities.deviation.20) defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds and nothing else is left to run,
+a line on stderr says so and names the activity that the wait keeps from
+running. Apart from that line the program runs as it would without it, and a
+HALT the host asks for ends the wait where [the host's
+request](r:conc.halt.signal) ends such a wait.
+In the first example the first message waits in an INTERPRET until a flag is
+set; the second sets the flag and then waits, in an INTERPRET, for the first
+one's result. In the second a method that `run` runs keeps the lock of the
+object and waits for a flag; the method that sets the flag then asks, in a
+method that `run` runs, for the same lock.
 
 ```rexx
 say 'start'

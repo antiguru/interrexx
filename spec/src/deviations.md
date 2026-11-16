@@ -110,7 +110,17 @@ activity that has not yet started to run.
 An activity waiting inside a nested construct, such as INTERPRET or a method
 that `run` runs, for something, such as a lock, a result or the change of a
 variable, that only an activity suspended beneath it can provide is refused,
-exit code 120. ooRexx runs each activity on its own thread and completes.
+exit code 120. ooRexx runs each activity on its own thread and completes. The
+refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+[the rule of Deviation 20](r:conc.activities.deviation.20) defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds with nothing else left to run, a
+line on stderr says so, and the program otherwise runs as it would without the
+line. A HALT the host asks for ends such a wait where it ends the same wait
+elsewhere. A trace line's delivery that holds a guard and spins until another
+activity acts ([the locks page's rule](r:conc.locks.trace.deviation.14)) is
+refused whatever was loaded.
 
 ## 15. Withdrawn
 
