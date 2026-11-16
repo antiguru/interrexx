@@ -562,9 +562,10 @@ lines, so a null string yields none. A <a href="../classes/stem.html#r-class.ste
 <a href="../classes/directory.html#r-class.directory.makearray">Directory</a> and a
 <a href="../classes/table.html#r-class.table.makearray">Table</a> yield their indexes, which for a Stem are the
 tails of the existing compound variables, and a <a href="../classes/set.html#r-class.set.makearray">Set</a>
-yields its members. The order of those four is not specified, as <a href="#r-instr.do.deviation.1">Deviation
-1</a> says for a Stem and <a href="../deviations.html#33-hash-iteration-order">Deviation
-33</a> for the others. A collection
+yields its members. The order of a Stem is that of assignment (<a href="#r-instr.do.deviation.1">Deviation
+1</a>), and that of the others is the order in which their
+entries were first put (<a href="../deviations.html#33-hash-iteration-order">Deviation
+33</a>). A collection
 that yields nothing leaves <code>name</code> as it was, and otherwise <code>name</code> holds the
 last item after the loop.</p>
 <pre><code class="language-rexx">a = .array~of('x', 'y', 'z')
@@ -1150,20 +1151,28 @@ do 2 counter c; end =&gt; 26.2
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-instr.do.deviation.1"><a href="#r-instr.do.deviation.1">[instr.do.deviation.1]</a></div>
-<p>The order in which a DO OVER over a Stem visits its tails is not specified.
-ooRexx visits them in an order that its storage fixes, which is neither the
-order of assignment nor a sorted order, and interrexx may visit them in
-another. Which tails the loop visits is specified, as <a href="#r-instr.do.over">the OVER
-rule</a> says.</p>
+<p>A DO OVER over a Stem visits its tails in the order they were first assigned, a
+tail that was dropped and assigned again counting from its new assignment. A
+dropped tail is not listed. ooRexx visits them in an order that its storage
+fixes, which is neither the order of assignment nor a sorted order. Which tails
+the loop visits is specified, as <a href="#r-instr.do.over">the OVER rule</a> says.</p>
 <pre><code class="language-rexx">s. = 'dflt'
 s.beta = 2; s.alpha = 1; s.gamma = 3
 seen = .array~new
 do t over s.
   seen~append(t)
 end
-say seen~items seen~sort~makeString('l', ' ')
+say seen~makeString('l', ' ')
+drop s.alpha
+s.alpha = 4
+seen = .array~new
+do t over s.
+  seen~append(t)
+end
+say seen~makeString('l', ' ')
 </code></pre>
-<pre><code class="language-output">3 ALPHA BETA GAMMA
+<pre><code class="language-output">BETA ALPHA GAMMA
+BETA GAMMA ALPHA
 </code></pre>
 <div class="rule" id="r-instr.do.deviation.25"><a href="#r-instr.do.deviation.25">[instr.do.deviation.25]</a></div>
 <p>When the TO test or the direction test of a controlled loop sends a comparison

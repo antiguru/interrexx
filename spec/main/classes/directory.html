@@ -192,9 +192,12 @@ method search</a> finds no method, such as <code>d~name</code>,
 reaches the <code>unknown</code> method of the class, which reads or sets the entry of that
 name in upper case (<a href="#r-class.directory.unknown">the unknown rule</a>). The page
 follows the order of the rexxref entry. Examples that show an error use a small
-routine <code>try</code>, as the builtin pages do. The page says nothing about which of
-two items equal to the argument <code>removeItem</code> removes (<a href="#r-class.directory.deviation.33">the hash order
-rule</a>).</p>
+routine <code>try</code>, as the builtin pages do. A directory lists its entries in the
+order they were first put, and then the names its methods were set under, and
+<code>index</code> and <code>removeItem</code> choose the oldest of several entries that qualify
+(<a href="#r-class.directory.deviation.33">the hash order rule</a>). ooRexx lists and
+chooses otherwise, so the examples outside that rule hold one such entry or
+sort the answers.</p>
 <h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
 <div class="rule" id="r-class.directory.creation"><a href="#r-class.directory.creation">[class.directory.creation]</a></div>
 <p><code>Directory</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>,
@@ -498,14 +501,13 @@ d~hasIndex("a", "b") =&gt; 93.902
 <div class="rule" id="r-class.directory.hasitem"><a href="#r-class.directory.hasitem">[class.directory.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers 1 when some item is equal to the argument and 0
 otherwise, and <code>index(item)</code> answers an index of such an item and <code>.nil</code> when
-there is none. The stored items are searched first. When none of them is
-equal, the methods are run one after the other, and the answer of each is
-compared before the next one runs, so a method runs only when nothing searched
-before it was equal, and at most once. The <code>UNKNOWN</code> method is not searched.
-Which index <code>index</code> answers when several items qualify is not specified (<a href="#r-class.directory.deviation.33">the
-hash order rule</a>). Both take exactly one
-argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second raises
-<code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
+there is none. The stored items are searched first. When none of them is equal,
+the methods are run one after the other, and the answer of each is compared
+before the next one runs, so a method runs only when nothing searched before it
+was equal, and at most once. The <code>UNKNOWN</code> method is not searched. When several
+stored items qualify, <code>index</code> answers the index of the oldest entry (<a href="#r-class.directory.index.deviation.33">the oldest
+rule</a>). Both take exactly one argument:
+none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">d = .directory~new
 d~put('x', 'k1')
 d~put(.nil, 'k2')
@@ -535,11 +537,12 @@ d~index(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.directory.hasitem.sends"><a href="#r-class.directory.hasitem.sends">[class.directory.hasitem.sends]</a></div>
 <p><code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code> to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the stored items are visited first, in an order that is
-not specified, and then the answers of the methods, in an order that is not
-specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The very object that is stored is found
-without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity rule</a>).</p>
+and send nothing else; the stored items are visited first, in the order of the
+entries, and then the answers of the methods, in the order the methods were set
+(<a href="#r-class.directory.deviation.33">the hash order rule</a>), so the number of
+messages is specified only when no item matches, as then every item is visited.
+The very object that is stored is found without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 d = .directory~new
 d~put('s', 'k1')
@@ -877,15 +880,16 @@ d~unknown("x", .nil) =&gt; 98.913
 </code></pre>
 <h2 id="lists-of-the-entries"><a class="header" href="#lists-of-the-entries">Lists of the entries</a></h2>
 <div class="rule" id="r-class.directory.makearray"><a href="#r-class.directory.makearray">[class.directory.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items, with the answer of each
-method (run once for each call of <code>allItems</code>; <code>makeArray</code> and <code>allIndexes</code> do
-not run the methods). They are instances of <code>Array</code> for a subclass receiver
-too, never the receiver, and do not follow later changes. They take no
-argument: one raises <code>SYNTAX 93.902</code>. The order is not specified (<a href="#r-class.directory.deviation.33">the hash
-order rule</a>), and is the same for the three
-answers and for the supplier of one unchanged directory, so the item at a
-position belongs to the index at the same position.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items, with the answer of each method (run
+once for each call of <code>allItems</code>; <code>makeArray</code> and <code>allIndexes</code> do not run the
+methods). They are instances of <code>Array</code> for a subclass receiver too, never the
+receiver, and do not follow later changes. They take no argument: one raises
+<code>SYNTAX 93.902</code>. The order is that in which the entries were first put, and then
+that in which the methods were first set (<a href="#r-class.directory.deviation.33">the hash order
+rule</a>), and is the same for the three answers
+and for the supplier of one unchanged directory, so the item at a position
+belongs to the index at the same position.</p>
 <pre><code class="language-rexx">d = .many~new
 do i = 1 to 40
   d~put('item'i, 'key'i)
@@ -1128,21 +1132,100 @@ say 'after'
 <pre><code class="language-output rc=120">before
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.33"><a href="#r-class.directory.deviation.33">[class.directory.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and of the search of <code>hasItem</code>, <code>index</code> and <code>removeItem</code>, is not
-specified, and may differ from ooRexx's. Which entries are produced, and how
-often, is specified. In the example the answers are sorted.</p>
-<pre><code class="language-rexx">d = .directory~new
-d~put(1, 'one')
-d~put(2, 'two')
-d~put(3, 'three')
-say d~allIndexes~sort~makeString('L', ',')
-say d~allItems~sort~makeString('L', ',')
-say d~items d~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
+items in that order. The names that <code>setMethod</code> gave the directory come after
+the entries. Which entries are produced, and how often, is specified. The entry
+that a search acts on when an <code>==</code> that it sends changes the directory is not
+specified, and may be none of them. ooRexx lists the entries in an order that
+its storage fixes, so its answers can differ. See <a href="../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">one,three,two
+<pre><code class="language-output">c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+</code></pre>
+<div class="rule" id="r-class.directory.put.deviation.33"><a href="#r-class.directory.put.deviation.33">[class.directory.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the directory holds leaves the entry in its
+place. An entry that is removed and then put again comes last. ooRexx's order
+does not follow the puts (<a href="#r-class.directory.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,b 4,2,3
+a,b,c 2,3,5
+</code></pre>
+<div class="rule" id="r-class.directory.index.deviation.33"><a href="#r-class.directory.index.deviation.33">[class.directory.index.deviation.33]</a></div>
+<p>When several entries hold an item equal to the argument, <code>index</code> answers the
+index of the oldest of them and <code>removeItem</code> removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another (<a href="#r-class.directory.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+</code></pre>
+<pre><code class="language-output">c x a,b
+b
+</code></pre>
+<div class="rule" id="r-class.directory.copy.deviation.33"><a href="#r-class.directory.copy.deviation.33">[class.directory.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each directory
+keeps its own order: an entry put into one comes last in that one only (<a href="#r-class.directory.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,b,c,z
+a,b,c,y
+</code></pre>
+<div class="rule" id="r-class.directory.setmethod.deviation.33"><a href="#r-class.directory.setmethod.deviation.33">[class.directory.setmethod.deviation.33]</a></div>
+<p>The names of the methods are listed after the entries, in the order in which
+<code>setMethod</code> first set them. Setting a method again under a name leaves it in its
+place, and a name whose method was unset and is then set again comes last (<a href="#r-class.directory.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">d = .directory~new
+d['c'] = 1
+d~setMethod('M', 'return 2')
+d['a'] = 3
+d~setMethod('K', 'return 4')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('M', 'return 6')
+d~setMethod('A', 'return 7')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('K')
+d~setMethod('K', 'return 8')
+say d~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,M,K 1,3,2,4
+c,a,M,K,A 1,3,6,4,7
+c,a,M,A,K
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.109"><a href="#r-class.directory.deviation.109">[class.directory.deviation.109]</a></div>
 <p>A name, an index or the size argument of <code>new</code> that is an instance of a

@@ -623,10 +623,11 @@ a~string(1) =&gt; 93.902
 argument. It answers the same string every time for one object. The collection
 classes that hash their indexes use it together with <code>==</code>, as their pages
 specify, so a class which declares <code>==</code> has to declare <code>hashCode</code> so that
-objects which are equal under <code>==</code> have equal hash codes. For <code>Object</code> the
-hash code belongs to the identity of the receiver; its form and its digits are
-not specified, and two different objects may have the same one. Equal strings
-have equal hash codes (<a href="#r-class.object.deviation.4">Deviation 4</a>).</p>
+objects which are equal under <code>==</code> have hash codes that are the same string, by
+strict comparison. For <code>Object</code> the hash code belongs to the identity of the
+receiver; its form and its digits are not specified, and two different objects
+may have the same one. Equal strings have equal hash codes (<a href="#r-class.object.deviation.4">Deviation
+4</a>).</p>
 <pre><code class="language-rexx">a = .box~new
 b = .box~new
 h = a~hashCode
@@ -853,18 +854,18 @@ a~instanceMethod("hello", 1) =&gt; 93.902
 <p><code>instanceMethods</code> answers a supplier whose indexes are method names in upper
 case and whose items are method objects. It lists names that exist when it is
 sent, and a later change to a class or to the receiver does not reach the
-supplier. The order of its entries is not specified
-(<a href="../deviations.html">Deviation 33</a>). Without an argument it lists every method
-of the receiver's own methods and of every class of its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver as its argument, it lists the methods of that
+supplier. The order of its entries is not specified (<a href="../deviations.html#33-hash-iteration-order">Deviation
+33</a>). Without an argument it lists
+every method of the receiver's own methods and of every class of its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver as its argument, it lists the methods of that
 class's table, and with <code>.nil</code> the receiver's own methods. With any other
 argument, a number or a string or a class outside the order included, the
-supplier has no entries. A table entry that hides a name is not listed; the
-name is still listed from every other table of the order that holds a method
-for it, so the listing does not show what the search finds. The argument may
-be given once: a second raises <code>SYNTAX 93.902</code>. For a class receiver the order
-is the <a href="methods.html#r-class.methods.class-side">class-side one</a>.</p>
+supplier has no entries. A table entry that hides a name is not listed; the name
+is still listed from every other table of the order that holds a method for it,
+so the listing does not show what the search finds. The argument may be given
+once: a second raises <code>SYNTAX 93.902</code>. For a class receiver the order is the
+<a href="methods.html#r-class.methods.class-side">class-side one</a>.</p>
 <pre><code class="language-rexx">call show .box~new~instanceMethods(.box), 'box'
 call show .sub~new~instanceMethods(.sub), 'sub'
 call show .sub~new~instanceMethods(.box), 'sub as box'
@@ -2078,9 +2079,9 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 String 0
 </code></pre>
 <div class="rule" id="r-class.object.deviation.33"><a href="#r-class.object.deviation.33">[class.object.deviation.33]</a></div>
-<p>The order of the entries that <code>instanceMethods</code> yields is not specified and
-may differ from ooRexx's (<a href="../deviations.html">Deviation 33</a>); which names are
-listed, and how often, is specified.</p>
+<p>The order of the entries that <code>instanceMethods</code> yields is not specified and may
+differ from ooRexx's (<a href="../deviations.html#33-hash-iteration-order">Deviation 33</a>);
+which names are listed, and how often, is specified.</p>
 <pre><code class="language-rexx">t = .box~new~instanceMethods(.box)
 a = .array~new
 do while t~available

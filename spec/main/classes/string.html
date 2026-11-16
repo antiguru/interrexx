@@ -478,7 +478,9 @@ takes no argument (<code>SYNTAX 93.902</code>). Strings with the same characters
 same hash code, including an instance of a subclass and a plain string, and
 the collection classes that hash their indexes use it with <code>==</code>, as <a href="object.html#r-class.object.hashcode">the
 object rule</a> says. Strings with different characters
-may have equal codes. The characters of the answer are not specified.</p>
+may have equal codes. The characters of the answer are not specified: they
+are the same throughout one run of the interpreter and may differ between
+runs, so that a program cannot choose many strings that share one code.</p>
 <pre><code class="language-rexx">a = 'ab' || 'c'
 say (a~hashCode == 'abc'~hashCode) (a~hashCode == 'abd'~hashCode)
 say (.shout~new('abc')~hashCode == 'abc'~hashCode)

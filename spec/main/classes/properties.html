@@ -867,8 +867,8 @@ p~load =&gt; 93.901
 p~load(f, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.properties.save"><a href="#r-class.properties.save">[class.properties.save]</a></div>
-<p><code>save(target)</code> writes one line <code>name=value</code> for each entry, each ended by a
-line feed, in an order that is not specified (<a href="#r-class.properties.deviation.33">the hash order
+<p><code>save(target)</code> writes one line <code>name=value</code> for each entry, each ended by a line
+feed, in the order the entries were first put (<a href="#r-class.properties.deviation.33">the hash order
 rule</a>); the name and the value are written as
 they are, a value that is not a string through <a href="../conventions.html#r-conv.string.object">the string-value
 rule</a>, with no escaping, so a name that holds <code>=</code> or a
@@ -1081,18 +1081,20 @@ say 'after'
 <pre><code class="language-output rc=120">before
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.33"><a href="#r-class.properties.deviation.33">[class.properties.deviation.33]</a></div>
-<p>The order of the lines that <code>save</code> writes, and the order of the lists and
-searches that <code>Properties</code> inherits from <code>Directory</code>, is not specified, and
-may differ from ooRexx's (<a href="directory.html#r-class.directory.deviation.33">the Directory
-rule</a>). Which lines are written, and how
-often, is specified. In the example the lines are sorted.</p>
+<p><code>save</code> writes the lines in the order the entries were first put, and the lists
+and searches that <code>Properties</code> inherits from <code>Directory</code> follow <a href="directory.html#r-class.directory.deviation.33">the Directory
+rule</a>. Which lines are written, and how often,
+is specified. ooRexx writes the lines in an order that its storage fixes, so
+its output can differ. See <a href="../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
 <pre><code class="language-rexx">p = .properties~new
 p~put('1', 'one')
 p~put('2', 'two')
 p~put('3', 'three')
+p~put('4', 'one')
 t = .recorder~new
 p~save(t)
-say t~lines~sort~makeString('L', '|')
+say t~lines~makeString('L', '|')
 ::class recorder
 ::method init
   expose lines
@@ -1105,7 +1107,7 @@ say t~lines~sort~makeString('L', '|')
   expose lines
   return lines
 </code></pre>
-<pre><code class="language-output">one=1|three=3|two=2
+<pre><code class="language-output">one=4|two=2|three=3
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.109"><a href="#r-class.properties.deviation.109">[class.properties.deviation.109]</a></div>
 <p>A value that is an instance of a subclass of <code>String</code> is read by its own

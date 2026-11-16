@@ -191,9 +191,11 @@ chapter</a> says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine <code>try</code>, as the builtin
 pages do. Whether two equal strings or numbers are one object is not specified
 (<a href="#r-class.identitytable.deviation.4">the identity rule</a>), so the examples use
-other objects, or one variable read twice, for indexes and items. The page
-says nothing about which of two items found by the same object <code>removeItem</code>
-removes (<a href="#r-class.identitytable.deviation.33">the hash order rule</a>).</p>
+other objects, or one variable read twice, for indexes and items. A table lists
+its entries in the order they were first put, and <code>index</code> and <code>removeItem</code>
+choose the oldest of several entries that hold the item (<a href="#r-class.identitytable.deviation.33">the hash order
+rule</a>). ooRexx lists and chooses otherwise,
+so the examples outside that rule hold one such entry or sort the answers.</p>
 <h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
 <div class="rule" id="r-class.identitytable.creation"><a href="#r-class.identitytable.creation">[class.identitytable.creation]</a></div>
 <p><code>IdentityTable</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>,
@@ -457,15 +459,14 @@ t~hasIndex =&gt; 88.901
 t~hasIndex("a", "b") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.identitytable.hasitem"><a href="#r-class.identitytable.hasitem">[class.identitytable.hasitem]</a></div>
-<p><code>hasItem(item)</code> answers 1 when some entry holds the argument itself as its
-item and 0 otherwise, and <code>index(item)</code> answers the index of such an entry and
-<code>.nil</code> when there is none. An object that is equal to an item under <code>==</code> but
-is not that object is not found, and no message is sent to the argument or to
-the items. Which index <code>index</code> answers when several entries hold the item is
-not specified (<a href="#r-class.identitytable.deviation.33">the hash order rule</a>).
-Both take exactly one argument: none, or an omitted one, raises
-<code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like
-any other.</p>
+<p><code>hasItem(item)</code> answers 1 when some entry holds the argument itself as its item
+and 0 otherwise, and <code>index(item)</code> answers the index of such an entry and <code>.nil</code>
+when there is none. An object that is equal to an item under <code>==</code> but is not
+that object is not found, and no message is sent to the argument or to the
+items. When several entries hold the item, <code>index</code> answers the index of the
+oldest (<a href="#r-class.identitytable.index.deviation.33">the oldest rule</a>). Both take
+exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
+second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">t = .identitytable~new
 x = .array~of('x')
 t~put(x, 'k1')
@@ -598,14 +599,15 @@ t~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-entries"><a class="header" href="#lists-of-the-entries">Lists of the entries</a></h2>
 <div class="rule" id="r-class.identitytable.makearray"><a href="#r-class.identitytable.makearray">[class.identitytable.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="#r-class.identitytable.deviation.33">the hash order rule</a>), and
-is the same for the three answers and for the supplier of one unchanged table,
-so the item at a position belongs to the index at the same position. The
-methods send no message to the table or to the indexes and items.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+entries were first put (<a href="#r-class.identitytable.deviation.33">the hash order
+rule</a>), and is the same for the three
+answers and for the supplier of one unchanged table, so the item at a position
+belongs to the index at the same position. The methods send no message to the
+table or to the indexes and items.</p>
 <pre><code class="language-rexx">t = .many~new
 do i = 1 to 40
   t~put('item'i, .array~of(i))
@@ -862,20 +864,80 @@ say t~at(u)
 3
 </code></pre>
 <div class="rule" id="r-class.identitytable.deviation.33"><a href="#r-class.identitytable.deviation.33">[class.identitytable.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and which of two entries that hold the same item <code>index</code> and
-<code>removeItem</code> use, is not specified, and may differ from ooRexx's. Which
-entries are produced, and how often, is specified. In the example the answers
-are sorted.</p>
-<pre><code class="language-rexx">t = .identitytable~new
-t~put(1, .array~of('one'))
-t~put(2, .array~of('two'))
-t~put(3, .array~of('three'))
-say t~allItems~sort~makeString('L', ',')
-say t~allIndexes~items t~items t~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> search the
+items in that order. Which entries are produced, and how often, is specified.
+ooRexx lists the entries in an order that its storage fixes, so its answers can
+differ. See <a href="../deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
+<pre><code class="language-rexx">c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
+t = .identitytable~new
+t[c] = 1
+t[a] = 2
+t[b] = 3
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say (s~index == c) s~item t~allIndexes~items t~makeArray~items
 </code></pre>
 <pre><code class="language-output">1,2,3
-3 3 3
+1 1 3 3
+</code></pre>
+<div class="rule" id="r-class.identitytable.put.deviation.33"><a href="#r-class.identitytable.put.deviation.33">[class.identitytable.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the table holds leaves the entry in its place.
+An entry that is removed and then put again comes last. ooRexx's order does not
+follow the puts (<a href="#r-class.identitytable.deviation.33">the hash order rule</a>).</p>
+<pre><code class="language-rexx">c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
+t = .identitytable~new
+t[c] = 1
+t[a] = 2
+t[b] = 3
+t[c] = 4
+say t~allItems~makeString('L', ',')
+t~remove(c)
+t[c] = 5
+say t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">4,2,3
+2,3,5
+</code></pre>
+<div class="rule" id="r-class.identitytable.index.deviation.33"><a href="#r-class.identitytable.index.deviation.33">[class.identitytable.index.deviation.33]</a></div>
+<p>When several entries hold the item, <code>index</code> answers the index of the oldest of
+them and <code>removeItem</code> removes the oldest. ooRexx searches the items in the order
+of its storage, so it can choose another (<a href="#r-class.identitytable.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">x = .array~of('x')
+t = .identitytable~new
+t['c'] = x
+t['a'] = 'y'
+t['b'] = x
+say t~index(x) (t~removeItem(x) == x) t~allIndexes~makeString('L', ',')
+say t~index(x)
+</code></pre>
+<pre><code class="language-output">c 1 a,b
+b
+</code></pre>
+<div class="rule" id="r-class.identitytable.copy.deviation.33"><a href="#r-class.identitytable.copy.deviation.33">[class.identitytable.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each table
+keeps its own order: an entry put into one comes last in that one only (<a href="#r-class.identitytable.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">c = .array~of('c')
+t = .identitytable~new
+t[c] = 1
+t[.array~of('a')] = 2
+t~remove(c)
+t[.array~of('b')] = 3
+t[c] = 4
+k = t~copy
+k[.array~of('z')] = 5
+t[.array~of('y')] = 6
+say k~allItems~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">2,3,4,5
+2,3,4,6
 </code></pre>
 <div class="rule" id="r-class.identitytable.deviation.109"><a href="#r-class.identitytable.deviation.109">[class.identitytable.deviation.109]</a></div>
 <p>The size argument of <code>new</code> that is an instance of a subclass of <code>String</code> is

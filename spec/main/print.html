@@ -7553,9 +7553,10 @@ lines, so a null string yields none. A <a href="instructions/../classes/stem.htm
 <a href="instructions/../classes/directory.html#r-class.directory.makearray">Directory</a> and a
 <a href="instructions/../classes/table.html#r-class.table.makearray">Table</a> yield their indexes, which for a Stem are the
 tails of the existing compound variables, and a <a href="instructions/../classes/set.html#r-class.set.makearray">Set</a>
-yields its members. The order of those four is not specified, as <a href="instructions/do.html#r-instr.do.deviation.1">Deviation
-1</a> says for a Stem and <a href="instructions/../deviations.html#33-hash-iteration-order">Deviation
-33</a> for the others. A collection
+yields its members. The order of a Stem is that of assignment (<a href="instructions/do.html#r-instr.do.deviation.1">Deviation
+1</a>), and that of the others is the order in which their
+entries were first put (<a href="instructions/../deviations.html#33-hash-iteration-order">Deviation
+33</a>). A collection
 that yields nothing leaves <code>name</code> as it was, and otherwise <code>name</code> holds the
 last item after the loop.</p>
 <pre><code class="language-rexx">a = .array~of('x', 'y', 'z')
@@ -8141,20 +8142,28 @@ do 2 counter c; end =&gt; 26.2
 </code></pre>
 <h2 id="deviations-5"><a class="header" href="#deviations-5">Deviations</a></h2>
 <div class="rule" id="r-instr.do.deviation.1"><a href="instructions/do.html#r-instr.do.deviation.1">[instr.do.deviation.1]</a></div>
-<p>The order in which a DO OVER over a Stem visits its tails is not specified.
-ooRexx visits them in an order that its storage fixes, which is neither the
-order of assignment nor a sorted order, and interrexx may visit them in
-another. Which tails the loop visits is specified, as <a href="instructions/do.html#r-instr.do.over">the OVER
-rule</a> says.</p>
+<p>A DO OVER over a Stem visits its tails in the order they were first assigned, a
+tail that was dropped and assigned again counting from its new assignment. A
+dropped tail is not listed. ooRexx visits them in an order that its storage
+fixes, which is neither the order of assignment nor a sorted order. Which tails
+the loop visits is specified, as <a href="instructions/do.html#r-instr.do.over">the OVER rule</a> says.</p>
 <pre><code class="language-rexx">s. = 'dflt'
 s.beta = 2; s.alpha = 1; s.gamma = 3
 seen = .array~new
 do t over s.
   seen~append(t)
 end
-say seen~items seen~sort~makeString('l', ' ')
+say seen~makeString('l', ' ')
+drop s.alpha
+s.alpha = 4
+seen = .array~new
+do t over s.
+  seen~append(t)
+end
+say seen~makeString('l', ' ')
 </code></pre>
-<pre><code class="language-output">3 ALPHA BETA GAMMA
+<pre><code class="language-output">BETA ALPHA GAMMA
+BETA GAMMA ALPHA
 </code></pre>
 <div class="rule" id="r-instr.do.deviation.25"><a href="instructions/do.html#r-instr.do.deviation.25">[instr.do.deviation.25]</a></div>
 <p>When the TO test or the direction test of a controlled loop sends a comparison
@@ -30063,10 +30072,11 @@ a~string(1) =&gt; 93.902
 argument. It answers the same string every time for one object. The collection
 classes that hash their indexes use it together with <code>==</code>, as their pages
 specify, so a class which declares <code>==</code> has to declare <code>hashCode</code> so that
-objects which are equal under <code>==</code> have equal hash codes. For <code>Object</code> the
-hash code belongs to the identity of the receiver; its form and its digits are
-not specified, and two different objects may have the same one. Equal strings
-have equal hash codes (<a href="classes/object.html#r-class.object.deviation.4">Deviation 4</a>).</p>
+objects which are equal under <code>==</code> have hash codes that are the same string, by
+strict comparison. For <code>Object</code> the hash code belongs to the identity of the
+receiver; its form and its digits are not specified, and two different objects
+may have the same one. Equal strings have equal hash codes (<a href="classes/object.html#r-class.object.deviation.4">Deviation
+4</a>).</p>
 <pre><code class="language-rexx">a = .box~new
 b = .box~new
 h = a~hashCode
@@ -30293,18 +30303,18 @@ a~instanceMethod("hello", 1) =&gt; 93.902
 <p><code>instanceMethods</code> answers a supplier whose indexes are method names in upper
 case and whose items are method objects. It lists names that exist when it is
 sent, and a later change to a class or to the receiver does not reach the
-supplier. The order of its entries is not specified
-(<a href="classes/../deviations.html">Deviation 33</a>). Without an argument it lists every method
-of the receiver's own methods and of every class of its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver as its argument, it lists the methods of that
+supplier. The order of its entries is not specified (<a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>). Without an argument it lists
+every method of the receiver's own methods and of every class of its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver as its argument, it lists the methods of that
 class's table, and with <code>.nil</code> the receiver's own methods. With any other
 argument, a number or a string or a class outside the order included, the
-supplier has no entries. A table entry that hides a name is not listed; the
-name is still listed from every other table of the order that holds a method
-for it, so the listing does not show what the search finds. The argument may
-be given once: a second raises <code>SYNTAX 93.902</code>. For a class receiver the order
-is the <a href="classes/methods.html#r-class.methods.class-side">class-side one</a>.</p>
+supplier has no entries. A table entry that hides a name is not listed; the name
+is still listed from every other table of the order that holds a method for it,
+so the listing does not show what the search finds. The argument may be given
+once: a second raises <code>SYNTAX 93.902</code>. For a class receiver the order is the
+<a href="classes/methods.html#r-class.methods.class-side">class-side one</a>.</p>
 <pre><code class="language-rexx">call show .box~new~instanceMethods(.box), 'box'
 call show .sub~new~instanceMethods(.sub), 'sub'
 call show .sub~new~instanceMethods(.box), 'sub as box'
@@ -31518,9 +31528,9 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 String 0
 </code></pre>
 <div class="rule" id="r-class.object.deviation.33"><a href="classes/object.html#r-class.object.deviation.33">[class.object.deviation.33]</a></div>
-<p>The order of the entries that <code>instanceMethods</code> yields is not specified and
-may differ from ooRexx's (<a href="classes/../deviations.html">Deviation 33</a>); which names are
-listed, and how often, is specified.</p>
+<p>The order of the entries that <code>instanceMethods</code> yields is not specified and may
+differ from ooRexx's (<a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>);
+which names are listed, and how often, is specified.</p>
 <pre><code class="language-rexx">t = .box~new~instanceMethods(.box)
 a = .array~new
 do while t~available
@@ -32384,18 +32394,18 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <div class="rule" id="r-class.class.methods"><a href="classes/class.html#r-class.class.methods">[class.class.methods]</a></div>
 <p><code>methods</code> answers a supplier whose indexes are method names in upper case and
 whose items are method objects, for the instance methods of the class. The
-supplier lists the names that exist when it is made, and a later change does
-not reach it. The order of its entries is not specified
-(<a href="classes/../deviations.html">Deviation 33</a>). Without an argument it lists the table of
-the class and the tables of every class behind it in its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver, the class itself included, it lists the methods of
-that class's table, and with <code>.nil</code> the methods of the receiver's own table
-only. With any other argument, a number, a string or a class that is not in
-the order, the supplier has no entries. A table entry that hides a name is not
-listed; the name is still listed from every other table of the order that
-holds a method for it, so the listing does not show what the search finds. A
-second argument raises <code>SYNTAX 93.902</code>.</p>
+supplier lists the names that exist when it is made, and a later change does not
+reach it. The order of its entries is not specified (<a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>). Without an argument it lists the
+table of the class and the tables of every class behind it in its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver, the class itself included, it lists the methods
+of that class's table, and with <code>.nil</code> the methods of the receiver's own table
+only. With any other argument, a number, a string or a class that is not in the
+order, the supplier has no entries. A table entry that hides a name is not
+listed; the name is still listed from every other table of the order that holds
+a method for it, so the listing does not show what the search finds. A second
+argument raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">call show .sub~methods(.nil), 'sub own'
 call show .sub~methods(.sub), 'sub(.sub)'
 call show .sub~methods(.plain), 'sub(.plain)'
@@ -33546,9 +33556,9 @@ e2: say 'mixinclass' condition('o')~code
 mixinclass 98.900
 </code></pre>
 <div class="rule" id="r-class.class.deviation.33"><a href="classes/class.html#r-class.class.deviation.33">[class.class.deviation.33]</a></div>
-<p>The order of the entries that <code>methods</code> yields is not specified and may
-differ from ooRexx's (<a href="classes/../deviations.html">Deviation 33</a>); which entries are
-there, and how often, is specified.</p>
+<p>The order of the entries that <code>methods</code> yields is not specified and may differ
+from ooRexx's (<a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>); which
+entries are there, and how often, is specified.</p>
 <pre><code class="language-rexx">t = .top~methods(.top)
 a = .array~new
 do while t~available
@@ -34016,7 +34026,9 @@ takes no argument (<code>SYNTAX 93.902</code>). Strings with the same characters
 same hash code, including an instance of a subclass and a plain string, and
 the collection classes that hash their indexes use it with <code>==</code>, as <a href="classes/object.html#r-class.object.hashcode">the
 object rule</a> says. Strings with different characters
-may have equal codes. The characters of the answer are not specified.</p>
+may have equal codes. The characters of the answer are not specified: they
+are the same throughout one run of the interpreter and may differ between
+runs, so that a program cannot choose many strings that share one code.</p>
 <pre><code class="language-rexx">a = 'ab' || 'c'
 say (a~hashCode == 'abc'~hashCode) (a~hashCode == 'abd'~hashCode)
 say (.shout~new('abc')~hashCode == 'abc'~hashCode)
@@ -45668,20 +45680,21 @@ s~putAll(.nonext~new) =&gt; 93.948
 </code></pre>
 <h2 id="deviations-36"><a class="header" href="#deviations-36">Deviations</a></h2>
 <div class="rule" id="r-class.mapcollection.deviation.33"><a href="classes/mapcollection.html#r-class.mapcollection.deviation.33">[class.mapcollection.deviation.33]</a></div>
-<p>The order in which a hash collection yields its entries is not specified
-(<a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>), and so is not the
-order in which <code>putAll</code> stores the entries of a directory or another hash
-collection given as <code>source</code>, nor the order of the indexes that <code>makeArray</code>
-answers for one. The entries stored, and how often, are specified.</p>
+<p>A hash collection yields its entries in the order they were first put
+(<a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>), and <code>putAll</code> stores
+the entries of a directory or another hash collection given as <code>source</code> in that
+order, as <code>makeArray</code> answers the indexes of one in that order. The entries
+stored, and how often, are specified. ooRexx yields them in an order that its
+storage fixes, so the order of the puts can differ.</p>
 <pre><code class="language-rexx">s = .store~new
 src = .directory~new
-src['k1'] = 'first'
-src['k2'] = 'second'
-src['k3'] = 'third'
+src['c'] = 'first'
+src['a'] = 'second'
+src['b'] = 'third'
 s~putAll(src)
 say s~items
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
 ::class store inherit mapcollection
 ::method init
   expose d
@@ -45698,7 +45711,7 @@ say s~allItems~sort~makeString('L', ',')
   return d~allitems
 </code></pre>
 <pre><code class="language-output">3
-k1,k2,k3
+c,a,b
 first,second,third
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="orderedcollection"><a class="header" href="#orderedcollection">OrderedCollection</a></h1>
@@ -52867,9 +52880,12 @@ method search</a> finds no method, such as <code>d~name</code>,
 reaches the <code>unknown</code> method of the class, which reads or sets the entry of that
 name in upper case (<a href="classes/directory.html#r-class.directory.unknown">the unknown rule</a>). The page
 follows the order of the rexxref entry. Examples that show an error use a small
-routine <code>try</code>, as the builtin pages do. The page says nothing about which of
-two items equal to the argument <code>removeItem</code> removes (<a href="classes/directory.html#r-class.directory.deviation.33">the hash order
-rule</a>).</p>
+routine <code>try</code>, as the builtin pages do. A directory lists its entries in the
+order they were first put, and then the names its methods were set under, and
+<code>index</code> and <code>removeItem</code> choose the oldest of several entries that qualify
+(<a href="classes/directory.html#r-class.directory.deviation.33">the hash order rule</a>). ooRexx lists and
+chooses otherwise, so the examples outside that rule hold one such entry or
+sort the answers.</p>
 <h2 id="the-class-15"><a class="header" href="#the-class-15">The class</a></h2>
 <div class="rule" id="r-class.directory.creation"><a href="classes/directory.html#r-class.directory.creation">[class.directory.creation]</a></div>
 <p><code>Directory</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>,
@@ -53173,14 +53189,13 @@ d~hasIndex("a", "b") =&gt; 93.902
 <div class="rule" id="r-class.directory.hasitem"><a href="classes/directory.html#r-class.directory.hasitem">[class.directory.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers 1 when some item is equal to the argument and 0
 otherwise, and <code>index(item)</code> answers an index of such an item and <code>.nil</code> when
-there is none. The stored items are searched first. When none of them is
-equal, the methods are run one after the other, and the answer of each is
-compared before the next one runs, so a method runs only when nothing searched
-before it was equal, and at most once. The <code>UNKNOWN</code> method is not searched.
-Which index <code>index</code> answers when several items qualify is not specified (<a href="classes/directory.html#r-class.directory.deviation.33">the
-hash order rule</a>). Both take exactly one
-argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second raises
-<code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
+there is none. The stored items are searched first. When none of them is equal,
+the methods are run one after the other, and the answer of each is compared
+before the next one runs, so a method runs only when nothing searched before it
+was equal, and at most once. The <code>UNKNOWN</code> method is not searched. When several
+stored items qualify, <code>index</code> answers the index of the oldest entry (<a href="classes/directory.html#r-class.directory.index.deviation.33">the oldest
+rule</a>). Both take exactly one argument:
+none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">d = .directory~new
 d~put('x', 'k1')
 d~put(.nil, 'k2')
@@ -53210,11 +53225,12 @@ d~index(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.directory.hasitem.sends"><a href="classes/directory.html#r-class.directory.hasitem.sends">[class.directory.hasitem.sends]</a></div>
 <p><code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code> to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the stored items are visited first, in an order that is
-not specified, and then the answers of the methods, in an order that is not
-specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The very object that is stored is found
-without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
+and send nothing else; the stored items are visited first, in the order of the
+entries, and then the answers of the methods, in the order the methods were set
+(<a href="classes/directory.html#r-class.directory.deviation.33">the hash order rule</a>), so the number of
+messages is specified only when no item matches, as then every item is visited.
+The very object that is stored is found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 d = .directory~new
 d~put('s', 'k1')
@@ -53552,15 +53568,16 @@ d~unknown("x", .nil) =&gt; 98.913
 </code></pre>
 <h2 id="lists-of-the-entries"><a class="header" href="#lists-of-the-entries">Lists of the entries</a></h2>
 <div class="rule" id="r-class.directory.makearray"><a href="classes/directory.html#r-class.directory.makearray">[class.directory.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items, with the answer of each
-method (run once for each call of <code>allItems</code>; <code>makeArray</code> and <code>allIndexes</code> do
-not run the methods). They are instances of <code>Array</code> for a subclass receiver
-too, never the receiver, and do not follow later changes. They take no
-argument: one raises <code>SYNTAX 93.902</code>. The order is not specified (<a href="classes/directory.html#r-class.directory.deviation.33">the hash
-order rule</a>), and is the same for the three
-answers and for the supplier of one unchanged directory, so the item at a
-position belongs to the index at the same position.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items, with the answer of each method (run
+once for each call of <code>allItems</code>; <code>makeArray</code> and <code>allIndexes</code> do not run the
+methods). They are instances of <code>Array</code> for a subclass receiver too, never the
+receiver, and do not follow later changes. They take no argument: one raises
+<code>SYNTAX 93.902</code>. The order is that in which the entries were first put, and then
+that in which the methods were first set (<a href="classes/directory.html#r-class.directory.deviation.33">the hash order
+rule</a>), and is the same for the three answers
+and for the supplier of one unchanged directory, so the item at a position
+belongs to the index at the same position.</p>
 <pre><code class="language-rexx">d = .many~new
 do i = 1 to 40
   d~put('item'i, 'key'i)
@@ -53803,21 +53820,100 @@ say 'after'
 <pre><code class="language-output rc=120">before
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.33"><a href="classes/directory.html#r-class.directory.deviation.33">[class.directory.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and of the search of <code>hasItem</code>, <code>index</code> and <code>removeItem</code>, is not
-specified, and may differ from ooRexx's. Which entries are produced, and how
-often, is specified. In the example the answers are sorted.</p>
-<pre><code class="language-rexx">d = .directory~new
-d~put(1, 'one')
-d~put(2, 'two')
-d~put(3, 'three')
-say d~allIndexes~sort~makeString('L', ',')
-say d~allItems~sort~makeString('L', ',')
-say d~items d~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
+items in that order. The names that <code>setMethod</code> gave the directory come after
+the entries. Which entries are produced, and how often, is specified. The entry
+that a search acts on when an <code>==</code> that it sends changes the directory is not
+specified, and may be none of them. ooRexx lists the entries in an order that
+its storage fixes, so its answers can differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">one,three,two
+<pre><code class="language-output">c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+</code></pre>
+<div class="rule" id="r-class.directory.put.deviation.33"><a href="classes/directory.html#r-class.directory.put.deviation.33">[class.directory.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the directory holds leaves the entry in its
+place. An entry that is removed and then put again comes last. ooRexx's order
+does not follow the puts (<a href="classes/directory.html#r-class.directory.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,b 4,2,3
+a,b,c 2,3,5
+</code></pre>
+<div class="rule" id="r-class.directory.index.deviation.33"><a href="classes/directory.html#r-class.directory.index.deviation.33">[class.directory.index.deviation.33]</a></div>
+<p>When several entries hold an item equal to the argument, <code>index</code> answers the
+index of the oldest of them and <code>removeItem</code> removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another (<a href="classes/directory.html#r-class.directory.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+</code></pre>
+<pre><code class="language-output">c x a,b
+b
+</code></pre>
+<div class="rule" id="r-class.directory.copy.deviation.33"><a href="classes/directory.html#r-class.directory.copy.deviation.33">[class.directory.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each directory
+keeps its own order: an entry put into one comes last in that one only (<a href="classes/directory.html#r-class.directory.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,b,c,z
+a,b,c,y
+</code></pre>
+<div class="rule" id="r-class.directory.setmethod.deviation.33"><a href="classes/directory.html#r-class.directory.setmethod.deviation.33">[class.directory.setmethod.deviation.33]</a></div>
+<p>The names of the methods are listed after the entries, in the order in which
+<code>setMethod</code> first set them. Setting a method again under a name leaves it in its
+place, and a name whose method was unset and is then set again comes last (<a href="classes/directory.html#r-class.directory.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">d = .directory~new
+d['c'] = 1
+d~setMethod('M', 'return 2')
+d['a'] = 3
+d~setMethod('K', 'return 4')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('M', 'return 6')
+d~setMethod('A', 'return 7')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('K')
+d~setMethod('K', 'return 8')
+say d~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,M,K 1,3,2,4
+c,a,M,K,A 1,3,6,4,7
+c,a,M,A,K
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.109"><a href="classes/directory.html#r-class.directory.deviation.109">[class.directory.deviation.109]</a></div>
 <p>A name, an index or the size argument of <code>new</code> that is an instance of a
@@ -53919,9 +54015,11 @@ method, such as <code>t~name</code>, reaches the <code>unknown</code> method of 
 reads or sets the entry of that name in upper case
 (<a href="classes/stringtable.html#r-class.stringtable.unknown">the unknown rule</a>). The page follows the order
 of the rexxref entry. Examples that show an error use a small routine <code>try</code>,
-as the builtin pages do. The page says nothing about which of two items equal
-to the argument <code>removeItem</code> removes (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order
-rule</a>).</p>
+as the builtin pages do. A string table lists its entries in the order they
+were first put, and <code>index</code> and <code>removeItem</code> choose the oldest of several
+entries that qualify (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order rule</a>).
+ooRexx lists and chooses otherwise, so the examples outside that rule hold one
+such entry or sort the answers.</p>
 <h2 id="the-class-16"><a class="header" href="#the-class-16">The class</a></h2>
 <div class="rule" id="r-class.stringtable.creation"><a href="classes/stringtable.html#r-class.stringtable.creation">[class.stringtable.creation]</a></div>
 <p><code>StringTable</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>,
@@ -54246,10 +54344,10 @@ t~hasIndex("a", "b") =&gt; 93.902
 <div class="rule" id="r-class.stringtable.hasitem"><a href="classes/stringtable.html#r-class.stringtable.hasitem">[class.stringtable.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers 1 when some item is equal to the argument and 0
 otherwise, and <code>index(item)</code> answers an index of such an item and <code>.nil</code> when
-there is none. Which index <code>index</code> answers when several items qualify is not
-specified (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order rule</a>). Both take
-exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
-second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
+there is none. When several items qualify, <code>index</code> answers the index of the
+oldest entry (<a href="classes/stringtable.html#r-class.stringtable.index.deviation.33">the oldest rule</a>). Both
+take exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and
+a second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">t = .stringtable~new
 t~put('x', 'k1')
 t~put(.nil, 'k2')
@@ -54278,10 +54376,11 @@ t~index(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.stringtable.hasitem.sends"><a href="classes/stringtable.html#r-class.stringtable.hasitem.sends">[class.stringtable.hasitem.sends]</a></div>
 <p><code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code> to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the items are visited in an order that is not specified,
-so the number of messages is specified only when no item matches, as then every
-item is visited. The very object that is stored is found without a <code>==</code> sent to
-it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
+and send nothing else; the items are visited in the order of the entries (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the
+hash order rule</a>), so the number of messages
+is specified only when no item matches, as then every item is visited. The very
+object that is stored is found without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity
+rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 t = .stringtable~new
 t~put('s', 'k1')
@@ -54408,13 +54507,14 @@ t~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-entries-1"><a class="header" href="#lists-of-the-entries-1">Lists of the entries</a></h2>
 <div class="rule" id="r-class.stringtable.makearray"><a href="classes/stringtable.html#r-class.stringtable.makearray">[class.stringtable.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order rule</a>), and
-is the same for the three answers and for the supplier of one unchanged table,
-so the item at a position belongs to the index at the same position.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+entries were first put (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order
+rule</a>), and is the same for the three answers
+and for the supplier of one unchanged table, so the item at a position belongs
+to the index at the same position.</p>
 <pre><code class="language-rexx">t = .many~new
 do i = 1 to 40
   t~put('item'i, 'key'i)
@@ -54646,21 +54746,77 @@ say 'after'
 <pre><code class="language-output rc=120">before
 </code></pre>
 <div class="rule" id="r-class.stringtable.deviation.33"><a href="classes/stringtable.html#r-class.stringtable.deviation.33">[class.stringtable.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and of the search of <code>hasItem</code>, <code>index</code> and <code>removeItem</code>, is not
-specified, and may differ from ooRexx's. Which entries are produced, and how
-often, is specified. In the example the answers are sorted.</p>
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
+items in that order. Which entries are produced, and how often, is specified.
+The entry that a search acts on when an <code>==</code> that it sends changes the string
+table is not specified, and may be none of them. ooRexx lists the entries in an
+order that its storage fixes, so its answers can differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
 <pre><code class="language-rexx">t = .stringtable~new
-t~put(1, 'one')
-t~put(2, 'two')
-t~put(3, 'three')
-say t~allIndexes~sort~makeString('L', ',')
-say t~allItems~sort~makeString('L', ',')
-say t~items t~makeArray~items
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">one,three,two
+<pre><code class="language-output">c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+</code></pre>
+<div class="rule" id="r-class.stringtable.put.deviation.33"><a href="classes/stringtable.html#r-class.stringtable.put.deviation.33">[class.stringtable.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the string table holds leaves the entry in its
+place. An entry that is removed and then put again comes last. ooRexx's order
+does not follow the puts (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .stringtable~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,b 4,2,3
+a,b,c 2,3,5
+</code></pre>
+<div class="rule" id="r-class.stringtable.index.deviation.33"><a href="classes/stringtable.html#r-class.stringtable.index.deviation.33">[class.stringtable.index.deviation.33]</a></div>
+<p>When several entries hold an item equal to the argument, <code>index</code> answers the
+index of the oldest of them and <code>removeItem</code> removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another (<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .stringtable~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+</code></pre>
+<pre><code class="language-output">c x a,b
+b
+</code></pre>
+<div class="rule" id="r-class.stringtable.copy.deviation.33"><a href="classes/stringtable.html#r-class.stringtable.copy.deviation.33">[class.stringtable.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each string
+table keeps its own order: an entry put into one comes last in that one only
+(<a href="classes/stringtable.html#r-class.stringtable.deviation.33">the hash order rule</a>).</p>
+<pre><code class="language-rexx">t = .stringtable~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,b,c,z
+a,b,c,y
 </code></pre>
 <div class="rule" id="r-class.stringtable.deviation.84"><a href="classes/stringtable.html#r-class.stringtable.deviation.84">[class.stringtable.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>removeItem</code> sends to its argument empties the string table,
@@ -55437,8 +55593,8 @@ p~load =&gt; 93.901
 p~load(f, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.properties.save"><a href="classes/properties.html#r-class.properties.save">[class.properties.save]</a></div>
-<p><code>save(target)</code> writes one line <code>name=value</code> for each entry, each ended by a
-line feed, in an order that is not specified (<a href="classes/properties.html#r-class.properties.deviation.33">the hash order
+<p><code>save(target)</code> writes one line <code>name=value</code> for each entry, each ended by a line
+feed, in the order the entries were first put (<a href="classes/properties.html#r-class.properties.deviation.33">the hash order
 rule</a>); the name and the value are written as
 they are, a value that is not a string through <a href="classes/../conventions.html#r-conv.string.object">the string-value
 rule</a>, with no escaping, so a name that holds <code>=</code> or a
@@ -55651,18 +55807,20 @@ say 'after'
 <pre><code class="language-output rc=120">before
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.33"><a href="classes/properties.html#r-class.properties.deviation.33">[class.properties.deviation.33]</a></div>
-<p>The order of the lines that <code>save</code> writes, and the order of the lists and
-searches that <code>Properties</code> inherits from <code>Directory</code>, is not specified, and
-may differ from ooRexx's (<a href="classes/directory.html#r-class.directory.deviation.33">the Directory
-rule</a>). Which lines are written, and how
-often, is specified. In the example the lines are sorted.</p>
+<p><code>save</code> writes the lines in the order the entries were first put, and the lists
+and searches that <code>Properties</code> inherits from <code>Directory</code> follow <a href="classes/directory.html#r-class.directory.deviation.33">the Directory
+rule</a>. Which lines are written, and how often,
+is specified. ooRexx writes the lines in an order that its storage fixes, so
+its output can differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
 <pre><code class="language-rexx">p = .properties~new
 p~put('1', 'one')
 p~put('2', 'two')
 p~put('3', 'three')
+p~put('4', 'one')
 t = .recorder~new
 p~save(t)
-say t~lines~sort~makeString('L', '|')
+say t~lines~makeString('L', '|')
 ::class recorder
 ::method init
   expose lines
@@ -55675,7 +55833,7 @@ say t~lines~sort~makeString('L', '|')
   expose lines
   return lines
 </code></pre>
-<pre><code class="language-output">one=1|three=3|two=2
+<pre><code class="language-output">one=4|two=2|three=3
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.109"><a href="classes/properties.html#r-class.properties.deviation.109">[class.properties.deviation.109]</a></div>
 <p>A value that is an instance of a subclass of <code>String</code> is read by its own
@@ -55756,8 +55914,11 @@ search</a> does not resolve raises
 <a href="classes/../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="classes/index.html#r-class.index.errors">the
 chapter</a> says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine <code>try</code>, as the builtin
-pages do. The page says nothing about which of two items equal to the argument
-<code>removeItem</code> removes (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>).</p>
+pages do. A table lists its entries in the order they were first put, and
+<code>index</code> and <code>removeItem</code> choose the oldest of several entries that qualify
+(<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>). ooRexx lists and chooses
+otherwise, so the examples outside that rule hold one such entry or sort the
+answers.</p>
 <h2 id="the-class-18"><a class="header" href="#the-class-18">The class</a></h2>
 <div class="rule" id="r-class.table.creation"><a href="classes/table.html#r-class.table.creation">[class.table.creation]</a></div>
 <p><code>Table</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
@@ -55846,7 +56007,12 @@ indexes. An instance of a subclass of <code>String</code> that declares neither 
 the index of its characters like any string. A class that declares <code>==</code> has to
 declare <code>hashCode</code> so that equal objects hash alike, as <a href="classes/object.html#r-class.object.hashcode">the hash code
 rule</a> says. When a <code>put</code> finds the index already in
-the table, the entry keeps the index object it has and takes the new item.</p>
+the table, the entry keeps the index object it has and takes the new item. For
+an argument and a stored index that are equal under <code>==</code> but whose <code>hashCode</code>
+answers are strictly different strings, or for a stored index whose <code>hashCode</code>
+no longer answers what it answered when it was stored, also when that index is
+itself the argument, whether a lookup finds the entry and whether <code>put</code> takes
+the two as one index is not specified.</p>
 <pre><code class="language-rexx">t = .table~new
 t~put('v1', 'Key')
 t~put('v2', 'KEY')
@@ -56030,8 +56196,8 @@ t~hasIndex("a", "b") =&gt; 93.902
 <div class="rule" id="r-class.table.hasitem"><a href="classes/table.html#r-class.table.hasitem">[class.table.hasitem]</a></div>
 <p><code>hasItem(item)</code> answers 1 when some item is equal to the argument and 0
 otherwise, and <code>index(item)</code> answers an index of such an item and <code>.nil</code> when
-there is none. Which index <code>index</code> answers when several items qualify is not
-specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>). Both take
+there is none. When several items qualify, <code>index</code> answers the index of the
+oldest entry (<a href="classes/table.html#r-class.table.index.deviation.33">the oldest rule</a>). Both take
 exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
 second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">t = .table~new
@@ -56062,11 +56228,11 @@ t~index(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.table.hasitem.sends"><a href="classes/table.html#r-class.table.hasitem.sends">[class.table.hasitem.sends]</a></div>
 <p><code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code> to the argument with an item as
 the argument, item by item, until one answers true, and send nothing else,
-<code>hashCode</code> included. The items are visited in an order that is not specified;
-every item is compared at least once when none matches, and how often <code>==</code> is
-sent with the same item is not specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order
-rule</a>). The very object that is stored is found
-without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
+<code>hashCode</code> included. The items are visited in the order of the entries (<a href="classes/table.html#r-class.table.deviation.33">the
+hash order rule</a>); every item is compared at least
+once when none matches, and how often <code>==</code> is sent with the same item is not
+specified. The very object that is stored is found without a <code>==</code> sent to it
+(<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">.local~n = 0
 t = .table~new
 t~put('s', 'k1')
@@ -56192,14 +56358,14 @@ t~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-entries-2"><a class="header" href="#lists-of-the-entries-2">Lists of the entries</a></h2>
 <div class="rule" id="r-class.table.makearray"><a href="classes/table.html#r-class.table.makearray">[class.table.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>), and is the
-same for the three answers and for the supplier of one unchanged table, so the
-item at a position belongs to the index at the same position. The methods send
-no message to the table or to the indexes and items.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+entries were first put (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>), and
+is the same for the three answers and for the supplier of one unchanged table,
+so the item at a position belongs to the index at the same position. The methods
+send no message to the table or to the indexes and items.</p>
 <pre><code class="language-rexx">t = .many~new
 do i = 1 to 40
   t~put('item'i, .array~of(i))
@@ -56431,23 +56597,78 @@ say .local~log~items
 </code></pre>
 <h2 id="deviations-45"><a class="header" href="#deviations-45">Deviations</a></h2>
 <div class="rule" id="r-class.table.deviation.33"><a href="classes/table.html#r-class.table.deviation.33">[class.table.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, of the search of <code>hasItem</code>, <code>index</code> and <code>removeItem</code>, and which
-stored indexes or items a lookup or a search compares, by <code>==</code> or <code>hashCode</code>,
-beyond those it must compare, and how often, are not specified, and may differ
-from ooRexx's. Which entries are produced, and how often, is specified. In the
-example the answers are sorted.</p>
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
+items in that order. Which entries are produced, and how often, is specified.
+Which stored indexes or items a lookup or a search compares, by <code>==</code> or
+<code>hashCode</code>, beyond those it must compare, and how often, is not specified, and
+neither is the entry that a lookup or a search acts on when an <code>==</code> or
+<code>hashCode</code> that it sends changes the table, which may be none of them. ooRexx
+lists the entries in an order that its storage fixes, so its answers can
+differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
 <pre><code class="language-rexx">t = .table~new
-t~put(1, 'one')
-t~put(2, 'two')
-t~put(3, 'three')
-say t~allIndexes~sort~makeString('L', ',')
-say t~allItems~sort~makeString('L', ',')
-say t~items t~makeArray~items
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">one,three,two
+<pre><code class="language-output">c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+</code></pre>
+<div class="rule" id="r-class.table.put.deviation.33"><a href="classes/table.html#r-class.table.put.deviation.33">[class.table.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the table holds leaves the entry in its place.
+An entry that is removed and then put again comes last. ooRexx's order does not
+follow the puts (<a href="classes/table.html#r-class.table.deviation.33">the hash order rule</a>).</p>
+<pre><code class="language-rexx">t = .table~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">c,a,b 4,2,3
+a,b,c 2,3,5
+</code></pre>
+<div class="rule" id="r-class.table.index.deviation.33"><a href="classes/table.html#r-class.table.index.deviation.33">[class.table.index.deviation.33]</a></div>
+<p>When several entries hold an item equal to the argument, <code>index</code> answers the
+index of the oldest of them and <code>removeItem</code> removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another (<a href="classes/table.html#r-class.table.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">t = .table~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+</code></pre>
+<pre><code class="language-output">c x a,b
+b
+</code></pre>
+<div class="rule" id="r-class.table.copy.deviation.33"><a href="classes/table.html#r-class.table.copy.deviation.33">[class.table.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each table
+keeps its own order: an entry put into one comes last in that one only (<a href="classes/table.html#r-class.table.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">t = .table~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,b,c,z
+a,b,c,y
 </code></pre>
 <div class="rule" id="r-class.table.deviation.84"><a href="classes/table.html#r-class.table.deviation.84">[class.table.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> sends to an index, or that <code>removeItem</code> sends to
@@ -56524,9 +56745,11 @@ chapter</a> says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine <code>try</code>, as the builtin
 pages do. Whether two equal strings or numbers are one object is not specified
 (<a href="classes/identitytable.html#r-class.identitytable.deviation.4">the identity rule</a>), so the examples use
-other objects, or one variable read twice, for indexes and items. The page
-says nothing about which of two items found by the same object <code>removeItem</code>
-removes (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order rule</a>).</p>
+other objects, or one variable read twice, for indexes and items. A table lists
+its entries in the order they were first put, and <code>index</code> and <code>removeItem</code>
+choose the oldest of several entries that hold the item (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order
+rule</a>). ooRexx lists and chooses otherwise,
+so the examples outside that rule hold one such entry or sort the answers.</p>
 <h2 id="the-class-19"><a class="header" href="#the-class-19">The class</a></h2>
 <div class="rule" id="r-class.identitytable.creation"><a href="classes/identitytable.html#r-class.identitytable.creation">[class.identitytable.creation]</a></div>
 <p><code>IdentityTable</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>,
@@ -56790,15 +57013,14 @@ t~hasIndex =&gt; 88.901
 t~hasIndex("a", "b") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.identitytable.hasitem"><a href="classes/identitytable.html#r-class.identitytable.hasitem">[class.identitytable.hasitem]</a></div>
-<p><code>hasItem(item)</code> answers 1 when some entry holds the argument itself as its
-item and 0 otherwise, and <code>index(item)</code> answers the index of such an entry and
-<code>.nil</code> when there is none. An object that is equal to an item under <code>==</code> but
-is not that object is not found, and no message is sent to the argument or to
-the items. Which index <code>index</code> answers when several entries hold the item is
-not specified (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order rule</a>).
-Both take exactly one argument: none, or an omitted one, raises
-<code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like
-any other.</p>
+<p><code>hasItem(item)</code> answers 1 when some entry holds the argument itself as its item
+and 0 otherwise, and <code>index(item)</code> answers the index of such an entry and <code>.nil</code>
+when there is none. An object that is equal to an item under <code>==</code> but is not
+that object is not found, and no message is sent to the argument or to the
+items. When several entries hold the item, <code>index</code> answers the index of the
+oldest (<a href="classes/identitytable.html#r-class.identitytable.index.deviation.33">the oldest rule</a>). Both take
+exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
+second raises <code>SYNTAX 93.902</code>. <code>.nil</code> is an item like any other.</p>
 <pre><code class="language-rexx">t = .identitytable~new
 x = .array~of('x')
 t~put(x, 'k1')
@@ -56931,14 +57153,15 @@ t~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-entries-3"><a class="header" href="#lists-of-the-entries-3">Lists of the entries</a></h2>
 <div class="rule" id="r-class.identitytable.makearray"><a href="classes/identitytable.html#r-class.identitytable.makearray">[class.identitytable.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order rule</a>), and
-is the same for the three answers and for the supplier of one unchanged table,
-so the item at a position belongs to the index at the same position. The
-methods send no message to the table or to the indexes and items.</p>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+entries were first put (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order
+rule</a>), and is the same for the three
+answers and for the supplier of one unchanged table, so the item at a position
+belongs to the index at the same position. The methods send no message to the
+table or to the indexes and items.</p>
 <pre><code class="language-rexx">t = .many~new
 do i = 1 to 40
   t~put('item'i, .array~of(i))
@@ -57195,20 +57418,80 @@ say t~at(u)
 3
 </code></pre>
 <div class="rule" id="r-class.identitytable.deviation.33"><a href="classes/identitytable.html#r-class.identitytable.deviation.33">[class.identitytable.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and which of two entries that hold the same item <code>index</code> and
-<code>removeItem</code> use, is not specified, and may differ from ooRexx's. Which
-entries are produced, and how often, is specified. In the example the answers
-are sorted.</p>
-<pre><code class="language-rexx">t = .identitytable~new
-t~put(1, .array~of('one'))
-t~put(2, .array~of('two'))
-t~put(3, .array~of('three'))
-say t~allItems~sort~makeString('L', ',')
-say t~allIndexes~items t~items t~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were first put, and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> search the
+items in that order. Which entries are produced, and how often, is specified.
+ooRexx lists the entries in an order that its storage fixes, so its answers can
+differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
+<pre><code class="language-rexx">c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
+t = .identitytable~new
+t[c] = 1
+t[a] = 2
+t[b] = 3
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say (s~index == c) s~item t~allIndexes~items t~makeArray~items
 </code></pre>
 <pre><code class="language-output">1,2,3
-3 3 3
+1 1 3 3
+</code></pre>
+<div class="rule" id="r-class.identitytable.put.deviation.33"><a href="classes/identitytable.html#r-class.identitytable.put.deviation.33">[class.identitytable.put.deviation.33]</a></div>
+<p>A <code>put</code> or <code>[]=</code> at an index that the table holds leaves the entry in its place.
+An entry that is removed and then put again comes last. ooRexx's order does not
+follow the puts (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order rule</a>).</p>
+<pre><code class="language-rexx">c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
+t = .identitytable~new
+t[c] = 1
+t[a] = 2
+t[b] = 3
+t[c] = 4
+say t~allItems~makeString('L', ',')
+t~remove(c)
+t[c] = 5
+say t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">4,2,3
+2,3,5
+</code></pre>
+<div class="rule" id="r-class.identitytable.index.deviation.33"><a href="classes/identitytable.html#r-class.identitytable.index.deviation.33">[class.identitytable.index.deviation.33]</a></div>
+<p>When several entries hold the item, <code>index</code> answers the index of the oldest of
+them and <code>removeItem</code> removes the oldest. ooRexx searches the items in the order
+of its storage, so it can choose another (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">x = .array~of('x')
+t = .identitytable~new
+t['c'] = x
+t['a'] = 'y'
+t['b'] = x
+say t~index(x) (t~removeItem(x) == x) t~allIndexes~makeString('L', ',')
+say t~index(x)
+</code></pre>
+<pre><code class="language-output">c 1 a,b
+b
+</code></pre>
+<div class="rule" id="r-class.identitytable.copy.deviation.33"><a href="classes/identitytable.html#r-class.identitytable.copy.deviation.33">[class.identitytable.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each table
+keeps its own order: an entry put into one comes last in that one only (<a href="classes/identitytable.html#r-class.identitytable.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">c = .array~of('c')
+t = .identitytable~new
+t[c] = 1
+t[.array~of('a')] = 2
+t~remove(c)
+t[.array~of('b')] = 3
+t[c] = 4
+k = t~copy
+k[.array~of('z')] = 5
+t[.array~of('y')] = 6
+say k~allItems~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">2,3,4,5
+2,3,4,6
 </code></pre>
 <div class="rule" id="r-class.identitytable.deviation.109"><a href="classes/identitytable.html#r-class.identitytable.deviation.109">[class.identitytable.deviation.109]</a></div>
 <p>The size argument of <code>new</code> that is an instance of a subclass of <code>String</code> is
@@ -57240,9 +57523,11 @@ search</a> does not resolve raises
 <a href="classes/../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="classes/index.html#r-class.index.errors">the
 chapter</a> says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine <code>try</code>, as the builtin
-pages do. Where several entries qualify for a method that answers one, which
-entry it answers is not specified, and the examples then hold one entry or
-sort the answers (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>).</p>
+pages do. A relation lists its entries in the order they were put, and where
+several entries qualify for a method that answers or removes one, it chooses
+the oldest (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>). ooRexx lists
+and chooses otherwise, so the examples outside that rule hold one such entry or
+sort the answers.</p>
 <h2 id="the-class-20"><a class="header" href="#the-class-20">The class</a></h2>
 <div class="rule" id="r-class.relation.creation"><a href="classes/relation.html#r-class.relation.creation">[class.relation.creation]</a></div>
 <p><code>Relation</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allAt</code>, <code>allIndex</code>,
@@ -57462,12 +57747,13 @@ r~put("x", ) =&gt; 88.901
 r~put("x", "y", "z") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.relation.at"><a href="classes/relation.html#r-class.relation.at">[class.relation.at]</a></div>
-<p><code>at(index)</code> and <code>[index]</code> answer an item of an entry whose index is equal to
-the argument, and <code>.nil</code> when there is none. When several entries qualify,
-which item is answered is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
-rule</a>). The methods take exactly one argument:
-none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; with a second argument, whether the index is looked up is unspecified,
-as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
+<p><code>at(index)</code> and <code>[index]</code> answer an item of an entry whose index is equal to the
+argument, and <code>.nil</code> when there is none. When several entries qualify, the item
+of the oldest is answered (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>). The methods take exactly one
+argument: none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises
+<code>SYNTAX 93.902</code>; with a second argument, whether the index is looked up is
+unspecified, as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">r = .relation~new
 r~put('item', 'k')
 r~put('x', 'k2')
@@ -57495,15 +57781,16 @@ r~at("a", "b") =&gt; 93.902
 r[] =&gt; 88.901
 </code></pre>
 <div class="rule" id="r-class.relation.allat"><a href="classes/relation.html#r-class.relation.allat">[class.relation.allat]</a></div>
-<p><code>allAt(index)</code> answers a new <code>Array</code> of the items of all the entries whose
-index is equal to the argument, one for each entry, in an order that is not
-specified, and an empty <code>Array</code> when there is none. It sends <code>hashCode</code> to the
-index once, and <code>==</code> to the index with every stored index of the same hash code
-as the argument; further sends, and how often each is sent, are not specified
-(<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>). The answer is an
-instance of <code>Array</code> for a subclass receiver too, and does not follow later
-changes. It takes exactly one argument: none, or an omitted one, raises
-<code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
+<p><code>allAt(index)</code> answers a new <code>Array</code> of the items of all the entries whose index
+is equal to the argument, one for each entry, oldest first (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>), and an empty <code>Array</code> when there is
+none. It sends <code>hashCode</code> to the index once, and <code>==</code> to the index with every
+stored index of the same hash code as the argument; further sends, and how often
+each is sent, are not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+rule</a>). The answer is an instance of <code>Array</code> for
+a subclass receiver too, and does not follow later changes. It takes exactly one
+argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second raises
+<code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 r = .many~new
 r~put('a', 'k')
@@ -57652,11 +57939,10 @@ r~hasItem("x", "k1", 3) =&gt; 93.902
 with the item of an entry as the argument, entry by entry, until one answers
 true, and send nothing else, <code>hashCode</code> included. <code>allIndex</code> sends <code>==</code> to the
 item argument with the item of every entry as the argument. The entries are
-visited in an order that is not specified, and how often <code>==</code> is sent with the
-same stored item is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
-rule</a>); every entry is compared at least once
-when none matches, and for <code>allIndex</code> always. <code>hasItem(item, index)</code> and
-<code>removeItem(item, index)</code> first look the index up as <a href="classes/relation.html#r-class.relation.indexes.sends">the lookup
+visited in the order they were put (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+rule</a>), and how often <code>==</code> is sent with the same
+stored item is not specified; every entry is compared at least once when none
+matches, and for <code>allIndex</code> always. <code>hasItem(item, index)</code> and <code>removeItem(item, index)</code> first look the index up as <a href="classes/relation.html#r-class.relation.indexes.sends">the lookup
 rule</a> says, and then send <code>==</code> to the item
 argument with the item of each entry whose index matches, at least once for
 each, and no message when no index matches. The very object that is stored is
@@ -57699,16 +57985,16 @@ r~removeItem(q, "k1") =&gt; 1
 3 0
 </code></pre>
 <div class="rule" id="r-class.relation.index"><a href="classes/relation.html#r-class.relation.index">[class.relation.index]</a></div>
-<p><code>index(item)</code> answers the index of an entry whose item is equal to the
-argument, and <code>.nil</code> when there is none; when several entries qualify, which
-index is answered is not specified. <code>allIndex(item)</code> answers a new <code>Array</code> of
-the indexes of all such entries, one for each entry, in an order that is not
-specified, and an empty <code>Array</code> when there is none; the same index twice when
-two entries hold the item at it. The answer of <code>allIndex</code> is an instance of
-<code>Array</code> for a subclass receiver too, and does not follow later changes. Both
-take exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>,
-and a second raises <code>SYNTAX 93.902</code>. The messages sent are those of <a href="classes/relation.html#r-class.relation.hasitem.sends">the
-search rule</a>.</p>
+<p><code>index(item)</code> answers the index of an entry whose item is equal to the argument,
+and <code>.nil</code> when there is none; when several entries qualify, the index of the
+oldest is answered. <code>allIndex(item)</code> answers a new <code>Array</code> of the indexes of all
+such entries, one for each entry, oldest first (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>), and an empty <code>Array</code> when there is
+none; the same index twice when two entries hold the item at it. The answer of
+<code>allIndex</code> is an instance of <code>Array</code> for a subclass receiver too, and does not
+follow later changes. Both take exactly one argument: none, or an omitted one,
+raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. The messages sent
+are those of <a href="classes/relation.html#r-class.relation.hasitem.sends">the search rule</a>.</p>
 <pre><code class="language-rexx">r = .many~new
 r~put('a', 'k')
 r~put('a', 'k')
@@ -57743,7 +58029,8 @@ r~allIndex(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.relation.remove"><a href="classes/relation.html#r-class.relation.remove">[class.relation.remove]</a></div>
 <p><code>remove(index)</code> removes one entry whose index is equal to the argument and
 answers its item, and answers <code>.nil</code> when there is none; when several entries
-qualify, which one is removed is not specified, and the others stay. The index
+qualify, the oldest is removed (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>), and the others stay. The index
 stays in the relation while an entry has it. It takes exactly one argument:
 none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">r = .relation~new
@@ -57773,15 +58060,15 @@ r~remove =&gt; 88.901
 r~remove("a", "b") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.relation.removeall"><a href="classes/relation.html#r-class.relation.removeall">[class.relation.removeall]</a></div>
-<p><code>removeAll(index)</code> removes every entry whose index is equal to the argument
-and answers a new <code>Array</code> of their items, one for each entry, in an order that
-is not specified; the answer is an empty <code>Array</code> when there is none. It sends
-<code>hashCode</code> to the index once, and <code>==</code> to the index with every stored index of
-the same hash code as the argument; further sends, and how often each is sent,
-are not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>). The
-answer is an instance of <code>Array</code> for a subclass receiver too. It takes exactly
-one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a second
-raises <code>SYNTAX 93.902</code>.</p>
+<p><code>removeAll(index)</code> removes every entry whose index is equal to the argument and
+answers a new <code>Array</code> of their items, one for each entry, oldest first (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the
+oldest rule</a>); the answer is an empty
+<code>Array</code> when there is none. It sends <code>hashCode</code> to the index once, and <code>==</code> to
+the index with every stored index of the same hash code as the argument; further
+sends, and how often each is sent, are not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+rule</a>). The answer is an instance of <code>Array</code> for
+a subclass receiver too. It takes exactly one argument: none, or an omitted one,
+raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 r = .many~new
 r~put('a', 'k')
@@ -57837,15 +58124,16 @@ r~removeAll("a", "b") =&gt; 93.902
 hash p 1 1
 </code></pre>
 <div class="rule" id="r-class.relation.removeitem"><a href="classes/relation.html#r-class.relation.removeitem">[class.relation.removeitem]</a></div>
-<p><code>removeItem(item)</code> removes one entry whose item is equal to the argument, by
-the search of <a href="classes/relation.html#r-class.relation.hasitem.sends">the search rule</a>, and answers
-the item that was stored, or <code>.nil</code> when no entry matches; when several
-entries qualify, which one is removed is not specified. <code>removeItem(item, index)</code> removes one entry that has both an item equal to the first argument
-and an index equal to the second, and answers the item that was stored, or
-<code>.nil</code> when there is none. An omitted second argument is no argument. The
-index stays in the relation while an entry has it, and it is gone when the
-entry was the last one. The methods take one or two arguments: a missing or
-omitted item raises <code>SYNTAX 93.903</code>, and a third argument raises <code>SYNTAX 93.902</code>.</p>
+<p><code>removeItem(item)</code> removes one entry whose item is equal to the argument, by the
+search of <a href="classes/relation.html#r-class.relation.hasitem.sends">the search rule</a>, and answers the
+item that was stored, or <code>.nil</code> when no entry matches; when several entries
+qualify, the oldest is removed (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>). <code>removeItem(item, index)</code> removes
+the oldest entry that has both an item equal to the first argument and an index
+equal to the second, and answers the item that was stored, or <code>.nil</code> when there
+is none. An omitted second argument is no argument. The index stays in the
+relation while an entry has it, and it is gone when the entry was the last one.
+The methods take one or two arguments: a missing or omitted item raises <code>SYNTAX 93.903</code>, and a third argument raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">r = .relation~new
 r~put('a', 'k')
 r~put('a', 'k')
@@ -57902,15 +58190,15 @@ r~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-entries-4"><a class="header" href="#lists-of-the-entries-4">Lists of the entries</a></h2>
 <div class="rule" id="r-class.relation.makearray"><a href="classes/relation.html#r-class.relation.makearray">[class.relation.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> with the index of each
-entry, so an index that is in several entries appears several times, and
-<code>allItems</code> a new <code>Array</code> with the item of each entry. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>), and is
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> with the index of each entry,
+so an index that is in several entries appears several times, and <code>allItems</code> a
+new <code>Array</code> with the item of each entry. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+entries were put (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>), and is
 the same for the three answers and for the supplier of one unchanged relation,
-so the item at a position belongs to the index at the same position. The
-methods send no message to the relation, the indexes or the items.</p>
+so the item at a position belongs to the index at the same position. The methods
+send no message to the relation, the indexes or the items.</p>
 <pre><code class="language-rexx">r = .many~new
 do i = 1 to 40
   r~put('item'i, 'key' || (i // 5))
@@ -57948,15 +58236,17 @@ r~makeArray(1) =&gt; 93.902
 <div class="rule" id="r-class.relation.uniqueindexes"><a href="classes/relation.html#r-class.relation.uniqueindexes">[class.relation.uniqueindexes]</a></div>
 <p><code>uniqueIndexes</code> answers a new <code>Array</code> with one index for each group of equal
 indexes in the relation, equal as <a href="classes/relation.html#r-class.relation.indexes">the index rule</a>
-says, so an index that is in several entries appears once, and two index objects
-with different hash codes are two indexes even when <code>==</code> answers true for them.
-Which of several equal index objects is answered is not specified, and so is the
-order (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>). An index object
-that is stored in more than one entry is one index, without a <code>==</code> sent to it
-(<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>). <code>uniqueIndexes</code> compares the
-stored indexes with each other by sending <code>==</code> to a stored index with another
-stored index as the argument; which stored indexes it sends <code>==</code> and <code>hashCode</code>
-to, and how often, is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+says, so an index that is in several entries appears once. For index objects
+that are equal under <code>==</code> but whose <code>hashCode</code> answers are strictly different
+strings, or a stored index whose <code>hashCode</code> no longer answers what it answered
+when it was stored, how they are grouped is not specified. Of several equal
+index objects the oldest is answered, and the groups come in the order of their
+oldest entries (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest rule</a>). An
+index object that is stored in more than one entry is one index, without a <code>==</code>
+sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>). <code>uniqueIndexes</code>
+compares the stored indexes with each other by sending <code>==</code> to a stored index
+with another stored index as the argument; which stored indexes it sends <code>==</code>
+and <code>hashCode</code> to, and how often, is not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
 rule</a>). The answer is an instance of <code>Array</code> for
 a subclass receiver too, and does not follow later changes. <code>uniqueIndexes</code>
 takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
@@ -57969,10 +58259,6 @@ x = r~uniqueIndexes
 r~put('e', 'zz')
 say x~items x~class~id r~allIndexes~items r~uniqueIndexes~items
 say x~sort~makeString('L', ',') .relation~new~uniqueIndexes~items
-s = .relation~new
-s~put('v1', .k~new('a', 'h1'))
-s~put('v2', .k~new('a', 'h2'))
-say s~uniqueIndexes~items
 .local~log = .array~new
 s = .relation~new
 s~put('v1', .k~new('a', 'h'))
@@ -58007,21 +58293,21 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">3 Array 5 4
 j,k,m 0
-2
 2 1
 r~uniqueIndexes(1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.relation.supplier"><a href="classes/relation.html#r-class.relation.supplier">[class.relation.supplier]</a></div>
 <p><code>supplier</code> answers a <code>Supplier</code> over the entries, the index and the item of
 each, and <code>supplier(index)</code> a <code>Supplier</code> over the entries whose index is equal
-to the argument. It is a snapshot: later changes do not reach it. Its order is
-that of <code>allIndexes</code> (<a href="classes/relation.html#r-class.relation.makearray">the order rule</a>). A
-relation with no entry, or none at the index, gives a supplier that is not
-available. It takes at most one argument, and an omitted argument is no
-argument: a second raises <code>SYNTAX 93.902</code>. With an index it sends <code>hashCode</code>
-to it once, and <code>==</code> to it with every stored index of the same hash code as the
-argument; further sends, and how often each is sent, are not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the
-hash order rule</a>).</p>
+to the argument, oldest first (<a href="classes/relation.html#r-class.relation.oldest.deviation.33">the oldest
+rule</a>). It is a snapshot: later changes do
+not reach it. Its order is that of <code>allIndexes</code> (<a href="classes/relation.html#r-class.relation.makearray">the order
+rule</a>). A relation with no entry, or none at the
+index, gives a supplier that is not available. It takes at most one argument,
+and an omitted argument is no argument: a second raises <code>SYNTAX 93.902</code>. With an
+index it sends <code>hashCode</code> to it once, and <code>==</code> to it with every stored index of
+the same hash code as the argument; further sends, and how often each is sent,
+are not specified (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order rule</a>).</p>
 <pre><code class="language-rexx">.local~log = .array~new
 r = .relation~new
 r~put('a', 'k')
@@ -58688,25 +58974,72 @@ subset=&gt; copy A.isA A.isA A.supplier C.removeItem C.removeItem
 </code></pre>
 <h2 id="deviations-47"><a class="header" href="#deviations-47">Deviations</a></h2>
 <div class="rule" id="r-class.relation.deviation.33"><a href="classes/relation.html#r-class.relation.deviation.33">[class.relation.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code>,
-<code>uniqueIndexes</code>, <code>allAt</code>, <code>allIndex</code>, <code>removeAll</code> and <code>supplier</code>, the entry
-that <code>at</code>, <code>index</code>, <code>remove</code> and <code>removeItem</code> choose among several, and which
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the entries in the
+order they were put, and <code>hasItem</code>, <code>index</code>, <code>allIndex</code> and <code>removeItem</code> search
+the items in that order. The set operations, which walk the entries of their
+argument, follow that order too. An entry that is removed and then put again
+comes last. Which entries are produced, and how often, is specified. Which
 stored indexes or items a lookup, a search or <code>uniqueIndexes</code> compares, by <code>==</code>
-or <code>hashCode</code>, beyond those it must compare, and how often, are not specified,
-and may differ from ooRexx's. Which entries are produced, and how often, is
-specified. In the example the answers are sorted.</p>
+or <code>hashCode</code>, beyond those it must compare, and how often, is not specified,
+and neither is the entry that a lookup or a search acts on when an <code>==</code> or
+<code>hashCode</code> that it sends changes the relation, which may be none of them.
+ooRexx lists the entries in an order that its storage fixes, so its answers can
+differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
 <pre><code class="language-rexx">r = .relation~new
-r~put(1, 'one')
-r~put(2, 'two')
-r~put(3, 'three')
-r~put(4, 'three')
-say r~allIndexes~sort~makeString('L', ',')
-say r~allItems~sort~makeString('L', ',')
-say r~uniqueIndexes~items r~items r~makeArray~items
+r~put('x', 'k')
+r~put('y', 'j')
+r~put('z', 'k')
+say r~allIndexes~makeString('L', ',') r~allItems~makeString('L', ',')
+r~remove('j')
+r~put('y', 'j')
+s = r~supplier
+say s~index s~item r~makeArray~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">one,three,three,two
-1,2,3,4
-3 4 4
+<pre><code class="language-output">k,j,k x,y,z
+k x k,k,j
+</code></pre>
+<div class="rule" id="r-class.relation.oldest.deviation.33"><a href="classes/relation.html#r-class.relation.oldest.deviation.33">[class.relation.oldest.deviation.33]</a></div>
+<p>Where several entries qualify, <code>at</code> and <code>[]</code> answer the item of the oldest,
+<code>index</code> its index, <code>remove</code> and <code>removeItem</code> remove the oldest, <code>allAt</code>,
+<code>allIndex</code>, <code>removeAll</code> and <code>supplier</code> with an index list them oldest first, and
+<code>uniqueIndexes</code> answers the oldest index of each group, in the order of those
+oldest entries. ooRexx chooses the newest of the entries at one index, and
+searches the items in the order of its storage (<a href="classes/relation.html#r-class.relation.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">r = .relation~new
+r~put('x', 'k')
+r~put('y', 'j')
+r~put('z', 'k')
+r~put('y', 'k')
+r~put('x', 'j')
+say r~uniqueIndexes~makeString('L', ',') r~at('k') r['k']
+say r~allAt('k')~makeString('L', ',') r~supplier('k')~item
+say r~index('y') r~allIndex('x')~makeString('L', ',')
+say r~remove('k') r~removeItem('y') r~allIndexes~makeString('L', ',')
+r~put('w', 'k')
+say r~removeAll('k')~makeString('L', ',') r~allItems~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">k,j x x
+x,z,y x
+j k,j
+x y k,k,j
+z,y,w x
+</code></pre>
+<div class="rule" id="r-class.relation.copy.deviation.33"><a href="classes/relation.html#r-class.relation.copy.deviation.33">[class.relation.copy.deviation.33]</a></div>
+<p>A copy lists its entries in the order of the receiver. After that each relation
+keeps its own order: an entry put into one comes last in that one only (<a href="classes/relation.html#r-class.relation.deviation.33">the
+hash order rule</a>).</p>
+<pre><code class="language-rexx">r = .relation~new
+r~put('x', 'k')
+r~put('y', 'j')
+r~remove('k')
+r~put('z', 'k')
+c = r~copy
+c~put('q', 'n')
+r~put('w', 'm')
+say c~allIndexes~makeString('L', ',') r~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">j,k,n j,k,m
 </code></pre>
 <div class="rule" id="r-class.relation.deviation.84"><a href="classes/relation.html#r-class.relation.deviation.84">[class.relation.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> sends to an index, or that <code>removeItem</code> sends to
@@ -58817,10 +59150,11 @@ of entries, and which count how often a member occurs.</p>
 search</a> does not resolve raises
 <a href="classes/../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="classes/index.html#r-class.index.errors">the
 chapter</a> says. Examples that show an error use a small
-routine <code>try</code>, as the builtin pages do. Where several members qualify for a
-method that answers one, which one it answers is not specified, and the examples
-then hold one member or sort the answers (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order
-rule</a>).</p>
+routine <code>try</code>, as the builtin pages do. A bag lists its members in the order
+they were put, and where several members qualify for a method that answers or
+removes one, it chooses the oldest (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order
+rule</a>). ooRexx lists and chooses otherwise, so the
+examples outside that rule hold one such member or sort the answers.</p>
 <h2 id="the-class-21"><a class="header" href="#the-class-21">The class</a></h2>
 <div class="rule" id="r-class.bag.creation"><a href="classes/bag.html#r-class.bag.creation">[class.bag.creation]</a></div>
 <p><code>Bag</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allAt</code>, <code>allIndex</code>,
@@ -58947,20 +59281,23 @@ SPY 3
 </code></pre>
 <h2 id="members"><a class="header" href="#members">Members</a></h2>
 <div class="rule" id="r-class.bag.members"><a href="classes/bag.html#r-class.bag.members">[class.bag.members]</a></div>
-<p>A member is any object, <code>.nil</code> and the null string included, and the bag
-stores every object that was put, whether or not an equal one is there. A
-member is found by <a href="classes/bag.html#r-class.bag.members.sends">the lookup</a>: <code>hashCode</code> answers
-the same string for the argument and for the stored object, and <code>==</code>, sent to
-the argument with the stored object as argument, answers true. For an object
-that declares neither method that is the same object, and an <code>Array</code> is its
-own member only. A string is a member of its characters, compared by <a href="classes/../expressions/comparison.html#r-expr.comparison.strict">the
-strict comparison</a>: case counts, a leading or
-trailing blank counts, and <code>5</code> and <code>5.0</code> are two members. A class that
-declares <code>==</code> has to declare <code>hashCode</code> so that equal objects hash alike, as
-<a href="classes/object.html#r-class.object.hashcode">the hash code rule</a> says. A method that takes an
-index considers every member that is equal to the argument, and the bag does
-not merge them: the objects stay distinct, and <code>allItems</code> answers each of
-them.</p>
+<p>A member is any object, <code>.nil</code> and the null string included, and the bag stores
+every object that was put, whether or not an equal one is there. A member is
+found by <a href="classes/bag.html#r-class.bag.members.sends">the lookup</a>: <code>hashCode</code> answers the same
+string for the argument and for the stored object, and <code>==</code>, sent to the
+argument with the stored object as argument, answers true. For an object that
+declares neither method that is the same object, and an <code>Array</code> is its own
+member only. A string is a member of its characters, compared by <a href="classes/../expressions/comparison.html#r-expr.comparison.strict">the strict
+comparison</a>: case counts, a leading or trailing blank
+counts, and <code>5</code> and <code>5.0</code> are two members. A class that declares <code>==</code> has to
+declare <code>hashCode</code> so that equal objects hash alike, as <a href="classes/object.html#r-class.object.hashcode">the hash code
+rule</a> says. A method that takes an index considers
+every member that is equal to the argument, and the bag does not merge them: the
+objects stay distinct, and <code>allItems</code> answers each of them. For an argument and
+a stored object that are equal under <code>==</code> but whose <code>hashCode</code> answers are
+strictly different strings, or for a stored object whose <code>hashCode</code> no longer
+answers what it answered when it was stored, also when that object is itself the
+argument, whether a lookup finds the member is not specified.</p>
 <pre><code class="language-rexx">b = .bag~new
 do x over .array~of('Key', 'KEY', 5, 5.0, ' a', '', .nil, 'Key')
   b~put(x)
@@ -59141,12 +59478,13 @@ b~put("a", "a", "a") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.bag.at"><a href="classes/bag.html#r-class.bag.at">[class.bag.at]</a></div>
 <p><code>at(index)</code> and <code>[index]</code> answer the stored object that is equal to the index,
-and <code>.nil</code> when there is none; when several members are equal, which one is
-answered is not specified (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order rule</a>).
-The methods take exactly one argument: none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; with a second argument, whether
-the index is looked up is unspecified, as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence
-rule</a> says. An error that the <code>hashCode</code> of the index
-raises is the error of the message.</p>
+and <code>.nil</code> when there is none; when several members are equal, the oldest is
+answered (<a href="classes/bag.html#r-class.bag.oldest.deviation.33">the oldest rule</a>). The methods take
+exactly one argument: none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a
+second raises <code>SYNTAX 93.902</code>; with a second argument, whether the index is
+looked up is unspecified, as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence rule</a>
+says. An error that the <code>hashCode</code> of the index raises is the error of the
+message.</p>
 <pre><code class="language-rexx">b = .bag~new
 b~put('item')
 b~put('item')
@@ -59178,10 +59516,10 @@ b~at(.hostile~new) =&gt; 93.900
 </code></pre>
 <div class="rule" id="r-class.bag.allat"><a href="classes/bag.html#r-class.bag.allat">[class.bag.allat]</a></div>
 <p><code>allAt(index)</code> answers a new <code>Array</code> of the stored objects that are equal to the
-argument, one for each member, in an order that is not specified (<a href="classes/bag.html#r-class.bag.deviation.33">the hash
-order rule</a>), and an empty <code>Array</code> when there is none.
-<code>allIndex(item)</code> is the same question asked with the item: it answers a new
-<code>Array</code> of the stored objects equal to it, and for a bag the two answers are
+argument, one for each member, oldest first (<a href="classes/bag.html#r-class.bag.oldest.deviation.33">the oldest
+rule</a>), and an empty <code>Array</code> when there is
+none. <code>allIndex(item)</code> is the same question asked with the item: it answers a
+new <code>Array</code> of the stored objects equal to it, and for a bag the two answers are
 alike. Both are instances of <code>Array</code> for a subclass receiver too, and do not
 follow later changes. Each takes exactly one argument: none, or an omitted one,
 raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>. <code>allAt</code> looks the
@@ -59404,11 +59742,11 @@ s1 | == s1 s1 | hash s1 | == s1 s1
 </code></pre>
 <h2 id="removing-members"><a class="header" href="#removing-members">Removing members</a></h2>
 <div class="rule" id="r-class.bag.remove"><a href="classes/bag.html#r-class.bag.remove">[class.bag.remove]</a></div>
-<p><code>remove(index)</code> removes one member that is equal to the argument and answers
-the stored object, and <code>.nil</code> when there is none; the other equal members
-stay, and which of them is removed is not specified (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order
-rule</a>). It takes exactly one argument: none, or an
-omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
+<p><code>remove(index)</code> removes one member that is equal to the argument and answers the
+stored object, and <code>.nil</code> when there is none; the other equal members stay, and
+the oldest of them is removed (<a href="classes/bag.html#r-class.bag.oldest.deviation.33">the oldest
+rule</a>). It takes exactly one argument: none, or
+an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">b = .bag~of('v', 'v', .nil)
 say b~remove('v') b~items('v') b~remove('v') (b~remove('v') == .nil) b~items
 say (b~remove(.nil) == .nil) (b~remove(.nil) == .nil) b~items
@@ -59430,11 +59768,11 @@ b~remove("a", "b") =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.bag.removeall"><a href="classes/bag.html#r-class.bag.removeall">[class.bag.removeall]</a></div>
 <p><code>removeAll(index)</code> removes every member that is equal to the argument and
-answers them in a new <code>Array</code>, one object for each, in an order that is not
-specified (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order rule</a>); it answers an empty
-<code>Array</code> when there is none, and the answer is an instance of <code>Array</code> for a
-subclass receiver too. It takes exactly one argument: none, or an omitted one,
-raises <code>SYNTAX 93.903</code>, and a second raises <code>SYNTAX 93.902</code>.</p>
+answers them in a new <code>Array</code>, one object for each, oldest first (<a href="classes/bag.html#r-class.bag.oldest.deviation.33">the oldest
+rule</a>); it answers an empty <code>Array</code> when there
+is none, and the answer is an instance of <code>Array</code> for a subclass receiver too.
+It takes exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>,
+and a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">b = .many~of('a', 'b', 'a', 'a')
 x = b~removeAll('a')
 say x~class~id x~items x~makeString('L', ',') b~items b~hasIndex('a')
@@ -59513,10 +59851,13 @@ b~empty(1) =&gt; 93.902
 <p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> that holds each member as
 often as it occurs, and <code>allItems</code> does the same: for a bag index and item are
 the same object, so the three answers are alike. <code>uniqueIndexes</code> answers a new
-<code>Array</code> that holds one object for each group of equal members, and so as many
-objects as there are different members. All four are instances of <code>Array</code> for a
-subclass receiver too, never the receiver, and do not follow later changes. They
-take no argument: one raises <code>SYNTAX 93.902</code>. The order is not specified (<a href="classes/bag.html#r-class.bag.deviation.33">the
+<code>Array</code> that holds the oldest object of each group of equal members, and so as
+many objects as there are different members; for members that break the hash
+code contract as <a href="classes/bag.html#r-class.bag.members">the member rule</a> says, how they are
+grouped is not specified. All four are instances of <code>Array</code> for a subclass
+receiver too, never the receiver, and do not follow later changes. They take no
+argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the members
+were put, and for <code>uniqueIndexes</code> that of the oldest member of each group (<a href="classes/bag.html#r-class.bag.deviation.33">the
 hash order rule</a>), and is the same for <code>allIndexes</code>,
 <code>makeArray</code>, <code>allItems</code> and the supplier of one unchanged bag. <code>allIndexes</code>,
 <code>allItems</code> and <code>makeArray</code> send no message to the bag or to the members; the
@@ -59560,13 +59901,13 @@ t~makeArray(1) =&gt; 93.902
 t~uniqueIndexes(1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.bag.supplier"><a href="classes/bag.html#r-class.bag.supplier">[class.bag.supplier]</a></div>
-<p><code>supplier</code> answers a <code>Supplier</code> over the members, the index and the item of
-each being the same object, once for each time the member occurs.
-<code>supplier(index)</code> answers one over the members equal to the argument only. It
-is a snapshot: later changes do not reach it. The order of <code>supplier</code> is that
-of <code>allIndexes</code> (<a href="classes/bag.html#r-class.bag.makearray">the order rule</a>). A supplier over no
-member is not available. It takes at most one argument: a second raises
-<code>SYNTAX 93.902</code>.</p>
+<p><code>supplier</code> answers a <code>Supplier</code> over the members, the index and the item of each
+being the same object, once for each time the member occurs. <code>supplier(index)</code>
+answers one over the members equal to the argument only, oldest first (<a href="classes/bag.html#r-class.bag.oldest.deviation.33">the
+oldest rule</a>). It is a snapshot: later changes
+do not reach it. The order of <code>supplier</code> is that of <code>allIndexes</code> (<a href="classes/bag.html#r-class.bag.makearray">the order
+rule</a>). A supplier over no member is not available. It
+takes at most one argument: a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">b = .bag~of('a', 'a', 'b')
 p = b~supplier
 b~put('c')
@@ -60139,23 +60480,88 @@ subset=&gt; copy A.isA A.allItems C.remove C.remove C.isEmpty | -
 </code></pre>
 <h2 id="deviations-48"><a class="header" href="#deviations-48">Deviations</a></h2>
 <div class="rule" id="r-class.bag.deviation.33"><a href="classes/bag.html#r-class.bag.deviation.33">[class.bag.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code>, <code>allAt</code>,
-<code>allIndex</code>, <code>removeAll</code>, <code>uniqueIndexes</code> and <code>supplier</code>, which of several equal
-members <code>at</code>, <code>index</code>, <code>remove</code> and <code>removeItem</code> choose, and which stored
-objects a lookup or a search compares, by <code>==</code> or <code>hashCode</code>, beyond those it
-must compare, and how often, and which members <code>uniqueIndexes</code> sends <code>hashCode</code>
-or <code>==</code>, are not specified, and may differ from ooRexx's. Which members are
-produced, and how often, is specified. In the example the answers are sorted.</p>
-<pre><code class="language-rexx">b = .bag~of(1, 2, 2, 3)
-say b~allIndexes~sort~makeString('L', ',')
-say b~allItems~sort~makeString('L', ',')
-say b~uniqueIndexes~sort~makeString('L', ',')
-say b~items b~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the members in the
+order they were put, each as often as it occurs, and so the set operations,
+which walk the members of their argument, follow that order. A member that is
+removed and then put again comes last. Which members are produced, and how
+often, is specified. Which stored objects a lookup or a search compares, by
+<code>==</code> or <code>hashCode</code>, beyond those it must compare, and how often, and which
+members <code>uniqueIndexes</code> sends <code>hashCode</code> or <code>==</code>, are not specified, and
+neither is the member that a lookup or a search acts on when an <code>==</code> or
+<code>hashCode</code> that it sends changes the bag, which may be none of them. ooRexx
+lists the members in an order that its storage fixes, so its answers can
+differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
+<pre><code class="language-rexx">b = .bag~new
+b~put('b')
+b~put('a')
+b~put('b')
+b~put('c')
+say b~allIndexes~makeString('L', ',') b~makeArray~makeString('L', ',')
+b~remove('a')
+b~put('a')
+say b~allItems~makeString('L', ',') b~supplier~index
 </code></pre>
-<pre><code class="language-output">1,2,2,3
-1,2,2,3
-1,2,3
-4 4
+<pre><code class="language-output">b,a,b,c b,a,b,c
+b,b,c,a b
+</code></pre>
+<div class="rule" id="r-class.bag.oldest.deviation.33"><a href="classes/bag.html#r-class.bag.oldest.deviation.33">[class.bag.oldest.deviation.33]</a></div>
+<p>Where several members are equal to the argument, <code>at</code>, <code>[]</code> and <code>index</code> answer
+the oldest of them, <code>remove</code> and <code>removeItem</code> remove the oldest, <code>allAt</code>,
+<code>allIndex</code>, <code>removeAll</code> and <code>supplier</code> with an index list them oldest first, and
+<code>uniqueIndexes</code> answers the oldest of each group, in the order of those oldest
+members. ooRexx chooses the newest (<a href="classes/bag.html#r-class.bag.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">b = .bag~new
+b~put(.m~new('b', 1))
+b~put(.m~new('a', 2))
+b~put(.m~new('b', 3))
+b~put(.m~new('a', 4))
+b~put(.m~new('b', 5))
+say .m~tags(b~uniqueIndexes)
+p = .m~new('b', 0)
+say b~at(p)~n b[p]~n b~index(p)~n .m~tags(b~allAt(p)) .m~tags(b~allIndex(p))
+say b~supplier(p)~item~n b~remove(p)~n b~removeItem(p)~n .m~tags(b~allIndexes)
+b~put(.m~new('b', 6))
+say .m~tags(b~removeAll(p)) .m~tags(b~allIndexes)
+::class m
+::method tags class
+  use arg a
+  r = ''
+  do x over a
+    r = r x~tag || x~n
+  end
+  return strip(r)
+::attribute tag
+::attribute n
+::method init
+  expose tag n
+  use arg tag, n
+::method '=='
+  expose tag
+  use arg o
+  return tag == o~tag
+::method hashCode
+  expose tag
+  return tag~hashCode
+</code></pre>
+<pre><code class="language-output">b1 a2
+1 1 1 b1 b3 b5 b1 b3 b5
+1 1 3 a2 a4 b5
+b5 b6 a2 a4
+</code></pre>
+<div class="rule" id="r-class.bag.copy.deviation.33"><a href="classes/bag.html#r-class.bag.copy.deviation.33">[class.bag.copy.deviation.33]</a></div>
+<p>A copy lists its members in the order of the receiver. After that each bag keeps
+its own order: a member put into one comes last in that one only (<a href="classes/bag.html#r-class.bag.deviation.33">the hash
+order rule</a>).</p>
+<pre><code class="language-rexx">b = .bag~of('c', 'a', 'c')
+b~remove('c')
+b~put('b')
+k = b~copy
+k~put('z')
+b~put('y')
+say k~allIndexes~makeString('L', ',') b~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,c,b,z a,c,b,y
 </code></pre>
 <div class="rule" id="r-class.bag.deviation.45"><a href="classes/bag.html#r-class.bag.deviation.45">[class.bag.deviation.45]</a></div>
 <p><code>hasItem(item, index)</code> with an index that is not equal to the item answers 0.
@@ -60249,10 +60655,10 @@ members and not as a list of entries.</p>
 search</a> does not resolve raises
 <a href="classes/../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="classes/index.html#r-class.index.errors">the
 chapter</a> says. Examples that show an error use a small
-routine <code>try</code>, as the builtin pages do. Where several members qualify for a
-method that answers one, which one it answers is not specified, and the examples
-then hold one member or sort the answers (<a href="classes/set.html#r-class.set.deviation.33">the hash order
-rule</a>).</p>
+routine <code>try</code>, as the builtin pages do. A set lists its members in the order
+they were first put (<a href="classes/set.html#r-class.set.deviation.33">the hash order rule</a>). ooRexx
+lists them otherwise, so the examples outside that rule hold one member or sort
+the answers.</p>
 <h2 id="the-class-22"><a class="header" href="#the-class-22">The class</a></h2>
 <div class="rule" id="r-class.set.creation"><a href="classes/set.html#r-class.set.creation">[class.set.creation]</a></div>
 <p><code>Set</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
@@ -60382,20 +60788,24 @@ SPY 2
 </code></pre>
 <h2 id="members-1"><a class="header" href="#members-1">Members</a></h2>
 <div class="rule" id="r-class.set.members"><a href="classes/set.html#r-class.set.members">[class.set.members]</a></div>
-<p>A member is any object, <code>.nil</code> and the null string included, and the set
-stores the object that was put. A member is found by <a href="classes/set.html#r-class.set.members.sends">the
+<p>A member is any object, <code>.nil</code> and the null string included, and the set stores
+the object that was put. A member is found by <a href="classes/set.html#r-class.set.members.sends">the
 lookup</a>: <code>hashCode</code> answers the same string for the
 argument and for the stored object, and <code>==</code>, sent to the argument with the
 stored object as argument, answers true. For an object that declares neither
-method that is the same object, and an <code>Array</code> is its own member only. A
-string is a member of its characters, compared by <a href="classes/../expressions/comparison.html#r-expr.comparison.strict">the strict
-comparison</a>: case counts, a leading or trailing
-blank counts, and <code>5</code> and <code>5.0</code> are two members. A class that declares <code>==</code>
-has to declare <code>hashCode</code> so that equal objects hash alike, as <a href="classes/object.html#r-class.object.hashcode">the hash code
+method that is the same object, and an <code>Array</code> is its own member only. A string
+is a member of its characters, compared by <a href="classes/../expressions/comparison.html#r-expr.comparison.strict">the strict
+comparison</a>: case counts, a leading or trailing blank
+counts, and <code>5</code> and <code>5.0</code> are two members. A class that declares <code>==</code> has to
+declare <code>hashCode</code> so that equal objects hash alike, as <a href="classes/object.html#r-class.object.hashcode">the hash code
 rule</a> says. When <code>put</code> finds an equal member, the set
 keeps the object it has as the index of the entry, and takes the new object as
 its item: <code>at</code> and <code>allItems</code> then answer the new object, and <code>allIndexes</code> and
-<code>makeArray</code> the old one.</p>
+<code>makeArray</code> the old one. For an argument and a stored object that are equal
+under <code>==</code> but whose <code>hashCode</code> answers are strictly different strings, or for a
+stored object whose <code>hashCode</code> no longer answers what it answered when it was
+stored, also when that object is itself the argument, whether a lookup finds the
+member and whether <code>put</code> takes the two as one member is not specified.</p>
 <pre><code class="language-rexx">s = .set~new
 do x over .array~of('Key', 'KEY', 5, 5.0, ' a', '', .nil)
   s~put(x)
@@ -60756,12 +61166,12 @@ s~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="lists-of-the-members-1"><a class="header" href="#lists-of-the-members-1">Lists of the members</a></h2>
 <div class="rule" id="r-class.set.makearray"><a href="classes/set.html#r-class.set.makearray">[class.set.makearray]</a></div>
-<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the
-entries, and <code>allItems</code> a new <code>Array</code> of their items. They are instances of
-<code>Array</code> for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises <code>SYNTAX 93.902</code>. The order is
-not specified (<a href="classes/set.html#r-class.set.deviation.33">the hash order rule</a>), and is the
-same for the three answers and for the supplier of one unchanged set, so the
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the indexes of the entries,
+and <code>allItems</code> a new <code>Array</code> of their items. They are instances of <code>Array</code> for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises <code>SYNTAX 93.902</code>. The order is that in which the
+members were first put (<a href="classes/set.html#r-class.set.deviation.33">the hash order rule</a>), and is
+the same for the three answers and for the supplier of one unchanged set, so the
 item at a position belongs to the index at the same position. The methods send
 no message to the set or to the members.</p>
 <pre><code class="language-rexx">t = .many~new
@@ -61357,19 +61767,56 @@ subset=&gt; copy A.allItems C.remove C.remove C.isEmpty | -
 </code></pre>
 <h2 id="deviations-49"><a class="header" href="#deviations-49">Deviations</a></h2>
 <div class="rule" id="r-class.set.deviation.33"><a href="classes/set.html#r-class.set.deviation.33">[class.set.deviation.33]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, and which stored objects a lookup compares, by <code>==</code> or <code>hashCode</code>,
-beyond those it must compare, and how often, are not specified, and may differ
-from ooRexx's. Which members are produced, and how often, is specified. In the
-example the answers are sorted.</p>
-<pre><code class="language-rexx">s = .set~of(1, 2, 3)
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
-say s~items s~makeArray~items
+<p><code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the members in the
+order they were first put, and so the set operations, which walk the members of
+their argument, follow that order. Which members are produced, and how often,
+is specified. Which stored objects a lookup compares, by <code>==</code> or <code>hashCode</code>,
+beyond those it must compare, and how often, is not specified, and neither is
+the member that a lookup acts on when an <code>==</code> or <code>hashCode</code> that it sends
+changes the set, which may be none of them. ooRexx lists the members in an
+order that its storage fixes, so its answers can differ. See <a href="classes/../deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
+<pre><code class="language-rexx">s = .set~new
+s~put('c')
+s~put('a')
+s~put('b')
+say s~allIndexes~makeString('L', ',') s~makeArray~makeString('L', ',')
+say s~union(.set~of('q', 'a'))~allIndexes~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output">1,2,3
-1,2,3
-3 3
+<pre><code class="language-output">c,a,b c,a,b
+c,a,b,q
+</code></pre>
+<div class="rule" id="r-class.set.put.deviation.33"><a href="classes/set.html#r-class.set.put.deviation.33">[class.set.put.deviation.33]</a></div>
+<p>A <code>put</code> of a member that the set holds leaves the entry in its place. A member
+that is removed and then put again comes last (<a href="classes/set.html#r-class.set.deviation.33">the hash order
+rule</a>).</p>
+<pre><code class="language-rexx">s = .set~new
+s~put('c')
+s~put('a')
+s~put('b')
+s~put('c')
+say s~allIndexes~makeString('L', ',')
+s~remove('c')
+s~put('c')
+say s~allItems~makeString('L', ',') s~supplier~index
+</code></pre>
+<pre><code class="language-output">c,a,b
+a,b,c a
+</code></pre>
+<div class="rule" id="r-class.set.copy.deviation.33"><a href="classes/set.html#r-class.set.copy.deviation.33">[class.set.copy.deviation.33]</a></div>
+<p>A copy lists its members in the order of the receiver. After that each set keeps
+its own order: a member put into one comes last in that one only (<a href="classes/set.html#r-class.set.deviation.33">the hash
+order rule</a>).</p>
+<pre><code class="language-rexx">s = .set~of('c', 'a')
+s~remove('c')
+s~put('b')
+s~put('c')
+k = s~copy
+k~put('z')
+s~put('y')
+say k~allIndexes~makeString('L', ',') s~allIndexes~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output">a,b,c,z a,b,c,y
 </code></pre>
 <div class="rule" id="r-class.set.deviation.84"><a href="classes/set.html#r-class.set.deviation.84">[class.set.deviation.84]</a></div>
 <p>When the <code>==</code> that <code>remove</code> or <code>removeItem</code> sends to its argument empties the
@@ -61453,10 +61900,11 @@ lists what it inherits.</p>
 <p>A stem has an <code>unknown</code> method, and the page begins with what the other methods
 do; <a href="classes/stem.html#r-class.stem.unknown">the unknown rule</a> says what <code>unknown</code> does with the
 messages that no method answers. Examples that show an error use a small routine
-<code>try</code>, as the builtin pages do. The order in which the tails are listed is not
-specified, as <a href="classes/../instructions/do.html#r-instr.do.deviation.1">the DO OVER rule</a> says of a loop, and the
-examples then hold one tail or sort the answers (<a href="classes/stem.html#r-class.stem.deviation.1">the order
-rule</a>).</p>
+<code>try</code>, as the builtin pages do. The order in which the tails are listed is
+the order of assignment, as <a href="classes/../instructions/do.html#r-instr.do.deviation.1">the DO OVER
+rule</a> says of a loop (<a href="classes/stem.html#r-class.stem.deviation.1">the order
+rule</a>). ooRexx lists them in another order, so the
+examples outside that rule hold one tail or sort the answers.</p>
 <h2 id="the-class-23"><a class="header" href="#the-class-23">The class</a></h2>
 <div class="rule" id="r-class.stem.creation"><a href="classes/stem.html#r-class.stem.creation">[class.stem.creation]</a></div>
 <p><code>Stem</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
@@ -61678,8 +62126,8 @@ say s~hasIndex('a', 'b') s~hasIndex(5) s~hasIndex
 argument, and <code>index(item)</code> answers the tail of such an item, as a string, and
 <code>.nil</code> when there is none. The default of the stem is not an item. Both take
 exactly one argument: a second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
-answers when several items qualify is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the order
-rule</a>).</p>
+answers when several items qualify is the first in the order of assignment
+(<a href="classes/stem.html#r-class.stem.deviation.1">the order rule</a>).</p>
 <pre><code class="language-rexx">s = .stem~new('N.')
 s['k1'] = 'x'
 s['k2'] = 'y'
@@ -61761,7 +62209,7 @@ d N. v 1
 <div class="rule" id="r-class.stem.removeitem"><a href="classes/stem.html#r-class.stem.removeitem">[class.stem.removeitem]</a></div>
 <p><code>removeItem(item)</code> removes one item that is equal to the argument and answers
 it, and answers <code>.nil</code> when there is none; when several tails hold an equal
-item, which one is removed is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the order
+item, the one removed is the first in the order of assignment (<a href="classes/stem.html#r-class.stem.deviation.1">the order
 rule</a>). The default is not an item. It takes
 exactly one argument: none raises <code>SYNTAX 93.903</code>, and a second raises
 <code>SYNTAX 93.902</code>.</p>
@@ -61815,7 +62263,7 @@ s~empty(1) =&gt; 93.902
 item, as strings, and <code>allItems</code> a new <code>Array</code> of the items. The default is in
 neither. They are instances of <code>Array</code> for a subclass receiver too, never the
 receiver, and do not follow later changes. They take no argument: one raises
-<code>SYNTAX 93.902</code>. The order is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the order
+<code>SYNTAX 93.902</code>. The order is that of assignment (<a href="classes/stem.html#r-class.stem.deviation.1">the order
 rule</a>), and is the same for the three answers and
 for the supplier of one unchanged stem, so the item at a position belongs to
 the tail at the same position. The methods send no message to the stem,
@@ -62253,7 +62701,7 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <p><code>hasItem(item)</code>, <code>index(item)</code> and <code>removeItem(item)</code> send <code>==</code> to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, <code>hashCode</code> included; when none matches, every item is
-compared. The order in which the items are compared is not specified (<a href="classes/stem.html#r-class.stem.deviation.1">the order
+compared. The items are compared in the order of assignment (<a href="classes/stem.html#r-class.stem.deviation.1">the order
 rule</a>). The very object that is stored is found
 without a <code>==</code> sent to it (<a href="classes/collection.html#r-class.collection.identity">the identity rule</a>).
 The messages sent to an index are those of <a href="classes/stem.html#r-class.stem.tails">the tails rule</a>.</p>
@@ -62282,24 +62730,38 @@ say (s~removeItem(q) == .nil) .local~n s~items
 </code></pre>
 <h2 id="deviations-50"><a class="header" href="#deviations-50">Deviations</a></h2>
 <div class="rule" id="r-class.stem.deviation.1"><a href="classes/stem.html#r-class.stem.deviation.1">[class.stem.deviation.1]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, the order in which <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare
-the items, and so which tail <code>index</code> and <code>removeItem</code> choose among equal
-items, are not specified, and may differ from ooRexx's, which follows its
-storage. Which tails are produced, and how often, is specified. <a href="classes/../instructions/do.html#r-instr.do.deviation.1">The DO OVER
+<p>The answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the
+tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+<code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the items in that order, so <code>index</code>
+and <code>removeItem</code> choose the first of several equal items. ooRexx follows its
+storage, which is neither insertion nor sorted order, so its answers can
+differ. Which tails are produced, and how often, is specified. A native
+routine that walks the variables with <code>RXSHV_NEXTV</code> is given a stem's tails in
+that order, and <a href="classes/../rexxutil/sysdumpvariables.html"><code>SysDumpVariables</code></a> writes
+the lines of a stem's tails in that order. <a href="classes/../instructions/do.html#r-instr.do.deviation.1">The DO OVER
 rule</a> says the same of a loop. See <a href="classes/../deviations.html">Deviation
-1</a>. In the example the answers are sorted.</p>
+1</a>.</p>
 <pre><code class="language-rexx">s = .stem~new
-s['a'] = 3
-s['b'] = 1
-s['c'] = 2
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
-say s~items s~makeArray~items
+s['c'] = 'x'
+s['b'] = 'x'
+s['a'] = 'x'
+say s~allIndexes~makeString('L', ',')
+say s~index('x') s~removeItem('x') s~allIndexes~makeString('L', ',')
+s~remove('b')
+say s~allIndexes~makeString('L', ',')
+s['b'] = 'y'
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
+s['c'] = 'z'
+say s~supplier~index s~items s~makeArray~items
 </code></pre>
-<pre><code class="language-output">a,b,c
-1,2,3
-3 3
+<pre><code class="language-output">c,b,a
+c x b,a
+a
+a,b
+x,y
+a 3 3
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.68"><a href="classes/stem.html#r-class.stem.deviation.68">[class.stem.deviation.68]</a></div>
 <p>The <code>UNKNOWN</code> method that a subclass of <code>Stem</code> declares runs for a message
@@ -103522,11 +103984,12 @@ sysgetfiledatetime(f) -&gt; 2037-01-01 01:01:01
 each, to the standard output or to the end of a file. It answers <code>0</code> when it
 has done so.</p>
 <blockquote>
-<p><strong>Note.</strong> The order in which the lines of a dump come is not specified, so
-the examples of this page read the lines back and print them in the order of
-their bytes, with a routine called <code>show</code>. A line of a dump that is read
-back as text ends in <code>&lt;CR&gt;</code> or <code>&lt;LF&gt;</code> in the examples where the line end
-matters, and <code>show</code> writes those as the five characters.</p>
+<p><strong>Note.</strong> The order in which the lines of a dump come is not specified beyond
+<a href="rexxutil/sysdumpvariables.html#r-util.sysdumpvariables.line">the line rule</a>, so the examples of this page
+read the lines back and print them in the order of their bytes, with a
+routine called <code>show</code>. A line of a dump that is read back as text ends in
+<code>&lt;CR&gt;</code> or <code>&lt;LF&gt;</code> in the examples where the line end matters, and <code>show</code>
+writes those as the five characters.</p>
 </blockquote>
 <h2 id="arguments-18"><a class="header" href="#arguments-18">Arguments</a></h2>
 <div class="rule" id="r-util.sysdumpvariables.args"><a href="rexxutil/sysdumpvariables.html#r-util.sysdumpvariables.args">[util.sysdumpvariables.args]</a></div>
@@ -103572,7 +104035,8 @@ then a line end. A simple or compound variable that has been dropped is not
 written. A stem is written as <a href="rexxutil/sysdumpvariables.html#r-util.sysdumpvariables.stem">the stem rule</a>
 says, even when it has been dropped. Nothing is written when there is no
 variable, and a file is then made and is empty. The order of the lines is not
-specified.</p>
+specified, except that the lines of one stem's tails come in <a href="rexxutil/../classes/stem.html#r-class.stem.deviation.1">the order of its
+tails</a>.</p>
 <pre><code class="language-rexx">call p
 exit
 p: procedure
@@ -128143,12 +128607,14 @@ ooRexx keeps the indent in a counter that drops a level too far when a loop
 ends on a failing control test, so its later lines sit one level short until
 an enclosing construct restores it.</p>
 <h2 id="1-do-over-order-on-a-stem"><a class="header" href="#1-do-over-order-on-a-stem">1. DO OVER order on a stem</a></h2>
-<p>DO OVER on a stem visits its tails in an order this book does not specify,
-and so do the <code>Stem</code> methods that list or search its tails: <code>allIndexes</code>,
-<code>allItems</code>, <code>makeArray</code> and <code>supplier</code>, the tail that <code>index</code> and <code>removeItem</code>
-choose, and the order in which <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
-items. ooRexx visits them in an order fixed by its internal storage, which is
-neither insertion nor sorted order.</p>
+<p>DO OVER on a stem, the <code>Stem</code> methods that list or search its tails
+(<code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code>, <code>supplier</code>, <code>index</code>, <code>removeItem</code> and
+<code>hasItem</code>), the variable pool's <code>RXSHV_NEXTV</code> walk and <code>SysDumpVariables</code> visit
+the tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+<code>index</code> and <code>removeItem</code> choose the first match in that order. ooRexx visits
+them in an order fixed by its internal storage, which is neither insertion nor
+sorted order.</p>
 <h2 id="2-withdrawn"><a class="header" href="#2-withdrawn">2. Withdrawn</a></h2>
 <p>interrexx evaluates an expression of any number of terms at one level.</p>
 <h2 id="3-withdrawn"><a class="header" href="#3-withdrawn">3. Withdrawn</a></h2>
@@ -128174,8 +128640,8 @@ a <code>~subclasses</code> count and a <code>WeakReference</code>.</p>
 standard error is not specified. ooRexx's order varies from run to run;
 interrexx gives one of the orders ooRexx can give.</p>
 <h2 id="8-withdrawn"><a class="header" href="#8-withdrawn">8. Withdrawn</a></h2>
-<p>Output that lists a hash collection now matches ooRexx; hash iteration order
-is <a href="deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
+<p>The order in which output lists a hash collection is <a href="deviations.html#33-hash-iteration-order">Deviation
+33</a>.</p>
 <h2 id="9-mutablebuffer-storage-held-by-a-native-call"><a class="header" href="#9-mutablebuffer-storage-held-by-a-native-call">9. MutableBuffer storage held by a native call</a></h2>
 <p>A native routine that holds the address of a MutableBuffer's data keeps
 reading valid storage after the buffer grows, even across a collection. In
@@ -128333,11 +128799,30 @@ with that metaclass is made, by <code>subclass</code>, by <code>mixinclass</code
 directive with METACLASS, is refused, exit code 120, where ooRexx rewires that
 class in place.</p>
 <h2 id="33-hash-iteration-order"><a class="header" href="#33-hash-iteration-order">33. Hash iteration order</a></h2>
-<p>The order in which a hash collection yields its entries, and the order of
-anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search compares, by <code>==</code> or <code>hashCode</code>, beyond those it must
-compare, and how often, is not specified either.</p>
+<p>A hash collection, a <code>Directory</code>, <code>StringTable</code>, <code>Properties</code>, <code>Table</code>,
+<code>IdentityTable</code>, <code>Set</code>, <code>Bag</code> or <code>Relation</code>, yields its entries in the order
+they were first put, and so does everything that lists or walks one. A <code>put</code>
+that replaces the item of an index already there keeps the entry in its place,
+and an entry that is removed and put again comes last. A <code>Directory</code> lists its
+entries first and then the names that <code>setMethod</code> gave it, each in the order
+they were put. Where several entries share an index or hold equal items, <code>at</code>,
+<code>[]</code>, <code>remove</code>, <code>index</code> and <code>removeItem</code> act on the oldest of them, a method
+that answers several of them lists them oldest first, and <code>uniqueIndexes</code>
+answers the oldest index of each group. ooRexx yields the entries in an order
+that its storage fixes, which is neither the order of insertion nor a sorted
+order, acts on the newest of several entries at one index, and searches the
+items in the order of its storage.</p>
+<p>Which entries are yielded, and how often, is specified. Which stored indexes or
+items a search compares, by <code>==</code> or <code>hashCode</code>, beyond those it must compare,
+and how often, is not specified. When a method that a search sends, <code>==</code> or
+<code>hashCode</code>, changes the collection being searched, which entry the search
+finds, answers or removes is not specified either, and it may act on none of
+them: a <code>removeAll</code> can answer an empty array while the entries under its index
+stay. The order is not specified for the methods that <code>methods</code> and
+<code>instanceMethods</code> list, for the variables that <code>.context~variables</code> and
+<code>SysDumpVariables</code> list, and for the entries that the interpreter itself puts
+in <code>.environment</code> and <code>.local</code>; the entries that a program puts there follow
+the order above.</p>
 <h2 id="34--in-a-file-name"><a class="header" href="#34--in-a-file-name">34. <code>..</code> in a file name</a></h2>
 <p>In every name interrexx qualifies (QUALIFY, streams, <code>.File</code> and the
 RexxUtil path arguments), each <code>..</code> removes exactly the one component before

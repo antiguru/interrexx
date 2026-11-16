@@ -697,20 +697,21 @@ s~putAll(.nonext~new) =&gt; 93.948
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.mapcollection.deviation.33"><a href="#r-class.mapcollection.deviation.33">[class.mapcollection.deviation.33]</a></div>
-<p>The order in which a hash collection yields its entries is not specified
-(<a href="../deviations.html#33-hash-iteration-order">Deviation 33</a>), and so is not the
-order in which <code>putAll</code> stores the entries of a directory or another hash
-collection given as <code>source</code>, nor the order of the indexes that <code>makeArray</code>
-answers for one. The entries stored, and how often, are specified.</p>
+<p>A hash collection yields its entries in the order they were first put
+(<a href="../deviations.html#33-hash-iteration-order">Deviation 33</a>), and <code>putAll</code> stores
+the entries of a directory or another hash collection given as <code>source</code> in that
+order, as <code>makeArray</code> answers the indexes of one in that order. The entries
+stored, and how often, are specified. ooRexx yields them in an order that its
+storage fixes, so the order of the puts can differ.</p>
 <pre><code class="language-rexx">s = .store~new
 src = .directory~new
-src['k1'] = 'first'
-src['k2'] = 'second'
-src['k3'] = 'third'
+src['c'] = 'first'
+src['a'] = 'second'
+src['b'] = 'third'
 s~putAll(src)
 say s~items
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
 ::class store inherit mapcollection
 ::method init
   expose d
@@ -727,7 +728,7 @@ say s~allItems~sort~makeString('L', ',')
   return d~allitems
 </code></pre>
 <pre><code class="language-output">3
-k1,k2,k3
+c,a,b
 first,second,third
 </code></pre>
 

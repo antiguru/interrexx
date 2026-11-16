@@ -181,11 +181,12 @@
 each, to the standard output or to the end of a file. It answers <code>0</code> when it
 has done so.</p>
 <blockquote>
-<p><strong>Note.</strong> The order in which the lines of a dump come is not specified, so
-the examples of this page read the lines back and print them in the order of
-their bytes, with a routine called <code>show</code>. A line of a dump that is read
-back as text ends in <code>&lt;CR&gt;</code> or <code>&lt;LF&gt;</code> in the examples where the line end
-matters, and <code>show</code> writes those as the five characters.</p>
+<p><strong>Note.</strong> The order in which the lines of a dump come is not specified beyond
+<a href="#r-util.sysdumpvariables.line">the line rule</a>, so the examples of this page
+read the lines back and print them in the order of their bytes, with a
+routine called <code>show</code>. A line of a dump that is read back as text ends in
+<code>&lt;CR&gt;</code> or <code>&lt;LF&gt;</code> in the examples where the line end matters, and <code>show</code>
+writes those as the five characters.</p>
 </blockquote>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
 <div class="rule" id="r-util.sysdumpvariables.args"><a href="#r-util.sysdumpvariables.args">[util.sysdumpvariables.args]</a></div>
@@ -231,7 +232,8 @@ then a line end. A simple or compound variable that has been dropped is not
 written. A stem is written as <a href="#r-util.sysdumpvariables.stem">the stem rule</a>
 says, even when it has been dropped. Nothing is written when there is no
 variable, and a file is then made and is empty. The order of the lines is not
-specified.</p>
+specified, except that the lines of one stem's tails come in <a href="../classes/stem.html#r-class.stem.deviation.1">the order of its
+tails</a>.</p>
 <pre><code class="language-rexx">call p
 exit
 p: procedure

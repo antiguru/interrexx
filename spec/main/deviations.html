@@ -188,12 +188,14 @@ ooRexx keeps the indent in a counter that drops a level too far when a loop
 ends on a failing control test, so its later lines sit one level short until
 an enclosing construct restores it.</p>
 <h2 id="1-do-over-order-on-a-stem"><a class="header" href="#1-do-over-order-on-a-stem">1. DO OVER order on a stem</a></h2>
-<p>DO OVER on a stem visits its tails in an order this book does not specify,
-and so do the <code>Stem</code> methods that list or search its tails: <code>allIndexes</code>,
-<code>allItems</code>, <code>makeArray</code> and <code>supplier</code>, the tail that <code>index</code> and <code>removeItem</code>
-choose, and the order in which <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the
-items. ooRexx visits them in an order fixed by its internal storage, which is
-neither insertion nor sorted order.</p>
+<p>DO OVER on a stem, the <code>Stem</code> methods that list or search its tails
+(<code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code>, <code>supplier</code>, <code>index</code>, <code>removeItem</code> and
+<code>hasItem</code>), the variable pool's <code>RXSHV_NEXTV</code> walk and <code>SysDumpVariables</code> visit
+the tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+<code>index</code> and <code>removeItem</code> choose the first match in that order. ooRexx visits
+them in an order fixed by its internal storage, which is neither insertion nor
+sorted order.</p>
 <h2 id="2-withdrawn"><a class="header" href="#2-withdrawn">2. Withdrawn</a></h2>
 <p>interrexx evaluates an expression of any number of terms at one level.</p>
 <h2 id="3-withdrawn"><a class="header" href="#3-withdrawn">3. Withdrawn</a></h2>
@@ -219,8 +221,8 @@ a <code>~subclasses</code> count and a <code>WeakReference</code>.</p>
 standard error is not specified. ooRexx's order varies from run to run;
 interrexx gives one of the orders ooRexx can give.</p>
 <h2 id="8-withdrawn"><a class="header" href="#8-withdrawn">8. Withdrawn</a></h2>
-<p>Output that lists a hash collection now matches ooRexx; hash iteration order
-is <a href="#33-hash-iteration-order">Deviation 33</a>.</p>
+<p>The order in which output lists a hash collection is <a href="#33-hash-iteration-order">Deviation
+33</a>.</p>
 <h2 id="9-mutablebuffer-storage-held-by-a-native-call"><a class="header" href="#9-mutablebuffer-storage-held-by-a-native-call">9. MutableBuffer storage held by a native call</a></h2>
 <p>A native routine that holds the address of a MutableBuffer's data keeps
 reading valid storage after the buffer grows, even across a collection. In
@@ -378,11 +380,30 @@ with that metaclass is made, by <code>subclass</code>, by <code>mixinclass</code
 directive with METACLASS, is refused, exit code 120, where ooRexx rewires that
 class in place.</p>
 <h2 id="33-hash-iteration-order"><a class="header" href="#33-hash-iteration-order">33. Hash iteration order</a></h2>
-<p>The order in which a hash collection yields its entries, and the order of
-anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search compares, by <code>==</code> or <code>hashCode</code>, beyond those it must
-compare, and how often, is not specified either.</p>
+<p>A hash collection, a <code>Directory</code>, <code>StringTable</code>, <code>Properties</code>, <code>Table</code>,
+<code>IdentityTable</code>, <code>Set</code>, <code>Bag</code> or <code>Relation</code>, yields its entries in the order
+they were first put, and so does everything that lists or walks one. A <code>put</code>
+that replaces the item of an index already there keeps the entry in its place,
+and an entry that is removed and put again comes last. A <code>Directory</code> lists its
+entries first and then the names that <code>setMethod</code> gave it, each in the order
+they were put. Where several entries share an index or hold equal items, <code>at</code>,
+<code>[]</code>, <code>remove</code>, <code>index</code> and <code>removeItem</code> act on the oldest of them, a method
+that answers several of them lists them oldest first, and <code>uniqueIndexes</code>
+answers the oldest index of each group. ooRexx yields the entries in an order
+that its storage fixes, which is neither the order of insertion nor a sorted
+order, acts on the newest of several entries at one index, and searches the
+items in the order of its storage.</p>
+<p>Which entries are yielded, and how often, is specified. Which stored indexes or
+items a search compares, by <code>==</code> or <code>hashCode</code>, beyond those it must compare,
+and how often, is not specified. When a method that a search sends, <code>==</code> or
+<code>hashCode</code>, changes the collection being searched, which entry the search
+finds, answers or removes is not specified either, and it may act on none of
+them: a <code>removeAll</code> can answer an empty array while the entries under its index
+stay. The order is not specified for the methods that <code>methods</code> and
+<code>instanceMethods</code> list, for the variables that <code>.context~variables</code> and
+<code>SysDumpVariables</code> list, and for the entries that the interpreter itself puts
+in <code>.environment</code> and <code>.local</code>; the entries that a program puts there follow
+the order above.</p>
 <h2 id="34--in-a-file-name"><a class="header" href="#34--in-a-file-name">34. <code>..</code> in a file name</a></h2>
 <p>In every name interrexx qualifies (QUALIFY, streams, <code>.File</code> and the
 RexxUtil path arguments), each <code>..</code> removes exactly the one component before

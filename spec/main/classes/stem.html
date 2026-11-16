@@ -191,10 +191,11 @@ lists what it inherits.</p>
 <p>A stem has an <code>unknown</code> method, and the page begins with what the other methods
 do; <a href="#r-class.stem.unknown">the unknown rule</a> says what <code>unknown</code> does with the
 messages that no method answers. Examples that show an error use a small routine
-<code>try</code>, as the builtin pages do. The order in which the tails are listed is not
-specified, as <a href="../instructions/do.html#r-instr.do.deviation.1">the DO OVER rule</a> says of a loop, and the
-examples then hold one tail or sort the answers (<a href="#r-class.stem.deviation.1">the order
-rule</a>).</p>
+<code>try</code>, as the builtin pages do. The order in which the tails are listed is
+the order of assignment, as <a href="../instructions/do.html#r-instr.do.deviation.1">the DO OVER
+rule</a> says of a loop (<a href="#r-class.stem.deviation.1">the order
+rule</a>). ooRexx lists them in another order, so the
+examples outside that rule hold one tail or sort the answers.</p>
 <h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
 <div class="rule" id="r-class.stem.creation"><a href="#r-class.stem.creation">[class.stem.creation]</a></div>
 <p><code>Stem</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
@@ -416,8 +417,8 @@ say s~hasIndex('a', 'b') s~hasIndex(5) s~hasIndex
 argument, and <code>index(item)</code> answers the tail of such an item, as a string, and
 <code>.nil</code> when there is none. The default of the stem is not an item. Both take
 exactly one argument: a second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
-answers when several items qualify is not specified (<a href="#r-class.stem.deviation.1">the order
-rule</a>).</p>
+answers when several items qualify is the first in the order of assignment
+(<a href="#r-class.stem.deviation.1">the order rule</a>).</p>
 <pre><code class="language-rexx">s = .stem~new('N.')
 s['k1'] = 'x'
 s['k2'] = 'y'
@@ -499,7 +500,7 @@ d N. v 1
 <div class="rule" id="r-class.stem.removeitem"><a href="#r-class.stem.removeitem">[class.stem.removeitem]</a></div>
 <p><code>removeItem(item)</code> removes one item that is equal to the argument and answers
 it, and answers <code>.nil</code> when there is none; when several tails hold an equal
-item, which one is removed is not specified (<a href="#r-class.stem.deviation.1">the order
+item, the one removed is the first in the order of assignment (<a href="#r-class.stem.deviation.1">the order
 rule</a>). The default is not an item. It takes
 exactly one argument: none raises <code>SYNTAX 93.903</code>, and a second raises
 <code>SYNTAX 93.902</code>.</p>
@@ -553,7 +554,7 @@ s~empty(1) =&gt; 93.902
 item, as strings, and <code>allItems</code> a new <code>Array</code> of the items. The default is in
 neither. They are instances of <code>Array</code> for a subclass receiver too, never the
 receiver, and do not follow later changes. They take no argument: one raises
-<code>SYNTAX 93.902</code>. The order is not specified (<a href="#r-class.stem.deviation.1">the order
+<code>SYNTAX 93.902</code>. The order is that of assignment (<a href="#r-class.stem.deviation.1">the order
 rule</a>), and is the same for the three answers and
 for the supplier of one unchanged stem, so the item at a position belongs to
 the tail at the same position. The methods send no message to the stem,
@@ -991,7 +992,7 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 <p><code>hasItem(item)</code>, <code>index(item)</code> and <code>removeItem(item)</code> send <code>==</code> to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, <code>hashCode</code> included; when none matches, every item is
-compared. The order in which the items are compared is not specified (<a href="#r-class.stem.deviation.1">the order
+compared. The items are compared in the order of assignment (<a href="#r-class.stem.deviation.1">the order
 rule</a>). The very object that is stored is found
 without a <code>==</code> sent to it (<a href="collection.html#r-class.collection.identity">the identity rule</a>).
 The messages sent to an index are those of <a href="#r-class.stem.tails">the tails rule</a>.</p>
@@ -1020,24 +1021,38 @@ say (s~removeItem(q) == .nil) .local~n s~items
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.stem.deviation.1"><a href="#r-class.stem.deviation.1">[class.stem.deviation.1]</a></div>
-<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
-<code>supplier</code>, the order in which <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare
-the items, and so which tail <code>index</code> and <code>removeItem</code> choose among equal
-items, are not specified, and may differ from ooRexx's, which follows its
-storage. Which tails are produced, and how often, is specified. <a href="../instructions/do.html#r-instr.do.deviation.1">The DO OVER
+<p>The answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and <code>supplier</code> list the
+tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+<code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare the items in that order, so <code>index</code>
+and <code>removeItem</code> choose the first of several equal items. ooRexx follows its
+storage, which is neither insertion nor sorted order, so its answers can
+differ. Which tails are produced, and how often, is specified. A native
+routine that walks the variables with <code>RXSHV_NEXTV</code> is given a stem's tails in
+that order, and <a href="../rexxutil/sysdumpvariables.html"><code>SysDumpVariables</code></a> writes
+the lines of a stem's tails in that order. <a href="../instructions/do.html#r-instr.do.deviation.1">The DO OVER
 rule</a> says the same of a loop. See <a href="../deviations.html">Deviation
-1</a>. In the example the answers are sorted.</p>
+1</a>.</p>
 <pre><code class="language-rexx">s = .stem~new
-s['a'] = 3
-s['b'] = 1
-s['c'] = 2
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
-say s~items s~makeArray~items
+s['c'] = 'x'
+s['b'] = 'x'
+s['a'] = 'x'
+say s~allIndexes~makeString('L', ',')
+say s~index('x') s~removeItem('x') s~allIndexes~makeString('L', ',')
+s~remove('b')
+say s~allIndexes~makeString('L', ',')
+s['b'] = 'y'
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
+s['c'] = 'z'
+say s~supplier~index s~items s~makeArray~items
 </code></pre>
-<pre><code class="language-output">a,b,c
-1,2,3
-3 3
+<pre><code class="language-output">c,b,a
+c x b,a
+a
+a,b
+x,y
+a 3 3
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.68"><a href="#r-class.stem.deviation.68">[class.stem.deviation.68]</a></div>
 <p>The <code>UNKNOWN</code> method that a subclass of <code>Stem</code> declares runs for a message

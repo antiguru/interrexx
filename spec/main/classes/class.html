@@ -829,18 +829,18 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <div class="rule" id="r-class.class.methods"><a href="#r-class.class.methods">[class.class.methods]</a></div>
 <p><code>methods</code> answers a supplier whose indexes are method names in upper case and
 whose items are method objects, for the instance methods of the class. The
-supplier lists the names that exist when it is made, and a later change does
-not reach it. The order of its entries is not specified
-(<a href="../deviations.html">Deviation 33</a>). Without an argument it lists the table of
-the class and the tables of every class behind it in its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver, the class itself included, it lists the methods of
-that class's table, and with <code>.nil</code> the methods of the receiver's own table
-only. With any other argument, a number, a string or a class that is not in
-the order, the supplier has no entries. A table entry that hides a name is not
-listed; the name is still listed from every other table of the order that
-holds a method for it, so the listing does not show what the search finds. A
-second argument raises <code>SYNTAX 93.902</code>.</p>
+supplier lists the names that exist when it is made, and a later change does not
+reach it. The order of its entries is not specified (<a href="../deviations.html#33-hash-iteration-order">Deviation
+33</a>). Without an argument it lists the
+table of the class and the tables of every class behind it in its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver, the class itself included, it lists the methods
+of that class's table, and with <code>.nil</code> the methods of the receiver's own table
+only. With any other argument, a number, a string or a class that is not in the
+order, the supplier has no entries. A table entry that hides a name is not
+listed; the name is still listed from every other table of the order that holds
+a method for it, so the listing does not show what the search finds. A second
+argument raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">call show .sub~methods(.nil), 'sub own'
 call show .sub~methods(.sub), 'sub(.sub)'
 call show .sub~methods(.plain), 'sub(.plain)'
@@ -1991,9 +1991,9 @@ e2: say 'mixinclass' condition('o')~code
 mixinclass 98.900
 </code></pre>
 <div class="rule" id="r-class.class.deviation.33"><a href="#r-class.class.deviation.33">[class.class.deviation.33]</a></div>
-<p>The order of the entries that <code>methods</code> yields is not specified and may
-differ from ooRexx's (<a href="../deviations.html">Deviation 33</a>); which entries are
-there, and how often, is specified.</p>
+<p>The order of the entries that <code>methods</code> yields is not specified and may differ
+from ooRexx's (<a href="../deviations.html#33-hash-iteration-order">Deviation 33</a>); which
+entries are there, and how often, is specified.</p>
 <pre><code class="language-rexx">t = .top~methods(.top)
 a = .array~new
 do while t~available
