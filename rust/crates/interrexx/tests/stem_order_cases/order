@@ -95,3 +95,68 @@ say .K~new~go
   return strip(r)
 ----
 C B A
+
+# a tail written with c.k = c.k + 1, whose write reuses what its read found,
+# keeps its place; a dropped one written that way counts from its new
+# assignment, and so does one written after the stem was emptied
+program
+c. = 0
+do k over 'X Y X Z Y X'~makeArray(' ')
+  c.k = c.k + 1
+end
+say c.~allIndexes~makeArray~toString('l', ' ')
+drop c.Y
+k = 'Y'
+c.k = c.k || '!'
+say c.~allIndexes~makeArray~toString('l', ' ')
+c.~empty
+c.k = c.k + 1
+c.X = 1
+say c.~allIndexes~makeArray~toString('l', ' ')
+----
+X Y Z
+X Z Y
+Y X
+
+# many tails dropped and set again, past the few a stem keeps inline: the
+# tails never dropped keep their places, and the ones set again follow in the
+# order they were set
+program
+w. = ''
+do i = 1 to 12
+  w.i = i
+end
+do i = 2 to 12 by 3
+  drop w.i
+end
+do i = 12 to 1 by -1
+  w.i = w.i || '.'
+end
+say w.~allIndexes~makeArray~toString('l', ' ')
+say w.~allItems~makeArray~toString('l', ' ')
+----
+1 3 4 6 7 9 10 12 11 8 5 2
+1. 3. 4. 6. 7. 9. 10. 12. W.11. W.8. W.5. W.2.
+
+# enough tails dropped and set again that the stem compacts its tails: a tail
+# dropped before the compaction and set after it goes to the end, and the
+# order holds across the compaction
+program
+w. = ''
+do i = 1 to 8
+  w.i = i
+end
+drop w.4
+do r = 1 to 3
+  do i = 1 to 7 by 2
+    drop w.i
+    w.i = r
+  end
+end
+w.4 = 'x'
+w.9 = 9
+say w.~allIndexes~makeArray~toString('l', ' ')
+say w.~allItems~makeArray~toString('l', ' ')
+----
+2 6 8 1 3 5 7 4 9
+2 6 8 3 3 3 3 x 9
