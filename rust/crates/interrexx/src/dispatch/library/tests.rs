@@ -419,18 +419,13 @@ fn a_reused_native_frame_holds_nothing_of_the_call_before() {
 /// a second write dropping the interpreter's own reference to it.
 #[test]
 fn a_held_library_is_not_replaced_by_a_later_answer() {
-    let (first, second) = (Rc::new(open_rxregexp()), Rc::new(open_rxregexp()));
     let mut libraries = crate::Libraries::new();
+    let (first, _) = libraries
+        .hold(b"rxregexp", Box::new(open_rxregexp()))
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
     assert!(Rc::ptr_eq(
         &libraries
-            .hold(b"rxregexp", Rc::clone(&first))
-            .unwrap_or_else(|_| panic!("nothing else loads it"))
-            .0,
-        &first
-    ));
-    assert!(Rc::ptr_eq(
-        &libraries
-            .hold(b"rxregexp", Rc::clone(&second))
+            .hold(b"rxregexp", Box::new(open_rxregexp()))
             .unwrap_or_else(|_| panic!("nothing else loads it"))
             .0,
         &first
@@ -441,12 +436,13 @@ fn a_held_library_is_not_replaced_by_a_later_answer() {
     ));
     // The control that says the second library was refused rather than
     // never built: under a name nothing is held for it is taken.
+    let (other, _) = libraries
+        .hold(b"zorkolib", Box::new(open_rxregexp()))
+        .unwrap_or_else(|_| panic!("nothing else loads it"));
+    assert!(!Rc::ptr_eq(&other, &first));
     assert!(Rc::ptr_eq(
-        &libraries
-            .hold(b"zorkolib", Rc::clone(&second))
-            .unwrap_or_else(|_| panic!("nothing else loads it"))
-            .0,
-        &second
+        libraries.get(b"zorkolib").expect("a library was held"),
+        &other
     ));
 }
 
@@ -813,7 +809,7 @@ fn dropping_the_libraries_closes_what_termination_left_open() {
     let (held, _) = libraries
         .hold(
             b"hooked",
-            Rc::new(interrexx_api::load::hooks_only(None, None)),
+            Box::new(interrexx_api::load::hooks_only(None, None)),
         )
         .unwrap_or_else(|_| panic!("nothing else loads it"));
     assert!(held.is_open());

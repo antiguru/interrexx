@@ -2267,7 +2267,7 @@ impl Interp {
         match opened {
             Ok(Some(mut library)) => {
                 library.keep_thread_context(&self.thread_context());
-                let (held, loading) = self.hold_library(name, Rc::new(library));
+                let (held, loading) = self.hold_library(name, Box::new(library));
                 self.register_package_routines(name, &held);
                 // A live instance has loaded it already, and its loader ran
                 // there (`r[native.loading.shared]`).
@@ -2293,7 +2293,7 @@ impl Interp {
             Err(mut refused) => {
                 refused.library.keep_thread_context(&self.thread_context());
                 // A refused library runs no loader, so nothing waits on it.
-                let _ = self.hold_library(name, Rc::from(refused.library));
+                let _ = self.hold_library(name, refused.library);
                 LibraryLoad::Version
             }
         }
@@ -2305,7 +2305,7 @@ impl Interp {
     fn hold_library(
         &mut self,
         name: &[u8],
-        mut library: Rc<interrexx_api::load::Library>,
+        mut library: Box<interrexx_api::load::Library>,
     ) -> (
         Rc<interrexx_api::load::Library>,
         Option<crate::libraries::Loading>,

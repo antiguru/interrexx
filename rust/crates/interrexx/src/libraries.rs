@@ -456,7 +456,8 @@ impl Libraries {
     /// run: it is where no live instance has loaded the same file under that
     /// name (`r[native.loading.shared]`). Where one has, `library` takes the
     /// mapping of the round's library instead of its own, so that it closes
-    /// with the round (`r[native.loading.again]`).
+    /// with the round (`r[native.loading.again]`). `library` is taken before
+    /// anything else holds it, so nothing keeps the mapping it gives up.
     ///
     /// Answers `library` back as the error, holding nothing, where another
     /// thread runs the loader of that load and this thread is to wait for it
@@ -464,8 +465,8 @@ impl Libraries {
     pub(crate) fn hold(
         &mut self,
         name: &[u8],
-        mut library: Rc<Library>,
-    ) -> Result<(Rc<Library>, Option<Loading>), Rc<Library>> {
+        mut library: Box<Library>,
+    ) -> Result<(Rc<Library>, Option<Loading>), Box<Library>> {
         if let Some(held) = self.held.get(name) {
             return Ok((Rc::clone(held), None));
         }
@@ -483,10 +484,7 @@ impl Libraries {
             round.order.put(name);
             match known {
                 Some(unload) => {
-                    // Freshly opened, so this is its only holder.
-                    if let Some(own) = Rc::get_mut(&mut library) {
-                        own.share_mapping(&unload);
-                    }
+                    library.share_mapping(&unload);
                     None
                 }
                 None => {
@@ -504,6 +502,7 @@ impl Libraries {
                 }
             }
         };
+        let library = Rc::<Library>::from(library);
         self.loaded.push(name.to_vec());
         self.held.insert(name.to_vec(), Rc::clone(&library));
         Ok((library, loading))
@@ -929,14 +928,17 @@ mod tests {
     fn a_held_name_keeps_its_first_library() {
         let _round = super::round_gate::exclusive();
         let mut libraries = Libraries::new();
-        let first = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let second = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let (held, _) = libraries
-            .hold(b"lib", Rc::clone(&first))
+        let (first, _) = libraries
+            .hold(
+                b"lib",
+                Box::new(interrexx_api::load::hooks_only(None, None)),
+            )
             .unwrap_or_else(|_| panic!("no other thread loads it"));
-        assert!(Rc::ptr_eq(&held, &first));
         let (again, loads) = libraries
-            .hold(b"lib", second)
+            .hold(
+                b"lib",
+                Box::new(interrexx_api::load::hooks_only(None, None)),
+            )
             .unwrap_or_else(|_| panic!("no other thread loads it"));
         assert!(Rc::ptr_eq(&again, &first));
         assert!(loads.is_none());
@@ -957,9 +959,11 @@ mod tests {
     fn the_walk_leaves_a_library_loading_on_another_thread() {
         let _round = super::round_gate::exclusive();
         let mut libraries = Libraries::new();
-        let walked = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let (_, loading) = libraries
-            .hold(b"walked", Rc::clone(&walked))
+        let (walked, loading) = libraries
+            .hold(
+                b"walked",
+                Box::new(interrexx_api::load::hooks_only(None, None)),
+            )
             .unwrap_or_else(|_| panic!("no other thread loads it"));
         drop(loading);
         let mut unloading = libraries.end().expect("the only live instance is the last");
@@ -988,9 +992,11 @@ mod tests {
     fn a_library_left_to_an_instance_that_ends_first_is_unloaded_by_the_walk() {
         let _round = super::round_gate::exclusive();
         let mut libraries = Libraries::new();
-        let walked = Rc::new(interrexx_api::load::hooks_only(None, None));
-        let (_, loading) = libraries
-            .hold(b"walked", Rc::clone(&walked))
+        let (_walked, loading) = libraries
+            .hold(
+                b"walked",
+                Box::new(interrexx_api::load::hooks_only(None, None)),
+            )
             .unwrap_or_else(|_| panic!("no other thread loads it"));
         drop(loading);
         let mut unloading = libraries.end().expect("the only live instance is the last");
