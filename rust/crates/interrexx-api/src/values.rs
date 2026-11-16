@@ -720,11 +720,17 @@ pub trait Baton {
         }
     }
 
-    /// Whether the host has ended, so a callback from a thread running none
-    /// of its native calls is refused, a thread attaches to nothing, and a
-    /// request ([`Baton::post_halt`], [`Baton::post_trace`]) is not posted.
+    /// Whether the host has ended, so a request ([`Baton::post_halt`],
+    /// [`Baton::post_trace`]) is not posted.
     fn ended(&self) -> bool {
         false
+    }
+
+    /// Whether the host's end has begun, so a callback from a thread running
+    /// none of its native calls is refused and a thread attaches to nothing.
+    /// It begins no later than [`Baton::ended`].
+    fn ending(&self) -> bool {
+        self.ended()
     }
 
     /// Whether the host refuses a callback from a thread running none of its

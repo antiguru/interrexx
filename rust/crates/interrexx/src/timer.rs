@@ -96,6 +96,8 @@ struct Queue<T> {
     woken: bool,
     /// The interpreter has terminated ([`Inbox::close`]).
     closed: bool,
+    /// The interpreter's termination has begun ([`Inbox::end`]).
+    ending: bool,
 }
 
 impl<T> Inbox<T> {
@@ -106,6 +108,7 @@ impl<T> Inbox<T> {
                 posted: VecDeque::new(),
                 woken: false,
                 closed: false,
+                ending: false,
             }),
             arrived: Condvar::new(),
         }
@@ -147,6 +150,19 @@ impl<T> Inbox<T> {
     /// Whether [`Inbox::close`] closed the inbox.
     pub(crate) fn is_closed(&self) -> bool {
         lock(&self.queue).closed
+    }
+
+    /// Notes that the interpreter's termination has begun, from which a
+    /// thread attaching or calling back is refused, while a request is
+    /// still posted until [`Inbox::close`].
+    pub(crate) fn end(&self) {
+        lock(&self.queue).ending = true;
+    }
+
+    /// Whether [`Inbox::end`] or [`Inbox::close`] has been called.
+    pub(crate) fn is_ending(&self) -> bool {
+        let queue = lock(&self.queue);
+        queue.ending || queue.closed
     }
 
     /// Puts `items`, taken by the holder and not yet served, back ahead of

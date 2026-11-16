@@ -913,10 +913,12 @@ impl Interp {
     /// length of the two steps, so the first native call or hook among them
     /// makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
-        // A thread that attaches or detaches from now on is not served: the
+        // A thread that attaches or calls back from now on is not served: the
         // attached activities end with the interpreter (`r[native.threads.end]`).
-        // A `Halt` or `SetTrace` through the instance posts nothing.
-        self.timer.inbox().close();
+        // A `Halt` or `SetTrace` through the instance still reaches the
+        // last-chance `UNINIT`s and the unloaders, and posts nothing once
+        // they have run.
+        self.timer.inbox().end();
         let running = self.activity.thread.take();
         if let Some(running) = &running {
             running.retire();
@@ -927,6 +929,7 @@ impl Interp {
         if terminated.is_some() {
             self.termination_thread = terminated;
         }
+        self.timer.inbox().close();
         refused
     }
 
@@ -1951,9 +1954,9 @@ impl interrexx_api::values::Baton for Requester {
         let Some(lent) = crate::island::wait_served(&self.baton, true) else {
             return TakeFor::Refused;
         };
-        // The holder closes the inbox, and it lends nothing while it does, so
+        // The holder ends the inbox, and it lends nothing while it does, so
         // this reads what it was when the lend was made.
-        if self.inbox.is_closed() {
+        if self.inbox.is_ending() {
             drop(lent);
             return TakeFor::Refused;
         }
@@ -1963,6 +1966,10 @@ impl interrexx_api::values::Baton for Requester {
 
     fn ended(&self) -> bool {
         self.inbox.is_closed()
+    }
+
+    fn ending(&self) -> bool {
+        self.inbox.is_ending()
     }
 
     fn release(&self) {

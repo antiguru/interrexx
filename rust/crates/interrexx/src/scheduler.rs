@@ -2375,7 +2375,7 @@ impl Interp {
         // (`r[native.threads.end]`): its thread is lent the baton only to
         // find that out and give it straight back.
         if matches!(by, Recaller::Context(address) if address != 0)
-            && self.timer.inbox().is_closed()
+            && self.timer.inbox().is_ending()
         {
             let baton = crate::sync::Arc::clone(&self.baton);
             baton.lend(thread, crate::island::Island::of(self));

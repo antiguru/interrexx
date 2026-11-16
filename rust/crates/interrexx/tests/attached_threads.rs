@@ -1785,6 +1785,17 @@ fn halt_reaches_a_running_attached_callback() {
     );
 }
 
+/// A thread of the extension calls `Halt` through the instance while an `UNINIT` runs Rexx clauses
+/// in the program's termination: the `UNINIT` traps the HALT, as the oracle's does under the gate.
+// spec: native.threads.halt
+#[test]
+fn a_halt_through_the_instance_reaches_an_uninit_at_termination() {
+    assert_eq!(
+        run("halt-uninit", "uninithalt.rex"),
+        ("main ends\nuninit halted\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// An attached thread's message calls `HaltThread` on its attachment's thread context, from the
 /// thread running the message: the message takes the HALT condition at its next clause, and the
 /// thread finds SYNTAX 4.1, while the main program, which was not asked, runs on to `main done`.

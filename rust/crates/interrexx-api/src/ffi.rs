@@ -5271,7 +5271,7 @@ unsafe extern "C" fn attach_thread(
             None => match unsafe { requester_of(instance) } {
                 // A thread attaching to an interpreter that has ended gets
                 // nothing (`r[native.threads.end]`).
-                Some(requester) if requester.refuses_attach() || requester.ended() => None,
+                Some(requester) if requester.refuses_attach() || requester.ending() => None,
                 // Built without the baton, so an attach answers while the
                 // interpreter's only activity runs a native call that waits
                 // for the attaching thread. The context is kept, so a
