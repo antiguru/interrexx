@@ -78,8 +78,8 @@ pub enum Body {
         name: Box<[u8]>,
         default: Option<ObjRef>,
         /// **Each tail's insertion ordinal is load-bearing.** `allIndexes`,
-        /// `supplier` and the other listings answer the tails in the order
-        /// they were first assigned (`r[class.stem.deviation.1]`), and a
+        /// `supplier` and the other listings answer the tails in assignment
+        /// order (`r[class.stem.deviation.1]`), and a
         /// `HashMap` cannot say which came first, so [`crate::Tails`] keeps
         /// the ordinal with the value.
         tails: crate::Tails,

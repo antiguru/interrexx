@@ -23,8 +23,8 @@ lists what it inherits.
 A stem has an `unknown` method, and the page begins with what the other methods
 do; [the unknown rule](r:class.stem.unknown) says what `unknown` does with the
 messages that no method answers. Examples that show an error use a small routine
-`try`, as the builtin pages do. The order in which the tails are listed is not
-the order in which they were first assigned, as [the DO OVER
+`try`, as the builtin pages do. The order in which the tails are listed is
+the order of assignment, as [the DO OVER
 rule](r:instr.do.deviation.1) says of a loop ([the order
 rule](r:class.stem.deviation.1)). ooRexx lists them in another order, so the
 examples outside that rule hold one tail or sort the answers.
@@ -998,8 +998,8 @@ say (s~removeItem(q) == .nil) .local~n s~items
 
 r[class.stem.deviation.1]
 The answers of `allIndexes`, `allItems`, `makeArray` and `supplier` list the
-tails in the order they were first assigned. A dropped tail keeps its place,
-and a tail assigned again after a drop goes to the end. `hasItem`, `index` and
+tails in the order they were first assigned. A dropped tail is not listed,
+and one assigned again after a drop is listed last. `hasItem`, `index` and
 `removeItem` compare the items in that order, so `index` and `removeItem` choose
 the first of several equal items. ooRexx follows its storage, which is neither
 insertion nor sorted order, so its answers can differ. Which tails are

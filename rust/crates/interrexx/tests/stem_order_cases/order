@@ -1,5 +1,5 @@
-# The order a stem lists its tails in is the order they were first assigned,
-# not the order of their names. Expected blocks are this crate's own output.
+# The order a stem lists its tails in is assignment order, not the order of
+# their names. The expected blocks follow from `r[class.stem.deviation.1]`.
 
 # allIndexes, allItems, makeArray and supplier follow assignment order
 program

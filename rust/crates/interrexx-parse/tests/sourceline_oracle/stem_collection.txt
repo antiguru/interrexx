@@ -16,7 +16,7 @@ count 146
  * `allIndexes`, `allItems`, `makeArray` and `supplier` answer tails in an
  * order that this program does not compare (Deviation 1), so each answer is
  * sorted before it is printed.  The order itself is in
- * tests/stem_order_cases.  The two blocks at the end insert the same five
+ * rust/crates/interrexx/tests/stem_order_cases.  The two blocks at the end insert the same five
  * tails forwards and backwards and must list the same set.
  */
 

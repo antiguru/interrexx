@@ -195,8 +195,7 @@ fn stem_refusal(interp: &mut Interp, receiver: ObjRef, method: &[u8]) -> Failure
 }
 
 /// Every tail that holds something, which is what `items` counts and
-/// `allIndexes` names, in the order the tails were first assigned
-/// (`r[class.stem.deviation.1]`).
+/// `allIndexes` names, in assignment order (`r[class.stem.deviation.1]`).
 fn stem_live(interp: &Interp, receiver: ObjRef) -> Vec<(Vec<u8>, ObjRef)> {
     match interp.heap.get(receiver).map(|object| &object.body) {
         Some(Body::Stem { tails, .. }) => tails
@@ -304,8 +303,7 @@ fn native_stem_request(
 }
 
 /// A fresh `Directory` holding one entry per tail that HAS a value, keyed by
-/// the tail's name, added in the order the tails were first assigned
-/// (`r[class.stem.deviation.1]`).
+/// the tail's name, added in assignment order (`r[class.stem.deviation.1]`).
 fn native_stem_to_directory(
     interp: &mut Interp,
     _cleared: Cleared,

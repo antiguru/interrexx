@@ -408,8 +408,8 @@ impl Interp {
         for (name, value) in entries {
             let stem = match self.heap.get(value).map(|object| &object.body) {
                 Some(Body::Stem { default, tails, .. }) => {
-                    // RXSHV tail order is the order the tails were first
-                    // assigned (`r[class.stem.deviation.1]`).
+                    // RXSHV tail order is assignment order
+                    // (`r[class.stem.deviation.1]`).
                     let held: Vec<(Vec<u8>, ObjRef)> = tails
                         .in_order()
                         .into_iter()

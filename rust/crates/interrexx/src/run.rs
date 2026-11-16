@@ -2370,7 +2370,7 @@ impl Interp {
         values.push(Some(item));
     }
 
-    /// A stem's assigned tails, in the order they were first assigned
+    /// A stem's assigned tails, in assignment order
     /// (`r[class.stem.deviation.1]`).
     fn stem_assigned_tails(&self, value: ObjRef) -> Vec<Vec<u8>> {
         self.stem_live_tails(value)

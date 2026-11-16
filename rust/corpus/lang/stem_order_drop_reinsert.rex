@@ -2,7 +2,7 @@
    a dropped tail is not listed, it reads as unset rather than as the stem's
    default, and one set again is listed. The order of the answers is not
    compared (Deviation 1), so each is sorted; the order itself is in
-   tests/stem_order_cases. */
+   rust/crates/interrexx/tests/stem_order_cases. */
 t. = 'dflt'
 do x over 'Q MANGO LONGKEYNAME ZEBRA APPLE'~makeArray(' ')
   t.x = x

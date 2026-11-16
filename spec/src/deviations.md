@@ -26,7 +26,7 @@ an enclosing construct restores it.
 DO OVER on a stem and the `Stem` methods that list or search its tails
 (`allIndexes`, `allItems`, `makeArray`, `supplier`, `index`, `removeItem` and
 `hasItem`) visit the tails in the order they were first assigned. A dropped
-tail keeps its place, and a tail assigned again after a drop goes to the end.
+tail is not listed, and one assigned again after a drop is listed last.
 `index` and `removeItem` choose the first match in that order. ooRexx visits
 them in an order fixed by its internal storage, which is neither insertion nor
 sorted order.
