@@ -5,7 +5,9 @@ call t .directory~new
 call t .ms~new
 call t .ma~new
 call t .list~of('return "L"')
-s.1 = 'return "S"'; s.0 = 1
+/* The tails convert in the order they were assigned (Deviation 1), so 0
+   comes first, as the oracle's storage happens to put it. */
+s.0 = 1; s.1 = 'return "S"'
 call t s.
 call t .queue~of('return "Q"')
 call t .mb~new

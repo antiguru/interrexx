@@ -368,7 +368,9 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
         "Properties",
         ".Properties~new~~put('v1','k1')~~put('v2','k2')",
     ),
-    ("Stem", ".Stem~new~~put('v1','k1')~~put('v2','k2')"),
+    // One tail: a Stem lists its tails in assignment order, which the oracle
+    // does not (Deviation 1), so two tails would diverge on every listing.
+    ("Stem", ".Stem~new~~put('v1','k1')"),
     // A cancelled timer whose replied activity has ended, by a `SysSleep`
     // after the cancel: a second cancel before the alarm clears
     // `eventSemHandle` posts the oracle's freed semaphore (`oracle-crashes.txt`

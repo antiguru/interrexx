@@ -9,7 +9,7 @@ say x~class~id
 x[1] = 'a'; say x[1] x~items x~hasindex(1)
 say x
 x~put('b', 2); say x~at(2)
-say x~allindexes~makestring(, ',')
+say x~allindexes~sort~makestring(, ',')
 s. = x; say s.1 s.~class~id (s. == x)
 call r x
 x2 = .k~new; say '['x2']' x2[7]
@@ -22,8 +22,9 @@ say x~request('STRING') x~string x~objectName x~makestring
 say x~isEmpty x~empty~class~id x~isEmpty x~items
 x[5] = 5; x~remove(5); say x~hasindex(5) x~hasItem('b') x~index('b')
 x['b'] = 'bee'; x[1] = 'one'
-do t over x; say 'over' t; end
-say x~makearray~makestring('L', ',') x~request('ARRAY')~items
+over = .array~new; do t over x; over~append(t); end
+do t over over~sort; say 'over' t; end
+say x~makearray~sort~makestring('L', ',') x~request('ARRAY')~items
 x~removeItem('bee'); say x~items x~allitems~items
 x~put('dflt')
 say x x[99] x~items x~string

@@ -304,7 +304,8 @@ fn native_stem_request(
 }
 
 /// A fresh `Directory` holding one entry per tail that HAS a value, keyed by
-/// the tail's name, added in the tail tree's own `first`/`next` order.
+/// the tail's name, added in the order the tails were first assigned
+/// (`r[class.stem.deviation.1]`).
 fn native_stem_to_directory(
     interp: &mut Interp,
     _cleared: Cleared,
