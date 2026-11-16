@@ -553,6 +553,51 @@ fn the_detector_tells_an_instruction_from_a_name_that_only_looks_like_one() {
 mod group_runner;
 #[path = "support/suite_rows/mod.rs"]
 mod suite_rows;
+
+/// What [`group_runner::fresh_copy_from`] does to each copy after making it:
+/// [`guard_unspecified`].
+const COPY_HOOK: Option<fn(&Path, &str)> = Some(guard_unspecified);
+
+/// Each group file below `dir` of the copy `run` with the assertions and
+/// conditions its Unspecified rows name guarded, as the suite gate guards
+/// them (`suite_rows::guards`), and the copy's framework naming each test as
+/// it starts, which the guards read, where one is guarded. The oracle runs
+/// the same copy.
+fn guard_unspecified(run: &Path, dir: &str) {
+    let (rows, malformed) = suite_rows::read_rows();
+    assert!(malformed.is_empty(), "the row files: {malformed:#?}");
+    let groups: BTreeSet<&str> = rows
+        .iter()
+        .filter(|row| row.owner == suite_rows::Owner::Unspecified)
+        .map(|row| row.group.as_str())
+        .filter(|group| {
+            group
+                .strip_prefix(dir)
+                .is_some_and(|rest| rest.starts_with('/'))
+        })
+        .collect();
+    let mut guarded = false;
+    for group in groups {
+        let file = run.join("ooRexx").join(format!("{group}.testGroup"));
+        if !file.exists() {
+            continue;
+        }
+        guarded = true;
+        suite_rows::guards::guard_assertions(
+            &file,
+            &suite_rows::guards::guarded_assertions(&rows, group),
+        );
+        suite_rows::guards::guard_conditions(
+            &file,
+            &suite_rows::guards::guarded_conditions(&rows, group),
+        );
+    }
+    // A copy with nothing guarded keeps the framework as it is, so what its
+    // runs compare stays what the committed oracle sets were recorded from.
+    if guarded {
+        group_runner::name_running_tests(run);
+    }
+}
 mod support;
 mod watchdog;
 

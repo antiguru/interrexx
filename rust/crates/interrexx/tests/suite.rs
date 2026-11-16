@@ -26,6 +26,10 @@ pub use launch::{
 mod diagnostics;
 #[path = "support/group_runner.rs"]
 mod group_runner;
+
+/// What [`group_runner::fresh_copy_from`] does to each copy after making it:
+/// nothing here.
+const COPY_HOOK: Option<fn(&std::path::Path, &str)> = None;
 #[path = "suite/private_service.rs"]
 mod private_service;
 #[path = "suite/process_ownership/mod.rs"]
