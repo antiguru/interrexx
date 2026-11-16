@@ -1011,7 +1011,7 @@ impl Interp {
                 }
                 Ok(answer)
             }
-            // A send retried once a guard lock is free leaves nothing behind.
+            // A send retried for a guard lock leaves nothing behind.
             Err(_) if self.send_retried() => Err(()),
             Err(failure) => {
                 self.hold_native_condition(failure);

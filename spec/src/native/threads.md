@@ -60,11 +60,11 @@ runs is held until that one returns, waits or calls into such a library, the
 earliest first. One that arrives while another waits runs on top of it, and the
 earlier goes on only once the later has finished. A message the thread sends
 with `SendMessage` or one of its variants, whose method needs at its entry a
-guard lock a stopped activity holds, waits for it as in ooRexx, and `TRACE`
+guard lock a stopped activity holds, waits for it as in ooRexx, is sent again
+behind the activities that wait for the lock at that point, and `TRACE`
 announces the method's entry once. A guard lock that a stopped activity
-acquires after a message began to wait for it counts from then as one it holds,
-and a message sent again for such a lock queues for it behind the activities
-already waiting. Any other wait counts as one of a message
+acquires after a message began to wait for it counts from then as one it holds.
+Any other wait counts as one of a message
 that has begun, including the wait of a routine the thread calls with
 `CallRoutine` or of a method another API call sends to, such as the
 `MAKESTRING` that `ObjectToString` sends.

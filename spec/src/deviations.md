@@ -1456,11 +1456,11 @@ that arrives while another waits runs on top of it, and the earlier goes on
 only once the later has finished. A message the thread sends with
 `SendMessage` or one of its variants, whose method needs at its entry a guard
 lock that a stopped activity holds, waits for the lock as in ooRexx: nothing of
-the message has run yet, so the interpreter sends it again once the lock is
-free, and `TRACE` announces its method's entry once. A guard lock that a
-stopped activity acquires after a message began to wait for it counts from then
-as one it holds, and a message sent again for such a lock queues for it behind
-the activities already waiting. Any other wait for a guard
+the message has run yet, so the interpreter sends it again, queued for the lock
+behind the activities that wait for it at that point, and `TRACE` announces
+its method's entry once. A guard lock that a stopped activity acquires after a
+message began to wait for it counts from then as one it holds. Any other wait
+for a guard
 lock counts as one of a message that has begun: a wait in a method or routine
 the message's own code reaches, and a wait of a routine the thread calls with
 `CallRoutine` or of a method that another of the thread's API calls sends to,

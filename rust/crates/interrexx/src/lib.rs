@@ -965,7 +965,8 @@ impl Loud {
     }
 
     /// A callback's send whose thread gives the baton back to send again
-    /// once a guard lock is free ([`Interp::retries_entry_guard`]). Nothing
+    /// once it is granted a guard lock in its turn
+    /// ([`Interp::retries_entry_guard`]). Nothing
     /// reports it: the send answers no one.
     fn retried_send() -> Loud {
         Loud {
