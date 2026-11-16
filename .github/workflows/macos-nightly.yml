@@ -48,7 +48,7 @@ jobs:
           echo "ootest=$ootest" >> "$GITHUB_OUTPUT"
           echo "oodocs=$oodocs" >> "$GITHUB_OUTPUT"
       - id: checkouts
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: |
             ootest
@@ -66,6 +66,15 @@ jobs:
         run: |
           svn checkout -q -r "${{ steps.revisions.outputs.ootest }}" "$SVN/test/trunk" ootest
           svn checkout -q -r "${{ steps.revisions.outputs.oodocs }}" "$SVN/docs/trunk/rexxref" oodocs/rexxref
+      - name: Save the checkouts
+        # Saved here rather than at the job's end, which a failing test run never reaches.
+        if: steps.checkouts.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ootest
+            oodocs/rexxref
+          key: ${{ steps.checkouts.outputs.cache-primary-key }}
       - name: Check the standalone inputs
         working-directory: .
         run: python3 rust/scripts/test_preflight.py --standalone
