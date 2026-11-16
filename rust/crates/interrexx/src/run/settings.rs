@@ -35,14 +35,24 @@ impl Interp {
         }
         // The setting changed from inside the pause, so the pause ends
         // without reading another line.
-        self.activation_mut().debug.bypass = true;
+        self.end_debug_stop();
         Ok(())
+    }
+
+    /// Ends the stop a line typed at a pause runs in, once the line is done,
+    /// as `r[env.debugging.input.trace]` has any `TRACE` the line runs do,
+    /// whatever setting it leaves. Does nothing outside a pause.
+    pub(crate) fn end_debug_stop(&mut self) {
+        if self.debug_pause() {
+            self.activation_mut().debug.bypass = true;
+        }
     }
 
     /// One parsed `TRACE` setting, merged with the setting in force.
     fn apply_trace_request(&mut self, request: &crate::trace::TraceRequest) {
         let merged = crate::trace::applied(self.trace_mode(), request);
         self.set_trace_mode(merged);
+        self.end_debug_stop();
     }
 
     /// Whether a `TRACE` instruction leaves the setting alone, and calls
@@ -74,6 +84,7 @@ impl Interp {
                     return Ok(());
                 }
                 self.set_trace_mode(crate::trace::TraceMode::NORMAL);
+                self.end_debug_stop();
             }
             Trace::Setting(bytes) => {
                 if self.ignores_trace_instruction() {
