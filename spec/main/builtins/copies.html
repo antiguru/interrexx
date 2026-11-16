@@ -203,7 +203,7 @@ signal on syntax name d
 say copies('abc', )
 d: say condition('o')~code
 signal on syntax name e
-say copies('abc', 'x', 1)
+say copies('abc', 2, 1)
 e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">abcabc abcabc
@@ -218,9 +218,7 @@ e: say condition('o')~code
 <a href="../conventions.html#r-conv.whole.digits">value</a> the conventions describe, and not negative.
 An <code>n</code> that is not a whole number, including the null string, raises
 <code>SYNTAX 40.12</code>; an <code>n</code> that is a whole number and negative raises
-<code>SYNTAX 93.906</code>. An <code>n</code> of 0 is allowed, and so is <code>-0</code>, which is 0. The form
-check comes before the range check, as in
-<a href="../conventions.html#r-conv.check.order">the order of the checks</a>.</p>
+<code>SYNTAX 93.906</code>. An <code>n</code> of 0 is allowed, and so is <code>-0</code>, which is 0.</p>
 <pre><code class="language-rexx">say '['copies('rst', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')
 signal on syntax name a
 say copies('abc', -1)

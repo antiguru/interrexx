@@ -483,14 +483,15 @@ s~put("a", "a", "a") =&gt; 93.902
 <p><code>at(index)</code> and <code>[index]</code> answer the stored item that is equal to the index,
 and <code>.nil</code> when there is none. The methods take exactly one argument: none, or
 an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>;
-the number of arguments is checked before the index is looked up. An error
-that the <code>hashCode</code> of the index raises is the error of the message.</p>
+with a second argument, whether the index is looked up is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. An error that the <code>hashCode</code> of
+the index raises is the error of the message.</p>
 <pre><code class="language-rexx">s = .set~new
 s~put('item')
 say s~at('item') s['item'] s~at('ITEM') (s~at('zz') == .nil),
   (s~at(.nil) == .nil)
 call try 's~at'
-call try 's~at(, "x")'
+call try 's~at("x", "x")'
 call try 's~at("a", "b")'
 call try 's[]'
 call try 's~at(.hostile~new)'
@@ -508,7 +509,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">item item The NIL object 1 1
 s~at =&gt; 88.901
-s~at(, "x") =&gt; 93.902
+s~at("x", "x") =&gt; 93.902
 s~at("a", "b") =&gt; 93.902
 s[] =&gt; 88.901
 s~at(.hostile~new) =&gt; 93.900
@@ -549,7 +550,7 @@ say s~hasItem('x') s~hasItem('X') s~hasItem(.nil) s~hasItem('zz')
 say s~index('x') (s~index('q') == .nil) s~hasItem('x', )
 call try 's~hasItem'
 call try 's~index'
-call try 's~hasItem(, 1)'
+call try 's~hasItem(1, 1)'
 call try 's~index(1, 2)'
 exit
 try:
@@ -564,7 +565,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 x 1 1
 s~hasItem =&gt; 88.901
 s~index =&gt; 93.903
-s~hasItem(, 1) =&gt; 93.902
+s~hasItem(1, 1) =&gt; 93.902
 s~index(1, 2) =&gt; 93.902
 </code></pre>
 <pre><code class="language-rexx">.local~log = .array~new

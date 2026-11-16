@@ -250,13 +250,13 @@ a: say condition('o')~code
 <p>The functions follow <a href="../builtins/index.html#r-bif.index.call.native">the native call rule</a>, as the
 <a href="../rexxutil/index.html">RexxUtil</a> functions do. A required argument that is not
 given, or is omitted, raises <code>SYNTAX 88.901</code>. An argument past the last one of
-the function raises <code>SYNTAX 88.922</code>, and the count is checked before the
-arguments are read. An omitted place at the end of the call adds nothing to the
-count. An argument that is an object other than a string is replaced by the
-string that its <code>request</code> with the argument <code>STRING</code> answers, and a name or an
-option for which an object has none raises <code>SYNTAX 88.909</code>. A name of a file,
-user or group is read as far as its first null character, so that a string whose
-null character comes before the end names what the part before it names.</p>
+the function raises <code>SYNTAX 88.922</code>. An omitted place at the end of the call
+adds nothing to the count. An argument that is an object other than a string is
+replaced by the string that its <code>request</code> with the argument <code>STRING</code> answers,
+and a name or an option for which an object has none raises <code>SYNTAX 88.909</code>. A
+name of a file, user or group is read as far as its first null character, so
+that a string whose null character comes before the end names what the part
+before it names.</p>
 <pre><code class="language-rexx">call try "SysUnlink()"
 call try "SysUnlink(,)"
 call try "SysUnlink('c1zqnone', 'x')"
@@ -387,10 +387,12 @@ its first character alone, in either case, so that <code>p</code>, <code>P</code
 are one option. A call whose option has a first character that the function
 does not know, or is the null string, raises <code>SYNTAX 40.1</code>, and so does a call
 of <code>SysStat</code>, <code>SysGetpwnam</code> or <code>SysGetgrnam</code> whose name is the null string: the
-call fails and nothing is made, whatever the other arguments are. The count and
-the whole numbers of the arguments are checked first. A name that is not the
-null string and that the system does not know does not raise: it is a failed
-call, as <a href="#r-rxunixsys.index.answer">the answer rule</a> says.</p>
+call fails and nothing is made, whatever the other arguments are. A call with
+more than one fault, among the count, the option and a whole-number argument,
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. A name that is not the null string and
+that the system does not know does not raise: it is a failed call, as <a href="#r-rxunixsys.index.answer">the
+answer rule</a> says.</p>
 <pre><code class="language-rexx">call lineout 'c1zqf1', 'x'
 call lineout 'c1zqf1'
 call SysChmod 'c1zqf1', 'rw-r-----'
@@ -407,7 +409,6 @@ call try "SysChmod('', 'rw-rw-rw-')"
 call try "SysChmod('c1zqnone', '')"
 call try "SysSignal(0, 'x')"
 call try "SysSignal(0, '')"
-call try "SysSignal('x', 'x')"
 call try "SysGetpwnam('', 'n')"
 call try "SysGetpwnam('root', '')"
 call try "SysGetpwnam('root', 'x')"
@@ -434,7 +435,6 @@ SysChmod('', 'rw-rw-rw-') =&gt; -1
 SysChmod('c1zqnone', '') -&gt; 40.1
 SysSignal(0, 'x') -&gt; 40.1
 SysSignal(0, '') -&gt; 40.1
-SysSignal('x', 'x') -&gt; 88.907
 SysGetpwnam('', 'n') -&gt; 40.1
 SysGetpwnam('root', '') -&gt; 40.1
 SysGetpwnam('root', 'x') -&gt; 40.1

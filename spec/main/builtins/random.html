@@ -302,9 +302,10 @@ which the call receives as they are.</p>
 <p>The range from <code>min</code> to <code>max</code> can span at most 999999999: a call with <code>max</code>
 more than 999999999 above <code>min</code> raises <code>SYNTAX 40.32</code>. A call with <code>max</code>
 below <code>min</code> raises <code>SYNTAX 40.33</code>, and so does a call with one argument
-that is negative, since that argument is <code>max</code>. The range checks come after
-the <a href="../conventions.html#r-conv.whole.form">whole-number checks</a> and after the
-<a href="#r-bif.random.seed.check">check of the seed</a>.</p>
+that is negative, since that argument is <code>max</code>. A call that also fails a
+<a href="../conventions.html#r-conv.whole.form">whole-number check</a> or <a href="#r-bif.random.seed.check">the check of the
+seed</a> raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">r = random(0, 999999999)
 say r &gt;= 0 &amp; r &lt;= 999999999
 r = random(-999999999, 0)
@@ -363,9 +364,9 @@ say random(0, 999999999, 5) random() random()
 807179458 880 443
 </code></pre>
 <div class="rule" id="r-bif.random.seed.check"><a href="#r-bif.random.seed.check">[bif.random.seed.check]</a></div>
-<p>A <code>seed</code> must not be negative: a negative seed raises <code>SYNTAX 40.13</code>. This
-check comes after the checks of the form of all three arguments, and before
-those of the range of the numbers. A seed of 0 is a seed like any other, and
+<p>A <code>seed</code> must not be negative: a negative seed raises <code>SYNTAX 40.13</code>. A call
+that also fails another check raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. A seed of 0 is a seed like any other, and
 <code>-0</code> is 0. A seed is any <a href="../conventions.html#r-conv.whole.digits">whole-number argument</a> that is
 not negative, and the sequence is the same for it on every run. A seed that
 rule refuses as too large raises <code>SYNTAX 40.12</code>, as it says.</p>
@@ -377,16 +378,16 @@ say random(,, -1)
 a: say condition('o')~code
 signal on syntax name b
 say random(5, 2, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.13 40.33') &gt; 0
 signal on syntax name c
 say random(-1000000000, 0, -1)
-c: say condition('o')~code
+c: say wordpos(condition('o')~code, '40.13 40.32') &gt; 0
 signal on syntax name d
 say random('x', 2, -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '40.12 40.13') &gt; 0
 signal on syntax name e
 say random(5, 2, 'x')
-e: say condition('o')~code
+e: say wordpos(condition('o')~code, '40.12 40.33') &gt; 0
 signal on syntax name f
 say random(,, 1000000000000000000)
 f: say condition('o')~code
@@ -395,10 +396,10 @@ f: say condition('o')~code
 608 162 861
 768 891 817
 40.13
-40.13
-40.13
-40.12
-40.12
+1
+1
+1
+1
 40.12
 </code></pre>
 <blockquote>

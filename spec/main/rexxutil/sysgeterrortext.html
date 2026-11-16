@@ -185,16 +185,16 @@ descriptions with each other and with the null string and never print one.</p>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
 <div class="rule" id="r-util.sysgeterrortext.args"><a href="#r-util.sysgeterrortext.args">[util.sysgeterrortext.args]</a></div>
 <p><code>errornumber</code> is a required argument. A call with no argument, or with the
-argument omitted, raises <code>SYNTAX 88.901</code>, and a second argument raises
-<code>SYNTAX 88.922</code>; an omitted place at the end of the call adds nothing to the
-count (<a href="index.html#r-util.index.args">the argument rule</a>, and for the order of the checks
-<a href="index.html#r-util.index.deviation.101">Deviation 101</a>). An object other than a string is
-replaced by the string that its <code>request</code> with the argument <code>STRING</code> answers.
-When that answer is not a string, the object is replaced by the answer of its
-<code>STRING</code> method. The replacement is then read as a number, so a mutable buffer
-that holds <code>2</code> is read as <code>2</code>. An object whose replacement is not a number
-raises <code>SYNTAX 88.907</code>, not the 88.909 of the argument rule. That includes
-<code>.nil</code> and an object with neither <code>MAKESTRING</code> nor its own <code>STRING</code>.</p>
+argument omitted, raises <code>SYNTAX 88.901</code>, and a second argument raises <code>SYNTAX 88.922</code>; an omitted place at the end of the call adds nothing to the count
+(<a href="index.html#r-util.index.args">the argument rule</a>), and a call with both faults raises
+the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a>
+says. An object other than a string is replaced by the string that its
+<code>request</code> with the argument <code>STRING</code> answers. When that answer is not a string,
+the object is replaced by the answer of its <code>STRING</code> method. The replacement is
+then read as a number, so a mutable buffer that holds <code>2</code> is read as <code>2</code>. An
+object whose replacement is not a number raises <code>SYNTAX 88.907</code>, not the 88.909
+of the argument rule. That includes <code>.nil</code> and an object with neither
+<code>MAKESTRING</code> nor its own <code>STRING</code>.</p>
 <pre><code class="language-rexx">call try "SysGetErrorText()"
 call try "SysGetErrorText(,)"
 call try "SysGetErrorText(2, 3)"

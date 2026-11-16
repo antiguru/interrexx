@@ -480,22 +480,22 @@ d sent to SPEC_CC_TWO
 <p>The <code>name</code> that <code>[]</code>, <code>getVar</code>, <code>[]=</code>, <code>setVar</code>, <code>hasVar</code> and <code>dropVar</code> take
 names a variable of the code that sent the command, a simple variable, a stem
 or a compound variable, as <a href="../lexical/symbols.html#r-lex.symbols.variable">a variable symbol</a> does,
-and its case plays no part. The number of the arguments is checked before the
-name is read: <code>getVar('1x', 2)</code>, <code>hasVar('1x', 2)</code> and <code>dropVar('1x', 2)</code> raise
-<code>SYNTAX 93.902</code>, and <code>setVar('1x')</code> raises <code>SYNTAX 93.901</code>, not <code>93.900</code>. A
-string is the name as it is; another object, an instance of a subclass of
-<code>String</code> apart (<a href="#r-class.commandcontext.deviation.109">the deviation rule</a>), is
-replaced by what it answers to the message <code>request</code> with the argument
-<code>String</code>. The <code>request</code> of <code>Object</code> answers what <code>makeString</code> answers, so an
-object with a <code>makeString</code>, an <code>Array</code> or a <code>MutableBuffer</code> is read through it.
-A name is refused with <code>SYNTAX 93.900</code> when it is no variable name: the null
-string, a string that starts with a digit or with a period, a string with a
-blank or with a character that no symbol can have, a number, and an object that
-does not answer a string. A name of a compound variable has its tail resolved
-in the code that sent the command, as <a href="../expressions/variables.html#r-expr.variables.tail">the tail rule</a>
-says for a program; the example sets <code>c.i</code> while <code>i</code> holds <code>3</code>, and reads the
-variable back as <code>c.3</code>. Special names such as <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are
-names of variables like the others.</p>
+and its case plays no part. A call with a wrong number of arguments and a bad
+name, such as <code>getVar('1x', 2)</code> or <code>setVar('1x')</code>, raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A string is the
+name as it is; another object, an instance of a subclass of <code>String</code> apart
+(<a href="#r-class.commandcontext.deviation.109">the deviation rule</a>), is replaced by
+what it answers to the message <code>request</code> with the argument <code>String</code>. The
+<code>request</code> of <code>Object</code> answers what <code>makeString</code> answers, so an object with a
+<code>makeString</code>, an <code>Array</code> or a <code>MutableBuffer</code> is read through it. A name is
+refused with <code>SYNTAX 93.900</code> when it is no variable name: the null string, a
+string that starts with a digit or with a period, a string with a blank or with
+a character that no symbol can have, a number, and an object that does not
+answer a string. A name of a compound variable has its tail resolved in the
+code that sent the command, as <a href="../expressions/variables.html#r-expr.variables.tail">the tail rule</a> says for
+a program; the example sets <code>c.i</code> while <code>i</code> holds <code>3</code>, and reads the variable
+back as <code>c.3</code>. Special names such as <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are names of
+variables like the others.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_name', .namer~new)
 i = 3; word = 'abc'; rc = 'my rc'
 address spec_cc_name 'go'
@@ -578,7 +578,7 @@ x = .commandhandler~deregister('spec_cc_getvar')
   say caller['nilvar']~isNil caller['nothing'] caller['nothing.k']
   do x over .array~of("caller~getVar", "caller~'[]'",,
       "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')",,
-      "caller~getVar('1x', 2)")
+      "caller~getVar('X', 2)")
     self~try(caller, x)
   end
   return 0
@@ -598,7 +598,7 @@ caller~getVar 93.901
 caller~'[]' 93.901
 caller~getVar('a', 'b') 93.902
 caller~'[]'('a', 'b') 93.902
-caller~getVar('1x', 2) 93.902
+caller~getVar('X', 2) 93.902
 3
 </code></pre>
 <div class="rule" id="r-class.commandcontext.hasvar"><a href="#r-class.commandcontext.hasvar">[class.commandcontext.hasvar]</a></div>
@@ -688,7 +688,7 @@ x = .commandhandler~deregister('spec_cc_setvar')
       "caller~setVar", "caller~setVar('a', 1, 2)", "caller~setVar('1x', 1)",,
       "caller~'[]='(1, '1x')", "caller~setVar('', 1)",,
       "caller~setVar(, 1)", "caller~'[]='(, 'x')", "caller~setVar('x', )",,
-      "caller~'[]='(1, )", "caller~setVar('1x')",,
+      "caller~'[]='(1, )", "caller~setVar('X')",,
       "x = caller~setVar('zz', 1)", "x = caller~'[]='(1, 'zz')")
     self~try(caller, x)
   end
@@ -714,7 +714,7 @@ caller~setVar(, 1) 93.903
 caller~'[]='(, 'x') 93.903
 caller~setVar('x', ) 93.901
 caller~'[]='(1, ) 93.901
-caller~setVar('1x') 93.901
+caller~setVar('X') 93.901
 x = caller~setVar('zz', 1) 91.999
 x = caller~'[]='(1, 'zz') 91.999
 by setVar | by bracket | compound | cleared cleared cleared
@@ -824,12 +824,9 @@ only one of them is redirected. <code>which</code> is required (<code>SYNTAX 88.
 more argument raises <code>SYNTAX 88.922</code>. A <code>which</code> that starts with another letter
 or has none, the null string and a number among them, raises <code>SYNTAX 93.900</code>.
 An object that is not a string and answers no string to <code>request</code> with
-<code>STRING</code>, <code>.nil</code> and an <code>Object</code> among them, raises <code>SYNTAX 88.909</code>. The checks
-run in this order: <code>which</code> is present (<code>88.901</code>), then it is a string or
-answers one (<code>88.909</code>), then the number of arguments is right (<code>88.922</code>), then
-the letter is one of those above (<code>93.900</code>). So <code>isRedirected(, 1)</code> raises
-<code>88.901</code> and <code>isRedirected(.nil, 1)</code> raises <code>88.909</code>, however many arguments
-follow, while <code>isRedirected('Q', 1)</code> raises <code>88.922</code>.</p>
+<code>STRING</code>, <code>.nil</code> and an <code>Object</code> among them, raises <code>SYNTAX 88.909</code>. A call
+with more than one of these faults, such as <code>isRedirected(.nil, 1)</code>, raises the
+error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir', .asker~new)
 a = .array~new; b = .array~new
 f = 'spec_cc_redir.tmp'
@@ -927,8 +924,7 @@ x = .commandhandler~deregister('spec_cc_redir_order')
 ::class asker inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("caller~isRedirected(, 1)",,
-      "caller~isRedirected(.nil, 1)", "caller~isRedirected('Q', 1)")
+  do x over .array~of("caller~isRedirected('I', 1)")
     self~try(caller, x)
   end
   return 0
@@ -941,9 +937,7 @@ x = .commandhandler~deregister('spec_cc_redir_order')
 bad: say x '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">caller~isRedirected(, 1) =&gt; 88.901
-caller~isRedirected(.nil, 1) =&gt; 88.909
-caller~isRedirected('Q', 1) =&gt; 88.922
+<pre><code class="language-output">caller~isRedirected('I', 1) =&gt; 88.922
 </code></pre>
 <div class="rule" id="r-class.commandcontext.input"><a href="#r-class.commandcontext.input">[class.commandcontext.input]</a></div>
 <p><code>input</code> answers the <a href="commandinput.html"><code>CommandInput</code></a> that reads the source of
@@ -1083,14 +1077,14 @@ rule</a>). <code>additional</code> is the <code>ADDITIONAL</code>
 entry of the condition object, the object as it was given, and when it is
 omitted or <code>.nil</code> the condition object has no such entry. The condition object
 has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
-stands for one of them, and <code>SYNTAX 93.902</code> for more than four arguments. The
-number of arguments is checked before the <code>condition</code> is read, so that
-<code>raise('BOGUS')</code> raises <code>SYNTAX 93.901</code>, not <code>93.900</code>. A <code>condition</code> that is
-none of the forms above, <code>ANY</code>, <code>NONE</code>, <code>PROPAGATE</code>, <code>USER</code> with no name or
-with more than one, any other text, the null string and <code>.nil</code> among them,
-raises <code>SYNTAX 93.900</code>. A call that raises an error does not use up the
-command's one condition, which <a href="#r-class.commandcontext.raise.once">the second
-rule</a> says.</p>
+stands for one of them, and <code>SYNTAX 93.902</code> for more than four arguments. A
+call with a wrong number of arguments and a bad <code>condition</code>, such as
+<code>raise('BOGUS')</code>, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. A <code>condition</code> that is none of the forms
+above, <code>ANY</code>, <code>NONE</code>, <code>PROPAGATE</code>, <code>USER</code> with no name or with more than one,
+any other text, the null string and <code>.nil</code> among them, raises <code>SYNTAX 93.900</code>.
+A call that raises an error does not use up the command's one condition, which
+<a href="#r-class.commandcontext.raise.once">the second rule</a> says.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raise', .raiser~new)
 call on error name trap
 call on failure name trap
@@ -1159,7 +1153,7 @@ x = .commandhandler~deregister('spec_cc_raise_args')
 ::class tries inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("raise", "raise('ERROR')", "raise('BOGUS')",,
+  do x over .array~of("raise", "raise('ERROR')",,
       "raise(, 1)", "raise('ERROR', , 'text')",,
       "raise('ERROR', 1, 'd', 'a', 'x')",,
       "raise('FOO', 1)", "raise('ANY', 1)", "raise('NONE', 1)",,
@@ -1180,7 +1174,6 @@ bad: say x condition('o')~code
 </code></pre>
 <pre><code class="language-output">raise 93.901
 raise('ERROR') 93.901
-raise('BOGUS') 93.901
 raise(, 1) 93.903
 raise('ERROR', , 'text') 93.903
 raise('ERROR', 1, 'd', 'a', 'x') 93.902

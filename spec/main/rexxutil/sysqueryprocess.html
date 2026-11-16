@@ -190,16 +190,13 @@ does. A second argument raises <code>SYNTAX 88.922</code>, even where the first 
 omitted or is not one of the words that <a href="#r-util.sysqueryprocess.info">the next
 rule</a> knows. An object that is not a string is
 replaced by its string value as <a href="index.html#r-util.index.args">the argument rule</a> says,
-and one that has none raises <code>SYNTAX 88.909</code>. When the first argument is an
-object that has no string value, <a href="index.html#r-util.index.deviation.101">Deviation 101</a>
-says which error is raised with a second argument.</p>
+and one that has none raises <code>SYNTAX 88.909</code>. When the first argument is an object that has no string value, <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which error is raised with a second argument.</p>
 <pre><code class="language-rexx">pid = SysQueryProcess('PID')
 say (SysQueryProcess() == pid) (SysQueryProcess(,) == pid)
 say (SysQueryProcess('PID', ) == pid)
 say (SysQueryProcess(.mutablebuffer~new('pid')) == pid)
 call try "SysQueryProcess(.nil)"
 call try "SysQueryProcess('PID', 1)"
-call try "SysQueryProcess('x', 1)"
 call try "SysQueryProcess(, 1)"
 call try "SysQueryProcess('PID', 1, 2)"
 exit
@@ -214,7 +211,6 @@ e: say condition('o')~code
 1
 1
 88.909
-88.922
 88.922
 88.922
 88.922

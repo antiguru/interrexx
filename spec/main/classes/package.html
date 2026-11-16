@@ -238,23 +238,22 @@ REXX REXX 1
 <p><code>new</code> makes a package from a name and, optionally, a source and a context. The
 name is required (<code>SYNTAX 88.901</code>), and is a string or the string that its
 argument <a href="index.html#r-class.index.string">gives</a>: an object that gives no string, <code>.nil</code>
-among them,
-raises <code>88.909</code>. With a source, the name is only the name of the package, and
-the package is always a new object. With no source, the name is the name of a
-file, which <code>new</code> looks for and reads, as
-<a href="#r-class.package.new.file">the file rule</a> says, and there is no context: the
-arguments from the third on go to <code>init</code>. The context is the third argument.
-It is a <code>Method</code>, a <code>Routine</code> or a <code>Package</code> object, or omitted; any other
-value, <code>.nil</code> and <code>PROGRAMSCOPE</code> included, raises <code>SYNTAX 93.953</code>. The checks
-run in this order: the name, the context, the source (a source that is <code>.nil</code>
-raises <code>93.961</code>), and then the source is translated, so that a source that
-does not translate raises its translation error, and <code>new</code> then installs the
-package as <a href="#r-class.package.new.install">the install rule</a> says. The arguments
-from the fourth on are passed to <code>init</code> of the new package, and so are the
-arguments from the third on when the source is omitted; the <code>init</code> of <code>Object</code>
-accepts none, and one argument raises <code>SYNTAX 93.902</code> after the package is
-installed. A subclass of <code>Package</code> makes instances of itself. The answer is
-the new package.</p>
+among them, raises <code>88.909</code>. With a source, the name is only the name of the
+package, and the package is always a new object. With no source, the name is
+the name of a file, which <code>new</code> looks for and reads, as <a href="#r-class.package.new.file">the file
+rule</a> says, and there is no context: the arguments
+from the third on go to <code>init</code>. The context is the third argument. It is a
+<code>Method</code>, a <code>Routine</code> or a <code>Package</code> object, or omitted; any other value,
+<code>.nil</code> and <code>PROGRAMSCOPE</code> included, raises <code>SYNTAX 93.953</code>. A source that is
+<code>.nil</code> raises <code>93.961</code>, and a source that does not translate raises its
+translation error. A call that fails more than one of these checks raises the
+error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A
+call that fails none installs the package as <a href="#r-class.package.new.install">the install
+rule</a> says. The arguments from the fourth on are
+passed to <code>init</code> of the new package, and so are the arguments from the third on
+when the source is omitted; the <code>init</code> of <code>Object</code> accepts none, and one
+argument raises <code>SYNTAX 93.902</code> after the package is installed. A subclass of
+<code>Package</code> makes instances of itself. The answer is the new package.</p>
 <pre><code class="language-rexx">p = .package~new('named', 'return 1')
 say p~class~id p~name
 call try '.package~new()'
@@ -270,7 +269,6 @@ call try '.package~new("n", "nop", .routine~new("r", "nop"))~class~id'
 call try '.package~new("n", "say (")'
 call try '.package~new("n", "nop", , 1)'
 call try '.package~new("n", "nop", .package~new("c", "nop"), 1)'
-call try '.package~new("n", .nil, 5)'
 say .mine~new('n', 'nop', , 'a', 'b')~class~id
 exit
 try:
@@ -301,7 +299,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .package~new("n", "say (") =&gt; 35.1
 .package~new("n", "nop", , 1) =&gt; 93.902
 .package~new("n", "nop", .package~new("c", "nop"), 1) =&gt; 93.902
-.package~new("n", .nil, 5) =&gt; 93.953
 init 2 a b
 MINE
 </code></pre>
@@ -1782,14 +1779,14 @@ p~findProgram(f, 1) =&gt; 93.902
 <p><code>addClass</code> adds a class to the package under a name, as a class that is not
 public, and answers the package. The name is required (<code>SYNTAX 88.901</code>), an
 object that <a href="index.html#r-class.index.string">gives no string</a>, <code>.nil</code> among them, raises
-<code>88.909</code>, and
-the class is required too (<code>88.901</code>) and must be a class (<code>SYNTAX 88.914</code>;
-<code>.nil</code>, a number and an instance that is not a class do not qualify); a third
-argument raises <code>93.902</code>. The checks run in that order. The name is taken in
-upper case, any string is a name, and a class that is added under a name that
-the package holds replaces the class that was there. The class is in
-<code>classes</code>, <code>findClass</code> finds it, and the code of the package names it with
-<code>.name</code>; it is not in <code>publicClasses</code>.</p>
+<code>88.909</code>, and the class is required too (<code>88.901</code>) and must be a class (<code>SYNTAX 88.914</code>; <code>.nil</code>, a number and an instance that is not a class do not qualify);
+a third argument raises <code>93.902</code>. A call with more than one fault, among the
+count, the name and the class, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. The name is taken in upper
+case, any string is a name, and a class that is added under a name that the
+package holds replaces the class that was there. The class is in <code>classes</code>,
+<code>findClass</code> finds it, and the code of the package names it with <code>.name</code>; it is
+not in <code>publicClasses</code>.</p>
 <pre><code class="language-rexx">src = .array~of('return 1', '::routine r', '  return .zk~id')
 p = .package~new('n', src)
 say (p~addClass('zk', .object) == p)

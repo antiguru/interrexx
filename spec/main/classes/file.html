@@ -424,28 +424,29 @@ writeChars name    [request STRING makeString]
 writeChars string  [request STRING makeString]
 </code></pre>
 <div class="rule" id="r-class.file.args.order"><a href="#r-class.file.args.order">[class.file.args.order]</a></div>
-<p>A method of <code>File</code> checks the number of its arguments before it reads an
-argument or sends a message to one. More arguments than the method takes raise
-<code>SYNTAX 93.902</code> and fewer than it needs <code>93.901</code>, and an omitted argument that
-the method needs before a given one raises <code>93.903</code> for <code>new</code>, <code>writeChars</code>,
-<code>writeLines</code> and <code>searchPath</code>. An omitted place at the end adds nothing to the
-count, so <code>.file~readChars(, )</code> has no argument. The values are checked after
-the count: in the example no probe is sent a message, and the log is empty.</p>
-<pre><code class="language-rexx">.environment~log = .array~new
-f = 'spec-file-args.tmp'
+<p>More arguments than a method of <code>File</code> takes raise <code>SYNTAX 93.902</code> and fewer
+than it needs <code>93.901</code>, and an omitted argument that the method needs before a
+given one raises <code>93.903</code> for <code>new</code>, <code>writeChars</code>, <code>writeLines</code> and
+<code>searchPath</code>. An omitted place at the end adds nothing to the count, so
+<code>.file~readChars(, )</code> has no argument. A call with a wrong count and another
+fault raises the error of one of them, and whether the checks after the first
+fault are made, with the messages they send, is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">f = 'spec-file-args.tmp'
 o = .file~new(f)
-call try 'o~renameTo(.spy~new, 1)'
-call try 'o~compareTo(.spy~new, 1)'
-call try 'o~"LASTMODIFIED="(.spy~new, 1)'
-call try 'o~"LASTACCESSED="(.spy~new, 1)'
-call try '.file~new(.spy~new, .spy~new, 1)'
-call try '.file~readChars(.spy~new, 1)'
-call try '.file~readLines(.spy~new, 1)'
-call try '.file~searchPath(.spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeLines(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new)'
-call try '.file~writeLines(.spy~new)'
+d = .datetime~new
+call try 'o~renameTo(o, 1)'
+call try 'o~compareTo(o, 1)'
+call try 'o~"LASTMODIFIED="(d, 1)'
+call try 'o~"LASTACCESSED="(d, 1)'
+call try '.file~new(f, ".", 1)'
+call try '.file~readChars(f, 1)'
+call try '.file~readLines(f, 1)'
+call try '.file~searchPath(f, ".", 1)'
+call try '.file~writeChars(f, "x", "A", 1)'
+call try '.file~writeLines(f, .array~new, "A", 1)'
+call try '.file~writeChars(f)'
+call try '.file~writeLines(f)'
 call try '.file~writeChars(, "x")'
 call try '.file~writeChars(f, , "A")'
 call try '.file~writeLines(, .array~of("x"))'
@@ -453,7 +454,6 @@ call try '.file~writeLines(f, , "A")'
 call try '.file~searchPath(, ".")'
 call try '.file~readChars(, )'
 call try 'o~renameTo(, )'
-say '['.environment~log~toString(,' ')']'
 exit
 try:
   signal on syntax name bad
@@ -462,35 +462,19 @@ try:
   return
 bad: say arg(1) '=&gt;' condition('o')~code
   return
-::class spy
-::method isA
-  .environment~log~append('isA')
-  return 0
-::method strip
-  .environment~log~append('strip')
-  return 'A'
-::method absolutePath
-  .environment~log~append('absolutePath')
-  return 'x'
-::method makeString
-  .environment~log~append('makeString')
-  return 'x'
-::method request
-  .environment~log~append('request')
-  return .nil
 </code></pre>
-<pre><code class="language-output">o~renameTo(.spy~new, 1) =&gt; 93.902
-o~compareTo(.spy~new, 1) =&gt; 93.902
-o~"LASTMODIFIED="(.spy~new, 1) =&gt; 93.902
-o~"LASTACCESSED="(.spy~new, 1) =&gt; 93.902
-.file~new(.spy~new, .spy~new, 1) =&gt; 93.902
-.file~readChars(.spy~new, 1) =&gt; 93.902
-.file~readLines(.spy~new, 1) =&gt; 93.902
-.file~searchPath(.spy~new, .spy~new, 1) =&gt; 93.902
-.file~writeChars(.spy~new, .spy~new, .spy~new, 1) =&gt; 93.902
-.file~writeLines(.spy~new, .spy~new, .spy~new, 1) =&gt; 93.902
-.file~writeChars(.spy~new) =&gt; 93.901
-.file~writeLines(.spy~new) =&gt; 93.901
+<pre><code class="language-output">o~renameTo(o, 1) =&gt; 93.902
+o~compareTo(o, 1) =&gt; 93.902
+o~"LASTMODIFIED="(d, 1) =&gt; 93.902
+o~"LASTACCESSED="(d, 1) =&gt; 93.902
+.file~new(f, ".", 1) =&gt; 93.902
+.file~readChars(f, 1) =&gt; 93.902
+.file~readLines(f, 1) =&gt; 93.902
+.file~searchPath(f, ".", 1) =&gt; 93.902
+.file~writeChars(f, "x", "A", 1) =&gt; 93.902
+.file~writeLines(f, .array~new, "A", 1) =&gt; 93.902
+.file~writeChars(f) =&gt; 93.901
+.file~writeLines(f) =&gt; 93.901
 .file~writeChars(, "x") =&gt; 93.903
 .file~writeChars(f, , "A") =&gt; 93.903
 .file~writeLines(, .array~of("x")) =&gt; 93.903
@@ -498,7 +482,6 @@ o~"LASTACCESSED="(.spy~new, 1) =&gt; 93.902
 .file~searchPath(, ".") =&gt; 93.903
 .file~readChars(, ) =&gt; 93.901
 o~renameTo(, ) =&gt; 93.901
-[]
 </code></pre>
 <h2 id="the-path-and-its-text"><a class="header" href="#the-path-and-its-text">The path and its text</a></h2>
 <div class="rule" id="r-class.file.path"><a href="#r-class.file.path">[class.file.path]</a></div>
@@ -1433,7 +1416,7 @@ signal on syntax name b2
 f~"LASTACCESSED="
 b2: say condition('o')~code
 signal on syntax name b3
-f~"LASTACCESSED="(1, 2)
+f~"LASTACCESSED="(.datetime~new, 2)
 b3: say condition('o')~code
 junk = f~delete
 </code></pre>
@@ -1880,16 +1863,16 @@ show:
 <div class="rule" id="r-class.file.searchpath.order"><a href="#r-class.file.searchpath.order">[class.file.searchpath.order]</a></div>
 <p><code>searchPath</code> reads its <code>path</code> before its <code>name</code>. A <code>path</code> that is no string is
 sent <code>request</code> with <code>ARRAY</code> first, and an answer that is no array raises
-<code>SYNTAX 98.913</code> whatever the <code>name</code> is, so <code>.nil</code> as <code>name</code> raises <code>88.909</code>
-only after the <code>path</code> was read. All the items of an array <code>path</code> are read as
-strings before any directory is searched, so a <code>.nil</code> item raises <code>SYNTAX 88.909</code> even when a directory before it holds the file. A string <code>path</code> that
-is not empty is read after the class is sent <code>pathSeparator</code>, and before the
-<code>name</code> is read. How often an array <code>path</code> sends <code>pathSeparator</code> is not
-specified.</p>
+<code>SYNTAX 98.913</code>. A call whose <code>path</code> and <code>name</code> are both wrong raises the error
+of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. All the
+items of an array <code>path</code> are read as strings before any directory is searched,
+so a <code>.nil</code> item raises <code>SYNTAX 88.909</code> even when a directory before it holds
+the file. A string <code>path</code> that is not empty is read after the class is sent
+<code>pathSeparator</code>, and before the <code>name</code> is read. How often an array <code>path</code> sends
+<code>pathSeparator</code> is not specified.</p>
 <pre><code class="language-rexx">junk = .file~new('spec-file-sp-order.tmp')
 call lineout 'spec-file-sp-order.tmp', 'x'
 call lineout 'spec-file-sp-order.tmp'
-call try '.file~searchPath(.nil, .object~new)'
 call try '.file~searchPath(.nil, ".")'
 call try '.file~searchPath(.nil, .array~of("."))'
 call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil))'
@@ -1926,8 +1909,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .environment~log~append('name')
   return 'spec-file-sp-order.tmp'
 </code></pre>
-<pre><code class="language-output">.file~searchPath(.nil, .object~new) =&gt; 98.913
-.file~searchPath(.nil, ".") =&gt; 88.909
+<pre><code class="language-output">.file~searchPath(.nil, ".") =&gt; 88.909
 .file~searchPath(.nil, .array~of(".")) =&gt; 88.909
 .file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil)) =&gt; 88.909
 .file~searchPath("spec-file-sp-order.tmp", .array~of(.nil, ".")) =&gt; 88.909
@@ -2023,7 +2005,6 @@ call try '.file~readLines'
 call try '.file~readLines(f, 1)'
 call try '.file~readLines(.nil)'
 call try '.file~readLines(.object~new)'
-call try '.file~readLines(.nil, 1)'
 exit
 try:
   signal on syntax name bad
@@ -2047,25 +2028,25 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .file~readLines(f, 1) =&gt; 93.902
 .file~readLines(.nil) =&gt; 93.938
 .file~readLines(.object~new) =&gt; 93.938
-.file~readLines(.nil, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.file.writechars"><a href="#r-class.file.writechars">[class.file.writechars]</a></div>
 <p><code>writeChars</code> takes the name of a file, a string and an optional <code>mode</code>, and
 writes the string to the file, bytes unchanged, creating the file when it does
 not exist. It answers nothing, so a program that uses what it answers raises
 <code>SYNTAX 91.999</code>. The <code>mode</code> is sent <code>strip</code>, and the first character of the
-string that answers, in upper or lower case, decides: <code>A</code> appends the string
-to the content of the file and <code>R</code> replaces the content, whatever follows the
+string that answers, in upper or lower case, decides: <code>A</code> appends the string to
+the content of the file and <code>R</code> replaces the content, whatever follows the
 letter, so <code>Replace</code>, <code>r</code> and <code>repl!</code> replace. An omitted <code>mode</code> appends. Any
-other <code>mode</code>, the empty string among them, raises <code>SYNTAX 88.916</code>, and one
-that does not understand <code>strip</code>, <code>.nil</code> for one, raises <code>SYNTAX 97.1</code>. The
-name is read as <a href="#r-class.file.readchars"><code>readChars</code></a> reads it, with the same
-error, after the <code>mode</code> has been checked. The string is read as the string
-value of an argument (<a href="index.html#r-class.index.string">the string rule</a>), so <code>.nil</code> is
-written as <code>The NIL object</code> and no object is refused. A file that cannot be
-opened is not written, and nothing is reported. No argument raises
-<code>SYNTAX 93.901</code>, a call with only the name <code>93.901</code> as well, and a fourth
-argument <code>93.902</code>.</p>
+other <code>mode</code>, the empty string among them, raises <code>SYNTAX 88.916</code>, and one that
+does not understand <code>strip</code>, <code>.nil</code> for one, raises <code>SYNTAX 97.1</code>. The name is
+read as <a href="#r-class.file.readchars"><code>readChars</code></a> reads it, with the same error,
+and a call whose name and <code>mode</code> are both wrong raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The string is
+read as the string value of an argument (<a href="index.html#r-class.index.string">the string
+rule</a>), so <code>.nil</code> is written as <code>The NIL object</code> and no
+object is refused. A file that cannot be opened is not written, and nothing is
+reported. No argument raises <code>SYNTAX 93.901</code>, a call with only the name
+<code>93.901</code> as well, and a fourth argument <code>93.902</code>.</p>
 <pre><code class="language-rexx">f = 'spec-file-writechars.tmp'
 .file~writeChars(f, 'abc')
 .file~writeChars(f, 'def')
@@ -2088,7 +2069,6 @@ say .file~new('spec-file-writechars-none.tmp')~exists
 call try '.file~writeChars(f, "x", "")'
 call try '.file~writeChars(f, "x", "Q")'
 call try '.file~writeChars(f, "x", .nil)'
-call try '.file~writeChars(.nil, "x", "Q")'
 call try '.file~writeChars(.nil, "x")'
 call try '.file~writeChars'
 call try '.file~writeChars(f)'
@@ -2114,7 +2094,6 @@ The NIL object12
 .file~writeChars(f, "x", "") =&gt; 88.916
 .file~writeChars(f, "x", "Q") =&gt; 88.916
 .file~writeChars(f, "x", .nil) =&gt; 97.1
-.file~writeChars(.nil, "x", "Q") =&gt; 88.916
 .file~writeChars(.nil, "x") =&gt; 93.938
 .file~writeChars =&gt; 93.901
 .file~writeChars(f) =&gt; 93.901
@@ -2125,22 +2104,21 @@ f2 = .file~writeChars(f, "x") =&gt; 91.999
 <p><code>writeLines</code> takes the name of a file, an ordered collection and an optional
 <code>mode</code>, and writes each item of the collection to the file followed by a line
 feed, creating the file when it does not exist. It answers nothing, as
-<a href="#r-class.file.writechars"><code>writeChars</code></a> does, reads the <code>mode</code> as it does,
-with the same error, and appends when <code>mode</code> is omitted. The collection is
-sent <code>isA</code> with <code>.OrderedCollection</code>; one that answers false raises
-<code>SYNTAX 88.914</code>, as do a string, <code>.nil</code>, a <code>Set</code>, a <code>Bag</code>, a <code>Directory</code>, a
-<code>Table</code>, a <code>Stem</code> and a <code>MutableBuffer</code>. The checks are made in this order:
-the collection, the <code>mode</code>, the name, with the error of
-<a href="#r-class.file.readchars"><code>readChars</code></a> for the name. The collection is then
-sent <code>request</code> with the argument <code>ARRAY</code>, a <code>List</code> subclass among them
+<a href="#r-class.file.writechars"><code>writeChars</code></a> does, reads the <code>mode</code> as it does, with
+the same error, and appends when <code>mode</code> is omitted. The collection is sent
+<code>isA</code> with <code>.OrderedCollection</code>; one that answers false raises <code>SYNTAX 88.914</code>,
+as do a string, <code>.nil</code>, a <code>Set</code>, a <code>Bag</code>, a <code>Directory</code>, a <code>Table</code>, a <code>Stem</code>
+and a <code>MutableBuffer</code>. The name has the error of
+<a href="#r-class.file.readchars"><code>readChars</code></a>. A call that fails more than one of the
+checks of the collection, the <code>mode</code> and the name raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The collection is
+then sent <code>request</code> with the argument <code>ARRAY</code>, a <code>List</code> subclass among them
 (<a href="#r-class.file.deviation.118">Deviation 118</a>), and the items of the array that
 answers are written in order, each as its string value (<a href="index.html#r-class.index.string">the string
 rule</a>); a position with no item is left out, and an
 answer that is not an array raises <code>SYNTAX 98.913</code>. An <code>Array</code>, a <code>List</code> and a
-<code>Queue</code> are ordered collections. With <code>Replace</code> an empty collection empties
-the file, and with <code>Append</code> it leaves it as it was. No argument raises
-<code>SYNTAX 93.901</code>, one with only the name <code>93.901</code> too, and a fourth argument
-<code>93.902</code>.</p>
+<code>Queue</code> are ordered collections. With <code>Replace</code> an empty collection empties the
+file, and with <code>Append</code> it leaves it as it was. No argument raises <code>SYNTAX 93.901</code>, one with only the name <code>93.901</code> too, and a fourth argument <code>93.902</code>.</p>
 <pre><code class="language-rexx">f = 'spec-file-writelines.tmp'
 .file~writeLines(f, .array~of('one', 'two'))
 .file~writeLines(f, .list~of('three'), 'Append')
@@ -2167,8 +2145,6 @@ call try '.file~writeLines(f, .bag~of("s"))'
 call try '.file~writeLines(f, .table~new)'
 call try '.file~writeLines(f, .stem~new)'
 call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
-call try '.file~writeLines(.nil, "text", "Q")'
-call try '.file~writeLines(.nil, .array~of("a"), "Q")'
 call try '.file~writeLines(.nil, .array~of("a"))'
 call try '.file~writeLines(f, .array~of("a"), "")'
 call try '.file~writeLines(f, .array~of("a"), .nil)'
@@ -2217,8 +2193,6 @@ an Object
 .file~writeLines(f, .table~new) =&gt; 88.914
 .file~writeLines(f, .stem~new) =&gt; 88.914
 .file~writeLines(f, .mutablebuffer~new("abc")) =&gt; 88.914
-.file~writeLines(.nil, "text", "Q") =&gt; 88.914
-.file~writeLines(.nil, .array~of("a"), "Q") =&gt; 88.916
 .file~writeLines(.nil, .array~of("a")) =&gt; 93.938
 .file~writeLines(f, .array~of("a"), "") =&gt; 88.916
 .file~writeLines(f, .array~of("a"), .nil) =&gt; 97.1

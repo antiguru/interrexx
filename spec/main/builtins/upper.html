@@ -186,8 +186,8 @@ characters, to uppercase, and leaves every other character as it is.</p>
 and <code>string</code>, its first argument, is the receiver; <code>n</code> and <code>length</code> become the
 message's arguments, in that order. <code>string</code> is a
 <a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code> is a <a href="../conventions.html#r-conv.position.check">position</a>, and
-<code>length</code> is a <a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<code>length</code> is a <a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: one is required and three is
 the most.</p>
 <pre><code class="language-rexx">say upper('mixed Case') 'mixed Case'~upper(7)
@@ -198,7 +198,7 @@ signal on syntax name b
 say upper('abc', 1, -2)
 b: say condition('o')~code
 signal on syntax name c
-say upper('abc', 0, 'two')
+say upper('abc', 1, 'two')
 c: say condition('o')~code
 signal on syntax name d
 say upper('abc', 1, 1, 1)

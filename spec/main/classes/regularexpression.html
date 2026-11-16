@@ -283,29 +283,25 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .RegularExpression~new('a', .object~new) =&gt; 88.909
 </code></pre>
 <div class="rule" id="r-class.regularexpression.args"><a href="#r-class.regularexpression.args">[class.regularexpression.args]</a></div>
-<p><code>new</code>, <code>parse</code>, <code>match</code> and <code>pos</code> check their arguments in one order, which is
-not the order of <a href="index.html#r-class.index.args.count">the count rule</a>. First each
-argument that the method takes is checked from the left (the pattern and the
-mode of <code>new</code> and <code>parse</code>, the string of <code>match</code> and <code>pos</code>): a required one
-that is missing raises <code>SYNTAX 88.901</code>, and one that cannot be read as a
-string <code>88.909</code>. Then the number of arguments is checked, one too many raising
-<code>88.922</code>; an argument beyond the last one the method takes is not read. Then
-the mode is checked, <code>93.0</code>, and only then the pattern, so that a bad pattern
-given to <code>new</code> raises <code>38.0</code> last. An argument that is not a string is
+<p>For <code>new</code>, <code>parse</code>, <code>match</code> and <code>pos</code>, a required argument that is missing
+raises <code>SYNTAX 88.901</code>, one that cannot be read as a string <code>88.909</code> and one
+too many <code>88.922</code>; the mode raises <code>93.0</code> and the pattern, which <code>new</code> refuses,
+<code>38.0</code>. The arguments it takes are the pattern and the mode of <code>new</code> and
+<code>parse</code>, and the string of <code>match</code> and <code>pos</code>. A call with more than one of
+these faults raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. An argument that is not a string is
 converted by sending it <code>request</code> with <code>STRING</code> (<a href="object.html#r-class.object.request">the request
 rule</a>); the <code>request</code> of <code>Object</code> answers what the
 object's <code>makeString</code> answers, and <code>.nil</code> when it has none. A string answer is
-used. An <code>Array</code> answer is read as its <code>makeString</code> answer, its items joined
-by line feeds. Any other answer, <code>.nil</code> included, raises <code>SYNTAX 88.909</code>, and
-the argument's <code>string</code> method is not used, unlike <a href="../conventions.html#r-conv.string.object">the
+used. An <code>Array</code> answer is read as its <code>makeString</code> answer, its items joined by
+line feeds. Any other answer, <code>.nil</code> included, raises <code>SYNTAX 88.909</code>, and the
+argument's <code>string</code> method is not used, unlike <a href="../conventions.html#r-conv.string.object">the
 builtins</a>. So a number is its digits, and an <code>Array</code>
 argument is its items joined by line feeds.</p>
 <pre><code class="language-rexx">re = .RegularExpression~new('xy')
 call try "re~match('a', .nil)"
-call try "re~parse('a', 'bogus', 3)"
-call try ".RegularExpression~new('[', 'MAXIMAL', 3)"
-call try ".RegularExpression~new('[', 'bogus')"
-call try "re~parse('[', 'bogus')"
+call try "re~parse('a', 'MAXIMAL', 3)"
+call try ".RegularExpression~new('a', 'MAXIMAL', 3)"
 call try "re~match(.str~new)"
 call try "re~match(.object~new)"
 call try "re~match(.mk~new)"
@@ -335,42 +331,14 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::requires "rxregexp.cls"
 </code></pre>
 <pre><code class="language-output">re~match('a', .nil) =&gt; 88.922
-re~parse('a', 'bogus', 3) =&gt; 88.922
-.RegularExpression~new('[', 'MAXIMAL', 3) =&gt; 88.922
-.RegularExpression~new('[', 'bogus') =&gt; 38.0
-re~parse('[', 'bogus') =&gt; 93.0
+re~parse('a', 'MAXIMAL', 3) =&gt; 88.922
+.RegularExpression~new('a', 'MAXIMAL', 3) =&gt; 88.922
 re~match(.str~new) =&gt; 88.909
 re~match(.object~new) =&gt; 88.909
 re~match(.mk~new) =&gt; 1
 1
 1
 re~match(.mko~new) =&gt; 88.909
-</code></pre>
-<pre><code class="language-rexx">re = .RegularExpression~new('xy')
-call try ".RegularExpression~new(.nil, , 3)"
-call try "re~parse(.nil, , 1)"
-call try "re~match(.nil, 1)"
-call try "re~match(, 1)"
-call try "re~pos(, 1)"
-call try "re~parse(.nil, 'bogus')"
-call try ".RegularExpression~new('a', .nil, 1)"
-exit
-try:
-  signal on syntax name bad
-  interpret 'x =' arg(1)
-  say arg(1) '=&gt; done'
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::requires "rxregexp.cls"
-</code></pre>
-<pre><code class="language-output">.RegularExpression~new(.nil, , 3) =&gt; 88.909
-re~parse(.nil, , 1) =&gt; 88.909
-re~match(.nil, 1) =&gt; 88.909
-re~match(, 1) =&gt; 88.901
-re~pos(, 1) =&gt; 88.901
-re~parse(.nil, 'bogus') =&gt; 88.909
-.RegularExpression~new('a', .nil, 1) =&gt; 88.909
 </code></pre>
 <pre><code class="language-rexx">re = .RegularExpression~new('xy')
 say re~match(.rq~new) re~position

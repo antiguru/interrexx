@@ -192,8 +192,7 @@ the error code, and then the stem as its count, a colon and its items.</p>
 <p><code>stem</code>, <code>position</code> and <code>value</code> are all required. <code>stem</code> names a stem as <a href="index.html#r-util.index.stemname">the
 stem name rule</a> says. The call follows <a href="index.html#r-util.index.args">the argument
 rule</a>: an argument that is missing, or is omitted, raises
-<code>SYNTAX 88.901</code>, and a fourth argument raises <code>SYNTAX 88.922</code> (<a href="index.html#r-util.index.deviation.101">Deviation
-101</a> is about which of the two comes first).
+<code>SYNTAX 88.901</code>, and a fourth argument raises <code>SYNTAX 88.922</code> (<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which of the two a call with both raises).
 <code>position</code> is read as a whole number that is at least <code>1</code>, with its blanks, a
 leading plus sign, a decimal point and an exponent, so that <code>' 2 '</code> and <code>1e0</code>
 are numbers. The value is read as <a href="index.html#r-util.index.whole">the whole-number rule</a>
@@ -379,24 +378,22 @@ f: say condition('o')~code s.0 s.1 symbol('s.2') symbol('s.3')
 <pre><code class="language-output">40.924 4 a LIT c c d
 40.924 2 a LIT LIT
 </code></pre>
-<h2 id="order-of-the-checks"><a class="header" href="#order-of-the-checks">Order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-util.syssteminsert.order"><a href="#r-util.syssteminsert.order">[util.syssteminsert.order]</a></div>
-<p>When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises <code>SYNTAX 88.901</code> when it
-is missing and <code>SYNTAX 40.919</code> when it is not a name; then <code>position</code> raises
+<p>The call can fail these checks: the name of the stem raises <code>SYNTAX 88.901</code>
+when it is missing and <code>SYNTAX 40.919</code> when it is not a name; <code>position</code> raises
 <code>SYNTAX 88.901</code> when it is missing and <code>SYNTAX 88.905</code> when it is not a whole
-number of at least <code>1</code>; then a missing <code>value</code> raises <code>SYNTAX 88.901</code>; then
-the tail <code>0</code> of the stem raises
-<code>SYNTAX 40.922</code>; then <code>position</code> raises <code>SYNTAX 40.923</code> when it is past the
-count; and last an item that has to move and has no value raises
-<code>SYNTAX 40.924</code>, with the count left as it was.</p>
-<pre><code class="language-rexx">call try "SysStemInsert('s-.', 1)", ""
-call try "SysStemInsert('s-.', , 'v')", ""
-call try "SysStemInsert('s.', 'x')", ""
-call try "SysStemInsert('s.a', 'x', 'v')", ""
-call try "SysStemInsert('s.', 0, 'v')", "drop s.0"
-call try "SysStemInsert('s.', 9, 'v')", "drop s.0"
-call try "SysStemInsert('s.', 9, 'v')", "drop s.2"
+number of at least <code>1</code>; a missing <code>value</code> raises <code>SYNTAX 88.901</code>; the tail <code>0</code>
+of the stem raises <code>SYNTAX 40.922</code>; <code>position</code> raises <code>SYNTAX 40.923</code> when it
+is past the count; and an item that has to move and has no value raises <code>SYNTAX 40.924</code>, with the count left as it was. When several of them fail, the call
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">call try "SysStemInsert(, 1, 'v')", ""
+call try "SysStemInsert('s-.', 1, 'v')", ""
+call try "SysStemInsert('s.', 'x', 'v')", ""
+call try "SysStemInsert('s.', 1)", ""
+call try "SysStemInsert('s.', 1, 'v')", "drop s.0"
+call try "SysStemInsert('s.', 9, 'v')", ""
 call try "SysStemInsert('s.', 1, 'v')", "drop s.2"
 call try "SysStemInsert('s.', 5, 'v')", "drop s.2"
 call try "SysStemInsert('s.', 3, 'v')", "drop s.4"
@@ -413,11 +410,10 @@ try:
 e: say condition('o')~code s.0
   return
 </code></pre>
-<pre><code class="language-output">40.919 4
+<pre><code class="language-output">88.901 4
 40.919 4
 88.905 4
-40.919 4
-88.905 S.0
+88.901 4
 40.922 S.0
 40.923 4
 40.924 4

@@ -186,8 +186,8 @@ right when the string runs out.</p>
 <code>string</code>, its first argument, is the receiver; <code>length</code> and <code>pad</code> become the
 message's arguments, in that order. <code>string</code> is a
 <a href="../conventions.html#r-conv.string.null">string</a>, <code>length</code> is a <a href="../conventions.html#r-conv.length.check">length</a>, and
-<code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and three
 is the most. Unlike <a href="substr.html">SUBSTR</a>, LEFT does not default <code>length</code>: it is
 a required argument, so a call without it fails by the call rules, with
@@ -215,7 +215,7 @@ say left('abc', 2, '..')
 f: say condition('o')~code
 signal on syntax name g
 say left('abc', -1, '..')
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.923 40.23') &gt; 0
 signal on syntax name h
 say left()
 h: say condition('o')~code
@@ -227,7 +227,7 @@ h: say condition('o')~code
 40.12
 93.923
 40.23
-40.23
+1
 40.3
 </code></pre>
 <div class="rule" id="r-bif.left.pad.default"><a href="#r-bif.left.pad.default">[bif.left.pad.default]</a></div>

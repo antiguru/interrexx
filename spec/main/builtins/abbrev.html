@@ -186,8 +186,8 @@ The answer is <code>1</code> or <code>0</code>.</p>
 and <code>information</code>, its first argument, is the receiver; <code>info</code> and <code>length</code>
 become the message's arguments, in that order. <code>information</code> and <code>info</code> are
 <a href="../conventions.html#r-conv.string.null">strings</a>, and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and three
 is the most.</p>
 <pre><code class="language-rexx">say abbrev('Stamp', 'Sta') 'Stamp'~abbrev('Sta') 'Stamp'~abbrev('Sta', 4)
@@ -208,7 +208,7 @@ signal on syntax name e
 say abbrev(, 'ab')
 e: say condition('o')~code
 signal on syntax name f
-say abbrev('abc', 'a', 'x', 1)
+say abbrev('abc', 'a', 1, 1)
 f: say condition('o')~code
 signal on syntax name g
 say abbrev('abc', , -1)

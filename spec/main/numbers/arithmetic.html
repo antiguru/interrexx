@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h1>
 <p class="references">ANSI: 7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10; rexxref: Numbers and Arithmetic &gt; Arithmetic</p>
-<p class="deviations">Deviations: D53, D102, D174, D175</p>
+<p class="deviations">Deviations: D53, D174, D175</p>
 <p>The arithmetic operators are the infix <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>, <code>//</code> and <code>**</code>,
 and the prefix <code>+</code> and <code>-</code>. Each reads its operands as numbers, works to the
 precision that NUMERIC DIGITS sets, and answers a new number. This page says
@@ -189,14 +189,15 @@ expressions chapter</a>.</p>
 <div class="rule" id="r-num.arithmetic.operand"><a href="#r-num.arithmetic.operand">[num.arithmetic.operand]</a></div>
 <p>Each operand of an arithmetic operator must be a <a href="index.html#r-num.index.form">number</a>,
 and a string that is not one raises <code>SYNTAX 41.1</code>, as <a href="index.html#r-num.index.use">the use
-rule</a> says. Both operands, and the operand of a prefix
-operator, are checked before the operator does anything else, so a bad operand
-wins over a zero divisor or any other error that the operator would otherwise
-find. The right operand of <code>**</code> is the exception: it is the exponent and is
-checked by <a href="#r-num.arithmetic.exponent">its own rule</a>. A string whose exponent
-is out of <a href="limits.html#r-num.limits.not-number">range</a> is not a number either.</p>
+rule</a> says. An operation that has a bad operand and another
+fault, a second bad operand, a zero divisor or any other error that the
+operator would find, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. The right operand of <code>**</code> is the
+exception: it is the exponent and is checked by <a href="#r-num.arithmetic.exponent">its own
+rule</a>. A string whose exponent is out of
+<a href="limits.html#r-num.limits.not-number">range</a> is not a number either.</p>
 <pre><code class="language-rexx">signal on syntax name a
-say 'ten' / 0
+say 'ten' / 2
 a: say condition('o')~code
 signal on syntax name b
 say 10 % 'x'
@@ -366,9 +367,9 @@ c: say condition('o')~code
 after it is rounded to DIGITS digits as <code>exponent + 0</code> would round it, and
 its value may be negative. A string that is not a number at all, a number
 with a fraction after that rounding, and a number of more than DIGITS digits
-raise <code>SYNTAX 26.8</code> where the other operators raise <code>SYNTAX 41.1</code>. The
-base is checked first, so a base that is not a number raises 41.1 even when
-the exponent is bad too.</p>
+raise <code>SYNTAX 26.8</code> where the other operators raise <code>SYNTAX 41.1</code>. A power
+whose base and exponent are both bad raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">numeric digits 3
 say (2 ** 3.0) (2 ** 3.001) (2 ** 010) (2 ** 1e2) (2 ** -2) (2 ** 999)
 signal on syntax name a
@@ -381,7 +382,7 @@ signal on syntax name c
 say 2 ** 1000
 c: say condition('o')~code
 signal on syntax name d
-say 'x' ** 'y'
+say 'x' ** 2
 d: say condition('o')~code
 signal on syntax name e
 say 2 ** ''
@@ -522,17 +523,18 @@ c: say condition('o')~code
 raises the <a href="../conditions/lostdigits.html#r-cond.lostdigits.information">LOSTDIGITS</a> condition, and so does
 the base of <code>**</code> but not its exponent. The digits counted are those from the
 first nonzero digit to the last one written, so zeros that end the operand
-count, and the exponent and the zeros that start the operand do not. An
-operand of value zero has no digits. The condition is raised for the left
-operand first and only after both operands were found to be numbers, and the
-builtins raise no such condition. When the condition is not trapped the
-operation goes on with the digits it has, cut as the <a href="#r-num.arithmetic.cut">cut
-rule</a> says. Both operands are checked for lost digits
-before the operator looks at their values, so a wide left operand raises
-LOSTDIGITS before <code>SYNTAX 42.3</code> for a zero divisor of <code>/</code>, <code>%</code> and <code>//</code> (<a href="#r-num.arithmetic.zero">the
-zero rule</a>) and before <code>SYNTAX 26.8</code> for an exponent of
-<code>**</code> that is a number but not a whole number of at most DIGITS digits (<a href="#r-num.arithmetic.exponent">the
-exponent rule</a>).</p>
+count, and the exponent and the zeros that start the operand do not. An operand
+of value zero has no digits, and the builtins raise no such condition. When the
+condition is not trapped the operation goes on with the digits it has, cut as
+the <a href="#r-num.arithmetic.cut">cut rule</a> says. When both operands are too wide,
+which of them the condition is raised for first is unspecified. When an
+operation has a wide operand and another fault, such as an operand that is not
+a number, a zero divisor of <code>/</code>, <code>%</code> and <code>//</code> (<a href="#r-num.arithmetic.zero">the zero
+rule</a>) or an exponent of <code>**</code> that is not a whole number
+of at most DIGITS digits (<a href="#r-num.arithmetic.exponent">the exponent rule</a>),
+which of LOSTDIGITS and the error it raises first is unspecified, and so
+whether a trap for LOSTDIGITS runs, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">numeric digits 3
 say 1234 + 1
 signal on lostdigits name a
@@ -599,24 +601,6 @@ d: say condition('d')
 1.234E3
 1.234E3
 1234.5
-</code></pre>
-<div class="rule" id="r-num.arithmetic.deviation.102"><a href="#r-num.arithmetic.deviation.102">[num.arithmetic.deviation.102]</a></div>
-<p>When LOSTDIGITS is trapped, an operand that is wider than NUMERIC DIGITS
-raises it before the operator checks a zero divisor or an exponent that is
-not a whole number. ooRexx checks the right operand first and raises
-<code>SYNTAX 42.3</code> or <code>SYNTAX 26.8</code> instead.</p>
-<pre><code class="language-rexx">numeric digits 3
-signal on lostdigits name a
-signal on syntax name a
-say 1234 / 0
-a: say condition('c')
-signal on lostdigits name b
-signal on syntax name b
-say 1234 ** 0.5
-b: say condition('c')
-</code></pre>
-<pre><code class="language-output">LOSTDIGITS
-LOSTDIGITS
 </code></pre>
 <div class="rule" id="r-num.arithmetic.deviation.174"><a href="#r-num.arithmetic.deviation.174">[num.arithmetic.deviation.174]</a></div>
 <p>An operand that an earlier operation produced takes part with the digits of

@@ -197,8 +197,7 @@ rule</a> says, and may name the same stem. <code>from</code>, <code>to</code>,
 <code>from</code> and <code>to</code> are <code>1</code>, <code>count</code> is the number of items of the source from
 <code>from</code> to its end, and <code>option</code> is <code>O</code>. The call follows <a href="index.html#r-util.index.args">the argument
 rule</a>: a missing required argument raises <code>SYNTAX 88.901</code>
-and an argument past the sixth raises <code>SYNTAX 88.922</code> (<a href="index.html#r-util.index.deviation.101">Deviation
-101</a> is about which of the two comes first).
+and an argument past the sixth raises <code>SYNTAX 88.922</code> (<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which of the two a call with both raises).
 <code>from</code> and <code>to</code> are read as whole numbers that are at least <code>1</code>, and an
 argument that is <code>0</code>, negative, fractional, text, the null string or too large
 raises <code>SYNTAX 88.905</code>. <code>count</code> is read as a whole number that is at least
@@ -558,32 +557,28 @@ show: procedure expose s.
 0 6 : a b c d a b
 0 6 : a b a b c d
 </code></pre>
-<h2 id="order-of-the-checks"><a class="header" href="#order-of-the-checks">Order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-util.sysstemcopy.order"><a href="#r-util.sysstemcopy.order">[util.sysstemcopy.order]</a></div>
-<p>When several things are wrong, the call raises the condition of the first of
-these checks that fails. <code>fromstem</code> and then <code>tostem</code> raise <code>SYNTAX 88.901</code>
-when missing and <code>SYNTAX 40.919</code> when not a name; then <code>from</code>, <code>to</code> and
-<code>count</code>, in that order, raise <code>SYNTAX 88.905</code> or <code>SYNTAX 88.904</code>; then
-<code>option</code> raises <code>SYNTAX 40.920</code>; then the tail <code>0</code> of the source raises
-<code>SYNTAX 40.922</code>; then the items to be read raise <code>SYNTAX 40.923</code> when they are
-not all in the source; then the tail <code>0</code> of the target raises
-<code>SYNTAX 40.922</code>; then <code>to</code> raises <code>SYNTAX 40.923</code> when it is more than one
-past the count of the target; and last the items themselves raise
-<code>SYNTAX 40.924</code> when one has no value: with <code>I</code>, first an item of the target
-that the call moves, and then the items of the source as they are copied.</p>
-<pre><code class="language-rexx">call try "SysStemCopy('s-.')", ""
-call try "SysStemCopy(, 't-.')", ""
-call try "SysStemCopy('s.', , 0)", ""
-call try "SysStemCopy('s.a', 't.a', 'x')", ""
-call try "SysStemCopy('s.', 't.', 0, 0, -1)", ""
-call try "SysStemCopy('s.', 't.', 1, 'x', 'x')", ""
-call try "SysStemCopy('s.', 't.', 1, 1, -1, 'x')", ""
-call try "SysStemCopy('s.', 't.', 1, 1, 1, 'x')", "drop s.0"
-call try "SysStemCopy('s.', 't.', 1, 1, 9)", "drop s.0"
-call try "SysStemCopy('s.', 't.', 1, 1, 9)", "t.0 = 'x'"
-call try "SysStemCopy('s.', 't.', 1, 9, 1)", "t.0 = 'x'"
-call try "SysStemCopy('s.', 't.', 1, 9, 4)", "drop s.3"
-call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3; t.0 = 'x'"
+<p>The call can fail these checks: <code>fromstem</code> and <code>tostem</code> raise <code>SYNTAX 88.901</code>
+when missing and <code>SYNTAX 40.919</code> when not a name; <code>from</code>, <code>to</code> and <code>count</code>
+raise <code>SYNTAX 88.905</code> or <code>SYNTAX 88.904</code>; <code>option</code> raises <code>SYNTAX 40.920</code>; the
+tail <code>0</code> of the source raises <code>SYNTAX 40.922</code>; the items to be read raise
+<code>SYNTAX 40.923</code> when they are not all in the source; the tail <code>0</code> of the target
+raises <code>SYNTAX 40.922</code>; <code>to</code> raises <code>SYNTAX 40.923</code> when it is more than one
+past the count of the target; and the items themselves raise <code>SYNTAX 40.924</code>
+when one has no value: with <code>I</code>, an item of the target that the call moves, and
+the items of the source as they are copied. When several of them fail, the call
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">call try "SysStemCopy(, 't.')", ""
+call try "SysStemCopy('s-.', 't.')", ""
+call try "SysStemCopy('s.', 't.', 0)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, -1)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, 1, 'x')", ""
+call try "SysStemCopy('s.', 't.')", "drop s.0"
+call try "SysStemCopy('s.', 't.', 1, 1, 9)", ""
+call try "SysStemCopy('s.', 't.', 1, 1, 1)", "t.0 = 'x'"
+call try "SysStemCopy('s.', 't.', 1, 9, 1)", ""
 call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3"
 call try "SysStemCopy('s.', 't.', 1, 1, 4, 'I')", "drop t.2"
 exit
@@ -599,11 +594,8 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">40.919
-88.901
-88.901
+<pre><code class="language-output">88.901
 40.919
-88.905
 88.905
 88.904
 40.920
@@ -611,7 +603,6 @@ e: say condition('o')~code
 40.923
 40.922
 40.923
-40.922
 40.924
 40.924
 </code></pre>

@@ -538,13 +538,13 @@ with two it answers the <code>len</code> characters from position <code>n</code>
 the end of the receiver and is not padded, so a position past the end answers
 the null string. <code>n</code> must be a positive whole number (<code>SYNTAX 93.924</code>) and
 <code>len</code> a non-negative whole number (<code>93.923</code>); a value that is not a number at
-all raises the same error as one out of range, and the arguments are checked
-from left to right. An omitted <code>n</code> raises <code>93.903</code>, an omitted <code>len</code> is as no
-<code>len</code>, and a third argument raises <code>93.902</code>.</p>
+all raises the same error as one out of range, and a call with both in error
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. An omitted <code>n</code> raises <code>93.903</code>, an omitted
+<code>len</code> is as no <code>len</code>, and a third argument raises <code>93.902</code>.</p>
 <pre><code class="language-rexx">say 'abcdef'[2] 'abcdef'[2, 3] '['||'abcdef'[7]']' 'abcdef'[5, 9] 12345[2, 3]
 say '['||'abcdef'[2, 0]']' 'abcdef'~"[]"(1, ) 'abcdef'[2.0, '2']
 call try "'abc'[0]"
-call try "'abc'[0, -1]"
 call try "'abc'[1, -1]"
 call try "'abc'['x']"
 call try "'abc'[1, 'x']"
@@ -564,7 +564,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">b bcd [] ef 234
 [] a bc
 'abc'[0] =&gt; 93.924
-'abc'[0, -1] =&gt; 93.924
 'abc'[1, -1] =&gt; 93.923
 'abc'['x'] =&gt; 93.924
 'abc'[1, 'x'] =&gt; 93.923
@@ -664,13 +663,13 @@ part of another is the lesser, whatever follows; numbers are not compared as
 numbers. The second argument <code>start</code> is the position, 1 by default, from which
 both strings are compared, and the third <code>length</code> is the number of characters
 compared of each, by default all that are left. A part that runs past the end
-of a string is cut there. The arguments are checked from left to right: the
-first, <code>other</code>, is required (<code>SYNTAX 93.903</code>) and has a string value as the
-conversion rule says (<code>88.909</code>, as for <code>.nil</code>; only the answer of <code>request</code> with
-the argument <code>STRING</code> is used,
-and then only for an object that is no string); <code>start</code> must be a positive
-whole number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); a
-fourth argument raises <code>93.902</code>.</p>
+of a string is cut there. The first argument, <code>other</code>, is required (<code>SYNTAX 93.903</code>) and has a string value as the conversion rule says (<code>88.909</code>, as for
+<code>.nil</code>; only the answer of <code>request</code> with the argument <code>STRING</code> is used, and
+then only for an object that is no string); <code>start</code> must be a positive whole
+number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); a fourth
+argument raises <code>93.902</code>, and a call with more than one argument in error
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">say 'abc'~compareTo('abc') 'b'~compareTo('a') 'a'~compareTo('b')
 say 'abc'~compareTo('aBc') 'abc'~compareTo('abcd') 'abcd'~compareTo('abc')
 say '10'~compareTo('9') ('FF'x)~compareTo('00'x) ''~compareTo('')
@@ -678,8 +677,8 @@ say '000abc000'~compareTo('111abc111', 4, 3) 'abc'~compareTo('abd', 1, 2)
 say 'abc'~compareTo('abd', 3) 'abc'~compareTo('abd', 4)
 say 'abc'~compareTo('abd', 1, 0)
 call try "'abc'~compareTo"
-call try "'abc'~compareTo(.nil, 0, -1)"
-call try "'abc'~compareTo('a', 0, -1)"
+call try "'abc'~compareTo(.nil)"
+call try "'abc'~compareTo('a', 0)"
 call try "'abc'~compareTo('a', 1, -1)"
 call try "'abc'~compareTo('a', 1, 1, 1)"
 exit
@@ -698,8 +697,8 @@ bad: say arg(1) '=&gt;' condition('o')~code
 -1 0
 0
 'abc'~compareTo =&gt; 93.903
-'abc'~compareTo(.nil, 0, -1) =&gt; 88.909
-'abc'~compareTo('a', 0, -1) =&gt; 93.924
+'abc'~compareTo(.nil) =&gt; 88.909
+'abc'~compareTo('a', 0) =&gt; 93.924
 'abc'~compareTo('a', 1, -1) =&gt; 93.923
 'abc'~compareTo('a', 1, 1, 1) =&gt; 93.902
 </code></pre>
@@ -759,16 +758,16 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <h3 id="containing-and-matching"><a class="header" href="#containing-and-matching">Containing and matching</a></h3>
 <div class="rule" id="r-class.string.contains"><a href="#r-class.string.contains">[class.string.contains]</a></div>
 <p><code>contains</code> answers 1 when its first argument, the needle, occurs in the
-receiver, and 0 otherwise; a needle that is the null string is never found.
-The search covers the whole receiver unless <code>start</code>, a position, and <code>length</code>,
-a number of characters from it, limit it, and then the needle must lie within
+receiver, and 0 otherwise; a needle that is the null string is never found. The
+search covers the whole receiver unless <code>start</code>, a position, and <code>length</code>, a
+number of characters from it, limit it, and then the needle must lie within
 that part. A <code>start</code> or a <code>length</code> that reaches past the end is cut there. The
 needle is required (<code>SYNTAX 93.903</code>) and is a string or else uses the string it
 <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code> for <code>.nil</code>), <code>start</code> must be a positive
-whole
-number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); the
-arguments are checked from left to right, and a fourth argument raises
-<code>93.902</code>. Case matters.</p>
+whole number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); a
+fourth argument raises <code>93.902</code>, and a call with more than one argument in
+error raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. Case matters.</p>
 <pre><code class="language-rexx">t = '-abcdef-'
 say t~contains('ef') t~contains('-', 2) t~contains('-', 2, 6)
 say t~contains('-', 2, 7)
@@ -778,7 +777,7 @@ say 'abc'~contains('') 'abc'~contains('B') '12345'~contains(23)
 call try "'abc'~contains"
 call try "'abc'~contains('b', 0)"
 call try "'abc'~contains('b', 1, -1)"
-call try "'abc'~contains(.nil, 0, -1)"
+call try "'abc'~contains(.nil)"
 call try "'abc'~contains('b', 1, 1, 1)"
 exit
 try:
@@ -797,7 +796,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 'abc'~contains =&gt; 93.903
 'abc'~contains('b', 0) =&gt; 93.924
 'abc'~contains('b', 1, -1) =&gt; 93.923
-'abc'~contains(.nil, 0, -1) =&gt; 88.909
+'abc'~contains(.nil) =&gt; 88.909
 'abc'~contains('b', 1, 1, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.string.caselesscontains"><a href="#r-class.string.caselesscontains">[class.string.caselesscontains]</a></div>
@@ -944,19 +943,20 @@ e: say condition('o')~code
 </code></pre>
 <div class="rule" id="r-class.string.match"><a href="#r-class.string.match">[class.string.match]</a></div>
 <p><code>match</code> tests whether a part of its second argument occurs at a given place in
-the receiver. The arguments are <code>start</code>, the position in the receiver,
-<code>other</code>, the string, <code>n</code>, the position in <code>other</code> where the part begins (1 by
-default), and <code>length</code>, the number of characters in the part (by default all
-that are left from <code>n</code>). The answer is 1 when the part is not empty, lies
-wholly within <code>other</code> and wholly within the receiver counted from <code>start</code>, and
-has the characters that the receiver has there, and 0 otherwise. A part that
-is empty, begins after the end of <code>other</code>, or runs past the end of either
-string is not an error: the answer is 0. The arguments are checked from left
-to right: <code>start</code> and <code>n</code> must be positive whole numbers (<code>SYNTAX 93.924</code>),
-<code>other</code> is required, as <code>start</code> is (<code>93.903</code>), and is a string or else uses
-the string it <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code>), and <code>length</code> must be a
-non-negative whole
-number (<code>93.923</code>); a fifth argument raises <code>93.902</code>. Case matters.</p>
+the receiver. The arguments are <code>start</code>, the position in the receiver, <code>other</code>,
+the string, <code>n</code>, the position in <code>other</code> where the part begins (1 by default),
+and <code>length</code>, the number of characters in the part (by default all that are
+left from <code>n</code>). The answer is 1 when the part is not empty, lies wholly within
+<code>other</code> and wholly within the receiver counted from <code>start</code>, and has the
+characters that the receiver has there, and 0 otherwise. A part that is empty,
+begins after the end of <code>other</code>, or runs past the end of either string is not
+an error: the answer is 0. <code>start</code> and <code>n</code> must be positive whole numbers
+(<code>SYNTAX 93.924</code>), <code>other</code> is required, as <code>start</code> is (<code>93.903</code>), and is a
+string or else uses the string it <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code>), and
+<code>length</code> must be a non-negative whole number (<code>93.923</code>); a fifth argument
+raises <code>93.902</code>. A call with more than one argument in error raises the error
+of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. Case
+matters.</p>
 <pre><code class="language-rexx">t = 'Wednesday'
 say t~match(4, 'nes') t~match(4, 'NES') t~match(4, 'honest', 3, 3)
 say t~match(4, 'nesting', 1, 3) t~match(4, 'nesting', 1, 4)
@@ -966,8 +966,8 @@ say t~match(1, 'W', 1, 0) t~match(1, 'W', 1, 2) t~match(1, 'W', , 1)
 call try "t~match"
 call try "t~match(1)"
 call try "t~match(0, 'W')"
-call try "t~match(1, .nil, 0, -1)"
-call try "t~match(1, 'W', 0, -1)"
+call try "t~match(1, .nil)"
+call try "t~match(1, 'W', 0)"
 call try "t~match(1, 'W', 1, -1)"
 call try "t~match(1, 'W', 1, 1, 1)"
 exit
@@ -987,8 +987,8 @@ bad: say arg(1) '=&gt;' condition('o')~code
 t~match =&gt; 93.903
 t~match(1) =&gt; 93.903
 t~match(0, 'W') =&gt; 93.924
-t~match(1, .nil, 0, -1) =&gt; 88.909
-t~match(1, 'W', 0, -1) =&gt; 93.924
+t~match(1, .nil) =&gt; 88.909
+t~match(1, 'W', 0) =&gt; 93.924
 t~match(1, 'W', 1, -1) =&gt; 93.923
 t~match(1, 'W', 1, 1, 1) =&gt; 93.902
 </code></pre>
@@ -1011,16 +1011,17 @@ e: say condition('o')~code
 one of the characters of its second argument, the set, and 0 otherwise: when
 it is not in the set, when the set is the null string, and when <code>n</code> is past
 the end of the receiver. Both arguments are required (<code>SYNTAX 93.903</code>), <code>n</code>
-must be a positive whole number (<code>93.924</code>) and is checked first, the set is a
-string or else uses the string it <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code>), and
-a third argument
-raises <code>93.902</code>. Case matters.</p>
+must be a positive whole number (<code>93.924</code>), the set is a string or else uses
+the string it <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code>), and a third argument
+raises <code>93.902</code>. A call whose <code>n</code> and set are both in error raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. Case
+matters.</p>
 <pre><code class="language-rexx">t = 'Saturday'
 say t~matchChar(1, 'xyzS') t~matchChar(2, 'A') t~matchChar(2, 'a')
 say t~matchChar(3, '')
 say t~matchChar(9, 'y') t~matchChar(8, 'y') '12'~matchChar(2, 12)
 call try "t~matchChar(1)"
-call try "t~matchChar(0, .nil)"
+call try "t~matchChar(0, 'a')"
 call try "t~matchChar(1, .nil)"
 call try "t~matchChar(1, 'a', 'b')"
 exit
@@ -1036,7 +1037,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 0
 0 1 1
 t~matchChar(1) =&gt; 93.903
-t~matchChar(0, .nil) =&gt; 93.924
+t~matchChar(0, 'a') =&gt; 93.924
 t~matchChar(1, .nil) =&gt; 88.909
 t~matchChar(1, 'a', 'b') =&gt; 93.902
 </code></pre>
@@ -1118,18 +1119,19 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <div class="rule" id="r-class.string.caselesschangestr"><a href="#r-class.string.caselesschangestr">[class.string.caselesschangestr]</a></div>
 <p><code>caselessChangeStr</code> is <a href="../builtins/changestr.html#r-bif.changestr.method"><code>changeStr</code></a> with upper and
 lower case letters taken as equal in the search: it answers the receiver with
-occurrences of the needle replaced by the new string, the first <code>count</code> of
-them when <code>count</code> is given. The replacement is put in as written, whatever
-case the text it replaces had. A needle that is the null string changes
-nothing. <code>count</code> must not be negative (<code>SYNTAX 93.906</code>); the arguments are
-checked from left to right, the first two are required (<code>93.903</code>), and a
-fourth raises <code>93.902</code>.</p>
+occurrences of the needle replaced by the new string, the first <code>count</code> of them
+when <code>count</code> is given. The replacement is put in as written, whatever case the
+text it replaces had. A needle that is the null string changes nothing. <code>count</code>
+must not be negative (<code>SYNTAX 93.906</code>); the first two are required (<code>93.903</code>),
+a fourth raises <code>93.902</code>, and a call with more than one argument in error
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">say 'Hello'~caselessChangeStr('L', 'x') 'Hello'~caselessChangeStr('L', 'x', 1)
 say 'Hello'~caselessChangeStr('L', 'x', 0) 'Hello'~caselessChangeStr('', 'x')
 say 'Hello'~caselessChangeStr('L', '') 'Hello'~changeStr('L', 'x')
 call try "'Hello'~caselessChangeStr('L')"
 call try "'Hello'~caselessChangeStr('L', 'x', -1)"
-call try "'Hello'~caselessChangeStr(.nil, 'x', -1)"
+call try "'Hello'~caselessChangeStr(.nil, 'x')"
 call try "'Hello'~caselessChangeStr('L', 'x', 1, 1)"
 exit
 try:
@@ -1145,7 +1147,7 @@ Hello Hello
 Heo Hello
 'Hello'~caselessChangeStr('L') =&gt; 93.903
 'Hello'~caselessChangeStr('L', 'x', -1) =&gt; 93.906
-'Hello'~caselessChangeStr(.nil, 'x', -1) =&gt; 88.909
+'Hello'~caselessChangeStr(.nil, 'x') =&gt; 88.909
 'Hello'~caselessChangeStr('L', 'x', 1, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.string.caselessabbrev"><a href="#r-class.string.caselessabbrev">[class.string.caselessabbrev]</a></div>
@@ -1218,13 +1220,14 @@ String 0
 <div class="rule" id="r-class.string.subwords"><a href="#r-class.string.subwords">[class.string.subwords]</a></div>
 <p><code>subWords</code> answers a new array of strings, the words of the receiver from the
 word <code>n</code>, 1 by default, up to <code>count</code> words, by default all that are left.
-Words are those of <a href="../builtins/index.html#r-bif.index.words.split">the word rule</a>: they are
-separated by blanks and tabs, and the white space around them is not part of
-them. A <code>n</code> past the last word, and a <code>count</code> of 0, answer an empty array;
-a <code>count</code> larger than the number of words left is cut. <code>n</code> must be a positive
-whole number (<code>SYNTAX 93.924</code>) and <code>count</code> a non-negative whole number
-(<code>93.923</code>), checked in that order; a third argument raises <code>93.902</code>. The
-items are strings of class <code>String</code>.</p>
+Words are those of <a href="../builtins/index.html#r-bif.index.words.split">the word rule</a>: they are separated
+by blanks and tabs, and the white space around them is not part of them. A <code>n</code>
+past the last word, and a <code>count</code> of 0, answer an empty array; a <code>count</code> larger
+than the number of words left is cut. <code>n</code> must be a positive whole number
+(<code>SYNTAX 93.924</code>) and <code>count</code> a non-negative whole number (<code>93.923</code>); a third
+argument raises <code>93.902</code>, and a call with both in error raises the error of one
+of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The items are
+strings of class <code>String</code>.</p>
 <pre><code class="language-rexx">t = 'a b c d'
 say t~subWords~items t~subWords(2)~items t~subWords(2)~at(1)
 say t~subWords(2, 2)~at(2)
@@ -1233,7 +1236,7 @@ say '  a   b  '~subWords~items '  a   b  '~subWords~at(1) ''~subWords~items
 say t~subWords(,2)~items t~subWords(2)~at(1)~class~id
 call try "t~subWords(0)"
 call try "t~subWords(1, -1)"
-call try "t~subWords('x', 'y')"
+call try "t~subWords('x')"
 call try "t~subWords(1, 1, 1)"
 exit
 try:
@@ -1251,7 +1254,7 @@ c
 2 String
 t~subWords(0) =&gt; 93.924
 t~subWords(1, -1) =&gt; 93.923
-t~subWords('x', 'y') =&gt; 93.924
+t~subWords('x') =&gt; 93.924
 t~subWords(1, 1, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.string.replaceat"><a href="#r-class.string.replaceat">[class.string.replaceat]</a></div>
@@ -1262,10 +1265,11 @@ of the receiver is cut there. When <code>position</code> is more than one past t
 the receiver, the gap is filled with the pad, a blank by default. <code>newstr</code> and
 <code>position</code> are required (<code>SYNTAX 93.903</code>), and <code>newstr</code> is a string or else
 uses the string it <a href="index.html#r-class.index.string">gives</a> (<code>88.909</code>), <code>position</code> must be
-a positive whole
-number (<code>93.924</code>), <code>length</code> a non-negative whole number (<code>93.923</code>) and the pad
-a single character (<code>93.922</code>); the arguments are checked from left to right,
-and a fifth raises <code>93.902</code>. A <code>length</code> of 0 inserts <code>newstr</code>.</p>
+a positive whole number (<code>93.924</code>), <code>length</code> a non-negative whole number
+(<code>93.923</code>) and the pad a single character (<code>93.922</code>); a fifth raises <code>93.902</code>,
+and a call with more than one argument in error raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A <code>length</code> of 0
+inserts <code>newstr</code>.</p>
 <pre><code class="language-rexx">s = 'abcdef'
 say s~replaceAt('XY', 3) s~replaceAt('XY', 3, 1) s~replaceAt('XY', 3, 0)
 say s~replaceAt('XY', 3, 3) s~replaceAt('XY', 3, 9) s~replaceAt('XY', 1, 2)
@@ -1273,9 +1277,9 @@ say s~replaceAt('XY', 7) s~replaceAt('', 3, 2) s~replaceAt(12, 3)
 say s~replaceAt('XY', 9)'|' s~replaceAt('XY', 9, 1, '*')
 call try "s~replaceAt"
 call try "s~replaceAt('XY')"
-call try "s~replaceAt(.nil, 0, -1, '**')"
-call try "s~replaceAt('X', 0, -1, '**')"
-call try "s~replaceAt('X', 1, -1, '**')"
+call try "s~replaceAt(.nil, 1)"
+call try "s~replaceAt('X', 0)"
+call try "s~replaceAt('X', 1, -1)"
 call try "s~replaceAt('X', 1, 1, '**')"
 call try "s~replaceAt('X', 1, 1, '')"
 call try "s~replaceAt('X', 1, 1, '*', 1)"
@@ -1294,9 +1298,9 @@ abcdefXY abef ab12ef
 abcdef  XY| abcdef**XY
 s~replaceAt =&gt; 93.903
 s~replaceAt('XY') =&gt; 93.903
-s~replaceAt(.nil, 0, -1, '**') =&gt; 88.909
-s~replaceAt('X', 0, -1, '**') =&gt; 93.924
-s~replaceAt('X', 1, -1, '**') =&gt; 93.923
+s~replaceAt(.nil, 1) =&gt; 88.909
+s~replaceAt('X', 0) =&gt; 93.924
+s~replaceAt('X', 1, -1) =&gt; 93.923
 s~replaceAt('X', 1, 1, '**') =&gt; 93.922
 s~replaceAt('X', 1, 1, '') =&gt; 93.922
 s~replaceAt('X', 1, 1, '*', 1) =&gt; 93.902
@@ -1387,20 +1391,21 @@ bad: say arg(1) '=&gt;' condition('o')~code
 2~round(1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.string.modulo"><a href="#r-class.string.modulo">[class.string.modulo]</a></div>
-<p><code>modulo</code> answers the remainder of the receiver divided by its argument <code>n</code>.
-The answer is never negative and is less than <code>n</code>, so for a negative receiver
+<p><code>modulo</code> answers the remainder of the receiver divided by its argument <code>n</code>. The
+answer is never negative and is less than <code>n</code>, so for a negative receiver
 <code>(-7)~modulo(4)</code> is 1. The receiver must be a number (<code>SYNTAX 93.943</code>) and a
 whole number (<code>93.940</code>): a number written with no period and no exponent is a
 whole number whatever its length, and any other number must be exactly whole,
 without rounding, and its value must have at most <code>NUMERIC DIGITS</code> digits. The
 argument is required (<code>93.903</code>) and must be a positive whole number (<code>93.907</code>)
-in the same sense, checked after the receiver; a second argument raises
-<code>93.902</code>. An argument that is not a string is converted to a number as
-<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says, as the other numeric
-arguments are. The remainder is found as
-<a href="../numbers/arithmetic.html#r-num.arithmetic.integer">the <code>//</code> operator</a> finds it, and written as that
-operator writes it, so a quotient wider than <code>NUMERIC DIGITS</code> raises
-<code>SYNTAX 26.12</code>, for a negative receiver too.</p>
+in the same sense; a second argument raises <code>93.902</code>. A call whose receiver and
+argument are both in error raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. An argument that is not a string is
+converted to a number as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says, as
+the other numeric arguments are. The remainder is found as <a href="../numbers/arithmetic.html#r-num.arithmetic.integer">the <code>//</code>
+operator</a> finds it, and written as that operator
+writes it, so a quotient wider than <code>NUMERIC DIGITS</code> raises <code>SYNTAX 26.12</code>, for
+a negative receiver too.</p>
 <pre><code class="language-rexx">say 9~modulo(4) (-7)~modulo(4) 0~modulo(5) '1e2'~modulo(7) 12~modulo(' 5 ')
 say '1.0'~modulo(5) 9~modulo(5.0) '11.0'~modulo(5) (9 // 4)
 call try "10~modulo"
@@ -1409,8 +1414,7 @@ call try "10~modulo(-3)"
 call try "10~modulo(3.5)"
 call try "10~modulo('x')"
 call try "10.5~modulo(3)"
-call try "10.5~modulo(0)"
-call try "'x'~modulo('y')"
+call try "'x'~modulo(3)"
 call try "'1E+30'~modulo(7)"
 call try "10~modulo(3, 4)"
 numeric digits 3
@@ -1436,8 +1440,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 10~modulo(3.5) =&gt; 93.907
 10~modulo('x') =&gt; 93.907
 10.5~modulo(3) =&gt; 93.940
-10.5~modulo(0) =&gt; 93.940
-'x'~modulo('y') =&gt; 93.943
+'x'~modulo(3) =&gt; 93.943
 '1E+30'~modulo(7) =&gt; 93.940
 10~modulo(3, 4) =&gt; 93.902
 6 1.00
@@ -1565,28 +1568,23 @@ say 'a-b'~translate('+', '-') 'hello world'~wordIndex(2) 'ab'~copies(3)
 a+b 7 ababab
 </code></pre>
 <div class="rule" id="r-class.string.builtins.errors"><a href="#r-class.string.builtins.errors">[class.string.builtins.errors]</a></div>
-<p>A method of the list is checked as the method itself checks it, argument by
-argument and from left to right, without the earlier check that a function
-call makes. The function form first checks the form of its arguments, as
-<a href="../conventions.html#r-conv.check.order">the order rule</a> says, and raises the codes of
-<a href="../conventions.html#r-conv.whole.form">the whole-number</a>, <a href="../conventions.html#r-conv.pad">pad</a> and
-<a href="../builtins/index.html#r-bif.index.call.count">argument count</a> rules. In the message form an
-argument that fails its form raises the code of its range check. The message
-form raises these errors: for a position that is not a positive whole number,
-<code>SYNTAX 93.924</code> whatever the value is, <code>abc</code> or 0 or 1.5; for a length that is
-not a non-negative whole number, <code>93.923</code>; for a pad that is not a single
-character, <code>93.922</code>; for a missing argument, or an omitted one that is
-followed by another, <code>93.903</code>; and for too many arguments, <code>93.902</code>, as
-<a href="index.html#r-class.index.args.count">the argument rules</a> say. A count or a number of
-copies that is not a non-negative whole number raises <code>93.906</code>, and the other
-arguments raise the code that the page of the builtin gives. Because the
-message form checks one argument at a time, a bad position before a length
-that is not a number is the error raised, where the function form raises 40.12
-for the length first.</p>
+<p>A method of the list is checked as the method itself checks it, without the
+earlier check that a function call makes. The function form checks the form of
+its arguments, as <a href="../conventions.html#r-conv.check.order">the conventions</a> say, and raises the
+codes of <a href="../conventions.html#r-conv.whole.form">the whole-number</a>, <a href="../conventions.html#r-conv.pad">pad</a> and <a href="../builtins/index.html#r-bif.index.call.count">argument
+count</a> rules. In the message form an argument that
+fails its form raises the code of its range check. The message form raises
+these errors: for a position that is not a positive whole number, <code>SYNTAX 93.924</code> whatever the value is, <code>abc</code> or 0 or 1.5; for a length that is not a
+non-negative whole number, <code>93.923</code>; for a pad that is not a single character,
+<code>93.922</code>; for a missing argument, or an omitted one that is followed by
+another, <code>93.903</code>; and for too many arguments, <code>93.902</code>, as <a href="index.html#r-class.index.args.count">the argument
+rules</a> say. A count or a number of copies that is not
+a non-negative whole number raises <code>93.906</code>, and the other arguments raise the
+code that the page of the builtin gives. A call with more than one argument in
+error raises the error of one of them, in either form, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">call try "'abc'~substr('x')"
 call try "substr('abc', 'x')"
-call try "'abc'~substr(0, 'x')"
-call try "substr('abc', 0, 'x')"
 call try "'abc'~left('x')"
 call try "left('abc', 'x')"
 call try "'abc'~left(1, '**')"
@@ -1610,8 +1608,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">'abc'~substr('x') =&gt; 93.924
 substr('abc', 'x') =&gt; 40.12
-'abc'~substr(0, 'x') =&gt; 93.924
-substr('abc', 0, 'x') =&gt; 40.12
 'abc'~left('x') =&gt; 93.923
 left('abc', 'x') =&gt; 40.12
 'abc'~left(1, '**') =&gt; 93.922

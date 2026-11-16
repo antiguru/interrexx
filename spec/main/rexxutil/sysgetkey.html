@@ -185,15 +185,15 @@ start a second interpreter with <code>rexx</code> on a program of their own and 
 the input.</p>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
 <div class="rule" id="r-util.sysgetkey.args"><a href="#r-util.sysgetkey.args">[util.sysgetkey.args]</a></div>
-<p><code>option</code> is an optional string. Read in any case, it is <code>ECHO</code> or <code>NOECHO</code>;
-any other string, the null string and a string with a blank around the word
-included, raises <code>SYNTAX 40.920</code>. An omitted <code>option</code> is the same as <code>ECHO</code>.
-A second argument raises <code>SYNTAX 88.922</code> before <code>option</code> is read at all, so
-before a <code>.nil</code> or a wrong option is reported
-(<a href="index.html#r-util.index.deviation.101">Deviation 101</a>); <code>.nil</code> and
-an object with no string value raise <code>SYNTAX 88.909</code>; any other object is
-replaced by its string (<a href="index.html#r-util.index.args">the argument rule</a>). An omitted
-place at the end of the call adds nothing to the count.</p>
+<p><code>option</code> is an optional string. Read in any case, it is <code>ECHO</code> or <code>NOECHO</code>; any
+other string, the null string and a string with a blank around the word
+included, raises <code>SYNTAX 40.920</code>. An omitted <code>option</code> is the same as <code>ECHO</code>. A
+second argument raises <code>SYNTAX 88.922</code>, and a call with a wrong <code>option</code> as
+well raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says; <code>.nil</code> and an object with no string value
+raise <code>SYNTAX 88.909</code>; any other object is replaced by its string (<a href="index.html#r-util.index.args">the
+argument rule</a>). An omitted place at the end of the call
+adds nothing to the count.</p>
 <pre><code class="language-rexx">call try "SysGetKey('bad')"
 call try "SysGetKey('')"
 call try "SysGetKey('E')"
@@ -202,7 +202,6 @@ call try "SysGetKey(' echo')"
 call try "SysGetKey('echo ')"
 call try "SysGetKey('echoes')"
 call try "SysGetKey('echo', 'x')"
-call try "SysGetKey('bad', 'x')"
 call try "SysGetKey(.object~new)"
 call try "SysGetKey(.nil)"
 call try "'['SysGetKey('echo')']'"
@@ -227,7 +226,6 @@ e: say condition('o')~code
 40.920
 40.920
 40.920
-88.922
 88.922
 88.909
 88.909

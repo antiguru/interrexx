@@ -275,15 +275,16 @@ at 5
 <div class="rule" id="r-class.collection.hasindex"><a href="#r-class.collection.hasindex">[class.collection.hasindex]</a></div>
 <p><code>hasIndex(index)</code> answers what the answer of <code>allIndexes</code> answers to
 <code>hasItem</code> for the same argument, unchanged. It takes exactly one argument:
-none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>, in both
-cases before <code>allIndexes</code> is sent, so that a collection that leaves
-<code>allIndexes</code> abstract raises 93.965 only for a call with one argument. A
-<code>.nil</code> index is a valid argument.</p>
+none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>. A collection
+that leaves <code>allIndexes</code> abstract raises 93.965 when <code>hasIndex</code> sends it; with
+a wrong count as well, the call raises one of the two errors, and whether
+<code>allIndexes</code> is sent is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. A <code>.nil</code> index is a valid argument.</p>
 <pre><code class="language-rexx">c = .collection~new
-call try 'c~hasIndex'
-call try 'c~hasIndex(1, 2)'
-call try 'c~hasIndex(1)'
 b = .box~new(.array~of('x', 'y'))
+call try 'b~hasIndex'
+call try 'b~hasIndex(1, 2)'
+call try 'c~hasIndex(1)'
 say b~hasIndex('x') b~hasIndex('z') b~hasIndex(.nil)
 exit
 try:
@@ -303,8 +304,8 @@ bad: say arg(1) '=&gt;' condition('o')~code
   expose d
   return d~allindexes~sort
 </code></pre>
-<pre><code class="language-output">c~hasIndex =&gt; 93.901
-c~hasIndex(1, 2) =&gt; 93.902
+<pre><code class="language-output">b~hasIndex =&gt; 93.901
+b~hasIndex(1, 2) =&gt; 93.902
 c~hasIndex(1) =&gt; 93.965
 1 0 0
 </code></pre>

@@ -254,14 +254,12 @@ value as <a href="../conventions.html#r-conv.string.object">the string-value rul
 text that its <code>makeString</code> gives; <code>.nil</code> and an object with no <code>makeString</code>
 raise <code>SYNTAX 93.938</code>. An instance of a subclass of <code>String</code> is stored as its
 own characters (<a href="#r-class.properties.deviation.109">the deviation rule</a>). The
-name is read as a string as for a directory (<a href="directory.html#r-class.directory.indexes">the
-index rule</a>), and <code>.nil</code> as the name raises
-<code>SYNTAX 88.909</code>. The three answer nothing, and none of them sends <code>put</code>, <code>[]=</code>
-or <code>setProperty</code> to the receiver. <code>put</code> and <code>setProperty</code> take exactly two
-arguments and <code>[]=</code> is the assignment <code>[name] = value</code>: fewer raises
-<code>SYNTAX 93.901</code>, an omitted place before the last argument given raises
-<code>SYNTAX 93.903</code>, and a third argument raises <code>SYNTAX 93.902</code>. The count is
-checked first, then the value, then the name.</p>
+name is read as a string as for a directory (<a href="directory.html#r-class.directory.indexes">the index
+rule</a>), and <code>.nil</code> as the name raises <code>SYNTAX 88.909</code>. The three answer nothing, and none of them sends <code>put</code>, <code>[]=</code> or
+<code>setProperty</code> to the receiver. <code>put</code> and <code>setProperty</code> take exactly two
+arguments and <code>[]=</code> is the assignment <code>[name] = value</code>: fewer raises <code>SYNTAX 93.901</code>, an omitted place before the last argument given raises <code>SYNTAX 93.903</code>, and a third argument raises <code>SYNTAX 93.902</code>. A call with more than one
+fault, among the count, the value and the name, raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">p = .properties~new
 p~put('v1', 'a')
 p['b'] = 7
@@ -280,8 +278,6 @@ call try 'p~put(, "x")'
 call try 'p~setProperty("x")'
 call try 'p~setProperty(, "x")'
 call try 'p~put("x", "y", "z")'
-call try 'p~put(.nil, .nil)'
-call try 'p~setProperty(.nil, .nil)'
 exit
 try:
   signal on syntax name bad
@@ -309,8 +305,6 @@ p~put(, "x") =&gt; 93.903
 p~setProperty("x") =&gt; 93.901
 p~setProperty(, "x") =&gt; 93.903
 p~put("x", "y", "z") =&gt; 93.902
-p~put(.nil, .nil) =&gt; 93.938
-p~setProperty(.nil, .nil) =&gt; 93.938
 </code></pre>
 <div class="rule" id="r-class.properties.unchecked"><a href="#r-class.properties.unchecked">[class.properties.unchecked]</a></div>
 <p><code>setEntry</code>, the assignment through <code>unknown</code> (<code>p~name = x</code>) and the methods
@@ -555,10 +549,11 @@ text. A string is accepted only as <code>0</code> or <code>1</code>, and a logic
 raise <code>SYNTAX 34.901</code>. A value that has no <code>datatype</code> method, <code>.nil</code> and an
 instance of a class that does not understand the message among them, raises
 <code>SYNTAX 97.1</code>; one whose <code>datatype</code> answers 1 but that is not a logical value
-raises <code>SYNTAX 34.1</code>, and one that answers 0 raises <code>SYNTAX 34.901</code>. The
-method answers nothing and takes exactly two arguments, counted as for <code>put</code>:
-fewer raises <code>SYNTAX 93.901</code>, an omitted name before the value <code>SYNTAX 93.903</code>
-and a third <code>SYNTAX 93.902</code>; the value is checked before the name.</p>
+raises <code>SYNTAX 34.1</code>, and one that answers 0 raises <code>SYNTAX 34.901</code>. The method
+answers nothing and takes exactly two arguments, counted as for <code>put</code>: fewer
+raises <code>SYNTAX 93.901</code>, an omitted name before the value <code>SYNTAX 93.903</code> and a
+third <code>SYNTAX 93.902</code>. A call whose value and name are both in error raises the
+error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">p = .properties~new
 do v over .array~of('0', '1', .true, .false)
   p~setLogical('k', v)
@@ -575,7 +570,6 @@ call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
 call try 'p~setLogical("k")', 'one argument'
 call try 'p~setLogical("k", 1, 2)', 'three'
 call try 'p~setLogical(, 1)', 'omitted name'
-call try 'p~setLogical(.nil, .nil)', 'both nil'
 call try 'p~setLogical(.nil, 1)', 'name nil'
 exit
 try:
@@ -611,7 +605,6 @@ answers 0 =&gt; 34.901
 one argument =&gt; 93.901
 three =&gt; 93.902
 omitted name =&gt; 93.903
-both nil =&gt; 97.1
 name nil =&gt; 88.909
 </code></pre>
 <div class="rule" id="r-class.properties.setwhole"><a href="#r-class.properties.setwhole">[class.properties.setwhole]</a></div>
@@ -641,7 +634,6 @@ call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
 call try 'p~setWhole("k")', 'one argument'
 call try 'p~setWhole("k", 1, 2)', 'three'
 call try 'p~setWhole(, 1)', 'omitted name'
-call try 'p~setWhole(.nil, .nil)', 'both nil'
 call try 'p~setWhole(.nil, 1)', 'name nil'
 exit
 try:
@@ -675,7 +667,6 @@ answers 0 =&gt; 93.905
 one argument =&gt; 93.901
 three =&gt; 93.902
 omitted name =&gt; 93.903
-both nil =&gt; 97.1
 name nil =&gt; 88.909
 </code></pre>
 <h2 id="loading-and-saving"><a class="header" href="#loading-and-saving">Loading and saving</a></h2>

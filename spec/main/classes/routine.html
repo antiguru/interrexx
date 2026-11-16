@@ -221,19 +221,17 @@ Object 1
 <h3 id="new"><a class="header" href="#new">new</a></h3>
 <div class="rule" id="r-class.routine.new"><a href="#r-class.routine.new">[class.routine.new]</a></div>
 <p><code>new</code> makes a routine from a name, a source and a context, with the same
-arguments, the same checks, in the same order, and the same errors as
-<a href="method.html#r-class.method.new">the <code>new</code> of <code>Method</code></a>: the name and the source are
-required (<code>SYNTAX 88.901</code>), a name that <a href="index.html#r-class.index.string">gives no string</a>,
-<code>.nil</code> among
+arguments, the same checks and the same errors as <a href="method.html#r-class.method.new">the <code>new</code> of
+<code>Method</code></a>: the name and the source are required (<code>SYNTAX 88.901</code>), a name that <a href="index.html#r-class.index.string">gives no string</a>, <code>.nil</code> among
 them, raises <code>88.909</code>, a context that is not <code>PROGRAMSCOPE</code>, a <code>Method</code>, a
 <code>Routine</code> or a <code>Package</code> raises <code>40.904</code>, and a source that does not translate
 raises its translation error, and the code does not run. The source is read as
-<a href="method.html#r-class.method.new.source">the source rule</a> says, with the messages of
-<a href="method.html#r-class.method.new.sends">the sends rule</a>, and the context decides what the
-routine finds as <a href="method.html#r-class.method.new.context">the context rule</a> says. The
-arguments from the fourth on are passed to <code>init</code> of the new object, and the
-class that received <code>new</code> is the class of the answer, as for a method. The
-name is the name of the routine's package.</p>
+<a href="method.html#r-class.method.new.source">the source rule</a> says, with the messages of <a href="method.html#r-class.method.new.sends">the
+sends rule</a>, and the context decides what the routine
+finds as <a href="method.html#r-class.method.new.context">the context rule</a> says. The arguments
+from the fourth on are passed to <code>init</code> of the new object, and the class that
+received <code>new</code> is the class of the answer, as for a method. The name is the
+name of the routine's package.</p>
 <pre><code class="language-rexx">r = .routine~new('who', 'return "I am" .context~executable~class~id')
 say r~call r~package~name
 d = .routine~new('d', 'return helper() .here~class~id')
@@ -277,7 +275,7 @@ help Class
 init 2 a b
 MINE
 </code></pre>
-<pre><code class="language-rexx">call try '.routine~new("n", .nil, 7)'
+<pre><code class="language-rexx">call try '.routine~new("n", .nil)'
 call try '.routine~new("n", "nop", 7)'
 exit
 try:
@@ -288,7 +286,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">.routine~new("n", .nil, 7) =&gt; 93.961
+<pre><code class="language-output">.routine~new("n", .nil) =&gt; 93.961
 .routine~new("n", "nop", 7) =&gt; 40.904
 </code></pre>
 <div class="rule" id="r-class.routine.new.sends"><a href="#r-class.routine.new.sends">[class.routine.new.sends]</a></div>
@@ -344,13 +342,12 @@ init 0
 <h3 id="newfile"><a class="header" href="#newfile">newFile</a></h3>
 <div class="rule" id="r-class.routine.newfile"><a href="#r-class.routine.newfile">[class.routine.newfile]</a></div>
 <p><code>newFile</code> makes a routine from the lines of a file, with the arguments, the
-checks, their order and the errors of <a href="method.html#r-class.method.newfile">the <code>newFile</code> of
-<code>Method</code></a>: the file name and an optional context, no
-third argument (<code>SYNTAX 93.902</code>), <code>.nil</code> or an object that <a href="index.html#r-class.index.string">gives no
-string</a> as the name raises <code>88.909</code>, a context that does
-not fit raises <code>40.904</code> before the file is looked for, and a file that cannot
-be read raises <code>SYNTAX 3.1</code>. The routine's package is named by the file name
-as it was given. Its source is the lines of the file before the first
+checks and the errors of <a href="method.html#r-class.method.newfile">the <code>newFile</code> of <code>Method</code></a>:
+the file name and an optional context, no third argument (<code>SYNTAX 93.902</code>),
+<code>.nil</code> or an object that <a href="index.html#r-class.index.string">gives no string</a> as the name
+raises <code>88.909</code>, a context that does not fit raises <code>40.904</code>, and a file that
+cannot be read raises <code>SYNTAX 3.1</code>. The routine's package is named by the file
+name as it was given. Its source is the lines of the file before the first
 directive, except that a first line that begins with <code>#!</code> is not part of it,
 and the directives of the file still make the classes and routines of its
 package, which its code can name. <code>call</code> runs the lines before the first
@@ -370,12 +367,12 @@ say r~class~id r~source~items (r~package~name == f)
 say r~package~classes~items r~package~routines~items
 say r~call('x')
 say .mine~newFile(f)~class~id
-call sysfiledelete f
 call try '.routine~newFile("class_routine_newfile_none.tmp")'
 call try '.routine~newFile()'
 call try '.routine~newFile(.nil)'
 call try '.routine~newFile(f, "PROGRAMSCOPE", 1)'
-call try '.routine~newFile("class_routine_newfile_none.tmp", "bad")'
+call try '.routine~newFile(f, "bad")'
+call sysfiledelete f
 exit
 try:
   signal on syntax name bad
@@ -398,7 +395,7 @@ MINE
 .routine~newFile() =&gt; 88.901
 .routine~newFile(.nil) =&gt; 88.909
 .routine~newFile(f, "PROGRAMSCOPE", 1) =&gt; 93.902
-.routine~newFile("class_routine_newfile_none.tmp", "bad") =&gt; 40.904
+.routine~newFile(f, "bad") =&gt; 40.904
 </code></pre>
 <pre><code class="language-rexx">f = 'class_routine_shebang_zq.tmp'
 call sysfiledelete f

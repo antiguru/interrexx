@@ -412,13 +412,12 @@ at override bracket override
 there, and answers no value. <code>a[i] = v</code> is the message <code>[]=</code> with the item
 first and the indexes after, and it is <code>put</code> under another name. The method
 needs at least the item and one index: fewer arguments raise <code>SYNTAX 93.901</code>,
-and an omitted item raises <code>SYNTAX 93.903</code>; both come before any check of the
-indexes. The indexes are read as <a href="#r-class.array.indexes">the index rule</a> says.
-A put beyond the present size of a dimension makes the dimension as large as
-the index, and the array grows. The first put into an array that has no
-dimension yet gives it as many dimensions as it has indexes, each as large as
-its index. <code>.nil</code> is an item like any other. A subclass's own <code>put</code> is not
-asked for <code>[]=</code>, nor the other way round.</p>
+and an omitted item raises <code>SYNTAX 93.903</code>. The indexes are read as <a href="#r-class.array.indexes">the index
+rule</a> says. A put beyond the present size of a dimension
+makes the dimension as large as the index, and the array grows. The first put
+into an array that has no dimension yet gives it as many dimensions as it has
+indexes, each as large as its index. <code>.nil</code> is an item like any other. A
+subclass's own <code>put</code> is not asked for <code>[]=</code>, nor the other way round.</p>
 <pre><code class="language-rexx">a = .array~new
 a~put('x', 3)
 say a~dimension a~size a~items
@@ -531,7 +530,6 @@ call try '.array~of(1)~insert(1, 0)'
 call try '.array~of(1)~insert(1, "x")'
 call try '.array~of(1)~insert(1, 1, 1)'
 call try '.array~new(2, 2)~insert(1, 0)'
-call try '.array~new(2, 2)~insert(1, 1, 1)'
 exit
 try:
   signal on syntax name bad
@@ -551,7 +549,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .array~of(1)~insert(1, "x") =&gt; 93.907
 .array~of(1)~insert(1, 1, 1) =&gt; 93.902
 .array~new(2, 2)~insert(1, 0) =&gt; 93.954
-.array~new(2, 2)~insert(1, 1, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.array.insert.omitted"><a href="#r-class.array.insert.omitted">[class.array.insert.omitted]</a></div>
 <p>An <code>insert</code> whose item is omitted makes an empty slot where the item would
@@ -594,7 +591,6 @@ call try 'a~delete(0)'
 call try 'a~delete("x")'
 call try 'a~delete(.array~of(1, 2))'
 call try '.array~new(2, 2)~delete(1)'
-call try '.array~new(2, 2)~delete(1, 2)'
 exit
 try:
   signal on syntax name bad
@@ -615,7 +611,6 @@ a~delete(0) =&gt; 93.907
 a~delete("x") =&gt; 93.907
 a~delete(.array~of(1, 2)) =&gt; 93.926
 .array~new(2, 2)~delete(1) =&gt; 93.954
-.array~new(2, 2)~delete(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.array.remove"><a href="#r-class.array.remove">[class.array.remove]</a></div>
 <p><code>remove(index)</code> takes the item at the index out of its slot and answers it,
@@ -771,7 +766,7 @@ raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>
 say a~hasItem(1) a~hasItem('1') a~hasItem(1.0) a~hasItem('X') a~hasItem(.nil)
 say .array~of(1, , 3)~hasItem(.nil)
 call try 'a~hasItem'
-call try 'a~hasItem(, 1)'
+call try 'a~hasItem(1, 1)'
 call try 'a~hasItem(1, 2)'
 exit
 try:
@@ -785,7 +780,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">1 1 0 0 1
 0
 a~hasItem =&gt; 93.903
-a~hasItem(, 1) =&gt; 93.902
+a~hasItem(1, 1) =&gt; 93.902
 a~hasItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.array.index"><a href="#r-class.array.index">[class.array.index]</a></div>
@@ -1022,7 +1017,7 @@ b = .array~new(2, 2)~fill('k')
 say b~items b[2, 2]
 say .array~new~fill('q')~items
 call try 'a~fill'
-call try 'a~fill(, 1)'
+call try 'a~fill(1, 1)'
 call try 'a~fill(1, 2)'
 exit
 try:
@@ -1037,7 +1032,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 4 k
 0
 a~fill =&gt; 93.903
-a~fill(, 1) =&gt; 93.902
+a~fill(1, 1) =&gt; 93.902
 a~fill(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.array.dimension"><a href="#r-class.array.dimension">[class.array.dimension]</a></div>
@@ -1085,20 +1080,22 @@ a~dimensions(1) =&gt; 93.902
 <div class="rule" id="r-class.array.section"><a href="#r-class.array.section">[class.array.section]</a></div>
 <p><code>section(start, count)</code> answers a new array that holds the entries from the
 index <code>start</code> on: <code>count</code> of them, or all of them up to the end of the array
-when <code>count</code> is omitted or runs past the end. The first entry of the section
-is at index 1, and an empty slot of the receiver stays an empty slot. The
-items are the receiver's own objects, and the receiver is not changed. A
-<code>start</code> beyond the size of the receiver, or a <code>count</code> of 0, gives an array
-with no entries and no dimension. The index is read as <a href="#r-class.array.indexes">the index
+when <code>count</code> is omitted or runs past the end. The first entry of the section is
+at index 1, and an empty slot of the receiver stays an empty slot. The items
+are the receiver's own objects, and the receiver is not changed. A <code>start</code>
+beyond the size of the receiver, or a <code>count</code> of 0, gives an array with no
+entries and no dimension. The index is read as <a href="#r-class.array.indexes">the index
 rule</a> says, so an array of one index is accepted, and
 <code>SYNTAX 93.907</code> is raised for a <code>start</code> that is not a whole number of at least</p>
 <ol>
 <li>The <code>count</code> is read as <a href="#r-class.array.indexes">the index rule</a> reads an
 index and must be a whole number of 0 or more, or <code>SYNTAX 93.923</code> is raised. No
-<code>start</code>, or an omitted one, raises <code>SYNTAX 93.903</code>, and a third
-argument <code>SYNTAX 93.902</code>; for an array of more than one dimension
-<code>SYNTAX 93.954</code> is raised after the count of arguments has been checked,
-whatever they are. The answer is an instance of the class of the receiver.</li>
+<code>start</code>, or an omitted one, raises <code>SYNTAX 93.903</code>, and a third argument
+<code>SYNTAX 93.902</code>; for an array of more than one dimension <code>SYNTAX 93.954</code> is
+raised, whatever the arguments are when they are not too many; a call with too
+many raises one of the two errors, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. The answer is an instance of the class of
+the receiver.</li>
 </ol>
 <pre><code class="language-rexx">a = .array~of('a', 'b', , 'd', 'e')
 s = a~section(2)
@@ -1247,25 +1244,23 @@ a~supplier(1) =&gt; 93.902
 </code></pre>
 <h2 id="the-items-as-text"><a class="header" href="#the-items-as-text">The items as text</a></h2>
 <div class="rule" id="r-class.array.makestring"><a href="#r-class.array.makestring">[class.array.makestring]</a></div>
-<p><code>makeString(mode, separator)</code> answers a string made from the items of the
-array in the order of the slots, with the first dimension changing fastest,
-and <code>toString</code> is the same method under another name. The first letter of
-<code>mode</code>, in either case, chooses the form and nothing after it counts: <code>L</code> puts
-the separator between one item and the next, and is the form when <code>mode</code> is
+<p><code>makeString(mode, separator)</code> answers a string made from the items of the array
+in the order of the slots, with the first dimension changing fastest, and
+<code>toString</code> is the same method under another name. The first letter of <code>mode</code>,
+in either case, chooses the form and nothing after it counts: <code>L</code> puts the
+separator between one item and the next, and is the form when <code>mode</code> is
 omitted, and <code>C</code> joins the items directly. The separator is read from its
-string value and is the line end <code>'0A'x</code> when it is omitted; it may be the
-null string. A <code>mode</code> that does not begin with <code>L</code> or <code>C</code> raises
-<code>SYNTAX 93.915</code>; a separator with <code>C</code>, even a null one, raises
-<code>SYNTAX 93.902</code>, as a third argument does; a mode or a separator that has no
-string value raises <code>SYNTAX 88.909</code>. The mode is checked first, its string
-value and then its letter, and the separator after it. An item that is a string
-is used as it is, and
-any other object, <code>.nil</code> included, gives the answer of its <code>objectName</code>
-message (a whole-number answer is written as its digits, <a href="#r-class.array.deviation.107">Deviation
-107</a>). An empty slot gives nothing, and no
-separator is added for it, but an
-item that is the null string still takes its separator. An array with no item
-answers the null string.</p>
+string value and is the line end <code>'0A'x</code> when it is omitted; it may be the null
+string. A <code>mode</code> that does not begin with <code>L</code> or <code>C</code> raises <code>SYNTAX 93.915</code>; a
+separator with <code>C</code>, even a null one, raises <code>SYNTAX 93.902</code>, as a third
+argument does; a mode or a separator that has no string value raises <code>SYNTAX 88.909</code>. The string value of the mode is read before that of the separator. A
+call whose mode and separator are both in error raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. An item that is a
+string is used as it is, and any other object, <code>.nil</code> included, gives the
+answer of its <code>objectName</code> message (a whole-number answer is written as its
+digits, <a href="#r-class.array.deviation.107">Deviation 107</a>). An empty slot gives
+nothing, and no separator is added for it, but an item that is the null string
+still takes its separator. An array with no item answers the null string.</p>
 <pre><code class="language-rexx">a = .array~of(1, 2, 3)
 say a~makeString('L', '-') a~makeString('Char') a~toString(, '+')
 say a~makeString~c2x

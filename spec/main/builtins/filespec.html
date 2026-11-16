@@ -233,12 +233,10 @@ b b
 <div class="rule" id="r-bif.filespec.option"><a href="#r-bif.filespec.option">[bif.filespec.option]</a></div>
 <p>The first character of <code>option</code> picks the piece, in either case, and the
 characters after it are ignored. The pieces are <code>Drive</code>, <code>Extension</code>,
-<code>Location</code>, <code>Name</code> and <code>Path</code>, so the first character is one of <code>D</code>, <code>E</code>,
-<code>L</code>, <code>N</code> and <code>P</code>. Any other first character, and the null string, raises
-<code>SYNTAX 40.904</code>. A blank is a character: it does not pick a piece, and
-nothing strips it. The checks of <a href="#r-bif.filespec.args">the arguments</a> come
-first, so a call with a wrong <code>option</code> and a wrong argument raises the
-error of the argument.</p>
+<code>Location</code>, <code>Name</code> and <code>Path</code>, so the first character is one of <code>D</code>, <code>E</code>, <code>L</code>,
+<code>N</code> and <code>P</code>. Any other first character, and the null string, raises <code>SYNTAX 40.904</code>. A blank is a character: it does not pick a piece, and nothing strips
+it. A call with a wrong <code>option</code> and a wrong argument raises the error of one
+of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">f = '/usr/lib/libm.so'
 say filespec('Name', f) filespec('NAMEXYZ', f) filespec('n', f)
 say filespec('path', f) filespec('Location', f) filespec('P', f)
@@ -254,13 +252,13 @@ say filespec(' N', f)
 c: say condition('o')~code
 signal on syntax name d
 say filespec('X', .nil)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '40.904 88.909') &gt; 0
 signal on syntax name e
-say filespec('X', f, 'x')
+say filespec('N', f, 'x')
 e: say condition('o')~code
 signal on syntax name g
 say filespec('X')
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '40.904 88.901') &gt; 0
 </code></pre>
 <pre><code class="language-output">libm.so libm.so libm.so
 /usr/lib/ /usr/lib/ /usr/lib/
@@ -268,9 +266,9 @@ g: say condition('o')~code
 40.904
 40.904
 40.904
-88.909
+1
 88.922
-88.901
+1
 </code></pre>
 <h2 id="the-pieces"><a class="header" href="#the-pieces">The pieces</a></h2>
 <div class="rule" id="r-bif.filespec.path"><a href="#r-bif.filespec.path">[bif.filespec.path]</a></div>

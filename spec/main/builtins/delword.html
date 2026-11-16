@@ -188,8 +188,8 @@ and <code>string</code>, its first argument, is the receiver; <code>n</code> and
 message's arguments, in that order. <code>string</code> is a
 <a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code> is a <a href="index.html#r-bif.index.words.number">word
 number</a>, and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a> that counts words. The arguments are checked in
-the <a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count
+<a href="../conventions.html#r-conv.length.check">length</a> that counts words. The arguments are checked as
+<a href="../conventions.html#r-conv.check.order">the conventions</a> give, and the argument count
 by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and
 three is the most.</p>
 <pre><code class="language-rexx">say delword('Pack my box jugs', 2, 1) 'Pack my box jugs'~delword(2, 1) '[' || 'Pack my box jugs'~delword(2) || ']'
@@ -209,11 +209,11 @@ signal on syntax name e
 say delword(, 1)
 e: say condition('o')~code
 signal on syntax name f
-say delword('a b', 'x', -1)
+say delword('a b', 'x')
 f: say condition('o')~code
 signal on syntax name g
 say delword('a b', 0, -1)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.924 93.923') &gt; 0
 signal on syntax name h
 say delword('a b', )
 h: say condition('o')~code
@@ -225,7 +225,7 @@ h: say condition('o')~code
 40.4
 40.5
 40.12
-93.924
+1
 40.3
 </code></pre>
 <div class="rule" id="r-bif.delword.length.default"><a href="#r-bif.delword.length.default">[bif.delword.length.default]</a></div>

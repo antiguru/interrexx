@@ -198,7 +198,7 @@ letter</a>, and <code>osep</code> and <code>isep</code> are
 <a href="#r-bif.date.sep.char">separators</a>.</p>
 <pre><code class="language-rexx">say date('S', '1 Jan 2000') date(, '1 Jan 2000') date('S', '20000101', 'S', , )
 signal on syntax name a
-say date('S', '1 Jan 2000', 'N', '', '', 1)
+say date('S', '1 Jan 2000', 'N', , , 1)
 a: say condition('o')~code
 signal on syntax name b
 say 'S'~date
@@ -698,63 +698,34 @@ h: say condition('o')~code
 40.44
 40.904
 </code></pre>
-<h2 id="the-order-of-the-checks"><a class="header" href="#the-order-of-the-checks">The order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-bif.date.order"><a href="#r-bif.date.order">[bif.date.order]</a></div>
-<p>A call is checked in this order, and the first failure is the one raised: the
-<a href="index.html#r-bif.index.call.count">argument count</a>; a missing <code>string</code> that an
-<code>informat</code> or <code>isep</code> needs (<a href="index.html#r-bif.index.dt.convert">40.5</a>); an <code>osep</code> with an
-<code>option</code> that <a href="#r-bif.date.sep.in.informat">does not apply it</a>; the form of
-<code>osep</code>; an <code>isep</code> with an <code>informat</code> that does not apply it; the form of
-<code>isep</code> (<a href="#r-bif.date.sep.char">40.43</a>); the letter of <code>informat</code>; the string
-itself (<code>40.19</code>, or <code>40.44</code> with an <code>isep</code>); and, last, the letter of
-<code>option</code>. So an <code>option</code> that is not a letter is raised only when the rest of
-the call is right.</p>
+<p>A call can fail these checks: the <a href="index.html#r-bif.index.call.count">argument count</a>; a
+missing <code>string</code> that an <code>informat</code> or <code>isep</code> needs
+(<a href="index.html#r-bif.index.dt.convert">40.5</a>); an <code>osep</code> with an <code>option</code> that <a href="#r-bif.date.sep.in.informat">does not
+apply it</a>; the form of <code>osep</code>; an <code>isep</code> with an
+<code>informat</code> that does not apply it; the form of <code>isep</code>
+(<a href="#r-bif.date.sep.char">40.43</a>); the letter of <code>informat</code>; the string itself
+(<code>40.19</code>, or <code>40.44</code> with an <code>isep</code>); and the letter of <code>option</code>. A call that
+fails more than one of these checks raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
-say date('B', 'junk', 'Q', 'ab', '-')
-a: say condition('o')~code
+say date('S', 'junk', 'Q', , 'ab')
+a: say wordpos(condition('o')~code, '40.43 40.904 40.19 40.44') &gt; 0
 signal on syntax name b
-say date('S', 'junk', 'Q', 'ab', '-')
+say date('X', '1 Jan 2000')
 b: say condition('o')~code
 signal on syntax name c
-say date('S', '5', 'B', 'ab', '-')
+say date('S', '1 Jan 2000', 'N', , , 1)
 c: say condition('o')~code
-signal on syntax name d
-say date('S', '5', 'B', , 'ab')
-d: say condition('o')~code
-signal on syntax name e
-say date('S', 'junk', 'Q', , 'ab')
-e: say condition('o')~code
-signal on syntax name f
-say date('S', 'junk', 'Q')
-f: say condition('o')~code
-signal on syntax name g
-say date('X', 'junk')
-g: say condition('o')~code
-signal on syntax name h
-say date('X', '1 Jan 2000')
-h: say condition('o')~code
-signal on syntax name i
-say date('X', , 'Q')
-i: say condition('o')~code
-signal on syntax name j
-say date('S', 'junk', 'N', , '-')
-j: say condition('o')~code
 </code></pre>
-<pre><code class="language-output">40.44
-40.43
-40.43
-40.44
-40.43
+<pre><code class="language-output">1
 40.904
-40.19
-40.904
-40.5
-40.44
+40.4
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The ANSI draft (9.8.1) has neither separators nor the options F,
-I, L and T. The reference manual does not give the order of the checks; this
-rule matches ooRexx.</p>
+I, L and T.</p>
 </blockquote>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-bif.date.deviation.165"><a href="#r-bif.date.deviation.165">[bif.date.deviation.165]</a></div>

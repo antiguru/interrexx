@@ -218,14 +218,15 @@ the null string, they are the entries of the
 <a href="#r-bif.value.directory"><code>.environment</code> directory</a>. When it is <code>ENVIRONMENT</code>, in
 any combination of cases and with nothing around it, they are the
 <a href="#r-bif.value.os">environment variables</a> of the operating system. Any other
-<code>selector</code> raises <code>SYNTAX 40.914</code>, and it is checked before <code>name</code> is, so a
-call with an invalid selector raises it also when <code>name</code> is invalid.</p>
+<code>selector</code> raises <code>SYNTAX 40.914</code>. A call whose <code>selector</code> and <code>name</code> are both
+invalid raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say value('x', , 'SYSTEM')
 a: say condition('o')~code
 signal on syntax name b
 say value('x y', , 'ENV')
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.914 40.26') &gt; 0
 signal on syntax name c
 say value('x', , 'ENVIRONMENT ')
 c: say condition('o')~code
@@ -235,7 +236,7 @@ d: say condition('o')~code
 say value('x', , 'Environment') '/' value('x', , '')
 </code></pre>
 <pre><code class="language-output">40.914
-40.914
+1
 40.914
 40.914
  / .X

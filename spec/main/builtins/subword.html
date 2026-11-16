@@ -187,8 +187,8 @@ whitespace between them as it is. Words are those of
 and <code>string</code>, its first argument, is the receiver. <code>string</code> is a
 <a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code> is a <a href="index.html#r-bif.index.words.number">word
 number</a>, and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a> that counts words. The arguments are checked in
-the <a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count
+<a href="../conventions.html#r-conv.length.check">length</a> that counts words. The arguments are checked as
+<a href="../conventions.html#r-conv.check.order">the conventions</a> give, and the argument count
 by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and
 three is the most.</p>
 <pre><code class="language-rexx">signal on syntax name a
@@ -198,7 +198,7 @@ signal on syntax name b
 say subword('a b', 1, -1)
 b: say condition('o')~code
 signal on syntax name c
-say subword('a b', 0, 'x')
+say subword('a b', 1, 'x')
 c: say condition('o')~code
 signal on syntax name d
 say subword('a b', 1, 1, 1)

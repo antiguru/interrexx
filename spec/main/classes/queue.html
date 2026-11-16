@@ -515,13 +515,13 @@ say q~allItems~makeString('L', ',') q~items
 call try 'x = q~queue("d")'
 call try 'x = q~push("d")'
 call try 'q~append'
-call try 'q~append(, 1)'
+call try 'q~append(1, 1)'
 call try 'q~append(1, 2)'
 call try 'q~queue'
-call try 'q~queue(, 1)'
+call try 'q~queue(1, 1)'
 call try 'q~queue(1, 2)'
 call try 'q~push'
-call try 'q~push(, 1)'
+call try 'q~push(1, 1)'
 call try 'q~push(1, 2)'
 say q~items
 exit
@@ -538,13 +538,13 @@ z,a,b,The NIL object,c 5
 x = q~queue("d") =&gt; 91.999
 x = q~push("d") =&gt; 91.999
 q~append =&gt; 93.903
-q~append(, 1) =&gt; 93.902
+q~append(1, 1) =&gt; 93.902
 q~append(1, 2) =&gt; 93.902
 q~queue =&gt; 93.903
-q~queue(, 1) =&gt; 93.902
+q~queue(1, 1) =&gt; 93.902
 q~queue(1, 2) =&gt; 93.902
 q~push =&gt; 93.903
-q~push(, 1) =&gt; 93.902
+q~push(1, 1) =&gt; 93.902
 q~push(1, 2) =&gt; 93.902
 7
 </code></pre>
@@ -655,7 +655,7 @@ say q~removeItem('a') q~allItems~makeString('L', ',')
 say q~removeItem('a') q~allItems~makeString('L', ',')
 say (q~removeItem('a') == .nil) q~items (q~removeItem(1.0) == .nil)
 call try 'q~removeItem'
-call try 'q~removeItem(, 1)'
+call try 'q~removeItem(1, 1)'
 call try 'q~removeItem(1, 2)'
 exit
 try:
@@ -670,7 +670,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 a b,1
 1 2 1
 q~removeItem =&gt; 93.903
-q~removeItem(, 1) =&gt; 93.902
+q~removeItem(1, 1) =&gt; 93.902
 q~removeItem(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.queue.removeitem.sends"><a href="#r-class.queue.removeitem.sends">[class.queue.removeitem.sends]</a></div>
@@ -757,7 +757,7 @@ say .queue~of(1)~hasItem(.nil)
 say q~index(1) q~index('x') q~index(.nil) (q~index('zz') == .nil)
 say .queue~of('p', 'q', 'q')~index('q')
 call try 'q~hasItem'
-call try 'q~hasItem(, 1)'
+call try 'q~hasItem(1, 1)'
 call try 'q~hasItem(1, 2)'
 call try 'q~index'
 call try 'q~index(1, 2)'
@@ -775,7 +775,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 1 2 3 1
 2
 q~hasItem =&gt; 93.903
-q~hasItem(, 1) =&gt; 93.902
+q~hasItem(1, 1) =&gt; 93.902
 q~hasItem(1, 2) =&gt; 93.902
 q~index =&gt; 93.903
 q~index(1, 2) =&gt; 93.902
@@ -912,18 +912,19 @@ q~empty(1) =&gt; 93.902
 </code></pre>
 <h2 id="taking-part-of-a-queue"><a class="header" href="#taking-part-of-a-queue">Taking part of a queue</a></h2>
 <div class="rule" id="r-class.queue.section"><a href="#r-class.queue.section">[class.queue.section]</a></div>
-<p><code>section(start, count)</code> answers a new queue that holds the items from the
-index <code>start</code> on: <code>count</code> of them, or all of them up to the tail when <code>count</code>
-is omitted or runs past the tail. A <code>count</code> of 0, or a <code>start</code> above the
-number of items, gives an empty queue. The new queue has its own indexes from
-1, the items are the receiver's own objects, and the receiver is not changed.
-The <code>start</code> is read as <a href="#r-class.queue.indexes">the index rule</a> says; the
-<code>count</code> must be a whole number that is not negative, read as the hint of
+<p><code>section(start, count)</code> answers a new queue that holds the items from the index
+<code>start</code> on: <code>count</code> of them, or all of them up to the tail when <code>count</code> is
+omitted or runs past the tail. A <code>count</code> of 0, or a <code>start</code> above the number of
+items, gives an empty queue. The new queue has its own indexes from 1, the
+items are the receiver's own objects, and the receiver is not changed. The
+<code>start</code> is read as <a href="#r-class.queue.indexes">the index rule</a> says; the <code>count</code>
+must be a whole number that is not negative, read as the hint of
 <a href="#r-class.queue.new"><code>new</code></a> is, or <code>SYNTAX 93.923</code> is raised. No <code>start</code>, or an
 omitted one, raises <code>SYNTAX 93.903</code>, and a third argument <code>SYNTAX 93.902</code>. The
 answer is an instance of the class of the receiver, so that a subclass gets a
-queue of its own class back.
-The arguments are counted first, then <code>start</code> is read, then <code>count</code>.</p>
+queue of its own class back. A call with more than one fault, among the number
+of arguments, <code>start</code> and <code>count</code>, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">q = .queue~of('a', 'b', 'c', 'd')
 s = q~section(2)
 say s~class~id s~allItems~makeString('L', ',')
@@ -940,7 +941,6 @@ call try 'q~section(.nil)'
 call try 'q~section("x")'
 call try 'q~section(1.5)'
 call try 'q~section(.array~of(1, 2))'
-call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, .nil)'
@@ -971,7 +971,6 @@ q~section(.nil) =&gt; 93.907
 q~section("x") =&gt; 93.907
 q~section(1.5) =&gt; 93.907
 q~section(.array~of(1, 2)) =&gt; 93.907
-q~section(0, -1) =&gt; 93.907
 q~section(1, -1) =&gt; 93.923
 q~section(1, "x") =&gt; 93.923
 q~section(1, .nil) =&gt; 93.923

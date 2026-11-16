@@ -315,13 +315,14 @@ t~put("x", .plain~new) =&gt; 88.909
 <div class="rule" id="r-class.stringtable.at"><a href="#r-class.stringtable.at">[class.stringtable.at]</a></div>
 <p><code>at(name)</code> and <code>[name]</code> answer the item stored at the index, and <code>.nil</code> when
 there is none. The methods take exactly one argument: none, or an omitted one,
-raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; the number of
-arguments is checked before the name is read.</p>
+raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; with a second
+argument, whether the name is read is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">t = .stringtable~new
 t~put('item', 'k')
 say t~at('k') t['k'] t~at('K') (t~at('zz') == .nil)
 call try 't~at'
-call try 't~at(, "x")'
+call try 't~at("x", "x")'
 call try 't~at("a", "b")'
 call try 't[]'
 exit
@@ -335,7 +336,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">item item The NIL object 1
 t~at =&gt; 88.901
-t~at(, "x") =&gt; 93.902
+t~at("x", "x") =&gt; 93.902
 t~at("a", "b") =&gt; 93.902
 t[] =&gt; 88.901
 </code></pre>
@@ -525,7 +526,7 @@ say t~hasItem('x') t~hasItem('X') t~hasItem(.nil) t~hasItem('zz')
 say t~index('x') t~index(.nil) (t~index('q') == .nil)
 call try 't~hasItem'
 call try 't~index'
-call try 't~hasItem(, 1)'
+call try 't~hasItem(1, 1)'
 call try 't~index(1, 2)'
 exit
 try:
@@ -540,7 +541,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 k1 k2 1
 t~hasItem =&gt; 93.903
 t~index =&gt; 93.903
-t~hasItem(, 1) =&gt; 93.902
+t~hasItem(1, 1) =&gt; 93.902
 t~index(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.stringtable.hasitem.sends"><a href="#r-class.stringtable.hasitem.sends">[class.stringtable.hasitem.sends]</a></div>

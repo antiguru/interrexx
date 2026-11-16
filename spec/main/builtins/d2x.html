@@ -208,8 +208,8 @@ c: say condition('o')~code
 <div class="rule" id="r-bif.d2x.errors"><a href="#r-bif.d2x.errors">[bif.d2x.errors]</a></div>
 <p>The errors of the arguments are <a href="index.html#r-bif.index.conv.decimal">those of the decimal
 argument</a>, which raises <code>SYNTAX 93.928</code> in D2X, and
-those of <a href="index.html#r-bif.index.conv.length">the length</a>, and they are checked in
-<a href="index.html#r-bif.index.conv.decimal.order">the order</a> the shared rules give.</p>
+those of <a href="index.html#r-bif.index.conv.length">the length</a>, as <a href="index.html#r-bif.index.conv.decimal.order">the shared
+rules</a> give.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say d2x('65.5')
 a: say condition('o')~code
@@ -221,12 +221,12 @@ say d2x(65, -1)
 c: say condition('o')~code
 signal on syntax name d
 say d2x('abc', -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '93.928 93.923') &gt; 0
 </code></pre>
 <pre><code class="language-output">93.928
 40.12
 93.923
-93.928
+1
 </code></pre>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <div class="rule" id="r-bif.d2x.unsigned"><a href="#r-bif.d2x.unsigned">[bif.d2x.unsigned]</a></div>

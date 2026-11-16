@@ -829,22 +829,23 @@ F
 one argument, in the format that the <code>option</code> names. With <code>N</code> it is the
 <code>TRACELINE</code> entry, or <code>?</code> when the object has none. With <code>T</code> the number of the
 thread is put inside the flag of the trace line: after the first two characters
-of <code>*-*</code>, so that it reads <code>*-1*</code>, and likewise <code>&gt;&gt;1&gt;</code>; this describes the lines
-that the interpreter makes, and where the number goes in any other text that a
-program sets as <code>TRACELINE</code> is not specified here. With <code>S</code> the line is preceded
-by <code>[T</code>, the thread number padded to three columns and at least one blank, <code>I</code>
-and the invocation number padded to two columns, <code>]</code> and fifteen blanks. With
-<code>F</code> the prefix is <code>[R</code>, the interpreter number padded to four columns and at
-least one blank, <code>T</code>, the thread number in the same way, <code>I</code>, the invocation
-number padded to four columns, <code>]</code> and eighteen blanks. With <code>P</code> the entry
-<code>OPTION</code> of the object chooses the format: a value equal, as the <code>=</code> operator
-compares, to <code>N</code> or <code>P</code> gives that of <code>N</code>, <code>T</code> that of <code>T</code> and <code>S</code> that of <code>S</code>,
-and any other value, the lower-case letters and the null string included, that
-of <code>F</code>; an object without an <code>OPTION</code> entry is formatted like <code>N</code>. <a href="#r-class.traceobject.makestringimpl.method">The line of
-a method</a> carries more fields in the
-prefix. <code>makeStringImpl</code> raises <code>SYNTAX 93.901</code> with no argument, <code>93.902</code> with
-two and <code>93.924</code> for a string argument, in this order: the number of arguments
-is checked first, so that <code>makeStringImpl('x', 1)</code> raises <code>93.902</code>; <a href="#r-class.traceobject.makestringimpl.sends">the next
+of <code>*-*</code>, so that it reads <code>*-1*</code>, and likewise <code>&gt;&gt;1&gt;</code>; this describes the
+lines that the interpreter makes, and where the number goes in any other text
+that a program sets as <code>TRACELINE</code> is not specified here. With <code>S</code> the line is
+preceded by <code>[T</code>, the thread number padded to three columns and at least one
+blank, <code>I</code> and the invocation number padded to two columns, <code>]</code> and fifteen
+blanks. With <code>F</code> the prefix is <code>[R</code>, the interpreter number padded to four
+columns and at least one blank, <code>T</code>, the thread number in the same way, <code>I</code>,
+the invocation number padded to four columns, <code>]</code> and eighteen blanks. With <code>P</code>
+the entry <code>OPTION</code> of the object chooses the format: a value equal, as the <code>=</code>
+operator compares, to <code>N</code> or <code>P</code> gives that of <code>N</code>, <code>T</code> that of <code>T</code> and <code>S</code>
+that of <code>S</code>, and any other value, the lower-case letters and the null string
+included, that of <code>F</code>; an object without an <code>OPTION</code> entry is formatted like
+<code>N</code>. <a href="#r-class.traceobject.makestringimpl.method">The line of a method</a> carries
+more fields in the prefix. <code>makeStringImpl</code> raises <code>SYNTAX 93.901</code> with no
+argument, <code>93.902</code> with two and <code>93.924</code> for a string argument, and a call with
+two arguments of which the first is a string raises one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says; <a href="#r-class.traceobject.makestringimpl.sends">the next
 rule</a> gives the reading of the
 argument. A <code>StringTable</code> without entries gives <code>?</code>.</p>
 <pre><code class="language-rexx">t = .traceobject
@@ -866,7 +867,7 @@ say '['t~makeStringImpl(n)']' '['t~makeStringImpl(.stringtable~new)']'
 call try 't~makeStringImpl'
 call try 't~makeStringImpl(n, n)'
 call try 't~makeStringImpl(1)'
-call try "t~makeStringImpl('x', 1)"
+call try "t~makeStringImpl(.stringtable~new, 1)"
 exit
 try:
   signal on syntax name bad
@@ -925,7 +926,7 @@ option P
 t~makeStringImpl =&gt; 93.901
 t~makeStringImpl(n, n) =&gt; 93.902
 t~makeStringImpl(1) =&gt; 93.924
-t~makeStringImpl('x', 1) =&gt; 93.902
+t~makeStringImpl(.stringtable~new, 1) =&gt; 93.902
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The option applies to the lines a program traces, as the next

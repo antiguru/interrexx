@@ -207,36 +207,35 @@ say c2x(upper('61007a'x))
 <p>An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
 replacement is found by sending the object the message <code>REQUEST</code> with the
-argument <code>STRING</code>, and nothing else is sent first. When the answer is a
-string, it is the replacement. When the answer is <code>.nil</code> or another object
-that is not a string, the replacement is the answer of the object's public
+argument <code>STRING</code>, and nothing else is sent first. When the answer is a string,
+it is the replacement. When the answer is <code>.nil</code> or another object that is not
+a string, the replacement is the answer of the object's public
 <a href="classes/object.html#r-class.object.string"><code>STRING</code></a> method, and when that answer is not a string
 either, see <a href="#r-conv.string.deviation.30">Deviation 30</a>. The
 <a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends the object <code>MAKESTRING</code>
 when it has one and answers what that answers, and answers <code>.nil</code> when it has
-none. So an object with a <code>MAKESTRING</code> method is replaced by its answer, as
-for an <a href="classes/array.html#r-class.array.makestring"><code>Array</code></a> or a
+none. So an object with a <code>MAKESTRING</code> method is replaced by its answer, as for
+an <a href="classes/array.html#r-class.array.makestring"><code>Array</code></a> or a
 <a href="classes/mutablebuffer.html#r-class.mutablebuffer.makestring"><code>MutableBuffer</code></a>, and an object with only a
 <code>STRING</code> method by the answer of that method. A class that declares its own
-<code>REQUEST</code> method decides the answer itself: its <code>MAKESTRING</code> method is not
-used unless its <code>REQUEST</code> sends it, and a <code>REQUEST</code> that answers a string is
-used even when the class has a <code>STRING</code> method. A <code>MAKESTRING</code> that answers
-<code>.nil</code> or an object that is not a string is like a <code>REQUEST</code> that does. An
-instance of a subclass of <code>String</code> is a string here, whether it is passed
-directly or is what <code>REQUEST</code> answers: the builtin works on its own
-characters, and no message is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation
-109</a>). A builtin that reads several such
-arguments reads them from left to right, after it has checked the number of
-its arguments and before it checks any of them (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
-170</a>). An argument that a builtin reads as a whole number or as a
-number is read this way too, and the replacement must then be a number. A
-builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a> has
-no fallback to <code>STRING</code>, as that rule says, and the same holds for the string
-arguments of methods (<a href="classes/index.html#r-class.index.string">the method argument rule</a>). A
-<code>REQUEST</code>, <code>MAKESTRING</code> or <code>STRING</code> method that is private and would be sent
-is not one the replacement can use: the call raises <code>SYNTAX 97.2</code>. A
-comparison operator converts its right operand once, as <a href="expressions/comparison.html#r-expr.comparison.object">the comparison
-rule</a> says.</p>
+<code>REQUEST</code> method decides the answer itself: its <code>MAKESTRING</code> method is not used
+unless its <code>REQUEST</code> sends it, and a <code>REQUEST</code> that answers a string is used
+even when the class has a <code>STRING</code> method. A <code>MAKESTRING</code> that answers <code>.nil</code>
+or an object that is not a string is like a <code>REQUEST</code> that does. An instance of
+a subclass of <code>String</code> is a string here, whether it is passed directly or is
+what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
+is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
+builtin that reads several such arguments reads them from left to right, before
+it checks any of them, when the call has no fault (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
+170</a>). An argument that a builtin reads
+as a whole number or as a number is read this way too, and the replacement must
+then be a number. A builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call
+rule</a> has no fallback to <code>STRING</code>, as that rule says,
+and the same holds for the string arguments of methods (<a href="classes/index.html#r-class.index.string">the method argument
+rule</a>). A <code>REQUEST</code>, <code>MAKESTRING</code> or <code>STRING</code> method that
+is private and would be sent is not one the replacement can use: the call
+raises <code>SYNTAX 97.2</code>. A comparison operator converts its right operand once, as
+<a href="expressions/comparison.html#r-expr.comparison.object">the comparison rule</a> says.</p>
 <pre><code class="language-rexx">say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
 say c2x(.array~of(1, 2)) length(.array~of(1, 2)~string)
 signal on syntax name a
@@ -431,7 +430,7 @@ arguments, usually the first and for a few builtins the second, is the
 receiver; the others become the message's arguments, in their order. The
 builtin and the message then give the same result for the same arguments. A
 builtin page says when its builtin is one of these. The range checks below,
-and the <a href="#r-conv.check.order">order of the checks</a>, are rules for these
+and <a href="#r-conv.check.order">the checks they belong to</a>, are rules for these
 builtins only; any other builtin's page states its own range checks.</p>
 <pre><code class="language-rexx">say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
 </code></pre>
@@ -528,46 +527,90 @@ b: say condition('o')~code
 <pre><code class="language-output">40.12
 40.23
 </code></pre>
-<h2 id="the-order-of-the-checks"><a class="header" href="#the-order-of-the-checks">The order of the checks</a></h2>
-<div class="rule" id="r-conv.check.order"><a href="#r-conv.check.order">[conv.check.order]</a></div>
-<p>In a builtin that runs as a String method, when more than one argument
-fails, the form checks run first: the
-whole-number checks of <a href="#r-conv.whole.form">form</a> and
-<a href="#r-conv.whole.digits">value</a>, and the <a href="#r-conv.pad">pad</a> check, applied to
-the arguments from left to right, and the first failure is raised. Only when
-every argument passes them do the range checks of
-<a href="#r-conv.position.check">positions</a> and <a href="#r-conv.length.check">lengths</a> run,
-again from left to right. A builtin page that has checks of its own states
-where they fall in this order.</p>
+<h2 id="evaluation-order-and-several-faults"><a class="header" href="#evaluation-order-and-several-faults">Evaluation order and several faults</a></h2>
+<div class="rule" id="r-conv.error.precedence"><a href="#r-conv.error.precedence">[conv.error.precedence]</a></div>
+<p>An operator evaluates both operands, the left before the right, before it
+checks either, and a call evaluates its arguments from left to right before
+the call is made. An error raised while an operand or an argument is evaluated
+is raised at that point, and nothing after it is evaluated. Each control
+expression of a DO is an operation of its own: the instruction evaluates and
+checks them one at a time, in the order they are written (<a href="instructions/do.html#r-instr.do.control.check">the DO
+rule</a>). A builtin's
+<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">conversion</a> of the arguments that are
+objects, by sending them <code>STRING</code>, is part of its checks: a call that has no
+fault sends <code>STRING</code> to each such argument, from left to right, before its
+other checks. When the checks of one operation, which is one operator, one
+call of a builtin or a method, or the checks of one instruction, find one
+fault, the operation raises the error that the rule for that fault gives; a
+<code>STRING</code> answer that has no string value is such a fault. When they find more
+than one, a wrong number of arguments or an omitted required argument among
+them, the operation raises the error of one of them, and which one is
+unspecified. Whether the checks after the first fault found are made, and so
+whether the messages they would send are sent, is unspecified too, and for a
+builtin call with a fault, whether and to how many arguments it sends <code>STRING</code>
+is unspecified. When one operation finds a fault that raises a condition, such
+as LOSTDIGITS, and another that raises an error, which of the two it raises
+first is unspecified, and so whether a trap for the condition runs. A page
+that lists the checks of an operation lists what is checked, not an order
+among them.</p>
 <pre><code class="language-rexx">signal on syntax name a
-say substr('abc', 0, 'x')
+say substr('abc', 0)
 a: say condition('o')~code
 signal on syntax name b
-say substr('abc', 0, 1, '**')
+say substr('abc', 1, 'x')
 b: say condition('o')~code
 signal on syntax name c
-say substr('abc', 'x', 1, '**')
+say 'x' + f()
 c: say condition('o')~code
 signal on syntax name d
-say translate('abc', , , '**', 'x')
-d: say condition('o')~code
-signal on syntax name f
-say substr('abc', 0, -1)
-f: say condition('o')~code
+say substr('abc', 0, 'x')
+d: say wordpos(condition('o')~code, '93.924 40.12') &gt; 0
+signal on syntax name e
+say substr('abc', 'x', 1, ' ', 5)
+e: say wordpos(condition('o')~code, '40.4 40.12') &gt; 0
+exit
+f: say 'f ran'
+return 'y'
 </code></pre>
-<pre><code class="language-output">40.12
-40.23
+<pre><code class="language-output">93.924
 40.12
+f ran
+41.1
+1
+1
+</code></pre>
+<div class="rule" id="r-conv.check.order"><a href="#r-conv.check.order">[conv.check.order]</a></div>
+<p>In a builtin that runs as a String method, the arguments have the form checks
+of a <a href="#r-conv.whole.form">whole number</a>, its <a href="#r-conv.whole.digits">value</a> and a
+<a href="#r-conv.pad">pad</a>, and the range checks of <a href="#r-conv.position.check">positions</a>
+and <a href="#r-conv.length.check">lengths</a>. A builtin page that has checks of its own
+names them. A call with one argument in error raises that argument's error.
+When more than one argument fails, or one argument fails more than one check,
+the call raises one of their errors, as <a href="#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 1, 2, '**')
+a: say condition('o')~code
+signal on syntax name b
+say translate('abc', , , '**')
+b: say condition('o')~code
+signal on syntax name f
+say substr('abc', 1, -1)
+f: say condition('o')~code
+signal on syntax name g
+say substr('abc', 'x', -1, '**')
+g: say wordpos(condition('o')~code, '40.12 93.923 40.23') &gt; 0
+</code></pre>
+<pre><code class="language-output">40.23
 40.23
-93.924
+93.923
+1
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> The range checks come last because they belong to the String
-method, which runs only once the call has been made. The reference manual
-does not say that the function call checks the form of its arguments, under
-error 40, before it sends the message; that part matches ooRexx. The ANSI
-draft (9.2.1) checks each argument's form and range together, one argument
-at a time.</p>
+<p><strong>Note.</strong> ANSI (9.2.1) checks each argument's form and range together, one
+argument at a time, and gives which fault of several a call raises. ooRexx
+departs from that order, and interrexx keeps ooRexx's where they differ, so
+neither is part of this book.</p>
 </blockquote>
 <h2 id="errors-and-results"><a class="header" href="#errors-and-results">Errors and results</a></h2>
 <div class="rule" id="r-conv.error.name"><a href="#r-conv.error.name">[conv.error.name]</a></div>
@@ -702,8 +745,7 @@ of <code>ABBREV</code>, <code>COMPARE</code>, <code>BITAND</code>, <code>BITOR</
 <code>DATATYPE</code>; the option and the character of <code>STRIP</code>; the two tables of
 <code>TRANSLATE</code>; the reference and the option of <code>VERIFY</code>; and the data of
 <code>CHAROUT</code> and <code>LINEOUT</code>. The conversions run in argument order, before any other argument check, so the error names the first argument
-whose answer has no string value, even where a later argument is also in
-error. A method's argument and a native routine's argument that has no string
+whose answer has no string value. A method's argument and a native routine's argument that has no string
 value raise the same error with their own position.</p>
 <pre><code class="language-rexx">o = .weird~new
 signal on syntax name s

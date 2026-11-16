@@ -253,20 +253,21 @@ return
 40.925 sysfilesearch('a', 'c2zqfs01.txt', '')
 </code></pre>
 <div class="rule" id="r-util.sysfilesearch.order"><a href="#r-util.sysfilesearch.order">[util.sysfilesearch.order]</a></div>
-<p>The arguments are checked in this order: the count and the conversion of the
-arguments to strings (<code>88.9xx</code>); <code>options</code> (<code>SYNTAX 40.900</code> for a character
-that is not an option letter, a blank included); the name of the stem (<code>SYNTAX 40.925</code>, with the names that <a href="sysfiletree.html#r-util.sysfiletree.stem.name">SysFileTree</a>
-rejects). Only then is the file opened, so a stem or an option that is wrong
-raises its error whether or not the file exists. An <code>options</code> that is the null
-string is allowed and means no option.</p>
-<pre><code class="language-rexx">call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', 'X')"
-call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N')"
+<p>The count of the arguments is checked, the conversion of the arguments to
+strings can raise <code>88.9xx</code>, <code>options</code> raises <code>SYNTAX 40.900</code> for a character
+that is not an option letter, a blank included, and the name of the stem raises
+<code>SYNTAX 40.925</code> for the names that <a href="sysfiletree.html#r-util.sysfiletree.stem.name">SysFileTree</a>
+rejects; a call in which more than one is wrong raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The file is
+opened only after these checks, so a stem or an option that is wrong raises its
+error whether or not the file exists. An <code>options</code> that is the null string is
+allowed and means no option.</p>
+<pre><code class="language-rexx">call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', 'X')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', 'N')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', '')"
 call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', ' ')"
-call try "sysfilesearch('a', 'c2zqfs06.none', .nil, 'X')"
-call try "sysfilesearch('a', 'c2zqfs06.none', 'a b', .nil)"
+call try "sysfilesearch('a', 'c2zqfs06.none', 'f.', .nil)"
 call try "sysfilesearch('a', 'c2zqfs06.none', '')"
 exit
 try: procedure
@@ -278,14 +279,12 @@ try: procedure
 bad: say ex '-&gt;' condition('o')~code
 return
 </code></pre>
-<pre><code class="language-output">sysfilesearch('a', 'c2zqfs06.none', 'a b', 'X') -&gt; 40.900
-sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N') -&gt; 40.925
+<pre><code class="language-output">sysfilesearch('a', 'c2zqfs06.none', 'a b', 'N') -&gt; 40.925
 sysfilesearch('a', 'c2zqfs06.none', 'f.', 'X') -&gt; 40.900
 sysfilesearch('a', 'c2zqfs06.none', 'f.', 'N') -&gt; 3
 sysfilesearch('a', 'c2zqfs06.none', 'f.', '') -&gt; 3
 sysfilesearch('a', 'c2zqfs06.none', 'f.', ' ') -&gt; 40.900
-sysfilesearch('a', 'c2zqfs06.none', .nil, 'X') -&gt; 40.900
-sysfilesearch('a', 'c2zqfs06.none', 'a b', .nil) -&gt; 88.909
+sysfilesearch('a', 'c2zqfs06.none', 'f.', .nil) -&gt; 88.909
 sysfilesearch('a', 'c2zqfs06.none', '') -&gt; 40.925
 </code></pre>
 <h2 id="what-is-stored"><a class="header" href="#what-is-stored">What is stored</a></h2>

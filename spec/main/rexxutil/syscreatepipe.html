@@ -184,12 +184,12 @@ can be read at the other, and answers the two numbers that name its ends.</p>
 <p>SysCreatePipe takes no argument. One argument that is a string raises <code>SYNTAX 40.920</code>, an object that has no string value raises <code>SYNTAX 88.909</code>, and two
 arguments or more raise <code>SYNTAX 88.922</code>; an omitted place that is followed by
 no argument is not one. (<a href="index.html#r-util.index.args">The argument rule</a> says that an
-argument past the last one of a function raises <code>88.922</code>; <a href="index.html#r-util.index.deviation.101">Deviation
-101</a> is about the order of that check.)</p>
+argument past the last one of a function raises <code>88.922</code>; <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says which error a call with that and another
+fault raises.)</p>
 <pre><code class="language-rexx">call try "SysCreatePipe('x')"
 call try "SysCreatePipe('')"
 call try "SysCreatePipe(.nil)"
-call try "SysCreatePipe(1, 2)"
 call try "SysCreatePipe(, 1)"
 say words(SysCreatePipe(,))
 exit
@@ -203,7 +203,6 @@ e: say condition('o')~code
 <pre><code class="language-output">40.920
 40.920
 88.909
-88.922
 88.922
 2
 </code></pre>

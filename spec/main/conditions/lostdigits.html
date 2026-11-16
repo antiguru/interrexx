@@ -219,8 +219,8 @@ rule</a> says, and a CALL ON ANY trap does not see it, as <a href="traps.html#r-
 choice rule</a> says. A SIGNAL trap ends the clause that
 held the operation, so the clause assigns nothing. Whether a LOSTDIGITS that
 a trap is to answer comes before the SYNTAX error that the same operation
-would raise is <a href="../numbers/arithmetic.html#r-num.arithmetic.deviation.102">the arithmetic
-chapter's</a> to specify.</p>
+would raise is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a>
+says.</p>
 <pre><code class="language-rexx">numeric digits 4
 call on any name h
 x = 123456 + 1

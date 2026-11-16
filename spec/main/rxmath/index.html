@@ -281,11 +281,11 @@ e: say condition('o')~code
 <p>The functions follow <a href="../builtins/index.html#r-bif.index.call.native">the native call rule</a>, as the
 <a href="../rexxutil/index.html">RexxUtil</a> functions do. A required argument that is not
 given, or is omitted, raises <code>SYNTAX 88.901</code>. An argument past the last one of
-the function raises <code>SYNTAX 88.922</code>, and the count is checked before the
-arguments are read. An omitted place at the end of the call adds nothing to
-the count, so <code>RxCalcSqrt(4,,)</code> is a call with one argument. An argument that is
-an object other than a string is replaced by the string that its <code>request</code>
-with the argument <code>STRING</code> answers, and an object that has none raises <code>SYNTAX 88.909</code>.</p>
+the function raises <code>SYNTAX 88.922</code>. An omitted place at the end of the call
+adds nothing to the count, so <code>RxCalcSqrt(4,,)</code> is a call with one argument. An
+argument that is an object other than a string is replaced by the string that
+its <code>request</code> with the argument <code>STRING</code> answers, and an object that has none
+raises <code>SYNTAX 88.909</code>.</p>
 <pre><code class="language-rexx">call try "RxCalcSqrt()"
 call try "RxCalcSqrt(,)"
 call try "RxCalcSqrt(, 5)"

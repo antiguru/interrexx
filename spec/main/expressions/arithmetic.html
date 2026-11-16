@@ -310,17 +310,17 @@ unset + 1 =&gt; 41.1
 </code></pre>
 <div class="rule" id="r-expr.arithmetic.order"><a href="#r-expr.arithmetic.order">[expr.arithmetic.order]</a></div>
 <p>Both operands of an operator are evaluated before the operator checks either
-one, so an error in the evaluation of the right operand is raised before a
-left operand that is not a number is found out. The operand check then goes
-from left to right, and it comes before any other error that the operator
-itself would raise, as <a href="../numbers/arithmetic.html#r-num.arithmetic.operand">the operand rule</a> says. A
+one, so an error in the evaluation of the right operand is raised before a left
+operand that is not a number is found out. An operator that finds more than one
+fault, in its operands or a fault of its own such as a zero divisor, raises the
+error of one of them, as <a href="../numbers/arithmetic.html#r-num.arithmetic.operand">the operand rule</a> says. A
 function call in an operand takes its effect before the operator is applied,
-whatever the operator does. Which of several operators is applied first
-follows precedence, so <code>1 / 0 + "ten"</code> raises <code>42.3</code> from the division before
-the addition looks at its operands.</p>
+whatever the operator does. Which of several operators is applied first follows
+precedence, so <code>1 / 0 + "ten"</code> raises <code>42.3</code> from the division before the
+addition looks at its operands.</p>
 <pre><code class="language-rexx">call try '"ten" + 1/0'
 call try '"ten" + f(2)'
-call try 'f(1) + "ten" / 0'
+call try 'f(1) + "ten" / 2'
 call try '1 / 0 + "ten"'
 exit
 try:
@@ -336,7 +336,7 @@ f: say 'f' arg(1); return arg(1)
 f 2
 "ten" + f(2) =&gt; 41.1
 f 1
-f(1) + "ten" / 0 =&gt; 41.1
+f(1) + "ten" / 2 =&gt; 41.1
 1 / 0 + "ten" =&gt; 42.3
 </code></pre>
 <div class="rule" id="r-expr.arithmetic.zero"><a href="#r-expr.arithmetic.zero">[expr.arithmetic.zero]</a></div>

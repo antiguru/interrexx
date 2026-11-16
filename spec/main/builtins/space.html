@@ -183,14 +183,13 @@ of them, and none before the first or after the last. Words are those of
 <a href="index.html#r-bif.index.words.split">the word rule</a>.</p>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
 <div class="rule" id="r-bif.space.method"><a href="#r-bif.space.method">[bif.space.method]</a></div>
-<p>SPACE is a builtin that runs as a <a href="../classes/string.html#r-class.string.builtins">String method</a>,
-and <code>string</code>, its first argument, is the receiver; <code>n</code> and <code>pad</code> become the
-message's arguments, in that order. <code>string</code> is a
-<a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code> is a <a href="../conventions.html#r-conv.length.check">length</a>, the
-number of fill characters between two words, and <code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>.
-The arguments are checked in the <a href="../conventions.html#r-conv.check.order">order</a> the conventions
-give, and the argument count by the <a href="index.html#r-bif.index.call.count">builtin call
-rules</a>: one is required and three is the most.</p>
+<p>SPACE is a builtin that runs as a <a href="../classes/string.html#r-class.string.builtins">String method</a>, and
+<code>string</code>, its first argument, is the receiver; <code>n</code> and <code>pad</code> become the
+message's arguments, in that order. <code>string</code> is a <a href="../conventions.html#r-conv.string.null">string</a>,
+<code>n</code> is a <a href="../conventions.html#r-conv.length.check">length</a>, the number of fill characters between
+two words, and <code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by the <a href="index.html#r-bif.index.call.count">builtin
+call rules</a>: one is required and three is the most.</p>
 <pre><code class="language-rexx">say space('a  b') 'a  b'~space(2, '.')
 signal on syntax name a
 say space('a b', -1)
@@ -292,22 +291,20 @@ c: say condition('o')~code
 93.923
 </code></pre>
 <div class="rule" id="r-bif.space.check-order"><a href="#r-bif.space.check-order">[bif.space.check-order]</a></div>
-<p>Of the checks that <code>n</code> and <code>pad</code> can fail, the form checks of <code>n</code> and of
-<code>pad</code> come first, from left to right, and only then the range check of <code>n</code>,
-as <a href="../conventions.html#r-conv.check.order">the order of the checks</a> gives: a negative <code>n</code> with a
-bad <code>pad</code> raises the <code>pad</code> error, and an <code>n</code> that is not a number raises its
-own error before a bad <code>pad</code> is looked at.</p>
+<p><code>n</code> can fail its form check or its range check, and <code>pad</code> its own check. A
+call in which both fail raises the error of one of them, as <a href="../conventions.html#r-conv.check.order">the checks of the
+conventions</a> say.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say space('a b', -1, '**')
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.23 93.923') &gt; 0
 signal on syntax name b
-say space('a b', 'x', '**')
+say space('a b', 'x')
 b: say condition('o')~code
 signal on syntax name c
 say space('a b', -1, '.')
 c: say condition('o')~code
 </code></pre>
-<pre><code class="language-output">40.23
+<pre><code class="language-output">1
 40.12
 93.923
 </code></pre>

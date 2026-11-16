@@ -656,28 +656,13 @@ characters there.</p>
 <h2 id="100-query-position-of-a-standard-stream"><a class="header" href="#100-query-position-of-a-standard-stream">100. QUERY POSITION of a standard stream</a></h2>
 <p><code>QUERY POSITION</code> of a transient standard stream answers the null string,
 because a transient stream has no position. ooRexx answers 1.</p>
-<h2 id="101-argument-checks-of-the-native-builtins"><a class="header" href="#101-argument-checks-of-the-native-builtins">101. Argument checks of the native builtins</a></h2>
-<p>DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
-SysFileDelete and SysStemSort, check their arguments in the order that every
-other builtin follows, the ANSI order: the count of arguments first, so that
-an argument past the last one raises <code>SYNTAX 88.922</code> before an omitted or
-wrong argument is reported. ooRexx reports an omitted argument, an object
-whose <code>request</code> with the argument <code>STRING</code> answers no string and an argument
-that is not a whole number before the count, and so does the substitutions
-argument of SysFormatMessage when it has no <code>MAKEARRAY</code> method. It also
-reports these before the count: the stem name of SysStemCopy, SysStemDelete
-and SysStemInsert when it fails its check, and a whole-number argument of
-SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
-a number out of range among them. It reports the count before an argument's
-value: an option it does not allow, or any other number out of range, except a
-negative semaphore handle, which it reports before the count. SysOpenEventSem
-and SysOpenMutexSem are the exception: in both engines they report an omitted
-name and an object that has no string value before the count.</p>
-<h2 id="102-lostdigits-before-the-right-operands-errors"><a class="header" href="#102-lostdigits-before-the-right-operands-errors">102. LOSTDIGITS before the right operand's errors</a></h2>
-<p>When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
-before the operator raises <code>SYNTAX 42.3</code> for a zero divisor or <code>SYNTAX 26.8</code>
-for an exponent that is not a whole number, as the ANSI standard orders the
-operations. ooRexx raises the error for the right operand first.</p>
+<h2 id="101-withdrawn"><a class="header" href="#101-withdrawn">101. Withdrawn</a></h2>
+<p>Which of the argument count and another fault of a native builtin or a
+RexxUtil function is reported is unspecified (<a href="conventions.html#r-conv.error.precedence">the precedence
+rule</a>).</p>
+<h2 id="102-withdrawn"><a class="header" href="#102-withdrawn">102. Withdrawn</a></h2>
+<p>Which of LOSTDIGITS and the error of the same operator is raised first is
+unspecified (<a href="conventions.html#r-conv.error.precedence">the precedence rule</a>).</p>
 <h2 id="103-trace-under-options-trace-"><a class="header" href="#103-trace-under-options-trace-">103. TRACE() under ::OPTIONS TRACE ?</a></h2>
 <p>Under <code>::OPTIONS TRACE ?</code>, the TRACE builtin answers <code>?N</code> when the code
 starts, as after the instruction <code>trace ?</code> at the start of a program: the
@@ -1155,15 +1140,13 @@ with exit code 120 that Deviation 30 described.</p>
 <p>A builtin whose page calls an argument a string converts each such argument
 that is an object other than a string, sending <code>STRING</code> (or <code>REQUEST</code> and
 <code>MAKESTRING</code>, as <a href="conventions.html#r-conv.string.object">the conversion rule</a> says), from left
-to right, after it has checked the number of its arguments and that every
-argument it requires is there, and before it checks any argument. An omitted
-argument that the builtin requires is therefore reported before any conversion
-runs, as in ooRexx. A <code>STRING</code> method of a later argument therefore runs even
-when an earlier argument is in error, and the call raises the same error as in
-ooRexx, which converts an argument as it checks it and stops at the first one
-in error, so that the method of a later argument never runs. The difference
-shows only in what such a method does: counting, input or output, or raising a
-condition of its own.</p>
+to right, before it checks any argument, when the call has no fault. The
+conversion is part of the builtin's checks: when the call has a fault, which
+error it raises, and whether and to how many arguments it sends <code>STRING</code>, are
+unspecified (<a href="conventions.html#r-conv.error.precedence">the precedence rule</a>). ooRexx converts
+an argument as it checks it and stops at the first one in error, so that the
+method of a later argument never runs. The difference shows only in what such
+a method does: counting, input or output, or raising a condition of its own.</p>
 <h2 id="171-query-position-sys-of-a-stream-just-opened-for-reading"><a class="header" href="#171-query-position-sys-of-a-stream-just-opened-for-reading">171. QUERY POSITION SYS of a stream just opened for reading</a></h2>
 <p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, before
 anything is read or positioned, answers 0, the host's offset when nothing has

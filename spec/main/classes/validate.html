@@ -237,18 +237,20 @@ error: it may be any string, a name or a text. In the error of a failed check
 it is the first item of the condition's <code>ADDITIONAL</code> array, so that a program
 can tell which argument failed; each rule below says which other items are
 stated. The errors of the argument count and of <code>digits</code> below have no name
-among their items. The counts are fixed: two arguments for <code>number</code> and <code>logical</code>, two and an optional
-<code>digits</code> for the other number checks, three for <code>classType</code> and
-<code>requestClassType</code>, and four and an optional <code>digits</code> for the range checks. A
-call with fewer raises <code>SYNTAX 93.901</code>, one with more <code>93.902</code>, and one that
-leaves out a required argument before the last one given <code>93.903</code>; omitted
-arguments at the end count as not given. The <code>ADDITIONAL</code> items of these three
-errors are <a href="../conventions.html#r-conv.error.additional">unspecified</a>. The argument count is
-checked first, then <code>digits</code>, and the value last. Every value and bound is read
-as a string as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says. A check that
-fails raises the <code>SYNTAX</code> error of its method, which the rules below give.
-The second example asks every check, with no argument, for one fewer than it
-needs, for the first one left out and for one more than it takes.</p>
+among their items. The counts are fixed: two arguments for <code>number</code> and
+<code>logical</code>, two and an optional <code>digits</code> for the other number checks, three for
+<code>classType</code> and <code>requestClassType</code>, and four and an optional <code>digits</code> for the
+range checks. A call with fewer raises <code>SYNTAX 93.901</code>, one with more <code>93.902</code>,
+and one that leaves out a required argument before the last one given <code>93.903</code>;
+omitted arguments at the end count as not given. The <code>ADDITIONAL</code> items of
+these three errors are <a href="../conventions.html#r-conv.error.additional">unspecified</a>. A call with more
+than one fault, among the argument count, <code>digits</code> and the value, raises the
+error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.
+Every value and bound is read as a string as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> says. A check that fails raises the <code>SYNTAX</code> error
+of its method, which the rules below give. The second example asks every check,
+with no argument, for one fewer than it needs, for the first one left out and
+for one more than it takes.</p>
 <pre><code class="language-rexx">call t 'number', 'N', 'x'
 call t 'number', 'my arg', 'x'
 call t 'number', 'N'
@@ -259,7 +261,7 @@ call t 'numberRange', 'N', 5, , 9
 call t 'classType', 'N', , .string
 call t 'numberRange', 'N', 5, 1
 call t 'numberRange', 'N', 5, 1, 9, 9, 9
-call t 'wholeNumber', 'N', 'x', 0
+call t 'wholeNumber', 'N', 5, 0
 call t 'wholeNumber', 'N', 'x', 5, 6
 call t 'classType', 'N', 1
 call u 'number("N", )'
@@ -348,12 +350,12 @@ under the NUMERIC DIGITS of the running code. <code>digits</code> is a whole num
 least 1 and at most 999999999 and defaults to <code>9</code>, except for <code>length</code> and
 <code>position</code>, whose default is <a href="rexxinfo.html#r-class.rexxinfo.limits">the number of digits that whole numbers have
 internally</a>. Any other value, a string that is no
-number included, raises <code>SYNTAX 26.5</code> before the value is read; its <code>ADDITIONAL</code>
-array has one item, the value of <code>digits</code>, the string that is
-refused.
-The last example of this rule asks every check that takes <code>digits</code> for the cases
-that are refused, for the two limits that are not, and for a value that is no
-number under a refused <code>digits</code>.</p>
+number included, raises <code>SYNTAX 26.5</code>, and whether the value is then read is
+unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says; its
+<code>ADDITIONAL</code> array has one item, the value of <code>digits</code>, the string that is
+refused. The last example of this rule asks every check that takes <code>digits</code> for
+the cases that are refused, for the two limits that are not, and for a value
+that is no number under a refused <code>digits</code>.</p>
 <pre><code class="language-rexx">numeric digits 20
 call t 'wholeNumber', '1234567890'
 call t 'wholeNumber', '1234567890', 9
@@ -658,21 +660,20 @@ wholeNumberRange 5 1.5 9.5 - =&gt; ok
 rule</a> says (apart from <a href="#r-class.validate.deviation.109">the
 deviation</a>); for an object without a <code>request</code>
 of its own that is one <code>makeString</code>. The string is checked first as a number,
-and as a whole number for the whole-number checks, and only a value that passes
-that check is asked, as the object that was given and not the string, to
-compare. <code>positiveNumber</code>, <code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code>
-with <code>0</code>; <code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it
-<code>&gt;=</code> with <code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code>
-and, only when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers
-<code>0</code> raises the error of the check, one that answers neither <code>0</code> nor <code>1</code> raises
-<code>SYNTAX 34.6</code>, and a value whose class has no such comparison method raises
-<code>SYNTAX 97.1</code>, so that an object with only a <code>makeString</code> is refused by
+and as a whole number for the whole-number checks, and a value that passes that
+check is asked, as the object that was given and not the string, to compare.
+<code>positiveNumber</code>, <code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code> with <code>0</code>;
+<code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it <code>&gt;=</code> with
+<code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code> and, only
+when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers <code>0</code> raises
+the error of the check, one that answers neither <code>0</code> nor <code>1</code> raises <code>SYNTAX 34.6</code>, and a value whose class has no such comparison method raises <code>SYNTAX 97.1</code>, so that an object with only a <code>makeString</code> is refused by
 <code>positiveNumber</code>, <code>nonNegativeNumber</code> and <code>numberRange</code>, which a number check
-alone would have passed. A value that fails the number check raises that error
-and is sent no comparison. <code>number</code> and <code>wholeNumber</code> send nothing more, and
-the bounds and <code>digits</code> are read as strings and are sent no comparison. The
-example has an object whose <code>makeString</code> and <code>unknown</code> write a line, and whose
-comparisons answer <code>1</code> and then <code>0</code>.</p>
+alone would have passed. A value that fails the number check raises that error,
+and whether it is sent a comparison as well is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. <code>number</code> and <code>wholeNumber</code> send nothing
+more, and the bounds and <code>digits</code> are read as strings and are sent no
+comparison. The example has an object whose <code>makeString</code> and <code>unknown</code> write a
+line, and whose comparisons answer <code>1</code> and then <code>0</code>.</p>
 <pre><code class="language-rexx">checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
   'nonNegativeWholeNumber position length numberRange wholeNumberRange'
 do answer over 1, 0

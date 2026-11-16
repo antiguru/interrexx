@@ -197,8 +197,7 @@ argument takes its default: <code>order</code> is <code>A</code>, <code>type</co
 each item. <code>stem</code> names a stem as <a href="index.html#r-util.index.stemname">the stem name rule</a>
 says, with the addition of <a href="#r-util.sysstemsort.name">the next rule</a>. The call
 follows <a href="index.html#r-util.index.args">the argument rule</a>: a missing <code>stem</code> raises
-<code>SYNTAX 88.901</code> and an eighth argument raises <code>SYNTAX 88.922</code> (<a href="index.html#r-util.index.deviation.101">Deviation
-101</a> is about which of the two comes first).
+<code>SYNTAX 88.901</code> and an eighth argument raises <code>SYNTAX 88.922</code> (<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which of the two a call with both raises).
 <code>start</code>, <code>end</code>, <code>firstcol</code> and <code>lastcol</code> are read as whole numbers that are at
 least <code>1</code>, with their blanks, a leading plus sign, a decimal point and an
 exponent. The value is read as <a href="index.html#r-util.index.whole">the whole-number rule</a>
@@ -501,9 +500,9 @@ range, as with <code>start</code> equal to <code>end</code>, is still read. The 
 the stem. An <code>end</code> of <code>999999999999999999</code>, the largest that is allowed, is
 taken as an <code>end</code> that is left out, the count of the stem. A stem with the
 count <code>0</code> has no item, and then no range is checked: the call answers <code>0</code> and
-does nothing, for every <code>start</code> and <code>end</code> that pass the checks before the tail
-<code>0</code> (<a href="#r-util.sysstemsort.order">the order rule</a>), so that a <code>start</code> above a
-given <code>end</code> still raises <code>SYNTAX 40.921</code>. The tail <code>0</code> is never changed, and
+does nothing, for every <code>start</code> and <code>end</code> that pass their own checks (<a href="#r-util.sysstemsort.order">the
+order rule</a>), so that a <code>start</code> above a given <code>end</code>
+still raises <code>SYNTAX 40.921</code>. The tail <code>0</code> is never changed, and
 the tails above the count are not touched. A count below <code>0</code> raises <code>SYNTAX 40.922</code>.</p>
 <pre><code class="language-rexx">call fill 'f', 'e', 'd', 'c', 'b', 'a'
 call SysStemSort 's.', , , 2, 4
@@ -620,34 +619,29 @@ say s.2~class~id s.2
 </code></pre>
 <pre><code class="language-output">String zz
 </code></pre>
-<h2 id="order-of-the-checks"><a class="header" href="#order-of-the-checks">Order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-util.sysstemsort.order"><a href="#r-util.sysstemsort.order">[util.sysstemsort.order]</a></div>
-<p>When several things are wrong, the call raises the condition of the first of
-these checks that fails: a missing <code>stem</code> raises <code>SYNTAX 88.901</code>; then an
-<code>order</code> or a <code>type</code> that is <code>.nil</code> raises <code>SYNTAX 88.909</code>; then <code>start</code>,
-<code>end</code>, <code>firstcol</code> and <code>lastcol</code> raise <code>SYNTAX 88.905</code>; then the name of the
-stem raises <code>SYNTAX 40.919</code>; then <code>order</code> and <code>type</code> raise <code>SYNTAX 40.920</code>;
-then a <code>start</code> that is more than an <code>end</code> that is given, and a <code>firstcol</code> that
-is more than a <code>lastcol</code> that is given, raise <code>SYNTAX 40.921</code>; then the tail
-<code>0</code> of the stem raises <code>SYNTAX 40.922</code>; then the range raises <code>SYNTAX 40.923</code>;
-and last an item without a value raises <code>SYNTAX 40.924</code>. A <code>start</code> that is
-more than the default <code>end</code>, the count of the stem, is a range that is outside
-the stem and raises <code>SYNTAX 40.923</code>, not <code>SYNTAX 40.921</code>. The other three
-functions that take a stem name check the name before any number.</p>
-<pre><code class="language-rexx">call try "SysStemSort(, .nil)", ""
-call try "SysStemSort(, , , 0)", ""
-call try "SysStemSort('s-.', .nil, , 'x')", ""
-call try "SysStemSort('s-.', 'x', , 'x')", ""
-call try "SysStemSort('s-.', 'x')", ""
-call try "SysStemSort('s.', 'x', , 4, 2)", ""
-call try "SysStemSort('s.', , , 4, 2)", "drop s.0"
-call try "SysStemSort('s.', , , , , 3, 2)", "drop s.0"
-call try "SysStemSort('s.', , , 9, 8)", ""
+<p>The call can fail these checks: a missing <code>stem</code> raises <code>SYNTAX 88.901</code>; an
+<code>order</code> or a <code>type</code> that is <code>.nil</code> raises <code>SYNTAX 88.909</code>; <code>start</code>, <code>end</code>,
+<code>firstcol</code> and <code>lastcol</code> raise <code>SYNTAX 88.905</code>; the name of the stem raises
+<code>SYNTAX 40.919</code>; <code>order</code> and <code>type</code> raise <code>SYNTAX 40.920</code>; a <code>start</code> that is
+more than an <code>end</code> that is given, and a <code>firstcol</code> that is more than a
+<code>lastcol</code> that is given, raise <code>SYNTAX 40.921</code>; the tail <code>0</code> of the stem raises
+<code>SYNTAX 40.922</code>; the range raises <code>SYNTAX 40.923</code>; and an item without a value
+raises <code>SYNTAX 40.924</code>. When several of them fail, the call raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A <code>start</code>
+that is more than the default <code>end</code>, the count of the stem, is a range that is
+outside the stem and raises <code>SYNTAX 40.923</code>, not <code>SYNTAX 40.921</code>.</p>
+<pre><code class="language-rexx">call try "SysStemSort()", ""
+call try "SysStemSort('s.', .nil)", ""
+call try "SysStemSort('s.', , , 0)", ""
+call try "SysStemSort('s-.')", ""
+call try "SysStemSort('s.', 'x')", ""
+call try "SysStemSort('s.', , , 4, 2)", ""
+call try "SysStemSort('s.', , , , , 3, 2)", ""
 call try "SysStemSort('s.', , , 7)", ""
 call try "SysStemSort('s.')", "drop s.0"
-call try "SysStemSort('s.', , , , 9)", "drop s.3"
 call try "SysStemSort('s.')", "drop s.3"
-call try "SysStemInsert('s-.', 'x', 'v')", ""
 exit
 try:
   parse arg ex, setup
@@ -661,19 +655,15 @@ e: say condition('o')~code
   return
 </code></pre>
 <pre><code class="language-output">88.901
-88.901
 88.909
 88.905
 40.919
 40.920
 40.921
 40.921
-40.921
 40.923
 40.922
-40.923
 40.924
-40.919
 </code></pre>
 
                     </main>

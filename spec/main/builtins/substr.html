@@ -186,9 +186,9 @@ run when it reaches past the end of the string.</p>
 and <code>string</code>, its first argument, is the receiver. <code>string</code> is a
 <a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code> is a <a href="../conventions.html#r-conv.position.check">position</a>,
 <code>length</code> is a <a href="../conventions.html#r-conv.length.check">length</a>, and <code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>.
-The arguments are checked in the <a href="../conventions.html#r-conv.check.order">order</a> the conventions
-give, and the argument count by the <a href="index.html#r-bif.index.call.count">builtin call
-rules</a>: two are required and four is the most.</p>
+The arguments are checked as <a href="../conventions.html#r-conv.check.order">the conventions</a> give, and
+the argument count by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are
+required and four is the most.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say substr('abc', 0)
 a: say condition('o')~code

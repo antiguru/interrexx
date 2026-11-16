@@ -338,11 +338,12 @@ there is none. When the name is the name of a method that
 <a href="#r-class.directory.setmethod"><code>setMethod</code></a> associated, the method runs, with
 the directory as <code>self</code> and no argument, and the answer is what it returns, so
 it is run again for each read, and <code>.nil</code> when it returns nothing. When there
-is neither an item nor a method and the directory has an <code>UNKNOWN</code> method,
-that method runs with the name as its only argument, as the name was given,
-and its answer is the answer of <code>at</code>. The methods take exactly one argument:
-none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises
-<code>SYNTAX 93.902</code>; the number of arguments is checked before the name is read.</p>
+is neither an item nor a method and the directory has an <code>UNKNOWN</code> method, that
+method runs with the name as its only argument, as the name was given, and its
+answer is the answer of <code>at</code>. The methods take exactly one argument: none, or
+an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>;
+with a second argument, whether the name is read is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">d = .directory~new
 d~put('item', 'k')
 d~setMethod('calc', .method~new('', 'return self~class~id arg()'))
@@ -350,7 +351,7 @@ say d~at('k') d['k'] d~at('K') d~at('CALC') d~at('calc')
 d~setMethod('unknown', .method~new('', 'return "none:" arg(1)'))
 say d~at('missing') d['MISSING'] d~at('k')
 call try 'd~at'
-call try 'd~at(, "x")'
+call try 'd~at("x", "x")'
 call try 'd~at("a", "b")'
 call try 'd[]'
 exit
@@ -365,7 +366,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">item item The NIL object Directory 0 The NIL object
 none: missing none: MISSING item
 d~at =&gt; 88.901
-d~at(, "x") =&gt; 93.902
+d~at("x", "x") =&gt; 93.902
 d~at("a", "b") =&gt; 93.902
 d[] =&gt; 88.901
 </code></pre>
@@ -513,7 +514,7 @@ say d~hasItem('x') d~hasItem('X') d~hasItem(.nil) d~hasItem('computed')
 say d~index('x') d~index('computed') d~index(.nil) (d~index('q') == .nil)
 call try 'd~hasItem'
 call try 'd~index'
-call try 'd~hasItem(, 1)'
+call try 'd~hasItem(1, 1)'
 call try 'd~index(1, 2)'
 exit
 try:
@@ -528,7 +529,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 k1 CALC k2 1
 d~hasItem =&gt; 93.903
 d~index =&gt; 93.903
-d~hasItem(, 1) =&gt; 93.902
+d~hasItem(1, 1) =&gt; 93.902
 d~index(1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.directory.hasitem.sends"><a href="#r-class.directory.hasitem.sends">[class.directory.hasitem.sends]</a></div>

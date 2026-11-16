@@ -188,7 +188,7 @@ and <code>target</code>, its second argument, is the receiver; <code>new</code>,
 <a href="../conventions.html#r-conv.string.null">strings</a>, <code>n</code> is a <a href="../conventions.html#r-conv.whole.form">whole number</a> of
 the kind <a href="#r-bif.insert.n.check">the next rule</a> describes, <code>length</code> is a
 <a href="../conventions.html#r-conv.length.check">length</a>, and <code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>. The arguments
-are checked in the <a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the
+are checked as <a href="../conventions.html#r-conv.check.order">the conventions</a> give, and the
 argument count by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are
 required and five is the most.</p>
 <pre><code class="language-rexx">say insert('123', 'abc', 1) 'abc'~insert('123', 1) '|' 'abc'~insert('123', 1, 2, '.')
@@ -222,29 +222,28 @@ f: say condition('o')~code
 <div class="rule" id="r-bif.insert.n.check"><a href="#r-bif.insert.n.check">[bif.insert.n.check]</a></div>
 <p>In INSERT, <code>n</code> is a <a href="../conventions.html#r-conv.whole.digits">whole-number argument</a> whose value
 must not be negative. A negative value raises <code>SYNTAX 93.906</code>. An <code>n</code> of 0 is
-allowed, and so is <code>-0</code>, which is 0. The check is a range check, and falls
-with those of <a href="../conventions.html#r-conv.check.order">the conventions</a>, from left to right with
-the check of <code>length</code>.</p>
+allowed, and so is <code>-0</code>, which is 0. The check is a range check, one of <a href="../conventions.html#r-conv.check.order">the
+checks of the conventions</a>.</p>
 <pre><code class="language-rexx">say insert('X', 'abc', 0) insert('X', 'abc', '-0')
 signal on syntax name a
 say insert('X', 'abc', -1)
 a: say condition('o')~code
 signal on syntax name b
 say insert('X', 'abc', -1, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '93.906 93.923') &gt; 0
 signal on syntax name c
 say insert('X', 'abc', 0, -1)
 c: say condition('o')~code
 signal on syntax name d
-say insert('X', 'abc', -1, 'x')
+say insert('X', 'abc', 1, 'x')
 d: say condition('o')~code
 signal on syntax name e
-say insert('X', 'abc', -1, 1, '**')
+say insert('X', 'abc', 1, 1, '**')
 e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">Xabc Xabc
 93.906
-93.906
+1
 93.923
 40.12
 40.23

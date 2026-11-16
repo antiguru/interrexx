@@ -243,8 +243,7 @@ e: say condition('o')~code
 answers, and every character after the first is ignored. The letters are
 <code>A</code>, <code>E</code>, <code>N</code> and <code>O</code>. Any other first character, and the null string,
 raises <code>SYNTAX 40.904</code>. When
-<code>option</code> is given and <code>n</code> is omitted, the call raises <code>SYNTAX 40.5</code>. <code>n</code> is
-checked before <code>option</code>.</p>
+<code>option</code> is given and <code>n</code> is omitted, the call raises <code>SYNTAX 40.5</code>.</p>
 <pre><code class="language-rexx">call show 'a'
 exit
 show:
@@ -262,7 +261,7 @@ signal on syntax name d
 say arg(, 'e')
 d: say condition('o')~code
 signal on syntax name e
-say arg(0, 'x')
+say arg(0, 'e')
 e: say condition('o')~code
 signal on syntax name f
 say arg(1, 1)

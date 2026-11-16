@@ -187,8 +187,8 @@ and <code>string</code>, its first argument, is the receiver; the other four bec
 message's arguments, in their order. <code>string</code> and <code>reference</code> are
 <a href="../conventions.html#r-conv.string.null">strings</a>, <code>option</code> is an <a href="#r-bif.verify.option">option</a>,
 <code>start</code> is a <a href="../conventions.html#r-conv.position.check">position</a>, and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and five is
 the most.</p>
 <pre><code class="language-rexx">say verify('a1', 'a') 'a1'~verify('1', 'M')
@@ -227,10 +227,10 @@ they change nothing. When <code>option</code> is omitted, it is Nomatch.</p>
 </code></pre>
 <div class="rule" id="r-bif.verify.option.check"><a href="#r-bif.verify.option.check">[bif.verify.option.check]</a></div>
 <p>An <code>option</code> whose first character is not one of those four, and an <code>option</code>
-that is the null string, raise <code>SYNTAX 93.915</code>. This is a range check: it
-runs after every argument has passed its form check, and before the range
-checks of <code>start</code> and <code>length</code>. It is made whatever <code>string</code> and
-<code>reference</code> are.</p>
+that is the null string, raise <code>SYNTAX 93.915</code>. It is made whatever <code>string</code>
+and <code>reference</code> are. A call whose <code>start</code> or <code>length</code> is also in error raises
+the error of one of them, as <a href="../conventions.html#r-conv.check.order">the checks of the
+conventions</a> say.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say verify('abc', 'a', 'Y')
 a: say condition('o')~code
@@ -245,17 +245,17 @@ say verify('', '', 'Z')
 d: say condition('o')~code
 signal on syntax name f
 say verify('abc', 'a', 'Y', 'z')
-f: say condition('o')~code
+f: say wordpos(condition('o')~code, '93.915 40.12') &gt; 0
 signal on syntax name g
 say verify('abc', 'a', 'Y', 0)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.915 93.924') &gt; 0
 </code></pre>
 <pre><code class="language-output">93.915
 93.915
 93.915
 93.915
-40.12
-93.915
+1
+1
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The reference manual names error 93.915 for a method option that

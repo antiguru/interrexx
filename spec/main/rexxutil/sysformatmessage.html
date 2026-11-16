@@ -187,13 +187,13 @@ the message functions, <a href="sysgetmessage.html">SysGetMessage</a> and
 <div class="rule" id="r-util.sysformatmessage.args"><a href="#r-util.sysformatmessage.args">[util.sysformatmessage.args]</a></div>
 <p><code>message</code> and <code>substitutions</code> are required arguments. A call with either
 missing or omitted raises <code>SYNTAX 88.901</code>, and a third argument raises <code>SYNTAX 88.922</code>; an omitted place at the end of the call adds nothing to the count
-(<a href="index.html#r-util.index.args">the argument rule</a>, and for the order of the checks
-<a href="index.html#r-util.index.deviation.101">Deviation 101</a>). <code>message</code> is checked before
-<code>substitutions</code>, and a third argument is reported before either. <code>message</code> is
-read as a string as <a href="index.html#r-util.index.args">the argument rule</a> says: <code>.nil</code>, and
-an object that has no <code>MAKESTRING</code> method, raise <code>SYNTAX 88.909</code>, and an
-object with only a <code>STRING</code> method is such an object. A mutable buffer is read
-as the string that it holds.</p>
+(<a href="index.html#r-util.index.args">the argument rule</a>). A call with more than one fault,
+among a third argument, <code>message</code> and <code>substitutions</code>, raises the error of one
+of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. <code>message</code> is
+read as a string as <a href="index.html#r-util.index.args">the argument rule</a> says: <code>.nil</code>, and an
+object that has no <code>MAKESTRING</code> method, raise <code>SYNTAX 88.909</code>, and an object
+with only a <code>STRING</code> method is such an object. A mutable buffer is read as the
+string that it holds.</p>
 <pre><code class="language-rexx">call try "SysFormatMessage()"
 call try "SysFormatMessage(,)"
 call try "SysFormatMessage('a')"
@@ -202,7 +202,6 @@ call try "SysFormatMessage(, 'x')"
 call try "SysFormatMessage('a', 'b', 'c')"
 call try "SysFormatMessage('[&amp;1]', 'x', )"
 call try "SysFormatMessage(.nil, 'x')"
-call try "SysFormatMessage(.nil, .nil)"
 call try "SysFormatMessage(.object~new, 'x')"
 call try "SysFormatMessage(.c6zqs~new, 'x')"
 call try "SysFormatMessage(.c6zqt~new, 'x')"
@@ -231,7 +230,6 @@ e: say condition('o')~code
 88.901
 88.922
 [x]
-88.909
 88.909
 88.909
 88.909

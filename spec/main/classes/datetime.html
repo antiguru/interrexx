@@ -432,25 +432,24 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .datetime~new(1, 2, 3, 4, 5, 6, 7, 8, 9) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.datetime.new.checks"><a href="#r-class.datetime.new.checks">[class.datetime.new.checks]</a></div>
-<p>The values are checked in this order, and the first that fails raises its error.
-In the one-argument and two-argument form the number of microseconds must be a
-whole number in its range, or <code>SYNTAX 40.19</code> is raised, and then the offset is
+<p>In the one-argument and two-argument form the number of microseconds must be a
+whole number in its range, or <code>SYNTAX 40.19</code> is raised, and the offset is
 checked as <a href="#r-class.datetime.offset">the offset rule</a> says. Each whole number,
-here and below, is read as a whole-number argument of a builtin is, by <a href="../conventions.html#r-conv.whole.form">the form
-rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a>, with the
-codes of this rule in place of SYNTAX 40.12 (<a href="#r-class.datetime.deviation.130">Deviation
+here and below, is read as a whole-number argument of a builtin is, by <a href="../conventions.html#r-conv.whole.form">the
+form rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a>, with
+the codes of this rule in place of SYNTAX 40.12 (<a href="#r-class.datetime.deviation.130">Deviation
 130</a>). In the other forms year, month and day
-are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its
-range, one that is no number and one that is not whole, such as 1.5, raise
-<code>SYNTAX 88.907</code>. A day that the month does not have, such as 30 February, then
-raises <code>SYNTAX 40.19</code>. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and
-microseconds (0 to 999999) are checked last, each a whole number in its range,
-and then the offset, as <a href="#r-class.datetime.offset">the offset rule</a> says; a value
-outside its range, one that is no number and one that is not whole raise <code>SYNTAX 88.907</code>. A day that does not exist is thus reported before an hour that is out
-of range, and a day of 32 before one that does not exist.</p>
-<pre><code class="language-rexx">call try '.datetime~new(2017, 2, 30, 25, 0, 0, 0)'
-call try '.datetime~new(2017, 2, 32)'
-call try '.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901)'
+are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside
+its range, one that is no number and one that is not whole, such as 1.5, raise
+<code>SYNTAX 88.907</code>. A day that the month does not have, such as 30 February,
+raises <code>SYNTAX 40.19</code>. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59)
+and microseconds (0 to 999999) are each a whole number in its range, and the
+offset is checked as <a href="#r-class.datetime.offset">the offset rule</a> says; a value
+outside its range, one that is no number and one that is not whole raise
+<code>SYNTAX 88.907</code>. A call that fails more than one of these checks, such as a day
+that does not exist with an hour out of range, raises the error of one of them,
+as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
+<pre><code class="language-rexx">call try '.datetime~new(2017, 1, 32)'
 call try '.datetime~new(2017, 2, 29)'
 call try '.datetime~new(2016, 2, 29)'
 call try '.datetime~new(2017, 6, 30, 24, 0, 0, 0)'
@@ -466,7 +465,6 @@ call try '.datetime~new(-1)'
 call try '.datetime~new(315537897600000000)'
 call try '.datetime~new(1.5)'
 call try '.datetime~new("x")'
-call try '.datetime~new(-5, 901)'
 call try '.datetime~new(5, 901)'
 call try '.datetime~new(9999, 12, 31, 23, 59, 59, 999999)'
 exit
@@ -478,9 +476,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">.datetime~new(2017, 2, 30, 25, 0, 0, 0) =&gt; 40.19
-.datetime~new(2017, 2, 32) =&gt; 88.907
-.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901) =&gt; 40.19
+<pre><code class="language-output">.datetime~new(2017, 1, 32) =&gt; 88.907
 .datetime~new(2017, 2, 29) =&gt; 40.19
 .datetime~new(2016, 2, 29) =&gt; 2016-02-29T00:00:00.000000
 .datetime~new(2017, 6, 30, 24, 0, 0, 0) =&gt; 88.907
@@ -496,7 +492,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .datetime~new(315537897600000000) =&gt; 40.19
 .datetime~new(1.5) =&gt; 40.19
 .datetime~new("x") =&gt; 40.19
-.datetime~new(-5, 901) =&gt; 40.19
 .datetime~new(5, 901) =&gt; 88.907
 .datetime~new(9999, 12, 31, 23, 59, 59, 999999) =&gt; 9999-12-31T23:59:59.999999
 </code></pre>
@@ -575,7 +570,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 default offset or the one its optional argument gives (<a href="#r-class.datetime.offset">the offset
 rule</a>). The day is the current one and is not
 specified, so the example checks the time of day and the offset only. It takes
-at most one argument: a second raises <code>SYNTAX 93.902</code>, whatever the first is.</p>
+at most one argument: a second raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">t = .datetime~today
 say t~normalTime t~microseconds (t~offset == .datetime~new~offset)
 say .datetime~today(90)~offset .datetime~today(.timespan~fromHours(-3))~offset
@@ -583,7 +578,7 @@ signal on syntax name bad
 say .datetime~today(901)
 bad: say condition('o')~code
 signal on syntax name bad2
-say .datetime~today(901, 1)
+say .datetime~today(90, 1)
 bad2: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">00:00:00 0 1

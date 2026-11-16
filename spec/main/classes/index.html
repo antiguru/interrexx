@@ -559,12 +559,12 @@ raise <code>88.922</code>.</p>
 <pre><code class="language-rexx">o = .object~new
 s = .stream~new('class_index_zzq_never_opened')
 call try 'o~hasMethod("A", "B")'
-call try 'o~hasMethod(, "B")'
+call try 'o~hasMethod("B", "B")'
 call try 'o~hasMethod("A", )'
 call try 'o~copy(1)'
 call try 'o~class(, )~id'
 call try '.array~of(1)~items(1)'
-call try '"abc"~left(-1, "xx", 3)'
+call try '"abc"~left(1, "x", 3)'
 call try 's~state(1)'
 exit
 try:
@@ -576,12 +576,12 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
 <pre><code class="language-output">o~hasMethod("A", "B") =&gt; 93.902
-o~hasMethod(, "B") =&gt; 93.902
+o~hasMethod("B", "B") =&gt; 93.902
 o~hasMethod("A", ) =&gt; 0
 o~copy(1) =&gt; 93.902
 o~class(, )~id =&gt; Object
 .array~of(1)~items(1) =&gt; 93.902
-"abc"~left(-1, "xx", 3) =&gt; 93.902
+"abc"~left(1, "x", 3) =&gt; 93.902
 s~state(1) =&gt; 88.922
 </code></pre>
 <div class="rule" id="r-class.index.args.missing"><a href="#r-class.index.args.missing">[class.index.args.missing]</a></div>

@@ -675,12 +675,14 @@ interpret inherited 1
 </code></pre>
 <div class="rule" id="r-bif.time.elapsed.convert"><a href="#r-bif.time.elapsed.convert">[bif.time.elapsed.convert]</a></div>
 <p>A call with a <code>string</code> and the option E or R raises <code>SYNTAX 40.29</code>, whatever
-<code>string</code> and <code>informat</code> are.</p>
+<code>string</code> is when it is valid for <code>informat</code>. A call whose <code>string</code> or
+<code>informat</code> is also in error raises the error of one of them, as <a href="#r-bif.time.order">the order
+rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say time('E', '13:05:09')
 a: say condition('o')~code
 signal on syntax name b
-say time('R', 'junk', 'Q')
+say time('R', '13:05:09', 'N')
 b: say condition('o')~code
 signal on syntax name c
 say time('r', 5, 'H')
@@ -690,37 +692,30 @@ c: say condition('o')~code
 40.29
 40.29
 </code></pre>
-<h2 id="the-order-of-the-checks"><a class="header" href="#the-order-of-the-checks">The order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-bif.time.order"><a href="#r-bif.time.order">[bif.time.order]</a></div>
-<p>A call is checked in this order, and the first failure is the one raised: the
-<a href="index.html#r-bif.index.call.count">argument count</a>; a missing <code>string</code> that an <code>informat</code>
-needs (<a href="index.html#r-bif.index.dt.convert">40.5</a>); the options E and R with a <code>string</code>
-(<a href="#r-bif.time.elapsed.convert">40.29</a>); the letter of <code>informat</code>; the string
-itself (<code>40.19</code>); and, last, the letter of <code>option</code>.</p>
+<p>A call can fail these checks: the <a href="index.html#r-bif.index.call.count">argument count</a>; a
+missing <code>string</code> that an <code>informat</code> needs (<a href="index.html#r-bif.index.dt.convert">40.5</a>); the
+options E and R with a <code>string</code> (<a href="#r-bif.time.elapsed.convert">40.29</a>); the
+letter of <code>informat</code>; the string itself (<code>40.19</code>); and the letter of <code>option</code>.
+A call that fails more than one of these checks raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
-say time('X', 'junk', 'Q', 1)
+say time('N', '13:05:09', 'N', 1)
 a: say condition('o')~code
 signal on syntax name b
 say time('E', , 'N')
 b: say condition('o')~code
 signal on syntax name c
 say time('E', 'junk', 'Q')
-c: say condition('o')~code
-signal on syntax name d
-say time('X', 'junk', 'Q')
-d: say condition('o')~code
-signal on syntax name e
-say time('X', 'junk')
-e: say condition('o')~code
+c: say wordpos(condition('o')~code, '40.29 40.904 40.19') &gt; 0
 signal on syntax name f
 say time('X', '13:05:09')
 f: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">40.4
 40.5
-40.29
-40.904
-40.19
+1
 40.904
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>

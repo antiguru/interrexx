@@ -200,9 +200,7 @@ third example shows these. Whitespace after a sign is the subject of
 and any other number above <code>2147483</code>, raises <code>SYNTAX 88.907</code>, and so does
 <code>2147483.4</code>: the largest delay is <code>2147483</code>. A delay of <code>0</code>, or of a fraction
 too small to count, is allowed, and so is a negative number too small in size
-for that format, as <code>-1e-400</code>, which is the delay <code>0</code>. When an argument past
-the last one comes with an omitted or wrong argument, <a href="index.html#r-util.index.deviation.101">Deviation
-101</a> says which error is raised. An object that
+for that format, as <code>-1e-400</code>, which is the delay <code>0</code>. When an argument past the last one comes with an omitted or wrong argument, <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which error is raised. An object that
 has no string value, as <code>.nil</code> is, raises <code>SYNTAX 88.909</code>, and so does an
 object that has only a <code>STRING</code> method, and no <code>MAKESTRING</code> method; the second
 and third examples show them.</p>

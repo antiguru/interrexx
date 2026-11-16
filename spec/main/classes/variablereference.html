@@ -398,27 +398,29 @@ r~'VALUE='(1, 2) =&gt; 93.902
 <p>A message that the reference does not understand is sent on to the value of the
 variable, with the same arguments, and its answer is the answer of the
 reference: the reference stands in for its value, so <code>r~length</code> sends <code>length</code>
-to the string that the variable holds, and <code>r~append(4)</code> appends to the array it
-holds. This holds for the messages <code>=</code>, <code>==</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code> too,
-which the reference, unlike other objects, does not understand itself, so they
-compare the value of the variable with the argument as given, and for the
-operators of arithmetic and comparison, which are messages. The methods that the
-reference does understand, <code>class</code>, <code>copy</code>, <code>hasMethod</code> and the others of
+to the string that the variable holds, and <code>r~append(4)</code> appends to the array
+it holds. This holds for the messages <code>=</code>, <code>==</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code>
+too, which the reference, unlike other objects, does not understand itself, so
+they compare the value of the variable with the argument as given, and for the
+operators of arithmetic and comparison, which are messages. The methods that
+the reference does understand, <code>class</code>, <code>copy</code>, <code>hasMethod</code> and the others of
 <code>Object</code>, <code>name</code>, <code>request</code>, <code>value</code> and <code>value=</code>, answer for the reference
 itself. <code>unknown</code> is the method that does the sending: <code>unknown(name, arguments)</code> sends the message <code>name</code> to the value with the arguments that
-<code>arguments</code> holds. It takes exactly two arguments, and a third raises <code>SYNTAX 93.902</code> before anything else is checked. <code>name</code> is checked next: an omitted one
-raises <code>SYNTAX 93.903</code>, and one with no string value, <code>.nil</code> included, <code>SYNTAX 88.909</code>. The message name is used as written: a name that is not in upper case
-names no method of the value, which handles it as a message it does not
-understand, and the null string is a name like any other, the abuttal's (<a href="object.html#r-class.object.concat">the
-joining rule</a>). <code>arguments</code> is checked last: an omitted
-one raises <code>SYNTAX 93.903</code>; any other is sent <code>request</code> with <code>ARRAY</code>, and an
-answer that is an instance of <code>Array</code>, or of a subclass of it, with one
+<code>arguments</code> holds. It takes exactly two arguments, and a third raises <code>SYNTAX 93.902</code>. An omitted <code>name</code> raises <code>SYNTAX 93.903</code>, and one with no string
+value, <code>.nil</code> included, <code>SYNTAX 88.909</code>. The message name is used as written: a
+name that is not in upper case names no method of the value, which handles it
+as a message it does not understand, and the null string is a name like any
+other, the abuttal's (<a href="object.html#r-class.object.concat">the joining rule</a>). An omitted
+<code>arguments</code> raises <code>SYNTAX 93.903</code>; any other is sent <code>request</code> with <code>ARRAY</code>,
+and an answer that is an instance of <code>Array</code>, or of a subclass of it, with one
 dimension is the array of arguments, while any other answer raises <code>SYNTAX 98.913</code>, so <code>.nil</code>, an <code>Object</code> and an array of two dimensions raise it and a
 string gives an array of its lines. A position that holds nothing is an omitted
 argument. An instance of a subclass of <code>List</code> given as <code>arguments</code> is sent
 <code>request</code> as any other object is (<a href="#r-class.variablereference.deviation.118">Deviation
-118</a>). A value that does not understand
-the message raises <code>SYNTAX 97.1</code>, as it would for any other sender.</p>
+118</a>). A value that does not
+understand the message raises <code>SYNTAX 97.1</code>, as it would for any other sender.
+A call whose <code>name</code> and <code>arguments</code> are both in error raises the error of one
+of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">text = 'hello world'
 r = &gt;text
 say r~length r~left(3) r~substr(7) r~words
@@ -441,8 +443,7 @@ call try "r~unknown('LENGTH', .array~new, 1)"
 call try 'r~unknown(.nil, .array~new)'
 call try "r~unknown('', .array~new)"
 call try "r~unknown('LENGTH', .nil)"
-call try "r~unknown(.nil, .nil, 1)"
-call try 'r~unknown(.nil)'
+call try "r~unknown('LENGTH', .array~new, 1)"
 call try "r~unknown('LENGTH', .object~new)"
 exit
 try:
@@ -468,8 +469,7 @@ r~unknown('LENGTH', .array~new, 1) =&gt; 93.902
 r~unknown(.nil, .array~new) =&gt; 88.909
 r~unknown('', .array~new) =&gt; 93.903
 r~unknown('LENGTH', .nil) =&gt; 98.913
-r~unknown(.nil, .nil, 1) =&gt; 93.902
-r~unknown(.nil) =&gt; 88.909
+r~unknown('LENGTH', .array~new, 1) =&gt; 93.902
 r~unknown('LENGTH', .object~new) =&gt; 98.913
 </code></pre>
 <pre><code class="language-rexx">v = 'hello'

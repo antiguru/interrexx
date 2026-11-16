@@ -192,8 +192,7 @@ the error code, and then the stem as its count, a colon and its items.</p>
 <p><code>stem</code> and <code>start</code> are required, and <code>count</code> is optional and is <code>1</code> when it is
 left out. <code>stem</code> names a stem as <a href="index.html#r-util.index.stemname">the stem name rule</a>
 says. The call follows <a href="index.html#r-util.index.args">the argument rule</a>: a missing
-required argument raises <code>SYNTAX 88.901</code> and a fourth argument raises <code>SYNTAX 88.922</code> (<a href="index.html#r-util.index.deviation.101">Deviation 101</a> is about which of the two
-comes first). <code>start</code> and <code>count</code> are read as whole numbers that are at least
+required argument raises <code>SYNTAX 88.901</code> and a fourth argument raises <code>SYNTAX 88.922</code> (<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says which of the two a call with both raises). <code>start</code> and <code>count</code> are read as whole numbers that are at least
 <code>1</code>, with their blanks, a leading plus sign, a decimal point and an exponent,
 so that <code>' 2 '</code> and <code>1e0</code> are numbers. The value is read as <a href="index.html#r-util.index.whole">the whole-number
 rule</a> says, so that <code>1.0000000000000000001</code> is fractional,
@@ -368,24 +367,23 @@ show: procedure expose s.
 40.923 3 : a b c
 40.922 -1 :
 </code></pre>
-<h2 id="order-of-the-checks"><a class="header" href="#order-of-the-checks">Order of the checks</a></h2>
+<h2 id="the-checks"><a class="header" href="#the-checks">The checks</a></h2>
 <div class="rule" id="r-util.sysstemdelete.order"><a href="#r-util.sysstemdelete.order">[util.sysstemdelete.order]</a></div>
-<p>When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises <code>SYNTAX 88.901</code> when it
-is missing and <code>SYNTAX 40.919</code> when it is not a name; then <code>start</code> raises
+<p>The call can fail these checks: the name of the stem raises <code>SYNTAX 88.901</code>
+when it is missing and <code>SYNTAX 40.919</code> when it is not a name; <code>start</code> raises
 <code>SYNTAX 88.901</code> when it is missing and <code>SYNTAX 88.905</code> when it is not a whole
-number of at least <code>1</code>; then <code>count</code> raises <code>SYNTAX 88.905</code>; then the tail <code>0</code>
-of the stem raises <code>SYNTAX 40.922</code>; then the range raises
-<code>SYNTAX 40.923</code>; and last an item that has to move and has no value raises
-<code>SYNTAX 40.924</code>.</p>
-<pre><code class="language-rexx">call try "SysStemDelete('s-.')", ""
-call try "SysStemDelete('s.', , 'x')", ""
-call try "SysStemDelete('s.a', 'x')", ""
-call try "SysStemDelete('s.', 0, -1)", ""
+number of at least <code>1</code>; <code>count</code> raises <code>SYNTAX 88.905</code>; the tail <code>0</code> of the
+stem raises <code>SYNTAX 40.922</code>; the range raises <code>SYNTAX 40.923</code>; and an item that
+has to move and has no value raises <code>SYNTAX 40.924</code>. When several of them fail,
+the call raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">call try "SysStemDelete(, 1)", ""
+call try "SysStemDelete('s-.', 1)", ""
+call try "SysStemDelete('s.')", ""
+call try "SysStemDelete('s.', 0)", ""
 call try "SysStemDelete('s.', 1, 'x')", ""
-call try "SysStemDelete('s.', 0)", "drop s.0"
-call try "SysStemDelete('s.', 9)", "drop s.0"
-call try "SysStemDelete('s.', 9)", "drop s.2"
+call try "SysStemDelete('s.', 1)", "drop s.0"
+call try "SysStemDelete('s.', 9)", ""
 call try "SysStemDelete('s.', 1)", "drop s.2"
 exit
 try:
@@ -399,10 +397,9 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">40.919
-88.901
+<pre><code class="language-output">88.901
 40.919
-88.905
+88.901
 88.905
 88.905
 40.922

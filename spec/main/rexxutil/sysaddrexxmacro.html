@@ -187,12 +187,13 @@ it is not.</p>
 the omission of an argument, and an object in the place of one, follow <a href="index.html#r-util.index.args">the
 argument rule</a>: a call with no <code>name</code> or no <code>file</code>, or with
 either one omitted, raises <code>SYNTAX 88.901</code>, a fourth argument raises <code>SYNTAX 88.922</code>, and <code>.nil</code> raises <code>SYNTAX 88.909</code>. An object that is not a string but
-has a string value is read by that value. The rules for what a <code>name</code> is are
-on <a href="macrospace.html#r-util.macrospace.names">the page of the macrospace</a>. A <code>file</code> that is the
+has a string value is read by that value. The rules for what a <code>name</code> is are on
+<a href="macrospace.html#r-util.macrospace.names">the page of the macrospace</a>. A <code>file</code> that is the
 null string names no file that can be read, so the call answers <code>7</code>. When more
-than one check fails, the count and the omission come first, then the <code>order</code>
-(the next rule), and only then is the file read, so that a bad <code>order</code> is
-reported for a file that is not there.</p>
+than one check fails, including that of the <code>order</code> (the next rule), the call
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. The file is read only after the checks, so
+a bad <code>order</code> is reported for a file that is not there.</p>
 <pre><code class="language-rexx">call lineout 'c4zqargs.rex', 'return "x"'
 call lineout 'c4zqargs.rex'
 call try "SysAddRexxMacro()"

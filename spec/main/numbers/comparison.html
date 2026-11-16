@@ -260,13 +260,14 @@ say (100 = 104) (1.00 = 1.04)
 </code></pre>
 <h2 id="lost-digits"><a class="header" href="#lost-digits">Lost digits</a></h2>
 <div class="rule" id="r-num.comparison.lostdigits"><a href="#r-num.comparison.lostdigits">[num.comparison.lostdigits]</a></div>
-<p>When a normal comparison compares two numbers, an operand with more digits
-than NUMERIC DIGITS minus NUMERIC FUZZ raises the
+<p>When a normal comparison compares two numbers, an operand with more digits than
+NUMERIC DIGITS minus NUMERIC FUZZ raises the
 <a href="../conditions/lostdigits.html#r-cond.lostdigits.information">LOSTDIGITS</a> condition. The digits are counted
-as <a href="arithmetic.html#r-num.arithmetic.lostdigits">the arithmetic rule</a> counts them, and the
-condition is raised for the left operand first. A strict comparison raises
-nothing, and neither does a comparison of text. When the condition is not
-trapped the comparison goes on and gives its answer.</p>
+as <a href="arithmetic.html#r-num.arithmetic.lostdigits">the arithmetic rule</a> counts them, and when
+both operands have too many, which of them the condition is raised for is
+unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A strict
+comparison raises nothing, and neither does a comparison of text. When the
+condition is not trapped the comparison goes on and gives its answer.</p>
 <pre><code class="language-rexx">numeric digits 3
 signal on lostdigits name a
 say 1234 = 1

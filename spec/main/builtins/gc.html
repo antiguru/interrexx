@@ -216,8 +216,9 @@ the letter <code>F</code>, in either case: <code>force</code>, <code>Force</code
 accepted, and so is any other string whose first character is <code>F</code> or <code>f</code>.
 Any other value raises <code>SYNTAX 40.904</code>: a string whose first character is
 something else, a blank or the digit <code>1</code> among them, the null string, and an
-object whose string value starts otherwise, such as <code>.nil</code> or <code>.false</code>. The
-argument is checked after the count of arguments.</p>
+object whose string value starts otherwise, such as <code>.nil</code> or <code>.false</code>. A call
+with a second argument and a wrong <code>force</code> raises the error of one of them, as
+<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say gc(1)
 a: say condition('o')~code
@@ -234,7 +235,7 @@ signal on syntax name e
 say gc(.false)
 e: say condition('o')~code
 signal on syntax name f
-say gc('x', 'y')
+say gc('force', 'y')
 f: say condition('o')~code
 signal off syntax
 say gc('force') gc('Force') gc('F') gc('f') gc('fx') gc(.mutablebuffer~new('f'))

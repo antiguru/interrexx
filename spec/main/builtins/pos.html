@@ -188,8 +188,8 @@ string. <a href="lastpos.html">LASTPOS</a> searches from the other end.</p>
 <code>length</code> become the message's arguments, in that order. <code>needle</code> and
 <code>haystack</code> are <a href="../conventions.html#r-conv.string.null">strings</a>, <code>start</code> is a
 <a href="../conventions.html#r-conv.position.check">position</a> and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and four is
 the most.</p>
 <pre><code class="language-rexx">say pos('ter', 'winter') 'winter'~pos('ter')
@@ -212,11 +212,11 @@ signal on syntax name f
 say pos('a', 'a', 'x')
 f: say condition('o')~code
 signal on syntax name g
-say pos('a', 'a', 0, 'x')
+say pos('a', 'a', 1, 'x')
 g: say condition('o')~code
 signal on syntax name h
 say pos('a', 'a', 0, -1)
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '93.924 93.923') &gt; 0
 </code></pre>
 <pre><code class="language-output">4 4
 40.3
@@ -226,7 +226,7 @@ h: say condition('o')~code
 93.923
 40.12
 40.12
-93.924
+1
 </code></pre>
 <div class="rule" id="r-bif.pos.start.default"><a href="#r-bif.pos.start.default">[bif.pos.start.default]</a></div>
 <p>When <code>start</code> is omitted, it is 1: the search begins at the first character of

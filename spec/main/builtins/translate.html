@@ -189,8 +189,8 @@ method</a>, and <code>string</code>, its first argument, is the
 receiver; the other five become the message's arguments, in their order.
 <code>string</code>, <code>tableo</code> and <code>tablei</code> are <a href="../conventions.html#r-conv.string.null">strings</a>, <code>pad</code> is a
 <a href="../conventions.html#r-conv.pad">pad</a>, <code>pos</code> is a <a href="../conventions.html#r-conv.position.check">position</a>, and <code>length</code>
-is a <a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+is a <a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: one is required and six is
 the most.</p>
 <pre><code class="language-rexx">say translate('tab', 'TB', 'tb') 'tab'~translate('TB', 'tb', , 2)

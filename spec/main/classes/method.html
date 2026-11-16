@@ -228,23 +228,21 @@ hello world
 <h3 id="new"><a class="header" href="#new">new</a></h3>
 <div class="rule" id="r-class.method.new"><a href="#r-class.method.new">[class.method.new]</a></div>
 <p><code>new</code> makes a method object from a name, a source and a context. The name is
-required (<code>SYNTAX 88.901</code>), and is a string, or the string that its
-argument <a href="index.html#r-class.index.string">gives</a>: an object that gives no string, <code>.nil</code>
-among them, raises
-<code>88.909</code>, and a number is a name like any other string. The name becomes the
-name of the method's package, which <code>package</code> shows. The source is required
-too (<code>88.901</code>) and is read as <a href="#r-class.method.new.source">the source rule</a>
-says. The context is <code>PROGRAMSCOPE</code> in any case, or omitted, or a <code>Method</code>, a
-<code>Routine</code> or a <code>Package</code> object, and decides what the code can see, as
-<a href="#r-class.method.new.context">the context rule</a> says; another value raises
-<code>40.904</code>. The checks run in this order: the name, the source, the context, and
-then the source is translated, so a source of <code>.nil</code> raises <code>93.961</code> whatever
-the context is, and a source that does not translate raises its translation
-error (<code>35.1</code> for an invalid expression, <code>13.1</code> for an invalid character)
-after the context has been accepted, and <code>new</code> runs none of the code. The
-arguments from the fourth on are passed to <code>init</code> as
-<a href="#r-class.method.new.sends">the sends rule</a> says. The answer is the new method
-object.</p>
+required (<code>SYNTAX 88.901</code>), and is a string, or the string that its argument
+<a href="index.html#r-class.index.string">gives</a>: an object that gives no string, <code>.nil</code> among
+them, raises <code>88.909</code>, and a number is a name like any other string. The name
+becomes the name of the method's package, which <code>package</code> shows. The source is
+required too (<code>88.901</code>) and is read as <a href="#r-class.method.new.source">the source
+rule</a> says. The context is <code>PROGRAMSCOPE</code> in any
+case, or omitted, or a <code>Method</code>, a <code>Routine</code> or a <code>Package</code> object, and decides
+what the code can see, as <a href="#r-class.method.new.context">the context rule</a> says;
+another value raises <code>40.904</code>. A source that does not translate raises its
+translation error (<code>35.1</code> for an invalid expression, <code>13.1</code> for an invalid
+character), and <code>new</code> runs none of the code. A call that fails more than one of
+these checks raises the error of one of them, as <a href="#r-class.method.new.order">the order
+rule</a> says. The arguments from the fourth on are
+passed to <code>init</code> as <a href="#r-class.method.new.sends">the sends rule</a> says. The answer
+is the new method object.</p>
 <pre><code class="language-rexx">m = .method~new('greet', 'return "hello" arg(1)')
 say m~class~id m~package~name m~source[1]
 call try '.method~new()'
@@ -286,11 +284,12 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .method~new(.onlystr~new, "nop") =&gt; 88.909
 </code></pre>
 <div class="rule" id="r-class.method.new.order"><a href="#r-class.method.new.order">[class.method.new.order]</a></div>
-<p><code>new</code> checks the source before the context: a source that is neither a string
-nor an array and a context that is not valid together raise the source's
-<code>SYNTAX 93.961</code>, and the context's <code>SYNTAX 40.904</code> only follows a valid source.
-<code>Routine~new</code> checks in the same order.</p>
-<pre><code class="language-rexx">call try '.method~new("n", .nil, 7)'
+<p>A call to <code>new</code> whose name, source or context fails more than one check, such
+as a source that is neither a string nor an array (<code>SYNTAX 93.961</code>) with a
+context that is not valid (<code>SYNTAX 40.904</code>), raises the error of one of them,
+as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The same holds for
+<code>Routine~new</code>.</p>
+<pre><code class="language-rexx">call try '.method~new("n", .nil)'
 call try '.method~new("n", "nop", 7)'
 exit
 try:
@@ -301,7 +300,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">.method~new("n", .nil, 7) =&gt; 93.961
+<pre><code class="language-output">.method~new("n", .nil) =&gt; 93.961
 .method~new("n", "nop", 7) =&gt; 40.904
 </code></pre>
 <div class="rule" id="r-class.method.new.source"><a href="#r-class.method.new.source">[class.method.new.source]</a></div>
@@ -548,21 +547,20 @@ m1 m2
 <p><code>newFile</code> makes a method object from the lines of a file. The file name is
 required (<code>SYNTAX 88.901</code>) and is a string, or an object that <a href="index.html#r-class.index.string">gives
 one</a> (<code>.nil</code> and others that give none raise <code>88.909</code>),
-and the context is the
-second argument, with the same values and the same error <code>40.904</code> as for
-<a href="#r-class.method.new.context"><code>new</code></a>. <code>newFile</code> takes no other argument: a
-third raises <code>SYNTAX 93.902</code> before the file is looked for. The checks run in
-this order: the number of arguments, the name, the context, and then the file
-is found and read; a file that cannot be read raises <code>SYNTAX 3.1</code>, and a file
-that does not translate raises its translation error. The method's package is
-named by the file name as it was given, and its source is the lines of the
-file that come before its first directive, except that a first line that
-begins with <code>#!</code> is not part of the source. A directive in the file still
-makes the classes and routines of the method's package, which the package
-answers to <code>classes</code> and <code>routines</code>, and the code of the method sees them. The
-context is used as for <code>new</code>. The file is not searched for (<a href="../environment/search.html#r-env.search.newfile">the newFile
-rule</a>). <code>newFile</code> sends <code>init</code> with no argument to the
-new object, and a subclass of <code>Method</code> makes instances of itself.</p>
+and the context is the second argument, with the same values and the same error
+<code>40.904</code> as for <a href="#r-class.method.new.context"><code>new</code></a>. <code>newFile</code> takes no other
+argument: a third raises <code>SYNTAX 93.902</code>. A file that cannot be read raises
+<code>SYNTAX 3.1</code>, and a file that does not translate raises its translation error.
+A call that fails more than one check raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. The method's package is named
+by the file name as it was given, and its source is the lines of the file that
+come before its first directive, except that a first line that begins with <code>#!</code>
+is not part of the source. A directive in the file still makes the classes and
+routines of the method's package, which the package answers to <code>classes</code> and
+<code>routines</code>, and the code of the method sees them. The context is used as for
+<code>new</code>. The file is not searched for (<a href="../environment/search.html#r-env.search.newfile">the newFile rule</a>).
+<code>newFile</code> sends <code>init</code> with no argument to the new object, and a subclass of
+<code>Method</code> makes instances of itself.</p>
 <pre><code class="language-rexx">f = 'class_method_newfile_zq.tmp'
 call sysfiledelete f
 call lineout f, 'say "file method" arg(1)'
@@ -577,13 +575,13 @@ say m~package~classes~items m~package~classes~allindexes~makearray~items
 .runner~define('GO', m)
 say .runner~new~go('x')
 say .mine~newFile(f)~class~id
-call sysfiledelete f
 call try '.method~newFile("class_method_newfile_none.tmp")'
 call try '.method~newFile()'
 call try '.method~newFile(.nil)'
 call try '.method~newFile(f, "PROGRAMSCOPE", 1)'
-call try '.method~newFile("class_method_newfile_none.tmp", "bad")'
+call try '.method~newFile(f, "bad")'
 call try '.method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE")'
+call sysfiledelete f
 exit
 try:
   signal on syntax name bad
@@ -607,7 +605,7 @@ MINE
 .method~newFile() =&gt; 88.901
 .method~newFile(.nil) =&gt; 88.909
 .method~newFile(f, "PROGRAMSCOPE", 1) =&gt; 93.902
-.method~newFile("class_method_newfile_none.tmp", "bad") =&gt; 40.904
+.method~newFile(f, "bad") =&gt; 40.904
 .method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE") =&gt; 3.1
 </code></pre>
 <div class="rule" id="r-class.method.newfile.shebang"><a href="#r-class.method.newfile.shebang">[class.method.newfile.shebang]</a></div>

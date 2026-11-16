@@ -535,13 +535,13 @@ delete("x", "y") 88.922
 that <code>queue</code> and <code>push</code> take, are read in the same way, as a string. It is a
 string, an instance of a subclass of <code>String</code> included, or an object that
 answers a string to the message <code>request</code> with the argument <code>STRING</code>, which an
-object with a <code>makeString</code> method does by the rule of <code>Object</code> (<a href="../conventions.html#r-conv.string.object">the
-conversion rule</a>); the answer is used as the name or the
-line. Any other object, <code>.nil</code> and an <code>Object</code> among them, raises
-<code>SYNTAX 88.909</code>, and the object is read before the number of arguments is
-checked, so a call with two arguments whose first is <code>.nil</code> raises <code>88.909</code>
-and not <code>88.922</code>. A number is read as the string that it is, and an <code>Array</code> is
-read as the string that its <code>makeString</code> gives: its items, one to a line.</p>
+object with a <code>makeString</code> method does by the rule of <code>Object</code> (<a href="../conventions.html#r-conv.string.object">the conversion
+rule</a>); the answer is used as the name or the line. Any
+other object, <code>.nil</code> and an <code>Object</code> among them, raises <code>SYNTAX 88.909</code>, and a
+call with two arguments whose first is <code>.nil</code> raises the error of one of the
+two faults, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A number is
+read as the string that it is, and an <code>Array</code> is read as the string that its
+<code>makeString</code> gives: its items, one to a line.</p>
 <pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_name')
 n = .named~new('SPEC_RQ_NAME')
 say .rexxqueue~exists(n) .rexxqueue~exists(12),
@@ -552,12 +552,10 @@ say '&lt;'q~pull'&gt;' '&lt;'q~pull~changestr('0a'x, '|')'&gt;'
 say .rexxqueue~open(n) .rexxqueue~delete(n) .rexxqueue~exists(n)
 call try '.rexxqueue~exists(.nil)'
 call try '.rexxqueue~open(.object~new)'
-call try '.rexxqueue~delete(.nil, 2)'
 call try '.rexxqueue~create(.nil)'
 q = .rexxqueue~new('spec_rq_name')
 call try 'q~queue(.nil)'
 call try 'q~push(.object~new)'
-call try 'q~queue(.nil, 2)'
 say q~delete
 exit
 try:
@@ -580,11 +578,9 @@ bad: say arg(1) condition('o')~code
 0 0 0
 .rexxqueue~exists(.nil) 88.909
 .rexxqueue~open(.object~new) 88.909
-.rexxqueue~delete(.nil, 2) 88.909
 .rexxqueue~create(.nil) 88.909
 q~queue(.nil) 88.909
 q~push(.object~new) 88.909
-q~queue(.nil, 2) 88.909
 0
 </code></pre>
 <h2 id="adding-lines"><a class="header" href="#adding-lines">Adding lines</a></h2>
@@ -945,17 +941,17 @@ SESSION
 </code></pre>
 <div class="rule" id="r-class.rexxqueue.set"><a href="#r-class.rexxqueue.set">[class.rexxqueue.set]</a></div>
 <p><code>set(name)</code> switches the object to the queue of that name and answers the name
-of the queue it worked with before, in upper case. <code>name</code> is required
-(<code>SYNTAX 93.901</code>) and the method takes no other argument (<code>SYNTAX 93.902</code>),
-both checked before anything else. <code>set</code> does not look for the queue: a name
-of a queue that does not exist is taken, and <a href="#r-class.rexxqueue.missing">the missing queue
+of the queue it worked with before, in upper case. <code>name</code> is required (<code>SYNTAX 93.901</code>) and the method takes no other argument (<code>SYNTAX 93.902</code>); a call with
+one of these faults and another raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. <code>set</code> does not look for the
+queue: a name of a queue that does not exist is taken, and <a href="#r-class.rexxqueue.missing">the missing queue
 rule</a> says what the object then does. The name is
 decided as <code>init</code> does: the argument is sent <code>upper</code>, and an object without
 that method raises <code>SYNTAX 97.1</code>, <code>.nil</code> and an <code>Object</code> among them. Then
 <code>objectName=</code> is sent to the receiver with the upper-case name (<a href="#r-class.rexxqueue.set.sends">the sends
 rule</a>). Only the object changes: the queue that
-the program uses with its instructions is not switched, and another object
-that holds the same name is not changed.</p>
+the program uses with its instructions is not switched, and another object that
+holds the same name is not changed.</p>
 <pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_set_a')
 b = .rexxqueue~new('spec_rq_set_b')
 q~queue('in a')

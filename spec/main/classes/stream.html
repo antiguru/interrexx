@@ -368,7 +368,7 @@ say 'first sends' o~log
 t = .loud~new(o)
 say 'second sends' o~log
 call try '.loud~new'
-call try '.loud~new(.nil, 2)'
+call try '.loud~new(o, 2)'
 exit
 try:
   signal on syntax name bad
@@ -396,7 +396,7 @@ second sends  makestring makestring
 init gets 0 argument(s)
 .loud~new =&gt; 93.901
 init gets 2 argument(s)
-.loud~new(.nil, 2) =&gt; 93.902
+.loud~new(o, 2) =&gt; 93.902
 </code></pre>
 <pre><code class="language-rexx">o = .counted~new
 t = .stream~new(o)
@@ -666,32 +666,31 @@ READY: READY:
 1
 </code></pre>
 <div class="rule" id="r-class.stream.args"><a href="#r-class.stream.args">[class.stream.args]</a></div>
-<p>The arguments of a message are checked in this order, and the first error is
-the one raised. First comes the form of the arguments that a method reads
-before it counts them: a start, a line number or a count of <code>charIn</code>,
-<code>lineIn</code>, <code>charOut</code> and <code>lineOut</code> that is no whole number in the range that
-<a href="#r-class.stream.args.numbers">the arguments</a> give raises <code>SYNTAX 88.907</code>, and
-a string to write that has no <code>makeString</code> method raises <code>SYNTAX 88.909</code>
-(<a href="#r-class.stream.args.strings">the strings rule</a>); the option of <code>open</code>,
-<code>lines</code>, <code>seek</code> and <code>position</code> is read through <code>makeString</code> too, and one
-without it raises <code>SYNTAX 88.909</code> (<a href="#r-class.stream.args.objects">the objects
-rule</a>). Then comes the count of arguments, as
-<a href="index.html#r-class.index.args.count">the count rule</a> says, and before the stream is
-opened: a message with more arguments than the method takes raises <code>SYNTAX 88.922</code> for <code>chars</code>, <code>charIn</code>, <code>charOut</code>, <code>close</code>, <code>description</code>, <code>flush</code>,
-<code>lineIn</code>, <code>lineOut</code>, <code>lines</code>, <code>open</code>, <code>position</code>, <code>qualify</code>, <code>seek</code>, <code>state</code>
-and <code>uninit</code>, and <code>SYNTAX 93.902</code> for <code>arrayIn</code>, <code>arrayOut</code>, <code>command</code>,
-<code>init</code>, <code>makeArray</code>, <code>query</code>, <code>say</code>, <code>string</code> and <code>supplier</code>; for these
-nothing is read before the count. Last come the values: a <code>lineIn</code> count above
-1 raises <code>SYNTAX 93.0</code>, an option that is not allowed raises <code>SYNTAX 93.0</code> or
-<code>93.915</code> as the rule of the method says, and, once the stream is open, a start
-or a line number below 1 raises <code>SYNTAX 93.907</code>. <code>charIn</code>, <code>charOut</code>,
-<code>lineIn</code>, <code>lineOut</code> and <code>arrayOut</code> take two arguments, <code>lines</code>, <code>open</code>,
-<code>position</code>, <code>seek</code>, <code>arrayIn</code>, <code>makeArray</code>, <code>command</code>, <code>init</code>, <code>query</code> and
-<code>say</code> one, and the others none. <code>arrayOut</code>, <code>command</code>, <code>init</code> and <code>query</code> need
-their argument, and a message without it raises <code>SYNTAX 93.901</code>; <code>position</code>
-and <code>seek</code> raise <code>SYNTAX 88.901</code>. No argument is required by <code>say</code>, <code>lines</code>,
-<code>open</code>, <code>arrayIn</code> or <code>makeArray</code>. In the example the state is still <code>UNKNOWN</code>
-after every message that raised.</p>
+<p>A start, a line number or a count of <code>charIn</code>, <code>lineIn</code>, <code>charOut</code> and
+<code>lineOut</code> that is no whole number in the range that <a href="#r-class.stream.args.numbers">the
+arguments</a> give raises <code>SYNTAX 88.907</code>, and a
+string to write that has no <code>makeString</code> method raises <code>SYNTAX 88.909</code> (<a href="#r-class.stream.args.strings">the
+strings rule</a>); the option of <code>open</code>, <code>lines</code>,
+<code>seek</code> and <code>position</code> is read through <code>makeString</code> too, and one without it
+raises <code>SYNTAX 88.909</code> (<a href="#r-class.stream.args.objects">the objects rule</a>). A
+message with more arguments than the method takes, as <a href="index.html#r-class.index.args.count">the count
+rule</a> says, raises <code>SYNTAX 88.922</code> for <code>chars</code>,
+<code>charIn</code>, <code>charOut</code>, <code>close</code>, <code>description</code>, <code>flush</code>, <code>lineIn</code>, <code>lineOut</code>,
+<code>lines</code>, <code>open</code>, <code>position</code>, <code>qualify</code>, <code>seek</code>, <code>state</code> and <code>uninit</code>, and
+<code>SYNTAX 93.902</code> for <code>arrayIn</code>, <code>arrayOut</code>, <code>command</code>, <code>init</code>, <code>makeArray</code>,
+<code>query</code>, <code>say</code>, <code>string</code> and <code>supplier</code>. A <code>lineIn</code> count above 1 raises
+<code>SYNTAX 93.0</code>, an option that is not allowed raises <code>SYNTAX 93.0</code> or <code>93.915</code>
+as the rule of the method says, and, once the stream is open, a start or a line
+number below 1 raises <code>SYNTAX 93.907</code>. These are checked before the stream is
+opened, except the last. A message with more than one of these faults raises
+the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a>
+says. <code>charIn</code>, <code>charOut</code>, <code>lineIn</code>, <code>lineOut</code> and <code>arrayOut</code> take two
+arguments, <code>lines</code>, <code>open</code>, <code>position</code>, <code>seek</code>, <code>arrayIn</code>, <code>makeArray</code>,
+<code>command</code>, <code>init</code>, <code>query</code> and <code>say</code> one, and the others none. <code>arrayOut</code>,
+<code>command</code>, <code>init</code> and <code>query</code> need their argument, and a message without it
+raises <code>SYNTAX 93.901</code>; <code>position</code> and <code>seek</code> raise <code>SYNTAX 88.901</code>. No
+argument is required by <code>say</code>, <code>lines</code>, <code>open</code>, <code>arrayIn</code> or <code>makeArray</code>. In
+the example the state is still <code>UNKNOWN</code> after every message that raised.</p>
 <pre><code class="language-rexx">f = 'spec-stream-args-zq.tmp'
 s = .stream~new(f)
 too = 'chars charIn charOut close description flush lineIn lineOut lines',
@@ -711,14 +710,9 @@ do m over 'arrayOut command init query position seek'~makearray(' ')
 end
 say s~state
 say '--'
-call try 's~charIn("x", 1, 2)'
-call try 's~lineIn(, -1, 3)'
-call try 's~lineOut(.nil, 1, 2)'
-call try 's~charOut(.object~new, 1, 2)'
-call try 's~lineIn(1, 5, 2)'
-call try 's~charIn(0, 1, 2)'
-call try 's~lines("x", 1)'
-call try 's~open("bogus", 1)'
+call try 's~lineIn(1, 1, 2)'
+call try 's~lines("N", 1)'
+call try 's~open("read", 1)'
 say s~state
 say '--'
 call try 's~say'
@@ -769,14 +763,9 @@ s~position =&gt; 88.901
 s~seek =&gt; 88.901
 UNKNOWN
 --
-s~charIn("x", 1, 2) =&gt; 88.907
-s~lineIn(, -1, 3) =&gt; 88.907
-s~lineOut(.nil, 1, 2) =&gt; 88.909
-s~charOut(.object~new, 1, 2) =&gt; 88.909
-s~lineIn(1, 5, 2) =&gt; 88.922
-s~charIn(0, 1, 2) =&gt; 88.922
-s~lines("x", 1) =&gt; 88.922
-s~open("bogus", 1) =&gt; 88.922
+s~lineIn(1, 1, 2) =&gt; 88.922
+s~lines("N", 1) =&gt; 88.922
+s~open("read", 1) =&gt; 88.922
 UNKNOWN
 --
 s~say =&gt; no error
@@ -791,15 +780,16 @@ significant digits, whatever <code>NUMERIC DIGITS</code> is in the caller, and i
 a whole number from -9223372036854775808 to 9223372036854775807. An argument
 that is outside that range, is not whole, or has a form that is no number,
 raises <code>SYNTAX 88.907</code>; the functions raise <code>SYNTAX 40.12</code> for it. A negative
-count raises <code>SYNTAX 88.907</code> too, and a <code>lineIn</code> count above 1 raises <code>SYNTAX 93.0</code>. The form is checked, from left to right, before the count of arguments
-and before the stream is opened (<a href="#r-class.stream.args">the order</a>). Once the
-stream is open, a start or a line number below 1 raises <code>SYNTAX 93.907</code>, the
-value <code>-0</code> and -9223372036854775808 among them. A stream that cannot be opened
-is not asked: the call has the <a href="../builtins/index.html#r-bif.index.stream.start">NOTREADY outcome</a> of
-a function that finds no stream, whatever the start is. An argument that is an
-object and no string is read as <a href="#r-class.stream.args.objects">the objects
-rule</a> says. What <code>charIn</code> does with a count
-larger than the memory of the host allows is not specified.</p>
+count raises <code>SYNTAX 88.907</code> too, and a <code>lineIn</code> count above 1 raises <code>SYNTAX 93.0</code>. The form is checked before the stream is opened (<a href="#r-class.stream.args">the arguments
+rule</a>). Once the stream is open, a start or a line number
+below 1 raises <code>SYNTAX 93.907</code>, the value <code>-0</code> and -9223372036854775808 among
+them. A call with more than one of these faults raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. A stream that
+cannot be opened is not asked: the call has the <a href="../builtins/index.html#r-bif.index.stream.start">NOTREADY
+outcome</a> of a function that finds no stream, whatever
+the start is. An argument that is an object and no string is read as <a href="#r-class.stream.args.objects">the
+objects rule</a> says. What <code>charIn</code> does with a
+count larger than the memory of the host allows is not specified.</p>
 <pre><code class="language-rexx">f = 'spec-stream-numbers-zq.tmp'
 call lineout f, 'abcdef'
 call lineout f
@@ -821,9 +811,9 @@ call try 's~linein(1, 2)'
 call try 's~charin("-9223372036854775809", 1)'
 say '--'
 t = .stream~new('spec-stream-numbers-none-zq.tmp')
-call try 't~charin(0, "x")'
+call try 't~charin(1, "x")'
 say t~state
-call try 't~charin(0, 1, 1)'
+call try 't~charin(1, 1, 1)'
 call try 't~linein(, 2)'
 say t~state
 call try 's~charin(0, 1)'
@@ -864,9 +854,9 @@ s~linein(, -1) =&gt; 88.907
 s~linein(1, 2) =&gt; 93.0
 s~charin("-9223372036854775809", 1) =&gt; 88.907
 --
-t~charin(0, "x") =&gt; 88.907
+t~charin(1, "x") =&gt; 88.907
 UNKNOWN
-t~charin(0, 1, 1) =&gt; 88.922
+t~charin(1, 1, 1) =&gt; 88.922
 t~linein(, 2) =&gt; 93.0
 UNKNOWN
 s~charin(0, 1) =&gt; 93.907
@@ -892,11 +882,10 @@ count is a count of 2, and <code>.nil</code> and an object whose string value is
 number, such as a plain <code>Object</code>, raise <code>SYNTAX 88.907</code>. The option that
 <code>open</code>, <code>lines</code>, <code>seek</code> and <code>position</code> take is read as a string argument,
 through <code>makeString</code> alone: an object that has no such method, <code>.nil</code> and an
-object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>, and it does
-so before the count of arguments is checked, so that <code>open(.nil, 1)</code> raises
-<code>SYNTAX 88.909</code> and not 88.922. The argument of <code>query</code> and of <code>command</code> is
-read through its string value with the fallback to <code>string</code>: an object that
-has only <code>string</code> is read by that answer, and <code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with.</p>
+object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>. The argument
+of <code>query</code> and of <code>command</code> is read through its string value with the fallback
+to <code>string</code>: an object that has only <code>string</code> is read by that answer, and
+<code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with.</p>
 <pre><code class="language-rexx">f = 'spec-stream-objects-zq.tmp'
 g = 'spec-stream-objects-w-zq.tmp'
 call lineout f, 'abc'
@@ -924,10 +913,6 @@ call try 't~open(.nil)'
 call try 't~lines(.os~new("N"))'
 call try 't~seek(.object~new)'
 call try 't~position(.nil)'
-call try 't~open(.nil, 1)'
-call try 't~lines(.nil, 1)'
-call try 't~seek(.nil, 1)'
-call try 't~position(.os~new("=1"), 1)'
 call try 't~query(.os~new("size"))'
 call try 't~query(.nil)'
 call try 't~command(.os~new("query size"))'
@@ -976,10 +961,6 @@ t~open(.nil) =&gt; 88.909
 t~lines(.os~new("N")) =&gt; 88.909
 t~seek(.object~new) =&gt; 88.909
 t~position(.nil) =&gt; 88.909
-t~open(.nil, 1) =&gt; 88.909
-t~lines(.nil, 1) =&gt; 88.909
-t~seek(.nil, 1) =&gt; 88.909
-t~position(.os~new("=1"), 1) =&gt; 88.909
 t~query(.os~new("size")) =&gt; [4]
 t~query(.nil) =&gt; 93.0
 t~command(.os~new("query size")) =&gt; [4]
@@ -990,14 +971,15 @@ t~command(.nil) =&gt; 93.914
 value</a> that a method takes from an argument: the
 <code>makeString</code> method of an object that is not a string is sent to it and its
 answer is written. An argument that has no <code>makeString</code> method, <code>.nil</code> and an
-object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>; it is
-checked before the stream is opened, and before the start or line number that
-follows it, <a href="#r-class.stream.args">from left to right</a>. An argument that is a
-<code>String</code>, a number or a <code>MutableBuffer</code>, or an object with a <code>makeString</code>
-method, is written as that string. The items that <code>arrayOut</code> writes are read
-in the same way, one at a time, by the <code>lineOut</code> or <code>charOut</code> that <code>arrayOut</code>
-sends; the items before a failing one are written (<a href="#r-class.stream.arrayout">the <code>arrayOut</code>
-rule</a> has the details).</p>
+object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>; it is checked
+before the stream is opened. A call whose start or line number is also in error
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. An argument that is a <code>String</code>, a number
+or a <code>MutableBuffer</code>, or an object with a <code>makeString</code> method, is written as
+that string. The items that <code>arrayOut</code> writes are read in the same way, one at
+a time, by the <code>lineOut</code> or <code>charOut</code> that <code>arrayOut</code> sends; the items before a
+failing one are written (<a href="#r-class.stream.arrayout">the <code>arrayOut</code> rule</a> has the
+details).</p>
 <pre><code class="language-rexx">f = 'spec-stream-strings-zq.tmp'
 s = .stream~new(f)
 call try 's~lineOut(.nil)'
@@ -1005,8 +987,6 @@ call try 's~lineOut(.object~new)'
 call try 's~lineOut(.only_string~new)'
 call try 's~charOut(.nil)'
 call try 's~say(.object~new)'
-call try 's~lineOut(.nil, "x")'
-call try 's~lineOut(.nil, 0)'
 say s~state
 call try 's~lineOut(12)'
 call try 's~lineOut(.has_makestring~new)'
@@ -1038,8 +1018,6 @@ s~lineOut(.object~new) =&gt; 88.909
 s~lineOut(.only_string~new) =&gt; 88.909
 s~charOut(.nil) =&gt; 88.909
 s~say(.object~new) =&gt; 88.909
-s~lineOut(.nil, "x") =&gt; 88.909
-s~lineOut(.nil, 0) =&gt; 88.909
 UNKNOWN
 s~lineOut(12) =&gt; [0]
 s~lineOut(.has_makestring~new) =&gt; [0]
@@ -2012,14 +1990,16 @@ argument <code>ARRAY</code>, which an <code>Array</code>, a <code>List</code>, a
 answer with an array of their items, and the items are written in the order of
 that array, an empty slot giving none; an argument whose answer is not an
 array, <code>.nil</code> among them, raises <code>SYNTAX 98.913</code>. The second argument is
-optional: it is sent <code>left</code> with the argument 1, and the answer must be <code>L</code>
-for lines or <code>C</code> for characters, in either case, or <code>SYNTAX 93.0</code> is raised;
-the option is checked before the first argument is. An item is written as
-<code>lineOut</code> and <code>charOut</code> read their string, so an item that has no <code>makeString</code>
-method raises <code>SYNTAX 88.909</code> in the write of that item, after the items
-before it were written. When a write raises NOTREADY the writing ends at that
-item, which was not written: the answer is the number of items from it to the
-end. A missing first argument raises <code>SYNTAX 93.901</code> when there is no other
+optional: it is sent <code>left</code> with the argument 1, and the answer must be <code>L</code> for
+lines or <code>C</code> for characters, in either case, or <code>SYNTAX 93.0</code> is raised. The
+option is sent <code>left</code> before the first argument is sent <code>request</code>, and a call
+whose option and first argument are both in error raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. An item is
+written as <code>lineOut</code> and <code>charOut</code> read their string, so an item that has no
+<code>makeString</code> method raises <code>SYNTAX 88.909</code> in the write of that item, after the
+items before it were written. When a write raises NOTREADY the writing ends at
+that item, which was not written: the answer is the number of items from it to
+the end. A missing first argument raises <code>SYNTAX 93.901</code> when there is no other
 argument, and <code>SYNTAX 93.903</code> when the option follows it; that check comes
 before the option is read. More than two arguments raise <code>SYNTAX 93.902</code>. An
 empty array writes nothing and does not open the stream.</p>
@@ -2037,10 +2017,8 @@ say e~arrayout(.array~new) e~state '[' || e~query('exists') || ']'
 s~close
 say translate(charin(f, 1, 200), '~', '0a'x)
 call try 's~arrayout'
-call try 's~arrayout(, "x")'
 call try 's~arrayout(, "L")'
 call try 's~arrayout(.array~of(1), "x")'
-call try 's~arrayout(.nil, "x")'
 call try 's~arrayout(.nil)'
 call try 's~arrayout(.object~new)'
 call try 's~arrayout(.array~of(1), "L", 3)'
@@ -2078,10 +2056,8 @@ bad: say arg(1) '=&gt;' condition('o')~code
 0 UNKNOWN []
 one~two~three~45six~eight~x~y~zset~q1~q2~
 s~arrayout =&gt; 93.901
-s~arrayout(, "x") =&gt; 93.903
 s~arrayout(, "L") =&gt; 93.903
 s~arrayout(.array~of(1), "x") =&gt; 93.0
-s~arrayout(.nil, "x") =&gt; 93.0
 s~arrayout(.nil) =&gt; 98.913
 s~arrayout(.object~new) =&gt; 98.913
 s~arrayout(.array~of(1), "L", 3) =&gt; 93.902

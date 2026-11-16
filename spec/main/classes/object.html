@@ -1355,15 +1355,16 @@ w count
 </code></pre>
 <div class="rule" id="r-class.object.sendwith"><a href="#r-class.object.sendwith">[class.object.sendwith]</a></div>
 <p><code>sendWith</code> is <code>send</code> with the arguments of the message in an array. The first
-argument names the message as for <a href="#r-class.object.send"><code>send</code></a>, and is
-checked first. The second argument is an array, or an object that answers an
-array to the message <code>request</code> with the argument <code>ARRAY</code>, which is what
-<code>sendWith</code> sends it; an object that answers anything but an array, including
-<code>.nil</code>, and an array of more than one dimension, raise <code>SYNTAX 88.913</code>. The
-items of the array are the arguments in order; a place of a sparse array that
-holds nothing is an omitted argument, and the argument count is the position
-of the last item that is present. Both arguments are required (<code>88.901</code>, one
-missing) and a third raises <code>93.902</code>.</p>
+argument names the message as for <a href="#r-class.object.send"><code>send</code></a>. The second
+argument is an array, or an object that answers an array to the message
+<code>request</code> with the argument <code>ARRAY</code>, which is what <code>sendWith</code> sends it; an
+object that answers anything but an array, including <code>.nil</code>, and an array of
+more than one dimension, raise <code>SYNTAX 88.913</code>. The items of the array are the
+arguments in order; a place of a sparse array that holds nothing is an omitted
+argument, and the argument count is the position of the last item that is
+present. Both arguments are required (<code>88.901</code>, one missing) and a third raises
+<code>93.902</code>. A call whose two arguments are both in error raises the error of one
+of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">o = .w~new
 say o~sendWith('hello', .array~of('W', 'F'))
 say o~sendWith('count', .array~of(1, , 3))
@@ -1378,7 +1379,6 @@ call try 'o~sendWith("count", .nil)'
 call try 'o~sendWith("count", .object~new)'
 call try 'o~sendWith("count", .array~new(2, 2))'
 call try 'o~sendWith("count", .array~new, 3)'
-call try 'o~sendWith(.nil, .nil)'
 call try 'o~sendWith("nosuchzz", .nil)'
 exit
 try:
@@ -1411,7 +1411,6 @@ o~sendWith("count", .nil) =&gt; 88.913
 o~sendWith("count", .object~new) =&gt; 88.913
 o~sendWith("count", .array~new(2, 2)) =&gt; 88.913
 o~sendWith("count", .array~new, 3) =&gt; 93.902
-o~sendWith(.nil, .nil) =&gt; 93.972
 o~sendWith("nosuchzz", .nil) =&gt; 88.913
 </code></pre>
 <div class="rule" id="r-class.object.sendwith.sends"><a href="#r-class.object.sendwith.sends">[class.object.sendwith.sends]</a></div>
@@ -1497,15 +1496,14 @@ o~start(.array~of("count")) =&gt; 93.946
 o~start(.array~of("count", 1)) =&gt; 88.914
 </code></pre>
 <div class="rule" id="r-class.object.startwith"><a href="#r-class.object.startwith">[class.object.startwith]</a></div>
-<p><code>startWith</code> is <code>start</code> with the arguments of the message in an array: the
-first argument names the message and is checked first, the second is an array
-or an object that answers one to <code>request('ARRAY')</code>, which is how the
-arguments are read, as for <a href="#r-class.object.sendwith"><code>sendWith</code></a>. It answers
-the message object at once. The errors of the array are raised at the call,
-with two differences from <code>sendWith</code>: an object that answers no array raises
-<code>SYNTAX 98.913</code>, where <code>sendWith</code> raises <code>88.913</code>, and a missing array raises
-<code>93.903</code>, where <code>sendWith</code> raises <code>88.901</code>. With no argument at all the error
-is <code>88.901</code>.</p>
+<p><code>startWith</code> is <code>start</code> with the arguments of the message in an array: the first
+argument names the message, the second is an array or an object that answers
+one to <code>request('ARRAY')</code>, which is how the arguments are read, as for
+<a href="#r-class.object.sendwith"><code>sendWith</code></a>. It answers the message object at once.
+The errors of the array are raised at the call, with two differences from
+<code>sendWith</code>: an object that answers no array raises <code>SYNTAX 98.913</code>, where
+<code>sendWith</code> raises <code>88.913</code>, and a missing array raises <code>93.903</code>, where
+<code>sendWith</code> raises <code>88.901</code>. With no argument at all the error is <code>88.901</code>.</p>
 <pre><code class="language-rexx">o = .w~new
 m = o~startWith('hello', .array~of('W', 'F'))
 say m~class~id m~result
@@ -1568,36 +1566,37 @@ count got 2
 <div class="rule" id="r-class.object.setmethod"><a href="#r-class.object.setmethod">[class.object.setmethod]</a></div>
 <p><code>setMethod</code> gives the receiver a method of its own, as <a href="methods.html#r-class.methods.object">the object method
 rule</a> says, and answers no value. It is private, with
-the restriction that <a href="methods.html#r-class.methods.object.access">the access rule</a> gives. The
-first argument is the name and is required (<code>SYNTAX 88.901</code>); an object that is
-no string and whose <code>request</code> with the argument <code>STRING</code> answers no string
-raises <code>88.909</code>. The second is the method: a method object, a string that holds
-the source of a method, or an array, whose items are read as <a href="method.html#r-class.method.new.source">the source
-rule</a> reads them, so an item that gives no string
-raises <code>SYNTAX 93.952</code>. These are instances of <code>Method</code>, <code>String</code> and <code>Array</code>
-themselves; an instance of a subclass of one of them, <code>Method</code> included, is
-converted as any other object is. Any other object is sent <code>request</code> with the
-argument <code>ARRAY</code>, and the array it answers is used; when it answers no array, it
-is sent <code>request</code> with the argument <code>STRING</code>, and a string answer is used as the
-source (<a href="#r-class.object.setmethod.sends">the sends rule</a>). <code>.nil</code>, and an object
-whose <code>request</code> with <code>STRING</code> answers <code>.nil</code>, raise <code>SYNTAX 93.974</code>, so a
-subclass of <code>Method</code> that declares neither <code>MAKEARRAY</code> nor <code>MAKESTRING</code> is
-refused. When that <code>request</code> answers an object that is not a string, the result
-is not specified. The method that the receiver gets runs the code of a method
-object that is given, with the scope that <a href="methods.html#r-class.methods.object.scope">the scope
-rule</a> says. It is not specified whether the method
-object that the receiver holds is the argument itself or a copy of it, and what
-scope the argument object answers afterwards is not specified either. The checks
-run in this order: the number of arguments, the name, the method, the scope.
-With no second argument the name is hidden for the receiver. The third argument
-is the scope, <code>FLOAT</code> or <code>OBJECT</code> as <a href="methods.html#r-class.methods.object.scope">the scope
-rule</a> says; another value raises <code>88.916</code>, and
-<code>.nil</code> raises <code>88.909</code>. A fourth argument raises <code>93.902</code>. A source that does
-not translate raises the translation error from <code>setMethod</code>. The code of a
-method made from a source runs with the scope <code>FLOAT</code>, whose object variables
-are separate from those of any class: the methods that the receiver got by
-<code>setMethod</code> with <code>FLOAT</code>, by <code>run</code> and by <code>enhanced</code> share one set, which is
-kept for the receiver.</p>
+the restriction that <a href="methods.html#r-class.methods.object.access">the access rule</a> gives.
+The first argument is the name and is required (<code>SYNTAX 88.901</code>); an object
+that is no string and whose <code>request</code> with the argument <code>STRING</code> answers no
+string raises <code>88.909</code>. The second is the method: a method object, a string
+that holds the source of a method, or an array, whose items are read as <a href="method.html#r-class.method.new.source">the
+source rule</a> reads them, so an item that gives no
+string raises <code>SYNTAX 93.952</code>. These are instances of <code>Method</code>, <code>String</code> and
+<code>Array</code> themselves; an instance of a subclass of one of them, <code>Method</code>
+included, is converted as any other object is. Any other object is sent
+<code>request</code> with the argument <code>ARRAY</code>, and the array it answers is used; when it
+answers no array, it is sent <code>request</code> with the argument <code>STRING</code>, and a string
+answer is used as the source (<a href="#r-class.object.setmethod.sends">the sends
+rule</a>). <code>.nil</code>, and an object whose <code>request</code>
+with <code>STRING</code> answers <code>.nil</code>, raise <code>SYNTAX 93.974</code>, so a subclass of <code>Method</code>
+that declares neither <code>MAKEARRAY</code> nor <code>MAKESTRING</code> is refused. When that
+<code>request</code> answers an object that is not a string, the result is not specified.
+The method that the receiver gets runs the code of a method object that is
+given, with the scope that <a href="methods.html#r-class.methods.object.scope">the scope rule</a> says.
+It is not specified whether the method object that the receiver holds is the
+argument itself or a copy of it, and what scope the argument object answers
+afterwards is not specified either. A call that fails more than one check, the
+number of arguments among them, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. With no second argument the
+name is hidden for the receiver. The third argument is the scope, <code>FLOAT</code> or
+<code>OBJECT</code> as <a href="methods.html#r-class.methods.object.scope">the scope rule</a> says; another value
+raises <code>88.916</code>, and <code>.nil</code> raises <code>88.909</code>. A fourth argument raises <code>93.902</code>.
+A source that does not translate raises the translation error from <code>setMethod</code>.
+The code of a method made from a source runs with the scope <code>FLOAT</code>, whose
+object variables are separate from those of any class: the methods that the
+receiver got by <code>setMethod</code> with <code>FLOAT</code>, by <code>run</code> and by <code>enhanced</code> share one
+set, which is kept for the receiver.</p>
 <pre><code class="language-rexx">o = .w~new
 call try 'o~sm("A1", "return 1")'
 call try 'x = o~smv'
@@ -1616,13 +1615,10 @@ call try 'o~sm("a8")'
 say o~hasMethod('a8') o~hasMethod('a1')
 call try 'o~sm("a9", .nil)'
 call try 'o~sm("a9", .object~new)'
-call try 'o~sm("a9", "return 1", "f", 4)'
+call try 'o~sm("a9", "return 1", "FLOAT", 4)'
 call try 'o~sm'
 call try 'o~sm(.nil)'
 call try 'o~sm("a9", "if then")'
-call try 'o~sm(.nil, .nil)'
-call try 'o~sm("a9", .nil, "x")'
-call try 'o~sm("a9", "if then", "x")'
 call try 'o~sm("a9", .lmeth~new("", "return 1"))'
 m = .method~new("", 'return "mobj"')
 o~sm('M1', m)
@@ -1672,13 +1668,10 @@ o~sm("a8") =&gt; no error
 0 1
 o~sm("a9", .nil) =&gt; 93.974
 o~sm("a9", .object~new) =&gt; 93.974
-o~sm("a9", "return 1", "f", 4) =&gt; 93.902
+o~sm("a9", "return 1", "FLOAT", 4) =&gt; 93.902
 o~sm =&gt; 88.901
 o~sm(.nil) =&gt; 88.909
 o~sm("a9", "if then") =&gt; 35.929
-o~sm(.nil, .nil) =&gt; 88.909
-o~sm("a9", .nil, "x") =&gt; 93.974
-o~sm("a9", "if then", "x") =&gt; 35.929
 o~sm("a9", .lmeth~new("", "return 1")) =&gt; 93.974
 mobj mobj
 41 42 class x
@@ -1742,18 +1735,18 @@ makestring sent
 made by string
 </code></pre>
 <div class="rule" id="r-class.object.unsetmethod"><a href="#r-class.object.unsetmethod">[class.object.unsetmethod]</a></div>
-<p><code>unsetMethod</code> takes the name off the receiver again, as
-<a href="methods.html#r-class.methods.object">the object method rule</a> says, and answers no value.
-It is private with the restriction of
-<a href="methods.html#r-class.methods.object.access">the access rule</a>. The argument is the name,
-required (<code>SYNTAX 88.901</code>), and a value that is no string raises <code>88.909</code>. A
-second argument raises <code>93.902</code>, and the number of arguments is checked first,
-so a second argument raises it even when the name is missing. The name is
-taken in upper case. A name for which the receiver has no method of its own is
-not an error and changes nothing, and so does a name that only a class holds:
-the class's method stays. A name that <code>setMethod</code> replaced twice is taken off
-with one <code>unsetMethod</code>. A method that <a href="methods.html#r-class.methods.enhanced"><code>enhanced</code></a>
-added to the receiver is not taken off by it, and the receiver keeps it.</p>
+<p><code>unsetMethod</code> takes the name off the receiver again, as <a href="methods.html#r-class.methods.object">the object method
+rule</a> says, and answers no value. It is private with
+the restriction of <a href="methods.html#r-class.methods.object.access">the access rule</a>. The
+argument is the name, required (<code>SYNTAX 88.901</code>), and a value that is no string
+raises <code>88.909</code>. A second argument raises <code>93.902</code>, and with the name missing
+too the call raises one of the two errors, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. The name is taken in upper case. A name
+for which the receiver has no method of its own is not an error and changes
+nothing, and so does a name that only a class holds: the class's method stays.
+A name that <code>setMethod</code> replaced twice is taken off with one <code>unsetMethod</code>. A
+method that <a href="methods.html#r-class.methods.enhanced"><code>enhanced</code></a> added to the receiver is not
+taken off by it, and the receiver keeps it.</p>
 <pre><code class="language-rexx">o = .w~new
 o~sm('A1', 'return "first"')
 o~sm('A1', 'return "second"')
@@ -1775,7 +1768,7 @@ say e~extra e~hasMethod('extra')
 call try 'o~um'
 call try 'o~um(.nil)'
 call try 'o~um("a1", 2)'
-call try 'o~um(, 2)'
+call try 'o~um(2, 2)'
 call try 'o~unsetMethod("outside")'
 exit
 try:
@@ -1810,20 +1803,20 @@ added 1
 o~um =&gt; 88.901
 o~um(.nil) =&gt; 88.909
 o~um("a1", 2) =&gt; 93.902
-o~um(, 2) =&gt; 93.902
+o~um(2, 2) =&gt; 93.902
 o~unsetMethod("outside") =&gt; 97.2
 </code></pre>
 <div class="rule" id="r-class.object.run"><a href="#r-class.object.run">[class.object.run]</a></div>
 <p><code>run</code> runs a method on the receiver once and answers what that method answers.
-It is private, with the restriction of
-<a href="methods.html#r-class.methods.object.access">the access rule</a>. The first argument is the
-method: a method object, a string that holds the source of a method, or an
-array of strings, one for each line, which <code>run</code> turns into a method as
-<code>setMethod</code> does (<a href="#r-class.object.setmethod">the argument rule</a>), with the
-same conversions and the same errors for a value that is no method or fails to
-translate, and <code>SYNTAX 88.901</code> when the argument is missing. The method is not
-kept. The second argument is an option, whose first letter counts and the rest
-is ignored: <code>I</code> passes the remaining arguments to the method one for each, in
+It is private, with the restriction of <a href="methods.html#r-class.methods.object.access">the access
+rule</a>. The first argument is the method: a
+method object, a string that holds the source of a method, or an array of
+strings, one for each line, which <code>run</code> turns into a method as <code>setMethod</code> does
+(<a href="#r-class.object.setmethod">the argument rule</a>), with the same conversions and
+the same errors for a value that is no method or fails to translate, and
+<code>SYNTAX 88.901</code> when the argument is missing. The method is not kept. The
+second argument is an option, whose first letter counts and the rest is
+ignored: <code>I</code> passes the remaining arguments to the method one for each, in
 order, with omitted ones omitted, and <code>A</code> passes the items of the third
 argument, converted as <a href="#r-class.object.sendwith"><code>sendWith</code></a> converts its
 array: a missing array raises <code>SYNTAX 88.901</code>, and one that converts to no
@@ -1831,10 +1824,11 @@ array, or to an array of more than one dimension, raises <code>88.913</code>. A 
 array's empty places are omitted arguments. Without an option the method gets
 no arguments, and arguments after an omitted option raise <code>88.901</code>. Any other
 option, the null string included, raises <code>SYNTAX 93.915</code>; <code>.nil</code> raises
-<code>88.909</code>. The checks run in this order: the method, the option, the array. The
-code runs with the scope <code>FLOAT</code>: its object variables are those of
-<code>setMethod</code>'s floating methods, not those of any class. When the method
-answers nothing, <code>run</code> answers nothing.</p>
+<code>88.909</code>. A call that fails more than one of these checks raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The code
+runs with the scope <code>FLOAT</code>: its object variables are those of <code>setMethod</code>'s
+floating methods, not those of any class. When the method answers nothing,
+<code>run</code> answers nothing.</p>
 <pre><code class="language-rexx">o = .w~new
 say o~go('return "plain" arg()')
 say o~go('return arg() "|" arg(1) arg(2)', 'I', 'a', 'b')
@@ -1861,7 +1855,6 @@ call try 'o~go("return 1", "A")'
 call try 'o~go("return 1", "A", .nil)'
 call try 'o~go("return 1", "A", .array~new(2, 2))'
 call try 'o~go2("return arg()", 1)'
-call try 'o~go(.object~new, "x")'
 call try 'o~go("return 1", "x", .nil)'
 call try 'o~go(.lmeth~new("", "return 1"))'
 call try 'o~go("return 1", "I", 1, 2)'
@@ -1914,7 +1907,6 @@ o~go("return 1", "A") =&gt; 88.901
 o~go("return 1", "A", .nil) =&gt; 88.913
 o~go("return 1", "A", .array~new(2, 2)) =&gt; 88.913
 o~go2("return arg()", 1) =&gt; 88.901
-o~go(.object~new, "x") =&gt; 93.974
 o~go("return 1", "x", .nil) =&gt; 93.915
 o~go(.lmeth~new("", "return 1")) =&gt; 93.974
 o~go("return 1", "I", 1, 2) =&gt; 1

@@ -518,7 +518,7 @@ r = s~putAll(src)
 say (r == s) '|' s
 say s~putAll(.array~of('X'))
 call try 's~putAll'
-call try 's~putAll(1, 2)'
+call try 's~putAll(.directory~new, 2)'
 exit
 try:
   signal on syntax name bad
@@ -544,7 +544,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">1 | 1=a 2=b 3=c
 1=X 2=b 3=c
 s~putAll =&gt; 93.901
-s~putAll(1, 2) =&gt; 93.902
+s~putAll(.directory~new, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.mapcollection.putall.sends"><a href="#r-class.mapcollection.putall.sends">[class.mapcollection.putall.sends]</a></div>
 <p><code>putAll</code> sends <code>supplier</code> to <code>source</code>, with no argument, and then reads the

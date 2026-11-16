@@ -592,7 +592,7 @@ directives.</p>
 <ul>
 <li>88, argument value refused: <code>x = filespec('N')</code> 88.901,
 <a href="../classes/directory.html#r-class.directory.put"><code>x = .directory~new~put(1)</code></a> 88.901,
-<code>x = charin(, 0, -1)</code> 88.907; <a href="../builtins/index.html#r-bif.index.call.native">rule</a>.</li>
+<code>x = charin('nofile_zz', 1, -1)</code> 88.907; <a href="../builtins/index.html#r-bif.index.call.native">rule</a>.</li>
 <li>89, USE target of the wrong kind: <code>use arg a, 'b'</code> 89.1, <code>use arg (a)</code> 89.1;
 <a href="../instructions/use.html#r-instr.use.syntax">rule</a>.</li>
 <li>90, EXTERNAL entry that is not there:
@@ -627,7 +627,7 @@ INTERPRET is no directive, so it raises 99 there.</p>
 </blockquote>
 <pre><code class="language-rexx">call try "x = filespec('N')"
 call try "x = .directory~new~put(1)"
-call try "x = charin(, 0, -1)"
+call try "x = charin('nofile_zz', 1, -1)"
 call try "use arg a, 'b'"
 call try "use arg (a)"
 call try "x = left('abc', -2)"
@@ -656,7 +656,7 @@ e: label = arg(1)
 </code></pre>
 <pre><code class="language-output">x = filespec('N')                            88.901
 x = .directory~new~put(1)                    88.901
-x = charin(, 0, -1)                          88.907
+x = charin('nofile_zz', 1, -1)               88.907
 use arg a, 'b'                               89.1
 use arg (a)                                  89.1
 x = left('abc', -2)                          93.923

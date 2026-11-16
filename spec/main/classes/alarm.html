@@ -245,26 +245,27 @@ Alarm SUB 0
 <p><code>new</code> sends <code>init(atime, target, attachment)</code>, and <code>init</code> sets the alarm up. It
 needs the first two arguments, so <code>new</code> with none or only the first raises
 <code>SYNTAX 93.901</code> and an omitted first or second argument raises <code>SYNTAX 93.903</code>;
-a fourth argument raises <code>SYNTAX 93.902</code>. The checks of the arguments that are
-present are made in this order: first the target, which must be an
-implementation of <a href="alarmnotification.html#r-class.alarmnotification.creation"><code>AlarmNotification</code></a> or
-<code>SYNTAX 88.914</code> is raised, and then the time, which raises <code>SYNTAX 93.951</code> for
-every value that <a href="#r-class.alarm.init.seconds">the rules below</a> do not accept,
-except the very large ones for which they name other errors. So a target that is
-no implementation is reported even when the time is wrong too, and a refused
-alarm is not set. <code>attachment</code> can be any object, and is <code>.nil</code> when it is
-omitted. The alarm is set when <code>init</code> ends normally. A subclass whose <code>init</code>
-does not send <code>init</code> to its superclass makes an alarm that is not set
-(<a href="#r-class.alarm.deviation.135">Deviation 135</a>). A second <code>init</code>, sent after
-the one that <code>new</code> sent, is refused, as <a href="../concurrency/halt.html#r-conc.halt.deviation.162">Deviation
-162</a> says.</p>
+a fourth argument raises <code>SYNTAX 93.902</code>. The target must be an implementation
+of <a href="alarmnotification.html#r-class.alarmnotification.creation"><code>AlarmNotification</code></a> or <code>SYNTAX 88.914</code>
+is raised, and the time raises <code>SYNTAX 93.951</code> for every value that <a href="#r-class.alarm.init.seconds">the rules
+below</a> do not accept, except the very large ones
+for which they name other errors. The target's <code>isA</code> is sent first, as <a href="#r-class.alarm.init.sends">the
+sends rule</a> gives, and a refused target sends the
+time nothing. A time that is a string is sent nothing, and a call whose target
+and string time are both wrong raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says. A refused alarm is not set.
+<code>attachment</code> can be any object, and is <code>.nil</code> when it is omitted. The alarm is
+set when <code>init</code> ends normally. A subclass whose <code>init</code> does not send <code>init</code> to
+its superclass makes an alarm that is not set (<a href="#r-class.alarm.deviation.135">Deviation
+135</a>). A second <code>init</code>, sent after the one that
+<code>new</code> sent, is refused, as <a href="../concurrency/halt.html#r-conc.halt.deviation.162">Deviation 162</a> says.</p>
 <pre><code class="language-rexx">n = .note~new
 call try ".alarm~new"
 call try ".alarm~new(60)"
 call try ".alarm~new(, n)"
 call try ".alarm~new(60, , 'x')"
 call try ".alarm~new(60, n, 'x', 'y')"
-call try ".alarm~new('abc', .nil)"
+call try ".alarm~new(60, .nil)"
 call try ".alarm~new('abc', n)"
 call try ".alarm~new(60, n)"
 call try ".alarm~new(60, n, .nil)"
@@ -287,7 +288,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .alarm~new(, n) =&gt; 93.903
 .alarm~new(60, , 'x') =&gt; 93.903
 .alarm~new(60, n, 'x', 'y') =&gt; 93.902
-.alarm~new('abc', .nil) =&gt; 88.914
+.alarm~new(60, .nil) =&gt; 88.914
 .alarm~new('abc', n) =&gt; 93.951
 .alarm~new(60, n) =&gt; ok
 .alarm~new(60, n, .nil) =&gt; ok
@@ -301,19 +302,21 @@ it has to be zero or more: a string that is no number, the empty string and a
 negative number raise <code>SYNTAX 93.951</code>. The number is cut to the microsecond
 before its sign is checked, so <code>-0.0000001</code> is a time of zero. A number with
 more than 18 significant digits is first rounded to 18, and the number is read
-in full whatever the NUMERIC DIGITS setting. A number of <code>10**12</code> or more, or of
-<code>-10**12</code> or less, once it is rounded as said above, raises <code>SYNTAX 88.903</code>
-instead, and one for which the date and time of the moment in the host's
-offset, as <code>scheduledTime</code> would answer it, would fall after 31 December 9999 at
-23:59:59.999999 or before 1 January 0001 at 00:00:00.000000
-(<a href="datetime.html#r-class.datetime.limits">the limits of <code>DateTime</code></a>) raises <code>SYNTAX 40.19</code>,
-which is checked before the sign. The largest and smallest times accepted so
-depend on the host's offset, as they do for <a href="datetime.html#r-class.datetime.add"><code>addSeconds</code></a>
-of a <code>DateTime</code> of now. A <code>TimeSpan</code> that does so raises <code>SYNTAX 40.19</code> too.
-The alarm is set for the moment that many seconds after <code>init</code> read the clock,
-to the microsecond. The example reads the scheduled time back, with the bounds a
-clock cannot break, and prints only whether they hold; under NUMERIC DIGITS 3 it
-shows the alarm of a number of five digits set in full.</p>
+in full whatever the NUMERIC DIGITS setting. A number of <code>10**12</code> or more, once
+it is rounded as said above, raises <code>SYNTAX 88.903</code> instead, and one for which
+the date and time of the moment in the host's offset, as <code>scheduledTime</code> would
+answer it, would fall after 31 December 9999 at 23:59:59.999999 or before 1
+January 0001 at 00:00:00.000000 (<a href="datetime.html#r-class.datetime.limits">the limits of
+<code>DateTime</code></a>) raises <code>SYNTAX 40.19</code>. A negative number
+that is also that large raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. The largest and smallest times accepted so
+depend on the host's offset, as they do for
+<a href="datetime.html#r-class.datetime.add"><code>addSeconds</code></a> of a <code>DateTime</code> of now. A <code>TimeSpan</code> that
+does so raises <code>SYNTAX 40.19</code> too. The alarm is set for the moment that many
+seconds after <code>init</code> read the clock, to the microsecond. The example reads the
+scheduled time back, with the bounds a clock cannot break, and prints only
+whether they hold; under NUMERIC DIGITS 3 it shows the alarm of a number of
+five digits set in full.</p>
 <pre><code class="language-rexx">n = .note~new
 call try ' 90 '
 call try '1.5e2'
@@ -323,9 +326,7 @@ call try '1x'
 call try '-1'
 call try '--1'
 call try '2.6e11'
-call try '-2e11'
 call try '1e12'
-call try '-1e12'
 numeric digits 3
 before = .datetime~new
 a = .alarm~new('12345', n)
@@ -356,9 +357,7 @@ bad: say '"'arg(1)'" =&gt;' condition('o')~code
 "-1" =&gt; 93.951
 "--1" =&gt; 93.951
 "2.6e11" =&gt; 40.19
-"-2e11" =&gt; 40.19
 "1e12" =&gt; 88.903
-"-1e12" =&gt; 88.903
 digits 3: 3 25 45
 </code></pre>
 <div class="rule" id="r-class.alarm.init.clock"><a href="#r-class.alarm.init.clock">[class.alarm.init.clock]</a></div>

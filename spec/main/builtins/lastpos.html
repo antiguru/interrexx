@@ -189,8 +189,8 @@ and <code>haystack</code>, its second argument, is the receiver; <code>needle</c
 <code>length</code> become the message's arguments, in that order. <code>needle</code> and
 <code>haystack</code> are <a href="../conventions.html#r-conv.string.null">strings</a>, <code>start</code> is a
 <a href="../conventions.html#r-conv.position.check">position</a> and <code>length</code> is a
-<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
-<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked as <a href="../conventions.html#r-conv.check.order">the
+conventions</a> give, and the argument count by
 the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are required and four is
 the most.</p>
 <pre><code class="language-rexx">say lastpos('/', 'a/b/c') 'a/b/c'~lastpos('/')
@@ -213,11 +213,11 @@ signal on syntax name f
 say lastpos('a', 'a', 'x')
 f: say condition('o')~code
 signal on syntax name g
-say lastpos('a', 'a', 0, 'x')
+say lastpos('a', 'a', 1, 'x')
 g: say condition('o')~code
 signal on syntax name h
 say lastpos('a', 'a', 0, -1)
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '93.924 93.923') &gt; 0
 </code></pre>
 <pre><code class="language-output">4 4
 40.3
@@ -227,7 +227,7 @@ h: say condition('o')~code
 93.923
 40.12
 40.12
-93.924
+1
 </code></pre>
 <div class="rule" id="r-bif.lastpos.start.default"><a href="#r-bif.lastpos.start.default">[bif.lastpos.start.default]</a></div>
 <p><code>start</code> is the length of <code>haystack</code> both when it is omitted and when it is

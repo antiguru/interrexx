@@ -334,25 +334,23 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .timespan~new(1, 2, 3, , 5) =&gt; 93.903
 </code></pre>
 <div class="rule" id="r-class.timespan.new.checks"><a href="#r-class.timespan.new.checks">[class.timespan.new.checks]</a></div>
-<p>The values are checked in this order, and the first that fails raises its error.
-With one argument it must be a whole number, read here and below by <a href="../conventions.html#r-conv.whole.form">the form
+<p>With one argument it must be a whole number, read here and below by <a href="../conventions.html#r-conv.whole.form">the form
 rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a> with the
 codes of this rule in place of SYNTAX 40.12 (<a href="#r-class.timespan.deviation.130">Deviation
-130</a>): another value raises <code>SYNTAX 88.903</code>, and
-so does a count of 1000000000000000000 or more, or of that size below zero; a
-count of a smaller size that is outside the range of <a href="#r-class.timespan.value">the value
-rule</a> raises <code>SYNTAX 40.19</code>. In the forms of two to five
-arguments the days, when given, are checked first: they must be a whole number
-from 0 to 999999999, or <code>SYNTAX 88.904</code> is raised. Hours (0 to 23), minutes (0
-to 59), seconds (0 to 59) and microseconds (0 to 999999) are checked next, in
-the order of the arguments, each a whole number in its range; a value outside
-it, one that is no number and one that is not whole, such as 1.5, raise <code>SYNTAX 88.907</code>. Last, a total outside the range of the class raises <code>SYNTAX 40.19</code>:
-3652059 days with every other part in range is refused so, and the same days
-with an hour of 99 are refused for the hour.</p>
+130</a>): another value raises <code>SYNTAX 88.903</code>,
+and so does a count of 1000000000000000000 or more, or of that size below zero;
+a count of a smaller size that is outside the range of <a href="#r-class.timespan.value">the value
+rule</a> raises <code>SYNTAX 40.19</code>. In the forms of two to
+five arguments the days, when given, must be a whole number from 0 to
+999999999, or <code>SYNTAX 88.904</code> is raised. Hours (0 to 23), minutes (0 to 59),
+seconds (0 to 59) and microseconds (0 to 999999) are each a whole number in its
+range; a value outside it, one that is no number and one that is not whole,
+such as 1.5, raise <code>SYNTAX 88.907</code>. A total outside the range of the class
+raises <code>SYNTAX 40.19</code>, as 3652059 days with every other part in range is. A
+call that fails more than one of these checks raises the error of one of them,
+as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">call try '.timespan~new(3652058, 23, 59, 59, 999999)'
 call try '.timespan~new(3652059, 0, 0, 0, 0)'
-call try '.timespan~new(3652059, 99, 0, 0, 0)'
-call try '.timespan~new(x, 99, 0, 0, 0)'
 call try '.timespan~new(-1, 0, 0, 0, 0)'
 call try '.timespan~new(1.5, 0, 0, 0, 0)'
 call try '.timespan~new(999999999, 0, 0, 0)'
@@ -384,8 +382,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">.timespan~new(3652058, 23, 59, 59, 999999) =&gt; 3652058.23:59:59.999999
 .timespan~new(3652059, 0, 0, 0, 0) =&gt; 40.19
-.timespan~new(3652059, 99, 0, 0, 0) =&gt; 88.907
-.timespan~new(x, 99, 0, 0, 0) =&gt; 88.904
 .timespan~new(-1, 0, 0, 0, 0) =&gt; 88.904
 .timespan~new(1.5, 0, 0, 0, 0) =&gt; 88.904
 .timespan~new(999999999, 0, 0, 0) =&gt; 40.19

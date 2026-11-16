@@ -229,14 +229,15 @@ done
 evaluated once, when the DO is reached, and its value is the number of passes,
 so a later assignment to a variable of the expression changes nothing. The
 value must be a whole number that is not negative. It may be written with a
-decimal point or an exponent when that is its value, and it must be below 10
-to the power of NUMERIC DIGITS however it is written: at DIGITS 5, <code>9.9999e4</code>
-is a count and <code>1e5</code> is not. No count may reach 10 to the power of 18,
-whatever DIGITS is. Any other value raises <code>SYNTAX 26.2</code>. A count of zero runs
-no pass and does not raise an error. When
-<a href="../conditions/lostdigits.html#r-cond.lostdigits.information">LOSTDIGITS</a> is trapped, a count written with
-more than DIGITS digits raises that condition before the error, if any, as
-<a href="../numbers/arithmetic.html#r-num.arithmetic.lostdigits">the lost-digits rule</a> describes for an operand.</p>
+decimal point or an exponent when that is its value, and it must be below 10 to
+the power of NUMERIC DIGITS however it is written: at DIGITS 5, <code>9.9999e4</code> is a
+count and <code>1e5</code> is not. No count may reach 10 to the power of 18, whatever
+DIGITS is. Any other value raises <code>SYNTAX 26.2</code>. A count of zero runs no pass
+and does not raise an error. A count written with more than DIGITS digits
+raises <a href="../conditions/lostdigits.html#r-cond.lostdigits.information">LOSTDIGITS</a>, as <a href="../numbers/arithmetic.html#r-num.arithmetic.lostdigits">the lost-digits
+rule</a> describes for an operand; with an error as
+well, which of the two is raised first is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">n = 3
 do n
   n = 1
@@ -260,7 +261,7 @@ call try 'numeric digits 20; do 999999999999999999; leave; end'
 call try 'numeric digits 20; do 1000000000000000000; leave; end'
 signal on lostdigits name wide
 numeric digits 5
-do 123456
+do 99999.0
   say 'never'
 end
 wide: say condition('c') condition('d')
@@ -287,7 +288,7 @@ numeric digits 5; do 9.9999e4; leave; end =&gt; ok
 numeric digits 5; do 1e5; leave; end =&gt; 26.2
 numeric digits 20; do 999999999999999999; leave; end =&gt; ok
 numeric digits 20; do 1000000000000000000; leave; end =&gt; 26.2
-LOSTDIGITS 123456
+LOSTDIGITS 99999.0
 </code></pre>
 <div class="rule" id="r-instr.do.forever"><a href="#r-instr.do.forever">[instr.do.forever]</a></div>
 <p><code>DO FOREVER</code> has no end test of its own, so the block runs until a LEAVE, an
@@ -403,6 +404,7 @@ like the result of an operation: blanks go, an exponent is written out as a
 result would show it, and the digits are cut to NUMERIC DIGITS, but a trailing
 zero after the point stays.</p>
 <pre><code class="language-rexx">call try 'do i = "a" to "b"; end'
+call try 'do i = "a" to f(); end'
 call try 'do i = 1 to "b" by 1/0; end'
 call try 'do i = 1 by 1/0 to "b"; end'
 call try 'do i = 1 to 2 by "c"; end'
@@ -422,8 +424,11 @@ try:
   return
 e: say arg(1) '=&gt;' condition('o')~code
   return
+f: say 'f ran'
+  return 2
 </code></pre>
 <pre><code class="language-output">do i = "a" to "b"; end =&gt; 41.1
+do i = "a" to f(); end =&gt; 41.1
 do i = 1 to "b" by 1/0; end =&gt; 41.1
 do i = 1 by 1/0 to "b"; end =&gt; 42.3
 do i = 1 to 2 by "c"; end =&gt; 41.1

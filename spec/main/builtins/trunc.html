@@ -212,22 +212,22 @@ c: say condition('o')~code
 <pre><code class="language-output">7 7 7
 </code></pre>
 <div class="rule" id="r-bif.trunc.errors"><a href="#r-bif.trunc.errors">[bif.trunc.errors]</a></div>
-<p>The checks run in this order, and the first that fails is raised: the
-<a href="../conventions.html#r-conv.whole.form">form</a> and <a href="../conventions.html#r-conv.whole.digits">value</a> of <code>n</code>, which raise
-<code>SYNTAX 40.12</code>; that <code>number</code> is a <a href="index.html#r-bif.index.num.arg">number</a>,
-<code>SYNTAX 93.943</code>; and last that <code>n</code> is not negative, <code>SYNTAX 93.906</code>. <code>n</code> is a
-whole-number argument, so the <a href="../conventions.html#r-conv.arg.empty">null string</a> raises 40.12 and
-<code>-0</code> is 0. A string that is not a number is therefore raised even when <code>n</code> is
-negative, and a negative <code>n</code> is raised only for a number that is valid.</p>
+<p>The call checks the <a href="../conventions.html#r-conv.whole.form">form</a> and
+<a href="../conventions.html#r-conv.whole.digits">value</a> of <code>n</code>, which raise <code>SYNTAX 40.12</code>; that <code>number</code>
+is a <a href="index.html#r-bif.index.num.arg">number</a>, <code>SYNTAX 93.943</code>; and that <code>n</code> is not
+negative, <code>SYNTAX 93.906</code>. A call that fails more than one of these checks
+raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says. <code>n</code> is a whole-number argument, so the
+<a href="../conventions.html#r-conv.arg.empty">null string</a> raises 40.12 and <code>-0</code> is 0.</p>
 <pre><code class="language-rexx">say trunc(5, '-0') trunc(5, ' 2 ') trunc(5, '1e1')
 signal on syntax name a
 say trunc(5, '')
 a: say condition('o')~code
 signal on syntax name b
-say trunc('x', 'y')
+say trunc(5, 'y')
 b: say condition('o')~code
 signal on syntax name c
-say trunc('x', -1)
+say trunc('x', 1)
 c: say condition('o')~code
 signal on syntax name d
 say trunc(5, -1)
@@ -282,10 +282,8 @@ negative zero.</p>
 <pre><code class="language-output">0 -0.50 0.00 -0.001 0 0.0 -1
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> The ANSI draft (9.4.6) checks <code>number</code> before an <code>n</code> that is not
-a whole number, where ooRexx, which this book follows, raises 40.12 for <code>n</code>
-first (for a negative <code>n</code> both check <code>number</code> first). It raises
-<code>SYNTAX 40.13</code> for a negative <code>n</code>, where ooRexx raises 93.906.</p>
+<p><strong>Note.</strong> The ANSI draft (9.4.6) raises <code>SYNTAX 40.13</code> for a negative <code>n</code>,
+where ooRexx raises 93.906.</p>
 </blockquote>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-bif.trunc.deviation.4"><a href="#r-bif.trunc.deviation.4">[bif.trunc.deviation.4]</a></div>

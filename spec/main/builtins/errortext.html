@@ -215,8 +215,9 @@ d: say condition('o')~code
 outside it raises <code>SYNTAX 40.903</code>, <code>-0</code> is 0, and a string that is not a whole
 number, the null string included, raises <code>SYNTAX 40.12</code>, as does a number
 whose magnitude is <a href="../conventions.html#r-conv.whole.digits">too large</a>. The caller's NUMERIC
-DIGITS plays no part. The form is checked before the range, so a number that
-is both out of range and not whole, such as 100.5, raises <code>SYNTAX 40.12</code>.</p>
+DIGITS plays no part. A number that is both out of range and not whole, such
+as 100.5, raises one of the two errors, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">numeric digits 1
 say (errortext(26) \== '') (errortext(26.0) == errortext(26)) (errortext(' 26 ') == errortext(26)),
     (errortext('026') == errortext(26)) (errortext(2.6e1) == errortext(26)) (errortext(99) \== '')
@@ -241,7 +242,7 @@ say errortext(1e30)
 f: say condition('o')~code
 signal on syntax name g
 say errortext(100.5)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '40.12 40.903') &gt; 0
 </code></pre>
 <pre><code class="language-output">1 1 1 1 1 1
 []
@@ -251,7 +252,7 @@ g: say condition('o')~code
 40.12
 40.903
 40.12
-40.12
+1
 </code></pre>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <div class="rule" id="r-bif.errortext.result"><a href="#r-bif.errortext.result">[bif.errortext.result]</a></div>

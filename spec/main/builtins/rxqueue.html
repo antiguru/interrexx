@@ -201,13 +201,13 @@ raises <code>SYNTAX 97.1</code>. The <a href="index.html#r-bif.index.call.count"
 number of arguments, with the fewest and the most depending on the option,
 which the rules below give: a call with no argument, or with only omitted
 places, raises <code>SYNTAX 40.3</code>; a call of at most two arguments whose first is
-omitted but whose second is present raises <code>SYNTAX 40.5</code>. The checks come in
-this order. First the number of arguments is checked against the bounds that
-hold for every function: at most two arguments, so that <code>rxqueue(, 'a', 'b')</code>
-raises <code>SYNTAX 40.4</code>, and then an <code>option</code>. Then the <a href="#r-bif.rxqueue.option">first character of
-<code>option</code></a> is checked, then the number of arguments
-against the bounds of the function it picks, and last
-<a href="#r-bif.rxqueue.name"><code>queuename</code></a>.</p>
+omitted but whose second is present raises <code>SYNTAX 40.5</code>. The number of
+arguments is checked against the bounds that hold for every function, at most
+two arguments, and against the bounds of the function that the <a href="#r-bif.rxqueue.option">first
+character of <code>option</code></a> picks. A call with more than one
+fault, such as <code>rxqueue(, 'a', 'b')</code> or an <code>option</code> and a
+<a href="#r-bif.rxqueue.name"><code>queuename</code></a> that are both in error, raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say rxqueue()
 a: say condition('o')~code
@@ -218,20 +218,14 @@ signal on syntax name c
 say 'Get'~rxqueue
 c: say condition('o')~code
 signal on syntax name d
-say rxqueue('X', 'a', 'b')
+say rxqueue('Get', 'a', 'b')
 d: say condition('o')~code
 signal on syntax name e
-say rxqueue('X', 'a b')
+say rxqueue('X', 'a')
 e: say condition('o')~code
 signal on syntax name f
-say rxqueue('Get', 'a b')
+say rxqueue('Get', 'a')
 f: say condition('o')~code
-signal on syntax name g
-say rxqueue(, 'a b')
-g: say condition('o')~code
-signal on syntax name h
-say rxqueue(, 'a', 'b')
-h: say condition('o')~code
 signal off syntax
 say rxqueue('Get', )
 </code></pre>
@@ -240,8 +234,6 @@ say rxqueue('Get', )
 97.1
 40.4
 40.904
-40.4
-40.5
 40.4
 SESSION
 </code></pre>

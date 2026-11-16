@@ -263,13 +263,11 @@ e: say condition('o')~code
 <p>The functions follow <a href="../builtins/index.html#r-bif.index.call.native">the native call rule</a>, as the
 <a href="../rexxutil/index.html">RexxUtil</a> functions do. A required argument that is not
 given, or is omitted, raises <code>SYNTAX 88.901</code>, and an argument past the last one
-of the function raises <code>SYNTAX 88.922</code>; the count is checked before the arguments
-are read. A socket, a flag and a count are given as <a href="../rxunixsys/index.html#r-rxunixsys.index.whole">whole
-numbers</a>, and one that is not raises <code>SYNTAX 88.907</code>.
-A name of a domain, a type, a protocol, a level or an option is read in either
-case. One that the function does not know raises <code>SYNTAX 40.1</code> where the page of
-the function says so, and is otherwise a failed call that <a href="#r-rxsock.index.errors">the error
-rule</a> describes.</p>
+of the function raises <code>SYNTAX 88.922</code>. A socket, a flag and a count are given
+as <a href="../rxunixsys/index.html#r-rxunixsys.index.whole">whole numbers</a>, and one that is not raises <code>SYNTAX 88.907</code>. A name of a domain, a type, a protocol, a level or an option is read
+in either case. One that the function does not know raises <code>SYNTAX 40.1</code> where
+the page of the function says so, and is otherwise a failed call that <a href="#r-rxsock.index.errors">the
+error rule</a> describes.</p>
 <pre><code class="language-rexx">call try "SockSocket('AF_INET', 'SOCK_STREAM')"
 call try "SockSocket('AF_INET', 'SOCK_STREAM', 0, 1)"
 call try "SockClose()"

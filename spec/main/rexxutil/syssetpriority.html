@@ -186,25 +186,26 @@ when it did, or a number that is not zero when the system refused.</p>
 <p><code>delta</code> is a required whole number. <code>class</code> is a whole number too, and may be
 omitted; its value, and a place that is left empty, make no difference to the
 call (<a href="#r-util.syssetpriority.answer">the next rule</a>). A number is read as <a href="index.html#r-util.index.whole">the
-whole-number rule</a> says, and is a whole number when it
-then has no fraction or only zeros, as <code>1.0</code>, <code>1e0</code> and
-<code>2.00000000000000000001</code> have, in the range <code>-2147483648</code> to <code>2147483647</code>. A
-value that is not a whole number or is out of that range raises <code>SYNTAX 88.907</code>: a fraction such as <code>1.5</code> or <code>.5</code>, the null string, a word, and the
-words <code>IDLE</code>, <code>NORMAL</code>, <code>LOWEST</code> and the like, with which some descriptions of
-the function name classes and deltas, are not numbers here. A value that is
-given is checked before the omission of <code>delta</code> is reported, so that
-<code>SysSetPriority('x')</code> raises <code>88.907</code> and <code>SysSetPriority(1)</code> raises <code>SYNTAX 88.901</code>; three arguments raise <code>SYNTAX 88.922</code>. When an argument past the last
-one comes with an omitted or wrong argument, <a href="index.html#r-util.index.deviation.101">Deviation
-101</a> says which error is raised. An object that is
-not a string is read by the string that its <code>STRING</code> method answers, not by
-its <code>request</code>, so that <code>.nil</code> raises <code>SYNTAX 88.907</code> and an object whose
-<code>STRING</code> answers a whole number is that number; the second example shows it.</p>
+whole-number rule</a> says, and is a whole number when it then
+has no fraction or only zeros, as <code>1.0</code>, <code>1e0</code> and <code>2.00000000000000000001</code>
+have, in the range <code>-2147483648</code> to <code>2147483647</code>. A value that is not a whole
+number or is out of that range raises <code>SYNTAX 88.907</code>: a fraction such as <code>1.5</code>
+or <code>.5</code>, the null string, a word, and the words <code>IDLE</code>, <code>NORMAL</code>, <code>LOWEST</code> and
+the like, with which some descriptions of the function name classes and deltas,
+are not numbers here. A call without <code>delta</code>, such as <code>SysSetPriority(1)</code>,
+raises <code>SYNTAX 88.901</code>, and one whose <code>class</code> is also wrong raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says; three
+arguments raise <code>SYNTAX 88.922</code>. When an argument past the last one comes with
+an omitted or wrong argument, <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a>
+says which error is raised. An object that is not a string is read by the
+string that its <code>STRING</code> method answers, not by its <code>request</code>, so that <code>.nil</code>
+raises <code>SYNTAX 88.907</code> and an object whose <code>STRING</code> answers a whole number is
+that number; the second example shows it.</p>
 <pre><code class="language-rexx">call try "SysSetPriority()"
 call try "SysSetPriority(1)"
 call try "SysSetPriority(,)"
 call try "SysSetPriority(1,)"
 call try "SysSetPriority(1, 2, 3)"
-call try "SysSetPriority('x')"
 call try "SysSetPriority(, 'x')"
 call try "SysSetPriority(1, 'x')"
 call try "SysSetPriority('x', 1)"
@@ -235,7 +236,6 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
-88.907
 88.907
 88.907
 88.907

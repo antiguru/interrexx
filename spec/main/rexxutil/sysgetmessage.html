@@ -192,26 +192,27 @@ no message, and the examples that print a message make a catalog of their own.</
 <p><code>num</code> is a required argument. <code>filename</code> is an optional string, and the
 arguments after it are optional strings, the inserts. A call with no <code>num</code>, or
 an omitted <code>num</code>, raises <code>SYNTAX 88.901</code>. <code>num</code> is read as a number, and a
-string that is not a number, a number that is not whole, a whole number that
-is not above zero and a whole number of more than 18 digits raise <code>SYNTAX 88.905</code>. A sign, leading zeros, blanks around the number and an exponent are
-allowed when the value is a whole number above zero. The value is read as <a href="index.html#r-util.index.whole">the
+string that is not a number, a number that is not whole, a whole number that is
+not above zero and a whole number of more than 18 digits raise <code>SYNTAX 88.905</code>.
+A sign, leading zeros, blanks around the number and an exponent are allowed
+when the value is a whole number above zero. The value is read as <a href="index.html#r-util.index.whole">the
 whole-number rule</a> says. The number of the message is the
 remainder of <code>num</code> divided by 4294967296. So <code>4294967297</code> names message <code>1</code>,
 and a multiple of 4294967296 names no message, which <a href="#r-util.sysgetmessage.answer">the answer
 rule</a> covers. A <code>filename</code> of <code>.nil</code> raises
-<code>SYNTAX 88.909</code>. A call with more than nine inserts raises <code>SYNTAX 40.1</code>. The
-checks go from left to right, each argument in full before the next: <code>num</code>,
-then <code>filename</code>, then the count of inserts. So a bad <code>num</code> is reported before
-a <code>.nil</code> <code>filename</code>, and either one before too many inserts. An omitted place
-at the end of the call adds nothing to the count. <code>filename</code> is read from an
-object that is not a string as <a href="index.html#r-util.index.args">the argument rule</a> says, so
-an object whose <code>request</code> answers no string raises <code>SYNTAX 88.909</code>. <code>num</code> and
-the inserts have a fallback. An object that is not a string is replaced by the
-string that its <code>request</code> with the argument <code>STRING</code> answers. When that answer
-is not a string, the object is replaced by the answer of its <code>STRING</code> method.
-So <code>.object~new</code>, whose <code>STRING</code> answers <code>an Object</code>, raises <code>SYNTAX 88.905</code>
-as <code>num</code> and is put in as <code>an Object</code> as an insert, and an object whose only
-method is a <code>STRING</code> that answers <code>2</code> names message <code>2</code>.</p>
+<code>SYNTAX 88.909</code>. A call with more than nine inserts raises <code>SYNTAX 40.1</code>. A
+call whose <code>num</code> and <code>filename</code> are both in error raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says, and so does one
+with too many inserts and another fault. An omitted place at the end of the
+call adds nothing to the count. <code>filename</code> is read from an object that is not a
+string as <a href="index.html#r-util.index.args">the argument rule</a> says, so an object whose
+<code>request</code> answers no string raises <code>SYNTAX 88.909</code>. <code>num</code> and the inserts have
+a fallback. An object that is not a string is replaced by the string that its
+<code>request</code> with the argument <code>STRING</code> answers. When that answer is not a string,
+the object is replaced by the answer of its <code>STRING</code> method. So <code>.object~new</code>,
+whose <code>STRING</code> answers <code>an Object</code>, raises <code>SYNTAX 88.905</code> as <code>num</code> and is put
+in as <code>an Object</code> as an insert, and an object whose only method is a <code>STRING</code>
+that answers <code>2</code> names message <code>2</code>.</p>
 <pre><code class="language-rexx">call try "SysGetMessage()"
 call try "SysGetMessage(,'rexx.cat')"
 call try "SysGetMessage(0)"
@@ -224,9 +225,6 @@ call try "SysGetMessage(.object~new)"
 call try "SysGetMessage(100, .object~new)"
 call try "SysGetMessage(.c6zqs~new, 'rexx.cat') == SysGetMessage(2, 'rexx.cat')"
 call try "SysGetMessage(100, .nil)"
-call try "SysGetMessage('x', .nil)"
-call try "SysGetMessage(1, .nil, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
-call try "SysGetMessage('x', 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
 call try "SysGetMessage('1000000000000000000')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', , ) == SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c')"
@@ -260,9 +258,6 @@ e: say condition('o')~code
 88.909
 1
 88.909
-88.905
-88.909
-88.905
 88.905
 40.1
 1

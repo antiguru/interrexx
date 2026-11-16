@@ -195,17 +195,16 @@ required: it must be neither omitted nor null. <code>operation</code> is a strin
 chooses what STREAM does, and <code>command</code> is a string, the command that the
 operation <code>C</code> carries out. STREAM is not a <a href="../classes/string.html#r-class.string.builtins">String
 method</a>. It takes three arguments at the most, by the
-<a href="index.html#r-bif.index.call.too-many">call rules</a>. The call is checked in this order.
-The count of arguments comes first, by the <a href="index.html#r-bif.index.call.count">call
-rules</a>. An omitted <code>name</code> then raises <code>SYNTAX 40.5</code>
-and a null one <code>SYNTAX 40.27</code>; an <code>operation</code> that is <a href="#r-bif.stream.operation">none of those of the
-next rule</a> raises <code>SYNTAX 40.904</code>. Last, a <code>command</code>
-that is missing for the operation <code>C</code> raises <code>SYNTAX 40.3</code>, and a <code>command</code>
-given for any other operation raises <code>SYNTAX 40.4</code>.</p>
+<a href="index.html#r-bif.index.call.too-many">call rules</a>, and an omitted <code>name</code> raises <code>SYNTAX 40.5</code>. A null <code>name</code> raises <code>SYNTAX 40.27</code>; an <code>operation</code> that is <a href="#r-bif.stream.operation">none of
+those of the next rule</a> raises <code>SYNTAX 40.904</code>; a
+<code>command</code> that is missing for the operation <code>C</code> raises <code>SYNTAX 40.3</code>, and a
+<code>command</code> given for any other operation raises <code>SYNTAX 40.4</code>. A call that fails
+more than one of these checks raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
+precedence rule</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-stream-args.tmp'
-do e over "stream()", "stream(,'s')", "stream('','s')", "stream(f,'x')", "stream('','x')",,
+do e over "stream()", "stream(,'s')", "stream('','s')", "stream(f,'x')",,
           "stream(f,'c')", "stream(f,'s','close')", "stream(f,'d','close')",,
-          "stream(f,'c','close','x')", "stream(f,,'close')", "stream(f,'x','close')",,
+          "stream(f,'c','close','x')", "stream(f,,'close')",,
           "stream(f,'c','query exists')"
   say left(e, 28) '=&gt;' try(e)
 end
@@ -219,13 +218,11 @@ oops: return condition('o')~code
 stream(,'s')                 =&gt; 40.5
 stream('','s')               =&gt; 40.27
 stream(f,'x')                =&gt; 40.904
-stream('','x')               =&gt; 40.27
 stream(f,'c')                =&gt; 40.3
 stream(f,'s','close')        =&gt; 40.4
 stream(f,'d','close')        =&gt; 40.4
 stream(f,'c','close','x')    =&gt; 40.4
 stream(f,,'close')           =&gt; 40.4
-stream(f,'x','close')        =&gt; 40.904
 stream(f,'c','query exists') =&gt; no error
 </code></pre>
 <div class="rule" id="r-bif.stream.operation"><a href="#r-bif.stream.operation">[bif.stream.operation]</a></div>

@@ -230,14 +230,16 @@ rule</a> says, and defaults to the null string; an object
 with no string value, <code>.nil</code> included, raises <code>SYNTAX 88.909</code>. The second
 argument, the size, is read after the first and must be a non-negative whole
 number, or the call raises <code>SYNTAX 93.923</code>; it defaults to 256 when it is
-omitted. A whole-number argument of a method of this class is read as that of
-a builtin is (<a href="../conventions.html#r-conv.whole.form">the form rule</a>, <a href="../conventions.html#r-conv.whole.digits">the digits
+omitted. A whole-number argument of a method of this class is read as that of a
+builtin is (<a href="../conventions.html#r-conv.whole.form">the form rule</a>, <a href="../conventions.html#r-conv.whole.digits">the digits
 rule</a>), so NUMERIC DIGITS plays no part, and only the
 error code differs. The buffer holds the text and has the size given, except
 that a size smaller than the length of the text is raised to that length. A
-subclass receiver gets an instance of itself. Both arguments are checked
-before <code>init</code> is sent, so a failing <code>new</code> runs no <code>init</code>, and the reading of
-the first argument comes before the check of the second.</p>
+subclass receiver gets an instance of itself. Both arguments are checked before
+<code>init</code> is sent, so a failing <code>new</code> runs no <code>init</code>, and the reading of the first
+argument comes before the check of the second. A call whose two arguments are
+both wrong raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">call show .mutablebuffer~new
 call show .mutablebuffer~new('hello')
 call show .mutablebuffer~new('hello', 10)
@@ -249,7 +251,6 @@ call try ".mutablebuffer~new('a', 'x')"
 call try ".mutablebuffer~new('a', -1)"
 call try ".mutablebuffer~new('a', 1.5)"
 call try ".mutablebuffer~new(.nil)"
-call try ".mutablebuffer~new(.nil, 'x')"
 call try ".mutablebuffer~new('a', 1, 2)"
 exit
 show: procedure
@@ -275,7 +276,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .mutablebuffer~new('a', -1) =&gt; 93.923
 .mutablebuffer~new('a', 1.5) =&gt; 93.923
 .mutablebuffer~new(.nil) =&gt; 88.909
-.mutablebuffer~new(.nil, 'x') =&gt; 88.909
 .mutablebuffer~new('a', 1, 2) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.mutablebuffer.new.init"><a href="#r-class.mutablebuffer.new.init">[class.mutablebuffer.new.init]</a></div>

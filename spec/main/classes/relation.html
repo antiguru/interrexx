@@ -415,7 +415,8 @@ r~put("x", "y", "z") =&gt; 93.902
 the argument, and <code>.nil</code> when there is none. When several entries qualify,
 which item is answered is not specified (<a href="#r-class.relation.deviation.33">the hash order
 rule</a>). The methods take exactly one argument:
-none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; the number of arguments is checked before the index is looked up.</p>
+none, or an omitted one, raises <code>SYNTAX 88.901</code>, and a second raises <code>SYNTAX 93.902</code>; with a second argument, whether the index is looked up is unspecified,
+as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">r = .relation~new
 r~put('item', 'k')
 r~put('x', 'k2')
@@ -423,7 +424,7 @@ r~put('y', 'k2')
 say r~at('k') r['k'] r~at('K') (r~at('zz') == .nil) (r~at(.nil) == .nil)
 say r~at('k2')~length (r~at('k2') == 'x' | r~at('k2') == 'y')
 call try 'r~at'
-call try 'r~at(, "x")'
+call try 'r~at("x", "x")'
 call try 'r~at("a", "b")'
 call try 'r[]'
 exit
@@ -438,7 +439,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">item item The NIL object 1 1
 1 1
 r~at =&gt; 88.901
-r~at(, "x") =&gt; 93.902
+r~at("x", "x") =&gt; 93.902
 r~at("a", "b") =&gt; 93.902
 r[] =&gt; 88.901
 </code></pre>
@@ -464,7 +465,7 @@ say x~sort~makeString('L', ',') x~class~id r~allAt('j')~items
 e = r~allAt('zz')
 say e~items e~class~id
 call try 'r~allAt'
-call try 'r~allAt(, "x")'
+call try 'r~allAt("x", "x")'
 call try 'r~allAt("a", "b")'
 r2 = .relation~new
 r2~put('v', .k~new('s1'))
@@ -500,7 +501,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">a,a,b Array 1
 0 Array
 r~allAt =&gt; 93.903
-r~allAt(, "x") =&gt; 93.902
+r~allAt("x", "x") =&gt; 93.902
 r~allAt("a", "b") =&gt; 93.902
 hash p 1
 </code></pre>
@@ -668,7 +669,7 @@ say x~sort~makeString('L', ',') x~class~id r~allIndex('b')~items,
   r~allIndex('zz')~items
 call try 'r~index'
 call try 'r~allIndex'
-call try 'r~index(, "x")'
+call try 'r~index("x", "x")'
 call try 'r~allIndex(1, 2)'
 exit
 try:
@@ -684,7 +685,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 j,k,k Array 1 0
 r~index =&gt; 93.903
 r~allIndex =&gt; 93.903
-r~index(, "x") =&gt; 93.902
+r~index("x", "x") =&gt; 93.902
 r~allIndex(1, 2) =&gt; 93.902
 </code></pre>
 <h2 id="removing-entries"><a class="header" href="#removing-entries">Removing entries</a></h2>

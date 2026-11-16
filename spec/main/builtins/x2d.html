@@ -235,20 +235,18 @@ d: say condition('o')~code
 93.933
 </code></pre>
 <div class="rule" id="r-bif.x2d.errors"><a href="#r-bif.x2d.errors">[bif.x2d.errors]</a></div>
-<p>The checks of the call run in this order: the argument count; the form of
-<code>n</code> as a <a href="../conventions.html#r-conv.whole.form">whole number</a>, <code>SYNTAX 40.12</code>; the sign of <code>n</code>,
-<code>SYNTAX 93.923</code>; then the digits of <code>hex_string</code>; and last the number of
-digits of the answer, <code>SYNTAX 93.935</code>. A negative <code>n</code> is therefore raised even
-when <code>hex_string</code> has a character that is not a digit or the answer would not
-fit, and a non-whole <code>n</code> before that.</p>
+<p>The call checks the argument count; the form of <code>n</code> as a <a href="../conventions.html#r-conv.whole.form">whole
+number</a>, <code>SYNTAX 40.12</code>; the sign of <code>n</code>, <code>SYNTAX 93.923</code>;
+the digits of <code>hex_string</code>; and the number of digits of the answer, <code>SYNTAX 93.935</code>. A call that fails more than one of these checks raises the error of
+one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name a
-say x2d('zz', 'x')
+say x2d('ff', 'x')
 a: say condition('o')~code
 signal on syntax name b
 say x2d('zz', -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '93.923 93.933') &gt; 0
 signal on syntax name c
-say x2d('ffffffffff', -1)
+say x2d('ff', -1)
 c: say condition('o')~code
 signal on syntax name d
 say x2d('zz')
@@ -258,7 +256,7 @@ say x2d('ffffffffff')
 e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">40.12
-93.923
+1
 93.923
 93.933
 93.935

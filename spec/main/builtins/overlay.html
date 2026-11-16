@@ -188,9 +188,9 @@ and <code>target</code>, its second argument, is the receiver; <code>new</code>,
 <code>pad</code> become the message's arguments, in that order. <code>new</code> and <code>target</code> are
 <a href="../conventions.html#r-conv.string.null">strings</a>, <code>n</code> is a <a href="../conventions.html#r-conv.position.check">position</a>,
 <code>length</code> is a <a href="../conventions.html#r-conv.length.check">length</a>, and <code>pad</code> is a <a href="../conventions.html#r-conv.pad">pad</a>.
-The arguments are checked in the <a href="../conventions.html#r-conv.check.order">order</a> the conventions
-give, and the argument count by the <a href="index.html#r-bif.index.call.count">builtin call
-rules</a>: two are required and five is the most.</p>
+The arguments are checked as <a href="../conventions.html#r-conv.check.order">the conventions</a> give, and
+the argument count by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: two are
+required and five is the most.</p>
 <pre><code class="language-rexx">say overlay('XY', 'abcd', 2) 'abcd'~overlay('XY', 2) '|' 'abcd'~overlay('XY', 2, 3, '.')
 signal on syntax name a
 say overlay('XY')
@@ -215,9 +215,9 @@ say overlay('XY', 'abcd', 'x')
 g: say condition('o')~code
 signal on syntax name h
 say overlay('XY', 'abcd', 0, -1, '**')
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '93.924 93.923 40.23') &gt; 0
 signal on syntax name i
-say overlay('XY', 'abcd', 0, 'x')
+say overlay('XY', 'abcd', 1, 'x')
 i: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">aXYd aXYd | aXY.
@@ -228,7 +228,7 @@ i: say condition('o')~code
 93.924
 93.923
 40.12
-40.23
+1
 40.12
 </code></pre>
 <div class="rule" id="r-bif.overlay.n.default"><a href="#r-bif.overlay.n.default">[bif.overlay.n.default]</a></div>

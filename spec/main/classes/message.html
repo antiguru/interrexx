@@ -303,20 +303,18 @@ unmarked
 <p><code>new(target, name, option, ...)</code> makes a message object that has not been run.
 It needs at least two arguments: fewer raise <code>SYNTAX 93.901</code>, and an omitted
 target raises <code>88.901</code>. The target is any object, <code>.nil</code> included. The name is
-checked next, after the target, as <a href="object.html#r-class.object.send">the <code>send</code> rule</a>
-checks it: a string,
-or an array of two items, the name and a class that starts the search (<a href="methods.html#r-class.methods.scoped.send">the
-scoped send rule</a>). A name that is not a
-string is read as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> reads it, through
-<code>request</code> with <code>ARRAY</code>; <code>.nil</code> and an object that answers <code>.nil</code> raise
-<code>93.972</code>, an array of another size <code>93.946</code>, an
-array whose first item is missing <code>88.901</code>, an array with a first item that
-has no string value <code>88.909</code> and one with a
-second item that is not a class <code>88.914</code>. The null string is a name. The
-option that follows is the third argument, which says how the remaining
-arguments are read, as the next rule states. With no option, the message has
-no arguments. The answer is the new object, and what the object holds is shown
-by <a href="#r-class.message.messagename"><code>messageName</code></a>,
+checked as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> checks it: a string, or an
+array of two items, the name and a class that starts the search (<a href="methods.html#r-class.methods.scoped.send">the scoped
+send rule</a>). A name that is not a string is read
+as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> reads it, through <code>request</code> with
+<code>ARRAY</code>; <code>.nil</code> and an object that answers <code>.nil</code> raise <code>93.972</code>, an array of
+another size <code>93.946</code>, an array whose first item is missing <code>88.901</code>, an array
+with a first item that has no string value <code>88.909</code> and one with a second item
+that is not a class <code>88.914</code>. The null string is a name. The option that
+follows is the third argument, which says how the remaining arguments are read,
+as the next rule states. With no option, the message has no arguments. The
+answer is the new object, and what the object holds is shown by
+<a href="#r-class.message.messagename"><code>messageName</code></a>,
 <a href="#r-class.message.target"><code>target</code></a> and
 <a href="#r-class.message.arguments"><code>arguments</code></a>.</p>
 <pre><code class="language-rexx">t = .t~new
@@ -331,7 +329,6 @@ call try '.message~new(t, .nil)'
 call try '.message~new(t, .array~of("hello"))'
 call try '.message~new(t, .array~of(.nil, .t))'
 call try '.message~new(t, .array~of("hello", 3))'
-call try '.message~new(t, .nil, "Z")'
 exit
 try:
   signal on syntax name bad
@@ -355,26 +352,27 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .message~new(t, .array~of("hello")) =&gt; 93.946
 .message~new(t, .array~of(.nil, .t)) =&gt; 88.909
 .message~new(t, .array~of("hello", 3)) =&gt; 88.914
-.message~new(t, .nil, "Z") =&gt; 93.972
 </code></pre>
 <div class="rule" id="r-class.message.new.options"><a href="#r-class.message.new.options">[class.message.new.options]</a></div>
 <p>The option is a string whose first letter, in either case, is <code>I</code> (individual)
-or <code>A</code> (array); the other letters are not looked at, so <code>Individual</code> and <code>array</code>
-are options. Any other string, the null string, and a number raise
-<code>SYNTAX 93.915</code>, and an option that has no string value raises <code>88.909</code>; the
-option is checked after the name. An omitted option with an argument after it
-raises <code>88.901</code>. With <code>I</code>, every argument after the option is an argument of the
-message, in order, and an omitted place stays omitted; omitted places at the end
-add nothing to the count, as <a href="index.html#r-class.index.args.count">the count rule</a> says,
-and an argument may be any object, <code>.nil</code> included. With <code>A</code>, the fourth
-argument is required (<code>SYNTAX 93.901</code>) and is the only argument that may follow:
-a fifth raises <code>93.902</code>, also when the fourth is omitted. It holds the arguments
-of the message: it is an array, or an object that answers an array to the
-message <code>request</code> with the argument <code>ARRAY</code>, and the items of the array are the
-arguments in order. The message keeps a copy of the array, made when <code>new</code> runs,
-so that a change that the caller makes to the array afterwards does not reach
-the message, and the number of arguments is the position of the last item
-present, as <a href="index.html#r-class.index.args.count">the count rule</a> says (<a href="#r-class.message.deviation.113">Deviation
+or <code>A</code> (array); the other letters are not looked at, so <code>Individual</code> and
+<code>array</code> are options. Any other string, the null string, and a number raise
+<code>SYNTAX 93.915</code>, and an option that has no string value raises <code>88.909</code>. A call
+whose name and option are both in error raises the error of one of them, as
+<a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. An omitted option with an
+argument after it raises <code>88.901</code>. With <code>I</code>, every argument after the option is
+an argument of the message, in order, and an omitted place stays omitted;
+omitted places at the end add nothing to the count, as <a href="index.html#r-class.index.args.count">the count
+rule</a> says, and an argument may be any object, <code>.nil</code>
+included. With <code>A</code>, the fourth argument is required (<code>SYNTAX 93.901</code>) and is
+the only argument that may follow: a fifth raises <code>93.902</code>, also when the
+fourth is omitted. It holds the arguments of the message: it is an array, or an
+object that answers an array to the message <code>request</code> with the argument
+<code>ARRAY</code>, and the items of the array are the arguments in order. The message
+keeps a copy of the array, made when <code>new</code> runs, so that a change that the
+caller makes to the array afterwards does not reach the message, and the number
+of arguments is the position of the last item present, as <a href="index.html#r-class.index.args.count">the count
+rule</a> says (<a href="#r-class.message.deviation.113">Deviation
 113</a>). An object that answers no array, <code>.nil</code>
 and an array of more than one dimension among them, raises <code>SYNTAX 88.913</code>.</p>
 <pre><code class="language-rexx">t = .t~new
