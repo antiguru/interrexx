@@ -1,7 +1,8 @@
 /* A Relation holds more than one item per index.  Which of them `at`,
  * `index`, `remove` and `removeItem` choose, and the order of every list, is
- * Deviation 33: interrexx chooses the oldest and lists in insertion order,
- * the oracle chooses the newest and lists in its storage order.  So every
+ * Deviation 33: interrexx chooses the oldest and lists in insertion order;
+ * the oracle chooses the newest of several entries at one index, searches
+ * items in its storage order, and lists in its storage order.  So every
  * list below is sorted, and every choice is printed as whether it is one of
  * the candidates; `relation-duplicates-oldest-first` in
  * `interrexx/tests/licensed_divergences.rs` records the choices themselves.
@@ -26,7 +27,7 @@ r['k'] = 'v1'
 r['k'] = 'v2'
 r['j'] = 'w'
 say 'items    ' r~items r~items('k') r~items('j') r~items('z')
-say 'at       ' wordpos(r['k'], 'v1 v2') > 0 'allAt' r~allAt('k')~sort~makeString('L',',')
+say 'at       ' (wordpos(r['k'], 'v1 v2') > 0) 'allAt' r~allAt('k')~sort~makeString('L',',')
 say 'indexes  ' r~allIndexes~sort~makeString('L',',') '/' r~uniqueIndexes~sort~makeString('L',',')
 say 'allItems ' r~allItems~sort~makeString('L',',')
 say 'index    ' r~index('v1') r~index('v2') 'allIndex' r~allIndex('v1')~makeString('L',',')
@@ -41,7 +42,7 @@ end
 do p over pairs~sort
   say '  pair' p
 end
-say 'supplier ' wordpos(r~supplier('k')~item, 'v1 v2') > 0
+say 'supplier ' (wordpos(r~supplier('k')~item, 'v1 v2') > 0)
 
 gone = .Relation~new
 gone['k'] = 'v1'

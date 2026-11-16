@@ -306,11 +306,12 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
                   say r['k'] r~at('k') r~allAt('k')~makeString('L', ',') \
                   r~supplier('k')~item\n\
                   say r~index('v1') r~allIndex('v1')~makeString('L', ',')\n\
-                  say r~remove('k') r~removeItem('v1') r~allItems~makeString('L', ',')\n",
+                  say r~removeItem('v1') r~allIndexes~makeString('L', ',') r~remove('k') \
+                  r~allItems~makeString('L', ',')\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "v2 v2 v2,v1 v2\nj j,k\nv2 v1 v1\n",
-        crate_stdout: "v1 v1 v1,v2 v1\nk k,j\nv1 v1 v2\n",
+        oracle_stdout: "v2 v2 v2,v1 v2\nj j,k\nv1 k,k v2 v1\n",
+        crate_stdout: "v1 v1 v1,v2 v1\nk k,j\nv1 k,j v2 v1\n",
     },
 ];
 

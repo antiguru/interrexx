@@ -84,8 +84,8 @@ page records why they are the way they are.
   collection yields its entries in the order they were first put: a `put` that replaces an item
   keeps its entry in place, and an entry removed and put again comes last. Where several entries
   share an index or hold equal items, lookups and removals act on the oldest, and lists of them
-  answer oldest first. ooRexx's order follows its bucket layout, and it acts on the newest
-  duplicate. The order is specified rather than left to the implementation, because a
+  answer oldest first. ooRexx's order follows its bucket layout; it acts on the newest of several
+  entries at one index and searches items in its storage order. The order is specified rather than left to the implementation, because a
   deterministic order that ships becomes a contract in practice, as Python's dict did between 3.6
   and 3.7. The hash function is to be seeded against flooding, with the seed showing only in
   `hashCode` answers. Seeding is not implemented yet; #36 tracks it. For objects that break the

@@ -756,18 +756,18 @@ Method return 'foo' 1
 r[class.class.methods]
 `methods` answers a supplier whose indexes are method names in upper case and
 whose items are method objects, for the instance methods of the class. The
-supplier lists the names that exist when it is made, and a later change does
-not reach it. The order of its entries is not specified
-([Deviation 33](../deviations.md)). Without an argument it lists the table of
-the class and the tables of every class behind it in its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver, the class itself included, it lists the methods of
-that class's table, and with `.nil` the methods of the receiver's own table
-only. With any other argument, a number, a string or a class that is not in
-the order, the supplier has no entries. A table entry that hides a name is not
-listed; the name is still listed from every other table of the order that
-holds a method for it, so the listing does not show what the search finds. A
-second argument raises `SYNTAX 93.902`.
+supplier lists the names that exist when it is made, and a later change does not
+reach it. The order of its entries is not specified ([Deviation
+33](../deviations.md#33-hash-iteration-order)). Without an argument it lists the
+table of the class and the tables of every class behind it in its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver, the class itself included, it lists the methods
+of that class's table, and with `.nil` the methods of the receiver's own table
+only. With any other argument, a number, a string or a class that is not in the
+order, the supplier has no entries. A table entry that hides a name is not
+listed; the name is still listed from every other table of the order that holds
+a method for it, so the listing does not show what the search finds. A second
+argument raises `SYNTAX 93.902`.
 
 ```rexx
 call show .sub~methods(.nil), 'sub own'
@@ -2045,9 +2045,9 @@ mixinclass 98.900
 ```
 
 r[class.class.deviation.33]
-The order of the entries that `methods` yields is not specified and may
-differ from ooRexx's ([Deviation 33](../deviations.md)); which entries are
-there, and how often, is specified.
+The order of the entries that `methods` yields is not specified and may differ
+from ooRexx's ([Deviation 33](../deviations.md#33-hash-iteration-order)); which
+entries are there, and how often, is specified.
 
 ```rexx
 t = .top~methods(.top)
