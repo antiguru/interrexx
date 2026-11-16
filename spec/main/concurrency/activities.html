@@ -926,7 +926,47 @@ ooRexx waits for ever (<a href="../deviations.html#20-a-wait-nothing-can-end">De
 rule</a>. The refusal holds after the main program has
 ended too, when every activity that remains waits for something nothing can
 bring about (<a href="halt.html#r-conc.halt.end.alive">the end rule</a>); the second example is
-such a program.</p>
+such a program.
+The refusal applies only while no native code from outside the interpreter
+can run, since a thread such code starts may <a href="../native/threads.html#r-native.threads.attach">attach</a>
+later and end the wait. That code is an external library, loaded through
+<code>::REQUIRES ... LIBRARY</code>, an <code>EXTERNAL</code> directive, <code>RxFuncAdd</code>,
+<code>~loadLibrary</code> or a call by name of a function another process registered
+with the API service, or behind a registered subcommand environment or a
+registered exit, and it is the host of an embedding, which runs the program
+through <code>RexxStart</code> or <code>RexxCreateInterpreter</code>, together with any library it
+registers. Once such code is present, every such wait goes on, as in ooRexx,
+for the rest of the run, also after a library has been dropped. Neither SIGINT
+nor SIGTERM ends such a wait for the result of a message never sent, as <a href="halt.html#r-conc.halt.deviation.10">the
+signal rule</a> says of a wait for a message. The libraries
+that come with interrexx, such as RexxUtil, do not count, and the <code>rexx</code>
+command runs a program with no host. This holds for each interpreter on its
+own: a host's instance does not turn the refusal off for another interpreter
+in the same process.
+A wait for the result or the completion of a message whose method the waiting
+activity itself runs, and has not yet replied from, is refused whatever was
+loaded, since the message completes only when that method returns. The other
+activities run on while it waits, and the refusal comes once nothing else can
+run, during the main program or at its end, so their output and their errors
+come first. Inside a message that an attached thread sends, or a routine that
+an embedding host calls, it comes there too, where another wait goes on for a
+later message. In a program the <code>rexx</code> command or <code>RexxStart</code> runs, the
+refusal ends the run, even where native code could still end another
+activity's wait. A call that a host makes on an instance it created with
+<code>RexxCreateInterpreter</code>, from any thread, answers no result and leaves a
+condition pending, and the instance takes further calls until <code>Terminate</code>.
+The refusal's text is written when the host terminates the instance, or at the
+end of the run, whether or not the host cleared the condition. The refusal
+claims only that the wait can never be satisfied.
+After a <code>reply</code> the result is settled, and the method's own <code>result</code> and
+<code>wait</code> answer at once.
+A wait that would close a ring of waits between activities raises <code>SYNTAX 98.905</code> whatever was loaded (<a href="locks.html#r-conc.locks.deadlock">the deadlock rule</a>).
+In the third example the program loads <a href="../native/index.html#the-fixture-libraries">the fixture library
+<code>specfixture</code></a>, whose thread may
+attach only after the main program has begun to wait on the semaphore it
+posts. In the fourth the program loads the same library, and a method waits
+for the result of the message that runs it. Each program runs as a separate
+<code>rexx</code> command, so that the outcome is that program's output and return code.</p>
 <pre><code class="language-rexx">m = .message~new(.object~new, 'string')
 c = m~reply
 say 'a message that was never sent, and the original of a reply'
@@ -950,6 +990,52 @@ say 'main ends'
 </code></pre>
 <pre><code class="language-output rc=120">main ends
 stuck: waiting
+</code></pre>
+<pre><code class="language-rexx">src = .array~of( -
+  "sem = .eventsemaphore~new", -
+  "call fxonthread sem, 'POST'", -
+  "sem~wait", -
+  "say 'posted'", -
+  "::requires 'specfixture' LIBRARY")
+call sysfiledelete 'a7zqlater.rex'
+do line over src
+  call lineout 'a7zqlater.rex', line
+end
+call lineout 'a7zqlater.rex'
+address system 'rexx a7zqlater.rex 2&gt;/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqlater.rex'
+</code></pre>
+<pre><code class="language-output">rc 0
+posted
+</code></pre>
+<pre><code class="language-rexx">src = .array~of( -
+  "m = .message~new(.a7zqself~new, 'run')", -
+  ".environment~a7zqm = m", -
+  "m~send", -
+  "say 'not reached'", -
+  "::requires 'specfixture' LIBRARY", -
+  "::class a7zqself", -
+  "::method run", -
+  "  say 'running'", -
+  "  say .environment~a7zqm~result")
+call sysfiledelete 'a7zqself.rex'
+do line over src
+  call lineout 'a7zqself.rex', line
+end
+call lineout 'a7zqself.rex'
+address system 'rexx a7zqself.rex 2&gt;/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqself.rex'
+</code></pre>
+<pre><code class="language-output">rc 120
+running
 </code></pre>
 
                     </main>

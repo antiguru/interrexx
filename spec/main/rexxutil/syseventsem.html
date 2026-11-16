@@ -549,7 +549,8 @@ e: say condition('o')~code
 <div class="rule" id="r-util.syseventsem.deviation.20"><a href="#r-util.syseventsem.deviation.20">[util.syseventsem.deviation.20]</a></div>
 <p>A call of SysWaitEventSem that has no limit, and finds no post, while no other
 activity or timer of the program can post the semaphore, ends the program at
-once, with exit code <code>120</code> and a message on the error stream (<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation
+once, with exit code <code>120</code> and a message on the error stream, unless native
+code from outside the interpreter can run (<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). ooRexx waits for ever.</p>
 <pre><code class="language-rexx">say 'before'
 h = SysCreateEventSem()

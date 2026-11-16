@@ -476,7 +476,8 @@ e: say condition('o')~code
 <div class="rule" id="r-util.sysmutexsem.deviation.20"><a href="#r-util.sysmutexsem.deviation.20">[util.sysmutexsem.deviation.20]</a></div>
 <p>A call of SysRequestMutexSem that has no limit, and finds the lock held, while
 no other activity or timer of the program can free it, ends the program at
-once, with exit code <code>120</code> and a message on the error stream (<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation
+once, with exit code <code>120</code> and a message on the error stream, unless native
+code from outside the interpreter can run (<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). ooRexx waits for ever. In
 the example the program asks twice for a lock that it holds itself.</p>
 <pre><code class="language-rexx">say 'before'

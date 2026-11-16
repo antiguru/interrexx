@@ -444,9 +444,10 @@ expose (lst); guard on when lst =&gt; 99.913
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> A WHEN condition that stays false, while no other activity is able
-to change an object variable, never ends. interrexx refuses it, and the
-program ends with exit code 120, as <a href="../concurrency/locks.html#r-conc.locks.deviation.20">the Deviation 20
-rule</a> says; ooRexx waits for ever.</p>
+to change an object variable, never ends. interrexx refuses it while no
+native code from outside the interpreter can run, and the program ends with
+exit code 120, as <a href="../concurrency/locks.html#r-conc.locks.deviation.20">the Deviation 20 rule</a> says;
+ooRexx waits for ever.</p>
 </blockquote>
 <h2 id="where-guard-may-appear"><a class="header" href="#where-guard-may-appear">Where GUARD may appear</a></h2>
 <div class="rule" id="r-instr.guard.method"><a href="#r-instr.guard.method">[instr.guard.method]</a></div>

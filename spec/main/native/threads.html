@@ -174,6 +174,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="threads-and-halting"><a class="header" href="#threads-and-halting">Threads and halting</a></h1>
+<p class="deviations">Deviations: D166, D176, D177, D178</p>
 <p>Native code may start threads of its own, and may ask the interpreter to halt
 activities. This page states what a program sees of both. The examples use
 <a href="index.html#the-fixture-libraries">the fixture library <code>specfixture</code></a>. The ones
@@ -184,7 +185,9 @@ the outcome is that program's output and return code.</p>
 <p>A thread that native code starts may attach to the interpreter. It is then an
 <a href="../concurrency/activities.html">activity</a> of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
-and it leaves the interpreter when it detaches. The fixture's thread posts an
+except the one each message interrupts, which <a href="#r-native.threads.attach.deviation.178">Deviation
+178</a> stops, and it leaves the
+interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.</p>
 <pre><code class="language-rexx">src = .array~of( -
   "sem = .eventsemaphore~new", -
@@ -204,10 +207,52 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqattach.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0
+<pre><code class="language-output">rc 0
 1
 posted
 </code></pre>
+<div class="rule" id="r-native.threads.attach.deviation.178"><a href="#r-native.threads.attach.deviation.178">[native.threads.attach.deviation.178]</a></div>
+<p>While a message that an attached thread sends runs, the activity that was
+running when it arrived makes no progress in Rexx clauses (<a href="../deviations.html#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts">Deviation
+178</a>).
+The message runs at that activity's next clause boundary, or during its wait or
+its call into a native library that is not built in, and the activity goes on
+only once the message has finished. A message that arrives while another runs is
+held until that one returns, waits or calls into such a library, the earliest
+first. One that arrives while another waits runs on top of it, and the earlier
+goes on only once the later has finished. A message the thread sends with
+<code>SendMessage</code> or one of its variants, whose method needs at its entry a guard
+lock a stopped activity holds, waits for it as in ooRexx, is sent again in the
+place in the lock's queue that its wait took when it began, and <code>TRACE</code>
+announces the method's entry once. A guard lock that a stopped activity acquires
+after a message began to wait for it counts from then as one it holds. Any other
+wait counts as one of a message that has begun, including the wait of a routine
+the thread calls with <code>CallRoutine</code> or of a method another API call sends to,
+such as the <code>MAKESTRING</code> that <code>ObjectToString</code> sends. Once a message has begun,
+a wait of it for something only a stopped activity can give never ends. A wait
+for a guard lock such an activity holds and no other message does, or for the
+completion of a message whose send it runs, is refused at once, and the program
+ends with exit code 120. Any other, such as a <code>GUARD WHEN</code>, goes on for ever,
+with a line on stderr, which says how long it has waited, once it has waited
+five seconds and nothing but a stopped activity is left to end it. In ooRexx the
+thread's messages run alongside the other activities. The tests of this rule
+need an extension of their own that sends messages by name, so they run outside
+this page.</p>
+<div class="rule" id="r-native.threads.attach.deviation.177"><a href="#r-native.threads.attach.deviation.177">[native.threads.attach.deviation.177]</a></div>
+<p><code>DetachThread</code>, <code>HaltThread</code> and <code>SetThreadTrace</code> called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second <code>DetachThread</code> from the thread that attached it (<a href="../deviations.html#177-an-attached-threads-context-used-from-another-thread">Deviation
+177</a>).
+The attachment stays as it was, and its next message runs, neither halted nor
+traced by the call. The call does not wait for a message the attached thread
+runs, so it returns even where that message waits for the calling thread.
+Native code on another thread halts or traces the interpreter through the
+instance's <code>Halt</code> and <code>SetTrace</code> instead, as <a href="#r-native.threads.halt">the halt
+rule</a> and <a href="#r-native.threads.trace">the trace rule</a> say.
+A message sent after the thread did detach is not covered here but by
+<a href="../deviations.html#19-callback-from-a-foreign-thread">Deviation 19</a>, which
+refuses it. ooRexx aborts the process or hangs on each of these misuses, so
+there is no example.</p>
 <div class="rule" id="r-native.threads.end"><a href="#r-native.threads.end">[native.threads.end]</a></div>
 <p>The end of a program waits for an attached thread only while that thread's
 activity runs a message, as it waits for <a href="../concurrency/halt.html#r-conc.halt.end.alive">any other
@@ -245,7 +290,7 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqend.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0
+<pre><code class="language-output">rc 0
 thread ran
 </code></pre>
 <pre><code class="language-rexx">src = .array~of( -
@@ -267,9 +312,18 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqidle.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0 waited 0
+<pre><code class="language-output">rc 0 waited 0
 main ends
 </code></pre>
+<div class="rule" id="r-native.threads.end.deviation.176"><a href="#r-native.threads.end.deviation.176">[native.threads.end.deviation.176]</a></div>
+<p>A thread that is still attached when the embedding calls <code>Terminate</code> can send
+no message afterwards: each send through its context is refused, answers the
+failure value of the member and runs nothing, and <code>DetachThread</code> from that
+thread returns (<a href="../deviations.html#176-a-callback-after-the-embedding-ends-the-interpreter">Deviation
+176</a>).
+ooRexx runs the message and answers its result. The example needs an
+embedding that calls <code>Terminate</code>, which the <code>rexx</code> command does not, so the
+tests of this rule run one instead.</p>
 <div class="rule" id="r-native.threads.instance"><a href="#r-native.threads.instance">[native.threads.instance]</a></div>
 <p>Every activity of one interpreter is given the same interpreter instance by
 the native API: the main program's, one that <a href="../instructions/reply.html"><code>REPLY</code></a>
@@ -302,7 +356,7 @@ say 'start' (o~start('plain')~result == main)
 ::method plain
   return fxinstance()
 </code></pre>
-<pre><code class="language-output defect=#628">main 1
+<pre><code class="language-output">main 1
 reply 1
 start 1
 </code></pre>
@@ -316,14 +370,34 @@ the process or hangs on both. Ending the interpreter belongs to the program
 that created it, which for a program run by <code>rexx</code> is <code>rexx</code> itself, so what
 native code that asks for the end achieves is not specified.</p>
 </blockquote>
+<div class="rule" id="r-native.threads.members"><a href="#r-native.threads.members">[native.threads.members]</a></div>
+<p>The members of the thread interface that store into or fetch from an array, a
+stem, a supplier, a directory or a string table, that ask an object whether it
+is an instance of a class or has a method, or that ask a package, a routine or
+a method for what it holds, send the object no message. Each runs the
+interpreter's own method for what it does, found by a search that starts in
+the receiver's class order at the last class of the interpreter's library
+ahead of the first class a program made. So a method a program's class defines
+under the matching name, such as <code>PUT</code>, <code>ISINSTANCEOF</code> or <code>HASMETHOD</code>, does
+not run, nor does a method the object was given with <code>setMethod</code>, while a
+subclass the interpreter's own library defines, such as that of the supplier a
+stream answers, keeps its own methods. The members act the same on every
+thread, attached or not. Their tests need an extension that calls them by
+name, so they run outside this page.</p>
 <h2 id="halting"><a class="header" href="#halting">Halting</a></h2>
 <div class="rule" id="r-native.threads.halt"><a href="#r-native.threads.halt">[native.threads.halt]</a></div>
 <p>Native code may ask the interpreter to halt every activity, or only the
 activity whose call is running it. Each activity that is asked takes the
 <a href="../conditions/halt.html">HALT condition</a> at its next clause, which for the
 activity of the call is the first clause after the call returns, and an
-activity that was not asked runs on. In the examples a second activity loops
-with a short sleep and records whether it was halted.</p>
+activity that was not asked runs on. An <a href="#r-native.threads.attach">attached
+thread</a> whose activity runs no message when the
+interpreter is asked to halt every activity is not asked: the next message it
+sends runs unhalted. A message that has arrived but is held under <a href="#r-native.threads.attach.deviation.178">Deviation
+178</a> has not begun, so its activity
+runs no message and is not asked either: the message runs to its end once it
+is let go. In the examples a second activity loops with a short sleep and
+records whether it was halted.</p>
 <pre><code class="language-rexx">w = .n3zqw~new
 w~start('spin')
 w~ready~wait
@@ -392,6 +466,37 @@ h: how = 'halted'
 </code></pre>
 <pre><code class="language-output">main HALT / worker not halted
 </code></pre>
+<h2 id="tracing"><a class="header" href="#tracing">Tracing</a></h2>
+<div class="rule" id="r-native.threads.trace"><a href="#r-native.threads.trace">[native.threads.trace]</a></div>
+<p>Native code may turn the external trace of the interpreter on or off from any
+thread, whether or not that thread runs a call of the interpreter. Turned on,
+every activity of the interpreter that runs Rexx code, the main one and the
+ones that <a href="../concurrency/activities.html#r-conc.activities.creation"><code>start</code></a> made, idle or not, traces from
+its next clause as under <code>TRACE ?R</code>, with the pause of interactive trace, except
+for the lines that <a href="#r-native.threads.trace.deviation.166">Deviation 166</a> leaves
+out of code that was already running. The setting is that of the code each
+activity is running: a method or a <code>::ROUTINE</code> it calls afterwards starts with
+its own, as <a href="../builtins/trace.html#r-bif.trace.scope">the scope of the setting</a> says. Turned off,
+every activity runs on untraced from its next clause. An <a href="#r-native.threads.attach">attached
+thread</a> whose activity runs no message when the trace
+is turned on or off is not reached: the next message it sends runs with its
+method's own setting. A request made after the interpreter has ended does
+nothing. The trace lines name the program's path, so the tests that witness
+this rule compare them outside this page.</p>
+<div class="rule" id="r-native.threads.trace.deviation.166"><a href="#r-native.threads.trace.deviation.166">[native.threads.trace.deviation.166]</a></div>
+<p>Code that was already running when native code first turned the external trace
+of the interpreter, or of one activity, on or off (<a href="../deviations.html#166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace">Deviation
+166</a>)
+may leave out some of the lines the trace asks for, up to the end of its run.
+That code is each run of a program, method, <code>::ROUTINE</code> or internal routine
+that an activity had begun, a caller that waits for a call to return included.
+The lines it may leave out are the <code>&gt;K&gt;</code> lines of a <code>DO</code> or <code>LOOP</code> header for
+<code>TO</code>, <code>BY</code>, <code>FOR</code>, <code>OVER</code> and <code>WITH</code>, and the <code>&gt;L&gt;</code>, <code>&gt;V&gt;</code>, <code>&gt;E&gt;</code>, <code>&gt;O&gt;</code>, <code>&gt;P&gt;</code>
+and <code>&gt;A&gt;</code> lines that <code>TRACE I</code>, set at an interactive pause, asks for. Code
+entered after that first request prints every line, as ooRexx does. ooRexx
+prints every line in code that was already running too. The trace lines name
+the program's path, so the tests that witness this rule compare them outside
+this page.</p>
 
                     </main>
 

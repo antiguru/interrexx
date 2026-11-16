@@ -10117,9 +10117,10 @@ expose (lst); guard on when lst =&gt; 99.913
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> A WHEN condition that stays false, while no other activity is able
-to change an object variable, never ends. interrexx refuses it, and the
-program ends with exit code 120, as <a href="instructions/../concurrency/locks.html#r-conc.locks.deviation.20">the Deviation 20
-rule</a> says; ooRexx waits for ever.</p>
+to change an object variable, never ends. interrexx refuses it while no
+native code from outside the interpreter can run, and the program ends with
+exit code 120, as <a href="instructions/../concurrency/locks.html#r-conc.locks.deviation.20">the Deviation 20 rule</a> says;
+ooRexx waits for ever.</p>
 </blockquote>
 <h2 id="where-guard-may-appear"><a class="header" href="#where-guard-may-appear">Where GUARD may appear</a></h2>
 <div class="rule" id="r-instr.guard.method"><a href="instructions/guard.html#r-instr.guard.method">[instr.guard.method]</a></div>
@@ -95495,7 +95496,47 @@ ooRexx waits for ever (<a href="concurrency/../deviations.html#20-a-wait-nothing
 rule</a>. The refusal holds after the main program has
 ended too, when every activity that remains waits for something nothing can
 bring about (<a href="concurrency/halt.html#r-conc.halt.end.alive">the end rule</a>); the second example is
-such a program.</p>
+such a program.
+The refusal applies only while no native code from outside the interpreter
+can run, since a thread such code starts may <a href="concurrency/../native/threads.html#r-native.threads.attach">attach</a>
+later and end the wait. That code is an external library, loaded through
+<code>::REQUIRES ... LIBRARY</code>, an <code>EXTERNAL</code> directive, <code>RxFuncAdd</code>,
+<code>~loadLibrary</code> or a call by name of a function another process registered
+with the API service, or behind a registered subcommand environment or a
+registered exit, and it is the host of an embedding, which runs the program
+through <code>RexxStart</code> or <code>RexxCreateInterpreter</code>, together with any library it
+registers. Once such code is present, every such wait goes on, as in ooRexx,
+for the rest of the run, also after a library has been dropped. Neither SIGINT
+nor SIGTERM ends such a wait for the result of a message never sent, as <a href="concurrency/halt.html#r-conc.halt.deviation.10">the
+signal rule</a> says of a wait for a message. The libraries
+that come with interrexx, such as RexxUtil, do not count, and the <code>rexx</code>
+command runs a program with no host. This holds for each interpreter on its
+own: a host's instance does not turn the refusal off for another interpreter
+in the same process.
+A wait for the result or the completion of a message whose method the waiting
+activity itself runs, and has not yet replied from, is refused whatever was
+loaded, since the message completes only when that method returns. The other
+activities run on while it waits, and the refusal comes once nothing else can
+run, during the main program or at its end, so their output and their errors
+come first. Inside a message that an attached thread sends, or a routine that
+an embedding host calls, it comes there too, where another wait goes on for a
+later message. In a program the <code>rexx</code> command or <code>RexxStart</code> runs, the
+refusal ends the run, even where native code could still end another
+activity's wait. A call that a host makes on an instance it created with
+<code>RexxCreateInterpreter</code>, from any thread, answers no result and leaves a
+condition pending, and the instance takes further calls until <code>Terminate</code>.
+The refusal's text is written when the host terminates the instance, or at the
+end of the run, whether or not the host cleared the condition. The refusal
+claims only that the wait can never be satisfied.
+After a <code>reply</code> the result is settled, and the method's own <code>result</code> and
+<code>wait</code> answer at once.
+A wait that would close a ring of waits between activities raises <code>SYNTAX 98.905</code> whatever was loaded (<a href="concurrency/locks.html#r-conc.locks.deadlock">the deadlock rule</a>).
+In the third example the program loads <a href="concurrency/../native/index.html#the-fixture-libraries">the fixture library
+<code>specfixture</code></a>, whose thread may
+attach only after the main program has begun to wait on the semaphore it
+posts. In the fourth the program loads the same library, and a method waits
+for the result of the message that runs it. Each program runs as a separate
+<code>rexx</code> command, so that the outcome is that program's output and return code.</p>
 <pre><code class="language-rexx">m = .message~new(.object~new, 'string')
 c = m~reply
 say 'a message that was never sent, and the original of a reply'
@@ -95519,6 +95560,52 @@ say 'main ends'
 </code></pre>
 <pre><code class="language-output rc=120">main ends
 stuck: waiting
+</code></pre>
+<pre><code class="language-rexx">src = .array~of( -
+  "sem = .eventsemaphore~new", -
+  "call fxonthread sem, 'POST'", -
+  "sem~wait", -
+  "say 'posted'", -
+  "::requires 'specfixture' LIBRARY")
+call sysfiledelete 'a7zqlater.rex'
+do line over src
+  call lineout 'a7zqlater.rex', line
+end
+call lineout 'a7zqlater.rex'
+address system 'rexx a7zqlater.rex 2&gt;/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqlater.rex'
+</code></pre>
+<pre><code class="language-output">rc 0
+posted
+</code></pre>
+<pre><code class="language-rexx">src = .array~of( -
+  "m = .message~new(.a7zqself~new, 'run')", -
+  ".environment~a7zqm = m", -
+  "m~send", -
+  "say 'not reached'", -
+  "::requires 'specfixture' LIBRARY", -
+  "::class a7zqself", -
+  "::method run", -
+  "  say 'running'", -
+  "  say .environment~a7zqm~result")
+call sysfiledelete 'a7zqself.rex'
+do line over src
+  call lineout 'a7zqself.rex', line
+end
+call lineout 'a7zqself.rex'
+address system 'rexx a7zqself.rex 2&gt;/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqself.rex'
+</code></pre>
+<pre><code class="language-output">rc 120
+running
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="locks"><a class="header" href="#locks">Locks</a></h1>
 <p class="references">rexxref: Concurrency &gt; Default Concurrency; Concurrency &gt; Sending Messages within an Activity; Concurrency &gt; Using Additional Concurrency Mechanisms; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; SETUNGUARDED Method and UNGUARDED Option; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; GUARD ON and GUARD OFF; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; Guarded Methods</p>
@@ -96355,11 +96442,21 @@ such as a lock, a result or the change of a variable, that only an activity
 that is suspended beneath it can provide is refused, and the program ends with
 exit code 120. ooRexx runs each activity on a thread of its own, so the
 activity that waits is not in the way of the one that must go on, and the
-program ends normally. In the first example the first message waits in an
-INTERPRET until a flag is set; the second sets the flag and then waits, in an
-INTERPRET, for the first one's result. In the second a method that <code>run</code> runs
-keeps the lock of the object and waits for a flag; the method that sets the
-flag then asks, in a method that <code>run</code> runs, for the same lock.</p>
+program ends normally.
+The refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+<a href="concurrency/activities.html#r-conc.activities.deviation.20">the rule of Deviation 20</a> defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds and nothing else is left to run,
+a line on stderr says so and names the activity that the wait keeps from
+running. Apart from that line the program runs as it would without it, and a
+HALT the host asks for ends the wait where <a href="concurrency/halt.html#r-conc.halt.signal">the host's
+request</a> ends such a wait.
+In the first example the first message waits in an INTERPRET until a flag is
+set; the second sets the flag and then waits, in an INTERPRET, for the first
+one's result. In the second a method that <code>run</code> runs keeps the lock of the
+object and waits for a flag; the method that sets the flag then asks, in a
+method that <code>run</code> runs, for the same lock.</p>
 <pre><code class="language-rexx">say 'start'
 f = .flag~new
 a = f~start('waitForFlag')
@@ -96406,7 +96503,18 @@ say h~result
 that only another activity can make: a delivery that holds a guard does not
 give the kernel to another activity, so such a wait is refused after the delivery
 has gone on for several seconds with another activity ready, and the program
-ends with exit code 120. In the example the destination loops until a started
+ends with exit code 120.
+The refusal follows the same switch as the waits above: it comes only while no
+native code from outside the interpreter can run, as <a href="concurrency/activities.html#r-conc.activities.deviation.20">the rule of Deviation
+20</a> defines such code. The refusal rests on
+time, not on a proof that the wait never ends, and once such code is present a
+thread it started may change what the destination waits for without the kernel.
+So the delivery goes on instead, a line on stderr says once that it keeps the
+activities that are ready from running, and apart from that line the program
+runs as it would without it. A HALT the host asks for reaches the delivery's
+clauses as <a href="concurrency/halt.html#r-conc.halt.signal">the host's request</a> reaches any running
+activity's.
+In the example, which loads no library, the destination loops until a started
 activity sets a flag.</p>
 <pre><code class="language-rexx">.environment~flag = 0
 .traceoutput~destination(.sink~new)
@@ -96429,15 +96537,17 @@ say 'done'
 </code></pre>
 <div class="rule" id="r-conc.locks.deviation.20"><a href="concurrency/locks.html#r-conc.locks.deviation.20">[conc.locks.deviation.20]</a></div>
 <p>A wait that no activity, timer or call can end is refused, and the program
-ends with exit code 120. ooRexx waits for ever. This holds for the waits that
-the refusal of a ring does not cover (<a href="concurrency/locks.html#r-conc.locks.deadlock">the rule</a>): a
-<code>GUARD WHEN</code> whose condition only a method that is held back by the lock of
-the waiting activity's own caller could make true, and a method that holds a
-lock and waits for a semaphore that only the activity that asks for the lock
-posts. In the first example a guarded method calls the waiting method of the
-rule on <a href="concurrency/locks.html#r-conc.locks.when">WHEN</a>, and the method that is to set the variable
-is guarded too; in the second the method that holds the lock waits for an
-event semaphore that the method that asks for the lock posts.</p>
+ends with exit code 120, while no native code from outside the interpreter
+can run (<a href="concurrency/activities.html#r-conc.activities.deviation.20">the activities rule</a>). ooRexx waits
+for ever. This holds for the waits that the refusal of a ring does not cover
+(<a href="concurrency/locks.html#r-conc.locks.deadlock">the rule</a>): a <code>GUARD WHEN</code> whose condition only a
+method that is held back by the lock of the waiting activity's own caller
+could make true, and a method that holds a lock and waits for a semaphore
+that only the activity that asks for the lock posts. In the first example a
+guarded method calls the waiting method of the rule on
+<a href="concurrency/locks.html#r-conc.locks.when">WHEN</a>, and the method that is to set the variable is
+guarded too; in the second the method that holds the lock waits for an event
+semaphore that the method that asks for the lock posts.</p>
 <pre><code class="language-rexx">say 'start'
 o = .k~new
 m = o~start('outer')
@@ -97130,8 +97240,9 @@ cancelled, and a ticker that an error in its target's <code>triggered</code> sto
 cancelled alarm or ticker with a delay of a minute does not make the program
 last a minute. An activity that waits for something that nothing can bring
 about any more keeps the program for ever. interrexx refuses such a wait
-(<a href="concurrency/activities.html#r-conc.activities.deviation.20">Deviation 20</a>), also once the main program
-has ended: the program ends with exit code 120 and does not wait for the other
+while no native code from outside the interpreter can run (<a href="concurrency/activities.html#r-conc.activities.deviation.20">Deviation
+20</a>), also once the main program has ended:
+the program ends with exit code 120 and does not wait for the other
 activities, where ooRexx hangs. A main program that interrexx ends with a refusal does not
 wait for any of them (<a href="concurrency/halt.html#r-conc.halt.deviation.21">the Deviation 21 rule</a>). The
 status of the command is the main program's (<a href="concurrency/halt.html#r-conc.halt.end.status">the next
@@ -98082,6 +98193,156 @@ function that RXFUNCADD registered.</p>
 </code></pre>
 <pre><code class="language-output">FXCLASSICJOIN:3:a,(),c
 </code></pre>
+<h2 id="the-lifetime-of-a-library"><a class="header" href="#the-lifetime-of-a-library">The lifetime of a library</a></h2>
+<blockquote>
+<p>A process can hold more than one interpreter instance at a time: the
+command-line interpreter creates one for the program it runs, and a host
+creates as many as it likes through the interpreter's C interface. The
+reference for that interface fixes when a library's loader and unloader run in
+terms of these instances, in its description of the <code>packageLoader</code> and
+<code>packageUnloader</code> fields of <code>RexxPackageEntry</code>. The rules below say what that
+means for a library with a package entry. Their examples need two instances in
+one process, which a single Rexx program cannot create, so each is told in
+words, and the tests that cite the rule run it with a test library of their
+own, not one of <a href="native/index.html#the-fixture-libraries">the fixture libraries</a>, whose
+loader prints the line <code>loader</code> and whose unloader prints <code>unloader</code>.</p>
+</blockquote>
+<div class="rule" id="r-native.loading.shared"><a href="native/loading.html#r-native.loading.shared">[native.loading.shared]</a></div>
+<p>A library is loaded for the process, not for one instance. Its package entry's
+loader runs once, when the first instance of the process loads the library. An
+instance that loads the library while another instance that loaded it is still
+live runs no loader: the two use one copy of the library, its static storage
+included. Such a load, and a load that another thread makes through the
+instance running the loader, completes only once the loader has returned, except
+where <a href="native/loading.html#r-native.loading.reentrant">the re-entrancy rule</a> lets it go on. Only a
+load waits: what a call by name of one of the library's routines does while the
+loader is still running on another thread is unspecified for the program, and
+the routine may find the library not yet set up, but the interpreter does not
+crash, corrupt its own state or deadlock for it. A load waits for the loader of
+that library only: a load of another library, which no thread is loading, does
+not wait for it. While a load waits, other threads may
+call into the instance it is made through, the thread running the loader
+included. Whether two live instances share one load when the same name finds a
+different file for each is unspecified.</p>
+<blockquote>
+<p>For example, a host creates two instances, and each loads the test library
+before the host terminates either. The test library prints <code>loader</code> once,
+while the first instance loads it.</p>
+</blockquote>
+<div class="rule" id="r-native.loading.unload"><a href="native/loading.html#r-native.loading.unload">[native.loading.unload]</a></div>
+<p>A library's unloader runs once, when the last live instance of the process is
+terminated, after that instance's last-chance <code>UNINIT</code> methods. Terminating an
+instance while another is still live runs no unloader, whichever of them loaded
+the library. The instance that is terminated last runs the unloader of each
+library the process holds, once. That is every library loaded since the previous
+such termination, apart from those whose unloaders an earlier termination ran
+while an instance it left live still held them, as <a href="native/loading.html#r-native.loading.reentrant">the re-entrancy
+rule</a> says. A library that one of these unloaders
+loads, and that the process had not loaded before, is among them: its loader
+runs inside that unloader, and its unloader runs later in the same termination.
+A library still loading on another thread when that termination comes to it is
+left to the instance that still holds it, and its unloader runs when that
+instance is the last to be terminated. Where a program that the command-line
+interpreter runs is the only instance of its process, as it is unless an
+extension creates another, the unloaders of its libraries run when it ends.
+An unloader runs as part of that last instance's termination, so what it writes
+goes to that instance's output and error streams. A host that runs several
+programs in one process through the <code>interrexx</code> Rust crate runs each as an
+instance of the process, and they share one round of loads. The process holds
+one copy of a library and of its static storage, as <a href="native/loading.html#r-native.loading.shared">the shared-load
+rule</a> says, so a library is loaded once for all of
+them, and its unloader runs at the end of whichever of them ends last.</p>
+<blockquote>
+<p>For example, the host of the <a href="native/loading.html#r-native.loading.shared">shared-load example</a>
+terminates the first instance and then the second. The test library prints
+<code>unloader</code> once, while the second instance is terminated.</p>
+</blockquote>
+<div class="rule" id="r-native.loading.again"><a href="native/loading.html#r-native.loading.again">[native.loading.again]</a></div>
+<p>The last live instance of a process stays live until the unloaders its
+termination runs have returned. Once they have, every library whose unloader
+ran is closed. That holds also where an unloader created an instance and left
+it live, as <a href="native/loading.html#r-native.loading.reentrant">the re-entrancy rule</a> lets it: the
+libraries that instance shared with the last instance are closed with the
+others, and its own termination does not run their unloaders again. When an
+instance created after that loads a library whose unloader ran, the library's
+loader runs again, and its unloader runs again when the last instance live with
+it is terminated. An instance that another thread creates while the last one's
+unloaders are still running is created only once they have returned, so a
+loader of the later instance never runs inside an unloader of the earlier ones,
+except where the re-entrancy rule lets it go on.</p>
+<blockquote>
+<p>For example, after the two instances of the <a href="native/loading.html#r-native.loading.unload">unload
+example</a> have been terminated, the host creates a
+third instance, which loads the test library, and terminates it. The host
+sees <code>loader</code>, <code>unloader</code>, <code>loader</code>, <code>unloader</code> in that order, and no other
+line of the library's.</p>
+</blockquote>
+<div class="rule" id="r-native.loading.reentrant"><a href="native/loading.html#r-native.loading.reentrant">[native.loading.reentrant]</a></div>
+<p>A thread that is running a loader or an unloader never waits for its own hook.
+What the <a href="native/loading.html#r-native.loading.shared">shared</a> and <a href="native/loading.html#r-native.loading.again">again</a>
+rules make other threads wait for, it goes on without. A thread's lineage is
+that thread, and for the thread an instance runs on, the lineage of the thread
+that created the instance too, so the lineage passes through every instance
+created in turn. An <a href="native/threads.html#r-native.threads.attach">attached</a> thread does not take on
+the lineage of the thread that created its instance. While a loader or an
+unloader runs, the instance running it is in a call into a native library, in
+the sense of <a href="native/threads.html#r-native.threads.attach.deviation.178">Deviation 178</a>: a message
+that an attached thread sends to that instance meanwhile runs without waiting
+for the hook to return. A hook may therefore wait for a thread that calls into
+the instance running it, for instance through a load that waits for the loader
+another thread runs. A loader that loads, with the thread context it is handed,
+the library whose loader it is finds the library loaded: the load completes at
+once and runs no loader. A loader or an unloader that loads another library, or
+creates an instance that loads a library, gets that load and that creation
+without waiting. Where the load is the first of the library in the process, the
+library's own loader runs inside the hook that asked for it. Where the library
+is already loading on a thread of the loading thread's lineage, the load finds
+it and runs no second loader. An instance a hook creates is created without
+waiting, and is a live instance like any other. An instance that an unloader of
+the last instance creates shares the libraries that instance holds, as the last
+instance is still live: a library it loads that the process holds runs no
+loader, and its termination, while that instance is live, is not the last and
+runs no unloader. Where it is still live once that instance's termination has
+ended, it is the last live instance, but its own termination runs none of the
+unloaders that termination ran a second time, and an instance created after it
+loads those libraries afresh. A load does not wait for a loader where the thread
+running that loader waits, directly or through other such waits, for a thread of
+the loading thread's lineage: the load finds the library loaded and runs no
+loader. Two loaders that each load the other's library therefore do not wait for
+each other. In the same way, an instance created while the last instance's
+unloaders run is not made to wait for them where the thread running them waits
+so: it shares the libraries, as an instance an unloader creates does. Only the
+waits these rules make count here. A loader must not wait in any other way for a
+thread outside its lineage that loads the loader's own library before the loader
+returns, and an unloader of the last instance must not wait so for a thread that
+creates an instance: the rules above make such a thread wait for the hook, and
+the two would wait for each other.</p>
+<blockquote>
+<p>For example, a loader of the test library creates an instance that loads the
+test library, and terminates it. The host sees <code>loader</code> and then the lines of
+the instance's creation and termination, and the library's loader does not
+run a second time.</p>
+</blockquote>
+<div class="rule" id="r-native.loading.static"><a href="native/loading.html#r-native.loading.static">[native.loading.static]</a></div>
+<p>Whether a library's static storage starts afresh when <a href="native/loading.html#r-native.loading.again">a later
+instance</a> loads it again is unspecified. The process
+may keep the library's code and data in memory from one load to the next, for
+example while code of the library may still be running on a thread of its own.
+A library that needs its static storage in a known state sets it in its loader
+and releases what it holds in its unloader. Once a library has been loaded in
+the process, a later load by the same name may find that copy again, even where
+the name would no longer lead to it, for instance after the search path has
+changed: whether a later load looks the name up afresh is unspecified. The
+reference gives a library without a package entry, whose functions RXFUNCADD or
+the C interface register, no loader and no unloader, and says nothing of when it
+is unloaded: whether it stays loaded after the instance that registered its
+functions ends is unspecified too.</p>
+<blockquote>
+<p>For example, a library that counted its loads in a static variable could print
+<code>2</code> or <code>1</code> at the third instance's load in the <a href="native/loading.html#r-native.loading.again">later-instance
+example</a>. The test library therefore prints its lines
+without counting.</p>
+</blockquote>
 <h2 id="classic-functions"><a class="header" href="#classic-functions">Classic functions</a></h2>
 <div class="rule" id="r-native.loading.classic"><a href="native/loading.html#r-native.loading.classic">[native.loading.classic]</a></div>
 <p>For a library without a package entry, <code>RXFUNCADD(name, module, procedure)</code>
@@ -98507,6 +98768,7 @@ say o~peek o~speek o~oget('V') o~soget('V') o~oget('W')
 1 2 1 2 (unset)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="threads-and-halting"><a class="header" href="#threads-and-halting">Threads and halting</a></h1>
+<p class="deviations">Deviations: D166, D176, D177, D178</p>
 <p>Native code may start threads of its own, and may ask the interpreter to halt
 activities. This page states what a program sees of both. The examples use
 <a href="native/index.html#the-fixture-libraries">the fixture library <code>specfixture</code></a>. The ones
@@ -98517,7 +98779,9 @@ the outcome is that program's output and return code.</p>
 <p>A thread that native code starts may attach to the interpreter. It is then an
 <a href="native/../concurrency/activities.html">activity</a> of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
-and it leaves the interpreter when it detaches. The fixture's thread posts an
+except the one each message interrupts, which <a href="native/threads.html#r-native.threads.attach.deviation.178">Deviation
+178</a> stops, and it leaves the
+interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.</p>
 <pre><code class="language-rexx">src = .array~of( -
   "sem = .eventsemaphore~new", -
@@ -98537,10 +98801,52 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqattach.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0
+<pre><code class="language-output">rc 0
 1
 posted
 </code></pre>
+<div class="rule" id="r-native.threads.attach.deviation.178"><a href="native/threads.html#r-native.threads.attach.deviation.178">[native.threads.attach.deviation.178]</a></div>
+<p>While a message that an attached thread sends runs, the activity that was
+running when it arrived makes no progress in Rexx clauses (<a href="native/../deviations.html#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts">Deviation
+178</a>).
+The message runs at that activity's next clause boundary, or during its wait or
+its call into a native library that is not built in, and the activity goes on
+only once the message has finished. A message that arrives while another runs is
+held until that one returns, waits or calls into such a library, the earliest
+first. One that arrives while another waits runs on top of it, and the earlier
+goes on only once the later has finished. A message the thread sends with
+<code>SendMessage</code> or one of its variants, whose method needs at its entry a guard
+lock a stopped activity holds, waits for it as in ooRexx, is sent again in the
+place in the lock's queue that its wait took when it began, and <code>TRACE</code>
+announces the method's entry once. A guard lock that a stopped activity acquires
+after a message began to wait for it counts from then as one it holds. Any other
+wait counts as one of a message that has begun, including the wait of a routine
+the thread calls with <code>CallRoutine</code> or of a method another API call sends to,
+such as the <code>MAKESTRING</code> that <code>ObjectToString</code> sends. Once a message has begun,
+a wait of it for something only a stopped activity can give never ends. A wait
+for a guard lock such an activity holds and no other message does, or for the
+completion of a message whose send it runs, is refused at once, and the program
+ends with exit code 120. Any other, such as a <code>GUARD WHEN</code>, goes on for ever,
+with a line on stderr, which says how long it has waited, once it has waited
+five seconds and nothing but a stopped activity is left to end it. In ooRexx the
+thread's messages run alongside the other activities. The tests of this rule
+need an extension of their own that sends messages by name, so they run outside
+this page.</p>
+<div class="rule" id="r-native.threads.attach.deviation.177"><a href="native/threads.html#r-native.threads.attach.deviation.177">[native.threads.attach.deviation.177]</a></div>
+<p><code>DetachThread</code>, <code>HaltThread</code> and <code>SetThreadTrace</code> called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second <code>DetachThread</code> from the thread that attached it (<a href="native/../deviations.html#177-an-attached-threads-context-used-from-another-thread">Deviation
+177</a>).
+The attachment stays as it was, and its next message runs, neither halted nor
+traced by the call. The call does not wait for a message the attached thread
+runs, so it returns even where that message waits for the calling thread.
+Native code on another thread halts or traces the interpreter through the
+instance's <code>Halt</code> and <code>SetTrace</code> instead, as <a href="native/threads.html#r-native.threads.halt">the halt
+rule</a> and <a href="native/threads.html#r-native.threads.trace">the trace rule</a> say.
+A message sent after the thread did detach is not covered here but by
+<a href="native/../deviations.html#19-callback-from-a-foreign-thread">Deviation 19</a>, which
+refuses it. ooRexx aborts the process or hangs on each of these misuses, so
+there is no example.</p>
 <div class="rule" id="r-native.threads.end"><a href="native/threads.html#r-native.threads.end">[native.threads.end]</a></div>
 <p>The end of a program waits for an attached thread only while that thread's
 activity runs a message, as it waits for <a href="native/../concurrency/halt.html#r-conc.halt.end.alive">any other
@@ -98578,7 +98884,7 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqend.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0
+<pre><code class="language-output">rc 0
 thread ran
 </code></pre>
 <pre><code class="language-rexx">src = .array~of( -
@@ -98600,9 +98906,18 @@ do i = 1 to out.0
 end
 call sysfiledelete 'n3zqidle.rex'
 </code></pre>
-<pre><code class="language-output defect=#621">rc 0 waited 0
+<pre><code class="language-output">rc 0 waited 0
 main ends
 </code></pre>
+<div class="rule" id="r-native.threads.end.deviation.176"><a href="native/threads.html#r-native.threads.end.deviation.176">[native.threads.end.deviation.176]</a></div>
+<p>A thread that is still attached when the embedding calls <code>Terminate</code> can send
+no message afterwards: each send through its context is refused, answers the
+failure value of the member and runs nothing, and <code>DetachThread</code> from that
+thread returns (<a href="native/../deviations.html#176-a-callback-after-the-embedding-ends-the-interpreter">Deviation
+176</a>).
+ooRexx runs the message and answers its result. The example needs an
+embedding that calls <code>Terminate</code>, which the <code>rexx</code> command does not, so the
+tests of this rule run one instead.</p>
 <div class="rule" id="r-native.threads.instance"><a href="native/threads.html#r-native.threads.instance">[native.threads.instance]</a></div>
 <p>Every activity of one interpreter is given the same interpreter instance by
 the native API: the main program's, one that <a href="native/../instructions/reply.html"><code>REPLY</code></a>
@@ -98635,7 +98950,7 @@ say 'start' (o~start('plain')~result == main)
 ::method plain
   return fxinstance()
 </code></pre>
-<pre><code class="language-output defect=#628">main 1
+<pre><code class="language-output">main 1
 reply 1
 start 1
 </code></pre>
@@ -98649,14 +98964,34 @@ the process or hangs on both. Ending the interpreter belongs to the program
 that created it, which for a program run by <code>rexx</code> is <code>rexx</code> itself, so what
 native code that asks for the end achieves is not specified.</p>
 </blockquote>
+<div class="rule" id="r-native.threads.members"><a href="native/threads.html#r-native.threads.members">[native.threads.members]</a></div>
+<p>The members of the thread interface that store into or fetch from an array, a
+stem, a supplier, a directory or a string table, that ask an object whether it
+is an instance of a class or has a method, or that ask a package, a routine or
+a method for what it holds, send the object no message. Each runs the
+interpreter's own method for what it does, found by a search that starts in
+the receiver's class order at the last class of the interpreter's library
+ahead of the first class a program made. So a method a program's class defines
+under the matching name, such as <code>PUT</code>, <code>ISINSTANCEOF</code> or <code>HASMETHOD</code>, does
+not run, nor does a method the object was given with <code>setMethod</code>, while a
+subclass the interpreter's own library defines, such as that of the supplier a
+stream answers, keeps its own methods. The members act the same on every
+thread, attached or not. Their tests need an extension that calls them by
+name, so they run outside this page.</p>
 <h2 id="halting"><a class="header" href="#halting">Halting</a></h2>
 <div class="rule" id="r-native.threads.halt"><a href="native/threads.html#r-native.threads.halt">[native.threads.halt]</a></div>
 <p>Native code may ask the interpreter to halt every activity, or only the
 activity whose call is running it. Each activity that is asked takes the
 <a href="native/../conditions/halt.html">HALT condition</a> at its next clause, which for the
 activity of the call is the first clause after the call returns, and an
-activity that was not asked runs on. In the examples a second activity loops
-with a short sleep and records whether it was halted.</p>
+activity that was not asked runs on. An <a href="native/threads.html#r-native.threads.attach">attached
+thread</a> whose activity runs no message when the
+interpreter is asked to halt every activity is not asked: the next message it
+sends runs unhalted. A message that has arrived but is held under <a href="native/threads.html#r-native.threads.attach.deviation.178">Deviation
+178</a> has not begun, so its activity
+runs no message and is not asked either: the message runs to its end once it
+is let go. In the examples a second activity loops with a short sleep and
+records whether it was halted.</p>
 <pre><code class="language-rexx">w = .n3zqw~new
 w~start('spin')
 w~ready~wait
@@ -98725,6 +99060,37 @@ h: how = 'halted'
 </code></pre>
 <pre><code class="language-output">main HALT / worker not halted
 </code></pre>
+<h2 id="tracing"><a class="header" href="#tracing">Tracing</a></h2>
+<div class="rule" id="r-native.threads.trace"><a href="native/threads.html#r-native.threads.trace">[native.threads.trace]</a></div>
+<p>Native code may turn the external trace of the interpreter on or off from any
+thread, whether or not that thread runs a call of the interpreter. Turned on,
+every activity of the interpreter that runs Rexx code, the main one and the
+ones that <a href="native/../concurrency/activities.html#r-conc.activities.creation"><code>start</code></a> made, idle or not, traces from
+its next clause as under <code>TRACE ?R</code>, with the pause of interactive trace, except
+for the lines that <a href="native/threads.html#r-native.threads.trace.deviation.166">Deviation 166</a> leaves
+out of code that was already running. The setting is that of the code each
+activity is running: a method or a <code>::ROUTINE</code> it calls afterwards starts with
+its own, as <a href="native/../builtins/trace.html#r-bif.trace.scope">the scope of the setting</a> says. Turned off,
+every activity runs on untraced from its next clause. An <a href="native/threads.html#r-native.threads.attach">attached
+thread</a> whose activity runs no message when the trace
+is turned on or off is not reached: the next message it sends runs with its
+method's own setting. A request made after the interpreter has ended does
+nothing. The trace lines name the program's path, so the tests that witness
+this rule compare them outside this page.</p>
+<div class="rule" id="r-native.threads.trace.deviation.166"><a href="native/threads.html#r-native.threads.trace.deviation.166">[native.threads.trace.deviation.166]</a></div>
+<p>Code that was already running when native code first turned the external trace
+of the interpreter, or of one activity, on or off (<a href="native/../deviations.html#166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace">Deviation
+166</a>)
+may leave out some of the lines the trace asks for, up to the end of its run.
+That code is each run of a program, method, <code>::ROUTINE</code> or internal routine
+that an activity had begun, a caller that waits for a call to return included.
+The lines it may leave out are the <code>&gt;K&gt;</code> lines of a <code>DO</code> or <code>LOOP</code> header for
+<code>TO</code>, <code>BY</code>, <code>FOR</code>, <code>OVER</code> and <code>WITH</code>, and the <code>&gt;L&gt;</code>, <code>&gt;V&gt;</code>, <code>&gt;E&gt;</code>, <code>&gt;O&gt;</code>, <code>&gt;P&gt;</code>
+and <code>&gt;A&gt;</code> lines that <code>TRACE I</code>, set at an interactive pause, asks for. Code
+entered after that first request prints every line, as ooRexx does. ooRexx
+prints every line in code that was already running too. The trace lines name
+the program's path, so the tests that witness this rule compare them outside
+this page.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="command-handlers"><a class="header" href="#command-handlers">Command handlers</a></h1>
 <p>Native code may add a command environment of its own: a handler that runs the
 commands a program sends to that environment's name. What a command is, and
@@ -107230,7 +107596,8 @@ e: say condition('o')~code
 <div class="rule" id="r-util.syseventsem.deviation.20"><a href="rexxutil/syseventsem.html#r-util.syseventsem.deviation.20">[util.syseventsem.deviation.20]</a></div>
 <p>A call of SysWaitEventSem that has no limit, and finds no post, while no other
 activity or timer of the program can post the semaphore, ends the program at
-once, with exit code <code>120</code> and a message on the error stream (<a href="rexxutil/../deviations.html#20-a-wait-nothing-can-end">Deviation
+once, with exit code <code>120</code> and a message on the error stream, unless native
+code from outside the interpreter can run (<a href="rexxutil/../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). ooRexx waits for ever.</p>
 <pre><code class="language-rexx">say 'before'
 h = SysCreateEventSem()
@@ -107618,7 +107985,8 @@ e: say condition('o')~code
 <div class="rule" id="r-util.sysmutexsem.deviation.20"><a href="rexxutil/sysmutexsem.html#r-util.sysmutexsem.deviation.20">[util.sysmutexsem.deviation.20]</a></div>
 <p>A call of SysRequestMutexSem that has no limit, and finds the lock held, while
 no other activity or timer of the program can free it, ends the program at
-once, with exit code <code>120</code> and a message on the error stream (<a href="rexxutil/../deviations.html#20-a-wait-nothing-can-end">Deviation
+once, with exit code <code>120</code> and a message on the error stream, unless native
+code from outside the interpreter can run (<a href="rexxutil/../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). ooRexx waits for ever. In
 the example the program asks twice for a lock that it holds itself.</p>
 <pre><code class="language-rexx">say 'before'
@@ -127836,7 +128204,17 @@ activity that has not yet started to run.</p>
 <p>An activity waiting inside a nested construct, such as INTERPRET or a method
 that <code>run</code> runs, for something, such as a lock, a result or the change of a
 variable, that only an activity suspended beneath it can provide is refused,
-exit code 120. ooRexx runs each activity on its own thread and completes.</p>
+exit code 120. ooRexx runs each activity on its own thread and completes. The
+refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+<a href="concurrency/activities.html#r-conc.activities.deviation.20">the rule of Deviation 20</a> defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds with nothing else left to run, a
+line on stderr says so, and the program otherwise runs as it would without the
+line. A HALT the host asks for ends such a wait where it ends the same wait
+elsewhere. A trace line's delivery that holds a guard and spins until another
+activity acts (<a href="concurrency/locks.html#r-conc.locks.trace.deviation.14">the locks page's rule</a>)
+follows the same switch: it is refused only while no such code is present.</p>
 <h2 id="15-withdrawn"><a class="header" href="#15-withdrawn">15. Withdrawn</a></h2>
 <p>A REPLY inside a labelled DO group runs as it does in ooRexx.</p>
 <h2 id="16-blocking-operations-hold-every-activity"><a class="header" href="#16-blocking-operations-hold-every-activity">16. Blocking operations hold every activity</a></h2>
@@ -127851,13 +128229,45 @@ clause.</p>
 <p>Two activities that busy-wait on each other inside nested constructs never
 end. ooRexx preempts both and they complete.</p>
 <h2 id="19-callback-from-a-foreign-thread"><a class="header" href="#19-callback-from-a-foreign-thread">19. Callback from a foreign thread</a></h2>
-<p>A callback into the interpreter from a thread that runs no native call waits
-for a native call that holds the interpreter; if that call joins the thread,
-the program hangs. ooRexx aborts. Both fail.</p>
+<p>A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as <code>SysFileTree</code> or <code>SysStemSort</code>, holds it
+too for its whole run, and the callback waits until that call returns, while
+<code>SysSleep</code>, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx aborts the process.</p>
+<p>A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.</p>
 <h2 id="20-a-wait-nothing-can-end"><a class="header" href="#20-a-wait-nothing-can-end">20. A wait nothing can end</a></h2>
 <p>A wait that no other activity, timer or call can end, such as the result of
 a message never sent or a GUARD WHEN nothing can make true, is refused, exit
-code 120. ooRexx blocks for ever.</p>
+code 120, while no native code from outside the interpreter can run. ooRexx
+blocks for ever. Such code is an external library a program loads, through
+<code>::REQUIRES ... LIBRARY</code>, an <code>EXTERNAL</code> directive, <code>RxFuncAdd</code>,
+<code>~loadLibrary</code> or a call by name of a function another process registered with
+the API service, or behind a registered subcommand environment or a registered
+exit, and it is the host of an embedding, which runs the program through
+<code>RexxStart</code> or <code>RexxCreateInterpreter</code>, together with the libraries it
+registers. Each may start a thread that attaches later and ends the wait, so
+once one is present, interrexx waits as ooRexx does, for the rest of the run,
+also after a library is dropped. Neither SIGINT nor SIGTERM ends such a wait
+for the result of a message never sent, as Deviation 10 says of a wait for a
+message. The libraries that come with interrexx, such
+as RexxUtil, start no such thread and do not count, and the <code>rexx</code> command
+runs a program with no host. A wait for the result or the completion of a
+message whose method the waiting activity itself runs, and has not yet
+replied from, is refused whatever was loaded: the message completes only when
+that method returns, and the method is what waits. The refusal comes once
+nothing else can run, after the other activities' output and errors, also
+inside a message an attached thread sends or a routine an embedding host
+calls. ooRexx blocks for ever there too.</p>
 <h2 id="21-activities-at-program-end"><a class="header" href="#21-activities-at-program-end">21. Activities at program end</a></h2>
 <p>Program end does not wait for activities that termination-time UNINIT
 methods start, REPLY continuations included, nor for any activity once the
@@ -128696,6 +129106,18 @@ or <code>TIME</code> is a character that is no letter, and is refused like any o
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte <code>option</code> with an <code>osep</code> raises <code>SYNTAX 40.904</code>
 and a 0 byte <code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.44</code>.</p>
+<h2 id="166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace"><a class="header" href="#166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace">166. Trace lines of code already running when native code first switches the trace</a></h2>
+<p>When native code first turns the external trace of the interpreter, or of one
+activity, on or off, each run of a program, method, <code>::ROUTINE</code> or internal
+routine that an activity had begun, a caller that waits for a call to return
+included, may print fewer trace lines than the trace asks for until that run
+ends. It can leave out the <code>&gt;K&gt;</code> lines of a <code>DO</code> or <code>LOOP</code> header for <code>TO</code>,
+<code>BY</code>, <code>FOR</code>, <code>OVER</code> and <code>WITH</code>, and the <code>&gt;L&gt;</code>, <code>&gt;V&gt;</code>, <code>&gt;E&gt;</code>, <code>&gt;O&gt;</code>, <code>&gt;P&gt;</code> and
+<code>&gt;A&gt;</code> lines that <code>TRACE I</code> asks for once it is set at an interactive pause. A
+line is left out only at a clause where the setting the run began under, as
+the run's own TRACE instructions change it, did not print that line. Code
+entered after that first request prints every line. ooRexx prints every line
+in both.</p>
 <h2 id="167-the-line-of-a-position-after-a-last-line-with-no-line-end"><a class="header" href="#167-the-line-of-a-position-after-a-last-line-with-no-line-end">167. The line of a position after a last line with no line end</a></h2>
 <p>The line that a position is in is one more than the number of line ends before
 it, for the write position as for the read position. For data <code>ab</code>, <code>cd</code> and
@@ -128768,6 +129190,60 @@ significant digits of the form it keeps, so <code>'1E3' + 0</code> made under NU
 DIGITS 20, written <code>1000</code>, raises LOSTDIGITS as an operand under NUMERIC DIGITS
 3 here, in <code>v + 0</code> and in <code>v &gt; 5</code> alike, and raises nothing on ooRexx. Ruled by
 the owner on 2026-11-14 (#554).</p>
+<h2 id="176-a-callback-after-the-embedding-ends-the-interpreter"><a class="header" href="#176-a-callback-after-the-embedding-ends-the-interpreter">176. A callback after the embedding ends the interpreter</a></h2>
+<p>A thread that stays attached after the embedding calls <code>Terminate</code> can still
+make callbacks through its context, and each one is refused: it answers the
+failure value of the member, runs nothing, and does not wait. The interpreter
+no longer exists once <code>Terminate</code> returns. ooRexx runs such a callback and
+answers its result.</p>
+<h2 id="177-an-attached-threads-context-used-from-another-thread"><a class="header" href="#177-an-attached-threads-context-used-from-another-thread">177. An attached thread's context used from another thread</a></h2>
+<p><code>DetachThread</code>, <code>HaltThread</code> and <code>SetThreadTrace</code> called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second <code>DetachThread</code> from the thread that attached it. The attachment
+stays as the first detach left it, or as it was, and the call never waits for
+a message the attached thread runs. Halting or tracing the interpreter from
+another thread remains the work of the instance's <code>Halt</code> and <code>SetTrace</code>.
+ooRexx aborts the process or hangs in these cases.</p>
+<h2 id="178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts"><a class="header" href="#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts">178. A message from an attached thread stops the activity it interrupts</a></h2>
+<p>While a message that a thread attached to the interpreter sends runs, the
+activity that was running when it arrived, the main program or another, makes
+no progress in Rexx clauses. The message runs at that activity's next clause
+boundary, or during a wait of the activity, such as <code>SysSleep</code>, a semaphore's
+<code>wait</code>, a guard or a message's <code>result</code>, or during a call it makes into a
+native library that is not built into the interpreter. The activity goes on
+only once the message has finished, even where its wait or its call ended
+first. A message that arrives while another runs is held until that one has
+returned, waits or calls into such a library, the earliest held first. One
+that arrives while another waits runs on top of it, and the earlier goes on
+only once the later has finished. A message the thread sends with
+<code>SendMessage</code> or one of its variants, whose method needs at its entry a guard
+lock that a stopped activity holds, waits for the lock as in ooRexx: nothing of
+the message has run yet, so the interpreter sends it again, in the place in the
+lock's queue that its wait took when it began, and <code>TRACE</code> announces its
+method's entry once. A guard lock that a stopped activity acquires after a
+message began to wait for it counts from then as one it holds. Any other wait
+for a guard lock counts as one of a message that has begun: a wait in a method
+or routine the message's own code reaches, and a wait of a routine the thread
+calls with <code>CallRoutine</code> or of a method that another of the thread's API calls
+sends to, such as the <code>MAKESTRING</code> that <code>ObjectToString</code> sends. Once a message
+has begun, a wait of it for something only a stopped activity can give never
+ends. Where it waits for a guard lock that such an activity holds and no other
+message does, or for the completion of a message whose send such an activity
+runs, directly or through a chain of such waits, the wait is refused at once as
+<a href="deviations.html#14-a-nested-wait-only-a-buried-activity-can-end">Deviation 14</a> refuses an
+inverted wait: the thread's send answers nothing, and the program, which runs
+on to its end, ends with exit code 120. Any other such wait, such as a <code>GUARD WHEN</code>, a semaphore's <code>wait</code> with no timeout, or a wait for a guard lock another
+message holds, goes on for ever. Once it has waited five seconds, and nothing
+else is left that could end it, a line on stderr says so and says how many
+seconds it has waited: no activity is ready, none is asleep but one a message
+stopped, no message is held or to be sent again, and no call is in flight but
+those the waiting messages run above. A stopped activity's sleep does not hold
+the line back, since the activity cannot go on when it wakes. A wait that
+another sleeping activity or a call in flight may still end is not reported
+until they are gone. A loop that polls for such a change runs for ever, and
+nothing is said. ooRexx runs each attached thread's messages on that thread,
+alongside the other activities, and each such program completes. Issue #681
+tracks doing the same.</p>
 
                     </main>
 
