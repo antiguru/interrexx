@@ -194,3 +194,47 @@ say 'copy  ' labels(c) c[.key~new('k7')] c~hasIndex(.key~new('k8'))
 holes k2 k4 k5 k7 4 7 0
 source 25 8 20 0
 copy   k4 k5 k7 7 0
+
+# a store of distinct keys that later takes two keys of one hash, after
+# removals left holes, keeps its order and finds every key
+program
+t = .table~new
+do i = 1 to 8; t['s'i] = i; end
+t~remove('s2'); t~remove('s5')
+t[.key~new('k1')] = 'k1'
+t['s9'] = 9
+t[.key~new('k2')] = 'k2'
+t~remove('s1')
+t[.key~new('k3')] = 'k3'
+line = ''; do k over t; line = line k~string; end
+say strip(line)
+say t['s3'] t['s8'] t['s9'] t[.key~new('k1')] t[.key~new('k2')] t[.key~new('k3')] t~items
+t~remove(.key~new('k1'))
+t[.key~new('k4')] = 'k4'
+c = t~copy
+t~remove(.key~new('k3')); c~remove(.key~new('k2'))
+t[.key~new('k5')] = 'k5'; c[.key~new('k6')] = 'k6'
+line = ''; do k over t; line = line k~string; end
+say strip(line)
+line = ''; do k over c; line = line k~string; end
+say strip(line)
+::class key
+::attribute label
+::method init
+  expose label
+  use arg label
+::method string
+  expose label
+  return label
+::method hashCode
+  return 'same hash'
+::method '=='
+  expose label
+  use arg other
+  if \other~isA(.key) then return 0
+  return label == other~label
+----
+s3 s4 s6 s7 s8 k1 s9 k2 k3
+3 8 9 k1 k2 k3 9
+s3 s4 s6 s7 s8 s9 k2 k4 k5
+s3 s4 s6 s7 s8 s9 k3 k4 k6

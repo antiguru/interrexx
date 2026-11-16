@@ -31,11 +31,10 @@ fn slots_for(
     // once, oldest first.
     let mut candidates = Vec::new();
     {
-        let slots = super::array_slots(interp, store.slots)?;
-        let codes = super::array_slots(interp, store.codes)?;
+        let (slots, codes) = super::codes_of(interp, &store)?;
         let indexes = super::array_slots(interp, store.indexes)?;
         if let Ok((_, head)) = super::chain_in(slots, codes, code) {
-            for position in super::chain_from(codes, head) {
+            for position in codes.chain(head) {
                 if let Some(held) = indexes.get(position).copied().flatten() {
                     candidates.push((position, held));
                 }

@@ -90,19 +90,15 @@ pub(super) fn find_text(
     if let Some(found) = find_plain_string(interp, store, code, wanted) {
         return Ok(found);
     }
-    let chain = chain_in(
-        array_slots(interp, store.slots)?,
-        array_slots(interp, store.codes)?,
-        code,
-    );
-    let mut at = chain.ok().map(|(_, head)| head);
+    let (slots, codes) = codes_of(interp, store)?;
+    let mut at = chain_in(slots, codes, code).ok().map(|(_, head)| head);
     while let Some(position) = at {
         if let Some(held) = slot_at(interp, store.indexes, position)?
             && *interp.to_text(held) == *wanted
         {
             return Ok(Some(position));
         }
-        at = next_in(array_slots(interp, store.codes)?, position);
+        at = codes_of(interp, store)?.1.next(position);
     }
     Ok(None)
 }
@@ -124,15 +120,11 @@ fn probe_by_protocol(
         // A differing cached code is a different index for every key that
         // keeps the hash contract, and nothing is sent to it: only the chain
         // of the index's own code is compared.
-        let chain = chain_in(
-            array_slots(interp, store.slots)?,
-            array_slots(interp, store.codes)?,
-            code,
-        );
-        let mut at = chain.ok().map(|(_, head)| head);
+        let (slots, codes) = codes_of(interp, &store)?;
+        let mut at = chain_in(slots, codes, code).ok().map(|(_, head)| head);
         while let Some(position) = at {
             let Some(held) = slot_at(interp, store.indexes, position)? else {
-                at = next_in(array_slots(interp, store.codes)?, position);
+                at = codes_of(interp, &store)?.1.next(position);
                 continue;
             };
             let generation = interp.store_generation;
@@ -159,7 +151,7 @@ fn probe_by_protocol(
                 ));
             }
             // Read after the comparison: a removal it made relinked the chain.
-            at = next_in(array_slots(interp, store.codes)?, position);
+            at = codes_of(interp, &store)?.1.next(position);
         }
         return Ok((store, Probe { found: None, code }));
     }
@@ -176,13 +168,12 @@ fn find_plain_string(
     code: u64,
     wanted: &[u8],
 ) -> Option<Option<usize>> {
-    let slots = array_slots(interp, store.slots).ok()?;
-    let codes = array_slots(interp, store.codes).ok()?;
+    let (slots, codes) = codes_of(interp, store).ok()?;
     let indexes = array_slots(interp, store.indexes).ok()?;
     let Ok((_, head)) = chain_in(slots, codes, code) else {
         return Some(None);
     };
-    for position in chain_from(codes, head) {
+    for position in codes.chain(head) {
         if let Some(held) = indexes.get(position).copied().flatten()
             && plain_text_is(interp, held, wanted)?
         {
