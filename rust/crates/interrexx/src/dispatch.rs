@@ -3554,6 +3554,11 @@ impl Interp {
             self.roots.activity_mut().pop_frame(frame);
             return Ok(None);
         }
+        // A continuation that failed answers its failure; a park it recorded
+        // first belongs to nothing.
+        if sent.is_err() {
+            self.activity.native_park = None;
+        }
         for (then, blame) in thens {
             if let Ok(Some(value)) = sent {
                 self.roots.activity_mut().push_temp(value);

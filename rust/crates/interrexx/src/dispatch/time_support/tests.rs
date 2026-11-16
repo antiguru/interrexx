@@ -109,24 +109,44 @@ fn a_post_ends_the_remainder_or_the_current_day() {
 /// activity, posts the timer once the lock is granted and yields to the
 /// waiter it woke, as a cancel's guarded `!stopTimer` does: the yield parks
 /// the stopping activity again after its guard wait, and the stop answers
-/// once that park ends, also where a native method, a message's `send`, made
-/// the stop's send and takes its answer.
+/// once that park ends. `hold` keeps the lock until the sender has said it is
+/// about to send, and then for longer than the send takes to reach the lock,
+/// so the send always waits. The stop is sent by the main activity, through a
+/// message's `send` that takes its answer, by a started activity's Rexx
+/// method, and as a started send itself.
 #[test]
 fn a_guarded_stop_that_waited_for_its_lock_yields_to_the_waiter_it_woke() {
+    let held = |name: &str| {
+        format!(
+            "{name} = .g~new\nm = {name}~start('alarmStart', 0, 20000)\ncall waitStarted {name}\n\
+             h = {name}~start('hold')\ndo while \\{name}~holding\n  call SysSleep 0.01\nend\n"
+        )
+    };
+    let main = [
+        held("o"),
+        "o~go\nsay o~stopGuarded(o~handle) m~result h~completed\n".to_string(),
+        held("p"),
+        "s = .message~new(p, 'STOPGUARDED', 'I', p~handle)\np~go\n\
+         say s~send s~completed s~result m~result\n"
+            .to_string(),
+        held("q"),
+        "r = .stopper~new~start('stopIt', q)\nsay r~result m~result\n".to_string(),
+        held("u"),
+        "u~go\nr = u~start('stopGuarded', u~handle)\nsay r~result m~result\n".to_string(),
+    ]
+    .concat();
     check(
-        "o = .g~new\nm = o~start('alarmStart', 0, 20000)\ncall waitStarted o\n\
-         h = o~start('hold')\ndo while \\o~holding\n  call SysSleep 0.01\nend\n\
-         say o~stopGuarded(o~handle)\nsay m~result\nsay h~completed\n\
-         p = .g~new\nm = p~start('alarmStart', 0, 20000)\ncall waitStarted p\n\
-         h = p~start('hold')\ndo while \\p~holding\n  call SysSleep 0.01\nend\n\
-         s = .message~new(p, 'STOPGUARDED', 'I', p~handle)\n\
-         say s~send s~completed s~result m~result\n",
+        &main,
         "\n::class g subclass t\n\
          ::method stopGuarded external 'LIBRARY REXX alarm_stopTimer'\n\
-         ::method hold\n  expose holding\n  holding = 1\n  call SysSleep 0.3\n  return\n\
-         ::method holding unguarded\n  expose holding\n  return holding == 1\n",
-        "0\n0\n1\n0 1 0 0\n",
-        Duration::from_millis(500),
+         ::method hold\n  expose holding go\n  holding = 1\n\
+         \x20 do while go \\== 1\n    call SysSleep 0.01\n  end\n  call SysSleep 0.3\n  return\n\
+         ::method holding unguarded\n  expose holding\n  return holding == 1\n\
+         ::method go unguarded\n  expose go\n  go = 1\n\
+         ::class stopper\n::method stopIt\n  use arg obj\n  obj~go\n\
+         \x20 return obj~stopGuarded(obj~handle)\n",
+        "0 0 1\n0 1 0 0\n0 0\n0 0\n",
+        Duration::from_millis(1200),
     );
 }
 
