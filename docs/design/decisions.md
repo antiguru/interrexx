@@ -101,6 +101,12 @@ page records why they are the way they are.
   answers, never in an order or in which entry a lookup finds. For objects that break the `hashCode`
   contract, whether a lookup finds an entry is unspecified (2026-11-16), and so is which entry a
   search acts on when an `==` or `hashCode` it sends changes the collection.
+* **What the host decides is the host's** (2026-11-16, #215, #759). Where a result comes from
+  the host system (an `errno` number, a C library's error text, a time zone's name), a rule
+  states it by the error's name where the name is the same on every host (`EAGAIN`, not 11), and
+  otherwise as the host's value, with a test expectation per host. interrexx does not translate
+  one host's values into another's. Linux is the reference host the specification's examples
+  show.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the
