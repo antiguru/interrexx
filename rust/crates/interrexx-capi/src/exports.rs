@@ -354,13 +354,19 @@ pub extern "C" fn RexxSetHalt(_process: process_id_t, thread: thread_id_t) -> Re
 /// `RexxSetTrace`: the external trace of the `RexxStart` run on `thread` turned on.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxSetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread_key(thread), true))
+    found(interrexx::embedding::classic_trace(
+        thread_key(thread),
+        true,
+    ))
 }
 
 /// `RexxResetTrace`: the external trace of the `RexxStart` run on `thread` turned off.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxResetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread_key(thread), false))
+    found(interrexx::embedding::classic_trace(
+        thread_key(thread),
+        false,
+    ))
 }
 
 /// `RexxContextEnvironment`, `RexxRedirectingEnvironment` and
