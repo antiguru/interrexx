@@ -107,9 +107,12 @@ Raising and throwing differ, as in ooRexx:
   raises 98.982. Routines and methods are registered from its tables; its `loader` hook runs after
   registration, and `unloader` hooks run at termination in ooRexx's table order.
 * A library is loaded for the process: the instances live at one time share one load of each
-  file, its `loader` runs at the first, and the last instance to be terminated runs every
-  library's `unloader` and closes it. An instance created after that runs the `loader` again
-  (`r[native.loading.shared]`, `r[native.loading.unload]`, `r[native.loading.again]`).
+  file, its `loader` runs at the first, and the last instance to be terminated runs each
+  library's `unloader` and closes it. A library whose `loader` another thread still runs when
+  that walk reaches it is left to the instance it loads for, and that termination neither
+  unloads nor closes it. An instance created after that
+  runs the `loader` again (`r[native.loading.shared]`, `r[native.loading.unload]`,
+  `r[native.loading.again]`).
 * `libraries.rs` keeps that round process-wide. A load of a library whose `loader` another thread
   is running waits for it, with the interpreter's baton vacated as for an external call, so that
   loader may call into the waiting instance. A load of another library does not wait. An instance
@@ -157,6 +160,8 @@ Raising and throwing differ, as in ooRexx:
 * A program run through `RexxStart` or `RexxCreateInterpreter` is marked as run by an outside host,
   which turns off the refusal of waits nothing can end (see `architecture.md`, Concurrency). The
   `rexx` executable and the in-process test harnesses do not set the mark.
+* `hostemu` and `orxncurses` are built unmodified against these two libraries by
+  `scripts/build-extensions.sh` and run without ooRexx's libraries on the search path.
 
 ## Attached threads
 
@@ -180,5 +185,3 @@ An idle attached activity does not hold the program's end, and one running a mes
 `Terminate`, a callback through an attached context is refused with the member's failure value
 (Deviation 176), as is one after the thread detached (Deviation 19). How a callback shares the
 interpreter with the other activities is in `architecture.md`, Concurrency.
-* `hostemu` and `orxncurses` are built unmodified against these two libraries by
-  `scripts/build-extensions.sh` and run without ooRexx's libraries on the search path.

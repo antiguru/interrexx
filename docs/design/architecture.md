@@ -147,8 +147,9 @@ ooRexx method table, not guessed.
   wait (Deviation 20), while no external native library has loaded and no outside host runs the
   program. Once either holds, the switch stays off for the rest of the run, and the scheduler waits
   for a post instead, since a thread such code started may attach later and end the wait. A wait on
-  a message the waiting activity itself runs, an inverted wait, and any wait in the simulation mode
-  are refused whatever was loaded.
+  a message the waiting activity itself runs, an inverted wait, which waits above an activity set
+  aside or interrupted by a recall, and any wait in the simulation mode are refused whatever was
+  loaded.
 * **Scheduling** is round-robin: a ready queue in arrival order, timed sleepers in a deadline heap,
   FIFO guard waiters. A timer thread sets the slice bit every 24 ms; the switch happens at the next
   clause boundary. HALT, trace toggles and raises from elsewhere set request bits that the target
