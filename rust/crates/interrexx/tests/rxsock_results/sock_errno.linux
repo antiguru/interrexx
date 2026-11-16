@@ -1,0 +1,29 @@
+# The number SockSock_Errno answers is the host's (`docs/design/decisions.md`): ENOTCONN is 107
+# on Linux and 57 on macOS.
+# SockSock_Errno: a failing call's errno; a success leaves it, and a host
+# lookup sets it to 0 first. Before any call it is 0 (Rulings, errno: the
+# oracle reports the errno its own console I/O left).
+ruled
+say SockSock_Errno()
+call SockShutDown 9999, 2
+say SockSock_Errno()
+call SockVersion
+say SockSock_Errno()
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call SockShutDown c, 2
+say SockSock_Errno()
+call SockIoctl c, 'FIONBIO', 0
+say SockSock_Errno()
+call SockGetHostByName '127.1', 'h.'
+say SockSock_Errno()
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+0
+9
+9
+107
+107
+0
+[stderr]
