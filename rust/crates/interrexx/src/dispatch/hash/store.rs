@@ -43,13 +43,24 @@ pub(super) const HASH_BUCKETS: &[u8] = b"HASHBUCKETS";
 pub(super) const HASH_FREE: &[u8] = b"HASHFREE";
 
 /// The five pool entries one store occupies.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Eq)]
 pub(super) struct Half {
     pub(super) indexes: &'static [u8],
     pub(super) items: &'static [u8],
     pub(super) codes: &'static [u8],
     pub(super) slots: &'static [u8],
     pub(super) used: &'static [u8],
+    /// Whether this is [`METHODS`] rather than [`CONTENTS`].
+    methods: bool,
+}
+
+impl PartialEq for Half {
+    /// Whether both are the same half. Every half is one of the two constants
+    /// below, so their flags tell them apart without comparing names.
+    #[inline]
+    fn eq(&self, other: &Half) -> bool {
+        self.methods == other.methods
+    }
 }
 
 /// The store every mapped collection has.
@@ -59,6 +70,7 @@ pub(super) const CONTENTS: Half = Half {
     codes: HASH_NEXT,
     slots: HASH_BUCKETS,
     used: HASH_FREE,
+    methods: false,
 };
 
 pub(super) const METHOD_INDEXES: &[u8] = b"METHODINDEXES";
@@ -74,6 +86,7 @@ pub(super) const METHODS: Half = Half {
     codes: METHOD_NEXT,
     slots: METHOD_BUCKETS,
     used: METHOD_FREE,
+    methods: true,
 };
 
 /// The one method `setMethod` keeps out of the method table, because `UNKNOWN`
