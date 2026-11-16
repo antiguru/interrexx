@@ -29258,7 +29258,13 @@ methods the changes add. The fourth runs the examples of
 <a href="classes/methods.html#r-class.methods.running">the rule on a running method</a> and
 <a href="classes/methods.html#r-class.methods.whole">the rule on a change seen whole</a> on one object <code>O</code>
 made before the changes: its second <code>M</code> runs the replacement, and the method
-on the other activity finds the new <code>A</code> and <code>B</code> for it.</p>
+on the other activity finds the new <code>A</code> and <code>B</code> for it. The fifth makes a
+subclass <code>ASUB</code> of <code>A</code> in the <code>INIT</code> of the metaclass of <code>A</code>, so before the
+<code>::METHOD</code> directives of <code>A</code> are installed, and sends <code>M1</code> to an instance of
+<code>ASUB</code>: the directives are changes to the table of <code>A</code>, so <code>ASUB</code> answers both
+methods. ooRexx takes the table of <code>A</code> into <code>ASUB</code> when <code>ASUB</code> is made, so its
+<code>ASUB</code> has neither method: both <code>hasMethod</code> calls answer <code>0</code> and the send of
+<code>M1</code> raises error 97.1.</p>
 <pre><code class="language-rexx">a = .k~new
 s = .sub~new
 call show 'start'
@@ -29453,6 +29459,22 @@ new
 two ran on
 -
 a1 b1 -&gt; a2 b2
+</code></pre>
+<pre><code class="language-rexx">o = .asub~new
+say o~hasMethod('M1') o~hasMethod('M2')
+say o~m1 o~m2
+::class Meta subclass class
+::method init
+  forward class (super) continue
+  if self~id = 'A' then .environment~asub = self~subclass('ASUB')
+::class A metaclass Meta
+::method m1
+  return 'a1'
+::method m2
+  return 'a2'
+</code></pre>
+<pre><code class="language-output">1 1
+a1 a2
 </code></pre>
 <div class="rule" id="r-class.methods.deviation.117"><a href="classes/methods.html#r-class.methods.deviation.117">[class.methods.deviation.117]</a></div>
 <p><code>delete</code> of a name that <code>define</code> hid with <code>.nil</code> as the method ends the hiding
