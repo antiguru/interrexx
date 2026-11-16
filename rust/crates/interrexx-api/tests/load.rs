@@ -179,3 +179,75 @@ fn a_closed_library_stays_mapped() {
     drop(library);
     assert!(mapped());
 }
+
+/// A shared object named `lib<name>.so` in a directory of its own, built from the C `source`, and
+/// whether the process has it mapped.
+fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
+    let dir = std::env::temp_dir().join(format!("interrexx-plain-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("the directory is creatable");
+    let file_source = dir.join("plain.c");
+    std::fs::write(&file_source, source).expect("the source is writable");
+    let file = format!("lib{name}.so");
+    let built = std::process::Command::new("cc")
+        .args(["-shared", "-fPIC", "-o"])
+        .arg(dir.join(&file))
+        .arg(&file_source)
+        .status()
+        .expect("cc runs, which this test needs to build its fixture");
+    assert!(built.success(), "the fixture did not build");
+    let mapped = move || {
+        std::fs::read_to_string("/proc/self/maps")
+            .expect("the process's maps")
+            .contains(&file)
+    };
+    (dir, mapped)
+}
+
+/// A C file that defines one function and no package exporter.
+const NO_EXPORTER: &str = "int plain(void) { return 1; }\n";
+
+/// A library whose exporter answers no package entry stays mapped, as one whose exporter answers
+/// one does (`r[native.loading.static]`).
+#[test]
+fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
+    let (dir, mapped) = plain_library(
+        "nullpackage",
+        "void *RexxGetPackage(void) { return (void *)0; }\n",
+    );
+    assert!(!mapped());
+    let answer = load::open_path(&dir.join("libnullpackage.so"), "nullpackage")
+        .expect("a null package entry is not an error");
+    assert!(answer.is_none());
+    assert!(mapped());
+    std::fs::remove_dir_all(&dir).expect("the directory is removable");
+}
+
+/// A library that is no package stays mapped once the load has found it is none, as one that is
+/// does: its file may be mapped for a classic registration's use too (`r[native.loading.static]`).
+#[test]
+fn a_library_without_the_exporter_stays_mapped() {
+    let (dir, mapped) = plain_library("plainpackage", NO_EXPORTER);
+    assert!(!mapped());
+    let answer = load::open_path(&dir.join("libplainpackage.so"), "plainpackage")
+        .expect("a library with no exporter is not an error");
+    assert!(answer.is_none());
+    assert!(mapped());
+    std::fs::remove_dir_all(&dir).expect("the directory is removable");
+}
+
+/// A classic registration naming a procedure its library lacks leaves the library mapped, as a
+/// package load does (`r[native.loading.static]`).
+#[test]
+fn a_classic_miss_leaves_its_library_mapped() {
+    let (dir, mapped) = plain_library("plainclassic", NO_EXPORTER);
+    assert!(!mapped());
+    let found = load::classic_procedure(
+        b"plainclassic",
+        b"NOSUCHPROCEDURE",
+        std::slice::from_ref(&dir),
+        &dir,
+    );
+    assert!(found.is_none());
+    assert!(mapped());
+    std::fs::remove_dir_all(&dir).expect("the directory is removable");
+}

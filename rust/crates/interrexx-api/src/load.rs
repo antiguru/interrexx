@@ -116,6 +116,12 @@ struct Mapping {
 
 impl Mapping {
     fn new(handle: Option<libloading::Library>) -> Arc<Mapping> {
+        Mapping::keyed(handle, None)
+    }
+
+    /// A mapping whose identity is `key` where it is given, and its handle's
+    /// otherwise.
+    fn keyed(handle: Option<libloading::Library>, key: Option<usize>) -> Arc<Mapping> {
         let (handle, identity) = match handle {
             Some(handle) => {
                 let raw = libloading::os::unix::Library::from(handle).into_raw();
@@ -128,7 +134,7 @@ impl Mapping {
         };
         Arc::new(Mapping {
             handle: Mutex::new(handle),
-            identity,
+            identity: key.unwrap_or(identity),
             open: AtomicBool::new(true),
             calls: AtomicUsize::new(0),
         })
@@ -2274,7 +2280,12 @@ pub fn classic_procedure(
                 .and_then(|address| ClassicEntry::new(*address))
         }
     };
-    let entry = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase()))?;
+    let Some(entry) = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase())) else {
+        // The file may be mapped for another use already, so a miss gives
+        // up the handle without unmapping it.
+        release(handle);
+        return None;
+    };
     CLASSIC_LIBRARIES
         .lock()
         .expect("the libraries' critical section cannot panic")
@@ -3013,20 +3024,25 @@ fn dlopen(path: &Path) -> Option<libloading::Library> {
 fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>, Refused> {
     type GetPackage = unsafe extern "C" fn() -> *mut RexxPackageEntry;
 
+    // A library that is no package stays mapped as one that is does
+    // (`r[native.loading.static]`): its file may be mapped for another use
+    // already, such as a classic registration's, so the handle is given up
+    // without unmapping it.
     let get_package = {
         // SAFETY: the symbol is read at the signature `OOREXX_GET_PACKAGE`
         // expands to, a nullary function answering a `RexxPackageEntry *`.
         // D5 freezes that header and makes it the
         // declaration both sides compile against, so an extension exporting
         // the name at another signature is outside the contract.
-        let symbol: libloading::Symbol<'_, GetPackage> =
-            match unsafe { handle.get(GET_PACKAGE_SYMBOL) } {
-                Ok(symbol) => symbol,
-                // A library without the exporter is a classic registration
-                // rather than a failure.
-                Err(_) => return Ok(None),
-            };
-        *symbol
+        let symbol: Option<libloading::Symbol<'_, GetPackage>> =
+            unsafe { handle.get(GET_PACKAGE_SYMBOL) }.ok();
+        symbol.map(|symbol| *symbol)
+    };
+    // A library without the exporter is a classic registration rather than a
+    // failure.
+    let Some(get_package) = get_package else {
+        release(handle);
+        return Ok(None);
     };
 
     // SAFETY: the address came from `dlsym` on a library `handle` still holds,
@@ -3035,6 +3051,7 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
     let entry = unsafe { get_package() };
     if entry.is_null() {
         // A null table is "not a package".
+        release(handle);
         return Ok(None);
     }
 
@@ -3063,9 +3080,18 @@ pub unsafe fn registered(
     if entry.is_null() {
         return Ok(None);
     }
+    // Every package of the running image shares its one handle, so the
+    // entry's address tells two of them apart as two files' handles do.
     // SAFETY: the caller guarantees the entry, its tables and its strings,
     // and the running image's handle keeps them mapped.
-    unsafe { library_of(&*entry, libloading::os::unix::Library::this().into(), name) }
+    unsafe {
+        library_keyed(
+            &*entry,
+            libloading::os::unix::Library::this().into(),
+            name,
+            Some(entry as usize),
+        )
+    }
 }
 
 /// The library `entry` describes, refused where its version check refuses.
@@ -3079,8 +3105,23 @@ unsafe fn library_of(
     handle: libloading::Library,
     name: &str,
 ) -> Result<Option<Library>, Refused> {
+    // SAFETY: the caller's guarantee.
+    unsafe { library_keyed(entry, handle, name, None) }
+}
+
+/// [`library_of`], whose identity ([`Library::identity`]) is `key` where it
+/// is given, and the handle's otherwise.
+///
+/// # Safety
+/// As [`library_of`].
+unsafe fn library_keyed(
+    entry: &RexxPackageEntry,
+    handle: libloading::Library,
+    name: &str,
+    key: Option<usize>,
+) -> Result<Option<Library>, Refused> {
     let refused = check_version(entry, name).err();
-    let mapping = Mapping::new(Some(handle));
+    let mapping = Mapping::keyed(Some(handle), key);
 
     // SAFETY: the caller guarantees the tables and strings.
     let (package_name, version, methods) = unsafe {
@@ -3369,5 +3410,26 @@ mod tests {
         assert_eq!(first.identity, second.identity);
         assert_ne!(first.identity, mapping("libc.so.6").identity);
         assert_eq!(super::Mapping::new(None).identity, 0);
+    }
+
+    /// Two packages the running image registers share its one handle, and still have two
+    /// identities, while one package registered twice has one.
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(miri, ignore = "opens the running image")]
+    fn two_registered_packages_of_the_image_have_two_identities() {
+        let first = Box::leak(Box::new(entry_asking_for(0)));
+        let second = Box::leak(Box::new(entry_asking_for(0)));
+        let identity = |entry: &RexxPackageEntry| {
+            // SAFETY: the entry is leaked, so it outlives the process's use of it, and has no
+            // tables or strings.
+            unsafe { super::registered(entry, "SAME") }
+                .ok()
+                .flatten()
+                .expect("an entry asking for no version registers")
+                .identity()
+        };
+        assert_ne!(identity(first), identity(second));
+        assert_eq!(identity(first), identity(first));
     }
 }
