@@ -62,7 +62,8 @@ jobs:
     needs: decide
     if: needs.decide.outputs.run == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    # Measured on 4 cores: 286 s to build and 1271 s to test.
+    timeout-minutes: 90
     env:
       # Without debug info: with it, the workspace's test binaries take more than 19 GB, more
       # than a runner has free. `debug_assert` stays on, as it is tied to the profile's
