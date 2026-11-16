@@ -1,7 +1,9 @@
-count 67
+count 69
 /* A hash collection's store sized by its INIT capacity and first needed only
-   later: the iteration order a capacity decides, through ITEMS, ISEMPTY,
-   COPY, a second INIT and the readers that find nothing. */
+   later: the entries it holds, through ITEMS, ISEMPTY, COPY, a second INIT and
+   the readers that find nothing. The order of the entries is Deviation 33 and
+   does not depend on the capacity here, so they are listed sorted;
+   interrexx/tests/hash_order_cases pins the order. */
 keys = .array~of('k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8', 'alpha', 'beta', 'gamma')
 classes = .array~of(.Table, .IdentityTable, .Directory, .StringTable, .Set, .Bag, .Relation)
 do c over classes
@@ -57,7 +59,7 @@ fill: procedure
 order: procedure
   use arg h
   line = ''
-  do i over h~allIndexes
+  do i over h~allIndexes~sort
     line = line i
   end
   return strip(line)

@@ -80,10 +80,17 @@ page records why they are the way they are.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.
-* **Hash collections are to iterate in insertion order** (2026-11-12, #36). This is not implemented
-  yet; #36 tracks it. The hash function is to be seeded against flooding, with the seed invisible to
-  programs. Python reached the same pair of decisions after randomised order proved noisy and
-  users came to rely on insertion order.
+* **Hash collections iterate in insertion order** (2026-11-12, #36, Deviation 33). Every hash
+  collection yields its entries in the order they were first put: a `put` that replaces an item
+  keeps its entry in place, and an entry removed and put again comes last. Where several entries
+  share an index or hold equal items, lookups and removals act on the oldest, and lists of them
+  answer oldest first. ooRexx's order follows its bucket layout, and it acts on the newest
+  duplicate. The order is specified rather than left to the implementation, because a
+  deterministic order that ships becomes a contract in practice, as Python's dict did between 3.6
+  and 3.7. The hash function is to be seeded against flooding, with the seed showing only in
+  `hashCode` answers. Seeding is not implemented yet; #36 tracks it. For objects that break the
+  `hashCode` contract, whether a lookup finds an entry is unspecified (2026-11-16), and so is
+  which entry a search acts on when an `==` or `hashCode` it sends changes the collection.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the

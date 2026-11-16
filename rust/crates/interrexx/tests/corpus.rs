@@ -274,8 +274,8 @@ const RAW_STDERR_COMPARISON: &[&str] = &[
 const CONCURRENTLY_TRACED: &[&str] = &["lang/directive_options_trace_reply.rex"];
 
 /// Corpus programs whose `stdout` is compared as a multiset of lines, per
-/// Deviation 33: what they print is a hash collection's iteration order,
-/// which is not a specified observable.
+/// Deviation 33: the lines they print follow a hash collection's iteration
+/// order, which here is insertion order and on the oracle its storage order.
 const HASH_ORDERED_STDOUT: &[&str] = &["lang/package_writes.rex"];
 
 /// The `stdout` comparison one corpus entry gets.

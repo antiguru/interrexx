@@ -517,10 +517,11 @@ r[class.object.hashcode]
 argument. It answers the same string every time for one object. The collection
 classes that hash their indexes use it together with `==`, as their pages
 specify, so a class which declares `==` has to declare `hashCode` so that
-objects which are equal under `==` have equal hash codes. For `Object` the
-hash code belongs to the identity of the receiver; its form and its digits are
-not specified, and two different objects may have the same one. Equal strings
-have equal hash codes ([Deviation 4](r:class.object.deviation.4)).
+objects which are equal under `==` have hash codes that are the same string, by
+strict comparison. For `Object` the hash code belongs to the identity of the
+receiver; its form and its digits are not specified, and two different objects
+may have the same one. Equal strings have equal hash codes ([Deviation
+4](r:class.object.deviation.4)).
 
 ```rexx
 a = .box~new

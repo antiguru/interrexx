@@ -298,6 +298,20 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
         oracle_stdout: "0 0\ntrapped 97.1\n",
         crate_stdout: "1 1\na1 a2\n",
     },
+    LicensedDivergence {
+        // `r[class.relation.oldest.deviation.33]`: of several entries at one
+        // index or with one item, interrexx acts on and lists the oldest first.
+        name: "relation-duplicates-oldest-first",
+        program: "r = .relation~new\nr['k'] = 'v1'\nr['k'] = 'v2'\nr['j'] = 'v1'\n\
+                  say r['k'] r~at('k') r~allAt('k')~makeString('L', ',') \
+                  r~supplier('k')~item\n\
+                  say r~index('v1') r~allIndex('v1')~makeString('L', ',')\n\
+                  say r~remove('k') r~removeItem('v1') r~allItems~makeString('L', ',')\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "v2 v2 v2,v1 v2\nj j,k\nv2 v1 v1\n",
+        crate_stdout: "v1 v1 v1,v2 v1\nk k,j\nv1 v1 v2\n",
+    },
 ];
 
 /// A directory of this run's own, because an unresolved Rexx name searches the

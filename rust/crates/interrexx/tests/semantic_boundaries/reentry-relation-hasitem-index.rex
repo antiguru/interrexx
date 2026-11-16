@@ -1,4 +1,4 @@
-/* Which and how many stored indexes and items a search compares, and in what order, are unspecified: r[class.relation.deviation.33] */
+/* Which and how many stored indexes and items a search compares, beyond those it must, are unspecified: r[class.relation.deviation.33] */
 r = .relation~new
 k = .key~new(r)
 r~put('old',k)

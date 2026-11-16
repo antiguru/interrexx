@@ -115,7 +115,7 @@ fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
     interp
         .bootstrap_library()
         .expect("the library bootstrap runs");
-    for (dotted, pinned, oracle) in [
+    for (dotted, pinned, sequence) in [
         (
             b".ENVIRONMENT".as_slice(),
             include_str!("sequence/environment.txt"),
@@ -128,7 +128,7 @@ fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
         ),
     ] {
         let pinned: Vec<&str> = pinned.lines().collect();
-        assert_eq!(pinned, oracle, "the lists and the pinned files agree");
+        assert_eq!(pinned, sequence, "the lists and the pinned files agree");
         let directory = interp.dot_variable(dotted).expect("resolves");
         let caller = interp.caller();
         let indexes = interp
@@ -143,7 +143,7 @@ fn the_bootstrap_leaves_its_names_in_the_insertion_sequence() {
             .map(|index| String::from_utf8_lossy(&interp.to_text(index)).into_owned())
             .collect();
         assert_eq!(names, pinned, "{}", String::from_utf8_lossy(dotted));
-        let owed: Vec<&str> = oracle
+        let owed: Vec<&str> = sequence
             .iter()
             .copied()
             .filter(|name| {
@@ -243,19 +243,19 @@ fn every_directory_method_answers_on_both_directories_as_on_a_copy() {
                   \x20   return out\n\
                   \x20 end\n\
                   \x20 return value~string\n";
-    for (directory, oracle, prepare) in [
+    for (directory, sequence, prepare) in [
         ("environment", ENVIRONMENT_SEQUENCE, ""),
         ("local", LOCAL_SEQUENCE, ".local['STDQUE'] = 'q'\n"),
     ] {
-        // The copy is filled from the sequence list, each value read as `.NAME`
-        // rather than by a send to the directory, and `LOCAL` -- `.environment`'s method-table entry --
-        // goes in as a method.
-        let contents: Vec<&str> = oracle
+        // The copy is filled from the sequence list, each value read as
+        // `.NAME` rather than by a send to the directory, and `LOCAL` --
+        // `.environment`'s method-table entry -- goes in as a method.
+        let contents: Vec<&str> = sequence
             .iter()
             .copied()
             .filter(|name| *name != "LOCAL")
             .collect();
-        let method = if oracle.contains(&"LOCAL") {
+        let method = if sequence.contains(&"LOCAL") {
             "r~setMethod('LOCAL', 'return .local')\n"
         } else {
             ""

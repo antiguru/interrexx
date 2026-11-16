@@ -21,9 +21,11 @@ search](r:class.methods.unknown) does not resolve raises
 [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
 chapter](r:class.index.errors) says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine `try`, as the builtin
-pages do. Where several entries qualify for a method that answers one, which
-entry it answers is not specified, and the examples then hold one entry or
-sort the answers ([the hash order rule](r:class.relation.deviation.33)).
+pages do. A relation lists its entries in the order they were put, and where
+several entries qualify for a method that answers or removes one, it chooses
+the oldest ([the hash order rule](r:class.relation.deviation.33)). ooRexx lists
+and chooses otherwise, so the examples outside that rule hold one such entry or
+sort the answers.
 
 ## The class
 
@@ -273,13 +275,13 @@ r~put("x", "y", "z") => 93.902
 ```
 
 r[class.relation.at]
-`at(index)` and `[index]` answer an item of an entry whose index is equal to
-the argument, and `.nil` when there is none. When several entries qualify,
-which item is answered is not specified ([the hash order
-rule](r:class.relation.deviation.33)). The methods take exactly one argument:
-none, or an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX
-93.902`; with a second argument, whether the index is looked up is unspecified,
-as [the precedence rule](r:conv.error.precedence) says.
+`at(index)` and `[index]` answer an item of an entry whose index is equal to the
+argument, and `.nil` when there is none. When several entries qualify, the item
+of the oldest is answered ([the oldest
+rule](r:class.relation.oldest.deviation.33)). The methods take exactly one
+argument: none, or an omitted one, raises `SYNTAX 88.901`, and a second raises
+`SYNTAX 93.902`; with a second argument, whether the index is looked up is
+unspecified, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 r = .relation~new
@@ -312,15 +314,16 @@ r[] => 88.901
 ```
 
 r[class.relation.allat]
-`allAt(index)` answers a new `Array` of the items of all the entries whose
-index is equal to the argument, one for each entry, in an order that is not
-specified, and an empty `Array` when there is none. It sends `hashCode` to the
-index once, and `==` to the index with every stored index of the same hash code
-as the argument; further sends, and how often each is sent, are not specified
-([the hash order rule](r:class.relation.deviation.33)). The answer is an
-instance of `Array` for a subclass receiver too, and does not follow later
-changes. It takes exactly one argument: none, or an omitted one, raises
-`SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
+`allAt(index)` answers a new `Array` of the items of all the entries whose index
+is equal to the argument, one for each entry, oldest first ([the oldest
+rule](r:class.relation.oldest.deviation.33)), and an empty `Array` when there is
+none. It sends `hashCode` to the index once, and `==` to the index with every
+stored index of the same hash code as the argument; further sends, and how often
+each is sent, are not specified ([the hash order
+rule](r:class.relation.deviation.33)). The answer is an instance of `Array` for
+a subclass receiver too, and does not follow later changes. It takes exactly one
+argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second raises
+`SYNTAX 93.902`.
 
 ```rexx
 .local~log = .array~new
@@ -490,11 +493,11 @@ r[class.relation.hasitem.sends]
 with the item of an entry as the argument, entry by entry, until one answers
 true, and send nothing else, `hashCode` included. `allIndex` sends `==` to the
 item argument with the item of every entry as the argument. The entries are
-visited in an order that is not specified, and how often `==` is sent with the
-same stored item is not specified ([the hash order
-rule](r:class.relation.deviation.33)); every entry is compared at least once
-when none matches, and for `allIndex` always. `hasItem(item, index)` and
-`removeItem(item, index)` first look the index up as [the lookup
+visited in the order they were put ([the hash order
+rule](r:class.relation.deviation.33)), and how often `==` is sent with the same
+stored item is not specified; every entry is compared at least once when none
+matches, and for `allIndex` always. `hasItem(item, index)` and `removeItem(item,
+index)` first look the index up as [the lookup
 rule](r:class.relation.indexes.sends) says, and then send `==` to the item
 argument with the item of each entry whose index matches, at least once for
 each, and no message when no index matches. The very object that is stored is
@@ -542,16 +545,16 @@ r~removeItem(q, "k1") => 1
 ```
 
 r[class.relation.index]
-`index(item)` answers the index of an entry whose item is equal to the
-argument, and `.nil` when there is none; when several entries qualify, which
-index is answered is not specified. `allIndex(item)` answers a new `Array` of
-the indexes of all such entries, one for each entry, in an order that is not
-specified, and an empty `Array` when there is none; the same index twice when
-two entries hold the item at it. The answer of `allIndex` is an instance of
-`Array` for a subclass receiver too, and does not follow later changes. Both
-take exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`,
-and a second raises `SYNTAX 93.902`. The messages sent are those of [the
-search rule](r:class.relation.hasitem.sends).
+`index(item)` answers the index of an entry whose item is equal to the argument,
+and `.nil` when there is none; when several entries qualify, the index of the
+oldest is answered. `allIndex(item)` answers a new `Array` of the indexes of all
+such entries, one for each entry, oldest first ([the oldest
+rule](r:class.relation.oldest.deviation.33)), and an empty `Array` when there is
+none; the same index twice when two entries hold the item at it. The answer of
+`allIndex` is an instance of `Array` for a subclass receiver too, and does not
+follow later changes. Both take exactly one argument: none, or an omitted one,
+raises `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`. The messages sent
+are those of [the search rule](r:class.relation.hasitem.sends).
 
 ```rexx
 r = .many~new
@@ -592,7 +595,8 @@ r~allIndex(1, 2) => 93.902
 r[class.relation.remove]
 `remove(index)` removes one entry whose index is equal to the argument and
 answers its item, and answers `.nil` when there is none; when several entries
-qualify, which one is removed is not specified, and the others stay. The index
+qualify, the oldest is removed ([the oldest
+rule](r:class.relation.oldest.deviation.33)), and the others stay. The index
 stays in the relation while an entry has it. It takes exactly one argument:
 none, or an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX
 93.902`.
@@ -628,15 +632,15 @@ r~remove("a", "b") => 93.902
 ```
 
 r[class.relation.removeall]
-`removeAll(index)` removes every entry whose index is equal to the argument
-and answers a new `Array` of their items, one for each entry, in an order that
-is not specified; the answer is an empty `Array` when there is none. It sends
-`hashCode` to the index once, and `==` to the index with every stored index of
-the same hash code as the argument; further sends, and how often each is sent,
-are not specified ([the hash order rule](r:class.relation.deviation.33)). The
-answer is an instance of `Array` for a subclass receiver too. It takes exactly
-one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second
-raises `SYNTAX 93.902`.
+`removeAll(index)` removes every entry whose index is equal to the argument and
+answers a new `Array` of their items, one for each entry, oldest first ([the
+oldest rule](r:class.relation.oldest.deviation.33)); the answer is an empty
+`Array` when there is none. It sends `hashCode` to the index once, and `==` to
+the index with every stored index of the same hash code as the argument; further
+sends, and how often each is sent, are not specified ([the hash order
+rule](r:class.relation.deviation.33)). The answer is an instance of `Array` for
+a subclass receiver too. It takes exactly one argument: none, or an omitted one,
+raises `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
 
 ```rexx
 .local~log = .array~new
@@ -697,17 +701,17 @@ hash p 1 1
 ```
 
 r[class.relation.removeitem]
-`removeItem(item)` removes one entry whose item is equal to the argument, by
-the search of [the search rule](r:class.relation.hasitem.sends), and answers
-the item that was stored, or `.nil` when no entry matches; when several
-entries qualify, which one is removed is not specified. `removeItem(item,
-index)` removes one entry that has both an item equal to the first argument
-and an index equal to the second, and answers the item that was stored, or
-`.nil` when there is none. An omitted second argument is no argument. The
-index stays in the relation while an entry has it, and it is gone when the
-entry was the last one. The methods take one or two arguments: a missing or
-omitted item raises `SYNTAX 93.903`, and a third argument raises `SYNTAX
-93.902`.
+`removeItem(item)` removes one entry whose item is equal to the argument, by the
+search of [the search rule](r:class.relation.hasitem.sends), and answers the
+item that was stored, or `.nil` when no entry matches; when several entries
+qualify, the oldest is removed ([the oldest
+rule](r:class.relation.oldest.deviation.33)). `removeItem(item, index)` removes
+the oldest entry that has both an item equal to the first argument and an index
+equal to the second, and answers the item that was stored, or `.nil` when there
+is none. An omitted second argument is no argument. The index stays in the
+relation while an entry has it, and it is gone when the entry was the last one.
+The methods take one or two arguments: a missing or omitted item raises `SYNTAX
+93.903`, and a third argument raises `SYNTAX 93.902`.
 
 ```rexx
 r = .relation~new
@@ -775,15 +779,15 @@ r~empty(1) => 93.902
 ## Lists of the entries
 
 r[class.relation.makearray]
-`allIndexes` and `makeArray` answer a new `Array` with the index of each
-entry, so an index that is in several entries appears several times, and
-`allItems` a new `Array` with the item of each entry. They are instances of
-`Array` for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises `SYNTAX 93.902`. The order is
-not specified ([the hash order rule](r:class.relation.deviation.33)), and is
+`allIndexes` and `makeArray` answer a new `Array` with the index of each entry,
+so an index that is in several entries appears several times, and `allItems` a
+new `Array` with the item of each entry. They are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is that in which the
+entries were put ([the hash order rule](r:class.relation.deviation.33)), and is
 the same for the three answers and for the supplier of one unchanged relation,
-so the item at a position belongs to the index at the same position. The
-methods send no message to the relation, the indexes or the items.
+so the item at a position belongs to the index at the same position. The methods
+send no message to the relation, the indexes or the items.
 
 ```rexx
 r = .many~new
@@ -826,15 +830,17 @@ r~makeArray(1) => 93.902
 r[class.relation.uniqueindexes]
 `uniqueIndexes` answers a new `Array` with one index for each group of equal
 indexes in the relation, equal as [the index rule](r:class.relation.indexes)
-says, so an index that is in several entries appears once, and two index objects
-with different hash codes are two indexes even when `==` answers true for them.
-Which of several equal index objects is answered is not specified, and so is the
-order ([the hash order rule](r:class.relation.deviation.33)). An index object
-that is stored in more than one entry is one index, without a `==` sent to it
-([the identity rule](r:class.collection.identity)). `uniqueIndexes` compares the
-stored indexes with each other by sending `==` to a stored index with another
-stored index as the argument; which stored indexes it sends `==` and `hashCode`
-to, and how often, is not specified ([the hash order
+says, so an index that is in several entries appears once. For index objects
+that are equal under `==` but whose `hashCode` answers are strictly different
+strings, or a stored index whose `hashCode` no longer answers what it answered
+when it was stored, how they are grouped is not specified. Of several equal
+index objects the oldest is answered, and the groups come in the order of their
+oldest entries ([the oldest rule](r:class.relation.oldest.deviation.33)). An
+index object that is stored in more than one entry is one index, without a `==`
+sent to it ([the identity rule](r:class.collection.identity)). `uniqueIndexes`
+compares the stored indexes with each other by sending `==` to a stored index
+with another stored index as the argument; which stored indexes it sends `==`
+and `hashCode` to, and how often, is not specified ([the hash order
 rule](r:class.relation.deviation.33)). The answer is an instance of `Array` for
 a subclass receiver too, and does not follow later changes. `uniqueIndexes`
 takes no argument: one raises `SYNTAX 93.902`.
@@ -849,10 +855,6 @@ x = r~uniqueIndexes
 r~put('e', 'zz')
 say x~items x~class~id r~allIndexes~items r~uniqueIndexes~items
 say x~sort~makeString('L', ',') .relation~new~uniqueIndexes~items
-s = .relation~new
-s~put('v1', .k~new('a', 'h1'))
-s~put('v2', .k~new('a', 'h2'))
-say s~uniqueIndexes~items
 .local~log = .array~new
 s = .relation~new
 s~put('v1', .k~new('a', 'h'))
@@ -889,7 +891,6 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 3 Array 5 4
 j,k,m 0
-2
 2 1
 r~uniqueIndexes(1) => 93.902
 ```
@@ -897,14 +898,15 @@ r~uniqueIndexes(1) => 93.902
 r[class.relation.supplier]
 `supplier` answers a `Supplier` over the entries, the index and the item of
 each, and `supplier(index)` a `Supplier` over the entries whose index is equal
-to the argument. It is a snapshot: later changes do not reach it. Its order is
-that of `allIndexes` ([the order rule](r:class.relation.makearray)). A
-relation with no entry, or none at the index, gives a supplier that is not
-available. It takes at most one argument, and an omitted argument is no
-argument: a second raises `SYNTAX 93.902`. With an index it sends `hashCode`
-to it once, and `==` to it with every stored index of the same hash code as the
-argument; further sends, and how often each is sent, are not specified ([the
-hash order rule](r:class.relation.deviation.33)).
+to the argument, oldest first ([the oldest
+rule](r:class.relation.oldest.deviation.33)). It is a snapshot: later changes do
+not reach it. Its order is that of `allIndexes` ([the order
+rule](r:class.relation.makearray)). A relation with no entry, or none at the
+index, gives a supplier that is not available. It takes at most one argument,
+and an omitted argument is no argument: a second raises `SYNTAX 93.902`. With an
+index it sends `hashCode` to it once, and `==` to it with every stored index of
+the same hash code as the argument; further sends, and how often each is sent,
+are not specified ([the hash order rule](r:class.relation.deviation.33)).
 
 ```rexx
 .local~log = .array~new
@@ -1640,29 +1642,86 @@ subset=> copy A.isA A.isA A.supplier C.removeItem C.removeItem
 ## Deviations
 
 r[class.relation.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray`,
-`uniqueIndexes`, `allAt`, `allIndex`, `removeAll` and `supplier`, the entry
-that `at`, `index`, `remove` and `removeItem` choose among several, and which
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the entries in the
+order they were put, and `hasItem`, `index`, `allIndex` and `removeItem` search
+the items in that order. The set operations, which walk the entries of their
+argument, follow that order too. An entry that is removed and then put again
+comes last. Which entries are produced, and how often, is specified. Which
 stored indexes or items a lookup, a search or `uniqueIndexes` compares, by `==`
-or `hashCode`, beyond those it must compare, and how often, are not specified,
-and may differ from ooRexx's. Which entries are produced, and how often, is
-specified. In the example the answers are sorted.
+or `hashCode`, beyond those it must compare, and how often, is not specified,
+and neither is the entry that a lookup or a search acts on when an `==` or
+`hashCode` that it sends changes the relation. ooRexx lists the entries in an
+order that its storage fixes, so its answers can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 r = .relation~new
-r~put(1, 'one')
-r~put(2, 'two')
-r~put(3, 'three')
-r~put(4, 'three')
-say r~allIndexes~sort~makeString('L', ',')
-say r~allItems~sort~makeString('L', ',')
-say r~uniqueIndexes~items r~items r~makeArray~items
+r~put('x', 'k')
+r~put('y', 'j')
+r~put('z', 'k')
+say r~allIndexes~makeString('L', ',') r~allItems~makeString('L', ',')
+r~remove('j')
+r~put('y', 'j')
+s = r~supplier
+say s~index s~item r~makeArray~makeString('L', ',')
 ```
 
 ```output
-one,three,three,two
-1,2,3,4
-3 4 4
+k,j,k x,y,z
+k x k,k,j
+```
+
+r[class.relation.oldest.deviation.33]
+Where several entries qualify, `at` and `[]` answer the item of the oldest,
+`index` its index, `remove` and `removeItem` remove the oldest, `allAt`,
+`allIndex`, `removeAll` and `supplier` with an index list them oldest first, and
+`uniqueIndexes` answers the oldest index of each group, in the order of those
+oldest entries. ooRexx chooses the newest of the entries at one index, and
+searches the items in the order of its storage ([the hash order
+rule](r:class.relation.deviation.33)).
+
+```rexx
+r = .relation~new
+r~put('x', 'k')
+r~put('y', 'j')
+r~put('z', 'k')
+r~put('y', 'k')
+r~put('x', 'j')
+say r~uniqueIndexes~makeString('L', ',') r~at('k') r['k']
+say r~allAt('k')~makeString('L', ',') r~supplier('k')~item
+say r~index('y') r~allIndex('x')~makeString('L', ',')
+say r~remove('k') r~removeItem('y') r~allIndexes~makeString('L', ',')
+r~put('w', 'k')
+say r~removeAll('k')~makeString('L', ',') r~allItems~makeString('L', ',')
+```
+
+```output
+k,j x x
+x,z,y x
+j k,j
+x y k,k,j
+z,y,w x
+```
+
+r[class.relation.copy.deviation.33]
+A copy lists its entries in the order of the receiver. After that each relation
+keeps its own order: an entry put into one comes last in that one only ([the
+hash order rule](r:class.relation.deviation.33)).
+
+```rexx
+r = .relation~new
+r~put('x', 'k')
+r~put('y', 'j')
+r~remove('k')
+r~put('z', 'k')
+c = r~copy
+c~put('q', 'n')
+r~put('w', 'm')
+say c~allIndexes~makeString('L', ',') r~allIndexes~makeString('L', ',')
+```
+
+```output
+j,k,n j,k,m
 ```
 
 r[class.relation.deviation.84]

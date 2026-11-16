@@ -582,22 +582,23 @@ s~putAll(.nonext~new) => 93.948
 ## Deviations
 
 r[class.mapcollection.deviation.33]
-The order in which a hash collection yields its entries is not specified
-([Deviation 33](../deviations.md#33-hash-iteration-order)), and so is not the
-order in which `putAll` stores the entries of a directory or another hash
-collection given as `source`, nor the order of the indexes that `makeArray`
-answers for one. The entries stored, and how often, are specified.
+A hash collection yields its entries in the order they were first put
+([Deviation 33](../deviations.md#33-hash-iteration-order)), and `putAll` stores
+the entries of a directory or another hash collection given as `source` in that
+order, as `makeArray` answers the indexes of one in that order. The entries
+stored, and how often, are specified. ooRexx yields them in an order that its
+storage fixes, so the order of the puts can differ.
 
 ```rexx
 s = .store~new
 src = .directory~new
-src['k1'] = 'first'
-src['k2'] = 'second'
-src['k3'] = 'third'
+src['c'] = 'first'
+src['a'] = 'second'
+src['b'] = 'third'
 s~putAll(src)
 say s~items
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
 ::class store inherit mapcollection
 ::method init
   expose d
@@ -616,6 +617,6 @@ say s~allItems~sort~makeString('L', ',')
 
 ```output
 3
-k1,k2,k3
+c,a,b
 first,second,third
 ```

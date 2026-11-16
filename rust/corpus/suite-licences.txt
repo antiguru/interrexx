@@ -20,6 +20,7 @@ base/class/Bag	TEST_HASITEM_VALUE_NOTEQUAL_INDEX	Deviation 45	the test's one ass
 base/class/IdentityTable	TEST_AT01	Deviation 4	line 78 asserts that coll~at("2"||"2") misses the index "2"||"2" built in init; the other assertions pass
 base/class/IdentityTable	TEST_HASINDEX	Deviation 4	line 163 asserts that hasIndex("1223"~substr(2,2)) misses the indexes "22" and "2"||"2"; the other assertions pass
 base/class/IdentityTable	TEST_[]	Deviation 4	line 89 asserts that coll["2"||"2"] misses the index "2"||"2" built in init; the other assertions pass
+base/class/Relation	TEST_OF_13	Deviation 33	line 868 expects d[x] to answer z, the newest of the three entries at x, where at answers the oldest; the other assertions pass
 base/class/RexxInteger	TEST_INTEGER_ADDITION	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
 base/class/RexxInteger	TEST_INTEGER_CONSTANT	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
 base/class/RexxInteger	TEST_INTEGER_D2X	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min

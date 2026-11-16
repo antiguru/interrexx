@@ -23,8 +23,11 @@ search](r:class.methods.unknown) does not resolve raises
 [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
 chapter](r:class.index.errors) says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine `try`, as the builtin
-pages do. The page says nothing about which of two items equal to the argument
-`removeItem` removes ([the hash order rule](r:class.table.deviation.33)).
+pages do. A table lists its entries in the order they were first put, and
+`index` and `removeItem` choose the oldest of several entries that qualify
+([the hash order rule](r:class.table.deviation.33)). ooRexx lists and chooses
+otherwise, so the examples outside that rule hold one such entry or sort the
+answers.
 
 ## The class
 
@@ -127,7 +130,12 @@ indexes. An instance of a subclass of `String` that declares neither method is
 the index of its characters like any string. A class that declares `==` has to
 declare `hashCode` so that equal objects hash alike, as [the hash code
 rule](r:class.object.hashcode) says. When a `put` finds the index already in
-the table, the entry keeps the index object it has and takes the new item.
+the table, the entry keeps the index object it has and takes the new item. For
+an argument and a stored index that are equal under `==` but whose `hashCode`
+answers are strictly different strings, or for a stored index whose `hashCode`
+no longer answers what it answered when it was stored, also when that index is
+itself the argument, whether a lookup finds the entry and whether `put` takes
+the two as one index is not specified.
 
 ```rexx
 t = .table~new
@@ -338,8 +346,8 @@ t~hasIndex("a", "b") => 93.902
 r[class.table.hasitem]
 `hasItem(item)` answers 1 when some item is equal to the argument and 0
 otherwise, and `index(item)` answers an index of such an item and `.nil` when
-there is none. Which index `index` answers when several items qualify is not
-specified ([the hash order rule](r:class.table.deviation.33)). Both take
+there is none. When several items qualify, `index` answers the index of the
+oldest entry ([the oldest rule](r:class.table.index.deviation.33)). Both take
 exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
 second raises `SYNTAX 93.902`. `.nil` is an item like any other.
 
@@ -375,11 +383,11 @@ t~index(1, 2) => 93.902
 r[class.table.hasitem.sends]
 `hasItem`, `index` and `removeItem` send `==` to the argument with an item as
 the argument, item by item, until one answers true, and send nothing else,
-`hashCode` included. The items are visited in an order that is not specified;
-every item is compared at least once when none matches, and how often `==` is
-sent with the same item is not specified ([the hash order
-rule](r:class.table.deviation.33)). The very object that is stored is found
-without a `==` sent to it ([the identity rule](r:class.collection.identity)).
+`hashCode` included. The items are visited in the order of the entries ([the
+hash order rule](r:class.table.deviation.33)); every item is compared at least
+once when none matches, and how often `==` is sent with the same item is not
+specified. The very object that is stored is found without a `==` sent to it
+([the identity rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -533,14 +541,14 @@ t~empty(1) => 93.902
 ## Lists of the entries
 
 r[class.table.makearray]
-`allIndexes` and `makeArray` answer a new `Array` of the indexes of the
-entries, and `allItems` a new `Array` of their items. They are instances of
-`Array` for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises `SYNTAX 93.902`. The order is
-not specified ([the hash order rule](r:class.table.deviation.33)), and is the
-same for the three answers and for the supplier of one unchanged table, so the
-item at a position belongs to the index at the same position. The methods send
-no message to the table or to the indexes and items.
+`allIndexes` and `makeArray` answer a new `Array` of the indexes of the entries,
+and `allItems` a new `Array` of their items. They are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is that in which the
+entries were first put ([the hash order rule](r:class.table.deviation.33)), and
+is the same for the three answers and for the supplier of one unchanged table,
+so the item at a position belongs to the index at the same position. The methods
+send no message to the table or to the indexes and items.
 
 ```rexx
 t = .many~new
@@ -810,27 +818,97 @@ say .local~log~items
 ## Deviations
 
 r[class.table.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, of the search of `hasItem`, `index` and `removeItem`, and which
-stored indexes or items a lookup or a search compares, by `==` or `hashCode`,
-beyond those it must compare, and how often, are not specified, and may differ
-from ooRexx's. Which entries are produced, and how often, is specified. In the
-example the answers are sorted.
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the entries in the
+order they were first put, and `hasItem`, `index` and `removeItem` compare the
+items in that order. Which entries are produced, and how often, is specified.
+Which stored indexes or items a lookup or a search compares, by `==` or
+`hashCode`, beyond those it must compare, and how often, is not specified, and
+neither is the entry that a lookup or a search acts on when an `==` or
+`hashCode` that it sends changes the table. ooRexx lists the entries in an order
+that its storage fixes, so its answers can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 t = .table~new
-t~put(1, 'one')
-t~put(2, 'two')
-t~put(3, 'three')
-say t~allIndexes~sort~makeString('L', ',')
-say t~allItems~sort~makeString('L', ',')
-say t~items t~makeArray~items
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 ```
 
 ```output
-one,three,two
+c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+```
+
+r[class.table.put.deviation.33]
+A `put` or `[]=` at an index that the table holds leaves the entry in its place.
+An entry that is removed and then put again comes last. ooRexx's order does not
+follow the puts ([the hash order rule](r:class.table.deviation.33)).
+
+```rexx
+t = .table~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+```
+
+```output
+c,a,b 4,2,3
+a,b,c 2,3,5
+```
+
+r[class.table.index.deviation.33]
+When several entries hold an item equal to the argument, `index` answers the
+index of the oldest of them and `removeItem` removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another ([the hash order
+rule](r:class.table.deviation.33)).
+
+```rexx
+t = .table~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+```
+
+```output
+c x a,b
+b
+```
+
+r[class.table.copy.deviation.33]
+A copy lists its entries in the order of the receiver. After that each table
+keeps its own order: an entry put into one comes last in that one only ([the
+hash order rule](r:class.table.deviation.33)).
+
+```rexx
+t = .table~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+```
+
+```output
+a,b,c,z
+a,b,c,y
 ```
 
 r[class.table.deviation.84]

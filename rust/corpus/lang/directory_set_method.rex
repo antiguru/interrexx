@@ -56,13 +56,15 @@ u~setMethod('lower', 'return 1')
 u['keep'] = 2
 say 'case    ' u~allIndexes~makeString('L',',')
 
-/* contents first, then the method table, each in its own order */
+/* contents first, then the method table; the order within each half is
+   Deviation 33, so each half is listed sorted */
 o = .Directory~new
 o~setMethod('AAA', 'return "a"')
 o['zzz'] = 'z'
 o~setMethod('MMM', 'return "m"')
 o['bbb'] = 'b'
-say 'order   ' o~allIndexes~makeString('L',',') o~items
+a = o~allIndexes
+say 'order   ' a~section(1, 2)~sort~makeString('L',',') a~section(3)~sort~makeString('L',',') o~items
 
 /* setMethod destroys an ordinary entry of the same name */
 g = .Directory~new
@@ -123,13 +125,13 @@ say 'unk rm  ' w~remove('nosuch') w~removeItem('nothing')
 w~unsetMethod('UNKNOWN')
 say 'unk gone' w['nosuch']
 
-/* growth past the minimum bucket count keeps the store's own order */
+/* growth past the minimum bucket count keeps every name, listed sorted */
 big = .Directory~new
 do i = 1 to 20
   big~setMethod('M'i, 'return' i*i)
 end
 say 'grown   ' big~items big['M20'] big~hasIndex('M7')
-say 'grown i ' big~allIndexes~makeString('L',',')
+say 'grown i ' big~allIndexes~sort~makeString('L',',')
 
 /* Properties inherits Directory's pair; StringTable has none of it */
 p = .Properties~new

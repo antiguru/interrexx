@@ -355,7 +355,10 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
     ),
     ("Set", ".Set~of('a','b','c')"),
     ("Bag", ".Bag~of('a','a','b')"),
-    ("Relation", ".Relation~new~~put('v1','k')~~put('v2','k')"),
+    // Two equal entries at one index: a Relation lists its entries in the
+    // order they were put and the oracle does not (Deviation 33), so two
+    // distinct items would diverge on every listing.
+    ("Relation", ".Relation~new~~put('v','k')~~put('v','k')"),
     (
         "Directory",
         ".Directory~new~~put('v1','k1')~~put('v2','k2')",
