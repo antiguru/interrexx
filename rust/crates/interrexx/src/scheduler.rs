@@ -1649,9 +1649,13 @@ impl Interp {
             Ok(Waited::Blocked { inverted: true })
         } else {
             let waiting = self.set_callback_waiting(true);
-            let stall = self.watch_stall(reason);
+            let replaced = self.watch_stall(reason);
             let waited = self.run_others(true);
-            self.activities.stall = stall;
+            // A watch this wait left in place is the loop's own, and where its
+            // line was written during the wait it stays consumed.
+            if let Some(previous) = replaced {
+                self.activities.stall = previous;
+            }
             if let Some(waiting) = waiting {
                 self.set_callback_waiting(waiting);
             }
@@ -1969,10 +1973,11 @@ impl Interp {
     /// where it is an attached activity's callback and only an activity its
     /// lend stopped may end it, or where waits are not refused as unending
     /// ([`Interp::refuses_unending_waits`]) and it may turn out to be an
-    /// inverted wait, answering the watch it replaces. Waits that end by
-    /// themselves, a sleep's or a timed one's, are not watched, and a wait
-    /// that is not a callback's leaves a callback's watch in place.
-    fn watch_stall(&mut self, reason: ParkReason) -> Option<Stall> {
+    /// inverted wait. Answers `Some` with the watch it replaced, and `None`
+    /// where it left the watch in place. Waits that end by themselves, a
+    /// sleep's or a timed one's, are not watched, and a wait that is not a
+    /// callback's leaves a callback's watch in place.
+    fn watch_stall(&mut self, reason: ParkReason) -> Option<Option<Stall>> {
         let previous = self.activities.stall;
         let endless = match reason {
             ParkReason::Guard(_)
@@ -1997,6 +2002,7 @@ impl Interp {
                 reason,
                 lender: Some(lender),
             });
+            Some(previous)
         } else if endless
             && !self.refuses_unending_waits()
             && previous.is_none_or(|stall| stall.lender.is_none())
@@ -2011,8 +2017,10 @@ impl Interp {
                 reason,
                 lender: None,
             });
+            Some(previous)
+        } else {
+            None
         }
-        previous
     }
 
     /// The watched wait of the loop at `level`, where it counts: a

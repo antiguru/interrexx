@@ -904,6 +904,23 @@ fn a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop() {
     assert_stalled_on_flag(&stderr);
 }
 
+/// [`a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop`] where a second
+/// message, seven and a half seconds in, ends the started activity's pinned wait. The callback's
+/// wait for the flag was reported while the pinned wait went on, and stderr does not report it a
+/// second time once that wait ends.
+// spec: native.threads.attach.deviation.178, conc.locks.deviation.14
+#[test]
+fn a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once() {
+    let (stdout, stderr, status) = run_ours_for("attach-flagrelease", "flagrelease.rex", "12");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("release sent\npinner released\n", 137),
+        "stderr: {stderr}"
+    );
+    assert_stalled_on_flag(&stderr);
+    assert_eq!(stderr.matches("interrexx: ").count(), 1, "stderr: {stderr}");
+}
+
 /// Asserts that `stderr` begins with the line that reports a callback's wait for a `GUARD WHEN`
 /// while the main program it stopped makes no progress, written once the wait was five seconds
 /// old ([`STALL_SECONDS`]).
