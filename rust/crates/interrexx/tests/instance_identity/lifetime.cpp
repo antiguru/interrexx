@@ -142,8 +142,9 @@ static RexxInstance *create_inner(RexxThreadContext **thread = NULL)
     return instance;
 }
 
-// Creates an instance that loads `lifetime`, from inside a hook, and terminates it.
-static void inner(void)
+// Creates an instance that loads `lifetime`, from inside a hook, and terminates it. The second
+// library, built with OTHER, does not call it.
+[[maybe_unused]] static void inner(void)
 {
     RexxInstance *instance = create_inner();
     if (instance == NULL)
@@ -154,8 +155,9 @@ static void inner(void)
     printf("terminated inner\n");
 }
 
-// Loads the library `name` through `context` and prints `label` with the answer.
-static void load_through(RexxThreadContext *context, const char *name, const char *label)
+// Loads the library `name` through `context` and prints `label` with the answer. The second
+// library, built with OTHER, does not call it.
+[[maybe_unused]] static void load_through(RexxThreadContext *context, const char *name, const char *label)
 {
     printf("%s %d\n", label, context->LoadLibrary(name) ? 1 : 0);
     fflush(stdout);

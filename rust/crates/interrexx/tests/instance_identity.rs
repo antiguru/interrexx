@@ -81,6 +81,7 @@ fn on_path(name: &str) -> bool {
 fn compile(source: &str, arguments: &[&str]) {
     let api = worktree().join("include");
     let built = Command::new("g++")
+        .args(["-Wall", "-Werror"])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(fixture(source))
