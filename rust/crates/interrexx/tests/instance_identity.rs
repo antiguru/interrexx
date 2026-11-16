@@ -1,5 +1,5 @@
 //! **One interpreter instance for every activity** (`r[native.threads.instance]`). The extension
-//! `tests/instance_identity/inst.cpp`, compiled with `g++` against this worktree's `api/` into a
+//! `tests/instance_identity/inst.cpp`, compiled with `g++` against this worktree's `include/` into a
 //! directory of this run's own, answers the instance its thread context links and the application
 //! data that instance carries. `inst.rex` asks it from the main activity, from the activity
 //! `REPLY` makes and from one `start` makes, and prints `same` where all three answers are the
@@ -27,6 +27,9 @@ use std::process::{Command, Stdio};
 /// The `memcap` limit each run is under.
 const MEMORY: &str = "2G";
 
+/// The address-space limit in KiB where `memcap` is not on `PATH`.
+const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
 fn gate_mode() -> bool {
@@ -51,11 +54,18 @@ fn fresh_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// `g++` compiling the fixture `source` against this worktree's `api/`, with `arguments` after the
-/// source.
+/// Whether `name` is an executable file on this process's `PATH`.
+fn on_path(name: &str) -> bool {
+    std::env::var_os("PATH")
+        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
+}
+
+/// `g++` compiling the fixture `source` against this worktree's `include/`, with `arguments` after
+/// the source.
 fn compile(source: &str, arguments: &[&str]) {
-    let api = worktree().join("third_party/ooRexx/api");
+    let api = worktree().join("include");
     let built = Command::new("g++")
+        .args(["-Wall", "-Werror"])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(fixture(source))
@@ -66,16 +76,26 @@ fn compile(source: &str, arguments: &[&str]) {
 }
 
 /// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
-/// memory-capped by `memcap`, from `dir`, with `dir` on the library path, answering stdout, stderr
-/// and the exit status.
+/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
+/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
 fn run(
     binary: &Path,
     dir: &Path,
     program: Option<&Path>,
     argument: Option<&str>,
 ) -> (String, String, i32) {
-    let output = Command::new("memcap")
-        .arg(MEMORY)
+    let mut command = if on_path("memcap") {
+        let mut command = Command::new("memcap");
+        command.arg(MEMORY);
+        command
+    } else {
+        let mut command = Command::new("bash");
+        command.arg("-c").arg(format!(
+            "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
+        ));
+        command
+    };
+    let output = command
         .arg(binary)
         .args(program)
         .args(argument)
@@ -84,7 +104,7 @@ fn run(
         .env("REXX_API_DIR", dir.join("api"))
         .stdin(Stdio::null())
         .output()
-        .expect("memcap runs, which every run of this test is under");
+        .expect("the capped run spawns");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
         .env("REXX_API_DIR", dir.join("api"))
