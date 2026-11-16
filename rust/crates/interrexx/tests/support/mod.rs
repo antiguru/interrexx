@@ -73,6 +73,9 @@ pub mod sidecar;
 /// service directories, the command for either side, the service's stop.
 pub mod rexx_service;
 
+/// The short API service directory of one run, whose socket path the platform bounds.
+pub mod api_socket;
+
 /// The oracle's trace prefix table, all nineteen -- not only the subset this
 /// crate has an emitter for. See the module doc for why the markers nothing
 /// here has ever produced are carried anyway: the alternative is a list that

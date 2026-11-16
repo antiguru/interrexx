@@ -46,8 +46,8 @@ fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-/// A fresh directory of this run's own, named for `name`. The process is written in hex, which
-/// keeps the API service's socket path below `api/` within the platform's bound.
+/// A fresh directory of this run's own, named for `name`. The API service's directory is not in
+/// it ([`support::api_socket::api_dir`]), so the socket path does not depend on the checkout.
 fn fresh_dir(name: &str) -> PathBuf {
     let dir =
         Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{:x}", std::process::id()));
@@ -103,14 +103,15 @@ fn run(
         .args(argument)
         .current_dir(dir)
         .env("LD_LIBRARY_PATH", dir)
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(dir))
         .stdin(Stdio::null())
         .output()
         .expect("the capped run spawns");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(dir))
         .output();
+    support::api_socket::end_api_dir(dir);
     (
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
