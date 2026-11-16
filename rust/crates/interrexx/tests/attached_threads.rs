@@ -371,11 +371,35 @@ fn run_driver(name: &str, arguments: &[&str]) -> Answer {
 
 /// [`run_driver`], killed after `seconds` rather than [`SECONDS`]: the driver waits for ever.
 fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
+    run_driver_with(name, arguments, seconds, false)
+}
+
+/// [`run_driver_for`], with the extension `attach` built beside the driver and on the library
+/// path where `extension`, for a program the driver runs to load.
+fn run_driver_with(name: &str, arguments: &[&str], seconds: &str, extension: bool) -> Answer {
     let (dir, binary) = build_driver(name);
+    if extension {
+        let built = compile(
+            "attach.cpp",
+            &[
+                "-shared",
+                "-fPIC",
+                "-O1",
+                "-static-libstdc++",
+                "-pthread",
+                "-o",
+            ],
+        )
+        .arg(dir.join("libattach.so"))
+        .status()
+        .expect("g++ runs, which this test needs to build its fixture");
+        assert!(built.success(), "the fixture did not build");
+    }
     let output = capped(seconds)
         .arg(&binary)
         .args(arguments)
         .current_dir(&dir)
+        .env("LD_LIBRARY_PATH", &dir)
         .env("REXX_API_DIR", dir.join("api"))
         .stdin(Stdio::null())
         .output()
@@ -1451,6 +1475,24 @@ fn a_wait_in_a_program_rexx_start_runs_is_not_refused() {
     assert_eq!(
         run_driver("hostwait", &["start", program]),
         ("rc 0 result halted\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A thread of the extension that a program `RexxStart` runs started calls `AttachThread` once the
+/// program has ended and `RexxStart` has returned: the interpreter has ended, though nothing
+/// called `Terminate`, so the attach gets nothing.
+// spec: native.threads.end
+#[test]
+fn an_attach_after_rexx_start_has_returned_gets_nothing() {
+    let program = fixture("afterend.rex");
+    let program = program.to_str().expect("the fixture's path is UTF-8");
+    assert_eq!(
+        run_driver_with("hostwait", &["late", program], SECONDS, true),
+        (
+            "rc 0 result returned\nlate attach 0\nhost done\n".to_owned(),
+            String::new(),
+            0
+        )
     );
 }
 

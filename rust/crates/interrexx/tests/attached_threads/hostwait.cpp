@@ -1,7 +1,8 @@
 // An embedding host whose program waits on something only the host can end.
 //
 // Usage: hostwait instance | hostwait terminate | hostwait self | hostwait selfclear
-//        | hostwait attached | hostwait nested | hostwait stall <ms> | hostwait start <program>.
+//        | hostwait attached | hostwait nested | hostwait stall <ms> | hostwait start <program>
+//        | hostwait late <program>.
 //
 // * `instance`: the host creates an instance, makes an event semaphore in it, and starts a thread
 //   that waits a while, attaches and posts the semaphore. The creating thread meanwhile calls a
@@ -28,6 +29,8 @@
 //   calls `Terminate`.
 // * `start`: the host starts a thread that waits a while and halts the thread `RexxStart` runs
 //   `<program>` on, then runs it there and prints what it answered.
+// * `late`: the host runs `<program>` with `RexxStart`, prints what it answered, waits a second
+//   for the threads the program started, and prints `host done`.
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -303,6 +306,20 @@ static int start_wait(const char *program)
     return 0;
 }
 
+static int late_attach(const char *program)
+{
+    short code = 0;
+    RXSTRING result = {0, NULL};
+    int rc = RexxStart(0, NULL, program, NULL, NULL, RXCOMMAND, NULL, &code, &result);
+    printf("rc %d result %s\n", rc, result.strptr ? result.strptr : "(none)");
+    fflush(stdout);
+    RexxFreeMemory(result.strptr);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    printf("host done\n");
+    fflush(stdout);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 2 && strcmp(argv[1], "instance") == 0)
@@ -336,6 +353,10 @@ int main(int argc, char **argv)
     if (argc >= 3 && strcmp(argv[1], "start") == 0)
     {
         return start_wait(argv[2]);
+    }
+    if (argc >= 3 && strcmp(argv[1], "late") == 0)
+    {
+        return late_attach(argv[2]);
     }
     return 2;
 }

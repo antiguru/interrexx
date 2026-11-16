@@ -51,6 +51,9 @@
 //   answers 1 once the flag is raised, and 0 before.
 // * `AtHaltAfter(milliseconds)` starts a thread that waits `milliseconds` and then calls `Halt`
 //   through the instance the call's thread context links, without attaching.
+// * `AtAttachLater(milliseconds)` starts a thread that waits `milliseconds`, calls `AttachThread`
+//   through the instance the call's thread context links, prints `late attach` with what it
+//   answered, detaches where it attached, and counts itself finished.
 // * `AtPause(milliseconds)` blocks for `milliseconds` and answers 1, starting no thread.
 // * `AtPauseCall(milliseconds, routine)` blocks for `milliseconds`, then calls `routine` with no
 //   arguments through `CallRoutine` on its own call's thread context, and answers what it
@@ -996,6 +999,42 @@ RexxRoutine0(int, AtRaised)
     return raised;
 }
 
+// What the thread `AtAttachLater` starts is given: the instance to attach to, and how many
+// milliseconds to wait first.
+struct AttachLater
+{
+    RexxInstance *instance;
+    size_t milliseconds;
+};
+
+static void *attach_later(void *argument)
+{
+    AttachLater *later = (AttachLater *)argument;
+    usleep((useconds_t)(later->milliseconds * 1000));
+    RexxThreadContext *thread = NULL;
+    logical_t attached = later->instance->AttachThread(&thread);
+    printf("late attach %d\n", attached ? 1 : 0);
+    fflush(stdout);
+    if (attached)
+    {
+        thread->DetachThread();
+    }
+    delete later;
+    finish();
+    return NULL;
+}
+
+RexxRoutine1(logical_t, AtAttachLater, positive_wholenumber_t, milliseconds)
+{
+    AttachLater *later = new AttachLater{context->threadContext->instance, (size_t)milliseconds};
+    if (!start_detached(attach_later, later))
+    {
+        delete later;
+        return 0;
+    }
+    return 1;
+}
+
 RexxRoutine1(logical_t, AtHaltAfter, positive_wholenumber_t, milliseconds)
 {
     HaltAfter *halt = new HaltAfter{context->threadContext->instance, (size_t)milliseconds};
@@ -1053,6 +1092,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtRaiseAfter, AtRaiseAfter),
     REXX_TYPED_ROUTINE(AtRaised, AtRaised),
     REXX_TYPED_ROUTINE(AtHaltAfter, AtHaltAfter),
+    REXX_TYPED_ROUTINE(AtAttachLater, AtAttachLater),
     REXX_LAST_ROUTINE()
 };
 
