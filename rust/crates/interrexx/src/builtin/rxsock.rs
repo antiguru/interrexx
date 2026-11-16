@@ -1854,14 +1854,20 @@ fn descriptor_table_size() -> i32 {
 }
 
 /// The size of this process's descriptor table: `select` reads no
-/// descriptor at or above it. Where no `/proc` gives it, that is the soft
-/// `RLIMIT_NOFILE`, which is what `getdtablesize` answers.
+/// descriptor at or above it. Apple's kernel truncates `select`'s count to
+/// the table it has grown to, as Linux's does, but does not say how large
+/// that is; one past the highest open descriptor, which `/dev/fd` lists, is
+/// the least it can be, and a descriptor never opened lies beyond it.
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 fn descriptor_table_size() -> i32 {
-    rustix::process::getrlimit(rustix::process::Resource::Nofile)
-        .current
-        .and_then(|limit| i32::try_from(limit).ok())
-        .unwrap_or(i32::MAX)
+    std::fs::read_dir("/dev/fd")
+        .ok()
+        .and_then(|entries| {
+            entries
+                .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse::<i32>().ok())
+                .max()
+        })
+        .map_or(i32::MAX, |highest| highest.saturating_add(1))
 }
 
 /// Whether `select` looks at `fd`: a negative entry or one past the descriptor
