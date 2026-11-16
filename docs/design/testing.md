@@ -4,9 +4,10 @@
 
 The language specification under `spec/` is normative. ooRexx is the differential instrument: a
 program's stdout, stderr and exit status on interrexx must match ooRexx's byte for byte, compared
-as separate streams. Every intended difference is a numbered Deviation in
-`spec/src/deviations.md`; a difference with no Deviation is a defect on one side, settled in the
-specification before it is settled in code. A new Deviation needs the project owner's ruling.
+as separate streams. Every intended difference in what the specification fixes is a numbered
+Deviation in `spec/src/deviations.md`; such a difference with no Deviation is a defect on one side,
+settled in the specification before it is settled in code. A new Deviation needs the project
+owner's ruling.
 
 A comparison checks only what the specification fixes. For an error that is the code and the
 subcode (`r[conv.error.name]`): the wording of a message (`r[conv.error.text]`) and the items of
@@ -16,6 +17,15 @@ that compares them tests behaviour nothing promises. A test that needs an error 
 methods (`r[class.stackframe.builtin]`) are not compared either. The differential harnesses have
 no way to mark part of a program's output as unspecified and compare every byte, so a
 differential program prints only what the specification fixes.
+
+Precedence is the one exception to that rule. Which of several faults of one operation raises its
+error is unspecified (`r[conv.error.precedence]`), so a difference in it between interrexx and
+ooRexx is neither a Deviation nor a defect. The harnesses still demand ooRexx's precedence, as a
+convenience that keeps them quiet, and interrexx keeps ooRexx's precedence where it has it. A
+comparison where interrexx keeps an older precedence of its own, such as the argument count
+checked first in a native builtin or LOSTDIGITS before an operator's error, carries a licence
+row that cites `r[conv.error.precedence]` in place of a Deviation, or its program is reduced to
+one fault. A differential program may assert a two-fault outcome on which both agree.
 
 Where ooRexx is defective (a crash, an unbounded loop, an answer that depends on memory layout),
 interrexx does not reproduce the defect. `rust/corpus/oracle-crashes.txt` lists the programs that

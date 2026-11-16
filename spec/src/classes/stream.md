@@ -781,12 +781,10 @@ count is a count of 2, and `.nil` and an object whose string value is no
 number, such as a plain `Object`, raise `SYNTAX 88.907`. The option that
 `open`, `lines`, `seek` and `position` take is read as a string argument,
 through `makeString` alone: an object that has no such method, `.nil` and an
-object that has only `string` among them, raises `SYNTAX 88.909`, and it does
-so before the count of arguments is checked, so that `open(.nil, 1)` raises
-`SYNTAX 88.909` and not 88.922. The argument of `query` and of `command` is
-read through its string value with the fallback to `string`: an object that
-has only `string` is read by that answer, and `.nil` is read as `The NIL
-object`, which no word or command starts with.
+object that has only `string` among them, raises `SYNTAX 88.909`. The argument
+of `query` and of `command` is read through its string value with the fallback
+to `string`: an object that has only `string` is read by that answer, and
+`.nil` is read as `The NIL object`, which no word or command starts with.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -816,7 +814,6 @@ call try 't~open(.nil)'
 call try 't~lines(.os~new("N"))'
 call try 't~seek(.object~new)'
 call try 't~position(.nil)'
-call try 't~open(.nil, 1)'
 call try 't~lines(.nil, 1)'
 call try 't~seek(.nil, 1)'
 call try 't~position(.os~new("=1"), 1)'
@@ -870,7 +867,6 @@ t~open(.nil) => 88.909
 t~lines(.os~new("N")) => 88.909
 t~seek(.object~new) => 88.909
 t~position(.nil) => 88.909
-t~open(.nil, 1) => 88.909
 t~lines(.nil, 1) => 88.909
 t~seek(.nil, 1) => 88.909
 t~position(.os~new("=1"), 1) => 88.909

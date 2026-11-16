@@ -317,15 +317,13 @@ say '['format('-999.4', , , 1, 2)']' '['format('999.6', , 0, 1, 2)']'
 ```
 
 > **Note.** The ANSI draft (9.4.2) differs from ooRexx, which this book
-> follows, in three ways. It checks `number` before a count that is not a
-> whole number, where ooRexx raises `SYNTAX 40.12` for the count first (for a
-> negative count both check `number` first), and it raises
-> `SYNTAX 40.13` for a negative count and `SYNTAX 40.38` for a result that
-> does not fit, in the exponent or in the integer part. It decides the
-> notation before it rounds to `after`, so there a carry out of the integer
-> part does not make the number scientific: `format('99999.5', , 0, , 5)` is
-> `100000`. And it tests the zeros after the point against a fixed limit, as
-> the [note on the writing rule](r:bif.index.num.sci) says.
+> follows, in three ways. It raises `SYNTAX 40.13` for a negative count and
+> `SYNTAX 40.38` for a result that does not fit, in the exponent or in the
+> integer part. It decides the notation before it rounds to `after`, so there a
+> carry out of the integer part does not make the number scientific:
+> `format('99999.5', , 0, , 5)` is `100000`. And it tests the zeros after the
+> point against a fixed limit, as the [note on the writing
+> rule](r:bif.index.num.sci) says.
 
 ## Deviations
 

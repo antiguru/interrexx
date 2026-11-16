@@ -69,14 +69,15 @@ r[instr.do.count]
 evaluated once, when the DO is reached, and its value is the number of passes,
 so a later assignment to a variable of the expression changes nothing. The
 value must be a whole number that is not negative. It may be written with a
-decimal point or an exponent when that is its value, and it must be below 10
-to the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4`
-is a count and `1e5` is not. No count may reach 10 to the power of 18,
-whatever DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs
-no pass and does not raise an error. When
-[LOSTDIGITS](r:cond.lostdigits.information) is trapped, a count written with
-more than DIGITS digits raises that condition before the error, if any, as
-[the lost-digits rule](r:num.arithmetic.lostdigits) describes for an operand.
+decimal point or an exponent when that is its value, and it must be below 10 to
+the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4` is a
+count and `1e5` is not. No count may reach 10 to the power of 18, whatever
+DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs no pass
+and does not raise an error. A count written with more than DIGITS digits
+raises [LOSTDIGITS](r:cond.lostdigits.information), as [the lost-digits
+rule](r:num.arithmetic.lostdigits) describes for an operand; with an error as
+well, which of the two is raised first is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 n = 3
@@ -102,7 +103,7 @@ call try 'numeric digits 20; do 999999999999999999; leave; end'
 call try 'numeric digits 20; do 1000000000000000000; leave; end'
 signal on lostdigits name wide
 numeric digits 5
-do 123456
+do 99999.0
   say 'never'
 end
 wide: say condition('c') condition('d')
@@ -131,7 +132,7 @@ numeric digits 5; do 9.9999e4; leave; end => ok
 numeric digits 5; do 1e5; leave; end => 26.2
 numeric digits 20; do 999999999999999999; leave; end => ok
 numeric digits 20; do 1000000000000000000; leave; end => 26.2
-LOSTDIGITS 123456
+LOSTDIGITS 99999.0
 ```
 
 r[instr.do.forever]

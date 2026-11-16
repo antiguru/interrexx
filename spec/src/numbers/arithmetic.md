@@ -427,17 +427,18 @@ An operand of an arithmetic operator that has more digits than NUMERIC DIGITS
 raises the [LOSTDIGITS](r:cond.lostdigits.information) condition, and so does
 the base of `**` but not its exponent. The digits counted are those from the
 first nonzero digit to the last one written, so zeros that end the operand
-count, and the exponent and the zeros that start the operand do not. An
-operand of value zero has no digits. The condition is raised for the left
-operand first and only after both operands were found to be numbers, and the
-builtins raise no such condition. When the condition is not trapped the
-operation goes on with the digits it has, cut as the [cut
-rule](r:num.arithmetic.cut) says. Both operands are checked for lost digits
-before the operator looks at their values, so a wide left operand raises
-LOSTDIGITS before `SYNTAX 42.3` for a zero divisor of `/`, `%` and `//` ([the
-zero rule](r:num.arithmetic.zero)) and before `SYNTAX 26.8` for an exponent of
-`**` that is a number but not a whole number of at most DIGITS digits ([the
-exponent rule](r:num.arithmetic.exponent)).
+count, and the exponent and the zeros that start the operand do not. An operand
+of value zero has no digits, and the builtins raise no such condition. When the
+condition is not trapped the operation goes on with the digits it has, cut as
+the [cut rule](r:num.arithmetic.cut) says. When both operands are too wide,
+which of them the condition is raised for first is unspecified. When an
+operation has a wide operand and another fault, such as an operand that is not
+a number, a zero divisor of `/`, `%` and `//` ([the zero
+rule](r:num.arithmetic.zero)) or an exponent of `**` that is not a whole number
+of at most DIGITS digits ([the exponent rule](r:num.arithmetic.exponent)),
+which of LOSTDIGITS and the error it raises first is unspecified, and so
+whether a trap for LOSTDIGITS runs, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 3

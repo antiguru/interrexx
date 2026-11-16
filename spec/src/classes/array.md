@@ -278,13 +278,12 @@ r[class.array.put]
 there, and answers no value. `a[i] = v` is the message `[]=` with the item
 first and the indexes after, and it is `put` under another name. The method
 needs at least the item and one index: fewer arguments raise `SYNTAX 93.901`,
-and an omitted item raises `SYNTAX 93.903`; both come before any check of the
-indexes. The indexes are read as [the index rule](r:class.array.indexes) says.
-A put beyond the present size of a dimension makes the dimension as large as
-the index, and the array grows. The first put into an array that has no
-dimension yet gives it as many dimensions as it has indexes, each as large as
-its index. `.nil` is an item like any other. A subclass's own `put` is not
-asked for `[]=`, nor the other way round.
+and an omitted item raises `SYNTAX 93.903`. The indexes are read as [the index
+rule](r:class.array.indexes) says. A put beyond the present size of a dimension
+makes the dimension as large as the index, and the array grows. The first put
+into an array that has no dimension yet gives it as many dimensions as it has
+indexes, each as large as its index. `.nil` is an item like any other. A
+subclass's own `put` is not asked for `[]=`, nor the other way round.
 
 ```rexx
 a = .array~new

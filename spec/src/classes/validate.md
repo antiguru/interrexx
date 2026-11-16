@@ -199,12 +199,12 @@ under the NUMERIC DIGITS of the running code. `digits` is a whole number of at
 least 1 and at most 999999999 and defaults to `9`, except for `length` and
 `position`, whose default is [the number of digits that whole numbers have
 internally](r:class.rexxinfo.limits). Any other value, a string that is no
-number included, raises `SYNTAX 26.5` before the value is read; its `ADDITIONAL`
-array has one item, the value of `digits`, the string that is
-refused.
-The last example of this rule asks every check that takes `digits` for the cases
-that are refused, for the two limits that are not, and for a value that is no
-number under a refused `digits`.
+number included, raises `SYNTAX 26.5`, and whether the value is then read is
+unspecified, as [the precedence rule](r:conv.error.precedence) says; its
+`ADDITIONAL` array has one item, the value of `digits`, the string that is
+refused. The last example of this rule asks every check that takes `digits` for
+the cases that are refused, for the two limits that are not, and for a value
+that is no number under a refused `digits`.
 
 ```rexx
 numeric digits 20
@@ -542,21 +542,22 @@ The number checks convert the value to a string once, as [the conversion
 rule](r:conv.string.object) says (apart from [the
 deviation](r:class.validate.deviation.109)); for an object without a `request`
 of its own that is one `makeString`. The string is checked first as a number,
-and as a whole number for the whole-number checks, and only a value that passes
-that check is asked, as the object that was given and not the string, to
-compare. `positiveNumber`, `positiveWholeNumber` and `position` send it `>`
-with `0`; `nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it
-`>=` with `0`; `numberRange` and `wholeNumberRange` send it `>=` with `min`
-and, only when that answers true, `<=` with `max`. A comparison that answers
-`0` raises the error of the check, one that answers neither `0` nor `1` raises
-`SYNTAX 34.6`, and a value whose class has no such comparison method raises
-`SYNTAX 97.1`, so that an object with only a `makeString` is refused by
+and as a whole number for the whole-number checks, and a value that passes that
+check is asked, as the object that was given and not the string, to compare.
+`positiveNumber`, `positiveWholeNumber` and `position` send it `>` with `0`;
+`nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it `>=` with
+`0`; `numberRange` and `wholeNumberRange` send it `>=` with `min` and, only
+when that answers true, `<=` with `max`. A comparison that answers `0` raises
+the error of the check, one that answers neither `0` nor `1` raises `SYNTAX
+34.6`, and a value whose class has no such comparison method raises `SYNTAX
+97.1`, so that an object with only a `makeString` is refused by
 `positiveNumber`, `nonNegativeNumber` and `numberRange`, which a number check
-alone would have passed. A value that fails the number check raises that error
-and is sent no comparison. `number` and `wholeNumber` send nothing more, and
-the bounds and `digits` are read as strings and are sent no comparison. The
-example has an object whose `makeString` and `unknown` write a line, and whose
-comparisons answer `1` and then `0`.
+alone would have passed. A value that fails the number check raises that error,
+and whether it is sent a comparison as well is unspecified, as [the precedence
+rule](r:conv.error.precedence) says. `number` and `wholeNumber` send nothing
+more, and the bounds and `digits` are read as strings and are sent no
+comparison. The example has an object whose `makeString` and `unknown` write a
+line, and whose comparisons answer `1` and then `0`.
 
 ```rexx
 checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',

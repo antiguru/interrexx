@@ -520,6 +520,7 @@ call try "SysStemSort('s.', , , 0)", ""
 call try "SysStemSort('s-.')", ""
 call try "SysStemSort('s.', 'x')", ""
 call try "SysStemSort('s.', , , 4, 2)", ""
+call try "SysStemSort('s.', , , , , 3, 2)", ""
 call try "SysStemSort('s.', , , 7)", ""
 call try "SysStemSort('s.')", "drop s.0"
 call try "SysStemSort('s.')", "drop s.3"
@@ -542,6 +543,7 @@ e: say condition('o')~code
 88.905
 40.919
 40.920
+40.921
 40.921
 40.923
 40.922

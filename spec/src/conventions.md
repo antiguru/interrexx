@@ -437,7 +437,7 @@ b: say condition('o')~code
 40.23
 ```
 
-## The order of the checks
+## Evaluation order and several faults
 
 r[conv.error.precedence]
 What an operation works on is evaluated before the operation checks it, in the
@@ -694,8 +694,7 @@ of `ABBREV`, `COMPARE`, `BITAND`, `BITOR` and `BITXOR`; the type of
 `DATATYPE`; the option and the character of `STRIP`; the two tables of
 `TRANSLATE`; the reference and the option of `VERIFY`; and the data of
 `CHAROUT` and `LINEOUT`. The conversions run in argument order, before any other argument check, so the error names the first argument
-whose answer has no string value, even where a later argument is also in
-error. A method's argument and a native routine's argument that has no string
+whose answer has no string value. A method's argument and a native routine's argument that has no string
 value raise the same error with their own position.
 
 ```rexx
