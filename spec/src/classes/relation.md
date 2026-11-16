@@ -278,7 +278,8 @@ the argument, and `.nil` when there is none. When several entries qualify,
 which item is answered is not specified ([the hash order
 rule](r:class.relation.deviation.33)). The methods take exactly one argument:
 none, or an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX
-93.902`; the number of arguments is checked before the index is looked up.
+93.902`; with a second argument, whether the index is looked up is unspecified,
+as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 r = .relation~new
@@ -288,7 +289,7 @@ r~put('y', 'k2')
 say r~at('k') r['k'] r~at('K') (r~at('zz') == .nil) (r~at(.nil) == .nil)
 say r~at('k2')~length (r~at('k2') == 'x' | r~at('k2') == 'y')
 call try 'r~at'
-call try 'r~at(, "x")'
+call try 'r~at("x", "x")'
 call try 'r~at("a", "b")'
 call try 'r[]'
 exit
@@ -305,7 +306,7 @@ bad: say arg(1) '=>' condition('o')~code
 item item The NIL object 1 1
 1 1
 r~at => 88.901
-r~at(, "x") => 93.902
+r~at("x", "x") => 93.902
 r~at("a", "b") => 93.902
 r[] => 88.901
 ```
@@ -334,7 +335,7 @@ say x~sort~makeString('L', ',') x~class~id r~allAt('j')~items
 e = r~allAt('zz')
 say e~items e~class~id
 call try 'r~allAt'
-call try 'r~allAt(, "x")'
+call try 'r~allAt("x", "x")'
 call try 'r~allAt("a", "b")'
 r2 = .relation~new
 r2~put('v', .k~new('s1'))
@@ -372,7 +373,7 @@ bad: say arg(1) '=>' condition('o')~code
 a,a,b Array 1
 0 Array
 r~allAt => 93.903
-r~allAt(, "x") => 93.902
+r~allAt("x", "x") => 93.902
 r~allAt("a", "b") => 93.902
 hash p 1
 ```
@@ -564,7 +565,7 @@ say x~sort~makeString('L', ',') x~class~id r~allIndex('b')~items,
   r~allIndex('zz')~items
 call try 'r~index'
 call try 'r~allIndex'
-call try 'r~index(, "x")'
+call try 'r~index("x", "x")'
 call try 'r~allIndex(1, 2)'
 exit
 try:
@@ -582,7 +583,7 @@ m 1 1
 j,k,k Array 1 0
 r~index => 93.903
 r~allIndex => 93.903
-r~index(, "x") => 93.902
+r~index("x", "x") => 93.902
 r~allIndex(1, 2) => 93.902
 ```
 

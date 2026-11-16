@@ -338,22 +338,22 @@ r[class.commandcontext.name]
 The `name` that `[]`, `getVar`, `[]=`, `setVar`, `hasVar` and `dropVar` take
 names a variable of the code that sent the command, a simple variable, a stem
 or a compound variable, as [a variable symbol](r:lex.symbols.variable) does,
-and its case plays no part. The number of the arguments is checked before the
-name is read: `getVar('1x', 2)`, `hasVar('1x', 2)` and `dropVar('1x', 2)` raise
-`SYNTAX 93.902`, and `setVar('1x')` raises `SYNTAX 93.901`, not `93.900`. A
-string is the name as it is; another object, an instance of a subclass of
-`String` apart ([the deviation rule](r:class.commandcontext.deviation.109)), is
-replaced by what it answers to the message `request` with the argument
-`String`. The `request` of `Object` answers what `makeString` answers, so an
-object with a `makeString`, an `Array` or a `MutableBuffer` is read through it.
-A name is refused with `SYNTAX 93.900` when it is no variable name: the null
-string, a string that starts with a digit or with a period, a string with a
-blank or with a character that no symbol can have, a number, and an object that
-does not answer a string. A name of a compound variable has its tail resolved
-in the code that sent the command, as [the tail rule](r:expr.variables.tail)
-says for a program; the example sets `c.i` while `i` holds `3`, and reads the
-variable back as `c.3`. Special names such as `RC`, `RESULT` and `SIGL` are
-names of variables like the others.
+and its case plays no part. A call with a wrong number of arguments and a bad
+name, such as `getVar('1x', 2)` or `setVar('1x')`, raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. A string is the
+name as it is; another object, an instance of a subclass of `String` apart
+([the deviation rule](r:class.commandcontext.deviation.109)), is replaced by
+what it answers to the message `request` with the argument `String`. The
+`request` of `Object` answers what `makeString` answers, so an object with a
+`makeString`, an `Array` or a `MutableBuffer` is read through it. A name is
+refused with `SYNTAX 93.900` when it is no variable name: the null string, a
+string that starts with a digit or with a period, a string with a blank or with
+a character that no symbol can have, a number, and an object that does not
+answer a string. A name of a compound variable has its tail resolved in the
+code that sent the command, as [the tail rule](r:expr.variables.tail) says for
+a program; the example sets `c.i` while `i` holds `3`, and reads the variable
+back as `c.3`. Special names such as `RC`, `RESULT` and `SIGL` are names of
+variables like the others.
 
 ```rexx
 x = .commandhandler~register('spec_cc_name', .namer~new)
@@ -443,7 +443,7 @@ x = .commandhandler~deregister('spec_cc_getvar')
   say caller['nilvar']~isNil caller['nothing'] caller['nothing.k']
   do x over .array~of("caller~getVar", "caller~'[]'",,
       "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')",,
-      "caller~getVar('1x', 2)")
+      "caller~getVar('X', 2)")
     self~try(caller, x)
   end
   return 0
@@ -465,7 +465,7 @@ caller~getVar 93.901
 caller~'[]' 93.901
 caller~getVar('a', 'b') 93.902
 caller~'[]'('a', 'b') 93.902
-caller~getVar('1x', 2) 93.902
+caller~getVar('X', 2) 93.902
 3
 ```
 
@@ -563,7 +563,7 @@ x = .commandhandler~deregister('spec_cc_setvar')
       "caller~setVar", "caller~setVar('a', 1, 2)", "caller~setVar('1x', 1)",,
       "caller~'[]='(1, '1x')", "caller~setVar('', 1)",,
       "caller~setVar(, 1)", "caller~'[]='(, 'x')", "caller~setVar('x', )",,
-      "caller~'[]='(1, )", "caller~setVar('1x')",,
+      "caller~'[]='(1, )", "caller~setVar('X')",,
       "x = caller~setVar('zz', 1)", "x = caller~'[]='(1, 'zz')")
     self~try(caller, x)
   end
@@ -591,7 +591,7 @@ caller~setVar(, 1) 93.903
 caller~'[]='(, 'x') 93.903
 caller~setVar('x', ) 93.901
 caller~'[]='(1, ) 93.901
-caller~setVar('1x') 93.901
+caller~setVar('X') 93.901
 x = caller~setVar('zz', 1) 91.999
 x = caller~'[]='(1, 'zz') 91.999
 by setVar | by bracket | compound | cleared cleared cleared
@@ -713,12 +713,9 @@ only one of them is redirected. `which` is required (`SYNTAX 88.901`) and one
 more argument raises `SYNTAX 88.922`. A `which` that starts with another letter
 or has none, the null string and a number among them, raises `SYNTAX 93.900`.
 An object that is not a string and answers no string to `request` with
-`STRING`, `.nil` and an `Object` among them, raises `SYNTAX 88.909`. The checks
-run in this order: `which` is present (`88.901`), then it is a string or
-answers one (`88.909`), then the number of arguments is right (`88.922`), then
-the letter is one of those above (`93.900`). So `isRedirected(, 1)` raises
-`88.901` and `isRedirected(.nil, 1)` raises `88.909`, however many arguments
-follow, while `isRedirected('Q', 1)` raises `88.922`.
+`STRING`, `.nil` and an `Object` among them, raises `SYNTAX 88.909`. A call
+with more than one of these faults, such as `isRedirected(.nil, 1)`, raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 x = .commandhandler~register('spec_cc_redir', .asker~new)
@@ -826,8 +823,7 @@ x = .commandhandler~deregister('spec_cc_redir_order')
 ::class asker inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("caller~isRedirected(, 1)",,
-      "caller~isRedirected(.nil, 1)", "caller~isRedirected('Q', 1)")
+  do x over .array~of("caller~isRedirected('I', 1)")
     self~try(caller, x)
   end
   return 0
@@ -842,9 +838,7 @@ bad: say x '=>' condition('o')~code
 ```
 
 ```output
-caller~isRedirected(, 1) => 88.901
-caller~isRedirected(.nil, 1) => 88.909
-caller~isRedirected('Q', 1) => 88.922
+caller~isRedirected('I', 1) => 88.922
 ```
 
 r[class.commandcontext.input]
@@ -1002,14 +996,14 @@ entry of the condition object, the object as it was given, and when it is
 omitted or `.nil` the condition object has no such entry. The condition object
 has `RC`, holding the `rc` object. `condition` and `rc` are required: `SYNTAX
 93.901` when they are fewer than two, `SYNTAX 93.903` when an omitted place
-stands for one of them, and `SYNTAX 93.902` for more than four arguments. The
-number of arguments is checked before the `condition` is read, so that
-`raise('BOGUS')` raises `SYNTAX 93.901`, not `93.900`. A `condition` that is
-none of the forms above, `ANY`, `NONE`, `PROPAGATE`, `USER` with no name or
-with more than one, any other text, the null string and `.nil` among them,
-raises `SYNTAX 93.900`. A call that raises an error does not use up the
-command's one condition, which [the second
-rule](r:class.commandcontext.raise.once) says.
+stands for one of them, and `SYNTAX 93.902` for more than four arguments. A
+call with a wrong number of arguments and a bad `condition`, such as
+`raise('BOGUS')`, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. A `condition` that is none of the forms
+above, `ANY`, `NONE`, `PROPAGATE`, `USER` with no name or with more than one,
+any other text, the null string and `.nil` among them, raises `SYNTAX 93.900`.
+A call that raises an error does not use up the command's one condition, which
+[the second rule](r:class.commandcontext.raise.once) says.
 
 ```rexx
 x = .commandhandler~register('spec_cc_raise', .raiser~new)
@@ -1088,7 +1082,7 @@ x = .commandhandler~deregister('spec_cc_raise_args')
 ::class tries inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("raise", "raise('ERROR')", "raise('BOGUS')",,
+  do x over .array~of("raise", "raise('ERROR')",,
       "raise(, 1)", "raise('ERROR', , 'text')",,
       "raise('ERROR', 1, 'd', 'a', 'x')",,
       "raise('FOO', 1)", "raise('ANY', 1)", "raise('NONE', 1)",,
@@ -1111,7 +1105,6 @@ bad: say x condition('o')~code
 ```output
 raise 93.901
 raise('ERROR') 93.901
-raise('BOGUS') 93.901
 raise(, 1) 93.903
 raise('ERROR', , 'text') 93.903
 raise('ERROR', 1, 'd', 'a', 'x') 93.902

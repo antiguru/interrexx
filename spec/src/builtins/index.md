@@ -3,7 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4, 98, 99, 101, 170]
+deviations: [4, 98, 99, 170]
 ---
 
 # Built-in functions
@@ -60,15 +60,15 @@ c: say condition('o')~code
 
 r[bif.index.call.too-many]
 A call whose argument count is greater than the number of arguments on the
-syntax line raises `SYNTAX 40.4`, whatever the values of the arguments,
-and even when the arguments before the last are omitted.
+syntax line raises `SYNTAX 40.4`, also when arguments before the last are
+omitted places that are not required.
 
 ```rexx
 signal on syntax name a
 say word('a b', 1, 2)
 a: say condition('o')~code
 signal on syntax name b
-say substr(, , , , 1)
+say substr('abc', 1, , , 1)
 b: say condition('o')~code
 ```
 
@@ -96,63 +96,56 @@ b: say condition('o')~code
 ```
 
 r[bif.index.call.order.count-before-missing]
-A call whose argument count is wrong raises the
+A call whose argument count is wrong and that also omits a [required
+argument](r:bif.index.call.missing) raises the error of one of them, the
 [too-few](r:bif.index.call.too-few) or [too-many](r:bif.index.call.too-many)
-error even when it also omits a [required argument](r:bif.index.call.missing).
+error or `SYNTAX 40.5`, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
 say word(, 1, 2)
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.4 40.5') > 0
 ```
 
 ```output
-40.4
+1
 ```
 
 r[bif.index.call.order.count-before-values]
-A call whose argument count is wrong raises the too-few or too-many error
-even when an argument it does pass would fail its own check.
+A call whose argument count is wrong and that passes an argument that would
+fail its own check raises the error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say substr('abc', 'x', 1, '**', 5)
+say substr('abc', 1, 1, '*', 5)
 a: say condition('o')~code
 signal on syntax name b
 say word('a b', 0, 2)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.4 93.924') > 0
 ```
 
 ```output
 40.4
-40.4
+1
 ```
 
 r[bif.index.call.order.missing-before-values]
-A call whose argument count is right but that omits a
-[required argument](r:bif.index.call.missing) raises `SYNTAX 40.5` even when an
-argument it passes after the omitted one would fail its own check, a
-[form check](r:conv.check.order) or a range check.
+A call whose argument count is right but that omits a [required
+argument](r:bif.index.call.missing) and passes another that would fail its
+own check, a [form check](r:conv.check.order) or a range check, raises the
+error of one of them, `SYNTAX 40.5` or the other argument's, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
 say substr(, 'x')
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.5 40.12') > 0
 signal on syntax name b
-say subword(, 0)
+say substr(, 1)
 b: say condition('o')~code
-signal on syntax name c
-say wordpos(, 'a', 0)
-c: say condition('o')~code
-signal on syntax name d
-say verify('abc', , 'Y')
-d: say condition('o')~code
 ```
 
 ```output
-40.5
-40.5
-40.5
+1
 40.5
 ```
 
@@ -164,22 +157,20 @@ r[bif.index.call.native]
 A builtin whose page links this rule does not follow the rules above for the
 number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
 their errors](r:bif.index.call.order.missing-before-values); its errors for
-them are of the 88.9xx family. A required argument that is omitted, whether
-the call stops short of it or leaves its place empty, raises `SYNTAX 88.901`.
-An argument past the last one on the syntax line raises `SYNTAX 88.922`, even
-when the arguments before it are omitted. As [for the other
-builtins](r:bif.index.call.count), a trailing omitted place adds nothing to
-the count. An argument that such a page calls a string and that is an object
+them are of the 88.9xx family. A required argument that is omitted, whether the
+call stops short of it or leaves its place empty, raises `SYNTAX 88.901`. An
+argument past the last one on the syntax line raises `SYNTAX 88.922`, also when
+the arguments before it are omitted places that are not required. As [for the
+other builtins](r:bif.index.call.count), a trailing omitted place adds nothing
+to the count. An argument that such a page calls a string and that is an object
 other than a string is replaced by the string that `request` with the argument
-`STRING` answers, as
-[for the other builtins](r:conv.string.object), but there is no fallback to
-the `STRING` method: an object whose `request` answers no string, such as one
-with no `MAKESTRING` method, raises
-`SYNTAX 88.909`, whatever its `STRING` method answers. As for the other
-builtins, the count comes first: a call that has an argument past the last
-one on the syntax line raises 88.922 even when an argument before it is
-omitted or fails its own check (see [Deviation
-101](r:bif.index.call.native.deviation.101)).
+`STRING` answers, as [for the other builtins](r:conv.string.object), but there
+is no fallback to the `STRING` method: an object whose `request` answers no
+string, such as one with no `MAKESTRING` method, raises `SYNTAX 88.909`,
+whatever its `STRING` method answers. A call that has an argument past the last
+one on the syntax line and an argument before it that is omitted or fails its
+own check raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -209,70 +200,32 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 z q
 ```
 
-r[bif.index.call.native.deviation.101]
-A builtin that follows the native call rule checks the count of its arguments
-before the arguments themselves, as [the other
-builtins](r:bif.index.call.order.count-before-values) do: a call that has an
-argument past the last one on the syntax line raises `SYNTAX 88.922` even when
-an argument before it is omitted, is an object whose `request` answers no
-string, or
-fails a check that its page gives. ooRexx reports an omitted argument, an
-object whose `request` answers no string and an argument that is not a whole
-number
-before the count, and the count before an argument's value: an option it does
-not allow or a number out of range.
-
-```rexx
-signal on syntax name a
-say filespec(, 'a/b', 'c')
-a: say condition('o')~code
-signal on syntax name b
-say filespec('N', .nil, 'c')
-b: say condition('o')~code
-signal on syntax name c
-say directory(.nil, 'x')
-c: say condition('o')~code
-signal on syntax name d
-say beep('x', 0, 1)
-d: say condition('o')~code
-```
-
-```output
-88.922
-88.922
-88.922
-88.922
-```
-
 r[bif.index.call.convert.deviation.170]
-A builtin converts every argument that its page calls a string and that is an
-object other than a string, from left to right and after it has checked the
-number of its arguments and that every argument it requires is there, before it
-checks any argument: a `STRING` method of
-a later argument runs even when an earlier argument is in error. The error the
-call raises is the one the checks give, as [the order of the
-checks](r:conv.check.order) says, whatever the conversions ran. ooRexx converts an argument as it checks
+A builtin's conversion of every argument that its page calls a string and
+that is an object other than a string is part of its checks. A call that has
+no fault converts those arguments from left to right before it checks any
+argument. When the call has a fault, which error it raises, and whether and to
+how many arguments it sends `STRING`, are unspecified, as [the precedence
+rule](r:conv.error.precedence) says. ooRexx converts an argument as it checks
 it and stops at the first that is in error, so a `STRING` method of a later
 argument does not run.
 
 ```rexx
-.local~n = 0
-signal on syntax
-say substr('abcdef', 'x', .c~new)
-syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
-.local~n = 0
-signal on syntax name omitted
-say substr(, 1, .c~new)
-omitted: say 'error' condition('o')~code 'STRING calls:' .local~n
+say substr('abcdef', .c~new('n'), .c~new('length'))
 ::class c
+::method init
+  expose tag
+  use arg tag
 ::method string
-  .local~n = .local~n + 1
+  expose tag
+  say 'STRING' tag
   return 2
 ```
 
 ```output
-error 40.12 STRING calls: 1
-error 40.5 STRING calls: 0
+STRING n
+STRING length
+bc
 ```
 
 ## Words
@@ -814,38 +767,28 @@ say d2x(999) d2x('1E2') d2x('-0') d2x('0099.90E1')
 ```
 
 r[bif.index.conv.decimal.order]
-The checks of a D2C or D2X call run in this order, and the first that fails
-is raised: the form of `n` ([whole-number form](r:conv.whole.form), `SYNTAX
-40.12`); whether the decimal argument is a number at all; the sign of `n`
-(`SYNTAX 93.923`); and last whether the decimal argument is a whole number
-with at most NUMERIC DIGITS digits. A decimal argument that is not a number
-is therefore raised even when `n` is negative, and a number that is not
-whole, or has too many digits, is raised only when `n` is not negative.
+A D2C or D2X call checks the form of `n` ([whole-number
+form](r:conv.whole.form), `SYNTAX 40.12`), the sign of `n` (`SYNTAX 93.923`)
+and the decimal argument ([the decimal rule](r:bif.index.conv.decimal)). A
+call that fails more than one of these checks raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say d2c('x', 'y')
+say d2c(65, 'y')
 a: say condition('o')~code
 signal on syntax name b
-say d2c('x', -1)
+say d2c(65, -1)
 b: say condition('o')~code
 signal on syntax name c
-say d2c('1234567890', -1)
-c: say condition('o')~code
-signal on syntax name d
 say d2x('1.5', -1)
-d: say condition('o')~code
-signal on syntax name e
-say d2x('x', -1)
-e: say condition('o')~code
+c: say wordpos(condition('o')~code, '93.923 93.928') > 0
 ```
 
 ```output
 40.12
-93.929
 93.923
-93.923
-93.928
+1
 ```
 
 r[bif.index.conv.digits-limit]
@@ -1030,12 +973,10 @@ of ten higher than the first digit of the number. When that power is above
 999999999, the call raises `SYNTAX 42.901`, although the number is within
 the [limits](r:bif.index.num.limit) before it is rounded. SIGN raises it
 too, for the same numbers, although its answer does not otherwise depend on
-NUMERIC DIGITS. In TRUNC and FORMAT the error comes after the checks of the
-arguments that their pages list, and in FORMAT before the checks of the fit
-of its result.
-In MAX and MIN it is the rounding of the receiver, and it comes before the
-checks of the other arguments, so a later argument that is not a number does
-not hide it. The same holds for the method forms of these calls.
+NUMERIC DIGITS. In MAX and MIN it is the rounding of the receiver. The same
+holds for the method forms of these calls. A call that also fails another
+check raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 1
@@ -1051,7 +992,7 @@ say format('99999e999999995', 0)
 c: say condition('o')~code
 signal on syntax name d
 say format('99999e999999995', -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '42.901 93.906') > 0
 numeric digits 9
 signal on syntax name e
 say abs('9.999999995e999999999')
@@ -1063,7 +1004,7 @@ e: say condition('o')~code
 42.901
 42.901
 42.901
-93.906
+1
 42.901
 ```
 
@@ -1077,7 +1018,7 @@ say max('95e999999998')
 b: say condition('o')~code
 signal on syntax name c
 say min('95e999999998', 'x')
-c: say condition('o')~code
+c: say wordpos(condition('o')~code, '42.901 93.904') > 0
 signal on syntax name d
 say '99999e999999995'~abs
 d: say condition('o')~code
@@ -1092,18 +1033,18 @@ say '99999e999999995'~trunc
 g: say condition('o')~code
 signal on syntax name h
 say '95e999999998'~max('x')
-h: say condition('o')~code
+h: say wordpos(condition('o')~code, '42.901 93.904') > 0
 ```
 
 ```output
 42.901
 42.901
+1
 42.901
 42.901
 42.901
 42.901
-42.901
-42.901
+1
 ```
 
 r[bif.index.num.write]
@@ -1172,15 +1113,16 @@ say abs('-1234567890') abs('2e11') abs('1.5e-19') abs('12345678e10')
 
 r[bif.index.num.list]
 The arguments of a call that takes a list of numbers are each a
-[number](r:bif.index.num.arg) that the call checks before it compares
-anything: first the receiver, which raises `SYNTAX 93.943` when it is not a
-number, and then the other arguments in order, the first one that is not a
-number raising `SYNTAX 93.904`. This includes a number outside the [exponent
-range](r:bif.index.num.limit), which for a later argument raises 93.904 where
-the receiver, and the other builtins, raise 93.943. The list has no upper
-limit on its length. Its argument count is checked by the [builtin call
-rules](r:bif.index.call.count), with one required argument and no most, so a
-call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
+[number](r:bif.index.num.arg) that the call checks before it compares anything:
+the receiver raises `SYNTAX 93.943` when it is not a number, and another
+argument that is not a number raises `SYNTAX 93.904`. A call with more than one
+argument that is not a number raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. This includes a number outside
+the [exponent range](r:bif.index.num.limit), which for a later argument raises
+93.904 where the receiver, and the other builtins, raise 93.943. The list has
+no upper limit on its length. Its argument count is checked by the [builtin
+call rules](r:bif.index.call.count), with one required argument and no most, so
+a call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
 an omitted first argument raises `SYNTAX 40.5`. A function call that omits an
 argument after the first but passes one after it raises `SYNTAX 40.5` too, as
 Deviation 53 says for [MAX](r:bif.max.deviation.53) and
@@ -1196,7 +1138,7 @@ signal on syntax name b
 say max(, 4)
 b: say condition('o')~code
 signal on syntax name c
-say min('one', 2, 'three')
+say min('one', 2, 3)
 c: say condition('o')~code
 signal on syntax name d
 say min(2, 'three', 'one')
@@ -1206,7 +1148,7 @@ say min(2, 3, .nil)
 e: say condition('o')~code
 signal on syntax name f
 say max('x', 3, 'y')
-f: say condition('o')~code
+f: say wordpos(condition('o')~code, '93.943 93.904') > 0
 signal on syntax name g
 say max(3, '')
 g: say condition('o')~code
@@ -1225,7 +1167,7 @@ i: say condition('o')~code
 93.943
 93.904
 93.904
-93.943
+1
 93.904
 93.904
 93.943
@@ -1486,10 +1428,10 @@ one two three four
 r[bif.index.stream.transient]
 A standard stream that is connected to a pipe is transient: it has no
 positions. A start or line number given to a transient stream raises
-`SYNTAX 93.958`, whatever its value: after the checks of [the argument
-rule](r:bif.index.stream.args) on the argument count, the form of the
-arguments and the count, and in place of that rule's check that the start is 1
-or more. CHAROUT given the name `STDIN` and a start is the exception: the
+`SYNTAX 93.958`, whatever its value, in place of [the argument
+rule](r:bif.index.stream.args)'s check that the start is 1 or more. A call
+that also fails another check of that rule raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says. CHAROUT given the name `STDIN` and a start is the exception: the
 start is not checked beyond its form, and the call [fails as any write to the
 standard input does](r:bif.charout.fail), with NOTREADY and the number of
 characters it did not write as its answer. The examples of
@@ -1510,14 +1452,14 @@ say charout(, 'x', 5)
 c: say condition('o')~code
 signal on syntax name d
 say charin(, 0, -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '88.907 93.958') > 0
 ```
 
 ```output
 93.958
 93.958
 93.958
-88.907
+1
 ```
 
 r[bif.index.stream.open]
@@ -1801,24 +1743,24 @@ r[bif.index.stream.args]
 A start, a count and a line number are [whole-number
 arguments](r:conv.whole.form) with the [value](r:bif.index.stream.value) that
 the next rule gives; they are not checked as the position and length arguments
-of [the String methods](r:conv.method) are. The call is checked in this order.
-The count of arguments comes first, by the [call
-rules](r:bif.index.call.count). Then the form and the value of every such
-argument, from left to right, raise `SYNTAX 40.12`. Then a count that is
-negative raises `SYNTAX 88.907`, and a count that the builtin's page does not
-allow raises the error that page names. Last, a
-[start](r:bif.index.stream.start) or line number that is below 1 raises
-`SYNTAX 93.907`.
+of [the String methods](r:conv.method) are. The count of arguments is checked
+by the [call rules](r:bif.index.call.count). The form and the value of such an
+argument raise `SYNTAX 40.12`, a count that is negative raises `SYNTAX 88.907`,
+a count that the builtin's page does not allow raises the error that page
+names, and a [start](r:bif.index.stream.start) or line number that is below 1
+raises `SYNTAX 93.907`. A call that fails more than one of these checks raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says.
 
 ```rexx
 f = 'spec-streams-args.tmp'
 call charout f, 'abc'
 signal on syntax name a
-say charin(f, 0, 'x')
+say charin(f, 1, 'x')
 a: say condition('o')~code
 signal on syntax name b
 say charin(f, 0, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '88.907 93.907') > 0
 signal on syntax name c
 say charin(f, 0, 1)
 c: say condition('o')~code
@@ -1831,7 +1773,7 @@ call sysfiledelete f
 
 ```output
 40.12
-88.907
+1
 93.907
 88.907
 ```

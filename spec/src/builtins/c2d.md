@@ -149,18 +149,18 @@ c: say condition('o')~code
 ```
 
 r[bif.c2d.errors]
-The checks of the call run in this order: the form of `n` as a
-[whole number](r:conv.whole.form), `SYNTAX 40.12`; then the sign of `n`,
-`SYNTAX 93.923`; and then the number of digits of the answer, `SYNTAX
-93.936`. A negative `n` is therefore raised even when the answer would not
-fit either.
+The call checks the form of `n` as a [whole number](r:conv.whole.form),
+`SYNTAX 40.12`; the sign of `n`, `SYNTAX 93.923`; and the number of digits of
+the answer, `SYNTAX 93.936`. A call that fails more than one of these checks
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say c2d('ffffffffffff'x, 'x')
+say c2d('ff'x, 'x')
 a: say condition('o')~code
 signal on syntax name b
-say c2d('ffffffffffff'x, -1)
+say c2d('ff'x, -1)
 b: say condition('o')~code
 signal on syntax name c
 say c2d('ffffffffffff'x)

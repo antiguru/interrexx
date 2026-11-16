@@ -726,11 +726,11 @@ fn logical_operators_do_not_short_circuit() {
 }
 
 #[test]
-fn logical_operators_check_the_left_operand_first() {
-    // say ('y' & 'x') -> reports "y", the left operand, when both are
-    // bad -- confirms evaluation order rather than assuming it.
+fn a_logical_operator_reports_a_bad_left_operand() {
+    // Only the left operand is bad: with both bad, which one is reported is
+    // unspecified (`r[conv.error.precedence]`).
     let mut interp = Interp::new();
-    let failure = eval_source(&mut interp, b"say ('y' & 'x')").unwrap_err();
+    let failure = eval_source(&mut interp, b"say ('y' & 1)").unwrap_err();
     let Failure::Raised(raised) = failure else {
         panic!("expected Raised, got {failure:?}");
     };

@@ -431,15 +431,15 @@ with two it answers the `len` characters from position `n`. The part is cut at
 the end of the receiver and is not padded, so a position past the end answers
 the null string. `n` must be a positive whole number (`SYNTAX 93.924`) and
 `len` a non-negative whole number (`93.923`); a value that is not a number at
-all raises the same error as one out of range, and the arguments are checked
-from left to right. An omitted `n` raises `93.903`, an omitted `len` is as no
-`len`, and a third argument raises `93.902`.
+all raises the same error as one out of range, and a call with both in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. An omitted `n` raises `93.903`, an omitted
+`len` is as no `len`, and a third argument raises `93.902`.
 
 ```rexx
 say 'abcdef'[2] 'abcdef'[2, 3] '['||'abcdef'[7]']' 'abcdef'[5, 9] 12345[2, 3]
 say '['||'abcdef'[2, 0]']' 'abcdef'~"[]"(1, ) 'abcdef'[2.0, '2']
 call try "'abc'[0]"
-call try "'abc'[0, -1]"
 call try "'abc'[1, -1]"
 call try "'abc'['x']"
 call try "'abc'[1, 'x']"
@@ -461,7 +461,6 @@ bad: say arg(1) '=>' condition('o')~code
 b bcd [] ef 234
 [] a bc
 'abc'[0] => 93.924
-'abc'[0, -1] => 93.924
 'abc'[1, -1] => 93.923
 'abc'['x'] => 93.924
 'abc'[1, 'x'] => 93.923
@@ -578,13 +577,14 @@ part of another is the lesser, whatever follows; numbers are not compared as
 numbers. The second argument `start` is the position, 1 by default, from which
 both strings are compared, and the third `length` is the number of characters
 compared of each, by default all that are left. A part that runs past the end
-of a string is cut there. The arguments are checked from left to right: the
-first, `other`, is required (`SYNTAX 93.903`) and has a string value as the
-conversion rule says (`88.909`, as for `.nil`; only the answer of `request` with
-the argument `STRING` is used,
-and then only for an object that is no string); `start` must be a positive
-whole number (`93.924`) and `length` a non-negative whole number (`93.923`); a
-fourth argument raises `93.902`.
+of a string is cut there. The first argument, `other`, is required (`SYNTAX
+93.903`) and has a string value as the conversion rule says (`88.909`, as for
+`.nil`; only the answer of `request` with the argument `STRING` is used, and
+then only for an object that is no string); `start` must be a positive whole
+number (`93.924`) and `length` a non-negative whole number (`93.923`); a fourth
+argument raises `93.902`, and a call with more than one argument in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 say 'abc'~compareTo('abc') 'b'~compareTo('a') 'a'~compareTo('b')
@@ -594,8 +594,8 @@ say '000abc000'~compareTo('111abc111', 4, 3) 'abc'~compareTo('abd', 1, 2)
 say 'abc'~compareTo('abd', 3) 'abc'~compareTo('abd', 4)
 say 'abc'~compareTo('abd', 1, 0)
 call try "'abc'~compareTo"
-call try "'abc'~compareTo(.nil, 0, -1)"
-call try "'abc'~compareTo('a', 0, -1)"
+call try "'abc'~compareTo(.nil)"
+call try "'abc'~compareTo('a', 0)"
 call try "'abc'~compareTo('a', 1, -1)"
 call try "'abc'~compareTo('a', 1, 1, 1)"
 exit
@@ -616,8 +616,8 @@ bad: say arg(1) '=>' condition('o')~code
 -1 0
 0
 'abc'~compareTo => 93.903
-'abc'~compareTo(.nil, 0, -1) => 88.909
-'abc'~compareTo('a', 0, -1) => 93.924
+'abc'~compareTo(.nil) => 88.909
+'abc'~compareTo('a', 0) => 93.924
 'abc'~compareTo('a', 1, -1) => 93.923
 'abc'~compareTo('a', 1, 1, 1) => 93.902
 ```
@@ -689,16 +689,16 @@ bad: say arg(1) '=>' condition('o')~code
 
 r[class.string.contains]
 `contains` answers 1 when its first argument, the needle, occurs in the
-receiver, and 0 otherwise; a needle that is the null string is never found.
-The search covers the whole receiver unless `start`, a position, and `length`,
-a number of characters from it, limit it, and then the needle must lie within
+receiver, and 0 otherwise; a needle that is the null string is never found. The
+search covers the whole receiver unless `start`, a position, and `length`, a
+number of characters from it, limit it, and then the needle must lie within
 that part. A `start` or a `length` that reaches past the end is cut there. The
 needle is required (`SYNTAX 93.903`) and is a string or else uses the string it
 [gives](r:class.index.string) (`88.909` for `.nil`), `start` must be a positive
-whole
-number (`93.924`) and `length` a non-negative whole number (`93.923`); the
-arguments are checked from left to right, and a fourth argument raises
-`93.902`. Case matters.
+whole number (`93.924`) and `length` a non-negative whole number (`93.923`); a
+fourth argument raises `93.902`, and a call with more than one argument in
+error raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. Case matters.
 
 ```rexx
 t = '-abcdef-'
@@ -710,7 +710,7 @@ say 'abc'~contains('') 'abc'~contains('B') '12345'~contains(23)
 call try "'abc'~contains"
 call try "'abc'~contains('b', 0)"
 call try "'abc'~contains('b', 1, -1)"
-call try "'abc'~contains(.nil, 0, -1)"
+call try "'abc'~contains(.nil)"
 call try "'abc'~contains('b', 1, 1, 1)"
 exit
 try:
@@ -731,7 +731,7 @@ bad: say arg(1) '=>' condition('o')~code
 'abc'~contains => 93.903
 'abc'~contains('b', 0) => 93.924
 'abc'~contains('b', 1, -1) => 93.923
-'abc'~contains(.nil, 0, -1) => 88.909
+'abc'~contains(.nil) => 88.909
 'abc'~contains('b', 1, 1, 1) => 93.902
 ```
 
@@ -914,19 +914,20 @@ e: say condition('o')~code
 
 r[class.string.match]
 `match` tests whether a part of its second argument occurs at a given place in
-the receiver. The arguments are `start`, the position in the receiver,
-`other`, the string, `n`, the position in `other` where the part begins (1 by
-default), and `length`, the number of characters in the part (by default all
-that are left from `n`). The answer is 1 when the part is not empty, lies
-wholly within `other` and wholly within the receiver counted from `start`, and
-has the characters that the receiver has there, and 0 otherwise. A part that
-is empty, begins after the end of `other`, or runs past the end of either
-string is not an error: the answer is 0. The arguments are checked from left
-to right: `start` and `n` must be positive whole numbers (`SYNTAX 93.924`),
-`other` is required, as `start` is (`93.903`), and is a string or else uses
-the string it [gives](r:class.index.string) (`88.909`), and `length` must be a
-non-negative whole
-number (`93.923`); a fifth argument raises `93.902`. Case matters.
+the receiver. The arguments are `start`, the position in the receiver, `other`,
+the string, `n`, the position in `other` where the part begins (1 by default),
+and `length`, the number of characters in the part (by default all that are
+left from `n`). The answer is 1 when the part is not empty, lies wholly within
+`other` and wholly within the receiver counted from `start`, and has the
+characters that the receiver has there, and 0 otherwise. A part that is empty,
+begins after the end of `other`, or runs past the end of either string is not
+an error: the answer is 0. `start` and `n` must be positive whole numbers
+(`SYNTAX 93.924`), `other` is required, as `start` is (`93.903`), and is a
+string or else uses the string it [gives](r:class.index.string) (`88.909`), and
+`length` must be a non-negative whole number (`93.923`); a fifth argument
+raises `93.902`. A call with more than one argument in error raises the error
+of one of them, as [the precedence rule](r:conv.error.precedence) says. Case
+matters.
 
 ```rexx
 t = 'Wednesday'
@@ -938,8 +939,8 @@ say t~match(1, 'W', 1, 0) t~match(1, 'W', 1, 2) t~match(1, 'W', , 1)
 call try "t~match"
 call try "t~match(1)"
 call try "t~match(0, 'W')"
-call try "t~match(1, .nil, 0, -1)"
-call try "t~match(1, 'W', 0, -1)"
+call try "t~match(1, .nil)"
+call try "t~match(1, 'W', 0)"
 call try "t~match(1, 'W', 1, -1)"
 call try "t~match(1, 'W', 1, 1, 1)"
 exit
@@ -961,8 +962,8 @@ bad: say arg(1) '=>' condition('o')~code
 t~match => 93.903
 t~match(1) => 93.903
 t~match(0, 'W') => 93.924
-t~match(1, .nil, 0, -1) => 88.909
-t~match(1, 'W', 0, -1) => 93.924
+t~match(1, .nil) => 88.909
+t~match(1, 'W', 0) => 93.924
 t~match(1, 'W', 1, -1) => 93.923
 t~match(1, 'W', 1, 1, 1) => 93.902
 ```
@@ -991,10 +992,11 @@ r[class.string.matchchar]
 one of the characters of its second argument, the set, and 0 otherwise: when
 it is not in the set, when the set is the null string, and when `n` is past
 the end of the receiver. Both arguments are required (`SYNTAX 93.903`), `n`
-must be a positive whole number (`93.924`) and is checked first, the set is a
-string or else uses the string it [gives](r:class.index.string) (`88.909`), and
-a third argument
-raises `93.902`. Case matters.
+must be a positive whole number (`93.924`), the set is a string or else uses
+the string it [gives](r:class.index.string) (`88.909`), and a third argument
+raises `93.902`. A call whose `n` and set are both in error raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. Case
+matters.
 
 ```rexx
 t = 'Saturday'
@@ -1002,7 +1004,7 @@ say t~matchChar(1, 'xyzS') t~matchChar(2, 'A') t~matchChar(2, 'a')
 say t~matchChar(3, '')
 say t~matchChar(9, 'y') t~matchChar(8, 'y') '12'~matchChar(2, 12)
 call try "t~matchChar(1)"
-call try "t~matchChar(0, .nil)"
+call try "t~matchChar(0, 'a')"
 call try "t~matchChar(1, .nil)"
 call try "t~matchChar(1, 'a', 'b')"
 exit
@@ -1020,7 +1022,7 @@ bad: say arg(1) '=>' condition('o')~code
 0
 0 1 1
 t~matchChar(1) => 93.903
-t~matchChar(0, .nil) => 93.924
+t~matchChar(0, 'a') => 93.924
 t~matchChar(1, .nil) => 88.909
 t~matchChar(1, 'a', 'b') => 93.902
 ```
@@ -1124,12 +1126,13 @@ bad: say arg(1) '=>' condition('o')~code
 r[class.string.caselesschangestr]
 `caselessChangeStr` is [`changeStr`](r:bif.changestr.method) with upper and
 lower case letters taken as equal in the search: it answers the receiver with
-occurrences of the needle replaced by the new string, the first `count` of
-them when `count` is given. The replacement is put in as written, whatever
-case the text it replaces had. A needle that is the null string changes
-nothing. `count` must not be negative (`SYNTAX 93.906`); the arguments are
-checked from left to right, the first two are required (`93.903`), and a
-fourth raises `93.902`.
+occurrences of the needle replaced by the new string, the first `count` of them
+when `count` is given. The replacement is put in as written, whatever case the
+text it replaces had. A needle that is the null string changes nothing. `count`
+must not be negative (`SYNTAX 93.906`); the first two are required (`93.903`),
+a fourth raises `93.902`, and a call with more than one argument in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 say 'Hello'~caselessChangeStr('L', 'x') 'Hello'~caselessChangeStr('L', 'x', 1)
@@ -1137,7 +1140,7 @@ say 'Hello'~caselessChangeStr('L', 'x', 0) 'Hello'~caselessChangeStr('', 'x')
 say 'Hello'~caselessChangeStr('L', '') 'Hello'~changeStr('L', 'x')
 call try "'Hello'~caselessChangeStr('L')"
 call try "'Hello'~caselessChangeStr('L', 'x', -1)"
-call try "'Hello'~caselessChangeStr(.nil, 'x', -1)"
+call try "'Hello'~caselessChangeStr(.nil, 'x')"
 call try "'Hello'~caselessChangeStr('L', 'x', 1, 1)"
 exit
 try:
@@ -1155,7 +1158,7 @@ Hello Hello
 Heo Hello
 'Hello'~caselessChangeStr('L') => 93.903
 'Hello'~caselessChangeStr('L', 'x', -1) => 93.906
-'Hello'~caselessChangeStr(.nil, 'x', -1) => 88.909
+'Hello'~caselessChangeStr(.nil, 'x') => 88.909
 'Hello'~caselessChangeStr('L', 'x', 1, 1) => 93.902
 ```
 
@@ -1245,13 +1248,14 @@ String 0
 r[class.string.subwords]
 `subWords` answers a new array of strings, the words of the receiver from the
 word `n`, 1 by default, up to `count` words, by default all that are left.
-Words are those of [the word rule](r:bif.index.words.split): they are
-separated by blanks and tabs, and the white space around them is not part of
-them. A `n` past the last word, and a `count` of 0, answer an empty array;
-a `count` larger than the number of words left is cut. `n` must be a positive
-whole number (`SYNTAX 93.924`) and `count` a non-negative whole number
-(`93.923`), checked in that order; a third argument raises `93.902`. The
-items are strings of class `String`.
+Words are those of [the word rule](r:bif.index.words.split): they are separated
+by blanks and tabs, and the white space around them is not part of them. A `n`
+past the last word, and a `count` of 0, answer an empty array; a `count` larger
+than the number of words left is cut. `n` must be a positive whole number
+(`SYNTAX 93.924`) and `count` a non-negative whole number (`93.923`); a third
+argument raises `93.902`, and a call with both in error raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says. The items are
+strings of class `String`.
 
 ```rexx
 t = 'a b c d'
@@ -1262,7 +1266,7 @@ say '  a   b  '~subWords~items '  a   b  '~subWords~at(1) ''~subWords~items
 say t~subWords(,2)~items t~subWords(2)~at(1)~class~id
 call try "t~subWords(0)"
 call try "t~subWords(1, -1)"
-call try "t~subWords('x', 'y')"
+call try "t~subWords('x')"
 call try "t~subWords(1, 1, 1)"
 exit
 try:
@@ -1282,7 +1286,7 @@ c
 2 String
 t~subWords(0) => 93.924
 t~subWords(1, -1) => 93.923
-t~subWords('x', 'y') => 93.924
+t~subWords('x') => 93.924
 t~subWords(1, 1, 1) => 93.902
 ```
 
@@ -1294,10 +1298,11 @@ of the receiver is cut there. When `position` is more than one past the end of
 the receiver, the gap is filled with the pad, a blank by default. `newstr` and
 `position` are required (`SYNTAX 93.903`), and `newstr` is a string or else
 uses the string it [gives](r:class.index.string) (`88.909`), `position` must be
-a positive whole
-number (`93.924`), `length` a non-negative whole number (`93.923`) and the pad
-a single character (`93.922`); the arguments are checked from left to right,
-and a fifth raises `93.902`. A `length` of 0 inserts `newstr`.
+a positive whole number (`93.924`), `length` a non-negative whole number
+(`93.923`) and the pad a single character (`93.922`); a fifth raises `93.902`,
+and a call with more than one argument in error raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. A `length` of 0
+inserts `newstr`.
 
 ```rexx
 s = 'abcdef'
@@ -1307,9 +1312,9 @@ say s~replaceAt('XY', 7) s~replaceAt('', 3, 2) s~replaceAt(12, 3)
 say s~replaceAt('XY', 9)'|' s~replaceAt('XY', 9, 1, '*')
 call try "s~replaceAt"
 call try "s~replaceAt('XY')"
-call try "s~replaceAt(.nil, 0, -1, '**')"
-call try "s~replaceAt('X', 0, -1, '**')"
-call try "s~replaceAt('X', 1, -1, '**')"
+call try "s~replaceAt(.nil, 1)"
+call try "s~replaceAt('X', 0)"
+call try "s~replaceAt('X', 1, -1)"
 call try "s~replaceAt('X', 1, 1, '**')"
 call try "s~replaceAt('X', 1, 1, '')"
 call try "s~replaceAt('X', 1, 1, '*', 1)"
@@ -1330,9 +1335,9 @@ abcdefXY abef ab12ef
 abcdef  XY| abcdef**XY
 s~replaceAt => 93.903
 s~replaceAt('XY') => 93.903
-s~replaceAt(.nil, 0, -1, '**') => 88.909
-s~replaceAt('X', 0, -1, '**') => 93.924
-s~replaceAt('X', 1, -1, '**') => 93.923
+s~replaceAt(.nil, 1) => 88.909
+s~replaceAt('X', 0) => 93.924
+s~replaceAt('X', 1, -1) => 93.923
 s~replaceAt('X', 1, 1, '**') => 93.922
 s~replaceAt('X', 1, 1, '') => 93.922
 s~replaceAt('X', 1, 1, '*', 1) => 93.902
@@ -1441,20 +1446,21 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.string.modulo]
-`modulo` answers the remainder of the receiver divided by its argument `n`.
-The answer is never negative and is less than `n`, so for a negative receiver
+`modulo` answers the remainder of the receiver divided by its argument `n`. The
+answer is never negative and is less than `n`, so for a negative receiver
 `(-7)~modulo(4)` is 1. The receiver must be a number (`SYNTAX 93.943`) and a
 whole number (`93.940`): a number written with no period and no exponent is a
 whole number whatever its length, and any other number must be exactly whole,
 without rounding, and its value must have at most `NUMERIC DIGITS` digits. The
 argument is required (`93.903`) and must be a positive whole number (`93.907`)
-in the same sense, checked after the receiver; a second argument raises
-`93.902`. An argument that is not a string is converted to a number as
-[the conversion rule](r:conv.string.object) says, as the other numeric
-arguments are. The remainder is found as
-[the `//` operator](r:num.arithmetic.integer) finds it, and written as that
-operator writes it, so a quotient wider than `NUMERIC DIGITS` raises
-`SYNTAX 26.12`, for a negative receiver too.
+in the same sense; a second argument raises `93.902`. A call whose receiver and
+argument are both in error raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. An argument that is not a string is
+converted to a number as [the conversion rule](r:conv.string.object) says, as
+the other numeric arguments are. The remainder is found as [the `//`
+operator](r:num.arithmetic.integer) finds it, and written as that operator
+writes it, so a quotient wider than `NUMERIC DIGITS` raises `SYNTAX 26.12`, for
+a negative receiver too.
 
 ```rexx
 say 9~modulo(4) (-7)~modulo(4) 0~modulo(5) '1e2'~modulo(7) 12~modulo(' 5 ')
@@ -1465,8 +1471,7 @@ call try "10~modulo(-3)"
 call try "10~modulo(3.5)"
 call try "10~modulo('x')"
 call try "10.5~modulo(3)"
-call try "10.5~modulo(0)"
-call try "'x'~modulo('y')"
+call try "'x'~modulo(3)"
 call try "'1E+30'~modulo(7)"
 call try "10~modulo(3, 4)"
 numeric digits 3
@@ -1494,8 +1499,7 @@ bad: say arg(1) '=>' condition('o')~code
 10~modulo(3.5) => 93.907
 10~modulo('x') => 93.907
 10.5~modulo(3) => 93.940
-10.5~modulo(0) => 93.940
-'x'~modulo('y') => 93.943
+'x'~modulo(3) => 93.943
 '1E+30'~modulo(7) => 93.940
 10~modulo(3, 4) => 93.902
 6 1.00
@@ -1645,30 +1649,26 @@ a+b 7 ababab
 ```
 
 r[class.string.builtins.errors]
-A method of the list is checked as the method itself checks it, argument by
-argument and from left to right, without the earlier check that a function
-call makes. The function form first checks the form of its arguments, as
-[the order rule](r:conv.check.order) says, and raises the codes of
-[the whole-number](r:conv.whole.form), [pad](r:conv.pad) and
-[argument count](r:bif.index.call.count) rules. In the message form an
-argument that fails its form raises the code of its range check. The message
-form raises these errors: for a position that is not a positive whole number,
-`SYNTAX 93.924` whatever the value is, `abc` or 0 or 1.5; for a length that is
-not a non-negative whole number, `93.923`; for a pad that is not a single
-character, `93.922`; for a missing argument, or an omitted one that is
-followed by another, `93.903`; and for too many arguments, `93.902`, as
-[the argument rules](r:class.index.args.count) say. A count or a number of
-copies that is not a non-negative whole number raises `93.906`, and the other
-arguments raise the code that the page of the builtin gives. Because the
-message form checks one argument at a time, a bad position before a length
-that is not a number is the error raised, where the function form raises 40.12
-for the length first.
+A method of the list is checked as the method itself checks it, without the
+earlier check that a function call makes. The function form checks the form of
+its arguments, as [the conventions](r:conv.check.order) say, and raises the
+codes of [the whole-number](r:conv.whole.form), [pad](r:conv.pad) and [argument
+count](r:bif.index.call.count) rules. In the message form an argument that
+fails its form raises the code of its range check. The message form raises
+these errors: for a position that is not a positive whole number, `SYNTAX
+93.924` whatever the value is, `abc` or 0 or 1.5; for a length that is not a
+non-negative whole number, `93.923`; for a pad that is not a single character,
+`93.922`; for a missing argument, or an omitted one that is followed by
+another, `93.903`; and for too many arguments, `93.902`, as [the argument
+rules](r:class.index.args.count) say. A count or a number of copies that is not
+a non-negative whole number raises `93.906`, and the other arguments raise the
+code that the page of the builtin gives. A call with more than one argument in
+error raises the error of one of them, in either form, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 call try "'abc'~substr('x')"
 call try "substr('abc', 'x')"
-call try "'abc'~substr(0, 'x')"
-call try "substr('abc', 0, 'x')"
 call try "'abc'~left('x')"
 call try "left('abc', 'x')"
 call try "'abc'~left(1, '**')"
@@ -1694,8 +1694,6 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 'abc'~substr('x') => 93.924
 substr('abc', 'x') => 40.12
-'abc'~substr(0, 'x') => 93.924
-substr('abc', 0, 'x') => 40.12
 'abc'~left('x') => 93.923
 left('abc', 'x') => 40.12
 'abc'~left(1, '**') => 93.922

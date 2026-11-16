@@ -516,7 +516,7 @@ say q~append('d') q~allItems~makeString('L', ',') q~items
 say q~append('e') q~allItems~makeString('L', ',') q~last
 say (.circularqueue~new(0)~append('a') == .nil)
 call try 'q~append'
-call try 'q~append(, 1)'
+call try 'q~append(1, 1)'
 call try 'q~append(1, 2)'
 say q~allItems~makeString('L', ',')
 exit
@@ -535,7 +535,7 @@ bad: say arg(1) '=>' condition('o')~code
 3 c,d,e 3
 1
 q~append => 93.901
-q~append(, 1) => 93.902
+q~append(1, 1) => 93.902
 q~append(1, 2) => 93.902
 c,d,e
 ```
@@ -590,16 +590,16 @@ q~insert("q", 1, 1) => 93.902
 ## Resizing
 
 r[class.circularqueue.resize]
-`resize(newSize, order)` changes the size to `newSize` and answers `newSize`
-as it was given. When the queue holds more items than the new size, the
-surplus is taken out, from the head for the order `Fifo`, which is the
-default, and from the tail for `Lifo`, so that the other end is kept. The
-`newSize` is read as the size of [the new rule](r:class.circularqueue.new) is,
-with the message `<` and the errors that rule names; a missing `newSize`
-raises `SYNTAX 93.901`, an omitted one before an `order` raises
-`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`; the arguments are
-counted first, then the `newSize` is read, then the order. The first character
-of the order, in either case, is `F` or `L`, and an order whose first
+`resize(newSize, order)` changes the size to `newSize` and answers `newSize` as
+it was given. When the queue holds more items than the new size, the surplus is
+taken out, from the head for the order `Fifo`, which is the default, and from
+the tail for `Lifo`, so that the other end is kept. The `newSize` is read as
+the size of [the new rule](r:class.circularqueue.new) is, with the message `<`
+and the errors that rule names; a missing `newSize` raises `SYNTAX 93.901`, an
+omitted one before an `order` raises `SYNTAX 93.903`, and a third argument
+`SYNTAX 93.902`; a call with more than one of these faults raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. The first
+character of the order, in either case, is `F` or `L`, and an order whose first
 character is another, the null string included, raises `SYNTAX 93.914`; the
 order is read by [the order rule](r:class.circularqueue.order). A size 0
 empties the queue.
@@ -729,14 +729,14 @@ for `start`, which is `.nil`, and the positions after it are 1, 2 and so on.
 The `start` is read as [the Queue index rule](r:class.queue.indexes) says;
 `count` must be a whole number from 0 up, or `SYNTAX 93.906` is raised, `.nil`
 raising `SYNTAX 97.1`. No `start` raises `SYNTAX 93.901`, an omitted one
-`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The arguments are counted
-first, an omitted `start` among them, so that it is refused before `count` is
-sent anything. `count` is then checked with the messages and conditions of
-[the new rule](r:class.circularqueue.new.sends), after which its string value
-is read once more; that second value is the count, and one below 0 or not a
-whole number raises `SYNTAX 93.906`, so a count whose string value is `-1` is
-refused even when its `<` answers 0. `start` is read last.
-The answer is not the receiver, and the receiver is not changed.
+`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. `count` is checked with
+the messages and conditions of [the new rule](r:class.circularqueue.new.sends),
+after which its string value is read once more; that second value is the count,
+and one below 0 or not a whole number raises `SYNTAX 93.906`, so a count whose
+string value is `-1` is refused even when its `<` answers 0. A call whose
+`start` and `count` are both wrong raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. The answer is not the receiver,
+and the receiver is not changed.
 
 ```rexx
 q = .circularqueue~of('a', 'b', 'c', 'd')
@@ -755,12 +755,9 @@ call show e~section(2, 99)
 say q~items q~size q~allItems~makeString('L', ',')
 call try 'q~section'
 call try 'q~section(, 1)'
-call try 'q~section(, "x")'
-call try 'q~section(, .loud~new(0, "1"))'
 call try 'q~section(0)'
 call try 'q~section(.nil)'
 call try 'q~section("x")'
-call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, 1.5)'
@@ -808,12 +805,9 @@ CircularQueue 5 5 [b|c|The NIL object|The NIL object|a]
 4 4 a,b,c,d
 q~section => 93.901
 q~section(, 1) => 93.903
-q~section(, "x") => 93.903
-q~section(, .loud~new(0, "1")) => 93.903
 q~section(0) => 93.907
 q~section(.nil) => 93.907
 q~section("x") => 93.907
-q~section(0, -1) => 93.906
 q~section(1, -1) => 93.906
 q~section(1, "x") => 93.906
 q~section(1, 1.5) => 93.906

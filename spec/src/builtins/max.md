@@ -43,12 +43,13 @@ c: say condition('o')~code
 
 r[bif.max.omitted]
 Sent as a message to a receiver that is a number, MAX raises `SYNTAX 93.903`
-when an argument is omitted and a later argument is passed, whether the
-omitted place is the first argument after the receiver or a later one. Omitted
-places after the last number passed are no arguments at all. A receiver that
-is not a number raises `SYNTAX 93.943` first. (This is the message form; a
-function call raises `SYNTAX 40.5` for the same mistake, as [Deviation
-53](r:bif.max.deviation.53) says.)
+when an argument is omitted and a later argument is passed, whether the omitted
+place is the first argument after the receiver or a later one. Omitted places
+after the last number passed are no arguments at all. A receiver that is not a
+number raises `SYNTAX 93.943`, and one of the two errors when an argument is
+also omitted, as [the precedence rule](r:conv.error.precedence) says. (This is
+the message form; a function call raises `SYNTAX 40.5` for the same mistake, as
+[Deviation 53](r:bif.max.deviation.53) says.)
 
 ```rexx
 say (4)~max(2,,)
@@ -60,14 +61,14 @@ say (1)~max(2,,3)
 b: say condition('o')~code
 signal on syntax name c
 say ('x')~max(,3)
-c: say condition('o')~code
+c: say wordpos(condition('o')~code, '93.943 93.903') > 0
 ```
 
 ```output
 4
 93.903
 93.903
-93.943
+1
 ```
 
 ## The result

@@ -19,8 +19,8 @@ DELSTR is a builtin that runs as a [String method](r:class.string.builtins),
 and `string`, its first argument, is the receiver; `n` and `length` become the
 message's arguments, in that order. `string` is a
 [string](r:conv.string.null), `n` is a [position](r:conv.position.check), and
-`length` is a [length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+`length` is a [length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): one is required and three is
 the most.
 
@@ -42,11 +42,11 @@ signal on syntax name e
 say delstr(, 2)
 e: say condition('o')~code
 signal on syntax name f
-say delstr('fghij', 'x', -1)
+say delstr('fghij', 'x')
 f: say condition('o')~code
 signal on syntax name g
 say delstr('fghij', 0, -1)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.924 93.923') > 0
 ```
 
 ```output
@@ -57,7 +57,7 @@ fgj fgj fg []
 40.4
 40.5
 40.12
-93.924
+1
 ```
 
 r[bif.delstr.n.default]

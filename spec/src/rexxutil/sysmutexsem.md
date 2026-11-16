@@ -31,9 +31,7 @@ than the null string, or an object whose string value is such a string, asks
 for a semaphore that other programs can open, which
 [Deviation 43](r:util.sysmutexsem.deviation.43) says is refused. A name that
 is an object with no string value, as `.nil` is, raises `SYNTAX 88.909`; the
-second example shows it. Which handle a call answers is not specified. When
-an argument past the last one comes with an omitted or wrong argument,
-[Deviation 101](r:util.index.deviation.101) says which error is raised.
+second example shows it. Which handle a call answers is not specified. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised.
 
 ```rexx
 numeric digits 20
@@ -225,9 +223,7 @@ The functions that take a handle read it as [the handle rule of the event
 semaphore functions](r:util.syseventsem.handle) says, and raise the same
 errors for the same values: a missing handle `SYNTAX 88.901`, a second
 argument of SysReleaseMutexSem or SysCloseMutexSem `SYNTAX 88.922`, and a
-value that is no whole number in range `SYNTAX 88.907`. When an argument past
-the last one comes with an omitted or wrong argument, [Deviation
-101](r:util.index.deviation.101) says which error is raised. A whole number
+value that is no whole number in range `SYNTAX 88.907`. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised. A whole number
 that is not the handle of an open semaphore is answered as [Deviation
 158](r:util.sysmutexsem.deviation.158) says.
 
@@ -320,21 +316,18 @@ say SysCloseMutexSem(h) SysCloseMutexSem(h)
 
 r[util.sysmutexsem.open]
 SysOpenMutexSem takes the name of a semaphore and answers its handle, or `0`
-for a name that it cannot open. The name is required: a call without one
-raises `SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that
-has no string value `SYNTAX 88.909`. The null string is no name of a
-semaphore, so that the call answers `0`. A name that is not the null string is
-refused ([Deviation 43](r:util.sysmutexsem.deviation.43)). An omitted name and
-an object that has no string value are reported before an argument that
-follows them: `SysOpenMutexSem(, 1)` raises `SYNTAX 88.901` and
-`SysOpenMutexSem(.nil, 1)` `SYNTAX 88.909`.
+for a name that it cannot open. The name is required: a call without one raises
+`SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that has no
+string value `SYNTAX 88.909`. The null string is no name of a semaphore, so
+that the call answers `0`. A name that is not the null string is refused
+([Deviation 43](r:util.sysmutexsem.deviation.43)). A call with a second
+argument and an omitted name, or a name that has no string value, raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 call try "SysOpenMutexSem()"
 call try "SysOpenMutexSem(,)"
 call try "SysOpenMutexSem('', 1)"
-call try "SysOpenMutexSem(, 1)"
-call try "SysOpenMutexSem(.nil, 1)"
 call try "SysOpenMutexSem(.nil)"
 call try "SysOpenMutexSem('')"
 call try "SysOpenMutexSem(.mutablebuffer~new)"
@@ -352,8 +345,6 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
-88.901
-88.909
 88.909
 0
 0

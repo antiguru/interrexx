@@ -726,22 +726,23 @@ r[class.traceobject.makestringimpl]
 one argument, in the format that the `option` names. With `N` it is the
 `TRACELINE` entry, or `?` when the object has none. With `T` the number of the
 thread is put inside the flag of the trace line: after the first two characters
-of `*-*`, so that it reads `*-1*`, and likewise `>>1>`; this describes the lines
-that the interpreter makes, and where the number goes in any other text that a
-program sets as `TRACELINE` is not specified here. With `S` the line is preceded
-by `[T`, the thread number padded to three columns and at least one blank, `I`
-and the invocation number padded to two columns, `]` and fifteen blanks. With
-`F` the prefix is `[R`, the interpreter number padded to four columns and at
-least one blank, `T`, the thread number in the same way, `I`, the invocation
-number padded to four columns, `]` and eighteen blanks. With `P` the entry
-`OPTION` of the object chooses the format: a value equal, as the `=` operator
-compares, to `N` or `P` gives that of `N`, `T` that of `T` and `S` that of `S`,
-and any other value, the lower-case letters and the null string included, that
-of `F`; an object without an `OPTION` entry is formatted like `N`. [The line of
-a method](r:class.traceobject.makestringimpl.method) carries more fields in the
-prefix. `makeStringImpl` raises `SYNTAX 93.901` with no argument, `93.902` with
-two and `93.924` for a string argument, in this order: the number of arguments
-is checked first, so that `makeStringImpl('x', 1)` raises `93.902`; [the next
+of `*-*`, so that it reads `*-1*`, and likewise `>>1>`; this describes the
+lines that the interpreter makes, and where the number goes in any other text
+that a program sets as `TRACELINE` is not specified here. With `S` the line is
+preceded by `[T`, the thread number padded to three columns and at least one
+blank, `I` and the invocation number padded to two columns, `]` and fifteen
+blanks. With `F` the prefix is `[R`, the interpreter number padded to four
+columns and at least one blank, `T`, the thread number in the same way, `I`,
+the invocation number padded to four columns, `]` and eighteen blanks. With `P`
+the entry `OPTION` of the object chooses the format: a value equal, as the `=`
+operator compares, to `N` or `P` gives that of `N`, `T` that of `T` and `S`
+that of `S`, and any other value, the lower-case letters and the null string
+included, that of `F`; an object without an `OPTION` entry is formatted like
+`N`. [The line of a method](r:class.traceobject.makestringimpl.method) carries
+more fields in the prefix. `makeStringImpl` raises `SYNTAX 93.901` with no
+argument, `93.902` with two and `93.924` for a string argument, and a call with
+two arguments of which the first is a string raises one of them, as [the
+precedence rule](r:conv.error.precedence) says; [the next
 rule](r:class.traceobject.makestringimpl.sends) gives the reading of the
 argument. A `StringTable` without entries gives `?`.
 
@@ -765,7 +766,7 @@ say '['t~makeStringImpl(n)']' '['t~makeStringImpl(.stringtable~new)']'
 call try 't~makeStringImpl'
 call try 't~makeStringImpl(n, n)'
 call try 't~makeStringImpl(1)'
-call try "t~makeStringImpl('x', 1)"
+call try "t~makeStringImpl(.stringtable~new, 1)"
 exit
 try:
   signal on syntax name bad
@@ -826,7 +827,7 @@ option P
 t~makeStringImpl => 93.901
 t~makeStringImpl(n, n) => 93.902
 t~makeStringImpl(1) => 93.924
-t~makeStringImpl('x', 1) => 93.902
+t~makeStringImpl(.stringtable~new, 1) => 93.902
 ```
 
 > **Note.** The option applies to the lines a program traces, as the next

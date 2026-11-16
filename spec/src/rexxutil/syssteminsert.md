@@ -23,8 +23,7 @@ r[util.syssteminsert.args]
 `stem`, `position` and `value` are all required. `stem` names a stem as [the
 stem name rule](r:util.index.stemname) says. The call follows [the argument
 rule](r:util.index.args): an argument that is missing, or is omitted, raises
-`SYNTAX 88.901`, and a fourth argument raises `SYNTAX 88.922` ([Deviation
-101](r:util.index.deviation.101) is about which of the two comes first).
+`SYNTAX 88.901`, and a fourth argument raises `SYNTAX 88.922` ([the precedence rule](r:conv.error.precedence) says which of the two a call with both raises).
 `position` is read as a whole number that is at least `1`, with its blanks, a
 leading plus sign, a decimal point and an exponent, so that `' 2 '` and `1e0`
 are numbers. The value is read as [the whole-number rule](r:util.index.whole)
@@ -232,27 +231,26 @@ f: say condition('o')~code s.0 s.1 symbol('s.2') symbol('s.3')
 40.924 2 a LIT LIT
 ```
 
-## Order of the checks
+## The checks
 
 r[util.syssteminsert.order]
-When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises `SYNTAX 88.901` when it
-is missing and `SYNTAX 40.919` when it is not a name; then `position` raises
+The call can fail these checks: the name of the stem raises `SYNTAX 88.901`
+when it is missing and `SYNTAX 40.919` when it is not a name; `position` raises
 `SYNTAX 88.901` when it is missing and `SYNTAX 88.905` when it is not a whole
-number of at least `1`; then a missing `value` raises `SYNTAX 88.901`; then
-the tail `0` of the stem raises
-`SYNTAX 40.922`; then `position` raises `SYNTAX 40.923` when it is past the
-count; and last an item that has to move and has no value raises
-`SYNTAX 40.924`, with the count left as it was.
+number of at least `1`; a missing `value` raises `SYNTAX 88.901`; the tail `0`
+of the stem raises `SYNTAX 40.922`; `position` raises `SYNTAX 40.923` when it
+is past the count; and an item that has to move and has no value raises `SYNTAX
+40.924`, with the count left as it was. When several of them fail, the call
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
-call try "SysStemInsert('s-.', 1)", ""
-call try "SysStemInsert('s-.', , 'v')", ""
-call try "SysStemInsert('s.', 'x')", ""
-call try "SysStemInsert('s.a', 'x', 'v')", ""
-call try "SysStemInsert('s.', 0, 'v')", "drop s.0"
-call try "SysStemInsert('s.', 9, 'v')", "drop s.0"
-call try "SysStemInsert('s.', 9, 'v')", "drop s.2"
+call try "SysStemInsert(, 1, 'v')", ""
+call try "SysStemInsert('s-.', 1, 'v')", ""
+call try "SysStemInsert('s.', 'x', 'v')", ""
+call try "SysStemInsert('s.', 1)", ""
+call try "SysStemInsert('s.', 1, 'v')", "drop s.0"
+call try "SysStemInsert('s.', 9, 'v')", ""
 call try "SysStemInsert('s.', 1, 'v')", "drop s.2"
 call try "SysStemInsert('s.', 5, 'v')", "drop s.2"
 call try "SysStemInsert('s.', 3, 'v')", "drop s.4"
@@ -271,11 +269,10 @@ e: say condition('o')~code s.0
 ```
 
 ```output
-40.919 4
+88.901 4
 40.919 4
 88.905 4
-40.919 4
-88.905 S.0
+88.901 4
 40.922 S.0
 40.923 4
 40.924 4

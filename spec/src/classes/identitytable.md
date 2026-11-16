@@ -231,8 +231,9 @@ x = t~removeItem(s) => 0
 r[class.identitytable.at]
 `at(index)` and `[index]` answer the item stored at the index, and `.nil` when
 there is none. The methods take exactly one argument: none, or an omitted one,
-raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; the number of
-arguments is checked before the index is looked up.
+raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; with a second
+argument, whether the index is looked up is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 t = .identitytable~new
@@ -240,7 +241,7 @@ k = 'k'
 t~put('item', k)
 say t~at(k) t[k] t~at('K') (t~at('zz') == .nil) (t~at(.nil) == .nil)
 call try 't~at'
-call try 't~at(, "x")'
+call try 't~at("x", "x")'
 call try 't~at("a", "b")'
 call try 't[]'
 exit
@@ -256,7 +257,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 item item The NIL object 1 1
 t~at => 88.901
-t~at(, "x") => 93.902
+t~at("x", "x") => 93.902
 t~at("a", "b") => 93.902
 t[] => 88.901
 ```
@@ -348,7 +349,7 @@ say t~hasItem(x) t~hasItem(.array~of('x')) t~hasItem(.nil) t~hasItem('zz')
 say t~index(x) t~index(.nil) (t~index(.array~of('x')) == .nil)
 call try 't~hasItem'
 call try 't~index'
-call try 't~hasItem(, 1)'
+call try 't~hasItem(1, 1)'
 call try 't~index(1, 2)'
 exit
 try:
@@ -365,7 +366,7 @@ bad: say arg(1) '=>' condition('o')~code
 k1 k2 1
 t~hasItem => 93.903
 t~index => 93.903
-t~hasItem(, 1) => 93.902
+t~hasItem(1, 1) => 93.902
 t~index(1, 2) => 93.902
 ```
 

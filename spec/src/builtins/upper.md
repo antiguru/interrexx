@@ -18,8 +18,8 @@ UPPER is a builtin that runs as a [String method](r:class.string.builtins),
 and `string`, its first argument, is the receiver; `n` and `length` become the
 message's arguments, in that order. `string` is a
 [string](r:conv.string.null), `n` is a [position](r:conv.position.check), and
-`length` is a [length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+`length` is a [length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): one is required and three is
 the most.
 
@@ -32,7 +32,7 @@ signal on syntax name b
 say upper('abc', 1, -2)
 b: say condition('o')~code
 signal on syntax name c
-say upper('abc', 0, 'two')
+say upper('abc', 1, 'two')
 c: say condition('o')~code
 signal on syntax name d
 say upper('abc', 1, 1, 1)

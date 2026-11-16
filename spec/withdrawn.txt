@@ -12,3 +12,6 @@ class.directory.deviation.78
 class.stringtable.deviation.78
 class.properties.deviation.78
 class.stem.deviation.78
+num.arithmetic.deviation.102
+bif.index.call.native.deviation.101
+util.index.deviation.101

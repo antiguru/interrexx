@@ -920,8 +920,7 @@ mod tests {
         assert_eq!(answer(b"DELWORD", &[ten, b"1", b"999999999999999999"]), b"");
     }
 
-    /// The zero-count shortcut does not run before the position check, and
-    /// the position's range check comes before the count's.
+    /// The zero-count shortcut does not run before the position check.
     #[test]
     fn the_position_is_range_checked_before_the_count_is_honoured() {
         assert_eq!(
@@ -930,14 +929,6 @@ mod tests {
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"delWord"), Some(b"0"), Some(b"0")]),
-            (93, 924, vec![b"0".to_vec()])
-        );
-        assert_eq!(
-            raised(b"SUBWORD", &[Some(b"a b"), Some(b"0"), Some(b"-1")]),
-            (93, 924, vec![b"0".to_vec()])
-        );
-        assert_eq!(
-            raised(b"DELWORD", &[Some(b"a b"), Some(b"0"), Some(b"-1")]),
             (93, 924, vec![b"0".to_vec()])
         );
         // The adjacent successes: with the position made legal, the zero
@@ -1053,12 +1044,13 @@ mod tests {
         );
     }
 
-    /// The call layer runs before the operation layer here too, at the one
-    /// shape in this family that can tell them apart.
+    /// A form check and a range check each raise their own code when they
+    /// are the only fault of the call; which of several faults is raised is
+    /// unspecified (`r[conv.error.precedence]`).
     #[test]
-    fn the_call_layer_is_checked_before_the_operation_layer() {
+    fn a_form_check_and_a_range_check_each_raise_their_own_code() {
         assert_eq!(
-            raised(b"SUBWORD", &[Some(b"a b"), Some(b"0"), Some(b"q")]),
+            raised(b"SUBWORD", &[Some(b"a b"), Some(b"1"), Some(b"q")]),
             (
                 40,
                 12,
@@ -1070,7 +1062,7 @@ mod tests {
             (93, 924, vec![b"0".to_vec()])
         );
         assert_eq!(
-            raised(b"DELWORD", &[Some(b"a b"), Some(b"0"), Some(b"q")]),
+            raised(b"DELWORD", &[Some(b"a b"), Some(b"1"), Some(b"q")]),
             (
                 40,
                 12,

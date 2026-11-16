@@ -150,20 +150,18 @@ r[class.message.new]
 `new(target, name, option, ...)` makes a message object that has not been run.
 It needs at least two arguments: fewer raise `SYNTAX 93.901`, and an omitted
 target raises `88.901`. The target is any object, `.nil` included. The name is
-checked next, after the target, as [the `send` rule](r:class.object.send)
-checks it: a string,
-or an array of two items, the name and a class that starts the search ([the
-scoped send rule](r:class.methods.scoped.send)). A name that is not a
-string is read as [the `send` rule](r:class.object.send) reads it, through
-`request` with `ARRAY`; `.nil` and an object that answers `.nil` raise
-`93.972`, an array of another size `93.946`, an
-array whose first item is missing `88.901`, an array with a first item that
-has no string value `88.909` and one with a
-second item that is not a class `88.914`. The null string is a name. The
-option that follows is the third argument, which says how the remaining
-arguments are read, as the next rule states. With no option, the message has
-no arguments. The answer is the new object, and what the object holds is shown
-by [`messageName`](r:class.message.messagename),
+checked as [the `send` rule](r:class.object.send) checks it: a string, or an
+array of two items, the name and a class that starts the search ([the scoped
+send rule](r:class.methods.scoped.send)). A name that is not a string is read
+as [the `send` rule](r:class.object.send) reads it, through `request` with
+`ARRAY`; `.nil` and an object that answers `.nil` raise `93.972`, an array of
+another size `93.946`, an array whose first item is missing `88.901`, an array
+with a first item that has no string value `88.909` and one with a second item
+that is not a class `88.914`. The null string is a name. The option that
+follows is the third argument, which says how the remaining arguments are read,
+as the next rule states. With no option, the message has no arguments. The
+answer is the new object, and what the object holds is shown by
+[`messageName`](r:class.message.messagename),
 [`target`](r:class.message.target) and
 [`arguments`](r:class.message.arguments).
 
@@ -180,7 +178,6 @@ call try '.message~new(t, .nil)'
 call try '.message~new(t, .array~of("hello"))'
 call try '.message~new(t, .array~of(.nil, .t))'
 call try '.message~new(t, .array~of("hello", 3))'
-call try '.message~new(t, .nil, "Z")'
 exit
 try:
   signal on syntax name bad
@@ -206,27 +203,28 @@ bad: say arg(1) '=>' condition('o')~code
 .message~new(t, .array~of("hello")) => 93.946
 .message~new(t, .array~of(.nil, .t)) => 88.909
 .message~new(t, .array~of("hello", 3)) => 88.914
-.message~new(t, .nil, "Z") => 93.972
 ```
 
 r[class.message.new.options]
 The option is a string whose first letter, in either case, is `I` (individual)
-or `A` (array); the other letters are not looked at, so `Individual` and `array`
-are options. Any other string, the null string, and a number raise
-`SYNTAX 93.915`, and an option that has no string value raises `88.909`; the
-option is checked after the name. An omitted option with an argument after it
-raises `88.901`. With `I`, every argument after the option is an argument of the
-message, in order, and an omitted place stays omitted; omitted places at the end
-add nothing to the count, as [the count rule](r:class.index.args.count) says,
-and an argument may be any object, `.nil` included. With `A`, the fourth
-argument is required (`SYNTAX 93.901`) and is the only argument that may follow:
-a fifth raises `93.902`, also when the fourth is omitted. It holds the arguments
-of the message: it is an array, or an object that answers an array to the
-message `request` with the argument `ARRAY`, and the items of the array are the
-arguments in order. The message keeps a copy of the array, made when `new` runs,
-so that a change that the caller makes to the array afterwards does not reach
-the message, and the number of arguments is the position of the last item
-present, as [the count rule](r:class.index.args.count) says ([Deviation
+or `A` (array); the other letters are not looked at, so `Individual` and
+`array` are options. Any other string, the null string, and a number raise
+`SYNTAX 93.915`, and an option that has no string value raises `88.909`. A call
+whose name and option are both in error raises the error of one of them, as
+[the precedence rule](r:conv.error.precedence) says. An omitted option with an
+argument after it raises `88.901`. With `I`, every argument after the option is
+an argument of the message, in order, and an omitted place stays omitted;
+omitted places at the end add nothing to the count, as [the count
+rule](r:class.index.args.count) says, and an argument may be any object, `.nil`
+included. With `A`, the fourth argument is required (`SYNTAX 93.901`) and is
+the only argument that may follow: a fifth raises `93.902`, also when the
+fourth is omitted. It holds the arguments of the message: it is an array, or an
+object that answers an array to the message `request` with the argument
+`ARRAY`, and the items of the array are the arguments in order. The message
+keeps a copy of the array, made when `new` runs, so that a change that the
+caller makes to the array afterwards does not reach the message, and the number
+of arguments is the position of the last item present, as [the count
+rule](r:class.index.args.count) says ([Deviation
 113](r:class.message.deviation.113)). An object that answers no array, `.nil`
 and an array of more than one dimension among them, raises `SYNTAX 88.913`.
 

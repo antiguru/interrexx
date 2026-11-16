@@ -22,8 +22,8 @@ method](r:class.string.builtins), and `string`, its first argument, is the
 receiver; the other five become the message's arguments, in their order.
 `string`, `tableo` and `tablei` are [strings](r:conv.string.null), `pad` is a
 [pad](r:conv.pad), `pos` is a [position](r:conv.position.check), and `length`
-is a [length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+is a [length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): one is required and six is
 the most.
 

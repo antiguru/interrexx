@@ -71,12 +71,11 @@ b b
 r[bif.filespec.option]
 The first character of `option` picks the piece, in either case, and the
 characters after it are ignored. The pieces are `Drive`, `Extension`,
-`Location`, `Name` and `Path`, so the first character is one of `D`, `E`,
-`L`, `N` and `P`. Any other first character, and the null string, raises
-`SYNTAX 40.904`. A blank is a character: it does not pick a piece, and
-nothing strips it. The checks of [the arguments](r:bif.filespec.args) come
-first, so a call with a wrong `option` and a wrong argument raises the
-error of the argument.
+`Location`, `Name` and `Path`, so the first character is one of `D`, `E`, `L`,
+`N` and `P`. Any other first character, and the null string, raises `SYNTAX
+40.904`. A blank is a character: it does not pick a piece, and nothing strips
+it. A call with a wrong `option` and a wrong argument raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 f = '/usr/lib/libm.so'
@@ -94,13 +93,13 @@ say filespec(' N', f)
 c: say condition('o')~code
 signal on syntax name d
 say filespec('X', .nil)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '40.904 88.909') > 0
 signal on syntax name e
-say filespec('X', f, 'x')
+say filespec('N', f, 'x')
 e: say condition('o')~code
 signal on syntax name g
 say filespec('X')
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '40.904 88.901') > 0
 ```
 
 ```output
@@ -110,9 +109,9 @@ libm.so libm.so libm.so
 40.904
 40.904
 40.904
-88.909
+1
 88.922
-88.901
+1
 ```
 
 ## The pieces

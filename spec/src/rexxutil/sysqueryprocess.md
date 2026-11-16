@@ -22,9 +22,7 @@ does. A second argument raises `SYNTAX 88.922`, even where the first is
 omitted or is not one of the words that [the next
 rule](r:util.sysqueryprocess.info) knows. An object that is not a string is
 replaced by its string value as [the argument rule](r:util.index.args) says,
-and one that has none raises `SYNTAX 88.909`. When the first argument is an
-object that has no string value, [Deviation 101](r:util.index.deviation.101)
-says which error is raised with a second argument.
+and one that has none raises `SYNTAX 88.909`. When the first argument is an object that has no string value, [the precedence rule](r:conv.error.precedence) says which error is raised with a second argument.
 
 ```rexx
 pid = SysQueryProcess('PID')
@@ -33,7 +31,6 @@ say (SysQueryProcess('PID', ) == pid)
 say (SysQueryProcess(.mutablebuffer~new('pid')) == pid)
 call try "SysQueryProcess(.nil)"
 call try "SysQueryProcess('PID', 1)"
-call try "SysQueryProcess('x', 1)"
 call try "SysQueryProcess(, 1)"
 call try "SysQueryProcess('PID', 1, 2)"
 exit
@@ -50,7 +47,6 @@ e: say condition('o')~code
 1
 1
 88.909
-88.922
 88.922
 88.922
 88.922

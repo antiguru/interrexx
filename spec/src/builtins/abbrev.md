@@ -19,8 +19,8 @@ ABBREV is a builtin that runs as a [String method](r:class.string.builtins),
 and `information`, its first argument, is the receiver; `info` and `length`
 become the message's arguments, in that order. `information` and `info` are
 [strings](r:conv.string.null), and `length` is a
-[length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+[length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most.
 
@@ -43,7 +43,7 @@ signal on syntax name e
 say abbrev(, 'ab')
 e: say condition('o')~code
 signal on syntax name f
-say abbrev('abc', 'a', 'x', 1)
+say abbrev('abc', 'a', 1, 1)
 f: say condition('o')~code
 signal on syntax name g
 say abbrev('abc', , -1)

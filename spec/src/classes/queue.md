@@ -389,13 +389,13 @@ say q~allItems~makeString('L', ',') q~items
 call try 'x = q~queue("d")'
 call try 'x = q~push("d")'
 call try 'q~append'
-call try 'q~append(, 1)'
+call try 'q~append(1, 1)'
 call try 'q~append(1, 2)'
 call try 'q~queue'
-call try 'q~queue(, 1)'
+call try 'q~queue(1, 1)'
 call try 'q~queue(1, 2)'
 call try 'q~push'
-call try 'q~push(, 1)'
+call try 'q~push(1, 1)'
 call try 'q~push(1, 2)'
 say q~items
 exit
@@ -414,13 +414,13 @@ z,a,b,The NIL object,c 5
 x = q~queue("d") => 91.999
 x = q~push("d") => 91.999
 q~append => 93.903
-q~append(, 1) => 93.902
+q~append(1, 1) => 93.902
 q~append(1, 2) => 93.902
 q~queue => 93.903
-q~queue(, 1) => 93.902
+q~queue(1, 1) => 93.902
 q~queue(1, 2) => 93.902
 q~push => 93.903
-q~push(, 1) => 93.902
+q~push(1, 1) => 93.902
 q~push(1, 2) => 93.902
 7
 ```
@@ -544,7 +544,7 @@ say q~removeItem('a') q~allItems~makeString('L', ',')
 say q~removeItem('a') q~allItems~makeString('L', ',')
 say (q~removeItem('a') == .nil) q~items (q~removeItem(1.0) == .nil)
 call try 'q~removeItem'
-call try 'q~removeItem(, 1)'
+call try 'q~removeItem(1, 1)'
 call try 'q~removeItem(1, 2)'
 exit
 try:
@@ -561,7 +561,7 @@ a b,a,1
 a b,1
 1 2 1
 q~removeItem => 93.903
-q~removeItem(, 1) => 93.902
+q~removeItem(1, 1) => 93.902
 q~removeItem(1, 2) => 93.902
 ```
 
@@ -662,7 +662,7 @@ say .queue~of(1)~hasItem(.nil)
 say q~index(1) q~index('x') q~index(.nil) (q~index('zz') == .nil)
 say .queue~of('p', 'q', 'q')~index('q')
 call try 'q~hasItem'
-call try 'q~hasItem(, 1)'
+call try 'q~hasItem(1, 1)'
 call try 'q~hasItem(1, 2)'
 call try 'q~index'
 call try 'q~index(1, 2)'
@@ -682,7 +682,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 2 3 1
 2
 q~hasItem => 93.903
-q~hasItem(, 1) => 93.902
+q~hasItem(1, 1) => 93.902
 q~hasItem(1, 2) => 93.902
 q~index => 93.903
 q~index(1, 2) => 93.902
@@ -838,18 +838,19 @@ q~empty(1) => 93.902
 ## Taking part of a queue
 
 r[class.queue.section]
-`section(start, count)` answers a new queue that holds the items from the
-index `start` on: `count` of them, or all of them up to the tail when `count`
-is omitted or runs past the tail. A `count` of 0, or a `start` above the
-number of items, gives an empty queue. The new queue has its own indexes from
-1, the items are the receiver's own objects, and the receiver is not changed.
-The `start` is read as [the index rule](r:class.queue.indexes) says; the
-`count` must be a whole number that is not negative, read as the hint of
+`section(start, count)` answers a new queue that holds the items from the index
+`start` on: `count` of them, or all of them up to the tail when `count` is
+omitted or runs past the tail. A `count` of 0, or a `start` above the number of
+items, gives an empty queue. The new queue has its own indexes from 1, the
+items are the receiver's own objects, and the receiver is not changed. The
+`start` is read as [the index rule](r:class.queue.indexes) says; the `count`
+must be a whole number that is not negative, read as the hint of
 [`new`](r:class.queue.new) is, or `SYNTAX 93.923` is raised. No `start`, or an
 omitted one, raises `SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The
 answer is an instance of the class of the receiver, so that a subclass gets a
-queue of its own class back.
-The arguments are counted first, then `start` is read, then `count`.
+queue of its own class back. A call with more than one fault, among the number
+of arguments, `start` and `count`, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 q = .queue~of('a', 'b', 'c', 'd')
@@ -868,7 +869,6 @@ call try 'q~section(.nil)'
 call try 'q~section("x")'
 call try 'q~section(1.5)'
 call try 'q~section(.array~of(1, 2))'
-call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, .nil)'
@@ -901,7 +901,6 @@ q~section(.nil) => 93.907
 q~section("x") => 93.907
 q~section(1.5) => 93.907
 q~section(.array~of(1, 2)) => 93.907
-q~section(0, -1) => 93.907
 q~section(1, -1) => 93.923
 q~section(1, "x") => 93.923
 q~section(1, .nil) => 93.923

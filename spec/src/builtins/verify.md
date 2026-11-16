@@ -20,8 +20,8 @@ and `string`, its first argument, is the receiver; the other four become the
 message's arguments, in their order. `string` and `reference` are
 [strings](r:conv.string.null), `option` is an [option](r:bif.verify.option),
 `start` is a [position](r:conv.position.check), and `length` is a
-[length](r:conv.length.check). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
+[length](r:conv.length.check). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and five is
 the most.
 
@@ -70,10 +70,10 @@ say verify('xy', 'x') verify('xy', 'x', 'n') verify('xy', 'x', 'Nope'),
 
 r[bif.verify.option.check]
 An `option` whose first character is not one of those four, and an `option`
-that is the null string, raise `SYNTAX 93.915`. This is a range check: it
-runs after every argument has passed its form check, and before the range
-checks of `start` and `length`. It is made whatever `string` and
-`reference` are.
+that is the null string, raise `SYNTAX 93.915`. It is made whatever `string`
+and `reference` are. A call whose `start` or `length` is also in error raises
+the error of one of them, as [the checks of the
+conventions](r:conv.check.order) say.
 
 ```rexx
 signal on syntax name a
@@ -90,10 +90,10 @@ say verify('', '', 'Z')
 d: say condition('o')~code
 signal on syntax name f
 say verify('abc', 'a', 'Y', 'z')
-f: say condition('o')~code
+f: say wordpos(condition('o')~code, '93.915 40.12') > 0
 signal on syntax name g
 say verify('abc', 'a', 'Y', 0)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '93.915 93.924') > 0
 ```
 
 ```output
@@ -101,8 +101,8 @@ g: say condition('o')~code
 93.915
 93.915
 93.915
-40.12
-93.915
+1
+1
 ```
 
 > **Note.** The reference manual names error 93.915 for a method option that

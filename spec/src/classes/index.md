@@ -449,12 +449,12 @@ raise `88.922`.
 o = .object~new
 s = .stream~new('class_index_zzq_never_opened')
 call try 'o~hasMethod("A", "B")'
-call try 'o~hasMethod(, "B")'
+call try 'o~hasMethod("B", "B")'
 call try 'o~hasMethod("A", )'
 call try 'o~copy(1)'
 call try 'o~class(, )~id'
 call try '.array~of(1)~items(1)'
-call try '"abc"~left(-1, "xx", 3)'
+call try '"abc"~left(1, "x", 3)'
 call try 's~state(1)'
 exit
 try:
@@ -468,12 +468,12 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 o~hasMethod("A", "B") => 93.902
-o~hasMethod(, "B") => 93.902
+o~hasMethod("B", "B") => 93.902
 o~hasMethod("A", ) => 0
 o~copy(1) => 93.902
 o~class(, )~id => Object
 .array~of(1)~items(1) => 93.902
-"abc"~left(-1, "xx", 3) => 93.902
+"abc"~left(1, "x", 3) => 93.902
 s~state(1) => 88.922
 ```
 

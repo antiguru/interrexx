@@ -20,8 +20,8 @@ SUBWORD is a builtin that runs as a [String method](r:class.string.builtins),
 and `string`, its first argument, is the receiver. `string` is a
 [string](r:conv.string.null), `n` is a [word
 number](r:bif.index.words.number), and `length` is a
-[length](r:conv.length.check) that counts words. The arguments are checked in
-the [order](r:conv.check.order) the conventions give, and the argument count
+[length](r:conv.length.check) that counts words. The arguments are checked as
+[the conventions](r:conv.check.order) give, and the argument count
 by the [builtin call rules](r:bif.index.call.count): two are required and
 three is the most.
 
@@ -33,7 +33,7 @@ signal on syntax name b
 say subword('a b', 1, -1)
 b: say condition('o')~code
 signal on syntax name c
-say subword('a b', 0, 'x')
+say subword('a b', 1, 'x')
 c: say condition('o')~code
 signal on syntax name d
 say subword('a b', 1, 1, 1)

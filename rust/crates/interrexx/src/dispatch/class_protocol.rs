@@ -416,7 +416,8 @@ pub(super) fn compile_method_source(
 /// [`compile_method_source`] whose directives install into a package whose
 /// parent `parent` resolves, or the caller's where it answers `None`. The
 /// source is checked before `parent` runs, so a bad source and a bad context
-/// together raise the source's fault (`r[class.method.new.order]`).
+/// together raise the source's fault. Which of the two is raised is
+/// unspecified (`r[class.method.new.order]`); this is the one ooRexx raises.
 pub(super) fn compile_method_source_in(
     interp: &mut Interp,
     name: &[u8],

@@ -16,14 +16,13 @@ of them, and none before the first or after the last. Words are those of
 ## Arguments
 
 r[bif.space.method]
-SPACE is a builtin that runs as a [String method](r:class.string.builtins),
-and `string`, its first argument, is the receiver; `n` and `pad` become the
-message's arguments, in that order. `string` is a
-[string](r:conv.string.null), `n` is a [length](r:conv.length.check), the
-number of fill characters between two words, and `pad` is a [pad](r:conv.pad).
-The arguments are checked in the [order](r:conv.check.order) the conventions
-give, and the argument count by the [builtin call
-rules](r:bif.index.call.count): one is required and three is the most.
+SPACE is a builtin that runs as a [String method](r:class.string.builtins), and
+`string`, its first argument, is the receiver; `n` and `pad` become the
+message's arguments, in that order. `string` is a [string](r:conv.string.null),
+`n` is a [length](r:conv.length.check), the number of fill characters between
+two words, and `pad` is a [pad](r:conv.pad). The arguments are checked as [the
+conventions](r:conv.check.order) give, and the argument count by the [builtin
+call rules](r:bif.index.call.count): one is required and three is the most.
 
 ```rexx
 say space('a  b') 'a  b'~space(2, '.')
@@ -161,18 +160,16 @@ c: say condition('o')~code
 ```
 
 r[bif.space.check-order]
-Of the checks that `n` and `pad` can fail, the form checks of `n` and of
-`pad` come first, from left to right, and only then the range check of `n`,
-as [the order of the checks](r:conv.check.order) gives: a negative `n` with a
-bad `pad` raises the `pad` error, and an `n` that is not a number raises its
-own error before a bad `pad` is looked at.
+`n` can fail its form check or its range check, and `pad` its own check. A
+call in which both fail raises the error of one of them, as [the checks of the
+conventions](r:conv.check.order) say.
 
 ```rexx
 signal on syntax name a
 say space('a b', -1, '**')
-a: say condition('o')~code
+a: say wordpos(condition('o')~code, '40.23 93.923') > 0
 signal on syntax name b
-say space('a b', 'x', '**')
+say space('a b', 'x')
 b: say condition('o')~code
 signal on syntax name c
 say space('a b', -1, '.')
@@ -180,7 +177,7 @@ c: say condition('o')~code
 ```
 
 ```output
-40.23
+1
 40.12
 93.923
 ```

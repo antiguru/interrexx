@@ -414,13 +414,13 @@ The `name` that `create`, `open`, `exists` and `delete` take, and the `line`
 that `queue` and `push` take, are read in the same way, as a string. It is a
 string, an instance of a subclass of `String` included, or an object that
 answers a string to the message `request` with the argument `STRING`, which an
-object with a `makeString` method does by the rule of `Object` ([the
-conversion rule](r:conv.string.object)); the answer is used as the name or the
-line. Any other object, `.nil` and an `Object` among them, raises
-`SYNTAX 88.909`, and the object is read before the number of arguments is
-checked, so a call with two arguments whose first is `.nil` raises `88.909`
-and not `88.922`. A number is read as the string that it is, and an `Array` is
-read as the string that its `makeString` gives: its items, one to a line.
+object with a `makeString` method does by the rule of `Object` ([the conversion
+rule](r:conv.string.object)); the answer is used as the name or the line. Any
+other object, `.nil` and an `Object` among them, raises `SYNTAX 88.909`, and a
+call with two arguments whose first is `.nil` raises the error of one of the
+two faults, as [the precedence rule](r:conv.error.precedence) says. A number is
+read as the string that it is, and an `Array` is read as the string that its
+`makeString` gives: its items, one to a line.
 
 ```rexx
 q = .rexxqueue~new('spec_rq_name')
@@ -433,12 +433,10 @@ say '<'q~pull'>' '<'q~pull~changestr('0a'x, '|')'>'
 say .rexxqueue~open(n) .rexxqueue~delete(n) .rexxqueue~exists(n)
 call try '.rexxqueue~exists(.nil)'
 call try '.rexxqueue~open(.object~new)'
-call try '.rexxqueue~delete(.nil, 2)'
 call try '.rexxqueue~create(.nil)'
 q = .rexxqueue~new('spec_rq_name')
 call try 'q~queue(.nil)'
 call try 'q~push(.object~new)'
-call try 'q~queue(.nil, 2)'
 say q~delete
 exit
 try:
@@ -463,11 +461,9 @@ bad: say arg(1) condition('o')~code
 0 0 0
 .rexxqueue~exists(.nil) 88.909
 .rexxqueue~open(.object~new) 88.909
-.rexxqueue~delete(.nil, 2) 88.909
 .rexxqueue~create(.nil) 88.909
 q~queue(.nil) 88.909
 q~push(.object~new) 88.909
-q~queue(.nil, 2) 88.909
 0
 ```
 
@@ -897,17 +893,18 @@ SESSION
 
 r[class.rexxqueue.set]
 `set(name)` switches the object to the queue of that name and answers the name
-of the queue it worked with before, in upper case. `name` is required
-(`SYNTAX 93.901`) and the method takes no other argument (`SYNTAX 93.902`),
-both checked before anything else. `set` does not look for the queue: a name
-of a queue that does not exist is taken, and [the missing queue
+of the queue it worked with before, in upper case. `name` is required (`SYNTAX
+93.901`) and the method takes no other argument (`SYNTAX 93.902`); a call with
+one of these faults and another raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. `set` does not look for the
+queue: a name of a queue that does not exist is taken, and [the missing queue
 rule](r:class.rexxqueue.missing) says what the object then does. The name is
 decided as `init` does: the argument is sent `upper`, and an object without
 that method raises `SYNTAX 97.1`, `.nil` and an `Object` among them. Then
 `objectName=` is sent to the receiver with the upper-case name ([the sends
 rule](r:class.rexxqueue.set.sends)). Only the object changes: the queue that
-the program uses with its instructions is not switched, and another object
-that holds the same name is not changed.
+the program uses with its instructions is not switched, and another object that
+holds the same name is not changed.
 
 ```rexx
 q = .rexxqueue~new('spec_rq_set_a')

@@ -80,23 +80,22 @@ r[class.package.new]
 `new` makes a package from a name and, optionally, a source and a context. The
 name is required (`SYNTAX 88.901`), and is a string or the string that its
 argument [gives](r:class.index.string): an object that gives no string, `.nil`
-among them,
-raises `88.909`. With a source, the name is only the name of the package, and
-the package is always a new object. With no source, the name is the name of a
-file, which `new` looks for and reads, as
-[the file rule](r:class.package.new.file) says, and there is no context: the
-arguments from the third on go to `init`. The context is the third argument.
-It is a `Method`, a `Routine` or a `Package` object, or omitted; any other
-value, `.nil` and `PROGRAMSCOPE` included, raises `SYNTAX 93.953`. The checks
-run in this order: the name, the context, the source (a source that is `.nil`
-raises `93.961`), and then the source is translated, so that a source that
-does not translate raises its translation error, and `new` then installs the
-package as [the install rule](r:class.package.new.install) says. The arguments
-from the fourth on are passed to `init` of the new package, and so are the
-arguments from the third on when the source is omitted; the `init` of `Object`
-accepts none, and one argument raises `SYNTAX 93.902` after the package is
-installed. A subclass of `Package` makes instances of itself. The answer is
-the new package.
+among them, raises `88.909`. With a source, the name is only the name of the
+package, and the package is always a new object. With no source, the name is
+the name of a file, which `new` looks for and reads, as [the file
+rule](r:class.package.new.file) says, and there is no context: the arguments
+from the third on go to `init`. The context is the third argument. It is a
+`Method`, a `Routine` or a `Package` object, or omitted; any other value,
+`.nil` and `PROGRAMSCOPE` included, raises `SYNTAX 93.953`. A source that is
+`.nil` raises `93.961`, and a source that does not translate raises its
+translation error. A call that fails more than one of these checks raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says. A
+call that fails none installs the package as [the install
+rule](r:class.package.new.install) says. The arguments from the fourth on are
+passed to `init` of the new package, and so are the arguments from the third on
+when the source is omitted; the `init` of `Object` accepts none, and one
+argument raises `SYNTAX 93.902` after the package is installed. A subclass of
+`Package` makes instances of itself. The answer is the new package.
 
 ```rexx
 p = .package~new('named', 'return 1')
@@ -114,7 +113,6 @@ call try '.package~new("n", "nop", .routine~new("r", "nop"))~class~id'
 call try '.package~new("n", "say (")'
 call try '.package~new("n", "nop", , 1)'
 call try '.package~new("n", "nop", .package~new("c", "nop"), 1)'
-call try '.package~new("n", .nil, 5)'
 say .mine~new('n', 'nop', , 'a', 'b')~class~id
 exit
 try:
@@ -147,7 +145,6 @@ Package named
 .package~new("n", "say (") => 35.1
 .package~new("n", "nop", , 1) => 93.902
 .package~new("n", "nop", .package~new("c", "nop"), 1) => 93.902
-.package~new("n", .nil, 5) => 93.953
 init 2 a b
 MINE
 ```
@@ -1819,14 +1816,15 @@ r[class.package.addclass]
 `addClass` adds a class to the package under a name, as a class that is not
 public, and answers the package. The name is required (`SYNTAX 88.901`), an
 object that [gives no string](r:class.index.string), `.nil` among them, raises
-`88.909`, and
-the class is required too (`88.901`) and must be a class (`SYNTAX 88.914`;
-`.nil`, a number and an instance that is not a class do not qualify); a third
-argument raises `93.902`. The checks run in that order. The name is taken in
-upper case, any string is a name, and a class that is added under a name that
-the package holds replaces the class that was there. The class is in
-`classes`, `findClass` finds it, and the code of the package names it with
-`.name`; it is not in `publicClasses`.
+`88.909`, and the class is required too (`88.901`) and must be a class (`SYNTAX
+88.914`; `.nil`, a number and an instance that is not a class do not qualify);
+a third argument raises `93.902`. A call with more than one fault, among the
+count, the name and the class, raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. The name is taken in upper
+case, any string is a name, and a class that is added under a name that the
+package holds replaces the class that was there. The class is in `classes`,
+`findClass` finds it, and the code of the package names it with `.name`; it is
+not in `publicClasses`.
 
 ```rexx
 src = .array~of('return 1', '::routine r', '  return .zk~id')

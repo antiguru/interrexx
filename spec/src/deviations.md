@@ -691,31 +691,16 @@ characters there.
 `QUERY POSITION` of a transient standard stream answers the null string,
 because a transient stream has no position. ooRexx answers 1.
 
-## 101. Argument checks of the native builtins
+## 101. Withdrawn
 
-DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
-SysFileDelete and SysStemSort, check their arguments in the order that every
-other builtin follows, the ANSI order: the count of arguments first, so that
-an argument past the last one raises `SYNTAX 88.922` before an omitted or
-wrong argument is reported. ooRexx reports an omitted argument, an object
-whose `request` with the argument `STRING` answers no string and an argument
-that is not a whole number before the count, and so does the substitutions
-argument of SysFormatMessage when it has no `MAKEARRAY` method. It also
-reports these before the count: the stem name of SysStemCopy, SysStemDelete
-and SysStemInsert when it fails its check, and a whole-number argument of
-SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
-a number out of range among them. It reports the count before an argument's
-value: an option it does not allow, or any other number out of range, except a
-negative semaphore handle, which it reports before the count. SysOpenEventSem
-and SysOpenMutexSem are the exception: in both engines they report an omitted
-name and an object that has no string value before the count.
+Which of the argument count and another fault of a native builtin or a
+RexxUtil function is reported is unspecified ([the precedence
+rule](r:conv.error.precedence)).
 
-## 102. LOSTDIGITS before the right operand's errors
+## 102. Withdrawn
 
-When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
-before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
-for an exponent that is not a whole number, as the ANSI standard orders the
-operations. ooRexx raises the error for the right operand first.
+Which of LOSTDIGITS and the error of the same operator is raised first is
+unspecified ([the precedence rule](r:conv.error.precedence)).
 
 ## 103. TRACE() under ::OPTIONS TRACE ?
 
@@ -1329,15 +1314,13 @@ with exit code 120 that Deviation 30 described.
 A builtin whose page calls an argument a string converts each such argument
 that is an object other than a string, sending `STRING` (or `REQUEST` and
 `MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
-to right, after it has checked the number of its arguments and that every
-argument it requires is there, and before it checks any argument. An omitted
-argument that the builtin requires is therefore reported before any conversion
-runs, as in ooRexx. A `STRING` method of a later argument therefore runs even
-when an earlier argument is in error, and the call raises the same error as in
-ooRexx, which converts an argument as it checks it and stops at the first one
-in error, so that the method of a later argument never runs. The difference
-shows only in what such a method does: counting, input or output, or raising a
-condition of its own.
+to right, before it checks any argument, when the call has no fault. The
+conversion is part of the builtin's checks: when the call has a fault, which
+error it raises, and whether and to how many arguments it sends `STRING`, are
+unspecified ([the precedence rule](r:conv.error.precedence)). ooRexx converts
+an argument as it checks it and stops at the first one in error, so that the
+method of a later argument never runs. The difference shows only in what such
+a method does: counting, input or output, or raising a condition of its own.
 
 ## 171. QUERY POSITION SYS of a stream just opened for reading
 

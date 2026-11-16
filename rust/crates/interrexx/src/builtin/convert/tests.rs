@@ -837,13 +837,13 @@ fn xrange_names_the_position_that_is_wrong_and_what_it_wanted() {
     );
 }
 
-/// Every conversion of an argument runs before every check on its
-/// content, and the two families answer at different exit codes.
+/// Each check of the conversion builtins raises its own code when it is the
+/// only fault of the call; which of several faults is raised is unspecified
+/// (`r[conv.error.precedence]`).
 #[test]
-fn the_call_layer_is_checked_before_the_operation_layer() {
-    // The *length*'s type error beats the value's content error.
+fn each_conversion_check_raises_its_own_code() {
     assert_eq!(
-        raised(b"D2C", &[Some(b"abc"), Some(b"def")]),
+        raised(b"D2C", &[Some(b"65"), Some(b"def")]),
         (
             40,
             12,
@@ -851,45 +851,17 @@ fn the_call_layer_is_checked_before_the_operation_layer() {
         )
     );
     assert_eq!(
-        raised(b"X2D", &[Some(b"ZZ"), Some(b"zz")]),
+        raised(b"X2D", &[Some(b"ff"), Some(b"zz")]),
         (40, 12, vec![b"X2D".to_vec(), b"2".to_vec(), b"zz".to_vec()])
     );
-    assert_eq!(
-        raised(b"D2X", &[Some(b"abc"), Some(b"zz")]),
-        (40, 12, vec![b"D2X".to_vec(), b"2".to_vec(), b"zz".to_vec()])
-    );
-    // With the length made legal, the content error the 40.12 was hiding.
     assert_eq!(raised(b"X2D", &[Some(b"ZZ"), Some(b"4")]).1, 933);
     assert_eq!(raised(b"D2C", &[Some(b"abc"), Some(b"1")]).1, 929);
-
-    // A negative length is 93.923 -- and for `D2X`/`D2C` it loses to the
-    // value's own check, where for `C2D`/`X2D` it wins over the string's.
     assert_eq!(
         raised(b"C2D", &[Some(b"abc"), Some(b"-1")]),
         (93, 923, vec![b"-1".to_vec()])
     );
     assert_eq!(
-        raised(b"X2D", &[Some(b"ZZ"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
-    );
-    assert_eq!(
-        raised(b"D2X", &[Some(b"1.5"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
-    );
-    assert_eq!(
         raised(b"D2X", &[Some(b"-1"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
-    );
-    assert_eq!(
-        raised(b"D2C", &[Some(b"abc"), Some(b"-1")]),
-        (93, 929, vec![b"abc".to_vec()])
-    );
-    assert_eq!(
-        raised(b"D2X", &[Some(b"abc"), Some(b"-1")]),
-        (93, 928, vec![b"abc".to_vec()])
-    );
-    assert_eq!(
-        raised_at("3", b"D2X", &[Some(b"1000"), Some(b"-1")]),
         (93, 923, vec![b"-1".to_vec()])
     );
     // A pad's own type error, at the position the call spells it.

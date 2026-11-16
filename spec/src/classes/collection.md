@@ -122,17 +122,18 @@ at 5
 r[class.collection.hasindex]
 `hasIndex(index)` answers what the answer of `allIndexes` answers to
 `hasItem` for the same argument, unchanged. It takes exactly one argument:
-none raises `SYNTAX 93.901` and a second raises `SYNTAX 93.902`, in both
-cases before `allIndexes` is sent, so that a collection that leaves
-`allIndexes` abstract raises 93.965 only for a call with one argument. A
-`.nil` index is a valid argument.
+none raises `SYNTAX 93.901` and a second raises `SYNTAX 93.902`. A collection
+that leaves `allIndexes` abstract raises 93.965 when `hasIndex` sends it; with
+a wrong count as well, the call raises one of the two errors, and whether
+`allIndexes` is sent is unspecified, as [the precedence
+rule](r:conv.error.precedence) says. A `.nil` index is a valid argument.
 
 ```rexx
 c = .collection~new
-call try 'c~hasIndex'
-call try 'c~hasIndex(1, 2)'
-call try 'c~hasIndex(1)'
 b = .box~new(.array~of('x', 'y'))
+call try 'b~hasIndex'
+call try 'b~hasIndex(1, 2)'
+call try 'c~hasIndex(1)'
 say b~hasIndex('x') b~hasIndex('z') b~hasIndex(.nil)
 exit
 try:
@@ -154,8 +155,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-c~hasIndex => 93.901
-c~hasIndex(1, 2) => 93.902
+b~hasIndex => 93.901
+b~hasIndex(1, 2) => 93.902
 c~hasIndex(1) => 93.965
 1 0 0
 ```

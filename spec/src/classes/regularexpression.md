@@ -127,31 +127,27 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.regularexpression.args]
-`new`, `parse`, `match` and `pos` check their arguments in one order, which is
-not the order of [the count rule](r:class.index.args.count). First each
-argument that the method takes is checked from the left (the pattern and the
-mode of `new` and `parse`, the string of `match` and `pos`): a required one
-that is missing raises `SYNTAX 88.901`, and one that cannot be read as a
-string `88.909`. Then the number of arguments is checked, one too many raising
-`88.922`; an argument beyond the last one the method takes is not read. Then
-the mode is checked, `93.0`, and only then the pattern, so that a bad pattern
-given to `new` raises `38.0` last. An argument that is not a string is
+For `new`, `parse`, `match` and `pos`, a required argument that is missing
+raises `SYNTAX 88.901`, one that cannot be read as a string `88.909` and one
+too many `88.922`; the mode raises `93.0` and the pattern, which `new` refuses,
+`38.0`. The arguments it takes are the pattern and the mode of `new` and
+`parse`, and the string of `match` and `pos`. A call with more than one of
+these faults raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. An argument that is not a string is
 converted by sending it `request` with `STRING` ([the request
 rule](r:class.object.request)); the `request` of `Object` answers what the
 object's `makeString` answers, and `.nil` when it has none. A string answer is
-used. An `Array` answer is read as its `makeString` answer, its items joined
-by line feeds. Any other answer, `.nil` included, raises `SYNTAX 88.909`, and
-the argument's `string` method is not used, unlike [the
+used. An `Array` answer is read as its `makeString` answer, its items joined by
+line feeds. Any other answer, `.nil` included, raises `SYNTAX 88.909`, and the
+argument's `string` method is not used, unlike [the
 builtins](r:conv.string.object). So a number is its digits, and an `Array`
 argument is its items joined by line feeds.
 
 ```rexx
 re = .RegularExpression~new('xy')
 call try "re~match('a', .nil)"
-call try "re~parse('a', 'bogus', 3)"
-call try ".RegularExpression~new('[', 'MAXIMAL', 3)"
-call try ".RegularExpression~new('[', 'bogus')"
-call try "re~parse('[', 'bogus')"
+call try "re~parse('a', 'MAXIMAL', 3)"
+call try ".RegularExpression~new('a', 'MAXIMAL', 3)"
 call try "re~match(.str~new)"
 call try "re~match(.object~new)"
 call try "re~match(.mk~new)"
@@ -183,46 +179,14 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 re~match('a', .nil) => 88.922
-re~parse('a', 'bogus', 3) => 88.922
-.RegularExpression~new('[', 'MAXIMAL', 3) => 88.922
-.RegularExpression~new('[', 'bogus') => 38.0
-re~parse('[', 'bogus') => 93.0
+re~parse('a', 'MAXIMAL', 3) => 88.922
+.RegularExpression~new('a', 'MAXIMAL', 3) => 88.922
 re~match(.str~new) => 88.909
 re~match(.object~new) => 88.909
 re~match(.mk~new) => 1
 1
 1
 re~match(.mko~new) => 88.909
-```
-
-```rexx
-re = .RegularExpression~new('xy')
-call try ".RegularExpression~new(.nil, , 3)"
-call try "re~parse(.nil, , 1)"
-call try "re~match(.nil, 1)"
-call try "re~match(, 1)"
-call try "re~pos(, 1)"
-call try "re~parse(.nil, 'bogus')"
-call try ".RegularExpression~new('a', .nil, 1)"
-exit
-try:
-  signal on syntax name bad
-  interpret 'x =' arg(1)
-  say arg(1) '=> done'
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::requires "rxregexp.cls"
-```
-
-```output
-.RegularExpression~new(.nil, , 3) => 88.909
-re~parse(.nil, , 1) => 88.909
-re~match(.nil, 1) => 88.909
-re~match(, 1) => 88.901
-re~pos(, 1) => 88.901
-re~parse(.nil, 'bogus') => 88.909
-.RegularExpression~new('a', .nil, 1) => 88.909
 ```
 
 ```rexx

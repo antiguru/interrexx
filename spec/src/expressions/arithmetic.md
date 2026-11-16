@@ -170,19 +170,19 @@ unset + 1 => 41.1
 
 r[expr.arithmetic.order]
 Both operands of an operator are evaluated before the operator checks either
-one, so an error in the evaluation of the right operand is raised before a
-left operand that is not a number is found out. The operand check then goes
-from left to right, and it comes before any other error that the operator
-itself would raise, as [the operand rule](r:num.arithmetic.operand) says. A
+one, so an error in the evaluation of the right operand is raised before a left
+operand that is not a number is found out. An operator that finds more than one
+fault, in its operands or a fault of its own such as a zero divisor, raises the
+error of one of them, as [the operand rule](r:num.arithmetic.operand) says. A
 function call in an operand takes its effect before the operator is applied,
-whatever the operator does. Which of several operators is applied first
-follows precedence, so `1 / 0 + "ten"` raises `42.3` from the division before
-the addition looks at its operands.
+whatever the operator does. Which of several operators is applied first follows
+precedence, so `1 / 0 + "ten"` raises `42.3` from the division before the
+addition looks at its operands.
 
 ```rexx
 call try '"ten" + 1/0'
 call try '"ten" + f(2)'
-call try 'f(1) + "ten" / 0'
+call try 'f(1) + "ten" / 2'
 call try '1 / 0 + "ten"'
 exit
 try:
@@ -200,7 +200,7 @@ f: say 'f' arg(1); return arg(1)
 f 2
 "ten" + f(2) => 41.1
 f 1
-f(1) + "ten" / 0 => 41.1
+f(1) + "ten" / 2 => 41.1
 1 / 0 + "ten" => 42.3
 ```
 

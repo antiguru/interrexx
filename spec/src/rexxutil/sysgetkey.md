@@ -17,15 +17,15 @@ the input.
 ## Arguments
 
 r[util.sysgetkey.args]
-`option` is an optional string. Read in any case, it is `ECHO` or `NOECHO`;
-any other string, the null string and a string with a blank around the word
-included, raises `SYNTAX 40.920`. An omitted `option` is the same as `ECHO`.
-A second argument raises `SYNTAX 88.922` before `option` is read at all, so
-before a `.nil` or a wrong option is reported
-([Deviation 101](r:util.index.deviation.101)); `.nil` and
-an object with no string value raise `SYNTAX 88.909`; any other object is
-replaced by its string ([the argument rule](r:util.index.args)). An omitted
-place at the end of the call adds nothing to the count.
+`option` is an optional string. Read in any case, it is `ECHO` or `NOECHO`; any
+other string, the null string and a string with a blank around the word
+included, raises `SYNTAX 40.920`. An omitted `option` is the same as `ECHO`. A
+second argument raises `SYNTAX 88.922`, and a call with a wrong `option` as
+well raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says; `.nil` and an object with no string value
+raise `SYNTAX 88.909`; any other object is replaced by its string ([the
+argument rule](r:util.index.args)). An omitted place at the end of the call
+adds nothing to the count.
 
 ```rexx
 call try "SysGetKey('bad')"
@@ -36,7 +36,6 @@ call try "SysGetKey(' echo')"
 call try "SysGetKey('echo ')"
 call try "SysGetKey('echoes')"
 call try "SysGetKey('echo', 'x')"
-call try "SysGetKey('bad', 'x')"
 call try "SysGetKey(.object~new)"
 call try "SysGetKey(.nil)"
 call try "'['SysGetKey('echo')']'"
@@ -63,7 +62,6 @@ e: say condition('o')~code
 40.920
 40.920
 40.920
-88.922
 88.922
 88.909
 88.909

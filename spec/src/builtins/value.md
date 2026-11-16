@@ -56,8 +56,9 @@ the null string, they are the entries of the
 [`.environment` directory](r:bif.value.directory). When it is `ENVIRONMENT`, in
 any combination of cases and with nothing around it, they are the
 [environment variables](r:bif.value.os) of the operating system. Any other
-`selector` raises `SYNTAX 40.914`, and it is checked before `name` is, so a
-call with an invalid selector raises it also when `name` is invalid.
+`selector` raises `SYNTAX 40.914`. A call whose `selector` and `name` are both
+invalid raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -65,7 +66,7 @@ say value('x', , 'SYSTEM')
 a: say condition('o')~code
 signal on syntax name b
 say value('x y', , 'ENV')
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.914 40.26') > 0
 signal on syntax name c
 say value('x', , 'ENVIRONMENT ')
 c: say condition('o')~code
@@ -77,7 +78,7 @@ say value('x', , 'Environment') '/' value('x', , '')
 
 ```output
 40.914
-40.914
+1
 40.914
 40.914
  / .X

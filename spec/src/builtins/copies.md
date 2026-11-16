@@ -38,7 +38,7 @@ signal on syntax name d
 say copies('abc', )
 d: say condition('o')~code
 signal on syntax name e
-say copies('abc', 'x', 1)
+say copies('abc', 2, 1)
 e: say condition('o')~code
 ```
 
@@ -56,9 +56,7 @@ r[bif.copies.n.check]
 [value](r:conv.whole.digits) the conventions describe, and not negative.
 An `n` that is not a whole number, including the null string, raises
 `SYNTAX 40.12`; an `n` that is a whole number and negative raises
-`SYNTAX 93.906`. An `n` of 0 is allowed, and so is `-0`, which is 0. The form
-check comes before the range check, as in
-[the order of the checks](r:conv.check.order).
+`SYNTAX 93.906`. An `n` of 0 is allowed, and so is `-0`, which is 0.
 
 ```rexx
 say '['copies('rst', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')

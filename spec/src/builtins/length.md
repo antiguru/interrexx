@@ -31,7 +31,7 @@ signal on syntax name c
 say length(,)
 c: say condition('o')~code
 signal on syntax name d
-say length(, 'b')
+say length('a', 'b')
 d: say condition('o')~code
 ```
 
