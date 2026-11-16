@@ -380,6 +380,10 @@ pub(crate) struct Activity {
     /// with its `>I>` written, before it gave the baton back to send again
     /// (`Interp::retries_entry_guard`), until the send's next entry.
     pub(crate) retraced: Option<crate::guards::GuardKey>,
+    /// Whether a release granted the guard lock this activity's callback
+    /// waited for to an activity the callback's lend stopped, which ended
+    /// the wait (`Interp::release_guard`), until its next pinned wait.
+    pub(crate) lock_to_lender: bool,
     /// The methods other than Rexx bodies and attributes that are running on
     /// this activity's Rust stack, innermost last.
     pub(crate) running_methods: Vec<interrexx_classes::MethodId>,
@@ -643,6 +647,7 @@ impl Activity {
             guard_waits: Vec::new(),
             guarded_send: None,
             retraced: None,
+            lock_to_lender: false,
             running_methods: Vec::new(),
             guard_exec: None,
             guard_posted: false,
@@ -832,6 +837,7 @@ impl Activity {
             guard_waits: _,
             guarded_send,
             retraced,
+            lock_to_lender: _,
             running_methods: _,
             guard_exec,
             guard_posted: _,

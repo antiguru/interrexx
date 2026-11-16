@@ -408,9 +408,10 @@ pub(crate) struct Activities {
     /// (Deviation 178).
     lends: Vec<Lend>,
     /// The callbacks held while the innermost lend's callback runs, in the
-    /// order they arrived, each with the guard lock it waits to find free
-    /// where it gave the baton back for one ([`Interp::retries_entry_guard`]).
-    pub(crate) held: VecDeque<(Recall, Option<crate::guards::GuardKey>)>,
+    /// order they arrived, each with the guard lock it waits to be granted,
+    /// and the attached activity queued for it, where it gave the baton back
+    /// for one ([`Interp::retries_entry_guard`]).
+    pub(crate) held: VecDeque<(Recall, Option<(crate::guards::GuardKey, ActivityId)>)>,
     /// The thread contexts whose callback gave the baton back to wait for a
     /// guard lock, each with that lock, until the callback's next recall.
     retrying: Vec<(usize, crate::guards::GuardKey)>,
@@ -1326,8 +1327,9 @@ impl Interp {
     /// for at its entry, before it has run anything, is held by an activity
     /// a lend to a callback stopped, and the callback's member sends again
     /// when asked. If so, the callback's thread is asked to give the baton
-    /// back and send again, and its next recall is held until the lock is
-    /// free, as ooRexx has the send wait for the lock
+    /// back and send again, and its next recall is held until a release
+    /// grants it the lock in its turn ([`Interp::queue_held_retry`]), as
+    /// ooRexx has the send wait for the lock
     /// (`r[native.threads.attach.deviation.178]`). The caller then fails the
     /// send with [`Loud::retried_send`], which the send answers no one.
     /// `entered` says whether the running activation is the method whose
@@ -1634,9 +1636,12 @@ impl Interp {
     /// lie below a loop on the stack, and a wait nothing can end where no
     /// activity is ready at all. A wait [`Interp::waits_on_a_lender`] finds
     /// on an activity a callback stopped is refused as an inverted wait at
-    /// once.
+    /// once, and so is a guard wait whose lock a release grants such an
+    /// activity later ([`Interp::stop_callbacks_behind`]), which leaves
+    /// [`Activity::lock_to_lender`] set for the caller.
     pub(crate) fn pinned_wait(&mut self, reason: ParkReason) -> Option<Failure> {
         pinned_park!(self, reason);
+        self.activity.lock_to_lender = false;
         self.park(reason);
         if self.sim_fails_wait() {
             pinned_unpark!(self);
@@ -1659,7 +1664,12 @@ impl Interp {
             if let Some(waiting) = waiting {
                 self.set_callback_waiting(waiting);
             }
-            waited
+            match waited {
+                Ok(Waited::Woken) if self.activity.lock_to_lender => {
+                    Ok(Waited::Blocked { inverted: true })
+                }
+                waited => waited,
+            }
         };
         pinned_unpark!(self);
         let failure = match waited {
@@ -2117,24 +2127,100 @@ impl Interp {
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
-    /// holds it any more: one waiting for a guard lock once the lock is free.
-    /// `drain` is where the drain serving them finds the running activity.
+    /// holds it any more: one waiting for a guard lock once a release has
+    /// granted it the lock, in its turn behind the activities queued before
+    /// it. `drain` is where the drain serving them finds the running
+    /// activity.
     fn serve_held(&mut self, drain: DrainAt) {
         let mut at = 0;
         while at < self.activities.held.len() && !self.holds_callbacks() {
-            let free = match self.activities.held[at].1 {
-                Some(key) => self.activities.guards.owner(key).is_none(),
+            let granted = match self.activities.held[at].1 {
+                Some((key, held)) => self.activities.guards.owner(key) == Some(held),
                 None => true,
             };
-            if !free {
+            if !granted {
                 at += 1;
                 continue;
             }
-            let Some((recall, _)) = self.activities.held.remove(at) else {
+            let Some((recall, waited)) = self.activities.held.remove(at) else {
                 break;
             };
             self.serve_recall(recall, drain);
+            // A send that did not reserve the lock it was granted, as one
+            // refused once the interpreter has ended, passes it on.
+            if let Some((key, held)) = waited
+                && self.activities.guards.granted_unreserved(key, held)
+                && let Some(next) = self.activities.guards.pass_unreserved(key)
+            {
+                self.grant_guard(key, next);
+            }
             at = 0;
+        }
+    }
+
+    /// Holds `recall`, queued for the guard lock of `retrying` where its
+    /// callback's send gave the baton back to be sent again.
+    fn file_held(&mut self, recall: Recall, retrying: Option<(usize, crate::guards::GuardKey)>) {
+        match retrying {
+            Some((address, key)) => self.queue_held_retry(recall, address, key),
+            None => self.activities.held.push_back((recall, None)),
+        }
+    }
+
+    /// Files `recall`, the next recall of a callback whose send gave the
+    /// baton back to be sent again once it is granted `key`
+    /// ([`Interp::retries_entry_guard`]): its attached activity joins the
+    /// back of `key`'s queue as any waiter does, so it is granted the lock in
+    /// its turn, and the recall is held until then.
+    fn queue_held_retry(&mut self, recall: Recall, address: usize, key: crate::guards::GuardKey) {
+        let waited = self.context_owner(address).map(|held| {
+            self.activities.guards.queue_retry(key, held);
+            (key, held)
+        });
+        self.activities.held.push_back((recall, waited));
+    }
+
+    /// Whether `activity` is the attached activity of a held send queued for
+    /// `key` ([`Interp::queue_held_retry`]).
+    pub(crate) fn holds_retry_for(
+        &self,
+        key: crate::guards::GuardKey,
+        activity: ActivityId,
+    ) -> bool {
+        (self.activities.held.iter()).any(|(_, waited)| *waited == Some((key, activity)))
+    }
+
+    /// Ends the guard waits for `key` of the callbacks whose lends stopped
+    /// `granted`, which a release has just made its owner: `granted` runs
+    /// only once those callbacks have ended, so their waits would never end.
+    /// A wait ended so is sent again or refused by its caller, as one that
+    /// found the lock held so at its start is (Deviation 178). A lender that
+    /// is an attached activity's callback leaves the waits as they are, as
+    /// at their start.
+    pub(crate) fn stop_callbacks_behind(
+        &mut self,
+        key: crate::guards::GuardKey,
+        granted: ActivityId,
+    ) {
+        let lends = &self.activities.lends;
+        let Some(first) = lends.iter().position(|lend| lend.lender == granted) else {
+            return;
+        };
+        if self.record(granted).is_some_and(|record| record.attached) {
+            return;
+        }
+        let stopped: Vec<ActivityId> = (lends[first..].iter())
+            .map(|lend| lend.lendee)
+            .filter(|lendee| {
+                self.activities.guards.waiting(*lendee) == Some(crate::guards::Waiting::Guard(key))
+            })
+            .collect();
+        for lendee in stopped {
+            self.activities.guards.withdraw(lendee);
+            if let Some(record) = self.record_of(lendee) {
+                record.lock_to_lender = true;
+            }
+            self.unpark(lendee);
         }
     }
 
@@ -2175,16 +2261,16 @@ impl Interp {
                     };
                     let retrying = (self.activities.retrying.iter())
                         .position(|(held, _)| Some(*held) == context)
-                        .map(|at| self.activities.retrying.swap_remove(at).1);
+                        .map(|at| self.activities.retrying.swap_remove(at));
                     if hold && context.is_some() {
-                        self.activities.held.push_back((recall, retrying));
+                        self.file_held(recall, retrying);
                         continue;
                     }
                     self.timer.requeue(std::mem::take(&mut posted));
                     if hold {
                         self.serve_recall(recall, at);
                     } else {
-                        self.activities.held.push_back((recall, retrying));
+                        self.file_held(recall, retrying);
                         self.serve_held(at);
                     }
                     posted = self.timer.drain();

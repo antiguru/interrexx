@@ -3223,6 +3223,9 @@ impl Interp {
                 if self.granted(key) {
                     self.release_guard(key);
                 }
+                if self.lock_went_to_lender(key, false) {
+                    return Err(crate::Loud::retried_send().into());
+                }
                 Err(failure)
             }
         }

@@ -750,6 +750,79 @@ fn a_callback_that_runs_again_for_a_guard_is_traced_once() {
     }
 }
 
+/// A started activity holds an object's guard while it sleeps, and the main program waits for it.
+/// An attached thread's guarded `POKE` arrives during that wait, stops the main program, and
+/// queues behind it. The release grants the guard to the main program, which only runs once
+/// `POKE`'s message has ended, so `POKE` gives the interpreter back and is sent again behind the
+/// main program: `g` runs, then `POKE` (Deviation 178). The oracle agrees under the gate.
+// spec: native.threads.attach.deviation.178
+#[test]
+fn a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it() {
+    assert_eq!(
+        run("attach-handoff", "handoff.rex"),
+        ("hold\ng\npoke\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// [`a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it`] with
+/// a third activity queued for the guard after the main program: the guard goes to the main
+/// program, then to the third activity, and `POKE`, sent again, comes last, as the order of the
+/// queue says. The oracle agrees under the gate.
+// spec: native.threads.attach.deviation.178
+#[test]
+fn a_callback_sent_again_for_a_guard_queues_behind_the_activities_already_waiting() {
+    assert_eq!(
+        run("attach-handoffthird", "handoffthird.rex"),
+        ("hold\ng\nt\npoke\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// [`a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it`] where
+/// a thread of the extension calls `Halt` through the instance while `POKE` waits: the started
+/// activity and the main program each trap their HALT, and `POKE`, sent again, runs. The oracle
+/// agrees under the gate.
+// spec: native.threads.attach.deviation.178, native.threads.halt
+#[test]
+fn a_halt_while_a_callback_waits_for_a_guard_its_lender_is_granted_ends_the_program() {
+    assert_eq!(
+        run("attach-handoffhalt", "handoffhalt.rex"),
+        ("hold halted\ng halted\npoke\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// [`a_guard_granted_to_the_activity_a_callback_stopped_sends_the_callback_again_behind_it`] where
+/// the guarded `POKE` is sent from inside the attached thread's unguarded message, after it has
+/// said a line. When the release grants the guard to the main program, which the message stopped,
+/// the wait is refused as an inverted wait (Deviation 178), and the program ends with rc 120. The
+/// oracle runs `POKE` after `g`, so it is not asked.
+// spec: native.threads.attach.deviation.178
+#[test]
+fn a_callbacks_wait_within_its_message_for_a_guard_its_lender_is_granted_is_refused() {
+    assert_eq!(
+        run_ours("attach-handofflater", "handofflater.rex"),
+        ("later\nhold\ng\n".to_owned(), inverted_wait("a guard"), 120)
+    );
+}
+
+/// Two started activities take turns with an object's guard, sleeping while they hold it and
+/// between turns, while an attached thread's guarded `POKE` needs it, a hundred runs in a row.
+/// Whichever activity `POKE`'s message stops, and whenever the guard is granted to it, `POKE` runs
+/// once and every run ends. CI runs it in a job of its own.
+// spec: native.threads.attach.deviation.178
+#[test]
+#[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
+fn a_callback_contending_with_two_activities_for_a_guard_runs_a_hundred_times() {
+    let dir = build("attach-handoffstress");
+    for run in 0..100 {
+        assert_eq!(
+            run_built(&dir, "handoffstress.rex"),
+            ("poke\n".to_owned(), String::new(), 0),
+            "run {run}"
+        );
+    }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
 /// An attached thread's unguarded message sends `TICK` to an object whose guarded method the main
 /// program runs. The `TICK`'s wait comes after its message has begun, so the message cannot give
 /// the interpreter back, and only the main program, which makes no progress while the message

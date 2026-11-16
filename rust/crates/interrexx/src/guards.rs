@@ -139,6 +139,64 @@ impl GuardTable {
         }
     }
 
+    /// Queues `held`, an attached activity whose callback's send waits to be
+    /// sent again, for `key` as any waiter is, or makes it the owner where
+    /// nobody holds `key`: owned at count 0, the lock is granted and not yet
+    /// reserved, which the send's own reserve does.
+    pub(crate) fn queue_retry(&mut self, key: GuardKey, held: ActivityId) {
+        match self.locks.entry(key) {
+            Entry::Vacant(vacant) => {
+                vacant.insert(Lock {
+                    owner: held,
+                    count: 0,
+                    waiters: VecDeque::new(),
+                });
+            }
+            Entry::Occupied(lock) if lock.get().owner == held => {}
+            Entry::Occupied(_) => self.enqueue(key, held),
+        }
+    }
+
+    /// Takes back the reserve of `key` that a release just granted its new
+    /// owner, a held send's activity ([`GuardTable::queue_retry`]), so that
+    /// the send's own reserve makes it.
+    pub(crate) fn grant_unreserved(&mut self, key: GuardKey) {
+        if let Some(lock) = self.locks.get_mut(&key) {
+            lock.count = 0;
+        }
+    }
+
+    /// Whether `held` owns `key` granted and not reserved
+    /// ([`GuardTable::queue_retry`]).
+    pub(crate) fn granted_unreserved(&self, key: GuardKey, held: ActivityId) -> bool {
+        self.locks
+            .get(&key)
+            .is_some_and(|lock| lock.owner == held && lock.count == 0)
+    }
+
+    /// Passes `key`, granted to an owner that did not reserve it, to its
+    /// first waiter at count 1, answered for waking, or frees it.
+    pub(crate) fn pass_unreserved(&mut self, key: GuardKey) -> Option<ActivityId> {
+        let Entry::Occupied(mut held) = self.locks.entry(key) else {
+            return None;
+        };
+        let lock = held.get_mut();
+        if lock.count != 0 {
+            return None;
+        }
+        match lock.waiters.pop_front() {
+            Some(next) => {
+                lock.owner = next;
+                lock.count = 1;
+                Some(next)
+            }
+            None => {
+                held.remove();
+                None
+            }
+        }
+    }
+
     /// Moves `key`, held at count 1, to `to`.
     pub(crate) fn transfer(&mut self, key: GuardKey, to: ActivityId) {
         if let Some(lock) = self.locks.get_mut(&key) {
@@ -539,7 +597,19 @@ impl Interp {
         if failure.is_none() || self.granted(wait.key) {
             self.activation_mut().flags.set_reserved(true);
         }
+        if failure.is_some() && self.lock_went_to_lender(wait.key, true) {
+            return Err(crate::Loud::retried_send().into());
+        }
         failure.map_or(Ok(()), Err)
+    }
+
+    /// Whether the pinned wait for `key` that just failed ended because a
+    /// release granted the lock to an activity the callback's lend stopped
+    /// ([`Interp::stop_callbacks_behind`]), and the callback's send is to be
+    /// sent again ([`Interp::retries_entry_guard`]). Otherwise the wait's
+    /// refusal stands.
+    pub(crate) fn lock_went_to_lender(&mut self, key: GuardKey, entered: bool) -> bool {
+        std::mem::take(&mut self.activity.lock_to_lender) && self.retries_entry_guard(key, entered)
     }
 
     /// Blames the running activation's first clause for a failure raised before
@@ -621,7 +691,20 @@ impl Interp {
             return;
         }
         if let Some(next) = self.activities.guards.release(key) {
+            self.grant_guard(key, next);
+        }
+    }
+
+    /// Wakes `next`, which a release made `key`'s owner. A held send's
+    /// activity is not parked: the lock waits, granted, for its send
+    /// ([`Interp::queue_held_retry`]).
+    pub(crate) fn grant_guard(&mut self, key: GuardKey, next: crate::scheduler::ActivityId) {
+        if self.holds_retry_for(key, next) {
+            self.activities.guards.grant_unreserved(key);
+            self.activities.guards.woken(next);
+        } else {
             self.unpark(next);
+            self.stop_callbacks_behind(key, next);
         }
         // A callback held for a lock is served at the next drain.
         if !self.activities.held.is_empty() {
