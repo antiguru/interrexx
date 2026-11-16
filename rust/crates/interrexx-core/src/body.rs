@@ -996,6 +996,24 @@ impl ScopePools {
         }
     }
 
+    /// Binds `value` to the entry of `scope`'s pool whose name is `name`
+    /// itself, the same allocation rather than equal bytes, and answers
+    /// whether there was one. A caller that bound a name from a copy it keeps
+    /// finds its entry this way without comparing any name's bytes.
+    #[inline]
+    pub fn set_shared(&mut self, scope: ObjRef, name: &Rc<[u8]>, value: ObjRef) -> bool {
+        let Some((_, pool)) = self.pools.iter_mut().find(|(s, _)| *s == scope) else {
+            return false;
+        };
+        match pool.iter_mut().find(|(bound, _)| Rc::ptr_eq(bound, name)) {
+            Some(entry) => {
+                entry.1 = value;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Returns `name` to the uninitialised state in `scope`'s pool, which is
     /// what `DROP` on an exposed variable does. A name the pool never held is
     /// a no-op, exactly as `DROP` on a never-assigned local is.

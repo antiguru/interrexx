@@ -494,12 +494,7 @@ fn build(
     interp.roots.activity_mut().push_temp(slots);
     let used = entries.len();
     let used_value = small(used as i64);
-    let names = if half == CONTENTS {
-        &interp.hash_names.contents
-    } else {
-        &interp.hash_names.methods
-    };
-    let [n_indexes, n_items, n_codes, n_slots, n_used] = names.clone();
+    let [n_indexes, n_items, n_codes, n_slots, n_used] = pool_names(interp, half).clone();
     // A capacity [`initialize_store`] left pending goes, so that the five
     // entries are bound together in their order, as [`shared_run`] reads them.
     if pool_variable(interp, receiver, scope, half.indexes).is_none()
@@ -770,8 +765,20 @@ pub(super) fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<
 
 fn set_used(interp: &mut Interp, receiver: ObjRef, half: Half, used: usize) {
     let scope = hash_scope(interp);
-    interp.set_pool_variable(receiver, scope, half.used, small(used as i64));
+    // The copy of the name [`build`] bound, whose entry is found by identity.
+    let [_, _, _, _, name] = pool_names(interp, half);
+    let name = Rc::clone(name);
+    interp.set_pool_variable_shared(receiver, scope, &name, small(used as i64));
     bump_store_generation(interp);
+}
+
+/// `half`'s five names as [`PoolNames`] keeps them.
+fn pool_names(interp: &Interp, half: Half) -> &[Rc<[u8]>; 5] {
+    if half == CONTENTS {
+        &interp.hash_names.contents
+    } else {
+        &interp.hash_names.methods
+    }
 }
 
 /// Marks every [`StoreView`] taken before this call as stale.
