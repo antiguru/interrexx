@@ -829,10 +829,9 @@ fn context_of(raw: NonNull<Thread>) -> *mut RexxThreadContext_ {
 /// through it files it ([`ThreadTable::take_pending`]). A callback through it
 /// from the thread attached to it, with no native call in flight on it, opens
 /// an entry of its own for the length of the member it calls. The context is
-/// kept ([`ThreadContext::keep`]), as the thread holds its address until it
-/// detaches, whenever that is. A context whose attached activity has ended is
-/// taken off the instance's free list before a new one is built. `None` where
-/// the interpreter's table is gone.
+/// kept ([`ThreadContext::keep`]). A context whose attached activity has
+/// ended is taken off the instance's free list before a new one is built.
+/// `None` where the interpreter's table is gone.
 ///
 /// # Safety
 /// As [`owner_of_instance`].
@@ -857,6 +856,8 @@ unsafe fn build_attached(
                 requester: Some(requester),
             };
             let raw = Thread::allocate(&table);
+            // Kept, as the thread holds the context's address until it
+            // detaches, whenever that is.
             // SAFETY: `raw` is the allocation just made, and no other thread
             // has its address yet.
             unsafe {
@@ -5224,12 +5225,9 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 /// created an embedding is to its root, is attached to it once more. Any
 /// other thread is attached to an activity of its own
 /// (`r[native.threads.attach]`): its callbacks run as that activity until it
-/// detaches. The context is built without the baton, and the interpreter files
-/// the activity at the first callback through it ([`build_attached`]), so an
-/// attach answers while the interpreter's only activity runs a native call
-/// that waits for the attaching thread. An attached activity's context is
-/// kept, so a `DetachThread` at any time reads live memory. A thread the
-/// interpreter refuses
+/// detaches. Its context is built without the baton and kept, and the
+/// interpreter files the activity at the first callback through it
+/// ([`build_attached`]). A thread the interpreter refuses
 /// ([`crate::values::Baton::refuses_attach`]) is not attached, and the answer
 /// is false.
 ///
@@ -5256,6 +5254,10 @@ unsafe extern "C" fn attach_thread(
                 // A thread attaching to an interpreter that has ended gets
                 // nothing (`r[native.threads.end]`).
                 Some(requester) if requester.refuses_attach() || requester.ended() => None,
+                // Built without the baton, so an attach answers while the
+                // interpreter's only activity runs a native call that waits
+                // for the attaching thread. The context is kept, so a
+                // `DetachThread` at any time reads live memory.
                 // SAFETY: the caller guarantees `instance`.
                 Some(requester) => unsafe { build_attached(instance, requester) }
                     .inspect(|&context| attach_here(context as usize)),
