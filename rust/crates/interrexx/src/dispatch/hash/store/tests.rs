@@ -172,3 +172,39 @@ fn a_slot_met_twice_is_one_entry() {
     );
     assert_eq!(out, " 11 11 11 11 11 11 11 11 11 11 11 11\n1 11\n");
 }
+
+/// A search compares each entry it began with at most once, so it ends even
+/// when every comparison adds an entry to the collection searched. The run is
+/// bounded by a deadline: a search that restarts on every change fails the
+/// test instead of hanging it.
+#[test]
+fn a_search_whose_comparison_always_adds_an_entry_ends() {
+    let outcome = crate::run_program(
+        "/t.rex",
+        b"r = .relation~new\n\
+          r~put('a', 'k')\n\
+          q = .grow~new(r)\n\
+          say 'hasItem' r~hasItem(q) 'calls' q~calls\n\
+          q = .grow~new(r)\n\
+          say 'removeItem' r~removeItem(q) 'calls' q~calls\n\
+          t = .table~new\n\
+          t~put('a', 'k')\n\
+          q = .grow~new(t)\n\
+          say 'table removeItem' t~removeItem(q) 'calls' q~calls\n\
+          ::class grow\n\
+          ::attribute calls\n\
+          ::method init\n  expose c calls\n  use arg c\n  calls = 0\n\
+          ::method '=='\n  expose c calls\n  calls += 1\n  c~put('n'calls, 'k'calls)\n  return 0\n"
+            .to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    // Each search began with the entries the collection held before it: one,
+    // then two once the first search had added its one entry.
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "hasItem 0 calls 1\nremoveItem The NIL object calls 2\n\
+         table removeItem The NIL object calls 1\n"
+    );
+}

@@ -3,7 +3,8 @@ r = .relation~new
 r~put('tail', 'key')
 r~put('head', 'key')
 q = .wanted~new(r)
-say 'answer' r~hasItem(q, 'key') 'items' r~items
+answer = r~hasItem(q, 'key')
+say 'answer-either' (answer == 0 | answer == 1) 'items' r~items
 say 'compared' (q~calls > 0)
 exit
 ::class wanted

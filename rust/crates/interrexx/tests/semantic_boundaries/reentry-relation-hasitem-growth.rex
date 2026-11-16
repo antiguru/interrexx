@@ -10,12 +10,10 @@ say 'answer' answer 'items' r~items
 exit
 ::class key
 ::attribute hashes
-::attribute equals
 ::method init
-  expose table armed hashes equals
+  expose table armed hashes
   use arg table
   hashes = 0
-  equals = 0
   armed = 0
 ::method arm
   expose armed
@@ -25,8 +23,7 @@ exit
   hashes += 1
   return 'key'
 ::method '=='
-  expose table armed equals
-  equals += 1
+  expose table armed
   if armed then do
     armed = 0
     do i = 1 to 40

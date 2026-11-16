@@ -3,7 +3,7 @@ t = .table~new
 t~put('victim', .key~new(1))
 w = .wanted~new(t)
 removed = t~removeItem(w)
-say 'consistent' ((removed == 'extra' & t~items == 0) | (removed == .nil & t~items == 1)) 'victim-still-present' t~hasIndex(.key~new(1))
+say 'consistent' ((removed == 'extra' & t~items == 0) | (removed == .nil & t~items == 1)) 'victim-still-present' t~hasIndex(.key~new(1)) 'key-2-left' (t~hasIndex(.key~new(2)) == (removed == .nil))
 exit
 ::class key
 ::attribute label

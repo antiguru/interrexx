@@ -124,28 +124,30 @@ pub(super) fn native_hash_remove_item(
     let wanted = super::collection::item_argument(args)?;
     let keys = keys_of(interp, receiver);
     if method_store(interp, receiver)?.is_none() && unknown_method(interp, receiver).is_none() {
-        'search: loop {
-            let store = store_of(interp, receiver)?;
-            // Keep the saved array identities live across replacement callbacks.
-            for array in [store.indexes, store.items, store.codes, store.slots] {
-                interp.roots.activity_mut().push_temp(array);
-            }
-            for position in entries(interp, &store)? {
-                let Some(item) = item_at(interp, &store, position)? else {
-                    continue;
-                };
-                if same_held_item(interp, keys, wanted, item)? {
-                    if let Some(removed) = take_at(interp, receiver, &store, position)? {
-                        return Ok(Some(removed));
-                    }
-                    continue 'search;
-                }
-                if store_of(interp, receiver)? != store {
-                    continue 'search;
-                }
-            }
-            return Ok(Some(ObjRef::NIL));
+        let store = store_of(interp, receiver)?;
+        // Keep the saved array identities live across replacement callbacks.
+        for array in [store.indexes, store.items, store.codes, store.slots] {
+            interp.roots.activity_mut().push_temp(array);
         }
+        // One pass over the entries the search began with, each compared at
+        // most once: a comparison that changes the receiver never starts the
+        // search again, so the search ends whatever the comparisons do. A
+        // match that a callback has removed or moved to new arrays is skipped
+        // (`r[class.table.deviation.33]`).
+        for position in entries(interp, &store)? {
+            if slot_at(interp, store.indexes, position)?.is_none() {
+                continue;
+            }
+            let Some(item) = item_at(interp, &store, position)? else {
+                continue;
+            };
+            if same_held_item(interp, keys, wanted, item)?
+                && let Some(removed) = take_at(interp, receiver, &store, position)?
+            {
+                return Ok(Some(removed));
+            }
+        }
+        return Ok(Some(ObjRef::NIL));
     }
     let Some((index, item, from_method)) = search_item(interp, receiver, wanted)? else {
         return Ok(Some(ObjRef::NIL));

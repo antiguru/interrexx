@@ -3,19 +3,18 @@ b = .bag~new
 b~put(.key~new(b, 'old'))
 q = .key~new(b, 'query')
 q~arm
-say 'answer' b~hasItem(q) 'items' b~items
+answer = b~hasItem(q)
+say 'answer-either' (answer == 0 | answer == 1) 'items' b~items
 say 'calls' q~hashes
 exit
 ::class key
 ::attribute label
 ::attribute hashes
-::attribute equals
 ::method init
-  expose bag label armed hashes equals
+  expose bag label armed hashes
   use arg bag, label
   armed = 0
   hashes = 0
-  equals = 0
 ::method arm
   expose armed
   armed = 1
@@ -24,9 +23,8 @@ exit
   hashes += 1
   return 'key'
 ::method '=='
-  expose bag armed equals label
+  expose bag armed label
   use arg held
-  equals += 1
   if armed then do
     armed = 0
     bag~empty
