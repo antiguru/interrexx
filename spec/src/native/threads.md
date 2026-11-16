@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166, 174, 175, 176]
+deviations: [166, 176, 177, 178]
 ---
 
 # Threads and halting
@@ -19,7 +19,7 @@ A thread that native code starts may attach to the interpreter. It is then an
 [activity](../concurrency/activities.md) of its own, which runs the Rexx code
 of the messages it sends while the program's other activities run as well,
 except the one each message interrupts, which [Deviation
-176](r:native.threads.attach.deviation.176) stops, and it leaves the
+178](r:native.threads.attach.deviation.178) stops, and it leaves the
 interpreter when it detaches. The fixture's thread posts an
 EventSemaphore that the main program waits on.
 
@@ -49,10 +49,10 @@ rc 0
 posted
 ```
 
-r[native.threads.attach.deviation.176]
+r[native.threads.attach.deviation.178]
 While a message that an attached thread sends runs, the activity that was
 running when it arrived makes no progress in Rexx clauses ([Deviation
-176](../deviations.md#176-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
+178](../deviations.md#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
 The message runs at that activity's next clause boundary, or during its wait
 or its call into a native library that is not built in, and the activity goes
 on only once the message has finished. A message that arrives while another
@@ -76,11 +76,11 @@ ooRexx the thread's messages run alongside the other activities. The tests of
 this rule need an extension of their own that sends messages by name, so they
 run outside this page.
 
-r[native.threads.attach.deviation.175]
+r[native.threads.attach.deviation.177]
 `DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
 thread's context from any other thread return at once and do nothing, and so
 does a second `DetachThread` from the thread that attached it ([Deviation
-175](../deviations.md#175-an-attached-threads-context-used-from-another-thread)).
+177](../deviations.md#177-an-attached-threads-context-used-from-another-thread)).
 The attachment stays as it was, and its next message runs, neither halted nor
 traced by the call. The call does not wait for a message the attached thread
 runs, so it returns even where that message waits for the calling thread.
@@ -163,12 +163,12 @@ rc 0 waited 0
 main ends
 ```
 
-r[native.threads.end.deviation.174]
+r[native.threads.end.deviation.176]
 A thread that is still attached when the embedding calls `Terminate` can send
 no message afterwards: each send through its context is refused, answers the
 failure value of the member and runs nothing, and `DetachThread` from that
 thread returns ([Deviation
-174](../deviations.md#174-a-callback-after-the-embedding-ends-the-interpreter)).
+176](../deviations.md#176-a-callback-after-the-embedding-ends-the-interpreter)).
 ooRexx runs the message and answers its result. The example needs an
 embedding that calls `Terminate`, which the `rexx` command does not, so the
 tests of this rule run one instead.
@@ -234,7 +234,7 @@ activity that was not asked runs on. An [attached
 thread](r:native.threads.attach) whose activity runs no message when the
 interpreter is asked to halt every activity is not asked: the next message it
 sends runs unhalted. A message that has arrived but is held under [Deviation
-176](r:native.threads.attach.deviation.176) has not begun, so its activity
+178](r:native.threads.attach.deviation.178) has not begun, so its activity
 runs no message and is not asked either: the message runs to its end once it
 is let go. In the examples a second activity loops with a short sleep and
 records whether it was halted.

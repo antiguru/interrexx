@@ -318,7 +318,7 @@ A thread that is running a loader or an unloader never waits for its own hook.
 What the [shared](r:native.loading.shared) and [again](r:native.loading.again)
 rules make other threads wait for, it goes on without. While a loader or an
 unloader runs, the instance running it is in a call into a native library, in
-the sense of [Deviation 176](r:native.threads.attach.deviation.176): a message
+the sense of [Deviation 178](r:native.threads.attach.deviation.178): a message
 that an attached thread sends to that instance meanwhile runs without waiting
 for the hook to return. A hook may therefore wait for a thread that calls into
 the instance running it, for instance through a load that waits for the loader

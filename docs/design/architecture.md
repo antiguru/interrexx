@@ -137,7 +137,7 @@ ooRexx method table, not guessed.
   holder lends it at its running activity's next clause boundary, during that activity's wait, or
   during its call into an external library, and the callback's Rexx code runs on the attached
   thread's stack. The interrupted activity makes no progress in Rexx clauses until the callback's
-  member finishes (Deviation 176). A callback that arrives while another runs Rexx clauses is held
+  member finishes (Deviation 178). A callback that arrives while another runs Rexx clauses is held
   until that one returns, waits or calls an external library, the earliest first. A send whose
   method needs at its entry a guard lock that a stopped activity holds gives the baton back and is
   sent again once the lock is free. A wait of a running callback that only a stopped activity can

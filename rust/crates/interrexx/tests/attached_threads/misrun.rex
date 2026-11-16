@@ -2,7 +2,7 @@
    program, from a call into the extension, calls HaltThread, SetThreadTrace and DetachThread on
    that thread's context. The three return at once and do nothing: LONG runs to its end untraced
    and leaves no condition, and the thread detaches itself afterwards.
-   spec: native.threads.attach.deviation.175 */
+   spec: native.threads.attach.deviation.177 */
 t = .ticks~new
 call on halt name halted
 call AtAttachIdle t, 'LONG'

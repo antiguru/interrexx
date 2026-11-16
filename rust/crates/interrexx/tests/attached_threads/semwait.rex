@@ -1,6 +1,6 @@
 /* An attached thread's message, sent while the main program waits on an event semaphore, posts
    it, sleeps a second and says it ends: the order of that and the main program's wake.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 t = .ticks~new
 call AtSendAfter t, 'POSTNAP', 200
 t~mainwait

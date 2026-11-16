@@ -1,6 +1,6 @@
 /* An attached thread's message sleeps a second while the main program runs Rexx code, which
    counts its own sleeps until the message has napped.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 t = .ticks~new
 call AtSend t, 'NAP'
 do while t~napping = 0 & t~napped = 0

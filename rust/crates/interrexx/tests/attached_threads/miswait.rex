@@ -2,7 +2,7 @@
    program, from a call of its own, has called HaltThread, SetThreadTrace and DetachThread on that
    thread's context. The three return at once and do nothing, so the main program's call lets
    STALLED go on, which ends without a condition.
-   spec: native.threads.attach.deviation.175 */
+   spec: native.threads.attach.deviation.177 */
 t = .ticks~new
 call on halt name halted
 call AtAttachIdle t, 'STALLED'

@@ -491,8 +491,8 @@ fn an_idle_attached_thread_does_not_hold_program_end() {
 /// A message an attached thread sent before the main program ends, still running when it does,
 /// holds the program's end until it finishes, and the program ends with rc 0. The main program
 /// says it ends only once the message has finished, as it makes no progress while the message runs
-/// (Deviation 176). The oracle says so first, so it is asked for the exit status only.
-// spec: native.threads.end, native.threads.attach.deviation.176
+/// (Deviation 178). The oracle says so first, so it is asked for the exit status only.
+// spec: native.threads.end, native.threads.attach.deviation.178
 #[test]
 fn a_running_callback_holds_program_end() {
     assert_eq!(
@@ -532,9 +532,9 @@ fn a_running_callback_holds_program_end_a_hundred_times() {
 
 /// A message an attached thread sent sleeps a second while the main program loops on
 /// `SysSleep 0.05`: the main program makes no progress meanwhile, its sleeps included, and counts
-/// fewer than five (Deviation 176). The oracle runs it meanwhile and says `main ran`, so it is asked
+/// fewer than five (Deviation 178). The oracle runs it meanwhile and says `main ran`, so it is asked
 /// for the exit status only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_runs_while_main_runs_rexx() {
     assert_eq!(
@@ -545,9 +545,9 @@ fn a_callback_runs_while_main_runs_rexx() {
 
 /// A message an attached thread sends while the main program is in a call into the extension,
 /// which blocks for a second, runs during the call and sleeps two seconds. The call returns
-/// first, but the main program goes on only once the message has finished (Deviation 176). The
+/// first, but the main program goes on only once the message has finished (Deviation 178). The
 /// oracle goes on at the return, so it is asked for the exit status only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_during_a_native_call_holds_its_return() {
     assert_eq!(
@@ -558,9 +558,9 @@ fn a_callback_during_a_native_call_holds_its_return() {
 
 /// A message an attached thread sends while the main program waits on an event semaphore runs
 /// during the wait and posts the semaphore, then sleeps a second. The main program wakes only once
-/// the message has finished (Deviation 176). The oracle wakes it at the post, so it is asked for
+/// the message has finished (Deviation 178). The oracle wakes it at the post, so it is asked for
 /// the exit status only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_during_a_wait_holds_its_wake() {
     assert_eq!(
@@ -571,9 +571,9 @@ fn a_callback_during_a_wait_holds_its_wake() {
 
 /// A second attached thread's message arrives while the first's sleeps, and sleeps as long: it runs
 /// on top of the sleeping one, and the first, whose sleep ends first, finishes only after the
-/// second (Deviation 176). The oracle finishes them in the order
+/// second (Deviation 178). The oracle finishes them in the order
 /// their sleeps end (`a b`), so it is asked for the exit status only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn callbacks_are_served_one_on_top_of_another() {
     assert_eq!(
@@ -610,9 +610,9 @@ fn a_callback_that_runs_again_for_a_guard_is_traced_once() {
 /// An attached thread's unguarded message sends `TICK` to an object whose guarded method the main
 /// program runs. The `TICK`'s wait comes after its message has begun, so the message cannot give
 /// the interpreter back, and only the main program, which makes no progress while the message
-/// runs, can end it: the wait is refused at once as an inverted wait (Deviation 176), and the
+/// runs, can end it: the wait is refused at once as an inverted wait (Deviation 178), and the
 /// program ends with rc 120. The oracle says `ticked 1`, so it is not asked.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_waiting_within_its_message_for_a_guard_the_main_program_holds_is_refused() {
     assert_eq!(
@@ -625,9 +625,9 @@ fn a_callback_waiting_within_its_message_for_a_guard_the_main_program_holds_is_r
 /// getter while the main program, stopped by the message, runs a guarded method of the same
 /// object. The read comes after the message has begun, so the message cannot give the
 /// interpreter back and send again, which would say the line twice: the wait is refused as an
-/// inverted wait (Deviation 176), the line is said once, and the program ends with rc 120. The
+/// inverted wait (Deviation 178), the line is said once, and the program ends with rc 120. The
 /// oracle's read waits for the method to return, so it is asked for the stdout only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_reading_a_guarded_attribute_within_its_message_runs_it_once() {
     assert_eq!(
@@ -643,10 +643,10 @@ fn a_callback_reading_a_guarded_attribute_within_its_message_runs_it_once() {
 /// An attached thread calls a routine through `CallRoutine` that says a line, then reads an
 /// attribute through its guarded getter while the main program, stopped by the call, runs a
 /// guarded method of the same object. Only a send gives the interpreter back and sends again, so
-/// the read is refused as an inverted wait (Deviation 176), the line is said once, and the
+/// the read is refused as an inverted wait (Deviation 178), the line is said once, and the
 /// thread's next send, a `TICK` to a second object, runs once. The oracle's read waits for the
 /// method to return, so it is asked for the stdout only.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_routine_an_attached_thread_calls_runs_once_and_so_does_its_next_send() {
     assert_eq!(
@@ -860,9 +860,9 @@ fn a_callback_waiting_for_a_post_after_a_native_call_is_not_refused() {
 
 /// An attached thread's message waits with `GUARD OFF WHEN` for a flag the main program sets once
 /// it has run Rexx code for a second. The main program makes no progress while the message runs,
-/// so the wait never ends (Deviation 176). After five seconds stderr says so, and the wait goes on
+/// so the wait never ends (Deviation 178). After five seconds stderr says so, and the wait goes on
 /// until the run is killed. The oracle says `flag seen`, so it is not asked.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
     let (stdout, stderr, status) = run_ours_for("attach-flag", "flag.rex", "10");
@@ -874,7 +874,7 @@ fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
 /// while the main program sleeps for an hour before it sets the flag. The main program makes no
 /// progress while the message runs, so its sleep cannot end the wait either, and stderr says so
 /// after five seconds, as it does where the main program runs Rexx code.
-// spec: native.threads.attach.deviation.176
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported() {
     let (stdout, stderr, status) = run_ours_for("attach-flagsleep", "flagsleep.rex", "10");
@@ -899,8 +899,8 @@ fn assert_stalled_on_flag(stderr: &str) {
 
 /// An attached thread's message waits for the result of the message whose send the main program
 /// runs. The wait is refused at once as an inverted wait, as a wait for a guard the main program
-/// holds is (Deviation 176). The oracle says `got served`, so it is not asked.
-// spec: native.threads.attach.deviation.176
+/// holds is (Deviation 178). The oracle says `got served`, so it is not asked.
+// spec: native.threads.attach.deviation.178
 #[test]
 fn a_callback_waiting_for_a_result_the_main_program_gives_is_refused() {
     assert_eq!(
@@ -954,7 +954,7 @@ fn attach_detach_cycles_stay_bounded() {
 /// A `DetachThread` from a thread not attached to the context, and a second `DetachThread` from
 /// the one that was, do nothing: the attachment's second message, sent between them, runs. The
 /// oracle aborts the process (rc 134), so it is not asked.
-// spec: native.threads.attach, native.threads.attach.deviation.175
+// spec: native.threads.attach, native.threads.attach.deviation.177
 #[test]
 fn detach_from_the_wrong_thread_or_twice_does_nothing() {
     assert_eq!(
@@ -1011,7 +1011,7 @@ fn buffer_strings_released_on_one_attachment_do_not_pile_up() {
 /// An embedding's thread, attached and idle when the creating thread calls `Terminate`, sends a
 /// message afterwards: the send answers nothing, `DetachThread` returns, and nothing aborts or
 /// hangs. The oracle, with the same driver, still runs the message (`after answered`).
-// spec: native.threads.end, native.threads.end.deviation.174
+// spec: native.threads.end, native.threads.end.deviation.176
 #[test]
 fn a_callback_after_terminate_is_refused() {
     assert_eq!(
@@ -1451,7 +1451,7 @@ fn attach_from_a_foreign_thread_is_refused_in_simulation() {
 
 /// One attached thread's message loops for ever, and a second attached thread's message, `THREE`,
 /// arrives while it does, which holds it until the first ends
-/// (`r[native.threads.attach.deviation.176]`). `Halt` through the instance then halts the looping
+/// (`r[native.threads.attach.deviation.178]`). `Halt` through the instance then halts the looping
 /// message, whose thread finds SYNTAX 4.1, and the main program. The held message's activity runs
 /// no message yet, so it is not asked: `THREE` runs to its end. The oracle runs `THREE` alongside
 /// the loop, before the halt, and prints the same.
@@ -1471,7 +1471,7 @@ fn a_held_message_runs_after_a_halt() {
 /// `HaltThread` and `SetThreadTrace`, called on an idle attached thread's context from the main
 /// program's call into the extension, return and do nothing: the thread's later message runs to
 /// its end untraced, and the main program is not halted. The oracle hangs, so it is not asked.
-// spec: native.threads.attach.deviation.175
+// spec: native.threads.attach.deviation.177
 #[test]
 fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
     assert_eq!(
@@ -1488,7 +1488,7 @@ fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
 /// the main program's call into the extension while that thread's message runs Rexx code for two
 /// seconds, return well within that time and do nothing: the message runs to its end untraced and
 /// leaves no condition. The oracle hangs, so it is not asked.
-// spec: native.threads.attach.deviation.175
+// spec: native.threads.attach.deviation.177
 #[test]
 fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_once() {
     assert_eq!(
@@ -1505,7 +1505,7 @@ fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_o
 /// let it go on, which that call does only once its `HaltThread`, `SetThreadTrace` and
 /// `DetachThread` on the thread's context have returned. They return at once, so neither waits
 /// for the other. The oracle hangs, so it is not asked.
-// spec: native.threads.attach.deviation.175
+// spec: native.threads.attach.deviation.177
 #[test]
 fn halt_trace_and_detach_from_the_thread_a_message_waits_on_do_not_hang() {
     assert_eq!(

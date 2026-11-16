@@ -1,6 +1,6 @@
 /* Two attached threads' messages sleep, the second sent while the first sleeps and ending a
    second after it would: the order in which they finish.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 t = .ticks~new
 call AtSend t, 'LIFOA'
 call AtSendAfter t, 'LIFOB', 1000

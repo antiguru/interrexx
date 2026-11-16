@@ -934,8 +934,8 @@ fn a_routine_called_by_name_during_its_loader_leaves_the_interpreter_sound_a_hun
 /// instance while that termination runs the library's unloader, does not crash or hang the
 /// termination: its send is refused and answers no object, the unloader returns and `Terminate`
 /// returns. Under `REXX_CORPUS_GATE` the oracle prints the same, except that it runs the send and
-/// answers `3`, as Deviation 174 (`native.threads.end.deviation.174`) records.
-// spec: native.loading.unload, native.loading.reentrant, native.threads.end.deviation.174
+/// answers `3`, as Deviation 176 (`native.threads.end.deviation.176`) records.
+// spec: native.loading.unload, native.loading.reentrant, native.threads.end.deviation.176
 #[test]
 fn a_thread_calling_in_during_the_last_unloader_is_refused() {
     let mut runs = lifetime_runs("lifetime-unloadercall", "unloadercall", gate_mode()).into_iter();

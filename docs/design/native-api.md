@@ -174,11 +174,11 @@ references, strings and buffers are released, its number is freed, and its conte
 instance's free list, which the next `AttachThread` takes from before it builds one. A detach made
 inside a callback through the context ends the activity once that callback returns. `DetachThread`,
 `HaltThread` and `SetThreadTrace` through the context from another thread return at once and do
-nothing (Deviation 175).
+nothing (Deviation 177).
 
 An idle attached activity does not hold the program's end, and one running a message does. After
 `Terminate`, a callback through an attached context is refused with the member's failure value
-(Deviation 174), as is one after the thread detached (Deviation 19). How a callback shares the
+(Deviation 176), as is one after the thread detached (Deviation 19). How a callback shares the
 interpreter with the other activities is in `architecture.md`, Concurrency.
 * `hostemu` and `orxncurses` are built unmodified against these two libraries by
   `scripts/build-extensions.sh` and run without ooRexx's libraries on the search path.

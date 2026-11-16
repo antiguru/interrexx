@@ -405,7 +405,7 @@ pub(crate) struct Activities {
     pub(crate) vacancies: Vec<Vacancy>,
     /// The lends of the baton to a callback ([`Interp::serve_recall`]),
     /// innermost last. Each lender runs again only once its lend has ended
-    /// (Deviation 176).
+    /// (Deviation 178).
     lends: Vec<Lend>,
     /// The callbacks held while the innermost lend's callback runs, in the
     /// order they arrived, each with the guard lock it waits to find free
@@ -1272,7 +1272,7 @@ impl Interp {
 
     /// The activity a lend to a callback stopped that a wait for `reason`
     /// waits on, through a chain of waits. It runs again only once that
-    /// callback has ended (Deviation 176).
+    /// callback has ended (Deviation 178).
     fn lender_waited_on(&self, reason: ParkReason) -> Option<ActivityId> {
         let lends = &self.activities.lends;
         if lends.is_empty() {
@@ -1298,7 +1298,7 @@ impl Interp {
     /// Whether a wait for `reason` is refused at once: it waits on an activity
     /// a lend to a callback stopped, unless it waits for a guard lock and
     /// that activity is an attached activity's callback, a wait that goes on
-    /// (Deviation 176).
+    /// (Deviation 178).
     fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
         self.lender_waited_on(reason).is_some_and(|lender| {
             !matches!(reason, ParkReason::Guard(_))
@@ -1322,7 +1322,7 @@ impl Interp {
     /// when asked. If so, the callback's thread is asked to give the baton
     /// back and send again, and its next recall is held until the lock is
     /// free, as ooRexx has the send wait for the lock
-    /// (`r[native.threads.attach.deviation.176]`). The caller then fails the
+    /// (`r[native.threads.attach.deviation.178]`). The caller then fails the
     /// send with [`Loud::retried_send`], which the send answers no one.
     /// `entered` says whether the running activation is the method whose
     /// entry waits, rather than one the wait comes in the middle of.
@@ -1943,7 +1943,7 @@ impl Interp {
     /// Whether a callback that arrives now is held until the innermost
     /// lend's callback returns or waits: that callback runs, so one served on
     /// top of it would stop it between two of its clauses, holding what it
-    /// holds (`r[native.threads.attach.deviation.176]`).
+    /// holds (`r[native.threads.attach.deviation.178]`).
     fn holds_callbacks(&self) -> bool {
         self.activities
             .lends
@@ -2941,7 +2941,7 @@ impl Interp {
                 // While an attached thread's callback runs, a later callback
                 // may end a wait, so a loop with nothing else to run or wait
                 // for idles for posts instead of refusing the wait
-                // (`r[native.threads.attach.deviation.176]`).
+                // (`r[native.threads.attach.deviation.178]`).
                 // No callback can end this loop's own wait on a message its
                 // activity runs, so that wait is refused even inside a
                 // callback, a host's call included (Deviation 20).

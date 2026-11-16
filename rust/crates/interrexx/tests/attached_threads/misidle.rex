@@ -2,7 +2,7 @@
    HaltThread and SetThreadTrace on that thread's context. Both return and do nothing: the thread
    then sends THREE, which runs to its end untraced and leaves no condition, and the main program
    is not halted either.
-   spec: native.threads.attach.deviation.175 */
+   spec: native.threads.attach.deviation.177 */
 t = .ticks~new
 call on halt name halted
 call AtAttachIdle t, 'THREE'

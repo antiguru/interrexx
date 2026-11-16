@@ -1,7 +1,7 @@
 /* An attached thread's unguarded message says a line, then reads an attribute through its guarded
    getter, of an object whose guarded method the main program runs, the method that started the
    thread.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 g = .holder~new
 g~holdget
 do while AtDone() < 1

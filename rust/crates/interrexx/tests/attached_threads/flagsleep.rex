@@ -1,6 +1,6 @@
 /* An attached thread's message waits, with GUARD OFF WHEN, for a flag the main program sets once
    it wakes from a sleep of an hour. The message arrives during the sleep.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 t = .ticks~new
 t~flag = 0
 call AtSend t, 'AWAITFLAG'

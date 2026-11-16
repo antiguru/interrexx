@@ -1098,7 +1098,7 @@ fn attach_here(context: usize) {
 
 /// Whether this thread is foreign to the attached activity whose context is
 /// `context`: it is neither attached to that context nor running a call of
-/// the activity (`r[native.threads.attach.deviation.175]`). A thread context
+/// the activity (`r[native.threads.attach.deviation.177]`). A thread context
 /// no `AttachThread` answered has no thread of its own here, so no thread is
 /// foreign to it.
 ///
@@ -1259,7 +1259,7 @@ impl ThreadContext {
 
     /// Asks the callback in flight on this context, an attached activity's,
     /// to give the baton back once its send has failed, and to send again
-    /// (`r[native.threads.attach.deviation.176]`), answering whether it will.
+    /// (`r[native.threads.attach.deviation.178]`), answering whether it will.
     /// It will only where the member in flight sends through [`retrying`]:
     /// any other member answers its failure, and nothing is asked of it.
     pub fn ask_retry(&self) -> bool {
@@ -5627,7 +5627,7 @@ mod redirector {
 /// thread runs a call of it, a callback through the context, the activity
 /// ends once that callback's member returns. A `DetachThread` from a thread
 /// not attached to an attached activity's context, as a second one is, does
-/// nothing and returns at once (`r[native.threads.attach.deviation.175]`).
+/// nothing and returns at once (`r[native.threads.attach.deviation.177]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
@@ -5688,7 +5688,7 @@ fn end_attached(cell: &Innermost) {
 /// `HaltThread`: the context's
 /// activity is asked to halt. Through an attached activity's context, from
 /// a thread foreign to it ([`foreign_to_attached`]), it does nothing and
-/// returns at once (`r[native.threads.attach.deviation.175]`).
+/// returns at once (`r[native.threads.attach.deviation.177]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
@@ -5707,7 +5707,7 @@ unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
 /// tracing of the context's activity on or off. Through an attached
 /// activity's context, from a thread foreign to it
 /// ([`foreign_to_attached`]), it does nothing and returns at once
-/// (`r[native.threads.attach.deviation.175]`).
+/// (`r[native.threads.attach.deviation.177]`).
 ///
 /// # Safety
 /// As [`whole_number_to_object`].

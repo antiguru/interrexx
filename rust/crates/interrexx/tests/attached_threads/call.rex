@@ -1,7 +1,7 @@
 /* An attached thread calls, through CallRoutine, a routine that says a line, then reads an
    attribute through its guarded getter, of an object whose guarded method the main program runs,
    the method that started the thread. The thread then sends TICK to a second object.
-   spec: native.threads.attach.deviation.176 */
+   spec: native.threads.attach.deviation.178 */
 h = .holder~new
 t = .ticks~new
 h~holdcall(.context~package~findRoutine('READCOUNT'), t)
