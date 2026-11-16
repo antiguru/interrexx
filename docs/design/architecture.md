@@ -146,10 +146,12 @@ ooRexx method table, not guessed.
 * **Waits nothing can end.** Where nothing is ready, asleep or in flight, the scheduler refuses the
   wait (Deviation 20), while no external native library has loaded and no outside host runs the
   program. Once either holds, the switch stays off for the rest of the run, and the scheduler waits
-  for a post instead, since a thread such code started may attach later and end the wait. A wait on
-  a message the waiting activity itself runs, an inverted wait, which waits above an activity set
-  aside or interrupted by a recall, and any wait in the simulation mode are refused whatever was
-  loaded.
+  for a post instead, since a thread such code started may attach later and end the wait. An
+  inverted wait, which waits above an activity set aside or interrupted by a recall, follows the
+  same switch (Deviation 14): where it goes on, the stall watch writes its line on stderr once it
+  has waited five seconds and nothing else can run, naming the activity it keeps from running,
+  and a HALT still ends it. A wait on a message the waiting activity itself runs, and any wait in
+  the simulation mode, are refused whatever was loaded.
 * **Scheduling** is round-robin: a ready queue in arrival order, timed sleepers in a deadline heap,
   FIFO guard waiters. A timer thread sets the slice bit every 24 ms; the switch happens at the next
   clause boundary. HALT, trace toggles and raises from elsewhere set request bits that the target
