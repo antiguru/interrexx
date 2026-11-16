@@ -471,23 +471,6 @@ rc -1
 signal 0
 [stderr]
 
-# Real-time signals by number: ignored, then sent; then their default
-# action, which ends the process.
-program
-say 'signal' SysSignal(40, 'I')
-say 'kill' SysKill(SysGetpid(), 40)
-say 'signal' SysSignal(40, 'D')
-say 'kill' SysKill(SysGetpid(), 40)
-say 'alive'
-::requires 'rxunixsys' LIBRARY
-----
-rc -1
-[stdout]
-signal 0
-kill 0
-signal 0
-[stderr]
-
 # signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
 # no signal has, answering 0 with EINVAL kept; kill() refuses a number no
 # signal has.

@@ -258,7 +258,7 @@ rc 0
 
 # The stream data path: NULs kept, MSG_PEEK, FIONREAD into a variable,
 # a compound variable as the target, FIONBIO's EWOULDBLOCK, end of file
-# after a shutdown, EPIPE without dying, and a negative length.
+# once a shutdown has arrived (macOS delivers it to loopback a moment later), EPIPE without dying, and a negative length.
 program
 l = SockSocket('AF_INET', 'SOCK_STREAM', '0')
 a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
@@ -275,6 +275,7 @@ say 'recv' SockRecv(s, 'x.y', 100) c2x(x.y)
 say 'nbio' SockIoctl(s, 'FIONBIO', ' 1 ') errno
 say 'recv' SockRecv(s, 'buf', 100) '['buf']' errno
 say 'shut' SockShutDown(c, 1) errno
+call SysSleep 0.1
 say 'recv' SockRecv(s, 'buf', 100) '['buf']' errno
 say 'close' SockClose(s)
 call SysSleep 0.1
