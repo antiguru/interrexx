@@ -41,18 +41,21 @@ fn on_path(name: &str) -> bool {
 }
 
 /// The `rxapi` service binary beside `rexx`, which `rexx` starts for an API call that needs it.
-/// Cargo builds it only for a workspace build, and a per-package build leaves it out, so a run
-/// that finds it missing fails here instead of as an error from the first `RxFuncAdd`.
-// spec: native.threads.attach
 fn rxapi() -> PathBuf {
-    let path = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+    Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi")
+}
+
+/// Fails a test that needs the `rxapi` service when the binary is missing. Cargo builds it only
+/// for a workspace build, and a per-package build leaves it out, so the test fails here instead
+/// of as an error from the first `RxFuncAdd`.
+fn assert_rxapi() {
+    let path = rxapi();
     assert!(
         path.is_file(),
         "the `rxapi` binary is missing beside `rexx` ({}): build it with `cargo build --workspace` \
          or `cargo build -p interrexx-rxapi` before running these tests",
         path.display()
     );
-    path
 }
 
 /// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
@@ -279,7 +282,6 @@ fn run_in(
     environment: &[(&str, &str)],
 ) -> (Answer, std::time::Duration) {
     let program = fixture(program);
-    drop(rxapi());
     let began = std::time::Instant::now();
     let output = capped(seconds)
         .arg(env!("CARGO_BIN_EXE_rexx"))
@@ -423,7 +425,6 @@ fn run_driver_with(name: &str, arguments: &[&str], seconds: &str, extension: boo
         .expect("g++ runs, which this test needs to build its fixture");
         assert!(built.success(), "the fixture did not build");
     }
-    drop(rxapi());
     let output = capped(seconds)
         .arg(&binary)
         .args(arguments)
@@ -1803,7 +1804,7 @@ fn the_switch_survives_rxfuncdrop() {
         .status()
         .expect("g++ runs, which this test needs to build its fixture");
     assert!(built.success(), "the classic fixture did not build");
-    drop(rxapi());
+    assert_rxapi();
     let mut child = capped(SECONDS)
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(fixture("classic.rex"))
