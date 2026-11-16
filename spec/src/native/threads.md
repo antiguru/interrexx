@@ -53,31 +53,29 @@ r[native.threads.attach.deviation.178]
 While a message that an attached thread sends runs, the activity that was
 running when it arrived makes no progress in Rexx clauses ([Deviation
 178](../deviations.md#178-a-message-from-an-attached-thread-stops-the-activity-it-interrupts)).
-The message runs at that activity's next clause boundary, or during its wait
-or its call into a native library that is not built in, and the activity goes
-on only once the message has finished. A message that arrives while another
-runs is held until that one returns, waits or calls into such a library, the
-earliest first. One that arrives while another waits runs on top of it, and the
-earlier goes on only once the later has finished. A message the thread sends
-with `SendMessage` or one of its variants, whose method needs at its entry a
-guard lock a stopped activity holds, waits for it as in ooRexx, is sent again
-in the place in the lock's queue that its wait took when it began, and `TRACE`
-announces the method's entry once. A guard lock that a stopped activity
-acquires after a message began to wait for it counts from then as one it holds.
-Any other wait counts as one of a message
-that has begun, including the wait of a routine the thread calls with
-`CallRoutine` or of a method another API call sends to, such as the
-`MAKESTRING` that `ObjectToString` sends.
-Once a message has begun, a wait of it for something only a stopped activity
-can give never ends. A wait for a guard lock such an activity holds and no
-other message does, or for the completion of a message whose send it runs, is
-refused at once, and the program ends with exit code 120. Any other, such as a
-`GUARD WHEN`, goes on for ever, with a line on stderr, which says how long it
-has waited, once it has waited five seconds and nothing but a stopped activity
-is left to end it. In
-ooRexx the thread's messages run alongside the other activities. The tests of
-this rule need an extension of their own that sends messages by name, so they
-run outside this page.
+The message runs at that activity's next clause boundary, or during its wait or
+its call into a native library that is not built in, and the activity goes on
+only once the message has finished. A message that arrives while another runs is
+held until that one returns, waits or calls into such a library, the earliest
+first. One that arrives while another waits runs on top of it, and the earlier
+goes on only once the later has finished. A message the thread sends with
+`SendMessage` or one of its variants, whose method needs at its entry a guard
+lock a stopped activity holds, waits for it as in ooRexx, is sent again in the
+place in the lock's queue that its wait took when it began, and `TRACE`
+announces the method's entry once. A guard lock that a stopped activity acquires
+after a message began to wait for it counts from then as one it holds. Any other
+wait counts as one of a message that has begun, including the wait of a routine
+the thread calls with `CallRoutine` or of a method another API call sends to,
+such as the `MAKESTRING` that `ObjectToString` sends. Once a message has begun,
+a wait of it for something only a stopped activity can give never ends. A wait
+for a guard lock such an activity holds and no other message does, or for the
+completion of a message whose send it runs, is refused at once, and the program
+ends with exit code 120. Any other, such as a `GUARD WHEN`, goes on for ever,
+with a line on stderr, which says how long it has waited, once it has waited
+five seconds and nothing but a stopped activity is left to end it. In ooRexx the
+thread's messages run alongside the other activities. The tests of this rule
+need an extension of their own that sends messages by name, so they run outside
+this page.
 
 r[native.threads.attach.deviation.177]
 `DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
