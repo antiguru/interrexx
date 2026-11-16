@@ -194,7 +194,8 @@ fn build_halt_trace(name: &str) -> PathBuf {
 /// Builds `halt_trace.cpp` as the extension `halttrace` into a fresh directory named for `name`
 /// and runs the fixture program `program` from it under `rexx`, answering `view` of its stdout,
 /// stderr and exit status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the
-/// same directory, and `view` of its answer must be the same.
+/// same directory, and `view` of its answer must be the same, with the message texts of both
+/// sides' stderr cut ([`support::error_text::cut_error_texts`]).
 fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answer {
     let dir = build_halt_trace(name);
     let program = fixture(program);
@@ -208,13 +209,17 @@ fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answ
         let oracle = support::oracle::locate();
         let library_path = format!("{}:{}", oracle.lib_dir().display(), dir.display());
         let theirs = oracle.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
+        let cut = |stderr: &[u8]| {
+            String::from_utf8_lossy(&support::error_text::cut_error_texts(stderr)).into_owned()
+        };
+        let theirs = view((
+            String::from_utf8_lossy(&theirs.stdout).into_owned(),
+            String::from_utf8_lossy(&theirs.stderr).into_owned(),
+            theirs.expect_exit_code(),
+        ));
         assert_eq!(
-            view((
-                String::from_utf8_lossy(&theirs.stdout).into_owned(),
-                String::from_utf8_lossy(&theirs.stderr).into_owned(),
-                theirs.expect_exit_code(),
-            )),
-            ours,
+            (theirs.0, cut(theirs.1.as_bytes()), theirs.2),
+            (ours.0.clone(), cut(ours.1.as_bytes()), ours.2),
             "the oracle"
         );
     }
@@ -291,11 +296,11 @@ fn set_trace_on_and_off_through_the_instance_traces_the_main_activity() {
         "       +++ \"LINUX COMMAND PROGRAM\"\n\
          \x20    5 *-* call sub\n\
          \x20   10 *-*   sub:\n\
-         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.\n\
          \x20   11 *-*   x = 1 + 2\n\
          \x20      >>>     \"3\"\n\
          \x20   12 *-*   return\n\
-         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.\n\
          \x20    6 *-* call httrace 0\n\
          \x20      >>>   \"0\"\n"
     );
@@ -318,7 +323,7 @@ fn set_trace_traces_a_body_compiled_before_the_extension_was_loaded() {
          \x20      >K>   \"TO\" => \"2\"\n\
          \x20      >K>   \"BY\" => \"1\"\n\
          \x20      >K>   \"FOR\" => \"2\"\n\
-         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.\n\
          \x20   15 *-*   nop\n\
          \x20   16 *-* end\n\
          \x20   14 *-* do i = 1 to 2 by 1 for 2\n\
@@ -358,7 +363,7 @@ fn set_trace_leaves_header_lines_out_of_a_routine_already_running() {
         "       +++ \"LINUX SUBROUTINE PROGRAM\"\n\
          \x20   12 *-* do i = 1 to 2 by 1 for 2 while i < 5\n\
          \x20      >K>     \"WHILE\" => \"1\"\n\
-         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.\n\
          \x20   13 *-*   nop\n\
          \x20   14 *-* end\n\
          \x20   12 *-* do i = 1 to 2 by 1 for 2 while i < 5\n\
@@ -427,7 +432,7 @@ fn set_trace_leaves_a_routine_called_afterwards_its_own_setting() {
         traced(&stderr, "trace_callee.rex"),
         "       +++ \"LINUX COMMAND PROGRAM\"\n\
          \x20    6 *-* call r\n\
-         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.\n\
          \x20    7 *-* call httrace 0\n\
          \x20      >>>   \"0\"\n"
     );
