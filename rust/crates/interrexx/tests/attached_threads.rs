@@ -922,6 +922,22 @@ fn a_callback_waiting_for_a_result_the_main_program_gives_is_refused() {
     );
 }
 
+/// A started activity's call into the extension calls a routine back through its own call's
+/// context while the main program runs Rexx clauses for ever, so the callback interrupts the main
+/// program. The routine waits for the result of a message nothing sends, which only the main
+/// program, interrupted below it, could go on to give: the wait is inverted, and an external
+/// library being loaded does not stop it from being refused at once (Deviation 14), so the program
+/// ends with rc 120. The oracle runs for ever, so it is not asked; the run is bounded so that a
+/// wait not refused fails the test.
+// spec: conc.locks.deviation.14
+#[test]
+fn an_inverted_wait_above_an_interrupted_activity_is_refused_with_a_library_loaded() {
+    assert_eq!(
+        run_ours_for("attach-pausecall", "pausecall.rex", "30"),
+        (String::new(), inverted_wait("a message's completion"), 120)
+    );
+}
+
 /// An attached thread's message waits on an event semaphore that a second attached thread's
 /// message, sent a second later, posts. The first waits on nothing the main program would
 /// provide, so it is not refused, and the second message, served on top of it, ends its wait

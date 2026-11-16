@@ -2894,15 +2894,17 @@ impl Interp {
     /// Whether the loop at `level`, with nothing to run and nothing in
     /// flight, waits for a post rather than answering that it is blocked:
     /// where waits are not refused as unending
-    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait, a
-    /// wait on the waiting activity's own message
-    /// ([`Interp::waits_on_its_own_message`]), the loop of the program's end
-    /// and the simulation mode.
+    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait,
+    /// above an activity set aside or interrupted, a wait on the waiting
+    /// activity's own message ([`Interp::waits_on_its_own_message`]), the
+    /// loop of the program's end and the simulation mode.
     fn waits_for_attaching_threads(&self, level: usize) -> bool {
         // A thread an external library started may attach later and end the
         // wait (Deviation 20). An inverted wait stays refused whatever was
         // loaded, since only a loop below can run what it waits on (Deviation
-        // 14). The program's end loop answers that it is blocked, and waits
+        // 14): one an activity set aside makes, and one an activity a recall
+        // interrupted below this loop makes, as [`Interp::blocked`] counts
+        // them. The program's end loop answers that it is blocked, and waits
         // for posts itself only while an activity waits
         // ([`Interp::run_to_end`]). The simulation mode refuses every attach,
         // so nothing can post there. No thread can end an activity's wait on
@@ -2911,6 +2913,8 @@ impl Interp {
             && self.sim.is_none()
             && !self.waits_on_its_own_message()
             && self.activities.set_aside.is_empty()
+            && !(self.activities.owners[..level].iter())
+                .any(|&(_, below)| below == Below::Interrupted)
             && self.activities.end_level != Some(level)
     }
 

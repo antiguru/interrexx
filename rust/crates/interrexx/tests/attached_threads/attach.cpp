@@ -40,6 +40,9 @@
 // * `AtSendAfter(target, name, milliseconds)` waits `milliseconds` before it attaches, then does
 //   what `AtSend` does.
 // * `AtPause(milliseconds)` blocks for `milliseconds` and answers 1, starting no thread.
+// * `AtPauseCall(milliseconds, routine)` blocks for `milliseconds`, then calls `routine` with no
+//   arguments through `CallRoutine` on its own call's thread context, and answers what it
+//   answered, or the null string where it answered nothing. It starts no thread.
 // * `AtSendJoin(target)` sends `JOIN`, whose method calls `AtTickJoin` from inside the attached
 //   thread's message, so the call that joins is made while a callback runs.
 // * `AtCallTick(routine, argument, target)` calls `routine` with `argument` through `CallRoutine`,
@@ -608,6 +611,14 @@ RexxRoutine1(int, AtPause, positive_wholenumber_t, milliseconds)
     return 1;
 }
 
+RexxRoutine2(RexxObjectPtr, AtPauseCall, positive_wholenumber_t, milliseconds, RexxObjectPtr,
+             routine)
+{
+    usleep((useconds_t)(milliseconds * 1000));
+    RexxObjectPtr answer = context->CallRoutine((RexxRoutineObject)routine, context->NewArray(0));
+    return answer == NULLOBJECT ? (RexxObjectPtr)context->NullString() : answer;
+}
+
 RexxRoutine1(logical_t, AtSendJoin, RexxObjectPtr, target)
 {
     return start(context, target, JOIN, 0);
@@ -867,6 +878,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtSend, AtSend),
     REXX_TYPED_ROUTINE(AtSendAfter, AtSendAfter),
     REXX_TYPED_ROUTINE(AtPause, AtPause),
+    REXX_TYPED_ROUTINE(AtPauseCall, AtPauseCall),
     REXX_TYPED_ROUTINE(AtSendJoin, AtSendJoin),
     REXX_TYPED_ROUTINE(AtTickJoin, AtTickJoin),
     REXX_TYPED_ROUTINE(AtCallTick, AtCallTick),
