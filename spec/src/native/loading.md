@@ -289,9 +289,12 @@ the library. The instance that is terminated last runs the unloaders of every
 library the process loaded, each once. A library that one of these unloaders
 loads, and that the process had not loaded before, is among them: its loader
 runs inside that unloader, and its unloader runs later in the same
-termination. Where a program that the command-line
-interpreter runs is the only instance of its process, as it is unless an
-extension creates another, the unloaders of its libraries run when it ends.
+termination. A library still loading on another thread when that termination
+comes to it is left to the instance that still holds it, and its unloader runs
+when that instance is the last to be terminated. Where a program that the
+command-line interpreter runs is the only instance of its process, as it is
+unless an extension creates another, the unloaders of its libraries run when it
+ends.
 
 > For example, the host of the [shared-load example](r:native.loading.shared)
 > terminates the first instance and then the second. The test library prints

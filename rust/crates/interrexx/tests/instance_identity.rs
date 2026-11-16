@@ -850,6 +850,32 @@ fn an_instance_an_unloader_leaves_live_does_not_unload_the_library_again() {
     );
 }
 
+/// An unloader that creates an instance, leaves it live and starts a thread that loads a second
+/// library through it, with a slow loader, returns once that loader has started. The termination
+/// that ran the unloader leaves the second library to the live instance: it runs no unloader of
+/// it, neither during its loader nor after, and does not close it. The live instance's own
+/// termination, the last, runs that library's unloader once, after its loader has returned. The
+/// run is not compared with the oracle, which does not wait for loaders (see [`lines_in_order`]).
+// spec: native.loading.unload, native.loading.reentrant
+#[test]
+fn a_library_loading_on_another_thread_is_left_to_the_instance_that_holds_it() {
+    let (stdout, stderr, code) =
+        lifetime_runs("lifetime-unloaderthread", "unloaderthread", false).remove(0);
+    assert_eq!((stderr.as_str(), code), ("", 0), "{stdout}");
+    lines_in_order(
+        &stdout,
+        &[
+            "loader",
+            "created A",
+            "unloader",
+            "created inner",
+            "other loader start",
+        ],
+        &["terminated A", "other loader end"],
+        &["thread other 1", "other unloader", "terminated inner"],
+    );
+}
+
 /// An unloader that loads a library new to the process runs that library's loader inside it, and
 /// the same termination runs the new library's unloader too. An instance created afterwards loads
 /// both afresh, and its termination unloads both.

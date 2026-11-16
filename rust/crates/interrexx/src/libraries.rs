@@ -38,8 +38,9 @@ pub(crate) struct Libraries {
     loaded: Vec<Vec<u8>>,
     /// Whether this interpreter still counts as live.
     live: bool,
-    /// The libraries of the process, in the order they loaded, where this
-    /// interpreter was the last live one: its drop closes them.
+    /// The libraries whose unloaders its termination ran, in the order they
+    /// loaded, where this interpreter was the last live one: its drop closes
+    /// them.
     last: Vec<Unload>,
 }
 
@@ -249,15 +250,22 @@ pub(crate) struct Unloading {
 impl Unloading {
     /// The libraries whose unloaders run next, with their names, in the order
     /// they run: those of the round no earlier call answered, which once the
-    /// first call's have run are those an unloader loaded. Answers nothing
-    /// once every library of the round has been answered
+    /// first call's have run are those an unloader loaded, leaving out each
+    /// library whose loader another thread is still running. Answers nothing
+    /// once every other library of the round has been answered
     /// (`r[native.loading.unload]`).
     pub(crate) fn next(&mut self) -> Vec<(Vec<u8>, Unload)> {
         let round = round();
         let mut batch = Vec::new();
+        let thread = std::thread::current().id();
         for name in round.order.names() {
             for loaded in &round.loaded {
-                if loaded.name == name && !self.walked.contains(&loaded.id) {
+                // A library still loading on another thread is left in the
+                // round to the instance that thread loads it for, which an
+                // unloader created and which outlives this termination: its
+                // own termination unloads it once the loader has returned.
+                let loading_elsewhere = loaded.loading.is_some_and(|holder| holder != thread);
+                if loaded.name == name && !loading_elsewhere && !self.walked.contains(&loaded.id) {
                     self.walked.push(loaded.id);
                     batch.push((loaded.name.clone(), loaded.unload.clone()));
                 }
@@ -266,11 +274,14 @@ impl Unloading {
         batch
     }
 
-    /// Every library of the round, in the order it loaded.
+    /// The libraries [`Unloading::next`] has answered, in the order they
+    /// loaded.
     pub(crate) fn libraries(&self) -> Vec<Unload> {
+        // The others are held by an instance that outlives this termination.
         round()
             .loaded
             .iter()
+            .filter(|loaded| self.walked.contains(&loaded.id))
             .map(|loaded| loaded.unload.clone())
             .collect()
     }
@@ -433,7 +444,7 @@ impl Libraries {
     }
 
     /// Takes `unloading` once its unloaders have run, and drops it, after
-    /// which this interpreter's drop closes every library of the round.
+    /// which this interpreter's drop closes every library it walked.
     pub(crate) fn unloaded(&mut self, unloading: Unloading) {
         self.last = unloading.libraries();
     }
@@ -643,6 +654,50 @@ mod tests {
                 .get(b"lib")
                 .is_some_and(|got| Rc::ptr_eq(got, &first))
         );
+    }
+
+    /// The walk of the last instance's termination leaves out a library whose
+    /// loader another thread still runs, and the libraries it answers for the
+    /// drop to close leave it out too, also once that loader has returned:
+    /// the library belongs to an instance that outlives the termination.
+    ///
+    /// The round is the process's, so this needs a process of its own, which
+    /// nextest gives each test.
+    #[test]
+    fn the_walk_leaves_a_library_loading_on_another_thread() {
+        let mut libraries = Libraries::new();
+        let walked = Rc::new(interrexx_api::load::hooks_only(None, None));
+        let (_, loading) = libraries
+            .hold(b"walked", Rc::clone(&walked))
+            .unwrap_or_else(|_| panic!("no other thread loads it"));
+        drop(loading);
+        let mut unloading = libraries.end().expect("the only live instance is the last");
+        let other = std::thread::spawn(|| std::thread::current().id())
+            .join()
+            .expect("the thread returns its id");
+        let elsewhere = interrexx_api::load::hooks_only(None, None);
+        {
+            let mut round = super::round();
+            round.order.put(b"elsewhere");
+            let id = round.next;
+            round.next += 1;
+            round.loaded.push(super::Loaded {
+                id,
+                name: b"elsewhere".to_vec(),
+                identity: elsewhere.identity(),
+                unload: elsewhere.unload(),
+                loading: Some(other),
+            });
+        }
+        let names: Vec<Vec<u8>> = unloading.next().into_iter().map(|(name, _)| name).collect();
+        assert_eq!(names, [b"walked".to_vec()]);
+        assert!(unloading.next().is_empty());
+        for loaded in &mut super::round().loaded {
+            loaded.loading = None;
+        }
+        let closed = unloading.libraries();
+        assert_eq!(closed.len(), 1);
+        assert!(walked.is_unloaded_by(&closed[0]));
     }
 
     /// The internal packages' keys, in the order the table iterates them; a

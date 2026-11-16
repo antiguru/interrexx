@@ -16,7 +16,12 @@
 // context it is handed and prints `unloader other 1` or `unloader other 0`. Where
 // LIFETIME_UNLOADER_KEEPS is set, the unloader, after printing `unloader`, unsets it, creates an
 // instance that loads `lifetime`, prints `created inner` and leaves the instance live, with its
-// address in the environment variable LIFETIME_KEPT.
+// address in the environment variable LIFETIME_KEPT. Where LIFETIME_UNLOADER_THREAD is set, the
+// unloader, after printing `unloader`, unsets it, creates and keeps an instance as
+// LIFETIME_UNLOADER_KEEPS makes it do, sets LIFETIME_SLOW to `loader` and starts a thread of its
+// own. The thread attaches to the kept instance, loads `lifetime2` through it, prints `thread
+// other 1` or `thread other 0` for the answer, detaches and creates the file `thread-done` in the
+// current directory. The unloader returns once that slow loader has started.
 //
 // The extension has one routine, `LifetimeProbe`, which answers 1 and prints nothing.
 //
@@ -46,6 +51,10 @@
 //   unloaderkeep with LIFETIME_UNLOADER_KEEPS set, creates A and terminates it, then terminates
 //                the instance the unloader left live and prints `terminated inner`, then creates
 //                C and terminates it
+//   unloaderthread
+//                with LIFETIME_UNLOADER_THREAD set, creates A and terminates it, waits until the
+//                unloader's thread has created `thread-done`, then terminates the instance the
+//                unloader left live and prints `terminated inner`
 //   callrace     with a slow loader, creates A without loading `lifetime`. A thread of its own
 //                attaches to A, loads `lifetime` there, prints `thread lifetime` with the answer
 //                and detaches. Once the loader has started, the main thread calls `LifetimeProbe`
@@ -155,6 +164,59 @@ static void RexxEntry LifetimeLoader(RexxThreadContext *context)
 #endif
 }
 
+#ifndef OTHER
+// Attaches to the instance `argument`, loads `lifetime2` there, prints the answer, detaches and
+// creates `thread-done`.
+static void *load_other_and_finish(void *argument)
+{
+    RexxThreadContext *context;
+    if (((RexxInstance *)argument)->AttachThread(&context))
+    {
+        load_through(context, "lifetime2", "thread other");
+        context->DetachThread();
+    }
+    else
+    {
+        printf("thread did not attach\n");
+    }
+    FILE *done = fopen("thread-done", "w");
+    if (done != NULL)
+    {
+        fclose(done);
+    }
+    return argument;
+}
+
+// Waits, for at most ten seconds, until the file `name` exists, answering whether it does.
+static int appeared(const char *name)
+{
+    for (int tries = 0; tries < 1000; tries++)
+    {
+        if (access(name, F_OK) == 0)
+        {
+            return 1;
+        }
+        usleep(10000);
+    }
+    printf("%s did not appear\n", name);
+    return 0;
+}
+
+// Creates an instance that loads `lifetime`, from inside a hook, leaves it live with its address in
+// LIFETIME_KEPT, and answers it.
+static RexxInstance *keep_inner(void)
+{
+    RexxInstance *instance = create_inner();
+    if (instance != NULL)
+    {
+        char address[32];
+        snprintf(address, sizeof address, "%p", (void *)instance);
+        setenv("LIFETIME_KEPT", address, 1);
+    }
+    return instance;
+}
+#endif
+
 static void RexxEntry LifetimeUnloader(RexxThreadContext *context)
 {
     hook("unloader");
@@ -175,13 +237,27 @@ static void RexxEntry LifetimeUnloader(RexxThreadContext *context)
     {
         // Once, so that the kept instance does not keep another in its own unloader.
         unsetenv("LIFETIME_UNLOADER_KEEPS");
-        RexxInstance *instance = create_inner();
-        if (instance != NULL)
+        keep_inner();
+    }
+    if (getenv("LIFETIME_UNLOADER_THREAD") != NULL)
+    {
+        // Once, so that the kept instance does not start another thread in its own unloader.
+        unsetenv("LIFETIME_UNLOADER_THREAD");
+        RexxInstance *instance = keep_inner();
+        if (instance == NULL)
         {
-            char address[32];
-            snprintf(address, sizeof address, "%p", (void *)instance);
-            setenv("LIFETIME_KEPT", address, 1);
+            return;
         }
+        setenv("LIFETIME_SLOW", "loader", 1);
+        unlink("hook-started");
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, load_other_and_finish, instance) != 0)
+        {
+            printf("no thread\n");
+            return;
+        }
+        pthread_detach(thread);
+        appeared("hook-started");
     }
 #endif
 }
@@ -514,6 +590,30 @@ int main(int argc, char **argv)
             return 1;
         }
         terminate(c, "C");
+        return 0;
+    }
+    if (strcmp(scenario, "unloaderthread") == 0)
+    {
+        setenv("LIFETIME_UNLOADER_THREAD", "1", 1);
+        unlink("thread-done");
+        RexxInstance *a = create("A");
+        if (a == NULL)
+        {
+            return 1;
+        }
+        terminate(a, "A");
+        if (!appeared("thread-done"))
+        {
+            return 1;
+        }
+        const char *address = getenv("LIFETIME_KEPT");
+        RexxInstance *kept = NULL;
+        if (address == NULL || sscanf(address, "%p", (void **)&kept) != 1 || kept == NULL)
+        {
+            printf("nothing kept\n");
+            return 1;
+        }
+        terminate(kept, "inner");
         return 0;
     }
     if (strcmp(scenario, "unloading") == 0)
