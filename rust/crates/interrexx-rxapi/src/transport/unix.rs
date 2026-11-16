@@ -68,10 +68,35 @@ pub fn service_dir() -> PathBuf {
 /// check is the one `UnixListener::bind` and `UnixStream::connect` make, which leaves room for
 /// the terminating NUL in `sun_path`: a path that fills `sun_path` exactly is refused there, so
 /// it is refused here.
+///
+/// The path measured is the one [`prepare_dir`] answers, with symbolic links resolved: on macOS
+/// `/var`, under which the temp directory lies, is a link to `/private/var`, eight bytes longer.
 fn socket_fits(dir: &Path) -> bool {
-    let socket = socket_path(dir, PROTOCOL_VERSION);
-    let socket = std::path::absolute(&socket).unwrap_or(socket);
+    let socket = socket_path(&resolved(dir), PROTOCOL_VERSION);
     std::os::unix::net::SocketAddr::from_pathname(&socket).is_ok()
+}
+
+/// `dir` absolute, with the links of its deepest existing ancestor resolved, as
+/// `fs::canonicalize` will resolve them once the rest exists.
+fn resolved(dir: &Path) -> PathBuf {
+    let absolute = std::path::absolute(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let mut existing = absolute.as_path();
+    let mut rest = Vec::new();
+    loop {
+        if let Ok(canonical) = fs::canonicalize(existing) {
+            return rest
+                .iter()
+                .rev()
+                .fold(canonical, |path, part| path.join(part));
+        }
+        match (existing.parent(), existing.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                existing = parent;
+            }
+            _ => return absolute,
+        }
+    }
 }
 
 /// The directory, and `REXX_API_DIR`'s value where it was set and passed over.
@@ -546,6 +571,31 @@ mod tests {
             taken > 0 && passed > 0,
             "the lengths cross the limit: {taken} {passed}"
         );
+    }
+
+    /// A directory reached through a link is measured where the link leads, which is where
+    /// [`prepare_dir`] puts the socket: a short link to a long directory does not fit, and a
+    /// directory below it that does not exist yet is measured there too.
+    #[test]
+    fn a_directory_behind_a_link_is_measured_where_it_leads() {
+        let root = std::env::temp_dir().join(format!("rxapi-link-{}", std::process::id()));
+        let long = root.join("l".repeat(100));
+        fs::create_dir_all(&long).expect("a long directory");
+        let link = root.join("s");
+        let _ = fs::remove_file(&link);
+        std::os::unix::fs::symlink(&long, &link).expect("a link");
+        let through = link.join("api");
+        assert!(
+            std::os::unix::net::SocketAddr::from_pathname(socket_path(&through, PROTOCOL_VERSION))
+                .is_ok(),
+            "the path through the link is short enough"
+        );
+        assert!(!socket_fits(&through), "the path it leads to is not");
+        assert_eq!(
+            resolved(&through),
+            fs::canonicalize(&long).expect("the target").join("api")
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     /// A listener in a private directory, which `uid` here is never the owner of.
