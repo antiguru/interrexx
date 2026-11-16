@@ -46,11 +46,13 @@ impl Deferred {
         match answer {
             Ok(_) => Err(Failure::Raised(refusal)),
             Err(Failure::Raised(mut raised)) => {
+                let nil = interp.to_text(ObjRef::NIL).into_owned();
                 for item in &mut raised.additional {
                     if item.as_slice() == UNCHECKED {
-                        *item = interp.to_text(ObjRef::NIL).into_owned();
+                        item.clone_from(&nil);
                     }
                 }
+                replace_pending_additional(interp, &nil);
                 Err(Failure::Raised(raised))
             }
             Err(other) => Err(other),
@@ -58,14 +60,55 @@ impl Deferred {
     }
 }
 
+/// Puts `nil` in place of [`UNCHECKED`] in the object a raise made by Rexx code
+/// gave as its `ADDITIONAL`, which the condition object carries instead of the
+/// error's substitutions: the body of `STREAM` sends `COMMAND`, whose
+/// `RAISE SYNTAX 93.914 ARRAY (...)` quotes the command it was given.
+fn replace_pending_additional(interp: &mut Interp, nil: &[u8]) {
+    let Some(object) = interp.activity.pending_additional else {
+        return;
+    };
+    let Some(slots) = interp.array_slots_of(object) else {
+        if interp.to_text(object).as_ref() == UNCHECKED {
+            interp.activity.pending_additional = Some(interp.text(nil));
+        }
+        return;
+    };
+    let unchecked = |interp: &mut Interp, slot: Option<ObjRef>| {
+        slot.is_some_and(|item| interp.to_text(item).as_ref() == UNCHECKED)
+    };
+    if !slots.iter().any(|&slot| unchecked(interp, slot)) {
+        return;
+    }
+    let frame = interp.roots.activity_mut().push_frame();
+    let mut replaced = Vec::with_capacity(slots.len());
+    for slot in slots {
+        let item = if unchecked(interp, slot) {
+            let text = interp.text(nil);
+            interp.roots.activity_mut().push_temp(text);
+            Some(text)
+        } else {
+            slot
+        };
+        replaced.push(item);
+    }
+    let array = interp.alloc_charged(
+        interrexx_core::BehaviourId::ARRAY,
+        interrexx_core::Body::array(replaced),
+    );
+    interp.roots.activity_mut().pop_frame(frame);
+    interp.activity.pending_additional = Some(array);
+}
+
 /// What a builtin argument whose `STRING` answer has no string value reads as.
 /// Where every argument before it is read as a string, names a stream or is the
 /// string the builtin works on, none of which has a check of its own, its
-/// refusal is raised at once. Otherwise it reads as [`UNCHECKED`], so that the
-/// checks of the arguments before it come first, where the order of the checks
-/// puts them (`r[conv.string.argument-kind]`, `r[conv.check.order]`). An
-/// argument with no kind keeps `SYNTAX 98.973`. `readable` is the text the
-/// refusal quotes.
+/// refusal is raised at once. Otherwise it reads as [`UNCHECKED`], so that a
+/// call with another fault as well raises the error ooRexx raises for it, a
+/// convenience, since which of several faults is raised is unspecified
+/// (`r[conv.string.argument-kind]`, `r[conv.error.precedence]`). An argument
+/// with no kind keeps `SYNTAX 98.973`. `readable` is the text the refusal
+/// quotes.
 pub(crate) fn refuse(
     interp: &mut Interp,
     argument: BuiltinArgument<'_>,
