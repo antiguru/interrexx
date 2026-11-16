@@ -14,7 +14,11 @@
 //!
 //! `-v` is not `timeout`'s: it limits the command's address space to `KIB`
 //! KiB, as `ulimit -v` does, so that a test bounds a program's memory without
-//! a tool of the machine's.
+//! a tool of the machine's. The limit is on reserved address space, not on
+//! memory in use: glibc reserves an arena of 64 MiB for each of up to eight
+//! threads per core, so a program with many threads reaches it sooner than
+//! its resident set suggests. macOS accepts the limit and does not enforce
+//! it, so there `-v` bounds nothing.
 //!
 //! The command runs with this process's standard streams and environment.
 //! Arguments are taken as bytes, so any of them may be non-UTF-8. When the

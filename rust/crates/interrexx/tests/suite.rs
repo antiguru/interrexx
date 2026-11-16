@@ -85,7 +85,10 @@ pub const GROUPS_AT_ONCE: usize = 8;
 /// The crate side's `PATH` after its own `bin`.
 pub const SYSTEM_PATH: &[&str] = &["/usr/local/bin", "/usr/bin", "/bin"];
 
-/// The crate's address-space limit in KiB, which `bounded-run -v` sets.
+/// The crate's address-space limit in KiB, which `bounded-run -v` sets. It bounds
+/// reserved address space, which a group that starts many threads fills well
+/// before its resident set does (`tests/support/bounded_run.rs`), so an
+/// out-of-memory end can be this limit rather than a leak.
 pub const CRATE_MEMORY_LIMIT_KIB: u64 = 4_194_304;
 
 /// The file the ootest checkout's svn revision is recorded in, relative to
