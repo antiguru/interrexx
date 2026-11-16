@@ -387,9 +387,9 @@ describes the level that produced the line with the entries <code>ARGUMENTS</cod
 <code>EXECUTABLE</code>, <code>INVOCATION</code>, <code>LINE</code>, <code>NAME</code>, <code>TARGET</code>, <code>TRACELINE</code> and <code>TYPE</code>,
 which answer what the <a href="stackframe.html"><code>StackFrame</code></a> methods of the same names
 answer. A line traced in a method adds <code>ATTRIBUTEPOOL</code>, <code>HASSCOPELOCK</code>,
-<code>ISGUARDED</code>, <code>RECEIVER</code> and <code>SCOPELOCKCOUNT</code>, and the line that announces the
-method, flagged <code>&gt;I&gt;</code>, adds <code>CALLERSTACKFRAME</code>, the frame of the code that
-called it. A line that shows a variable being read or assigned adds <code>VARIABLE</code>,
+<code>ISGUARDED</code>, <code>RECEIVER</code> and <code>SCOPELOCKCOUNT</code>, and the line that announces a
+method or a routine, flagged <code>&gt;I&gt;</code>, adds <code>CALLERSTACKFRAME</code>, the frame of the
+code that called it. A line that shows a variable being read or assigned adds <code>VARIABLE</code>,
 a <code>StringTable</code> with the entries <code>NAME</code>, <code>VALUE</code> and <code>ASSIGNMENT</code>, which is <code>1</code>
 for an assignment and <code>0</code> for a read. Which clause the <code>STACKFRAME</code> of the <code>&gt;I&gt;</code>
 line shows, in its <code>LINE</code> and its <code>TRACELINE</code>, and the values of <code>HASSCOPELOCK</code>
