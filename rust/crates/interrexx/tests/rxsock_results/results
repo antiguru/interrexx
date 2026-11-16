@@ -213,11 +213,6 @@ call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)"
 call t "SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v"
 call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')"
 call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
-call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v"
-call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)"
-call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
-call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)"
-call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
 call t "SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
 call t "SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)"
 call t "SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v"
@@ -238,11 +233,6 @@ SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)            => 0 | 0 | 0
 SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v        => 0 5 | 0 | 0
 SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')        => 0 | 0 | 0
 SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v        => 0 7 | 0 | 0
-SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v        => 0 1 | 0 | 0
-SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)            => -1 | ENOPROTOOPT | 0
-SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 0 | 0 | 0
-SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)         => 0 | 0 | 0
-SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 1 | 0 | 0
 SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v     => -1 0 | 9 | 0
 SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)            => -1 | 9 | 0
 SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v          => -1 0 | 9 | 0

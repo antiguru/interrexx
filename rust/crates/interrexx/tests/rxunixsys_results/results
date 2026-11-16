@@ -243,12 +243,12 @@ ERR 40.1
 "-1"
 "-1"
 
-# Services: http is 80/tcp with the alias www.
+# Services: http is 80/tcp with the alias www, among whatever others the host lists.
 eval
 SysGetservbyname('http', 'tcp', 'p')
 SysGetservbyname('http', 'tcp', 'n')
 SysGetservbyname('www', 'tcp', 'n')
-SysGetservbyname('www', 'tcp', 'a')
+SysGetservbyname('www', 'tcp', 'a')~hasItem('www')
 SysGetservbyname('http', 'tcp', '')
 SysGetservbyname('http', 'tcp', 'q')
 SysGetservbyname('nosuchsvc', 'tcp', 'q')
@@ -259,7 +259,7 @@ SysGetservbyname('http', 'TCP', 'n')
 SysGetservbyname('HTTP', 'tcp', 'n')
 SysGetservbyport(80, 'tcp', 'n')
 SysGetservbyport(80, 'tcp', 'Port')
-SysGetservbyport(80, 'tcp', 'a')
+SysGetservbyport(80, 'tcp', 'a')~hasItem('www')
 SysGetservbyport(0, 'tcp', 'n')
 SysGetservbyport(-1, 'tcp', 'n')
 SysGetservbyport(65535, 'tcp', 'n')
@@ -271,7 +271,7 @@ SysGetservbyport(80, 'tcp', 'q')
 "80"
 "http"
 "http"
-Array[1]: www
+"1"
 ERR 40.1
 ERR 40.1
 ""
@@ -282,7 +282,7 @@ ERR 40.1
 ""
 "http"
 "80"
-Array[1]: www
+"1"
 ERR 40.1
 ERR 40.1
 ERR 40.1
