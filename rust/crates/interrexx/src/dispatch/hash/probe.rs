@@ -170,7 +170,9 @@ impl Guard {
             }
         }
         // A candidate a later comparison removes must not be swept and its
-        // handle reused by an entry put after.
+        // handle reused by an entry put after. The temporaries stay rooted
+        // until the clause that sent the lookup ends, whose frame
+        // (`Interp::enter_stepped_clause`) truncates them.
         interp.roots.activity_mut().push_temp(held);
         for &candidate in &candidates {
             interp.roots.activity_mut().push_temp(candidate);
