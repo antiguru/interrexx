@@ -53,7 +53,9 @@ fn finish(mut child: Child, dir: &PathBuf) {
     let _ = std::fs::remove_dir_all(dir);
 }
 
-/// Context switches, voluntary and not, of every thread of process `pid`.
+/// Context switches, voluntary and not, of every thread of process `pid`. Another process's
+/// per-thread counts are read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 fn switches(pid: u32) -> u64 {
     let tasks = format!("/proc/{pid}/task");
     std::fs::read_dir(&tasks)
@@ -139,6 +141,8 @@ fn a_select_with_a_timeout_ends_at_the_timeout() {
 /// A program blocked in `SockRecv` uses no CPU while it waits: over half a
 /// second, its threads are switched in a handful of times at most, where a
 /// wait that polled every 5 ms would be woken a hundred times.
+/// It counts the process's context switches, which only Linux's `/proc` gives per thread.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_blocked_receive_does_not_wake_while_idle() {
     let (mut child, dir) = start(
@@ -163,6 +167,8 @@ fn a_blocked_receive_does_not_wake_while_idle() {
 /// `poll` reports as hung up whatever it is asked, waits out its timeout
 /// without spinning: a hang-up answers no wait for priority data, and the
 /// wait must not wake on it again and again.
+/// It counts the process's context switches, which only Linux's `/proc` gives per thread.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_hung_up_exception_entry_does_not_spin_a_select() {
     let (mut child, dir) = start(

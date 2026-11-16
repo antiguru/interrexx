@@ -18,6 +18,8 @@
     reason = "this harness times or bounds real runs"
 )]
 
+#[path = "support/host_process.rs"]
+mod host_process;
 mod support;
 
 use interrexx_inventory::errors::expand;
@@ -1222,15 +1224,9 @@ fn a_halted_read_loses_no_input() {
     );
 }
 
-/// `/proc/<pid>/stat`'s user and system time, in clock ticks.
+/// Process `pid`'s user and system time, in hundredths of a second.
 fn cpu_ticks(pid: u32) -> u64 {
-    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).expect("the process's stat");
-    let (_, fields) = stat
-        .rsplit_once(')')
-        .expect("stat names the command in parentheses");
-    let fields: Vec<&str> = fields.split_whitespace().collect();
-    let field = |at: usize| fields[at].parse::<u64>().expect("a tick count");
-    field(11) + field(12)
+    host_process::cpu_centiseconds(pid).expect("the process's CPU time")
 }
 
 /// A read of standard input idles while another activity's command end
@@ -1327,7 +1323,9 @@ fn no_activity_runs_while_main_reads() {
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 }
 
-/// Each thread's blocked halting signals, by thread name.
+/// Each thread's blocked halting signals, by thread name. Another process's per-thread signal
+/// masks are read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 fn halting_blocked(pid: u32) -> Vec<(String, bool)> {
     let mut threads = Vec::new();
     for task in std::fs::read_dir(format!("/proc/{pid}/task")).expect("the threads") {
@@ -1354,7 +1352,9 @@ fn halting_blocked(pid: u32) -> Vec<(String, bool)> {
 
 /// The halting signals reach only the interpreter's thread and a thread in a
 /// command's wait or a read of standard input: measured on each
-/// thread while a command runs, after it, and while a read waits.
+/// thread while a command runs, after it, and while a read waits. Per-thread signal masks are
+/// read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 #[test]
 fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))

@@ -113,8 +113,13 @@ fn a_search_directory_resolves_a_name_the_undecorated_attempt_misses() {
 fn a_library_without_the_exporter_is_not_an_error() {
     // Without the first assertion the second cannot tell "loaded, no
     // `RexxGetPackage`" from "did not load": both answer `Ok(None)`.
-    let libc = Path::new("libc.so.6");
-    assert!(load::loads(libc), "libc.so.6 did not load");
+    // The host's C library, by the name its loader knows it by.
+    let libc = Path::new(if cfg!(target_vendor = "apple") {
+        "/usr/lib/libSystem.B.dylib"
+    } else {
+        "libc.so.6"
+    });
+    assert!(load::loads(libc), "{} did not load", libc.display());
     let answer = load::open_path(libc, "c").expect("a library with no exporter is not an error");
     assert!(answer.is_none());
 }
