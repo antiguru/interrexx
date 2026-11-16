@@ -367,7 +367,10 @@ fn a_rebuild_of_a_store_of_mostly_holes_leaves_four_times_the_room() {
     assert!(store.used - live > live, "the store is mostly holes");
     let rebuilt = rebuild(&mut interp, table, CONTENTS, &store).expect("rebuild");
     let capacity = rebuilt.capacity(&interp).expect("capacity");
-    assert!(capacity >= 4 * live, "capacity {capacity} for {live} live entries");
+    assert!(
+        capacity >= 4 * live,
+        "capacity {capacity} for {live} live entries"
+    );
 }
 
 /// Removing the oldest entry of a chain hands the chain's tail to the next
