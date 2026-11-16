@@ -20,23 +20,77 @@
 //!
 //! The slab is what lets a caller that has found a tail once write it again
 //! by its ordinal, without hashing the tail's bytes a second time.
+//!
+//! The map hashes with a keyed hash whose keys come from the interpreter's
+//! [`HashSeed`], so a program cannot choose tails that all collide in it
+//! without knowing the seed. The order comes from the slab, so the seed never
+//! shows in it. That hash is not the one a string's hash code answers: a
+//! tail's hash is never observable, so a faster keyed hash serves.
 
-use crate::{NameMap, ObjRef};
+use std::hash::{BuildHasher, Hasher};
+
+use hashbrown::HashMap;
+use hashbrown::hash_map::EntryRef;
+
+use crate::{HashSeed, ObjRef};
 
 /// The tails of one stem. Allocated on the first tail, so a stem that never
 /// holds one costs a null pointer.
 #[derive(Clone, Default, Debug)]
 pub struct Tails(Option<Box<Store>>);
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 struct Store {
-    ordinals: NameMap<Vec<u8>, usize>,
+    ordinals: HashMap<Vec<u8>, usize, TailHasher>,
     /// Indexed by ordinal: one slot per entry of `ordinals`, and the holes.
     values: Slab,
     /// How many slots of `values` are holes.
     holes: usize,
     /// Changed whenever ordinals are renumbered or dropped wholesale.
     epoch: u64,
+}
+
+/// The map's hasher: a keyed hash of a tail's bytes, keyed from the
+/// interpreter's seed. A key is a byte string, compared whole when its hash
+/// matches, so the length a slice writes ahead of its bytes is left out of
+/// the hash.
+#[derive(Clone, Debug)]
+struct TailHasher(ahash::RandomState);
+
+impl TailHasher {
+    /// The hasher keyed from `seed`.
+    fn of(seed: HashSeed) -> TailHasher {
+        let [k0, k1, k2, k3] = seed.four_keys();
+        TailHasher(ahash::RandomState::with_seeds(k0, k1, k2, k3))
+    }
+}
+
+impl BuildHasher for TailHasher {
+    type Hasher = BytesHasher;
+
+    #[inline]
+    fn build_hasher(&self) -> BytesHasher {
+        BytesHasher(self.0.build_hasher())
+    }
+}
+
+/// [`TailHasher`]'s hasher: the keyed hasher, passing over the length
+/// prefix, which is the only `usize` a byte string writes.
+struct BytesHasher(ahash::AHasher);
+
+impl Hasher for BytesHasher {
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write(bytes);
+    }
+
+    #[inline]
+    fn write_usize(&mut self, _length: usize) {}
+
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0.finish()
+    }
 }
 
 /// How many values a stem keeps beside its map before it allocates for
@@ -122,6 +176,16 @@ impl Slab {
 }
 
 impl Store {
+    /// No tails, its map hashing with `hasher`.
+    fn new(hasher: TailHasher) -> Store {
+        Store {
+            ordinals: HashMap::with_hasher(hasher),
+            values: Slab::default(),
+            holes: 0,
+            epoch: 0,
+        }
+    }
+
     /// Rebuilds the slab without its holes where they make up more than half
     /// of it, renumbering the map to match and changing the epoch. Answers
     /// whether it did.
@@ -200,15 +264,19 @@ impl Tails {
     /// A tail that holds a value, or is written a tombstone, keeps its
     /// ordinal. A tombstone given a value, and a new tail, take the next
     /// ordinal at the end of the order. Answers the tail's ordinal, which a
-    /// compaction this write caused has already renumbered.
+    /// compaction this write caused has already renumbered. `seed` is the
+    /// interpreter's, which the map takes when this is the stem's first tail.
     #[inline]
-    pub fn set(&mut self, key: &[u8], value: Option<ObjRef>) -> usize {
-        let store = self.0.get_or_insert_with(Box::default);
-        // **Looked up before it is inserted, because the key is already there
-        // on all but the first write to a tail**: inserting needs an owned
-        // key whether or not the map keeps it.
-        match store.ordinals.get_mut(key) {
-            Some(ordinal) => {
+    pub fn set(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) -> usize {
+        let store = self
+            .0
+            .get_or_insert_with(|| Box::new(Store::new(TailHasher::of(seed))));
+        // **One lookup serves an existing tail and a new one alike**: the
+        // entry borrows the key, so a write to an existing tail allocates
+        // nothing, and a new tail is hashed once and copied only when filed.
+        match store.ordinals.entry_ref(key) {
+            EntryRef::Occupied(mut entry) => {
+                let ordinal = entry.get_mut();
                 let Some(slot) = store.values.get_mut(*ordinal) else {
                     unreachable!("a mapped ordinal is a slot of the slab");
                 };
@@ -228,9 +296,9 @@ impl Tails {
                     moved
                 }
             }
-            None => {
+            EntryRef::Vacant(entry) => {
                 let ordinal = store.values.len();
-                store.ordinals.insert(key.to_vec(), ordinal);
+                entry.insert(ordinal);
                 store.values.push(Slot::of(value));
                 ordinal
             }
@@ -239,9 +307,13 @@ impl Tails {
 
     /// Adds the tail `key` holding `value` where the stem has no such tail,
     /// and leaves an existing one, tombstone or not, as it is.
-    pub fn insert_if_absent(&mut self, key: &[u8], value: Option<ObjRef>) {
-        if !self.contains_key(key) {
-            self.set(key, value);
+    pub fn insert_if_absent(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) {
+        let store = self
+            .0
+            .get_or_insert_with(|| Box::new(Store::new(TailHasher::of(seed))));
+        if let EntryRef::Vacant(entry) = store.ordinals.entry_ref(key) {
+            entry.insert(store.values.len());
+            store.values.push(Slot::of(value));
         }
     }
 
@@ -282,7 +354,7 @@ impl Tails {
         if let Some(store) = self.0.as_deref_mut() {
             *store = Store {
                 epoch: store.epoch.wrapping_add(1),
-                ..Store::default()
+                ..Store::new(store.ordinals.hasher().clone())
             };
         }
     }
@@ -295,19 +367,6 @@ impl Tails {
                 .iter()
                 .filter(|slot| *slot != Slot::Hole)
                 .map(Slot::value)
-        })
-    }
-
-    /// Every tail's bytes, ordinal and value, in no particular order.
-    pub fn iter(&self) -> impl Iterator<Item = (&[u8], usize, Option<ObjRef>)> + '_ {
-        self.0.as_deref().into_iter().flat_map(|store| {
-            store.ordinals.iter().map(|(key, &ordinal)| {
-                (
-                    key.as_slice(),
-                    ordinal,
-                    store.values.get(ordinal).and_then(Slot::value),
-                )
-            })
         })
     }
 
@@ -336,11 +395,20 @@ impl Tails {
     pub fn map_len(&self) -> usize {
         self.0.as_ref().map_or(0, |store| store.ordinals.len())
     }
+
+    /// The hash the map gives `key`.
+    #[cfg(test)]
+    fn tail_hash(&self, key: &[u8]) -> Option<u64> {
+        let store = self.0.as_deref()?;
+        Some(store.ordinals.hasher().hash_one(key))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const SEED: HashSeed = HashSeed::new(1, 2);
 
     fn keys(tails: &Tails) -> Vec<&[u8]> {
         tails.in_order().into_iter().map(|(key, _)| key).collect()
@@ -350,10 +418,10 @@ mod tests {
     fn a_reassigned_dropped_tail_goes_to_the_end() {
         let mut tails = Tails::new();
         let one = ObjRef::NIL;
-        assert_eq!(tails.set(b"A", Some(one)), 0);
-        assert_eq!(tails.set(b"B", Some(one)), 1);
-        assert_eq!(tails.set(b"A", None), 0);
-        assert_eq!(tails.set(b"A", Some(one)), 2);
+        assert_eq!(tails.set(SEED, b"A", Some(one)), 0);
+        assert_eq!(tails.set(SEED, b"B", Some(one)), 1);
+        assert_eq!(tails.set(SEED, b"A", None), 0);
+        assert_eq!(tails.set(SEED, b"A", Some(one)), 2);
         assert_eq!(tails.lookup(b"A"), Some((2, Some(one))));
         assert_eq!(tails.value_at(0), None);
         assert_eq!(keys(&tails), [&b"B"[..], b"A"]);
@@ -365,16 +433,16 @@ mod tests {
     fn a_dropped_tail_keeps_its_place_until_reassigned() {
         let mut tails = Tails::new();
         let one = ObjRef::NIL;
-        tails.set(b"A", Some(one));
-        tails.set(b"B", Some(one));
-        assert_eq!(tails.set(b"A", None), 0);
+        tails.set(SEED, b"A", Some(one));
+        tails.set(SEED, b"B", Some(one));
+        assert_eq!(tails.set(SEED, b"A", None), 0);
         assert_eq!(tails.get(b"A"), Some(None));
         assert_eq!(tails.get(b"D"), None);
         assert_eq!(
             tails.in_order(),
             [(&b"A"[..], None), (&b"B"[..], Some(one))]
         );
-        assert_eq!(tails.set(b"C", None), 2);
+        assert_eq!(tails.set(SEED, b"C", None), 2);
         assert_eq!(tails.lookup(b"C"), Some((2, None)));
         assert_eq!(keys(&tails), [&b"A"[..], b"B", b"C"]);
     }
@@ -383,9 +451,9 @@ mod tests {
     fn an_overwrite_keeps_the_place() {
         let mut tails = Tails::new();
         let one = ObjRef::NIL;
-        tails.set(b"A", Some(one));
-        tails.set(b"B", Some(one));
-        assert_eq!(tails.set(b"A", Some(one)), 0);
+        tails.set(SEED, b"A", Some(one));
+        tails.set(SEED, b"B", Some(one));
+        assert_eq!(tails.set(SEED, b"A", Some(one)), 0);
         assert_eq!(keys(&tails), [&b"A"[..], b"B"]);
         assert_eq!(tails.slab_len(), 2);
     }
@@ -393,10 +461,10 @@ mod tests {
     #[test]
     fn churn_on_one_tail_stays_bounded() {
         let mut tails = Tails::new();
-        tails.set(b"Y", Some(ObjRef::NIL));
+        tails.set(SEED, b"Y", Some(ObjRef::NIL));
         for _ in 0..1_000_000u32 {
-            tails.set(b"X", None);
-            tails.set(b"X", Some(ObjRef::NIL));
+            tails.set(SEED, b"X", None);
+            tails.set(SEED, b"X", Some(ObjRef::NIL));
             assert!(tails.slab_len() <= 2 * tails.map_len().max(INLINE));
         }
         assert_eq!(keys(&tails), [&b"Y"[..], b"X"]);
@@ -406,13 +474,13 @@ mod tests {
     fn compaction_bumps_the_epoch() {
         let mut tails = Tails::new();
         for key in [&b"A"[..], b"B", b"C", b"D", b"E", b"F"] {
-            tails.set(key, Some(ObjRef::NIL));
+            tails.set(SEED, key, Some(ObjRef::NIL));
         }
         let before = tails.epoch();
         let mut cycles = 0;
         while tails.epoch() == before {
-            tails.set(b"B", None);
-            tails.set(b"B", Some(ObjRef::NIL));
+            tails.set(SEED, b"B", None);
+            tails.set(SEED, b"B", Some(ObjRef::NIL));
             cycles += 1;
             assert!(cycles < 1_000, "no compaction after {cycles} cycles");
         }
@@ -426,7 +494,7 @@ mod tests {
     #[test]
     fn clearing_bumps_the_epoch() {
         let mut tails = Tails::new();
-        tails.set(b"A", Some(ObjRef::NIL));
+        tails.set(SEED, b"A", Some(ObjRef::NIL));
         let before = tails.epoch();
         tails.clear();
         assert_ne!(tails.epoch(), before);
@@ -438,8 +506,8 @@ mod tests {
         let mut tails = Tails::new();
         for i in 0..1_000_000u32 {
             let key = (i % 1000).to_string().into_bytes();
-            tails.set(&key, Some(ObjRef::NIL));
-            tails.set(&key, None);
+            tails.set(SEED, &key, Some(ObjRef::NIL));
+            tails.set(SEED, &key, None);
         }
         assert_eq!(tails.len(), 1000);
         assert!(tails.slab_len() <= 2 * tails.map_len().max(INLINE));
@@ -451,12 +519,40 @@ mod tests {
     fn writing_by_ordinal_needs_a_tail_holding_a_value() {
         let mut tails = Tails::new();
         assert!(!tails.set_at(0, Some(ObjRef::NIL)));
-        tails.set(b"X", None);
+        tails.set(SEED, b"X", None);
         assert!(!tails.set_at(0, Some(ObjRef::NIL)));
         assert_eq!(tails.get(b"X"), Some(None));
-        tails.set(b"Y", Some(ObjRef::NIL));
+        tails.set(SEED, b"Y", Some(ObjRef::NIL));
         assert!(tails.set_at(1, Some(ObjRef::NIL)));
         assert_eq!(tails.value_at(1), Some(ObjRef::NIL));
         assert!(!tails.set_at(2, None));
+    }
+
+    /// The map hashes a tail's bytes alone with the hash keyed from the
+    /// seed.
+    #[test]
+    fn a_tail_hashes_as_the_keyed_hash_of_its_bytes_alone() {
+        let mut tails = Tails::new();
+        let [k0, k1, k2, k3] = SEED.four_keys();
+        let state = ahash::RandomState::with_seeds(k0, k1, k2, k3);
+        for key in [&b"X"[..], b"LONGER.THAN.EIGHT", b""] {
+            tails.set(SEED, key, None);
+            let mut bytes_alone = state.build_hasher();
+            bytes_alone.write(key);
+            assert_eq!(tails.tail_hash(key), Some(bytes_alone.finish()));
+        }
+    }
+
+    /// The map hashes a tail under the seed its first tail was set with.
+    #[test]
+    fn two_seeds_hash_a_tail_differently() {
+        let mut first = Tails::new();
+        let mut second = Tails::new();
+        first.set(HashSeed::new(1, 2), b"X", None);
+        second.set(HashSeed::new(3, 4), b"X", None);
+        assert_ne!(first.tail_hash(b"X"), second.tail_hash(b"X"));
+        first.clear();
+        first.set(HashSeed::new(3, 4), b"X", None);
+        assert_ne!(first.tail_hash(b"X"), second.tail_hash(b"X"));
     }
 }

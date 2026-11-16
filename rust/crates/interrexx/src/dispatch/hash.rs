@@ -332,7 +332,7 @@ fn object_hash_code(text: &[u8]) -> u64 {
 fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failure> {
     if keys == Keys::StringValue {
         let text = interp.to_text(index).into_owned();
-        return Ok(super::string_hash(&text));
+        return Ok(super::string_hash(interp.hash_seed, &text));
     }
     // Hashing branches on whether the behaviour is a primitive one. **"Has a
     // string value" and "is a base-class object" are different questions**: a
@@ -1127,10 +1127,10 @@ pub(crate) struct Key<'a> {
 }
 
 impl<'a> Key<'a> {
-    pub(crate) fn new(name: &'a [u8]) -> Key<'a> {
+    pub(crate) fn new(seed: interrexx_core::HashSeed, name: &'a [u8]) -> Key<'a> {
         Key {
             name,
-            hash: super::string_hash(name),
+            hash: super::string_hash(seed, name),
         }
     }
 }

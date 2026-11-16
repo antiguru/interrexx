@@ -87,11 +87,14 @@ page records why they are the way they are.
   answer oldest first. ooRexx's order follows its bucket layout; it acts on the newest of several
   entries at one index and searches items in its storage order. The order is specified rather than
   left to the implementation, because a deterministic order that ships becomes a contract in
-  practice, as Python's dict did between 3.6 and 3.7. The hash function is to be seeded against
-  flooding, with the seed showing only in `hashCode` answers. Seeding is not implemented yet; #36
-  tracks it. For objects that break the `hashCode` contract, whether a lookup finds an entry is
-  unspecified (2026-11-16), and so is which entry a search acts on when an `==` or `hashCode` it
-  sends changes the collection.
+  practice, as Python's dict did between 3.6 and 3.7. A string's hash code is a keyed hash of its
+  characters under a seed drawn for each run, and a stem's tail map is keyed from the same seed, so
+  a program cannot choose many string keys of a hash collection, or many tails of a stem, that share
+  one probe path. The other maps keyed by names a program picks, the variables that `INTERPRET` and
+  `VALUE` create and a stem's exposed tails, are not keyed. The seed shows only in `hashCode`
+  answers, never in an order or in which entry a lookup finds. For objects that break the `hashCode`
+  contract, whether a lookup finds an entry is unspecified (2026-11-16), and so is which entry a
+  search acts on when an `==` or `hashCode` it sends changes the collection.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the

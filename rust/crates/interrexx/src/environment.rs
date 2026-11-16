@@ -705,7 +705,7 @@ impl Interp {
         bare: &[u8],
         access: &env_seam::Access,
     ) -> Result<hash::DirectoryEntry, Failure> {
-        let key = hash::Key::new(bare);
+        let key = hash::Key::new(self.hash_seed, bare);
         for &scope in scopes {
             match env_seam::admit(self, scope, bare, access)? {
                 env_seam::Admission::Replaced(value) => {
@@ -784,8 +784,12 @@ impl Interp {
             Some((held, view)) if held == local => Some(view),
             _ => None,
         };
-        let (entry, fresh) =
-            hash::package_local_get(self, local, hash::Key::new(bare), view.as_ref())?;
+        let (entry, fresh) = hash::package_local_get(
+            self,
+            local,
+            hash::Key::new(self.hash_seed, bare),
+            view.as_ref(),
+        )?;
         if let Some(fresh) = fresh {
             self.package_local_view = Some((local, fresh));
         }

@@ -117,6 +117,9 @@ pub struct Knobs {
     pub block: f64,
     /// The contended steps an activity runs before a preemption is forced.
     pub floor: u64,
+    /// The seed of the keyed string hash where `REXX_HASH_SEED` fixed it, in
+    /// place of the hash stream's, so that a trace replays under it.
+    pub hash: Option<u64>,
 }
 
 /// The smallest `block=`: a millisecond.
@@ -162,6 +165,8 @@ pub struct SimReport {
     /// The hash of the decisions the run took, FNV-1a over each one's tag
     /// byte and its value's eight bytes, little endian.
     pub trace_hash: Option<u64>,
+    /// [`Knobs::hash`].
+    pub hash_seed: Option<u64>,
 }
 
 impl SimConfig {
@@ -179,6 +184,7 @@ impl SimConfig {
                 clock: ClockOrigin::Seeded,
                 block: BLOCK_SECONDS,
                 floor: FAIRNESS_FLOOR,
+                hash: None,
             },
             trace: None,
             replay: None,
@@ -253,6 +259,15 @@ impl SimConfig {
                              {BLOCK_LIMIT}"
                         )
                     })?;
+            } else if let Some(seed) = item.strip_prefix("hash=") {
+                knobs.hash = Some(
+                    crate::parse_hash_seed(seed.as_bytes())
+                        .ok()
+                        .flatten()
+                        .ok_or_else(|| {
+                            format!("`{item}`: a hash seed is decimal digits below 2**64")
+                        })?,
+                );
             } else if item == "clock=midnight" {
                 knobs.clock = ClockOrigin::Midnight;
             } else if item == "clock=real" {
@@ -268,7 +283,7 @@ impl SimConfig {
                 return Err(format!(
                     "`{item}` is not a policy (`fifo`, `pre:D,k=N`, `uniform:P`, `pct:D,k=N`) \
                      or a knob (`order=fifo`, `gc=Q`, `halt@K`, `fail=wait:K`, `block=S`, \
-                     `floor=F`, `clock=midnight`, `clock=real`, `trace=FILE`)"
+                     `floor=F`, `clock=midnight`, `clock=real`, `hash=SEED`, `trace=FILE`)"
                 ));
             }
             previous = item;
@@ -455,6 +470,9 @@ impl std::fmt::Display for SimConfig {
             ClockOrigin::Midnight => f.write_str(",clock=midnight")?,
             ClockOrigin::Real => f.write_str(",clock=real")?,
         }
+        if let Some(seed) = knobs.hash {
+            write!(f, ",hash={seed}")?;
+        }
         if let Some(path) = &self.trace {
             write!(f, ",trace={}", path.display())?;
         }
@@ -540,6 +558,8 @@ pub(crate) struct Streams {
     pub(crate) children: Rng,
     /// The starting states of each activity's `RANDOM` generator.
     pub(crate) random: Rng,
+    /// The seed of the keyed string hash.
+    hash: Rng,
 }
 
 impl Streams {
@@ -552,8 +572,20 @@ impl Streams {
             gc: Rng::split(&mut state),
             children: Rng::split(&mut state),
             random: Rng::split(&mut state),
+            hash: Rng::split(&mut state),
         }
     }
+}
+
+/// The seed of the keyed string hash in the simulation mode: `hash=`'s, else
+/// from the hash stream of `config`'s seed. Called before the run starts,
+/// since every string hashed in the run is hashed under it.
+pub(crate) fn hash_seed(config: &SimConfig) -> interrexx_core::HashSeed {
+    if let Some(seed) = config.knobs.hash {
+        return interrexx_core::HashSeed::from_u64(seed);
+    }
+    let mut stream = Streams::new(config.seed).hash;
+    interrexx_core::HashSeed::new(stream.next_u64(), stream.next_u64())
 }
 
 /// Virtual time: the instant and the wall time it started at, and how far
@@ -1267,6 +1299,7 @@ impl Interp {
             contended: sim.schedule.contended,
             switches: self.activities.switches(),
             trace_hash: Some(sim.trace.hash),
+            hash_seed: sim.config.knobs.hash,
         })
     }
 

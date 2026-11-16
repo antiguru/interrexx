@@ -11,6 +11,7 @@ mod body;
 mod bytes;
 mod frame;
 mod handle;
+mod hash_seed;
 mod heap;
 mod roots;
 mod slots;
@@ -29,6 +30,7 @@ pub use frame::{FrameArena, FrameBlock, ParkedFrame, RegFrame};
 pub use handle::{
     Decoded, GENERATION_MAX, INLINE_TEXT, InlineText, ObjRef, SMALL_INT_MAX, SMALL_INT_MIN,
 };
+pub use hash_seed::HashSeed;
 #[cfg(feature = "sharing")]
 pub use heap::SharingCount;
 pub use heap::{CollectStats, Heap};

@@ -306,6 +306,17 @@ fn method_name_literal(name: &str) -> &str {
     }
 }
 
+/// Sends whose answer is a string's hash code, which this crate keys by the
+/// hash seed drawn for each run (`r[class.string.hashcode]`), so that two
+/// runs answer differently by specification. `DateTime` and `File` answer the
+/// hash code of a string of their own. Such a row is `unstable` in this
+/// crate, and reaching that from `answers` is not the row stopping.
+const SEEDED_SENDS: &[(&str, &str)] = &[
+    ("String", "hashCode"),
+    ("DateTime", "hashCode"),
+    ("File", "hashCode"),
+];
+
 /// A class whose `class-set.txt` construction expression cannot be this
 /// table's receiver, with the expression that replaces it.
 const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
@@ -524,7 +535,7 @@ fn run_probe_twice(abs: &Path, text: &[u8]) -> CrateSide {
     let bounded = watchdog::run_bounded(
         path,
         text.to_vec(),
-        Invocation::none().with_environment(support::zone_pinned_environment(&[])),
+        Invocation::none().with_environment(unseeded_environment()),
     );
     assert!(
         bounded.chunks_refused == 0,
@@ -553,11 +564,23 @@ fn same_outcome(left: &Outcome, right: &Outcome) -> bool {
         && left.stderr == right.stderr
 }
 
-/// This crate's answer to `abs` with `TZ` set, as a subprocess.
+/// [`support::zone_pinned_environment`] without [`interrexx::HASH_SEED_ENV`]:
+/// each run of this crate draws its own hash seed, as a [`SEEDED_SENDS`] row
+/// needs to come out `unstable` rather than `diverge`, whatever the
+/// developer's environment fixes.
+fn unseeded_environment() -> Vec<(Vec<u8>, Vec<u8>)> {
+    let mut environment = support::zone_pinned_environment(&[]);
+    environment.retain(|(name, _)| name != interrexx::HASH_SEED_ENV.as_bytes());
+    environment
+}
+
+/// This crate's answer to `abs` with `TZ` set, as a subprocess, under a hash
+/// seed of its own ([`unseeded_environment`]).
 fn run_crate_in_zone(abs: &Path, zone: &str) -> Outcome {
     let out = Command::new(env!("CARGO_BIN_EXE_rexx"))
         .arg(abs)
         .env("TZ", zone)
+        .env_remove(interrexx::HASH_SEED_ENV)
         .stdin(std::process::Stdio::null())
         .output()
         .unwrap_or_else(|e| {
@@ -1348,7 +1371,12 @@ fn run_table(shard: Option<usize>) {
         let crashes = ORACLE_CRASHING_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
-        if !(crashes && cell.verdict == Body::Uncomparable) && regressed(was.verdict, cell.verdict)
+        let seeded = SEEDED_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method);
+        if !(crashes && cell.verdict == Body::Uncomparable)
+            && !(seeded && cell.verdict == Body::Unstable)
+            && regressed(was.verdict, cell.verdict)
         {
             regressions.push(format!(
                 "{} {} ({} arm): {} -> {} [{}]",

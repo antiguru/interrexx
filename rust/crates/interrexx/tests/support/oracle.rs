@@ -344,7 +344,9 @@ impl Oracle {
             // it is the one the crate side is given (`super::PINNED_ZONE`),
             // not the developer's. A caller that asks about another zone
             // sets `TZ` after this and wins.
-            .env("TZ", super::PINNED_ZONE);
+            .env("TZ", super::PINNED_ZONE)
+            // This crate's hash seed, which a comparison leaves to each run.
+            .env_remove(interrexx::HASH_SEED_ENV);
         command
     }
 

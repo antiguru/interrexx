@@ -180,13 +180,14 @@ table, not guessed.
 `REXX_SWITCH_MODE=sim:SEED[,policy][,knobs]` makes a run deterministic under one seed. One clock
 seam serves every clock read; virtual time starts at a seeded epoch, advances per clause and jumps
 to the next deadline when every activity waits. Each kind of decision (schedule, order, clock,
-collection, children) draws from its own stream, so a knob does not re-roll the schedule. Every
-native call, command and stdin read runs on the baton. Policies: `pre:d` (d preemptions among the
-first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness floor. Knobs include
-`gc=q`, `halt@K` and `fail=wait:K`. The scheduler checks its own invariants at every switch, and a
-run records a decision trace that `sim:trace=FILE` replays. Anything that cannot be simulated
-(named semaphores, rxapi) is refused in sim. ooRexx differences under a seed are reported, never
-gating.
+collection, children, the hash seed) draws from its own stream, so a knob does not re-roll the
+schedule. Every native call, command and stdin read runs on the baton. Policies: `pre:d` (d
+preemptions among the first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness
+floor. Knobs include `gc=q`, `halt@K`, `fail=wait:K` and `hash=SEED`, which a `REXX_HASH_SEED`
+override records so that a trace replays under the same hash seed. The scheduler checks its own
+invariants at every switch, and a run records a decision trace that `sim:trace=FILE` replays.
+Anything that cannot be simulated (named semaphores, rxapi) is refused in sim. ooRexx differences
+under a seed are reported, never gating.
 
 ## Streams and platform
 

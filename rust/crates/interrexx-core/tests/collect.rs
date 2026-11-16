@@ -124,10 +124,11 @@ fn a_stems_tails_and_default_are_traced() {
         bytes: Bytes::from_slice(b"dflt"),
         num: None,
     });
+    let seed = interrexx_core::HashSeed::new(1, 2);
     let mut tails = interrexx_core::Tails::new();
-    tails.set(b"1", Some(tail));
+    tails.set(seed, b"1", Some(tail));
     // A tombstone: present, and reaching nothing.
-    tails.set(b"2", None);
+    tails.set(seed, b"2", None);
     let stem = heap.alloc_with_uncollected(
         BehaviourId::STEM,
         Body::Stem {

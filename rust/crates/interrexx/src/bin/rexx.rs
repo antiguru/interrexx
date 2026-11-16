@@ -56,6 +56,16 @@ fn main() -> ExitCode {
             own_descriptors: true,
         });
 
+    // `REXX_HASH_SEED` fixes the seed of the keyed string hash. The
+    // interpreter reads it, and passes over a value it cannot read, so that
+    // value is refused here. An empty value leaves the seed unset.
+    if let Some(value) = std::env::var_os(interrexx::HASH_SEED_ENV)
+        && let Err(message) = interrexx::parse_hash_seed(value.as_bytes())
+    {
+        eprintln!("rexx: {message}");
+        return ExitCode::from(2);
+    }
+
     // `REXX_SWITCH_MODE` is the deterministic switch mode, for tests:
     // `every`, `at:K` for the program's K-th clause, or the simulation mode,
     // `sim`, `sim:SEED[,...]` or `sim:replay=FILE[,trace=FILE]`.
@@ -134,13 +144,17 @@ fn main() -> ExitCode {
             .trace_hash
             .map(|hash| format!(" trace={hash:016x}"))
             .unwrap_or_default();
+        let hash = sim
+            .hash_seed
+            .map(|seed| format!(" hash={seed}"))
+            .unwrap_or_default();
         let profile = if cfg!(debug_assertions) {
             "debug"
         } else {
             "release"
         };
         eprintln!(
-            "rexx-sim: seed={} policy={} steps={} contended={} switches={}{trace} profile={profile} \
+            "rexx-sim: seed={} policy={} steps={} contended={} switches={}{trace}{hash} profile={profile} \
              stack={}",
             sim.seed,
             sim.policy,

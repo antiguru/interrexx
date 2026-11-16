@@ -489,12 +489,12 @@ impl Interp {
                     self.set_tail(home, key, Some(value));
                     return;
                 }
-                tails.set(key, Some(value));
+                tails.set(self.hash_seed, key, Some(value));
                 self.stem_changed(stem_value);
             }
             None => {
                 let mut tails = interrexx_core::Tails::new();
-                tails.set(key, Some(value));
+                tails.set(self.hash_seed, key, Some(value));
                 let stem = self.alloc_with(
                     BehaviourId::STEM,
                     Body::Stem {
@@ -539,7 +539,7 @@ impl Interp {
         }
         // A drop keeps the tail's place, so the ordinal survives it until the
         // tail is assigned again, which moves it to the end.
-        tails.set(key, None);
+        tails.set(self.hash_seed, key, None);
         self.stem_changed(stem_value);
     }
 
@@ -608,7 +608,7 @@ impl Interp {
         if let Some(Body::Stem { default, tails, .. }) =
             self.heap.get_mut(home).map(|object| &mut object.body)
         {
-            tails.insert_if_absent(key, *default);
+            tails.insert_if_absent(self.hash_seed, key, *default);
         }
         let local = self.read_stem(stem_name);
         // `expose a. a.1`: the local stem is the object's own.
@@ -620,7 +620,7 @@ impl Interp {
         {
             // Held as a tail with no value of its own, which keeps its place
             // among the stem's tails and leaves it out of `items`.
-            tails.insert_if_absent(key, None);
+            tails.insert_if_absent(self.hash_seed, key, None);
             exposed
                 .get_or_insert_with(Default::default)
                 .insert(key.to_vec(), home);
@@ -753,7 +753,7 @@ impl Interp {
         if let Some(Body::Stem { tails, .. }) =
             self.heap.get_mut(stem).map(|object| &mut object.body)
         {
-            tails.set(key, value);
+            tails.set(self.hash_seed, key, value);
             self.stem_changed(stem);
         }
     }
