@@ -155,7 +155,9 @@
   self~start('!RUN', days, millis)
   guard on when timerStarted == 1
 
--- Waits out the time on an activity of its own, then tells the target.
+-- Waits out the time on an activity of its own, then tells the target, still
+-- holding the guard, so that triggered and cancel wait for the target's
+-- method to end (r[class.alarm.triggered.held]).
 ::method '!run' private unguarded
   expose canceled triggered target
   use arg days, millis
@@ -163,7 +165,6 @@
   guard on
   if canceled == 1 then return
   triggered = .true
-  guard off
   target~triggered(self)
 
 ::method !startTimer private external "LIBRARY REXX alarm_startTimer"

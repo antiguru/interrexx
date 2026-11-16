@@ -605,6 +605,51 @@ cancelled: 0 1
 
 ## Cancelling
 
+r[class.alarm.triggered.held]
+The alarm holds its guard while it sends `triggered` to the target, until the
+target's method returns. So `triggered` sent to the alarm, and `cancel` sent
+to it, wait until then when another activity sends them, and the target's
+method, which runs on the alarm's activity, can send them itself without
+waiting. The other methods of the alarm do not wait. A `cancel` that waited
+finds the alarm gone off, sends the target nothing and changes nothing. A
+target's method that waits for another activity which sends the alarm
+`triggered` or `cancel` would wait for ever: that send raises `SYNTAX 98.905`
+on the other activity, as [the deadlock rule](r:conc.locks.deadlock) says.
+
+```rexx
+n = .note~new
+a = .alarm~new(0.2, n)
+n~awaitStart
+say a~triggered n~log
+b = .alarm~new(0.2, n)
+n~awaitStart
+b~cancel
+say n~log '|' b~canceled b~triggered
+::class note inherit AlarmNotification
+::method triggered unguarded
+  expose started log
+  use arg alarm
+  started = .true
+  call SysSleep 0.2
+  log = 'done, inside:' alarm~triggered
+::method cancel unguarded
+  expose log
+  log = 'cancel sent'
+::method awaitStart unguarded
+  expose started log
+  started = .false
+  log = ''
+  guard on when started
+::method log unguarded
+  expose log
+  return log
+```
+
+```output
+1 done, inside: 1
+done, inside: 1 | 0 1
+```
+
 r[class.alarm.cancel]
 `cancel` takes no argument (`SYNTAX 93.902`) and answers nothing, so using its
 answer as a value raises `SYNTAX 91.999`. Sent to an alarm that is still waiting
