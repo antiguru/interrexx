@@ -15,6 +15,12 @@ on:
     paths:
       - .github/workflows/macos-nightly.yml
 
+# A newer run of the same ref supersedes one still queued or running: each run takes most of an
+# hour of a macOS runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     working-directory: rust
