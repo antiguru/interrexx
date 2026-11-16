@@ -77,6 +77,41 @@ struct Ended {
     stderr: String,
 }
 
+/// A command that runs its arguments with SIGINT, SIGTERM and SIGHUP at their default action,
+/// whatever this process's are: GNU `env` on Linux, and Perl, which macOS ships, elsewhere.
+fn with_default_halting_signals() -> Command {
+    if cfg!(target_os = "linux") {
+        let mut command = Command::new("env");
+        command.arg("--default-signal=INT,TERM,HUP");
+        command
+    } else {
+        let mut command = Command::new("perl");
+        command.args([
+            "-e",
+            "$SIG{$_} = 'DEFAULT' for qw(INT TERM HUP); exec { $ARGV[0] } @ARGV or die $!",
+        ]);
+        command
+    }
+}
+
+/// Sends the signal named `name` (`INT`, `TERM`, `HUP`) to process `pid`, or to its process
+/// group where `launch` started one: whether it was sent.
+fn send(name: &str, launch: &Launch, pid: u32) -> bool {
+    use rustix::process::{Pid, Signal, kill_process, kill_process_group};
+    let signal = match name {
+        "INT" => Signal::INT,
+        "TERM" => Signal::TERM,
+        "HUP" => Signal::HUP,
+        other => panic!("no signal {other} among the halting ones"),
+    };
+    let pid = Pid::from_raw(i32::try_from(pid).expect("a pid")).expect("a positive pid");
+    match launch {
+        Launch::Group => kill_process_group(pid, signal),
+        _ => kill_process(pid, signal),
+    }
+    .is_ok()
+}
+
 /// Runs `source` under `rexx` started as `launch`, takes `steps` once
 /// `ready` is on its stdout, or after [`UNREADY_WAIT`] where `ready` is
 /// empty, and answers how it ended and how long after the first signal.
@@ -93,8 +128,7 @@ fn run_steps(
     std::fs::create_dir_all(&dir).expect("the probe directory");
     let file = dir.join(format!("{name}.rex"));
     std::fs::write(&file, source).expect("the probe");
-    let mut command = Command::new("env");
-    command.arg("--default-signal=INT,TERM,HUP");
+    let mut command = with_default_halting_signals();
     match launch {
         Launch::Nohup => {
             command.arg("nohup");
@@ -143,20 +177,13 @@ fn run_steps(
             seen.extend(bytes);
         }
     }
-    let target = match launch {
-        Launch::Group => format!("-{}", child.id()),
-        _ => child.id().to_string(),
-    };
     let mut signalled = None;
     let mut sent = true;
     for step in steps {
         match *step {
             Step::Signal(signal) => {
                 signalled.get_or_insert_with(Instant::now);
-                sent &= Command::new("kill")
-                    .args([&format!("-{signal}"), "--", &target])
-                    .status()
-                    .is_ok_and(|status| status.success());
+                sent &= send(signal, &launch, child.id());
             }
             Step::Pause(pause) => std::thread::sleep(pause),
             Step::Write(text) => {
