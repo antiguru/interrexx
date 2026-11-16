@@ -116,9 +116,9 @@ fn fixture(name: &str) -> PathBuf {
 }
 
 /// A fresh directory of this run's own, named for `name`. Its name is new within the process too,
-/// so tests that run the same fixture in parallel under `cargo test` do not share it. The process
-/// and the count are written in hex, which keeps the API service's socket path below `api/` within
-/// the platform's bound.
+/// so tests that run the same fixture in parallel under `cargo test` do not share it. The API
+/// service's directory is not in it ([`support::api_socket::api_dir`]), so the socket path does not
+/// depend on the checkout.
 fn fresh_dir(name: &str) -> PathBuf {
     static MADE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let made = MADE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -270,7 +270,7 @@ fn run_in(
         .arg(&program)
         .current_dir(dir)
         .env("LD_LIBRARY_PATH", dir)
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(dir))
         .envs(environment.iter().copied())
         .stdin(Stdio::null())
         .output()
@@ -278,8 +278,9 @@ fn run_in(
     let took = began.elapsed();
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(dir))
         .output();
+    support::api_socket::end_api_dir(dir);
     let ours = (
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
@@ -411,14 +412,15 @@ fn run_driver_with(name: &str, arguments: &[&str], seconds: &str, extension: boo
         .args(arguments)
         .current_dir(&dir)
         .env("LD_LIBRARY_PATH", &dir)
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .stdin(Stdio::null())
         .output()
         .expect("the capped run spawns");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .output();
+    support::api_socket::end_api_dir(&dir);
     let answer = (
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
@@ -1789,7 +1791,7 @@ fn the_switch_survives_rxfuncdrop() {
         .arg(fixture("classic.rex"))
         .current_dir(&dir)
         .env("LD_LIBRARY_PATH", &dir)
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1810,8 +1812,9 @@ fn the_switch_survives_rxfuncdrop() {
     let output = child.wait_with_output().expect("the run's output");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
-        .env("REXX_API_DIR", dir.join("api"))
+        .env("REXX_API_DIR", support::api_socket::api_dir(&dir))
         .output();
+    support::api_socket::end_api_dir(&dir);
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
