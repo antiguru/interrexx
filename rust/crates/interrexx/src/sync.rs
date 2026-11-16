@@ -223,9 +223,10 @@ mod tests {
     use std::time::{Duration, Instant};
 
     /// A timed wait with nothing written ends at its timeout: the best of
-    /// three 300 ms waits is under 1 ms late. Measured at niceness 5, a
-    /// socket read timeout was 15 to 24 ms late and a poll timeout about
-    /// 1.5 ms.
+    /// three 300 ms waits is under 1 ms late where a timerfd holds the
+    /// deadline, and under 5 ms where the poll's timeout, in whole
+    /// milliseconds, does. Measured at niceness 5, a socket read timeout was
+    /// 15 to 24 ms late and a poll timeout about 1.5 ms.
     #[test]
     fn a_timed_wait_ends_close_to_its_timeout() {
         let wake = Wake::new();
@@ -240,7 +241,12 @@ mod tests {
             })
             .min()
             .expect("three waits");
-        assert!(late < Duration::from_millis(1), "{late:?} late");
+        let bound = if cfg!(any(target_os = "linux", target_os = "android")) {
+            Duration::from_millis(1)
+        } else {
+            Duration::from_millis(5)
+        };
+        assert!(late < bound, "{late:?} late");
     }
 
     /// A wake written before the wait ends it at once, and the wait takes

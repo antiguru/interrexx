@@ -37,7 +37,16 @@ pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     let launch = if thread_sanitizer() {
         "import os,sys; os.execv(sys.argv[1],sys.argv[1:])"
     } else {
-        "import os,resource,sys; resource.setrlimit(resource.RLIMIT_AS,(8<<30,8<<30)); os.execv(sys.argv[1],sys.argv[1:])"
+        // The cap is 8 GiB or the hard limit, where that is lower. A host that refuses an address
+        // cap (macOS, which does not enforce one either) runs without it; Linux must take it.
+        "import os,resource,sys\n\
+         c=8<<30\n\
+         h=resource.getrlimit(resource.RLIMIT_AS)[1]\n\
+         c=c if h==resource.RLIM_INFINITY else min(c,h)\n\
+         try:\n resource.setrlimit(resource.RLIMIT_AS,(c,c))\n\
+         except (ValueError,OSError):\n\
+         \x20if sys.platform.startswith('linux'): raise\n\
+         os.execv(sys.argv[1],sys.argv[1:])"
     };
     let mut child = Command::new("python3")
         .args(["-c", launch])
