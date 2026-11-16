@@ -140,7 +140,7 @@ ooRexx method table, not guessed.
   member finishes (Deviation 178). A callback that arrives while another runs Rexx clauses is held
   until that one returns, waits or calls an external library, the earliest first. A send whose
   method needs at its entry a guard lock that a stopped activity holds gives the baton back and is
-  sent again, queued for the lock behind the activities waiting for it then. A wait of a running
+  sent again in the place in the lock's queue that its wait took when it began. A wait of a running
   callback that only a stopped activity can end is refused where that is provable, and otherwise
   goes on, with a line on stderr once it has waited five seconds and nothing else can end it.
 * **Waits nothing can end.** Where nothing is ready, asleep or in flight, the scheduler refuses the
