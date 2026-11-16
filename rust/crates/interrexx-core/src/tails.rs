@@ -12,9 +12,11 @@
 //! Holes are reclaimed by compaction: when they make up more than half of a
 //! slab larger than [`INLINE`], the slab is rebuilt in ordinal order without
 //! them, and every ordinal is renumbered. So a loop that drops and assigns
-//! one tail forever holds a bounded slab. Renumbering, and [`Tails::clear`],
-//! change [`Tails::epoch`]: an ordinal is good only with the epoch it was
-//! read under.
+//! one tail forever holds a bounded slab. The bound covers holes only: a
+//! dropped tail that is not assigned again stays a tombstone, in the map and
+//! the slab, until [`Tails::clear`] removes it. Renumbering, and
+//! [`Tails::clear`], change [`Tails::epoch`]: an ordinal is good only with
+//! the epoch it was read under.
 //!
 //! The slab is what lets a caller that has found a tail once write it again
 //! by its ordinal, without hashing the tail's bytes a second time.
