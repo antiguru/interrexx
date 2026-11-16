@@ -181,7 +181,9 @@ ERR 40.1
 "0"
 "0"
 
-# SysStat: failures, a missing file, and /dev/null's fixed fields.
+# SysStat: failures, a missing file, and /dev/null's fixed fields. Its device numbers are the
+# host's: `{null_rdev}` is its own, and its file system's may be too long for a whole number at
+# nine digits.
 eval
 SysStat('', 'x')
 SysStat('/nonexist', '')
@@ -195,7 +197,7 @@ SysStat('/dev/null', 'RDEV')
 SysStat('/dev/null', 'p')
 SysStat('/dev/null', 's')
 SysStat('/', 'p')~left(1)
-SysStat('/dev/null', 'd')~datatype('W')
+SysStat('/dev/null', 'd')~datatype('N')
 SysStat('/dev/null', 'i')~datatype('W')
 SysStat('/dev/null', 'n')~datatype('W')
 SysStat('/', 'm')~length SysStat('/', 'a')~words SysStat('/', 'c')~wordlength(1)
@@ -207,8 +209,8 @@ ERR 40.1
 ""
 ERR 40.1
 ERR 40.1
-"259"
-"259"
+"{null_rdev}"
+"{null_rdev}"
 "crw-rw-rw-"
 "0"
 "d"

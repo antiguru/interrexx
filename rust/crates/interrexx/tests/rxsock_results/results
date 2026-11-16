@@ -156,7 +156,6 @@ call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)"
 call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v"
 call t "SockShutDown(c, 0)"
 call t "SockShutDown(c, 5)"
-call t "SockRecv(c, 'v', 0) '['v']'"
 call t "SockSelect(,,,0)"
 exit
 t: procedure expose c
@@ -200,7 +199,6 @@ SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)               => -1 | ENOPROTOOPT
 SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v           => -1 0 | ENOPROTOOPT | 0
 SockShutDown(c, 0)                                           => -1 | ENOTCONN | 0
 SockShutDown(c, 5)                                           => -1 | 22 | 0
-SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0
 SockSelect(,,,0)                                             => 0 | 0 | 0
 [stderr]
 

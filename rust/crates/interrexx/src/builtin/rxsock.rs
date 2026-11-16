@@ -1115,7 +1115,7 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
 
 /// `accept` on the socket numbered `fd` without blocking: a blocking socket
-/// is made non-blocking for the call.
+/// is made non-blocking for the call. The socket it answers is blocking.
 fn try_accept(fd: i32) -> Os<Accepted> {
     with_socket(fd, |socket| {
         let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
@@ -1127,8 +1127,21 @@ fn try_accept(fd: i32) -> Os<Accepted> {
         if toggled {
             let _ = rustix::fs::fcntl_setfl(socket, flags);
         }
-        accepted
+        let (new, address) = accepted?;
+        blocking(&new).map_err(os)?;
+        Ok((new, address))
     })
+}
+
+/// Makes `socket` blocking. A socket `accept` answers starts blocking on
+/// Linux; Apple's systems and the BSDs give it the listening socket's
+/// `O_NONBLOCK`, which [`try_accept`] sets for its call.
+fn blocking(socket: &OwnedFd) -> rustix::io::Result<()> {
+    let flags = rustix::fs::fcntl_getfl(socket)?;
+    if flags.contains(rustix::fs::OFlags::NONBLOCK) {
+        rustix::fs::fcntl_setfl(socket, flags - rustix::fs::OFlags::NONBLOCK)?;
+    }
+    Ok(())
 }
 
 /// Whether a receive on `socket` can never be answered by data: a listening

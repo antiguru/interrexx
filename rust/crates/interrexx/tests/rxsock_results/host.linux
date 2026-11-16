@@ -1,9 +1,12 @@
 # The answers the host's kernel decides (`docs/design/decisions.md`): a datagram socket asked for
-# TCP, and a send on a stream socket that is not connected.
+# TCP, and a send, a shutdown and a receive on a stream socket that is not connected; the receive's
+# answer depends on the shutdown before it.
 program
 c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
 call t "SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')"
 call t "SockSend(c, 'x')"
+call t "SockShutDown(c, 0)"
+call t "SockRecv(c, 'v', 0) '['v']'"
 exit
 t: procedure expose c
   drop errno h_errno
@@ -16,4 +19,6 @@ rc 0
 [stdout]
 SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')           => -1 | EPROTONOSUPPORT | 0
 SockSend(c, 'x')                                             => -1 | 32 | 0
+SockShutDown(c, 0)                                           => -1 | ENOTCONN | 0
+SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0
 [stderr]
