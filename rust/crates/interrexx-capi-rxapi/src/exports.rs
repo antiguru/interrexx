@@ -20,7 +20,7 @@ use interrexx_api::layout::{
 fn target(name: &CStr) -> *mut c_void {
     static LIBREXX: OnceLock<usize> = OnceLock::new();
     let handle = *LIBREXX.get_or_init(|| {
-        let beside = interrexx_api::library_names::host_api_libraries().librexx_beside;
+        let beside = env!("REXX_LIBREXX_BESIDE");
         let Ok(soname) = std::ffi::CString::new(beside) else {
             failed("the name of librexx holds a NUL");
         };
@@ -39,15 +39,17 @@ fn target(name: &CStr) -> *mut c_void {
     // SAFETY: `handle` came from `dlopen` and is never closed; `name` is NUL-terminated.
     let symbol = unsafe { libc::dlsym(handle as *mut c_void, name.as_ptr()) };
     if symbol.is_null() {
-        let librexx = interrexx_api::library_names::host_api_libraries().librexx;
-        failed(&format!("{librexx} defines no {}", name.to_string_lossy()));
+        failed(&format!(
+            "{} defines no {}",
+            env!("REXX_LIBREXX"),
+            name.to_string_lossy()
+        ));
     }
     symbol
 }
 
 fn failed(what: &str) -> ! {
-    let librexxapi = interrexx_api::library_names::host_api_libraries().librexxapi;
-    eprintln!("{librexxapi}: {what}");
+    eprintln!("{}: {what}", env!("REXX_LIBREXXAPI"));
     std::process::abort()
 }
 

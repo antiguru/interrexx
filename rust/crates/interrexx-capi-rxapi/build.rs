@@ -14,6 +14,13 @@ fn main() {
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("cargo sets CARGO_CFG_TARGET_OS");
     let names = library_names::api_libraries(&target_os);
     let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR"));
+    // The names the forwarding reads, as constants: the library links no code of another crate.
+    println!("cargo:rustc-env=REXX_LIBREXX={}", names.librexx);
+    println!("cargo:rustc-env=REXX_LIBREXXAPI={}", names.librexxapi);
+    println!(
+        "cargo:rustc-env=REXX_LIBREXX_BESIDE={}",
+        names.librexx_beside
+    );
     if std::env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple") {
         apple(&names, &out);
     } else {

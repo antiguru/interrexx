@@ -1,9 +1,10 @@
 //! The names the C API's two shared libraries go by on each host: the name a
 //! program or library that links them records, which the loader looks for,
 //! and how the one that forwards finds the one that owns the state. Build
-//! scripts include this file by path, with the target's `CARGO_CFG_TARGET_OS`,
-//! and the libraries read it with [`std::env::consts::OS`], so the two cannot
-//! disagree.
+//! scripts include this file by path, with the target's `CARGO_CFG_TARGET_OS`;
+//! `librexxapi`'s build script hands the names to its source as constants, so
+//! that library links no code of this crate. Code that runs on the host reads
+//! [`host_api_libraries`].
 
 /// The C API's libraries on one host.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
