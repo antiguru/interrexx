@@ -842,7 +842,9 @@ with the API service, or behind a registered subcommand environment or a
 registered exit, and it is the host of an embedding, which runs the program
 through `RexxStart` or `RexxCreateInterpreter`, together with any library it
 registers. Once such code is present, every such wait goes on, as in ooRexx,
-for the rest of the run, also after a library has been dropped. The libraries
+for the rest of the run, also after a library has been dropped. Neither SIGINT
+nor SIGTERM ends such a wait for the result of a message never sent, as [the
+signal rule](r:conc.halt.deviation.10) says of a wait for a message. The libraries
 that come with interrexx, such as RexxUtil, do not count, and the `rexx`
 command runs a program with no host. This holds for each interpreter on its
 own: a host's instance does not turn the refusal off for another interpreter

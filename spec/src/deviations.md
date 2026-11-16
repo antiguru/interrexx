@@ -152,7 +152,9 @@ returns. It first waits for the interpreter while another thread holds it. A
 call into a native library that is not built into the interpreter leaves it
 free while it runs, so such a call may wait for that thread, but a handler of
 a system exit holds it, and if the handler waits for the thread, the program
-hangs. ooRexx aborts the process.
+hangs. A call of a library built into the interpreter, such as RexxUtil or
+RxSock, holds it too, and the callback waits until that call returns. ooRexx
+aborts the process.
 
 A callback through the context of an attached thread, made after that thread
 detached from it, does not wait: it is refused at once and answers the failure
@@ -172,7 +174,9 @@ exit, and it is the host of an embedding, which runs the program through
 `RexxStart` or `RexxCreateInterpreter`, together with the libraries it
 registers. Each may start a thread that attaches later and ends the wait, so
 once one is present, interrexx waits as ooRexx does, for the rest of the run,
-also after a library is dropped. The libraries that come with interrexx, such
+also after a library is dropped. Neither SIGINT nor SIGTERM ends such a wait
+for the result of a message never sent, as Deviation 10 says of a wait for a
+message. The libraries that come with interrexx, such
 as RexxUtil, start no such thread and do not count, and the `rexx` command
 runs a program with no host. A wait for the result or the completion of a
 message whose method the waiting activity itself runs, and has not yet
