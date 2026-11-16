@@ -208,3 +208,51 @@ fn a_search_whose_comparison_always_adds_an_entry_ends() {
          table removeItem The NIL object calls 1\n"
     );
 }
+
+/// [`a_search_whose_comparison_always_adds_an_entry_ends`] for the searches
+/// that compare indexes: a `Relation` searched by index and a `Bag`, whose
+/// item is its index. Every index collides and every comparison of the armed
+/// index adds a colliding entry, so a search that restarts on a change never
+/// ends; each must compare the one candidate it began with once.
+#[test]
+fn an_index_search_whose_comparison_always_adds_an_entry_ends() {
+    let outcome = crate::run_program(
+        "/t.rex",
+        b"r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'allAt' r~allAt(q)~items q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'items' r~items(q) q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'supplier' r~supplier(q)~available q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'removeAll' r~removeAll(q)~items q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'hasItem' r~hasItem('a', q) q~calls\n\
+          r = fresh(.relation); q = .grow~new(r, 1)\n\
+          say 'removeItem' r~removeItem('a', q) q~calls\n\
+          b = fresh(.bag); q = .grow~new(b, 1)\n\
+          say 'bag hasItem' b~hasItem(q) q~calls\n\
+          b = fresh(.bag); q = .grow~new(b, 1)\n\
+          say 'bag removeItem' b~removeItem(q) q~calls\n\
+          exit\n\
+          fresh: procedure\n  use arg class\n  c = class~new\n  \
+          k = .grow~new(c, 0)\n  if class == .bag then c~put(k)\n  else c~put('a', k)\n  \
+          return c\n\
+          ::class grow\n\
+          ::attribute calls\n\
+          ::method init\n  expose c calls armed\n  use arg c, armed\n  calls = 0\n\
+          ::method hashCode\n  return 'h'\n\
+          ::method '=='\n  expose c calls armed\n  use arg other\n  \
+          if \\armed then return 0\n  calls += 1\n  g = .grow~new(c, 0)\n  \
+          if c~isA(.bag) then c~put(g)\n  else c~put('n'calls, g)\n  return 0\n"
+            .to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "allAt 0 1\nitems 0 1\nsupplier 0 1\nremoveAll 0 1\nhasItem 0 1\n\
+         removeItem The NIL object 1\nbag hasItem 0 1\nbag removeItem The NIL object 1\n"
+    );
+}
