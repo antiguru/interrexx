@@ -1837,8 +1837,10 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
 
 const SET_EVENTS: [PollFlags; 3] = [PollFlags::IN, PollFlags::OUT, PollFlags::PRI];
 
-/// The size of this process's descriptor table, `FDSize` in
-/// `/proc/self/status`: `select` reads no descriptor at or above it.
+/// The size of this process's descriptor table: `select` reads no
+/// descriptor at or above it. On Linux that is `FDSize` in
+/// `/proc/self/status`, the table the kernel has grown to.
+#[cfg(any(target_os = "linux", target_os = "android"))]
 fn descriptor_table_size() -> i32 {
     std::fs::read_to_string("/proc/self/status")
         .ok()
@@ -1848,6 +1850,17 @@ fn descriptor_table_size() -> i32 {
                 .find_map(|line| line.strip_prefix("FDSize:"))
                 .and_then(|size| size.trim().parse().ok())
         })
+        .unwrap_or(i32::MAX)
+}
+
+/// The size of this process's descriptor table: `select` reads no
+/// descriptor at or above it. Where no `/proc` gives it, that is the soft
+/// `RLIMIT_NOFILE`, which is what `getdtablesize` answers.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+fn descriptor_table_size() -> i32 {
+    rustix::process::getrlimit(rustix::process::Resource::Nofile)
+        .current
+        .and_then(|limit| i32::try_from(limit).ok())
         .unwrap_or(i32::MAX)
 }
 

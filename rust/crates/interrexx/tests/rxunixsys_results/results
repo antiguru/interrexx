@@ -536,12 +536,12 @@ rc 216
 Error 40 running {dir}/probe.rex line 7:
 Error 40.1:
 
-# With SIGCHLD ignored every child is reaped before the interpreter waits for
-# it: a command's return code is negative, with no FAILURE trace (PR 4 review
+# With SIGCHLD ignored ({SIGCHLD} is the host's number for it) every child is reaped before the
+# interpreter waits for it: a command's return code is negative, with no FAILURE trace (PR 4 review
 # M2). The oracle's value is whatever its stack held (measured -35, -64, -100,
 # -112 across runs); this crate answers -ECHILD.
 program
-say SysSignal(17, 'I')
+say SysSignal({SIGCHLD}, 'I')
 'true'
 say rc < 0
 'exit 3'
@@ -560,7 +560,7 @@ rc 0
 
 # The value this crate answers for that return code.
 ruled
-say SysSignal(17, 'I')
+say SysSignal({SIGCHLD}, 'I')
 'true'
 say rc
 ::requires 'rxunixsys' LIBRARY

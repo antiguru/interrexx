@@ -2,8 +2,8 @@
 //! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
 //! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
-//! (`uname -s`), which `SysUname` answers, `{null_rdev}` `/dev/null`'s device number, and `{ENAME}` in a program the host's number for the
-//! error `ENAME`. A file named `<name>.<host>` holds answers the host decides, and runs only on
+//! (`uname -s`), which `SysUname` answers, `{null_rdev}` `/dev/null`'s device number, and `{ENAME}` or `{SIGNAME}` in a program the host's
+//! number for that error or signal. A file named `<name>.<host>` holds answers the host decides, and runs only on
 //! that host.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
@@ -72,7 +72,8 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     std::fs::set_permissions(dir.join("f"), PermissionsExt::from_mode(0o664))
         .expect("the case file's mode");
     let mut program = program.replace("{dir}", &dir.display().to_string());
-    // An error a case names, `{ENAME}`, is the host's number for it (`docs/design/decisions.md`).
+    // An error or a signal a case names, `{ENAME}` or `{SIGNAME}`, is the host's number for it
+    // (`docs/design/decisions.md`).
     for (name, number) in [
         ("EPERM", libc::EPERM),
         ("ENOENT", libc::ENOENT),
@@ -82,6 +83,7 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         ("EISDIR", libc::EISDIR),
         ("EINVAL", libc::EINVAL),
         ("ENOTEMPTY", libc::ENOTEMPTY),
+        ("SIGCHLD", libc::SIGCHLD),
     ] {
         program = program.replace(&format!("{{{name}}}"), &number.to_string());
     }
