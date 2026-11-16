@@ -102,8 +102,9 @@ const DELETED: i64 = -1;
 /// holds the code alone, one field per entry, and a table of distinct keys
 /// pays nothing for links. The first append that joins an existing chain
 /// gives the store a linked codes array ([`relink`]), and nothing else; a
-/// rebuild keeps the layout it finds, and `EMPTY` installs an unlinked one. Which layout an array has is read off
-/// its length: [`FIELDS`] per entry position, or one.
+/// rebuild keeps the layout it finds, and `EMPTY` installs an unlinked one.
+/// Which layout an array has is read off its length: a linked one is at
+/// least as long as the slot index, an unlinked one shorter.
 const FIELDS: usize = 3;
 /// The entry's [`code_of`], `None` for a hole.
 const CODE: usize = 0;
@@ -119,8 +120,8 @@ const MINIMUM_SLOTS: usize = 8;
 const MAXIMUM_SLOTS: usize = 1 << 31;
 
 /// The entry capacity of a store of `slots` slots: two thirds, so that the
-/// slots, which hold one mark per used entry position, never fill and every
-/// probe ends at an empty one.
+/// slots, which hold at most one mark per used entry position, never fill
+/// and every probe ends at an empty one.
 fn capacity_of(slots: usize) -> usize {
     slots * 2 / 3
 }
