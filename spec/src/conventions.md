@@ -51,36 +51,35 @@ r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
 replacement is found by sending the object the message `REQUEST` with the
-argument `STRING`, and nothing else is sent first. When the answer is a
-string, it is the replacement. When the answer is `.nil` or another object
-that is not a string, the replacement is the answer of the object's public
+argument `STRING`, and nothing else is sent first. When the answer is a string,
+it is the replacement. When the answer is `.nil` or another object that is not
+a string, the replacement is the answer of the object's public
 [`STRING`](r:class.object.string) method, and when that answer is not a string
 either, see [Deviation 30](r:conv.string.deviation.30). The
 [`REQUEST`](r:class.object.request) of `Object` sends the object `MAKESTRING`
 when it has one and answers what that answers, and answers `.nil` when it has
-none. So an object with a `MAKESTRING` method is replaced by its answer, as
-for an [`Array`](r:class.array.makestring) or a
+none. So an object with a `MAKESTRING` method is replaced by its answer, as for
+an [`Array`](r:class.array.makestring) or a
 [`MutableBuffer`](r:class.mutablebuffer.makestring), and an object with only a
 `STRING` method by the answer of that method. A class that declares its own
-`REQUEST` method decides the answer itself: its `MAKESTRING` method is not
-used unless its `REQUEST` sends it, and a `REQUEST` that answers a string is
-used even when the class has a `STRING` method. A `MAKESTRING` that answers
-`.nil` or an object that is not a string is like a `REQUEST` that does. An
-instance of a subclass of `String` is a string here, whether it is passed
-directly or is what `REQUEST` answers: the builtin works on its own
-characters, and no message is sent to it for that ([Deviation
-109](r:class.string.deviation.109)). A builtin that reads several such
-arguments reads them from left to right, after it has checked the number of
-its arguments and before it checks any of them ([Deviation
-170](r:bif.index.call.convert.deviation.170)). An argument that a builtin reads as a whole number or as a
-number is read this way too, and the replacement must then be a number. A
-builtin whose page links [the native call rule](r:bif.index.call.native) has
-no fallback to `STRING`, as that rule says, and the same holds for the string
-arguments of methods ([the method argument rule](r:class.index.string)). A
-`REQUEST`, `MAKESTRING` or `STRING` method that is private and would be sent
-is not one the replacement can use: the call raises `SYNTAX 97.2`. A
-comparison operator converts its right operand once, as [the comparison
-rule](r:expr.comparison.object) says.
+`REQUEST` method decides the answer itself: its `MAKESTRING` method is not used
+unless its `REQUEST` sends it, and a `REQUEST` that answers a string is used
+even when the class has a `STRING` method. A `MAKESTRING` that answers `.nil`
+or an object that is not a string is like a `REQUEST` that does. An instance of
+a subclass of `String` is a string here, whether it is passed directly or is
+what `REQUEST` answers: the builtin works on its own characters, and no message
+is sent to it for that ([Deviation 109](r:class.string.deviation.109)). A
+builtin that reads several such arguments reads them from left to right, before
+it checks any of them, when the call has no fault ([Deviation
+170](r:bif.index.call.convert.deviation.170)). An argument that a builtin reads
+as a whole number or as a number is read this way too, and the replacement must
+then be a number. A builtin whose page links [the native call
+rule](r:bif.index.call.native) has no fallback to `STRING`, as that rule says,
+and the same holds for the string arguments of methods ([the method argument
+rule](r:class.index.string)). A `REQUEST`, `MAKESTRING` or `STRING` method that
+is private and would be sent is not one the replacement can use: the call
+raises `SYNTAX 97.2`. A comparison operator converts its right operand once, as
+[the comparison rule](r:expr.comparison.object) says.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
@@ -440,25 +439,30 @@ b: say condition('o')~code
 ## Evaluation order and several faults
 
 r[conv.error.precedence]
-What an operation works on is evaluated before the operation checks it, in the
-order the language gives: both operands of an operator, the left before the
-right, before either is checked, and the arguments of a call from left to
-right, before the call is made. An error raised while an operand or an argument
-is evaluated is raised at that point, and nothing after it is evaluated. A
-builtin [converts](r:bif.index.call.convert.deviation.170) the arguments that
-are objects, sending them `STRING`, before it checks their values; these sends
-belong to the evaluation and keep its order. When the checks of one operation,
-which is one operator, one call of a builtin or a method, or the checks of one
-instruction, find one fault, the operation raises the error that the rule for
-that fault gives; a `STRING` answer that has no string value is such a fault.
-When they find more than one, a wrong number of arguments or an omitted
-required argument among them, the operation raises the error of one of them,
-and which one is unspecified. Whether the checks after the first fault found
-are made, and so whether the messages they would send are sent, is unspecified
-too. When one operation finds a fault that raises a condition, such as
-LOSTDIGITS, and another that raises an error, which of the two it raises first
-is unspecified, and so whether a trap for the condition runs. A page that lists
-the checks of an operation lists what is checked, not an order among them.
+An operator evaluates both operands, the left before the right, before it
+checks either, and a call evaluates its arguments from left to right before
+the call is made. An error raised while an operand or an argument is evaluated
+is raised at that point, and nothing after it is evaluated. Each control
+expression of a DO is an operation of its own: the instruction evaluates and
+checks them one at a time, in the order they are written ([the DO
+rule](r:instr.do.control.check)). A builtin's
+[conversion](r:bif.index.call.convert.deviation.170) of the arguments that are
+objects, by sending them `STRING`, is part of its checks: a call that has no
+fault sends `STRING` to each such argument, from left to right, before its
+other checks. When the checks of one operation, which is one operator, one
+call of a builtin or a method, or the checks of one instruction, find one
+fault, the operation raises the error that the rule for that fault gives; a
+`STRING` answer that has no string value is such a fault. When they find more
+than one, a wrong number of arguments or an omitted required argument among
+them, the operation raises the error of one of them, and which one is
+unspecified. Whether the checks after the first fault found are made, and so
+whether the messages they would send are sent, is unspecified too, and for a
+builtin call with a fault, whether and to how many arguments it sends `STRING`
+is unspecified. When one operation finds a fault that raises a condition, such
+as LOSTDIGITS, and another that raises an error, which of the two it raises
+first is unspecified, and so whether a trap for the condition runs. A page
+that lists the checks of an operation lists what is checked, not an order
+among them.
 
 ```rexx
 signal on syntax name a

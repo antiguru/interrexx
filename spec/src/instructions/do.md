@@ -262,6 +262,7 @@ zero after the point stays.
 
 ```rexx
 call try 'do i = "a" to "b"; end'
+call try 'do i = "a" to f(); end'
 call try 'do i = 1 to "b" by 1/0; end'
 call try 'do i = 1 by 1/0 to "b"; end'
 call try 'do i = 1 to 2 by "c"; end'
@@ -281,10 +282,13 @@ try:
   return
 e: say arg(1) '=>' condition('o')~code
   return
+f: say 'f ran'
+  return 2
 ```
 
 ```output
 do i = "a" to "b"; end => 41.1
+do i = "a" to f(); end => 41.1
 do i = 1 to "b" by 1/0; end => 41.1
 do i = 1 by 1/0 to "b"; end => 42.3
 do i = 1 to 2 by "c"; end => 41.1

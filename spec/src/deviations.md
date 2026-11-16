@@ -1314,16 +1314,13 @@ with exit code 120 that Deviation 30 described.
 A builtin whose page calls an argument a string converts each such argument
 that is an object other than a string, sending `STRING` (or `REQUEST` and
 `MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
-to right, after it has checked the number of its arguments and that every
-argument it requires is there, and before it checks any argument. An omitted
-argument that the builtin requires is therefore reported before any conversion
-runs, as in ooRexx. A `STRING` method of a later argument therefore runs even
-when an earlier argument is in error. ooRexx converts an argument as it checks
-it and stops at the first one in error, so that the method of a later argument
-never runs. The difference shows only in what such a method does: counting,
-input or output, or raising a condition of its own. Which error a call with
-more than one argument in error raises is not part of this Deviation: [the
-precedence rule](r:conv.error.precedence) leaves it unspecified.
+to right, before it checks any argument, when the call has no fault. The
+conversion is part of the builtin's checks: when the call has a fault, which
+error it raises, and whether and to how many arguments it sends `STRING`, are
+unspecified ([the precedence rule](r:conv.error.precedence)). ooRexx converts
+an argument as it checks it and stops at the first one in error, so that the
+method of a later argument never runs. The difference shows only in what such
+a method does: counting, input or output, or raising a condition of its own.
 
 ## 171. QUERY POSITION SYS of a stream just opened for reading
 

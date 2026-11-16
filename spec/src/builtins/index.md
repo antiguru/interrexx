@@ -201,34 +201,31 @@ z q
 ```
 
 r[bif.index.call.convert.deviation.170]
-A builtin converts every argument that its page calls a string and that is an
-object other than a string, from left to right and after it has checked the
-number of its arguments and that every argument it requires is there, before it
-checks any argument: a `STRING` method of
-a later argument runs even when an earlier argument is in error. The
-conversions do not decide which error the call raises: that is the error of a
-check that fails, as [the precedence rule](r:conv.error.precedence) says.
-ooRexx converts an argument as it checks it and stops at the first that is in
-error, so a `STRING` method of a later argument does not run.
+A builtin's conversion of every argument that its page calls a string and
+that is an object other than a string is part of its checks. A call that has
+no fault converts those arguments from left to right before it checks any
+argument. When the call has a fault, which error it raises, and whether and to
+how many arguments it sends `STRING`, are unspecified, as [the precedence
+rule](r:conv.error.precedence) says. ooRexx converts an argument as it checks
+it and stops at the first that is in error, so a `STRING` method of a later
+argument does not run.
 
 ```rexx
-.local~n = 0
-signal on syntax
-say substr('abcdef', 'x', .c~new)
-syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
-.local~n = 0
-signal on syntax name omitted
-say substr(, 1, .c~new)
-omitted: say 'error' condition('o')~code 'STRING calls:' .local~n
+say substr('abcdef', .c~new('n'), .c~new('length'))
 ::class c
+::method init
+  expose tag
+  use arg tag
 ::method string
-  .local~n = .local~n + 1
+  expose tag
+  say 'STRING' tag
   return 2
 ```
 
 ```output
-error 40.12 STRING calls: 1
-error 40.5 STRING calls: 0
+STRING n
+STRING length
+bc
 ```
 
 ## Words

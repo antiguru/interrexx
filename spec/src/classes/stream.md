@@ -814,9 +814,6 @@ call try 't~open(.nil)'
 call try 't~lines(.os~new("N"))'
 call try 't~seek(.object~new)'
 call try 't~position(.nil)'
-call try 't~lines(.nil, 1)'
-call try 't~seek(.nil, 1)'
-call try 't~position(.os~new("=1"), 1)'
 call try 't~query(.os~new("size"))'
 call try 't~query(.nil)'
 call try 't~command(.os~new("query size"))'
@@ -867,9 +864,6 @@ t~open(.nil) => 88.909
 t~lines(.os~new("N")) => 88.909
 t~seek(.object~new) => 88.909
 t~position(.nil) => 88.909
-t~lines(.nil, 1) => 88.909
-t~seek(.nil, 1) => 88.909
-t~position(.os~new("=1"), 1) => 88.909
 t~query(.os~new("size")) => [4]
 t~query(.nil) => 93.0
 t~command(.os~new("query size")) => [4]
