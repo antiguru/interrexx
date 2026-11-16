@@ -984,8 +984,8 @@ const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 /// The slices that fall due while a trace delivery holds a guard, with another
 /// activity ready, before the delivery is refused as an inverted wait, or,
-/// where waits are not refused as unending, reported on stderr: about six
-/// seconds, past what a destination that is doing work takes.
+/// where waits are not refused as unending, reported on stderr. The bound lies
+/// well past the slices a destination that is doing work takes.
 const GUARDED_DELIVERY_SLICES: u32 = 250;
 
 impl Interp {
