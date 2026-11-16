@@ -23,9 +23,11 @@ chapter](r:class.index.errors) says. The page follows the order of the rexxref
 entry. Examples that show an error use a small routine `try`, as the builtin
 pages do. Whether two equal strings or numbers are one object is not specified
 ([the identity rule](r:class.identitytable.deviation.4)), so the examples use
-other objects, or one variable read twice, for indexes and items. The page
-says nothing about which of two items found by the same object `removeItem`
-removes ([the hash order rule](r:class.identitytable.deviation.33)).
+other objects, or one variable read twice, for indexes and items. A table lists
+its entries in the order they were first put, and `index` and `removeItem`
+choose the oldest of several entries that hold the item ([the hash order
+rule](r:class.identitytable.deviation.33)). ooRexx lists and chooses otherwise,
+so the examples outside that rule hold one such entry or sort the answers.
 
 ## The class
 
@@ -330,15 +332,14 @@ t~hasIndex("a", "b") => 93.902
 ```
 
 r[class.identitytable.hasitem]
-`hasItem(item)` answers 1 when some entry holds the argument itself as its
-item and 0 otherwise, and `index(item)` answers the index of such an entry and
-`.nil` when there is none. An object that is equal to an item under `==` but
-is not that object is not found, and no message is sent to the argument or to
-the items. Which index `index` answers when several entries hold the item is
-not specified ([the hash order rule](r:class.identitytable.deviation.33)).
-Both take exactly one argument: none, or an omitted one, raises
-`SYNTAX 93.903`, and a second raises `SYNTAX 93.902`. `.nil` is an item like
-any other.
+`hasItem(item)` answers 1 when some entry holds the argument itself as its item
+and 0 otherwise, and `index(item)` answers the index of such an entry and `.nil`
+when there is none. An object that is equal to an item under `==` but is not
+that object is not found, and no message is sent to the argument or to the
+items. When several entries hold the item, `index` answers the index of the
+oldest ([the oldest rule](r:class.identitytable.index.deviation.33)). Both take
+exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
+second raises `SYNTAX 93.902`. `.nil` is an item like any other.
 
 ```rexx
 t = .identitytable~new
@@ -498,14 +499,15 @@ t~empty(1) => 93.902
 ## Lists of the entries
 
 r[class.identitytable.makearray]
-`allIndexes` and `makeArray` answer a new `Array` of the indexes of the
-entries, and `allItems` a new `Array` of their items. They are instances of
-`Array` for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises `SYNTAX 93.902`. The order is
-not specified ([the hash order rule](r:class.identitytable.deviation.33)), and
-is the same for the three answers and for the supplier of one unchanged table,
-so the item at a position belongs to the index at the same position. The
-methods send no message to the table or to the indexes and items.
+`allIndexes` and `makeArray` answer a new `Array` of the indexes of the entries,
+and `allItems` a new `Array` of their items. They are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is that in which the
+entries were first put ([the hash order
+rule](r:class.identitytable.deviation.33)), and is the same for the three
+answers and for the supplier of one unchanged table, so the item at a position
+belongs to the index at the same position. The methods send no message to the
+table or to the indexes and items.
 
 ```rexx
 t = .many~new
@@ -805,24 +807,99 @@ say t~at(u)
 ```
 
 r[class.identitytable.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, and which of two entries that hold the same item `index` and
-`removeItem` use, is not specified, and may differ from ooRexx's. Which
-entries are produced, and how often, is specified. In the example the answers
-are sorted.
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the entries in the
+order they were first put, and `hasItem`, `index` and `removeItem` search the
+items in that order. Which entries are produced, and how often, is specified.
+ooRexx lists the entries in an order that its storage fixes, so its answers can
+differ. See [Deviation 33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
+c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
 t = .identitytable~new
-t~put(1, .array~of('one'))
-t~put(2, .array~of('two'))
-t~put(3, .array~of('three'))
-say t~allItems~sort~makeString('L', ',')
-say t~allIndexes~items t~items t~makeArray~items
+t[c] = 1
+t[a] = 2
+t[b] = 3
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say (s~index == c) s~item t~allIndexes~items t~makeArray~items
 ```
 
 ```output
 1,2,3
-3 3 3
+1 1 3 3
+```
+
+r[class.identitytable.put.deviation.33]
+A `put` or `[]=` at an index that the table holds leaves the entry in its place.
+An entry that is removed and then put again comes last. ooRexx's order does not
+follow the puts ([the hash order rule](r:class.identitytable.deviation.33)).
+
+```rexx
+c = .array~of('c')
+a = .array~of('a')
+b = .array~of('b')
+t = .identitytable~new
+t[c] = 1
+t[a] = 2
+t[b] = 3
+t[c] = 4
+say t~allItems~makeString('L', ',')
+t~remove(c)
+t[c] = 5
+say t~allItems~makeString('L', ',')
+```
+
+```output
+4,2,3
+2,3,5
+```
+
+r[class.identitytable.index.deviation.33]
+When several entries hold the item, `index` answers the index of the oldest of
+them and `removeItem` removes the oldest. ooRexx searches the items in the order
+of its storage, so it can choose another ([the hash order
+rule](r:class.identitytable.deviation.33)).
+
+```rexx
+x = .array~of('x')
+t = .identitytable~new
+t['c'] = x
+t['a'] = 'y'
+t['b'] = x
+say t~index(x) (t~removeItem(x) == x) t~allIndexes~makeString('L', ',')
+say t~index(x)
+```
+
+```output
+c 1 a,b
+b
+```
+
+r[class.identitytable.copy.deviation.33]
+A copy lists its entries in the order of the receiver. After that each table
+keeps its own order: an entry put into one comes last in that one only ([the
+hash order rule](r:class.identitytable.deviation.33)).
+
+```rexx
+c = .array~of('c')
+t = .identitytable~new
+t[c] = 1
+t[.array~of('a')] = 2
+t~remove(c)
+t[.array~of('b')] = 3
+t[c] = 4
+k = t~copy
+k[.array~of('z')] = 5
+t[.array~of('y')] = 6
+say k~allItems~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+```
+
+```output
+2,3,4,5
+2,3,4,6
 ```
 
 r[class.identitytable.deviation.109]

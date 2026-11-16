@@ -21,10 +21,10 @@ A set has no `unknown` method: a message that [the method
 search](r:class.methods.unknown) does not resolve raises
 [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
 chapter](r:class.index.errors) says. Examples that show an error use a small
-routine `try`, as the builtin pages do. Where several members qualify for a
-method that answers one, which one it answers is not specified, and the examples
-then hold one member or sort the answers ([the hash order
-rule](r:class.set.deviation.33)).
+routine `try`, as the builtin pages do. A set lists its members in the order
+they were first put ([the hash order rule](r:class.set.deviation.33)). ooRexx
+lists them otherwise, so the examples outside that rule hold one member or sort
+the answers.
 
 ## The class
 
@@ -173,20 +173,24 @@ SPY 2
 ## Members
 
 r[class.set.members]
-A member is any object, `.nil` and the null string included, and the set
-stores the object that was put. A member is found by [the
+A member is any object, `.nil` and the null string included, and the set stores
+the object that was put. A member is found by [the
 lookup](r:class.set.members.sends): `hashCode` answers the same string for the
 argument and for the stored object, and `==`, sent to the argument with the
 stored object as argument, answers true. For an object that declares neither
-method that is the same object, and an `Array` is its own member only. A
-string is a member of its characters, compared by [the strict
-comparison](r:expr.comparison.strict): case counts, a leading or trailing
-blank counts, and `5` and `5.0` are two members. A class that declares `==`
-has to declare `hashCode` so that equal objects hash alike, as [the hash code
+method that is the same object, and an `Array` is its own member only. A string
+is a member of its characters, compared by [the strict
+comparison](r:expr.comparison.strict): case counts, a leading or trailing blank
+counts, and `5` and `5.0` are two members. A class that declares `==` has to
+declare `hashCode` so that equal objects hash alike, as [the hash code
 rule](r:class.object.hashcode) says. When `put` finds an equal member, the set
 keeps the object it has as the index of the entry, and takes the new object as
 its item: `at` and `allItems` then answer the new object, and `allIndexes` and
-`makeArray` the old one.
+`makeArray` the old one. For an argument and a stored object that are equal
+under `==` but whose `hashCode` answers are strictly different strings, or for a
+stored object whose `hashCode` no longer answers what it answered when it was
+stored, also when that object is itself the argument, whether a lookup finds the
+member and whether `put` takes the two as one member is not specified.
 
 ```rexx
 s = .set~new
@@ -605,12 +609,12 @@ s~empty(1) => 93.902
 ## Lists of the members
 
 r[class.set.makearray]
-`allIndexes` and `makeArray` answer a new `Array` of the indexes of the
-entries, and `allItems` a new `Array` of their items. They are instances of
-`Array` for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises `SYNTAX 93.902`. The order is
-not specified ([the hash order rule](r:class.set.deviation.33)), and is the
-same for the three answers and for the supplier of one unchanged set, so the
+`allIndexes` and `makeArray` answer a new `Array` of the indexes of the entries,
+and `allItems` a new `Array` of their items. They are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is that in which the
+members were first put ([the hash order rule](r:class.set.deviation.33)), and is
+the same for the three answers and for the supplier of one unchanged set, so the
 item at a position belongs to the index at the same position. The methods send
 no message to the set or to the members.
 
@@ -1287,23 +1291,70 @@ subset=> copy A.allItems C.remove C.remove C.isEmpty | -
 ## Deviations
 
 r[class.set.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, and which stored objects a lookup compares, by `==` or `hashCode`,
-beyond those it must compare, and how often, are not specified, and may differ
-from ooRexx's. Which members are produced, and how often, is specified. In the
-example the answers are sorted.
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the members in the
+order they were first put, and so the set operations, which walk the members of
+their argument, follow that order. Which members are produced, and how often,
+is specified. Which stored objects a lookup compares, by `==` or `hashCode`,
+beyond those it must compare, and how often, is not specified, and neither is
+the member that a lookup acts on when an `==` or `hashCode` that it sends
+changes the set, which may be none of them. ooRexx lists the members in an
+order that its storage fixes, so its answers can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
-s = .set~of(1, 2, 3)
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
-say s~items s~makeArray~items
+s = .set~new
+s~put('c')
+s~put('a')
+s~put('b')
+say s~allIndexes~makeString('L', ',') s~makeArray~makeString('L', ',')
+say s~union(.set~of('q', 'a'))~allIndexes~makeString('L', ',')
 ```
 
 ```output
-1,2,3
-1,2,3
-3 3
+c,a,b c,a,b
+c,a,b,q
+```
+
+r[class.set.put.deviation.33]
+A `put` of a member that the set holds leaves the entry in its place. A member
+that is removed and then put again comes last ([the hash order
+rule](r:class.set.deviation.33)).
+
+```rexx
+s = .set~new
+s~put('c')
+s~put('a')
+s~put('b')
+s~put('c')
+say s~allIndexes~makeString('L', ',')
+s~remove('c')
+s~put('c')
+say s~allItems~makeString('L', ',') s~supplier~index
+```
+
+```output
+c,a,b
+a,b,c a
+```
+
+r[class.set.copy.deviation.33]
+A copy lists its members in the order of the receiver. After that each set keeps
+its own order: a member put into one comes last in that one only ([the hash
+order rule](r:class.set.deviation.33)).
+
+```rexx
+s = .set~of('c', 'a')
+s~remove('c')
+s~put('b')
+s~put('c')
+k = s~copy
+k~put('z')
+s~put('y')
+say k~allIndexes~makeString('L', ',') s~allIndexes~makeString('L', ',')
+```
+
+```output
+a,b,c,z a,b,c,y
 ```
 
 r[class.set.deviation.84]

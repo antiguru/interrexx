@@ -1,6 +1,2 @@
-equal A B
-equal A A
 has 1
-equal A B
-equal A A
 remove first

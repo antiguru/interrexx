@@ -517,10 +517,11 @@ r[class.object.hashcode]
 argument. It answers the same string every time for one object. The collection
 classes that hash their indexes use it together with `==`, as their pages
 specify, so a class which declares `==` has to declare `hashCode` so that
-objects which are equal under `==` have equal hash codes. For `Object` the
-hash code belongs to the identity of the receiver; its form and its digits are
-not specified, and two different objects may have the same one. Equal strings
-have equal hash codes ([Deviation 4](r:class.object.deviation.4)).
+objects which are equal under `==` have hash codes that are the same string, by
+strict comparison. For `Object` the hash code belongs to the identity of the
+receiver; its form and its digits are not specified, and two different objects
+may have the same one. Equal strings have equal hash codes ([Deviation
+4](r:class.object.deviation.4)).
 
 ```rexx
 a = .box~new
@@ -773,18 +774,18 @@ r[class.object.instancemethods]
 `instanceMethods` answers a supplier whose indexes are method names in upper
 case and whose items are method objects. It lists names that exist when it is
 sent, and a later change to a class or to the receiver does not reach the
-supplier. The order of its entries is not specified
-([Deviation 33](../deviations.md)). Without an argument it lists every method
-of the receiver's own methods and of every class of its order, so a name that
-more than one of them holds is listed once for each. With a class that is in
-the order of the receiver as its argument, it lists the methods of that
+supplier. The order of its entries is not specified ([Deviation
+33](../deviations.md#33-hash-iteration-order)). Without an argument it lists
+every method of the receiver's own methods and of every class of its order, so a
+name that more than one of them holds is listed once for each. With a class that
+is in the order of the receiver as its argument, it lists the methods of that
 class's table, and with `.nil` the receiver's own methods. With any other
 argument, a number or a string or a class outside the order included, the
-supplier has no entries. A table entry that hides a name is not listed; the
-name is still listed from every other table of the order that holds a method
-for it, so the listing does not show what the search finds. The argument may
-be given once: a second raises `SYNTAX 93.902`. For a class receiver the order
-is the [class-side one](r:class.methods.class-side).
+supplier has no entries. A table entry that hides a name is not listed; the name
+is still listed from every other table of the order that holds a method for it,
+so the listing does not show what the search finds. The argument may be given
+once: a second raises `SYNTAX 93.902`. For a class receiver the order is the
+[class-side one](r:class.methods.class-side).
 
 ```rexx
 call show .box~new~instanceMethods(.box), 'box'
@@ -2137,9 +2138,9 @@ String 0
 ```
 
 r[class.object.deviation.33]
-The order of the entries that `instanceMethods` yields is not specified and
-may differ from ooRexx's ([Deviation 33](../deviations.md)); which names are
-listed, and how often, is specified.
+The order of the entries that `instanceMethods` yields is not specified and may
+differ from ooRexx's ([Deviation 33](../deviations.md#33-hash-iteration-order));
+which names are listed, and how often, is specified.
 
 ```rexx
 t = .box~new~instanceMethods(.box)

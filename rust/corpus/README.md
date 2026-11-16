@@ -36,15 +36,16 @@ oracle's `librxmath.so`, `librxregexp.so`, `librxsock.so` and
 `crates/interrexx/tests/support/sidecar.rs`), so both sides load the same C
 binary. Each such program has a `_rust` copy naming the Rust library.
 
-**Hash iteration order.** The order `DO OVER` yields a hash collection's
-indexes in is the order of the oracle's own hash table: bucket
-`key->getHashValue() % bucketSize`, iterated bucket-ascending. Whether that
-reproduces from run to run depends on what the keys are, not on which collection
-class it is. A string's `getHashValue` is `31*h + byte` over its own content
-and a number's delegates to its string value.
-Every other object's is its identity hash, which is
-`((uintptr_t)this) ^ UINTPTR_MAX` -- the
-address, which ASLR moves on every run.
+**Hash iteration order.** interrexx yields a hash collection's entries in the
+order they were first put, as Deviation 33 of `spec/src/deviations.md` specifies.
+The oracle yields them in the order of its own hash table, bucket by bucket, so
+the two orders differ for most collections of more than one entry. Whether the
+oracle's order reproduces from run to run depends on what the keys are, not on
+which collection class it is. A string's hash is computed from its characters,
+and a number's from its string value, so a collection keyed by strings or
+numbers comes out in one order on every oracle run. Every other object's hash is
+its identity hash, which is derived from its address, and ASLR moves that on
+every run.
 
 Measured, ten oracle runs each: a program filling an `IdentityTable` with eight
 fresh `.Object`s and printing their values in iteration order gives five
@@ -55,9 +56,15 @@ So **no program here may print the iteration order of a collection whose keys
 are objects rather than strings or numbers**. That covers an `IdentityTable`
 outright and a `Table`, `Set`, `Bag` or `Relation` whenever what went into it
 was not a string. The oracle does not agree with itself there, so a differential
-has nothing to compare against. Iterating a string-keyed table and printing
-something order-independent -- a count, or a lookup of each index against the
-table -- is fine, and is what `lang/do_over_string_table.rex` does.
+has nothing to compare against. A program that prints the order of a collection
+keyed by strings or numbers sorts what it prints, prints something
+order-independent (a count, or a lookup of each index against the table, as
+`lang/do_over_string_table.rex` does), or is listed in `HASH_ORDERED_STDOUT`
+(`crates/interrexx/tests/corpus.rs`), which compares its stdout as a multiset of
+lines and so licenses line order and nothing else. Where Deviation 33 changes an
+answer rather than an order, such as which of several entries at one index `at`
+answers, the program keeps that line out of the differential, and a test of
+interrexx alone asserts it.
 
 A class object is an exception, because its hash value is
 the hash of the class's id string, so a

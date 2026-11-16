@@ -772,12 +772,14 @@ pub(super) const COLLECTION_STORES: &[(&str, &[u8])] = &[
     ("Table", b"HASHINDEXES"),
     ("Table", b"HASHITEMS"),
     ("Table", b"HASHNEXT"),
+    ("Table", b"HASHBUCKETS"),
     // A `Directory`'s method table travels with the copy and is its own: the
     // copy duplicates it rather than sharing it. Measured: `g = f~copy` then
     // `g~unsetMethod('M')` leaves `f['M']` answering.
     ("Table", b"METHODINDEXES"),
     ("Table", b"METHODITEMS"),
     ("Table", b"METHODNEXT"),
+    ("Table", b"METHODBUCKETS"),
 ];
 
 /// Replaces each of [`COLLECTION_STORES`] on `copy` with an array of its own.

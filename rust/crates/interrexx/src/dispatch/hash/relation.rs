@@ -6,68 +6,116 @@ use super::{
     not_this_task, owns, pairs, same_index, slot_at, store_of,
 };
 
-/// Every matching slot in chain order, paired with the store it belongs to.
+/// Every live entry under `index`, oldest first, paired with the store it
+/// belongs to.
+///
+/// One pass over the candidates the store held when the search began, each
+/// compared at most once: a comparison that changes the receiver never starts
+/// the search again, so the search ends whatever the comparisons do. Which
+/// entries it answers after such a change is unspecified
+/// (`r[class.relation.deviation.33]`).
 fn slots_for(
     interp: &mut Interp,
     receiver: ObjRef,
     index: ObjRef,
 ) -> Result<(super::Store, Vec<usize>), Failure> {
-    let (store, _, found) = slots_in_bucket(interp, receiver, index)?;
+    let keys = keys_of(interp, receiver);
+    let code = super::code_of(super::hash_of(interp, keys, index)?);
+    let store = store_of(interp, receiver)?;
+    // Keep the saved array identities live across replacement callbacks.
+    for array in [store.indexes, store.items, store.codes, store.slots] {
+        interp.roots.activity_mut().push_temp(array);
+    }
+    // The candidates and their indexes, read before any comparison sends:
+    // the chain of the index's code, which lists each entry of that code
+    // once, oldest first.
+    let mut candidates = Vec::new();
+    {
+        let (slots, codes) = super::codes_of(interp, &store)?;
+        let indexes = super::array_slots(interp, store.indexes)?;
+        if let Ok((_, head)) = super::chain_in(slots, codes, code) {
+            for position in codes.chain(head) {
+                if let Some(held) = indexes.get(position).copied().flatten() {
+                    candidates.push((position, held));
+                }
+            }
+        }
+    }
+    for &(_, held) in &candidates {
+        interp.roots.activity_mut().push_temp(held);
+    }
+    let mut found = Vec::with_capacity(candidates.len());
+    for &(position, held) in &candidates {
+        // An earlier comparison may have removed this candidate: one that no
+        // longer holds its entry is skipped. A position is filled once, so a
+        // live one still holds the entry collected.
+        if slot_at(interp, store.indexes, position)? != Some(held) {
+            continue;
+        }
+        if same_index(interp, &store, keys, position, index)?
+            && slot_at(interp, store.indexes, position)? == Some(held)
+        {
+            found.push(position);
+        }
+    }
     Ok((store, found))
 }
 
-/// [`slots_for`], also answering the bucket the index hashes to.
-fn slots_in_bucket(
+/// The oldest live entry under `index`, with the store it belongs to: the
+/// search a `Bag` makes, whose item is its index, so one match is the answer.
+///
+/// The chain is walked from its oldest entry and stops at the first match,
+/// each candidate compared at most once. A comparison that changes the
+/// receiver's store, or removes the entry it compared, ends the search: its
+/// own match stands while its entry is still where it was, and otherwise the
+/// search answers none (`r[class.relation.deviation.33]`). A comparison that
+/// writes only other stores does not end it.
+fn first_slot_for(
     interp: &mut Interp,
     receiver: ObjRef,
     index: ObjRef,
-) -> Result<(super::Store, usize, Vec<usize>), Failure> {
+) -> Result<(super::Store, Option<usize>), Failure> {
     let keys = keys_of(interp, receiver);
-    let hash = super::hash_of(interp, keys, index)?;
-    'search: loop {
-        let store = store_of(interp, receiver)?;
-        // Keep the saved array identities live across replacement callbacks.
-        for array in [store.indexes, store.items, store.next] {
-            interp.roots.activity_mut().push_temp(array);
-        }
-        let bucket = (hash % store.buckets as u64) as usize;
-        let entries = super::entries_in(interp, &store, Some(bucket))?;
-        let mut indexes = Vec::with_capacity(entries.len());
-        for &(slot, _) in &entries {
-            let held = slot_at(interp, store.indexes, slot)?;
-            if let Some(held) = held {
-                interp.roots.activity_mut().push_temp(held);
-            }
-            indexes.push(held);
-        }
-        let mut found = Vec::new();
-        for &(slot, _) in &entries {
-            let writes = interp.store_writes;
-            let generation = interp.store_generation;
-            let matches = same_index(interp, &store, keys, slot, index)?;
-            // Equality can replace arrays or change an earlier collision
-            // entry. Validate the whole saved chain before retaining slots.
-            if writes != interp.store_writes || generation != interp.store_generation {
-                let current = store_of(interp, receiver)?;
-                if current != store || super::entries_in(interp, &current, Some(bucket))? != entries
-                {
-                    continue 'search;
-                }
-                for (&(saved, _), &held) in entries.iter().zip(&indexes) {
-                    if slot_at(interp, current.indexes, saved)? != held {
-                        continue 'search;
-                    }
-                }
-            }
-            if matches {
-                found.push(slot);
-            }
-        }
-        return Ok((store, bucket, found));
+    let code = super::code_of(super::hash_of(interp, keys, index)?);
+    let store = store_of(interp, receiver)?;
+    // Keep the saved array identities live across replacement callbacks.
+    for array in [store.indexes, store.items, store.codes, store.slots] {
+        interp.roots.activity_mut().push_temp(array);
     }
+    let mut at = {
+        let (slots, codes) = super::codes_of(interp, &store)?;
+        super::chain_in(slots, codes, code)
+            .ok()
+            .map(|(_, head)| head)
+    };
+    while let Some(position) = at {
+        let Some(held) = slot_at(interp, store.indexes, position)? else {
+            at = super::codes_of(interp, &store)?.1.next(position);
+            continue;
+        };
+        let generation = interp.store_generation;
+        let writes = interp.store_writes;
+        let matches = same_index(interp, &store, keys, position, index)?;
+        if generation != interp.store_generation || writes != interp.store_writes {
+            // The comparison ran code that wrote a store, which may be another
+            // collection's. The receiver's own store and the entry at hand
+            // decide: unchanged, the walk goes on as if nothing was written.
+            let current = store_of(interp, receiver)?;
+            let held_still = slot_at(interp, current.indexes, position)? == Some(held);
+            if current != store || !held_still {
+                let stands = matches && current.same_arrays(&store) && held_still;
+                return Ok((store, stands.then_some(position)));
+            }
+        }
+        if matches {
+            return Ok((store, Some(position)));
+        }
+        at = super::codes_of(interp, &store)?.1.next(position);
+    }
+    Ok((store, None))
 }
 
-/// `Relation~allAt(index)`: every item under that index, newest first.
+/// `Relation~allAt(index)`: every item under that index, oldest first.
 fn native_relation_all_at(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -175,7 +223,7 @@ fn native_relation_items(
 }
 
 /// `Relation~removeAll(index)`: takes every entry under that index out and
-/// answers them as an array, newest first -- an empty `Array` for an index the
+/// answers them as an array, oldest first -- an empty `Array` for an index the
 /// relation does not hold.
 fn native_relation_remove_all(
     interp: &mut Interp,
@@ -192,18 +240,16 @@ fn native_relation_remove_all(
     // report 93.903 (argument 1) where `at()` and
     // `remove()` report 88.901, naming `index`.
     let index = super::collection::item_argument(args)?;
-    // One lookup, one `hashCode`. Entries are taken last first: taking the
-    // bucket's own slot copies its successor into it, which would move a
-    // later matching entry out from under its saved slot.
-    let (store, bucket, slots) = slots_in_bucket(interp, receiver, index)?;
+    // One lookup, one `hashCode`. Taking an entry moves no other, so the
+    // saved positions stay valid while nothing is sent between the takes.
+    let (store, slots) = slots_for(interp, receiver, index)?;
     let mut removed = Vec::new();
-    for slot in slots.into_iter().rev() {
-        if let Some(item) = super::take_at(interp, receiver, &store, slot, bucket)? {
+    for position in slots {
+        if let Some(item) = super::take_at(interp, receiver, &store, position)? {
             interp.roots.activity_mut().push_temp(item);
             removed.push(item);
         }
     }
-    removed.reverse();
     Ok(Some(super::collection::array_of(interp, removed)))
 }
 
@@ -249,59 +295,46 @@ fn native_relation_has_item(
     let bag = super::index_only(interp, receiver);
     let supplied_index = args.get(1).copied().flatten();
     // Bag's item is its index. Its optional argument is compared before
-    // hashing, and a successful lookup sends only the index comparison. An
-    // index unequal to the item answers 0 (r[class.bag.deviation.45]).
+    // hashing, and the lookup then sends `==` only to the members of the
+    // item's hash up to the first equal one. An index unequal to the item
+    // answers 0 (r[class.bag.deviation.45]).
     if bag
         && let Some(index) = supplied_index
         && !super::collection::same_item(interp, wanted, index)?
     {
         return Ok(Some(crate::eval::logical(false)));
     }
-    let under = if bag { Some(wanted) } else { supplied_index };
-    let keys = keys_of(interp, receiver);
-    let hash = under
-        .map(|index| super::hash_of(interp, keys, index))
-        .transpose()?;
-    let store = store_of(interp, receiver)?;
+    if bag {
+        let found = first_slot_for(interp, receiver, wanted)?.1.is_some();
+        return Ok(Some(crate::eval::logical(found)));
+    }
+    let under = supplied_index;
+    let (store, candidates) = match under {
+        Some(index) => slots_for(interp, receiver, index)?,
+        None => {
+            let store = store_of(interp, receiver)?;
+            let all = super::entries(interp, &store)?;
+            (store, all)
+        }
+    };
     // The active lookup keeps its hash store through growth. These arrays are
-    // actually read after callbacks, even if expansion detached them from the
+    // actually read after callbacks, even if a rebuild detached them from the
     // receiver. EMPTY clears them in place.
-    for array in [store.indexes, store.items, store.next] {
+    for array in [store.indexes, store.items, store.codes, store.slots] {
         interp.roots.activity_mut().push_temp(array);
     }
-    let first = hash.map_or(0, |hash| (hash % store.buckets as u64) as usize);
-    let end = if under.is_some() {
-        first + 1
-    } else {
-        store.buckets
-    };
-    for bucket in first..end {
-        let mut slot = bucket;
-        while slot < store.total && slot_at(interp, store.indexes, slot)?.is_some() {
-            let matches = match under {
-                Some(index) => same_index(interp, &store, keys, slot, index)?,
-                None => true,
-            };
-            if bag && matches {
-                return Ok(Some(crate::eval::logical(true)));
-            }
-            // A callback may empty this location or replace its value.
-            // Read the selected contents' current item only if it is live.
-            if slot_at(interp, store.indexes, slot)?.is_none() {
-                break;
-            }
-            if matches
-                && let Some(item) = slot_at(interp, store.items, slot)?
-                && super::collection::same_item(interp, wanted, item)?
-            {
-                return Ok(Some(crate::eval::logical(true)));
-            }
-            // A false comparison can replace the collision tail too.
-            // Follow its current link, never a saved entry list or a free slot.
-            if slot_at(interp, store.indexes, slot)?.is_none() {
-                break;
-            }
-            slot = super::link_at(interp, &store, slot)?;
+    // One pass over the candidates the search began with, each compared at
+    // most once, as [`slots_for`] does.
+    for position in candidates {
+        // A callback may empty this location or replace its value.
+        // Read the selected contents' current item only if it is live.
+        if slot_at(interp, store.indexes, position)?.is_none() {
+            continue;
+        }
+        if let Some(item) = slot_at(interp, store.items, position)?
+            && super::collection::same_item(interp, wanted, item)?
+        {
+            return Ok(Some(crate::eval::logical(true)));
         }
     }
     Ok(Some(crate::eval::logical(false)))
@@ -329,48 +362,45 @@ fn native_relation_remove_item(
     {
         return Ok(Some(ObjRef::NIL));
     }
-    let under = if bag { Some(wanted) } else { supplied_index };
-    let keys = keys_of(interp, receiver);
-    let hash = under
-        .map(|index| super::hash_of(interp, keys, index))
-        .transpose()?;
-    'search: loop {
-        let store = store_of(interp, receiver)?;
-        // Keep the saved array identities live across replacement callbacks.
-        for array in [store.indexes, store.items, store.next] {
-            interp.roots.activity_mut().push_temp(array);
-        }
-        let selected = hash.map(|hash| (hash % store.buckets as u64) as usize);
-        let mut bucket = selected.unwrap_or(0);
-        for (slot, previous) in super::entries_in(interp, &store, selected)? {
-            if previous.is_none() {
-                bucket = slot;
-            }
-            if let Some(index) = under {
-                let matches = same_index(interp, &store, keys, slot, index)?;
-                if store_of(interp, receiver)? != store {
-                    continue 'search;
-                }
-                if !matches {
-                    continue;
-                }
-            }
-            let Some(item) = slot_at(interp, store.items, slot)? else {
-                continue;
-            };
-            // A Bag's item is its index, which already matched.
-            if bag || super::collection::same_item(interp, wanted, item)? {
-                if let Some(removed) = super::take_at(interp, receiver, &store, slot, bucket)? {
-                    return Ok(Some(removed));
-                }
-                continue 'search;
-            }
-            if store_of(interp, receiver)? != store {
-                continue 'search;
-            }
-        }
-        return Ok(Some(ObjRef::NIL));
+    if bag {
+        // A Bag's item is its index, so the first equal index is the match.
+        let (store, found) = first_slot_for(interp, receiver, wanted)?;
+        let removed = match found {
+            Some(position) => super::take_at(interp, receiver, &store, position)?,
+            None => None,
+        };
+        return Ok(Some(removed.unwrap_or(ObjRef::NIL)));
     }
+    let under = supplied_index;
+    let (store, candidates) = match under {
+        Some(index) => slots_for(interp, receiver, index)?,
+        None => {
+            let store = store_of(interp, receiver)?;
+            let all = super::entries(interp, &store)?;
+            (store, all)
+        }
+    };
+    // Keep the saved array identities live across replacement callbacks.
+    for array in [store.indexes, store.items, store.codes, store.slots] {
+        interp.roots.activity_mut().push_temp(array);
+    }
+    // One pass over the candidates the search began with, each compared at
+    // most once, as [`slots_for`] does. A match that a callback has removed or
+    // moved to new arrays is skipped.
+    for position in candidates {
+        if slot_at(interp, store.indexes, position)?.is_none() {
+            continue;
+        }
+        let Some(item) = slot_at(interp, store.items, position)? else {
+            continue;
+        };
+        if super::collection::same_item(interp, wanted, item)?
+            && let Some(removed) = super::take_at(interp, receiver, &store, position)?
+        {
+            return Ok(Some(removed));
+        }
+    }
+    Ok(Some(ObjRef::NIL))
 }
 
 /// `Relation`'s and `Bag`'s primitive methods, chained into

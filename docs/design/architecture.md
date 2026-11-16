@@ -108,9 +108,14 @@ One contents protocol (iterate index and item pairs, look up, put, remove, count
 collection classes; ordered collections are backed by an array store, mapped ones by a hash store.
 Each store holds handles in both positions and is traced. `makeArray` stays per class: hash
 collections answer indexes, `Array` and `List` answer items, `Stem` its tails. A base-class object
-hashes internally; any other object, including a String subclass, is sent `HASHCODE`. Hash
-iteration order is unspecified (a Deviation). Argument arity per entry point is taken from the
-ooRexx method table, not guessed.
+hashes internally; any other object, including a String subclass, is sent `HASHCODE`. The hash
+store is compact, as CPython's dict is: dense entry arrays in insertion order, with each entry's
+cached hash, and a sparse open-addressed slot index into them. A removal leaves a hole that
+iteration skips, and a rebuild re-slots the live entries from their cached hashes in their order,
+so it sends nothing. The live entries of one hash form a chain from the oldest, so a `Relation`
+or `Bag` reaches the oldest duplicate first. Iteration walks the entry arrays, which gives
+insertion order (Deviation 33). Argument arity per entry point is taken from the ooRexx method
+table, not guessed.
 
 ## Concurrency
 

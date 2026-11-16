@@ -440,8 +440,9 @@ lines, so a null string yields none. A [Stem](r:class.stem.makearray), a
 [Table](r:class.table.makearray) yield their indexes, which for a Stem are the
 tails of the existing compound variables, and a [Set](r:class.set.makearray)
 yields its members. The order of a Stem is that of assignment ([Deviation
-1](r:instr.do.deviation.1)), and that of the others is not specified
-([Deviation 33](../deviations.md#33-hash-iteration-order)). A collection
+1](r:instr.do.deviation.1)), and that of the others is the order in which their
+entries were first put ([Deviation
+33](../deviations.md#33-hash-iteration-order)). A collection
 that yields nothing leaves `name` as it was, and otherwise `name` holds the
 last item after the loop.
 

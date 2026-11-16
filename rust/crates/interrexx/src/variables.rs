@@ -191,6 +191,25 @@ impl Interp {
         Interp::pools_in(object).set(scope, name, value);
     }
 
+    /// [`Interp::set_pool_variable`] for a name the caller bound from a copy
+    /// it keeps: the entry is found by identity
+    /// ([`interrexx_core::ScopePools::set_shared`]), and by name where it is
+    /// not or where a `GUARD WHEN` has watched the object.
+    #[inline]
+    pub(super) fn set_pool_variable_shared(
+        &mut self,
+        owner: ObjRef,
+        scope: ObjRef,
+        name: &std::rc::Rc<[u8]>,
+        value: ObjRef,
+    ) {
+        let object = Interp::pool_object(&mut self.heap, owner);
+        if !object.watched() && Interp::pools_in(object).set_shared(scope, name, value) {
+            return;
+        }
+        self.set_pool_variable(owner, scope, name, value);
+    }
+
     /// The value an accessor's or `DELEGATE`'s name holds in `scope`'s pool on
     /// `owner`: a simple variable's value or derived name, the stem (made if
     /// the pool has none), or one tail of that stem.

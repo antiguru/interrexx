@@ -4,7 +4,9 @@
  * The whole-collection reads are compared as ordered output: the contents
  * come back in bucket order and LOCAL comes last, because the oracle installs
  * it with setMethod and a Directory appends its method table after its
- * contents. A program-added entry lands where its hash puts it.
+ * contents. A program-added entry lands where its hash puts it on the oracle
+ * and last here (Deviation 33), so the lists taken after one is added are
+ * sorted.
  *
  * The entry family upper-cases the name and the index family does not;
  * setEntry with no value removes. Removing a class name from .environment
@@ -46,7 +48,7 @@ e['zzAdded'] = 'lower'
 e~put('upper', 'ZZADDED')
 e~setEntry('viaEntry', 'entry')
 say 'added    ' e['zzAdded'] e['ZZADDED'] e['viaEntry'] e['VIAENTRY'] .zzAdded .viaEntry
-say 'order    ' e~allIndexes~makeString('L', ' ')
+say 'order    ' e~allIndexes~sort~makeString('L', ' ')
 e~setEntry('viaentry')
 say 'no value ' e~hasIndex('VIAENTRY') e~items
 say 'removeEnt' e~removeEntry('zzadded') e~hasIndex('ZZADDED') e~hasIndex('zzAdded')
@@ -59,7 +61,7 @@ say 'unset    ' e~hasIndex('GREETING') e~items .greeting
 removed = e~remove('ARRAY')
 say 'remove   ' removed e~hasIndex('ARRAY') e['ARRAY'] .array e~items
 e['ARRAY'] = removed
-say 'restored ' e~hasIndex('ARRAY') e~allIndexes~makeString('L', ' ')
+say 'restored ' e~hasIndex('ARRAY') e~allIndexes~sort~makeString('L', ' ')
 say 'removeItm' e~removeItem(.string) e~hasIndex('STRING') .string
 say 'removeLoc' e~remove('LOCAL') e~hasIndex('LOCAL') e~items
 e~init

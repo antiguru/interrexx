@@ -128,16 +128,11 @@ const ENVIRONMENT_ROOT: &str = ".environment";
 /// The root name `.local` is held alive under.
 const LOCAL_ROOT: &str = ".local";
 
-/// `.environment`'s store capacity, which gives the 69 buckets its contents are
-/// held at: the contents in `ORACLE_ENVIRONMENT`'s order are non-decreasing in
-/// `hash % 69` and in no other bucket count from 17 to 4999, and a
-/// `.Directory~new(68)` filled in that order answers `allIndexes` the same before
-/// and after 200 more entries.
-const ENVIRONMENT_CAPACITY: usize = 68;
-
-/// `.environment~allIndexes`, in its order: the contents at
-/// [`ENVIRONMENT_CAPACITY`], then `LOCAL`, which is a method-table entry.
-static ORACLE_ENVIRONMENT: &[&str] = &[
+/// The order the interpreter's own entries are put into `.environment`, which
+/// is the order `~allIndexes` answers them in, then `LOCAL`, which is a
+/// method-table entry. The order is this implementation's own and the spec
+/// leaves it unspecified.
+static ENVIRONMENT_SEQUENCE: &[&str] = &[
     "INPUTOUTPUTSTREAM",
     "ALARM",
     "ENDOFLINE",
@@ -214,8 +209,10 @@ static ORACLE_ENVIRONMENT: &[&str] = &[
     "LOCAL",
 ];
 
-/// `.local~allIndexes`, in its order, at the default size.
-static ORACLE_LOCAL: &[&str] = &[
+/// The order the interpreter's own entries are put into `.local`, which is the
+/// order `~allIndexes` answers them in. Unspecified by the spec, like
+/// [`ENVIRONMENT_SEQUENCE`].
+static LOCAL_SEQUENCE: &[&str] = &[
     "SYSCARGS",
     "INPUT",
     "TRACEOUTPUT",
@@ -366,12 +363,9 @@ impl Interp {
             );
             self.roots.add_global(&format!(".owed{at}"), *held);
         }
-        let environment = self.interpreter_directory(
-            ENVIRONMENT_ROOT,
-            ENVIRONMENT_CAPACITY,
-            b"The Environment Directory",
-        );
-        let local = self.interpreter_directory(LOCAL_ROOT, 0, b"The Local Directory");
+        let environment =
+            self.interpreter_directory(ENVIRONMENT_ROOT, b"The Environment Directory");
+        let local = self.interpreter_directory(LOCAL_ROOT, b"The Local Directory");
 
         // `completeSystemClass` puts every native class into the environment
         // under its uppercased id, and that is the whole of what this crate
@@ -417,7 +411,7 @@ impl Interp {
         // In the fixed order, so every entry sits at its position and a later
         // write of a name replaces it in place. A name this crate has not built
         // yet is owed until the library bootstrap puts it.
-        for name in ORACLE_ENVIRONMENT {
+        for name in ENVIRONMENT_SEQUENCE {
             if *name == "LOCAL" {
                 continue;
             }
@@ -435,7 +429,7 @@ impl Interp {
             .expect("a string-keyed store accepts a string index");
         // `Interp::mint_local_directory` builds these before any program runs,
         // once the classes it needs exist.
-        for name in ORACLE_LOCAL {
+        for name in LOCAL_SEQUENCE {
             self.put_interpreter_entry(local, name.as_bytes(), owed[0]);
         }
         self.roots.activity_mut().pop_frame(frame);
@@ -450,9 +444,8 @@ impl Interp {
 
     /// A `Directory` for `.environment` or `.local`, held alive under `root`
     /// and rendered as `rendered`.
-    fn interpreter_directory(&mut self, root: &str, capacity: usize, rendered: &[u8]) -> ObjRef {
-        let directory =
-            hash::new_directory(self, capacity).expect("Directory is not an abstract class");
+    fn interpreter_directory(&mut self, root: &str, rendered: &[u8]) -> ObjRef {
+        let directory = hash::new_directory(self, 0).expect("Directory is not an abstract class");
         self.roots.add_global(root, directory);
         if let Some(object) = self.heap.get_mut(directory)
             && let Body::Instance { name, .. } = &mut object.body
@@ -1406,21 +1399,6 @@ impl Interp {
         };
         native.set_entry(index, item);
         Ok(())
-    }
-
-    /// Every key a string-keyed table holds, owned and in the table's own
-    /// order -- `NativeObject`'s map for a table this crate built on one, and
-    /// the hash store for any other `Directory` or `StringTable`.
-    pub(crate) fn native_keys(&mut self, object: ObjRef) -> Vec<Box<[u8]>> {
-        match self.heap.get(object).map(|held| &held.body) {
-            Some(Body::Native(native)) => native.keys(),
-            Some(Body::Instance { .. }) => self
-                .store_indexes(object)
-                .into_iter()
-                .map(|index| self.to_text(index).into_owned().into_boxed_slice())
-                .collect(),
-            _ => Vec::new(),
-        }
     }
 
     /// [`crate::dispatch::hash::store_indexes`], reachable from this module.

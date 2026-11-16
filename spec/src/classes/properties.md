@@ -778,8 +778,8 @@ p~load(f, 1) => 93.902
 ```
 
 r[class.properties.save]
-`save(target)` writes one line `name=value` for each entry, each ended by a
-line feed, in an order that is not specified ([the hash order
+`save(target)` writes one line `name=value` for each entry, each ended by a line
+feed, in the order the entries were first put ([the hash order
 rule](r:class.properties.deviation.33)); the name and the value are written as
 they are, a value that is not a string through [the string-value
 rule](r:conv.string.object), with no escaping, so a name that holds `=` or a
@@ -1019,20 +1019,22 @@ before
 ```
 
 r[class.properties.deviation.33]
-The order of the lines that `save` writes, and the order of the lists and
-searches that `Properties` inherits from `Directory`, is not specified, and
-may differ from ooRexx's ([the Directory
-rule](r:class.directory.deviation.33)). Which lines are written, and how
-often, is specified. In the example the lines are sorted.
+`save` writes the lines in the order the entries were first put, and the lists
+and searches that `Properties` inherits from `Directory` follow [the Directory
+rule](r:class.directory.deviation.33). Which lines are written, and how often,
+is specified. ooRexx writes the lines in an order that its storage fixes, so
+its output can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 p = .properties~new
 p~put('1', 'one')
 p~put('2', 'two')
 p~put('3', 'three')
+p~put('4', 'one')
 t = .recorder~new
 p~save(t)
-say t~lines~sort~makeString('L', '|')
+say t~lines~makeString('L', '|')
 ::class recorder
 ::method init
   expose lines
@@ -1047,7 +1049,7 @@ say t~lines~sort~makeString('L', '|')
 ```
 
 ```output
-one=1|three=3|two=2
+one=4|two=2|three=3
 ```
 
 r[class.properties.deviation.109]

@@ -70,8 +70,8 @@ interrexx gives one of the orders ooRexx can give.
 
 ## 8. Withdrawn
 
-Output that lists a hash collection now matches ooRexx; hash iteration order
-is [Deviation 33](#33-hash-iteration-order).
+The order in which output lists a hash collection is [Deviation
+33](#33-hash-iteration-order).
 
 ## 9. MutableBuffer storage held by a native call
 
@@ -280,11 +280,31 @@ class in place.
 
 ## 33. Hash iteration order
 
-The order in which a hash collection yields its entries, and the order of
-anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search compares, by `==` or `hashCode`, beyond those it must
-compare, and how often, is not specified either.
+A hash collection, a `Directory`, `StringTable`, `Properties`, `Table`,
+`IdentityTable`, `Set`, `Bag` or `Relation`, yields its entries in the order
+they were first put, and so does everything that lists or walks one. A `put`
+that replaces the item of an index already there keeps the entry in its place,
+and an entry that is removed and put again comes last. A `Directory` lists its
+entries first and then the names that `setMethod` gave it, each in the order
+they were put. Where several entries share an index or hold equal items, `at`,
+`[]`, `remove`, `index` and `removeItem` act on the oldest of them, a method
+that answers several of them lists them oldest first, and `uniqueIndexes`
+answers the oldest index of each group. ooRexx yields the entries in an order
+that its storage fixes, which is neither the order of insertion nor a sorted
+order, acts on the newest of several entries at one index, and searches the
+items in the order of its storage.
+
+Which entries are yielded, and how often, is specified. Which stored indexes or
+items a search compares, by `==` or `hashCode`, beyond those it must compare,
+and how often, is not specified. When a method that a search sends, `==` or
+`hashCode`, changes the collection being searched, which entry the search
+finds, answers or removes is not specified either, and it may act on none of
+them: a `removeAll` can answer an empty array while the entries under its index
+stay. The order is not specified for the methods that `methods` and
+`instanceMethods` list, for the variables that `.context~variables` and
+`SysDumpVariables` list, and for the entries that the interpreter itself puts
+in `.environment` and `.local`; the entries that a program puts there follow
+the order above.
 
 ## 34. `..` in a file name
 

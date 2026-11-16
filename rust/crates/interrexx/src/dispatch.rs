@@ -1154,8 +1154,7 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
     // the standard initialisation and nothing else.
     ("Bag", "NEW", Arity::Counted, hash::native_hash_new),
     // `Table`'s and `IdentityTable`'s `new` take an optional
-    // initial capacity, and it is observable: it decides the bucket count,
-    // which decides the order every iteration answers in.
+    // initial capacity, a sizing hint that no iteration order depends on.
     (
         "IdentityTable",
         "NEW",
@@ -1405,12 +1404,6 @@ impl ObjectModel {
     /// What `class` keeps alive through the class graph, for the collector.
     pub(crate) fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
         self.classes.class_references(class, out);
-    }
-
-    /// The hash-collection class a `DO OVER` target may be, for a caller
-    /// asking whether an object is one.
-    pub(crate) fn iterable_collection_class(&self) -> ObjRef {
-        self.string_table
     }
 
     /// The native class set, plus the lookup from each implemented
