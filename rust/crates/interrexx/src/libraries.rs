@@ -256,14 +256,30 @@ pub(crate) struct Unloading {
     thread: ThreadId,
     /// The libraries [`Unloading::next`] has answered.
     walked: Vec<u64>,
+    /// What [`Unloading::libraries`] answers once [`Unloading::finish`] has
+    /// ended the count.
+    closing: Option<Vec<Unload>>,
+}
+
+/// What [`Unloading::finish`] found.
+pub(crate) enum Finish {
+    /// The walk is over, and this instance no longer counts as live.
+    Done,
+    /// Libraries the walk left while their loaders ran, which are this
+    /// termination's to unload: no other instance is live to take them.
+    More(Vec<(Vec<u8>, Unload)>),
+    /// Loaders other threads run through this instance, the only live one,
+    /// to wait for before finishing again.
+    Wait(Vec<ThreadId>),
 }
 
 impl Unloading {
     /// The libraries whose unloaders run next, with their names, in the order
     /// they run: those of the round no earlier call answered, which once the
     /// first call's have run are those an unloader loaded, leaving out each
-    /// library whose loader another thread is still running. Answers nothing
-    /// once every other library of the round has been answered
+    /// library whose loader another thread is still running, which
+    /// [`Unloading::finish`] takes where no other instance is live. Answers
+    /// nothing once every other library of the round has been answered
     /// (`r[native.loading.unload]`).
     pub(crate) fn next(&mut self) -> Vec<(Vec<u8>, Unload)> {
         let round = round();
@@ -285,22 +301,76 @@ impl Unloading {
         batch
     }
 
+    /// Ends the walk once [`Unloading::next`] has answered nothing, in one
+    /// step with the end of this instance's count, so that no instance can
+    /// end between the two and leave a library to nobody. Where this
+    /// instance is the only live one, a library the walk left while another
+    /// thread ran its loader is this termination's: the instance that load
+    /// was made for has ended, or it was made through this instance itself.
+    /// It answers those whose loaders have returned, or the threads whose
+    /// loaders to wait for, and is to be asked again after either.
+    pub(crate) fn finish(&mut self) -> Finish {
+        let mut round = round();
+        if round.live == 1 {
+            let thread = std::thread::current().id();
+            let mut batch = Vec::new();
+            let mut holders = Vec::new();
+            for name in round.order.names() {
+                for loaded in &round.loaded {
+                    if loaded.name != name || self.walked.contains(&loaded.id) {
+                        continue;
+                    }
+                    match loaded.loading {
+                        Some(holder) if holder != thread => holders.push(holder),
+                        _ => {
+                            self.walked.push(loaded.id);
+                            batch.push((loaded.name.clone(), loaded.unload.clone()));
+                        }
+                    }
+                }
+            }
+            if !batch.is_empty() {
+                return Finish::More(batch);
+            }
+            // A loader that waits for this thread is not waited for: its
+            // library is left, as before the count ends.
+            if !holders.is_empty() && !closes_cycle(&round, &holders) {
+                return Finish::Wait(holders);
+            }
+        }
+        self.conclude(&mut round);
+        drop(round);
+        SETTLED.notify_all();
+        Finish::Done
+    }
+
     /// The libraries [`Unloading::next`] has answered, in the order they
     /// loaded.
     pub(crate) fn libraries(&self) -> Vec<Unload> {
+        if let Some(closing) = &self.closing {
+            return closing.clone();
+        }
+        Self::walked_of(&round(), &self.walked)
+    }
+
+    /// The libraries of `walked` that `round` holds, in the order they
+    /// loaded.
+    fn walked_of(round: &Round, walked: &[u64]) -> Vec<Unload> {
         // The others are held by an instance that outlives this termination.
-        round()
+        round
             .loaded
             .iter()
-            .filter(|loaded| self.walked.contains(&loaded.id))
+            .filter(|loaded| walked.contains(&loaded.id))
             .map(|loaded| loaded.unload.clone())
             .collect()
     }
-}
 
-impl Drop for Unloading {
-    fn drop(&mut self) {
-        let mut round = round();
+    /// Ends this instance's count, once.
+    fn conclude(&mut self, round: &mut Round) {
+        if self.closing.is_some() {
+            return;
+        }
+        self.closing = Some(Self::walked_of(round, &self.walked));
         if let Some(at) = round.unloading.iter().position(|held| *held == self.thread) {
             round.unloading.remove(at);
         }
@@ -313,6 +383,26 @@ impl Drop for Unloading {
             round.loaded.clear();
             round.order = PackageTable::new();
         }
+    }
+}
+
+/// Waits for the loaders `holders` run, as [`Finish::Wait`] asks: until one
+/// of them has returned. Touches nothing but the round, so a thread may wait
+/// here with its interpreter's baton vacated.
+pub(crate) fn await_holders(holders: Vec<ThreadId>) {
+    let round = round();
+    let running = holders
+        .iter()
+        .any(|holder| (round.loaded.iter()).any(|loaded| loaded.loading == Some(*holder)));
+    if running {
+        drop(wait_for(round, holders));
+    }
+}
+
+impl Drop for Unloading {
+    fn drop(&mut self) {
+        let mut round = round();
+        self.conclude(&mut round);
         drop(round);
         SETTLED.notify_all();
     }
@@ -468,6 +558,7 @@ impl Libraries {
         Some(Unloading {
             thread,
             walked: Vec::new(),
+            closing: None,
         })
     }
 
@@ -872,32 +963,103 @@ mod tests {
             .unwrap_or_else(|_| panic!("no other thread loads it"));
         drop(loading);
         let mut unloading = libraries.end().expect("the only live instance is the last");
-        let other = std::thread::spawn(|| std::thread::current().id())
-            .join()
-            .expect("the thread returns its id");
+        // The instance an unloader created, which the other thread loads for.
+        let _outliving = Libraries::new();
         let elsewhere = interrexx_api::load::hooks_only(None, None);
-        {
-            let mut round = super::round();
-            round.order.put(b"elsewhere");
-            let id = round.next;
-            round.next += 1;
-            round.loaded.push(super::Loaded {
-                id,
-                name: b"elsewhere".to_vec(),
-                identity: elsewhere.identity(),
-                unload: elsewhere.unload(),
-                loading: Some(other),
-            });
-        }
+        push_loading_elsewhere(b"elsewhere", &elsewhere);
         let names: Vec<Vec<u8>> = unloading.next().into_iter().map(|(name, _)| name).collect();
         assert_eq!(names, [b"walked".to_vec()]);
         assert!(unloading.next().is_empty());
         for loaded in &mut super::round().loaded {
             loaded.loading = None;
         }
+        assert!(matches!(unloading.finish(), super::Finish::Done));
         let closed = unloading.libraries();
         assert_eq!(closed.len(), 1);
         assert!(walked.is_unloaded_by(&closed[0]));
+    }
+
+    /// A library loading on another thread while the last instance's walk
+    /// comes to it, for an instance an unloader created, whose loader then
+    /// returns and whose instance then ends while the walk's termination is
+    /// still counted live: the walk's end, which comes after, takes the
+    /// library, as no other instance is left to unload it.
+    #[test]
+    fn a_library_left_to_an_instance_that_ends_first_is_unloaded_by_the_walk() {
+        let _round = super::round_gate::exclusive();
+        let mut libraries = Libraries::new();
+        let walked = Rc::new(interrexx_api::load::hooks_only(None, None));
+        let (_, loading) = libraries
+            .hold(b"walked", Rc::clone(&walked))
+            .unwrap_or_else(|_| panic!("no other thread loads it"));
+        drop(loading);
+        let mut unloading = libraries.end().expect("the only live instance is the last");
+        let mut inner = Libraries::new();
+        let left = interrexx_api::load::hooks_only(None, None);
+        push_loading_elsewhere(b"left", &left);
+        let names: Vec<Vec<u8>> = unloading.next().into_iter().map(|(name, _)| name).collect();
+        assert_eq!(names, [b"walked".to_vec()]);
+        assert!(unloading.next().is_empty());
+        for loaded in &mut super::round().loaded {
+            loaded.loading = None;
+        }
+        assert!(inner.end().is_none(), "the walk's instance still counts");
+        let super::Finish::More(more) = unloading.finish() else {
+            panic!("the walk's end left the library to no instance");
+        };
+        assert_eq!(more.len(), 1);
+        assert!(left.is_unloaded_by(&more[0].1));
+        assert!(matches!(unloading.finish(), super::Finish::Done));
+        assert_eq!(unloading.libraries().len(), 2);
+    }
+
+    /// A library that another thread loads through the last instance itself
+    /// while its walk runs, with its loader still running when the walk
+    /// comes to it: the walk's end waits for the loader, and then takes the
+    /// library, which is this termination's to unload.
+    #[test]
+    fn a_library_loading_through_the_ending_instance_is_waited_for_and_unloaded() {
+        let _round = super::round_gate::exclusive();
+        let mut libraries = Libraries::new();
+        let mut unloading = libraries.end().expect("the only live instance is the last");
+        let late = interrexx_api::load::hooks_only(None, None);
+        let holder = push_loading_elsewhere(b"late", &late);
+        assert!(unloading.next().is_empty());
+        let super::Finish::Wait(holders) = unloading.finish() else {
+            panic!("the walk's end did not wait for the loader");
+        };
+        assert_eq!(holders, [holder]);
+        for loaded in &mut super::round().loaded {
+            loaded.loading = None;
+        }
+        let super::Finish::More(more) = unloading.finish() else {
+            panic!("the walk's end did not take the library once its loader returned");
+        };
+        assert!(late.is_unloaded_by(&more[0].1));
+        assert!(matches!(unloading.finish(), super::Finish::Done));
+    }
+
+    /// Records in the round a load of `library` as `name` whose loader another
+    /// thread runs, and answers that thread.
+    fn push_loading_elsewhere(
+        name: &[u8],
+        library: &interrexx_api::load::Library,
+    ) -> std::thread::ThreadId {
+        let other = std::thread::spawn(|| std::thread::current().id())
+            .join()
+            .expect("the thread returns its id");
+        let mut round = super::round();
+        round.order.put(name);
+        let id = round.next;
+        round.next += 1;
+        round.loaded.push(super::Loaded {
+            id,
+            name: name.to_vec(),
+            identity: library.identity(),
+            unload: library.unload(),
+            loading: Some(other),
+        });
+        other
     }
 
     /// The internal packages' keys, in the order the table iterates them; a

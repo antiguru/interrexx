@@ -946,9 +946,18 @@ impl Interp {
         // A library an unloader loads is walked after the ones before it, in
         // the same termination (`r[native.loading.unload]`).
         let refused = 'walk: loop {
-            let batch = unloading.next();
+            let mut batch = unloading.next();
             if batch.is_empty() {
-                break None;
+                match unloading.finish() {
+                    crate::libraries::Finish::Done => break None,
+                    crate::libraries::Finish::More(more) => batch = more,
+                    // A loader another thread runs through this instance may
+                    // call into it, so the wait vacates the baton.
+                    crate::libraries::Finish::Wait(holders) => {
+                        self.wait_vacated(|| crate::libraries::await_holders(holders));
+                        continue;
+                    }
+                }
             }
             for (_, unload) in batch {
                 let library = unload.library();
