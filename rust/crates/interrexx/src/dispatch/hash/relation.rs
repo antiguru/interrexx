@@ -66,9 +66,10 @@ fn slots_for(
 ///
 /// The chain is walked from its oldest entry and stops at the first match,
 /// each candidate compared at most once. A comparison that changes the
-/// receiver's store ends the search: its own match stands while its entry is
-/// still where it was, and otherwise the search answers none
-/// (`r[class.relation.deviation.33]`).
+/// receiver's store, or removes the entry it compared, ends the search: its
+/// own match stands while its entry is still where it was, and otherwise the
+/// search answers none (`r[class.relation.deviation.33]`). A comparison that
+/// writes only other stores does not end it.
 fn first_slot_for(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -96,10 +97,15 @@ fn first_slot_for(
         let writes = interp.store_writes;
         let matches = same_index(interp, &store, keys, position, index)?;
         if generation != interp.store_generation || writes != interp.store_writes {
-            let stands = matches
-                && store_of(interp, receiver)?.same_arrays(&store)
-                && slot_at(interp, store.indexes, position)? == Some(held);
-            return Ok((store, stands.then_some(position)));
+            // The comparison ran code that wrote a store, which may be another
+            // collection's. The receiver's own store and the entry at hand
+            // decide: unchanged, the walk goes on as if nothing was written.
+            let current = store_of(interp, receiver)?;
+            let held_still = slot_at(interp, current.indexes, position)? == Some(held);
+            if current != store || !held_still {
+                let stands = matches && current.same_arrays(&store) && held_still;
+                return Ok((store, stands.then_some(position)));
+            }
         }
         if matches {
             return Ok((store, Some(position)));

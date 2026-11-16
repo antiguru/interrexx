@@ -348,6 +348,31 @@ fn a_bag_search_stops_at_the_first_equal_member() {
     assert_eq!(out, "1 1\n0 200\n");
 }
 
+/// A `Bag`'s `hasItem` and `removeItem` decide by the bag's own store: a
+/// comparison that writes another collection leaves the bag as it was, so the
+/// search goes on to the later members and finds the equal one.
+#[test]
+fn a_bag_search_whose_comparison_writes_another_collection_finds_its_member() {
+    let out = output_of(
+        ".local~log = .set~new\n\
+         b = .bag~new\n\
+         b~put(.key~new('y'))\n\
+         b~put(.key~new('x'))\n\
+         say 'hasItem' b~hasItem(.key~new('x'))\n\
+         r = b~removeItem(.key~new('x'))\n\
+         if r~isA(.key) then say 'removeItem' r~label\n\
+         else say 'removeItem none'\n\
+         say 'items' b~items b~hasItem(.key~new('y'))\n\
+         ::class key\n\
+         ::attribute label\n\
+         ::method init\n  expose label\n  use arg label\n\
+         ::method hashCode\n  return 7\n\
+         ::method '=='\n  expose label\n  use arg other\n  \
+         .log~put(.object~new)\n  return label == other~label\n",
+    );
+    assert_eq!(out, "hasItem 1\nremoveItem x\nitems 1 1\n");
+}
+
 /// A rebuild of a store whose positions are mostly holes leaves room for
 /// four times its live entries, so a store whose removals keep pace with its
 /// appends is rebuilt less often than once per as many appends as it holds.
