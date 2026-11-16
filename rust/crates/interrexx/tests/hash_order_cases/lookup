@@ -1,7 +1,9 @@
 # An index is found when its `hashCode` answers the same string as the stored
 # index's and `==` answers true. A string's hash code is keyed by a seed drawn
 # for each run, and an object whose `hashCode` answers a string's hash code
-# still finds that string, and the string finds the object.
+# still finds that string, and the string finds the object. These cases guard
+# the probe and `hashCode` agreeing on the seed, not the seeding itself, which
+# `tests/hash_seed.rs` covers.
 
 # an object delegating hashCode to a string finds the string and the reverse
 program

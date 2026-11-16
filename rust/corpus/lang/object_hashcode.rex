@@ -14,9 +14,9 @@
  * a number and its rendering agree, and the codes of the strings below
  * differ from one another.
  *
- * DateTime and TimeSpan reach this through their own Rexx-level hashCode in
- * the embedded core library, which returns `timestamp~hashcode` -- a number's hash, so
- * two equal instants agree and two different ones do not.
+ * DateTime and TimeSpan answer through their own Rexx-level hashCode in the
+ * embedded core library: DateTime the hash code of its instant as a number,
+ * TimeSpan an unkeyed hash it computes itself, so two equal values agree.
  */
 
 strings = .array~of('', 'a', 'abc', 'abcdefghijklmnopqrstuvwxyz0123456789', 'ff'x, '80'x, '7f'x)
