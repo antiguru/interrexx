@@ -15,11 +15,8 @@ use std::time::Duration;
 
 use interrexx::{Invocation, Outcome, run_program, run_program_collect_every_alloc};
 
-/// The `memcap` limit each run is under.
-const MEMORY: &str = "2G";
-
-/// The address-space limit in KiB where `memcap` is not on `PATH`.
-const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
 
 fn worktree() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
@@ -55,12 +52,6 @@ fn fresh_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Whether `name` is an executable file on this process's `PATH`.
-fn on_path(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
-}
-
 /// Runs `RelLoop(passes)` and answers the interpreter's peak resident set in
 /// KiB, read from its own rusage by `/usr/bin/time`, the innermost wrapper.
 fn peak_kib(dir: &Path, passes: u32) -> u64 {
@@ -71,20 +62,10 @@ fn peak_kib(dir: &Path, passes: u32) -> u64 {
     )
     .expect("the program is writable");
     let rss = dir.join(format!("rss{passes}"));
-    let mut command = if on_path("memcap") {
-        let mut command = Command::new("memcap");
-        command.arg(MEMORY);
-        command
-    } else {
-        let mut command = Command::new("bash");
-        command.arg("-c").arg(format!(
-            "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
-        ));
-        command
-    };
-    let output = command
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args([
-            env!("CARGO_BIN_EXE_bounded-run"),
+            "-v",
+            MEMORY_LIMIT_KIB,
             "-k",
             "5",
             "120",

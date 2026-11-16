@@ -332,7 +332,7 @@ not (
   | (binary_id(=interrexx::suite) & test(=fixtures::tests::the_marker_file_names_the_test_a_kill_at_the_bound_ended_in))
   | (binary_id(=interrexx::suite) & test(=fixtures::tests::the_relative_path_tests_pass_on_the_oracle_with_their_neighbours_copied))
   | (binary_id(=interrexx::suite) & test(=fixtures::tests::the_run_cap_stops_a_group_that_hangs_on_every_test))
-  | (binary_id(=interrexx::suite) & test(=fixtures::tests::without_memcap_the_crate_run_is_under_the_ulimit_fallback))
+  | (binary_id(=interrexx::suite) & test(=fixtures::tests::the_crate_run_is_under_its_address_space_limit))
   | (binary_id(=interrexx::timing_witnesses) & test(=the_oracle_prints_the_expected_output_every_time))
   | (binary_id(=interrexx::unreachable_classes) & test(=a_class_marked_unreachable_still_has_no_route_to_an_instance))
 )

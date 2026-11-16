@@ -26,11 +26,7 @@ done
 mkdir -m 700 "$work/service"
 
 capped() {
-    if command -v memcap >/dev/null; then
-        memcap 4G timeout -k 5 600 "$@"
-    else
-        (ulimit -v 4194304 && exec timeout -k 5 600 "$@")
-    fi
+    "$crate/bounded-run" -v 4194304 -k 5 600 "$@"
 }
 side() { # oracle|crate DIR ARGS...
     local which=$1 dir=$2
