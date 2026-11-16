@@ -35,11 +35,7 @@ fn main() -> ExitCode {
 
     let mut invocation = interrexx::join_command_line(&run.words)
         .with_input(interrexx::ProgramInput::Stdin)
-        .with_standard_transient(std::array::from_fn(|fd| {
-            use std::os::unix::fs::FileTypeExt;
-            std::fs::metadata(format!("/proc/self/fd/{fd}"))
-                .is_ok_and(|meta| meta.file_type().is_char_device() || meta.file_type().is_fifo())
-        }))
+        .with_standard_transient(transient_standard_streams())
         // After what native code wrote through C's streams, in that order.
         .with_sinks(interrexx::Sinks {
             stdout: Box::new(|bytes| {
@@ -178,4 +174,23 @@ fn main() -> ExitCode {
 fn report((text, status): (Vec<u8>, i32)) -> ExitCode {
     let _ = std::io::stderr().write_all(&text);
     ExitCode::from(status as u8)
+}
+
+/// Whether standard input, output and error are each a terminal or a pipe, from
+/// each descriptor's own status, which every Unix answers. A closed one is not.
+fn transient_standard_streams() -> [bool; 3] {
+    use std::os::fd::{AsFd, BorrowedFd};
+    let transient = |fd: BorrowedFd<'_>| {
+        rustix::fs::fstat(fd).is_ok_and(|status| {
+            matches!(
+                rustix::fs::FileType::from_raw_mode(status.st_mode),
+                rustix::fs::FileType::CharacterDevice | rustix::fs::FileType::Fifo
+            )
+        })
+    };
+    [
+        transient(std::io::stdin().as_fd()),
+        transient(std::io::stdout().as_fd()),
+        transient(std::io::stderr().as_fd()),
+    ]
 }
