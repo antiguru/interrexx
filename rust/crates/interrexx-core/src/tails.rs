@@ -21,9 +21,11 @@
 //! The slab is what lets a caller that has found a tail once write it again
 //! by its ordinal, without hashing the tail's bytes a second time.
 //!
-//! The map hashes with the interpreter's [`HashSeed`], so a program cannot
-//! choose tails that all collide in it without knowing the seed. The order
-//! comes from the slab, so the seed never shows in it.
+//! The map hashes with a keyed hash whose keys come from the interpreter's
+//! [`HashSeed`], so a program cannot choose tails that all collide in it
+//! without knowing the seed. The order comes from the slab, so the seed never
+//! shows in it. That hash is not the one a string's hash code answers: a
+//! tail's hash is never observable, so a faster keyed hash serves.
 
 use std::hash::{BuildHasher, Hasher};
 
@@ -48,11 +50,20 @@ struct Store {
     epoch: u64,
 }
 
-/// The map's hasher: the interpreter's keyed hash of a tail's bytes. A key
-/// is a byte string, compared whole when its hash matches, so the length a
-/// slice writes ahead of its bytes is left out of the hash.
-#[derive(Clone, Copy, Debug)]
-struct TailHasher(HashSeed);
+/// The map's hasher: a keyed hash of a tail's bytes, keyed from the
+/// interpreter's seed. A key is a byte string, compared whole when its hash
+/// matches, so the length a slice writes ahead of its bytes is left out of
+/// the hash.
+#[derive(Clone, Debug)]
+struct TailHasher(ahash::RandomState);
+
+impl TailHasher {
+    /// The hasher keyed from `seed`.
+    fn of(seed: HashSeed) -> TailHasher {
+        let [k0, k1, k2, k3] = seed.four_keys();
+        TailHasher(ahash::RandomState::with_seeds(k0, k1, k2, k3))
+    }
+}
 
 impl BuildHasher for TailHasher {
     type Hasher = BytesHasher;
@@ -65,7 +76,7 @@ impl BuildHasher for TailHasher {
 
 /// [`TailHasher`]'s hasher: the keyed hasher, passing over the length
 /// prefix, which is the only `usize` a byte string writes.
-struct BytesHasher(<HashSeed as BuildHasher>::Hasher);
+struct BytesHasher(ahash::AHasher);
 
 impl Hasher for BytesHasher {
     #[inline]
@@ -165,10 +176,10 @@ impl Slab {
 }
 
 impl Store {
-    /// No tails, its map hashing under `seed`.
-    fn new(seed: HashSeed) -> Store {
+    /// No tails, its map hashing with `hasher`.
+    fn new(hasher: TailHasher) -> Store {
         Store {
-            ordinals: HashMap::with_hasher(TailHasher(seed)),
+            ordinals: HashMap::with_hasher(hasher),
             values: Slab::default(),
             holes: 0,
             epoch: 0,
@@ -257,7 +268,9 @@ impl Tails {
     /// interpreter's, which the map takes when this is the stem's first tail.
     #[inline]
     pub fn set(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) -> usize {
-        let store = self.0.get_or_insert_with(|| Box::new(Store::new(seed)));
+        let store = self
+            .0
+            .get_or_insert_with(|| Box::new(Store::new(TailHasher::of(seed))));
         // **One lookup serves an existing tail and a new one alike**: the
         // entry borrows the key, so a write to an existing tail allocates
         // nothing, and a new tail is hashed once and copied only when filed.
@@ -295,7 +308,9 @@ impl Tails {
     /// Adds the tail `key` holding `value` where the stem has no such tail,
     /// and leaves an existing one, tombstone or not, as it is.
     pub fn insert_if_absent(&mut self, seed: HashSeed, key: &[u8], value: Option<ObjRef>) {
-        let store = self.0.get_or_insert_with(|| Box::new(Store::new(seed)));
+        let store = self
+            .0
+            .get_or_insert_with(|| Box::new(Store::new(TailHasher::of(seed))));
         if let EntryRef::Vacant(entry) = store.ordinals.entry_ref(key) {
             entry.insert(store.values.len());
             store.values.push(Slot::of(value));
@@ -339,7 +354,7 @@ impl Tails {
         if let Some(store) = self.0.as_deref_mut() {
             *store = Store {
                 epoch: store.epoch.wrapping_add(1),
-                ..Store::new(store.ordinals.hasher().0)
+                ..Store::new(store.ordinals.hasher().clone())
             };
         }
     }
@@ -516,11 +531,15 @@ mod tests {
     /// The map hashes a tail's bytes with the seed's keyed hash, the one a
     /// string's hash code is.
     #[test]
-    fn a_tail_hashes_as_the_seeds_hash_of_its_bytes() {
+    fn a_tail_hashes_as_the_keyed_hash_of_its_bytes_alone() {
         let mut tails = Tails::new();
+        let [k0, k1, k2, k3] = SEED.four_keys();
+        let state = ahash::RandomState::with_seeds(k0, k1, k2, k3);
         for key in [&b"X"[..], b"LONGER.THAN.EIGHT", b""] {
             tails.set(SEED, key, None);
-            assert_eq!(tails.tail_hash(key), Some(SEED.hash(key)));
+            let mut bytes_alone = state.build_hasher();
+            bytes_alone.write(key);
+            assert_eq!(tails.tail_hash(key), Some(bytes_alone.finish()));
         }
     }
 

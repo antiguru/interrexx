@@ -2,9 +2,10 @@
 
 use siphasher::sip::SipHasher13;
 
-/// The key of the keyed hash an interpreter hashes strings with: a string's
-/// hash code (`r[class.string.hashcode]`) and a stem's map from tails to
-/// ordinals. Keys that collide for one seed do not in general collide for
+/// The key of the keyed hash an interpreter hashes strings with, a string's
+/// hash code (`r[class.string.hashcode]`), and of a stem's map from tails to
+/// ordinals, which hashes with a function of its own ([`HashSeed::four_keys`]).
+/// Keys that collide for one seed do not in general collide for
 /// another, so a program cannot choose a set of strings that all land on one
 /// probe path without knowing the seed.
 ///
@@ -35,6 +36,18 @@ impl HashSeed {
         use std::hash::BuildHasher;
         let state = std::hash::RandomState::new();
         HashSeed::new(state.hash_one(0u8), state.hash_one(1u8))
+    }
+
+    /// Four keys derived from this seed, for a keyed hash that takes four:
+    /// the seed's own two, and two mixed from both of them.
+    pub(crate) fn four_keys(self) -> [u64; 4] {
+        let mut state = self.k0 ^ self.k1.rotate_left(32);
+        [
+            self.k0,
+            self.k1,
+            splitmix64(&mut state),
+            splitmix64(&mut state),
+        ]
     }
 
     /// The keyed hash of `bytes`.
