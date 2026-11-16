@@ -471,32 +471,6 @@ rc -1
 signal 0
 [stderr]
 
-# signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
-# no signal has, answering 0 with EINVAL kept; kill() refuses a number no
-# signal has.
-program
-do sig over 9, 19, 32, 33, 0, 65, -1, 64, 1
-  call SysClose -1
-  say sig SysSignal(sig, 'i') SysGeterrno()
-end
-call SysClose -1
-say SysKill(SysGetpid(), 65) SysGeterrno() SysKill(SysGetpid(), -2) SysGeterrno()
-::requires 'rxunixsys' LIBRARY
-----
-rc 0
-[stdout]
-9 0 22
-19 0 22
-32 0 22
-33 0 22
-0 0 22
-65 0 22
--1 0 22
-64 0 9
-1 0 9
--1 22 -1 22
-[stderr]
-
 # errno: immediately after a failing call it is that call's, and a success
 # leaves it. Rulings, errno: before any call of this library it is 0, and
 # the interpreter's own I/O (the SAYs here) does not change it; the oracle

@@ -1,0 +1,32 @@
+# How a send to an unusable address fails is the host's (`docs/design/decisions.md`): EINVAL
+# (22) on Linux, EADDRNOTAVAIL on macOS.
+# Datagrams: SockSendTo with and without flags, SockRecvFrom with the
+# sender's address, MSG_PEEK, and flags given as the null string.
+program
+d = SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_UDP')
+e = SockSocket('AF_INET', 'SOCK_DGRAM', '0')
+da.family = 2; da.port = 0; da.addr = '127.0.0.1'
+call SockBind d, 'da.'; call SockGetSockName d, 'dn.'
+say 'sendto' SockSendTo(e, 'dgram', 'dn.') errno
+say 'sendto' SockSendTo(e, 'dgram2', 'MSG_DONTROUTE', 'dn.') errno
+say 'recvfrom' SockRecvFrom(d, 'v', 100, 'f.') v f.family f.addr (f.port > 0)
+say 'recvfrom' SockRecvFrom(d, 'v', 3, 'MSG_PEEK', 'f.') v
+say 'recvfrom' SockRecvFrom(d, 'v', 100, '', 'f.') v
+z.family = 0; z.port = 0; z.addr = 0
+say 'sendto' SockSendTo(e, 'x', 'z.') errno
+z.family = 7
+say 'sendto' SockSendTo(e, 'x', 'z.') errno
+say SockClose(d) SockClose(e)
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+sendto 5 0
+sendto 6 0
+recvfrom 5 dgram 2 127.0.0.1 1
+recvfrom 3 dgr
+recvfrom 6 dgram2
+sendto -1 22
+sendto -1 EAFNOSUPPORT
+0 0
+[stderr]

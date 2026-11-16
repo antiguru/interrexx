@@ -1,0 +1,27 @@
+# Signal numbers are the host's (`docs/design/decisions.md`): 19 is SIGSTOP on Linux and SIGCONT
+# on macOS, and 64 is a real-time signal on Linux and none on macOS.
+# signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
+# no signal has, answering 0 with EINVAL kept; kill() refuses a number no
+# signal has.
+program
+do sig over 9, 19, 32, 33, 0, 65, -1, 64, 1
+  call SysClose -1
+  say sig SysSignal(sig, 'i') SysGeterrno()
+end
+call SysClose -1
+say SysKill(SysGetpid(), 65) SysGeterrno() SysKill(SysGetpid(), -2) SysGeterrno()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+9 0 22
+19 0 22
+32 0 22
+33 0 22
+0 0 22
+65 0 22
+-1 0 22
+64 0 9
+1 0 9
+-1 22 -1 22
+[stderr]
