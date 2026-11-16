@@ -52,11 +52,13 @@ statics of `unsafe extern "C" fn` slots.
   package hook, the interpreter also keeps that activity's thread context and what the context
   holds: its copy of the thread interface table, the requester (a handle on the baton and on the
   inbox) and anything left in the inbox when the interpreter ended. Nothing is posted to the inbox
-  after the end. Each thread context `AttachThread` builds is kept too, as its thread holds the
-  address until it detaches. Classic `RexxStart` makes an interpreter for each run, so a process
-  that calls it again and again keeps an instance for each run, and a thread context with what it
-  holds for each run whose program loads a native library and calls into it. That memory grows
-  without bound in such a process.
+  after the end. Each thread context `AttachThread` builds is kept too, because an extension may
+  still call through it after its thread detached or the interpreter ended. A detached context goes
+  on the instance's free list for the next `AttachThread`, so an instance keeps no more of them
+  than the most threads it had attached at once. Classic `RexxStart` makes an interpreter for each
+  run, so a process that calls it again and again keeps an instance for each run, and a thread
+  context with what it holds for each run whose program loads a native library and calls into it.
+  That memory grows without bound in such a process.
 * A callback from a thread other than the one running that activity's native call raises
   `Error_Execution_invalid_thread`.
 * A callback made while the interpreter's baton is held elsewhere takes the baton, or is run on
