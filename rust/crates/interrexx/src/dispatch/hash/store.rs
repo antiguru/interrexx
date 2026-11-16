@@ -152,12 +152,20 @@ fn slots_for(entries: usize) -> usize {
 /// [`slots_for`] gives the fewest slots.
 pub(super) const MINIMUM_ENTRIES: usize = 0;
 
-/// The capacity a rebuild gives a store holding `live` entries: room for as
-/// many appends again before the next rebuild. Sized by the live entries
-/// alone, so a store that churns through few of them stays at the minimum
-/// however many it has removed.
-fn regrown(live: usize) -> usize {
-    live.saturating_mul(2)
+/// The capacity a rebuild gives a store holding `live` entries in `used`
+/// positions: room for as many appends again before the next rebuild, or,
+/// when more of the positions are holes than entries, for three times as
+/// many. Sized by the live entries alone, so a store that churns through few
+/// of them stays small however many it has removed.
+fn regrown(live: usize, used: usize) -> usize {
+    // A store whose removals keep pace with its appends would otherwise be
+    // rebuilt after as many appends as it has entries, and a rebuild costs
+    // far more than an append: the larger room spreads it over more appends.
+    if used.saturating_sub(live) > live {
+        live.saturating_mul(4)
+    } else {
+        live.saturating_mul(2)
+    }
 }
 
 /// The form a hash takes in an entry's cache and in the probe sequence:
@@ -858,7 +866,7 @@ pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure>
 }
 
 /// Compacts the live entries of `store`, the receiver's, in their order, into
-/// fresh arrays sized for [`regrown`] of them, and files them again from their
+/// fresh arrays sized by [`regrown`], and files them again from their
 /// cached codes. Sends nothing. The store stays linked or unlinked as it was.
 fn rebuild(
     interp: &mut Interp,
@@ -878,7 +886,7 @@ fn rebuild(
             live.push((index, items.get(position).copied().flatten(), code));
         }
     }
-    let capacity = regrown(live.len());
+    let capacity = regrown(live.len(), store.used);
     Ok(build(interp, receiver, half, &live, capacity, linked))
 }
 
