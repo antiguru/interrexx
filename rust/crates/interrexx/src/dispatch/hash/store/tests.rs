@@ -348,6 +348,50 @@ fn a_bag_search_stops_at_the_first_equal_member() {
     assert_eq!(out, "1 1\n0 200\n");
 }
 
+/// A rebuild of a store whose positions are mostly holes leaves room for
+/// four times its live entries, so a store whose removals keep pace with its
+/// appends is rebuilt less often than once per as many appends as it holds.
+#[test]
+fn a_rebuild_of_a_store_of_mostly_holes_leaves_four_times_the_room() {
+    let mut interp = Interp::new();
+    let table = run_returning(
+        &mut interp,
+        "t = .table~new\n\
+         do i = 1 to 100\n  t[i] = i\nend\n\
+         do i = 1 to 90\n  t~remove(i)\nend\n\
+         return t\n",
+    );
+    let store = store_of(&mut interp, table).expect("the table has a store");
+    let live = count_in(&interp, &store).expect("count");
+    assert_eq!(live, 10);
+    assert!(store.used - live > live, "the store is mostly holes");
+    let rebuilt = rebuild(&mut interp, table, CONTENTS, &store).expect("rebuild");
+    let capacity = rebuilt.capacity(&interp).expect("capacity");
+    assert!(capacity >= 4 * live, "capacity {capacity} for {live} live entries");
+}
+
+/// Removing the oldest entry of a chain hands the chain's tail to the next
+/// entry, which heads it now: an entry appended to the chain afterwards
+/// follows the last one, and no entry of the chain is lost. The run is
+/// bounded by a deadline: a chain linked into a loop fails the test instead
+/// of hanging it.
+#[test]
+fn removing_the_head_of_a_chain_hands_its_tail_on() {
+    let outcome = crate::run_program(
+        "/t.rex",
+        b"r = .relation~new\n\
+          do i = 1 to 3\n  r~put(i, 'dup')\nend\n\
+          r~remove('dup')\n\
+          r~put(4, 'dup')\n\
+          say r~allAt('dup')~makeString('l', ' ') r~items('dup') r~items\n"
+            .to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(String::from_utf8_lossy(&outcome.stdout), "2 3 4 3 3\n");
+}
+
 /// The slots of `collection`'s store that file an entry.
 fn filed_slots(interp: &mut Interp, collection: ObjRef) -> Vec<usize> {
     let store = store_of(interp, collection).expect("the collection has a store");
