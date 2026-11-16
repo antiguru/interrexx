@@ -144,13 +144,17 @@ fn main() -> ExitCode {
             .trace_hash
             .map(|hash| format!(" trace={hash:016x}"))
             .unwrap_or_default();
+        let hash = sim
+            .hash_seed
+            .map(|seed| format!(" hash={seed}"))
+            .unwrap_or_default();
         let profile = if cfg!(debug_assertions) {
             "debug"
         } else {
             "release"
         };
         eprintln!(
-            "rexx-sim: seed={} policy={} steps={} contended={} switches={}{trace} profile={profile} \
+            "rexx-sim: seed={} policy={} steps={} contended={} switches={}{trace}{hash} profile={profile} \
              stack={}",
             sim.seed,
             sim.policy,

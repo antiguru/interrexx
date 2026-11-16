@@ -4583,6 +4583,14 @@ fn execute_kept(
     // Before the bootstrap, which hashes the first strings: a store holds
     // hashes made under the seed of its time, so the seed never changes once
     // one is made.
+    // A seed the environment names is recorded in the simulation's own
+    // configuration, so that its trace header and report name it.
+    let mut switch_mode = switch_mode;
+    if let Some(SwitchMode::Sim(config)) = &mut switch_mode
+        && let Ok(Some(seed)) = named_hash_seed(&interp.env)
+    {
+        config.knobs.hash = Some(seed);
+    }
     let sim_config = match &switch_mode {
         Some(SwitchMode::Sim(config)) => Some(config),
         _ => None,

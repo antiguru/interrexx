@@ -126,3 +126,35 @@ fn an_embedded_run_warns_of_a_refused_seed_and_draws_one() {
     assert_ne!(first.stdout, second.stdout);
     assert!(run("5").stderr.is_empty());
 }
+
+/// A seed `REXX_HASH_SEED` names in the simulation mode is recorded in the
+/// trace's header and in the run's `rexx-sim:` line, so a replay of the
+/// trace hashes under it with the variable unset.
+#[test]
+fn a_named_seed_is_recorded_for_a_replay() {
+    let dir = std::env::temp_dir().join(format!("interrexx-hash-seed-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("scratch directory");
+    let trace = dir.join("trace");
+    let mode = format!("sim:7,trace={}", trace.display());
+    let recorded = run(
+        CODE,
+        &[("REXX_SWITCH_MODE", &mode), ("REXX_HASH_SEED", "1")],
+    );
+    assert_eq!(recorded.status.code(), Some(0));
+    let stderr = String::from_utf8_lossy(&recorded.stderr);
+    assert!(stderr.contains(" hash=1 "), "{stderr}");
+    let header = std::fs::read_to_string(&trace).expect("the trace was written");
+    assert!(
+        header
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .contains(",hash=1 "),
+        "{header}"
+    );
+    let replay = format!("sim:replay={}", trace.display());
+    let replayed = stdout(CODE, &[("REXX_SWITCH_MODE", &replay)]);
+    assert_eq!(replayed, String::from_utf8_lossy(&recorded.stdout));
+    assert_ne!(replayed, stdout(CODE, &[("REXX_SWITCH_MODE", "sim:7")]));
+    let _ = std::fs::remove_dir_all(&dir);
+}
