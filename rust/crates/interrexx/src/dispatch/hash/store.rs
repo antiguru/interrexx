@@ -30,7 +30,7 @@ use interrexx_core::SMALL_INT_MAX;
 
 use super::*;
 
-/// The five pool entries a hash store is, bound in the receiver's own pool
+/// The pool entries a hash store is, bound in the receiver's own pool
 /// under the `MapCollection` class as scope: the entries' indexes, their
 /// items and their [`FIELDS`] (cached hash and chain links), all in
 /// insertion order; the slot index ([`EMPTY`], [`DELETED`], or the position
@@ -42,7 +42,7 @@ pub(super) const HASH_NEXT: &[u8] = b"HASHNEXT";
 pub(super) const HASH_BUCKETS: &[u8] = b"HASHBUCKETS";
 pub(super) const HASH_FREE: &[u8] = b"HASHFREE";
 
-/// The five pool entries one store occupies.
+/// The pool entries one store occupies.
 #[derive(Clone, Copy, Eq)]
 pub(super) struct Half {
     pub(super) indexes: &'static [u8],
@@ -55,7 +55,7 @@ pub(super) struct Half {
 }
 
 impl PartialEq for Half {
-    /// Whether both are the same half. Every half is one of the two constants
+    /// Whether both are the same half. Every half is one of the constants
     /// below, so their flags tell them apart without comparing names.
     #[inline]
     fn eq(&self, other: &Half) -> bool {
@@ -103,12 +103,12 @@ const EMPTY: i64 = 0;
 const DELETED: i64 = -1;
 
 /// The fields each entry has in the codes array of a linked store, at
-/// `position * FIELDS`: its [`CODE`], the position of the [`NEXT`] entry of
-/// its chain, and, for the oldest entry of a chain, the position of the
-/// chain's [`TAIL`]. The links reuse the codes array rather than a sixth pool
-/// entry, so that the store stays five names that `copy`, a rebuild and
-/// `EMPTY` already treat as one: a copy duplicates the links with the codes,
-/// and fresh arrays start with none.
+/// `position * FIELDS`: its [`CODE`], the position of the [`NEXT`] entry of its
+/// chain, and, for the oldest entry of a chain, the position of the chain's
+/// [`TAIL`]. The links reuse the codes array rather than a pool entry of their
+/// own, so that the store stays the names that `copy`, a rebuild and `EMPTY`
+/// already treat as one: a copy duplicates the links with the codes, and fresh
+/// arrays start with none.
 ///
 /// **A store is linked only once it needs to be.** While no two of its
 /// entries share a code every chain is one entry long, so its codes array
@@ -245,7 +245,7 @@ impl<'a> Codes<'a> {
     #[inline]
     pub(super) fn new(fields: &'a [Option<ObjRef>], slot_count: usize) -> Codes<'a> {
         // An unlinked array has one field per entry position, fewer than the
-        // slots; a linked one has three, at least as many as the slots.
+        // slots; a linked one has [`FIELDS`], at least as many as the slots.
         let stride = if fields.len() >= slot_count {
             FIELDS
         } else {
@@ -372,7 +372,7 @@ fn small(value: i64) -> ObjRef {
     ObjRef::small_int(value).expect("a hash store's numbers fit a SmallInt")
 }
 
-/// A hash store's four arrays and its count, read out together.
+/// A hash store's arrays and its count, read out together.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(super) struct Store {
     pub(super) indexes: ObjRef,
@@ -417,7 +417,7 @@ pub(super) fn counted(value: ObjRef) -> Option<usize> {
     }
 }
 
-/// The five names of each half, as the pool keeps them, made once.
+/// The names of each half, as the pool keeps them, made once.
 pub(crate) struct PoolNames {
     contents: [Rc<[u8]>; 5],
     methods: [Rc<[u8]>; 5],
@@ -508,7 +508,7 @@ fn build(
     let used = entries.len();
     let used_value = small(used as i64);
     let [n_indexes, n_items, n_codes, n_slots, n_used] = pool_names(interp, half).clone();
-    // A capacity [`initialize_store`] left pending goes, so that the five
+    // A capacity [`initialize_store`] left pending goes, so that the half's
     // entries are bound together in their order, as [`shared_run`] reads them.
     if pool_variable(interp, receiver, scope, half.indexes).is_none()
         && pool_variable(interp, receiver, scope, half.slots).is_some()
@@ -609,7 +609,7 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     let names = &interp.hash_names;
     let mut rest = pools.entries(scope);
     while !rest.is_empty() {
-        // [`install_store`] binds a half's five names together, in this order
+        // [`install_store`] binds a half's names together, in this order
         // and as copies of [`PoolNames`]' own, so a run of them is recognised
         // by identity before any name is compared byte by byte.
         if let Some(found) = shared_run(rest, &names.contents) {
@@ -656,7 +656,7 @@ pub(super) fn leading_contents(interp: &mut Interp, receiver: ObjRef) -> Option<
     shared_run(pools.entries(scope), &interp.hash_names.contents)
 }
 
-/// One half's entries, when `entries` starts with that half's five shared
+/// One half's entries, when `entries` starts with that half's shared
 /// names in [`install_store`]'s order. A pool binds a name once, so what this
 /// finds is what the byte-by-byte reading would.
 #[inline]
@@ -783,7 +783,7 @@ fn set_used(interp: &mut Interp, receiver: ObjRef, half: Half, used: usize) {
     bump_store_generation(interp);
 }
 
-/// `half`'s five names as [`PoolNames`] keeps them.
+/// `half`'s names as [`PoolNames`] keeps them.
 fn pool_names(interp: &Interp, half: Half) -> &[Rc<[u8]>; 5] {
     if half == CONTENTS {
         &interp.hash_names.contents
