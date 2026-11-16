@@ -2,6 +2,7 @@
 //! fallbacks behind them.
 
 use super::{Body, Decoded, Failure, Interp, ObjRef, Primitive, Raised};
+use crate::builtin::argument_kinds::{BuiltinArgument, Deferred};
 use crate::value::Referent;
 
 /// What the protocol's conversion limbs answered, before anything is built.
@@ -87,15 +88,16 @@ impl Interp {
 
     /// The required-string protocol, with `nil` saying whether a user
     /// `STRING` answer with no string value is `.nil` or refused. It is asked
-    /// only where a `STRING` method runs. `position` is the argument number
-    /// the refusal names where the value is a builtin's argument
-    /// (`r[conv.string.deviation.169]`), and `None` everywhere else.
+    /// only where a `STRING` method runs. `argument` is the builtin argument
+    /// the value is, whose kind decides the refusal
+    /// (`r[conv.string.builtin-argument]`, `r[conv.string.argument-kind]`),
+    /// and `None` everywhere else.
     #[inline]
     fn required_string_or(
         &mut self,
         value: ObjRef,
         nil: impl FnOnce() -> bool,
-        position: Option<usize>,
+        argument: Option<BuiltinArgument<'_>>,
     ) -> Result<ObjRef, Failure> {
         // **A string and a small integer are their own string value**, and
         // that is the answer whether the latch is armed or clear:
@@ -123,7 +125,7 @@ impl Interp {
                 self.roots.activity_mut().push_temp(value);
                 return Ok(value);
             }
-            return self.required_string_dispatch(value, nil(), position);
+            return self.required_string_dispatch(value, nil(), argument);
         }
         debug_assert!(
             unshared!(self, self.required_string_latch_holds(value)),
@@ -179,7 +181,7 @@ impl Interp {
         &mut self,
         value: ObjRef,
         nil: bool,
-        position: Option<usize>,
+        argument: Option<BuiltinArgument<'_>>,
     ) -> Result<ObjRef, Failure> {
         match self.required_string_answer(value) {
             Ok(Some(RequiredString::Object(text))) => {
@@ -257,15 +259,15 @@ impl Interp {
             // Consumers of bytes raise the SYNTAX condition that a NOSTRING
             // turned into SYNTAX raises, trappable and untrapped alike
             // (Deviation 169).
-            return if nil {
-                Ok(ObjRef::NIL)
-            } else if let Some(position) = position {
-                // A builtin's argument is named by its position, as an
-                // argument of a method is.
-                Err(Raised::argument_needs_a_string_value(position).into())
-            } else {
-                Err(Raised::nostring_syntax(&readable).into())
-            };
+            if nil {
+                return Ok(ObjRef::NIL);
+            }
+            // A builtin's argument fails the check of its kind
+            // (`r[conv.string.argument-kind]`).
+            if let Some(argument) = argument {
+                return crate::builtin::argument_kinds::refuse(self, argument, &readable);
+            }
+            return Err(Raised::nostring_syntax(&readable).into());
         }
         let readable = self.text_built(readable);
         self.roots.activity_mut().push_temp(readable);
@@ -316,6 +318,7 @@ impl Interp {
         &mut self,
         name: &'static [u8],
         args: &[Option<ObjRef>],
+        deferred: &Deferred,
     ) -> Result<Option<Vec<Option<ObjRef>>>, Failure> {
         if !self.reqstr_armed {
             return Ok(None);
@@ -358,7 +361,11 @@ impl Interp {
                 Some(value) => Some(self.required_string_or(
                     *value,
                     || false,
-                    crate::builtin::string_argument_number(name, position),
+                    Some(BuiltinArgument {
+                        name,
+                        position,
+                        deferred,
+                    }),
                 )?),
             });
         }

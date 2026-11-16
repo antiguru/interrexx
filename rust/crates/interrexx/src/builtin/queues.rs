@@ -9,7 +9,7 @@ use crate::Interp;
 use crate::error::{Failure, Raised};
 
 /// The options `RXQUEUE` names in its 40.904.
-const OPTIONS: &str = "CDEGOS";
+pub(crate) const OPTIONS: &str = "CDEGOS";
 
 /// `RXQUEUE(option [, name])`.
 pub(crate) fn rxqueue(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {

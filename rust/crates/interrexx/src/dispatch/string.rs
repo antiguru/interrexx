@@ -1699,7 +1699,7 @@ fn native_string_modulo(
     let Some(object) = args.first().copied().flatten() else {
         return Err(Raised::missing_method_argument(1).into());
     };
-    let divisor = match interp.requested_number(object)? {
+    let divisor = match interp.requested_argument_number(object)? {
         Some(number) if number.is_integer(digits) && number.signum() == 1 => number,
         _ => {
             let found = interp.string_value_text(object)?;

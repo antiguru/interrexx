@@ -969,8 +969,10 @@ NOSTRING if it is trapped. ooRexx reads `.nil` as a string there, with garbage
 results or a crash. [The
 conventions](r:conv.string.deviation.30) and [the NOSTRING
 rule](r:cond.nostring.deviation.30) state it for builtin arguments and for
-the condition, and [the argument rule](r:conv.string.builtin-argument) gives
-the `SYNTAX 88.909` of an argument a builtin reads as a string.
+the condition, [the argument rule](r:conv.string.builtin-argument) gives
+the `SYNTAX 88.909` of an argument a builtin reads as a string, and [the kind
+rule](r:conv.string.argument-kind) the error of an argument it reads as
+something else.
 
 ```rexx
 say 'before'
