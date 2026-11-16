@@ -279,6 +279,25 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
         oracle_stdout: "1\n",
         crate_stdout: "LOSTDIGITS 1000\n",
     },
+    LicensedDivergence {
+        name: "subclass-made-before-the-directives-sees-them",
+        // `ASUB` is made in the metaclass `INIT` of `A`, before the `::METHOD`
+        // directives of `A` are installed. The oracle's `ASUB` took the table
+        // of `A` as it was then, so it has neither method and the send of `M1`
+        // raises error 97, which the trap names by `rc`.
+        program: "signal on syntax name trapped\no = .asub~new\n\
+                  say o~hasMethod('M1') o~hasMethod('M2')\nsay o~m1 o~m2\nexit\n\
+                  trapped: say 'trapped' rc\n\
+                  ::class Meta subclass class\n::method init\n\
+                  \x20 forward class (super) continue\n\
+                  \x20 if self~id = 'A' then .environment~asub = self~subclass('ASUB')\n\
+                  ::class A metaclass Meta\n::method m1\n  return 'a1'\n\
+                  ::method m2\n  return 'a2'\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "0 0\ntrapped 97\n",
+        crate_stdout: "1 1\na1 a2\n",
+    },
 ];
 
 /// A directory of this run's own, because an unresolved Rexx name searches the
