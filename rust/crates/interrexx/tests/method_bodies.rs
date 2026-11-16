@@ -535,7 +535,7 @@ fn run_probe_twice(abs: &Path, text: &[u8]) -> CrateSide {
     let bounded = watchdog::run_bounded(
         path,
         text.to_vec(),
-        Invocation::none().with_environment(support::zone_pinned_environment(&[])),
+        Invocation::none().with_environment(unseeded_environment()),
     );
     assert!(
         bounded.chunks_refused == 0,
@@ -564,11 +564,23 @@ fn same_outcome(left: &Outcome, right: &Outcome) -> bool {
         && left.stderr == right.stderr
 }
 
-/// This crate's answer to `abs` with `TZ` set, as a subprocess.
+/// [`support::zone_pinned_environment`] without [`interrexx::HASH_SEED_ENV`]:
+/// each run of this crate draws its own hash seed, as a [`SEEDED_SENDS`] row
+/// needs to come out `unstable` rather than `diverge`, whatever the
+/// developer's environment fixes.
+fn unseeded_environment() -> Vec<(Vec<u8>, Vec<u8>)> {
+    let mut environment = support::zone_pinned_environment(&[]);
+    environment.retain(|(name, _)| name != interrexx::HASH_SEED_ENV.as_bytes());
+    environment
+}
+
+/// This crate's answer to `abs` with `TZ` set, as a subprocess, under a hash
+/// seed of its own ([`unseeded_environment`]).
 fn run_crate_in_zone(abs: &Path, zone: &str) -> Outcome {
     let out = Command::new(env!("CARGO_BIN_EXE_rexx"))
         .arg(abs)
         .env("TZ", zone)
+        .env_remove(interrexx::HASH_SEED_ENV)
         .stdin(std::process::Stdio::null())
         .output()
         .unwrap_or_else(|e| {
