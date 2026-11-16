@@ -1,10 +1,30 @@
 //! The hash store's layout in its receiver's pool, and the primitives that
 //! read and write it.
+//!
+//! A store is a compact table. Its entries sit in dense arrays in the order
+//! they were added, and a sparse slot index, open-addressed, maps a hash to
+//! the entries filed under it. A new entry goes at the end of the entry
+//! arrays; a removed one leaves a hole there and a deleted marker in its slot.
+//! When the entry arrays fill, the store is rebuilt into fresh arrays that
+//! keep the live entries in their order and re-slot them from each entry's
+//! cached hash, so a rebuild sends nothing. Iteration walks the entry arrays,
+//! which is what makes every enumeration answer insertion order.
+//!
+//! **Within one set of arrays, a position holds at most one entry in its
+//! life**: entries are only appended, a hole is never filled again, and every
+//! operation that would start over at position zero (a rebuild, `EMPTY`)
+//! installs fresh arrays. A caller that kept a position across a send can
+//! therefore trust it while the arrays are the same and the position is live.
+
+use interrexx_core::SMALL_INT_MAX;
 
 use super::*;
 
 /// The five pool entries a hash store is, bound in the receiver's own pool
-/// under the `MapCollection` class as scope.
+/// under the `MapCollection` class as scope: the entries' indexes, their
+/// items and their cached hashes ([`code_of`], `None` for a hole), all in
+/// insertion order; the slot index ([`EMPTY`], [`DELETED`], or an entry's
+/// position plus one); and how many entry positions are used, holes included.
 pub(super) const HASH_INDEXES: &[u8] = b"HASHINDEXES";
 pub(super) const HASH_ITEMS: &[u8] = b"HASHITEMS";
 pub(super) const HASH_NEXT: &[u8] = b"HASHNEXT";
@@ -16,18 +36,18 @@ pub(super) const HASH_FREE: &[u8] = b"HASHFREE";
 pub(super) struct Half {
     pub(super) indexes: &'static [u8],
     pub(super) items: &'static [u8],
-    pub(super) next: &'static [u8],
-    pub(super) buckets: &'static [u8],
-    pub(super) free: &'static [u8],
+    pub(super) codes: &'static [u8],
+    pub(super) slots: &'static [u8],
+    pub(super) used: &'static [u8],
 }
 
 /// The store every mapped collection has.
 pub(super) const CONTENTS: Half = Half {
     indexes: HASH_INDEXES,
     items: HASH_ITEMS,
-    next: HASH_NEXT,
-    buckets: HASH_BUCKETS,
-    free: HASH_FREE,
+    codes: HASH_NEXT,
+    slots: HASH_BUCKETS,
+    used: HASH_FREE,
 };
 
 pub(super) const METHOD_INDEXES: &[u8] = b"METHODINDEXES";
@@ -40,9 +60,9 @@ pub(super) const METHOD_FREE: &[u8] = b"METHODFREE";
 pub(super) const METHODS: Half = Half {
     indexes: METHOD_INDEXES,
     items: METHOD_ITEMS,
-    next: METHOD_NEXT,
-    buckets: METHOD_BUCKETS,
-    free: METHOD_FREE,
+    codes: METHOD_NEXT,
+    slots: METHOD_BUCKETS,
+    used: METHOD_FREE,
 };
 
 /// The one method `setMethod` keeps out of the method table, because `UNKNOWN`
@@ -51,38 +71,144 @@ pub(super) const METHODS: Half = Half {
 /// `allIndexes` does not name it.
 pub(super) const UNKNOWN_METHOD: &[u8] = b"METHODUNKNOWN";
 
-pub(super) const MINIMUM_BUCKET_SIZE: usize = 17;
+/// A slot no entry has been filed in since the slots were built: a probe
+/// that reaches one has seen every entry of its hash.
+const EMPTY: i64 = 0;
+/// A slot whose entry was removed: a probe passes over it, and an append
+/// does not reuse it, so the entries of one hash meet a probe oldest first.
+const DELETED: i64 = -1;
 
-pub(super) fn calculate_bucket_size(capacity: usize) -> usize {
-    if capacity >= 1 << 30 {
-        return 1 << 30;
+/// The fewest slots a store has.
+const MINIMUM_SLOTS: usize = 8;
+
+/// The most slots a store is sized at.
+const MAXIMUM_SLOTS: usize = 1 << 31;
+
+/// The entry capacity of a store of `slots` slots: two thirds, so that the
+/// slots, which hold one mark per used entry position, never fill and every
+/// probe ends at an empty one.
+fn capacity_of(slots: usize) -> usize {
+    slots * 2 / 3
+}
+
+/// The slot count of a store sized to hold `entries` entries.
+fn slots_for(entries: usize) -> usize {
+    let mut slots = MINIMUM_SLOTS;
+    while capacity_of(slots) < entries && slots < MAXIMUM_SLOTS {
+        slots *= 2;
     }
-    if capacity < MINIMUM_BUCKET_SIZE {
-        return MINIMUM_BUCKET_SIZE;
+    slots
+}
+
+/// The capacity a store is built at when nothing asks for more, which
+/// [`slots_for`] gives the fewest slots.
+pub(super) const MINIMUM_ENTRIES: usize = 0;
+
+/// The capacity a rebuild gives a store holding `live` entries: room for as
+/// many appends again before the next rebuild. Sized by the live entries
+/// alone, so a store that churns through few of them stays at the minimum
+/// however many it has removed.
+fn regrown(live: usize) -> usize {
+    live.saturating_mul(2)
+}
+
+/// The form a hash takes in an entry's cache and in the probe sequence:
+/// mixed, so that the low bits that pick the first slot depend on every bit
+/// of the hash, and cut to what a SmallInt holds. Equal hashes give equal
+/// codes, which is all a comparison of codes relies on.
+pub(super) fn code_of(hash: u64) -> u64 {
+    let mixed = hash.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    (mixed ^ (mixed >> 29)) & SMALL_INT_MAX as u64
+}
+
+/// The slots a code probes, in order: a perturbed sequence over a power of
+/// two slots, which takes every bit of the code into account and, once the
+/// perturbation has shifted out, visits every slot.
+#[derive(Clone, Copy)]
+pub(super) struct Sequence {
+    mask: usize,
+    at: usize,
+    perturb: u64,
+}
+
+impl Sequence {
+    pub(super) fn new(code: u64, slots: usize) -> Sequence {
+        let mask = slots - 1;
+        Sequence {
+            mask,
+            at: code as usize & mask,
+            perturb: code,
+        }
     }
-    // `(capacity & 1) == 0`: an odd bucket count is preferred.
-    if capacity.is_multiple_of(2) {
-        capacity + 1
-    } else {
-        capacity
+
+    /// The slot this step of the sequence reads.
+    pub(super) fn at(&self) -> usize {
+        self.at
+    }
+
+    pub(super) fn advance(&mut self) {
+        self.perturb >>= 5;
+        self.at = self
+            .at
+            .wrapping_mul(5)
+            .wrapping_add(1)
+            .wrapping_add(self.perturb as usize)
+            & self.mask;
     }
 }
 
-/// A hash store's three arrays and its two scalars, read out together.
+/// What one slot holds.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum Mark {
+    Empty,
+    Deleted,
+    Entry(usize),
+}
+
+/// The mark a slot array holds at `slot`. A slot array that is not one
+/// reads as empty everywhere.
+pub(super) fn mark_in(slots: &[Option<ObjRef>], slot: usize) -> Mark {
+    match slots.get(slot).copied().flatten().map(ObjRef::decode) {
+        Some(Decoded::SmallInt(DELETED)) => Mark::Deleted,
+        Some(Decoded::SmallInt(value)) if value > EMPTY => Mark::Entry(value as usize - 1),
+        _ => Mark::Empty,
+    }
+}
+
+/// The code cached for the entry at a position, `None` for a hole.
+pub(super) fn code_in(codes: &[Option<ObjRef>], position: usize) -> Option<u64> {
+    match codes.get(position).copied().flatten().map(ObjRef::decode) {
+        Some(Decoded::SmallInt(code)) if code >= 0 => Some(code as u64),
+        _ => None,
+    }
+}
+
+/// A SmallInt handle for a value known to be in range: a code, a mark or a
+/// count no larger than an array.
+fn small(value: i64) -> ObjRef {
+    ObjRef::small_int(value).expect("a hash store's numbers fit a SmallInt")
+}
+
+/// A hash store's four arrays and its count, read out together.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(super) struct Store {
     pub(super) indexes: ObjRef,
     pub(super) items: ObjRef,
-    pub(super) next: ObjRef,
-    pub(super) buckets: usize,
-    pub(super) free: usize,
-    pub(super) total: usize,
+    pub(super) codes: ObjRef,
+    pub(super) slots: ObjRef,
+    /// Entry positions used, holes included: where the next entry goes.
+    pub(super) used: usize,
+    /// Entry positions the arrays have.
+    pub(super) capacity: usize,
 }
 
 impl Store {
-    /// The chain terminator, which is one past the last slot.
-    pub(super) fn no_more(&self) -> usize {
-        self.total
+    /// Whether `other` is these same arrays, whatever their count.
+    pub(super) fn same_arrays(&self, other: &Store) -> bool {
+        self.indexes == other.indexes
+            && self.items == other.items
+            && self.codes == other.codes
+            && self.slots == other.slots
     }
 }
 
@@ -114,7 +240,7 @@ pub(crate) struct PoolNames {
 impl Default for PoolNames {
     fn default() -> PoolNames {
         let names = |half: Half| {
-            [half.indexes, half.items, half.next, half.buckets, half.free].map(Rc::from)
+            [half.indexes, half.items, half.codes, half.slots, half.used].map(Rc::from)
         };
         PoolNames {
             contents: names(CONTENTS),
@@ -123,47 +249,69 @@ impl Default for PoolNames {
     }
 }
 
-/// Builds a store of `buckets` primary slots and as many overflow slots, and
-/// binds it to `receiver`.
+/// Builds an empty store sized for `capacity` entries, and binds it to
+/// `receiver`.
 pub(super) fn install_store(
     interp: &mut Interp,
     receiver: ObjRef,
     half: Half,
-    buckets: usize,
+    capacity: usize,
 ) -> Store {
-    let total = buckets * 2;
+    build(interp, receiver, half, &[], capacity)
+}
+
+/// Builds a store holding `entries` -- (index, item, code) in their order --
+/// sized for at least `capacity`, and binds it to `receiver` in place of
+/// whatever it had.
+fn build(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    half: Half,
+    entries: &[(ObjRef, Option<ObjRef>, u64)],
+    capacity: usize,
+) -> Store {
+    let slot_count = slots_for(capacity.max(entries.len()));
+    let capacity = capacity_of(slot_count);
     let scope = hash_scope(interp);
-    let indexes = interp.alloc_charged(BehaviourId::ARRAY, Body::array(vec![None; total]));
-    interp.roots.activity_mut().push_temp(indexes);
-    let items = interp.alloc_charged(BehaviourId::ARRAY, Body::array(vec![None; total]));
-    interp.roots.activity_mut().push_temp(items);
-    // Every bucket slot ends its own chain, and the overflow slots are chained
-    // upward from the bucket count with the last one ending the chain.
-    let mut links: Vec<Option<ObjRef>> = Vec::with_capacity(total);
-    for slot in 0..total {
-        let link = if slot < buckets || slot + 1 == total {
-            total
-        } else {
-            slot + 1
-        };
-        links.push(Some(interp.counted(link)));
+    let mut index_slots = vec![None; capacity];
+    let mut item_slots = vec![None; capacity];
+    let mut code_slots = vec![None; capacity];
+    let mut marks = vec![Some(small(EMPTY)); slot_count];
+    for (position, &(index, item, code)) in entries.iter().enumerate() {
+        index_slots[position] = Some(index);
+        item_slots[position] = item;
+        code_slots[position] = Some(small(code as i64));
+        let mut sequence = Sequence::new(code, slot_count);
+        while mark_in(&marks, sequence.at()) != Mark::Empty {
+            sequence.advance();
+        }
+        marks[sequence.at()] = Some(small(position as i64 + 1));
     }
-    let next = interp.alloc_charged(BehaviourId::ARRAY, Body::array(links));
-    interp.roots.activity_mut().push_temp(next);
-    let buckets_value = interp.counted(buckets);
-    let free_value = interp.counted(buckets);
+    // Each array is rooted as soon as it exists: the next allocation may
+    // collect. The entries copied in stay reachable through the arrays still
+    // bound until the new ones replace them.
+    let indexes = interp.alloc_charged(BehaviourId::ARRAY, Body::array(index_slots));
+    interp.roots.activity_mut().push_temp(indexes);
+    let items = interp.alloc_charged(BehaviourId::ARRAY, Body::array(item_slots));
+    interp.roots.activity_mut().push_temp(items);
+    let codes = interp.alloc_charged(BehaviourId::ARRAY, Body::array(code_slots));
+    interp.roots.activity_mut().push_temp(codes);
+    let slots = interp.alloc_charged(BehaviourId::ARRAY, Body::array(marks));
+    interp.roots.activity_mut().push_temp(slots);
+    let used = entries.len();
+    let used_value = small(used as i64);
     let names = if half == CONTENTS {
         &interp.hash_names.contents
     } else {
         &interp.hash_names.methods
     };
-    let [n_indexes, n_items, n_next, n_buckets, n_free] = names.clone();
-    // A bucket count [`initialize_store`] left pending goes, so that the five
+    let [n_indexes, n_items, n_codes, n_slots, n_used] = names.clone();
+    // A capacity [`initialize_store`] left pending goes, so that the five
     // entries are bound together in their order, as [`shared_run`] reads them.
     if pool_variable(interp, receiver, scope, half.indexes).is_none()
-        && pool_variable(interp, receiver, scope, half.buckets).is_some()
+        && pool_variable(interp, receiver, scope, half.slots).is_some()
     {
-        interp.clear_pool_variable(receiver, scope, half.buckets);
+        interp.clear_pool_variable(receiver, scope, half.slots);
     }
     interp.set_pool_variables(
         receiver,
@@ -171,19 +319,19 @@ pub(super) fn install_store(
         &[
             (&n_indexes, indexes),
             (&n_items, items),
-            (&n_next, next),
-            (&n_buckets, buckets_value),
-            (&n_free, free_value),
+            (&n_codes, codes),
+            (&n_slots, slots),
+            (&n_used, used_value),
         ],
     );
     bump_store_generation(interp);
     Store {
         indexes,
         items,
-        next,
-        buckets,
-        free: buckets,
-        total,
+        codes,
+        slots,
+        used,
+        capacity,
     }
 }
 
@@ -207,28 +355,36 @@ pub(super) fn read_store(
 pub(super) struct Found {
     pub(super) indexes: Option<ObjRef>,
     pub(super) items: Option<ObjRef>,
-    pub(super) next: Option<ObjRef>,
-    pub(super) buckets: Option<usize>,
-    pub(super) free: Option<usize>,
+    pub(super) codes: Option<ObjRef>,
+    /// The slot array, or before the store is built the capacity
+    /// [`keep_capacity`] left for it.
+    pub(super) slots: Option<ObjRef>,
+    pub(super) used: Option<usize>,
 }
 
 impl Found {
     /// The store these entries make, or `None` when any is missing.
     pub(super) fn store(self, interp: &Interp) -> Result<Option<Store>, Failure> {
-        let (Some(indexes), Some(items), Some(next), Some(buckets), Some(free)) =
-            (self.indexes, self.items, self.next, self.buckets, self.free)
+        let (Some(indexes), Some(items), Some(codes), Some(slots), Some(used)) =
+            (self.indexes, self.items, self.codes, self.slots, self.used)
         else {
             return Ok(None);
         };
-        let total = array_slots(interp, indexes)?.len();
+        let capacity = array_slots(interp, indexes)?.len();
         Ok(Some(Store {
             indexes,
             items,
-            next,
-            buckets,
-            free,
-            total,
+            codes,
+            slots,
+            used,
+            capacity,
         }))
+    }
+
+    /// The capacity a store not built yet is to be built at, if one was
+    /// kept.
+    pub(super) fn kept_capacity(self) -> Option<usize> {
+        self.slots.and_then(counted)
     }
 }
 
@@ -272,14 +428,14 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
         match name.as_ref() {
             HASH_INDEXES => parts.contents.indexes = Some(value),
             HASH_ITEMS => parts.contents.items = Some(value),
-            HASH_NEXT => parts.contents.next = Some(value),
-            HASH_BUCKETS => parts.contents.buckets = counted(value),
-            HASH_FREE => parts.contents.free = counted(value),
+            HASH_NEXT => parts.contents.codes = Some(value),
+            HASH_BUCKETS => parts.contents.slots = Some(value),
+            HASH_FREE => parts.contents.used = counted(value),
             METHOD_INDEXES => parts.methods.indexes = Some(value),
             METHOD_ITEMS => parts.methods.items = Some(value),
-            METHOD_NEXT => parts.methods.next = Some(value),
-            METHOD_BUCKETS => parts.methods.buckets = counted(value),
-            METHOD_FREE => parts.methods.free = counted(value),
+            METHOD_NEXT => parts.methods.codes = Some(value),
+            METHOD_BUCKETS => parts.methods.slots = Some(value),
+            METHOD_FREE => parts.methods.used = counted(value),
             UNKNOWN_METHOD => parts.unknown = Some(value).filter(|held| *held != ObjRef::NIL),
             _ => {}
         }
@@ -308,26 +464,26 @@ pub(super) fn shared_run(entries: &[(Rc<[u8]>, ObjRef)], names: &[Rc<[u8]>; 5]) 
     let [
         (indexes_name, indexes),
         (items_name, items),
-        (next_name, next),
-        (buckets_name, buckets),
-        (free_name, free),
+        (codes_name, codes),
+        (slots_name, slots),
+        (used_name, used),
         ..,
     ] = entries
     else {
         return None;
     };
-    let [indexes_at, items_at, next_at, buckets_at, free_at] = names;
+    let [indexes_at, items_at, codes_at, slots_at, used_at] = names;
     (Rc::ptr_eq(indexes_name, indexes_at)
         && Rc::ptr_eq(items_name, items_at)
-        && Rc::ptr_eq(next_name, next_at)
-        && Rc::ptr_eq(buckets_name, buckets_at)
-        && Rc::ptr_eq(free_name, free_at))
+        && Rc::ptr_eq(codes_name, codes_at)
+        && Rc::ptr_eq(slots_name, slots_at)
+        && Rc::ptr_eq(used_name, used_at))
     .then(|| Found {
         indexes: Some(*indexes),
         items: Some(*items),
-        next: Some(*next),
-        buckets: counted(*buckets),
-        free: counted(*free),
+        codes: Some(*codes),
+        slots: Some(*slots),
+        used: counted(*used),
     })
 }
 
@@ -342,7 +498,7 @@ pub(super) fn store_in(
     }
     match read_store(interp, receiver, half)? {
         Some(store) => Ok(store),
-        None => Ok(install_store(interp, receiver, half, MINIMUM_BUCKET_SIZE)),
+        None => Ok(install_store(interp, receiver, half, MINIMUM_ENTRIES)),
     }
 }
 
@@ -357,9 +513,9 @@ pub(super) fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, F
         return Ok(store);
     }
     refuse_storeless(interp, receiver)?;
-    // The bucket count [`initialize_store`] left pending, if it left one.
-    let buckets = parts.contents.buckets.unwrap_or(MINIMUM_BUCKET_SIZE);
-    Ok(install_store(interp, receiver, CONTENTS, buckets))
+    // The capacity [`initialize_store`] left pending, if it left one.
+    let capacity = parts.contents.kept_capacity().unwrap_or(MINIMUM_ENTRIES);
+    Ok(install_store(interp, receiver, CONTENTS, capacity))
 }
 
 /// The contents' store, or `None` for a receiver [`store_of`] would build an
@@ -379,22 +535,22 @@ pub(super) fn store_if_built(
         return Ok(Some(store));
     }
     refuse_storeless(interp, receiver)?;
-    if parts.contents.buckets.is_none() {
-        keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+    if parts.contents.slots.is_none() {
+        keep_capacity(interp, receiver, MINIMUM_ENTRIES);
     }
     Ok(None)
 }
 
-/// Leaves `buckets` as the size [`store_of`] builds `receiver`'s store at,
+/// Leaves `capacity` as the size [`store_of`] builds `receiver`'s store at,
 /// for a receiver that has neither a store nor a size kept for one. Taking
 /// the place of building the store, it is what makes a later `INIT` find the
 /// size already decided, as it would find a store built.
-pub(super) fn keep_bucket_count(interp: &mut Interp, receiver: ObjRef, buckets: usize) {
+pub(super) fn keep_capacity(interp: &mut Interp, receiver: ObjRef, capacity: usize) {
     let scope = hash_scope(interp);
-    let buckets = interp.counted(buckets);
+    let capacity = interp.counted(capacity);
     let [_, _, _, name, _] = &interp.hash_names.contents;
     let name = Rc::clone(name);
-    interp.set_pool_variables(receiver, scope, &[(&name, buckets)]);
+    interp.set_pool_variables(receiver, scope, &[(&name, capacity)]);
 }
 
 /// [`store_of`]'s refusal of a receiver that has no store and is not given
@@ -418,10 +574,9 @@ pub(super) fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<
     Ok(())
 }
 
-pub(super) fn set_free(interp: &mut Interp, receiver: ObjRef, half: Half, free: usize) {
+fn set_used(interp: &mut Interp, receiver: ObjRef, half: Half, used: usize) {
     let scope = hash_scope(interp);
-    let value = interp.counted(free);
-    interp.set_pool_variable(receiver, scope, half.free, value);
+    interp.set_pool_variable(receiver, scope, half.used, small(used as i64));
     bump_store_generation(interp);
 }
 
@@ -461,13 +616,6 @@ pub(super) fn item_at(
     Ok(item)
 }
 
-pub(super) fn link_at(interp: &Interp, store: &Store, slot: usize) -> Result<usize, Failure> {
-    match slot_at(interp, store.next, slot)?.map(|value| value.decode()) {
-        Some(Decoded::SmallInt(link)) if link >= 0 => Ok(link as usize),
-        _ => Ok(store.no_more()),
-    }
-}
-
 pub(super) fn write_slot(interp: &mut Interp, array: ObjRef, slot: usize, value: Option<ObjRef>) {
     interp.store_writes = interp.store_writes.wrapping_add(1);
     if let Some(Body::Array { slots, .. }) =
@@ -477,198 +625,147 @@ pub(super) fn write_slot(interp: &mut Interp, array: ObjRef, slot: usize, value:
     }
 }
 
-pub(super) fn write_link(interp: &mut Interp, store: &Store, slot: usize, link: usize) {
-    let value = interp.counted(link);
-    write_slot(interp, store.next, slot, Some(value));
-}
-
 // ---- the store's own operations ----
 
-/// Every occupied slot, in bucket order following each chain.
-pub(super) fn walk(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<usize>, Failure> {
+/// Every live entry position of the receiver's contents, in insertion order.
+pub(super) fn entries_of(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<usize>, Failure> {
     let store = store_of(interp, receiver)?;
-    walk_in(interp, &store)
+    entries(interp, &store)
 }
 
-/// [`walk`] over a store the caller has already read.
-pub(super) fn walk_in(interp: &Interp, store: &Store) -> Result<Vec<usize>, Failure> {
-    let mut order = Vec::new();
-    walk_each(interp, store, |slot| order.push(slot))?;
-    Ok(order)
-}
-
-/// How many entries [`walk_in`] would answer, without collecting them.
-pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure> {
-    let mut count = 0;
-    walk_each(interp, store, |_| count += 1)?;
-    Ok(count)
-}
-
-/// Calls `visit` with every occupied slot in [`walk_in`]'s order. The two
-/// arrays are borrowed once rather than looked up per slot, each at the
-/// point the slot-by-slot walk first reads it, so a store whose arrays are
-/// not arrays refuses where it did.
-pub(super) fn walk_each(
-    interp: &Interp,
-    store: &Store,
-    mut visit: impl FnMut(usize),
-) -> Result<(), Failure> {
-    if store.buckets == 0 || store.total == 0 {
-        return Ok(());
-    }
+/// Every live entry position of a store the caller has already read, in
+/// insertion order.
+pub(super) fn entries(interp: &Interp, store: &Store) -> Result<Vec<usize>, Failure> {
     let indexes = array_slots(interp, store.indexes)?;
-    let mut next: Option<&[Option<ObjRef>]> = None;
-    for bucket in 0..store.buckets {
-        let mut slot = bucket;
-        while slot < store.total && indexes.get(slot).copied().flatten().is_some() {
-            visit(slot);
-            let links = match next {
-                Some(links) => links,
-                None => *next.insert(array_slots(interp, store.next)?),
-            };
-            slot = match links.get(slot).copied().flatten().map(ObjRef::decode) {
-                Some(Decoded::SmallInt(link)) if link >= 0 => link as usize,
-                _ => store.no_more(),
-            };
-        }
-    }
-    Ok(())
+    Ok(indexes
+        .iter()
+        .take(store.used)
+        .enumerate()
+        .filter_map(|(position, index)| index.map(|_| position))
+        .collect())
 }
 
-/// Occupied entries and their predecessors, restricted to a bucket when supplied.
-pub(super) fn entries_in(
-    interp: &Interp,
-    store: &Store,
-    bucket: Option<usize>,
-) -> Result<Vec<(usize, Option<usize>)>, Failure> {
-    let mut entries = Vec::new();
-    let buckets = match bucket {
-        Some(bucket) => bucket..bucket + 1,
-        None => 0..store.buckets,
+/// How many entries [`entries`] would answer, without collecting them.
+pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure> {
+    let indexes = array_slots(interp, store.indexes)?;
+    Ok(indexes
+        .iter()
+        .take(store.used)
+        .filter(|index| index.is_some())
+        .count())
+}
+
+/// The slot that files the entry at `position`, found along its code's
+/// sequence.
+fn slot_of(interp: &Interp, store: &Store, position: usize) -> Result<Option<usize>, Failure> {
+    let Some(code) = code_in(array_slots(interp, store.codes)?, position) else {
+        return Ok(None);
     };
-    for bucket in buckets {
-        let mut previous = None;
-        let mut slot = bucket;
-        while slot < store.total && slot_at(interp, store.indexes, slot)?.is_some() {
-            entries.push((slot, previous));
-            previous = Some(slot);
-            slot = link_at(interp, store, slot)?;
+    let slots = array_slots(interp, store.slots)?;
+    let mut sequence = Sequence::new(code, slots.len());
+    loop {
+        match mark_in(slots, sequence.at()) {
+            Mark::Empty => return Ok(None),
+            Mark::Entry(held) if held == position => return Ok(Some(sequence.at())),
+            _ => sequence.advance(),
         }
     }
-    Ok(entries)
 }
 
-/// Grows the table and re-adds every entry in old bucket order.
-pub(super) fn expand(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<(), Failure> {
+/// Compacts the live entries, in their order, into fresh arrays sized for
+/// `capacity`, and files them again from their cached codes. Sends nothing.
+pub(super) fn rebuild(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    half: Half,
+    capacity: usize,
+) -> Result<Store, Failure> {
     let store = store_in(interp, receiver, half)?;
-    let order = walk_in(interp, &store)?;
-    let mut carried = Vec::with_capacity(order.len());
-    for slot in order {
-        let index = slot_at(interp, store.indexes, slot)?;
-        let item = slot_at(interp, store.items, slot)?;
-        if let Some(index) = index {
-            interp.roots.activity_mut().push_temp(index);
-            if let Some(item) = item {
-                interp.roots.activity_mut().push_temp(item);
-            }
-            carried.push((index, item));
+    let indexes = array_slots(interp, store.indexes)?;
+    let items = array_slots(interp, store.items)?;
+    let codes = array_slots(interp, store.codes)?;
+    let mut live = Vec::new();
+    for (position, index) in indexes.iter().enumerate().take(store.used) {
+        if let Some(index) = *index
+            && let Some(code) = code_in(codes, position)
+        {
+            live.push((index, items.get(position).copied().flatten(), code));
         }
     }
-    let buckets = calculate_bucket_size(store.total * 2);
-    install_store(interp, receiver, half, buckets);
-    for (index, item) in carried {
-        // **Never `insert`**, which replaces an index the table already holds:
-        // a `Relation` carries duplicate indexes and would lose one per pair
-        // on every growth. The merge adds rather than puts, and adding in the
-        // old walk order is what keeps each index's chain in its order.
-        append_entry(interp, receiver, half, index, item)?;
-    }
-    Ok(())
+    Ok(build(interp, receiver, half, &live, capacity))
 }
 
-/// Appends an entry at the end of its bucket's chain without looking for an
-/// index the table already holds -- the append half of `put`.
-pub(super) fn append_entry(
+/// Adds an entry after every other, without looking for an index the store
+/// already holds -- the append half of `put`, and the whole of a multi-value
+/// `put`. `code` is the index's [`code_of`]. A full store is rebuilt first.
+pub(super) fn append(
     interp: &mut Interp,
     receiver: ObjRef,
     half: Half,
     index: ObjRef,
     item: Option<ObjRef>,
+    code: u64,
 ) -> Result<(), Failure> {
-    let store = store_in(interp, receiver, half)?;
-    if store.free >= store.total {
-        expand(interp, receiver, half)?;
-        return append_entry(interp, receiver, half, index, item);
+    let mut store = store_in(interp, receiver, half)?;
+    if store.used >= store.capacity {
+        let live = count_in(interp, &store)?;
+        store = rebuild(interp, receiver, half, regrown(live))?;
     }
-    let store = store_in(interp, receiver, half)?;
-    let keys = keys_of(interp, receiver);
-    let hash = hash_of(interp, keys, index)?;
-    let bucket = (hash % store.buckets as u64) as usize;
-    if slot_at(interp, store.indexes, bucket)?.is_none() {
-        write_slot(interp, store.indexes, bucket, Some(index));
-        write_slot(interp, store.items, bucket, item);
-        write_link(interp, &store, bucket, store.no_more());
-        return Ok(());
-    }
-    let mut last = bucket;
-    loop {
-        let next = link_at(interp, &store, last)?;
-        if next >= store.total {
-            break;
+    let position = store.used;
+    let slot = {
+        let slots = array_slots(interp, store.slots)?;
+        let mut sequence = Sequence::new(code, slots.len());
+        while mark_in(slots, sequence.at()) != Mark::Empty {
+            sequence.advance();
         }
-        last = next;
-    }
-    let slot = store.free;
-    let next_free = link_at(interp, &store, slot)?;
-    set_free(interp, receiver, half, next_free);
-    write_slot(interp, store.indexes, slot, Some(index));
-    write_slot(interp, store.items, slot, item);
-    write_link(interp, &store, last, slot);
-    write_link(interp, &store, slot, store.no_more());
+        sequence.at()
+    };
+    write_slot(interp, store.indexes, position, Some(index));
+    write_slot(interp, store.items, position, item);
+    write_slot(interp, store.codes, position, Some(small(code as i64)));
+    write_slot(interp, store.slots, slot, Some(small(position as i64 + 1)));
+    set_used(interp, receiver, half, position + 1);
     Ok(())
 }
 
-/// A new entry for an index the table already holds goes to the FRONT of that
-/// index's chain.
-pub(super) fn insert_front(
+/// Takes the entry at `position` out: a hole in the entry arrays, and a
+/// deleted mark in its slot. Answers the item it held.
+pub(super) fn remove_entry(
     interp: &mut Interp,
-    receiver: ObjRef,
-    index: ObjRef,
-    item: Option<ObjRef>,
-) -> Result<(), Failure> {
-    let store = store_of(interp, receiver)?;
-    if store.free >= store.total {
-        expand(interp, receiver, CONTENTS)?;
-        return insert_front(interp, receiver, index, item);
+    store: &Store,
+    position: usize,
+) -> Result<Option<ObjRef>, Failure> {
+    let item = slot_at(interp, store.items, position)?;
+    if let Some(slot) = slot_of(interp, store, position)? {
+        write_slot(interp, store.slots, slot, Some(small(DELETED)));
     }
-    let store = store_of(interp, receiver)?;
-    let keys = keys_of(interp, receiver);
-    let hash = hash_of(interp, keys, index)?;
-    let bucket = (hash % store.buckets as u64) as usize;
-    if slot_at(interp, store.indexes, bucket)?.is_none() {
-        write_slot(interp, store.indexes, bucket, Some(index));
-        write_slot(interp, store.items, bucket, item);
-        write_link(interp, &store, bucket, store.no_more());
-        return Ok(());
+    write_slot(interp, store.indexes, position, None);
+    write_slot(interp, store.items, position, None);
+    write_slot(interp, store.codes, position, None);
+    Ok(item)
+}
+
+/// Empties `half` in place, and then gives it fresh arrays.
+pub(super) fn clear(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<(), Failure> {
+    let store = store_in(interp, receiver, half)?;
+    // Active lookups retain these contents through callbacks and growth. EMPTY
+    // clears that contents in place, and then installs fresh arrays, so that
+    // no position of these arrays is ever filled a second time.
+    for position in 0..store.used.min(store.capacity) {
+        write_slot(interp, store.indexes, position, None);
+        write_slot(interp, store.items, position, None);
+        write_slot(interp, store.codes, position, None);
     }
-    let moved = store.free;
-    let next_free = link_at(interp, &store, moved)?;
-    set_free(interp, receiver, CONTENTS, next_free);
-    let head_index = slot_at(interp, store.indexes, bucket)?;
-    let head_item = slot_at(interp, store.items, bucket)?;
-    let head_next = link_at(interp, &store, bucket)?;
-    write_slot(interp, store.indexes, moved, head_index);
-    write_slot(interp, store.items, moved, head_item);
-    write_link(interp, &store, moved, head_next);
-    write_slot(interp, store.indexes, bucket, Some(index));
-    write_slot(interp, store.items, bucket, item);
-    write_link(interp, &store, bucket, moved);
+    let slot_count = array_slots(interp, store.slots)?.len();
+    for slot in 0..slot_count {
+        write_slot(interp, store.slots, slot, Some(small(EMPTY)));
+    }
+    install_store(interp, receiver, half, MINIMUM_ENTRIES);
     Ok(())
 }
 
-/// Replaces the value under an index the table already holds, and otherwise
-/// appends to the end of the bucket's chain, expanding first if the free chain
-/// has run out.
+/// Replaces the value under an index the table already holds, keeping its
+/// place, and otherwise appends a new entry.
 pub(super) fn insert(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -694,33 +791,29 @@ pub(super) fn insert_in(
 ) -> Result<(), Failure> {
     // `.local['OUTPUT'] = x` moves a route's far end.
     interp.bump_route_generation();
-    // **The fullness test comes first, and it is the free chain rather than the
-    // item count**: a table can run its overflow dry while primary buckets
-    // stand empty, and the table expands before every `put` rather than only
-    // when one needs a slot. In the simulation this was written from, testing
-    // the item count instead runs the free chain out on the forty-integer case.
-    let store = store_in(interp, receiver, half)?;
-    if store.free >= store.total {
-        expand(interp, receiver, half)?;
-    }
     let store = store_in(interp, receiver, half)?;
     let (store, found) = probe_in(interp, receiver, half, store, index)?;
-    if let Some(slot) = found.found {
-        write_slot(interp, store.items, slot, item);
+    if let Some(position) = found.found {
+        write_slot(interp, store.items, position, item);
         return Ok(());
     }
-    let Some(last) = found.last else {
-        write_slot(interp, store.indexes, found.bucket, Some(index));
-        write_slot(interp, store.items, found.bucket, item);
-        write_link(interp, &store, found.bucket, store.no_more());
-        return Ok(());
-    };
-    let slot = store.free;
-    let next_free = link_at(interp, &store, slot)?;
-    set_free(interp, receiver, half, next_free);
-    write_slot(interp, store.indexes, slot, Some(index));
-    write_slot(interp, store.items, slot, item);
-    write_link(interp, &store, last, slot);
-    write_link(interp, &store, slot, store.no_more());
-    Ok(())
+    // The probe sent nothing after its last look at the store, so the index
+    // is still absent; the append reads the store afresh and sends nothing.
+    append(interp, receiver, half, index, item, found.code)
 }
+
+/// A multi-value `put`: another entry under `index`, after every other,
+/// whatever the store already holds under it.
+pub(super) fn insert_duplicate(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    index: ObjRef,
+    item: Option<ObjRef>,
+) -> Result<(), Failure> {
+    let keys = keys_of(interp, receiver);
+    let code = code_of(hash_of(interp, keys, index)?);
+    append(interp, receiver, CONTENTS, index, item, code)
+}
+
+#[cfg(test)]
+mod tests;

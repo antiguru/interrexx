@@ -1154,8 +1154,7 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
     // the standard initialisation and nothing else.
     ("Bag", "NEW", Arity::Counted, hash::native_hash_new),
     // `Table`'s and `IdentityTable`'s `new` take an optional
-    // initial capacity, and it is observable: it decides the bucket count,
-    // which decides the order every iteration answers in.
+    // initial capacity, a sizing hint that no iteration order depends on.
     (
         "IdentityTable",
         "NEW",

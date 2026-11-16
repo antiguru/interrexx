@@ -1,0 +1,250 @@
+# The order a mapped collection lists its entries in is the order their
+# indexes were first put. The expected blocks follow from that rule alone.
+# Each program runs the rule over `Directory`, `StringTable`, `Table`,
+# `IdentityTable` and `Set`; a `Set`'s item is its index. Keys are held in an
+# array, so an `IdentityTable` is given the same object every time.
+
+# allIndexes, allItems, makeArray, supplier and DO OVER follow insertion order
+program
+keys = .array~of('q', 'zz', 'b', 'k7', 'a', 'mm', 'x', 'c1', 'p', 'e', 'ab', 'z')
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  do i = 1 to keys~items
+    call put t, keys[i], i
+  end
+  say cls~id
+  say '  allIndexes' t~allIndexes~toString('l', ' ')
+  say '  allItems  ' t~allItems~toString('l', ' ')
+  say '  makeArray ' t~makeArray~toString('l', ' ')
+  line = ''
+  sup = t~supplier
+  do while sup~available
+    line = line sup~index'='sup~item
+    sup~next
+  end
+  say '  supplier  'line
+  line = ''
+  do i over t
+    line = line i
+  end
+  say '  do over   'line
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory
+  allIndexes q zz b k7 a mm x c1 p e ab z
+  allItems   1 2 3 4 5 6 7 8 9 10 11 12
+  makeArray  q zz b k7 a mm x c1 p e ab z
+  supplier   q=1 zz=2 b=3 k7=4 a=5 mm=6 x=7 c1=8 p=9 e=10 ab=11 z=12
+  do over    q zz b k7 a mm x c1 p e ab z
+StringTable
+  allIndexes q zz b k7 a mm x c1 p e ab z
+  allItems   1 2 3 4 5 6 7 8 9 10 11 12
+  makeArray  q zz b k7 a mm x c1 p e ab z
+  supplier   q=1 zz=2 b=3 k7=4 a=5 mm=6 x=7 c1=8 p=9 e=10 ab=11 z=12
+  do over    q zz b k7 a mm x c1 p e ab z
+Table
+  allIndexes q zz b k7 a mm x c1 p e ab z
+  allItems   1 2 3 4 5 6 7 8 9 10 11 12
+  makeArray  q zz b k7 a mm x c1 p e ab z
+  supplier   q=1 zz=2 b=3 k7=4 a=5 mm=6 x=7 c1=8 p=9 e=10 ab=11 z=12
+  do over    q zz b k7 a mm x c1 p e ab z
+IdentityTable
+  allIndexes q zz b k7 a mm x c1 p e ab z
+  allItems   1 2 3 4 5 6 7 8 9 10 11 12
+  makeArray  q zz b k7 a mm x c1 p e ab z
+  supplier   q=1 zz=2 b=3 k7=4 a=5 mm=6 x=7 c1=8 p=9 e=10 ab=11 z=12
+  do over    q zz b k7 a mm x c1 p e ab z
+Set
+  allIndexes q zz b k7 a mm x c1 p e ab z
+  allItems   q zz b k7 a mm x c1 p e ab z
+  makeArray  q zz b k7 a mm x c1 p e ab z
+  supplier   q=q zz=zz b=b k7=k7 a=a mm=mm x=x c1=c1 p=p e=e ab=ab z=z
+  do over    q zz b k7 a mm x c1 p e ab z
+
+# an index put again after its removal goes to the end, and a put that
+# replaces an existing index's item keeps its place
+program
+keys = .array~of('q', 'zz', 'b', 'k7', 'a', 'mm')
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  do i = 1 to keys~items
+    call put t, keys[i], i
+  end
+  t~remove(keys[3])
+  call put t, keys[3], 'again'
+  call put t, keys[1], 'new'
+  say cls~id':' t~allIndexes~toString('l', ' ')
+  say cls~id':' t~allItems~toString('l', ' ')
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory: q zz k7 a mm b
+Directory: new 2 4 5 6 again
+StringTable: q zz k7 a mm b
+StringTable: new 2 4 5 6 again
+Table: q zz k7 a mm b
+Table: new 2 4 5 6 again
+IdentityTable: q zz k7 a mm b
+IdentityTable: new 2 4 5 6 again
+Set: q zz k7 a mm b
+Set: q zz k7 a mm b
+
+# the order survives growth past ten thousand entries
+program
+n = 12000
+keys = .array~new(n)
+do i = 1 to n
+  keys[i] = 'k'i
+end
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  do i = 1 to n
+    call put t, keys[i], i
+  end
+  indexes = t~allIndexes
+  items = t~allItems
+  bad = 0
+  do i = 1 to n
+    if indexes[i] \== keys[i] then bad = bad + 1
+  end
+  say cls~id t~items indexes~items bad indexes[1] indexes[n] items[1] items[n]
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory 12000 12000 0 k1 k12000 1 12000
+StringTable 12000 12000 0 k1 k12000 1 12000
+Table 12000 12000 0 k1 k12000 1 12000
+IdentityTable 12000 12000 0 k1 k12000 1 12000
+Set 12000 12000 0 k1 k12000 k1 k12000
+
+# the order survives churn that removes far more entries than it keeps
+program
+n = 3000
+keys = .array~new(n)
+do i = 1 to n
+  keys[i] = 'n'i
+end
+fixed = .array~of('c', 'a', 'b')
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  do i = 1 to fixed~items
+    call put t, fixed[i], i
+  end
+  do i = 1 to n
+    call put t, keys[i], i
+    if i > 2 then t~remove(keys[i - 2])
+  end
+  t~remove(fixed[2])
+  call put t, fixed[2], 'back'
+  say cls~id t~items':' t~allIndexes~toString('l', ' ')
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory 5: c b n2999 n3000 a
+StringTable 5: c b n2999 n3000 a
+Table 5: c b n2999 n3000 a
+IdentityTable 5: c b n2999 n3000 a
+Set 5: c b n2999 n3000 a
+
+# a copy lists its source's order, and later puts and removals to the copy
+# and to the source each keep their own order
+program
+keys = .array~of('q', 'zz', 'b', 'k7', 'a', 'mm', 'x')
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  do i = 1 to 5
+    call put t, keys[i], i
+  end
+  t~remove(keys[2])
+  u = t~copy
+  say cls~id 'copy:  ' u~allIndexes~toString('l', ' ')
+  call put t, keys[6], 6
+  call put u, keys[7], 7
+  u~remove(keys[1])
+  call put u, keys[2], 2
+  say cls~id 'source:' t~allIndexes~toString('l', ' ') t~hasIndex(keys[7]) t~hasIndex(keys[1])
+  say cls~id 'copy:  ' u~allIndexes~toString('l', ' ') u~hasIndex(keys[6]) u~hasIndex(keys[1])
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory copy:   q b k7 a
+Directory source: q b k7 a mm 0 1
+Directory copy:   b k7 a x zz 0 0
+StringTable copy:   q b k7 a
+StringTable source: q b k7 a mm 0 1
+StringTable copy:   b k7 a x zz 0 0
+Table copy:   q b k7 a
+Table source: q b k7 a mm 0 1
+Table copy:   b k7 a x zz 0 0
+IdentityTable copy:   q b k7 a
+IdentityTable source: q b k7 a mm 0 1
+IdentityTable copy:   b k7 a x zz 0 0
+Set copy:   q b k7 a
+Set source: q b k7 a mm 0 1
+Set copy:   b k7 a x zz 0 0
+
+# a Directory lists its contents, then its setMethod names, each in insertion
+# order
+program
+d = .directory~new
+d~setMethod('ZM', 'return 1')
+d['zz'] = 1
+d~setMethod('AM', 'return 2')
+d['bb'] = 2
+d~setMethod('MM', 'return 3')
+d['aa'] = 3
+d~setMethod('BM', 'return 4')
+say d~allIndexes~toString('l', ' ')
+say d~allItems~toString('l', ' ')
+d~unsetMethod('ZM')
+d~setMethod('ZM', 'return 5')
+say d~allIndexes~toString('l', ' ')
+----
+zz bb aa ZM AM MM BM
+1 2 3 1 2 3 4
+zz bb aa AM MM BM ZM
+
+# the capacity given to new is a sizing hint and does not change the order
+program
+keys = .array~of('q', 'zz', 'b', 'k7', 'a', 'mm', 'x', 'c1', 'p', 'e', 'ab', 'z')
+do cls over .array~of(.directory, .stringtable, .table, .identitytable, .set)
+  t = cls~new
+  u = cls~new(1000)
+  do i = 1 to keys~items
+    call put t, keys[i], i
+    call put u, keys[i], i
+  end
+  say cls~id':' t~allIndexes~toString('l', ' ')
+  say cls~id':' u~allIndexes~toString('l', ' ')
+end
+::routine put
+  use arg t, k, v
+  if t~isA(.set) then t~put(k)
+  else t~put(v, k)
+----
+Directory: q zz b k7 a mm x c1 p e ab z
+Directory: q zz b k7 a mm x c1 p e ab z
+StringTable: q zz b k7 a mm x c1 p e ab z
+StringTable: q zz b k7 a mm x c1 p e ab z
+Table: q zz b k7 a mm x c1 p e ab z
+Table: q zz b k7 a mm x c1 p e ab z
+IdentityTable: q zz b k7 a mm x c1 p e ab z
+IdentityTable: q zz b k7 a mm x c1 p e ab z
+Set: q zz b k7 a mm x c1 p e ab z
+Set: q zz b k7 a mm x c1 p e ab z

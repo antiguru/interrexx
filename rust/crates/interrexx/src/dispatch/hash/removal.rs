@@ -1,7 +1,6 @@
 use super::*;
 
-/// Unlinks the entry and returns its slot to the free chain, answering the
-/// item it held.
+/// Takes the entry out, answering the item it held.
 pub(super) fn take(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -22,88 +21,35 @@ pub(super) fn take_in(
         return Ok(None);
     };
     let (store, found) = probe_in(interp, receiver, half, store, index)?;
-    let Some(slot) = found.found else {
+    let Some(position) = found.found else {
         return Ok(None);
     };
-    let previous = found.last.filter(|last| *last != slot);
-    remove_at(interp, receiver, half, &store, slot, previous)
+    remove_entry(interp, &store, position)
 }
 
-/// Removes an already compared slot if it is still live in its original
-/// backing arrays and bucket, answering the value actually removed.
+/// Removes an already compared entry if it is still live in its original
+/// backing arrays, answering the value actually removed.
 ///
-/// `removeItem` identifies a slot rather than an index because two entries
+/// `removeItem` identifies an entry rather than an index because two entries
 /// under one index can differ only by their item.
 pub(super) fn take_at(
     interp: &mut Interp,
     receiver: ObjRef,
     store: &Store,
-    slot: usize,
-    bucket: usize,
+    position: usize,
 ) -> Result<Option<ObjRef>, Failure> {
     let current = store_of(interp, receiver)?;
-    if current.indexes != store.indexes
-        || current.items != store.items
-        || current.next != store.next
-        || current.buckets != store.buckets
-    {
+    if !current.same_arrays(store) {
         return Ok(None);
     }
-    // A callback can prepend a collision or overwrite the selected slot.
-    // Re-find its current predecessor and free chain without another send.
-    let Some((_, previous)) = entries_in(interp, &current, Some(bucket))?
-        .into_iter()
-        .find(|&(candidate, _)| candidate == slot)
-    else {
+    // A callback can remove the selected entry. In the same arrays a live
+    // position still holds the entry that was compared, since a position is
+    // filled once.
+    if slot_at(interp, current.indexes, position)?.is_none() {
         return Ok(None);
-    };
+    }
     interp.bump_route_generation();
-    remove_at(interp, receiver, CONTENTS, &current, slot, previous)
-}
-
-/// Unlinks the entry at `slot`, whose chain predecessor is `previous`, and
-/// answers the item it held.
-pub(super) fn remove_at(
-    interp: &mut Interp,
-    receiver: ObjRef,
-    half: Half,
-    store: &Store,
-    slot: usize,
-    previous: Option<usize>,
-) -> Result<Option<ObjRef>, Failure> {
-    let item = slot_at(interp, store.items, slot)?;
-    let next = link_at(interp, store, slot)?;
-    if slot < store.buckets {
-        // A bucket slot cannot be freed, so the chain is closed by copying the
-        // next entry into it.
-        if next < store.total {
-            let moved_index = slot_at(interp, store.indexes, next)?;
-            let moved_item = slot_at(interp, store.items, next)?;
-            let moved_next = link_at(interp, store, next)?;
-            write_slot(interp, store.indexes, slot, moved_index);
-            write_slot(interp, store.items, slot, moved_item);
-            write_link(interp, store, slot, moved_next);
-            free_slot(interp, receiver, half, store, next);
-        } else {
-            write_slot(interp, store.indexes, slot, None);
-            write_slot(interp, store.items, slot, None);
-            write_link(interp, store, slot, store.no_more());
-        }
-        return Ok(item);
-    }
-    if let Some(previous) = previous {
-        write_link(interp, store, previous, next);
-    }
-    free_slot(interp, receiver, half, store, slot);
-    Ok(item)
-}
-
-fn free_slot(interp: &mut Interp, receiver: ObjRef, half: Half, store: &Store, slot: usize) {
-    write_slot(interp, store.indexes, slot, None);
-    write_slot(interp, store.items, slot, None);
-    let free = store.free;
-    write_link(interp, store, slot, free);
-    set_free(interp, receiver, half, slot);
+    remove_entry(interp, &current, position)
 }
 
 /// Whether a removal refuses an owed entry before taking it: `Answered` for
@@ -129,14 +75,13 @@ pub(super) fn take_merged(
     if method_store(interp, receiver)?.is_none() && unknown_method(interp, receiver).is_none() {
         interp.bump_route_generation();
         let (store, found) = probe(interp, receiver, index)?;
-        let Some(slot) = found.found else {
+        let Some(position) = found.found else {
             return Ok(None);
         };
         if removal == Removal::Answered {
-            item_at(interp, &store, slot)?;
+            item_at(interp, &store, position)?;
         }
-        let previous = found.last.filter(|last| *last != slot);
-        return remove_at(interp, receiver, CONTENTS, &store, slot, previous);
+        return remove_entry(interp, &store, position);
     }
     // `get` runs a method only where the contents miss, so a contents entry
     // that is discarded needs no read.
@@ -162,20 +107,7 @@ pub(super) fn native_hash_empty(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"EMPTY"));
     }
-    let store = store_of(interp, receiver)?;
-    // Active lookups retain these contents through callbacks and growth. EMPTY
-    // clears that contents in place.
-    for slot in 0..store.total {
-        write_slot(interp, store.indexes, slot, None);
-        write_slot(interp, store.items, slot, None);
-        let next = if slot < store.buckets || slot + 1 == store.total {
-            store.no_more()
-        } else {
-            slot + 1
-        };
-        write_link(interp, &store, slot, next);
-    }
-    set_free(interp, receiver, CONTENTS, store.buckets);
+    clear(interp, receiver, CONTENTS)?;
     Ok(Some(receiver))
 }
 
@@ -195,19 +127,15 @@ pub(super) fn native_hash_remove_item(
         'search: loop {
             let store = store_of(interp, receiver)?;
             // Keep the saved array identities live across replacement callbacks.
-            for array in [store.indexes, store.items, store.next] {
+            for array in [store.indexes, store.items, store.codes, store.slots] {
                 interp.roots.activity_mut().push_temp(array);
             }
-            let mut bucket = 0;
-            for (slot, previous) in entries_in(interp, &store, None)? {
-                if previous.is_none() {
-                    bucket = slot;
-                }
-                let Some(item) = item_at(interp, &store, slot)? else {
+            for position in entries(interp, &store)? {
+                let Some(item) = item_at(interp, &store, position)? else {
                     continue;
                 };
                 if same_held_item(interp, keys, wanted, item)? {
-                    if let Some(removed) = take_at(interp, receiver, &store, slot, bucket)? {
+                    if let Some(removed) = take_at(interp, receiver, &store, position)? {
                         return Ok(Some(removed));
                     }
                     continue 'search;

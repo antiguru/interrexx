@@ -1,11 +1,10 @@
 use super::*;
 
-/// Where `index` belongs, and where it is: the bucket, the slot holding it if
-/// any, and the last slot on that bucket's chain.
+/// Where `index` is: the position of the oldest live entry under it, if any,
+/// and the index's code, which an append files a new entry under.
 pub(super) struct Probe {
-    pub(super) bucket: usize,
     pub(super) found: Option<usize>,
-    pub(super) last: Option<usize>,
+    pub(super) code: u64,
 }
 
 pub(super) fn probe(
@@ -18,7 +17,7 @@ pub(super) fn probe(
 }
 
 /// [`probe`] against a store the caller has already read, so that a
-/// `Directory`'s method table can be searched with the same chain walk.
+/// `Directory`'s method table can be searched with the same slot walk.
 #[inline]
 pub(super) fn probe_in(
     interp: &mut Interp,
@@ -56,10 +55,11 @@ fn probe_string_value(
         },
         _ => None,
     };
-    if let Some(wanted) = plain
-        && let Some(probe) = probe_plain_strings(interp, &store, wanted)
-    {
-        return Ok((store, probe));
+    if let Some(wanted) = plain {
+        let code = code_of(super::super::string_hash(wanted));
+        if let Some(found) = find_plain_string(interp, &store, code, wanted) {
+            return Ok((store, Probe { found, code }));
+        }
     }
     let short;
     let owned;
@@ -73,46 +73,42 @@ fn probe_string_value(
             &owned
         }
     };
-    let bucket = bucket_of(&store, wanted);
-    if slot_at(interp, store.indexes, bucket)?.is_none() {
-        return Ok((
-            store,
-            Probe {
-                bucket,
-                found: None,
-                last: None,
-            },
-        ));
+    let code = code_of(super::super::string_hash(wanted));
+    let found = find_text(interp, &store, code, wanted)?;
+    Ok((store, Probe { found, code }))
+}
+
+/// The position of the entry whose index's string value is `wanted`, in a
+/// string-keyed store, looked up by `code` -- `wanted`'s string hash's
+/// [`code_of`] -- without building an index object.
+pub(super) fn find_text(
+    interp: &mut Interp,
+    store: &Store,
+    code: u64,
+    wanted: &[u8],
+) -> Result<Option<usize>, Failure> {
+    if let Some(found) = find_plain_string(interp, store, code, wanted) {
+        return Ok(found);
     }
-    let mut slot = bucket;
-    let mut last = bucket;
+    let slot_count = array_slots(interp, store.slots)?.len();
+    let mut sequence = Sequence::new(code, slot_count);
     loop {
-        let matches = match slot_at(interp, store.indexes, slot)? {
-            Some(held) => *interp.to_text(held) == *wanted,
-            None => false,
+        let mark = mark_in(array_slots(interp, store.slots)?, sequence.at());
+        let position = match mark {
+            Mark::Empty => return Ok(None),
+            Mark::Deleted => {
+                sequence.advance();
+                continue;
+            }
+            Mark::Entry(position) => position,
         };
-        if matches {
-            return Ok((
-                store,
-                Probe {
-                    bucket,
-                    found: Some(slot),
-                    last: Some(last),
-                },
-            ));
+        if code_in(array_slots(interp, store.codes)?, position) == Some(code)
+            && let Some(held) = slot_at(interp, store.indexes, position)?
+            && *interp.to_text(held) == *wanted
+        {
+            return Ok(Some(position));
         }
-        last = slot;
-        slot = link_at(interp, &store, slot)?;
-        if slot >= store.total {
-            return Ok((
-                store,
-                Probe {
-                    bucket,
-                    found: None,
-                    last: Some(last),
-                },
-            ));
-        }
+        sequence.advance();
     }
 }
 
@@ -125,30 +121,43 @@ fn probe_by_protocol(
     keys: Keys,
 ) -> Result<(Store, Probe), Failure> {
     let generation = interp.store_generation;
-    let hash = hash_of(interp, keys, index)?;
+    let code = code_of(hash_of(interp, keys, index)?);
     if generation != interp.store_generation {
         store = store_in(interp, receiver, half)?;
     }
     'search: loop {
-        let bucket = (hash % store.buckets as u64) as usize;
-        if slot_at(interp, store.indexes, bucket)?.is_none() {
-            return Ok((
-                store,
-                Probe {
-                    bucket,
-                    found: None,
-                    last: None,
-                },
-            ));
-        }
-        let mut slot = bucket;
-        let mut last = bucket;
+        let mut sequence = Sequence::new(code, array_slots(interp, store.slots)?.len());
         loop {
+            let position = match mark_in(array_slots(interp, store.slots)?, sequence.at()) {
+                Mark::Empty => {
+                    return Ok((store, Probe { found: None, code }));
+                }
+                Mark::Deleted => {
+                    sequence.advance();
+                    continue;
+                }
+                Mark::Entry(position) => position,
+            };
+            // A differing cached code is a different index for every key that
+            // keeps the hash contract, and nothing is sent to it.
+            if code_in(array_slots(interp, store.codes)?, position) != Some(code) {
+                sequence.advance();
+                continue;
+            }
+            let Some(held) = slot_at(interp, store.indexes, position)? else {
+                sequence.advance();
+                continue;
+            };
             let generation = interp.store_generation;
-            let matches = same_index(interp, &store, keys, slot, index)?;
-            if generation != interp.store_generation {
+            let writes = interp.store_writes;
+            let matches = same_index(interp, &store, keys, position, index)?;
+            if generation != interp.store_generation || writes != interp.store_writes {
+                // The comparison ran code that wrote a store. New arrays, or a
+                // new entry, start the search again; in the same arrays a
+                // position keeps its entry while it is live, so the answer
+                // stands unless the compared entry has gone.
                 let current = store_in(interp, receiver, half)?;
-                if current != store {
+                if current != store || slot_at(interp, current.indexes, position)? != Some(held) {
                     store = current;
                     continue 'search;
                 }
@@ -157,76 +166,45 @@ fn probe_by_protocol(
                 return Ok((
                     store,
                     Probe {
-                        bucket,
-                        found: Some(slot),
-                        last: Some(last),
+                        found: Some(position),
+                        code,
                     },
                 ));
             }
-            last = slot;
-            slot = link_at(interp, &store, slot)?;
-            if slot >= store.total {
-                return Ok((
-                    store,
-                    Probe {
-                        bucket,
-                        found: None,
-                        last: Some(last),
-                    },
-                ));
-            }
+            sequence.advance();
         }
     }
 }
 
-/// The bucket a string-keyed store files `wanted` under.
-fn bucket_of(store: &Store, wanted: &[u8]) -> usize {
-    (super::super::string_hash(wanted) % store.buckets as u64) as usize
-}
-
-/// [`probe_string_value`]'s chain walk with both arrays borrowed once, for a
-/// plain string `wanted` and a chain whose every index is one too: inline or
-/// a `Body::Text`, whose bytes are what `to_text` would answer. `None`, and
-/// the slot-by-slot walk instead, for anything else -- an index of another
-/// kind on the chain, or an array that is not one, which that walk refuses.
-fn probe_plain_strings(interp: &Interp, store: &Store, wanted: &[u8]) -> Option<Probe> {
-    let bucket = bucket_of(store, wanted);
-    let indexes = super::array_slots(interp, store.indexes).ok()?;
-    let index_at = |slot: usize| indexes.get(slot).copied().flatten();
-    if index_at(bucket).is_none() {
-        return Some(Probe {
-            bucket,
-            found: None,
-            last: None,
-        });
-    }
-    let links = super::array_slots(interp, store.next).ok()?;
-    let mut slot = bucket;
-    let mut last = bucket;
+/// [`find_text`]'s slot walk with the arrays borrowed once, for a plain
+/// string `wanted` and candidates whose every index is one too: inline or a
+/// `Body::Text`, whose bytes are what `to_text` would answer. `None`, and the
+/// one-by-one walk instead, for anything else -- a candidate index of another
+/// kind, or an array that is not one, which that walk refuses.
+fn find_plain_string(
+    interp: &Interp,
+    store: &Store,
+    code: u64,
+    wanted: &[u8],
+) -> Option<Option<usize>> {
+    let slots = array_slots(interp, store.slots).ok()?;
+    let codes = array_slots(interp, store.codes).ok()?;
+    let indexes = array_slots(interp, store.indexes).ok()?;
+    let mut sequence = Sequence::new(code, slots.len());
     loop {
-        let matches = match index_at(slot) {
-            Some(held) => plain_text_is(interp, held, wanted)?,
-            None => false,
-        };
-        if matches {
-            return Some(Probe {
-                bucket,
-                found: Some(slot),
-                last: Some(last),
-            });
+        match mark_in(slots, sequence.at()) {
+            Mark::Empty => return Some(None),
+            Mark::Deleted => {}
+            Mark::Entry(position) => {
+                if code_in(codes, position) == Some(code)
+                    && let Some(held) = indexes.get(position).copied().flatten()
+                    && plain_text_is(interp, held, wanted)?
+                {
+                    return Some(Some(position));
+                }
+            }
         }
-        last = slot;
-        slot = match links.get(slot).copied().flatten().map(ObjRef::decode) {
-            Some(Decoded::SmallInt(link)) if link >= 0 => link as usize,
-            _ => store.no_more(),
-        };
-        if slot >= store.total {
-            return Some(Probe {
-                bucket,
-                found: None,
-                last: Some(last),
-            });
-        }
+        sequence.advance();
     }
 }
 

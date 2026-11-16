@@ -55,7 +55,8 @@ const OWNED: &[&str] = &[
 const INDEX_ONLY: &[&str] = &["Set", "Bag"];
 
 /// The classes whose `put` adds a second entry under an existing index instead
-/// of replacing it: the multi-value contents, whose `put` adds at the front.
+/// of replacing it: the multi-value contents, whose `put` adds another entry
+/// after every other.
 const MULTI_VALUE: &[&str] = &["Relation", "Bag"];
 
 /// The answers of this file's class tests for one class, as bits.
@@ -532,7 +533,7 @@ fn method_entries(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, 
         return Ok(Vec::new());
     };
     let mut held = Vec::new();
-    for slot in walk_in(interp, &store)? {
+    for slot in entries(interp, &store)? {
         let Some(index) = slot_at(interp, store.indexes, slot)? else {
             continue;
         };
@@ -558,7 +559,8 @@ fn method_entry_answer(
     Ok(item)
 }
 
-/// Every (index, result) the method table answers, in its own store order.
+/// Every (index, result) the method table answers, in its own insertion
+/// order.
 fn method_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let held = method_entries(interp, receiver)?;
     let mut pairs = Vec::with_capacity(held.len());
@@ -580,7 +582,7 @@ fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure>
     count_in(interp, &store)
 }
 
-/// How many entries the contents hold: [`walk`]'s length.
+/// How many entries the contents hold: [`entries_of`]'s length.
 fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     match store_if_built(interp, receiver)? {
         Some(store) => count_in(interp, &store),
@@ -589,7 +591,7 @@ fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failur
 }
 
 /// The contents' entries and the method table's together, which is what
-/// `items` answers, from one read of the pool: [`walk`] then
+/// `items` answers, from one read of the pool: [`entries_of`] then
 /// [`method_count`], in that order.
 fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     let parts = read_parts(interp, receiver);
@@ -600,8 +602,8 @@ fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> 
         Some(store) => count_in(interp, &store)?,
         None => {
             refuse_storeless(interp, receiver)?;
-            if parts.contents.buckets.is_none() {
-                keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+            if parts.contents.slots.is_none() {
+                keep_capacity(interp, receiver, MINIMUM_ENTRIES);
             }
             0
         }
@@ -680,28 +682,28 @@ pub(super) fn store_put(
         validated_index(interp, receiver, index)?
     };
     if multi_value(interp, receiver) {
-        insert_front(interp, receiver, index, Some(item))?;
+        insert_duplicate(interp, receiver, index, Some(item))?;
     } else {
         insert(interp, receiver, index, Some(item))?;
     }
     Ok(None)
 }
 
-/// Every (index, item) pair the receiver holds, in bucket order.
+/// Every (index, item) pair the receiver holds, in insertion order.
 fn pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let mut pairs = stored_pairs(interp, receiver)?;
     // `allIndexes` and its siblings append the method table AFTER the
-    // contents, each half in its own store order. Measured: a directory given
-    // `AAA`(method), `zzz`, `MMM`(method), `bbb` answers `zzz bbb MMM AAA`.
+    // contents, each half in its own insertion order: a directory given
+    // `AAA`(method), `zzz`, `MMM`(method), `bbb` answers `zzz bbb AAA MMM`.
     pairs.extend(method_pairs(interp, receiver)?);
     Ok(pairs)
 }
 
-/// [`pairs`] without the method table: the contents only, in bucket order.
+/// [`pairs`] without the method table: the contents only, in insertion order.
 fn stored_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let store = store_of(interp, receiver)?;
     let mut pairs = Vec::new();
-    for slot in walk(interp, receiver)? {
+    for slot in entries_of(interp, receiver)? {
         let Some(index) = slot_at(interp, store.indexes, slot)? else {
             continue;
         };
@@ -747,7 +749,7 @@ fn indexes(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<ObjRef>, Failure
     let store = store_of(interp, receiver)?;
     let methods = method_store(interp, receiver)?;
     for half in std::iter::once(store).chain(methods) {
-        for slot in walk_in(interp, &half)? {
+        for slot in entries(interp, &half)? {
             if let Some(index) = slot_at(interp, half.indexes, slot)? {
                 interp.roots.activity_mut().push_temp(index);
                 indexes.push(index);
@@ -932,10 +934,8 @@ pub(super) fn native_hash_new(
 }
 
 /// the store sized for `capacity`, unless the receiver already has one. The
-/// capacity is **observable**: it decides the bucket count, which decides
-/// the iteration order. Measured, the same eight keys in the same order come
-/// back differently from `.Table~new` and `.Table~new(100)`, and both orders
-/// are what this store's geometry predicts.
+/// capacity is a sizing hint only: entries come back in insertion order
+/// whatever it is.
 pub(super) fn initialize_store(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -952,10 +952,10 @@ pub(super) fn initialize_store(
         _ => return Ok(()),
     };
     if kind_of_class(interp, class).has(HashKind::STORE_HOLDER) {
-        // Only the bucket count is kept: [`store_of`] builds the store at that
+        // Only the capacity is kept: [`store_of`] builds the store at that
         // size when something first needs one, and a read that finds nothing
         // answers the same without it.
-        keep_bucket_count(interp, receiver, calculate_bucket_size(capacity));
+        keep_capacity(interp, receiver, capacity);
     }
     Ok(())
 }
@@ -988,7 +988,7 @@ pub(crate) fn store_indexes(interp: &mut Interp, receiver: ObjRef) -> Vec<ObjRef
     let Ok(store) = store_of(interp, receiver) else {
         return Vec::new();
     };
-    let Ok(order) = walk(interp, receiver) else {
+    let Ok(order) = entries_of(interp, receiver) else {
         return Vec::new();
     };
     order
@@ -1019,7 +1019,7 @@ pub(crate) fn store_item(interp: &mut Interp, receiver: ObjRef, index: ObjRef) -
 pub(crate) fn new_directory(interp: &mut Interp, capacity: usize) -> Result<ObjRef, Failure> {
     let class = interp.object_model().directory;
     let directory = new_instance(interp, class)?;
-    install_store(interp, directory, CONTENTS, calculate_bucket_size(capacity));
+    install_store(interp, directory, CONTENTS, capacity);
     Ok(directory)
 }
 
@@ -1027,7 +1027,7 @@ pub(crate) fn new_directory(interp: &mut Interp, capacity: usize) -> Result<ObjR
 pub(crate) fn new_string_table(interp: &mut Interp) -> Result<ObjRef, Failure> {
     let class = interp.object_model().string_table;
     let table = new_instance(interp, class)?;
-    install_store(interp, table, CONTENTS, calculate_bucket_size(0));
+    install_store(interp, table, CONTENTS, MINIMUM_ENTRIES);
     Ok(table)
 }
 
@@ -1056,7 +1056,7 @@ pub(crate) fn directory_remove(
 
 /// `put` of `item` under the string `name`, run for the native API's
 /// `DirectoryPut` and `StringTablePut` on any collection this file owns: a
-/// multi-value one adds at the front, as its contents' `put` does, and a
+/// multi-value one adds another entry, as its contents' `put` does, and a
 /// `Directory` runs its own `put`.
 pub(crate) fn native_put(
     interp: &mut Interp,
@@ -1068,7 +1068,7 @@ pub(crate) fn native_put(
     let index = interp.text(name);
     interp.roots.activity_mut().push_temp(index);
     if multi_value(interp, receiver) {
-        insert_front(interp, receiver, index, Some(item))
+        insert_duplicate(interp, receiver, index, Some(item))
     } else {
         insert(interp, receiver, index, Some(item))
     }
@@ -1217,20 +1217,10 @@ fn view_get(
         .map(DirectoryEntry::Found)
 }
 
-/// The slot holding `name` in a string-keyed store, found without building
-/// an index object.
+/// The position holding `name` in a string-keyed store, found without
+/// building an index object.
 fn text_slot(interp: &mut Interp, store: &Store, key: Key<'_>) -> Result<Option<usize>, Failure> {
-    let mut slot = (key.hash % store.buckets as u64) as usize;
-    while slot < store.total {
-        let Some(held) = slot_at(interp, store.indexes, slot)? else {
-            return Ok(None);
-        };
-        if interp.to_text(held).as_ref() == key.name {
-            return Ok(Some(slot));
-        }
-        slot = link_at(interp, store, slot)?;
-    }
-    Ok(None)
+    probe::find_text(interp, store, code_of(key.hash), key.name)
 }
 
 /// Whether `table` still holds an entry this crate does not build.
@@ -1238,7 +1228,7 @@ pub(crate) fn holds_owed_entry(interp: &mut Interp, table: ObjRef) -> bool {
     let Ok(Some(store)) = read_store(interp, table, CONTENTS) else {
         return false;
     };
-    let Ok(order) = walk_in(interp, &store) else {
+    let Ok(order) = entries(interp, &store) else {
         return false;
     };
     order.into_iter().any(|slot| {
@@ -1668,11 +1658,11 @@ pub(super) fn native_bag_of(
     }
     let object = new_instance(interp, class)?;
     interp.roots.activity_mut().push_temp(object);
-    install_store(interp, object, CONTENTS, MINIMUM_BUCKET_SIZE);
+    install_store(interp, object, CONTENTS, MINIMUM_ENTRIES);
     let caller = interp.caller();
     interp.send_message(object, super::INIT, None, &[], caller)?;
     for argument in args.iter().flatten() {
-        insert_front(interp, object, *argument, Some(*argument))?;
+        insert_duplicate(interp, object, *argument, Some(*argument))?;
     }
     Ok(Some(object))
 }
@@ -1693,7 +1683,7 @@ pub(super) fn native_set_of(
     }
     let object = new_instance(interp, class)?;
     interp.roots.activity_mut().push_temp(object);
-    install_store(interp, object, CONTENTS, MINIMUM_BUCKET_SIZE);
+    install_store(interp, object, CONTENTS, MINIMUM_ENTRIES);
     let caller = interp.caller();
     interp.send_message(object, super::INIT, None, &[], caller)?;
     for argument in args.iter().flatten() {
