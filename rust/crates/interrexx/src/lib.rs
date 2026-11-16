@@ -4580,9 +4580,6 @@ fn execute_kept(
     if let Some(environment) = parts.environment {
         interp.adopt_environment(environment);
     }
-    // Before the bootstrap, which hashes the first strings: a store holds
-    // hashes made under the seed of its time, so the seed never changes once
-    // one is made.
     // A seed the environment names is recorded in the simulation's own
     // configuration, so that its trace header and report name it.
     let mut switch_mode = switch_mode;
@@ -4595,6 +4592,9 @@ fn execute_kept(
         Some(SwitchMode::Sim(config)) => Some(config),
         _ => None,
     };
+    // Before the bootstrap, which hashes the first strings: a store holds
+    // hashes made under the seed of its time, so the seed never changes once
+    // one is made.
     interp.hash_seed = hash_seed_of(&interp.env, sim_config);
     interp.warn_of_refused_hash_seed();
     // Armed here rather than in `Interp::new`, and after the parse, so that
