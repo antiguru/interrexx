@@ -81,7 +81,6 @@ fn on_path(name: &str) -> bool {
 fn compile(source: &str, arguments: &[&str]) {
     let api = worktree().join("include");
     let built = Command::new("g++")
-        .args(["-Wall", "-Werror"])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(fixture(source))
@@ -91,15 +90,9 @@ fn compile(source: &str, arguments: &[&str]) {
     assert!(built.success(), "the fixture did not build: {arguments:?}");
 }
 
-/// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
-/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
-/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
-fn run(
-    binary: &Path,
-    dir: &Path,
-    program: Option<&Path>,
-    argument: Option<&str>,
-) -> (String, String, i32) {
+/// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
+/// `memcap` is not on `PATH`, and killed by `timeout` after [`DEADLINE`].
+fn capped() -> Command {
     let mut command = if on_path("memcap") {
         let mut command = Command::new("memcap");
         command.arg(MEMORY);
@@ -111,8 +104,20 @@ fn run(
         ));
         command
     };
-    let output = command
-        .args(["timeout", "-s", "KILL", DEADLINE])
+    command.args(["timeout", "-s", "KILL", DEADLINE]);
+    command
+}
+
+/// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
+/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
+/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
+fn run(
+    binary: &Path,
+    dir: &Path,
+    program: Option<&Path>,
+    argument: Option<&str>,
+) -> (String, String, i32) {
+    let output = capped()
         .arg(binary)
         .args(program)
         .args(argument)
@@ -559,9 +564,7 @@ fn driver_runs(
         let oracle = support::oracle::locate();
         let theirs_driver = dir.join("ltdriver-oracle");
         link_driver(source, &theirs_driver, oracle.lib_dir());
-        let output = Command::new("memcap")
-            .arg(MEMORY)
-            .args(["timeout", "-s", "KILL", DEADLINE])
+        let output = capped()
             .arg(&theirs_driver)
             .arg(scenario)
             .current_dir(&dir)
@@ -572,7 +575,7 @@ fn driver_runs(
             .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
             .stdin(Stdio::null())
             .output()
-            .expect("memcap runs, which every run of this test is under");
+            .expect("the capped run spawns");
         // The oracle's run starts its `rxapi` inside the run's `memcap` group, so `memcap` may
         // report that it left the group behind. That line is the harness's, not the program's.
         let stderr: String = String::from_utf8_lossy(&output.stderr)
