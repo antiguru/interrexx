@@ -37,6 +37,7 @@ fi
 
 src=$root/third_party/ooRexx/testbinaries
 api=$root/include
+. "$root/scripts/api-flags.sh"
 samples=$root/third_party/ooRexx/samples/api/classic/unix/callrexx
 
 mkdir -p "$out"
@@ -48,13 +49,14 @@ out=$(cd "$out" && pwd)
 stamp=
 if [ -n "$libs" ]; then
     exec 9>"$out.lock"
-    flock 9
+    api_lock 9
 fi
 stage() {
     for library in librexx librexxapi; do
-        cp -f "$libs/$library.so" "$out/$library.so.4.tmp"
-        mv -f "$out/$library.so.4.tmp" "$out/$library.so.4"
-        ln -sfn "$library.so.4" "$out/$library.so"
+        versioned=$(api_versioned "$library")
+        cp -f "$libs/$library.$api_dylib" "$out/$versioned.tmp"
+        mv -f "$out/$versioned.tmp" "$out/$versioned"
+        ln -sfn "$versioned" "$out/$library.$api_dylib"
     done
 }
 if [ -n "$stage_only" ]; then
@@ -63,13 +65,12 @@ if [ -n "$stage_only" ]; then
     exit 0
 fi
 
-. "$root/scripts/api-flags.sh"
 if [ -n "$libs" ]; then
     # The stamp names the inputs of the build: the libraries, this script, the headers, and the
     # upstream sources it compiles (size and time, as a submodule update rewrites them).
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
+    stamp=$(api_file_stamp "$libs/librexx.$api_dylib" "$libs/librexxapi.$api_dylib" "$0" "$root/scripts/api-flags.sh"
         api_stamp
-        find "$src" "$samples" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %.9Y'
+        find "$src" "$samples" -type f -print0 | LC_ALL=C sort -z | xargs -0 "${api_stat[@]}"
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-testbinaries.sh: $out is up to date"

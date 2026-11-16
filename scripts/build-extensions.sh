@@ -41,9 +41,10 @@ build() {
         libs=${CARGO_TARGET_DIR:-$root/rust/target}/debug
     fi
     for library in librexx librexxapi; do
-        cp -f "$libs/$library.so" "$out/$library.so.4.tmp"
-        mv -f "$out/$library.so.4.tmp" "$out/$library.so.4"
-        ln -sfn "$library.so.4" "$out/$library.so"
+        versioned=$(api_versioned "$library")
+        cp -f "$libs/$library.$api_dylib" "$out/$versioned.tmp"
+        mv -f "$out/$versioned.tmp" "$out/$versioned"
+        ln -sfn "$versioned" "$out/$library.$api_dylib"
     done
 
     # --no-as-needed keeps both libraries recorded although a product may call into only one,
@@ -72,10 +73,10 @@ out=$(cd "$out" && pwd)
 stamp=
 if [ -n "$libs" ] && [ -z "$check_only" ]; then
     exec 9>"$out.lock"
-    flock 9
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
+    api_lock 9
+    stamp=$(api_file_stamp "$libs/librexx.$api_dylib" "$libs/librexxapi.$api_dylib" "$0" "$root/scripts/api-flags.sh"
         api_stamp
-        find "$src" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %.9Y'
+        find "$src" -type f -print0 | LC_ALL=C sort -z | xargs -0 "${api_stat[@]}"
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-extensions.sh: $out is up to date"

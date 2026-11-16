@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      filter:
+        description: "A nextest filter expression run instead of the whole profile, e.g. binary(classic_api)"
+        required: false
+        default: ""
   # A change to this workflow runs it on its pull request.
   pull_request:
     paths:
@@ -89,4 +94,11 @@ jobs:
         with:
           tool: nextest@0.9.150
       - name: Cargo nextest
-        run: cargo nextest run --locked --workspace --profile standalone --no-fail-fast
+        env:
+          FILTER: ${{ inputs.filter }}
+        run: |
+          if [ -n "$FILTER" ]; then
+            cargo nextest run --locked --workspace --profile standalone --no-fail-fast -E "$FILTER"
+          else
+            cargo nextest run --locked --workspace --profile standalone --no-fail-fast
+          fi

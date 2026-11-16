@@ -34,22 +34,27 @@ fn include_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../include")
 }
 
-/// Both libraries in `dir` under their run-time names (`lib<name>.so.4`, which each records as
-/// its SONAME and `librexxapi` names as `NEEDED`), with the link-time names beside them.
+/// Both libraries in `dir` under their run-time names (`lib<name>.so.4`, or `lib<name>.4.dylib`
+/// on Apple's hosts, which each records and `librexxapi` names as its dependency), with the
+/// link-time names cargo gave them beside them.
 fn stage_libraries(dir: &Path) {
-    for source in [cdylibs::librexx(), cdylibs::librexxapi()] {
+    let names = interrexx_api::library_names::host_api_libraries();
+    for (source, run_time) in [
+        (cdylibs::librexx(), names.librexx),
+        (cdylibs::librexxapi(), names.librexxapi),
+    ] {
         let name = source
             .file_name()
             .and_then(|name| name.to_str())
             .expect("a library name")
             .to_string();
-        let versioned = dir.join(format!("{name}.4"));
+        let versioned = dir.join(run_time);
         let _ = std::fs::remove_file(&versioned);
         std::fs::copy(&source, &versioned)
             .unwrap_or_else(|e| panic!("{} to {}: {e}", source.display(), versioned.display()));
         let link = dir.join(&name);
         let _ = std::fs::remove_file(&link);
-        std::os::unix::fs::symlink(format!("{name}.4"), &link)
+        std::os::unix::fs::symlink(run_time, &link)
             .unwrap_or_else(|e| panic!("{}: {e}", link.display()));
     }
 }

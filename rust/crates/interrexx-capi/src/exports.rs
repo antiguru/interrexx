@@ -329,14 +329,17 @@ pub unsafe extern "C-unwind" fn RexxCallBack(
     unsafe { interrexx_api::ffi::classic::call_back(label, argc, argv, rc, result) }
 }
 
-/// The key a `RexxStart` run is found by, from the `pthread_t` its thread is: an integer on
-/// Linux, a pointer-sized integer on Apple's systems.
-#[cfg_attr(
-    target_vendor = "apple",
-    expect(clippy::unnecessary_cast, reason = "`pthread_t` is `usize` there")
-)]
+/// The key a `RexxStart` run is found by, from the `pthread_t` its thread is.
+#[cfg(not(target_vendor = "apple"))]
 fn thread_key(thread: thread_id_t) -> usize {
     thread as usize
+}
+
+/// The key a `RexxStart` run is found by, from the `pthread_t` its thread is: a
+/// pointer on Apple's systems, whose address is the key.
+#[cfg(target_vendor = "apple")]
+fn thread_key(thread: thread_id_t) -> usize {
+    thread.addr()
 }
 
 /// `RXARI_OK` where `done`, else `RXARI_NOT_FOUND`.

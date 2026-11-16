@@ -33,7 +33,7 @@ fn main() {
 fn elf(names: &library_names::ApiLibraries, out: &Path) {
     println!(
         "cargo:rustc-cdylib-link-arg=-Wl,-soname,{}",
-        names.librexxapi
+        names.librexxapi_id
     );
     println!("cargo:rustc-cdylib-link-arg=-Wl,--disable-new-dtags");
     println!("cargo:rustc-cdylib-link-arg=-Wl,-rpath,$ORIGIN");
@@ -41,7 +41,7 @@ fn elf(names: &library_names::ApiLibraries, out: &Path) {
     // The forwarding exports look their targets up at run time, so no symbol binds to it and
     // `--as-needed` would drop the entry.
     let stub = out.join("librexx.so");
-    let soname = format!("-Wl,-soname,{}", names.librexx);
+    let soname = format!("-Wl,-soname,{}", names.librexx_id);
     stub_library(&stub, &["-shared", "-nostdlib", &soname]);
     println!("cargo:rustc-cdylib-link-arg=-Wl,--no-as-needed");
     println!("cargo:rustc-cdylib-link-arg={}", stub.display());
@@ -50,8 +50,8 @@ fn elf(names: &library_names::ApiLibraries, out: &Path) {
 
 fn apple(names: &library_names::ApiLibraries, out: &Path) {
     println!(
-        "cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/{}",
-        names.librexxapi
+        "cargo:rustc-cdylib-link-arg=-Wl,-install_name,{}",
+        names.librexxapi_id
     );
     // An empty library whose install name is `librexx` beside this one, which the link records
     // as a load command. `-needed_library` keeps it although no symbol binds to it. Apple's
