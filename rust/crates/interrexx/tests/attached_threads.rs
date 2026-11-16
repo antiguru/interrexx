@@ -115,11 +115,24 @@ fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-/// A fresh directory of this run's own, named for `name`, holding the extension `attach`.
-fn build(name: &str) -> PathBuf {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{}", std::process::id()));
+/// A fresh directory of this run's own, named for `name`. Its name is new within the process too,
+/// so tests that run the same fixture in parallel under `cargo test` do not share it. The process
+/// and the count are written in hex, which keeps the API service's socket path below `api/` within
+/// the platform's bound.
+fn fresh_dir(name: &str) -> PathBuf {
+    static MADE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let made = MADE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("{name}-{:x}-{made:x}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("a directory of this run's own");
+    dir
+}
+
+/// A fresh directory of this run's own ([`fresh_dir`]), named for `name`, holding the extension
+/// `attach`.
+fn build(name: &str) -> PathBuf {
+    let dir = fresh_dir(name);
     let built = compile(
         "attach.cpp",
         &[
@@ -340,9 +353,7 @@ fn run_in(
 /// this run's own against this workspace's `librexx.so.4` and `librexxapi.so.4`, which it holds
 /// beside the driver.
 fn build_driver(name: &str) -> (PathBuf, PathBuf) {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).expect("a directory of this run's own");
+    let dir = fresh_dir(name);
     for (source, library) in [
         (cdylibs::librexx(), "librexx"),
         (cdylibs::librexxapi(), "librexxapi"),
