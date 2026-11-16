@@ -4,7 +4,7 @@ count 60
  * stem's value is its own derived name -- so `a.~length` is 2, not 0.
  *
  * `request('ARRAY')` answers the stem's `makeArray`, which for a Stem is its
- * TAILS rather than its items, walked in the tail tree's own post-order.
+ * TAILS rather than its items, in the stem's own tail order (Deviation 1).
  * Every other class name is forwarded to the value, so `request('STRING')`
  * answers what the value would.  The name is upper-cased, and a missing one
  * is the POSITIONAL 93 rather than the named 88.
@@ -23,7 +23,7 @@ s = .Stem~new
 s['k1'] = 'v1'
 s['k2'] = 'v2'
 say 'value   ['s~string']'
-say 'array   ' s~request('ARRAY')~makeString('L',',')
+say 'array   ' s~request('ARRAY')~sort~makeString('L',',')
 say 'lower   ' s~request('array')~class~id
 say 'string  ['s~request('STRING')']'
 say 'other   ['s~request('DIRECTORY')']'
@@ -38,7 +38,7 @@ q. = 'hello'
 q.x = 9
 q.y = 8
 say 'named   ['q.~string']' q.~length
-say 'n array ' q.~request('ARRAY')~makeString('L',',')
+say 'n array ' q.~request('ARRAY')~sort~makeString('L',',')
 say 'n string['q.~request('STRING')']'
 qd = q.~toDirectory
 say 'n todir ' qd~items qd~allIndexes~makeString('L',',') qd~allItems~makeString('L',',')

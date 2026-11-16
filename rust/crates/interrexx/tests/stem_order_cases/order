@@ -1,0 +1,162 @@
+# The order a stem lists its tails in is assignment order, not the order of
+# their names. The expected blocks follow from `r[class.stem.deviation.1]`.
+
+# allIndexes, allItems, makeArray and supplier follow assignment order
+program
+s.c = 1; s.b = 2; s.a = 3
+say s.~allIndexes~makeArray~toString('l', ' ')
+say s.~allItems~makeArray~toString('l', ' ')
+say s.~makeArray~toString('l', ' ')
+sup = s.~supplier
+do while sup~available
+  say sup~index sup~item
+  sup~next
+end
+----
+C B A
+1 2 3
+C B A
+C 1
+B 2
+A 3
+
+# DO OVER follows assignment order, and a tail that is neither shortest nor
+# alphabetically first still comes where it was assigned
+program
+s.zz = 1; s.a = 2; s.mmm = 3; s.b = 4
+do i over s.
+  say i
+end
+----
+ZZ
+A
+MMM
+B
+
+# assigning an existing tail again keeps its place
+program
+s.c = 1; s.b = 2; s.a = 3
+s.c = 9
+say s.~allIndexes~makeArray~toString('l', ' ')
+----
+C B A
+
+# a dropped tail is not listed, and one assigned again after a drop goes to
+# the end
+program
+s.c = 1; s.b = 2; s.a = 3
+drop s.b
+say s.~allIndexes~makeArray~toString('l', ' ')
+s.b = 4
+say s.~allIndexes~makeArray~toString('l', ' ')
+say s.~items
+----
+C A
+C A B
+3
+
+# index and removeItem choose the first match in assignment order
+program
+s.c = 'dup'; s.b = 'dup'; s.a = 'dup'
+say s.~index('dup')
+say s.~removeItem('dup')
+say s.~allIndexes~makeArray~toString('l', ' ')
+----
+C
+dup
+B A
+
+# hasItem and removeItem over a stem whose first match was dropped and
+# assigned again: the match is the earlier remaining tail
+program
+s.c = 'dup'; s.b = 'dup'; s.a = 'dup'
+drop s.c
+s.c = 'dup'
+say s.~index('dup')
+say s.~removeItem('dup')
+say s.~allIndexes~makeArray~toString('l', ' ')
+----
+B
+dup
+A C
+
+# FORWARD ARGUMENTS with a stem passes the tails in assignment order
+program
+say .K~new~go
+::class K
+::method go
+  s.c = 1; s.b = 2; s.a = 3
+  forward message('SEEN') arguments (s.)
+::method seen
+  r = ''
+  do i = 1 to arg()
+    r = r arg(i)
+  end
+  return strip(r)
+----
+C B A
+
+# a tail written with c.k = c.k + 1, whose write reuses what its read found,
+# keeps its place; a dropped one written that way counts from its new
+# assignment, and so does one written after the stem was emptied
+program
+c. = 0
+do k over 'X Y X Z Y X'~makeArray(' ')
+  c.k = c.k + 1
+end
+say c.~allIndexes~makeArray~toString('l', ' ')
+drop c.Y
+k = 'Y'
+c.k = c.k || '!'
+say c.~allIndexes~makeArray~toString('l', ' ')
+c.~empty
+c.k = c.k + 1
+c.X = 1
+say c.~allIndexes~makeArray~toString('l', ' ')
+----
+X Y Z
+X Z Y
+Y X
+
+# many tails dropped and set again, past the few a stem keeps inline: the
+# tails never dropped keep their places, and the ones set again follow in the
+# order they were set
+program
+w. = ''
+do i = 1 to 12
+  w.i = i
+end
+do i = 2 to 12 by 3
+  drop w.i
+end
+do i = 12 to 1 by -1
+  w.i = w.i || '.'
+end
+say w.~allIndexes~makeArray~toString('l', ' ')
+say w.~allItems~makeArray~toString('l', ' ')
+----
+1 3 4 6 7 9 10 12 11 8 5 2
+1. 3. 4. 6. 7. 9. 10. 12. W.11. W.8. W.5. W.2.
+
+# enough tails dropped and set again that the stem compacts its tails: a tail
+# dropped before the compaction and set after it goes to the end, and the
+# order holds across the compaction
+program
+w. = ''
+do i = 1 to 8
+  w.i = i
+end
+drop w.4
+do r = 1 to 3
+  do i = 1 to 7 by 2
+    drop w.i
+    w.i = r
+  end
+end
+w.4 = 'x'
+w.9 = 9
+say w.~allIndexes~makeArray~toString('l', ' ')
+say w.~allItems~makeArray~toString('l', ' ')
+----
+2 6 8 1 3 5 7 4 9
+2 6 8 3 3 3 3 x 9

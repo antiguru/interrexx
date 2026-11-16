@@ -368,7 +368,9 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
         "Properties",
         ".Properties~new~~put('v1','k1')~~put('v2','k2')",
     ),
-    ("Stem", ".Stem~new~~put('v1','k1')~~put('v2','k2')"),
+    // One tail: a Stem lists its tails in assignment order, which the oracle
+    // does not (Deviation 1), so two tails would diverge on every listing.
+    ("Stem", ".Stem~new~~put('v1','k1')"),
     // A cancelled timer whose replied activity has ended, by a `SysSleep`
     // after the cancel: a second cancel before the alarm clears
     // `eventSemHandle` posts the oracle's freed semaphore (`oracle-crashes.txt`
@@ -463,6 +465,11 @@ fn probe_text(class: &ClassRow, row: &MethodRow) -> String {
         "class" => format!(".{}", class.name),
         _ => instance_receiver(class),
     };
+    probe_text_to(class, row, &receiver)
+}
+
+/// The text of one row's probe program, sending to `receiver`.
+fn probe_text_to(class: &ClassRow, row: &MethodRow, receiver: &str) -> String {
     let mut text = format!(
         "/* Method-body row: {} {} ({} arm). The documented name is sent with no\n\
          \x20  arguments to `{receiver}`. Derived by\n\
@@ -1413,6 +1420,93 @@ fn run_table(shard: Option<usize>) {
         drifted.join("\n  "),
     );
 
+    let _ = fs::remove_dir_all(&staging);
+}
+
+/// The second `Stem` receiver, holding several tails where the table's own
+/// holds one, so that a method's answer over several items is compared too.
+const STEM_SEVERAL_TAILS: &str = ".Stem~new~~put('v1','k1')~~put('v2','k2')~~put('v3','k3')";
+
+/// The lines of `out`, sorted, so that two listings of one set of tails in
+/// different orders read the same.
+fn sorted_lines(out: &[u8]) -> Vec<u8> {
+    let mut lines: Vec<&[u8]> = out.split_inclusive(|byte| *byte == b'\n').collect();
+    lines.sort_unstable();
+    lines.concat()
+}
+
+/// **Every `Stem` row the table records as `answers` answers the oracle's
+/// way over a stem of several tails too, up to the order of the lines on
+/// standard output.** The table's own `Stem` receiver holds one tail, since a
+/// stem lists its tails in assignment order and the oracle does not
+/// (Deviation 1). Sorting the output lines compares which tails and items an
+/// answer holds, and how often, without their order.
+#[test]
+fn a_stem_of_several_tails_answers_as_the_oracle_does_up_to_order() {
+    let oracle = support::oracle::locate();
+    let corpus = corpus_dir();
+    let classes = read_classes(&corpus);
+    let rows = read_method_rows(&corpus);
+    let committed = read_committed(&corpus, false);
+    let stem = classes
+        .iter()
+        .find(|class| class.name == "Stem")
+        .expect("class-set.txt carries Stem");
+    let staging = staging_root(Some(SHARDS));
+    let mut compared = 0;
+    let mut differ = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
+        if row.class != "Stem" || row.arm != "instance" {
+            continue;
+        }
+        // The oracle crashes on these sends whenever the stem holds a tail.
+        if ORACLE_CRASHING_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method)
+        {
+            continue;
+        }
+        if committed.get(&row.key()).map(|cell| cell.verdict) != Some(Body::Answers) {
+            continue;
+        }
+        let text = probe_text_to(stem, row, STEM_SEVERAL_TAILS);
+        let dir = staging.join(format!("{index:04}"));
+        fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+        let file = dir.join("probe.rex");
+        fs::write(&file, &text).unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+        let abs = fs::canonicalize(&file)
+            .unwrap_or_else(|e| panic!("cannot canonicalize {}: {e}", file.display()));
+        let mut ours = run_crate_in_zone(&abs, support::PINNED_ZONE);
+        let mut cpp: CppOutcome = oracle.run(&abs);
+        assert!(
+            !did_not_finish(&cpp),
+            "the oracle did not finish Stem {}: {:?}",
+            row.method,
+            cpp.termination
+        );
+        ours.stdout = sorted_lines(&ours.stdout);
+        cpp.stdout = sorted_lines(&cpp.stdout);
+        compared += 1;
+        if verdict(compare_raw(&ours, &cpp)) != gate_tables::Verdict::Agree {
+            differ.push(format!(
+                "Stem {}: oracle rc={} out={} err={}, crate rc={} out={} err={}",
+                row.method,
+                cpp.expect_exit_code(),
+                excerpt(&cpp.stdout),
+                excerpt(&cpp.stderr),
+                wrapped_exit_code(ours.exit_code),
+                excerpt(&ours.stdout),
+                excerpt(&ours.stderr),
+            ));
+        }
+    }
+    assert!(compared > 0, "no Stem row was compared");
+    assert!(
+        differ.is_empty(),
+        "{} Stem row(s) answer differently over several tails:\n  {}",
+        differ.len(),
+        differ.join("\n  "),
+    );
     let _ = fs::remove_dir_all(&staging);
 }
 

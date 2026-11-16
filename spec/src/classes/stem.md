@@ -23,10 +23,11 @@ lists what it inherits.
 A stem has an `unknown` method, and the page begins with what the other methods
 do; [the unknown rule](r:class.stem.unknown) says what `unknown` does with the
 messages that no method answers. Examples that show an error use a small routine
-`try`, as the builtin pages do. The order in which the tails are listed is not
-specified, as [the DO OVER rule](r:instr.do.deviation.1) says of a loop, and the
-examples then hold one tail or sort the answers ([the order
-rule](r:class.stem.deviation.1)).
+`try`, as the builtin pages do. The order in which the tails are listed is
+the order of assignment, as [the DO OVER
+rule](r:instr.do.deviation.1) says of a loop ([the order
+rule](r:class.stem.deviation.1)). ooRexx lists them in another order, so the
+examples outside that rule hold one tail or sort the answers.
 
 ## The class
 
@@ -292,8 +293,8 @@ r[class.stem.hasitem]
 argument, and `index(item)` answers the tail of such an item, as a string, and
 `.nil` when there is none. The default of the stem is not an item. Both take
 exactly one argument: a second raises `SYNTAX 93.902`. Which tail `index`
-answers when several items qualify is not specified ([the order
-rule](r:class.stem.deviation.1)).
+answers when several items qualify is the first in the order of assignment
+([the order rule](r:class.stem.deviation.1)).
 
 ```rexx
 s = .stem~new('N.')
@@ -391,7 +392,7 @@ d N. v 1
 r[class.stem.removeitem]
 `removeItem(item)` removes one item that is equal to the argument and answers
 it, and answers `.nil` when there is none; when several tails hold an equal
-item, which one is removed is not specified ([the order
+item, the one removed is the first in the order of assignment ([the order
 rule](r:class.stem.deviation.1)). The default is not an item. It takes
 exactly one argument: none raises `SYNTAX 93.903`, and a second raises
 `SYNTAX 93.902`.
@@ -456,7 +457,7 @@ r[class.stem.makearray]
 item, as strings, and `allItems` a new `Array` of the items. The default is in
 neither. They are instances of `Array` for a subclass receiver too, never the
 receiver, and do not follow later changes. They take no argument: one raises
-`SYNTAX 93.902`. The order is not specified ([the order
+`SYNTAX 93.902`. The order is that of assignment ([the order
 rule](r:class.stem.deviation.1)), and is the same for the three answers and
 for the supplier of one unchanged stem, so the item at a position belongs to
 the tail at the same position. The methods send no message to the stem,
@@ -961,7 +962,7 @@ r[class.stem.hasitem.sends]
 `hasItem(item)`, `index(item)` and `removeItem(item)` send `==` to the argument
 with a stored item as the argument, once for each item, until one answers true,
 and send nothing else, `hashCode` included; when none matches, every item is
-compared. The order in which the items are compared is not specified ([the order
+compared. The items are compared in the order of assignment ([the order
 rule](r:class.stem.deviation.1)). The very object that is stored is found
 without a `==` sent to it ([the identity rule](r:class.collection.identity)).
 The messages sent to an index are those of [the tails rule](r:class.stem.tails).
@@ -996,28 +997,42 @@ say (s~removeItem(q) == .nil) .local~n s~items
 ## Deviations
 
 r[class.stem.deviation.1]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, the order in which `hasItem`, `index` and `removeItem` compare
-the items, and so which tail `index` and `removeItem` choose among equal
-items, are not specified, and may differ from ooRexx's, which follows its
-storage. Which tails are produced, and how often, is specified. [The DO OVER
+The answers of `allIndexes`, `allItems`, `makeArray` and `supplier` list the
+tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+`hasItem`, `index` and `removeItem` compare the items in that order, so `index`
+and `removeItem` choose the first of several equal items. ooRexx follows its
+storage, which is neither insertion nor sorted order, so its answers can
+differ. Which tails are produced, and how often, is specified. A native
+routine that walks the variables with `RXSHV_NEXTV` is given a stem's tails in
+that order, and [`SysDumpVariables`](../rexxutil/sysdumpvariables.md) writes
+the lines of a stem's tails in that order. [The DO OVER
 rule](r:instr.do.deviation.1) says the same of a loop. See [Deviation
-1](../deviations.md). In the example the answers are sorted.
+1](../deviations.md).
 
 ```rexx
 s = .stem~new
-s['a'] = 3
-s['b'] = 1
-s['c'] = 2
-say s~allIndexes~sort~makeString('L', ',')
-say s~allItems~sort~makeString('L', ',')
-say s~items s~makeArray~items
+s['c'] = 'x'
+s['b'] = 'x'
+s['a'] = 'x'
+say s~allIndexes~makeString('L', ',')
+say s~index('x') s~removeItem('x') s~allIndexes~makeString('L', ',')
+s~remove('b')
+say s~allIndexes~makeString('L', ',')
+s['b'] = 'y'
+say s~allIndexes~makeString('L', ',')
+say s~allItems~makeString('L', ',')
+s['c'] = 'z'
+say s~supplier~index s~items s~makeArray~items
 ```
 
 ```output
-a,b,c
-1,2,3
-3 3
+c,b,a
+c x b,a
+a
+a,b
+x,y
+a 3 3
 ```
 
 r[class.stem.deviation.68]

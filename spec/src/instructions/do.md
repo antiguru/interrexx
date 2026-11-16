@@ -439,9 +439,9 @@ lines, so a null string yields none. A [Stem](r:class.stem.makearray), a
 [Directory](r:class.directory.makearray) and a
 [Table](r:class.table.makearray) yield their indexes, which for a Stem are the
 tails of the existing compound variables, and a [Set](r:class.set.makearray)
-yields its members. The order of those four is not specified, as [Deviation
-1](r:instr.do.deviation.1) says for a Stem and [Deviation
-33](../deviations.md#33-hash-iteration-order) for the others. A collection
+yields its members. The order of a Stem is that of assignment ([Deviation
+1](r:instr.do.deviation.1)), and that of the others is not specified
+([Deviation 33](../deviations.md#33-hash-iteration-order)). A collection
 that yields nothing leaves `name` as it was, and otherwise `name` holds the
 last item after the loop.
 
@@ -1089,11 +1089,11 @@ do 2 counter c; end => 26.2
 ## Deviations
 
 r[instr.do.deviation.1]
-The order in which a DO OVER over a Stem visits its tails is not specified.
-ooRexx visits them in an order that its storage fixes, which is neither the
-order of assignment nor a sorted order, and interrexx may visit them in
-another. Which tails the loop visits is specified, as [the OVER
-rule](r:instr.do.over) says.
+A DO OVER over a Stem visits its tails in the order they were first assigned, a
+tail that was dropped and assigned again counting from its new assignment. A
+dropped tail is not listed. ooRexx visits them in an order that its storage
+fixes, which is neither the order of assignment nor a sorted order. Which tails
+the loop visits is specified, as [the OVER rule](r:instr.do.over) says.
 
 ```rexx
 s. = 'dflt'
@@ -1102,11 +1102,19 @@ seen = .array~new
 do t over s.
   seen~append(t)
 end
-say seen~items seen~sort~makeString('l', ' ')
+say seen~makeString('l', ' ')
+drop s.alpha
+s.alpha = 4
+seen = .array~new
+do t over s.
+  seen~append(t)
+end
+say seen~makeString('l', ' ')
 ```
 
 ```output
-3 ALPHA BETA GAMMA
+BETA ALPHA GAMMA
+BETA GAMMA ALPHA
 ```
 
 r[instr.do.deviation.25]

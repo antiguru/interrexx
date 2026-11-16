@@ -1,4 +1,4 @@
-count 144
+count 146
 /* A Stem's store is the language's tails, and the collection surface has to
  * respect the one thing `Body::Stem` already models: a DROPPED tail is not
  * an absent one.
@@ -13,13 +13,11 @@ count 144
  * name.  Writing tombstones there would answer `U.K` where the oracle
  * answers `5`.
  *
- * `allIndexes`, `allItems`, `makeArray` and `supplier` answer tails in the
- * stem's own table order, which is neither insertion order nor sorted: the
- * tails live in a balanced binary tree keyed on (length, bytes) and walked in
- * POST-order.  The order therefore depends on the shape the insertions built,
- * so the two blocks at the end insert the same five tails forwards and
- * backwards and get different answers -- which is the assertion that a
- * store keeping insertion order, or one sorting the names, would fail.
+ * `allIndexes`, `allItems`, `makeArray` and `supplier` answer tails in an
+ * order that this program does not compare (Deviation 1), so each answer is
+ * sorted before it is printed.  The order itself is in
+ * rust/crates/interrexx/tests/stem_order_cases.  The two blocks at the end insert the same five
+ * tails forwards and backwards and must list the same set.
  */
 
 s. = 'dflt'
@@ -95,13 +93,17 @@ signal next
 done:
 say 'end'
 
-/* The tail order, which is the tree's post-order walk. */
-say 'order   ' obj~allIndexes~makeString('L',',') '/' obj~allItems~makeString('L',',')
-say 'makeArr ' obj~makeArray~makeString('L',',')
+/* The tails listed, sorted because their order is not compared. */
+say 'order   ' obj~allIndexes~sort~makeString('L',',') '/' obj~allItems~sort~makeString('L',',')
+say 'makeArr ' obj~makeArray~sort~makeString('L',',')
 osup = obj~supplier
+pairs = .array~new
 do while osup~available
-  say '  pair' osup~index osup~item
+  pairs~append(osup~index osup~item)
   osup~next
+end
+do pair over pairs~sort
+  say '  pair' pair
 end
 
 f.zebra = 1
@@ -109,16 +111,16 @@ f.apple = 2
 f.mango = 3
 f.q = 4
 f.longkeyname = 5
-say 'forward ' (f.)~allIndexes~makeString('L',',')
+say 'forward ' (f.)~allIndexes~sort~makeString('L',',')
 r.longkeyname = 5
 r.q = 4
 r.mango = 3
 r.apple = 2
 r.zebra = 1
-say 'reversed' (r.)~allIndexes~makeString('L',',')
+say 'reversed' (r.)~allIndexes~sort~makeString('L',',')
 
 do i = 1 to 25; g.i = i; end
-say 'grown   ' (g.)~allIndexes~makeString('L',',')
+say 'grown   ' (g.)~allIndexes~sort~makeString('L',',')
 
 /* And the operations built on that order. */
 u.b = 2
@@ -140,6 +142,6 @@ cobj2 = c.
 say 'read    ' cobj2['A'] cobj2['a']
 say 'hasIndex' cobj2~hasIndex('A') cobj2~hasIndex('a')
 cobj2['b'] = 2
-say 'written ' cobj2~allIndexes~makeString('L',',')
+say 'written ' cobj2~allIndexes~sort~makeString('L',',')
 say 'cases   ' cobj2['b'] cobj2['B'] c.b
-say 'built   ' (.Stem~new~~put('v1','k1')~~put('v2','k2'))~allIndexes~makeString('L',',')
+say 'built   ' (.Stem~new~~put('v1','k1')~~put('v2','k2'))~allIndexes~sort~makeString('L',',')
