@@ -1,4 +1,4 @@
-/* flagpinned.rex where a second message, seven and a half seconds in, posts the semaphore the
+/* flagpinned.rex where a second message, fifteen seconds in, posts the semaphore the
    started activity's pinned wait waits on. The callback's wait for the flag has been reported by
    then, and the pinned wait ending does not report it again.
    spec: native.threads.attach.deviation.178, conc.locks.deviation.14 */
@@ -11,7 +11,7 @@ do until .waiting = 1
 end
 f = .flagged~new
 call AtSendAfter f, 'AWAITFLAG', 500
-call AtSendAfter f, 'RELEASE', 7500
+call AtSendAfter f, 'RELEASE', 15000
 call SysSleep 3600
 f~flag = 1
 say 'done'

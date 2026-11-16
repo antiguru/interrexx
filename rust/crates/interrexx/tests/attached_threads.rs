@@ -920,35 +920,36 @@ fn a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop() {
 }
 
 /// [`a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop`] where a second
-/// message, seven and a half seconds in, ends the started activity's pinned wait. The callback's
-/// wait for the flag was reported while the pinned wait went on, and stderr does not report it a
-/// second time once that wait ends.
+/// message, fifteen seconds in, ends the started activity's pinned wait. The callback's wait for
+/// the flag was reported while the pinned wait went on, and stderr does not report it a second
+/// time once that wait ends. The line names a wait shorter than the time to that message, so a
+/// run too late to have been reported during the pinned wait fails instead of passing.
 // spec: native.threads.attach.deviation.178, conc.locks.deviation.14
 #[test]
 fn a_callback_wait_reported_during_a_pinned_wait_in_its_loop_is_reported_once() {
-    let (stdout, stderr, status) = run_ours_for("attach-flagrelease", "flagrelease.rex", "12");
+    let (stdout, stderr, status) = run_ours_for("attach-flagrelease", "flagrelease.rex", "20");
     assert_eq!(
         (stdout.as_str(), status),
         ("release sent\npinner released\n", 137),
         "stderr: {stderr}"
     );
-    assert_stalled_on_flag(&stderr);
+    let waited = assert_stalled_on_flag(&stderr);
+    assert!(waited < RELEASE_SECONDS, "stderr: {stderr}");
     assert_eq!(stderr.matches("interrexx: ").count(), 1, "stderr: {stderr}");
 }
 
 /// Asserts that `stderr` begins with the line that reports a callback's wait for a `GUARD WHEN`
 /// while the main program it stopped makes no progress, written once the wait was five seconds
-/// old ([`STALL_SECONDS`]).
-fn assert_stalled_on_flag(stderr: &str) {
+/// old ([`STALL_SECONDS`]), and returns the seconds it says.
+fn assert_stalled_on_flag(stderr: &str) -> u64 {
     let waited = stderr
         .strip_prefix("interrexx: a callback has waited ")
         .and_then(|rest| rest.split_once(" s for a guard's WHEN while the main program, "))
         .filter(|(_, rest)| rest.starts_with("which it stopped, makes no progress\n"))
         .and_then(|(seconds, _)| seconds.parse::<u64>().ok());
-    assert!(
-        waited.is_some_and(|seconds| STALL_SECONDS.contains(&seconds)),
-        "stderr: {stderr}"
-    );
+    let seconds = waited.unwrap_or(0);
+    assert!(STALL_SECONDS.contains(&seconds), "stderr: {stderr}");
+    seconds
 }
 
 /// An attached thread's message waits for the result of the message whose send the main program
@@ -1090,6 +1091,9 @@ const TRACE_HELD: &str = "interrexx: a trace line's delivery holds a guard and h
 /// written, and below [`SECONDS`], after which the run is killed, so a loaded machine that writes
 /// it late still passes.
 const STALL_SECONDS: std::ops::Range<u64> = 5..120;
+
+/// The seconds after which `flagrelease.rex` ends the pinned wait.
+const RELEASE_SECONDS: u64 = 15;
 
 /// Asserts that `stderr` is the one line that reports `waiter`'s wait for `what` while `stopped`
 /// makes no progress, written once the wait was five seconds old ([`STALL_SECONDS`]).
