@@ -2,7 +2,7 @@
    a routine's own context on an instance of a subclass of a class Class~new made, whose methods of
    the matching names, given to it with define, say that they run. The program's own message runs
    one of them, the members neither.
-   spec: native.threads.attach */
+   spec: native.threads.members */
 c = .class~new('M')
 c~define('ISINSTANCEOF', 'say "ISINSTANCEOF runs"; forward class (super)')
 c~define('HASMETHOD', 'say "HASMETHOD runs"; forward class (super)')

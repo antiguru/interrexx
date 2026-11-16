@@ -3,7 +3,7 @@
    built-in classes themselves, each given methods of its own under the names of the matching
    messages with setMethod and the scope OBJECT. Each such method says that it runs: none of them
    runs. The program's own `a~items` is a message, so that method says it runs.
-   spec: native.threads.attach */
+   spec: native.threads.members */
 e = .directory~new
 e['OBJSET'] = 'use arg n, src; self~setMethod(n, src, "OBJECT")'
 a = .array~enhanced(e)

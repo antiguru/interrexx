@@ -1,7 +1,7 @@
 /* An attached thread puts an item, through ArrayPut, into an array whose class defines a guarded
    PUT that says it runs, while the main program sleeps in an unguarded method of that array, the
    method that started the thread. The thread then sends TICK to a second object.
-   spec: native.threads.attach */
+   spec: native.threads.attach, native.threads.members */
 a = .putter~new
 t = .ticks~new
 a~holdput(t)

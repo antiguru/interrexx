@@ -3,7 +3,7 @@
    mixin class of the interpreter's own library, and then a mixin class of the program that
    redefines the methods of the matching names. Comparable comes ahead of that mixin in the
    instance's class order. Each redefinition says that it runs: neither of them is sent to.
-   spec: native.threads.attach */
+   spec: native.threads.members */
 s = .stem~new('S.')
 p = .supplier~new(.array~of('i1'), .array~of('x1'))
 k = .package~new('members', .array~of('::routine r public', '  return 1'))

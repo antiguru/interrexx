@@ -1,7 +1,7 @@
 /* The supplier members of the thread interface, called through a routine's own context on the
    supplier a stream answers, an instance of a subclass of Supplier that the interpreter's own
    library defines. That subclass's own methods answer, so the members read the stream's lines.
-   spec: native.threads.attach */
+   spec: native.threads.members */
 call lineout 'lines.txt', 'line1'
 call lineout 'lines.txt', 'line2'
 call lineout 'lines.txt'

@@ -2,7 +2,7 @@
    a package, a routine or a method, called through a routine's own context on objects whose
    classes redefine the methods of those names. Each redefinition says that it runs: none of them
    is sent to.
-   spec: native.threads.attach */
+   spec: native.threads.members */
 a = .xarray~new
 s = .xstem~new('S.')
 p = .xsupplier~new(.array~of('i1'), .array~of('x1'))

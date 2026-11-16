@@ -673,7 +673,7 @@ fn a_routine_an_attached_thread_calls_runs_once_and_so_does_its_next_send() {
 /// method of the same array. `ArrayPut` stores into the array without sending `PUT`, so the
 /// method neither runs nor waits for the guard, and the thread's next send, a `TICK` to a second
 /// object, runs once.
-// spec: native.threads.attach
+// spec: native.threads.attach, native.threads.members
 #[test]
 fn an_array_put_from_an_attached_thread_stores_without_a_send() {
     assert_eq!(
@@ -685,7 +685,7 @@ fn an_array_put_from_an_attached_thread_stores_without_a_send() {
 /// [`an_array_put_from_an_attached_thread_stores_without_a_send`] with the main program asleep in
 /// an unguarded method of the array: the array's `PUT`, which nothing keeps from running, does not
 /// run either.
-// spec: native.threads.attach
+// spec: native.threads.attach, native.threads.members
 #[test]
 fn an_array_put_from_an_attached_thread_runs_no_put_method() {
     assert_eq!(
@@ -699,7 +699,7 @@ fn an_array_put_from_an_attached_thread_runs_no_put_method() {
 /// a routine or a method for what it holds, act on the object itself: a method its class defines
 /// under the name of the matching message, which says that it runs, is never sent to. The
 /// program's own `a~items` afterwards is a message, so that method says it runs.
-// spec: native.threads.attach
+// spec: native.threads.members
 #[test]
 fn thread_interface_members_send_no_message_a_subclass_redefines() {
     let expected = "\
@@ -746,7 +746,7 @@ array 3 directory 0 table 0
 /// [`thread_interface_members_send_no_message_a_subclass_redefines`] on instances of the built-in
 /// classes themselves, each given methods of its own under the names of the matching messages with
 /// `setMethod` and the scope `OBJECT`: none of those methods runs.
-// spec: native.threads.attach
+// spec: native.threads.members
 #[test]
 fn thread_interface_members_run_no_method_an_object_sets_on_itself() {
     let expected = "\
@@ -796,7 +796,7 @@ GetMethodPackage present
 /// of the interpreter's own library, and then a mixin class of the program that redefines the
 /// methods of those names. `Comparable` comes ahead of that mixin in the instance's class order,
 /// and the redefinitions do not run either.
-// spec: native.threads.attach
+// spec: native.threads.members
 #[test]
 fn thread_interface_members_send_no_message_a_mixin_behind_a_library_mixin_redefines() {
     assert_eq!(
@@ -809,7 +809,7 @@ fn thread_interface_members_send_no_message_a_mixin_behind_a_library_mixin_redef
 /// `HasMethod` on an instance of a subclass of a class that `Class~new` made, which takes the
 /// package of the interpreter's own library and was given methods of those names with `define`:
 /// those methods do not run either.
-// spec: native.threads.attach
+// spec: native.threads.members
 #[test]
 fn thread_interface_members_send_no_message_a_class_new_made_redefines() {
     assert_eq!(
@@ -826,7 +826,7 @@ fn thread_interface_members_send_no_message_a_class_new_made_redefines() {
 /// a subclass of `Supplier` the interpreter's own library defines: that subclass's methods answer,
 /// so the members read the stream's lines. Not asked of the oracle, which ends this program with a
 /// segmentation fault.
-// spec: native.threads.attach
+// spec: native.threads.members
 #[test]
 fn thread_interface_supplier_members_run_a_library_subclass_s_own_methods() {
     let expected = "\
