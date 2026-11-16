@@ -1130,10 +1130,12 @@ error that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING, whether or 
 program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
 untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
 takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. A builtin's
-argument that the builtin reads as a string is not part of this Deviation:
-there interrexx raises what ooRexx raises, <code>SYNTAX 88.909</code> with the argument's
-position (<a href="conventions.html#r-conv.string.builtin-argument">the rule</a>). The
+sees an address-like number, a different error or a crash. The arguments of a
+builtin are not part of this Deviation, except the string the builtin works on
+and the names that the conventions list: an argument raises the error of its
+own kind, <code>SYNTAX 88.909</code> with its position where the builtin reads it as a
+string (<a href="conventions.html#r-conv.string.builtin-argument">the rule</a>) and the error of its check
+otherwise (<a href="conventions.html#r-conv.string.argument-kind">the kind rule</a>). The
 <a href="conventions.html#r-conv.string.deviation.169">conventions</a> state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.</p>
 <h2 id="170-a-builtin-converts-every-argument-before-it-checks-any"><a class="header" href="#170-a-builtin-converts-every-argument-before-it-checks-any">170. A builtin converts every argument before it checks any</a></h2>

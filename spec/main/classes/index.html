@@ -1028,8 +1028,10 @@ NOSTRING if it is trapped. ooRexx reads <code>.nil</code> as a string there, wit
 results or a crash. <a href="../conventions.html#r-conv.string.deviation.30">The
 conventions</a> and <a href="../conditions/nostring.html#r-cond.nostring.deviation.30">the NOSTRING
 rule</a> state it for builtin arguments and for
-the condition, and <a href="../conventions.html#r-conv.string.builtin-argument">the argument rule</a> gives
-the <code>SYNTAX 88.909</code> of an argument a builtin reads as a string.</p>
+the condition, <a href="../conventions.html#r-conv.string.builtin-argument">the argument rule</a> gives
+the <code>SYNTAX 88.909</code> of an argument a builtin reads as a string, and <a href="../conventions.html#r-conv.string.argument-kind">the kind
+rule</a> the error of an argument it reads as
+something else.</p>
 <pre><code class="language-rexx">say 'before'
 say 'x' .weird~new
 ::class weird
