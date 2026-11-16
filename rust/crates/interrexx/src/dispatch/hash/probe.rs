@@ -1,15 +1,22 @@
 use super::*;
 
-/// Where `index` is: the position of the oldest live entry under it, if any,
-/// and the index's code, which an append files a new entry under.
+/// Where `index` is: the position of the oldest live entry under it, or,
+/// when there is none, where the chain of its code was when the probe last
+/// walked the slots of the store it answers with; and the index's code,
+/// which an append files a new entry under. An append that follows with
+/// nothing sent in between starts from that place rather than walking the
+/// slots again.
 pub(super) struct Probe {
-    pub(super) found: Option<usize>,
+    pub(super) at: Result<usize, Place>,
     pub(super) code: u64,
-    /// Where the chain of `code` was when the probe last walked the slots of
-    /// the store it answers with: the chain's slot and oldest entry, or the
-    /// slot a new chain takes. An append that follows with nothing sent in
-    /// between starts from it rather than walking the slots again.
-    pub(super) chain: Result<(usize, usize), usize>,
+}
+
+impl Probe {
+    /// The position of the oldest live entry under the index, if any.
+    #[inline]
+    pub(super) fn found(&self) -> Option<usize> {
+        self.at.ok()
+    }
 }
 
 pub(super) fn probe(
@@ -62,8 +69,8 @@ fn probe_string_value(
     };
     if let Some(wanted) = plain {
         let code = code_of(super::super::string_hash(wanted));
-        if let Some((found, chain)) = find_plain_string(interp, &store, code, wanted) {
-            return Ok((store, Probe { found, code, chain }));
+        if let Some(at) = find_plain_string(interp, &store, code, wanted) {
+            return Ok((store, Probe { at, code }));
         }
     }
     let short;
@@ -79,8 +86,8 @@ fn probe_string_value(
         }
     };
     let code = code_of(super::super::string_hash(wanted));
-    let (found, chain) = find_text_in(interp, &store, code, wanted)?;
-    Ok((store, Probe { found, code, chain }))
+    let at = find_text_in(interp, &store, code, wanted)?;
+    Ok((store, Probe { at, code }))
 }
 
 /// The position of the entry whose index's string value is `wanted`, in a
@@ -92,31 +99,32 @@ pub(super) fn find_text(
     code: u64,
     wanted: &[u8],
 ) -> Result<Option<usize>, Failure> {
-    Ok(find_text_in(interp, store, code, wanted)?.0)
+    Ok(find_text_in(interp, store, code, wanted)?.ok())
 }
 
-/// [`find_text`], and where the chain of `code` is, as [`Probe::chain`].
+/// [`find_text`], or where the chain of `code` is, as [`Probe::at`].
 fn find_text_in(
     interp: &mut Interp,
     store: &Store,
     code: u64,
     wanted: &[u8],
-) -> Result<(Option<usize>, Result<(usize, usize), usize>), Failure> {
+) -> Result<Result<usize, Place>, Failure> {
     if let Some(found) = find_plain_string(interp, store, code, wanted) {
         return Ok(found);
     }
     let (slots, codes) = codes_of(interp, store)?;
     let chain = chain_in(slots, codes, code);
+    let place = Place::of(chain, codes);
     let mut at = chain.ok().map(|(_, head)| head);
     while let Some(position) = at {
         if let Some(held) = slot_at(interp, store.indexes, position)?
             && *interp.to_text(held) == *wanted
         {
-            return Ok((Some(position), chain));
+            return Ok(Ok(position));
         }
         at = codes_of(interp, store)?.1.next(position);
     }
-    Ok((None, chain))
+    Ok(Err(place))
 }
 
 fn probe_by_protocol(
@@ -138,6 +146,7 @@ fn probe_by_protocol(
         // of the index's own code is compared.
         let (slots, codes) = codes_of(interp, &store)?;
         let chain = chain_in(slots, codes, code);
+        let place = Place::of(chain, codes);
         let mut at = chain.ok().map(|(_, head)| head);
         while let Some(position) = at {
             let Some(held) = slot_at(interp, store.indexes, position)? else {
@@ -162,9 +171,8 @@ fn probe_by_protocol(
                 return Ok((
                     store,
                     Probe {
-                        found: Some(position),
+                        at: Ok(position),
                         code,
-                        chain,
                     },
                 ));
             }
@@ -174,9 +182,8 @@ fn probe_by_protocol(
         return Ok((
             store,
             Probe {
-                found: None,
+                at: Err(place),
                 code,
-                chain,
             },
         ));
     }
@@ -192,26 +199,27 @@ fn find_plain_string(
     store: &Store,
     code: u64,
     wanted: &[u8],
-) -> Option<(Option<usize>, Result<(usize, usize), usize>)> {
+) -> Option<Result<usize, Place>> {
     let (slots, codes) = codes_of(interp, store).ok()?;
     let indexes = array_slots(interp, store.indexes).ok()?;
     let chain = chain_in(slots, codes, code);
     let Ok((_, head)) = chain else {
-        return Some((None, chain));
+        return Some(Err(Place::of(chain, codes)));
     };
     for position in codes.chain(head) {
         if let Some(held) = indexes.get(position).copied().flatten()
             && plain_text_is(interp, held, wanted)?
         {
-            return Some((Some(position), chain));
+            return Some(Ok(position));
         }
     }
-    Some((None, chain))
+    Some(Err(Place::of(chain, codes)))
 }
 
 /// Whether `held`'s string value is `wanted`, for a plain string only: the
 /// bytes in the handle, or a `Body::Text`'s own, which no redirect applies
 /// to. `None` for any other value.
+#[inline]
 fn plain_text_is(interp: &Interp, held: ObjRef, wanted: &[u8]) -> Option<bool> {
     match held.decode() {
         Decoded::Text(text) => Some(*text == *wanted),

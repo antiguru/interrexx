@@ -21,7 +21,7 @@ pub(super) fn take_in(
         return Ok(None);
     };
     let (store, found) = probe_in(interp, receiver, half, store, index)?;
-    let Some(position) = found.found else {
+    let Some(position) = found.found() else {
         return Ok(None);
     };
     remove_entry(interp, &store, position)
@@ -75,7 +75,7 @@ pub(super) fn take_merged(
     if method_store(interp, receiver)?.is_none() && unknown_method(interp, receiver).is_none() {
         interp.bump_route_generation();
         let (store, found) = probe(interp, receiver, index)?;
-        let Some(position) = found.found else {
+        let Some(position) = found.found() else {
             return Ok(None);
         };
         if removal == Removal::Answered {
@@ -85,12 +85,12 @@ pub(super) fn take_merged(
     }
     // `get` runs a method only where the contents miss, so a contents entry
     // that is discarded needs no read.
-    let old = if removal == Removal::Discarded && probe(interp, receiver, index)?.1.found.is_some()
-    {
-        None
-    } else {
-        merged_get(interp, receiver, index)?
-    };
+    let old =
+        if removal == Removal::Discarded && probe(interp, receiver, index)?.1.found().is_some() {
+            None
+        } else {
+            merged_get(interp, receiver, index)?
+        };
     take(interp, receiver, index)?;
     take_in(interp, receiver, METHODS, index)?;
     Ok(old)

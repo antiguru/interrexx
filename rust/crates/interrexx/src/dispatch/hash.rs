@@ -451,7 +451,7 @@ fn method_table_value(
         return Ok(None);
     };
     let (store, found) = probe_in(interp, receiver, METHODS, store, index)?;
-    let Some(slot) = found.found else {
+    let Some(slot) = found.found() else {
         return Ok(None);
     };
     let Some(stored) = slot_at(interp, store.items, slot)? else {
@@ -481,7 +481,7 @@ fn merged_get(
     index: ObjRef,
 ) -> Result<Option<ObjRef>, Failure> {
     let (store, found) = probe(interp, receiver, index)?;
-    if let Some(slot) = found.found {
+    if let Some(slot) = found.found() {
         return Ok(Some(item_at(interp, &store, slot)?.unwrap_or(ObjRef::NIL)));
     }
     if let Some(value) = method_table_value(interp, receiver, index)? {
@@ -516,14 +516,14 @@ pub(crate) fn store_remove(
 /// method returns.
 fn merged_has_index(interp: &mut Interp, receiver: ObjRef, index: ObjRef) -> Result<bool, Failure> {
     let (_, found) = probe(interp, receiver, index)?;
-    if found.found.is_some() {
+    if found.found().is_some() {
         return Ok(true);
     }
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(false);
     };
     let (_, found) = probe_in(interp, receiver, METHODS, store, index)?;
-    Ok(found.found.is_some())
+    Ok(found.found().is_some())
 }
 
 /// Every (index, stored entry) the method table holds, rooted, none of them
@@ -873,7 +873,7 @@ fn native_hash_index(
         // `hashCode` to it, `==` against the stored indexes of that hash --
         // and answers the stored object, `.nil` for none.
         let (store, found) = probe(interp, receiver, wanted)?;
-        let Some(slot) = found.found else {
+        let Some(slot) = found.found() else {
             return Ok(Some(ObjRef::NIL));
         };
         return Ok(Some(
@@ -1011,7 +1011,7 @@ pub(crate) fn store_insert(
 /// The item the receiver's store holds under `index`.
 pub(crate) fn store_item(interp: &mut Interp, receiver: ObjRef, index: ObjRef) -> Option<ObjRef> {
     let (store, found) = probe(interp, receiver, index).ok()?;
-    let slot = found.found?;
+    let slot = found.found()?;
     slot_at(interp, store.items, slot).ok().flatten()
 }
 
