@@ -1293,12 +1293,12 @@ subset=> copy A.allItems C.remove C.remove C.isEmpty | -
 r[class.set.deviation.33]
 `allIndexes`, `allItems`, `makeArray` and `supplier` list the members in the
 order they were first put, and so the set operations, which walk the members of
-their argument, follow that order. Which members are produced, and how often, is
-specified. Which stored objects a lookup compares, by `==` or `hashCode`, beyond
-those it must compare, and how often, is not specified, and neither is the
-member that a lookup acts on when an `==` or `hashCode` that it sends changes
-the set. ooRexx lists the members in an order that its storage fixes, so its
-answers can differ. See [Deviation
+their argument, follow that order. Which members are produced, and how often,
+is specified. Which stored objects a lookup compares, by `==` or `hashCode`,
+beyond those it must compare, and how often, is not specified, and neither is
+the member that a lookup acts on when an `==` or `hashCode` that it sends
+changes the set, which may be none of them. ooRexx lists the members in an
+order that its storage fixes, so its answers can differ. See [Deviation
 33](../deviations.md#33-hash-iteration-order).
 
 ```rexx

@@ -824,9 +824,9 @@ items in that order. Which entries are produced, and how often, is specified.
 Which stored indexes or items a lookup or a search compares, by `==` or
 `hashCode`, beyond those it must compare, and how often, is not specified, and
 neither is the entry that a lookup or a search acts on when an `==` or
-`hashCode` that it sends changes the table. ooRexx lists the entries in an order
-that its storage fixes, so its answers can differ. See [Deviation
-33](../deviations.md#33-hash-iteration-order).
+`hashCode` that it sends changes the table, which may be none of them. ooRexx
+lists the entries in an order that its storage fixes, so its answers can
+differ. See [Deviation 33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 t = .table~new

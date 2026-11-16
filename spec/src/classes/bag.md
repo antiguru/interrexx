@@ -1543,13 +1543,13 @@ r[class.bag.deviation.33]
 order they were put, each as often as it occurs, and so the set operations,
 which walk the members of their argument, follow that order. A member that is
 removed and then put again comes last. Which members are produced, and how
-often, is specified. Which stored objects a lookup or a search compares, by `==`
-or `hashCode`, beyond those it must compare, and how often, and which members
-`uniqueIndexes` sends `hashCode` or `==`, are not specified, and neither is the
-member that a lookup or a search acts on when an `==` or `hashCode` that it
-sends changes the bag. ooRexx lists the members in an order that its storage
-fixes, so its answers can differ. See [Deviation
-33](../deviations.md#33-hash-iteration-order).
+often, is specified. Which stored objects a lookup or a search compares, by
+`==` or `hashCode`, beyond those it must compare, and how often, and which
+members `uniqueIndexes` sends `hashCode` or `==`, are not specified, and
+neither is the member that a lookup or a search acts on when an `==` or
+`hashCode` that it sends changes the bag, which may be none of them. ooRexx
+lists the members in an order that its storage fixes, so its answers can
+differ. See [Deviation 33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 b = .bag~new

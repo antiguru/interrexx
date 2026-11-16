@@ -294,15 +294,17 @@ that its storage fixes, which is neither the order of insertion nor a sorted
 order, acts on the newest of several entries at one index, and searches the
 items in the order of its storage.
 
-Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search compares, by `==` or `hashCode`, beyond those it must
-compare, and how often, is not specified. When a method that a search sends,
-`==` or `hashCode`, changes the collection being searched, which entry the
-search finds, answers or removes is not specified either. The order is not
-specified for the methods that `methods` and `instanceMethods` list, for the
-variables that `.context~variables` and `SysDumpVariables` list, and for the
-entries that the interpreter itself puts in `.environment` and `.local`; the
-entries that a program puts there follow the order above.
+Which entries are yielded, and how often, is specified. Which stored indexes or
+items a search compares, by `==` or `hashCode`, beyond those it must compare,
+and how often, is not specified. When a method that a search sends, `==` or
+`hashCode`, changes the collection being searched, which entry the search
+finds, answers or removes is not specified either, and it may act on none of
+them: a `removeAll` can answer an empty array while the entries under its index
+stay. The order is not specified for the methods that `methods` and
+`instanceMethods` list, for the variables that `.context~variables` and
+`SysDumpVariables` list, and for the entries that the interpreter itself puts
+in `.environment` and `.local`; the entries that a program puts there follow
+the order above.
 
 ## 34. `..` in a file name
 

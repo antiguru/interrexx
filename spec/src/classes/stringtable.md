@@ -882,8 +882,8 @@ r[class.stringtable.deviation.33]
 order they were first put, and `hasItem`, `index` and `removeItem` compare the
 items in that order. Which entries are produced, and how often, is specified.
 The entry that a search acts on when an `==` that it sends changes the string
-table is not specified. ooRexx lists the entries in an order that its storage
-fixes, so its answers can differ. See [Deviation
+table is not specified, and may be none of them. ooRexx lists the entries in an
+order that its storage fixes, so its answers can differ. See [Deviation
 33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
