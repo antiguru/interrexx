@@ -11,6 +11,8 @@
 //!   trapped and shown as its code.
 //! * `program`: the input is the whole program; the case records rc, stdout
 //!   and stderr.
+//!
+//! A file named `<name>.<host>` holds answers the host decides, and runs only on that host.
 
 use std::collections::HashMap;
 
@@ -21,6 +23,17 @@ mod error_text;
 mod watchdog;
 
 const CASES: &str = "tests/rxmath_results";
+
+/// Whether `file` holds the answers of a host other than this one: a file named `<name>.<host>`,
+/// for a host Rust names (`linux`, `macos`), holds that host's.
+fn for_another_host(file: &datadriven::TestFile) -> bool {
+    let host = std::path::Path::new(&file.filename)
+        .extension()
+        .and_then(|extension| extension.to_str());
+    host.is_some_and(|host| {
+        ["linux", "macos", "windows"].contains(&host) && host != std::env::consts::OS
+    })
+}
 
 /// The path every case runs as.
 const PATH: &str = "probe.rex";
@@ -59,47 +72,51 @@ fn run(program: String) -> interrexx::Outcome {
 #[test]
 fn rxmath_answers_as_the_oracle_does() {
     let mut cases = 0;
-    datadriven::walk(CASES, |file| {
-        file.run(|case| {
-            cases += 1;
-            let lines: Vec<&str> = case.input.lines().collect();
-            let args: HashMap<String, Vec<String>> = case
-                .args
-                .iter()
-                .map(|(key, values)| (key.clone(), values.clone()))
-                .collect();
-            match case.directive.as_str() {
-                "eval" | "raises" => {
-                    let program = if case.directive == "eval" {
-                        eval_program(&args, &lines)
-                    } else {
-                        raises_program(&lines)
-                    };
-                    let outcome = run(program);
-                    assert_eq!(
-                        outcome.exit_code,
-                        0,
-                        "{}",
-                        String::from_utf8_lossy(&outcome.stderr)
-                    );
-                    String::from_utf8_lossy(&outcome.stdout).into_owned()
+    datadriven::walk_exclusive(
+        CASES,
+        |file| {
+            file.run(|case| {
+                cases += 1;
+                let lines: Vec<&str> = case.input.lines().collect();
+                let args: HashMap<String, Vec<String>> = case
+                    .args
+                    .iter()
+                    .map(|(key, values)| (key.clone(), values.clone()))
+                    .collect();
+                match case.directive.as_str() {
+                    "eval" | "raises" => {
+                        let program = if case.directive == "eval" {
+                            eval_program(&args, &lines)
+                        } else {
+                            raises_program(&lines)
+                        };
+                        let outcome = run(program);
+                        assert_eq!(
+                            outcome.exit_code,
+                            0,
+                            "{}",
+                            String::from_utf8_lossy(&outcome.stderr)
+                        );
+                        String::from_utf8_lossy(&outcome.stdout).into_owned()
+                    }
+                    "program" => {
+                        let outcome = run(format!("{}\n", case.input.trim_end()));
+                        // The message text of an error report is not specified, so
+                        // a recorded answer holds the code and subcode of each
+                        // report on stderr and not its text.
+                        format!(
+                            "rc {}\n[stdout]\n{}[stderr]\n{}",
+                            outcome.exit_code,
+                            String::from_utf8_lossy(&outcome.stdout)
+                                .replace(env!("CARGO_PKG_VERSION"), "<version>"),
+                            String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr)),
+                        )
+                    }
+                    other => panic!("unknown directive {other}"),
                 }
-                "program" => {
-                    let outcome = run(format!("{}\n", case.input.trim_end()));
-                    // The message text of an error report is not specified, so
-                    // a recorded answer holds the code and subcode of each
-                    // report on stderr and not its text.
-                    format!(
-                        "rc {}\n[stdout]\n{}[stderr]\n{}",
-                        outcome.exit_code,
-                        String::from_utf8_lossy(&outcome.stdout)
-                            .replace(env!("CARGO_PKG_VERSION"), "<version>"),
-                        String::from_utf8_lossy(&error_text::cut_error_texts(&outcome.stderr)),
-                    )
-                }
-                other => panic!("unknown directive {other}"),
-            }
-        });
-    });
+            });
+        },
+        for_another_host,
+    );
     assert!(cases > 0, "no case ran");
 }

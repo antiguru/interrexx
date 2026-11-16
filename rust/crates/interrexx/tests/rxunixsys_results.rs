@@ -1,7 +1,8 @@
 //! The `rxunixsys` library run in Rust, against the oracle's
 //! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
-//! fresh directory, `{dir}` in a case's text.
+//! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
+//! (`uname -s`), which `SysUname` answers.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
 //!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
@@ -95,8 +96,17 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         String::from_utf8_lossy(&support::error_text::cut_error_texts(bytes))
             .replace(&dir.display().to_string(), "{dir}")
     };
-    let raw =
-        |bytes: &[u8]| String::from_utf8_lossy(bytes).replace(&dir.display().to_string(), "{dir}");
+    // The system's name is the host's (`docs/design/decisions.md`), so a recorded answer holds
+    // `{sysname}` where `SysUname` answered it.
+    let sysname = format!(
+        "\"{}\"",
+        rustix::system::uname().sysname().to_string_lossy()
+    );
+    let raw = |bytes: &[u8]| {
+        String::from_utf8_lossy(bytes)
+            .replace(&dir.display().to_string(), "{dir}")
+            .replace(&sysname, "\"{sysname}\"")
+    };
     (
         output.status.code().unwrap_or(-1),
         raw(&output.stdout),
