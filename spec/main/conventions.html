@@ -226,8 +226,8 @@ a subclass of <code>String</code> is a string here, whether it is passed directl
 what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
 is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
 builtin that reads several such arguments reads them from left to right, before
-it checks any of them, when the call has no fault (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
-170</a>). An argument that a builtin reads
+it checks any of them, when the call has no fault (<a href="builtins/index.html#r-bif.index.call.convert">the conversion
+rule</a>). An argument that a builtin reads
 as a whole number or as a number is read this way too, and the replacement must
 then be a number. A builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call
 rule</a> has no fallback to <code>STRING</code>, as that rule says,
@@ -536,7 +536,7 @@ is raised at that point, and nothing after it is evaluated. Each control
 expression of a DO is an operation of its own: the instruction evaluates and
 checks them one at a time, in the order they are written (<a href="instructions/do.html#r-instr.do.control.check">the DO
 rule</a>). A builtin's
-<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">conversion</a> of the arguments that are
+<a href="builtins/index.html#r-bif.index.call.convert">conversion</a> of the arguments that are
 objects, by sending them <code>STRING</code>, is part of its checks: a call that has no
 fault sends <code>STRING</code> to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one

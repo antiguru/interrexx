@@ -311,8 +311,8 @@ a subclass of <code>String</code> is a string here, whether it is passed directl
 what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
 is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
 builtin that reads several such arguments reads them from left to right, before
-it checks any of them, when the call has no fault (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
-170</a>). An argument that a builtin reads
+it checks any of them, when the call has no fault (<a href="builtins/index.html#r-bif.index.call.convert">the conversion
+rule</a>). An argument that a builtin reads
 as a whole number or as a number is read this way too, and the replacement must
 then be a number. A builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call
 rule</a> has no fallback to <code>STRING</code>, as that rule says,
@@ -621,7 +621,7 @@ is raised at that point, and nothing after it is evaluated. Each control
 expression of a DO is an operation of its own: the instruction evaluates and
 checks them one at a time, in the order they are written (<a href="instructions/do.html#r-instr.do.control.check">the DO
 rule</a>). A builtin's
-<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">conversion</a> of the arguments that are
+<a href="builtins/index.html#r-bif.index.call.convert">conversion</a> of the arguments that are
 objects, by sending them <code>STRING</code>, is part of its checks: a call that has no
 fault sends <code>STRING</code> to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
@@ -111045,7 +111045,7 @@ say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D4, D98, D99, D170</p>
+<p class="deviations">Deviations: D4, D98, D99</p>
 <p>This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a>
@@ -111197,15 +111197,13 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 88.909
 z q
 </code></pre>
-<div class="rule" id="r-bif.index.call.convert.deviation.170"><a href="builtins/index.html#r-bif.index.call.convert.deviation.170">[bif.index.call.convert.deviation.170]</a></div>
+<div class="rule" id="r-bif.index.call.convert"><a href="builtins/index.html#r-bif.index.call.convert">[bif.index.call.convert]</a></div>
 <p>A builtin's conversion of every argument that its page calls a string and
 that is an object other than a string is part of its checks. A call that has
 no fault converts those arguments from left to right before it checks any
 argument. When the call has a fault, which error it raises, and whether and to
 how many arguments it sends <code>STRING</code>, are unspecified, as <a href="builtins/../conventions.html#r-conv.error.precedence">the precedence
-rule</a> says. ooRexx converts an argument as it checks
-it and stops at the first that is in error, so a <code>STRING</code> method of a later
-argument does not run.</p>
+rule</a> says.</p>
 <pre><code class="language-rexx">say substr('abcdef', .c~new('n'), .c~new('length'))
 ::class c
 ::method init
@@ -128727,17 +128725,10 @@ string (<a href="conventions.html#r-conv.string.builtin-argument">the rule</a>) 
 otherwise (<a href="conventions.html#r-conv.string.argument-kind">the kind rule</a>). The
 <a href="conventions.html#r-conv.string.deviation.169">conventions</a> state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.</p>
-<h2 id="170-a-builtin-converts-every-argument-before-it-checks-any"><a class="header" href="#170-a-builtin-converts-every-argument-before-it-checks-any">170. A builtin converts every argument before it checks any</a></h2>
-<p>A builtin whose page calls an argument a string converts each such argument
-that is an object other than a string, sending <code>STRING</code> (or <code>REQUEST</code> and
-<code>MAKESTRING</code>, as <a href="conventions.html#r-conv.string.object">the conversion rule</a> says), from left
-to right, before it checks any argument, when the call has no fault. The
-conversion is part of the builtin's checks: when the call has a fault, which
-error it raises, and whether and to how many arguments it sends <code>STRING</code>, are
-unspecified (<a href="conventions.html#r-conv.error.precedence">the precedence rule</a>). ooRexx converts
-an argument as it checks it and stops at the first one in error, so that the
-method of a later argument never runs. The difference shows only in what such
-a method does: counting, input or output, or raising a condition of its own.</p>
+<h2 id="170-withdrawn"><a class="header" href="#170-withdrawn">170. Withdrawn</a></h2>
+<p>A builtin's conversion of its arguments is part of its checks, and a call with
+no fault converts them from the left before the checks, as ooRexx does
+(<a href="builtins/index.html#r-bif.index.call.convert">the conversion rule</a>); no difference remains.</p>
 <h2 id="171-query-position-sys-of-a-stream-just-opened-for-reading"><a class="header" href="#171-query-position-sys-of-a-stream-just-opened-for-reading">171. QUERY POSITION SYS of a stream just opened for reading</a></h2>
 <p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, before
 anything is read or positioned, answers 0, the host's offset when nothing has
