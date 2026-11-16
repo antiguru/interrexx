@@ -306,7 +306,7 @@ String	endsWith	instance	answers	rc 168
 String	equals	instance	answers	rc 163
 String	floor	instance	answers	rc 163
 String	format	instance	answers	rc 163
-String	hashCode	instance	answers	rc 0
+String	hashCode	instance	unstable	this crate
 String	insert	instance	answers	rc 163
 String	lastPos	instance	answers	rc 163
 String	left	instance	answers	rc 163
@@ -978,7 +978,7 @@ DateTime	daysInYear	instance	answers	rc 0
 DateTime	elapsed	instance	unstable	this crate
 DateTime	europeanDate	instance	answers	rc 0
 DateTime	fullDate	instance	answers	rc 0
-DateTime	hashCode	instance	answers	rc 0
+DateTime	hashCode	instance	unstable	this crate
 DateTime	hours	instance	answers	rc 0
 DateTime	isLeapYear	instance	answers	rc 0
 DateTime	isoDate	instance	answers	rc 0
@@ -1054,7 +1054,7 @@ File	compareTo	instance	answers	rc 163
 File	delete	instance	answers	rc 0
 File	exists	instance	answers	rc 0
 File	extension	instance	answers	rc 0
-File	hashCode	instance	answers	rc 0
+File	hashCode	instance	unstable	this crate
 File	init	instance	answers	rc 163
 File	isCaseSensitive	instance	answers	rc 0
 File	isDirectory	instance	answers	rc 0

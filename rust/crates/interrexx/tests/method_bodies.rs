@@ -306,6 +306,17 @@ fn method_name_literal(name: &str) -> &str {
     }
 }
 
+/// Sends whose answer is a string's hash code, which this crate keys by the
+/// hash seed drawn for each run (`r[class.string.hashcode]`), so that two
+/// runs answer differently by specification. `DateTime` and `File` answer the
+/// hash code of a string of their own. Such a row is `unstable` in this
+/// crate, and reaching that from `answers` is not the row stopping.
+const SEEDED_SENDS: &[(&str, &str)] = &[
+    ("String", "hashCode"),
+    ("DateTime", "hashCode"),
+    ("File", "hashCode"),
+];
+
 /// A class whose `class-set.txt` construction expression cannot be this
 /// table's receiver, with the expression that replaces it.
 const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
@@ -1348,7 +1359,12 @@ fn run_table(shard: Option<usize>) {
         let crashes = ORACLE_CRASHING_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
-        if !(crashes && cell.verdict == Body::Uncomparable) && regressed(was.verdict, cell.verdict)
+        let seeded = SEEDED_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method);
+        if !(crashes && cell.verdict == Body::Uncomparable)
+            && !(seeded && cell.verdict == Body::Unstable)
+            && regressed(was.verdict, cell.verdict)
         {
             regressions.push(format!(
                 "{} {} ({} arm): {} -> {} [{}]",
