@@ -75,23 +75,6 @@ The most recent run counting cycles on both sides (2026-08-20, at `d90de68e3`) g
 (allocation, string materialisation, `PARSE`, decimal loop control); it has fewer cache and branch
 misses than ooRexx on every axis measured except L1i.
 
-## Hash store baseline
-
-Callgrind instruction counts (whole process, and with libc and ld-linux subtracted) and release
-wall time (median of five) for the programs that exercise the hash store and stem tails, measured
-2026-11-16 at `3bb9709da` before the store changes (issue #36), release build, two callgrind rounds.
-Most of `hashcopy`'s whole-process count is inside libc, hence its small subtracted figure.
-
-| program | Ir (whole process) | Ir (libc subtracted) | wall (s) |
-|---|---:|---:|---:|
-| `hashgrow` | 9,435,493,844 | 8,476,257,915 | 0.902 |
-| `hashlookup` | 14,132,248,904 | 13,889,603,910 | 1.167 |
-| `hashchurn` | 9,930,428,112 | 9,089,273,184 | 0.853 |
-| `hashiter` | 13,141,968,772 | 12,063,312,925 | 0.901 |
-| `hashdup` | 18,485,651,065 | 17,773,988,475 | 1.037 |
-| `hashcopy` | 15,185,194,570 | 4,917,274,166 | 0.661 |
-| `stemchurn` | 10,269,922,642 | 9,666,407,184 | 0.788 |
-
 ## Tried and rejected
 
 * **A bytecode VM replacing the execution core**: ooRexx is a tree walker of the same family, and
