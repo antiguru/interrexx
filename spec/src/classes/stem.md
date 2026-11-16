@@ -998,12 +998,15 @@ say (s~removeItem(q) == .nil) .local~n s~items
 
 r[class.stem.deviation.1]
 The answers of `allIndexes`, `allItems`, `makeArray` and `supplier` list the
-tails in the order they were first assigned. A dropped tail is not listed,
-and one assigned again after a drop is listed last. `hasItem`, `index` and
-`removeItem` compare the items in that order, so `index` and `removeItem` choose
-the first of several equal items. ooRexx follows its storage, which is neither
-insertion nor sorted order, so its answers can differ. Which tails are
-produced, and how often, is specified. [The DO OVER
+tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+`hasItem`, `index` and `removeItem` compare the items in that order, so `index`
+and `removeItem` choose the first of several equal items. ooRexx follows its
+storage, which is neither insertion nor sorted order, so its answers can
+differ. Which tails are produced, and how often, is specified. A native
+routine that walks the variables with `RXSHV_NEXTV` is given a stem's tails in
+that order, and [`SysDumpVariables`](../rexxutil/sysdumpvariables.md) writes
+the lines of a stem's tails in that order. [The DO OVER
 rule](r:instr.do.deviation.1) says the same of a loop. See [Deviation
 1](../deviations.md).
 

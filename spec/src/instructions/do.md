@@ -1089,11 +1089,11 @@ do 2 counter c; end => 26.2
 ## Deviations
 
 r[instr.do.deviation.1]
-A DO OVER over a Stem visits its tails in the order they were first assigned.
-A dropped tail is not listed, and one assigned again after a drop is listed
-last. ooRexx visits them in an order that its storage fixes, which is
-neither the order of assignment nor a sorted order. Which tails the loop
-visits is specified, as [the OVER rule](r:instr.do.over) says.
+A DO OVER over a Stem visits its tails in the order they were first assigned, a
+tail that was dropped and assigned again counting from its new assignment. A
+dropped tail is not listed. ooRexx visits them in an order that its storage
+fixes, which is neither the order of assignment nor a sorted order. Which tails
+the loop visits is specified, as [the OVER rule](r:instr.do.over) says.
 
 ```rexx
 s. = 'dflt'

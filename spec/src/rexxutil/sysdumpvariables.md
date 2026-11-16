@@ -11,11 +11,12 @@ SysDumpVariables writes the variables of the code that calls it, one line for
 each, to the standard output or to the end of a file. It answers `0` when it
 has done so.
 
-> **Note.** The order in which the lines of a dump come is not specified, so
-> the examples of this page read the lines back and print them in the order of
-> their bytes, with a routine called `show`. A line of a dump that is read
-> back as text ends in `<CR>` or `<LF>` in the examples where the line end
-> matters, and `show` writes those as the five characters.
+> **Note.** The order in which the lines of a dump come is not specified beyond
+> [the line rule](r:util.sysdumpvariables.line), so the examples of this page
+> read the lines back and print them in the order of their bytes, with a
+> routine called `show`. A line of a dump that is read back as text ends in
+> `<CR>` or `<LF>` in the examples where the line end matters, and `show`
+> writes those as the five characters.
 
 ## Arguments
 
@@ -68,7 +69,8 @@ then a line end. A simple or compound variable that has been dropped is not
 written. A stem is written as [the stem rule](r:util.sysdumpvariables.stem)
 says, even when it has been dropped. Nothing is written when there is no
 variable, and a file is then made and is empty. The order of the lines is not
-specified.
+specified, except that the lines of one stem's tails come in [the order of its
+tails](r:class.stem.deviation.1).
 
 ```rexx
 call p
