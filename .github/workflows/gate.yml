@@ -16,17 +16,14 @@ on:
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
-concurrency:
-  group: gate-${{ github.ref }}
-  cancel-in-progress: true
-
 defaults:
   run:
     working-directory: rust
 
 jobs:
   # A pull request runs the gate when it carries the `gate` label or changes the pinned ooRexx
-  # or its build script. Every other event runs it.
+  # or its build script. Adding a label runs it only when that label is `gate`, so another label
+  # neither starts a second run nor cancels one. Every other event runs it.
   decide:
     name: decide
     runs-on: ubuntu-24.04
@@ -42,11 +39,15 @@ jobs:
         working-directory: .
         env:
           EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ADDED: ${{ github.event.label.name }}
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'gate') }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
+          if [ "$EVENT" = pull_request ] && [ "$ACTION" = labeled ] && [ "$ADDED" != gate ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "$BASE...$HEAD" -- third_party/ooRexx scripts/setup-third-party.sh | grep -q .; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -61,6 +62,10 @@ jobs:
     name: workspace in gate mode
     needs: decide
     if: needs.decide.outputs.run == 'true'
+    # On the job, not the workflow, so a run whose `decide` says no cancels nothing.
+    concurrency:
+      group: gate-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     # Measured on 4 cores: 286 s to build and 1271 s to test.
     timeout-minutes: 90
