@@ -1969,7 +1969,8 @@ impl Interp {
     /// lend stopped may end it, or where waits are not refused as unending
     /// ([`Interp::refuses_unending_waits`]) and it may turn out to be an
     /// inverted wait, answering the watch it replaces. Waits that end by
-    /// themselves, a sleep's or a timed one's, are not watched.
+    /// themselves, a sleep's or a timed one's, are not watched, and a wait
+    /// that is not a callback's leaves a callback's watch in place.
     fn watch_stall(&mut self, reason: ParkReason) -> Option<Stall> {
         let previous = self.activities.stall;
         let endless = match reason {
@@ -1995,10 +1996,15 @@ impl Interp {
                 reason,
                 lender: Some(lender),
             });
-        } else if endless && !self.refuses_unending_waits() {
+        } else if endless
+            && !self.refuses_unending_waits()
+            && previous.is_none_or(|stall| stall.lender.is_none())
+        {
             // An inverted wait goes on where native code from outside may
             // end it (Deviation 14). Whether it is inverted shows only once
             // the loop has nothing to run, so the watch counts only then.
+            // A callback's watch stays: the wait made in its loop does not
+            // end it, and the callback's line must still come.
             self.activities.stall = Some(Stall {
                 due: self.now() + STALL_REPORT,
                 reason,

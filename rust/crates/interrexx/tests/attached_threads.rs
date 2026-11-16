@@ -891,6 +891,19 @@ fn a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported() {
     assert_stalled_on_flag(&stderr);
 }
 
+/// [`a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported`] with a started
+/// activity that, half a second into the message's wait, waits in an INTERPRET on an event
+/// semaphore nothing posts. The message stops the main program where it is parked, and that
+/// pinned wait, no callback's, leaves the message's watch in place, so stderr still names the
+/// callback's wait for the flag after five seconds.
+// spec: native.threads.attach.deviation.178, conc.locks.deviation.14
+#[test]
+fn a_callback_waiting_for_a_flag_is_reported_past_a_pinned_wait_in_its_loop() {
+    let (stdout, stderr, status) = run_ours_for("attach-flagpinned", "flagpinned.rex", "10");
+    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_stalled_on_flag(&stderr);
+}
+
 /// Asserts that `stderr` begins with the line that reports a callback's wait for a `GUARD WHEN`
 /// while the main program it stopped makes no progress, written once the wait was five seconds
 /// old and less than seven.
