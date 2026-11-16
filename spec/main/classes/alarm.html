@@ -716,6 +716,46 @@ cancelled: 0 1
 93.902
 </code></pre>
 <h2 id="cancelling"><a class="header" href="#cancelling">Cancelling</a></h2>
+<div class="rule" id="r-class.alarm.triggered.held"><a href="#r-class.alarm.triggered.held">[class.alarm.triggered.held]</a></div>
+<p>The alarm holds its guard while it sends <code>triggered</code> to the target, until the
+target's method returns. So <code>triggered</code> sent to the alarm, and <code>cancel</code> sent
+to it, wait until then when another activity sends them, and the target's
+method, which runs on the alarm's activity, can send them itself without
+waiting. The other methods of the alarm do not wait. A <code>cancel</code> that waited
+finds the alarm gone off, sends the target nothing and changes nothing. A
+target's method that waits for another activity which sends the alarm
+<code>triggered</code> or <code>cancel</code> would wait for ever: that send raises <code>SYNTAX 98.905</code>
+on the other activity, as <a href="../concurrency/locks.html#r-conc.locks.deadlock">the deadlock rule</a> says.</p>
+<pre><code class="language-rexx">n = .note~new
+a = .alarm~new(0.2, n)
+n~awaitStart
+say a~triggered n~log
+b = .alarm~new(0.2, n)
+n~awaitStart
+b~cancel
+say n~log '|' b~canceled b~triggered
+::class note inherit AlarmNotification
+::method triggered unguarded
+  expose started log
+  use arg alarm
+  started = .true
+  call SysSleep 0.2
+  log = 'done, inside:' alarm~triggered
+::method cancel unguarded
+  expose log
+  log = 'cancel sent'
+::method awaitStart unguarded
+  expose started log
+  started = .false
+  log = ''
+  guard on when started
+::method log unguarded
+  expose log
+  return log
+</code></pre>
+<pre><code class="language-output">1 done, inside: 1
+done, inside: 1 | 0 1
+</code></pre>
 <div class="rule" id="r-class.alarm.cancel"><a href="#r-class.alarm.cancel">[class.alarm.cancel]</a></div>
 <p><code>cancel</code> takes no argument (<code>SYNTAX 93.902</code>) and answers nothing, so using its
 answer as a value raises <code>SYNTAX 91.999</code>. Sent to an alarm that is still waiting
