@@ -392,6 +392,29 @@ fn a_failing_classic_function_raises_40_1() {
     );
 }
 
+/// A classic function called while another activity runs, from that activity and from the
+/// first: each call reads the queue name through `.local`'s `STDQUE`, Rexx that runs nested in
+/// the call, and both answer. A `REPLY` thread that calls one before `Terminate` is case 2 of
+/// `detach_root_terminate`.
+#[test]
+fn a_classic_function_answers_while_another_activity_runs() {
+    let stdout = run_program(
+        "classic-beside-reply",
+        "call rxfuncadd 'MyTestExtFunc', 'orxclassic1', 'MyTestExtFunc'\n\
+         .s~new~go\n\
+         say 'first' MyTestExtFunc()\n\
+         call syssleep 0.3\n\
+         exit\n\
+         ::class s\n\
+         ::method go\n\
+         reply\n\
+         call syssleep 0.1\n\
+         say 'replied' MyTestExtFunc()\n",
+        &[],
+    );
+    assert_eq!(stdout, "first 0\nreplied 0\n");
+}
+
 /// Runs `program` as `program.rex` in a fresh directory `name` holding `files`, with the
 /// compiled test libraries, against a private service it stops after. Its stdout.
 fn run_program(name: &str, program: &str, files: &[(&str, &str)]) -> String {
@@ -709,24 +732,39 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// condition decoded, and the instance terminated; the call type, the initial environment,
 /// direct, redirecting and registered command environments, a classic subcommand handler, the
 /// instance's own search path and extensions, and every system exit, as context exits and as
-/// registered ones. The oracle's counts: `INVOCATION` 55 tests and 295 assertions,
-/// `ProcessInvocation` 54 and 284, which this crate matches with no failure: `TestLoadLibrary`
-/// loads `rxmath`, which it runs in Rust.
+/// registered ones; and `Terminate` after the creating thread detached, from that thread or from
+/// one never attached (`detach_root_terminate`). The oracle's counts: `INVOCATION` 55 tests and
+/// 295 assertions, `ProcessInvocation` 61 and 298, with no failure. `TestLoadLibrary` loads
+/// `rxmath`, which this crate runs in Rust. `TestTerminateOnOtherThreadUninitWaitsForGuard` fails
+/// here and makes neither of its two assertions: the uninit method it waits for sends to an
+/// object of another instance, which this crate refuses (Deviation 85), so that object is never
+/// marked.
 #[test]
 fn the_invocation_group_runs_programs_in_instances() {
-    an_invocation_group_runs_programs_in_instances("INVOCATION", 55, 295);
+    an_invocation_group_runs_programs_in_instances("INVOCATION", 55, 295, &[]);
 }
 
 #[test]
 fn the_process_invocation_group_runs_programs_in_instances() {
-    an_invocation_group_runs_programs_in_instances("ProcessInvocation", 54, 284);
+    an_invocation_group_runs_programs_in_instances(
+        "ProcessInvocation",
+        61,
+        296,
+        &["TESTTERMINATEONOTHERTHREADUNINITWAITSFORGUARD"],
+    );
 }
 
-fn an_invocation_group_runs_programs_in_instances(group: &str, ran: usize, assertions: usize) {
+/// `group` runs `ran` tests making `assertions` assertions, and exactly the tests `refused` fail.
+fn an_invocation_group_runs_programs_in_instances(
+    group: &str,
+    ran: usize,
+    assertions: usize,
+    refused: &[&str],
+) {
     let outcome = run_group("API/oo", group, library_path(true));
     let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
     assert!(
-        failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
+        failed == refused && outcome.ran == ran && outcome.assertions == assertions,
         "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
         outcome.ran,
         outcome.assertions,
