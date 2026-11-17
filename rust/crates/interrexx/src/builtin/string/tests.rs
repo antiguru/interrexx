@@ -783,7 +783,7 @@ fn a_null_option_byte_is_accepted_and_matches_no_letter() {
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(&[0x01])]),
-        (40, 904, vec![b"VERIFY".to_vec(), b"4".to_vec(), b"MN".to_vec(), vec![0x01]])
+        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), b"".to_vec()])
     );
 }
 
