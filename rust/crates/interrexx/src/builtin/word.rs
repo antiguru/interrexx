@@ -856,7 +856,7 @@ mod tests {
         ] {
             assert_eq!(
                 raised(name, &[Some(b"a b"), Some(b"0")]),
-                (93, 924, vec![b"0".to_vec()]),
+                (40, 14, vec![b"WORD".to_vec(), b"2".to_vec(), b"0".to_vec()]),
                 "{} did not refuse position 0",
                 String::from_utf8_lossy(name)
             );
