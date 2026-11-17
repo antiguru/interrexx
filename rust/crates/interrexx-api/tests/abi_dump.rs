@@ -1101,6 +1101,14 @@ fn differences(measured: &Facts, expected: &Facts) -> Vec<String> {
     found
 }
 
+/// The facts on which the pinned upstream headers differ from `include/` by design, each with
+/// its reason; the dump against `include/` has none.
+const UPSTREAM_DIFFERENCES: &[(&str, &str)] = &[(
+    "const REXX_CURRENT_LANGUAGE_LEVEL",
+    "interrexx implements level 6.06, the pinned headers name 6.07 (decisions.md, the language \
+     level)",
+)];
+
 fn check(language: Language, headers: Headers) {
     let dir = scratch(&format!(
         "{}-{}",
@@ -1113,7 +1121,18 @@ fn check(language: Language, headers: Headers) {
         &dump_program(),
         Some(headers),
     ));
-    let found = differences(&measured, &rust_facts());
+    let mut found = differences(&measured, &rust_facts());
+    if matches!(headers, Headers::Upstream) {
+        for (key, _reason) in UPSTREAM_DIFFERENCES {
+            let before = found.len();
+            found.retain(|line| !line.starts_with(&format!("{key}:")));
+            assert_eq!(
+                found.len() + 1,
+                before,
+                "{key} is listed as a difference by design but does not differ exactly once"
+            );
+        }
+    }
     assert!(
         found.is_empty(),
         "the Rust layout differs from the {} headers as {} sees them:\n{}",
