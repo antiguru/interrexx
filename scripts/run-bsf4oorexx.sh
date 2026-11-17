@@ -5,7 +5,8 @@
 #
 #   run-bsf4oorexx.sh            fetch, build and run the suite
 #   run-bsf4oorexx.sh --revision print the pinned BSF4ooRexx revision and stop
-#   run-bsf4oorexx.sh --fetch    export the sources to BSF_SOURCES if absent, and stop
+#   run-bsf4oorexx.sh --fetch    export the sources to BSF_SOURCES afresh, replacing any tree there,
+#                                and stop
 #
 # BSF4ooRexx comes from its SourceForge svn repository at the pinned revision below; nothing of it is
 # committed here. Its Java sources are compiled with the JDK of JAVA_HOME, and its JNI library
@@ -21,6 +22,7 @@
 #   BSF_WORK       compiled classes, the library directory, logs and results.tsv.
 #                  Default: rust/target/bsf4oorexx/work.
 #   BSF_EXPECTED   the expected-failure list. Default: ci/bsf-expected-failures.txt.
+#   BSF_GROUPS     the list of every group the sources hold. Default: ci/bsf-groups.txt.
 #   BSF_TIMEOUT    seconds one group may run. Default: 180.
 #   OOTEST         the ooTest checkout whose framework runs the groups. Default: ootest.
 #   JAVA_HOME      the JDK. Default: the one `javac` on PATH belongs to.
@@ -54,19 +56,42 @@ if [ $# -gt 1 ]; then
     exit 2
 fi
 
+die() {
+    echo "run-bsf4oorexx.sh: $*" >&2
+    exit 1
+}
+
 root=$(cd "$(dirname "$0")/.." && pwd)
 sources=${BSF_SOURCES:-$root/rust/target/bsf4oorexx/r$BSF_REVISION}
-if [ ! -d "$sources" ]; then
-    rm -rf "$sources.tmp"
+# Exports into a temporary directory, retrying a failed export, and renames the result into place,
+# replacing any tree there. --fetch always does, so a partly restored cache is never kept. A run
+# reuses a tree that is there, and the group list below stops it if that tree lost groups.
+fetch() {
+    local attempt
     mkdir -p "$(dirname "$sources")"
-    svn export -q -r "$BSF_REVISION" "$BSF_URL@$BSF_REVISION" "$sources.tmp"
-    mv "$sources.tmp" "$sources"
+    for attempt in 1 2 3; do
+        rm -rf "${sources:?}.tmp"
+        if svn export -q -r "$BSF_REVISION" "$BSF_URL@$BSF_REVISION" "$sources.tmp"; then
+            rm -rf "${sources:?}"
+            mv "$sources.tmp" "$sources"
+            return
+        fi
+        echo "run-bsf4oorexx.sh: svn export failed (attempt $attempt)" >&2
+        [ "$attempt" = 3 ] || sleep 10
+    done
+    rm -rf "${sources:?}.tmp"
+    die "svn export of $BSF_URL@$BSF_REVISION failed on every attempt"
+}
+if [ "$mode" = fetch ]; then
+    fetch
+    exit 0
 fi
-[ "$mode" = run ] || exit 0
+[ -d "$sources" ] || fetch
 
 release=${REXX_RELEASE:-${CARGO_TARGET_DIR:-$root/rust/target}/release}
 work=${BSF_WORK:-$root/rust/target/bsf4oorexx/work}
 expected=${BSF_EXPECTED:-$root/ci/bsf-expected-failures.txt}
+group_list=${BSF_GROUPS:-$root/ci/bsf-groups.txt}
 group_timeout=${BSF_TIMEOUT:-180}
 ootest=${OOTEST:-$root/ootest}
 if [ -z "${JAVA_HOME:-}" ]; then
@@ -74,20 +99,34 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 export JAVA_HOME
 
-die() {
-    echo "run-bsf4oorexx.sh: $*" >&2
-    exit 1
-}
 for f in "$release/rexx" "$release/librexx.so" "$release/librexxapi.so"; do
     [ -e "$f" ] || die "$f is missing; build with cargo build --release"
 done
 [ -f "$ootest/framework/OOREXXUNIT.CLS" ] || die "no ooTest framework under $ootest"
 [ -f "$JAVA_HOME/include/jni.h" ] || die "no JDK at JAVA_HOME=$JAVA_HOME"
 [ -f "$expected" ] || die "no expected-failure list at $expected"
+[ -f "$group_list" ] || die "no group list at $group_list"
 command -v memcap >/dev/null || die "memcap is not on PATH"
 
 dev=$sources/bsf4oorexx.dev
 units=$dev/testUnits
+
+# Every group the sources hold must be one the list names, and the other way round: a tree that lost
+# or gained groups stops the run before anything is built.
+[ -d "$units" ] || die "no $units"
+mapfile -t groups < <(cd "$units" && find . -name '*.testGroup' | sed 's|^\./||' | LC_ALL=C sort)
+listed_groups=$(grep -a -v -E '^(#|$)' "$group_list" | LC_ALL=C sort) || die "$group_list names no group"
+missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
+added=$(LC_ALL=C comm -13 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
+if [ -n "$missing$added" ]; then
+    while read -r group; do
+        [ -z "$group" ] || echo "missing from $units: $group" >&2
+    done <<< "$missing"
+    while read -r group; do
+        [ -z "$group" ] || echo "not in $group_list: $group" >&2
+    done <<< "$added"
+    die "the groups under $units differ from $group_list"
+fi
 
 mkdir -p "$work"
 rm -rf "${work:?}/classes" "${work:?}/lib" "${work:?}/logs" "${work:?}/api" "${work:?}/source_cc"
@@ -157,7 +196,6 @@ table+="|---|---|---|---|---|---|---|---|"$'\n'
 passed=0 total=0 bad=0
 field() { grep -a -m1 "^$1:" "$log" | awk '{ print $NF }' || true; }
 declare -A seen
-mapfile -t groups < <(cd "$units" && find . -name '*.testGroup' | sed 's|^\./||' | LC_ALL=C sort)
 [ "${#groups[@]}" -gt 0 ] || die "no .testGroup under $units"
 for group in "${groups[@]}"; do
     seen[$group]=1
