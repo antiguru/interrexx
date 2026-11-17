@@ -370,19 +370,20 @@ fn each_validation_layer_raises_its_own_code() {
         raised(b"FORMAT", &[Some(b"1"), Some(b"-1")]),
         (40, 13, subs(&[b"FORMAT", b"2", b"-1"]))
     );
-    // Each of the four optional positions names its own method position
+    // Each of the four optional positions names its own argument position
     // when it is the range that is wrong.
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"1"), Some(b"y")]),
         (40, 12, subs(&[b"FORMAT", b"3", b"y"]))
     );
-    for (position, method) in [(2usize, b"1"), (3, b"2"), (4, b"3"), (5, b"4")] {
+    for position in 2usize..=5 {
         let mut args: Vec<Option<&[u8]>> = vec![Some(b"1"), None, None, None, None];
         args[position - 1] = Some(b"-1");
+        let named = position.to_string();
         assert_eq!(
             raised(b"FORMAT", &args),
-            (40, 13, subs(&[b"FORMAT", b"3", b"-1"])),
-            "argument {position} named the wrong method position"
+            (40, 13, subs(&[b"FORMAT", named.as_bytes(), b"-1"])),
+            "argument {position} named the wrong position"
         );
     }
 }
