@@ -505,7 +505,7 @@ fn a_bad_argument_kind_names_the_routine_and_the_call_position() {
 fn a_bad_argument_range_reports_the_converted_value() {
     assert_eq!(
         raised(b"LEFT", &[Some(b"ab"), Some(b"-1.0")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (40, 13, vec![b"LEFT".to_vec(), b"2".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"0.0")]),
