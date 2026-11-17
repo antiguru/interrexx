@@ -532,7 +532,7 @@ fn a_bad_argument_range_reports_the_converted_value() {
     );
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(b"Xyz")]),
-        (93, 915, vec![b"BLT".to_vec(), b"Xyz".to_vec()])
+        (40, 904, vec![b"STRIP".to_vec(), b"2".to_vec(), b"BLT".to_vec(), b"Xyz".to_vec()])
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"")]),
