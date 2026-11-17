@@ -293,7 +293,8 @@ jobs:
           java-version: "25"
       - uses: actions/cache/restore@v6
         with:
-          # Only ootest is kept below.
+          # The paths the third-party job saves, which the entry is looked up by too. Only ootest
+          # is used: the next step removes the rest.
           path: |
             third_party/oracle
             build
@@ -305,12 +306,13 @@ jobs:
         # The JNI library compiles against include/ only, so no ooRexx header may be there to find.
         working-directory: .
         run: |
-          rm -rf third_party/oracle build
+          rm -rf third_party/oracle build oodocs
           # The gitlink checks out as an empty directory without the submodule.
           rmdir third_party/ooRexx
           rmdir third_party
           test ! -e third_party
           test ! -e build && test ! -L build
+          test ! -e oodocs
           test -d ootest
       - name: Provide memcap
         run: |
@@ -318,17 +320,29 @@ jobs:
           printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
           chmod +x "$HOME/.local/bin/memcap"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - id: revision
+      - id: source
+        name: Pinned BSF4ooRexx sources
+        # The pinned branch and revision, which the source cache is keyed by.
         working-directory: .
-        run: echo "revision=$(scripts/run-bsf4oorexx.sh --revision)" >> "$GITHUB_OUTPUT"
+        run: |
+          id=$(scripts/run-bsf4oorexx.sh --source-id)
+          test -n "$id"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
       - id: sources
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.BSF_SOURCES }}
-          key: bsf4oorexx-sources-r${{ steps.revision.outputs.revision }}
+          key: bsf4oorexx-sources-${{ steps.source.outputs.id }}
       - name: Install svn
         if: steps.sources.outputs.cache-hit != 'true'
-        run: sudo apt-get update && sudo apt-get install -y subversion
+        # Retried, as a mirror can fail for a moment.
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get update && sudo apt-get install -y subversion && exit 0
+            echo "apt-get failed (attempt $attempt)"
+            sleep 15
+          done
+          exit 1
       - id: fetch
         name: Export the BSF4ooRexx sources
         if: steps.sources.outputs.cache-hit != 'true'
@@ -339,7 +353,7 @@ jobs:
         if: steps.fetch.outcome == 'success'
         with:
           path: ${{ env.BSF_SOURCES }}
-          key: bsf4oorexx-sources-r${{ steps.revision.outputs.revision }}
+          key: bsf4oorexx-sources-${{ steps.source.outputs.id }}
       - name: Release build
         run: >
           cargo build --locked --release

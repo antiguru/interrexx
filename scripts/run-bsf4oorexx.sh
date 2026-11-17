@@ -3,10 +3,11 @@
 # of interrexx, and fails on any group outside the expected-failure list that does not pass, and on
 # any listed group that does.
 #
-#   run-bsf4oorexx.sh            fetch, build and run the suite
-#   run-bsf4oorexx.sh --revision print the pinned BSF4ooRexx revision and stop
-#   run-bsf4oorexx.sh --fetch    export the sources to BSF_SOURCES afresh, replacing any tree there,
-#                                and stop
+#   run-bsf4oorexx.sh             fetch, build and run the suite
+#   run-bsf4oorexx.sh --source-id print the pinned BSF4ooRexx branch and revision as one word,
+#                                 and stop
+#   run-bsf4oorexx.sh --fetch     export the sources to BSF_SOURCES afresh, replacing any tree there,
+#                                 and stop
 #
 # BSF4ooRexx comes from its SourceForge svn repository at the pinned revision below; nothing of it is
 # committed here. Its Java sources are compiled with the JDK of JAVA_HOME, and its JNI library
@@ -35,14 +36,15 @@
 # $GITHUB_STEP_SUMMARY as soon as the group ends.
 set -euo pipefail
 
-# The pinned BSF4ooRexx revision, the one place it is written.
+# The pinned BSF4ooRexx branch and revision, the one place they are written.
+BSF_BRANCH=branches/850
 BSF_REVISION=1131
-BSF_URL=https://svn.code.sf.net/p/bsf4oorexx/code/branches/850
+BSF_URL=https://svn.code.sf.net/p/bsf4oorexx/code/$BSF_BRANCH
 
 mode=run
 case ${1:-} in
-    --revision)
-        echo "$BSF_REVISION"
+    --source-id)
+        echo "${BSF_BRANCH//\//-}-r$BSF_REVISION"
         exit 0
         ;;
     --fetch) mode=fetch ;;
