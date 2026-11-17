@@ -2,7 +2,7 @@
 # `GROUP::METHOD<TAB>unblocked_by` per line; lines starting with # are
 # comments.
 #
-# Measured at ooTest r13347. This is the committed set `keyword_assertions.rs`
+# Measured at ooTest r13532. This is the committed set `keyword_assertions.rs`
 # polices in both directions: a body here that starts passing is as red as a
 # body not here that starts failing, so an improvement shows up in a diff rather
 # than being quietly absorbed.
@@ -31,7 +31,43 @@
 #       C++ oracle exits 3 on the same program, so this is the extraction and
 #       not a divergence.
 #
+#       CATCH::* and FINALLY::*: the bodies use CATCH and FINALLY clauses, which
+#       belong to language level 6.07; interrexx implements 6.06
+#       (`docs/design/decisions.md`, the language level), which has no such
+#       clause, so the condition a body expects its clause to catch ends the
+#       program instead.
+#
+#       RAISE::test_RAISE_RETURN_result_signal_on and ...EXIT...: the bodies
+#       call the group's ::routines raisableConditions and signalOnResult,
+#       which the extracted program does not carry; the C++ oracle raises 43.1
+#       on the same call, so this is agreement with the oracle.
+#
 CALL::test_literal	RAISED
 CALL::test_expression	RAISED
 CALL::test_on_name	RAISED
 NUMERIC::test_42	RAISED
+CATCH::test_catch_after_complete_else	RAISED
+CATCH::test_code_error	RAISED
+CATCH::test_code_error_call_on	RAISED
+CATCH::test_code_error_negative	RAISED
+CATCH::test_code_error_not_caught	RAISED
+CATCH::test_code_error_numeric	RAISED
+CATCH::test_code_error_string	RAISED
+CATCH::test_code_error_variable_routine	RAISED
+CATCH::test_code_error_variable_unset	RAISED
+CATCH::test_code_error_variable_value	RAISED
+CATCH::test_code_failure	RAISED
+CATCH::test_code_syntax_internal_routine	RAISED
+CATCH::test_code_syntax_literal	RAISED
+CATCH::test_code_syntax_minor	RAISED
+CATCH::test_code_syntax_order	RAISED
+CATCH::test_code_syntax_other_clause	RAISED
+CATCH::test_code_syntax_outer_block	RAISED
+CATCH::test_code_syntax_variable	RAISED
+CATCH::test_code_syntax_variable_major	RAISED
+CATCH::test_variable_none	RAISED
+FINALLY::test_catch_code_error_ignored	RAISED
+FINALLY::test_catch_code_matched	RAISED
+FINALLY::test_catch_code_not_matched	RAISED
+RAISE::test_RAISE_EXIT_result_signal_on	RAISED
+RAISE::test_RAISE_RETURN_result_signal_on	RAISED

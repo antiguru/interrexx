@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 /// The ooTest revision every absolute literal below was measured at. Named
 /// in each failure message so a red count is diagnosable as `svn up` rather
 /// than as a regression in this repository.
-const OOTEST_REVISION: &str = "r13347";
+const OOTEST_REVISION: &str = "r13532";
 
 /// What a red absolute-literal test most likely means, appended to every
 /// such failure.
@@ -66,19 +66,21 @@ fn measure() -> Vec<(String, usize, usize, usize)> {
 /// The absolute committed literals: per-group row counts, and the four
 /// totals. Measured at [`OOTEST_REVISION`].
 const PER_GROUP: &[(&str, usize, usize)] = &[
-    ("ADDRESS", 230, 19),
+    ("ADDRESS", 238, 19),
     ("ASSIGNMENT", 265, 265),
     ("Assignments", 0, 0),
-    ("CALL", 128, 50),
+    ("CALL", 139, 50),
+    ("CATCH", 69, 23),
     ("DO", 510, 507),
     ("DoControlled", 0, 0),
     ("DoOther", 0, 0),
     ("DoOver", 4, 0),
     ("DoWith", 6, 0),
     ("EXPOSE", 24, 0),
-    ("FORWARD", 0, 0),
-    ("GUARD", 15, 0),
-    ("IF", 159, 29),
+    ("FINALLY", 12, 3),
+    ("FORWARD", 2, 0),
+    ("GUARD", 19, 0),
+    ("IF", 167, 29),
     ("INTERPRET", 10, 3),
     ("ITERATE", 21, 20),
     ("LABEL", 0, 0),
@@ -93,14 +95,14 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
     ("NOP", 3, 3),
     ("NUMERIC", 68, 63),
     ("PARSE", 792, 778),
-    ("RAISE", 1, 0),
+    ("RAISE", 6, 2),
     ("REPLY", 11, 0),
     ("SAY", 3, 0),
     ("SELECT", 12, 8),
     ("SIGNAL", 27, 0),
     ("SelectCase", 5, 1),
     ("ShortCircuitAnd", 0, 0),
-    ("TRACE", 49, 13),
+    ("TRACE", 57, 13),
     ("TRACE_TraceObject", 11, 0),
     ("USE", 20, 0),
     ("USELOCAL", 14, 0),
@@ -108,13 +110,13 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
 ];
 
 /// `.testGroup` files scanned.
-const TOTAL_FILES: usize = 39;
+const TOTAL_FILES: usize = 41;
 /// Exact-spelling `self~assertSame` occurrences across all of them.
-const TOTAL_CALLS: usize = 2453;
+const TOTAL_CALLS: usize = 2580;
 /// Calls carried by a body this extractor turned into a runnable program.
-const TOTAL_ROWS: usize = 1781;
+const TOTAL_ROWS: usize = 1809;
 /// Calls in a method this extractor could not turn into one.
-const TOTAL_DROPPED: usize = 672;
+const TOTAL_DROPPED: usize = 771;
 
 /// **Criterion 2, the absolute literals.** Everything a percentage would
 /// hide: the file count, the independently-counted call total, the row and
@@ -207,12 +209,12 @@ fn the_row_floor() {
 fn the_drop_reasons_account_for_every_call_outside_the_population() {
     /// `(reason, methods, calls)`, measured at [`OOTEST_REVISION`].
     const BY_REASON: &[(DropReason, usize, usize)] = &[
-        (DropReason::OutsideTestMethod, 1, 2),
-        (DropReason::InsideComment, 3, 3),
+        (DropReason::OutsideTestMethod, 4, 11),
+        (DropReason::InsideComment, 2, 2),
         (DropReason::ContinuedLine, 2, 3),
         (DropReason::AssertSameList, 0, 0),
         (DropReason::OtherAssertion, 138, 169),
-        (DropReason::MessageSend, 99, 495),
+        (DropReason::MessageSend, 147, 586),
         (DropReason::UnparsedCallShape, 0, 0),
         (DropReason::NotAClause, 0, 0),
     ];

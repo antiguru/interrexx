@@ -4,3 +4,5 @@
 28	3	Symbol following LEAVE ("&1") must either match the label of a current loop or block instruction or be omitted.
 28	4	Symbol following ITERATE ("&1") must either match the label of a current loop or be omitted.
 28	5	Symbol following ITERATE ("&1") names a block that is not a loop.
+28	6	LEAVE in a CATCH clause must not target the block on line &1 to which the clause belongs.
+28	7	ITERATE in a CATCH clause must not target the block on line &1 to which the clause belongs.

@@ -108,6 +108,12 @@ EXCEPTIONS = [
         "ours declares the function through the handler typedef, the same function type",
     ),
     (
+        "both",
+        "macro REXX_CURRENT_LANGUAGE_LEVEL",
+        "interrexx implements level 6.06; 6.07 adds CATCH and FINALLY, which it does not have "
+        "(decisions.md, the language level)",
+    ),
+    (
         "upstream",
         "header platform/windows/rexxapitypes.h",
         "interrexx has Unix platform headers only (decisions.md, per-platform layout)",

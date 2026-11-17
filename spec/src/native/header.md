@@ -234,6 +234,7 @@ answers. The values are:
 * `REXX_LANGUAGE_6_04`: `0x00000604`
 * `REXX_LANGUAGE_6_05`: `0x00000605`
 * `REXX_LANGUAGE_6_06`: `0x00000606`
+* `REXX_LANGUAGE_6_07`: `0x00000607`
 * `REXX_CURRENT_LANGUAGE_LEVEL`: `0x00000606`
 
 r[native.header.entry-constants]

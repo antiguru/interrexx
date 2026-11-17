@@ -3,3 +3,4 @@
 46	900	&1.
 46	901	Unmatched "(" in variable reference.
 46	902	"," or end of instruction expected after USE ARG variable reference; found "&1".
+46	903	",", "=", or end of instruction expected after USE ARG name; found "&1".

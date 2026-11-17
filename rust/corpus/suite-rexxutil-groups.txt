@@ -3,7 +3,9 @@
 # byte order; suite.rs re-runs it and asserts the list below equals it.
 #   grep -rlawiE 'SysCls|SysCreatePipe|SysDropFuncs|SysDumpVariables|SysFileCopy|SysFileMove|SysFileSearch|SysFork|SysFormatMessage|SysGetErrorText|SysGetFileDateTime|SysGetKey|SysGetMessage|SysGetMessageX|SysIsFileDirectory|SysIsFileLink|SysLoadFuncs|SysOpenEventSem|SysOpenMutexSem|SysQueryProcess|SysSearchPath|SysSetFileDateTime|SysSetPriority|SysStemCopy|SysStemDelete|SysStemInsert|SysStemSort|SysTempFileName|SysUtilVersion|SysWait|SysFileTree|SysFileXXX' ootest/ooRexx
 base/class/File
+base/class/Stream
 base/keyword/ADDRESS
+base/keyword/CATCH
 base/rexxutil/Macrospace
 base/rexxutil/SysDumpVariables
 base/rexxutil/SysFileDateTime
@@ -21,3 +23,4 @@ base/rexxutil/platform/unix/tilde
 base/rexxutil/platform/windows/SysFileTree
 base/rexxutil/platform/windows/SysIsFileDirectory
 base/security.manager/SecurityManager
+utilities/rxapi

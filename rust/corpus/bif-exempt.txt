@@ -3,7 +3,7 @@
 # of the row among the rows its own method yielded; lines starting with # are
 # comments.
 #
-# Measured at ooTest r13347. This is the committed set `bif_assertions.rs`
+# Measured at ooTest r13532. This is the committed set `bif_assertions.rs`
 # polices in both directions: a row here that starts passing is as red as a row
 # not here that starts failing, so an improvement shows up in a diff rather than
 # being quietly absorbed. The assertion runs under a plain `cargo test`.
@@ -17,13 +17,79 @@
 # a row carrying one is a divergence nothing is holding. MISMATCH is the sharp
 # one: both renderings produced output and they differ.
 # `every_exempt_attribution_is_a_known_phase_or_a_declared_outcome` pins them
-# at 7, 0 and 0. If it goes red, rule on the row first -- give it an owner, or
+# at 7, 33 and 33. If it goes red, rule on the row first -- give it an owner, or
 # record it as a known gap -- and then move the number to match.
 #
+ABS::test_14#1	RAISE-MISMATCH
+ABS::test_22#1	RAISE-MISMATCH
+ABS::test_30#1	RAISE-MISMATCH
+ABS::test_31#1	RAISE-MISMATCH
+ABS::test_ABS_subTest32#1	RAISE-MISMATCH
+C2D::test_22#1	RAISE-MISMATCH
+C2D::test_23#1	RAISE-MISMATCH
+C2D::test_24#1	RAISE-MISMATCH
+C2D::test_25#1	RAISE-MISMATCH
+C2D::test_26#1	RAISE-MISMATCH
+C2D::test_27#1	RAISE-MISMATCH
+C2D::test_28#1	RAISE-MISMATCH
+C2D::test_29#1	RAISE-MISMATCH
+C2D::test_30#1	RAISE-MISMATCH
+C2D::test_31#1	RAISE-MISMATCH
+CENTER::test_11#1	RAISE-MISMATCH
+CENTER::test_45#1	RAISE-MISMATCH
+CENTER::test_46#1	RAISE-MISMATCH
+CENTER::test_71#1	RAISE-MISMATCH
+CENTER::test_72#1	RAISE-MISMATCH
+CENTER::test_73#1	RAISE-MISMATCH
+CENTER::test_91#1	RAISE-MISMATCH
+CENTER::test_92#1	RAISE-MISMATCH
+CENTER::test_93#1	RAISE-MISMATCH
+CENTRE::test_11#1	RAISE-MISMATCH
+CENTRE::test_45#1	RAISE-MISMATCH
+CENTRE::test_46#1	RAISE-MISMATCH
+CENTRE::test_71#1	RAISE-MISMATCH
+CENTRE::test_72#1	RAISE-MISMATCH
+CENTRE::test_73#1	RAISE-MISMATCH
+CENTRE::test_91#1	RAISE-MISMATCH
+CENTRE::test_92#1	RAISE-MISMATCH
+CENTRE::test_93#1	RAISE-MISMATCH
 ERRORTEXT::test_ERRORTEXT#22	MISMATCH
 ERRORTEXT::test_ERRORTEXT#27	MISMATCH
 ERRORTEXT::test_ERRORTEXT#32	MISMATCH
 ERRORTEXT::test_ERRORTEXT#36	MISMATCH
 ERRORTEXT::test_ERRORTEXT#95	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#1	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#2	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#3	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#4	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#5	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#6	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#7	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#8	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#9	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#10	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#11	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#12	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#1	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#2	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#3	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#4	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#5	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#6	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#7	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#8	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#9	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#10	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#11	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#12	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#13	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#1	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#2	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#3	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#4	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#5	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#6	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#7	ANOMALY
+SETLOCAL::test_endlocal_no_setlocal#1	ANOMALY
 STREAM::test_relative_file_exists#1	MISMATCH
 STREAM::test_relative_file_exists2#1	MISMATCH

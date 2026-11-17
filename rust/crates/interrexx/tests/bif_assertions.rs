@@ -39,7 +39,7 @@ const REFRESH_ENV: &str = "REXX_BIF_EXEMPT_REFRESH";
 /// `ootest/` is git-ignored and is an SVN working copy, not checked-in test
 /// data, so it can move with nothing in this repository changing; read it back
 /// with `svn info ootest`.
-const OOTEST_REVISION: &str = "r13347";
+const OOTEST_REVISION: &str = "r13532";
 
 fn gate_mode() -> bool {
     match env::var(GATE_ENV) {
@@ -1047,8 +1047,14 @@ fn every_exempt_attribution_is_a_declared_outcome() {
     // produce. The group's own `::method setup` supplies it, and this harness
     // lifts one assertion out without it.
     //
-    // `RAISE-MISMATCH` and `ANOMALY` are 0.
-    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 7), ("RAISE-MISMATCH", 0), ("ANOMALY", 0)];
+    // `RAISE-MISMATCH`'s 33 rows are of `ABS`, `C2D`, `CENTER` and `CENTRE`,
+    // whose argument errors the specification gives as the 93.xxx of the
+    // String method, where the suite now expects the builtin's own 40.xxx.
+    // `ANOMALY`'s 33 are 32 of `ERRORTEXT`, which pass ERRORTEXT a code with a
+    // subcode or an array of inserts, arguments the specification does not
+    // accept, and `SETLOCAL::test_endlocal_no_setlocal`, whose assertion calls
+    // the group's own `run` method, which a lifted-out row cannot reach.
+    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 7), ("RAISE-MISMATCH", 33), ("ANOMALY", 33)];
 
     let names: Vec<&str> = DERIVED.iter().map(|(name, _)| *name).collect();
     let mut counts = vec![0usize; DERIVED.len()];

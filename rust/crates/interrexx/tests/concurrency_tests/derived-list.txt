@@ -147,7 +147,11 @@ base/directives/ATTRIBUTE.testGroup TESTDELEGATE TraceObject field
 base/directives/CONSTANT.testGroup TEST_CONSTANT_METHOD_PROPERTIES TraceObject field
 base/directives/METHOD.testGroup TESTGUARDEDACCESS REPLY,SysSleep
 base/directives/METHOD.testGroup TESTDELEGATE TraceObject field
+base/keyword/CALL.testGroup TEST_STACKSIZE_START_THREAD ~start
+base/keyword/CALL.testGroup TEST_STACKSIZE_REPLY_THREAD GUARD,REPLY
 base/keyword/CALL.testGroup TEST_4 SysSleep
+base/keyword/FINALLY.testGroup TEST_REPLY_FROM_CATCH_CLAUSE REPLY
+base/keyword/FINALLY.testGroup TEST_REPLY REPLY
 base/keyword/GUARD.testGroup TEST_WHEN_NOVALUE GUARD
 base/keyword/GUARD.testGroup TEST_WHEN_NOT_BOOLEAN GUARD
 base/keyword/GUARD.testGroup TEST_ON_OFF_CONSECUTIVE GUARD
@@ -163,6 +167,7 @@ base/keyword/GUARD.testGroup TEST_WHEN_MULTIPLE_NO_WAIT GUARD
 base/keyword/GUARD.testGroup TEST_WAIT_SIMPLE_TRIGGER GUARD,REPLY,SysSleep
 base/keyword/GUARD.testGroup TEST_WAIT_SIMPLE GUARD,REPLY,SysSleep
 base/keyword/GUARD.testGroup TEST_WAIT_MULTIPLE GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_WAIT_COMPOUND SysSleep,~start
 base/keyword/RAISE.testGroup TEST_RAISE_INSERT_CRLF REPLY,SysSleep
 base/keyword/REPLY.testGroup TEST_REPLY_ROUTINE REPLY
 base/keyword/REPLY.testGroup TEST_REPLY_PROCEDURE REPLY
@@ -185,6 +190,7 @@ base/keyword/TRACE.testGroup TEST_TRACE_GUARD GUARD
 base/keyword/TRACE.testGroup TEST_TRACE_REPLY Message~reply,REPLY,SysSleep
 base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR REPLY,SysSleep,TraceObject field
 base/keyword/TRACE_TraceObject.testGroup TEST_CALLER_STACK_FRAME_REPLY_START GUARD,REPLY,SysSleep,~start
+base/rexxutil/SysMutexSem.testGroup TEST_CREATE_EMPTY_NAME Sys*Sem
 base/rexxutil/SysSleep.testGroup TEST_SLEEP_NO_ARG SysSleep
 base/rexxutil/SysSleep.testGroup TEST_SLEEP_TWO_ARGS SysSleep
 base/rexxutil/SysSleep.testGroup TEST_SLEEP_INVALID SysSleep

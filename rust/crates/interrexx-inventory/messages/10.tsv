@@ -6,3 +6,10 @@
 10	5	END must not immediately follow THEN.
 10	6	END must not immediately follow ELSE.
 10	7	END corresponding to SELECT on line &2 must not have a symbol following it because there is no LABEL; found "&1".
+10	8	CATCH has no corresponding DO, LOOP, or SELECT.
+10	9	CATCH must not be used as the instruction of THEN.
+10	11	CATCH must not be used as the instruction of ELSE.
+10	12	FINALLY has no corresponding DO, LOOP, or SELECT.
+10	13	FINALLY must not be used as the instruction of THEN.
+10	14	FINALLY must not be used as the instruction of ELSE.
+10	15	FINALLY clause on line &1 must be the last clause of its block.

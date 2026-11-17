@@ -43,3 +43,5 @@
 40	923	Position is past the end of the stem array of size &1.
 40	924	Stem has no item at position &1.
 40	925	Argument &1 must be an array object, a stem object, or a stem name value; found "&2".
+40	926	&1 argument &2 must be an error code of the form nn.nnn; found "&3".
+40	927	&1 argument &2 must be from &3 to &4; found "&5".
