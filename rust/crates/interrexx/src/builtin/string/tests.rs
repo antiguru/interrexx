@@ -586,7 +586,7 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"TRANSLATE",
             &[Some(b"abc"), None, None, Some(b"$"), Some(b"0"), Some(b"1")]
         ),
-        (93, 924, vec![b"0".to_vec()])
+        (40, 14, vec![b"TRANSLATE".to_vec(), b"5".to_vec(), b"0".to_vec()])
     );
 
     assert_eq!(
