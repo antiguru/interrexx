@@ -513,15 +513,15 @@ fn a_bad_argument_range_reports_the_converted_value() {
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (40, 13, vec![b"SUBSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(b"COPIES", &[Some(b"ab"), Some(b"-1.0")]),
-        (93, 906, vec![b"1".to_vec(), b"-1".to_vec()])
+        (40, 13, vec![b"COPIES".to_vec(), b"2".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(b"INSERT", &[Some(b"a"), Some(b"b"), Some(b"-1")]),
-        (93, 906, vec![b"2".to_vec(), b"-1".to_vec()])
+        (40, 13, vec![b"INSERT".to_vec(), b"3".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(
@@ -567,7 +567,7 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"SUBSTR",
             &[Some(b"abc"), Some(b"0"), Some(b"5"), Some(b"x")]
         ),
-        (93, 924, vec![b"0".to_vec()])
+        (40, 14, vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()])
     );
 
     assert_eq!(
