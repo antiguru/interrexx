@@ -597,15 +597,12 @@ pub(crate) fn search_path(
     Ok(interp.text_built(found))
 }
 
-/// The search-path lookup. A name starting `/`, `./`, `../` or `~` is
-/// only qualified. Otherwise each non-empty entry of `path` is tried in turn,
-/// and the first that names anything ends the search: a regular file is the
-/// answer, anything else is not found.
+/// The search-path lookup. A name starting `/` or `~` is only qualified.
+/// Otherwise, `./name` and `../name` included, each non-empty entry of `path`
+/// is tried in turn, and the first that names anything ends the search: a
+/// regular file is the answer, anything else is not found.
 fn search(interp: &Interp, file: &[u8], path: &[u8]) -> Vec<u8> {
-    let has_directory = file.first() == Some(&b'~')
-        || file.first() == Some(&b'/')
-        || file.starts_with(b"./")
-        || file.starts_with(b"../");
+    let has_directory = file.first() == Some(&b'~') || file.first() == Some(&b'/');
     if has_directory {
         let qualified = qualify_name(interp, file);
         return if is_regular(&qualified) {

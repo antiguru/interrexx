@@ -390,7 +390,7 @@ fn kind_refusal(name: &'static [u8], position: usize, kind: Kind, found: &[u8]) 
         Kind::Whole => Raised::argument_not_whole(name, position, found),
         Kind::Character => Raised::argument_not_a_pad(name, position, found),
         Kind::Option(valid) => Raised::argument_not_in_list(name, position, valid, found),
-        Kind::Target => Raised::method_target_not_a_number(name, found),
+        Kind::Target => Raised::argument_not_a_number(name, position, found),
         Kind::D2c => Raised::d2c_value_not_whole(found),
         Kind::D2x => Raised::d2x_value_not_whole(found),
         Kind::Digits(notation) => Raised::invalid_digit(notation, first),

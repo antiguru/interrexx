@@ -191,7 +191,7 @@ and defaults to `1`; with `0` it answers the null string and reads nothing;
 when fewer than `count` characters are left, it answers those that are. A line
 that was partly read goes on from where it stopped. At the end of the input it
 answers the null string and raises NOTREADY. `start`, the position, must be
-omitted (`SYNTAX 93.963`). A `count` that is no number raises `SYNTAX 93.943`
+omitted (`SYNTAX 93.963`). A `count` that is no number raises `SYNTAX 40.11`
 and one that is a negative number or not whole raises `SYNTAX 93.923`; a third
 argument raises `SYNTAX 93.902`. In the example the input is two lines, `ab`
 and `cd`.
@@ -229,8 +229,8 @@ bad: say e condition('o')~code
 ```output
 in~charin(1) 93.963
 in~charin(1, 1) 93.963
-in~charin(, 'x') 93.943
-in~charin(, .nil) 93.943
+in~charin(, 'x') 40.11
+in~charin(, .nil) 40.11
 in~charin(, -1) 93.923
 in~charin(, 1.5) 93.923
 in~charin(, 1, 1) 93.902

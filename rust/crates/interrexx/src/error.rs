@@ -641,6 +641,20 @@ impl Raised {
         )
     }
 
+    /// 40.11: a builtin's argument is not a number (`r[conv.method.number]`).
+    /// The same three slots as [`Raised::argument_not_positive`].
+    pub(crate) fn argument_not_a_number(routine: &[u8], position: usize, found: &[u8]) -> Raised {
+        Raised::syntax(
+            40,
+            11,
+            vec![
+                routine.to_vec(),
+                position.to_string().into_bytes(),
+                found.to_vec(),
+            ],
+        )
+    }
+
     /// 40.34: `SOURCELINE`'s line number is past the end of the program.
     /// The message names the routine itself, so the only substitutions are
     /// the requested line and the program's own line count.
@@ -845,14 +859,6 @@ impl Raised {
             906,
             vec![position.to_string().into_bytes(), found.to_vec()],
         )
-    }
-
-    /// 93.915: an option argument's first letter is not one of the ones the
-    /// builtin accepts. `valid` is the accepted set as the message spells it,
-    /// and `found` is the **whole option string**, not the letter that was
-    /// rejected.
-    pub(crate) fn invalid_option(valid: &str, found: &[u8]) -> Raised {
-        Raised::syntax(93, 915, vec![valid.as_bytes().to_vec(), found.to_vec()])
     }
 
     /// 5: a result string too large to allocate. No sub-number and no

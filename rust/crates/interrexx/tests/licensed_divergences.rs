@@ -128,7 +128,7 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
               \x20 call stream f, 'c', 'close'\n  return\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "r AAAAx___CCCCDDDD\np AAAAx___CCCC____\nn AAAAx___________\n",
+        oracle_stdout: "r AAAAx___CCCCDDDD\np AAAAx___CCCCDDDD\nn AAAAx___________\n",
         crate_stdout: "r AAAAxBBBCCCCDDDD\np AAAAxBBBCCCCDDDD\nn AAAAxBBBCCCCDDDD\n",
     },
     LicensedDivergence {

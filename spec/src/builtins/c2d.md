@@ -150,7 +150,7 @@ c: say condition('o')~code
 
 r[bif.c2d.errors]
 The call checks the form of `n` as a [whole number](r:conv.whole.form),
-`SYNTAX 40.12`; the sign of `n`, `SYNTAX 93.923`; and the number of digits of
+`SYNTAX 40.12`; the sign of `n`, `SYNTAX 40.13`; and the number of digits of
 the answer, `SYNTAX 93.936`. A call that fails more than one of these checks
 raises the error of one of them, as [the precedence
 rule](r:conv.error.precedence) says.
@@ -169,7 +169,7 @@ c: say condition('o')~code
 
 ```output
 40.12
-93.923
+40.13
 93.936
 ```
 

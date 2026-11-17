@@ -627,7 +627,7 @@ while `NUMERIC DIGITS` is the number given to `init` (the digits of the program
 that sent `compare` do not matter), and answers the sign of the difference: -1,
 0 or 1. Two numbers whose difference is lost in the rounding to those digits are
 equal, so a comparator of 3 digits finds 1000 and 1001 equal and 1000 and 1010
-not. A difference that is no number raises `SYNTAX 93.943`; a string that is no
+not. A difference that is no number raises `SYNTAX 40.11`; a string that is no
 number raises `SYNTAX 41.1`; a first argument that has no `-` method raises
 `SYNTAX 97.1`. Argument errors are those of
 [`Comparator`](r:class.comparators.comparator.compare). The difference is read
@@ -688,8 +688,8 @@ n~compare("a", "b") => 41.1
 n~compare(1, "") => 41.1
 n~compare(.nil, 1) => 97.1
 n~compare(1, .nil) => 41.1
-n~compare(.pad~new("x"), 1) => 93.943
-n~compare(.pad~new(.nil), 1) => 93.943
+n~compare(.pad~new("x"), 1) => 40.11
+n~compare(.pad~new(.nil), 1) => 40.11
 n~compare(.pad~new(40), 1) => 1
 -1 -1
 n~compare(1) => 93.901
@@ -839,7 +839,7 @@ caselesscolumn:  caselessCompareTo/3 => ANSWER
 descending:  compareTo/1 answer-/0 => String
 caselessdescending:  caselessCompareTo/1 answer-/0 => String
 inverting:  compare/2 answer-/0 => String
-numeric:  -/1 => 93.943
+numeric:  -/1 => 40.11
 ```
 
 ## Deviations

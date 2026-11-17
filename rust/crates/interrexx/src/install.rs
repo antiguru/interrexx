@@ -2474,7 +2474,11 @@ impl Interp {
             // routine is the function that resolves, kept for it whatever
             // RXFUNCDROP later removes.
             let entry = spec.entry.as_deref().unwrap_or(&routine.name);
-            crate::builtin::registrations::register_function(&routine.name, &spec.library, entry);
+            let made = crate::builtin::registrations::register_function(
+                &routine.name,
+                &spec.library,
+                entry,
+            );
             let upper = routine.name.to_ascii_uppercase();
             // Only a library without a package entry exports classic functions:
             // a packaged library's exports are its typed stubs, and an entry
@@ -2490,6 +2494,9 @@ impl Interp {
             {
                 self.routines_changed();
                 return Ok((Vec::new(), None, Some(classic)));
+            }
+            if made {
+                crate::builtin::registrations::drop_function(&upper);
             }
             let raised = Raised::external_routine_not_found(entry);
             return Err(refuse(raised.into(), true));

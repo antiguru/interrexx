@@ -808,8 +808,12 @@ fn the_new_raisers_render_the_oracles_own_message_text() {
             expand("⟨93.906¦1¦-1⟩"),
         ),
         (
-            Raised::invalid_option("BLT", b"Xyz"),
-            expand("⟨93.915¦BLT¦Xyz⟩"),
+            Raised::argument_not_in_list(b"STRIP", 2, "BLT", b"Xyz"),
+            expand("⟨40.904¦STRIP¦2¦BLT¦Xyz⟩"),
+        ),
+        (
+            Raised::argument_not_a_number(b"ABS", 1, b"x"),
+            expand("⟨40.11¦ABS¦1¦x⟩"),
         ),
         (Raised::system_resources(), expand("⟨5⟩")),
     ];

@@ -188,13 +188,12 @@ fn has_extension(name: &str) -> bool {
     program_extension(name).is_some()
 }
 
-/// Whether `name` carries enough directory information to be checked directly
-/// rather than searched for along the path.
+/// Whether `name` is checked directly rather than searched for along the
+/// path: an absolute name or one from the home directory. `./name` and
+/// `../name` are searched for like any other relative name
+/// (`r[env.search.names]`).
 fn has_directory(name: &str) -> bool {
-    name.starts_with('~')
-        || name.starts_with('/')
-        || name.starts_with("./")
-        || name.starts_with("../")
+    name.starts_with('~') || name.starts_with('/')
 }
 
 /// The file a search for `name` finds, normalised against `cwd`, or `None`

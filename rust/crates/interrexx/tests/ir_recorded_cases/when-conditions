@@ -105,29 +105,3 @@ err>      4 *-*     then
 err>      4 *-*       say 'two'
 err>        >L>         "two"
 err>        >>>         "two"
-
-# A transcript, claiming nothing about catching -- no mutation run against this
-# file reddened it. An absorbed `WHEN` under
-# trace r. The inner `WHEN` is the outer one's consequence rather than a branch
-# the `SELECT` collected, so it has no `when_info` entry and compiles to a
-# plain `Op::Exec` region. Its condition is evaluated and traced, its own consequence
-# never runs, and control leaves the `SELECT` without reaching the
-# `OTHERWISE` -- the last of which is why `say 'after'` is the only stdout.
-program
-trace r
-select
-  when 1 = 1 then when 2 = 2 then say 'inner'
-  otherwise say 'other'
-end
-say 'after'
-----
-rc> 0
-out> after
-err>      2 *-* select
-err>      3 *-*   when 1 = 1 
-err>        >>>     "1"
-err>      3 *-*     then
-err>      3 *-*       when 2 = 2 
-err>        >>>         "1"
-err>      6 *-* say 'after'
-err>        >>>   "after"

@@ -219,14 +219,11 @@ say rxcalclog(1)
 r[bif.rxfuncadd.unknown-library]
 A `module` that names no library the interpreter can load, because there is
 none of that name or because the name is spelled with another case, makes the
-call answer `1`, and `name`, unless it is already available, is
-nonetheless registered: [RXFUNCQUERY](rxfuncquery.md) answers `0` for it
-afterwards. The function cannot be called, and the attempt raises `SYNTAX
-43.1`. The registration is the kind that
-[RXFUNCDROP](rxfuncdrop.md) removes. When another program holds a
-registration of the name, [the repeat rule](r:bif.rxfuncadd.repeat) says what
-the call does instead. What it records of `procedure` is not observable and
-not specified.
+call answer `1` and register nothing: [RXFUNCQUERY](rxfuncquery.md) answers
+`1` for `name` afterwards unless it was available before, and a call of it
+raises `SYNTAX 43.1`. When another program holds a registration of the name,
+[the repeat rule](r:bif.rxfuncadd.repeat) says what the call does instead.
+What it records of `procedure` is not observable and not specified.
 
 ```rexx
 say rxfuncquery('spec_rxfuncadd_gone')
@@ -254,14 +251,9 @@ say rxfuncquery('spec_rxfuncadd_gone') rxfuncquery('spec_rxfuncadd_case')
 ```
 
 r[bif.rxfuncadd.repeat]
-Within one program, every call that answers `1` for an unknown library adds a
-registration of its own, even when an earlier call registered the same name for
-the same library: the registrations pile up, and
-[RXFUNCDROP](rxfuncdrop.md) removes them one call at a time. A name already
-registered does not change the answer of a later call: it is `1` for an
-unknown library, and `0` for a library that provides the name, which makes the
-name available through the library and leaves the earlier registrations to be
-dropped. When another program holds a registration of the name, a call for an
+A call that answers `1` registers nothing, so repeating it changes nothing. A
+name already available does not change the answer of a later call: it is `1`
+for an unknown library, and `0` for a library that provides the name. When another program holds a registration of the name, a call for an
 unknown library answers `1` as well, and a call of RXFUNCDROP by this program
 answers `1` and leaves the name available.
 

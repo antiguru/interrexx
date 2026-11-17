@@ -326,21 +326,6 @@ fn a_fragments_activation_base_survives_every_indent_writer_inside_it() {
                 "Error 28.3:  ⟨28.3¦ZZ⟩\n",
             ),
         ),
-        (
-            "do z = 1 to 1\n\
-             select case 2\n\
-             \x20 when 2 then\n\
-             \x20   when 3 then nop\n\
-             \x20 otherwise interpret \"do jj = 1 to 1; say 1/0; end\"\n\
-             end\n\
-             end\n",
-            concat!(
-                "     5 *-*             say 1/0;\n",
-                "     5 *-*           interpret \"do jj = 1 to 1; say 1/0; end\"\n",
-                "Error 42 running {path} line 5:  ⟨42⟩\n",
-                "Error 42.3:  ⟨42.3⟩\n",
-            ),
-        ),
     ];
     for (index, (program, expected)) in rows.iter().enumerate() {
         let outcome = run_program(

@@ -177,7 +177,7 @@ pub(crate) const DATATYPE_OPTIONS: &str = "ABILMNOSUVWX9";
 /// holds, or whether it matches one named type.
 pub(crate) fn datatype(
     interp: &mut Interp,
-    _name: &[u8],
+    name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let Some(option) = optional_string(interp, args, 2) else {
@@ -204,7 +204,7 @@ pub(crate) fn datatype(
         }
     };
     let Some(matched) = matched else {
-        return Err(Raised::invalid_option(DATATYPE_OPTIONS, &[letter]).into());
+        return Err(Raised::argument_not_in_list(name, 2, DATATYPE_OPTIONS, &[letter]).into());
     };
     Ok(interp.text(if matched { b"1" } else { b"0" }))
 }

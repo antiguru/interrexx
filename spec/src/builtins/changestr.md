@@ -54,10 +54,10 @@ r[bif.changestr.count]
 `count` is a [whole-number](r:conv.whole.form) argument, so it raises
 `SYNTAX 40.12` when it does not have that form or has a
 [value](r:conv.whole.digits) that is not a whole number. A whole number
-below 0 raises `SYNTAX 93.906`; `-0` is 0. The null string is not a
-whole number, so an empty `count` raises 40.12 and does not stand for an
-omitted one. The form check comes first, so a `count` that fails it raises
-40.12 whatever its sign.
+below 0 raises `SYNTAX 40.13` ([a count](r:conv.length.check)); `-0` is 0.
+The null string is not a whole number, so an empty `count` raises 40.12 and
+does not stand for an omitted one. The form check comes first, so a `count`
+that fails it raises 40.12 whatever its sign.
 
 ```rexx
 say changestr('a', 'banana', 'x', ' + 2 ') changestr('a', 'banana', 'x', '-0'),
@@ -78,10 +78,10 @@ d: say condition('o')~code
 
 ```output
 bxnxna banana bxnxna
-93.906
+40.13
 40.12
 40.12
-93.906
+40.13
 ```
 
 r[bif.changestr.count.default]
@@ -184,7 +184,7 @@ a: say condition('o')~code
 
 ```output
 [] []
-93.906
+40.13
 ```
 
 r[bif.changestr.empty-newneedle]

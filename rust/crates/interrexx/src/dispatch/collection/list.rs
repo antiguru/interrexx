@@ -298,9 +298,9 @@ fn native_list_insert(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let chain = list_state(interp, receiver)?;
-    // The value is optional -- `insert` requires no argument for it. Measured:
-    // `.List~new~insert` answers `0` at rc 0.
-    let item = args.first().copied().flatten();
+    // The item is required, and checked before the index
+    // (`r[class.list.insert]`).
+    let item = Some(item_argument(args)?);
     let after = match args.get(1).copied() {
         Some(Some(index)) if index == ObjRef::NIL => None,
         Some(Some(index)) => match list_position(interp, chain, index)? {
@@ -344,16 +344,14 @@ fn native_list_put(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let chain = list_state(interp, receiver)?;
-    // The INDEX is what is required, and it is argument two:
-    // `requiredIndex(argIndex, ARG_TWO)`. The value is not checked at all --
-    // measured, `l~put(, handle)` succeeds and leaves the entry holding
-    // nothing.
+    // The index is argument two and is checked first, then the item
+    // (`r[class.list.put]`).
     let handle = list_index_argument(args, 1)?;
-    let item = args.first().copied().flatten();
     let Some(entry) = list_position(interp, chain, handle)? else {
         let written = interp.to_text(handle);
         return Err(Raised::incorrect_list_index(&written).into());
     };
+    let item = Some(item_argument(args)?);
     write_chain(interp, chain, |slots| slots.set(at(entry, ITEM), item))?;
     Ok(None)
 }

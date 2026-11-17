@@ -15,8 +15,9 @@ pub(crate) fn os_path(path: &[u8]) -> &std::path::Path {
 /// canonical name followed by path normalisation. Purely lexical, so that a
 /// path that does not exist still normalises. Each `..` removes the component
 /// before it, which the reference loop does not do after a doubled slash or
-/// after a component starting with `.` (Deviation 34). A name that is not UTF-8
-/// keeps its bytes.
+/// after a component starting with `.` (Deviation 34). A name that ends with a
+/// slash keeps it, since `file/` names a directory and not the file `file`
+/// (`r[bif.qualify.normal]`). A name that is not UTF-8 keeps its bytes.
 pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
     let mut absolute = Vec::with_capacity(cwd.len() + path.len() + 1);
     if path.first() != Some(&b'/') {
@@ -39,7 +40,7 @@ pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
         out.push(b'/');
         out.extend_from_slice(part);
     }
-    if out.is_empty() {
+    if out.is_empty() || path.last() == Some(&b'/') {
         out.push(b'/');
     }
     out

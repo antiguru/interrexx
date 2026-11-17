@@ -281,7 +281,7 @@
   if arg(1, 'E') then raise syntax 93.963 array('CHARIN', 1)
   if \arg(2, 'E') then count = 1
   else do
-    if \datatype(count, 'N') then raise syntax 93.943 array('CHARIN', 2, count)
+    if \datatype(count, 'N') then raise syntax 40.11 array('CHARIN', 2, count)
     if \datatype(count, 'W') | count < 0 then raise syntax 93.923 array('CHARIN', 2, count)
   end
   if count = 0 then return ''

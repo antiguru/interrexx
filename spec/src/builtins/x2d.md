@@ -79,7 +79,7 @@ d: say condition('o')~code
 
 r[bif.x2d.errors]
 The call checks the argument count; the form of `n` as a [whole
-number](r:conv.whole.form), `SYNTAX 40.12`; the sign of `n`, `SYNTAX 93.923`;
+number](r:conv.whole.form), `SYNTAX 40.12`; the sign of `n`, `SYNTAX 40.13`;
 the digits of `hex_string`; and the number of digits of the answer, `SYNTAX
 93.935`. A call that fails more than one of these checks raises the error of
 one of them, as [the precedence rule](r:conv.error.precedence) says.
@@ -90,7 +90,7 @@ say x2d('ff', 'x')
 a: say condition('o')~code
 signal on syntax name b
 say x2d('zz', -1)
-b: say wordpos(condition('o')~code, '93.923 93.933') > 0
+b: say wordpos(condition('o')~code, '40.13 93.933') > 0
 signal on syntax name c
 say x2d('ff', -1)
 c: say condition('o')~code
@@ -105,7 +105,7 @@ e: say condition('o')~code
 ```output
 40.12
 1
-93.923
+40.13
 93.933
 93.935
 ```
@@ -200,7 +200,7 @@ b: say condition('o')~code
 
 ```output
 0 0 0 0 0
-93.923
+40.13
 93.933
 ```
 

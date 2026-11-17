@@ -105,15 +105,15 @@ say rxfuncquery(' SysSleep') rxfuncquery('SysSleep ')
 ```
 
 r[bif.rxfuncquery.registered]
-A name that [RXFUNCADD](rxfuncadd.md) registered for a
-[library it could not find](r:bif.rxfuncadd.unknown-library) is available to
+A name that [RXFUNCADD](rxfuncadd.md) registered is available to
 RXFUNCQUERY, in any case, until [RXFUNCDROP](rxfuncdrop.md) removes the
-registration, although a call of it raises `SYNTAX 43.1`. A name that another
+registration; a name it could not register, for a [library it could not
+find](r:bif.rxfuncadd.unknown-library), is not. A name that another
 program registered is available in the same way, whether or not that program
 is still running.
 
 ```rexx
-say rxfuncadd('spec_rxfuncquery_reg', 'no_such_library_spec', 'entry')
+say rxfuncadd('spec_rxfuncquery_reg', 'specclassic', 'FxClassicJoin')
 say rxfuncquery('spec_rxfuncquery_reg') rxfuncquery('SPEC_RXFUNCQUERY_REG')
 say rxfuncdrop('Spec_RxFuncQuery_Reg')
 say rxfuncquery('spec_rxfuncquery_reg')

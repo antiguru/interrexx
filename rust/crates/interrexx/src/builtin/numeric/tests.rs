@@ -103,7 +103,7 @@ fn the_target_and_the_later_arguments_raise_different_numbers() {
     ] {
         assert_eq!(
             raised(name, &[Some(b"abc")]),
-            (93, 943, subs(&[name, b"abc"])),
+            (40, 11, subs(&[b"ABS", b"1", b"abc"])),
             "{} did not name itself in 93.943",
             String::from_utf8_lossy(name)
         );
@@ -169,7 +169,7 @@ fn an_omitted_argument_is_40_5_at_its_position() {
     // is what is reported.
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"a"), None, Some(b"4")]),
-        (93, 904, subs(&[b"1", b"a"]))
+        (40, 11, subs(&[b"MAX", b"2", b"a"]))
     );
 }
 
@@ -351,11 +351,11 @@ fn each_validation_layer_raises_its_own_code() {
     );
     assert_eq!(
         raised(b"TRUNC", &[Some(b"AB.CD"), Some(b"1")]),
-        (93, 943, subs(&[b"TRUNC", b"AB.CD"]))
+        (40, 11, subs(&[b"TRUNC", b"1", b"AB.CD"]))
     );
     assert_eq!(
         raised(b"TRUNC", &[Some(b"1.5"), Some(b"-1")]),
-        (93, 906, subs(&[b"1", b"-1"]))
+        (40, 13, subs(&[b"TRUNC", b"2", b"-1"]))
     );
 
     assert_eq!(
@@ -364,11 +364,11 @@ fn each_validation_layer_raises_its_own_code() {
     );
     assert_eq!(
         raised(b"FORMAT", &[Some(b"a"), Some(b"1")]),
-        (93, 943, subs(&[b"FORMAT", b"a"]))
+        (40, 11, subs(&[b"FORMAT", b"1", b"a"]))
     );
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"-1")]),
-        (93, 906, subs(&[b"1", b"-1"]))
+        (40, 13, subs(&[b"FORMAT", b"2", b"-1"]))
     );
     // Each of the four optional positions names its own method position
     // when it is the range that is wrong.
@@ -381,7 +381,7 @@ fn each_validation_layer_raises_its_own_code() {
         args[position - 1] = Some(b"-1");
         assert_eq!(
             raised(b"FORMAT", &args),
-            (93, 906, subs(&[method, b"-1"])),
+            (40, 13, subs(&[b"FORMAT", b"3", b"-1"])),
             "argument {position} named the wrong method position"
         );
     }

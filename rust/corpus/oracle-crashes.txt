@@ -456,84 +456,10 @@ documented with no console attached.
 
 ## 10. `SETLOCAL` / `ENDLOCAL` -- two separate crashes
 
-**10a, an unpaired `ENDLOCAL` after any `SETLOCAL`:**
-
-    say setlocal()
-    say endlocal()
-    say endlocal()
-
-SIGSEGV, rc 139, deterministic. stdout carries `1` then `1`; the second
-`ENDLOCAL` dies before printing anything of its own, and stderr is empty.
-
-**10b, the second `ENDLOCAL` that actually restores, paired or not:**
-
-    say setlocal()
-    say endlocal()
-    say setlocal()
-    say endlocal()
-
-SIGABRT, rc 134, `free(): invalid pointer` on stderr, with `1`, `1` and `1` on
-stdout -- the fourth line never prints, so it is the *second restore* that dies
-and not an unpaired call. Measured the same way with the two `SETLOCAL`s nested
-(`setlocal, setlocal, endlocal, endlocal`), which dies at the same point.
-
-So a program reaches 10a only when its first `ENDLOCAL` too many arrives before
-its second restore does; every measured program hits one or the other.
-
-Cause, read end to end in the oracle's source. `SETLOCAL` reaches the
-system-level environment push and the activation's own, which creates its
-environment queue on the first call and pushes the
-saved block. `ENDLOCAL` reaches the system-level environment pop,
-whose guard tests for `.nil`.
-The activation's pop answers
-`.nil` **only when its environment queue is still null**; once the queue
-exists it answers the queue's first item pulled, which is `deleteItem(1)`,
-and an array's `deleteItem` answers a **null pointer** for an out-of-bounds
-index -- which an empty queue's index 1 is. A null pointer is not `.nil`,
-so the guard passes it through to the environment restore,
-which reads the saved block's size and does `chdir` off it.
-That is 10a.
-
-10b is a second defect in the same function. The environment restore
-`putenv`s pointers that live **inside the
-saved Rexx buffer** and frees whatever `environ` entry each name resolved to;
-its first run also copies the whole environment into `malloc`ed strings under
-the `putflag` guard. After one restore, `environ` points into GC-managed memory,
-and the next restore hands those pointers to `free`. Exactly one restore per
-process survives, whatever the nesting -- which is why the paired program above
-dies too.
-
-A termination restore counts. An activation ending with a `SETLOCAL` outstanding
-restores the oldest, so a `::ROUTINE` that
-leaves one open spends the process's one restore on its return:
-
-    call r
-    say 'main sees' value('P61X',,'ENVIRONMENT')
-    call s
-    say 'after internal' value('P61X',,'ENVIRONMENT') endlocal()
-    exit
-    s:
-      call setlocal
-      call value 'P61X', 'internal', 'ENVIRONMENT'
-      return
-    ::routine r
-      call setlocal
-      call value 'P61X', 'routine', 'ENVIRONMENT'
-      return
-
-SIGABRT, rc 134, `free(): invalid pointer` on stderr after `main sees routine`
-on stdout, 5 of 5 runs: main's `ENDLOCAL` is the second restore. This crate
-prints `after internal internal 1`, rc 0.
-
-The control is what makes that reading discriminating rather than merely
-consistent: `say endlocal(); say endlocal()` with no `SETLOCAL` anywhere answers
-`0` and `0` at rc 0 (measured, same wrapper). An absent list is safe; an emptied
-one is not.
-
-**No upstream ticket.** The consequence for this crate is a licensed divergence: an `ENDLOCAL`
-past the outstanding `SETLOCAL`s answers `0` here -- the answer the
-never-created path already gives -- and no differential case may put that
-program in front of the oracle.
+Dropped at r13532 (SF #2146, r13409): an unpaired `ENDLOCAL` after a
+`SETLOCAL` answers `0` rc 0, a second restore runs, and a `::ROUTINE` that
+leaves a `SETLOCAL` open restores on its return with the variables it created
+removed, rc 0.
 
 ## 11. A default I/O route with nothing at the end of it
 
@@ -1747,3 +1673,55 @@ sends at once only where all-notified is set, so `w` is never sent
 sleeps 1 s, and main's `~notify` lands 0.3 s in. This crate prints `notified 1`
 and refuses with `interrexx: a wait that nothing left to run can end is not
 implemented`, rc 120. No upstream ticket.
+
+## 70. A notification target whose `messageComplete` raises, then `~result`
+
+    t = .t~new
+    s = .message~new(t, 'show')
+    b = .bad~new
+    r = .rec~new
+    s~notify(b)
+    s~notify(r)
+    s~start
+    s~wait
+    do until s~hasError
+      call syssleep 0.01
+    end
+    say 'failing target sent:' (b~count > 0) 'next target sent:' (r~count > 0)
+    say s~completed s~hasError s~hasResult
+    say 'error' s~errorCondition~code
+    signal on syntax name c1
+    say s~result
+    c1: say 'result raised' condition('o')~code
+    exit
+    ::class t
+    ::method show unguarded
+      return 'shown'
+    ::class bad inherit MessageNotification
+    ::method init
+      expose n
+      n = 0
+    ::method count unguarded
+      expose n
+      return n
+    ::method messageComplete unguarded
+      expose n
+      n = n + 1
+      raise syntax 93.900 array('refused')
+    ::class rec inherit MessageNotification
+    ::method init
+      expose n
+      n = 0
+    ::method count unguarded
+      expose n
+      return n
+    ::method messageComplete unguarded
+      expose n
+      n = n + 1
+
+Effect: SIGSEGV, rc 139, deterministic: 3 of 3 under the standard wrapper at
+r13532. Nothing on stdout; stderr holds the 93.900 report of the failing
+`messageComplete` twice before the process dies. The same program ran to the
+end at r13346. This crate prints the four lines of the spec example
+`class.message.notify` (`spec/src/classes/message.md`), which is marked
+`no-oracle` for this entry. Cause not investigated; no upstream ticket.

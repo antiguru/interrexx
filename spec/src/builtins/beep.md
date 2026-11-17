@@ -3,6 +3,7 @@ element: BEEP
 kind: builtin
 syntax: "BEEP(frequency, duration)"
 rexxref: "Functions > Built-in Functions > BEEP"
+deviations: [179]
 ---
 
 # BEEP
@@ -33,6 +34,146 @@ arguments. The null string is not an omitted argument; it is a value that
 ```rexx
 signal on syntax name a
 say beep()
+a: say condition('c')
+signal on syntax name b
+say beep(100, 0, 1)
+b: say condition('c')
+signal on syntax name e
+say '100'~beep(0)
+e: say condition('o')~code
+signal off syntax
+say 'done'
+```
+
+```output
+SYNTAX
+SYNTAX
+97.1
+done
+```
+
+r[bif.beep.range]
+`frequency` and `duration` are whole numbers in the [form](r:conv.whole.form)
+that rule gives. The value of each is its number rounded to 20 significant
+digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
+or more, the magnitude rounds up, otherwise down. This is not the rule of [the
+conventions](r:conv.whole.digits), which rounds to 18 digits and raises
+`SYNTAX 40.12`. The frequency must be from 37 to 32767 and the duration from 0
+to 60000. An argument that is not in that form, whose rounded value has a
+fractional part other than zero, that is out of its range, or that is the null
+string raises `SYNTAX 88.907`, and so does an object whose string value fails
+these checks, such as `.nil`. A rounded value whose magnitude is 10\*\*18 or
+more is not a whole number for this purpose, whichever sign it has: it fails
+the form check.
+
+```rexx
+call try 36, 0
+call try 32768, 0
+call try 100, 60001
+call try 100, -1
+call try 1.5, 0
+call try 100, ''
+call try .nil, 0
+call try 36, 'x'
+exit
+try:
+  signal on syntax name e
+  call beep arg(1), arg(2)
+  say 'accepted'
+  return
+e: say condition('c')
+  return
+```
+
+```output
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+```
+
+r[bif.beep.order]
+A call with more than one fault, such as a third argument together with a
+frequency out of range, or a frequency that is not a whole number together
+with a missing duration, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
+
+```rexx
+signal on syntax name d
+x = beep(100, 0, 1)
+d: say condition('c')
+signal on syntax name e
+x = beep(36, 0, 1)
+e: say condition('c')
+signal on syntax name f
+x = beep('x', )
+f: say condition('c')
+```
+
+```output
+SYNTAX
+SYNTAX
+SYNTAX
+```
+
+## The result
+
+r[bif.beep.answer]
+BEEP answers the null string, which is a string of length 0, for every
+accepted pair of arguments. A call as a subroutine therefore sets `RESULT` to
+the null string rather than dropping it.
+
+```rexx
+say '[' || beep(100, 0) || ']' length(beep(37, 0))
+call beep 32767, 0
+say symbol('RESULT') length(result)
+```
+
+```output escaped
+\a\a[] 0
+\aVAR 0
+```
+
+r[bif.beep.bell]
+When no tone can be sounded, as when the output of the program is not a
+console, an accepted call writes one bell character, code 7, to standard
+output, at the point of the call, and nothing else. It is not written through
+the `.OUTPUT` monitor: a program that has redirected `.OUTPUT` still has the
+bell written to standard output. A call that raises an error writes nothing.
+When a tone can be sounded the program cannot rely on anything being
+written.
+
+```rexx
+signal on syntax name a
+call beep 100, 60001
+a: say 'after' condition('c')
+```
+
+```output
+after SYNTAX
+```
+
+## Deviations
+
+r[bif.beep.deviation.179]
+BEEP is a routine of the REXX package, as at language level 6.06
+([Deviation 179](../deviations.md)). Its argument errors are those of [the
+native call rule](r:bif.index.call.native) and of [the range
+rule](r:bif.beep.range), of the 88.9xx family, and when no tone can be sounded
+an accepted call writes a bell character to standard output, as [the bell
+rule](r:bif.beep.bell) says. ooRexx, at level 6.07, makes BEEP a builtin: it
+raises errors of the 40.xxx family for the same faults, accepts some values
+that interrexx refuses, such as `36.9999999999999999994` and
+`60000.000000000000001`, and writes no bell. The examples are those of the
+rules above with the codes and the bells of interrexx.
+
+```rexx
+signal on syntax name a
+say beep()
 a: say condition('o')~code
 signal on syntax name b
 say beep(, 0)
@@ -58,20 +199,6 @@ say 'done'
 97.1
 done
 ```
-
-r[bif.beep.range]
-`frequency` and `duration` are whole numbers in the [form](r:conv.whole.form)
-that rule gives. The value of each is its number rounded to 20 significant
-digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
-or more, the magnitude rounds up, otherwise down. This is not the rule of [the
-conventions](r:conv.whole.digits), which rounds to 18 digits and raises
-`SYNTAX 40.12`. The frequency must be from 37 to 32767 and the duration from 0
-to 60000. An argument that is not in that form, whose rounded value has a
-fractional part other than zero, that is out of its range, or that is the null
-string raises `SYNTAX 88.907`, and so does an object whose string value fails
-these checks, such as `.nil`. A rounded value whose magnitude is 10\*\*18 or
-more is not a whole number for this purpose, whichever sign it has: it fails
-the form check.
 
 ```rexx
 signal on syntax name a
@@ -135,12 +262,6 @@ say 'done'
 \a\a\a\a\a\a\a\adone
 ```
 
-r[bif.beep.order]
-A call with more than one fault, such as a third argument together with a
-frequency out of range, or a frequency that is not a whole number together
-with a missing duration, raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says.
-
 ```rexx
 signal on syntax name d
 x = beep(100, 0, 1)
@@ -158,33 +279,6 @@ f: say wordpos(condition('o')~code, '88.907 88.901') > 0
 1
 1
 ```
-
-## The result
-
-r[bif.beep.answer]
-BEEP answers the null string, which is a string of length 0, for every
-accepted pair of arguments. A call as a subroutine therefore sets `RESULT` to
-the null string rather than dropping it.
-
-```rexx
-say '[' || beep(100, 0) || ']' length(beep(37, 0))
-call beep 32767, 0
-say symbol('RESULT') length(result)
-```
-
-```output escaped
-\a\a[] 0
-\aVAR 0
-```
-
-r[bif.beep.bell]
-When no tone can be sounded, as when the output of the program is not a
-console, an accepted call writes one bell character, code 7, to standard
-output, at the point of the call, and nothing else. It is not written through
-the `.OUTPUT` monitor: a program that has redirected `.OUTPUT` still has the
-bell written to standard output. A call that raises an error writes nothing.
-When a tone can be sounded the program cannot rely on anything being
-written.
 
 ```rexx
 call beep 100, 0

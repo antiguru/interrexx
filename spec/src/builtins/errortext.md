@@ -4,6 +4,7 @@ kind: builtin
 syntax: "ERRORTEXT(n)"
 ansi: "9.5.5"
 rexxref: "Functions > Built-in Functions > ERRORTEXT"
+deviations: [180]
 ---
 
 # ERRORTEXT
@@ -29,7 +30,7 @@ signal on syntax name a
 say errortext()
 a: say condition('o')~code
 signal on syntax name b
-say errortext(26, 'S')
+say errortext(26, 'S', 1)
 b: say condition('o')~code
 signal on syntax name c
 say errortext(, )
@@ -68,9 +69,6 @@ a: say condition('o')~code
 signal on syntax name b
 say errortext(-1)
 b: say condition('o')~code
-signal on syntax name c
-say errortext(1.5)
-c: say condition('o')~code
 signal on syntax name d
 say errortext('')
 d: say condition('o')~code
@@ -80,9 +78,6 @@ e: say condition('o')~code
 signal on syntax name f
 say errortext(1e30)
 f: say condition('o')~code
-signal on syntax name g
-say errortext(100.5)
-g: say wordpos(condition('o')~code, '40.12 40.903') > 0
 ```
 
 ```output
@@ -91,10 +86,8 @@ g: say wordpos(condition('o')~code, '40.12 40.903') > 0
 40.903
 40.903
 40.12
-40.12
 40.903
 40.12
-1
 ```
 
 ## The result
@@ -207,6 +200,35 @@ say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 ```
 
 > **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
-> that selects the standard English text. ooRexx takes one argument only, and
-> so does interrexx: a second argument raises `SYNTAX 40.4`. The texts are
-> interrexx's own and are not specified.
+> that selects the standard English text. interrexx takes one argument only: a
+> second argument raises `SYNTAX 40.4`. The texts are interrexx's own and are
+> not specified.
+
+## Deviations
+
+r[bif.errortext.deviation.180]
+ERRORTEXT takes one argument, a whole number from 0 to 99, as ANSI makes it
+([Deviation 180](../deviations.md)), so a second argument raises `SYNTAX
+40.4` and a number with a fractional part raises `SYNTAX 40.12`, or one of the
+two errors when it is also out of range. ooRexx also takes an error code
+`nn.nnn`, and answers the text of that subcode, or the null string where there
+is none, and a second argument of insert values, which is a feature of
+language level 6.07.
+
+```rexx
+signal on syntax name b
+say errortext(26, 'S')
+b: say condition('o')~code
+signal on syntax name c
+say errortext(1.5)
+c: say condition('o')~code
+signal on syntax name g
+say errortext(100.5)
+g: say wordpos(condition('o')~code, '40.12 40.903') > 0
+```
+
+```output
+40.4
+40.12
+1
+```

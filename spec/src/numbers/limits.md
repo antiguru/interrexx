@@ -50,7 +50,7 @@ A string whose exponent is out of range has [the form of a
 number](r:num.index.form) but is not a number, whatever its other
 characters. DATATYPE with type `N` answers `0` for it, an
 arithmetic operator raises `SYNTAX 41.1`, and a number argument of a builtin
-raises `SYNTAX 93.943`, as [the use rule](r:num.index.use) says of every
+raises `SYNTAX 40.11`, as [the use rule](r:num.index.use) says of every
 string that is not a number. A comparison raises no error: it treats such a
 string as it treats any other that is not a number, and compares it as text.
 
@@ -71,7 +71,7 @@ say ('1e1000000000' = '1.0e1000000000') ('1e999999999' = '1.0e999999999')
 ```output
 41.1
 41.1
-93.943
+40.11
 1 0 0
 0 1
 ```

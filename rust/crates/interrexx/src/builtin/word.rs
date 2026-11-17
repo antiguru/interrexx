@@ -297,7 +297,7 @@ fn converted_position(
 /// `WORD(string, n)`: the `n`th word, or the null string if there is no such
 /// word.
 pub(crate) fn word(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let value = arg(args, 1).expect("check_arity admitted the string");
     let string = required_render(interp, args, 1);
     let bytes = string.text(interp);
@@ -445,7 +445,7 @@ pub(crate) fn word_index(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let string = required_render(interp, args, 1);
 
     let index = word_range(string.text(interp), position).map_or(0, |word| word.start + 1);
@@ -458,7 +458,7 @@ pub(crate) fn word_length(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let string = required_render(interp, args, 1);
 
     let length = word_range(string.text(interp), position).map_or(0, |word| word.len());
@@ -470,8 +470,10 @@ pub(crate) fn word_length(
 pub(crate) fn subword(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let n = converted_position(interp, name, args, 2)?;
     let requested = whole_number(interp, name, args, 3)?;
-    let position = position_of(n)?;
-    let count = requested.map(length_of).transpose()?;
+    let position = position_of(name, 2, n)?;
+    let count = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
 
     let string = required_render(interp, args, 1);
     let string = string.text(interp);
@@ -486,8 +488,10 @@ pub(crate) fn delword(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
     let mut string = required_string(interp, args, 1);
     let n = converted_position(interp, name, args, 2)?;
     let requested = whole_number(interp, name, args, 3)?;
-    let position = position_of(n)?;
-    let count = requested.map(length_of).transpose()?;
+    let position = position_of(name, 2, n)?;
+    let count = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
 
     delword_bytes(&mut string, position, count);
     Ok(interp.text_built(string))
@@ -501,7 +505,7 @@ pub(crate) fn word_pos(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let start = match whole_number(interp, name, args, 3)? {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 3, value)?,
         None => 1,
     };
 

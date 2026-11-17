@@ -48,7 +48,7 @@ say center('abc', 5, '**')
 f: say condition('o')~code
 signal on syntax name g
 say center('abc', -1, '**')
-g: say wordpos(condition('o')~code, '93.923 40.23') > 0
+g: say wordpos(condition('o')~code, '40.13 40.23') > 0
 signal on syntax name h
 say center('abc', 1000000000000000000)
 h: say condition('o')~code
@@ -60,7 +60,7 @@ h: say condition('o')~code
 40.4
 40.5
 40.12
-93.923
+40.13
 40.23
 1
 40.12
@@ -80,7 +80,7 @@ a: say condition('o')~code
 
 ```output
 ..abc.. ..abc.. ..abc..
-93.923
+40.13
 ```
 
 r[bif.center.pad.default]

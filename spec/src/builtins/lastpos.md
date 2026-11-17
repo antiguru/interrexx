@@ -52,7 +52,7 @@ say lastpos('a', 'a', 1, 'x')
 g: say condition('o')~code
 signal on syntax name h
 say lastpos('a', 'a', 0, -1)
-h: say wordpos(condition('o')~code, '93.924 93.923') > 0
+h: say wordpos(condition('o')~code, '40.14 40.13') > 0
 ```
 
 ```output
@@ -60,8 +60,8 @@ h: say wordpos(condition('o')~code, '93.924 93.923') > 0
 40.3
 40.4
 40.5
-93.924
-93.923
+40.14
+40.13
 40.12
 40.12
 1
@@ -172,8 +172,8 @@ b: say condition('o')~code
 
 ```output
 0 0 0
-93.924
-93.923
+40.14
+40.13
 ```
 
 r[bif.lastpos.empty-haystack]

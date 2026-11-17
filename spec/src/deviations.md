@@ -395,8 +395,8 @@ answers some integers unrounded, depending on how the number is held.
 ## 46. LINEOUT on a binary record stream
 
 On a stream opened `BINARY RECLENGTH n`, positioning with LINEOUT and closing
-clear no record, and only a LINEOUT with a string pads its record. ooRexx
-clears or pads a record when LINEOUT positions or closes.
+pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
+a record that a write has started when LINEOUT positions or closes.
 
 ## 47. A DO count wider than NUMERIC DIGITS
 
@@ -1205,7 +1205,7 @@ nothing. ooRexx loses some sets of VALUE that follow in-process `export` and
 `unset` commands, which ones depending on what the program ran before for
 any variable (the second `unset` of a name among them), so that the variable
 has no value afterwards. For `export` with an empty name it stores an entry
-with no name, which a `$` reference with no name then finds.
+with no name.
 
 ## 150. An INTERPRET in a line read at an interactive trace stop
 
@@ -1402,15 +1402,10 @@ no fault converts them from the left before the checks, as ooRexx does
 anything is read or positioned, answers 0, the host's offset when nothing has
 been consumed. ooRexx answers the size of the file.
 
-## 172. A list's Array counts only the items it holds
+## 172. Withdrawn
 
-The Array that `allItems` and `makeArray` answer for a `List` with an entry
-that holds nothing has no item at that entry's place, and its `items` counts
-only the items it holds, so `items` and `isEmpty` agree with what the Array
-holds; `DO OVER` the list skips that entry. ooRexx counts the empty place as an
-item: `items` stays one higher than the items the Array holds, and `isEmpty`
-answers 0 after its last item is removed. Its `DO OVER` assigns `.nil` for the
-entry.
+A list entry that holds nothing: current ooRexx refuses an omitted item to
+`put` and `insert`, as interrexx does, so no such entry exists.
 
 ## 173. IsString answers true for every String
 
@@ -1505,3 +1500,24 @@ until they are gone. A loop that polls for such a change runs for ever, and
 nothing is said. ooRexx runs each attached thread's messages on that thread,
 alongside the other activities, and each such program completes. Issue #681
 tracks doing the same.
+
+## 179. Language level 6.06
+
+interrexx implements language level 6.06. BEEP, DIRECTORY and FILESPEC are
+routines of the REXX package, as at that level, not builtins: their argument
+errors are those of a native routine, of the 88.9xx family, a `::ROUTINE` of
+the same name or an RXFNC exit can replace them, the security manager is sent
+`CALL` for them, and an argument with no string value raises `SYNTAX 88.909`
+rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
+character to standard output. `.RexxInfo~languageLevel`, and the level in
+`PARSE VERSION` and `.RexxInfo~name`, read 6.06, and the CATCH and FINALLY
+clauses of level 6.07 are not part of interrexx. ooRexx is at level 6.07: the
+three are builtins there, with argument errors of the 40.xxx family, BEEP
+writes no bell, and the level reads 6.07.
+
+## 180. ERRORTEXT's argument
+
+interrexx's ERRORTEXT takes one argument, a whole number from 0 to 99, as ANSI
+makes it. ooRexx also takes an error code `nn.nnn`, and answers the text of
+that subcode, or the null string where there is none, and a second argument of
+insert values, which is a feature of level 6.07.

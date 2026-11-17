@@ -1347,21 +1347,3 @@ makearray sent
 answered
 ```
 
-r[instr.do.deviation.172]
-`DO OVER` a list with an entry that [holds nothing](r:class.list.nothing)
-skips that entry, as it skips an index of the list's Array that holds no item
-([Deviation 172](r:class.list.deviation.172)). ooRexx assigns `.nil` for it.
-
-```rexx
-l = .list~of('a', 'b', 'c')
-l~put(, l~next(l~first))
-n = 0
-do x over l
-  n = n + 1
-end
-say n
-```
-
-```output
-2
-```

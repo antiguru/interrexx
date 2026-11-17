@@ -55,9 +55,9 @@ d: say condition('o')~code
 ## The result
 
 r[bif.rxfuncdrop.registered]
-A name that this program had [RXFUNCADD](rxfuncadd.md) register for a [library
-it could not find](r:bif.rxfuncadd.unknown-library) is removed, and the answer
-is `0`. The name is compared without regard to case, as
+A name that this program had [RXFUNCADD](rxfuncadd.md) register for a
+function of a [library without a package entry](r:native.loading.classic) is
+removed, and the answer is `0`. The name is compared without regard to case, as
 [RXFUNCQUERY](rxfuncquery.md) does. Afterwards the name is no longer
 available, and a call of it raises `SYNTAX 43.1` as that of any unknown
 function does. The answer is written as the digit `0` or `1`. This rule and
@@ -68,7 +68,7 @@ RXFUNCDROP, and whether the name stays available, is not specified; the second
 program's side is in [RXFUNCADD's repeat rule](r:bif.rxfuncadd.repeat).
 
 ```rexx
-call rxfuncadd 'spec_rxfuncdrop_one', 'no_such_library_spec', 'p'
+call rxfuncadd 'spec_rxfuncdrop_one', 'specclassic', 'FxClassicJoin'
 say rxfuncquery('spec_rxfuncdrop_one')
 say rxfuncdrop('SPEC_RXFUNCDROP_ONE')
 say rxfuncquery('spec_rxfuncdrop_one')
@@ -93,7 +93,7 @@ is still running.
 
 ```rexx
 say rxfuncdrop('spec_rxfuncdrop_never')
-call rxfuncadd 'spec_rxfuncdrop_twice', 'no_such_library_spec', 'p'
+call rxfuncadd 'spec_rxfuncdrop_twice', 'specclassic', 'FxClassicJoin'
 say rxfuncdrop('spec_rxfuncdrop_twice')
 say rxfuncdrop('spec_rxfuncdrop_twice')
 say rxfuncdrop('')
@@ -107,23 +107,21 @@ say rxfuncdrop('')
 ```
 
 r[bif.rxfuncdrop.one-at-a-time]
-A call removes one registration. A name registered more than once, by calls
-of [RXFUNCADD](rxfuncadd.md) that answered `1` for an unknown library, stays
-available until as many calls of RXFUNCDROP as there were registrations have
-removed them.
+A name has one registration at the most: [RXFUNCADD](rxfuncadd.md) of a name
+that is already available registers nothing more, and one that answers `1`
+registers nothing. So one call of RXFUNCDROP removes the name, and a second
+answers `1`.
 
 ```rexx
+call rxfuncadd 'spec_rxfuncdrop_many', 'specclassic', 'FxClassicJoin'
+call rxfuncadd 'spec_rxfuncdrop_many', 'specclassic', 'FxClassicUpper'
 call rxfuncadd 'spec_rxfuncdrop_many', 'no_such_library_spec', 'a'
-call rxfuncadd 'spec_rxfuncdrop_many', 'no_such_library_spec', 'b'
-call rxfuncadd 'spec_rxfuncdrop_many', 'other_library_spec', 'a'
-do 4
+do 2
   say rxfuncdrop('spec_rxfuncdrop_many') rxfuncquery('spec_rxfuncdrop_many')
 end
 ```
 
 ```output
-0 0
-0 0
 0 1
 1 1
 ```

@@ -858,11 +858,11 @@ fn each_conversion_check_raises_its_own_code() {
     assert_eq!(raised(b"D2C", &[Some(b"abc"), Some(b"1")]).1, 929);
     assert_eq!(
         raised(b"C2D", &[Some(b"abc"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (40, 13, vec![b"C2D".to_vec(), b"2".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(b"D2X", &[Some(b"-1"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (40, 13, vec![b"D2X".to_vec(), b"2".to_vec(), b"-1".to_vec()])
     );
     // A pad's own type error, at the position the call spells it.
     assert_eq!(

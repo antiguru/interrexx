@@ -56,7 +56,8 @@ r[bif.copies.n.check]
 [value](r:conv.whole.digits) the conventions describe, and not negative.
 An `n` that is not a whole number, including the null string, raises
 `SYNTAX 40.12`; an `n` that is a whole number and negative raises
-`SYNTAX 93.906`. An `n` of 0 is allowed, and so is `-0`, which is 0.
+`SYNTAX 40.13`, as [a length](r:conv.length.check) does. An `n` of 0 is
+allowed, and so is `-0`, which is 0.
 
 ```rexx
 say '['copies('rst', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')
@@ -82,17 +83,16 @@ f: say condition('o')~code
 
 ```output
 [] [] abab
-93.906
+40.13
 40.12
 40.12
 40.12
-93.906
+40.13
 40.12
 ```
 
-> **Note.** The code is not 93.923, which [the length rule](r:conv.length.check)
-> gives to the length of other builtins: COPIES' count is not a length
-> argument.
+> **Note.** Sent as a message, a negative `n` raises `SYNTAX 93.906`, not the
+> 93.923 of a negative length: the method's count is not a length argument.
 
 ## The result
 

@@ -146,8 +146,8 @@ r[bif.setlocal.return]
 When a `::routine` or a method ends with saves of its own outstanding, the
 oldest of them is put back: the code that called it sees the current
 directory of that save, and each environment variable the save held has the
-value it held, as [an ENDLOCAL](r:bif.endlocal.restore) would give. A
-variable the program created after the save keeps its value, as
+value it held, as [an ENDLOCAL](r:bif.endlocal.restore) would give, and a
+variable the program created after the save is removed, as
 [ENDLOCAL](r:bif.endlocal.scope) says. The return of an internal routine
 puts nothing back, by [the rule above](r:bif.setlocal.owner). What the end of
 the program does with saves outstanding is not specified.
@@ -170,7 +170,7 @@ return
 
 ```output
 inside /
-before 1 new
+before 1 
 ```
 
 ```rexx

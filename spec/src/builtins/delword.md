@@ -48,7 +48,7 @@ say delword('a b', 'x')
 f: say condition('o')~code
 signal on syntax name g
 say delword('a b', 0, -1)
-g: say wordpos(condition('o')~code, '93.924 93.923') > 0
+g: say wordpos(condition('o')~code, '40.14 40.13') > 0
 signal on syntax name h
 say delword('a b', )
 h: say condition('o')~code
@@ -56,8 +56,8 @@ h: say condition('o')~code
 
 ```output
 Pack box jugs Pack box jugs [Pack ]
-93.924
-93.923
+40.14
+40.13
 40.3
 40.4
 40.5

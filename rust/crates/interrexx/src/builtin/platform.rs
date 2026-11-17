@@ -134,14 +134,8 @@ pub(crate) fn setlocal(
 }
 
 /// `ENDLOCAL()`: restores the innermost saved pair, answering `.true` when there was
-/// one and `.false` when there was not.
-///
-/// **This crate does not crash past the end** (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 10): an `ENDLOCAL` with nothing
-/// outstanding dereferences null there once any `SETLOCAL` has run, and a
-/// second restore in one process aborts in the allocator. Answering 0 is what
-/// is answered before the first `SETLOCAL`, so that is the answer here, and no
-/// differential case may run either program.
+/// one and `.false` when there was not, whether or not a `SETLOCAL` ran before
+/// (`r[bif.endlocal.none]`).
 pub(crate) fn endlocal(
     interp: &mut Interp,
     _name: &'static [u8],

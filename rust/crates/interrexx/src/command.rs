@@ -257,12 +257,18 @@ fn after_keyword(command: &[u8], keyword: usize) -> &[u8] {
 
 /// `cd`, `set`, `unset` and `export` against this interpreter's own directory
 /// and environment rather than in a child. `None` is "not handled here", which
-/// hands the command to a shell. A leading blank or a quoted spelling is
-/// deliberately not recognised, matching `handleCommandInternally`.
+/// hands the command to a shell. Blanks and tabs before the word are skipped; a
+/// quoted or capitalised spelling is not recognised, matching
+/// `handleCommandInternally`.
 fn run_internally(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcome> {
     if shell_metacharacter(command) {
         return None;
     }
+    let lead = command
+        .iter()
+        .position(|byte| !matches!(*byte, b' ' | b'\t'))
+        .unwrap_or(command.len());
+    let command = &command[lead..];
     if command == b"cd" || command.starts_with(b"cd ") {
         return change_directory(interp, command);
     }
@@ -296,8 +302,8 @@ fn unquote(text: &[u8]) -> Vec<u8> {
     out
 }
 
-/// The target after the leading spaces, unquoted, is where this interpreter's
-/// own directory moves. Nothing is the home directory. `~`, `~/rest` and `~
+/// The target after the leading spaces, its trailing blanks dropped and then
+/// unquoted, is where this interpreter's own directory moves. Nothing is the home directory. `~`, `~/rest` and `~
 /// rest` are `HOME` with a `/` after it, the rest kept only after `~/`. `~user`
 /// and `~user/rest` are that account's home directory. `None` hands the command
 /// to the shell, where `HOME` is unset or the account is unknown. With `HOME`
@@ -331,7 +337,7 @@ fn change_directory(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcom
     } else {
         rest.to_vec()
     };
-    let target = unquote(&target);
+    let target = unquote(trim_unescaped_blanks(&target));
     let target = match target.iter().position(|byte| *byte == 0) {
         Some(end) => &target[..end],
         None => &target[..],
@@ -370,38 +376,75 @@ fn physical_directory(interp: &Interp, target: &[u8]) -> Result<std::path::PathB
     Ok(directory)
 }
 
-/// Expands `$NAME` in the value half of an assignment against this
-/// interpreter's environment, as `sys_process_export` does before storing it.
+/// `text` without the blanks at its end, except that a blank with a backslash
+/// right before it stays, and so does every blank before that one.
+fn trim_unescaped_blanks(text: &[u8]) -> &[u8] {
+    let mut end = text.len();
+    while end > 0 && text[end - 1] == b' ' && (end < 2 || text[end - 2] != b'\\') {
+        end -= 1;
+    }
+    &text[..end]
+}
+
+/// The longest variable name a `$` reference can carry; a longer run of name
+/// characters is not a reference, and its `$` stays.
+const MAX_REFERENCE_NAME: usize = 255;
+
+/// The value half of an assignment as a shell reads it, in the simple cases,
+/// against this interpreter's environment.
 ///
-/// **A name ends only at `/`, `:`, `$` or the end of the value** -- not at a
-/// blank and not at punctuation, so `$ZZSET-tail` looks up a variable called
-/// `ZZSET-tail`. A name nothing answers contributes nothing at all, which is
-/// why that example stores the empty string rather than the shell's
-/// `two-tail`; measured, and the terminator itself is left in the stream for
-/// the next segment to copy.
+/// Double quotes are dropped, and so are single quotes, with nothing between
+/// a pair of single quotes read. Elsewhere a backslash is dropped and the
+/// byte after it kept as it is, and `$NAME` or `${NAME}` is replaced by that
+/// variable's value, or by nothing when it has none. A name is a run of ASCII
+/// letters, digits and underscores, of at most [`MAX_REFERENCE_NAME`] bytes; a
+/// `$` with no such run after it, or a `${` whose run is not closed by `}`,
+/// stays as it is, as does a backslash at the very end. A quote that nothing
+/// closes runs to the end.
 fn expand(interp: &Interp, value: &[u8]) -> Vec<u8> {
-    // The hit flag is set on seeing a `$` rather than on resolving one, and the
-    // value is copied untouched only when there is none.
-    if !value.contains(&b'$') {
-        return value.to_vec();
-    }
+    let name_byte = |byte: u8| byte == b'_' || byte.is_ascii_alphanumeric();
     let mut out = Vec::with_capacity(value.len());
+    let mut in_double = false;
+    let mut in_single = false;
     let mut at = 0;
-    while let Some(offset) = value[at..].iter().position(|byte| *byte == b'$') {
-        let dollar = at + offset;
-        out.extend_from_slice(&value[at..dollar]);
-        let start = dollar + 1;
-        let mut end = start;
-        while end < value.len() && !matches!(value[end], b'/' | b':' | b'$') {
-            end += 1;
+    while at < value.len() {
+        let byte = value[at];
+        at += 1;
+        if in_single {
+            if byte == b'\'' {
+                in_single = false;
+            } else {
+                out.push(byte);
+            }
+            continue;
         }
-        if let Some(found) = interp.env_get(&value[start..end]) {
-            out.extend_from_slice(found);
+        match byte {
+            b'\\' if at < value.len() => {
+                out.push(value[at]);
+                at += 1;
+            }
+            b'"' => in_double = !in_double,
+            b'\'' if !in_double => in_single = true,
+            b'$' => {
+                let braced = value.get(at) == Some(&b'{');
+                let start = at + usize::from(braced);
+                let end = start
+                    + value[start..]
+                        .iter()
+                        .take_while(|byte| name_byte(**byte))
+                        .count();
+                let closed = !braced || value.get(end) == Some(&b'}');
+                if end > start && end - start <= MAX_REFERENCE_NAME && closed {
+                    if let Some(found) = interp.env_get(&value[start..end]) {
+                        out.extend_from_slice(found);
+                    }
+                    at = end + usize::from(braced);
+                } else {
+                    out.push(byte);
+                }
+            }
+            _ => out.push(byte),
         }
-        at = end;
-    }
-    if at < value.len() {
-        out.extend_from_slice(&value[at..]);
     }
     out
 }

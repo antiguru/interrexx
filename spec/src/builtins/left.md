@@ -50,7 +50,7 @@ say left('abc', 2, '..')
 f: say condition('o')~code
 signal on syntax name g
 say left('abc', -1, '..')
-g: say wordpos(condition('o')~code, '93.923 40.23') > 0
+g: say wordpos(condition('o')~code, '40.13 40.23') > 0
 signal on syntax name h
 say left()
 h: say condition('o')~code
@@ -62,7 +62,7 @@ hi yo   | hi yo..
 40.4
 40.5
 40.12
-93.923
+40.13
 40.23
 1
 40.3
