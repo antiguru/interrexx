@@ -653,10 +653,10 @@ fn fields(out: &mut String, fields: &[CField], retype: &[(&str, &str)], indent: 
 }
 
 /// The C++ conversion operators of `conversions`, each answering the union
-/// member of its value code, then the assignment operators of `assignments`,
-/// each storing its value in the union member of its value code and setting
-/// `type` to that code. The code is written as a number: the `REXX_VALUE_`
-/// names are defined after the structs.
+/// member of its value code, which must be of the type converted to, then the
+/// assignment operators of `assignments`, each storing its value in the union
+/// member of its value code and setting `type` to that code. The code is
+/// written as a number: the `REXX_VALUE_` names are defined after the structs.
 fn operators(out: &mut String, conversions: &[(&str, &str)], assignments: &[(&str, &str)]) {
     if conversions.is_empty() && assignments.is_empty() {
         return;
@@ -667,12 +667,20 @@ fn operators(out: &mut String, conversions: &[(&str, &str)], assignments: &[(&st
             rows().any(|(_, row)| row == *name),
             "the conversion table has no code {name}"
         );
-        writeln!(
-            out,
-            "    operator {}() {{ return value.value_{name}; }}",
-            c_type(tokens)
-        )
-        .unwrap();
+        let ty = c_type(tokens);
+        let member = format!("value_{name}");
+        let Some(field) = ValueUnion::C_FIELDS.iter().find(|f| f.name == member) else {
+            panic!("the value union has no member {member}");
+        };
+        let CSpelling::Rust(member_tokens) = field.ty else {
+            panic!("{member} is spelled in C, not from its Rust type");
+        };
+        assert_eq!(
+            c_type(member_tokens),
+            ty,
+            "operator {ty} reads {member}, which is not of that type"
+        );
+        writeln!(out, "    operator {ty}() {{ return value.{member}; }}").unwrap();
     }
     for (tokens, name) in assignments {
         let Some((code, _)) = rows().find(|(_, row)| row == name) else {
