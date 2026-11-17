@@ -528,7 +528,7 @@ fn a_bad_argument_range_reports_the_converted_value() {
             b"CHANGESTR",
             &[Some(b"a"), Some(b"b"), Some(b"c"), Some(b"-1")]
         ),
-        (93, 906, vec![b"3".to_vec(), b"-1".to_vec()])
+        (40, 13, vec![b"CHANGESTR".to_vec(), b"4".to_vec(), b"-1".to_vec()])
     );
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(b"Xyz")]),
