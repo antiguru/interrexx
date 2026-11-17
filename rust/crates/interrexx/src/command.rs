@@ -815,7 +815,7 @@ fn start(
     } else {
         interp.pool.reserve()?.map(ReservedWorker::new)
     };
-    let Ok(running) = builder.spawn() else {
+    let Ok(running) = crate::host::spawning(|| builder.spawn()) else {
         return Ok(nothing(UNKNOWN_COMMAND));
     };
     // **Every writing half of a merged pipe closes here**, and there are

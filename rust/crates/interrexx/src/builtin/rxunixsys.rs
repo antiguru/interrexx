@@ -230,11 +230,6 @@ pub(crate) fn setuid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
     check_arity(args, 1)?;
     let uid = int(interp, args, 1)?;
     let dropped = crate::host::drop_supplementary_groups();
-    // A host that cannot drop the groups does not change the user either, so
-    // a process giving up its privileges never keeps the old user's groups.
-    if dropped == Err(nix::errno::Errno::ENOSYS) {
-        return Ok(code(interp, dropped.map_err(nix_errno)));
-    }
     kept(interp, dropped.map_err(nix_errno));
     let set = nix::unistd::setuid(nix::unistd::Uid::from_raw(unsigned(uid))).map_err(nix_errno);
     Ok(code(interp, set))

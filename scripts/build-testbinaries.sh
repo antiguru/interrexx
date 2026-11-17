@@ -13,8 +13,9 @@
 #               this repository owns link against that directory.
 #
 # Every product records only --out as its search path (DT_RPATH, which the loader consults before
-# LD_LIBRARY_PATH). The build fails if `ldd` resolves either library anywhere else, with or
-# without the oracle's lib directory on LD_LIBRARY_PATH.
+# LD_LIBRARY_PATH, or LC_RPATH on macOS). The build fails if either library resolves anywhere
+# else, with or without the oracle's lib directory on LD_LIBRARY_PATH (api_resolves in
+# api-flags.sh).
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -80,12 +81,13 @@ if [ -n "$libs" ]; then
 fi
 stage
 
-flags=("${api_flags[@]}" -L"$out" -Wl,--disable-new-dtags -Wl,-rpath,"$out")
+api_rpath "$out"
+flags=("${api_flags[@]}" -L"$out" "${api_rpath_flags[@]}")
 
 shared() {
     local compiler=$1 name=$2
     shift 2
-    "$compiler" -shared -o "$out/lib$name.so" "$@" "${flags[@]}"
+    "$compiler" -shared -o "$out/lib$name.$api_dylib" "$@" "${flags[@]}"
 }
 
 shared c++ orxfunction "$src/orxfunction.cpp" -lrexx -lrexxapi
@@ -103,20 +105,21 @@ if [ -f "$samples/callrexx1.cpp" ]; then
     c++ -o "$out/callrexx1" "$samples/callrexx1.cpp" "${flags[@]}" -lrexx -lrexxapi
 fi
 
-products=("$out"/liborx*.so "$out/rexxinstance" "$out/provoke_locks" "$out/detach_root_terminate")
+products=("$out"/liborx*."$api_dylib" "$out/rexxinstance" "$out/provoke_locks"
+    "$out/detach_root_terminate")
 [ -f "$out/callrexx1" ] && products+=("$out/callrexx1")
 
 # Each of the two libraries a product needs must resolve to --out, under the caller's environment
-# and with the oracle's lib directory first on LD_LIBRARY_PATH.
+# and with the oracle's lib directory first on LD_LIBRARY_PATH (api_resolves says what the check
+# reads on each host).
 check() {
-    local product=$1 resolved library
+    local product=$1 library status
     shift
-    resolved=$(env "$@" ldd "$product")
-    for library in librexx.so.4 librexxapi.so.4; do
-        grep -q "^[[:space:]]*$library " <<<"$resolved" || continue
-        if ! grep -q "^[[:space:]]*$library => $out/$library " <<<"$resolved"; then
-            echo "build-testbinaries.sh: $product resolves $library outside $out ($*):" >&2
-            grep "$library" <<<"$resolved" >&2 || echo "  (not resolved)" >&2
+    for library in $(api_versioned librexx) $(api_versioned librexxapi); do
+        status=0
+        api_resolves "$product" "$library" "$out" "$@" || status=$?
+        if [ "$status" -eq 1 ]; then
+            echo "build-testbinaries.sh: $product resolves $library outside $out ($*)" >&2
             exit 1
         fi
     done

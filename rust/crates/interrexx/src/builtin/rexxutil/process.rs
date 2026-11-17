@@ -52,8 +52,13 @@ pub(crate) fn cls(
     command.current_dir(std::ffi::OsStr::from_bytes(interp.cwd_bytes()));
     // `output` would give the child `/dev/null`; `system` inherits it.
     command.stdin(std::process::Stdio::inherit());
+    // The output is collected as `output` collects it, but the child starts
+    // apart from the wait, so `host::spawning` holds no lock while it runs.
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
     interp.sync_input_offset();
-    let output = command.output();
+    let output =
+        crate::host::spawning(|| command.spawn()).and_then(std::process::Child::wait_with_output);
     interp.adopt_input_offset();
     let status = match output {
         Ok(output) => {

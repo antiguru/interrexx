@@ -14,8 +14,9 @@
 # uses it, so no bison is needed. A host without the ncurses headers skips orxncurses and says so.
 #
 # Every product records only --out as its search path (DT_RPATH, which the loader consults before
-# LD_LIBRARY_PATH). The build fails if `ldd` resolves either library anywhere else, with or
-# without the oracle's lib directory on LD_LIBRARY_PATH.
+# LD_LIBRARY_PATH, or LC_RPATH on macOS). The build fails if either library resolves anywhere
+# else, with or without the oracle's lib directory on LD_LIBRARY_PATH (api_resolves in
+# api-flags.sh).
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -47,17 +48,19 @@ build() {
         ln -sfn "$versioned" "$out/$library.$api_dylib"
     done
 
-    # --no-as-needed keeps both libraries recorded although a product may call into only one,
-    # so the check below always has both to look at.
-    local flags=(-w "${api_flags[@]}" -shared -L"$out"
-        -Wl,--disable-new-dtags -Wl,-rpath,"$out" -Wl,--no-as-needed)
+    # api_keep_needed keeps both libraries recorded although a product may call into only one,
+    # so the check below always has both to look at. It is empty on macOS, which the bash there
+    # (3.2) takes for unset under `set -u` unless the expansion is guarded.
+    api_rpath "$out"
+    local flags=(-w "${api_flags[@]}" -shared -L"$out" "${api_rpath_flags[@]}"
+        ${api_keep_needed[@]+"${api_keep_needed[@]}"})
 
-    c++ -o "$out/libhostemu.so" "$src/hostemu/platform/unix/hostemu.cpp" \
+    c++ -o "$out/libhostemu.$api_dylib" "$src/hostemu/platform/unix/hostemu.cpp" \
         "$src/hostemu/cmdparse.cpp" -I"$src/hostemu" "${flags[@]}" -pthread -lrexx -lrexxapi
 
-    rm -f "$out/liborxncurses.so"
+    rm -f "$out/liborxncurses.$api_dylib"
     if echo '#include <ncurses.h>' | c++ -fsyntax-only -x c++ - 2>/dev/null; then
-        c++ -o "$out/liborxncurses.so" "$src/orxncurses/orxncurses.cpp" -DCURSES_HAVE_NCURSES_H \
+        c++ -o "$out/liborxncurses.$api_dylib" "$src/orxncurses/orxncurses.cpp" -DCURSES_HAVE_NCURSES_H \
             "${flags[@]}" -lrexx -lrexxapi -lncurses
     else
         echo "build-extensions.sh: no ncurses headers (<ncurses.h>); orxncurses is not built" >&2
@@ -86,7 +89,7 @@ if [ -n "$libs" ] && [ -z "$check_only" ]; then
 fi
 [ -n "$check_only" ] || build
 products=()
-for product in "$out/libhostemu.so" "$out/liborxncurses.so"; do
+for product in "$out/libhostemu.$api_dylib" "$out/liborxncurses.$api_dylib"; do
     [ -f "$product" ] && products+=("$product")
 done
 if [ ${#products[@]} -eq 0 ]; then
@@ -95,15 +98,17 @@ if [ ${#products[@]} -eq 0 ]; then
 fi
 
 # Both libraries, which every product records as needed, must resolve to --out, under the
-# caller's environment and with the oracle's lib directory first on LD_LIBRARY_PATH.
+# caller's environment and with the oracle's lib directory first on LD_LIBRARY_PATH
+# (api_resolves says what the check reads on each host).
 check() {
-    local product=$1 resolved library
+    local product=$1 library status
     shift
-    resolved=$(env "$@" ldd "$product")
-    for library in librexx.so.4 librexxapi.so.4; do
-        if ! grep -q "^[[:space:]]*$library => $out/$library " <<<"$resolved"; then
-            echo "build-extensions.sh: $product resolves $library outside $out ($*):" >&2
-            grep "$library" <<<"$resolved" >&2 || echo "  (not resolved)" >&2
+    for library in $(api_versioned librexx) $(api_versioned librexxapi); do
+        status=0
+        api_resolves "$product" "$library" "$out" "$@" || status=$?
+        if [ "$status" -ne 0 ]; then
+            echo "build-extensions.sh: $product resolves $library outside $out ($*)" >&2
+            [ "$status" -ne 2 ] || echo "  (not needed)" >&2
             exit 1
         fi
     done

@@ -15,11 +15,12 @@ on:
     paths:
       - .github/workflows/macos-nightly.yml
 
-# A newer run of the same ref supersedes one still queued or running: each run takes most of an
-# hour of a macOS runner.
+# A newer run of the same pull request supersedes one still queued or running: each run takes most
+# of an hour of a macOS runner. Runs of different events never share a group, and a scheduled or
+# dispatched run is never cancelled, so a dispatch on `main` does not end that night's run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:

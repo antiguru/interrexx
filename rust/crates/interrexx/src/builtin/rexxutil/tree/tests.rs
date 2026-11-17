@@ -1,5 +1,6 @@
 use std::fs;
 use std::os::unix::ffi::OsStrExt as _;
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::PathBuf;
 
 use rustix::fs::FileType;
@@ -63,12 +64,21 @@ fn a_dangling_link_is_listed_by_its_own_status() {
     let zone = tz::TimeZone::utc();
     let line = entry_line(options, &zone, b"/x/dangling".to_vec(), stat).expect("a file");
     // A link's own permissions are the host's: Linux gives every link all of them, Apple's
-    // systems the creating process's umask.
-    let mode = if cfg!(target_os = "linux") {
-        "lrwxrwxrwx"
-    } else {
-        "lrwxr-xr-x"
-    };
+    // systems what the creating process's umask leaves. The expectation is the link's own
+    // `lstat`, so it holds under any umask.
+    let bits = fs::symlink_metadata(scratch.0.join("dangling"))
+        .expect("the link's own status")
+        .permissions()
+        .mode();
+    let mode: String = std::iter::once('l')
+        .chain((0..9).rev().map(|bit| {
+            if bits & (1 << bit) == 0 {
+                '-'
+            } else {
+                ['x', 'w', 'r'][bit % 3]
+            }
+        }))
+        .collect();
     assert!(
         line.ends_with(format!("           7  {mode}  /x/dangling").as_bytes()),
         "{}",

@@ -2,8 +2,8 @@
 //! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
 //! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
-//! (`uname -s`), which `SysUname` answers, `{null_rdev}` `/dev/null`'s device number, and `{ENAME}` or `{SIGNAME}` in a program the host's
-//! number for that error or signal. A file named `<name>.<host>` holds answers the host decides, and runs only on
+//! (`uname -s`), which `SysUname` answers. `{null_rdev}` in a program is `/dev/null`'s device
+//! number, and `{ENAME}` or `{SIGNAME}` the host's number for that error or signal. A file named `<name>.<host>` holds answers the host decides, and runs only on
 //! that host.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
@@ -87,6 +87,15 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     ] {
         program = program.replace(&format!("{{{name}}}"), &number.to_string());
     }
+    // So is `/dev/null`'s device number, `{null_rdev}` in a program: a case compares an answer
+    // with it there, so no other answer that happens to be the same number is rewritten.
+    program = program.replace(
+        "{null_rdev}",
+        &rustix::fs::stat("/dev/null")
+            .expect("/dev/null")
+            .st_rdev
+            .to_string(),
+    );
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
     let api = rexx_service::service_dir(&root, name);
@@ -121,16 +130,10 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         "\"{}\"",
         rustix::system::uname().sysname().to_string_lossy()
     );
-    // So is `/dev/null`'s device number, recorded as `{null_rdev}`.
-    let null_rdev = format!(
-        "\"{}\"",
-        rustix::fs::stat("/dev/null").expect("/dev/null").st_rdev
-    );
     let raw = |bytes: &[u8]| {
         String::from_utf8_lossy(bytes)
             .replace(&dir.display().to_string(), "{dir}")
             .replace(&sysname, "\"{sysname}\"")
-            .replace(&null_rdev, "\"{null_rdev}\"")
     };
     (
         output.status.code().unwrap_or(-1),

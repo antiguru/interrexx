@@ -91,11 +91,7 @@ impl Canceller {
         }
         #[cfg(not(any(target_os = "linux", target_os = "android")))]
         {
-            // No `pipe2` here, so close-on-exec is set apart from the call.
-            let (read, write) = rustix::pipe::pipe().ok()?;
-            for end in [&read, &write] {
-                rustix::io::fcntl_setfd(end, rustix::io::FdFlags::CLOEXEC).ok()?;
-            }
+            let (read, write) = crate::host::pipe_cloexec().ok()?;
             rustix::fs::fcntl_setfl(&write, rustix::fs::OFlags::NONBLOCK).ok()?;
             Some(Canceller {
                 pipe: (read, write),

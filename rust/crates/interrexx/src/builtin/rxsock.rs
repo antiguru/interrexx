@@ -26,7 +26,7 @@ mod hosts;
 use super::rxsock_wait;
 
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::os::fd::{BorrowedFd, IntoRawFd as _, OwnedFd};
+use std::os::fd::{AsFd as _, BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -950,7 +950,10 @@ pub(crate) fn socket_new(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
         _ => return Err(failed(interp)),
     };
     let made = rustix::net::socket(rustix::net::AddressFamily::INET, kind, protocol)
-        .map(|socket| i64::from(socket.into_raw_fd()))
+        .and_then(|socket| {
+            crate::host::prepare_socket(socket.as_fd())?;
+            Ok(i64::from(socket.into_raw_fd()))
+        })
         .map_err(os);
     Ok(answer(interp, made))
 }
@@ -1115,7 +1118,10 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
 
 /// `accept` on the socket numbered `fd` without blocking: a blocking socket
-/// is made non-blocking for the call. The socket it answers is blocking.
+/// is made non-blocking for the call. The socket it answers has the mode the
+/// host's `accept` gives it for the listening socket's own mode, which the
+/// call's toggle does not change. A socket it cannot ready is closed and the
+/// failure answered.
 fn try_accept(fd: i32) -> Os<Accepted> {
     with_socket(fd, |socket| {
         let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
@@ -1128,7 +1134,12 @@ fn try_accept(fd: i32) -> Os<Accepted> {
             let _ = rustix::fs::fcntl_setfl(socket, flags);
         }
         let (new, address) = accepted?;
-        blocking(&new).map_err(os)?;
+        // A host whose accepted socket takes the listening socket's mode
+        // gave it the toggle's `O_NONBLOCK`, which the program never set.
+        if toggled && crate::host::ACCEPT_INHERITS_NONBLOCK {
+            blocking(&new).map_err(os)?;
+        }
+        crate::host::prepare_socket(new.as_fd()).map_err(os)?;
         Ok((new, address))
     })
 }
@@ -1145,11 +1156,11 @@ fn blocking(socket: &OwnedFd) -> rustix::io::Result<()> {
 }
 
 /// Whether a receive on `socket` can never be answered by data: a listening
-/// socket, and off Linux, whose poll does not report it hung up, a stream
+/// socket, and where the host's poll does not report it hung up, a stream
 /// socket with no peer.
 fn unconnected_stream(socket: std::os::fd::BorrowedFd<'_>) -> bool {
     crate::host::is_listening(socket)
-        || (!cfg!(any(target_os = "linux", target_os = "android"))
+        || (!crate::host::POLL_HANGS_UP_UNCONNECTED
             && rustix::net::sockopt::socket_type(socket) == Ok(rustix::net::SocketType::STREAM)
             && rustix::net::getpeername(socket) == Err(rustix::io::Errno::NOTCONN))
 }
@@ -1388,7 +1399,7 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     // raises HALT on the `SockSend` line.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
-            let flags = flags | crate::host::send_without_sigpipe(socket);
+            let flags = flags | crate::host::SEND_FLAGS;
             rustix::net::send(socket, &bytes, flags)
                 .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
                 .map_err(os)
@@ -1420,7 +1431,7 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     // As `SockSend`: a halting signal ends a blocked send at this clause.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
-            let flags = flags | crate::host::send_without_sigpipe(socket);
+            let flags = flags | crate::host::SEND_FLAGS;
             let count = match target(address) {
                 Target::Inet(v4) | Target::Unspec(v4) => {
                     rustix::net::sendto(socket, &bytes, flags, &v4)
@@ -1837,53 +1848,33 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
 
 const SET_EVENTS: [PollFlags; 3] = [PollFlags::IN, PollFlags::OUT, PollFlags::PRI];
 
-/// The size of this process's descriptor table: `select` reads no
-/// descriptor at or above it. On Linux that is `FDSize` in
-/// `/proc/self/status`, the table the kernel has grown to.
-#[cfg(any(target_os = "linux", target_os = "android"))]
-fn descriptor_table_size() -> i32 {
-    std::fs::read_to_string("/proc/self/status")
-        .ok()
-        .and_then(|status| {
-            status
-                .lines()
-                .find_map(|line| line.strip_prefix("FDSize:"))
-                .and_then(|size| size.trim().parse().ok())
+/// Whether `select` looks at each entry of `sets`, per set
+/// ([`crate::host::SelectTable`]): a negative entry or one past the
+/// descriptor table is never ready and no error, while a closed one inside it
+/// answers -1 with `EBADF`. Taken once per call, so the polls and the walk of
+/// their answers agree on every entry.
+fn reached(sets: &[Option<Set>; 3]) -> [Vec<bool>; 3] {
+    let table = crate::host::SelectTable::now();
+    sets.each_ref().map(|set| {
+        set.as_ref().map_or_else(Vec::new, |set| {
+            set.sockets.iter().map(|fd| table.reaches(*fd)).collect()
         })
-        .unwrap_or(i32::MAX)
+    })
 }
 
-/// The size of this process's descriptor table: `select` reads no
-/// descriptor at or above it. Apple's kernel truncates `select`'s count to
-/// the table it has grown to, as Linux's does, but does not say how large
-/// that is; one past the highest open descriptor, which `/dev/fd` lists, is
-/// the least it can be, and a descriptor never opened lies beyond it.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
-fn descriptor_table_size() -> i32 {
-    std::fs::read_dir("/dev/fd")
-        .ok()
-        .and_then(|entries| {
-            entries
-                .filter_map(|entry| entry.ok()?.file_name().to_str()?.parse::<i32>().ok())
-                .max()
-        })
-        .map_or(i32::MAX, |highest| highest.saturating_add(1))
-}
-
-/// Whether `select` looks at `fd`: a negative entry or one past the descriptor
-/// table is never ready and no error, while a closed one below it answers -1
-/// with `EBADF`.
-fn selectable(fd: i32, table: i32) -> bool {
-    (0..table).contains(&fd)
-}
-
-fn select_polls(sets: &[Option<Set>; 3]) -> Vec<(i32, PollFlags)> {
-    let table = descriptor_table_size();
+/// The polls for the entries of `sets` that `reached` says `select` looks at.
+fn select_polls(sets: &[Option<Set>; 3], reached: &[Vec<bool>; 3]) -> Vec<(i32, PollFlags)> {
     sets.iter()
         .zip(SET_EVENTS)
-        .filter_map(|(set, events)| set.as_ref().map(|set| (set, events)))
-        .flat_map(|(set, events)| set.sockets.iter().map(move |fd| (*fd, events)))
-        .filter(|(fd, _)| selectable(*fd, table))
+        .zip(reached)
+        .filter_map(|((set, events), reached)| set.as_ref().map(|set| (set, events, reached)))
+        .flat_map(|(set, events, reached)| {
+            set.sockets
+                .iter()
+                .zip(reached)
+                .filter(|(_, reached)| **reached)
+                .map(move |(fd, _)| (*fd, events))
+        })
         .collect()
 }
 
@@ -1898,7 +1889,7 @@ pub(crate) fn select(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
         None => None,
     };
     let sets = [reads, writes, excepts];
-    let polls = select_polls(&sets);
+    let polls = select_polls(&sets, &reached(&sets));
     let ready = any_ready(&polls);
     if ready || timeout.is_some_and(|seconds| seconds <= 0.0) {
         return Ok(finish_select(interp, &sets));
@@ -1920,23 +1911,23 @@ pub(crate) fn select(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 }
 
 fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
-    let table = descriptor_table_size();
-    let polls = select_polls(sets);
+    let reached = reached(sets);
+    let polls = select_polls(sets, &reached);
     let Some(revents) = poll_now(&polls) else {
         return answer(interp, Err(EBADF));
     };
     let mut revents = revents.into_iter();
     let mut count = 0;
     let mut kept: Vec<Option<Vec<i32>>> = Vec::new();
-    for (set, events) in sets.iter().zip(SET_EVENTS) {
+    for ((set, events), reached) in sets.iter().zip(SET_EVENTS).zip(&reached) {
         let Some(set) = set else {
             kept.push(None);
             continue;
         };
         let mut ready = Vec::new();
         let mut counted = Vec::new();
-        for fd in set.sockets.iter().copied() {
-            if !selectable(fd, table) {
+        for (fd, reached) in set.sockets.iter().copied().zip(reached) {
+            if !reached {
                 continue;
             }
             let revents = revents.next().unwrap_or_else(PollFlags::empty);
@@ -2002,5 +1993,29 @@ mod tests {
         let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
             .expect("a connection");
         assert!(try_accept(fd).is_ok());
+    }
+
+    /// A blocking listening socket's connection is accepted blocking on every
+    /// host, the toggle that tried it without blocking undone. A non-blocking
+    /// one's, the program's own choice, is accepted as the host's `accept`
+    /// gives it: blocking on Linux, non-blocking where the mode is inherited.
+    #[test]
+    fn an_accepted_socket_has_the_mode_the_host_gives_it() {
+        use std::os::fd::AsFd as _;
+        for listener_blocks in [true, false] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a listener");
+            listener
+                .set_nonblocking(!listener_blocks)
+                .expect("the listener's mode");
+            let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
+                .expect("a connection");
+            let (accepted, _) = try_accept(listener.as_raw_fd()).expect("the connection");
+            let expected = listener_blocks || !crate::host::ACCEPT_INHERITS_NONBLOCK;
+            assert_eq!(
+                blocks(accepted.as_fd()),
+                expected,
+                "listener blocking: {listener_blocks}"
+            );
+        }
     }
 }

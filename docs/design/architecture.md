@@ -225,17 +225,22 @@ its behaviour. Windows is not supported yet (#215).
 
 * Code that differs by host sits behind one function per concern, with an implementation per
   host chosen by `cfg`, so a new host adds implementations and no caller changes. The
-  interpreter's are in `interrexx/src/host.rs` (watching a child's end, `SIGPIPE` on sends,
-  `mode_t` and `access` widths, dropping supplementary groups); the C API's library names, which
-  build scripts and the libraries read alike, are in `interrexx-api/src/library_names.rs`.
-  Smaller differences stay at their one site as paired `cfg` items: the thread stack query in
+  interpreter's are in `interrexx/src/host.rs`: watching a child's end, `SIGPIPE` on sends,
+  the mode of an accepted socket, which descriptors `select` looks at, whether a `FIONREAD`
+  count is trusted, close-on-exec descriptors and the start of child processes, `mode_t` and
+  `access` widths, and dropping supplementary groups. The raw calls some hosts need there sit in
+  the granted module `interrexx/src/host/sys.rs`. The C API's library names, which build
+  scripts and the libraries read alike, are in `interrexx-api/src/library_names.rs`, and the
+  build scripts' linker and loader differences in `scripts/api-flags.sh`. Smaller differences
+  stay at their one site as paired `cfg` items: the thread stack query in
   `interrexx-api/src/ffi.rs`, peer credentials in the API service's transport, the descriptor
   listing in `interrexx-rxapi/src/descriptors.rs`, `SysQueryProcess`'s usage figures.
 * Where Linux has a mechanism and another Unix has none, the other host takes the fallback the
   code already had: socket waits without `epoll` poll on a pool thread, and the timer without
   `timerfd` uses the poll's timeout.
-* On macOS, `SysSetuid` changes nothing and answers -1 with `ENOSYS`, since no safe call drops
-  the supplementary groups there and a process giving up its privileges must not keep them.
+* Where a host cannot create a descriptor close-on-exec in one call, the interpreter's own
+  descriptors are made under a shared lock that the start of a child process takes exclusively,
+  so no child inherits one half made.
 * Tests that read `/proc`, set another process's limits or use GNU `env` are compiled on Linux
   only, each with the reason beside its `cfg`.
 * On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and
