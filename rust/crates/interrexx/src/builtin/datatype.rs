@@ -686,13 +686,17 @@ mod tests {
         let (code, stderr) = failure(b"say datatype('','')\n");
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&expand("Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦?⟩")),
+            stderr.contains(&expand(
+                "Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦?⟩"
+            )),
             "{stderr}"
         );
         let (code, stderr) = failure(b"say datatype(1,'Z')\n");
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&expand("Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦Z⟩")),
+            stderr.contains(&expand(
+                "Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦Z⟩"
+            )),
             "{stderr}"
         );
     }

@@ -505,44 +505,90 @@ fn a_bad_argument_kind_names_the_routine_and_the_call_position() {
 fn a_bad_argument_range_reports_the_converted_value() {
     assert_eq!(
         raised(b"LEFT", &[Some(b"ab"), Some(b"-1.0")]),
-        (40, 13, vec![b"LEFT".to_vec(), b"2".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"LEFT".to_vec(), b"2".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"0.0")]),
-        (40, 14, vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]),
-        (40, 13, vec![b"SUBSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"SUBSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"COPIES", &[Some(b"ab"), Some(b"-1.0")]),
-        (40, 13, vec![b"COPIES".to_vec(), b"2".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"COPIES".to_vec(), b"2".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"INSERT", &[Some(b"a"), Some(b"b"), Some(b"-1")]),
-        (40, 13, vec![b"INSERT".to_vec(), b"3".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"INSERT".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(
             b"CHANGESTR",
             &[Some(b"a"), Some(b"b"), Some(b"c"), Some(b"-1")]
         ),
-        (40, 13, vec![b"CHANGESTR".to_vec(), b"4".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"CHANGESTR".to_vec(), b"4".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(b"Xyz")]),
-        (40, 904, vec![b"STRIP".to_vec(), b"2".to_vec(), b"BLT".to_vec(), b"Xyz".to_vec()])
+        (
+            40,
+            904,
+            vec![
+                b"STRIP".to_vec(),
+                b"2".to_vec(),
+                b"BLT".to_vec(),
+                b"Xyz".to_vec()
+            ]
+        )
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"")]),
-        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), Vec::new()])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                Vec::new()
+            ]
+        )
     );
     // A range error inside a builtin whose start is out of range is
     // still raised, which is the ordering `delstr`'s own comment names.
     assert_eq!(
         raised(b"DELSTR", &[Some(b"abc"), Some(b"9"), Some(b"-1")]),
-        (40, 13, vec![b"DELSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"DELSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
 }
 
@@ -567,7 +613,11 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"SUBSTR",
             &[Some(b"abc"), Some(b"0"), Some(b"5"), Some(b"x")]
         ),
-        (40, 14, vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()]
+        )
     );
 
     assert_eq!(
@@ -586,7 +636,11 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"TRANSLATE",
             &[Some(b"abc"), None, None, Some(b"$"), Some(b"0"), Some(b"1")]
         ),
-        (40, 14, vec![b"TRANSLATE".to_vec(), b"5".to_vec(), b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"TRANSLATE".to_vec(), b"5".to_vec(), b"0".to_vec()]
+        )
     );
 
     assert_eq!(
@@ -599,7 +653,16 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"X"), Some(b"1")]),
-        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), b"X".to_vec()])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                b"X".to_vec()
+            ]
+        )
     );
 }
 
@@ -779,11 +842,29 @@ fn a_null_option_byte_is_accepted_and_matches_no_letter() {
 
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(&[0x01])]),
-        (40, 904, vec![b"STRIP".to_vec(), b"2".to_vec(), b"BLT".to_vec(), vec![0x01]])
+        (
+            40,
+            904,
+            vec![
+                b"STRIP".to_vec(),
+                b"2".to_vec(),
+                b"BLT".to_vec(),
+                vec![0x01]
+            ]
+        )
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(&[0x01])]),
-        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), b"".to_vec()])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                b"".to_vec()
+            ]
+        )
     );
 }
 
