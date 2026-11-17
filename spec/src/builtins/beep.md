@@ -125,18 +125,10 @@ SYNTAX
 r[bif.beep.answer]
 BEEP answers the null string, which is a string of length 0, for every
 accepted pair of arguments. A call as a subroutine therefore sets `RESULT` to
-the null string rather than dropping it.
+the null string rather than dropping it. The test that cites this rule checks
+it on interrexx; the example under [the deviation](r:bif.beep.deviation.179)
+shows it with interrexx's bells.
 
-```rexx
-say '[' || beep(100, 0) || ']' length(beep(37, 0))
-call beep 32767, 0
-say symbol('RESULT') length(result)
-```
-
-```output escaped
-\a\a[] 0
-\aVAR 0
-```
 
 r[bif.beep.bell]
 When no tone can be sounded, as when the output of the program is not a
@@ -307,4 +299,15 @@ exit
 \aafter
 88.907
 \ashown 1
+```
+
+```rexx
+say '[' || beep(100, 0) || ']' length(beep(37, 0))
+call beep 32767, 0
+say symbol('RESULT') length(result)
+```
+
+```output escaped
+\a\a[] 0
+\aVAR 0
 ```
