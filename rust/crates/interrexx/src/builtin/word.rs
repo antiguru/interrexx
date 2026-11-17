@@ -1063,7 +1063,7 @@ mod tests {
         );
         assert_eq!(
             raised(b"SUBWORD", &[Some(b"a b"), Some(b"0"), Some(b"1")]),
-            (93, 924, vec![b"0".to_vec()])
+            (40, 14, vec![b"SUBWORD".to_vec(), b"2".to_vec(), b"0".to_vec()])
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"a b"), Some(b"1"), Some(b"q")]),
