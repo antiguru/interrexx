@@ -122,7 +122,7 @@ insert (,'a')
 insert ('a',)
 insert (,,'a')
 ----
-insert (,'a') => 93.918
+insert (,'a') => 93.903
 insert ('a',) => ok
 insert (,,'a') => 93.902
 

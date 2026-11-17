@@ -80,13 +80,14 @@ Raised	address_input_source	body	crates/interrexx/src/error.rs	off-send-surface	
 Raised	address_output_target	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_needs_a_string_value	body+send	crates/interrexx/src/error.rs	agrees	yes	88.909	o~hasMethod(o)
 Raised	argument_not_a_class	send	crates/interrexx/src/error.rs	agrees	yes	88.914	o~isA(5)
+Raised	argument_not_a_number	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_a_pad	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_a_pad_or_class_name	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_a_symbol	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_an_instance	send	crates/interrexx/src/error.rs	agrees	yes	88.914	p~addRoutine('X', 5) over p = .context~package -- the pair with argument_not_a_class is the class name substituted, and Routine is the one this row raises
 Raised	argument_not_convertible	send	crates/interrexx/src/error.rs	agrees	yes	93.953	.Package~new('X', 'Y', 'Z') -- the third argument is a parent context and anything that is not a Method, a Routine or a Package reaches this
 Raised	argument_not_in_list	body+send	crates/interrexx/src/error.rs	agrees	yes	40.904	say .Method~newFile('nofile.rex', 5)
-Raised	argument_not_non_negative	body+send	crates/interrexx/src/error.rs	agrees	yes	93.906	.array~new(-1)
+Raised	argument_not_non_negative	send	crates/interrexx/src/error.rs	agrees	yes	93.906	.array~new(-1)
 Raised	argument_not_non_negative_call	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_positive	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_single_dimensional	send	crates/interrexx/src/error.rs	agrees	yes	88.913	o~sendWith('M', .array~new(2,2)) -- ~run's A style is the same raise under the name "argument array", and .array~new(2) answers on both sides
@@ -160,9 +161,8 @@ Raised	invalid_base64	send	crates/interrexx/src/error.rs	agrees	yes	93.962	'YW==
 Raised	invalid_conversion	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	invalid_digit	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	invalid_grouping	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
-Raised	invalid_length	body+send	crates/interrexx/src/error.rs	agrees	yes	93.923	.stringtable~new('abc')
-Raised	invalid_option	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
-Raised	invalid_position	body+send	crates/interrexx/src/error.rs	agrees	yes	93.924	m = .array~new(2,3) then m[1.5,1]
+Raised	invalid_length	send	crates/interrexx/src/error.rs	agrees	yes	93.923	.stringtable~new('abc')
+Raised	invalid_position	send	crates/interrexx/src/error.rs	agrees	yes	93.924	m = .array~new(2,3) then m[1.5,1]
 Raised	invalid_routine_option	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	invalid_stream_name	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Loud	inverted_wait	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
@@ -190,7 +190,7 @@ Raised	method_argument_not_positive	send	crates/interrexx/src/error.rs	agrees	ye
 Raised	method_argument_not_whole	send	crates/interrexx/src/error.rs	agrees	yes	93.905	.Package~defaultOptions('C', 'x')
 Raised	method_option_not_recognised	send	crates/interrexx/src/error.rs	agrees	yes	93.915	(1,2)~makeString('X')
 Raised	method_source_not_all_strings	send	crates/interrexx/src/error.rs	agrees	yes	93.952	self~setMethod('Z', (1, .nil))
-Raised	method_target_not_a_number	body+send	crates/interrexx/src/error.rs	agrees	yes	93.943	'abc'~sign
+Raised	method_target_not_a_number	send	crates/interrexx/src/error.rs	agrees	yes	93.943	'abc'~sign
 Raised	method_target_not_whole	send	crates/interrexx/src/error.rs	agrees	yes	93.940	'1.5'~modulo(3)
 Raised	method_user_defined	body+send	crates/interrexx/src/error.rs	agrees	yes	argument 2 must not be empty	.context~package~options('DIGITS', '') -- the message is the whole of what this raise substitutes, so the row's answer is that text rather than an M.N
 Raised	misplaced_whitespace	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-

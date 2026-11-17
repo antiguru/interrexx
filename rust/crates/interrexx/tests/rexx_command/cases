@@ -1398,9 +1398,9 @@ out> ordm rex in REXX_PATH
 run rexx_path=rp
 ./viarp
 ----
-rc> 253
-err> Error 3:
-err> Error 3.901:
+rc> 0
+out> hi from rp
+out> LINUX COMMAND DIR/rp/viarp.rex
 
 run rexx_path=rp
 sub2/inrp
@@ -1411,9 +1411,8 @@ out> inrp
 run rexx_path=rp
 ./sub2/inrp
 ----
-rc> 253
-err> Error 3:
-err> Error 3.901:
+rc> 0
+out> inrp
 
 # the written form, then the lower-case form (env.search.case)
 run

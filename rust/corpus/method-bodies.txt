@@ -637,7 +637,7 @@ List	firstItem	instance	answers	rc 0
 List	hasIndex	instance	answers	rc 163
 List	hasItem	instance	answers	rc 163
 List	index	instance	answers	rc 163
-List	insert	instance	answers	rc 0
+List	insert	instance	answers	rc 163
 List	isEmpty	instance	answers	rc 0
 List	items	instance	answers	rc 0
 List	last	instance	answers	rc 0
@@ -1213,7 +1213,7 @@ RexxInfo	fuzz	instance	answers	rc 0
 RexxInfo	internalDigits	instance	answers	rc 0
 RexxInfo	internalMaxNumber	instance	answers	rc 0
 RexxInfo	internalMinNumber	instance	answers	rc 0
-RexxInfo	languageLevel	instance	answers	rc 0
+RexxInfo	languageLevel	instance	diverge	diverge-stdout
 RexxInfo	libraryPath	instance	answers	rc 0
 RexxInfo	majorVersion	instance	answers	rc 0
 RexxInfo	maxArraySize	instance	answers	rc 0
@@ -1221,7 +1221,7 @@ RexxInfo	maxExponent	instance	answers	rc 0
 RexxInfo	maxPathLength	instance	answers	rc 0
 RexxInfo	minExponent	instance	answers	rc 0
 RexxInfo	modification	instance	answers	rc 0
-RexxInfo	name	instance	answers	rc 0
+RexxInfo	name	instance	diverge	diverge-stdout
 RexxInfo	package	instance	answers	rc 0
 RexxInfo	pathSeparator	instance	answers	rc 0
 RexxInfo	platform	instance	answers	rc 0
@@ -1229,7 +1229,7 @@ RexxInfo	release	instance	answers	rc 0
 RexxInfo	revision	instance	answers	rc 0
 RexxInfo	version	instance	answers	rc 0
 RexxQueue	new	class	answers	rc 0
-RexxQueue	create	class	unstable	the oracle
+RexxQueue	create	class	unstable	this crate
 RexxQueue	delete	class	answers	rc 168
 RexxQueue	exists	class	answers	rc 168
 RexxQueue	open	class	answers	rc 168

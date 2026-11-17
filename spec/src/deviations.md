@@ -447,9 +447,8 @@ with the return code as if every write had succeeded.
 ## 53. Numeric rules from the reference manual
 
 A comparison under NUMERIC FUZZ checks LOSTDIGITS whatever the signs, MAX and
-MIN apply FUZZ to whole numbers, an omitted MAX or MIN argument is `40.5` for
-the function and `93.903` for the method, and a divisor is checked for
-LOSTDIGITS when the dividend is zero. A LOSTDIGITS description renders its
+MIN apply FUZZ to whole numbers, and a divisor is checked for LOSTDIGITS when
+the dividend is zero. A LOSTDIGITS description renders its
 operand the same way however it was produced. ooRexx departs from each of
 these.
 
