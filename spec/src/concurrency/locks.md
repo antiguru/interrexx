@@ -1115,7 +1115,11 @@ o4 = .k~new; m4 = o4~start('onDrop')
 do o over .array~of(o1, o2, o4)
   do until o~ready; end
 end
-o1~assignTail; o2~assignTail; o4~dropTail
+-- each change is repeated until its waiter has ended, so that a change made
+-- before the waiter waits is not the only one
+do until m1~completed; o1~assignTail; call SysSleep 0.01; end
+do until m2~completed; o2~assignTail; call SysSleep 0.01; end
+do until m4~completed; o4~dropTail; call SysSleep 0.01; end
 say m1~result
 say m2~result
 say m4~result
@@ -1164,7 +1168,7 @@ do kind over .array~of('onStem', 'offStem')
   o = .k~new
   m = o~start(kind)
   do until o~ready; end
-  o~assignStem
+  do until m~completed; o~assignStem; call SysSleep 0.01; end
   say kind':' m~result
 end
 ::class k
