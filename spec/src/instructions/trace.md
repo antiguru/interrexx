@@ -1446,7 +1446,7 @@ say 'caught' condition('o')~code symbol('x')
 ```
 
 ```output
-a
        >>>   "a"
+a
 caught 93.900 LIT
 ```

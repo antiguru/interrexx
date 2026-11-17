@@ -307,7 +307,7 @@ say SysSearchPath('C1ZQSN', here || '/c1zqsna/c1zqsnf', 'N') == here || '/c1zqsn
 say '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna/none') || ']' '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna') || ']'
 say SysSearchPath('C1ZQSN', here || '/c1zqsna//./c1zqsnf') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', 'c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
-say SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf' (SysSearchPath('C1ZQSN', './c1zqsnf', 'C') == here || '/c1zqsnf')
+say (SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf') (SysSearchPath('C1ZQSN', './c1zqsnf', 'C') == here || '/c1zqsnf')
 say '[' || SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf', 'N') || ']' (SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf') == here || '/c1zqsna/c1zqsnf')
 say SysSearchPath('C1ZQSN', 'c1zqsnh/../c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
