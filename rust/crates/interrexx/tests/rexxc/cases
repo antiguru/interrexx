@@ -274,8 +274,10 @@ ok.rex
 ro.rxo
 -s
 ----
-rc> 0
-file> #!/usr/bin/env rexx\n/**/@REXX\x00\x00
+rc> 253
+err> Error 3:
+err> Error 3.902:
+file> old\n
 
 run
 ok.rex
@@ -507,7 +509,9 @@ run
 locked.rex
 -s
 ----
-rc> 0
+rc> 253
+err> Error 3:
+err> Error 3.1:
 
 # words in error come before the check of the names
 # (env.invocation.rexxc.names)
