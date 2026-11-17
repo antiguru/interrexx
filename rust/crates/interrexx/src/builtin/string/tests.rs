@@ -536,7 +536,7 @@ fn a_bad_argument_range_reports_the_converted_value() {
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"")]),
-        (93, 915, vec![b"MN".to_vec(), Vec::new()])
+        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), Vec::new()])
     );
     // A range error inside a builtin whose start is out of range is
     // still raised, which is the ordering `delstr`'s own comment names.
