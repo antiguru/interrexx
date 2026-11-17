@@ -1725,3 +1725,35 @@ r13532. Nothing on stdout; stderr holds the 93.900 report of the failing
 end at r13346. This crate prints the four lines of the spec example
 `class.message.notify` (`spec/src/classes/message.md`), which is marked
 `no-oracle` for this entry. Cause not investigated; no upstream ticket.
+
+## 71. In-process `unset` after earlier in-process `unset` commands
+
+    e = 'ENVIRONMENT'
+    address system
+    do n over .array~of('A4ZQ_U1', 'A4ZQ_U2', 'A4ZQ_U3', 'A4ZQ_U4', 'A4ZQ_W4',,
+        'A4ZQ_U5', 'A4ZQ_U6')
+      call value n, 'set', e
+    end
+    call t 'unset A4ZQ_U1', 'A4ZQ_U1'
+    call t 'unset  A4ZQ_U2', 'A4ZQ_U2'
+    call t 'unset A4ZQ_U3 ', 'A4ZQ_U3'
+    call t 'unset A4ZQ_U4 A4ZQ_W4', 'A4ZQ_U4 A4ZQ_W4'
+    exit
+    t: procedure expose e
+      parse arg cmd, names
+      address system
+      cmd
+      s = ''
+      do n over names~makeArray(' ')
+        s = s '['value(n, , e)']'
+      end
+      say '['cmd']' rc s
+      return
+
+Effect: abort, "free(): double free detected", 3 of 3 under the standard
+wrapper at r13532, on the fourth command. The program is the original
+`env.commands.unset` example (`spec/src/environment/commands.md`) up to that
+command; the example now runs the same commands in another order, which did
+not crash in 5 of 5 runs. The crash depends on heap layout, so another order
+may crash too. Probably the r13532 `sys_process_export` (SF #1711): an `unset`
+frees the old entry without taking it out of `environ`. No upstream ticket.
