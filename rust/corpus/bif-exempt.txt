@@ -17,42 +17,9 @@
 # a row carrying one is a divergence nothing is holding. MISMATCH is the sharp
 # one: both renderings produced output and they differ.
 # `every_exempt_attribution_is_a_known_phase_or_a_declared_outcome` pins them
-# at 7, 33 and 33. If it goes red, rule on the row first -- give it an owner, or
+# at 7, 0 and 33. If it goes red, rule on the row first -- give it an owner, or
 # record it as a known gap -- and then move the number to match.
 #
-ABS::test_14#1	RAISE-MISMATCH
-ABS::test_22#1	RAISE-MISMATCH
-ABS::test_30#1	RAISE-MISMATCH
-ABS::test_31#1	RAISE-MISMATCH
-ABS::test_ABS_subTest32#1	RAISE-MISMATCH
-C2D::test_22#1	RAISE-MISMATCH
-C2D::test_23#1	RAISE-MISMATCH
-C2D::test_24#1	RAISE-MISMATCH
-C2D::test_25#1	RAISE-MISMATCH
-C2D::test_26#1	RAISE-MISMATCH
-C2D::test_27#1	RAISE-MISMATCH
-C2D::test_28#1	RAISE-MISMATCH
-C2D::test_29#1	RAISE-MISMATCH
-C2D::test_30#1	RAISE-MISMATCH
-C2D::test_31#1	RAISE-MISMATCH
-CENTER::test_11#1	RAISE-MISMATCH
-CENTER::test_45#1	RAISE-MISMATCH
-CENTER::test_46#1	RAISE-MISMATCH
-CENTER::test_71#1	RAISE-MISMATCH
-CENTER::test_72#1	RAISE-MISMATCH
-CENTER::test_73#1	RAISE-MISMATCH
-CENTER::test_91#1	RAISE-MISMATCH
-CENTER::test_92#1	RAISE-MISMATCH
-CENTER::test_93#1	RAISE-MISMATCH
-CENTRE::test_11#1	RAISE-MISMATCH
-CENTRE::test_45#1	RAISE-MISMATCH
-CENTRE::test_46#1	RAISE-MISMATCH
-CENTRE::test_71#1	RAISE-MISMATCH
-CENTRE::test_72#1	RAISE-MISMATCH
-CENTRE::test_73#1	RAISE-MISMATCH
-CENTRE::test_91#1	RAISE-MISMATCH
-CENTRE::test_92#1	RAISE-MISMATCH
-CENTRE::test_93#1	RAISE-MISMATCH
 ERRORTEXT::test_ERRORTEXT#22	MISMATCH
 ERRORTEXT::test_ERRORTEXT#27	MISMATCH
 ERRORTEXT::test_ERRORTEXT#32	MISMATCH

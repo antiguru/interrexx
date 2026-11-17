@@ -25,12 +25,15 @@ struct Case {
 /// The cases whose three descriptors must **not** agree.
 /// [`every_state_builtin_case_matches_the_oracle_except_the_declared_gaps`]
 /// polices it in both directions, so a case that starts differing is as red
-/// as a declared gap that starts agreeing.
-///
-/// ERRORTEXT takes one argument, a whole number, here; ooRexx also takes an
-/// error code `nn.nnn`, answering the null string for `1.5`, and a second
-/// argument (Deviation 180).
-const DECLARED_GAPS: &[&str] = &[
+/// as a declared gap that starts agreeing. A gap is a loud refusal of this
+/// crate's (`every_declared_gap_names_a_case_and_fails_loudly`).
+const DECLARED_GAPS: &[&str] = &[];
+
+/// The cases whose difference a Deviation licenses, which must not agree
+/// either but answer rather than refuse: ERRORTEXT takes one argument, a
+/// whole number, here, and ooRexx also takes an error code `nn.nnn`,
+/// answering the null string for `1.5`, and a second argument (Deviation 180).
+const DEVIATING: &[&str] = &[
     "errortext_arity",
     "errortext_not_whole",
     "errortext_not_whole_digits_crossed",
@@ -481,7 +484,7 @@ fn sweep_one(oracle: &Oracle, run_root: &Path, case: &Case) -> Option<String> {
     ))
 }
 
-/// The set of cases that differ is exactly [`DECLARED_GAPS`].
+/// The set of cases that differ is exactly [`DECLARED_GAPS`] and [`DEVIATING`].
 #[test]
 fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
     let oracle = support::oracle::locate();
@@ -500,10 +503,11 @@ fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
     let unexpected: Vec<&str> = differing
         .iter()
         .copied()
-        .filter(|name| !DECLARED_GAPS.contains(name))
+        .filter(|name| !DECLARED_GAPS.contains(name) && !DEVIATING.contains(name))
         .collect();
     let closed: Vec<&str> = DECLARED_GAPS
         .iter()
+        .chain(DEVIATING)
         .copied()
         .filter(|name| !differing.contains(name))
         .collect();
@@ -512,7 +516,7 @@ fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
         unexpected.is_empty() && closed.is_empty(),
         "the state builtins' differential surface moved.\n\
          differ but are not declared gaps: {unexpected:?}\n\
-         are declared gaps but now agree (remove them from DECLARED_GAPS): {closed:?}\n\
+         are declared gaps or deviations but now agree (remove them): {closed:?}\n\
          transcripts:\n{transcripts}"
     );
 
