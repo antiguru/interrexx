@@ -599,7 +599,7 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"X"), Some(b"1")]),
-        (93, 915, vec![b"MN".to_vec(), b"X".to_vec()])
+        (40, 904, vec![b"VERIFY".to_vec(), b"3".to_vec(), b"MN".to_vec(), b"X".to_vec()])
     );
 }
 
