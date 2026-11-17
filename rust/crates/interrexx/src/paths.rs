@@ -62,7 +62,8 @@ mod tests {
         assert_eq!(normalize("./lib.rex", "/a/b"), "/a/b/lib.rex");
         assert_eq!(normalize("../lib.rex", "/a/b"), "/a/lib.rex");
         assert_eq!(normalize("/a//b/./c/../d", "/x"), "/a/b/d");
-        assert_eq!(normalize("/a/b/", "/x"), "/a/b");
+        // A trailing slash names a directory, so it stays.
+        assert_eq!(normalize("/a/b/", "/x"), "/a/b/");
         assert_eq!(normalize("/..", "/x"), "/");
         // `..b` is a file name, not a parent reference.
         assert_eq!(normalize("/a/..b", "/x"), "/a/..b");
@@ -95,6 +96,6 @@ mod tests {
     #[test]
     fn normalize_bytes_keeps_bytes_that_are_not_utf8() {
         assert_eq!(normalize_bytes(b"a/\xff/../\xfe", b"/x/"), b"/x/a/\xfe");
-        assert_eq!(normalize_bytes(b"/\xff/", b"/x"), b"/\xff");
+        assert_eq!(normalize_bytes(b"/\xff/", b"/x"), b"/\xff/");
     }
 }

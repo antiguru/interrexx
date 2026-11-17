@@ -312,7 +312,7 @@ fn the_classic_function_and_subcommand_tests_pass(classic: &Outcome) {
 /// and `RXSHV_NEXTV`), and from a method answers `RXSHV_NOAVL`.
 fn the_whole_classic_group_passes(outcome: &Outcome) {
     assert!(
-        outcome.failed.is_empty() && outcome.ran == 72,
+        outcome.failed.is_empty() && outcome.ran == 75,
         "{:?} failed of {} run:\n{}",
         outcome.failed,
         outcome.ran,
@@ -1520,8 +1520,8 @@ fn the_extension_check_refuses_the_oracles_librexx() {
 /// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
 /// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
 /// a socket there both engines pass those six, 30 / 176 / 0 + 1. `TEST_WORDEXP` passes on the
-/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 138 / 8 here
-/// against the oracle's 30 / 139 / 7.
+/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 139 / 8 here at
+/// r13532.
 #[test]
 fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
     let runtime = scratch().join("rxunixsys-runtime");
@@ -1538,7 +1538,7 @@ fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
         (outcome.ran, outcome.assertions, failed),
         (
             30,
-            138,
+            139,
             vec![
                 "TEST_SYSCRYPT",
                 "TEST_SYSSTAT_DEVICE",

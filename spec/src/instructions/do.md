@@ -4,7 +4,7 @@ kind: instruction
 syntax: "DO [LABEL name] [COUNTER name] [repetitor] [conditional]; instructions; END [name]"
 ansi: "6.3.2.12, 8.3.6"
 rexxref: "Keyword Instructions > DO"
-deviations: [1, 25, 26, 38, 47, 118, 172]
+deviations: [1, 25, 26, 38, 47, 118]
 ---
 
 # DO

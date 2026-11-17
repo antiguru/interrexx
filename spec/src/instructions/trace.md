@@ -370,7 +370,9 @@ is a monitor, and by default it writes to the error stream, so a program that
 traces shows nothing on its standard output. A program sets another
 destination with the message `DESTINATION` to `.TRACEOUTPUT`: any object that
 understands `LINEOUT` will do, and `.OUTPUT` sends the lines to standard
-output.
+output. A destination that raises a condition for a line refuses it: the line
+is written to standard output, and the condition is raised in the program, as
+it would be by the clause the line traces.
 
 ```rexx
 trace r
@@ -399,6 +401,31 @@ exit
 got <     3 *-* x = 1>
 got <       >>>   "1">
 got <     4 *-* trace n>
+```
+
+```rexx
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace r
+nop
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 1 then raise syntax 93.900
+  return 0
+```
+
+```output
+     4 *-* nop
+caught 93.900
 ```
 
 ## The format of a line
@@ -1420,5 +1447,6 @@ say 'caught' condition('o')~code symbol('x')
 
 ```output
 a
+       >>>   "a"
 caught 93.900 LIT
 ```

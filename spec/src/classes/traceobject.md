@@ -1362,6 +1362,7 @@ say 'caught' condition('o')~code '['c[2]~traceline']'
 
 ```output
 a
+       >>>   "a"
 caught 93.900 [       >>>   "a"]
 ```
 

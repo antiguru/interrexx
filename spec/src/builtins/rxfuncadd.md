@@ -125,8 +125,8 @@ say rxcalctan(0)
 1
 1
 1
-0
-0 0 0
+1
+1 1 1
 1
 0
 0
@@ -242,20 +242,24 @@ say rxfuncquery('spec_rxfuncadd_gone') rxfuncquery('spec_rxfuncadd_case')
 ```output
 1
 1
-0
+1
 43.1
 1
-0
-0 0
+1
+1 1
 1 1
 ```
 
 r[bif.rxfuncadd.repeat]
-A call that answers `1` registers nothing, so repeating it changes nothing. A
-name already available does not change the answer of a later call: it is `1`
-for an unknown library, and `0` for a library that provides the name. When another program holds a registration of the name, a call for an
-unknown library answers `1` as well, and a call of RXFUNCDROP by this program
-answers `1` and leaves the name available.
+A call that answers `1` registers nothing, so repeating it changes nothing,
+and [RXFUNCDROP](rxfuncdrop.md) of the name afterwards answers `1`. A name
+already available does not change the answer of a later call: it is `1` for an
+unknown library, and `0` for a library that provides the name. A name made
+available by a library that provides it is not one RXFUNCDROP removes: it
+answers `1`, and the name stays available. When another program holds a
+registration of the name, a call for an unknown library answers `1` as well,
+and a call of RXFUNCDROP by this program answers `1` and leaves the name
+available.
 
 ```rexx
 say rxfuncadd('spec_rxfuncadd_twice', 'no_such_library_spec', 'p')
@@ -271,10 +275,10 @@ say rxfuncdrop('RxCalcArcCos') rxfuncdrop('RxCalcArcCos') rxfuncquery('RxCalcArc
 ```output
 1
 1
-0 0
-0 1
+1 1
+1 1
 1 1
 1
 0
-0 1 0
+1 1 0
 ```

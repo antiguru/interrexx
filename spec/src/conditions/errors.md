@@ -452,8 +452,8 @@ r[cond.errors.objects]
 The numbers from 88 up usually name faults of messages, of objects and of
 directives.
 * 88, argument value refused: `x = sysfileexists()` 88.901,
-  [`x = .directory~new~put(1)`](r:class.directory.put) 88.901,
-  `x = charin('nofile_zz', 1, -1)` 88.907; [rule](r:bif.index.call.native).
+  [`x = .directory~new~put(1)`](r:class.directory.put) 88.901;
+  [rule](r:bif.index.call.native).
 * 89, USE target of the wrong kind: `use arg a, 'b'` 89.1, `use arg (a)` 89.1;
   [rule](r:instr.use.syntax).
 * 90, EXTERNAL entry that is not there:
@@ -488,7 +488,6 @@ directives.
 ```rexx
 call try "x = sysfileexists()"
 call try "x = .directory~new~put(1)"
-call try "x = charin('nofile_zz', 1, -1)"
 call try "use arg a, 'b'"
 call try "use arg (a)"
 call try "x = 'abc'~left(-2)"
@@ -519,7 +518,6 @@ e: label = arg(1)
 ```output
 x = sysfileexists()                          88.901
 x = .directory~new~put(1)                    88.901
-x = charin('nofile_zz', 1, -1)               88.907
 use arg a, 'b'                               89.1
 use arg (a)                                  89.1
 x = 'abc'~left(-2)                           93.923

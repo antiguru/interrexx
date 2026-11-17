@@ -509,7 +509,7 @@ fn a_bad_argument_range_reports_the_converted_value() {
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"0.0")]),
-        (93, 924, vec![b"0".to_vec()])
+        (40, 14, vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()])
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]),
@@ -691,17 +691,16 @@ fn a_counting_builtin_answers_text_that_no_digits_setting_reshapes() {
     }
 }
 
-/// The condition every 93.9xx here carries is rc 163, not the 40.x
-/// family's 216, which is the observable that made the two families
-/// worth separating.
+/// A builtin's range error is of the 40.x family, as its form error is, so
+/// both exit 216; the String method's own 93.9xx, 163, is not used here.
 #[test]
-fn the_two_argument_families_exit_differently() {
+fn a_range_error_and_a_form_error_exit_alike() {
     let failure =
         call(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]).expect_err("a negative length");
     let Failure::Raised(range) = failure else {
         panic!("expected Raised");
     };
-    assert_eq!(range.exit_code(), 163);
+    assert_eq!(range.exit_code(), 216);
 
     let failure = call(b"SUBSTR", &[Some(b"abc"), Some(b"x")]).expect_err("a non-numeric position");
     let Failure::Raised(kind) = failure else {
@@ -780,11 +779,11 @@ fn a_null_option_byte_is_accepted_and_matches_no_letter() {
 
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(&[0x01])]),
-        (93, 915, vec![b"BLT".to_vec(), vec![0x01]])
+        (40, 904, vec![b"STRIP".to_vec(), b"2".to_vec(), b"BLT".to_vec(), vec![0x01]])
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(&[0x01])]),
-        (93, 915, vec![b"MN".to_vec(), vec![0x01]])
+        (40, 904, vec![b"VERIFY".to_vec(), b"4".to_vec(), b"MN".to_vec(), vec![0x01]])
     );
 }
 

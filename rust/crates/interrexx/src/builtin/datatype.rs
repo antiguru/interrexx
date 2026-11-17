@@ -675,7 +675,7 @@ mod tests {
 
     /// `DATATYPE`'s option is read as one byte, and the omitted argument is
     /// not an empty one: an omitted second argument selects the one-argument
-    /// form, while an empty one is 93.915 with `found "?"` -- the NUL byte
+    /// form, while an empty one is 40.904 with `found "?"` -- the NUL byte
     /// an empty option's first-character read gives, turned into `?` by the report
     /// line's own control-byte substitution (`error.rs`'s `displayable`).
     #[test]
@@ -684,15 +684,15 @@ mod tests {
         // answer, not an error.
         assert_eq!(output(b"say datatype('')\n"), "CHAR\n");
         let (code, stderr) = failure(b"say datatype('','')\n");
-        assert_eq!(code, 163, "{stderr}");
+        assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&expand("Error 93.915:  ⟨93.915¦ABILMNOSUVWX9¦?⟩")),
+            stderr.contains(&expand("Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦?⟩")),
             "{stderr}"
         );
         let (code, stderr) = failure(b"say datatype(1,'Z')\n");
-        assert_eq!(code, 163, "{stderr}");
+        assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&expand("Error 93.915:  ⟨93.915¦ABILMNOSUVWX9¦Z⟩")),
+            stderr.contains(&expand("Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦Z⟩")),
             "{stderr}"
         );
     }

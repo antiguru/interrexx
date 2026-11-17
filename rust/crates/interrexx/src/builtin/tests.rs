@@ -285,9 +285,19 @@ fn the_raw_argument_table_re_derives_from_the_oracles_own_source() {
 
     // Restricted to what this crate can reach, for the reason the doc
     // gives.
+    // A position past this crate's own arity for the builtin cannot be
+    // given here (40.4), so it is no row either: ERRORTEXT's second
+    // argument, which ooRexx fetches raw, is level 6.07 (Deviation 180).
     let mut derived: Vec<(String, Vec<usize>)> = derived
         .into_iter()
-        .filter(|(name, _)| IMPLEMENTED.iter().any(|row| row.name == name.as_bytes()))
+        .filter_map(|(name, positions)| {
+            let row = IMPLEMENTED.iter().find(|row| row.name == name.as_bytes())?;
+            let positions: Vec<usize> = positions
+                .into_iter()
+                .filter(|&position| row.max.is_none_or(|max| position <= max))
+                .collect();
+            (!positions.is_empty()).then_some((name, positions))
+        })
         .collect();
     derived.sort();
     let mut committed: Vec<(String, Vec<usize>)> = RAW_ARGUMENT_POSITIONS

@@ -427,9 +427,9 @@ b: say condition('o')~code
 0
 MYJOIN:1:x
 0 MYUPPER:1:y
-1 0
+1 1
 43.1
-0 0 0
+0 0 1
 43.1
 ```
 
@@ -544,5 +544,5 @@ say rxfuncquery('n1zqqq') rxfuncdrop('n1zqqq') rxfuncquery('n1zqqq')
 
 ```output
 90.999
-0 0 1
+1 1 1
 ```

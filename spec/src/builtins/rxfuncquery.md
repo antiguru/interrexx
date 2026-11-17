@@ -82,8 +82,8 @@ say rxfuncquery('RxCalcArcTan')
 1
 1
 1
-0
-0 1
+1
+1 1
 1
 0
 0
@@ -120,7 +120,7 @@ say rxfuncquery('spec_rxfuncquery_reg')
 ```
 
 ```output
-1
+0
 0 0
 0
 1

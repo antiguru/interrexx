@@ -26,7 +26,15 @@ struct Case {
 /// [`every_state_builtin_case_matches_the_oracle_except_the_declared_gaps`]
 /// polices it in both directions, so a case that starts differing is as red
 /// as a declared gap that starts agreeing.
-const DECLARED_GAPS: &[&str] = &[];
+///
+/// ERRORTEXT takes one argument, a whole number, here; ooRexx also takes an
+/// error code `nn.nnn`, answering the null string for `1.5`, and a second
+/// argument (Deviation 180).
+const DECLARED_GAPS: &[&str] = &[
+    "errortext_arity",
+    "errortext_not_whole",
+    "errortext_not_whole_digits_crossed",
+];
 
 const CASES: &[Case] = &[
     // ---- ADDRESS: the default, the forms, byte transparency ----

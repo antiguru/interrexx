@@ -103,8 +103,8 @@ fn the_target_and_the_later_arguments_raise_different_numbers() {
     ] {
         assert_eq!(
             raised(name, &[Some(b"abc")]),
-            (40, 11, subs(&[b"ABS", b"1", b"abc"])),
-            "{} did not name itself in 93.943",
+            (40, 11, subs(&[name, b"1", b"abc"])),
+            "{} did not name itself in 40.11",
             String::from_utf8_lossy(name)
         );
     }
@@ -112,33 +112,33 @@ fn the_target_and_the_later_arguments_raise_different_numbers() {
     // what they are.
     assert_eq!(
         raised(b"ABS", &[Some(b"")]),
-        (93, 943, subs(&[b"ABS", b""]))
+        (40, 11, subs(&[b"ABS", b"1", b""]))
     );
     assert_eq!(
         raised(b"SIGN", &[Some(b" ")]),
-        (93, 943, subs(&[b"SIGN", b" "]))
+        (40, 11, subs(&[b"SIGN", b"1", b" "]))
     );
     // Quoted, so no arithmetic runs before the call: this is SIGN's own
     // error, not the 41.1 an unquoted `-1E1234567890` would raise from
     // the unary minus.
     assert_eq!(
         raised(b"SIGN", &[Some(b"-1E1234567890")]),
-        (93, 943, subs(&[b"SIGN", b"-1E1234567890"]))
+        (40, 11, subs(&[b"SIGN", b"1", b"-1E1234567890"]))
     );
 
     // Arguments 2 and up: a different sub-code, and the *method's* own
     // numbering.
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"a"), Some(b"3")]),
-        (93, 904, subs(&[b"1", b"a"]))
+        (40, 11, subs(&[b"MAX", b"2", b"a"]))
     );
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"2"), Some(b"a")]),
-        (93, 904, subs(&[b"2", b"a"]))
+        (40, 11, subs(&[b"MAX", b"3", b"a"]))
     );
     assert_eq!(
         raised(b"MIN", &[Some(b"1"), Some(b"")]),
-        (93, 904, subs(&[b"1", b""]))
+        (40, 11, subs(&[b"MIN", b"2", b""]))
     );
 }
 

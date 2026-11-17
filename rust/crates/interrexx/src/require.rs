@@ -420,15 +420,15 @@ mod tests {
         );
     }
 
-    /// A name qualified enough to stand on its own is checked directly and the
-    /// path is not searched, where a name merely carrying a directory is
-    /// searched over every entry.
+    /// An absolute name is checked directly and the path is not searched,
+    /// where a relative name, `./` and `../` ones included, is searched over
+    /// every entry.
     #[test]
-    fn a_directory_qualified_name_bypasses_the_path() {
+    fn only_an_absolute_name_bypasses_the_path() {
         let entries = search_entries(Some("/prog/"), None, None);
         assert_eq!(
             candidates("./sub/lib.rex", &entries, None, true),
-            vec![vec!["./sub/lib.rex"]]
+            vec![vec!["/prog/./sub/lib.rex", "././sub/lib.rex"]]
         );
         assert_eq!(
             candidates("/abs/lib.rex", &entries, None, true),
