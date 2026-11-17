@@ -542,7 +542,7 @@ fn a_bad_argument_range_reports_the_converted_value() {
     // still raised, which is the ordering `delstr`'s own comment names.
     assert_eq!(
         raised(b"DELSTR", &[Some(b"abc"), Some(b"9"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (40, 13, vec![b"DELSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()])
     );
 }
 
