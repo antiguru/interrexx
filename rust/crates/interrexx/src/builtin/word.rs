@@ -893,7 +893,7 @@ mod tests {
     fn a_negative_count_is_an_invalid_length() {
         assert_eq!(
             raised(b"SUBWORD", &[Some(b"a b"), Some(b"1"), Some(b"-1")]),
-            (93, 923, vec![b"-1".to_vec()])
+            (40, 13, vec![b"SUBWORD".to_vec(), b"3".to_vec(), b"-1".to_vec()])
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"a b"), Some(b"1"), Some(b"-1")]),
