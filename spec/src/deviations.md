@@ -1282,12 +1282,11 @@ A save of the macrospace onto a file that is there and may not be written
 answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
 or removes the file depending on the calls the program made earlier.
 
-## 160. A GUARD WHEN on a compound variable or a stem
+## 160. Withdrawn
 
-A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
-or a stem names the whole stem: it is evaluated again when another activity
-assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end.
+A GUARD WHEN on a compound variable or a stem: ooRexx r13532 evaluates the
+condition again when another activity assigns to or drops a tail it names (SF
+#2167), so the wait ends there as it does in interrexx.
 
 ## 161. SysSleep and whitespace after the sign
 

@@ -2,7 +2,7 @@
 element: "Locks"
 kind: concept
 rexxref: "Concurrency > Default Concurrency; Concurrency > Sending Messages within an Activity; Concurrency > Using Additional Concurrency Mechanisms; Concurrency > Using Additional Concurrency Mechanisms > SETUNGUARDED Method and UNGUARDED Option; Concurrency > Using Additional Concurrency Mechanisms > GUARD ON and GUARD OFF; Concurrency > Using Additional Concurrency Mechanisms > Guarded Methods"
-deviations: [14, 20, 160]
+deviations: [14, 20]
 ---
 
 # Locks
@@ -579,8 +579,8 @@ again when another activity assigns a value to an object variable that the
 condition names as a simple symbol, even the value that it had, or drops one,
 whether or not the last evaluation reached that name; a variable that only a
 method that the condition calls reads is not one of them. A compound variable
-or a stem in the condition names the whole stem, which
-[Deviation 160](r:conc.locks.deviation.160) describes. When the condition is
+or a stem in the condition names the whole stem, as
+[the stem rule](r:conc.locks.when.stem) says. When the condition is
 evaluated at other times is not specified. The wait gives up only that one
 hold. When the method was called by a guarded method on the same activity,
 which holds the lock too ([the counting rule](r:conc.locks.count)), the other
@@ -1096,18 +1096,16 @@ say o~outer(e)
 start
 ```
 
-r[conc.locks.deviation.160]
+r[conc.locks.when.stem]
 A condition of `GUARD ON WHEN` or `GUARD OFF WHEN` that names a compound
 variable or a stem names the whole stem. The condition is evaluated again when
 another activity assigns a value to any tail of that stem or drops one, or
 assigns a value to the whole stem or drops it, for `GUARD ON WHEN` and `GUARD
-OFF WHEN` alike. ooRexx does not evaluate it again for a tail, so the wait
-does not end. As
-for a simple symbol, a variable that only a method called by the condition
-reads does not cause it. In the first example three waiting methods are ended
-by the assignment to a tail, by the same for `GUARD OFF WHEN` and by the drop
-of a tail; the second example is the assignment to the whole stem, for `GUARD
-ON WHEN` and for `GUARD OFF WHEN`, which both interpreters already end.
+OFF WHEN` alike. As for a simple symbol, a variable that only a method called
+by the condition reads does not cause it. In the first example three waiting
+methods are ended by the assignment to a tail, by the same for `GUARD OFF
+WHEN` and by the drop of a tail; the second example is the assignment to the
+whole stem, for `GUARD ON WHEN` and for `GUARD OFF WHEN`.
 
 ```rexx
 say 'start'
