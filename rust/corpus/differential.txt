@@ -105,7 +105,6 @@ lang/leave_nested_outer.rex
 lang/iterate_from_select.rex
 lang/if_else_chain.rex
 lang/select_when_bodies.rex
-lang/select_when_absorption.rex
 lang/leave_iterate_variants.rex
 lang/drop_stem_tail.rex
 lang/stem_aliasing.rex
@@ -578,11 +577,8 @@ lang/scope_setlocal_method.rex
 lang/scope_setlocal_routine.rex
 lang/scope_propagate_routine.rex
 lang/scope_propagate_after_routine.rex
-lang/scope_case_text_absorbed.rex
-lang/scope_case_text_absorbed_other.rex
 lang/scope_internal_depth.rex
 lang/scope_debug_pause_routine.rex
-lang/scope_case_text_debug_line.rex
 lang/do_counter_ctrl.rex
 lang/do_counter_rep.rex
 lang/do_counter_forever.rex

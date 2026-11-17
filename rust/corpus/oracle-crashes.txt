@@ -25,17 +25,7 @@
 
 ## 1. `select; when 1 = 0 then; when 2 = 2 then nop; end`
 
-    select
-      when 1 = 0 then
-      when 2 = 2 then nop
-    end
-
-Effect: SIGSEGV, rc 139, deterministic.
-
-Cause: upstream SourceForge **SF #2018**. An orphaned `WHEN` (a `WHEN` clause
-with no body, immediately followed by another `WHEN`) reaches a null-pointer
-dereference in ooRexx's `SELECT` handling. Not something
-this crate needs to reproduce.
+Dropped at r13532: Error 9.1 rc 247, when the program is read (SF #2018, r13367).
 
 ## 2. `say date('M','0','D')`
 

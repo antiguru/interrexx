@@ -646,22 +646,24 @@ fn class_carries_its_options_and_rejects_a_second_of_each() {
         vec!["class \"C\" subclass \"REXX:OBJECT\""]
     );
 
-    // Every duplicate and every conflict, all 25.901. Measured, each.
-    for text in [
-        "::class c public private\n",
-        "::class c public public\n",
-        "::class c private public\n",
-        "::class c abstract abstract\n",
-        "::class c subclass object subclass object\n",
-        "::class c subclass object mixinclass object\n",
-        "::class c mixinclass object subclass object\n",
-        "::class c metaclass class metaclass class\n",
-        "::class c junk\n",
-        "::class c package\n",
-        "::class c guarded\n",
-        "::class c, public\n",
+    // A keyword whose slot is filled: the same keyword is 25.936 and
+    // another 25.937 (`r[dir.index.options]`); a keyword ::CLASS does not
+    // take is 25.901.
+    for (text, code) in [
+        ("::class c public private\n", (25, 937)),
+        ("::class c public public\n", (25, 936)),
+        ("::class c private public\n", (25, 937)),
+        ("::class c abstract abstract\n", (25, 936)),
+        ("::class c subclass object subclass object\n", (25, 936)),
+        ("::class c subclass object mixinclass object\n", (25, 937)),
+        ("::class c mixinclass object subclass object\n", (25, 937)),
+        ("::class c metaclass class metaclass class\n", (25, 936)),
+        ("::class c junk\n", (25, 901)),
+        ("::class c package\n", (25, 901)),
+        ("::class c guarded\n", (25, 901)),
+        ("::class c, public\n", (25, 901)),
     ] {
-        assert_eq!(err(text), (25, 901), "{text:?}");
+        assert_eq!(err(text), code, "{text:?}");
     }
     // And the "nothing there" errors, one number per keyword.
     assert_eq!(err("::class\n"), (19, 901));
@@ -728,21 +730,21 @@ fn method_carries_its_options_and_decides_whether_a_body_follows() {
         vec!["method \"M\" attribute delegate P"]
     );
 
-    // Duplicates and conflicts, all 25.902.
-    for text in [
-        "::method m class class\n",
-        "::method m public private\n",
-        "::method m protected unprotected\n",
-        "::method m guarded unguarded\n",
-        "::method m attribute attribute\n",
-        "::method m abstract abstract\n",
-        "::method m abstract external \"LIBRARY x\"\n",
-        "::method m external \"LIBRARY x\" abstract\n",
-        "::method m delegate p delegate q\n",
-        "::method m delegate p abstract\n",
-        "::method m junk\n",
+    // Duplicates 25.936, conflicts 25.937, an unknown keyword 25.902.
+    for (text, code) in [
+        ("::method m class class\n", (25, 936)),
+        ("::method m public private\n", (25, 937)),
+        ("::method m protected unprotected\n", (25, 937)),
+        ("::method m guarded unguarded\n", (25, 937)),
+        ("::method m attribute attribute\n", (25, 936)),
+        ("::method m abstract abstract\n", (25, 936)),
+        ("::method m abstract external \"LIBRARY x\"\n", (25, 937)),
+        ("::method m external \"LIBRARY x\" abstract\n", (25, 937)),
+        ("::method m delegate p delegate q\n", (25, 936)),
+        ("::method m delegate p abstract\n", (25, 937)),
+        ("::method m junk\n", (25, 902)),
     ] {
-        assert_eq!(err(text), (25, 902), "{text:?}");
+        assert_eq!(err(text), code, "{text:?}");
     }
     assert_eq!(err("::method\n"), (19, 902));
     assert_eq!(err("::method m external nostring\n"), (19, 905));
@@ -878,21 +880,21 @@ fn attribute_asks_whether_a_body_follows_only_for_get_and_set() {
         shapes("::attribute a package\n"),
         vec!["attribute \"A\" both package"]
     );
-    // Duplicates and conflicts, all 25.925.
-    for text in [
-        "::attribute a get set\n",
-        "::attribute a set get\n",
-        "::attribute a get get\n",
-        "::attribute a class class\n",
-        "::attribute a public private\n",
-        "::attribute a protected unprotected\n",
-        "::attribute a guarded unguarded\n",
-        "::attribute a abstract abstract\n",
-        "::attribute a abstract delegate p\n",
-        "::attribute a inherit x\n",
-        "::attribute a junk\n",
+    // Duplicates 25.936, conflicts 25.937, an unknown keyword 25.925.
+    for (text, code) in [
+        ("::attribute a get set\n", (25, 937)),
+        ("::attribute a set get\n", (25, 937)),
+        ("::attribute a get get\n", (25, 936)),
+        ("::attribute a class class\n", (25, 936)),
+        ("::attribute a public private\n", (25, 937)),
+        ("::attribute a protected unprotected\n", (25, 937)),
+        ("::attribute a guarded unguarded\n", (25, 937)),
+        ("::attribute a abstract abstract\n", (25, 936)),
+        ("::attribute a abstract delegate p\n", (25, 937)),
+        ("::attribute a inherit x\n", (25, 925)),
+        ("::attribute a junk\n", (25, 925)),
     ] {
-        assert_eq!(err(text), (25, 925), "{text:?}");
+        assert_eq!(err(text), code, "{text:?}");
     }
     assert_eq!(err("::attribute\n"), (19, 914));
 }
@@ -1124,7 +1126,7 @@ fn the_options_arguments_are_gated_the_way_the_oracle_gates_them() {
     assert_eq!(err("::options numeric syntax\n"), (25, 935));
     assert_eq!(err("::options numeric \"inherit\"\n"), (20, 935));
     assert_eq!(err("::options numeric\n"), (20, 935));
-    assert_eq!(err("::options form value\n"), (25, 11));
+    assert_eq!(err("::options form value\n"), (25, 938));
     assert_eq!(err("::options form \"scientific\"\n"), (20, 925));
     assert_eq!(err("::options form\n"), (20, 925));
     assert_eq!(err("::options novalue\n"), (20, 929));
@@ -1149,15 +1151,16 @@ fn requires_takes_a_name_and_one_of_two_mutually_exclusive_options() {
         shapes("::requires \"nosuch\" namespace ns\n"),
         vec!["requires \"nosuch\" namespace NS"]
     );
-    // Both directions of the exclusion, in both orders. Measured: 25.904.
-    for text in [
-        "::requires x library namespace ns\n",
-        "::requires x namespace ns library\n",
-        "::requires x library library\n",
-        "::requires x namespace a namespace b\n",
-        "::requires x junk\n",
+    // LIBRARY and NAMESPACE fill one slot: either after the other is
+    // 25.937, either twice 25.936; an unknown keyword is 25.904.
+    for (text, code) in [
+        ("::requires x library namespace ns\n", (25, 937)),
+        ("::requires x namespace ns library\n", (25, 937)),
+        ("::requires x library library\n", (25, 936)),
+        ("::requires x namespace a namespace b\n", (25, 936)),
+        ("::requires x junk\n", (25, 904)),
     ] {
-        assert_eq!(err(text), (25, 904), "{text:?}");
+        assert_eq!(err(text), code, "{text:?}");
     }
     assert_eq!(err("::requires\n"), (19, 904));
     assert_eq!(err("::requires \"x\" namespace \"ns\"\n"), (20, 920));
@@ -1195,24 +1198,22 @@ fn routine_takes_an_access_option_and_an_external_specification() {
         err("::routine r external \"LIBRARY x\"\n  return 1\n"),
         (99, 939)
     );
-    for text in [
-        "::routine r public private\n",
-        "::routine r public public\n",
-        "::routine r package\n",
-        "::routine r class\n",
-        "::routine r junk\n",
+    // Duplicates 25.936, conflicts 25.937, an unknown keyword 25.903.
+    for (text, code) in [
+        ("::routine r public private\n", (25, 937)),
+        ("::routine r public public\n", (25, 936)),
+        ("::routine r package\n", (25, 903)),
+        ("::routine r class\n", (25, 903)),
+        ("::routine r junk\n", (25, 903)),
     ] {
-        assert_eq!(err(text), (25, 903), "{text:?}");
+        assert_eq!(err(text), code, "{text:?}");
     }
     assert_eq!(err("::routine\n"), (19, 903));
     assert_eq!(err("::routine r external nostring\n"), (19, 905));
-    // A SECOND external on a `::ROUTINE` reports the `::CLASS` number, because
-    // the oracle's routine parser passes the wrong error code. Measured: 25.901,
-    // not
-    // 25.903. The interpreter defines the behaviour.
+    // A second EXTERNAL is a duplicate like any other.
     assert_eq!(
         err("::routine r external \"LIBRARY x\" external \"LIBRARY y\"\n"),
-        (25, 901)
+        (25, 936)
     );
 }
 
@@ -1313,14 +1314,18 @@ fn an_attribute_name_must_be_a_variable_name() {
         "::attribute \"a b\"\n",
         "::attribute \"a-b\"\n",
         "::attribute \"1e+5\"\n",
+        // A sign belongs to an exponent, and so to a number, never to a
+        // name (`r[dir.attribute.name]`).
+        "::attribute \"a.e+5\"\n",
+        "::attribute \"ae+5\"\n",
+        "::attribute \"x.1e-3\"\n",
         "::attribute 3 get\n",
         "::attribute 3 abstract\n",
     ] {
         assert_eq!(err(text), (99, 925), "{text:?}");
     }
-    // The symbol scan looks for an exponent before giving up, so a sign after an
-    // `E` survives and the compound test is reached anyway. Measured: rc 0.
-    ok("::attribute \"a.e+5\"\n");
+    // An exponent without a sign is only letters and digits.
+    ok("::attribute \"a.1e5\"\n");
     // The length bound. Measured: 250 bytes is rc 0 and 251 is 99.925.
     let name = "a".repeat(250);
     ok(&format!("::attribute \"{name}\"\n"));

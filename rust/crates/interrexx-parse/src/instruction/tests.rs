@@ -1393,14 +1393,17 @@ fn every_use_arg_form_reaches_its_own_shape() {
 fn use_arg_rejects_what_the_oracle_rejects() {
     // Measured, each of these: `use foo` is 25.905, `use strict foo` is
     // 25.929, `use arg ..., a` is 99.930, `use arg >a = 1` is 99.950,
-    // `use arg >a.b` is 20.931, `use arg a b` is 46.902, `use arg a = ` is
+    // `use arg >a.b` is 20.931, `use arg a b` is 46.903 and `use arg >a b`
+    // 46.902 (`r[instr.use.syntax]`), `use arg a = ` is
     // 35.930 and `use arg 1` is 31.2.
     assert_eq!(err("use foo"), (25, 905));
     assert_eq!(err("use strict foo"), (25, 929));
     assert_eq!(err("use arg ..., a"), (99, 930));
     assert_eq!(err("use arg >a = 1"), (99, 950));
     assert_eq!(err("use arg >a.b"), (20, 931));
-    assert_eq!(err("use arg a b"), (46, 902));
+    assert_eq!(err("use arg a b"), (46, 903));
+    assert_eq!(err("use arg >a b"), (46, 902));
+    assert_eq!(err("use arg q~x y"), (46, 903));
     assert_eq!(err("use arg a ="), (35, 930));
     assert_eq!(err("use arg 1"), (31, 2));
     // USE LOCAL has its own list rules: measured, `use local 1` is 31.2,
