@@ -109,7 +109,7 @@ fn ranged(
         };
         let text = interp.to_text(value).into_owned();
         let number = match value.decode() {
-            Decoded::SmallInt(number) => Some(i64::from(number)),
+            Decoded::SmallInt(number) => Some(number),
             _ => Number::parse_bytes(&text).and_then(|number| number.int64_value(DIGITS64)),
         };
         let Some(number) = number else {
