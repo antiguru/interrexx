@@ -295,9 +295,10 @@ impl Interp {
             .and_then(|pending| pending.trace_failure)
     }
 
-    /// The failed `LINEOUT` of a trace delivery: the line is written to stdout,
-    /// as ooRexx does since r13424 (SF #2149), and the failure is raised in the
-    /// traced activation at its clause's end. With no activation running the
+    /// The failed `LINEOUT` of a trace delivery: a condition the destination
+    /// raised leaves the line on stdout, as ooRexx does since r13424 (SF
+    /// #2149), and the failure is raised in the traced activation at its
+    /// clause's end; a refusal of this crate's writes no line. With no activation running the
     /// line is all there is, as `corpus/oracle-crashes.txt` entry 11 licenses
     /// (oracle defect).
     /// A refusal is never dropped: an activation that ends before a clause end
@@ -306,8 +307,8 @@ impl Interp {
     #[inline(never)]
     fn queue_trace_failure(&mut self, failure: Failure, line: &[u8]) {
         let refusal = !matches!(failure, Failure::Raised(_));
-        self.write_out_line(line);
         let Some(running) = self.running_activation() else {
+            self.write_out_line(line);
             if refusal {
                 self.trace_refusal.get_or_insert(failure);
             }
@@ -318,6 +319,8 @@ impl Interp {
             // So that its end runs `Interp::end_cold`, which carries the
             // refusal on.
             self.activation_mut().cold_mut();
+        } else {
+            self.write_out_line(line);
         }
         self.activity.pending_traps.push_back(crate::PendingTrap {
             condition: b"SYNTAX".as_slice().into(),
