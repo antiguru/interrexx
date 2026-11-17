@@ -31,7 +31,8 @@
 # summary reports at least one test ran, no failures and no errors. A listed group is an expected
 # failure only when it ran normally, exited 0, and the tests it failed are exactly the ones the list
 # names for it: a crash, a kill, a timeout or a run without tests fails the job whether the group is
-# listed or not. The verdict table goes to stdout and, when set, to $GITHUB_STEP_SUMMARY.
+# listed or not. Each group's line of the verdict table goes to stdout and, when set, to
+# $GITHUB_STEP_SUMMARY as soon as the group ends.
 set -euo pipefail
 
 # The pinned BSF4ooRexx revision, the one place it is written.
@@ -209,8 +210,19 @@ export REXX_API_DIR=$work/api
 
 results=$work/results.tsv
 printf 'group\trc\tran\tassertions\tfailures\terrors\tsecs\tverdict\n' > "$results"
-table="| group | rc | ran | assertions | failures | errors | secs | verdict |"$'\n'
-table+="|---|---|---|---|---|---|---|---|"$'\n'
+# One line of the verdict table, to stdout and the step summary as soon as it is known, so a job
+# cancelled partway still shows how far it got.
+row() {
+    printf '%s\n' "$1"
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+        printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"
+    fi
+}
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    printf '## BSF4ooRexx test suite\n\n' >> "$GITHUB_STEP_SUMMARY"
+fi
+row "| group | rc | ran | assertions | failures | errors | secs | verdict |"
+row "|---|---|---|---|---|---|---|---|"
 passed=0 total=0 bad=0
 field() { grep -a -m1 "^$1:" "$log" | awk '{ print $NF }' || true; }
 # The tests the log reports as failed, one `failure NAME` or `error NAME` per line, sorted. ooTest
@@ -299,20 +311,18 @@ for group in "${groups[@]}"; do
     fi
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$group" "$rc" "$ran" "$assertions" "$failures" \
         "$errors" "$secs" "$verdict" >> "$results"
-    table+="| $group | $rc | $ran | $assertions | $failures | $errors | $secs | $verdict |"$'\n'
+    row "| $group | $rc | $ran | $assertions | $failures | $errors | $secs | $verdict |"
 done
 for group in "${!listed[@]}"; do
     if [ -z "${seen[$group]+x}" ]; then
-        table+="| $group | | | | | | | FAIL: listed as an expected failure but no such group |"$'\n'
+        row "| $group | | | | | | | FAIL: listed as an expected failure but no such group |"
         bad=$((bad + 1))
     fi
 done
 
 summary="BSF4ooRexx r$BSF_REVISION: $passed of $total groups pass, ${#listed[@]} listed as expected failures, $bad wrong"
-printf '%s\n%s\n' "$table" "$summary"
-if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-    printf '## BSF4ooRexx test suite\n\n%s\n%s\n' "$table" "$summary" >> "$GITHUB_STEP_SUMMARY"
-fi
+row ""
+row "$summary"
 if [ "$bad" -gt 0 ]; then
     awk -F'\t' 'NR > 1 && $8 ~ /^(FAIL|UNEXPECTED)/ { print $1 }' "$results" | while read -r group; do
         echo "::group::log of $group"

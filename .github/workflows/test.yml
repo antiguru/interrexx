@@ -272,6 +272,9 @@ jobs:
       CARGO_PROFILE_RELEASE_DEBUG: "0"
       BSF_SOURCES: ${{ github.workspace }}/bsf4oorexx/sources
       BSF_WORK: ${{ github.workspace }}/bsf4oorexx/work
+      # Seconds one group may run: low enough that every group running into it, each with its kill
+      # grace, still ends with the setup and the build inside timeout-minutes.
+      BSF_TIMEOUT: "30"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -345,7 +348,8 @@ jobs:
         working-directory: .
         run: scripts/run-bsf4oorexx.sh
       - uses: actions/upload-artifact@v7
-        if: failure()
+        # Also when the job is cancelled, as on its timeout.
+        if: failure() || cancelled()
         with:
           name: bsf4oorexx-logs
           path: ${{ env.BSF_WORK }}/logs
