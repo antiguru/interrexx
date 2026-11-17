@@ -106,11 +106,13 @@ repository at the revision pinned in the script, compiles its Java classes and i
 `.testGroup` under `bsf4oorexx.dev/testUnits` on the release `rexx`, each under a memory cap and a
 180 s bound. Groups that fail for a known cause are listed with it in
 `ci/bsf-expected-failures.txt`: a second interpreter instance cannot reach the first's objects
-(#731). A listing covers failed tests only. Any other group that does not pass fails the job, and so
-does a listed group that passes, crashes, times out or runs no tests. The library is built from a
-copy of BSF4ooRexx's sources with one edit, which sizes `BsfLoadJava`'s option array for the
-entries it writes; without it a call with no arguments writes past the heap block. The edit is
-dropped once BSF4ooRexx sizes the array itself. The script runs
+(#731). Each listed group also names the tests it fails, as ooTest reports them in the group's log.
+It is an expected failure only when it exits 0 and the tests it fails are exactly those, so a test
+that starts or stops failing fails the job. A listing covers failed tests only. Any other group that
+does not pass fails the job, and so does a listed group that passes, crashes, times out or runs no
+tests. The library is built from a copy of BSF4ooRexx's sources with one edit, which sizes
+`BsfLoadJava`'s option array for the entries it writes; without it a call with no arguments writes
+past the heap block. The edit is dropped once BSF4ooRexx sizes the array itself. The script runs
 locally with the same environment overrides its header lists.
 
 Older, narrower instruments still run: extracted ooTest assertions run standalone

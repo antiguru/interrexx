@@ -29,9 +29,9 @@
 #
 # Each group runs from its own directory under `memcap 8G`. A group passes when it exits 0 and its
 # summary reports at least one test ran, no failures and no errors. A listed group is an expected
-# failure only when it ran normally and reported a failure or an error: a crash, a kill, a timeout or
-# a run without tests fails the job whether the group is listed or not. The verdict table goes to
-# stdout and, when set, to $GITHUB_STEP_SUMMARY.
+# failure only when it ran normally, exited 0, and the tests it failed are exactly the ones the list
+# names for it: a crash, a kill, a timeout or a run without tests fails the job whether the group is
+# listed or not. The verdict table goes to stdout and, when set, to $GITHUB_STEP_SUMMARY.
 set -euo pipefail
 
 # The pinned BSF4ooRexx revision, the one place it is written.
@@ -128,6 +128,32 @@ if [ -n "$missing$added" ]; then
     die "the groups under $units differ from $group_list"
 fi
 
+# The expected-failure list: a group path relative to testUnits, then its reason, and under it an
+# indented line for each test the group fails, `failure` or `error` and then the test's name.
+declare -A listed failing
+group=
+while IFS= read -r line; do
+    case ${line#"${line%%[![:space:]]*}"} in '' | '#'*) continue ;; esac
+    case $line in
+        [[:space:]]*)
+            [ -n "$group" ] || die "$expected: a test before any group: $line"
+            read -r kind name rest <<< "$line"
+            case $kind in failure | error) ;; *) die "$expected: not failure or error: $line" ;; esac
+            [ -n "$name" ] && [ -z "$rest" ] || die "$expected: not a kind and one name: $line"
+            failing[$group]+="$kind $name"$'\n'
+            ;;
+        *)
+            read -r group reason <<< "$line"
+            [ -n "$reason" ] || die "$expected: $group has no reason"
+            listed[$group]=$reason
+            failing[$group]=
+            ;;
+    esac
+done < "$expected"
+for group in "${!listed[@]}"; do
+    [ -n "${failing[$group]}" ] || die "$expected: $group names no failing test"
+done
+
 mkdir -p "$work"
 rm -rf "${work:?}/classes" "${work:?}/lib" "${work:?}/logs" "${work:?}/api" "${work:?}/source_cc"
 mkdir -p "$work/classes" "$work/lib" "$work/logs" "$work/api"
@@ -175,14 +201,6 @@ while read -r name path; do
     [ "$path" = "$lib/$name" ] || die "libBSF4ooRexx850.so resolves $name to '$path', not $lib"
 done <<< "$needed"
 
-# The expected-failure list: a group path relative to testUnits, then its reason.
-declare -A listed
-while read -r group reason; do
-    case $group in '' | '#'*) continue ;; esac
-    [ -n "$reason" ] || die "$expected: $group has no reason"
-    listed[$group]=$reason
-done < "$expected"
-
 export CLASSPATH=.:$work/classes:$sources:$sources/jars/Xalan/xalan.jar:$units/bsf4rexx
 export REXX_PATH=$dev/bin:$ootest:$ootest/framework
 export PATH=$dev/bin:$PATH
@@ -195,6 +213,13 @@ table="| group | rc | ran | assertions | failures | errors | secs | verdict |"$'
 table+="|---|---|---|---|---|---|---|---|"$'\n'
 passed=0 total=0 bad=0
 field() { grep -a -m1 "^$1:" "$log" | awk '{ print $NF }' || true; }
+# The tests the log reports as failed, one `failure NAME` or `error NAME` per line, sorted. ooTest
+# prints each after the summary: a `[failure]` or `[error]` line, then the test's `Test:` line.
+failed_tests() {
+    awk '/^Tests ran:/ { summary = 1; next }
+        summary && /^\[(failure|error)\] / { kind = substr($1, 2, length($1) - 2); next }
+        kind != "" { if ($1 == "Test:") print kind, $2; kind = "" }' "$log" | LC_ALL=C sort
+}
 declare -A seen
 [ "${#groups[@]}" -gt 0 ] || die "no .testGroup under $units"
 for group in "${groups[@]}"; do
@@ -240,7 +265,24 @@ for group in "${groups[@]}"; do
             verdict="UNEXPECTED PASS: remove it from the expected failures"
             bad=$((bad + 1))
         elif [ "$rc" = 0 ] && { [ "${failures:-0}" != 0 ] || [ "${errors:-0}" != 0 ]; }; then
-            verdict="expected failure (${listed[$group]})"
+            # The Errors count includes exceptions, which ooTest reports without a test name, so
+            # every failure and error must have its name in the log before the names are compared.
+            found=$(failed_tests)
+            named=$(grep -c . <<< "$found" || true)
+            pinned=$(printf '%s' "${failing[$group]}" | LC_ALL=C sort)
+            if [ "$named" != $((${failures:-0} + ${errors:-0})) ]; then
+                verdict="FAIL: the log names $named of its $((${failures:-0} + ${errors:-0})) failed tests (listed for ${listed[$group]})"
+                bad=$((bad + 1))
+            elif [ "$found" = "$pinned" ]; then
+                verdict="expected failure (${listed[$group]})"
+            else
+                new=$(LC_ALL=C comm -13 <(echo "$pinned") <(echo "$found") | paste -s -d, -)
+                gone=$(LC_ALL=C comm -23 <(echo "$pinned") <(echo "$found") | paste -s -d, -)
+                verdict="FAIL: failed tests differ from the list (listed for ${listed[$group]})."
+                [ -z "$new" ] || verdict+=" Failed but not listed: ${new//,/, }."
+                [ -z "$gone" ] || verdict+=" Listed but did not fail: ${gone//,/, }."
+                bad=$((bad + 1))
+            fi
         else
             verdict="FAIL: exit status $rc without a failed test (listed for ${listed[$group]})"
             bad=$((bad + 1))
