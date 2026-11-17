@@ -150,8 +150,6 @@ base/directives/METHOD.testGroup TESTDELEGATE TraceObject field
 base/keyword/CALL.testGroup TEST_STACKSIZE_START_THREAD ~start
 base/keyword/CALL.testGroup TEST_STACKSIZE_REPLY_THREAD GUARD,REPLY
 base/keyword/CALL.testGroup TEST_4 SysSleep
-base/keyword/FINALLY.testGroup TEST_REPLY_FROM_CATCH_CLAUSE REPLY
-base/keyword/FINALLY.testGroup TEST_REPLY REPLY
 base/keyword/GUARD.testGroup TEST_WHEN_NOVALUE GUARD
 base/keyword/GUARD.testGroup TEST_WHEN_NOT_BOOLEAN GUARD
 base/keyword/GUARD.testGroup TEST_ON_OFF_CONSECUTIVE GUARD
