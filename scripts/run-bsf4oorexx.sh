@@ -4,12 +4,12 @@
 # any listed group that does.
 #
 #   run-bsf4oorexx.sh             fetch, build and run the suite
-#   run-bsf4oorexx.sh --source-id print the pinned BSF4ooRexx branch and revision as one word,
-#                                 and stop
-#   run-bsf4oorexx.sh --fetch     export the sources to BSF_SOURCES afresh, replacing any tree there,
-#                                 and stop
+#   run-bsf4oorexx.sh --source-id print the pinned BSF4ooRexx branch and revision as one word, and
+#                                 stop
+#   run-bsf4oorexx.sh --fetch     export the sources to BSF_SOURCES afresh, replacing any tree
+#                                 there, and stop
 #
-# BSF4ooRexx comes from its SourceForge svn repository at the pinned revision below; nothing of it is
+# BSF4ooRexx comes from its SourceForge svn repository at the pinned revision below. Nothing of it is
 # committed here. Its Java sources are compiled with the JDK of JAVA_HOME, and its JNI library
 # libBSF4ooRexx850.so is compiled against this repository's include/ and linked against interrexx's
 # librexx.so.4 and librexxapi.so.4. The library is also reachable as libBSF4ooRexx.so, the name a
@@ -18,7 +18,7 @@
 # Environment (all optional):
 #   REXX_RELEASE   directory holding the release rexx, librexx.so and librexxapi.so.
 #                  Default: ${CARGO_TARGET_DIR:-rust/target}/release.
-#   BSF_SOURCES    the exported BSF4ooRexx tree; exported there when absent.
+#   BSF_SOURCES    the exported BSF4ooRexx tree, exported there when absent.
 #                  Default: rust/target/bsf4oorexx/r<revision>.
 #   BSF_WORK       compiled classes, the library directory, logs and results.tsv.
 #                  Default: rust/target/bsf4oorexx/work.
@@ -28,11 +28,11 @@
 #   OOTEST         the ooTest checkout whose framework runs the groups. Default: ootest.
 #   JAVA_HOME      the JDK. Default: the one `javac` on PATH belongs to.
 #
-# Each group runs from its own directory under `memcap 8G`. A group passes when it exits 0 and its
-# summary reports at least one test ran, no failures and no errors. A listed group is an expected
-# failure only when it ran normally, exited 0, and the tests it failed are exactly the ones the list
-# names for it: a crash, a kill, a timeout or a run without tests fails the job whether the group is
-# listed or not. Each group's line of the verdict table goes to stdout and, when set, to
+# Each group runs from its own directory under a memory cap (memcap). A group passes when it exits 0
+# and its summary reports at least one test ran, no failures and no errors. A listed group is an
+# expected failure only when it ran normally, exited 0, and the tests it failed are exactly the ones
+# the list names for it: a crash, a kill, a timeout or a run without tests fails the job whether the
+# group is listed or not. Each group's line of the verdict table goes to stdout and, when set, to
 # $GITHUB_STEP_SUMMARY as soon as the group ends.
 set -euo pipefail
 
@@ -103,7 +103,7 @@ fi
 export JAVA_HOME
 
 for f in "$release/rexx" "$release/librexx.so" "$release/librexxapi.so"; do
-    [ -e "$f" ] || die "$f is missing; build with cargo build --release"
+    [ -e "$f" ] || die "$f is missing (build with cargo build --release)"
 done
 [ -f "$ootest/framework/OOREXXUNIT.CLS" ] || die "no ooTest framework under $ootest"
 [ -f "$JAVA_HOME/include/jni.h" ] || die "no JDK at JAVA_HOME=$JAVA_HOME"
@@ -118,7 +118,8 @@ units=$dev/testUnits
 # or gained groups stops the run before anything is built.
 [ -d "$units" ] || die "no $units"
 mapfile -t groups < <(cd "$units" && find . -name '*.testGroup' | sed 's|^\./||' | LC_ALL=C sort)
-listed_groups=$(grep -a -v -E '^(#|$)' "$group_list" | LC_ALL=C sort) || die "$group_list names no group"
+listed_groups=$(grep -a -v -E '^(#|$)' "$group_list" | LC_ALL=C sort) ||
+    die "$group_list names no group"
 missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
 added=$(LC_ALL=C comm -13 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
 if [ -n "$missing$added" ]; then
@@ -141,7 +142,8 @@ while IFS= read -r line; do
         [[:space:]]*)
             [ -n "$group" ] || die "$expected: a test before any group: $line"
             read -r kind name rest <<< "$line"
-            case $kind in failure | error) ;; *) die "$expected: not failure or error: $line" ;; esac
+            [ "$kind" = failure ] || [ "$kind" = error ] ||
+                die "$expected: not failure or error: $line"
             [ -n "$name" ] && [ -z "$rest" ] || die "$expected: not a kind and one name: $line"
             failing[$group]+="$kind $name"$'\n'
             ;;
@@ -163,7 +165,7 @@ mkdir -p "$work/classes" "$work/lib" "$work/logs" "$work/api"
 work=$(cd "$work" && pwd)
 lib=$work/lib
 
-# The engine classes, compiled fresh so they match the native library built below; the rest of
+# The engine classes, compiled fresh so they match the native library built below. The rest of
 # BSF4ooRexx's classes come precompiled with the sources.
 "$JAVA_HOME/bin/javac" -nowarn -Xlint:none --release 8 -encoding ISO-8859-1 \
     -cp "$sources:$sources/jars/Xalan/xalan.jar" -implicit:none -d "$work/classes" \
@@ -182,7 +184,7 @@ done
 cp -R "$dev/source_cc" "$work/source_cc"
 undersized='malloc( sizeof( JavaVMOption ) * (numArgs+1) )'
 [ "$(grep -a -o -F "$undersized" "$work/source_cc/BSF4ooRexx.cc" | wc -l)" = 1 ] ||
-    die "BSF4ooRexx.cc no longer has one '$undersized'; review the BsfLoadJava edit"
+    die "BSF4ooRexx.cc no longer has one '$undersized'. Review the BsfLoadJava edit."
 sed -i 's/malloc( sizeof( JavaVMOption ) \* (numArgs+1) )/malloc( sizeof( JavaVMOption ) * (numArgs+2) )/' \
     "$work/source_cc/BSF4ooRexx.cc"
 grep -a -q -F 'malloc( sizeof( JavaVMOption ) * (numArgs+2) )' "$work/source_cc/BSF4ooRexx.cc" ||
@@ -250,9 +252,9 @@ for group in "${groups[@]}"; do
     ran=$(field 'Tests ran') assertions=$(field Assertions)
     failures=$(field Failures) errors=$(field Errors)
     # How the run ended when it did not end normally. timeout exits 124 when the group stopped on
-    # its TERM, and 137 when the group outlived it and was killed; memcap reports its own kill in
+    # its TERM, and 137 when the group outlived it and was killed. memcap reports its own kill in
     # the log. A program ended by a Rexx error exits with 256 minus the error number and reports
-    # that error in the log; any other status above 128 is a signal.
+    # that error in the log. Any other status above 128 is a signal.
     abnormal=
     if [ "$rc" = 124 ]; then
         abnormal="timeout after ${group_timeout}s"
@@ -284,8 +286,10 @@ for group in "${groups[@]}"; do
             found=$(failed_tests)
             named=$(grep -c . <<< "$found" || true)
             pinned=$(printf '%s' "${failing[$group]}" | LC_ALL=C sort)
-            if [ "$named" != $((${failures:-0} + ${errors:-0})) ]; then
-                verdict="FAIL: the log names $named of its $((${failures:-0} + ${errors:-0})) failed tests (listed for ${listed[$group]})"
+            counted=$((${failures:-0} + ${errors:-0}))
+            if [ "$named" != "$counted" ]; then
+                verdict="FAIL: the log names $named of its $counted failed tests"
+                verdict+=" (listed for ${listed[$group]})"
                 bad=$((bad + 1))
             elif [ "$found" = "$pinned" ]; then
                 verdict="expected failure (${listed[$group]})"

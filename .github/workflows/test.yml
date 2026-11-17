@@ -260,8 +260,9 @@ jobs:
           -E 'package(interrexx) & (binary(attached_threads) | binary(instance_identity))' --run-ignored ignored-only --profile ci
 
   # BSF4ooRexx's test suite on a release build, through its JNI library compiled against
-  # include/. The groups in ci/bsf-expected-failures.txt fail (#731); any other group that does
-  # not pass fails the job, and so does a listed group that passes.
+  # include/. The groups in ci/bsf-expected-failures.txt fail the tests listed there (#731). Any
+  # other group that does not pass fails the job, and so does a listed group that passes or fails
+  # other tests.
   bsf4oorexx:
     name: BSF4ooRexx test suite
     needs: [third-party]
