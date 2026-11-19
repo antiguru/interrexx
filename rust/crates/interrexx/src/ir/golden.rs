@@ -34,9 +34,12 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 src,
                 base,
                 to,
+                opening,
+                strings,
             } => {
                 out.push_str(&format!(
-                    "{index}: ParseBegin index={at} src={} base={} to={to}\n",
+                    "{index}: ParseBegin index={at} src={} base={} to={to} opening={opening:?} \
+                     strings={strings}\n",
                     render_arg(*src),
                     render_arg(*base)
                 ));

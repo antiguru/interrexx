@@ -58,6 +58,25 @@ fn each_comma_of_parse_arg_steps_to_the_next_argument() {
     assert_eq!(printed, "a|b|c d||e||\n");
 }
 
+/// An argument past a comma that is not its own string value sends the
+/// clause to the engine as the first does, since it is judged before the
+/// first is taken.
+#[test]
+fn a_later_object_argument_is_parsed_by_the_engine() {
+    let printed = stdout_of(
+        "call show 'a b', .thing~new\n\
+         exit\n\
+         show:\n\
+         parse arg p, q\n\
+         say p'|'q'|'\n\
+         return\n\
+         ::class thing\n\
+         ::method string\n\
+         return 'from string'\n",
+    );
+    assert_eq!(printed, "a b|from string|\n");
+}
+
 /// **An operand is evaluated after the targets before it are assigned**,
 /// which is where the compiled stream puts its ops: between two steps.
 #[test]

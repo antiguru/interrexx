@@ -245,6 +245,8 @@ pub(crate) enum Op {
         src: u16,
         base: u16,
         to: u16,
+        opening: ParseOpening,
+        strings: u8,
     },
     /// Walks template entries `from..to` of the `PARSE` at `index` on from
     /// the walk filed from register `base`: entry `from` with its operand in
@@ -353,6 +355,25 @@ impl ConditionKeyword {
             ConditionKeyword::When => raised_when_not_logical,
         }
     }
+}
+
+/// How an [`Op::ParseBegin`] takes its clause, as far as the compiler can
+/// tell: the template engine whole, or the walk over a source it reads in
+/// place, which the opening still hands back to the engine where a line will
+/// be traced or the value is not its own string value.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub(crate) enum ParseOpening {
+    /// A fold, a source read as a line or built by the interpreter, `PARSE
+    /// VAR` into words or of a stem or a compound, or an `ARG` with more
+    /// strings than [`Op::ParseBegin`]'s count holds.
+    Engine,
+    /// `PARSE VALUE`, from the op's `src` or the null string.
+    Value,
+    /// `PARSE VAR` of a simple name.
+    Var,
+    /// `PARSE ARG`, over the op's `strings` parse strings.
+    Arg,
 }
 
 /// Which driver steps the member clauses of a construct that resolves the

@@ -1194,11 +1194,13 @@ macro_rules! region_ops {
                 // whole instruction run by `exec_parse`, which can read
                 // a line or run Rexx code and so ends the region as a
                 // settled `Flow`, with the runs after this op not driven.
-                Op::ParseBegin { $index, src, base, to } => {
+                Op::ParseBegin { $index, src, base, to, opening, strings } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ParseBegin",
                     );
-                    match $self.parse_begin($code, $clause, *src, *base, *to, $registers) {
+                    match $self.parse_begin(
+                        $code, $clause, *src, *base, *to, *opening, *strings, $registers,
+                    ) {
                         Ok(true) => {}
                         Ok(false) => break $cold Ok(RegionEnd::Flowed(Flow::Next)),
                         Err(failure) => break $cold Err(failure),

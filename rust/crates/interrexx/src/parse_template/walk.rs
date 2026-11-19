@@ -11,6 +11,7 @@
 //! [`Op::ParseRun`]: crate::ir::Op::ParseRun
 
 use super::*;
+use crate::ir::ParseOpening;
 use interrexx_core::RegFrame;
 use interrexx_parse::Instruction;
 use interrexx_parse::InstructionKind;
@@ -200,6 +201,10 @@ impl Interp {
     /// [`Interp::exec_parse`] then runs the clause whole, with nothing done
     /// that it would do again.
     #[inline(never)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the op's own fields, beside the clause and the frame they index"
+    )]
     pub(crate) fn parse_begin(
         &mut self,
         code: &Code<'_>,
@@ -207,11 +212,15 @@ impl Interp {
         src: u16,
         base: u16,
         to: u16,
+        opening: ParseOpening,
+        strings: u8,
         registers: RegFrame<'_>,
     ) -> Result<bool, Failure> {
         let parse = parse_of(clause)?;
         let evaluated = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
-        let Some((first, source, origin)) = self.walked_source(code, parse, evaluated)? else {
+        let Some((first, source, origin)) =
+            self.walked_source(code, parse, evaluated, opening, strings)?
+        else {
             self.exec_parse(code, parse, evaluated)?;
             return Ok(false);
         };
@@ -239,7 +248,9 @@ impl Interp {
 
     /// The first parse string the compiled walk takes, read in place, and
     /// the number a whole-string piece assigns, or `None` for a clause it
-    /// hands to the template engine.
+    /// hands to the template engine: one the compiler handed it, one that
+    /// will trace a line, and one whose parse string is not its own string
+    /// value.
     #[allow(
         clippy::type_complexity,
         reason = "the value, its bytes and its origin, once"
@@ -249,32 +260,23 @@ impl Interp {
         code: &Code<'_>,
         parse: &Parse,
         evaluated: Option<ObjRef>,
+        opening: ParseOpening,
+        strings: u8,
     ) -> Result<Option<(ObjRef, SourceText, Option<ObjRef>)>, Failure> {
-        let traced = self.traced_mode();
-        if traced.results || traced.intermediates || parse.upper || parse.lower {
+        if opening == ParseOpening::Engine {
             return Ok(None);
         }
-        let first = match &parse.source {
-            ParseSource::Value(None) => ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL),
-            ParseSource::Value(Some(_)) => match evaluated {
-                Some(value) => value,
-                None => return Ok(None),
-            },
-            // A simple name: its read is the variable's value and `NOVALUE`
-            // for an unset one. A stem or a compound is read by the engine's
-            // own `Interp::read_parse_var`.
-            // `PARSE VAR name w1 ... rest` is the engine's own walk for that
-            // shape, `Interp::parse_var_words`.
-            ParseSource::Var(id) => {
-                let name = code.symbols.name(*id).as_bytes();
-                if !matches!(crate::run::shape_of(name), crate::run::NameShape::Simple)
-                    || matches!(
-                        parse.template.as_slice(),
-                        [Some(trigger)] if trigger.kind == TriggerKind::End
-                    )
-                {
-                    return Ok(None);
-                }
+        let traced = self.traced_mode();
+        if traced.results || traced.intermediates {
+            return Ok(None);
+        }
+        let first = match (opening, &parse.source) {
+            (ParseOpening::Value, _) => {
+                evaluated.unwrap_or_else(|| ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL))
+            }
+            // A simple name, which the compiler judged: its read is the
+            // variable's value and `NOVALUE` for an unset one.
+            (ParseOpening::Var, ParseSource::Var(id)) => {
                 let (value, novalue) = self.read(code, *id);
                 self.novalue_check(novalue, value)?;
                 value
@@ -282,14 +284,8 @@ impl Interp {
             // Every argument a template of this clause will read, judged
             // before the first is taken, since a later one that needs
             // rendering could no longer hand the clause back.
-            ParseSource::Arg => {
-                let strings = parse
-                    .template
-                    .iter()
-                    .filter(|entry| entry.is_none())
-                    .count()
-                    + 1;
-                if (0..strings).any(|at| {
+            (ParseOpening::Arg, _) => {
+                if (0..usize::from(strings)).any(|at| {
                     self.plain_parse_source(self.argument_parse_value(at))
                         .is_none()
                 }) {
@@ -297,12 +293,7 @@ impl Interp {
                 }
                 self.argument_parse_value(0)
             }
-            ParseSource::LineIn
-            | ParseSource::Pull
-            | ParseSource::Source
-            | ParseSource::Version => {
-                return Ok(None);
-            }
+            _ => return Ok(None),
         };
         Ok(self
             .plain_parse_source(first)
