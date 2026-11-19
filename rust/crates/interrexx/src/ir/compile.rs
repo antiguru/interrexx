@@ -1221,13 +1221,24 @@ fn compile_settled(
                     Some(_) => ([&name[..], b"="].concat(), SendForm::Assign),
                     None => (name.to_vec(), SendForm::Clause),
                 };
-                ops.push(Op::Send {
-                    site: calls.reserve_send(name.into_boxed_slice())?,
-                    recv,
-                    argc,
-                    dst: recv,
-                    scope,
-                    form,
+                let site = calls.reserve_send(name.into_boxed_slice())?;
+                ops.push(if scope == Op::NO_SCOPE {
+                    Op::Send {
+                        site,
+                        recv,
+                        argc,
+                        dst: recv,
+                        form,
+                    }
+                } else {
+                    Op::SendWith {
+                        site,
+                        recv,
+                        argc,
+                        dst: recv,
+                        scope,
+                        form,
+                    }
                 });
                 close_region(&mut ops, at)?;
                 registers.release(mark);
@@ -1572,14 +1583,6 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         ExprKind::List(items) => native_arguments(items, path, 0),
         // A reference names its variable through its address.
         ExprKind::VariableReference(_) | ExprKind::ClassResolver { .. } => path.is_some(),
-        // A comma list, which only a condition is.
-        ExprKind::Logical(items) => {
-            u32::try_from(items.len()).is_ok()
-                && items
-                    .iter()
-                    .enumerate()
-                    .all(|(k, item)| native_shape(item, descend_nth(path, k)))
-        }
         ExprKind::Binary { op, left, right } => {
             is_native_binary(*op)
                 && native_shape(left, descend(path, false))
@@ -2034,18 +2037,29 @@ fn push_native<'a>(
                 |k| (slot, path.nth(k + 1)),
                 true,
             )?;
-            ops.push(Op::Send {
-                site: calls.reserve_send(Box::from(&name[..]))?,
-                recv: dst,
-                argc,
-                dst,
-                scope,
-                // `~~` answers the receiver.
-                form: if *cascade {
-                    SendForm::Cascade
-                } else {
-                    SendForm::Value
-                },
+            let site = calls.reserve_send(Box::from(&name[..]))?;
+            ops.push(if scope == Op::NO_SCOPE && !*cascade {
+                Op::Send {
+                    site,
+                    recv: dst,
+                    argc,
+                    dst,
+                    form: SendForm::Value,
+                }
+            } else {
+                Op::SendWith {
+                    site,
+                    recv: dst,
+                    argc,
+                    dst,
+                    scope,
+                    // `~~` answers the receiver.
+                    form: if *cascade {
+                        SendForm::Cascade
+                    } else {
+                        SendForm::Value
+                    },
+                }
             });
             registers.release(mark);
         }
@@ -2082,36 +2096,6 @@ fn push_native<'a>(
                     path,
                     src: dst,
                 });
-            }
-        }
-        // Each item lands in `dst` and is judged there, in order, until one
-        // does not hold; the items after it are not evaluated
-        // (`eval_logical_list`).
-        ExprKind::Logical(items) => {
-            let mut judged = Vec::with_capacity(items.len());
-            for (k, item) in items.iter().enumerate() {
-                push_native(
-                    ops,
-                    echoes_values,
-                    consts,
-                    registers,
-                    hints,
-                    calls,
-                    plan,
-                    item,
-                    index,
-                    slot,
-                    descend_nth(path, k),
-                    dst,
-                )?;
-                judged.push(op_index(ops)?);
-                ops.push(Op::LogicalItem { reg: dst, skip: 0 });
-            }
-            let last = *judged.last().expect("a comma list has two items or more");
-            for at in judged {
-                if let Op::LogicalItem { skip, .. } = &mut ops[at as usize] {
-                    *skip = last - at;
-                }
             }
         }
         // An omitted item owes no `>A>` line, where an omitted argument owes
@@ -2352,7 +2336,7 @@ fn close_region(ops: &mut [Op], at: u32) -> Result<(), ChunkTooLarge> {
     let calling = region.iter().any(|op| {
         matches!(
             op,
-            Op::CallExpr { .. } | Op::CallArgs { .. } | Op::Send { .. }
+            Op::CallExpr { .. } | Op::CallArgs { .. } | Op::Send { .. } | Op::SendWith { .. }
         )
     });
     match &mut head[0] {

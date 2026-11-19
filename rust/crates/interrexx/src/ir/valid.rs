@@ -38,11 +38,11 @@ impl ValidOps {
                     inside(lhs) && inside(rhs) && inside(dst)
                 }
                 Op::Prefix { src, dst, .. } => inside(src) && inside(dst),
-                Op::Send {
+                Op::Send { recv, dst, .. } => inside(recv) && inside(dst),
+                Op::SendWith {
                     recv, dst, scope, ..
                 } => inside(recv) && inside(dst) && (scope == Op::NO_SCOPE || inside(scope)),
                 Op::SendScope { recv, scope } => inside(recv) && inside(scope),
-                Op::LogicalItem { reg, .. } => inside(reg),
                 Op::Reference { dst, .. } | Op::ClassAt { dst, .. } => inside(dst),
                 Op::List { dst, .. } => inside(dst),
                 Op::Say { src, .. }

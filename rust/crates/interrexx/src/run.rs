@@ -3658,10 +3658,6 @@ impl Interp {
                     let index = list_step(step, &mut steps)?;
                     args.get(index)?.as_ref()?
                 }
-                (ExprKind::Logical(items), _) => {
-                    let index = list_step(step, &mut steps)?;
-                    items.get(index)?
-                }
                 (ExprKind::Message { target, args, .. }, _) => {
                     match list_step(step, &mut steps)?.checked_sub(1) {
                         None => target,

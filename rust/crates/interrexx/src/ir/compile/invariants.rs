@@ -263,8 +263,8 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::CallingClause { .. }
                 | Op::LoopTest { .. }
                 | Op::Send { .. }
+                | Op::SendWith { .. }
                 | Op::SendScope { .. }
-                | Op::LogicalItem { .. }
                 | Op::Reference { .. }
                 | Op::ClassAt { .. }
                 | Op::List { .. }
