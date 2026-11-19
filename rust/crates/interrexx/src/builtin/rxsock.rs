@@ -1963,6 +1963,8 @@ mod tests {
 
     use std::net::Ipv4Addr;
 
+    use rustix::event::{PollFd, PollFlags};
+
     use super::{EAGAIN, blocks, host_id, try_accept, with_socket};
 
     /// `SockGetHostId` answers the first address not beginning `127`, and
@@ -1990,9 +1992,22 @@ mod tests {
         let fd = listener.as_raw_fd();
         assert_eq!(try_accept(fd).err(), Some(EAGAIN));
         assert_eq!(with_socket(fd, |socket| Ok(blocks(socket))), Ok(true));
-        let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
-            .expect("a connection");
+        let _client = connected(&listener);
         assert!(try_accept(fd).is_ok());
+    }
+
+    /// A client connected to `listener`, once the connection is in its accept
+    /// queue: it may reach the queue after `connect` returns.
+    fn connected(listener: &std::net::TcpListener) -> std::net::TcpStream {
+        let client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
+            .expect("a connection");
+        let mut ready = [PollFd::new(listener, PollFlags::IN)];
+        let five_seconds = rustix::event::Timespec {
+            tv_sec: 5,
+            tv_nsec: 0,
+        };
+        rustix::event::poll(&mut ready, Some(&five_seconds)).expect("a poll");
+        client
     }
 
     /// A blocking listening socket's connection is accepted blocking on every
@@ -2007,8 +2022,7 @@ mod tests {
             listener
                 .set_nonblocking(!listener_blocks)
                 .expect("the listener's mode");
-            let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
-                .expect("a connection");
+            let _client = connected(&listener);
             let (accepted, _) = try_accept(listener.as_raw_fd()).expect("the connection");
             let expected = listener_blocks || !crate::host::ACCEPT_INHERITS_NONBLOCK;
             assert_eq!(

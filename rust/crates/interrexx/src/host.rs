@@ -354,15 +354,24 @@ mod tests {
         assert!(!table.reaches(-1));
     }
 
-    /// An empty pipe's count of 0 is trusted on every host, so a terminal's
-    /// end of file is never read to learn there is no data; a pipe holding
-    /// bytes counts them.
+    /// A count of 0 is trusted where the host's count is, so a terminal's end
+    /// of file is never read to learn there is no data: on Linux for every
+    /// device, and on Apple's systems for all but a FIFO, which a pipe is
+    /// there. A count above 0 is trusted everywhere.
     #[test]
-    fn an_empty_pipe_counts_no_bytes() {
+    fn an_empty_count_is_trusted_but_for_an_apple_fifo() {
         let (read, write) = rustix::pipe::pipe().expect("a pipe");
-        assert_eq!(bytes_waiting(read.as_fd()), Some(0));
+        let empty_pipe = if cfg!(any(target_os = "linux", target_os = "android")) {
+            Some(0)
+        } else {
+            None
+        };
+        assert_eq!(bytes_waiting(read.as_fd()), empty_pipe);
         rustix::io::write(&write, b"abc").expect("a write");
         assert_eq!(bytes_waiting(read.as_fd()), Some(3));
+
+        let (socket, _peer) = std::os::unix::net::UnixStream::pair().expect("a socket pair");
+        assert_eq!(bytes_waiting(socket.as_fd()), Some(0));
     }
 
     /// Apple's `FIONREAD` on a FIFO open for reading and writing counts 0
