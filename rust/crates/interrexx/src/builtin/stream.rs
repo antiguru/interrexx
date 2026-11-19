@@ -82,6 +82,54 @@ fn whole_positions(
     Ok(())
 }
 
+/// The range a stream function's position or count must lie in, once
+/// [`whole_positions`] has found it whole.
+#[derive(Clone, Copy)]
+enum Range {
+    /// A position: 40.14 for 0 or less.
+    Positive,
+    /// CHARIN's count: 40.13 for less than 0.
+    NonNegative,
+    /// LINEIN's count: 40.904 for anything but 0 and 1.
+    ZeroOrOne,
+}
+
+/// The ranges of a stream function's positions and counts, checked before
+/// the stream is looked at, so that a stream that cannot be opened does not
+/// hide them (`r[bif.index.stream.args]`).
+fn ranged(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+    checks: &[(usize, Range)],
+) -> Result<(), Failure> {
+    for &(position, range) in checks {
+        let Some(value) = arg(args, position) else {
+            continue;
+        };
+        let text = interp.to_text(value).into_owned();
+        let number = match value.decode() {
+            Decoded::SmallInt(number) => Some(number),
+            _ => Number::parse_bytes(&text).and_then(|number| number.int64_value(DIGITS64)),
+        };
+        let Some(number) = number else {
+            continue;
+        };
+        let raised = match range {
+            Range::Positive if number <= 0 => Raised::argument_not_positive(name, position, &text),
+            Range::NonNegative if number < 0 => {
+                Raised::argument_not_non_negative_call(name, position, &text)
+            }
+            Range::ZeroOrOne if number != 0 && number != 1 => {
+                Raised::argument_not_in_list(name, position, "0, 1", &text)
+            }
+            _ => continue,
+        };
+        return Err(raised.into());
+    }
+    Ok(())
+}
+
 /// `LINEIN(name, [line], [count])`.
 pub(crate) fn linein(
     interp: &mut Interp,
@@ -89,6 +137,12 @@ pub(crate) fn linein(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[2, 3])?;
+    ranged(
+        interp,
+        name,
+        args,
+        &[(2, Range::Positive), (3, Range::ZeroOrOne)],
+    )?;
     if names_queue(interp, args) {
         // The queue exit's first pass (`BUILTIN(LINEIN)`).
         if interp.exits.is_some()
@@ -136,6 +190,12 @@ pub(crate) fn charin(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[2, 3])?;
+    ranged(
+        interp,
+        name,
+        args,
+        &[(2, Range::Positive), (3, Range::NonNegative)],
+    )?;
     if names_queue(interp, args) {
         return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
     }
@@ -149,6 +209,7 @@ pub(crate) fn charout(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[3])?;
+    ranged(interp, name, args, &[(3, Range::Positive)])?;
     if names_queue(interp, args) {
         return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
     }
@@ -176,6 +237,7 @@ pub(crate) fn lineout(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[3])?;
+    ranged(interp, name, args, &[(3, Range::Positive)])?;
     if names_queue(interp, args) {
         return match arg(args, 2) {
             Some(line) => {

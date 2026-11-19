@@ -1,5 +1,5 @@
 #!/usr/bin/env rexx
-/* TEST_LIMIT passes only under the fallback's address-space limit. */
+/* TEST_LIMIT passes only under the crate's address-space limit. */
   parse source . . s
   group = .TestGroup~new(s)
   group~add(.AddressSpace.testGroup)

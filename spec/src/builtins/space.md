@@ -45,7 +45,7 @@ f: say condition('o')~code
 
 ```output
 a b a..b
-93.923
+40.13
 40.12
 40.23
 40.4
@@ -156,7 +156,7 @@ c: say condition('o')~code
 [w]
 40.23
 40.12
-93.923
+40.13
 ```
 
 r[bif.space.check-order]
@@ -167,7 +167,7 @@ conventions](r:conv.check.order) say.
 ```rexx
 signal on syntax name a
 say space('a b', -1, '**')
-a: say wordpos(condition('o')~code, '40.23 93.923') > 0
+a: say wordpos(condition('o')~code, '40.23 40.13') > 0
 signal on syntax name b
 say space('a b', 'x')
 b: say condition('o')~code
@@ -179,14 +179,14 @@ c: say condition('o')~code
 ```output
 1
 40.12
-93.923
+40.13
 ```
 
 > **Note.** A result of many characters needs memory for them; a request
 > larger than the machine can serve ends in an error that this book does not
 > specify. The ANSI draft (9.3.19) defines SPACE through `COPIES` and
 > `SUBWORD`, with the same answers, and checks `n` for a value below 0 under
-> error 40.13, where ooRexx raises 93.923.
+> the same error 40.13.
 
 ## Deviations
 

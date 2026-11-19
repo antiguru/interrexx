@@ -79,8 +79,9 @@ written, so the variable of `::attribute "Mixed"` is not the one that the
 symbol `mixed` names in an EXPOSE, and while it is unset the getter answers
 `Mixed`. The messages `mixed` and `mixed=` still reach the methods, because
 the lookup of a method by name [ignores case](r:dir.method.name). A name that
-cannot be the name of a variable, such as a string with a blank or a number,
-raises `SYNTAX 99.925`, and a directive whose name is missing or is neither a
+cannot be the name of a variable, such as a string with a blank, a number, or
+a string with a sign such as `"a.e+5"`, which a variable name cannot hold
+because an exponent belongs only to a number, raises `SYNTAX 99.925`, and a directive whose name is missing or is neither a
 symbol nor a string raises `19.914`. Both are found when the program is read.
 
 ```rexx
@@ -93,6 +94,7 @@ o2 = .box~new
 say o2~mixed
 call try '::attribute "a b"'
 call try '::attribute 1'
+call try '::attribute "a.e+5"'
 call try '::attribute'
 call try '::attribute +'
 exit
@@ -117,6 +119,7 @@ MIXED 6
 Mixed
 ::attribute "a b" => 99.925
 ::attribute 1 => 99.925
+::attribute "a.e+5" => 99.925
 ::attribute => 19.914
 ::attribute + => 19.914
 ```
@@ -125,7 +128,7 @@ Mixed
 
 r[dir.attribute.getset]
 GET declares only the getter and SET only the setter, so that the two can have
-different options. GET and SET together raise `SYNTAX 25.925`. A GET or SET
+different options. GET and SET together raise `SYNTAX 25.937`. A GET or SET
 directive without a keyword of the kind group (ABSTRACT, EXTERNAL, DELEGATE)
 that has a section takes the section as the code of its method,
 with the directive clause left out, and without a section it declares the
@@ -174,8 +177,10 @@ The keywords after the name are GET, SET, CLASS, PUBLIC, PRIVATE, PACKAGE,
 GUARDED, UNGUARDED, PROTECTED, UNPROTECTED, ABSTRACT, EXTERNAL and DELEGATE,
 in any case and in any order. The groups and the rules about them are those of
 [::METHOD](r:dir.method.options), except that ATTRIBUTE is not a keyword and
-GET and SET make a group of their own: a word that is none of the keywords, a
-keyword repeated or a second keyword of one group raises `SYNTAX 25.925`. The
+GET and SET make a group of their own: a keyword repeated raises
+`SYNTAX 25.936` and a second keyword of one group `25.937`, as [the options
+rule](r:dir.index.options) says, and a word that is none of the keywords
+raises `25.925`. The
 access, guarding and protection options apply to every method that the
 directive declares, as [access](r:dir.method.access),
 [guarding](r:dir.method.guard) and [protection](r:dir.method.protected) say
@@ -224,12 +229,12 @@ e2: say arg(1) '=>' condition('o')~code
 o~level = 4 => 97.2
 say o~secret => 97.2
 o~secret = 1 => 97.2
-::attribute a get set => 25.925
-::attribute a public private => 25.925
-::attribute a class class => 25.925
+::attribute a get set => 25.937
+::attribute a public private => 25.937
+::attribute a class class => 25.936
 ::attribute a frob => 25.925
 ::attribute a attribute => 25.925
-::attribute a abstract delegate d => 25.925
+::attribute a abstract delegate d => 25.937
 ::attribute a Package Get Class Guarded Protected => ok
 ```
 

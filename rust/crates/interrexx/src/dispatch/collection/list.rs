@@ -23,8 +23,9 @@ fn list_index_argument(args: &[Option<ObjRef>], at: usize) -> Result<ObjRef, Fai
 ///
 /// The array starts with [`HEADER`] slots -- the first and last handle, the
 /// count of entries and the top of the free stack -- and then holds
-/// [`ENTRY`] slots per handle ever issued: the item ([`ITEM`], empty for an
-/// entry holding nothing), the next entry ([`NEXT`]) and the previous one
+/// [`ENTRY`] slots per handle ever issued: the item ([`ITEM`], which the
+/// layout lets be empty, though `put` and `insert` require an item, so no
+/// program makes such an entry: `r[class.list.nothing]`), the next entry ([`NEXT`]) and the previous one
 /// ([`PREV`]). A link is the handle plus one as an inline integer, `0` for
 /// none. An entry in use always has a `PREV` slot; a freed one has none, and
 /// its `NEXT` is the freed handle below it on the free stack. So lookup by
@@ -188,10 +189,9 @@ fn list_position(
     };
     // `isIndexValid` is `isInUse`, so `validateIndex` answers NoLink
     // for an entry holding nothing and every lookup reads it as
-    // absent. Measured over `l~put(, 1)`: `hasIndex(1)` is `0`,
-    // `at(1)` and `next(1)` are `.nil`, and `section(1,1)` raises --
-    // while the chain still walks through the entry, which is
-    // [`list_pairs`]'s business and not this function's.
+    // absent. No program makes one any more (`r[class.list.nothing]`);
+    // the test is kept so that the layout's empty item is never read as a
+    // live entry.
     read_chain(interp, chain, |chain| {
         (chain.in_use(wanted) && chain.item(wanted).is_some()).then_some(wanted)
     })
@@ -298,9 +298,9 @@ fn native_list_insert(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let chain = list_state(interp, receiver)?;
-    // The value is optional -- `insert` requires no argument for it. Measured:
-    // `.List~new~insert` answers `0` at rc 0.
-    let item = args.first().copied().flatten();
+    // The item is required, and checked before the index
+    // (`r[class.list.insert]`).
+    let item = Some(item_argument(args)?);
     let after = match args.get(1).copied() {
         Some(Some(index)) if index == ObjRef::NIL => None,
         Some(Some(index)) => match list_position(interp, chain, index)? {
@@ -344,16 +344,14 @@ fn native_list_put(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let chain = list_state(interp, receiver)?;
-    // The INDEX is what is required, and it is argument two:
-    // `requiredIndex(argIndex, ARG_TWO)`. The value is not checked at all --
-    // measured, `l~put(, handle)` succeeds and leaves the entry holding
-    // nothing.
+    // The index is argument two and is checked first, then the item
+    // (`r[class.list.put]`).
     let handle = list_index_argument(args, 1)?;
-    let item = args.first().copied().flatten();
     let Some(entry) = list_position(interp, chain, handle)? else {
         let written = interp.to_text(handle);
         return Err(Raised::incorrect_list_index(&written).into());
     };
+    let item = Some(item_argument(args)?);
     write_chain(interp, chain, |slots| slots.set(at(entry, ITEM), item))?;
     Ok(None)
 }

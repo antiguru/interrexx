@@ -312,7 +312,7 @@ fn the_classic_function_and_subcommand_tests_pass(classic: &Outcome) {
 /// and `RXSHV_NEXTV`), and from a method answers `RXSHV_NOAVL`.
 fn the_whole_classic_group_passes(outcome: &Outcome) {
     assert!(
-        outcome.failed.is_empty() && outcome.ran == 72,
+        outcome.failed.is_empty() && outcome.ran == 75,
         "{:?} failed of {} run:\n{}",
         outcome.failed,
         outcome.ran,
@@ -390,6 +390,29 @@ fn a_failing_classic_function_raises_40_1() {
         stderr.ends_with(&expand("Error 40.1:  ⟨40.1¦TESTCALLBACK⟩\n")),
         "{stderr}"
     );
+}
+
+/// A classic function called while another activity runs, from that activity and from the
+/// first: each call reads the queue name through `.local`'s `STDQUE`, Rexx that runs nested in
+/// the call, and both answer. A `REPLY` thread that calls one before `Terminate` is case 2 of
+/// `detach_root_terminate`.
+#[test]
+fn a_classic_function_answers_while_another_activity_runs() {
+    let stdout = run_program(
+        "classic-beside-reply",
+        "call rxfuncadd 'MyTestExtFunc', 'orxclassic1', 'MyTestExtFunc'\n\
+         .s~new~go\n\
+         say 'first' MyTestExtFunc()\n\
+         call syssleep 0.3\n\
+         exit\n\
+         ::class s\n\
+         ::method go\n\
+         reply\n\
+         call syssleep 0.1\n\
+         say 'replied' MyTestExtFunc()\n",
+        &[],
+    );
+    assert_eq!(stdout, "first 0\nreplied 0\n");
 }
 
 /// Runs `program` as `program.rex` in a fresh directory `name` holding `files`, with the
@@ -709,24 +732,39 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// condition decoded, and the instance terminated; the call type, the initial environment,
 /// direct, redirecting and registered command environments, a classic subcommand handler, the
 /// instance's own search path and extensions, and every system exit, as context exits and as
-/// registered ones. The oracle's counts: `INVOCATION` 55 tests and 295 assertions,
-/// `ProcessInvocation` 54 and 284, which this crate matches with no failure: `TestLoadLibrary`
-/// loads `rxmath`, which it runs in Rust.
+/// registered ones; and `Terminate` after the creating thread detached, from that thread or from
+/// one never attached (`detach_root_terminate`). The oracle's counts: `INVOCATION` 55 tests and
+/// 295 assertions, `ProcessInvocation` 61 and 298, with no failure. `TestLoadLibrary` loads
+/// `rxmath`, which this crate runs in Rust. `TestTerminateOnOtherThreadUninitWaitsForGuard` fails
+/// here and makes neither of its two assertions: the uninit method it waits for sends to an
+/// object of another instance, which this crate refuses (Deviation 85), so that object is never
+/// marked.
 #[test]
 fn the_invocation_group_runs_programs_in_instances() {
-    an_invocation_group_runs_programs_in_instances("INVOCATION", 55, 295);
+    an_invocation_group_runs_programs_in_instances("INVOCATION", 55, 295, &[]);
 }
 
 #[test]
 fn the_process_invocation_group_runs_programs_in_instances() {
-    an_invocation_group_runs_programs_in_instances("ProcessInvocation", 54, 284);
+    an_invocation_group_runs_programs_in_instances(
+        "ProcessInvocation",
+        61,
+        296,
+        &["TESTTERMINATEONOTHERTHREADUNINITWAITSFORGUARD"],
+    );
 }
 
-fn an_invocation_group_runs_programs_in_instances(group: &str, ran: usize, assertions: usize) {
+/// `group` runs `ran` tests making `assertions` assertions, and exactly the tests `refused` fail.
+fn an_invocation_group_runs_programs_in_instances(
+    group: &str,
+    ran: usize,
+    assertions: usize,
+    refused: &[&str],
+) {
     let outcome = run_group("API/oo", group, library_path(true));
     let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
     assert!(
-        failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
+        failed == refused && outcome.ran == ran && outcome.assertions == assertions,
         "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
         outcome.ran,
         outcome.assertions,
@@ -1520,8 +1558,8 @@ fn the_extension_check_refuses_the_oracles_librexx() {
 /// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
 /// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
 /// a socket there both engines pass those six, 30 / 176 / 0 + 1. `TEST_WORDEXP` passes on the
-/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 138 / 8 here
-/// against the oracle's 30 / 139 / 7.
+/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 139 / 8 here at
+/// r13532.
 #[test]
 fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
     let runtime = scratch().join("rxunixsys-runtime");
@@ -1538,7 +1576,7 @@ fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
         (outcome.ran, outcome.assertions, failed),
         (
             30,
-            138,
+            139,
             vec![
                 "TEST_SYSCRYPT",
                 "TEST_SYSSTAT_DEVICE",

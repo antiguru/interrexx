@@ -155,7 +155,8 @@ call answers `2` when a component of either before the last does not exist and
 `20` when one is a file, whether `source` exists or not, so that
 `SysFileMove('none', 'f/x')` answers `20` and `SysFileMove('none/x', 'f/x')`
 answers `2`. Otherwise it answers `2` when `source` names nothing, `21` when a
-file is moved to a directory, `39` when a directory is moved to a directory
+file is moved to a directory, `20` when a file is moved to a name that ends in
+a slash, `39` when a directory is moved to a directory
 that has entries, `20` when a directory is moved to a symbolic link or to an
 entry, such as a fifo, that is neither a directory nor a regular file, `22`
 when a directory is moved into itself, and `13` when the system refuses, as it
@@ -190,7 +191,7 @@ call SysRmDir 'c1zqmfd'
 17 3 6
 17 17 3
 21 1 1
-21 0
+20 0
 2 1
 20 20 20 17
 2 20

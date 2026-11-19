@@ -39,7 +39,7 @@ const REFRESH_ENV: &str = "REXX_BIF_EXEMPT_REFRESH";
 /// `ootest/` is git-ignored and is an SVN working copy, not checked-in test
 /// data, so it can move with nothing in this repository changing; read it back
 /// with `svn info ootest`.
-const OOTEST_REVISION: &str = "r13347";
+const OOTEST_REVISION: &str = "r13532";
 
 fn gate_mode() -> bool {
     match env::var(GATE_ENV) {
@@ -1038,17 +1038,22 @@ fn a_raise_row_needs_the_sub_number_too() {
 #[test]
 fn every_exempt_attribution_is_a_declared_outcome() {
     // The count is the whole point of this table, not decoration on it.
-    // `MISMATCH`'s seven rows are five of `ERRORTEXT::test_ERRORTEXT`, which
-    // compare a message's wording with ooRexx's, unspecified under
-    // `r[conv.error.text]`, and `STREAM::test_relative_file_exists` and `...2`.
+    // `MISMATCH`'s fourteen rows are five of `ERRORTEXT::test_ERRORTEXT` and seven
+    // of `ERRORTEXT::test_ERRORTEXT_subcode`, which compare a message's wording
+    // with ooRexx's, unspecified under `r[conv.error.text]`, and `STREAM::test_relative_file_exists` and `...2`.
     // The two STREAM rows assert against `.ooTest.dir`, which does not resolve outside the
     // ooTest framework -- both interpreters render it as the literal
     // `.OOTEST.DIR`, so the expected value is a string no implementation can
     // produce. The group's own `::method setup` supplies it, and this harness
     // lifts one assertion out without it.
     //
-    // `RAISE-MISMATCH` and `ANOMALY` are 0.
-    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 7), ("RAISE-MISMATCH", 0), ("ANOMALY", 0)];
+    // `RAISE-MISMATCH` has no rows: a builtin raises its own 40.xxx argument
+    // errors, as the suite expects (ooRexx SF #2136).
+    // `ANOMALY`'s 21 are 20 of `ERRORTEXT`, which pass ERRORTEXT a second
+    // argument of values, which the specification does not accept (Deviation
+    // 179), and `SETLOCAL::test_endlocal_no_setlocal`, whose assertion calls
+    // the group's own `run` method, which a lifted-out row cannot reach.
+    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 14), ("RAISE-MISMATCH", 0), ("ANOMALY", 21)];
 
     let names: Vec<&str> = DERIVED.iter().map(|(name, _)| *name).collect();
     let mut counts = vec![0usize; DERIVED.len()];

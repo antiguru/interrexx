@@ -288,33 +288,6 @@ const BRANCH_CASES: &[InlineCase] = &[
         exit_code: 0,
     },
     InlineCase {
-        // An **absorbed** `WHEN CASE` -- one this `SELECT`'s `whens` never
-        // collected, because it is the listed `WHEN`'s own `THEN` consequence
-        // -- whose false path escapes the matched body and lands on the `END`.
-        // Its residual indent rides along, so the 7.3 clause echoes four
-        // columns further in than the `END`'s own position.
-        name: "select case whose absorbed when case falls through to 7.3",
-        program: "trace r\nselect case 2\n  when 2 then\n  when 3 then nop\nend\nsay 'after'\n",
-        stdout: "",
-        stderr: "     2 *-* select case 2\n       >K>   \"CASE\" => \"2\"\n     3 *-*   \
-                 when 2 \n       >>>     \"2\"\n       >>>     \"1\"\n     3 *-*     then\n     \
-                 4 *-*       when 3 \n       >>>         \"3\"\n       >>>         \"0\"\n     \
-                 5 *-*     end\n     5 *-*     end\nError 7 running <PATH> line 5:  ⟨7⟩\nError 7.3:  ⟨7.3⟩\n",
-        exit_code: 249,
-    },
-    InlineCase {
-        // F-EX1: the same absorbed escape landing exactly on this `SELECT`'s
-        // own `OTHERWISE` marker, which has to run with this `SELECT`'s search
-        // frame still standing -- the `leave s` is what says so, since a
-        // redirect that lost the frame reports 28.3 instead.
-        name: "select label whose absorbed when case escapes into otherwise",
-        program: "select label s case 2\n  when 2 then\n  when 3 then nop\n  otherwise say 'O'\n  \
-                  leave s\nend\nsay 'after'\n",
-        stdout: "O\nafter\n",
-        stderr: "",
-        exit_code: 0,
-    },
-    InlineCase {
         // A `SELECT` is never a repetitive block, so an `ITERATE` naming one is
         // 28.5 even though the name matches -- the one flow a matching label
         // does not consume.
@@ -372,24 +345,6 @@ const BRANCH_CASES: &[InlineCase] = &[
         stderr: "     2 *-* select label s\n     3 *-*   when 1 = 0 \n       >>>     \"0\"\n     \
                  4 *-*   otherwise\n     4 *-*     nop\n     5 *-* end\n     6 *-* say 'after'\n  \
                  \x20    >>>   \"after\"\n",
-        exit_code: 0,
-    },
-    InlineCase {
-        // The escape elevation an absorbed `WHEN CASE` sets is restored once
-        // `OTHERWISE`'s whole dispatch is over, and this is the program that
-        // says so: the `END` and the clause after the `SELECT` both trace at
-        // their own positions. Left in force they would each print four
-        // columns further in, which no case whose `OTHERWISE` is the last
-        // thing that traces can see.
-        name: "the escape elevation is restored after an escaped otherwise",
-        program: "trace r\nselect case 2\n  when 2 then\n  when 3 then nop\n  otherwise nop\nend\n\
-                  say 'after'\n",
-        stdout: "after\n",
-        stderr: "     2 *-* select case 2\n       >K>   \"CASE\" => \"2\"\n     3 *-*   when 2 \n  \
-                 \x20    >>>     \"2\"\n       >>>     \"1\"\n     3 *-*     then\n     \
-                 4 *-*       when 3 \n       >>>         \"3\"\n       >>>         \"0\"\n     \
-                 5 *-*       otherwise\n     5 *-*         nop\n     6 *-* end\n     \
-                 7 *-* say 'after'\n       >>>   \"after\"\n",
         exit_code: 0,
     },
     InlineCase {
@@ -466,23 +421,6 @@ const BRANCH_CASES: &[InlineCase] = &[
                   raise user zx return 'V'\nh:\nraise user zy return 1\ng:\nsay 'G ran' sigl\n\
                   return\n",
         stdout: "G ran 4\nafter\n",
-        stderr: "",
-        exit_code: 0,
-    },
-    InlineCase {
-        // **One boundary per construct, not one per branch entered.** The
-        // absorbed `WHEN CASE`'s own clause queues `zy` and its false path
-        // escapes onto the `OTHERWISE` marker, which is F-EX1's redirect --
-        // and a redirect is this `SELECT` still running, so the branch it left
-        // owes no end-of-branch boundary. The delivery therefore lands at the
-        // `OTHERWISE` marker's own clause, `SIGL` 6, where a `SELECT` that
-        // closed the branch it was redirected out of would report 5.
-        name: "a handler that queues again where a when is redirected to otherwise",
-        program: "call on user zx name h\ncall on user zy name g\nselect case 2\nwhen 2 then\n\
-                  when raiser() then nop\notherwise say 'O'\nend\nsay 'after'\nexit\nraiser:\n\
-                  raise user zx return 'V'\nh:\nraise user zy return 1\ng:\nsay 'G ran' sigl\n\
-                  return\n",
-        stdout: "G ran 6\nO\nafter\n",
         stderr: "",
         exit_code: 0,
     },

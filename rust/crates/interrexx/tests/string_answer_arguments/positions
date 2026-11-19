@@ -622,18 +622,18 @@ Error 40.904:
 [trapped]
 40.904
 
-# oracle Error 93.904 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 refuses string=object
 max(1, o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say max(1, o)
-Error 93 running PROGRAM line 2:
-Error 93.904:
+Error 40 running PROGRAM line 2:
+Error 40.11:
 [trapped]
-93.904
+40.11
 
 # oracle Error 88.909, argument 2 (3 of 3 runs)
 refuses string=directory
@@ -765,18 +765,18 @@ Error 40.904:
 [trapped]
 40.904
 
-# oracle Error 93.904 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 refuses string=directory
 max(1, o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say max(1, o)
-Error 93 running PROGRAM line 2:
-Error 93.904:
+Error 40 running PROGRAM line 2:
+Error 40.11:
 [trapped]
-93.904
+40.11
 
 # oracle Error 40.12 (3 of 3 runs); two faults, of which the call raises one (r[conv.error.precedence]): interrexx reports the replacement
 refuses string=object
@@ -843,31 +843,31 @@ Error 88.909:
 [trapped]
 88.909 1
 
-# oracle Error 93.915 (3 of 3 runs); two faults, of which the call raises one (r[conv.error.precedence]): interrexx reports the option
+# oracle Error 40.904 (3 of 3 runs); two faults, of which the call raises one (r[conv.error.precedence]): interrexx reports the option
 refuses string=object
 strip('zz', 'Q', o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say strip('zz', 'Q', o)
-Error 93 running PROGRAM line 2:
-Error 93.915:
+Error 40 running PROGRAM line 2:
+Error 40.904:
 [trapped]
-93.915
+40.904
 
-# oracle Error 93.943 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 refuses string=object
 abs(o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say abs(o)
-Error 93 running PROGRAM line 2:
-Error 93.943:
+Error 40 running PROGRAM line 2:
+Error 40.11:
 [trapped]
-93.943
+40.11
 
 # oracle Error 93.929 (3 of 3 runs)
 refuses string=object
@@ -1016,18 +1016,18 @@ rc 0
 93.914
 [stderr]
 
-# oracle Error 93.904 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 refuses string=object
 min(1, 2, o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say min(1, 2, o)
-Error 93 running PROGRAM line 2:
-Error 93.904:
+Error 40 running PROGRAM line 2:
+Error 40.11:
 [trapped]
-93.904
+40.11
 
 # oracle Error 93.923 (3 of 3 runs)
 refuses string=object
@@ -1177,15 +1177,15 @@ Error 98.973:
 [trapped]
 98.973
 
-# oracle Error 93.943 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 refuses string=directory
 trunc(o)
 ----
-rc 163
+rc 216
 [stdout]
 [stderr]
      2 *-* say trunc(o)
-Error 93 running PROGRAM line 2:
-Error 93.943:
+Error 40 running PROGRAM line 2:
+Error 40.11:
 [trapped]
-93.943
+40.11

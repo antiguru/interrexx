@@ -778,13 +778,23 @@ count is read through the `makeString` method of the object, or through its
 `string` method when it has only that, and then as [the rule of the
 arguments](r:class.stream.args.numbers) says: an object that answers 2 for a
 count is a count of 2, and `.nil` and an object whose string value is no
-number, such as a plain `Object`, raise `SYNTAX 88.907`. The option that
+number, such as a plain `Object`, raise `SYNTAX 88.907`; so does an object
+whose `string` method answers an object with no string value, which fails the
+check of its kind as [the kind rule](r:conv.string.argument-kind) says. The option that
 `open`, `lines`, `seek` and `position` take is read as a string argument,
 through `makeString` alone: an object that has no such method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`. The argument
 of `query` and of `command` is read through its string value with the fallback
 to `string`: an object that has only `string` is read by that answer, and
-`.nil` is read as `The NIL object`, which no word or command starts with.
+`.nil` is read as `The NIL object`, which no word or command starts with, and
+so is an answer of `string` that has no string value: `query` raises `SYNTAX
+93.0` and `command` `SYNTAX 93.914` for it, as for a word that nothing starts
+with. The argument that `arrayIn`, `makeArray` and `arrayOut` take as the option
+is no string argument: a message is sent to it, and an object that does not
+understand the message raises `SYNTAX 97.1`. The second example reads an
+object whose `string` method answers an object with no string value: the start,
+the count and the line number raise `SYNTAX 88.907`, a string to write and an
+option `SYNTAX 88.909`.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -868,6 +878,43 @@ t~query(.os~new("size")) => [4]
 t~query(.nil) => 93.0
 t~command(.os~new("query size")) => [4]
 t~command(.nil) => 93.914
+```
+
+```rexx
+o = .nostr~new
+s = .stream~new('spec-stream-nostring-zq.tmp')
+call try 's~charin(o)'
+call try 's~charin(1, o)'
+call try 's~linein(o)'
+call try 's~linein(1, o)'
+call try 's~charout("x", o)'
+call try 's~lineout("x", o)'
+call try 's~lineout(o, 1)'
+call try 's~open(o)'
+call try 's~arrayin(o)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> [' || r || ']'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class nostr
+::method string
+  return .object~new
+```
+
+```output
+s~charin(o) => 88.907
+s~charin(1, o) => 88.907
+s~linein(o) => 88.907
+s~linein(1, o) => 88.907
+s~charout("x", o) => 88.907
+s~lineout("x", o) => 88.907
+s~lineout(o, 1) => 88.909
+s~open(o) => 88.909
+s~arrayin(o) => 97.1
 ```
 
 r[class.stream.args.strings]
@@ -2256,15 +2303,16 @@ one two READY
 ```
 
 r[class.stream.supplier.sends]
-The supplier that `supplier` makes sends the stream, in this order, `state`
-twice and then one `lineIn` when it is made: with no argument when the stream
+The supplier that `supplier` makes sends the stream, in this order, `state`,
+then `open` with the argument `read` when that answer is `UNKNOWN`, then
+`state` again and then one `lineIn` when it is made: with no argument when the stream
 was read part of the way into a line, so that its answer is the rest of that
 line as [Deviation 140](r:class.stream.deviation.140) says, and otherwise with
 one argument, the number of the line to read. For each `next` it sends
 `lineIn` with the number of the next line; the other methods of the supplier
 send nothing. `supplier` sends nothing else, apart from the `close` that
 [the rule of `StreamSupplier`](r:class.streamsupplier.sends) says. The first
-answer of `state` is used for that `close` only. When the second is `READY`, the supplier starts at the line that the
+answer of `state` is used for that `open` and that `close` only. When the second is `READY`, the supplier starts at the line that the
 read position is in, which it learns from the stream by messages that are not part of this
 specification, and otherwise
 at line 1; when the second answer is `READY` for a stream that is not open,
@@ -2354,7 +2402,7 @@ exit
 ```
 
 ```output
-UNKNOWN READY -> 2 two
+UNKNOWN READY -> 1 one
 READY NOTREADY -> 1 one
 41.1
 ```
@@ -2407,15 +2455,13 @@ NOVAL => 91.999
 
 r[class.stream.supplier.transient]
 For a transient stream, such as `STDIN`, the supplier does not number the
-lines it asks for. When the stream has been read from, as by `lineIn`,
-`charIn` or `lines`, every `lineIn` that the supplier sends, the first and each
-later one, has no argument, and the answers to `state` do not change that. The
-index of the supplier counts from 1 at the first line it reads, whatever the
-number of that line in the stream. When the stream has not been read from, the
-first `lineIn` is sent with the argument 1, as for a stream that was not read,
-and raises `SYNTAX 93.958` because a transient stream cannot be positioned;
-`supplier`, or `new` of [`StreamSupplier`](r:class.streamsupplier.sends),
-raises it. The examples run with an empty standard input, so they show these
+lines it asks for: every `lineIn` that the supplier sends, the first and each
+later one, has no argument, whether or not the stream has been read from, as
+by `lineIn`, `charIn` or `lines`, and the answers to `state` do not change
+that. A stream that was not open is opened for reading first, as [the rule of
+the sends](r:class.stream.supplier.sends) says, which is what tells the
+supplier that it is transient. The index of the supplier counts from 1 at the
+first line it reads, whatever the number of that line in the stream. The examples run with an empty standard input, so they show these
 sends and the end of the supplier and not lines of data; a transient stream
 that holds lines is not shown by an example.
 
@@ -2446,7 +2492,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-unread => 93.958
+unread 0  state state lineIn()
 read 0  state state lineIn()
 ```
 

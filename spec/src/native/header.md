@@ -234,6 +234,7 @@ answers. The values are:
 * `REXX_LANGUAGE_6_04`: `0x00000604`
 * `REXX_LANGUAGE_6_05`: `0x00000605`
 * `REXX_LANGUAGE_6_06`: `0x00000606`
+* `REXX_LANGUAGE_6_07`: `0x00000607`
 * `REXX_CURRENT_LANGUAGE_LEVEL`: `0x00000606`
 
 r[native.header.entry-constants]
@@ -360,6 +361,9 @@ its type to the code, leaving its flags. Compiled as C++, a
 `RexxArrayObject`, `RexxStemObject`, `RexxMutableBufferObject`, `CSTRING`,
 `POINTER`, `wholenumber_t`, `float` or `double`: the assignment stores the
 value as the code of that type's own name and sets the type in the same way.
+It also converts implicitly to each of those types and to `stringsize_t`,
+answering the value stored as the code of that type's own name, whatever its
+type says.
 
 r[native.header.tables]
 A routine table is an array of `RexxRoutineEntry` and a method table one of

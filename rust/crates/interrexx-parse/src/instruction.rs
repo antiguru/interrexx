@@ -10,8 +10,8 @@ use interrexx_inventory::errors::{
     E25_911, E25_912, E25_913, E25_914, E25_915, E25_916, E25_917, E25_918, E25_919, E25_921,
     E25_922, E25_923, E25_929, E26_7, E31_2, E31_3, E35_1, E35_912, E35_913, E35_915, E35_916,
     E35_917, E35_918, E35_922, E35_923, E35_924, E35_925, E35_926, E35_927, E35_928, E35_929,
-    E35_930, E35_932, E35_933, E46_1, E46_901, E46_902, E47_1, E49_2, E89_1, E99_907, E99_908,
-    E99_910, E99_912, E99_913, E99_915, E99_923, E99_924, E99_930, E99_948, E99_950, Msg,
+    E35_930, E35_932, E35_933, E46_1, E46_901, E46_902, E46_903, E47_1, E49_2, E89_1, E99_907,
+    E99_908, E99_910, E99_912, E99_913, E99_915, E99_923, E99_924, E99_930, E99_948, E99_950, Msg,
 };
 
 use crate::ast::{
@@ -1271,8 +1271,10 @@ impl<'a> Inst<'a> {
                         Some(_) => return Err(self.error(E35_930, [])),
                     }
                 }
-                // `use arg a b` is 46.902, not a two-variable list.
-                Some(next) => return Err(self.found(E46_902, Some(next))),
+                // `use arg a b` is not a two-variable list: after a target
+                // that may take a default, `=` is expected too, which is
+                // 46.903 (`r[instr.use.syntax]`).
+                Some(next) => return Err(self.found(E46_903, Some(next))),
             }
             targets.push(Some(UseTarget {
                 target,
@@ -1703,20 +1705,15 @@ impl<'a> Inst<'a> {
         };
         match &condition.kind {
             ExprKind::Variable(id) | ExprKind::Stem(id) => watch(self.ctx.symbols.name(*id)),
+            // A compound contributes its stem and its variable tail pieces,
+            // wherever else in the body it is referenced
+            // (`r[instr.guard.when.exposed]`).
             ExprKind::Compound(id) => {
-                let name = self.ctx.symbols.name(*id);
-                // A compound contributes NOTHING if this exact spelling was
-                // already referenced earlier in the body: the cached retriever
-                // is returned before the calls that would capture are reached,
-                // and it is the earlier reference that disqualifies the later
-                // guard, not the other way round.
-                if !block.compound_is_cached(name.as_bytes()) {
-                    let (stem, tails) = compound_parts(name);
-                    watch(stem);
-                    for tail in tails {
-                        if let Tail::Variable(piece) = tail {
-                            watch(piece);
-                        }
+                let (stem, tails) = compound_parts(self.ctx.symbols.name(*id));
+                watch(stem);
+                for tail in tails {
+                    if let Tail::Variable(piece) = tail {
+                        watch(piece);
                     }
                 }
             }

@@ -340,7 +340,7 @@ impl Interp {
 
     /// A tail of `stem` was assigned or dropped: every activity that watches
     /// an exposed stem variable holding it is posted, as a store to the
-    /// variable posts it (r[conc.locks.deviation.160]). Costs one test where
+    /// variable posts it (r[conc.locks.when.stem]). Costs one test where
     /// no `GUARD WHEN` watches a stem.
     #[inline]
     pub(crate) fn stem_changed(&mut self, stem: ObjRef) {

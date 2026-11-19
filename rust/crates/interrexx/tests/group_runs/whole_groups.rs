@@ -87,15 +87,15 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "base/bif/STREAM.testGroup",
         "whole",
         "normal",
-        "error, assertions 195, rc 2, last started TEST_WRONG_TOO_MANY_ARGS_S, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2 TEST_QUERYFILE_EXISTS_OPENED_01 TEST_QUERYFILE_EXISTS_OPENED_03 TEST_SEEK_CLOSEDFILE_2785896 TEST_SEEK_CLOSEDFILE_2787994 TEST_OPEN_WRITE_ONLY_3274050_C TEST_OPEN_WRITE_ONLY_3274050_D]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt), and TEST_RELATIVE_FILE_EXISTS and _EXISTS2, which fail on the oracle too",
+        "failure, assertions 218, rc 1, last started TEST_RELATIVE_FILE_NOT_EXISTS2, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2]",
+        "the oracle's outcome but for the last test started: the group's two test classes share one index of the framework's Relation, which lists them oldest first here and newest first on the oracle (r[class.relation.oldest.deviation.33]), so the classes run the other way round; TEST_RELATIVE_FILE_EXISTS and _EXISTS2 fail on the oracle too",
     ),
     (
         "base/bif/STREAM.testGroup",
         "whole",
         "every",
-        "error, assertions 195, rc 2, last started TEST_WRONG_TOO_MANY_ARGS_S, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2 TEST_QUERYFILE_EXISTS_OPENED_01 TEST_QUERYFILE_EXISTS_OPENED_03 TEST_SEEK_CLOSEDFILE_2785896 TEST_SEEK_CLOSEDFILE_2787994 TEST_OPEN_WRITE_ONLY_3274050_C TEST_OPEN_WRITE_ONLY_3274050_D]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt), and TEST_RELATIVE_FILE_EXISTS and _EXISTS2, which fail on the oracle too",
+        "failure, assertions 218, rc 1, last started TEST_RELATIVE_FILE_NOT_EXISTS2, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2]",
+        "the oracle's outcome but for the last test started: the group's two test classes share one index of the framework's Relation, which lists them oldest first here and newest first on the oracle (r[class.relation.oldest.deviation.33]), so the classes run the other way round; TEST_RELATIVE_FILE_EXISTS and _EXISTS2 fail on the oracle too",
     ),
     (
         "base/class/Class.testGroup",
@@ -704,7 +704,7 @@ fn the_differing_tests_are_read_from_every_key() {
     let tests = differing_tests();
     for (group, test) in [
         ("base/bif/STREAM", "TEST_RELATIVE_FILE_EXISTS2"),
-        ("base/bif/STREAM", "TEST_WRONG_TOO_MANY_ARGS_S"),
+        ("base/bif/STREAM", "TEST_RELATIVE_FILE_NOT_EXISTS2"),
         ("base/class/RexxContext", "TESTRS01"),
     ] {
         assert!(
@@ -1309,7 +1309,7 @@ mod sim_gate {
                 (" --release", "release")
             };
             format!(
-                "REXX_CORPUS_GATE=1 {ONLY_ENV}='{}' memcap 8G cargo test -j 4{} -p \
+                "REXX_CORPUS_GATE=1 {ONLY_ENV}='{}' cargo test -j 4{} -p \
                          interrexx --test concurrency_tests the_seeded_gate -- --nocapture \
                          (profile={}, stack={}, REXX_SWITCH_MODE={}, scratch {})",
                 self.name(),

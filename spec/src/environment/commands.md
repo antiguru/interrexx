@@ -491,9 +491,10 @@ r[env.commands.inprocess]
 A command that the shell would run in a process of its own, and whose effect
 would end with that process, is run by the interpreter in the program instead,
 so that its effect is the program's. These are the commands `cd`, `export`,
-`set` and `unset`, in lower case, when all of the following hold. The string
-begins with the word, directly followed by a blank and an argument, or, for
-`cd`, by nothing or by blanks only. It has none of the characters `;`, `&`,
+`set` and `unset`, in lower case, when all of the following hold. The string,
+after any blanks and tabs at its start, begins with the word, directly
+followed by a blank and an argument, or, for `cd`, by nothing or by blanks
+only. It has none of the characters `;`, `&`,
 `|`, `<` and `>`. It is sent as a command clause or by an ADDRESS instruction
 with a command to a native environment, any of those that [the first
 rule](r:env.commands.names) names, `PATH` included. Which shell that
@@ -505,10 +506,12 @@ its clause has none, and no earlier ADDRESS instruction with `WITH` and no
 command has given the environment one, even one that names only `NORMAL`. Any
 other string is run as the environment runs every command, by a shell or, for
 `PATH`, as a program that is searched for, in a process whose effect on the
-program ends with it, so that a leading blank, a tab for the blank, a capital
-letter, or a `;` sends the string that way. A command that the interpreter
+program ends with it, so that a tab in place of the blank after the word, a
+capital letter, or a `;` sends the string that way. A command that the interpreter
 does itself writes nothing, and its return code is set as the rules of the
-four commands say.
+four commands say. An ERROR or FAILURE condition it raises names it, in
+`CONDITION('D')`, without the blanks and tabs before its word, where a
+command that a shell runs keeps them.
 
 ```rexx
 call directory '/'
@@ -520,6 +523,10 @@ call directory '/'
 say directory()
 ' cd /usr'
 say directory()
+call directory '/'
+'09'x || 'cd /usr'
+say directory()
+call directory '/'
 'cd' || '09'x || '/usr'
 say directory()
 'CD /usr'
@@ -549,7 +556,8 @@ call directory '/'
 ```output
 /usr
 /
-/
+/usr
+/usr
 /
 127 /
 /usr
@@ -578,6 +586,21 @@ call directory '/'
 0 []
 ```
 
+```rexx
+call on error name e
+address system
+' cd /a4zq_none '
+'  false  '
+exit
+e: say '['condition('d')']' rc
+  return
+```
+
+```output
+[cd /a4zq_none ] 2
+[  false  ] 1
+```
+
 r[env.commands.cd]
 `cd` makes the directory its argument names the current directory of the
 program, as [DIRECTORY](r:bif.directory.effect) does, and answers 0. The
@@ -595,11 +618,12 @@ argument, stands for the home directory of the user of that name in the host's
 user database. When there is no such user, the command is not done by the
 interpreter: the string goes to the shell, as any other string does. A `~`
 that is not the first character of the argument as written, and one that a
-quote or backslash comes before, is an ordinary character. In the rest of the
-argument every double quote is dropped, even one that nothing closes, and so
-is a backslash, the character after it being kept. Nothing else is read: a
-blank at the end is part of the name, as is a `-`, a single quote, a dollar
-sign or a star. A name that does not start with a slash is taken from the
+quote or backslash comes before, is an ordinary character. The name so formed then loses the blanks at its
+end, all but those up to and including a blank that a backslash comes right
+before. In what remains every double quote is dropped, even one that nothing
+closes, and so is a backslash, the character after it being kept. Nothing
+else is read: a `-`, a single quote, a dollar sign or a star is part of the
+name. A name that does not start with a slash is taken from the
 current directory. When `HOME` is the null string, `cd` with no argument fails
 as below, and a `~` that stands for `HOME` stands for nothing, so that `cd ~`
 and `cd ~/` make `/` current and `cd ~/x` makes `/x` current. When the
@@ -616,7 +640,7 @@ call directory '/'
 address system
 do c over .array~of('cd', 'cd /', 'cd ~', 'cd ~/..', 'cd ~ /etc', 'cd  usr',,
     'cd "/usr"', 'cd /u"s"r', 'cd \/usr', 'cd /usr/', 'cd /usr ',,
-    "cd '/usr'", 'cd $HOME', 'cd -', 'cd "~"', 'cd /a4zq_none',,
+    'cd "/usr"  ', 'cd "/usr "', 'cd /usr\ ', 'cd ~/  ', "cd '/usr'", 'cd $HOME', 'cd -', 'cd "~"', 'cd /a4zq_none',,
     'cd /dev/null', 'cd ""', 'cd /usr lib')
   call directory '/'
   c
@@ -647,7 +671,11 @@ call value 'HOME', old, e
 [cd /u"s"r] 0 0 /usr
 [cd \/usr] 0 0 /usr
 [cd /usr/] 0 0 /usr
-[cd /usr ] 2 1 /
+[cd /usr ] 0 0 /usr
+[cd "/usr"  ] 0 0 /usr
+[cd "/usr "] 2 1 /
+[cd /usr\ ] 2 1 /
+[cd ~/  ] 0 0 /usr
 [cd '/usr'] 2 1 /
 [cd $HOME] 2 1 /
 [cd -] 2 1 /
@@ -665,17 +693,25 @@ r[env.commands.export]
 `export` and `set`, given an argument, set an environment variable of the
 program, as VALUE does ([the variables rule](r:bif.value.os)), and answer 0.
 The name is the text from the blanks that follow the word to the first `=`,
-and the value is all that follows that `=`, to the end of the string, blanks
-and quotes included. A string without `=` sets nothing, and neither does one
-whose name is empty, `export =3` for one, which answers 0 ([the deviation
-rule](r:env.commands.deviation.149)). Within the value each `$` starts a
-reference: the characters after it up to the next `/`, `:` or `$`, or the end
-of the string, are the name of an environment variable, and the reference is
-replaced by the value of that variable, or by nothing when there is none; the
-character that ended the name stays. Neither the name nor the reference
-follows the rules of the shell, so that `${NAME}` is a reference to a variable
-whose name has braces in it. A `~` in the value is an ordinary character.
-`export` and `set` with no argument are run by the shell.
+and the value is what follows that `=`, to the end of the string, read as a
+shell reads it in the simple cases. A double quote is dropped, and opens or
+closes a quoted part in which the rest is read as outside one. A single quote
+outside double quotes is dropped and opens a part that runs to the next single
+quote, also dropped, and keeps every character in it as it is. Outside single
+quotes a backslash is dropped and the character after it kept as it is, so
+that `\$`, `\"`, `\'` and `\\` stand for themselves; a backslash at the end
+of the string is kept. Outside single quotes a `$` followed by a name, or by
+`{`, a name and `}`, is a reference, replaced by the value of the environment
+variable of that name, or by nothing when there is none. A name is a run of
+the ASCII letters, digits and the underscore, at most 255 of them, and ends
+at the first other character, which is read as usual. A `$` that no such name
+follows, one before a name longer than that, and one whose `{` no `}` closes
+straight after the name, is an ordinary character. A quote that nothing
+closes runs to the end of the string. Blanks are kept wherever they are, and a
+`~` is an ordinary character. A string without `=` sets nothing, and neither
+does one whose name is empty, `export =3` for one, which answers 0 ([the
+deviation rule](r:env.commands.deviation.149)). `export` and `set` with no
+argument are run by the shell.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -689,11 +725,17 @@ call t 'export A4ZQ_X5=7 A4ZQ_Y5=8', 'A4ZQ_X5 A4ZQ_Y5'
 call t 'export A4ZQ_X6', 'A4ZQ_X6'
 call t 'export A4ZQ_X8=$A4ZQ_H/s:t', 'A4ZQ_X8'
 call t 'export A4ZQ_X9=<$A4ZQ_H$A4ZQ_H>', 'A4ZQ_X9'
-call t 'export A4ZQ_X10=${A4ZQ_H}', 'A4ZQ_X10'
+call t 'export A4ZQ_X10=${A4ZQ_H}x', 'A4ZQ_X10'
 call t 'export A4ZQ_X11=u$A4ZQ_nope', 'A4ZQ_X11'
 call t 'export A4ZQ_X12=~/x', 'A4ZQ_X12'
 call t 'export A4ZQ_X13=1;', 'A4ZQ_X13'
 call t 'export A4ZQ_X14=', 'A4ZQ_X14'
+call t 'export A4ZQ_X15="$A4ZQ_H-$A4ZQ_H.b"', 'A4ZQ_X15'
+call t "export A4ZQ_X16='$A4ZQ_H \x'"" ""'$A4ZQ_H'", 'A4ZQ_X16'
+call t 'export A4ZQ_X17=\$A4ZQ_H \"\\a\', 'A4ZQ_X17'
+call t 'export A4ZQ_X18=a$ $- ${A4ZQ_H ${-}', 'A4ZQ_X18'
+call t 'export A4ZQ_X19="it''s', 'A4ZQ_X19'
+call t ' export A4ZQ_X20=1', 'A4ZQ_X20'
 'test "${A4ZQ_X14+set}" = set'
 say 'set but null' rc
 exit
@@ -713,16 +755,22 @@ t: procedure expose e
 [export A4ZQ_X1=1] 0  [1]
 [set A4ZQ_X2=2] 0  [2]
 [export  A4ZQ_X3=a  b ] 0  [a  b ]
-[export A4ZQ_X4="q r"] 0  ["q r"]
+[export A4ZQ_X4="q r"] 0  [q r]
 [export A4ZQ_X5=7 A4ZQ_Y5=8] 0  [7 A4ZQ_Y5=8] []
 [export A4ZQ_X6] 0  []
 [export A4ZQ_X8=$A4ZQ_H/s:t] 0  [hval/s:t]
 [export A4ZQ_X9=<$A4ZQ_H$A4ZQ_H>] 2  []
-[export A4ZQ_X10=${A4ZQ_H}] 0  []
+[export A4ZQ_X10=${A4ZQ_H}x] 0  [hvalx]
 [export A4ZQ_X11=u$A4ZQ_nope] 0  [u]
 [export A4ZQ_X12=~/x] 0  [~/x]
 [export A4ZQ_X13=1;] 0  []
 [export A4ZQ_X14=] 0  []
+[export A4ZQ_X15="$A4ZQ_H-$A4ZQ_H.b"] 0  [hval-hval.b]
+[export A4ZQ_X16='$A4ZQ_H \x'" "'$A4ZQ_H'] 0  [$A4ZQ_H \x $A4ZQ_H]
+[export A4ZQ_X17=\$A4ZQ_H \"\\a\] 0  [$A4ZQ_H "\a\]
+[export A4ZQ_X18=a$ $- ${A4ZQ_H ${-}] 0  [a$ $- ${A4ZQ_H ${-}]
+[export A4ZQ_X19="it's] 0  [it's]
+[ export A4ZQ_X20=1] 0  [1]
 set but null 0
 ```
 
@@ -739,12 +787,12 @@ do n over .array~of('A4ZQ_U1', 'A4ZQ_U2', 'A4ZQ_U3', 'A4ZQ_U4', 'A4ZQ_W4',,
     'A4ZQ_U5', 'A4ZQ_U6')
   call value n, 'set', e
 end
-call t 'unset A4ZQ_U1', 'A4ZQ_U1'
-call t 'unset  A4ZQ_U2', 'A4ZQ_U2'
-call t 'unset A4ZQ_U3 ', 'A4ZQ_U3'
 call t 'unset A4ZQ_U4 A4ZQ_W4', 'A4ZQ_U4 A4ZQ_W4'
+call t 'unset A4ZQ_U3 ', 'A4ZQ_U3'
 call t 'unset A4ZQ_nope', 'A4ZQ_U5'
 call t 'unset A4ZQ_U6;', 'A4ZQ_U6'
+call t 'unset A4ZQ_U1', 'A4ZQ_U1'
+call t 'unset  A4ZQ_U2', 'A4ZQ_U2'
 exit
 t: procedure expose e
   parse arg cmd, names
@@ -759,12 +807,12 @@ t: procedure expose e
 ```
 
 ```output
-[unset A4ZQ_U1] 0  []
-[unset  A4ZQ_U2] 0  []
-[unset A4ZQ_U3 ] 0  [set]
 [unset A4ZQ_U4 A4ZQ_W4] 0  [set] [set]
+[unset A4ZQ_U3 ] 0  [set]
 [unset A4ZQ_nope] 0  [set]
 [unset A4ZQ_U6;] 0  [set]
+[unset A4ZQ_U1] 0  []
+[unset  A4ZQ_U2] 0  []
 ```
 
 r[env.commands.deviation.149]
@@ -777,8 +825,7 @@ changes nothing and answers 0. This is [Deviation
 ooRexx loses some of these sets, which ones depending on the in-process
 `export` and `unset` commands that the program ran before for any variable, so
 that the second line of the example is empty there. And `export =3` stores an
-entry whose name is empty, which a `$` with no name after it then refers to,
-so that the last line is `[a3]` there.
+entry whose name is empty.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -803,7 +850,7 @@ say '['value('A4ZQ_R', , e)']'
 [u5]
 [w2]
 0
-[a]
+[a$]
 ```
 
 ## Redirection

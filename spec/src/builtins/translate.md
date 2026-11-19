@@ -51,8 +51,8 @@ g: say condition('o')~code
 
 ```output
 TaB taB
-93.924
-93.923
+40.14
+40.13
 40.23
 40.12
 40.4

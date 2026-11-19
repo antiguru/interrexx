@@ -62,7 +62,7 @@ pub(crate) struct GuardTable {
     watches: FxHashMap<ObjRef, Vec<Watch>>,
     /// How many (watcher, stem variable) pairs are watched now: a write to a
     /// tail of a stem looks for a watcher of the stem only when this is not
-    /// zero (r[conc.locks.deviation.160]).
+    /// zero (r[conc.locks.when.stem]).
     stem_watching: u32,
 }
 

@@ -25,8 +25,18 @@ struct Case {
 /// The cases whose three descriptors must **not** agree.
 /// [`every_state_builtin_case_matches_the_oracle_except_the_declared_gaps`]
 /// polices it in both directions, so a case that starts differing is as red
-/// as a declared gap that starts agreeing.
+/// as a declared gap that starts agreeing. A gap is a loud refusal of this
+/// crate's (`every_declared_gap_names_a_case_and_fails_loudly`).
 const DECLARED_GAPS: &[&str] = &[];
+
+/// The cases whose difference a Deviation licenses, which must not agree
+/// either but answer rather than refuse: ERRORTEXT takes one argument here,
+/// as at language level 6.06, and ooRexx at 6.07 takes a second one of values
+/// (Deviation 179).
+///
+/// Each case names the error this crate raises for it, which
+/// [`every_deviating_case_raises_its_own_error`] holds it to.
+const DEVIATING: &[(&str, &str)] = &[("errortext_arity", "Error 40.4:")];
 
 const CASES: &[Case] = &[
     // ---- ADDRESS: the default, the forms, byte transparency ----
@@ -473,7 +483,7 @@ fn sweep_one(oracle: &Oracle, run_root: &Path, case: &Case) -> Option<String> {
     ))
 }
 
-/// The set of cases that differ is exactly [`DECLARED_GAPS`].
+/// The set of cases that differ is exactly [`DECLARED_GAPS`] and [`DEVIATING`].
 #[test]
 fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
     let oracle = support::oracle::locate();
@@ -492,11 +502,14 @@ fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
     let unexpected: Vec<&str> = differing
         .iter()
         .copied()
-        .filter(|name| !DECLARED_GAPS.contains(name))
+        .filter(|name| {
+            !DECLARED_GAPS.contains(name) && !DEVIATING.iter().any(|(case, _)| case == name)
+        })
         .collect();
     let closed: Vec<&str> = DECLARED_GAPS
         .iter()
         .copied()
+        .chain(DEVIATING.iter().map(|(case, _)| *case))
         .filter(|name| !differing.contains(name))
         .collect();
 
@@ -504,7 +517,7 @@ fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
         unexpected.is_empty() && closed.is_empty(),
         "the state builtins' differential surface moved.\n\
          differ but are not declared gaps: {unexpected:?}\n\
-         are declared gaps but now agree (remove them from DECLARED_GAPS): {closed:?}\n\
+         are declared gaps or deviations but now agree (remove them): {closed:?}\n\
          transcripts:\n{transcripts}"
     );
 
@@ -553,4 +566,28 @@ fn every_declared_gap_names_a_case_and_fails_loudly() {
         );
     }
     let _ = fs::remove_dir_all(&run_root);
+}
+
+/// A Deviation-licensed difference is still a fixed answer of this crate's:
+/// each [`DEVIATING`] case raises the error it names, so a change in what
+/// interrexx answers is not hidden by the difference being licensed.
+#[test]
+fn every_deviating_case_raises_its_own_error() {
+    for (name, error) in DEVIATING {
+        let case = CASES
+            .iter()
+            .find(|case| case.name == *name)
+            .unwrap_or_else(|| panic!("{name} is a deviating case with no case of that name"));
+        let rust = interrexx::run_program(
+            "/deviating.rex",
+            format!("{}\n", case.source).into_bytes(),
+            interrexx::Invocation::none().with_deadline(support::oracle::RUN_DEADLINE),
+        );
+        let stderr = String::from_utf8_lossy(&rust.stderr);
+        assert!(
+            rust.exit_code == 216 && stderr.contains(error),
+            "{name} should raise {error} (exit 216), and gave exit {}: {stderr}",
+            rust.exit_code
+        );
+    }
 }

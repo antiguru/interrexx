@@ -42,7 +42,7 @@ d: say condition('o')~code
 
 ```output
 2 2
-93.924
+40.14
 40.12
 40.5
 40.4
@@ -175,7 +175,7 @@ e: say condition('o')~code
 
 ```output
 0 0 0
-93.924
+40.14
 ```
 
 r[bif.wordpos.empty-string]

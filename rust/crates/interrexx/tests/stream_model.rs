@@ -115,7 +115,7 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
         "record-close-pads-nothing",
         46,
         "pads-on-close",
-        "[AAAAx___CCCCDDDD____]",
+        "[AAAAx___CCCCDDDD]",
     ),
     (
         "seek-char-from-end",

@@ -2,7 +2,7 @@
 element: "NOSTRING"
 kind: concept
 rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
-deviations: [30, 77]
+deviations: [30, 77, 179]
 ---
 
 # NOSTRING
@@ -102,7 +102,7 @@ exit
     when j = 3 then do; t = .object~new; a.t = 5; end
     when j = 4 then x = 'a' || .ps~new
     when j = 5 then x = 'a' || .pm~new
-    when j = 6 then x = filespec('n', .object~new)
+    when j = 6 then x = sysfileexists(.object~new)
     when j = 7 then parse value .ps~new with x .
     when j = 8 then do; t = .pm~new; a.t = 5; end
   end
@@ -322,6 +322,29 @@ darr text
 ```
 
 ## Deviations
+
+r[cond.nostring.deviation.179]
+BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
+level 6.06 ([Deviation 179](../deviations.md)), and link [the native call
+rule](r:bif.index.call.native), so an argument of theirs that has no string
+value raises `SYNTAX 88.909` and no NOSTRING. ooRexx, at level 6.07, makes
+them builtins, and raises NOSTRING for such an argument as for one of any
+other builtin.
+
+```rexx
+signal on syntax name s
+signal on nostring name n
+x = filespec('n', .object~new)
+say 'nothing'
+exit
+n: say 'NOSTRING'
+exit
+s: say 'SYNTAX' condition('o')~code
+```
+
+```output
+SYNTAX 88.909
+```
 
 r[cond.nostring.deviation.77]
 The string value of a stem is its default value's, and NOSTRING is raised,

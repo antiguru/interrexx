@@ -324,7 +324,7 @@ impl Interp {
     /// empty nor `=` runs as an `INTERPRET` fragment; the pause ends when the
     /// fragment ended debug or changed a setting from inside it.
     pub(crate) fn debug_pause_now(&mut self) -> Result<Pause, Failure> {
-        if self.debug_pause() {
+        if self.silenced() {
             return Ok(Pause::Go);
         }
         if self.activation().debug.bypass {
@@ -409,12 +409,6 @@ impl Interp {
         // The paused clause's line and indent, which a condition it queued
         // reads at its boundary after the pause.
         let saved_clause = self.save_clause_state();
-        // A `SELECT CASE` typed at the pause opens and closes inside the
-        // line; the construct the pause interrupted keeps its own value.
-        let saved_case = self.activation().current_case;
-        if let Some(case) = saved_case {
-            self.roots.activity_mut().push_temp(case);
-        }
         self.activity.fragment_depth += 1;
         let (line, indent) = (
             self.activity.clause_state.line(),
@@ -442,7 +436,6 @@ impl Interp {
         self.leave_fragment(saved_entry);
         self.replace_debug_pause(saved_pause);
         self.restore_clause_state(saved_clause);
-        self.activation_mut().current_case = saved_case;
         match outcome {
             // An `EXIT`, `RETURN` or `SIGNAL` the line ran leaves the paused
             // clause as it would from the program.

@@ -103,8 +103,8 @@ fn the_target_and_the_later_arguments_raise_different_numbers() {
     ] {
         assert_eq!(
             raised(name, &[Some(b"abc")]),
-            (93, 943, subs(&[name, b"abc"])),
-            "{} did not name itself in 93.943",
+            (40, 11, subs(&[name, b"1", b"abc"])),
+            "{} did not name itself in 40.11",
             String::from_utf8_lossy(name)
         );
     }
@@ -112,33 +112,33 @@ fn the_target_and_the_later_arguments_raise_different_numbers() {
     // what they are.
     assert_eq!(
         raised(b"ABS", &[Some(b"")]),
-        (93, 943, subs(&[b"ABS", b""]))
+        (40, 11, subs(&[b"ABS", b"1", b""]))
     );
     assert_eq!(
         raised(b"SIGN", &[Some(b" ")]),
-        (93, 943, subs(&[b"SIGN", b" "]))
+        (40, 11, subs(&[b"SIGN", b"1", b" "]))
     );
     // Quoted, so no arithmetic runs before the call: this is SIGN's own
     // error, not the 41.1 an unquoted `-1E1234567890` would raise from
     // the unary minus.
     assert_eq!(
         raised(b"SIGN", &[Some(b"-1E1234567890")]),
-        (93, 943, subs(&[b"SIGN", b"-1E1234567890"]))
+        (40, 11, subs(&[b"SIGN", b"1", b"-1E1234567890"]))
     );
 
     // Arguments 2 and up: a different sub-code, and the *method's* own
     // numbering.
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"a"), Some(b"3")]),
-        (93, 904, subs(&[b"1", b"a"]))
+        (40, 11, subs(&[b"MAX", b"2", b"a"]))
     );
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"2"), Some(b"a")]),
-        (93, 904, subs(&[b"2", b"a"]))
+        (40, 11, subs(&[b"MAX", b"3", b"a"]))
     );
     assert_eq!(
         raised(b"MIN", &[Some(b"1"), Some(b"")]),
-        (93, 904, subs(&[b"1", b""]))
+        (40, 11, subs(&[b"MIN", b"2", b""]))
     );
 }
 
@@ -169,7 +169,7 @@ fn an_omitted_argument_is_40_5_at_its_position() {
     // is what is reported.
     assert_eq!(
         raised(b"MAX", &[Some(b"1"), Some(b"a"), None, Some(b"4")]),
-        (93, 904, subs(&[b"1", b"a"]))
+        (40, 11, subs(&[b"MAX", b"2", b"a"]))
     );
 }
 
@@ -351,11 +351,11 @@ fn each_validation_layer_raises_its_own_code() {
     );
     assert_eq!(
         raised(b"TRUNC", &[Some(b"AB.CD"), Some(b"1")]),
-        (93, 943, subs(&[b"TRUNC", b"AB.CD"]))
+        (40, 11, subs(&[b"TRUNC", b"1", b"AB.CD"]))
     );
     assert_eq!(
         raised(b"TRUNC", &[Some(b"1.5"), Some(b"-1")]),
-        (93, 906, subs(&[b"1", b"-1"]))
+        (40, 13, subs(&[b"TRUNC", b"2", b"-1"]))
     );
 
     assert_eq!(
@@ -364,25 +364,26 @@ fn each_validation_layer_raises_its_own_code() {
     );
     assert_eq!(
         raised(b"FORMAT", &[Some(b"a"), Some(b"1")]),
-        (93, 943, subs(&[b"FORMAT", b"a"]))
+        (40, 11, subs(&[b"FORMAT", b"1", b"a"]))
     );
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"-1")]),
-        (93, 906, subs(&[b"1", b"-1"]))
+        (40, 13, subs(&[b"FORMAT", b"2", b"-1"]))
     );
-    // Each of the four optional positions names its own method position
+    // Each of the four optional positions names its own argument position
     // when it is the range that is wrong.
     assert_eq!(
         raised(b"FORMAT", &[Some(b"1"), Some(b"1"), Some(b"y")]),
         (40, 12, subs(&[b"FORMAT", b"3", b"y"]))
     );
-    for (position, method) in [(2usize, b"1"), (3, b"2"), (4, b"3"), (5, b"4")] {
+    for position in 2usize..=5 {
         let mut args: Vec<Option<&[u8]>> = vec![Some(b"1"), None, None, None, None];
         args[position - 1] = Some(b"-1");
+        let named = position.to_string();
         assert_eq!(
             raised(b"FORMAT", &args),
-            (93, 906, subs(&[method, b"-1"])),
-            "argument {position} named the wrong method position"
+            (40, 13, subs(&[b"FORMAT", named.as_bytes(), b"-1"])),
+            "argument {position} named the wrong position"
         );
     }
 }

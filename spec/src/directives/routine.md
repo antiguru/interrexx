@@ -110,9 +110,10 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 r[dir.routine.options]
 The keywords after the name are PUBLIC, PRIVATE and EXTERNAL, in any case.
 PRIVATE is the default, and writing it is the same as writing no access
-keyword. A routine names at most one of PUBLIC and PRIVATE, and a keyword
-written twice, a word that is not one of the three, and so a keyword of
-[::METHOD](method.md) such as PACKAGE or GUARDED, raise `SYNTAX 25.903`.
+keyword. PUBLIC or PRIVATE, and EXTERNAL, are the [groups](r:dir.index.options):
+a keyword written twice raises `SYNTAX 25.936` and PUBLIC with PRIVATE
+`25.937`. A word that is not one of the three, and so a keyword of
+[::METHOD](method.md) such as PACKAGE or GUARDED, raises `25.903`.
 EXTERNAL takes an operand and the others do not, as
 [the rule for external routines](r:dir.routine.external) says. The errors of
 the directive are found when the program is read.
@@ -140,9 +141,9 @@ e: say arg(1) '=>' condition('o')~code
 ```output
 ::routine r public => ok
 ::routine r Private => ok
-::routine r PUBLIC private => 25.903
-::routine r public public => 25.903
-::routine r private private => 25.903
+::routine r PUBLIC private => 25.937
+::routine r public public => 25.936
+::routine r private private => 25.936
 ::routine r package => 25.903
 ::routine r guarded => 25.903
 ::routine r class => 25.903

@@ -14,7 +14,7 @@ impl Interp {
             Some(plan) => plan.indent_of(&code.body.instructions, target),
             None => static_indent(&code.body.instructions, target),
         };
-        base + self.activity.activation_indent + self.activity.indent_offset
+        base + self.activity.activation_indent
     }
 }
 
@@ -242,14 +242,7 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                             // the `OTHERWISE` one three lines of history
                             // below: "`whens` holds only `When`/`WhenCase`"
                             // is `interrexx-parse`'s own invariant, not this
-                            // function's, and such invariants have
-                            // not all held -- the absorbed-`WHEN` case
-                            // (`when_absorbing_a_when_parses_and_runs_at_
-                            // rc_0`, `run`'s own test) is exactly a
-                            // `When` instruction executing while its
-                            // enclosing `SELECT`'s own `whens` does not list
-                            // it, which is the same shape of surprise. If a
-                            // reader ever sees this, `whens` names an index
+                            // function's. If a reader ever sees this, `whens` names an index
                             // whose own kind is not what built it -- a
                             // `interrexx-parse` defect, not a formatting one, and
                             // nothing this function can correct. Skipping

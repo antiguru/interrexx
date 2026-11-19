@@ -1,10 +1,10 @@
-# The 39 `.testGroup` files `base/keyword`'s L1 extractor scans, one relative
+# The 41 `.testGroup` files `base/keyword`'s L1 extractor scans, one relative
 # path per line, sorted exactly as `find_test_groups` returns them. Lines
 # starting with # are comments; blank lines are ignored.
 #
 # Pinned because the
 # extractor's absolute row/drop literals are only meaningful against a known
-# input set. Measured at ooTest **r13347** (`svn info ootest`). `ootest/` is
+# input set. Measured at ooTest **r13532** (`svn info ootest`). `ootest/` is
 # NOT checked-in test data -- it is git-ignored (`.gitignore:6`), has zero
 # tracked files, and exists only as an SVN working copy of
 # `svn.code.sf.net/p/oorexx/code-0/test/trunk`. So a red count here is
@@ -14,12 +14,14 @@ ADDRESS.testGroup
 ASSIGNMENT.testGroup
 Assignments.testGroup
 CALL.testGroup
+CATCH.testGroup
 DO.testGroup
 DoControlled.testGroup
 DoOther.testGroup
 DoOver.testGroup
 DoWith.testGroup
 EXPOSE.testGroup
+FINALLY.testGroup
 FORWARD.testGroup
 GUARD.testGroup
 IF.testGroup

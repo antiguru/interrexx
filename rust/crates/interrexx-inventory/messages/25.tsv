@@ -41,3 +41,7 @@
 25	933	ADDRESS WITH I/O type must be one of the keywords NORMAL, STEM, STREAM, or USING; found "&1".
 25	934	WITH must be followed by one of the keywords INPUT, OUTPUT, or ERROR; found "&1".
 25	935	NUMERIC keyword of ::OPTIONS directive must be followed by one of the keywords INHERIT or NOINHERIT; found "&1".
+25	936	"&2" keyword must not appear more than once on ::&1 directive.
+25	937	"&1" keyword on ::&2 directive must not be combined with "&3".
+25	938	::OPTIONS FORM must be followed by one of the keywords SCIENTIFIC or ENGINEERING; found "&1".
+25	939	CATCH must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, SYNTAX, USER, or ANY; found "&1".

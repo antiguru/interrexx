@@ -52,7 +52,7 @@ g: say condition('o')~code
 
 ```output
 1 1 0
-93.923
+40.13
 40.12
 1
 40.3

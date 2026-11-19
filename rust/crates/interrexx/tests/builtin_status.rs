@@ -26,6 +26,9 @@ enum Status {
     Loud,
     Divergent,
     Excluded,
+    /// A builtin only at a language level above this crate's
+    /// (`interrexx_inventory::builtins::LATER_LEVEL`), not probed.
+    LaterLevel,
 }
 
 impl Status {
@@ -35,6 +38,7 @@ impl Status {
             Status::Loud => "loud",
             Status::Divergent => "divergent",
             Status::Excluded => "excluded",
+            Status::LaterLevel => "later-level",
         }
     }
 
@@ -44,6 +48,7 @@ impl Status {
             "loud" => Some(Status::Loud),
             "divergent" => Some(Status::Divergent),
             "excluded" => Some(Status::Excluded),
+            "later-level" => Some(Status::LaterLevel),
             _ => None,
         }
     }
@@ -270,6 +275,10 @@ fn classify() -> Run {
             derived.push(((*name).to_string(), Status::Excluded));
             continue;
         }
+        if interrexx_inventory::builtins::is_later_level(name) {
+            derived.push(((*name).to_string(), Status::LaterLevel));
+            continue;
+        }
         let program = &probes[*name];
         let result = measure(&oracle, &run_root, name, program);
         derived.push(((*name).to_string(), result.status));
@@ -316,7 +325,7 @@ fn the_status_file_matches_a_live_differential_run() {
         assert!(
             Status::parse(token).is_some(),
             "{}: {name} has status {token:?}, which is not one of implemented/loud/\
-             divergent/excluded",
+             divergent/excluded/later-level",
             status_path().display()
         );
     }
@@ -414,10 +423,20 @@ fn the_status_file_matches_a_live_differential_run() {
         "the excluded rows are exactly the names excluded outright"
     );
     assert_eq!(excluded, 0, "no builtin is wholly excluded");
+    let later = run
+        .derived
+        .iter()
+        .filter(|(_, status)| *status == Status::LaterLevel)
+        .count();
     assert_eq!(
-        run.derived.len() - excluded,
+        later,
+        interrexx_inventory::builtins::LATER_LEVEL.len(),
+        "the later-level rows are exactly the names of a later level"
+    );
+    assert_eq!(
+        run.derived.len() - excluded - later,
         81,
-        "all 81 builtins are in scope"
+        "all 81 builtins of this crate's level are in scope"
     );
 
     // The assertion a classifier that consults only name tables cannot pass.

@@ -96,11 +96,13 @@ shared c++ orxinvocation "$src/orxinvocation.cpp" -lorxexits -lrexx -lrexxapi
 c++ -o "$out/rexxinstance" "$src/rexxinstance.cpp" "${flags[@]}" -lorxexits -lrexx -lrexxapi
 c++ -o "$out/provoke_locks" "$src/provoke_locks.cpp" "${flags[@]}" -pthread -lrexx -lrexxapi
 cp -f "$src/provoke_locks.rex" "$out/provoke_locks.rex"
+c++ -o "$out/detach_root_terminate" "$src/detach_root_terminate.cpp" "${flags[@]}" -pthread \
+    -lrexx -lrexxapi
 if [ -f "$samples/callrexx1.cpp" ]; then
     c++ -o "$out/callrexx1" "$samples/callrexx1.cpp" "${flags[@]}" -lrexx -lrexxapi
 fi
 
-products=("$out"/liborx*.so "$out/rexxinstance" "$out/provoke_locks")
+products=("$out"/liborx*.so "$out/rexxinstance" "$out/provoke_locks" "$out/detach_root_terminate")
 [ -f "$out/callrexx1" ] && products+=("$out/callrexx1")
 
 # Each of the two libraries a product needs must resolve to --out, under the caller's environment

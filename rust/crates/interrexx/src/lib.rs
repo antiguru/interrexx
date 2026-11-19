@@ -3060,7 +3060,6 @@ impl Interp {
         let caller_levels = own_level.then(|| {
             (
                 std::mem::take(&mut self.activity.activation_indent),
-                std::mem::take(&mut self.activity.indent_offset),
                 self.activity.clause_line_override.take(),
             )
         });
@@ -3143,9 +3142,8 @@ impl Interp {
         let activation = self.pop_activation().expect("the frame just pushed");
         self.roots.activity_mut().pop_slots(activation.frame);
         self.restore_clause_state(caller_clause);
-        if let Some((base, offset, line)) = caller_levels {
+        if let Some((base, line)) = caller_levels {
             self.activity.activation_indent = base;
-            self.activity.indent_offset = offset;
             self.activity.clause_line_override = line;
         }
         let exit = if !nested && let Some(refusal) = self.trace_refusal.take() {
@@ -3271,21 +3269,15 @@ impl Interp {
         }
     }
 
-    /// Puts back one saved `SETLOCAL` pair. **A restore puts back the names it
-    /// saved and removes nothing added since**: and `restoreEnvironment` only
-    /// re-`putenv`s what it holds.
+    /// Puts back one saved `SETLOCAL` pair: the directory, and the
+    /// environment exactly as it was saved, so that a variable created since
+    /// is removed (`r[bif.endlocal.scope]`).
     pub(crate) fn restore_local_environment(
         &mut self,
         (cwd, saved): (std::path::PathBuf, Vec<(Vec<u8>, Vec<u8>)>),
     ) {
         self.cwd = cwd;
-        for (name, value) in saved {
-            let at = self.env.iter().position(|(held, _)| *held == name);
-            match at {
-                Some(at) => self.env[at].1 = value,
-                None => self.env.push((name, value)),
-            }
-        }
+        self.env = saved;
     }
 
     /// `RXTRACE=ON` in the interpreter's own environment, which starts every

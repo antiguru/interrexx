@@ -146,7 +146,7 @@ debug = true
 lto = "fat"
 codegen-units = 1
 
-# The debug-assertion gate (`REXX_CORPUS_GATE=1 memcap 8G cargo test --workspace`)
+# The debug-assertion gate (`REXX_CORPUS_GATE=1 cargo test --workspace`)
 # exists for the `debug_assert`s the release profile compiles out; optimised, it
 # keeps `debug-assertions` and `overflow-checks` from `dev`. Measured: 957 s of
 # run time unoptimised against 246 s under release.

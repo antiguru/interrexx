@@ -42,7 +42,7 @@ d: say condition('o')~code
 
 ```output
 [mn] [ pq]
-93.915
+40.904
 40.4
 40.5
 40.3
@@ -70,7 +70,9 @@ say '['strip('  a  ', 'lx')']' '['strip('  a  ', , )']'
 
 r[bif.strip.option.check]
 An `option` whose first character is not one of those six, and an `option`
-that is the null string, raise `SYNTAX 93.915`. No other argument has a
+that is the null string, raise `SYNTAX 40.904` ([an
+option](r:conv.method.option)); sent as a message, they raise `SYNTAX
+93.915`. No other argument has a
 check, so this is the only check STRIP makes of its own after the argument
 count, and it is made whatever `string` and `chars` are.
 
@@ -96,18 +98,18 @@ g: say condition('o')~code
 ```
 
 ```output
-93.915
-93.915
-93.915
-93.915
-93.915
+40.904
+40.904
+40.904
+40.904
+40.904
 40.5
 ```
 
 > **Note.** The reference manual names error 93.915 for a method option that
 > is not one of those allowed. The ANSI draft (9.3.20) reads `option` the same
 > way, by its first character in either case, but raises 40.21 for a null
-> option and 40.28 for any other bad one, where ooRexx raises 93.915; and it
+> option and 40.28 for any other bad one, where this book raises 40.904; and it
 > makes `chars` one character, where ooRexx takes the characters of `chars` as
 > a set, as [the rule below](r:bif.strip.chars) says.
 

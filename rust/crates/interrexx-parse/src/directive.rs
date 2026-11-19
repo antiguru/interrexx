@@ -4,10 +4,11 @@ use interrexx_inventory::errors::{
     E19_901, E19_902, E19_903, E19_904, E19_905, E19_906, E19_907, E19_908, E19_913, E19_914,
     E19_915, E19_916, E19_917, E19_918, E19_919, E19_920, E19_921, E19_923, E19_924, E19_925,
     E20_916, E20_919, E20_920, E20_921, E20_924, E20_925, E20_926, E20_929, E20_935, E21_913,
-    E21_914, E24_1, E25_11, E25_901, E25_902, E25_903, E25_904, E25_924, E25_925, E25_926, E25_927,
-    E25_928, E25_935, E26_5, E26_6, E33_1, E35_936, E36_901, E99_901, E99_902, E99_903, E99_905,
-    E99_906, E99_916, E99_917, E99_925, E99_931, E99_932, E99_933, E99_934, E99_935, E99_936,
-    E99_937, E99_938, E99_939, E99_940, E99_942, E99_943, E99_944, E99_945, E99_946, E99_947, Msg,
+    E21_914, E24_1, E25_901, E25_902, E25_903, E25_904, E25_924, E25_925, E25_926, E25_927,
+    E25_928, E25_935, E25_936, E25_937, E25_938, E26_5, E26_6, E33_1, E35_936, E36_901, E99_901,
+    E99_902, E99_903, E99_905, E99_906, E99_916, E99_917, E99_925, E99_931, E99_932, E99_933,
+    E99_934, E99_935, E99_936, E99_937, E99_938, E99_939, E99_940, E99_942, E99_943, E99_944,
+    E99_945, E99_946, E99_947, Msg,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -43,6 +44,30 @@ const DIR_ROUTINE: usize = 8;
 // Positions in the `SUB_DIRECTIVES` table, pinned the same way. All forty are
 // named, and `tests::every_sub_directive_is_reachable` pairs each with a
 // directive that accepts it.
+/// The option slots one directive has filled: the slot, the sub-directive
+/// that filled it and its spelling, for [`Parser::fill`].
+#[derive(Default)]
+struct Slots(Vec<(u8, usize, Vec<u8>)>);
+
+/// The option slot a sub-directive of `::METHOD` or `::ATTRIBUTE` fills:
+/// the access, protection and guard keywords one slot each, EXTERNAL,
+/// ABSTRACT and DELEGATE one slot between them, CLASS and ATTRIBUTE their
+/// own. `None` for a keyword these directives do not take.
+fn member_slot(sub: usize) -> Option<u8> {
+    match sub {
+        SUBDIR_PRIVATE | SUBDIR_PACKAGE | SUBDIR_PUBLIC => Some(0),
+        SUBDIR_PROTECTED | SUBDIR_UNPROTECTED => Some(1),
+        SUBDIR_GUARDED | SUBDIR_UNGUARDED => Some(2),
+        SUBDIR_EXTERNAL | SUBDIR_ABSTRACT | SUBDIR_DELEGATE => Some(3),
+        SUBDIR_CLASS => Some(4),
+        SUBDIR_ATTRIBUTE => Some(5),
+        _ => None,
+    }
+}
+
+/// `::ATTRIBUTE`'s slot for GET and SET, apart from [`member_slot`]'s.
+const STYLE_SLOT: u8 = 6;
+
 const SUBDIR_ABSTRACT: usize = 0;
 const SUBDIR_ALL: usize = 1;
 const SUBDIR_ATTRIBUTE: usize = 2;
@@ -386,6 +411,33 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
+    /// Fills the option `slot` of `directive` with the sub-directive `sub`
+    /// that `token` spells. A slot already filled is 25.936 when `sub` is the
+    /// keyword that filled it and 25.937 when it is another
+    /// (`r[dir.index.options]`).
+    fn fill(
+        &self,
+        slots: &mut Slots,
+        directive: &[u8],
+        slot: u8,
+        sub: usize,
+        token: &Token,
+    ) -> Result<(), ParseError> {
+        let keyword = display_value(self.ctx, Some(token));
+        match slots.0.iter().find(|(filled, ..)| *filled == slot) {
+            Some((_, previous, _)) if *previous == sub => {
+                Err(self.error(E25_936, [directive.to_vec(), keyword]))
+            }
+            Some((_, _, spelling)) => {
+                Err(self.error(E25_937, [keyword, directive.to_vec(), spelling.clone()]))
+            }
+            None => {
+                slots.0.push((slot, sub, keyword));
+                Ok(())
+            }
+        }
+    }
+
     /// The `SUB_KEYWORDS` index of `token`, for the two option arguments that
     /// resolve against that table instead.
     fn sub_keyword(&self, token: &Token) -> Option<usize> {
@@ -544,28 +596,33 @@ impl<'a, 'd> Dir<'a, 'd> {
             metaclass: None,
             inherit: Vec::new(),
         };
+        let mut slots = Slots::default();
         while let Some(token) = self.next_real() {
-            // Every rejection on this directive is 25.901, whether the token is
-            // not a symbol, not a sub-directive, or a sub-directive already
-            // given. Measured all three: `::class c,`, `::class c junk` and
-            // `::class c abstract abstract`.
-            match self.sub_directive(token) {
-                Some(SUBDIR_METACLASS) if class.metaclass.is_none() => {
+            // A token that is not a sub-directive of ::CLASS is 25.901; one
+            // whose slot is filled is [`Parser::fill`]'s error.
+            let sub = self.sub_directive(token);
+            // `SUBCLASS` and `MIXINCLASS` fill one slot, because setting the
+            // mixin class sets the subclass too.
+            let slot = match sub {
+                Some(SUBDIR_METACLASS) => Some(0),
+                Some(SUBDIR_PUBLIC | SUBDIR_PRIVATE) => Some(1),
+                Some(SUBDIR_SUBCLASS | SUBDIR_MIXINCLASS) => Some(2),
+                Some(SUBDIR_ABSTRACT) => Some(3),
+                _ => None,
+            };
+            if let (Some(slot), Some(sub)) = (slot, sub) {
+                self.fill(&mut slots, b"CLASS", slot, sub, token)?;
+            }
+            match sub {
+                Some(SUBDIR_METACLASS) => {
                     class.metaclass = Some(self.class_reference(E19_906)?);
                 }
-                Some(SUBDIR_PUBLIC) if class.access == Access::Default => {
-                    class.access = Access::Public;
-                }
-                Some(SUBDIR_PRIVATE) if class.access == Access::Default => {
-                    class.access = Access::Private;
-                }
-                // `SUBCLASS` and `MIXINCLASS` fill one slot, because
-                // setting the mixin class sets the subclass too, so either one
-                // already present rejects the other. Measured in both orders.
-                Some(SUBDIR_SUBCLASS) if class.subclass.is_none() => {
+                Some(SUBDIR_PUBLIC) => class.access = Access::Public,
+                Some(SUBDIR_PRIVATE) => class.access = Access::Private,
+                Some(SUBDIR_SUBCLASS) => {
                     class.subclass = Some(self.class_reference(E19_907)?);
                 }
-                Some(SUBDIR_MIXINCLASS) if class.subclass.is_none() => {
+                Some(SUBDIR_MIXINCLASS) => {
                     class.subclass = Some(self.class_reference(E19_913)?);
                     class.mixin = true;
                 }
@@ -580,7 +637,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                         class.inherit.push(self.class_reference(E19_908)?);
                     }
                 }
-                Some(SUBDIR_ABSTRACT) if !class.abstract_ => class.abstract_ = true,
+                Some(SUBDIR_ABSTRACT) => class.abstract_ = true,
                 _ => return Err(self.found(E25_901, Some(token))),
             }
         }
@@ -644,47 +701,31 @@ impl<'a, 'd> Dir<'a, 'd> {
         // line 2, so the attribute shape checks the body FIRST and the plain
         // external shape decodes first.
         let mut external: Option<Box<[u8]>> = None;
+        let mut slots = Slots::default();
         while let Some(token) = self.next_real() {
-            match self.sub_directive(token) {
-                Some(SUBDIR_CLASS) if !method.class_method => method.class_method = true,
-                Some(SUBDIR_EXTERNAL)
-                    if external.is_none() && method.delegate.is_none() && !method.abstract_ =>
-                {
+            let sub = self.sub_directive(token);
+            if let Some((slot, sub)) = sub.and_then(|sub| member_slot(sub).map(|slot| (slot, sub)))
+            {
+                self.fill(&mut slots, b"METHOD", slot, sub, token)?;
+            }
+            match sub {
+                Some(SUBDIR_CLASS) => method.class_method = true,
+                Some(SUBDIR_EXTERNAL) => {
                     // And a symbol is not enough: measured, `::method m external
                     // nostring` is
                     // 19.905.
                     external = Some(self.require_literal(E19_905)?);
                 }
-                Some(SUBDIR_PRIVATE) if method.access == Access::Default => {
-                    method.access = Access::Private;
-                }
-                Some(SUBDIR_PACKAGE) if method.access == Access::Default => {
-                    method.access = Access::Package;
-                }
-                Some(SUBDIR_PUBLIC) if method.access == Access::Default => {
-                    method.access = Access::Public;
-                }
-                Some(SUBDIR_PROTECTED) if method.protection == Protection::Default => {
-                    method.protection = Protection::Protected;
-                }
-                Some(SUBDIR_UNPROTECTED) if method.protection == Protection::Default => {
-                    method.protection = Protection::Unprotected;
-                }
-                Some(SUBDIR_UNGUARDED) if method.guard == GuardOption::Default => {
-                    method.guard = GuardOption::Unguarded;
-                }
-                Some(SUBDIR_GUARDED) if method.guard == GuardOption::Default => {
-                    method.guard = GuardOption::Guarded;
-                }
-                Some(SUBDIR_ATTRIBUTE) if !method.attribute => method.attribute = true,
-                Some(SUBDIR_ABSTRACT)
-                    if !method.abstract_ && external.is_none() && method.delegate.is_none() =>
-                {
-                    method.abstract_ = true;
-                }
-                Some(SUBDIR_DELEGATE)
-                    if external.is_none() && method.delegate.is_none() && !method.abstract_ =>
-                {
+                Some(SUBDIR_PRIVATE) => method.access = Access::Private,
+                Some(SUBDIR_PACKAGE) => method.access = Access::Package,
+                Some(SUBDIR_PUBLIC) => method.access = Access::Public,
+                Some(SUBDIR_PROTECTED) => method.protection = Protection::Protected,
+                Some(SUBDIR_UNPROTECTED) => method.protection = Protection::Unprotected,
+                Some(SUBDIR_UNGUARDED) => method.guard = GuardOption::Unguarded,
+                Some(SUBDIR_GUARDED) => method.guard = GuardOption::Guarded,
+                Some(SUBDIR_ATTRIBUTE) => method.attribute = true,
+                Some(SUBDIR_ABSTRACT) => method.abstract_ = true,
+                Some(SUBDIR_DELEGATE) => {
                     // Measured: `::method m delegate "p"` is 20.926.
                     method.delegate = Some(
                         self.next_symbol()
@@ -761,57 +802,34 @@ impl<'a, 'd> Dir<'a, 'd> {
             body: None,
         };
         let mut external: Option<Box<[u8]>> = None;
+        let mut slots = Slots::default();
         while let Some(token) = self.next_real() {
-            match self.sub_directive(token) {
-                // GET and SET share one slot, so a second of either is 25.925.
-                // Measured: `::attribute a get set`.
-                Some(SUBDIR_GET) if attribute.style == AttributeStyle::Both => {
-                    attribute.style = AttributeStyle::Get;
-                }
-                Some(SUBDIR_SET) if attribute.style == AttributeStyle::Both => {
-                    attribute.style = AttributeStyle::Set;
-                }
-                Some(SUBDIR_CLASS) if !attribute.class_method => attribute.class_method = true,
-                Some(SUBDIR_PRIVATE) if attribute.access == Access::Default => {
-                    attribute.access = Access::Private;
-                }
-                Some(SUBDIR_PUBLIC) if attribute.access == Access::Default => {
-                    attribute.access = Access::Public;
-                }
-                Some(SUBDIR_PACKAGE) if attribute.access == Access::Default => {
-                    attribute.access = Access::Package;
-                }
-                Some(SUBDIR_PROTECTED) if attribute.protection == Protection::Default => {
-                    attribute.protection = Protection::Protected;
-                }
-                Some(SUBDIR_UNPROTECTED) if attribute.protection == Protection::Default => {
-                    attribute.protection = Protection::Unprotected;
-                }
-                Some(SUBDIR_UNGUARDED) if attribute.guard == GuardOption::Default => {
-                    attribute.guard = GuardOption::Unguarded;
-                }
-                Some(SUBDIR_GUARDED) if attribute.guard == GuardOption::Default => {
-                    attribute.guard = GuardOption::Guarded;
-                }
-                Some(SUBDIR_EXTERNAL)
-                    if external.is_none()
-                        && attribute.delegate.is_none()
-                        && !attribute.abstract_ =>
-                {
+            let sub = self.sub_directive(token);
+            // GET and SET share one slot of their own.
+            let slot = match sub {
+                Some(SUBDIR_GET | SUBDIR_SET) => Some(STYLE_SLOT),
+                Some(sub) => member_slot(sub).filter(|_| sub != SUBDIR_ATTRIBUTE),
+                None => None,
+            };
+            if let (Some(slot), Some(sub)) = (slot, sub) {
+                self.fill(&mut slots, b"ATTRIBUTE", slot, sub, token)?;
+            }
+            match sub {
+                Some(SUBDIR_GET) => attribute.style = AttributeStyle::Get,
+                Some(SUBDIR_SET) => attribute.style = AttributeStyle::Set,
+                Some(SUBDIR_CLASS) => attribute.class_method = true,
+                Some(SUBDIR_PRIVATE) => attribute.access = Access::Private,
+                Some(SUBDIR_PUBLIC) => attribute.access = Access::Public,
+                Some(SUBDIR_PACKAGE) => attribute.access = Access::Package,
+                Some(SUBDIR_PROTECTED) => attribute.protection = Protection::Protected,
+                Some(SUBDIR_UNPROTECTED) => attribute.protection = Protection::Unprotected,
+                Some(SUBDIR_UNGUARDED) => attribute.guard = GuardOption::Unguarded,
+                Some(SUBDIR_GUARDED) => attribute.guard = GuardOption::Guarded,
+                Some(SUBDIR_EXTERNAL) => {
                     external = Some(self.require_literal(E19_905)?);
                 }
-                Some(SUBDIR_ABSTRACT)
-                    if !attribute.abstract_
-                        && external.is_none()
-                        && attribute.delegate.is_none() =>
-                {
-                    attribute.abstract_ = true;
-                }
-                Some(SUBDIR_DELEGATE)
-                    if external.is_none()
-                        && attribute.delegate.is_none()
-                        && !attribute.abstract_ =>
-                {
+                Some(SUBDIR_ABSTRACT) => attribute.abstract_ = true,
+                Some(SUBDIR_DELEGATE) => {
                     attribute.delegate = Some(
                         self.next_symbol()
                             .map_err(|found| self.found(E20_926, found))?,
@@ -1169,7 +1187,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                 }
                 Some(SUBDIR_FORM) => {
                     // Then This argument resolves against `subKeywords[]`:
-                    // measured, `::options form value` is 25.11 where `VALUE` is a
+                    // measured, `::options form value` is 25.938 where `VALUE` is a
                     // row of that table, and `::options form "scientific"` is
                     // 20.925.
                     let token = match self.next_real() {
@@ -1179,7 +1197,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                     let form = match self.sub_keyword(token) {
                         Some(SUBKEY_SCIENTIFIC) => OptionsForm::Scientific,
                         Some(SUBKEY_ENGINEERING) => OptionsForm::Engineering,
-                        _ => return Err(self.found(E25_11, Some(token))),
+                        _ => return Err(self.found(E25_938, Some(token))),
                     };
                     options.push(PackageOption::Form(form));
                 }
@@ -1299,13 +1317,15 @@ impl<'a, 'd> Dir<'a, 'd> {
             library: false,
             namespace: None,
         };
+        let mut slots = Slots::default();
         while let Some(token) = self.next_real() {
-            // LIBRARY and NAMESPACE are mutually exclusive as well as each being
-            // once-only, and both rejections are this error: measured in both
-            // orders and doubled.
-            let taken = requires.library || requires.namespace.is_some();
-            match self.sub_directive(token) {
-                Some(SUBDIR_NAMESPACE) if !taken => {
+            // LIBRARY and NAMESPACE fill one slot.
+            let sub = self.sub_directive(token);
+            if let Some(sub @ (SUBDIR_NAMESPACE | SUBDIR_LIBRARY)) = sub {
+                self.fill(&mut slots, b"REQUIRES", 0, sub, token)?;
+            }
+            match sub {
+                Some(SUBDIR_NAMESPACE) => {
                     // Measured: `::requires "x" namespace "ns"` is 20.920.
                     let namespace = self.next_symbol().map_err(|_| self.error(E20_920, []))?;
                     // The symbol is already upcased, so this catches every
@@ -1315,7 +1335,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                     }
                     requires.namespace = Some(namespace);
                 }
-                Some(SUBDIR_LIBRARY) if !taken => requires.library = true,
+                Some(SUBDIR_LIBRARY) => requires.library = true,
                 _ => return Err(self.found(E25_904, Some(token))),
             }
         }
@@ -1379,26 +1399,23 @@ impl<'a, 'd> Dir<'a, 'd> {
             body: None,
         };
         let mut external: Option<Box<[u8]>> = None;
+        let mut slots = Slots::default();
         while let Some(token) = self.next_real() {
-            match self.sub_directive(token) {
+            let sub = self.sub_directive(token);
+            let slot = match sub {
+                Some(SUBDIR_EXTERNAL) => Some(0),
+                Some(SUBDIR_PUBLIC | SUBDIR_PRIVATE) => Some(1),
+                _ => None,
+            };
+            if let (Some(slot), Some(sub)) = (slot, sub) {
+                self.fill(&mut slots, b"ROUTINE", slot, sub, token)?;
+            }
+            match sub {
                 Some(SUBDIR_EXTERNAL) => {
-                    // A SECOND external is 25.901, the ::CLASS number, because the
-                    // ::CLASS error is what is passed there: `::routine r external
-                    // "LIBRARY x" external "LIBRARY y"` reports `Unknown keyword
-                    // on ::CLASS directive`. The interpreter defines the
-                    // behaviour, so the oddity is reproduced rather than
-                    // corrected.
-                    if external.is_some() {
-                        return Err(self.found(E25_901, Some(token)));
-                    }
                     external = Some(self.require_literal(E19_905)?);
                 }
-                Some(SUBDIR_PUBLIC) if routine.access == Access::Default => {
-                    routine.access = Access::Public;
-                }
-                Some(SUBDIR_PRIVATE) if routine.access == Access::Default => {
-                    routine.access = Access::Private;
-                }
+                Some(SUBDIR_PUBLIC) => routine.access = Access::Public,
+                Some(SUBDIR_PRIVATE) => routine.access = Access::Private,
                 _ => return Err(self.found(E25_903, Some(token))),
             }
         }
@@ -1436,33 +1453,15 @@ fn condition_option_name(which: ConditionOption) -> &'static [u8] {
     }
 }
 
-/// Whether `name` spells a variable: a simple name, a stem, or a compound.
+/// Whether `name` spells a variable: a simple name, a stem, or a compound,
+/// made of symbol characters alone and starting with neither a period nor a
+/// digit (`r[dir.attribute.name]`). An exponent's sign belongs to a number,
+/// which a name starting with a letter is not.
 fn is_variable_name(name: &[u8]) -> bool {
-    if name.is_empty() || name.len() > MAX_SYMBOL_LENGTH {
-        return false;
-    }
-    let mut scan = 0;
-    while scan < name.len() && is_symbol_char(name[scan]) {
-        scan += 1;
-    }
-    if scan < name.len() {
-        // A non-symbol character stops the walk. The only one that can still
-        // leave a name is an exponent's sign: not last, preceded by an `E`, and
-        // followed by digits alone.
-        if scan + 1 >= name.len() || scan == 0 {
-            return false;
-        }
-        if name[scan] != b'-' && name[scan] != b'+' {
-            return false;
-        }
-        if !name[scan - 1].eq_ignore_ascii_case(&b'E') {
-            return false;
-        }
-        if !name[scan + 1..].iter().all(u8::is_ascii_digit) {
-            return false;
-        }
-    }
-    !(name[0] == b'.' || name[0].is_ascii_digit())
+    !name.is_empty()
+        && name.len() <= MAX_SYMBOL_LENGTH
+        && name.iter().all(|byte| is_symbol_char(*byte))
+        && !(name[0] == b'.' || name[0].is_ascii_digit())
 }
 
 #[cfg(test)]

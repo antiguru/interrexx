@@ -202,8 +202,9 @@ null string, even when a later directory holds a file of the name. A symbolic
 link that points to nothing, and a name in a directory that the program may
 not search, are no entry, and the search goes on. A `name` that is not found,
 or is the null string or `.`, has no answer: the call answers the null
-string. Blanks, `*` and `?` are characters of the name, so `g ` is not `g` and
-no pattern is expanded. The name is not found in another case.
+string. A `name` that ends in a slash names a directory, so it finds no file:
+`g/` is not `g`. Blanks, `*` and `?` are characters of the name, so `g ` is
+not `g` and no pattern is expanded. The name is not found in another case.
 
 ```rexx
 here = directory()
@@ -227,7 +228,7 @@ say '[' || SysSearchPath('C1ZQSF', 'x', 'N') || ']'
 say SysSearchPath('C1ZQSF', 'lk', 'N') == here || '/c1zqsfb/lk'
 say SysSearchPath('C1ZQSF', 'sub/k', 'N') == here || '/c1zqsfb/sub/k'
 say SysSearchPath('C1ZQSF', 'ls/k', 'N') == here || '/c1zqsfb/ls/k'
-say SysSearchPath('C1ZQSF', 'g/', 'N') == here || '/c1zqsfa/g'
+say '[' || SysSearchPath('C1ZQSF', 'g/', 'N') || ']'
 say SysSearchPath('C1ZQSF', 'x/../sub/k', 'N') == here || '/c1zqsfb/sub/k'
 say '[' || SysSearchPath('C1ZQSF', 'sub', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '.', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g ', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSF', 'G', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g*', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'c1zqsfnone', 'N') || ']'
@@ -246,7 +247,7 @@ call SysRmDir 'c1zqsfb'
 1
 1
 1
-1
+[]
 1
 [] [] [] []
 [] [] []
@@ -284,11 +285,11 @@ A `name` is read as [every name is](r:util.index.names): a `..` component is
 resolved first, and `~` is the home directory. A `name` that starts with a
 slash is a full name, and is not searched for: the answer is the name, cleaned
 up, when it is the name of a file, and the null string when it is not,
-whatever `option` and the list are. A `name` that starts with `./` or with
-`../` is taken from the current directory and is not searched for along the
-list either, with `N` too. Any other `name` is joined to the directories of
-the list, and to the current directory first when `option` is `C`, so that a
-`name` with a slash in it, such as `sub/k`, is a path from each of them.
+whatever `option` and the list are. Any other `name` is joined to the
+directories of the list, and to the current directory first when `option` is
+`C`, so that a `name` with a slash in it, such as `sub/k`, is a path from each
+of them. A `name` that starts with `./` or with `../` is joined in the same
+way: `./f` is found where `f` is.
 
 ```rexx
 here = directory()
@@ -306,8 +307,8 @@ say SysSearchPath('C1ZQSN', here || '/c1zqsna/c1zqsnf', 'N') == here || '/c1zqsn
 say '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna/none') || ']' '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna') || ']'
 say SysSearchPath('C1ZQSN', here || '/c1zqsna//./c1zqsnf') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', 'c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
-say SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsnf'
-say SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') == here || '/c1zqsnf'
+say (SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf') (SysSearchPath('C1ZQSN', './c1zqsnf', 'C') == here || '/c1zqsnf')
+say '[' || SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf', 'N') || ']' (SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf') == here || '/c1zqsna/c1zqsnf')
 say SysSearchPath('C1ZQSN', 'c1zqsnh/../c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', '~/hf', 'N') == here || '/c1zqsnh/hf'
@@ -325,8 +326,8 @@ call SysRmDir 'c1zqsnh'
 [] []
 1
 1
-1
-1
+1 1
+[]
 [] 1
 1
 1

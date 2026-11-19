@@ -730,8 +730,8 @@ argwhole: procedure expose m.
   return whole(n, 18)
 
 /* Argument `i` as a non-negative whole number, '' when omitted, after the
-   40.12 its type raises. The 93.906 for a negative one is the caller's,
-   since the target's own 93.943 comes between them. */
+   40.12 its type raises. The 40.13 for a negative one is the caller's,
+   since the target's own 40.11 comes between them. */
 count_arg: procedure expose m.
   parse arg name, i
   if \m.0given.i then return ''
@@ -750,7 +750,7 @@ bif: procedure expose m.
     when name == 'MAX' | name == 'MIN' then return maxmin(name, function)
     when name == 'ABS' | name == 'SIGN' then do
       n = num(m.0arg.1)
-      if n == '' then return fail('93.943')
+      if n == '' then return fail('40.11')
       parse var n s d e
       if name == 'SIGN' then do
         if d == '0' then return 0
@@ -763,8 +763,8 @@ bif: procedure expose m.
       places = count_arg(name, 2)
       if m.0event \== '' then return ''
       n = num(m.0arg.1)
-      if n == '' then return fail('93.943')
-      if left(places, 1) == '-' then return fail('93.906')
+      if n == '' then return fail('40.11')
+      if left(places, 1) == '-' then return fail('40.13')
       if places == '' then places = 0
       return trunc(round(n, k), places)
     end
@@ -774,9 +774,9 @@ bif: procedure expose m.
         if m.0event \== '' then return ''
       end
       n = num(m.0arg.1)
-      if n == '' then return fail('93.943')
+      if n == '' then return fail('40.11')
       do i = 2 to 5
-        if left(w.i, 1) == '-' then return fail('93.906')
+        if left(w.i, 1) == '-' then return fail('40.13')
       end
       return format(n, w.2, w.3, w.4, w.5)
     end
@@ -897,17 +897,24 @@ datatype_w: procedure expose m.
    does each comparison, unless every value is written as a whole number
    and the target fits DIGITS (Deviation 44: decided by the written value).
    An omitted argument is 40.5 for the function and 93.903 for the message
-   (rexxref, "Error Numbers"). The description renders the number
+   (rexxref, "Error Numbers"), and a value that is not a number 40.11 for the
+   function and 93.943 or 93.904 for the message. The description renders the number
    unrounded, which the documentation leaves open; the model takes this
    crate's. */
 maxmin: procedure expose m.
   parse arg name, function
   k = m.0digits
   missing = '93.903'
-  if function then missing = '40.5'
+  target = '93.943'
+  other = '93.904'
+  if function then do
+    missing = '40.5'
+    target = '40.11'
+    other = '40.11'
+  end
   if \m.0given.1 then return fail(missing)
   t = num(m.0arg.1)
-  if t == '' then return fail('93.943')
+  if t == '' then return fail(target)
   quiet = integer_written(m.0arg.1)
   if quiet then quiet = valid_under(m.0arg.1, k)
   do i = 2 to m.0count while quiet
@@ -918,7 +925,7 @@ maxmin: procedure expose m.
   do i = 2 to m.0count
     if \m.0given.i then return fail(missing)
     c = num(m.0arg.i)
-    if c == '' then return fail('93.904')
+    if c == '' then return fail(other)
     if \quiet then do
       call lost c, k, unrounded(c, k)
       if m.0event \== '' then return ''

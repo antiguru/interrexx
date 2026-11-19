@@ -973,29 +973,33 @@ fn pad_byte(
 
 // ---- range-checking converted arguments ----
 
-/// A converted argument used as a length: zero or positive.
+/// A converted argument used as a length: zero or positive. A negative value
+/// is the builtin's own 40.13 (`r[conv.length.check]`), naming the builtin
+/// and the argument's position in the call.
 #[inline]
-fn length_of(value: i64) -> Result<usize, Failure> {
-    usize::try_from(value).map_err(|_| Raised::invalid_length(value.to_string().as_bytes()).into())
+fn length_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure> {
+    usize::try_from(value).map_err(|_| {
+        Raised::argument_not_non_negative_call(name, position, value.to_string().as_bytes()).into()
+    })
 }
 
-/// A converted argument used as a position: strictly positive.
+/// A converted argument used as a position: strictly positive, or the
+/// builtin's own 40.14 (`r[conv.position.check]`).
 #[inline]
-fn position_of(value: i64) -> Result<usize, Failure> {
+fn position_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure> {
     match usize::try_from(value) {
-        Ok(position) if position > 0 => Ok(position),
-        _ => Err(Raised::invalid_position(value.to_string().as_bytes()).into()),
+        Ok(at) if at > 0 => Ok(at),
+        _ => {
+            Err(Raised::argument_not_positive(name, position, value.to_string().as_bytes()).into())
+        }
     }
 }
 
 /// A converted argument used as a repetition or replacement count: zero or
-/// positive. `method_position` is the position the message names, which is the
-/// *operation's* own numbering rather than the call's.
+/// positive, or the builtin's own 40.13 (`r[conv.length.check]`).
 #[inline]
-fn count_of(value: i64, method_position: usize) -> Result<usize, Failure> {
-    usize::try_from(value).map_err(|_| {
-        Raised::argument_not_non_negative(method_position, value.to_string().as_bytes()).into()
-    })
+fn count_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure> {
+    length_of(name, position, value)
 }
 
 // ---- building results ----
