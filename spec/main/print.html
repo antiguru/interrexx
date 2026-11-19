@@ -93294,7 +93294,7 @@ the raise is at line 19
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
 <p class="references">rexxref: Debugging Aids; Debugging Aids &gt; Interactive Debugging of Programs; Debugging Aids &gt; RXTRACE Variable</p>
-<p class="deviations">Deviations: D150, D151, D152</p>
+<p class="deviations">Deviations: D150, D151, D152, D181, D182</p>
 <p>Interactive tracing lets a person, or a program that stands in for one, step
 through another program: after each clause that is traced the interpreter
 stops, reads a line, and runs it or goes on. This page specifies how that
@@ -94802,7 +94802,13 @@ Error 28.1:
 program, and so does a call of the TRACE function with an argument; either
 ends the stop, whatever setting it leaves: the program runs on to its next
 stop, if any. The rest of the line still runs. A call with no argument, and a
-TRACE that the line holds but does not run, end nothing.
+TRACE that the line holds but does not run, end nothing. A TRACE in a string
+that an INTERPRET in the line runs counts as the line's own (<a href="environment/debugging.html#r-env.debugging.deviation.181">Deviation
+181</a>). A routine or method that the line calls
+runs untraced (<a href="environment/debugging.html#r-env.debugging.deviation.182">Deviation 182</a>): it shows no
+clause and never stops. It inherits interactive tracing, so a TRACE instruction
+in it is ignored like one in the program (<a href="environment/../builtins/trace.html#r-bif.trace.instruction">the rule</a>),
+and the stop of the line does not change.
 <code>trace o</code>, <code>trace off</code>,
 the bare <code>trace</code>, and a setting with a letter and no question mark, as
 <code>trace r</code>, turn interactive tracing off and set the letter, as <a href="environment/../builtins/trace.html#r-bif.trace.prefix">the prefix
@@ -95405,6 +95411,112 @@ two
 three
 [read 4: ]
      7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.deviation.181"><a href="environment/debugging.html#r-env.debugging.deviation.181">[env.debugging.deviation.181]</a></div>
+<p>A TRACE in a string that an INTERPRET in a line runs takes effect as one in
+the line itself does, instruction or function with an argument, a number
+included, and ends the stop. ooRexx and the ANSI standard (8.3.26) treat the
+string as program source and ignore the instruction while interactive tracing
+is on, so that <code>interpret 'trace off'</code> changes nothing and the stop goes on;
+the function takes effect there. The example shows the setting that <code>body</code>
+answers and the number of lines read. The example is not run against ooRexx.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+call try "interpret 'trace ?a'"
+call try "interpret 'trace ?n'"
+call try "interpret 'trace off'"
+call try "interpret 'interpret ''trace off'''"
+call try "interpret 'trace 2'"
+call try "interpret 'x = trace(''?a'')'"
+call try "interpret 'x = trace(''n'')'"
+exit
+try: procedure
+  .debuginput~destination(.in~new(arg(1)))
+  call body
+  say arg(1)~left(36) 'reads' .in~count 'setting' result
+  return
+body:
+  trace ?a
+  nop
+  nop
+  nop
+  return trace()
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute count class
+::method init
+  expose line
+  use arg line
+  .in~count = 0
+::method linein
+  expose line
+  .in~count += 1
+  if .in~count = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">interpret 'trace ?a'                 reads 3 setting ?A
+interpret 'trace ?n'                 reads 1 setting ?N
+interpret 'trace off'                reads 1 setting O
+interpret 'interpret ''trace off'''  reads 1 setting O
+interpret 'trace 2'                  reads 1 setting ?A
+interpret 'x = trace(''?a'')'        reads 3 setting ?A
+interpret 'x = trace(''n'')'         reads 1 setting N
+</code></pre>
+<div class="rule" id="r-env.debugging.deviation.182"><a href="environment/debugging.html#r-env.debugging.deviation.182">[env.debugging.deviation.182]</a></div>
+<p>A routine or method that a line calls runs untraced: it writes no trace line,
+takes no stop and reads no line, the routines and methods it calls included, and
+in all else runs as it would in the program. A method that the line starts runs
+on an activity of its own, which the untraced state does not follow, so it is
+traced as it would be in the program. In the example the line <code>call sub</code> is read
+once, and the routine's clauses are not shown. ooRexx traces the routine and
+stops after its clauses, reading lines for them; the ANSI standard (8.2.4) has
+no tracing and no stop while the line runs, which includes the routines it
+calls. The example is not run against ooRexx.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('call sub', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+exit
+sub: procedure
+  say 'in sub' trace()
+  trace off
+  say 'after off' trace()
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
+&lt;notice&gt;
+[read 1: call sub]
+in sub ?A
+after off ?A
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* exit
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="concurrency"><a class="header" href="#concurrency">Concurrency</a></h1>
 <p class="references">rexxref: Concurrency</p>
@@ -130213,6 +130325,21 @@ argument of values for an error code's message, and the level reads 6.07. Ruled 
 <p>ERRORTEXT's argument: interrexx takes an error code <code>nn.nnn</code> as ooRexx does,
 ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
 level 6.07, is part of Deviation 179.</p>
+<h2 id="181-a-trace-in-a-string-that-an-interpret-in-a-typed-line-runs"><a class="header" href="#181-a-trace-in-a-string-that-an-interpret-in-a-typed-line-runs">181. A TRACE in a string that an INTERPRET in a typed line runs</a></h2>
+<p>A TRACE instruction or a call of the TRACE function with an argument in a
+string that an INTERPRET in a line read at an interactive trace stop runs takes
+effect, a number included, and ends the stop, as in the line itself. ooRexx
+ignores the instruction there, as the ANSI standard (8.3.26) ignores a TRACE
+instruction in program source while interactive tracing is on, so that
+<code>interpret 'trace off'</code> leaves tracing and the stop as they were. Ruled by the
+owner on 2026-11-16 (#758).</p>
+<h2 id="182-a-routine-or-method-called-from-a-line-typed-at-a-trace-stop-runs-untraced"><a class="header" href="#182-a-routine-or-method-called-from-a-line-typed-at-a-trace-stop-runs-untraced">182. A routine or method called from a line typed at a trace stop runs untraced</a></h2>
+<p>A routine or method that a line read at an interactive trace stop calls shows
+no clause and takes no stop, and a TRACE instruction in it is ignored. A method
+that the line starts runs on an activity of its own and is traced as it would
+be in the program. ooRexx traces the routine and stops after its clauses,
+reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
+runs. Ruled by the owner on 2026-11-16 (#758).</p>
 
                     </main>
 
