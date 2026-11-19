@@ -66,24 +66,57 @@ die() {
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 sources=${BSF_SOURCES:-$root/rust/target/bsf4oorexx/r$BSF_REVISION}
+group_list=${BSF_GROUPS:-$root/ci/bsf-groups.txt}
+[ -f "$group_list" ] || die "no group list at $group_list"
+
+# Every group the tree $1 holds must be one the list names, and the other way round: a tree that
+# lost or gained groups is refused before anything is built. Returns nonzero, naming the groups
+# that differ, when it is. The groups found are left in `groups`.
+check_groups() {
+    local units=$1/bsf4oorexx.dev/testUnits listed_groups missing added group
+    [ -d "$units" ] || {
+        echo "run-bsf4oorexx.sh: no $units" >&2
+        return 1
+    }
+    mapfile -t groups < <(cd "$units" && find . -name '*.testGroup' | sed 's|^\./||' | LC_ALL=C sort)
+    listed_groups=$(grep -a -v -E '^(#|$)' "$group_list" | LC_ALL=C sort) || {
+        echo "run-bsf4oorexx.sh: $group_list names no group" >&2
+        return 1
+    }
+    missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
+    added=$(LC_ALL=C comm -13 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
+    [ -n "$missing$added" ] || return 0
+    while read -r group; do
+        [ -z "$group" ] || echo "missing from $units: $group" >&2
+    done <<< "$missing"
+    while read -r group; do
+        [ -z "$group" ] || echo "not in $group_list: $group" >&2
+    done <<< "$added"
+    echo "run-bsf4oorexx.sh: the groups under $units differ from $group_list" >&2
+    return 1
+}
+
 # Exports into a temporary directory, retrying a failed export, and renames the result into place,
-# replacing any tree there. --fetch always does, so a partly restored cache is never kept. A run
-# reuses a tree that is there, and the group list below stops it if that tree lost groups.
+# replacing any tree there. An export that exits 0 but holds other groups than the list names counts
+# as a failed one, so a short tree is never renamed into place, where the source cache would keep
+# it. --fetch always replaces the tree, so a partly restored cache is never kept. A run reuses a
+# tree that is there, and the group list stops it if that tree lost groups.
 fetch() {
     local attempt
     mkdir -p "$(dirname "$sources")"
     for attempt in 1 2 3; do
         rm -rf "${sources:?}.tmp"
-        if svn export -q -r "$BSF_REVISION" "$BSF_URL@$BSF_REVISION" "$sources.tmp"; then
+        if svn export -q -r "$BSF_REVISION" "$BSF_URL@$BSF_REVISION" "$sources.tmp" &&
+            check_groups "$sources.tmp"; then
             rm -rf "${sources:?}"
             mv "$sources.tmp" "$sources"
             return
         fi
-        echo "run-bsf4oorexx.sh: svn export failed (attempt $attempt)" >&2
+        echo "run-bsf4oorexx.sh: svn export failed or is short of the groups (attempt $attempt)" >&2
         [ "$attempt" = 3 ] || sleep 10
     done
     rm -rf "${sources:?}.tmp"
-    die "svn export of $BSF_URL@$BSF_REVISION failed on every attempt"
+    die "svn export of $BSF_URL@$BSF_REVISION failed or was short of the groups on every attempt"
 }
 if [ "$mode" = fetch ]; then
     fetch
@@ -94,7 +127,6 @@ fi
 release=${REXX_RELEASE:-${CARGO_TARGET_DIR:-$root/rust/target}/release}
 work=${BSF_WORK:-$root/rust/target/bsf4oorexx/work}
 expected=${BSF_EXPECTED:-$root/ci/bsf-expected-failures.txt}
-group_list=${BSF_GROUPS:-$root/ci/bsf-groups.txt}
 group_timeout=${BSF_TIMEOUT:-180}
 ootest=${OOTEST:-$root/ootest}
 if [ -z "${JAVA_HOME:-}" ]; then
@@ -108,29 +140,14 @@ done
 [ -f "$ootest/framework/OOREXXUNIT.CLS" ] || die "no ooTest framework under $ootest"
 [ -f "$JAVA_HOME/include/jni.h" ] || die "no JDK at JAVA_HOME=$JAVA_HOME"
 [ -f "$expected" ] || die "no expected-failure list at $expected"
-[ -f "$group_list" ] || die "no group list at $group_list"
 command -v memcap >/dev/null || die "memcap is not on PATH"
 
 dev=$sources/bsf4oorexx.dev
 units=$dev/testUnits
 
-# Every group the sources hold must be one the list names, and the other way round: a tree that lost
-# or gained groups stops the run before anything is built.
-[ -d "$units" ] || die "no $units"
-mapfile -t groups < <(cd "$units" && find . -name '*.testGroup' | sed 's|^\./||' | LC_ALL=C sort)
-listed_groups=$(grep -a -v -E '^(#|$)' "$group_list" | LC_ALL=C sort) ||
-    die "$group_list names no group"
-missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
-added=$(LC_ALL=C comm -13 <(printf '%s\n' "$listed_groups") <(printf '%s\n' "${groups[@]}"))
-if [ -n "$missing$added" ]; then
-    while read -r group; do
-        [ -z "$group" ] || echo "missing from $units: $group" >&2
-    done <<< "$missing"
-    while read -r group; do
-        [ -z "$group" ] || echo "not in $group_list: $group" >&2
-    done <<< "$added"
-    die "the groups under $units differ from $group_list"
-fi
+# The tree must hold the groups the list names, nothing more and nothing less, before anything is
+# built.
+check_groups "$sources" || exit 1
 
 # The expected-failure list: a group path relative to testUnits, then its reason, and under it an
 # indented line for each test the group fails: `failure` or `error`, then the test's class and its
