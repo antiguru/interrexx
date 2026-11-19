@@ -255,7 +255,9 @@ the first attempt to load it raises <code>SYNTAX 98.982</code>, whichever of the
 directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 <code>::REQUIRES</code> directive raises nothing, <code>loadLibrary</code> answers <code>1</code>, RXFUNCADD
-answers <code>1</code>, and none of its routines can be called.</p>
+answers <code>1</code>, and none of its routines can be called.
+Whether the refused library's unloader runs when the instance ends is
+unspecified, and the loader never runs.</p>
 <pre><code class="language-rexx">say 'not reached'
 ::requires 'specnewer' LIBRARY
 </code></pre>
