@@ -81,7 +81,8 @@ mod loops;
 #[cfg(test)]
 use loops::numeric_less;
 pub(crate) use loops::{
-    FlatLoop, FlatStart, FlatStep, HeaderRole, LoopHeaderValues, loop_header_plan, loop_header_slot,
+    FlatLoop, FlatStart, FlatStep, HeaderRole, LOOP_CONDITION_SLOT, LoopHeaderValues, TestOpen,
+    loop_header_plan, loop_header_slot,
 };
 
 /// A `FORWARD` with its options evaluated and checked, whose send the driver
@@ -2674,6 +2675,23 @@ impl Interp {
         }
     }
 
+    /// The stepped clause a loop's test region runs in, around the header
+    /// clause `entry` [`Interp::open_loop_test`] opened: only the temps frame
+    /// the condition's evaluation pushes into, since the echo, the line and
+    /// the indent are the pass boundary's. The region closes as a `DO`
+    /// region does, with no boundary, because `Op::LoopTested` runs the
+    /// header clause's own.
+    #[inline(never)]
+    pub(crate) fn enter_loop_test_clause(&mut self, entry: ClauseEntry) -> SteppedClause {
+        let temps_at_entry = self.roots.activity().temps_len();
+        let frame = self.roots.activity_mut().push_frame();
+        SteppedClause {
+            entry,
+            frame,
+            temps_at_entry,
+        }
+    }
+
     /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
     /// interactive-debug `=` re-runs: takes and answers the indent it is
     /// re-run at, or ends the one recorded for an earlier clause.
@@ -3570,6 +3588,13 @@ impl Interp {
             // and the same one `eval_chunk_expr` evaluates a declining slot
             // with. Every slot of a header is addressable, not just one, which
             // is why this arm binds `slot` rather than matching a number.
+            // Its `WHILE`/`UNTIL` condition, compiled into the loop's test
+            // region, at the one slot no header expression takes.
+            (InstructionKind::Do(body) | InstructionKind::Loop(body), slot)
+                if u32::from(slot) == LOOP_CONDITION_SLOT =>
+            {
+                &body.conditional.as_ref()?.condition
+            }
             (InstructionKind::Do(body) | InstructionKind::Loop(body), slot) => {
                 loop_header_slot(body, u32::from(slot))?
             }
@@ -3705,13 +3730,11 @@ impl Interp {
 
     /// [`Interp::eval_condition`] for the `WHILE`/`UNTIL` of the loop at
     /// `do_index`, running the ops its condition compiled to
-    /// ([`crate::ir::Chunk::conditions`]) instead of walking it, where the
-    /// header has the register file in hand and `TRACE` shows no
-    /// intermediates. `registers` is `None` for a pass boundary reached
-    /// through `Interp::settle`, an `ITERATE` or a `LEAVE`, which has no
-    /// register file to give, and that pass walks the expression. The chunk
-    /// is asked on every pass rather than once at the loop's start, because a
-    /// `TRACE` in the body can put a recompiled one in its place.
+    /// ([`crate::ir::Chunk::conditions`]) instead of walking it, where
+    /// `TRACE` shows no intermediates. A condition that calls or sends is
+    /// not here at all where the loop's test region takes it
+    /// ([`Interp::streams_loop_tests`]), and walks only where that region
+    /// is not entered.
     #[inline(always)]
     #[expect(
         clippy::too_many_arguments,
@@ -3722,14 +3745,13 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &crate::ir::Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         do_index: usize,
         condition: &Expr,
         trace: ConditionTrace<'_>,
         raise: fn(&[u8]) -> Raised,
     ) -> Result<bool, Failure> {
-        if let Some(registers) = registers
-            && let Some(compiled) = chunk.condition_at(do_index)
+        if let Some(compiled) = chunk.condition_at(do_index)
             && !self.tracing_intermediates()
         {
             let value = self.run_condition(code, chunk, registers, compiled)?;

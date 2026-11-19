@@ -10,13 +10,13 @@ use interrexx_parse::{
 
 use super::{
     Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, ConditionOps,
-    Hints, NodePath, Op, PlanSlot, SendForm,
+    Hints, LoopTestOps, NodePath, Op, PlanSlot, SendForm,
 };
 use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
 use crate::run::{
-    HeaderRole, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan, loop_header_slot,
-    otherwise_range, when_targets,
+    HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan,
+    loop_header_slot, otherwise_range, when_targets,
 };
 use crate::trace::ChunkTrace;
 
@@ -292,6 +292,7 @@ fn compile_settled(
     // belongs to.
     let mut conditions: Vec<Op> = Vec::new();
     let mut condition_of: Vec<Option<ConditionOps>> = vec![None; len];
+    let mut loop_test_of: Vec<Option<LoopTestOps>> = vec![None; len];
 
     for (index, instruction) in body.instructions.iter().enumerate() {
         op_of.push(op_index(&ops)?);
@@ -414,7 +415,48 @@ fn compile_settled(
                 // header walks the expression instead whenever `TRACE` shows
                 // intermediates.
                 if let Some(conditional) = &body_node.conditional
-                    && value_only(&conditional.condition)
+                    && !value_only(&conditional.condition)
+                    && native_shape(&conditional.condition, Some(NodePath::ROOT))
+                {
+                    // **A condition that calls or sends is a region of its own
+                    // in the stream**, between the header's region and the
+                    // body, because a call op parks the region it is in and
+                    // the side table has none. The pass boundary jumps to its
+                    // `LoopTest`, which opens the header clause; `LoopTested`
+                    // decides the pass. Its register is held to past the `END`
+                    // as the header's are. No echo op is emitted; the boundary
+                    // walks the expression instead whenever `TRACE` shows
+                    // intermediates.
+                    let dst = registers.alloc()?;
+                    let test = op_index(&ops)?;
+                    ops.push(Op::LoopTest {
+                        index: instruction_index(index)?,
+                        end: 0,
+                    });
+                    push_native(
+                        &mut ops,
+                        false,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        &conditional.condition,
+                        instruction_index(index)?,
+                        LOOP_CONDITION_SLOT,
+                        Some(NodePath::ROOT),
+                        dst,
+                    )?;
+                    ops.push(Op::LoopTested {
+                        index: instruction_index(index)?,
+                        src: dst,
+                    });
+                    let body = op_index(&ops)?;
+                    if let Op::LoopTest { end, .. } = &mut ops[test as usize] {
+                        *end = body;
+                    }
+                    loop_test_of[index] = Some(LoopTestOps { test, body });
+                } else if let Some(conditional) = &body_node.conditional
                     && native_shape(&conditional.condition, Some(NodePath::ROOT))
                 {
                     let dst = registers.alloc()?;
@@ -1362,6 +1404,7 @@ fn compile_settled(
         calls,
         conditions: super::valid::ValidOps::new(conditions, registers)?,
         condition_of: condition_of.into_boxed_slice(),
+        loop_test_of: loop_test_of.into_boxed_slice(),
     })
 }
 

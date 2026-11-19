@@ -241,3 +241,23 @@ pub(super) fn count_condition_run() {
 pub(super) fn condition_runs() -> usize {
     CONDITION_RUNS.with(std::cell::Cell::get)
 }
+
+// Test-only instrumentation: how many loop header tests this thread has run
+// from a loop's test region in the stream.
+#[cfg(test)]
+thread_local! {
+    static LOOP_TESTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(super) fn count_loop_test() {
+    if !counting() {
+        return;
+    }
+    LOOP_TESTS.with(|tests| tests.set(tests.get() + 1));
+}
+
+#[cfg(test)]
+pub(super) fn loop_tests() -> usize {
+    LOOP_TESTS.with(std::cell::Cell::get)
+}

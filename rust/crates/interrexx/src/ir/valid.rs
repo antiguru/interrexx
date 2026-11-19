@@ -46,10 +46,12 @@ impl ValidOps {
                 | Op::Return { src, .. }
                 | Op::Queue { src, .. } => optional(src),
                 Op::JumpUnless { reg, .. } | Op::ConditionJump { reg, .. } => inside(reg),
+                Op::LoopTested { src, .. } => inside(src),
                 Op::Clause { .. }
                 | Op::CallingClause { .. }
                 | Op::LoopRun { .. }
                 | Op::LoopNext { .. }
+                | Op::LoopTest { .. }
                 | Op::TraceClause { .. }
                 | Op::EndBranch
                 | Op::EndWhen

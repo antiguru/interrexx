@@ -8,9 +8,16 @@ use super::{
     raised_for_count_not_whole, raised_iterate_wrong_kind, raised_repetition_count_not_whole,
     raised_until_not_logical, raised_while_not_logical, shape_of, within_digits,
 };
-use crate::clause::DeadlineCounted;
+use crate::clause::{ClauseEntry, DeadlineCounted};
 use crate::ir::Chunk;
 use interrexx_num::Scaled;
+
+/// The expression slot a `DO`/`LOOP`'s `WHILE` or `UNTIL` condition is
+/// addressed by, past every header slot `loop_header_plan` hands out.
+pub(crate) const LOOP_CONDITION_SLOT: u32 = u16::MAX as u32;
+
+/// [`FlatLoop::op_test`] for a loop whose condition is not in the stream.
+const NO_TEST: u32 = u32::MAX;
 
 /// What one pass of a `DO`/`LOOP` body just did, from `do_body_outcome`.
 enum DoOutcome {
@@ -64,6 +71,13 @@ type IterateSite = Option<(usize, Vec<u8>)>;
 pub(crate) struct FlatLoop {
     /// The first op of the body, where every pass starts.
     pub(crate) op_body: u32,
+    /// Where a pass boundary that does not end the loop continues:
+    /// [`FlatLoop::op_body`], or [`FlatLoop::op_test`] where the `WHILE`'s
+    /// test is left to its test region ([`Interp::flat_loop_header_general`]).
+    op_next: u32,
+    /// The loop's header test region ([`crate::ir::Op::LoopTest`]), or
+    /// [`NO_TEST`] where its condition is not in the stream.
+    op_test: u32,
     /// The body's own instruction range, which an escaping `Flow` is absorbed
     /// against exactly as `run_bounded`'s own bounds absorb it today.
     pub(crate) body_start: usize,
@@ -87,10 +101,11 @@ pub(crate) struct FlatLoop {
     state: LoopState,
 }
 
-/// A flat loop's per-pass tests: `UNTIL` after the body, and whether the
-/// header takes [`Interp::flat_loop_header_general`] for a `WHILE` or a
-/// `COUNTER`. The two are bits of one byte, so a loop with neither pays one
-/// test of it per pass.
+/// A flat loop's per-pass tests: `UNTIL` after the body, whether the header
+/// takes [`Interp::flat_loop_header_general`] for a `WHILE` or a `COUNTER`,
+/// and whether the condition is in a test region of the stream
+/// ([`FlatLoop::op_test`]). They are bits of one byte, so a loop with none of
+/// them pays one test of it per pass.
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 enum PassTest {
@@ -98,6 +113,9 @@ enum PassTest {
     Until = 1,
     General = 2,
     UntilGeneral = 3,
+    StreamedUntil = 5,
+    StreamedGeneral = 6,
+    StreamedUntilGeneral = 7,
 }
 
 impl PassTest {
@@ -122,6 +140,24 @@ impl PassTest {
     fn general(self) -> bool {
         self as u8 & 2 != 0
     }
+
+    /// Whether the condition is in a test region.
+    fn streamed(self) -> bool {
+        self as u8 & 4 != 0
+    }
+
+    /// This, for a loop whose condition is in a test region.
+    fn with_stream(self) -> PassTest {
+        match self {
+            PassTest::Until | PassTest::StreamedUntil => PassTest::StreamedUntil,
+            PassTest::General | PassTest::StreamedGeneral => PassTest::StreamedGeneral,
+            PassTest::UntilGeneral | PassTest::StreamedUntilGeneral => {
+                PassTest::StreamedUntilGeneral
+            }
+            // A loop with no condition has no test region.
+            PassTest::Plain => PassTest::Plain,
+        }
+    }
 }
 
 impl FlatLoop {
@@ -132,6 +168,8 @@ impl FlatLoop {
     const fn vacant() -> FlatLoop {
         FlatLoop {
             op_body: 0,
+            op_next: 0,
+            op_test: NO_TEST,
             body_start: 0,
             end_index: 0,
             do_index: 0,
@@ -188,6 +226,13 @@ pub(crate) enum FlatStart {
     /// this is the body's own instruction range, which the driver's frame
     /// absorbs an escaping `Flow` against.
     Flat { body_start: usize, end_index: usize },
+    /// Driven from the driver's frame as [`FlatStart::Flat`] is, with the
+    /// first header test still to run, from the region at op `test`.
+    Test {
+        body_start: usize,
+        end_index: usize,
+        test: u32,
+    },
     /// The header said zero passes, so the construct is already over.
     Ended(Flow),
     /// An unlabelled `DO; ... END` block whose `DO` clause has run: the body
@@ -205,6 +250,14 @@ pub(crate) enum FlatStep {
     /// One more pass, from this op.
     Body(u32),
     /// The construct is over and this is its answer.
+    Done(Flow),
+}
+
+/// What [`Interp::open_loop_test`] decided.
+pub(crate) enum TestOpen {
+    /// The header clause is open and the condition's ops come next.
+    Run(ClauseEntry),
+    /// The header ended the loop before its condition was needed.
     Done(Flow),
 }
 
@@ -1242,6 +1295,19 @@ impl Interp {
         let end_index = body
             .end
             .expect("an unclosed DO/LOOP is error 14.1/14.5, so a body that parsed has this set");
+        // A condition in the stream puts the body past its test region, and
+        // a `WHILE`'s first test is that region's, which counts its own
+        // clause.
+        let (op_body, op_test) = match chunk.loop_test_at(index) {
+            Some(test) => (test.body, test.test),
+            None => (op_body, NO_TEST),
+        };
+        let test = if op_test == NO_TEST {
+            PassTest::of(body)
+        } else {
+            PassTest::of(body).with_stream()
+        };
+        let streamed = test.streamed() && !test.until() && self.streams_loop_tests();
         let do_indent = self.activity.clause_state.current_value_indent;
         let end_line = self
             .clause_line_at(code, end_index, &code.body.instructions[end_index], source)
@@ -1264,6 +1330,8 @@ impl Interp {
         };
         *boxed = FlatLoop {
             op_body,
+            op_next: op_body,
+            op_test,
             body_start: index + 1,
             end_index,
             do_index: index,
@@ -1275,25 +1343,32 @@ impl Interp {
             do_line,
             header_clause: HeaderClause::Do,
             iterate_site: None,
-            test: PassTest::of(body),
+            test,
             counter: LoopCounter::of(code, body),
             state,
         };
-        let header = match self.flat_loop_header(
-            code,
-            source,
-            chunk,
-            Some(registers),
-            &mut boxed,
-            counted,
-        ) {
-            Ok(header) => header,
-            Err(failure) => {
-                self.release_loop_objects(&boxed);
-                self.activity.flat_spares.push(boxed);
-                return Err(failure);
+        if streamed {
+            // The test region counts the header clause as it opens it.
+            self.uncount_clause(counted);
+            let range = (boxed.body_start, boxed.end_index);
+            if let Some(enclosing) = self.activity.flat_top.replace(boxed) {
+                self.activity.flat_loops.push(enclosing);
             }
-        };
+            return Ok(FlatStart::Test {
+                body_start: range.0,
+                end_index: range.1,
+                test: op_test,
+            });
+        }
+        let header =
+            match self.flat_loop_header(code, source, chunk, registers, &mut boxed, counted) {
+                Ok(header) => header,
+                Err(failure) => {
+                    self.release_loop_objects(&boxed);
+                    self.activity.flat_spares.push(boxed);
+                    return Err(failure);
+                }
+            };
         match header {
             Some(flow) => {
                 // The header ended the loop, so nothing will drive it and
@@ -1348,7 +1423,7 @@ impl Interp {
         code: &Code<'_>,
         source: Option<&ProgramSource>,
         chunk: &Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         arrival: Flow,
         counted: impl FnOnce(&mut Self) -> Result<DeadlineCounted, Failure>,
     ) -> Result<FlatStep, Failure> {
@@ -1359,7 +1434,21 @@ impl Interp {
         // or `UNTIL` calling a routine that loops) ends by uncovering the
         // loop enclosing `top` into `flat_top`, so each arm below finds either
         // `None` or that enclosing loop there.
-        match self.flat_loop_step(code, source, chunk, registers, &mut top, arrival, counted) {
+        let stepped =
+            self.flat_loop_step(code, source, chunk, registers, &mut top, arrival, counted);
+        self.return_flat_top(top, stepped)
+    }
+
+    /// Puts the innermost flat loop `top`, taken out of `Activity::flat_top`
+    /// for a pass boundary, back where `stepped` leaves it: in place for
+    /// another pass or a test to come, and spare once the loop is over.
+    #[inline(always)]
+    fn return_flat_top(
+        &mut self,
+        top: Box<FlatLoop>,
+        stepped: Result<FlatStep, Failure>,
+    ) -> Result<FlatStep, Failure> {
+        match stepped {
             Ok(FlatStep::Body(op_body)) => {
                 if let Some(enclosing) = self.activity.flat_top.replace(top) {
                     self.cover_enclosing_loop(enclosing);
@@ -1424,7 +1513,7 @@ impl Interp {
         code: &Code<'_>,
         source: Option<&ProgramSource>,
         chunk: &Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         flat: &mut FlatLoop,
         arrival: Flow,
         counted: impl FnOnce(&mut Self) -> Result<DeadlineCounted, Failure>,
@@ -1478,6 +1567,9 @@ impl Interp {
             // The clock is stale after the pass boundary. Only an `UNTIL` or a `WHILE` re-evaluates an
             // expression here, so a plain loop's pass skips the store.
             self.activation_mut().clock_stale = true;
+            if flat.test.streamed() && self.streams_loop_tests() {
+                return self.hand_test_to_region(flat, counted);
+            }
             let counted = counted(self)?;
             if let Some(flow) =
                 self.flat_loop_until(code, source, chunk, registers, flat, counted)?
@@ -1504,7 +1596,7 @@ impl Interp {
         let counted = counted(self)?;
         match self.flat_loop_header(code, source, chunk, registers, flat, counted)? {
             Some(flow) => Ok(FlatStep::Done(flow)),
-            None => Ok(FlatStep::Body(flat.op_body)),
+            None => Ok(FlatStep::Body(flat.op_next)),
         }
     }
 
@@ -1515,7 +1607,7 @@ impl Interp {
         code: &Code<'_>,
         source: Option<&ProgramSource>,
         chunk: &Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         flat: &FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
@@ -1578,6 +1670,263 @@ impl Interp {
         }
     }
 
+    /// Whether a pass boundary hands its header test to the loop's test
+    /// region rather than evaluating the condition itself. The region holds
+    /// no echo op, so not while `TRACE` shows intermediates, and not under
+    /// interactive debug, whose pause after an `ITERATE`'s re-test follows
+    /// the whole test (`flat_loop_step_escaped`).
+    #[inline(never)]
+    pub(crate) fn streams_loop_tests(&self) -> bool {
+        !self.tracing_intermediates() && !self.chunk_trace().debugging()
+    }
+
+    /// The opening of the innermost flat loop's header test, from its test
+    /// region: the clause the test runs in, and for a `WHILE` the advance
+    /// in front of the condition, which can end the loop before the
+    /// condition is needed. The `UNTIL` and `WHILE` halves of
+    /// [`Interp::flat_loop_until`] and [`Interp::flat_loop_header_general`]
+    /// in front of the condition, in the same order.
+    #[inline(never)]
+    pub(crate) fn open_loop_test(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+        counted: DeadlineCounted,
+    ) -> Result<TestOpen, Failure> {
+        let Some(mut top) = self.activity.flat_top.take() else {
+            return Err(Loud::op_not_driven("a loop test with no loop open").into());
+        };
+        let first = matches!(top.header_clause, HeaderClause::Do);
+        let do_index = top.do_index;
+        let opened = self.open_loop_test_in(code, source, &mut top, counted);
+        let (stepped, entry) = match opened {
+            Ok(TestOpen::Run(entry)) => (Ok(FlatStep::Body(top.op_test)), Some(entry)),
+            Ok(TestOpen::Done(flow)) => (Ok(FlatStep::Done(flow)), None),
+            Err(failure) => (Err(failure), None),
+        };
+        // The first test ran inside the `DO` clause before it was a region of
+        // its own, and a failure there the loop does not blame is the `DO`'s.
+        if first && stepped.is_err() {
+            self.record_failure_site(code, do_index, source, &code.body.instructions[do_index]);
+        }
+        match (self.return_flat_top(top, stepped)?, entry) {
+            (FlatStep::Body(_), Some(entry)) => Ok(TestOpen::Run(entry)),
+            (FlatStep::Done(flow), _) => Ok(TestOpen::Done(flow)),
+            _ => Err(Loud::op_not_driven("a loop test that opened no clause").into()),
+        }
+    }
+
+    fn open_loop_test_in(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+        flat: &mut FlatLoop,
+        counted: DeadlineCounted,
+    ) -> Result<TestOpen, Failure> {
+        let header_line = flat.header_line();
+        let (do_index, end_index) = (flat.do_index, flat.end_index);
+        let (do_indent, loop_indent, resume) = (flat.do_indent, flat.loop_indent, flat.resume);
+        let blame = flat.header_clause;
+        if flat.test.until() {
+            if matches!(blame, HeaderClause::End) {
+                self.enter_clause_index(end_index);
+            }
+            self.activity.clause_state.current_value_indent = loop_indent;
+            return Ok(TestOpen::Run(self.enter_clause(header_line, counted)));
+        }
+        if matches!(blame, HeaderClause::End) {
+            self.enter_clause_index(end_index);
+        }
+        if !matches!(blame, HeaderClause::Do) {
+            self.activation_mut().clock_stale = true;
+        }
+        let entry = self.enter_clause(header_line, counted);
+        let site = &flat.iterate_site;
+        let state = &mut flat.state;
+        let ran = match self.loop_advance(code, state, do_indent, loop_indent) {
+            Ok(true) => {
+                self.activity.clause_state.current_value_indent = loop_indent;
+                return Ok(TestOpen::Run(entry));
+            }
+            Ok(false) => {
+                self.settle_block_indent(false, do_indent);
+                Ok(false)
+            }
+            Err(failure) => {
+                if by_message_first_pass(blame, state) {
+                    self.blame_while_failure(code, source, do_index, loop_indent);
+                }
+                self.blame_header_failure(code, source, blame, site, end_index, loop_indent);
+                Err(failure)
+            }
+        };
+        let header = match self.leave_clause(entry, ran) {
+            Ok(header) => header,
+            Err(failure) => {
+                self.blame_header_failure(code, source, blame, site, end_index, loop_indent);
+                return Err(failure);
+            }
+        };
+        match flat_header_outcome(header, resume)? {
+            Some(flow) => Ok(TestOpen::Done(flow)),
+            None => Err(Loud::op_not_driven("a loop that did not advance went on").into()),
+        }
+    }
+
+    /// The end of the innermost flat loop's header test, whose condition
+    /// answered `value`: the halves of [`Interp::flat_loop_until`] and
+    /// [`Interp::flat_loop_header_general`] behind the condition, the header
+    /// clause's boundary included, and for an `UNTIL` that did not hold the
+    /// header clause after it.
+    #[inline(never)]
+    pub(crate) fn loop_tested(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        value: ObjRef,
+    ) -> Result<FlatStep, Failure> {
+        let Some(mut top) = self.activity.flat_top.take() else {
+            return Err(Loud::op_not_driven("a loop test with no loop open").into());
+        };
+        let stepped = self.loop_tested_in(code, source, chunk, registers, &mut top, value);
+        self.return_flat_top(top, stepped)
+    }
+
+    fn loop_tested_in(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        flat: &mut FlatLoop,
+        value: ObjRef,
+    ) -> Result<FlatStep, Failure> {
+        let (do_index, end_index) = (flat.do_index, flat.end_index);
+        let (do_indent, loop_indent, resume) = (flat.do_indent, flat.loop_indent, flat.resume);
+        if flat.test.until() {
+            let held = self
+                .condition_value(
+                    value,
+                    ConditionTrace::Keyword(loop_indent, "UNTIL"),
+                    false,
+                    raised_until_not_logical,
+                )
+                .inspect(|held| self.settle_block_indent(!held, do_indent));
+            let end = &code.body.instructions[end_index];
+            return match self.clause_boundary(held) {
+                Ok(ClauseOutcome::Ended(exit)) => Ok(FlatStep::Done(Flow::Exit(exit.value()))),
+                Ok(ClauseOutcome::Ran(Ok(true))) => Ok(FlatStep::Done(Flow::Goto(resume))),
+                Ok(ClauseOutcome::Ran(Ok(false))) => {
+                    let counted = self.count_clause_against_deadline(false)?;
+                    match self.flat_loop_header(code, source, chunk, registers, flat, counted)? {
+                        Some(flow) => Ok(FlatStep::Done(flow)),
+                        None => Ok(FlatStep::Body(flat.op_body)),
+                    }
+                }
+                Ok(ClauseOutcome::Ran(Err(failure))) | Err(failure) => {
+                    self.record_failure_at(source, end, loop_indent);
+                    Err(failure)
+                }
+            };
+        }
+        let blame = flat.header_clause;
+        let site = &flat.iterate_site;
+        let ran = match self.condition_value(
+            value,
+            ConditionTrace::Keyword(loop_indent, "WHILE"),
+            false,
+            raised_while_not_logical,
+        ) {
+            Ok(false) => {
+                self.settle_block_indent(false, do_indent);
+                Ok(false)
+            }
+            Ok(true) => match flat.counter.as_mut() {
+                Some(counter) => self.count_pass(code, counter, loop_indent).map(|()| true),
+                None => Ok(true),
+            }
+            .inspect(|_| self.settle_block_indent(true, do_indent)),
+            Err(failure) => {
+                match blame {
+                    HeaderClause::Do => {
+                        self.blame_while_failure(code, source, do_index, loop_indent);
+                    }
+                    _ => {
+                        self.blame_header_failure(code, source, blame, site, end_index, loop_indent)
+                    }
+                }
+                Err(failure)
+            }
+        };
+        let header = match self.clause_boundary(ran) {
+            Ok(header) => header,
+            Err(failure) => {
+                self.blame_header_failure(code, source, blame, site, end_index, loop_indent);
+                return Err(failure);
+            }
+        };
+        match flat_header_outcome(header, resume)? {
+            Some(flow) => Ok(FlatStep::Done(flow)),
+            None => Ok(FlatStep::Body(flat.op_body)),
+        }
+    }
+
+    /// A pass boundary's answer for a loop whose header test is its test
+    /// region's: the region at [`FlatLoop::op_test`] runs next, as the next
+    /// pass's body would, and it counts the header clause as it opens it, so
+    /// the count `counted` stands for is handed back.
+    #[cold]
+    #[inline(never)]
+    fn hand_test_to_region(
+        &mut self,
+        flat: &FlatLoop,
+        counted: impl FnOnce(&mut Self) -> Result<DeadlineCounted, Failure>,
+    ) -> Result<FlatStep, Failure> {
+        let counted = counted(self)?;
+        self.uncount_clause(counted);
+        Ok(FlatStep::Body(flat.op_test))
+    }
+
+    /// Blames a failure of the innermost flat loop's header test, raised by
+    /// its condition's ops, as a failure of the condition the boundary
+    /// evaluated itself is blamed: on the `END` for an `UNTIL`, and on the
+    /// clause that came back to the header for a `WHILE`.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn blame_loop_test_failure(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+    ) {
+        let Some(flat) = self.activity.flat_top.take() else {
+            return;
+        };
+        if flat.test.until() {
+            self.record_failure_at(
+                source,
+                &code.body.instructions[flat.end_index],
+                flat.loop_indent,
+            );
+        } else {
+            match flat.header_clause {
+                HeaderClause::Do => {
+                    self.blame_while_failure(code, source, flat.do_index, flat.loop_indent);
+                }
+                blame => self.blame_header_failure(
+                    code,
+                    source,
+                    blame,
+                    &flat.iterate_site,
+                    flat.end_index,
+                    flat.loop_indent,
+                ),
+            }
+        }
+        self.activity.flat_top = Some(flat);
+    }
+
     /// Who a failing header re-test is blamed on: the clause that
     /// transferred control back to the loop, at the body's indent.
     #[cold]
@@ -1633,7 +1982,7 @@ impl Interp {
         code: &Code<'_>,
         source: Option<&ProgramSource>,
         chunk: &Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         flat: &mut FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
@@ -1691,7 +2040,7 @@ impl Interp {
         code: &Code<'_>,
         source: Option<&ProgramSource>,
         chunk: &Chunk,
-        registers: Option<RegFrame<'_>>,
+        registers: RegFrame<'_>,
         flat: &mut FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
@@ -1710,6 +2059,18 @@ impl Interp {
         let site = &flat.iterate_site;
         let state = &mut flat.state;
         let counter = &mut flat.counter;
+        // **A `WHILE` in a test region is left to the region**, which counts
+        // the header clause as it opens it, and the boundary continues there.
+        // Asked afresh each pass, because a `TRACE` in the body can turn the
+        // region off.
+        if flat.test.streamed() {
+            if self.streams_loop_tests() {
+                self.uncount_clause(counted);
+                flat.op_next = flat.op_test;
+                return Ok(None);
+            }
+            flat.op_next = flat.op_body;
+        }
         // A pass boundary's `WHILE` reads a fresh clock (`flat_loop_step`'s
         // `UNTIL` store). The first test belongs to the `DO` clause and
         // shares its reading.

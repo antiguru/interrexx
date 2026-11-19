@@ -219,7 +219,10 @@ pub(super) fn assert_exec_regions_hold_nothing_else(ops: &[Op]) {
 /// own clause.**
 pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
     for (at, op) in ops.iter().enumerate() {
-        let (Op::Clause { index, end } | Op::CallingClause { index, end }) = op else {
+        let (Op::Clause { index, end }
+        | Op::CallingClause { index, end }
+        | Op::LoopTest { index, end }) = op
+        else {
             continue;
         };
         for (inside, op) in ops[at + 1..(*end as usize).min(ops.len())]
@@ -245,12 +248,14 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::ConditionJump { index, .. }
                 | Op::LoopRun { index }
                 | Op::LoopNext { index }
+                | Op::LoopTested { index, .. }
                 | Op::Signal { index, .. }
                 | Op::Parse { index, .. } => Some(*index),
                 Op::TraceKeyword { .. }
                 | Op::LoopHeaderValue { .. }
                 | Op::Clause { .. }
                 | Op::CallingClause { .. }
+                | Op::LoopTest { .. }
                 | Op::Send { .. }
                 | Op::List { .. }
                 | Op::SelectCaseText { .. }
