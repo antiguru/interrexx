@@ -67,6 +67,16 @@ fn an_operand_reads_a_target_the_template_assigned_before_it() {
     assert_eq!(printed, "k| more|\n");
 }
 
+/// The same for an operand the stream computes: its ops run between the run
+/// that assigned `key` and the run that searches for it.
+#[test]
+fn a_computed_operand_reads_a_target_the_template_assigned_before_it() {
+    let printed = stdout_of(
+        "parse value 'k:rest kk more' with key ':' . (key || key) tail\nsay key'|'tail'|'\n",
+    );
+    assert_eq!(printed, "k| more|\n");
+}
+
 /// An unset `PARSE VAR` source raises `NOVALUE` from the walk's own read.
 #[test]
 fn an_unset_var_source_raises_novalue() {

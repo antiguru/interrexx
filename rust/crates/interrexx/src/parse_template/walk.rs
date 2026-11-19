@@ -193,10 +193,12 @@ impl Interp {
     /// [`crate::ir::Op::ParseBegin`]: takes the first parse string of the
     /// clause and walks its entries up to `to`, and answers whether the
     /// compiled walk took the clause. It does not where a `>K>`, `>>>` or
-    /// `>=>` line will be traced, or where a parse string is not a string
-    /// that is its own string value -- a number to render, an object to ask,
-    /// a stem or a compound to read -- and [`Interp::exec_parse`] then runs
-    /// the clause whole, with nothing done that it would do again.
+    /// `>=>` line will be traced, under a fold, for a source read as a line
+    /// or built by the interpreter, for `PARSE VAR` into words, or where a
+    /// parse string is not a string that is its own string value -- a number
+    /// to render, an object to ask, a stem or a compound to read -- and
+    /// [`Interp::exec_parse`] then runs the clause whole, with nothing done
+    /// that it would do again.
     #[inline(never)]
     pub(crate) fn parse_begin(
         &mut self,
@@ -209,7 +211,7 @@ impl Interp {
     ) -> Result<bool, Failure> {
         let parse = parse_of(clause)?;
         let evaluated = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
-        let Some(first) = self.walked_source(code, parse, evaluated)? else {
+        let Some((first, source, origin)) = self.walked_source(code, parse, evaluated)? else {
             self.exec_parse(code, parse, evaluated)?;
             return Ok(false);
         };
@@ -219,23 +221,35 @@ impl Interp {
         // target is then all that held it, and the pieces built after it
         // are allocations.
         self.roots.activity_mut().push_temp(first);
-        let mut walk = self.walk_over(first, 1);
+        let mut cursor = Cursor::new(source.len());
+        cursor.origin = origin;
+        let mut walk = Walk {
+            value: first,
+            source,
+            cursor,
+            next_argument: 1,
+        };
         let to = usize::from(to);
         self.walk_entries(code, parse, 0, to, None, &mut walk)?;
-        if to < parse.template.len() {
+        if to < parse.template.len() && base != crate::ir::Op::ARG_OMITTED {
             Self::file_walk(registers, base, &walk);
         }
         Ok(true)
     }
 
-    /// The first parse string the compiled walk takes, or `None` for a
-    /// clause it hands to the template engine.
+    /// The first parse string the compiled walk takes, read in place, and
+    /// the number a whole-string piece assigns, or `None` for a clause it
+    /// hands to the template engine.
+    #[allow(
+        clippy::type_complexity,
+        reason = "the value, its bytes and its origin, once"
+    )]
     fn walked_source(
         &mut self,
         code: &Code<'_>,
         parse: &Parse,
         evaluated: Option<ObjRef>,
-    ) -> Result<Option<ObjRef>, Failure> {
+    ) -> Result<Option<(ObjRef, SourceText, Option<ObjRef>)>, Failure> {
         let traced = self.traced_mode();
         if traced.results || traced.intermediates || parse.upper || parse.lower {
             return Ok(None);
@@ -249,9 +263,16 @@ impl Interp {
             // A simple name: its read is the variable's value and `NOVALUE`
             // for an unset one. A stem or a compound is read by the engine's
             // own `Interp::read_parse_var`.
+            // `PARSE VAR name w1 ... rest` is the engine's own walk for that
+            // shape, `Interp::parse_var_words`.
             ParseSource::Var(id) => {
                 let name = code.symbols.name(*id).as_bytes();
-                if !matches!(crate::run::shape_of(name), crate::run::NameShape::Simple) {
+                if !matches!(crate::run::shape_of(name), crate::run::NameShape::Simple)
+                    || matches!(
+                        parse.template.as_slice(),
+                        [Some(trigger)] if trigger.kind == TriggerKind::End
+                    )
+                {
                     return Ok(None);
                 }
                 let (value, novalue) = self.read(code, *id);
@@ -283,7 +304,9 @@ impl Interp {
                 return Ok(None);
             }
         };
-        Ok(self.plain_parse_source(first).map(|_| first))
+        Ok(self
+            .plain_parse_source(first)
+            .map(|(source, origin)| (first, source, origin)))
     }
 
     /// [`crate::ir::Op::ParseRun`]: template entries `from..to` of the

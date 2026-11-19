@@ -3,6 +3,7 @@ use interrexx_parse::Expr;
 
 impl Interp {
     /// Evaluates one trigger's operand, if it has one, and moves the cursor.
+    #[inline(always)]
     pub(super) fn apply_trigger(
         &mut self,
         code: &Code<'_>,
@@ -55,6 +56,7 @@ impl Interp {
 
     /// [`Interp::apply_trigger`] once the operand of a trigger that has one is
     /// evaluated: its `>>>` line, its conversion and the cursor's movement.
+    #[inline(always)]
     pub(super) fn apply_trigger_value(
         &mut self,
         trigger: &ParseTrigger,

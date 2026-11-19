@@ -555,21 +555,20 @@ fn the_recorded_chunks_render_as_committed() {
 /// **A `PARSE` template compiles to its walk**: the opening, which walks
 /// the entries before the first operand the stream evaluates, then per such
 /// operand its ops and the run from its entry to the next, with the walk's
-/// registers below the operand's.
+/// registers below the operand's. A simple variable, like a literal, is read
+/// where the walk reaches it.
 #[test]
 fn a_parse_template_compiles_to_its_walk() {
     let chunk =
         compile_for_test(b"parse var s a (p) b '-' c +(n + 1) d\n").expect("the chunk fits");
     assert_eq!(
         render(&chunk),
-        "0: Clause index=0 end=8\n\
-         1: ParseBegin index=0 src=omitted base=0 to=0 skip=8\n\
-         2: Load read=Simple at=1 dst=8\n\
-         3: ParseRun index=0 base=0 from=0 to=2 operand=8\n\
-         4: Load read=Simple at=4 dst=8\n\
-         5: LoadConstant dst=9\n\
-         6: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
-         7: ParseRun index=0 base=0 from=2 to=4 operand=8\n"
+        "0: Clause index=0 end=6\n\
+         1: ParseBegin index=0 src=omitted base=0 to=2\n\
+         2: Load read=Simple at=4 dst=8\n\
+         3: LoadConstant dst=9\n\
+         4: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
+         5: ParseRun index=0 base=0 from=2 to=4 operand=8\n"
     );
 }
 
@@ -581,20 +580,27 @@ fn a_template_of_literals_is_one_parse_begin() {
         render(&chunk),
         "0: Clause index=0 end=3\n\
          1: Load read=Simple at=0 dst=0\n\
-         2: ParseBegin index=0 src=0 base=1 to=5 skip=3\n"
+         2: ParseBegin index=0 src=0 base=omitted to=5\n"
     );
 }
 
-/// The shapes the walk does not take keep the template engine's one op: a
-/// traced clause, a fold, a source read as a line, `PARSE VAR` into words,
-/// and an operand with a call in it.
+/// The shapes the walk takes no runs for are its opening alone, with no
+/// walk registers: a traced clause, a fold, a source read as a line, `PARSE
+/// VAR` into words, and an operand with a call in it. The opening hands them
+/// to the template engine, or walks them whole.
 #[test]
-fn a_template_the_walk_does_not_take_stays_one_parse_op() {
+fn a_template_with_no_runs_is_its_opening_alone() {
     for (source, trace) in [
-        (&b"parse value v with a (p) b\n"[..], traced()),
-        (b"parse value v with a (p) b\n", intermediates()),
-        (b"parse upper arg a b\n", ChunkTrace::of(TraceMode::NORMAL)),
-        (b"parse pull a b\n", ChunkTrace::of(TraceMode::NORMAL)),
+        (&b"parse value v with a (p + 1) b\n"[..], traced()),
+        (b"parse value v with a (p + 1) b\n", intermediates()),
+        (
+            b"parse upper arg a (p + 1) b\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse pull a (p + 1) b\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
         (b"parse var s a b c\n", ChunkTrace::of(TraceMode::NORMAL)),
         (
             b"parse var s a (f()) b\n",
@@ -603,7 +609,9 @@ fn a_template_the_walk_does_not_take_stays_one_parse_op() {
     ] {
         let rendered = render(&compile_for_test_under(source, trace).expect("the chunk fits"));
         assert!(
-            rendered.contains(": Parse index=0") && !rendered.contains("ParseBegin"),
+            rendered.contains("ParseBegin index=0")
+                && rendered.contains("base=omitted")
+                && !rendered.contains("ParseRun"),
             "{}\n{rendered}",
             String::from_utf8_lossy(source)
         );

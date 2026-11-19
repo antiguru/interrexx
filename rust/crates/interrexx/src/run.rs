@@ -3665,7 +3665,7 @@ impl Interp {
                 self.eval(code, expr)
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
-            // `>K>` echo and the whole template walk are `Op::Parse`'s; only
+            // `>K>` echo and the whole template walk are `Op::ParseBegin`'s; only
             // the source is a register, and only this source has one --
             // `compile` emits no register for any other, so reaching here with
             // one is an op off its node.

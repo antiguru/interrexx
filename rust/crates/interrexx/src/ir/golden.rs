@@ -29,22 +29,16 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     render_register(*src)
                 ));
             }
-            Op::Parse { index: at, src } => {
-                out.push_str(&format!(
-                    "{index}: Parse index={at} src={}\n",
-                    render_register(*src)
-                ));
-            }
             Op::ParseBegin {
                 index: at,
-                skip,
                 src,
                 base,
                 to,
             } => {
                 out.push_str(&format!(
-                    "{index}: ParseBegin index={at} src={} base={base} to={to} skip={skip}\n",
-                    render_arg(*src)
+                    "{index}: ParseBegin index={at} src={} base={} to={to}\n",
+                    render_arg(*src),
+                    render_arg(*base)
                 ));
             }
             Op::ParseRun {

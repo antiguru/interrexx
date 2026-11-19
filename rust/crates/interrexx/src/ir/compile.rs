@@ -875,8 +875,9 @@ fn compile_settled(
             // expression present only for `PARSE VALUE expr WITH` -- every
             // other source reads a variable, an argument list or a line, none
             // of which is an `Expr` a register could hold. The template then
-            // compiles to its walk where `compiled_template` takes it, and is
-            // otherwise the one `Op::Parse` the template engine walks.
+            // compiles to its walk, with runs for the operands the stream
+            // evaluates where `compiled_template` takes it, and otherwise to
+            // the walk's opening alone.
             InstructionKind::Parse(parse)
             | InstructionKind::Arg(parse)
             | InstructionKind::Pull(parse) => {
@@ -908,24 +909,18 @@ fn compile_settled(
                     }
                     _ => None,
                 };
-                if !echoes_values && !echoes_keyword && compiled_template(parse) {
-                    push_template(
-                        &mut ops,
-                        &mut consts,
-                        &mut registers,
-                        &mut hints,
-                        &mut calls,
-                        plan,
-                        parse,
-                        instruction_index(index)?,
-                        src,
-                    )?;
-                } else {
-                    ops.push(Op::Parse {
-                        index: instruction_index(index)?,
-                        src,
-                    });
-                }
+                push_template(
+                    &mut ops,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    parse,
+                    instruction_index(index)?,
+                    src,
+                    !echoes_values && !echoes_keyword && compiled_template(parse),
+                )?;
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
@@ -1466,17 +1461,18 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
         })
 }
 
-/// The ops of a template [`compiled_template`] accepts: the walk's opening,
+/// The ops of a `PARSE`: the walk's opening, alone where `runs` is false
+/// and otherwise, for a template [`compiled_template`] accepts, the opening,
 /// which walks the entries up to the first with an operand that is not a
 /// literal, and per such entry its operand's ops and the run from it to the
 /// next. An operand's ops follow the run before it, because it is evaluated
 /// after the earlier pieces' targets are assigned
-/// (`r[parse.patterns.variable]`). A literal is read off the template where
-/// its run reaches it, as the template engine reads it.
+/// (`r[parse.patterns.variable]`). A literal or a simple variable is read
+/// where its run reaches it, as the template engine reads it.
 #[expect(
     clippy::too_many_arguments,
-    reason = "the emission sinks, the plan an operand's reads resolve against, and the clause \
-              the ops name"
+    reason = "the emission sinks, the plan an operand's reads resolve against, the clause the \
+              ops name, and whether its operands get runs"
 )]
 fn push_template<'a>(
     ops: &mut Vec<Op>,
@@ -1488,31 +1484,45 @@ fn push_template<'a>(
     parse: &'a interrexx_parse::Parse,
     index: u32,
     src: Option<u16>,
+    runs: bool,
 ) -> Result<(), ChunkTooLarge> {
-    let base = registers.alloc()?;
-    for _ in 1..crate::parse_template::WALK_REGISTERS {
-        registers.alloc()?;
-    }
     /// The operand of `entry` that the stream evaluates: one that is not a
-    /// literal.
+    /// literal or a simple variable, which the walk reads where it reaches
+    /// it, as the template engine reads them.
     fn evaluated(entry: &Option<interrexx_parse::ParseTrigger>) -> Option<&Expr> {
         entry
             .as_ref()
             .and_then(|trigger| trigger.value.as_ref())
-            .filter(|operand| !matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_)))
+            .filter(|operand| {
+                !matches!(
+                    operand.kind,
+                    ExprKind::Literal(_) | ExprKind::Constant(_) | ExprKind::Variable(_)
+                )
+            })
     }
     let width = |at: usize| u16::try_from(at).map_err(|_| ChunkTooLarge { what: "template" });
     // The entries whose operand the stream evaluates, each the start of a
-    // run, and the template's end.
-    let starts: Vec<usize> = (parse.template.iter().enumerate())
-        .filter(|(_, entry)| evaluated(entry).is_some())
-        .map(|(at, _)| at)
-        .collect();
+    // run, and the template's end. A template the walk runs whole has none.
+    let starts: Vec<usize> = if runs {
+        (parse.template.iter().enumerate())
+            .filter(|(_, entry)| evaluated(entry).is_some())
+            .map(|(at, _)| at)
+            .collect()
+    } else {
+        Vec::new()
+    };
     let end = parse.template.len();
-    let begin = op_index(ops)?;
+    let base = if starts.is_empty() {
+        Op::ARG_OMITTED
+    } else {
+        let base = registers.alloc()?;
+        for _ in 1..crate::parse_template::WALK_REGISTERS {
+            registers.alloc()?;
+        }
+        base
+    };
     ops.push(Op::ParseBegin {
         index,
-        skip: 0,
         src: src.unwrap_or(Op::ARG_OMITTED),
         base,
         to: width(starts.first().copied().unwrap_or(end))?,
@@ -1545,10 +1555,6 @@ fn push_template<'a>(
             to: width(starts.get(run + 1).copied().unwrap_or(end))?,
             operand: dst,
         });
-    }
-    let past = op_index(ops)?;
-    if let Some(Op::ParseBegin { skip, .. }) = ops.get_mut(begin as usize) {
-        *skip = past;
     }
     Ok(())
 }

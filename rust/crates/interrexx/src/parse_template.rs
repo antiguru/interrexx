@@ -916,6 +916,7 @@ impl Interp {
 
     /// Carves the current section into this trigger's targets: a blank
     /// delimited word each, and the whole remainder for the last one.
+    #[inline(always)]
     fn assign_targets(
         &mut self,
         code: &Code<'_>,

@@ -230,23 +230,18 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
-    /// The `PARSE`, `ARG` or `PULL` at `index`, with its template walked by
-    /// `Interp::exec_parse`: a clause whose template does not compile to
-    /// [`Op::ParseBegin`] and its steps.
-    Parse { index: u32, src: Option<u16> },
-    /// Opens the compiled template walk of the `PARSE`, `ARG` or `PULL` at
-    /// `index`: takes its first parse string, from register `src` for `PARSE
-    /// VALUE`, and walks the template's entries up to `to`, the first whose
-    /// operand the stream evaluates. Where entries are left it files the walk
-    /// in the registers from `base` on
-    /// ([`crate::parse_template::WALK_REGISTERS`] of them) for the
-    /// [`Op::ParseRun`]s after it. A clause the walk does not take, because a
-    /// line will be traced or the source is not a string it can read in
-    /// place, is run whole by `Interp::exec_parse` instead, and the driver
-    /// goes on at `skip`, past the last run.
+    /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
+    /// string, from register `src` for `PARSE VALUE`, and walks the
+    /// template's entries up to `to`, the first whose operand the stream
+    /// evaluates. Where entries are left it files the walk in the registers
+    /// from `base` on ([`crate::parse_template::WALK_REGISTERS`] of them) for
+    /// the [`Op::ParseRun`]s after it; a template with none has `base`
+    /// [`Op::ARG_OMITTED`]. A clause the walk does not take -- a line will be
+    /// traced, a fold, a source read as a line, a parse string that is not a
+    /// string it can read in place -- is run whole by `Interp::exec_parse`,
+    /// and the runs after this op are not driven.
     ParseBegin {
         index: u32,
-        skip: u32,
         src: u16,
         base: u16,
         to: u16,
