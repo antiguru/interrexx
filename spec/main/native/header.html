@@ -519,7 +519,10 @@ its type to the code, leaving its flags. Compiled as C++, a
 <code>ValueDescriptor</code> may be assigned a <code>RexxObjectPtr</code>, <code>RexxStringObject</code>,
 <code>RexxArrayObject</code>, <code>RexxStemObject</code>, <code>RexxMutableBufferObject</code>, <code>CSTRING</code>,
 <code>POINTER</code>, <code>wholenumber_t</code>, <code>float</code> or <code>double</code>: the assignment stores the
-value as the code of that type's own name and sets the type in the same way.</p>
+value as the code of that type's own name and sets the type in the same way.
+It also converts implicitly to each of those types and to <code>stringsize_t</code>,
+answering the value stored as the code of that type's own name, whatever its
+type says.</p>
 <div class="rule" id="r-native.header.tables"><a href="#r-native.header.tables">[native.header.tables]</a></div>
 <p>A routine table is an array of <code>RexxRoutineEntry</code> and a method table one of
 <code>RexxMethodEntry</code>. Each row holds a style, the name the row is found by and
