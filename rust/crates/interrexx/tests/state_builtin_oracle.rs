@@ -30,17 +30,13 @@ struct Case {
 const DECLARED_GAPS: &[&str] = &[];
 
 /// The cases whose difference a Deviation licenses, which must not agree
-/// either but answer rather than refuse: ERRORTEXT takes one argument, a
-/// whole number, here, and ooRexx also takes an error code `nn.nnn`,
-/// answering the null string for `1.5`, and a second argument (Deviation 180).
+/// either but answer rather than refuse: ERRORTEXT takes one argument here,
+/// as at language level 6.06, and ooRexx at 6.07 takes a second one of values
+/// (Deviation 179).
 ///
 /// Each case names the error this crate raises for it, which
 /// [`every_deviating_case_raises_its_own_error`] holds it to.
-const DEVIATING: &[(&str, &str)] = &[
-    ("errortext_arity", "Error 40.4:"),
-    ("errortext_not_whole", "Error 40.12:"),
-    ("errortext_not_whole_digits_crossed", "Error 40.12:"),
-];
+const DEVIATING: &[(&str, &str)] = &[("errortext_arity", "Error 40.4:")];
 
 const CASES: &[Case] = &[
     // ---- ADDRESS: the default, the forms, byte transparency ----

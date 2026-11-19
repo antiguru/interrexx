@@ -681,6 +681,24 @@ impl Raised {
         )
     }
 
+    /// 40.926: ERRORTEXT's argument is neither a whole number nor an error
+    /// code `nn.nnn` with an error number of 0-99 and a subcode of 0-999.
+    pub(crate) fn argument_not_an_error_code(
+        routine: &[u8],
+        position: usize,
+        found: &[u8],
+    ) -> Raised {
+        Raised::syntax(
+            40,
+            926,
+            vec![
+                routine.to_vec(),
+                position.to_string().into_bytes(),
+                found.to_vec(),
+            ],
+        )
+    }
+
     /// 40.904: a builtin's option argument is not one of the letters that
     /// builtin accepts. `valid` is substituted verbatim, so its own quoting
     /// is the caller's to supply.

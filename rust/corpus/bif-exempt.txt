@@ -17,7 +17,7 @@
 # a row carrying one is a divergence nothing is holding. MISMATCH is the sharp
 # one: both renderings produced output and they differ.
 # `every_exempt_attribution_is_a_known_phase_or_a_declared_outcome` pins them
-# at 7, 0 and 33. If it goes red, rule on the row first -- give it an owner, or
+# at 14, 0 and 21. If it goes red, rule on the row first -- give it an owner, or
 # record it as a known gap -- and then move the number to match.
 #
 ERRORTEXT::test_ERRORTEXT#22	MISMATCH
@@ -25,18 +25,13 @@ ERRORTEXT::test_ERRORTEXT#27	MISMATCH
 ERRORTEXT::test_ERRORTEXT#32	MISMATCH
 ERRORTEXT::test_ERRORTEXT#36	MISMATCH
 ERRORTEXT::test_ERRORTEXT#95	MISMATCH
-ERRORTEXT::test_ERRORTEXT_subcode#1	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#2	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#3	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#4	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#5	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#6	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#7	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#8	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#9	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#10	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#11	ANOMALY
-ERRORTEXT::test_ERRORTEXT_subcode#12	ANOMALY
+ERRORTEXT::test_ERRORTEXT_subcode#2	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#3	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#4	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#5	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#6	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#7	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#12	MISMATCH
 ERRORTEXT::test_ERRORTEXT_values#1	ANOMALY
 ERRORTEXT::test_ERRORTEXT_values#2	ANOMALY
 ERRORTEXT::test_ERRORTEXT_values#3	ANOMALY

@@ -1508,15 +1508,15 @@ the same name or an RXFNC exit can replace them, the security manager is sent
 `CALL` for them, and an argument with no string value raises `SYNTAX 88.909`
 rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
 character to standard output. `.RexxInfo~languageLevel`, and the level in
-`PARSE VERSION` and `.RexxInfo~name`, read 6.06, and the CATCH and FINALLY
-clauses of level 6.07 are not part of interrexx. ooRexx is at level 6.07: the
-three are builtins there, with argument errors of the 40.xxx family, BEEP
-writes no bell, and the level reads 6.07. Ruled by the owner on 2026-11-17
+`PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
+argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
+interrexx. ooRexx is at level 6.07: the three are builtins there, with argument
+errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
+argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
 (#796).
 
-## 180. ERRORTEXT's argument
+## 180. Withdrawn
 
-interrexx's ERRORTEXT takes one argument, a whole number from 0 to 99, as ANSI
-makes it. ooRexx also takes an error code `nn.nnn`, and answers the text of
-that subcode, or the null string where there is none, and a second argument of
-insert values, which is a feature of level 6.07.
+ERRORTEXT's argument: interrexx takes an error code `nn.nnn` as ooRexx does,
+ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
+level 6.07, is part of Deviation 179.
