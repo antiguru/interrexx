@@ -2,7 +2,7 @@
 element: "Stream"
 kind: class
 rexxref: "Builtin Classes > Stream Classes > Stream Class; Builtin Classes > Stream Classes > Stream Class > new (Inherited Class Method); Builtin Classes > Stream Classes > Stream Class > arrayIn; Builtin Classes > Stream Classes > Stream Class > arrayOut; Builtin Classes > Stream Classes > Stream Class > charIn; Builtin Classes > Stream Classes > Stream Class > charOut; Builtin Classes > Stream Classes > Stream Class > chars; Builtin Classes > Stream Classes > Stream Class > close; Builtin Classes > Stream Classes > Stream Class > command; Builtin Classes > Stream Classes > Stream Class > description; Builtin Classes > Stream Classes > Stream Class > flush; Builtin Classes > Stream Classes > Stream Class > init; Builtin Classes > Stream Classes > Stream Class > lineIn; Builtin Classes > Stream Classes > Stream Class > lineOut; Builtin Classes > Stream Classes > Stream Class > lines; Builtin Classes > Stream Classes > Stream Class > makeArray; Builtin Classes > Stream Classes > Stream Class > open; Builtin Classes > Stream Classes > Stream Class > position; Builtin Classes > Stream Classes > Stream Class > qualify; Builtin Classes > Stream Classes > Stream Class > query; Builtin Classes > Stream Classes > Stream Class > say; Builtin Classes > Stream Classes > Stream Class > seek; Builtin Classes > Stream Classes > Stream Class > state; Builtin Classes > Stream Classes > Stream Class > string; Builtin Classes > Stream Classes > Stream Class > supplier; Builtin Classes > Stream Classes > Stream Class > uninit"
-deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140, 142]
+deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140, 142, 183]
 ---
 
 # Stream
@@ -789,12 +789,14 @@ to `string`: an object that has only `string` is read by that answer, and
 `.nil` is read as `The NIL object`, which no word or command starts with, and
 so is an answer of `string` that has no string value: `query` raises `SYNTAX
 93.0` and `command` `SYNTAX 93.914` for it, as for a word that nothing starts
-with. The argument that `arrayIn`, `makeArray` and `arrayOut` take as the option
-is no string argument: a message is sent to it, and an object that does not
-understand the message raises `SYNTAX 97.1`. The second example reads an
-object whose `string` method answers an object with no string value: the start,
-the count and the line number raise `SYNTAX 88.907`, a string to write and an
-option `SYNTAX 88.909`.
+with. The option that `arrayIn`, `makeArray` and `arrayOut` take is read as a
+string argument as that of `open` is, through `makeString` alone, so an object
+with no such method, `.nil` among them, raises `SYNTAX 88.909` at its position,
+1 for `arrayIn` and `makeArray` and 2 for `arrayOut` ([Deviation
+183](r:class.stream.deviation.183) is the difference from ooRexx). The second example reads an object whose
+`string` method answers an object with no string value: the start, the count
+and the line number raise `SYNTAX 88.907`, a string to write and an option
+`SYNTAX 88.909`.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -891,7 +893,6 @@ call try 's~charout("x", o)'
 call try 's~lineout("x", o)'
 call try 's~lineout(o, 1)'
 call try 's~open(o)'
-call try 's~arrayin(o)'
 exit
 try:
   signal on syntax name bad
@@ -914,7 +915,77 @@ s~charout("x", o) => 88.907
 s~lineout("x", o) => 88.907
 s~lineout(o, 1) => 88.909
 s~open(o) => 88.909
-s~arrayin(o) => 97.1
+```
+
+r[class.stream.deviation.183]
+The option of `arrayIn`, `makeArray` and `arrayOut` is read as a string
+argument, as the option of `open` is: its `makeString` method is sent to it,
+and the characters of the answer decide. An object whose `makeString` answers
+`L` or `C` works as that string does; an object with no `makeString` method,
+one that has only `string` among them, and `.nil` raise `SYNTAX 88.909`, at
+argument 1 for `arrayIn` and `makeArray` and at argument 2 for `arrayOut`. A
+string whose first character is neither is the wrong option, `SYNTAX 93.915` for
+`arrayIn` and `makeArray` and `SYNTAX 93.0` for `arrayOut`. ooRexx sends the
+option the message `caselessStartsWith` instead, so for every object that is no
+string, one whose `makeString` answers `L` among them, and for `.nil`, it
+raises `SYNTAX 97.1`.
+
+```rexx
+f = 'spec-stream-optobj-zq.tmp'
+g = 'spec-stream-optobj-w-zq.tmp'
+call charout f, 'ab'
+call charout f
+s = .stream~new(f)
+w = .stream~new(g)
+a = .array~of('x')
+call try 's~arrayin(.ms~new("L"))~items'
+call try 's~makearray(.ms~new("c"))~items'
+call try 's~arrayin(.ms~new("Q"))'
+call try 's~arrayin(.os~new("L"))'
+call try 's~makearray(.nil)'
+call try 'w~arrayout(a, .ms~new("L"))'
+call try 'w~arrayout(a, .ms~new("Q"))'
+call try 'w~arrayout(a, .os~new("L"))'
+call try 'w~arrayout(a, .nil)'
+w~close
+s~close
+call sysfiledelete f
+call sysfiledelete g
+exit
+try:
+  signal on syntax name bad
+  s~close
+  interpret 'r =' arg(1)
+  say arg(1) '=> [' || r || ']'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ms
+::method init
+  expose v
+  use arg v
+::method makestring
+  expose v
+  return v
+::class os
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+```
+
+```output
+s~arrayin(.ms~new("L"))~items => [1]
+s~makearray(.ms~new("c"))~items => [2]
+s~arrayin(.ms~new("Q")) => 93.915
+s~arrayin(.os~new("L")) => 88.909
+s~makearray(.nil) => 88.909
+w~arrayout(a, .ms~new("L")) => [0]
+w~arrayout(a, .ms~new("Q")) => 93.0
+w~arrayout(a, .os~new("L")) => 88.909
+w~arrayout(a, .nil) => 88.909
 ```
 
 r[class.stream.args.strings]
@@ -1828,10 +1899,10 @@ cats 21
 ```
 
 r[class.stream.arrayin.sends]
-When `arrayIn` has an argument that is not a string, it sends it
-`caselessStartsWith('L')` and, when that answers false,
-`caselessStartsWith('C')`, and no other message, to find the option; when both
-answer false the option is wrong and `SYNTAX 93.915` is raised. Then, for the
+`arrayIn` reads its argument as a string argument, as [Deviation
+183](r:class.stream.deviation.183) says, and sends it no other message to find
+the option; when the first character is neither `L` nor `C` the option is
+wrong and `SYNTAX 93.915` is raised. Then, for the
 lines, it sends `lines` with no argument to the receiver once, before it
 reads, and reads that answer as a whole number that is not negative, whatever
 it is used for: another answer raises `SYNTAX 93.906`, and the array is the
@@ -1864,11 +1935,6 @@ s~count = 0
 .local~log = ''
 a = s~arrayin('chars')
 say a~items a~makeString('L', ',') .local~log
-do o over .opt~new('1'), .opt~new('0 1'), .opt~new('0 0')
-  .local~log = ''
-  s~close
-  call try2 o
-end
 s~close
 call sysfiledelete f
 exit
@@ -1879,13 +1945,6 @@ try:
   say '[' || arg(1) || ']' '->' a~items .local~log
   return
 bad: say '[' || arg(1) || ']' '=>' condition('o')~code .local~log
-  return
-try2:
-  signal on syntax name bad2
-  a = s~arrayin(arg(1))
-  say a~items .local~log
-  return
-bad2: say condition('o')~code .local~log
   return
 ::class spy subclass stream
 ::attribute count
@@ -1905,16 +1964,6 @@ bad2: say condition('o')~code .local~log
   self~reads = self~reads + 1
   if self~reads > 3 then raise notready
   return 'c' || self~reads
-::class opt
-::attribute answers
-::method init
-  expose answers
-  use arg answers
-::method caselessStartsWith
-  expose answers
-  .local~log = .local~log 'caselessStartsWith(' || arg(1) || ')'
-  parse var answers first answers
-  return first
 ```
 
 ```output
@@ -1927,9 +1976,6 @@ bad2: say condition('o')~code .local~log
 [x] => 93.906  lines
 [The NIL object] => 93.906  lines
 3 c1,c2,c3  chars charin charin charin charin
-2  caselessStartsWith(L) lines
-3  caselessStartsWith(L) caselessStartsWith(C) chars charin charin charin charin
-93.915  caselessStartsWith(L) caselessStartsWith(C)
 ```
 
 r[class.stream.makearray]
@@ -2041,9 +2087,10 @@ argument `ARRAY`, which an `Array`, a `List`, a `Set`, a `Queue` and a stream
 answer with an array of their items, and the items are written in the order of
 that array, an empty slot giving none; an argument whose answer is not an
 array, `.nil` among them, raises `SYNTAX 98.913`. The second argument is
-optional: it is sent `left` with the argument 1, and the answer must be `L` for
+optional: it is read as a string argument ([Deviation
+183](r:class.stream.deviation.183)), and its first character must be `L` for
 lines or `C` for characters, in either case, or `SYNTAX 93.0` is raised. The
-option is sent `left` before the first argument is sent `request`, and a call
+option is read before the first argument is sent `request`, and a call
 whose option and first argument are both in error raises the error of one of
 them, as [the precedence rule](r:conv.error.precedence) says. An item is
 written as `lineOut` and `charOut` read their string, so an item that has no
@@ -2062,7 +2109,7 @@ say s~arrayout(.array~of('one', 'two')) s~state
 say s~arrayout(.list~of('three')) s~arrayout(.array~of(4, 5), 'C')
 say s~arrayout(.array~new(3)~~put('six', 1)~~put('eight', 3), 'lines')
 say s~arrayout(.array~new) s~arrayout(.array~new(2))
-say s~arrayout(.array~of('x', 'y'), .opt~new('L'))
+say s~arrayout(.array~of('x', 'y'), 'L')
 say s~arrayout(.array~of('z'), 'c')
 say s~arrayout(.set~of('set')) s~arrayout(.queue~of('q1', 'q2'))
 e = .stream~new('spec-stream-arrayout-empty-zq.tmp')
@@ -2123,8 +2170,7 @@ one~two~three~45six~eight~x~y~zset~q1~q2~p~a
 ```
 
 r[class.stream.arrayout.sends]
-`arrayOut` sends, in this order: `left(1)` to the second argument when it has
-one and it is not a string, `request('ARRAY')` to the first argument, and then
+`arrayOut` sends, in this order: `request('ARRAY')` to the first argument, and then
 `lineOut`, or `charOut` for the characters, to the receiver for each item in
 turn, with the item itself as the one argument. It sends no other message to
 the receiver, the array or an item; what the sends answer is not looked at,
@@ -2154,7 +2200,7 @@ end
 .local~log = ''
 s = .spy~new(f)
 s~mode = 'record'
-say s~arrayout(.arr~of('p', 'q'), .opt~new) .local~log s~log
+say s~arrayout(.arr~of('p', 'q'), 'L') .local~log s~log
 call sysfiledelete f
 exit
 ::routine help
@@ -2192,10 +2238,6 @@ exit
 ::method charout
   self~log = self~log 'charOut'
   return 0
-::class opt
-::method left
-  .local~log = .local~log 'left(' || arg(1) || ')'
-  return 'L'
 ::class arr subclass array
 ::method request
   .local~log = .local~log 'request(' || arg(1) || ')'
@@ -2209,7 +2251,7 @@ continue  0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
 super     0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
 raise     3 READY  lineOut(String)
 helper    0 READY  lineOut(String) lineOut(SHOWN) lineOut(String)
-0  left(1) request(ARRAY) lineOut lineOut  lineOut(String) lineOut(String)
+0  request(ARRAY) lineOut lineOut  lineOut(String) lineOut(String)
 ```
 
 r[class.stream.supplier]

@@ -1539,3 +1539,12 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).
+
+## 183. The option of arrayIn, makeArray and arrayOut is read as a string
+
+The option of `Stream`'s `arrayIn`, `makeArray` and `arrayOut` is read as a
+string argument, as the option of `open` is: through its `makeString` method,
+so an object whose `makeString` answers `L` or `C` is that option, and an
+object with no such method, `.nil` among them, raises `SYNTAX 88.909`. ooRexx
+sends the option `caselessStartsWith` and raises `SYNTAX 97.1` for any object
+that is no string and for `.nil`, whatever its `makeString` answers.
