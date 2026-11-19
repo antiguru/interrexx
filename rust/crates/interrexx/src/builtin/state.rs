@@ -873,10 +873,11 @@ mod tests {
             ),
             // And the 40.12 half under the same crossing, which does read
             // the captured rendering: `1/3` at `DIGITS 3` is `0.333`, and
-            // stays `0.333` after `DIGITS 9`.
+            // stays `0.333` after `DIGITS 9`. (Not ERRORTEXT, which reads
+            // `0.333` as the error code 0.333.)
             (
-                b"numeric digits 3; z = 1/3; numeric digits 9; say errortext(z)\n".as_slice(),
-                "Error 40.12:  ⟨40.12¦ERRORTEXT¦1¦0.333⟩",
+                b"numeric digits 3; z = 1/3; numeric digits 9; say sourceline(z)\n".as_slice(),
+                "Error 40.12:  ⟨40.12¦SOURCELINE¦1¦0.333⟩",
             ),
         ] {
             let (code, stderr) = failure(source);
