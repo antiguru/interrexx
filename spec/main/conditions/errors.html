@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="error-numbers"><a class="header" href="#error-numbers">Error numbers</a></h1>
 <p class="references">ANSI: 8.2.1, 8.4, 8.4.1; rexxref: Conditions and Condition Traps &gt; Condition Information &gt; The Special Variable RC; Error Numbers and Messages</p>
+<p class="deviations">Deviations: D179</p>
 <p>Every fault that raises the SYNTAX condition has an error number. The number
 says what kind of fault it is, so that a program can answer a kind of error
 without reading a message. This page specifies how a number is built, what a
@@ -224,8 +225,8 @@ e: o = condition('o')
   say left(arg(1), 26) o~code o~rc
   return
 </code></pre>
-<pre><code class="language-output">x = left("abc", -2)        93.923 93
-x = copies("ab", -2)       93.906 93
+<pre><code class="language-output">x = left("abc", -2)        40.13 40
+x = copies("ab", -2)       40.13 40
 x = d2c(-1)                93.927 93
 x = "abc"~substr(0)        93.924 93
 </code></pre>
@@ -445,7 +446,8 @@ cause, at the clause that meets it.</p>
 <li>34, operand that is no truth value: <code>if 'a' then say 1</code> 34.1, <code>x = 1 &amp; 'a'</code>
 34.901, <code>x = \'a'</code> 34.901; <a href="../expressions/logical.html#r-expr.logical.value">rule</a>.</li>
 <li>40, argument count or value refused: <code>x = abs()</code> 40.3, <code>x = abs(1, 2)</code> 40.4,
-<code>x = left('abc', 'q')</code> 40.12, <code>x = random(5, 1)</code> 40.33;
+<code>x = left('abc', 'q')</code> 40.12, <code>x = left('abc', -2)</code> 40.13,
+<code>x = substr('abc', 0)</code> 40.14, <code>x = random(5, 1)</code> 40.33;
 <a href="../builtins/index.html#r-bif.index.call.too-few">rule</a>, <a href="../builtins/index.html#r-bif.index.call.too-many">rule</a>.</li>
 <li>41, arithmetic on a non-number: <code>x = 1 + 'a'</code> 41.1, <code>x = -'a'</code> 41.1,
 <code>x = 'a' % 2</code> 41.1; <a href="../numbers/index.html#r-num.index.use">rule</a>.</li>
@@ -486,6 +488,8 @@ call try "x = \'a'"
 call try "x = abs()"
 call try "x = abs(1, 2)"
 call try "x = left('abc', 'q')"
+call try "x = left('abc', -2)"
+call try "x = substr('abc', 0)"
 call try "x = random(5, 1)"
 call try "x = 1 + 'a'"
 call try "x = -'a'"
@@ -530,6 +534,8 @@ x = \'a'                                     34.901
 x = abs()                                    40.3
 x = abs(1, 2)                                40.4
 x = left('abc', 'q')                         40.12
+x = left('abc', -2)                          40.13
+x = substr('abc', 0)                         40.14
 x = random(5, 1)                             40.33
 x = 1 + 'a'                                  41.1
 x = -'a'                                     41.1
@@ -590,9 +596,9 @@ e: say condition('o')~code rc
 <p>The numbers from 88 up usually name faults of messages, of objects and of
 directives.</p>
 <ul>
-<li>88, argument value refused: <code>x = filespec('N')</code> 88.901,
-<a href="../classes/directory.html#r-class.directory.put"><code>x = .directory~new~put(1)</code></a> 88.901,
-<code>x = charin('nofile_zz', 1, -1)</code> 88.907; <a href="../builtins/index.html#r-bif.index.call.native">rule</a>.</li>
+<li>88, argument value refused: <code>x = sysfileexists()</code> 88.901,
+<a href="../classes/directory.html#r-class.directory.put"><code>x = .directory~new~put(1)</code></a> 88.901;
+<a href="../builtins/index.html#r-bif.index.call.native">rule</a>.</li>
 <li>89, USE target of the wrong kind: <code>use arg a, 'b'</code> 89.1, <code>use arg (a)</code> 89.1;
 <a href="../instructions/use.html#r-instr.use.syntax">rule</a>.</li>
 <li>90, EXTERNAL entry that is not there:
@@ -600,8 +606,8 @@ directives.</p>
 <a href="../directives/routine.html#r-dir.routine.external">rule</a>.</li>
 <li>91, message term with no result: <code>say 'a' .m~new~bar 'b'</code> 91.999;
 <a href="../expressions/messages.html#r-expr.messages.cascade">rule</a>.</li>
-<li>93, argument value refused: <code>x = left('abc', -2)</code> 93.923,
-<code>x = copies('ab', -2)</code> 93.906, <code>x = 'abc'~substr(0)</code> 93.924, <code>x = d2c(-1)</code>
+<li>93, argument value refused: <code>x = 'abc'~left(-2)</code> 93.923,
+<code>x = 'ab'~copies(-2)</code> 93.906, <code>x = 'abc'~substr(0)</code> 93.924, <code>x = d2c(-1)</code>
 93.927, <a href="../classes/array.html#r-class.array.new"><code>x = .array~new('x')</code></a> 93.906,
 <code>x = stream('nofile_zz', 'c', 'bogus')</code> 93.914;
 <a href="../conventions.html#r-conv.position.check">rule</a>.</li>
@@ -625,13 +631,12 @@ fault of form found when the text is read, and 98 is a fault found when
 the clause or directive takes effect. A directive in the text of an
 INTERPRET is no directive, so it raises 99 there.</p>
 </blockquote>
-<pre><code class="language-rexx">call try "x = filespec('N')"
+<pre><code class="language-rexx">call try "x = sysfileexists()"
 call try "x = .directory~new~put(1)"
-call try "x = charin('nofile_zz', 1, -1)"
 call try "use arg a, 'b'"
 call try "use arg (a)"
-call try "x = left('abc', -2)"
-call try "x = copies('ab', -2)"
+call try "x = 'abc'~left(-2)"
+call try "x = 'ab'~copies(-2)"
 call try "x = 'abc'~substr(0)"
 call try "x = d2c(-1)"
 call try "x = .array~new('x')"
@@ -654,13 +659,12 @@ e: label = arg(1)
   say left(label, 44) condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">x = filespec('N')                            88.901
+<pre><code class="language-output">x = sysfileexists()                          88.901
 x = .directory~new~put(1)                    88.901
-x = charin('nofile_zz', 1, -1)               88.907
 use arg a, 'b'                               89.1
 use arg (a)                                  89.1
-x = left('abc', -2)                          93.923
-x = copies('ab', -2)                         93.906
+x = 'abc'~left(-2)                           93.923
+x = 'ab'~copies(-2)                          93.906
 x = 'abc'~substr(0)                          93.924
 x = d2c(-1)                                  93.927
 x = .array~new('x')                          93.906
@@ -719,6 +723,19 @@ e2: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">91.999
 97.2
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-cond.errors.deviation.179"><a href="#r-cond.errors.deviation.179">[cond.errors.deviation.179]</a></div>
+<p>BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
+level 6.06 (<a href="../deviations.html">Deviation 179</a>), so the errors of their
+arguments are numbered 88, as <a href="../builtins/index.html#r-bif.index.call.native">the native call rule</a>
+says. ooRexx, at level 6.07, makes them builtins, and numbers the same faults
+40.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = filespec('N')
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">88.901
 </code></pre>
 
                     </main>

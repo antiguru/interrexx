@@ -221,8 +221,8 @@ f: say condition('o')~code
 </code></pre>
 <div class="rule" id="r-bif.insert.n.check"><a href="#r-bif.insert.n.check">[bif.insert.n.check]</a></div>
 <p>In INSERT, <code>n</code> is a <a href="../conventions.html#r-conv.whole.digits">whole-number argument</a> whose value
-must not be negative. A negative value raises <code>SYNTAX 93.906</code>. An <code>n</code> of 0 is
-allowed, and so is <code>-0</code>, which is 0. The check is a range check, one of <a href="../conventions.html#r-conv.check.order">the
+must not be negative. A negative value raises <code>SYNTAX 40.13</code>, as <a href="../conventions.html#r-conv.length.check">a
+count</a> does; sent as a message, it raises <code>SYNTAX 93.906</code>. An <code>n</code> of 0 is allowed, and so is <code>-0</code>, which is 0. The check is a range check, one of <a href="../conventions.html#r-conv.check.order">the
 checks of the conventions</a>.</p>
 <pre><code class="language-rexx">say insert('X', 'abc', 0) insert('X', 'abc', '-0')
 signal on syntax name a
@@ -230,7 +230,7 @@ say insert('X', 'abc', -1)
 a: say condition('o')~code
 signal on syntax name b
 say insert('X', 'abc', -1, -1)
-b: say wordpos(condition('o')~code, '93.906 93.923') &gt; 0
+b: say condition('o')~code
 signal on syntax name c
 say insert('X', 'abc', 0, -1)
 c: say condition('o')~code
@@ -242,9 +242,9 @@ say insert('X', 'abc', 1, 1, '**')
 e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">Xabc Xabc
-93.906
-1
-93.923
+40.13
+40.13
+40.13
 40.12
 40.23
 </code></pre>

@@ -402,7 +402,8 @@ e: say condition('o')~code
 a slash is taken from the current directory. The function cleans the name up
 before it uses it, in the way <a href="../builtins/qualify.html#r-bif.qualify.normal">QUALIFY</a> does: a run of
 slashes is one slash, a component that is a single period is dropped, a slash
-at the end is dropped, and a component of two periods is dropped together with
+at the end is kept, so that the name is one of a directory and <code>file/</code> names
+no file, and a component of two periods is dropped together with
 the component before it, so that the name <code>c1zqidxd/../c1zqidxn</code> is the name
 <code>c1zqidxn</code> even when <code>c1zqidxd</code> does not exist. The characters <code>*</code> and <code>?</code> are
 characters of the name: no function except SysFileTree expands a pattern, so
@@ -430,7 +431,7 @@ call SysFileDelete 'c1zqidxn'
 call SysRmDir 'c1zqidxd'
 </code></pre>
 <pre><code class="language-output">1 1
-1 1
+0 1
 1 1
 0 0 0
 0 1 -1 0 0

@@ -209,8 +209,8 @@ say verify('abc', , 'M')
 f: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">2 2
-93.924
-93.923
+40.14
+40.13
 40.12
 40.4
 40.5
@@ -227,7 +227,8 @@ they change nothing. When <code>option</code> is omitted, it is Nomatch.</p>
 </code></pre>
 <div class="rule" id="r-bif.verify.option.check"><a href="#r-bif.verify.option.check">[bif.verify.option.check]</a></div>
 <p>An <code>option</code> whose first character is not one of those four, and an <code>option</code>
-that is the null string, raise <code>SYNTAX 93.915</code>. It is made whatever <code>string</code>
+that is the null string, raise <code>SYNTAX 40.904</code> (<a href="../conventions.html#r-conv.method.option">an
+option</a>); sent as a message, they raise <code>SYNTAX 93.915</code>. The check is made whatever <code>string</code>
 and <code>reference</code> are. A call whose <code>start</code> or <code>length</code> is also in error raises
 the error of one of them, as <a href="../conventions.html#r-conv.check.order">the checks of the
 conventions</a> say.</p>
@@ -245,15 +246,15 @@ say verify('', '', 'Z')
 d: say condition('o')~code
 signal on syntax name f
 say verify('abc', 'a', 'Y', 'z')
-f: say wordpos(condition('o')~code, '93.915 40.12') &gt; 0
+f: say wordpos(condition('o')~code, '40.904 40.12') &gt; 0
 signal on syntax name g
 say verify('abc', 'a', 'Y', 0)
-g: say wordpos(condition('o')~code, '93.915 93.924') &gt; 0
+g: say wordpos(condition('o')~code, '40.904 40.14') &gt; 0
 </code></pre>
-<pre><code class="language-output">93.915
-93.915
-93.915
-93.915
+<pre><code class="language-output">40.904
+40.904
+40.904
+40.904
 1
 1
 </code></pre>

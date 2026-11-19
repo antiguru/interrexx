@@ -218,7 +218,8 @@ e: say condition('o')~code
 <a href="../conventions.html#r-conv.whole.digits">value</a> the conventions describe, and not negative.
 An <code>n</code> that is not a whole number, including the null string, raises
 <code>SYNTAX 40.12</code>; an <code>n</code> that is a whole number and negative raises
-<code>SYNTAX 93.906</code>. An <code>n</code> of 0 is allowed, and so is <code>-0</code>, which is 0.</p>
+<code>SYNTAX 40.13</code>, as <a href="../conventions.html#r-conv.length.check">a length</a> does. An <code>n</code> of 0 is
+allowed, and so is <code>-0</code>, which is 0.</p>
 <pre><code class="language-rexx">say '['copies('rst', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')
 signal on syntax name a
 say copies('abc', -1)
@@ -240,17 +241,16 @@ say copies('abc', 1000000000000000000)
 f: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">[] [] abab
-93.906
+40.13
 40.12
 40.12
 40.12
-93.906
+40.13
 40.12
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> The code is not 93.923, which <a href="../conventions.html#r-conv.length.check">the length rule</a>
-gives to the length of other builtins: COPIES' count is not a length
-argument.</p>
+<p><strong>Note.</strong> Sent as a message, a negative <code>n</code> raises <code>SYNTAX 93.906</code>, not the
+93.923 of a negative length: the method's count is not a length argument.</p>
 </blockquote>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <div class="rule" id="r-bif.copies.result"><a href="#r-bif.copies.result">[bif.copies.result]</a></div>

@@ -623,7 +623,8 @@ e: say condition('o')~code
 <p>A fault in the form of the clause is raised when the program is read. USE
 with no word after it, and USE with a word that is not ARG, STRICT or LOCAL,
 raise <code>SYNTAX 25.905</code>. STRICT that is not followed by ARG raises <code>25.929</code>.
-Two targets that follow each other with no comma raise <code>46.902</code>. A target
+Two targets that follow each other with no comma raise <code>46.903</code> when the
+first could take a default, and <code>46.902</code> when it is a reference (<code>&gt;a</code>). A target
 that starts with a digit raises <code>31.2</code>, one that starts with a period <code>31.3</code>,
 and a string or a parenthesis in a target's place <code>89.1</code>. The text of an
 INTERPRET raises the same errors when the INTERPRET runs.</p>
@@ -631,6 +632,7 @@ INTERPRET raises the same errors when the INTERPRET runs.</p>
 call try 'use foo a'
 call try 'use strict a'
 call try 'use strict arg a b'
+call try 'use arg &gt;a b'
 call try 'use arg 1'
 call try 'use arg .a'
 call try 'use arg "x"'
@@ -647,7 +649,8 @@ e: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">use =&gt; 25.905
 use foo a =&gt; 25.905
 use strict a =&gt; 25.929
-use strict arg a b =&gt; 46.902
+use strict arg a b =&gt; 46.903
+use arg &gt;a b =&gt; 46.902
 use arg 1 =&gt; 31.2
 use arg .a =&gt; 31.3
 use arg "x" =&gt; 89.1

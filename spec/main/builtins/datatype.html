@@ -213,8 +213,9 @@ characters after the first are not looked at. The letters that select a
 test are <code>A</code>, <code>B</code>, <code>I</code>, <code>L</code>, <code>M</code>, <code>N</code>, <code>O</code>, <code>S</code>, <code>U</code>, <code>V</code>, <code>W</code> and <code>X</code>, and
 the digit <code>9</code>. A <code>type</code> whose first character is another character,
 including a blank, or a <code>type</code> that is the null string, raises
-<code>SYNTAX 93.915</code>. The <code>type</code> is checked before the string is examined, so it
-raises the error for every <code>string</code>, the null string included.</p>
+<code>SYNTAX 40.904</code> (<a href="../conventions.html#r-conv.method.option">an option</a>); sent as a message, it
+raises <code>SYNTAX 93.915</code>. The <code>type</code> is checked before the string is examined,
+so it raises the error for every <code>string</code>, the null string included.</p>
 <pre><code class="language-rexx">say datatype('12', 'n') datatype('12', 'Number') datatype('12', 'Nonsense'),
     datatype('abc', 'Xyz')
 signal on syntax name a
@@ -231,10 +232,10 @@ say datatype('1', 'C')
 d: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">1 1 1 1
-93.915
-93.915
-93.915
-93.915
+40.904
+40.904
+40.904
+40.904
 </code></pre>
 <div class="rule" id="r-bif.datatype.omitted"><a href="#r-bif.datatype.omitted">[bif.datatype.omitted]</a></div>
 <p>When <code>type</code> is omitted, DATATYPE answers <code>NUM</code> if the string is a number
@@ -249,7 +250,7 @@ not; a <code>type</code> that is <a href="../conventions.html#r-conv.arg.omitted
 <p>Type <code>N</code> answers <code>1</code> when the string is a number: a string of the
 <a href="../conventions.html#r-conv.whole.form">whole-number form</a> whose value is within the <a href="index.html#r-bif.index.num.limit">exponent
 range</a> of the language. The strings that
-<a href="index.html#r-bif.index.num.arg">a number argument</a> rejects with <code>SYNTAX 93.943</code> are
+<a href="index.html#r-bif.index.num.arg">a number argument</a> rejects with <code>SYNTAX 40.11</code> are
 exactly the strings for which <code>N</code> answers <code>0</code>: the null string, a string of
 only whitespace, a string with a character that the form does
 not allow, and a number whose exponent is out of range. The digits of the

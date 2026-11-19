@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="security-manager"><a class="header" href="#security-manager">Security manager</a></h1>
 <p class="references">rexxref: The Security Manager; The Security Manager &gt; Calls to the Security Manager; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; setSecurityManager</p>
+<p class="deviations">Deviations: D179</p>
 <p>A program can run code that it does not trust, and a security manager is the
 way to keep that code inside bounds. The manager is an object of the
 program's own. The interpreter asks it before the untrusted code does any of
@@ -524,9 +525,9 @@ value</a> does. A manager that answers <code>0</code> lets the search
 go on, and nothing it set in the directory counts: a name that the search does
 not find raises <code>SYNTAX 43.1</code> although <code>RESULT</code> was set, and a changed <code>NAME</code>
 does not change the routine that is searched for. The first example shows the
-name and the arguments, and each way that a call ends. In the second, each
-built-in function of this book is called once and the manager notes the names
-it is sent; it takes those calls over, so that nothing runs. In the third, a
+name and the arguments, and each way that a call ends. In the second, every
+other built-in function of this book is called once, and the manager, which
+notes each name it is sent and takes that call over, is sent none. In the third, a
 program file is offered at each of two calls, and the command in it is not,
 and so is a function of RexxUtil.</p>
 <pre><code class="language-rexx">tests = .array~of('return envsecfun(1, , "x")', -
@@ -574,12 +575,12 @@ return envsecpoor() =&gt; error 44.1
   CALL ENVSECPASS 0 0
 return envsecpass() =&gt; error 43.1
 </code></pre>
-<pre><code class="language-rexx">names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', 'beep', -
+<pre><code class="language-rexx">names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', -
   'bitand', 'bitor', 'bitxor', 'c2d', 'c2x', 'center', 'changestr', -
   'charin', 'charout', 'chars', 'compare', 'condition', 'copies', -
   'countstr', 'd2c', 'd2x', 'datatype', 'date', 'delstr', 'delword', -
   'digits', -
-  'directory', 'endlocal', 'errortext', 'filespec', 'format', 'form', -
+  'endlocal', 'errortext', 'format', 'form', -
   'fuzz', 'gc', 'insert', 'lastpos', 'left', 'length', 'linein', 'lineout', -
   'lines', 'lower', 'max', 'min', 'overlay', 'pos', 'qualify', 'queued', -
   'random', 'reverse', 'right', 'rxfuncadd', 'rxfuncdrop', 'rxfuncquery', -
@@ -596,7 +597,7 @@ do n over names
   r~setSecurityManager(m)
   r~call
 end
-say m~seen~allItems~sort~makearray~makestring('l', ' ')
+say '[' || m~seen~allItems~sort~makearray~makestring('l', ' ') || ']'
 exit
 ::class mgr
 ::attribute seen
@@ -608,7 +609,7 @@ exit
   info~result = 'R'
   return 1
 </code></pre>
-<pre><code class="language-output">BEEP DIRECTORY FILESPEC
+<pre><code class="language-output">[]
 </code></pre>
 <pre><code class="language-rexx">call sysfiledelete 'envsecprog.rex'
 prog = 'address system "exit 8"; return "program" arg(1) rc'
@@ -641,6 +642,33 @@ COMMAND exit 9
 5
 CALL SYSFILEEXISTS
 0
+</code></pre>
+<div class="rule" id="r-env.security.call.deviation.179"><a href="#r-env.security.call.deviation.179">[env.security.call.deviation.179]</a></div>
+<p>BEEP, DIRECTORY and FILESPEC are offered to the manager because they are
+routines of the REXX package, as at language level 6.06 (<a href="../deviations.html">Deviation
+179</a>). ooRexx, at level 6.07, makes them builtins and offers
+none of them. In the example the manager notes the names it is sent and takes
+the calls over.</p>
+<pre><code class="language-rexx">m = .mgr~new
+do n over .array~of('beep', 'directory', 'filespec')
+  src = 'signal on syntax; x =' n || '(); syntax: return 0'
+  r = .routine~new('agent', src)
+  r~setSecurityManager(m)
+  r~call
+end
+say m~seen~allItems~sort~makearray~makestring('l', ' ')
+exit
+::class mgr
+::attribute seen
+::method init
+  self~seen = .list~new
+::method call
+  use arg info
+  self~seen~append(info~name)
+  info~result = 'R'
+  return 1
+</code></pre>
+<pre><code class="language-output">BEEP DIRECTORY FILESPEC
 </code></pre>
 <div class="rule" id="r-env.security.command"><a href="#r-env.security.command">[env.security.command]</a></div>
 <p>The <code>COMMAND</code> checkpoint is sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.command">the class

@@ -214,8 +214,8 @@ call sysfiledelete f
 <pre><code class="language-output">b cd |
 40.4
 40.12
-88.907
-93.907
+40.13
+40.14
 </code></pre>
 <div class="rule" id="r-bif.charin.length.default"><a href="#r-bif.charin.length.default">[bif.charin.length.default]</a></div>
 <p>When <code>length</code> is omitted, it is 1.</p>
@@ -332,14 +332,14 @@ return
 <p>A file that does not exist has no characters: CHARIN returns the null string
 and raises NOTREADY, whatever <code>start</code> is and whatever the valid <code>length</code> is,
 and creates no file. A name that cannot be opened for another reason, a
-directory for example, is answered the same way. The <code>start</code> of such a call is
-not checked (see <a href="index.html#r-bif.index.stream.start">the start rule</a>), but a <code>length</code>
-that is not valid is.</p>
+directory for example, is answered the same way. The <code>start</code> and the <code>length</code>
+of such a call are checked all the same, as <a href="index.html#r-bif.index.stream.args">the stream
+rule</a> says.</p>
 <pre><code class="language-rexx">n = 0
 call on notready name nr
 x = charin('spec-charin-nofile.tmp')
 say '[' || x || ']' n
-x = charin('spec-charin-nofile.tmp', 0, 5)
+x = charin('spec-charin-nofile.tmp', 1, 5)
 say '[' || x || ']' n
 x = charin('.', 1, 1)
 say '[' || x || ']' n
@@ -347,6 +347,9 @@ say stream('spec-charin-nofile.tmp', 'c', 'query exists') == ''
 signal on syntax name a
 say charin('spec-charin-nofile.tmp', 1, -1)
 a: say condition('o')~code
+signal on syntax name b
+say charin('spec-charin-nofile.tmp', 0, 5)
+b: say condition('o')~code
 exit
 nr: n = n + 1
 return
@@ -355,7 +358,8 @@ return
 [] 2
 [] 3
 1
-88.907
+40.13
+40.14
 </code></pre>
 <div class="rule" id="r-bif.charin.stdin"><a href="#r-bif.charin.stdin">[bif.charin.stdin]</a></div>
 <p>Without a <code>name</code>, CHARIN reads the standard input. It returns up to

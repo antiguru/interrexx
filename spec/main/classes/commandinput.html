@@ -342,7 +342,7 @@ and defaults to <code>1</code>; with <code>0</code> it answers the null string a
 when fewer than <code>count</code> characters are left, it answers those that are. A line
 that was partly read goes on from where it stopped. At the end of the input it
 answers the null string and raises NOTREADY. <code>start</code>, the position, must be
-omitted (<code>SYNTAX 93.963</code>). A <code>count</code> that is no number raises <code>SYNTAX 93.943</code>
+omitted (<code>SYNTAX 93.963</code>). A <code>count</code> that is no number raises <code>SYNTAX 40.11</code>
 and one that is a negative number or not whole raises <code>SYNTAX 93.923</code>; a third
 argument raises <code>SYNTAX 93.902</code>. In the example the input is two lines, <code>ab</code>
 and <code>cd</code>.</p>
@@ -376,8 +376,8 @@ bad: say e condition('o')~code
 </code></pre>
 <pre><code class="language-output">in~charin(1) 93.963
 in~charin(1, 1) 93.963
-in~charin(, 'x') 93.943
-in~charin(, .nil) 93.943
+in~charin(, 'x') 40.11
+in~charin(, .nil) 40.11
 in~charin(, -1) 93.923
 in~charin(, 1.5) 93.923
 in~charin(, 1, 1) 93.902

@@ -289,8 +289,8 @@ e0
 <p>When a <code>::routine</code> or a method ends with saves of its own outstanding, the
 oldest of them is put back: the code that called it sees the current
 directory of that save, and each environment variable the save held has the
-value it held, as <a href="endlocal.html#r-bif.endlocal.restore">an ENDLOCAL</a> would give. A
-variable the program created after the save keeps its value, as
+value it held, as <a href="endlocal.html#r-bif.endlocal.restore">an ENDLOCAL</a> would give, and a
+variable the program created after the save is removed, as
 <a href="endlocal.html#r-bif.endlocal.scope">ENDLOCAL</a> says. The return of an internal routine
 puts nothing back, by <a href="#r-bif.setlocal.owner">the rule above</a>. What the end of
 the program does with saves outstanding is not specified.</p>
@@ -309,7 +309,7 @@ say value('SPEC_SETLOCAL_B',, 'ENVIRONMENT') directory()
 return
 </code></pre>
 <pre><code class="language-output">inside /
-before 1 new
+before 1 
 </code></pre>
 <pre><code class="language-rexx">call value 'SPEC_SETLOCAL_C', 'c0', 'ENVIRONMENT'
 here = directory()

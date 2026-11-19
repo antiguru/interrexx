@@ -267,9 +267,10 @@ e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
 <div class="rule" id="r-dir.routine.options"><a href="#r-dir.routine.options">[dir.routine.options]</a></div>
 <p>The keywords after the name are PUBLIC, PRIVATE and EXTERNAL, in any case.
 PRIVATE is the default, and writing it is the same as writing no access
-keyword. A routine names at most one of PUBLIC and PRIVATE, and a keyword
-written twice, a word that is not one of the three, and so a keyword of
-<a href="method.html">::METHOD</a> such as PACKAGE or GUARDED, raise <code>SYNTAX 25.903</code>.
+keyword. PUBLIC or PRIVATE, and EXTERNAL, are the <a href="index.html#r-dir.index.options">groups</a>:
+a keyword written twice raises <code>SYNTAX 25.936</code> and PUBLIC with PRIVATE
+<code>25.937</code>. A word that is not one of the three, and so a keyword of
+<a href="method.html">::METHOD</a> such as PACKAGE or GUARDED, raises <code>25.903</code>.
 EXTERNAL takes an operand and the others do not, as
 <a href="#r-dir.routine.external">the rule for external routines</a> says. The errors of
 the directive are found when the program is read.</p>
@@ -293,9 +294,9 @@ e: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <pre><code class="language-output">::routine r public =&gt; ok
 ::routine r Private =&gt; ok
-::routine r PUBLIC private =&gt; 25.903
-::routine r public public =&gt; 25.903
-::routine r private private =&gt; 25.903
+::routine r PUBLIC private =&gt; 25.937
+::routine r public public =&gt; 25.936
+::routine r private private =&gt; 25.936
 ::routine r package =&gt; 25.903
 ::routine r guarded =&gt; 25.903
 ::routine r class =&gt; 25.903

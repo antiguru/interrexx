@@ -216,14 +216,14 @@ say pos('a', 'a', 1, 'x')
 g: say condition('o')~code
 signal on syntax name h
 say pos('a', 'a', 0, -1)
-h: say wordpos(condition('o')~code, '93.924 93.923') &gt; 0
+h: say wordpos(condition('o')~code, '40.14 40.13') &gt; 0
 </code></pre>
 <pre><code class="language-output">4 4
 40.3
 40.4
 40.5
-93.924
-93.923
+40.14
+40.13
 40.12
 40.12
 1
@@ -313,8 +313,8 @@ say pos('', 'banana', 1, -1)
 b: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">0 0 0 0
-93.924
-93.923
+40.14
+40.13
 </code></pre>
 <div class="rule" id="r-bif.pos.empty-haystack"><a href="#r-bif.pos.empty-haystack">[bif.pos.empty-haystack]</a></div>
 <p>When <code>haystack</code> is the null string, the result is <code>0</code> for every <code>needle</code>

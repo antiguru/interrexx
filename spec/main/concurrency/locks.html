@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="locks"><a class="header" href="#locks">Locks</a></h1>
 <p class="references">rexxref: Concurrency &gt; Default Concurrency; Concurrency &gt; Sending Messages within an Activity; Concurrency &gt; Using Additional Concurrency Mechanisms; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; SETUNGUARDED Method and UNGUARDED Option; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; GUARD ON and GUARD OFF; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; Guarded Methods</p>
-<p class="deviations">Deviations: D14, D20, D160</p>
+<p class="deviations">Deviations: D14, D20</p>
 <p>Methods of one object can run on several activities at once, and a guarded
 method must not run at the same time as another guarded method that works on
 the same object variables. The interpreter keeps them apart with locks. This
@@ -703,8 +703,8 @@ again when another activity assigns a value to an object variable that the
 condition names as a simple symbol, even the value that it had, or drops one,
 whether or not the last evaluation reached that name; a variable that only a
 method that the condition calls reads is not one of them. A compound variable
-or a stem in the condition names the whole stem, which
-<a href="#r-conc.locks.deviation.160">Deviation 160</a> describes. When the condition is
+or a stem in the condition names the whole stem, as
+<a href="#r-conc.locks.when.stem">the stem rule</a> says. When the condition is
 evaluated at other times is not specified. The wait gives up only that one
 hold. When the method was called by a guarded method on the same activity,
 which holds the lock too (<a href="#r-conc.locks.count">the counting rule</a>), the other
@@ -1158,16 +1158,14 @@ say o~outer(e)
 </code></pre>
 <pre><code class="language-output rc=120">start
 </code></pre>
-<div class="rule" id="r-conc.locks.deviation.160"><a href="#r-conc.locks.deviation.160">[conc.locks.deviation.160]</a></div>
+<div class="rule" id="r-conc.locks.when.stem"><a href="#r-conc.locks.when.stem">[conc.locks.when.stem]</a></div>
 <p>A condition of <code>GUARD ON WHEN</code> or <code>GUARD OFF WHEN</code> that names a compound
 variable or a stem names the whole stem. The condition is evaluated again when
 another activity assigns a value to any tail of that stem or drops one, or
-assigns a value to the whole stem or drops it, for <code>GUARD ON WHEN</code> and <code>GUARD OFF WHEN</code> alike. ooRexx does not evaluate it again for a tail, so the wait
-does not end. As
-for a simple symbol, a variable that only a method called by the condition
-reads does not cause it. In the first example three waiting methods are ended
-by the assignment to a tail, by the same for <code>GUARD OFF WHEN</code> and by the drop
-of a tail; the second example is the assignment to the whole stem, for <code>GUARD ON WHEN</code> and for <code>GUARD OFF WHEN</code>, which both interpreters already end.</p>
+assigns a value to the whole stem or drops it, for <code>GUARD ON WHEN</code> and <code>GUARD OFF WHEN</code> alike. As for a simple symbol, a variable that only a method called
+by the condition reads does not cause it. In the first example three waiting
+methods are ended by the assignment to a tail, by the same for <code>GUARD OFF WHEN</code> and by the drop of a tail; the second example is the assignment to the
+whole stem, for <code>GUARD ON WHEN</code> and for <code>GUARD OFF WHEN</code>.</p>
 <pre><code class="language-rexx">say 'start'
 o1 = .k~new; m1 = o1~start('onTail')
 o2 = .k~new; m2 = o2~start('offTail')
@@ -1175,7 +1173,11 @@ o4 = .k~new; m4 = o4~start('onDrop')
 do o over .array~of(o1, o2, o4)
   do until o~ready; end
 end
-o1~assignTail; o2~assignTail; o4~dropTail
+-- each change is repeated until its waiter has ended, so that a change made
+-- before the waiter waits is not the only one
+do until m1~completed; o1~assignTail; call SysSleep 0.01; end
+do until m2~completed; o2~assignTail; call SysSleep 0.01; end
+do until m4~completed; o4~dropTail; call SysSleep 0.01; end
 say m1~result
 say m2~result
 say m4~result
@@ -1220,7 +1222,7 @@ do kind over .array~of('onStem', 'offStem')
   o = .k~new
   m = o~start(kind)
   do until o~ready; end
-  o~assignStem
+  do until m~completed; o~assignStem; call SysSleep 0.01; end
   say kind':' m~result
 end
 ::class k

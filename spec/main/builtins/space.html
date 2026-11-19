@@ -208,7 +208,7 @@ say space(, 2)
 f: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">a b a..b
-93.923
+40.13
 40.12
 40.23
 40.4
@@ -288,7 +288,7 @@ c: say condition('o')~code
 [w]
 40.23
 40.12
-93.923
+40.13
 </code></pre>
 <div class="rule" id="r-bif.space.check-order"><a href="#r-bif.space.check-order">[bif.space.check-order]</a></div>
 <p><code>n</code> can fail its form check or its range check, and <code>pad</code> its own check. A
@@ -296,7 +296,7 @@ call in which both fail raises the error of one of them, as <a href="../conventi
 conventions</a> say.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say space('a b', -1, '**')
-a: say wordpos(condition('o')~code, '40.23 93.923') &gt; 0
+a: say wordpos(condition('o')~code, '40.23 40.13') &gt; 0
 signal on syntax name b
 say space('a b', 'x')
 b: say condition('o')~code
@@ -306,14 +306,14 @@ c: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">1
 40.12
-93.923
+40.13
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> A result of many characters needs memory for them; a request
 larger than the machine can serve ends in an error that this book does not
 specify. The ANSI draft (9.3.19) defines SPACE through <code>COPIES</code> and
 <code>SUBWORD</code>, with the same answers, and checks <code>n</code> for a value below 0 under
-error 40.13, where ooRexx raises 93.923.</p>
+the same error 40.13.</p>
 </blockquote>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <blockquote>

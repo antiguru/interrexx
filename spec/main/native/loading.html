@@ -518,9 +518,9 @@ registers <code>name</code> for the function that the library exports under the 
 <code>procedure</code>, looked up as it is spelled and, when that finds nothing, in
 capitals. An omitted <code>procedure</code> is <code>name</code>. When the library exports such a
 function, the call answers <code>0</code> and <code>name</code> can be called from then on. When it
-does not, the call answers <code>1</code>, and <code>name</code> is registered nonetheless, as for
-<a href="../builtins/rxfuncadd.html#r-bif.rxfuncadd.unknown-library">an unknown library</a>: RXFUNCQUERY answers
-<code>0</code>, a call raises <code>SYNTAX 43.1</code>, and RXFUNCDROP removes it. A registration of
+does not, the call answers <code>1</code> and registers nothing, as for <a href="../builtins/rxfuncadd.html#r-bif.rxfuncadd.unknown-library">an unknown
+library</a>: RXFUNCQUERY answers <code>1</code> and a call
+raises <code>SYNTAX 43.1</code>. A registration of
 a classic function is the kind that RXFUNCDROP removes, after which a call
 raises <code>43.1</code>.</p>
 <pre><code class="language-rexx">say rxfuncadd('MyJoin', 'specclassic', 'FxClassicJoin')
@@ -538,9 +538,9 @@ b: say condition('o')~code
 <pre><code class="language-output">0
 MYJOIN:1:x
 0 MYUPPER:1:y
-1 0
+1 1
 43.1
-0 0 0
+0 0 1
 43.1
 </code></pre>
 <pre><code class="language-rexx">say rxfuncadd('FxClassicJoin', 'specclassic')
@@ -599,7 +599,7 @@ RXFUNCADD of the routine's name, the library and the entry registers it, and
 the routine is that function. An omitted entry is the routine's name, which is
 in capitals. The routine stays bound after RXFUNCDROP removes the
 registration. When the library exports no such function, the directive raises
-<code>SYNTAX 90.999</code> and leaves the registration behind.</p>
+<code>SYNTAX 90.999</code> and leaves no registration behind.</p>
 <pre><code class="language-rexx">say rxfuncquery('n1zqrr')
 say n1zqrr(1, 2)
 say rxfuncdrop('n1zqrr') rxfuncquery('n1zqrr')
@@ -628,7 +628,7 @@ e: say condition('o')~code
 say rxfuncquery('n1zqqq') rxfuncdrop('n1zqqq') rxfuncquery('n1zqqq')
 </code></pre>
 <pre><code class="language-output">90.999
-0 0 1
+1 1 1
 </code></pre>
 
                     </main>

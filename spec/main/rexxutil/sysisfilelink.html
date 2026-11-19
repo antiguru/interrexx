@@ -210,6 +210,8 @@ e: say condition('o')~code
 to: a file, a directory, another link or nothing. The link itself is looked
 at, not its target, so the answer is <code>0</code> for the name of the target and for
 any other entry that is not a link, and a link to a link is a link. A name
+that ends in a slash names the directory a link points to, not the link, so
+the answer for it is <code>0</code>. A name
 with a <code>..</code> component is cleaned up first, as for every name. The call never
 raises a condition for a name.</p>
 <pre><code class="language-rexx">call lineout 'c1zqilf', 'x'
@@ -223,7 +225,7 @@ address system 'rm c1zqill c1zqilk c1zqilb c1zqilm c1zqilf'
 call SysRmDir 'c1zqild'
 </code></pre>
 <pre><code class="language-output">1 1 1
-1 1 1
+1 0 1
 0 0 0
 </code></pre>
 

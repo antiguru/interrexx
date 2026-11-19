@@ -218,9 +218,9 @@ d: say condition('o')~code
 </code></pre>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <div class="rule" id="r-bif.rxfuncdrop.registered"><a href="#r-bif.rxfuncdrop.registered">[bif.rxfuncdrop.registered]</a></div>
-<p>A name that this program had <a href="rxfuncadd.html">RXFUNCADD</a> register for a <a href="rxfuncadd.html#r-bif.rxfuncadd.unknown-library">library
-it could not find</a> is removed, and the answer
-is <code>0</code>. The name is compared without regard to case, as
+<p>A name that this program had <a href="rxfuncadd.html">RXFUNCADD</a> register for a
+function of a <a href="../native/loading.html#r-native.loading.classic">library without a package entry</a> is
+removed, and the answer is <code>0</code>. The name is compared without regard to case, as
 <a href="rxfuncquery.html">RXFUNCQUERY</a> does. Afterwards the name is no longer
 available, and a call of it raises <code>SYNTAX 43.1</code> as that of any unknown
 function does. The answer is written as the digit <code>0</code> or <code>1</code>. This rule and
@@ -229,7 +229,7 @@ has called RXFUNCADD for the name. When a second program has also called it,
 what the program that registered the name first gets from its calls of
 RXFUNCDROP, and whether the name stays available, is not specified; the second
 program's side is in <a href="rxfuncadd.html#r-bif.rxfuncadd.repeat">RXFUNCADD's repeat rule</a>.</p>
-<pre><code class="language-rexx">call rxfuncadd 'spec_rxfuncdrop_one', 'no_such_library_spec', 'p'
+<pre><code class="language-rexx">call rxfuncadd 'spec_rxfuncdrop_one', 'specclassic', 'FxClassicJoin'
 say rxfuncquery('spec_rxfuncdrop_one')
 say rxfuncdrop('SPEC_RXFUNCDROP_ONE')
 say rxfuncquery('spec_rxfuncdrop_one')
@@ -249,7 +249,7 @@ an earlier call has removed, and a name that only another program registered:
 the answer is <code>1</code> and the name stays available, whether or not that program
 is still running.</p>
 <pre><code class="language-rexx">say rxfuncdrop('spec_rxfuncdrop_never')
-call rxfuncadd 'spec_rxfuncdrop_twice', 'no_such_library_spec', 'p'
+call rxfuncadd 'spec_rxfuncdrop_twice', 'specclassic', 'FxClassicJoin'
 say rxfuncdrop('spec_rxfuncdrop_twice')
 say rxfuncdrop('spec_rxfuncdrop_twice')
 say rxfuncdrop('')
@@ -260,20 +260,18 @@ say rxfuncdrop('')
 1
 </code></pre>
 <div class="rule" id="r-bif.rxfuncdrop.one-at-a-time"><a href="#r-bif.rxfuncdrop.one-at-a-time">[bif.rxfuncdrop.one-at-a-time]</a></div>
-<p>A call removes one registration. A name registered more than once, by calls
-of <a href="rxfuncadd.html">RXFUNCADD</a> that answered <code>1</code> for an unknown library, stays
-available until as many calls of RXFUNCDROP as there were registrations have
-removed them.</p>
-<pre><code class="language-rexx">call rxfuncadd 'spec_rxfuncdrop_many', 'no_such_library_spec', 'a'
-call rxfuncadd 'spec_rxfuncdrop_many', 'no_such_library_spec', 'b'
-call rxfuncadd 'spec_rxfuncdrop_many', 'other_library_spec', 'a'
-do 4
+<p>A name has one registration at the most: <a href="rxfuncadd.html">RXFUNCADD</a> of a name
+that is already available registers nothing more, and one that answers <code>1</code>
+registers nothing. So one call of RXFUNCDROP removes the name, and a second
+answers <code>1</code>.</p>
+<pre><code class="language-rexx">call rxfuncadd 'spec_rxfuncdrop_many', 'specclassic', 'FxClassicJoin'
+call rxfuncadd 'spec_rxfuncdrop_many', 'specclassic', 'FxClassicUpper'
+call rxfuncadd 'spec_rxfuncdrop_many', 'no_such_library_spec', 'a'
+do 2
   say rxfuncdrop('spec_rxfuncdrop_many') rxfuncquery('spec_rxfuncdrop_many')
 end
 </code></pre>
-<pre><code class="language-output">0 0
-0 0
-0 1
+<pre><code class="language-output">0 1
 1 1
 </code></pre>
 <div class="rule" id="r-bif.rxfuncdrop.provided"><a href="#r-bif.rxfuncdrop.provided">[bif.rxfuncdrop.provided]</a></div>

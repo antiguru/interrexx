@@ -281,7 +281,7 @@ c: say condition('o')~code
 </code></pre>
 <div class="rule" id="r-bif.c2d.errors"><a href="#r-bif.c2d.errors">[bif.c2d.errors]</a></div>
 <p>The call checks the form of <code>n</code> as a <a href="../conventions.html#r-conv.whole.form">whole number</a>,
-<code>SYNTAX 40.12</code>; the sign of <code>n</code>, <code>SYNTAX 93.923</code>; and the number of digits of
+<code>SYNTAX 40.12</code>; the sign of <code>n</code>, <code>SYNTAX 40.13</code>; and the number of digits of
 the answer, <code>SYNTAX 93.936</code>. A call that fails more than one of these checks
 raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
 rule</a> says.</p>
@@ -296,7 +296,7 @@ say c2d('ffffffffffff'x)
 c: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">40.12
-93.923
+40.13
 93.936
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>

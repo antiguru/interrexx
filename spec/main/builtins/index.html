@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D4, D98, D99</p>
+<p class="deviations">Deviations: D4, D98, D99, D179</p>
 <p>This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links <a href="#r-bif.index.call.native">the native call rule</a>
@@ -260,7 +260,7 @@ say substr('abc', 1, 1, '*', 5)
 a: say condition('o')~code
 signal on syntax name b
 say word('a b', 0, 2)
-b: say wordpos(condition('o')~code, '40.4 93.924') &gt; 0
+b: say wordpos(condition('o')~code, '40.4 40.14') &gt; 0
 </code></pre>
 <pre><code class="language-output">40.4
 1
@@ -303,6 +303,39 @@ whatever its <code>STRING</code> method answers. A call that has an argument pas
 one on the syntax line and an argument before it that is omitted or fails its
 own check raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
 rule</a> says.</p>
+<blockquote>
+<p>The RexxUtil functions follow this rule too, as <a href="../rexxutil/index.html#r-util.index.args">their
+rule</a> says, and the example raises the errors with them.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "SysFileExists()"
+call try "SysFileExists(, )"
+call try "SysTempFileName('envzq???', , 'x')"
+call try "SysFileExists(.told~new)"
+call try "filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class told
+::method string
+  return 'a/b'
+</code></pre>
+<pre><code class="language-output">88.901
+88.901
+88.922
+88.909
+z q
+</code></pre>
+<div class="rule" id="r-bif.index.call.native.deviation.179"><a href="#r-bif.index.call.native.deviation.179">[bif.index.call.native.deviation.179]</a></div>
+<p>BEEP, DIRECTORY and FILESPEC, the builtins that link this rule, are routines
+of the REXX package, as at language level 6.06 (<a href="../deviations.html">Deviation
+179</a>). ooRexx, at level 6.07, makes them builtins that
+follow the rules above for the number of arguments, with errors of the 40.xxx
+family, and reads an object argument by its <code>STRING</code> method when <code>request</code>
+answers no string.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say filespec('N')
 a: say condition('o')~code
@@ -384,7 +417,7 @@ say wordindex('a b', 0)
 e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">[] 0 0 0
-93.924
+40.14
 </code></pre>
 <h2 id="answers-that-are-counts"><a class="header" href="#answers-that-are-counts">Answers that are counts</a></h2>
 <div class="rule" id="r-bif.index.count.answer"><a href="#r-bif.index.count.answer">[bif.index.count.answer]</a></div>
@@ -665,7 +698,7 @@ say which of the errors is raised; the examples above have one fault each.</p>
 <div class="rule" id="r-bif.index.conv.length"><a href="#r-bif.index.conv.length">[bif.index.conv.length]</a></div>
 <p>Where a conversion function takes a length <code>n</code>, it is an optional
 <a href="../conventions.html#r-conv.whole.form">whole-number argument</a> whose value must not be negative
-(<a href="../conventions.html#r-conv.length.check">a length</a>): a negative <code>n</code> raises <code>SYNTAX 93.923</code>, and
+(<a href="../conventions.html#r-conv.length.check">a length</a>): a negative <code>n</code> raises <code>SYNTAX 40.13</code>, and
 an <code>n</code> of 0 is allowed. An omitted <code>n</code> is not the same as an <code>n</code> of 0, and
 the null string is not omitted. Its unit is the character in C2D and D2C and the
 hexadecimal digit in D2X and X2D.</p>
@@ -683,8 +716,8 @@ say d2c(65, 'x')
 d: say condition('o')~code
 say c2d('a') c2d('a', 0) c2d('a', '-0') '['d2c(65, 0)']' '['d2x(65, 0)']'
 </code></pre>
-<pre><code class="language-output">93.923
-93.923
+<pre><code class="language-output">40.13
+40.13
 40.12
 40.12
 97 0 0 [] []
@@ -788,7 +821,7 @@ say d2x(999) d2x('1E2') d2x('-0') d2x('0099.90E1')
 </code></pre>
 <div class="rule" id="r-bif.index.conv.decimal.order"><a href="#r-bif.index.conv.decimal.order">[bif.index.conv.decimal.order]</a></div>
 <p>A D2C or D2X call checks the form of <code>n</code> (<a href="../conventions.html#r-conv.whole.form">whole-number
-form</a>, <code>SYNTAX 40.12</code>), the sign of <code>n</code> (<code>SYNTAX 93.923</code>)
+form</a>, <code>SYNTAX 40.12</code>), the sign of <code>n</code> (<code>SYNTAX 40.13</code>)
 and the decimal argument (<a href="#r-bif.index.conv.decimal">the decimal rule</a>). A
 call that fails more than one of these checks raises the error of one of
 them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.</p>
@@ -800,10 +833,10 @@ say d2c(65, -1)
 b: say condition('o')~code
 signal on syntax name c
 say d2x('1.5', -1)
-c: say wordpos(condition('o')~code, '93.923 93.928') &gt; 0
+c: say wordpos(condition('o')~code, '40.13 93.928') &gt; 0
 </code></pre>
 <pre><code class="language-output">40.12
-93.923
+40.13
 1
 </code></pre>
 <div class="rule" id="r-bif.index.conv.digits-limit"><a href="#r-bif.index.conv.digits-limit">[bif.index.conv.digits-limit]</a></div>
@@ -843,9 +876,10 @@ codes of the argument errors. It raises <code>40.24</code> for a binary string a
 <code>40.25</code> for a hexadecimal one that is not valid, where this book has the
 93.9xx codes above; <code>40.12</code> for a decimal argument
 that is not a whole number, where D2C and D2X raise 93.929 and 93.928; and
-<code>40.13</code> for a negative <code>n</code>, or a negative decimal argument without an <code>n</code>,
-where this book raises 93.923 and 93.927. It raises <code>40.35</code> for an answer
-that does not fit NUMERIC DIGITS, where C2D raises 93.936 and X2D 93.935.
+<code>40.13</code> for a negative <code>n</code>, as this book does, or a negative decimal
+argument without an <code>n</code>, where this book raises 93.927. It raises <code>40.35</code>
+for an answer that does not fit NUMERIC DIGITS, where C2D raises 93.936 and
+X2D 93.935.
 The draft also checks the hexadecimal string of X2D when <code>n</code> is 0, which
 raises an error there for a string with a bad character; this book
 answers 0 without examining the string.</p>
@@ -876,8 +910,9 @@ restating them.</p>
 <div class="rule" id="r-bif.index.num.arg"><a href="#r-bif.index.num.arg">[bif.index.num.arg]</a></div>
 <p>The number argument must be a string of the <a href="../conventions.html#r-conv.whole.form">whole-number
 form</a>, which is also the form of a Rexx number, but its
-value need not be whole. Any other string raises <code>SYNTAX 93.943</code>, the null
-string and a string of only whitespace among them. An argument that is an
+value need not be whole. Any other string raises <code>SYNTAX 40.11</code> (<a href="../conventions.html#r-conv.method.number">the number
+rule</a>), the null string and a string of only whitespace
+among them. An argument that is an
 object other than a string is first <a href="../conventions.html#r-conv.string.object">replaced by a
 string</a>, as any string argument is, and that string must
 be a number.</p>
@@ -901,21 +936,20 @@ e: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">25.0 0.5 5 7
 7 4
-93.943
-93.943
-93.943
-93.943
-93.943
+40.11
+40.11
+40.11
+40.11
+40.11
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> The ANSI draft raises <code>SYNTAX 40.11</code> for a string that does not
-have the form of a number, where ooRexx, which this book follows, raises
-93.943.</p>
+<p><strong>Note.</strong> The ANSI draft raises the same <code>SYNTAX 40.11</code> for a string that
+does not have the form of a number.</p>
 </blockquote>
 <div class="rule" id="r-bif.index.num.limit"><a href="#r-bif.index.num.limit">[bif.index.num.limit]</a></div>
 <p>A nonzero number is a number only within the exponent range of the
 language, which the next three conditions describe. Each failing number
-raises <code>SYNTAX 93.943</code>: one whose written exponent, the digits after <code>E</code>
+raises <code>SYNTAX 40.11</code>: one whose written exponent, the digits after <code>E</code>
 without the sign, has a value above 999999999; one whose first nonzero digit
 stands at a power of ten above 999999999; and one whose last written digit
 stands at a power of ten below -999999999. This book does not specify a
@@ -935,10 +969,10 @@ say abs('0.1e1000000000')
 d: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">1E+999999999 1.2345E-999999995 10
-93.943
-93.943
-93.943
-93.943
+40.11
+40.11
+40.11
+40.11
 </code></pre>
 <div class="rule" id="r-bif.index.num.round"><a href="#r-bif.index.num.round">[bif.index.num.round]</a></div>
 <p>Before it is used, the number is rounded to NUMERIC DIGITS significant
@@ -982,7 +1016,7 @@ say format('99999e999999995', 0)
 c: say condition('o')~code
 signal on syntax name d
 say format('99999e999999995', -1)
-d: say wordpos(condition('o')~code, '42.901 93.906') &gt; 0
+d: say wordpos(condition('o')~code, '42.901 40.13') &gt; 0
 numeric digits 9
 signal on syntax name e
 say abs('9.999999995e999999999')
@@ -1004,7 +1038,7 @@ say max('95e999999998')
 b: say condition('o')~code
 signal on syntax name c
 say min('95e999999998', 'x')
-c: say wordpos(condition('o')~code, '42.901 93.904') &gt; 0
+c: say wordpos(condition('o')~code, '42.901 40.11') &gt; 0
 signal on syntax name d
 say '99999e999999995'~abs
 d: say condition('o')~code
@@ -1089,19 +1123,18 @@ rules are theirs.</p>
 <div class="rule" id="r-bif.index.num.list"><a href="#r-bif.index.num.list">[bif.index.num.list]</a></div>
 <p>The arguments of a call that takes a list of numbers are each a
 <a href="#r-bif.index.num.arg">number</a> that the call checks before it compares anything:
-the receiver raises <code>SYNTAX 93.943</code> when it is not a number, and another
-argument that is not a number raises <code>SYNTAX 93.904</code>. A call with more than one
-argument that is not a number raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
-precedence rule</a> says. This includes a number outside
-the <a href="#r-bif.index.num.limit">exponent range</a>, which for a later argument raises
-93.904 where the receiver, and the other builtins, raise 93.943. The list has
-no upper limit on its length. Its argument count is checked by the <a href="#r-bif.index.call.count">builtin
+an argument that is not a number, a number outside the <a href="#r-bif.index.num.limit">exponent
+range</a> included, raises <code>SYNTAX 40.11</code>, the first and a
+later one alike. Sent as a message, a receiver that is not a number raises
+<code>SYNTAX 93.943</code> and a later argument that is not one <code>SYNTAX 93.904</code>. A call
+with more than one argument that is not a number raises the error of one of
+them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The list has no
+upper limit on its length. Its argument count is checked by the <a href="#r-bif.index.call.count">builtin
 call rules</a>, with one required argument and no most, so
 a call with no arguments raises <code>SYNTAX 40.3</code> and no call raises <code>SYNTAX 40.4</code>;
 an omitted first argument raises <code>SYNTAX 40.5</code>. A function call that omits an
 argument after the first but passes one after it raises <code>SYNTAX 40.5</code> too, as
-Deviation 53 says for <a href="max.html#r-bif.max.deviation.53">MAX</a> and
-<a href="min.html#r-bif.min.deviation.53">MIN</a>.</p>
+the rules of <a href="max.html#r-bif.max.omitted">MAX</a> and <a href="min.html#r-bif.min.omitted">MIN</a> say.</p>
 <pre><code class="language-rexx">say max(31,7,-4,19,22,-8,0,13,5,26,-15,9,17,2,28,-1,11,24,6,3,20,14,-9,25,12),
     max(5,)
 signal on syntax name a
@@ -1121,7 +1154,7 @@ say min(2, 3, .nil)
 e: say condition('o')~code
 signal on syntax name f
 say max('x', 3, 'y')
-f: say wordpos(condition('o')~code, '93.943 93.904') &gt; 0
+f: say condition('o')~code
 signal on syntax name g
 say max(3, '')
 g: say condition('o')~code
@@ -1135,13 +1168,13 @@ i: say condition('o')~code
 <pre><code class="language-output">31 5
 40.3
 40.5
-93.943
-93.904
-93.904
-1
-93.904
-93.904
-93.943
+40.11
+40.11
+40.11
+40.11
+40.11
+40.11
+40.11
 </code></pre>
 <div class="rule" id="r-bif.index.num.pick"><a href="#r-bif.index.num.pick">[bif.index.num.pick]</a></div>
 <p>A call that picks one number from a list <a href="#r-bif.index.num.round">rounds</a> every
@@ -1360,13 +1393,11 @@ ends at once.</p>
 </blockquote>
 <div class="rule" id="r-bif.index.stream.transient"><a href="#r-bif.index.stream.transient">[bif.index.stream.transient]</a></div>
 <p>A standard stream that is connected to a pipe is transient: it has no
-positions. A start or line number given to a transient stream raises
-<code>SYNTAX 93.958</code>, whatever its value, in place of <a href="#r-bif.index.stream.args">the argument
-rule</a>'s check that the start is 1 or more. A call
-that also fails another check of that rule raises the error of one of them,
-as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. CHAROUT given the name <code>STDIN</code> and a start is the exception: the
-start is not checked beyond its form, and the call <a href="charout.html#r-bif.charout.fail">fails as any write to the
-standard input does</a>, with NOTREADY and the number of
+positions. A start or line number that passes <a href="#r-bif.index.stream.args">the argument
+rule</a>'s checks raises <code>SYNTAX 93.958</code> when it is
+given to a transient stream. CHAROUT given the name <code>STDIN</code> and a valid start
+is the exception: the call <a href="charout.html#r-bif.charout.fail">fails as any write to the standard input
+does</a>, with NOTREADY and the number of
 characters it did not write as its answer. The examples of
 this book run with a pipe as standard input and as standard output. What a
 standard stream that is connected to anything else does with a start is not
@@ -1376,14 +1407,14 @@ specified in this chapter.</p>
 say charin(, 1)
 a: say condition('o')~code
 signal on syntax name b
-say linein(, 0)
+say linein(, 2)
 b: say condition('o')~code
 signal on syntax name c
 say charout(, 'x', 5)
 c: say condition('o')~code
 signal on syntax name d
 say charin(, 0, -1)
-d: say wordpos(condition('o')~code, '88.907 93.958') &gt; 0
+d: say wordpos(condition('o')~code, '40.13 40.14') &gt; 0
 </code></pre>
 <pre><code class="language-output">93.958
 93.958
@@ -1626,12 +1657,13 @@ arguments</a> with the <a href="#r-bif.index.stream.value">value</a> that
 the next rule gives; they are not checked as the position and length arguments
 of <a href="../conventions.html#r-conv.method">the String methods</a> are. The count of arguments is checked
 by the <a href="#r-bif.index.call.count">call rules</a>. The form and the value of such an
-argument raise <code>SYNTAX 40.12</code>, a count that is negative raises <code>SYNTAX 88.907</code>,
+argument raise <code>SYNTAX 40.12</code>, a count that is negative raises <code>SYNTAX 40.13</code>,
 a count that the builtin's page does not allow raises the error that page
 names, and a <a href="#r-bif.index.stream.start">start</a> or line number that is below 1
-raises <code>SYNTAX 93.907</code>. A call that fails more than one of these checks raises
-the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a>
-says.</p>
+raises <code>SYNTAX 40.14</code>. These checks are made before the stream is looked at,
+so a stream that cannot be opened does not hide them. A call that fails more
+than one of these checks raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-streams-args.tmp'
 call charout f, 'abc'
 signal on syntax name a
@@ -1639,7 +1671,7 @@ say charin(f, 1, 'x')
 a: say condition('o')~code
 signal on syntax name b
 say charin(f, 0, -1)
-b: say wordpos(condition('o')~code, '88.907 93.907') &gt; 0
+b: say wordpos(condition('o')~code, '40.13 40.14') &gt; 0
 signal on syntax name c
 say charin(f, 0, 1)
 c: say condition('o')~code
@@ -1651,8 +1683,8 @@ call sysfiledelete f
 </code></pre>
 <pre><code class="language-output">40.12
 1
-93.907
-88.907
+40.14
+40.13
 </code></pre>
 <div class="rule" id="r-bif.index.stream.value"><a href="#r-bif.index.stream.value">[bif.index.stream.value]</a></div>
 <p>The value of a start, a count or a line number is its number rounded to 20
@@ -1698,10 +1730,9 @@ b c
 40.12
 </code></pre>
 <div class="rule" id="r-bif.index.stream.start"><a href="#r-bif.index.stream.start">[bif.index.stream.start]</a></div>
-<p>A start, or line number, below 1 raises <code>SYNTAX 93.907</code>, and <code>-0</code> is 0.
-A start is checked once the stream is open. For a stream that cannot be
-opened it is not checked: the call has the NOTREADY outcome that its page
-gives for such a stream.</p>
+<p>A start, or line number, below 1 raises <code>SYNTAX 40.14</code>, and <code>-0</code> is 0. It is
+checked before the stream is opened, so a stream that cannot be opened raises
+it too.</p>
 <pre><code class="language-rexx">f = 'spec-streams-start.tmp'
 call sysfiledelete f
 call charout f, 'abc'
@@ -1711,14 +1742,15 @@ a: say condition('o')~code
 signal on syntax name b
 say charout(f, 'x', 0)
 b: say condition('o')~code
-signal off syntax
-say '['charin('spec-no-dir/x', 0)']' charout('spec-no-dir/x', 'xy', 0)
+signal on syntax name c
+say charin('spec-no-dir/x', 0)
+c: say condition('o')~code
 call charout f
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output">93.907
-93.907
-[] 2
+<pre><code class="language-output">40.14
+40.14
+40.14
 </code></pre>
 
                     </main>

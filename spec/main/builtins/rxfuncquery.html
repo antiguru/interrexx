@@ -241,8 +241,8 @@ say rxfuncquery('RxCalcArcTan')
 1
 1
 1
-0
-0 1
+1
+1 1
 1
 0
 0
@@ -258,18 +258,18 @@ say rxfuncquery(' SysSleep') rxfuncquery('SysSleep ')
 1 1
 </code></pre>
 <div class="rule" id="r-bif.rxfuncquery.registered"><a href="#r-bif.rxfuncquery.registered">[bif.rxfuncquery.registered]</a></div>
-<p>A name that <a href="rxfuncadd.html">RXFUNCADD</a> registered for a
-<a href="rxfuncadd.html#r-bif.rxfuncadd.unknown-library">library it could not find</a> is available to
+<p>A name that <a href="rxfuncadd.html">RXFUNCADD</a> registered is available to
 RXFUNCQUERY, in any case, until <a href="rxfuncdrop.html">RXFUNCDROP</a> removes the
-registration, although a call of it raises <code>SYNTAX 43.1</code>. A name that another
+registration; a name it could not register, for a <a href="rxfuncadd.html#r-bif.rxfuncadd.unknown-library">library it could not
+find</a>, is not. A name that another
 program registered is available in the same way, whether or not that program
 is still running.</p>
-<pre><code class="language-rexx">say rxfuncadd('spec_rxfuncquery_reg', 'no_such_library_spec', 'entry')
+<pre><code class="language-rexx">say rxfuncadd('spec_rxfuncquery_reg', 'specclassic', 'FxClassicJoin')
 say rxfuncquery('spec_rxfuncquery_reg') rxfuncquery('SPEC_RXFUNCQUERY_REG')
 say rxfuncdrop('Spec_RxFuncQuery_Reg')
 say rxfuncquery('spec_rxfuncquery_reg')
 </code></pre>
-<pre><code class="language-output">1
+<pre><code class="language-output">0
 0 0
 0
 1

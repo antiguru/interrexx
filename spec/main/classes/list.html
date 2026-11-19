@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="list"><a class="header" href="#list">List</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; List Class; Builtin Classes &gt; Collection Classes &gt; List Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; List Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; List Class &gt; []; Builtin Classes &gt; Collection Classes &gt; List Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; List Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; List Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; List Class &gt; append; Builtin Classes &gt; Collection Classes &gt; List Class &gt; at; Builtin Classes &gt; Collection Classes &gt; List Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; List Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; List Class &gt; first; Builtin Classes &gt; Collection Classes &gt; List Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; List Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; index; Builtin Classes &gt; Collection Classes &gt; List Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; List Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; List Class &gt; items; Builtin Classes &gt; Collection Classes &gt; List Class &gt; last; Builtin Classes &gt; Collection Classes &gt; List Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; List Class &gt; next; Builtin Classes &gt; Collection Classes &gt; List Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; List Class &gt; put; Builtin Classes &gt; Collection Classes &gt; List Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; List Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; List Class &gt; section; Builtin Classes &gt; Collection Classes &gt; List Class &gt; supplier</p>
-<p class="deviations">Deviations: D109, D118, D172</p>
+<p class="deviations">Deviations: D109, D118</p>
 <p>A <code>List</code> is an ordered collection that grows and shrinks at any point. Its
 entries are addressed by indexes that the list chooses and hands back when an
 item is added: an index is a handle that names an entry for as long as the entry
@@ -422,8 +422,8 @@ at override bracket override
 value; the order of the list and the indexes do not change. <code>l[i] = v</code> is the
 message <code>[]=</code> and the same as <code>put</code>. The index must be the handle of an entry of
 the list, or <code>SYNTAX 93.918</code> is raised (<a href="#r-class.list.indexes">the index rule</a>).
-The method takes two arguments: fewer, or an omitted index, raise <code>SYNTAX 93.903</code>, and a third raises <code>SYNTAX 93.902</code>. An omitted item leaves the entry
-holding nothing, as <a href="#r-class.list.nothing">the next rule</a> says. A <code>put</code> of a
+The method takes two arguments: fewer, or an omitted index, raise <code>SYNTAX 93.903</code>, and a third raises <code>SYNTAX 93.902</code>. An omitted item raises <code>SYNTAX 93.903</code> too, once the index is found, as <a href="#r-class.list.nothing">the next rule</a>
+says. A <code>put</code> of a
 subclass is not asked for <code>[]=</code>, nor the other way round.</p>
 <pre><code class="language-rexx">l = .list~of('a', 'b', 'c')
 h = l~allIndexes
@@ -456,22 +456,18 @@ l~put =&gt; 93.903
 l~put("x", h[2], 0) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.list.nothing"><a href="#r-class.list.nothing">[class.list.nothing]</a></div>
-<p>An entry can hold nothing: <code>put</code> with the item omitted empties an entry, and
-<code>insert</code> with the item omitted adds one that holds nothing. Such an entry stays
-in the list. <code>items</code> counts it, and <code>next</code>, <code>previous</code> and <code>allIndexes</code> walk
-it. It is not taken for an entry by the methods that look up an index: <code>at</code>
-answers <code>.nil</code> for its handle, <code>hasIndex</code> answers 0, <code>remove</code> and <code>delete</code>
-answer <code>.nil</code> and leave it in the list, and <code>put</code> and <code>insert</code> raise <code>SYNTAX 93.918</code> for its handle. What <code>allItems</code>, <code>makeArray</code> and <code>DO OVER</code> make of it
-is the <a href="#r-class.list.makearray">makeArray rule</a>'s.</p>
+<p>Every entry holds an item. <code>put</code> and <code>insert</code> require one: an omitted item
+raises <code>SYNTAX 93.903</code> and leaves the list as it was. <code>put</code> finds its index
+first, so a handle the list does not hold raises <code>93.918</code> even then, and
+<code>insert</code> checks the item before the index.</p>
 <pre><code class="language-rexx">l = .list~of('a', 'b', 'c')
 h = l~allIndexes
-l~put(, h[2])
-e = l~insert(, h[3])
-say l~items l~hasIndex(h[2]) l~hasIndex(e) (l~at(h[2]) == .nil)
-say l~allIndexes~items (l~next(h[1]) == h[2]) (l~previous(h[3]) == h[2])
-say (l~remove(h[2]) == .nil) (l~delete(e) == .nil) l~items
-call try 'l~put("B", h[2])'
-call try 'l~insert("x", h[2])'
+call try 'l~put(, h[2])'
+call try 'l~put(, "x")'
+call try 'l~insert(, h[3])'
+call try 'l~insert(, "x")'
+call try 'l~insert'
+say l~items l~allItems~makeString('L', ',')
 exit
 try:
   signal on syntax name bad
@@ -481,11 +477,12 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">4 0 0 1
-4 1 1
-1 1 4
-l~put("B", h[2]) =&gt; 93.918
-l~insert("x", h[2]) =&gt; 93.918
+<pre><code class="language-output">l~put(, h[2]) =&gt; 93.903
+l~put(, "x") =&gt; 93.918
+l~insert(, h[3]) =&gt; 93.903
+l~insert(, "x") =&gt; 93.903
+l~insert =&gt; 93.903
+3 a,b,c
 </code></pre>
 <div class="rule" id="r-class.list.append"><a href="#r-class.list.append">[class.list.append]</a></div>
 <p><code>append(item)</code> adds the item as the last entry and answers its index. The
@@ -517,8 +514,9 @@ l~append(1, 2) =&gt; 93.902
 <div class="rule" id="r-class.list.insert"><a href="#r-class.list.insert">[class.list.insert]</a></div>
 <p><code>insert(item, index)</code> adds the item as a new entry directly after the entry
 with that index and answers the new index. An <code>index</code> of <code>.nil</code> makes the item
-the first entry, and an omitted <code>index</code> makes it the last. An omitted item adds
-an entry that <a href="#r-class.list.nothing">holds nothing</a>. The index must name an
+the first entry, and an omitted <code>index</code> makes it the last. An omitted item
+raises <code>SYNTAX 93.903</code> before the index is looked at, as <a href="#r-class.list.nothing">the next
+rule</a> says. The index must name an
 entry, or <code>SYNTAX 93.918</code> is raised. The method takes one or two arguments:
 a third raises <code>SYNTAX 93.902</code>. The indexes of the other entries do not
 change; only the order does.</p>
@@ -651,8 +649,7 @@ q 2
 <h2 id="questions-about-the-contents"><a class="header" href="#questions-about-the-contents">Questions about the contents</a></h2>
 <div class="rule" id="r-class.list.hasindex"><a href="#r-class.list.hasindex">[class.list.hasindex]</a></div>
 <p><code>hasIndex(index)</code> answers 1 when an entry has that index and 0 when none has,
-including a handle whose entry is not in the list and one whose entry <a href="#r-class.list.nothing">holds
-nothing</a>. The method takes exactly one
+including a handle whose entry is not in the list. The method takes exactly one
 argument: none raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>. A
 value that is not a handle is treated as <a href="#r-class.list.indexes">the index rule</a>
 says: <code>.nil</code> and <code>x</code> raise <code>SYNTAX 93.918</code>.</p>
@@ -892,10 +889,7 @@ List
 <div class="rule" id="r-class.list.makearray"><a href="#r-class.list.makearray">[class.list.makearray]</a></div>
 <p><code>makeArray</code> and <code>allItems</code> answer a new <code>Array</code> that holds the items of the
 list in list order, the first at index 1, and <code>allIndexes</code> a new <code>Array</code> of
-the indexes of the entries in the same order. An entry that <a href="#r-class.list.nothing">holds
-nothing</a> keeps its place in the Array, which holds no
-item at that index, so the Array's size is the number of entries and its
-<code>items</code> the number of items (<a href="#r-class.list.deviation.172">Deviation 172</a>). The answers are instances of
+the indexes of the entries in the same order. The answers are instances of
 <code>Array</code> whatever the class of the receiver is, never the receiver, and do not
 follow later changes to the list. They take no argument: any argument raises
 <code>SYNTAX 93.902</code>.</p>
@@ -1288,30 +1282,6 @@ say .object~new~sendWith('HASMETHOD', r)
 answered
 request ARRAY
 0
-</code></pre>
-<div class="rule" id="r-class.list.deviation.172"><a href="#r-class.list.deviation.172">[class.list.deviation.172]</a></div>
-<p>The Array that <code>allItems</code> and <code>makeArray</code> answer for a list with an entry that
-<a href="#r-class.list.nothing">holds nothing</a> counts only the items it holds, so its
-<code>items</code> and <code>isEmpty</code> agree with its contents, and <code>DO OVER</code> the list skips
-that entry (<a href="../deviations.html">Deviation 172</a>). ooRexx counts the empty place
-as an item, so <code>items</code> stays one higher than the items the Array holds and
-<code>isEmpty</code> answers 0 once its last item is removed, and its <code>DO OVER</code> assigns
-<code>.nil</code> for that entry.</p>
-<pre><code class="language-rexx">l = .list~of('a', 'b', 'c')
-l~put(, l~next(l~first))
-a = l~allItems
-say a~items a~size a~hasIndex(2) l~makeArray~items
-a~remove(1)
-a~remove(3)
-say a~items a~isEmpty
-do x over l
-  say x
-end
-</code></pre>
-<pre><code class="language-output">2 3 0 2
-0 1
-a
-c
 </code></pre>
 
                     </main>

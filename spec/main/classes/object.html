@@ -1198,8 +1198,7 @@ says. An object that is not a string is sent <code>request</code> with the argum
 the first argument is (<a href="#r-class.object.send.sends">the sends rule</a>; an
 instance of a subclass of <code>String</code> is read as
 <a href="#r-class.object.deviation.109">Deviation 109</a> states). <code>.nil</code>, and an object
-that answers <code>.nil</code>, raise <code>SYNTAX 93.972</code>, an answer that is no array and an
-array of another size <code>93.946</code>, an array whose first item is missing <code>88.901</code>
+that answers <code>.nil</code> or anything else that is not an <code>Array</code>, raise <code>SYNTAX 93.972</code>, an array of another size <code>93.946</code>, an array whose first item is missing <code>88.901</code>
 and one whose first item has no string value <code>88.909</code>, and no argument
 <code>88.901</code>. The null string is a name
 like any other: it names the abuttal method
@@ -1334,7 +1333,7 @@ o~startWith(.duck~new, .logged~new)~result =&gt; count got 2
 o~sendWith(.duck~new, .logged~new, 3) =&gt; 93.902
 larr request ARRAY
 o~send(.larr~of("count", .w), 9) =&gt; count got 1
-o~send(.wrong~new, 6) =&gt; 93.946
+o~send(.wrong~new, 6) =&gt; 93.972
 o~send(.none~new, 6) =&gt; 93.972
 larr request ARRAY
 o~send(.larr~of("count"), 6) =&gt; 93.946

@@ -333,7 +333,9 @@ s~next(1) =&gt; 93.902
 s~available(1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.streamsupplier.sends"><a href="#r-class.streamsupplier.sends">[class.streamsupplier.sends]</a></div>
-<p><code>init</code> sends the stream <code>state</code> twice and then sends the receiver <code>next</code>,
+<p><code>init</code> sends the stream <code>state</code>, then <code>open</code> with the argument <code>read</code> when
+that answer is <code>UNKNOWN</code>, since the kind of a stream is known only once it is
+open, then <code>state</code> again, and then sends the receiver <code>next</code>,
 which sends the stream the first <code>lineIn</code>. What that <code>lineIn</code> is sent with,
 and which line the supplier starts at, is stated once, in <a href="stream.html#r-class.stream.supplier.sends">the rule of
 <code>supplier</code></a>, and holds here: no argument when
@@ -348,7 +350,7 @@ transient, and nothing else. <code>init</code> also sends the stream private mes
 its own, which are not part of this specification, and the answers to them
 decide how the supplier starts. So the outcome is specified only for a stream,
 and for an argument that is not a <code>Stream</code> only when it answers every message
-other than <code>state</code> and <code>lineIn</code> with the string <code>UNKNOWN</code> and its second
+other than <code>state</code>, <code>open</code> and <code>lineIn</code> with the string <code>UNKNOWN</code> and its second
 answer to <code>state</code> is not <code>READY</code>: the supplier then starts at line 1, as for a
 stream that was not read. An argument that answers other things behaves as its
 answers decide, which may be an error such as <code>SYNTAX 41.1</code>, <code>97.1</code> or

@@ -552,9 +552,10 @@ q~push(1, 2) =&gt; 93.902
 <p><code>insert(item, index)</code> adds the item as a new entry directly after the item at
 the index and answers the index of the new entry. An <code>index</code> of <code>.nil</code> makes
 the item the first, and an omitted <code>index</code> the last. The index is read as <a href="#r-class.queue.indexes">the
-index rule</a> says, and it must be one of an item: a
-number above the number of items raises <code>SYNTAX 93.966</code>, and the queue keeps
-its items. A third argument raises <code>SYNTAX 93.902</code>. The items behind the new
+index rule</a> says, except that an <code>Array</code> holding more
+than one item raises <code>SYNTAX 93.926</code>, and it must be one of an item: a number
+above the number of items raises <code>SYNTAX 93.966</code>, and the queue keeps its
+items. A third argument raises <code>SYNTAX 93.902</code>. The items behind the new
 one move to the next index.</p>
 <pre><code class="language-rexx">q = .queue~of('a', 'b', 'c')
 say q~insert('x', 1) q~allItems~makeString('L', ',')
@@ -574,6 +575,8 @@ call try 'q~insert("q", 1, 1)'
 call try 'q~insert("q", q~items + 1)'
 call try 'q~insert("q", 99)'
 call try '.queue~new~insert("q", 1)'
+call try '.queue~of(1, 2, 3)~insert("q", .array~of(, 1))'
+call try '.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2))'
 say (q~items == n) q~allItems~makeString('L', ',')
 exit
 try:
@@ -594,11 +597,13 @@ bad: say arg(1) '=&gt;' condition('o')~code
 q~insert("q", 0) =&gt; 93.907
 q~insert("q", "x") =&gt; 93.907
 q~insert("q", -1) =&gt; 93.907
-q~insert("q", .array~of(1, 2)) =&gt; 93.907
+q~insert("q", .array~of(1, 2)) =&gt; 93.926
 q~insert("q", 1, 1) =&gt; 93.902
 q~insert("q", q~items + 1) =&gt; 93.966
 q~insert("q", 99) =&gt; 93.966
 .queue~new~insert("q", 1) =&gt; 93.966
+.queue~of(1, 2, 3)~insert("q", .array~of(, 1)) =&gt; 2
+.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2)) =&gt; 93.966
 1 y,q,a,q,x,v,b,c,z,w
 </code></pre>
 <div class="rule" id="r-class.queue.delete"><a href="#r-class.queue.delete">[class.queue.delete]</a></div>

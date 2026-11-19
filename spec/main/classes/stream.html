@@ -2229,15 +2229,16 @@ call sysfiledelete f
 0 NOTREADY
 </code></pre>
 <div class="rule" id="r-class.stream.supplier.sends"><a href="#r-class.stream.supplier.sends">[class.stream.supplier.sends]</a></div>
-<p>The supplier that <code>supplier</code> makes sends the stream, in this order, <code>state</code>
-twice and then one <code>lineIn</code> when it is made: with no argument when the stream
+<p>The supplier that <code>supplier</code> makes sends the stream, in this order, <code>state</code>,
+then <code>open</code> with the argument <code>read</code> when that answer is <code>UNKNOWN</code>, then
+<code>state</code> again and then one <code>lineIn</code> when it is made: with no argument when the stream
 was read part of the way into a line, so that its answer is the rest of that
 line as <a href="#r-class.stream.deviation.140">Deviation 140</a> says, and otherwise with
 one argument, the number of the line to read. For each <code>next</code> it sends
 <code>lineIn</code> with the number of the next line; the other methods of the supplier
 send nothing. <code>supplier</code> sends nothing else, apart from the <code>close</code> that
 <a href="streamsupplier.html#r-class.streamsupplier.sends">the rule of <code>StreamSupplier</code></a> says. The first
-answer of <code>state</code> is used for that <code>close</code> only. When the second is <code>READY</code>, the supplier starts at the line that the
+answer of <code>state</code> is used for that <code>open</code> and that <code>close</code> only. When the second is <code>READY</code>, the supplier starts at the line that the
 read position is in, which it learns from the stream by messages that are not part of this
 specification, and otherwise
 at line 1; when the second answer is <code>READY</code> for a stream that is not open,
@@ -2319,7 +2320,7 @@ exit
   self~answers = self~answers~subword(2)
   return w
 </code></pre>
-<pre><code class="language-output">UNKNOWN READY -&gt; 2 two
+<pre><code class="language-output">UNKNOWN READY -&gt; 1 one
 READY NOTREADY -&gt; 1 one
 41.1
 </code></pre>
@@ -2367,15 +2368,13 @@ NOVAL =&gt; 91.999
 </code></pre>
 <div class="rule" id="r-class.stream.supplier.transient"><a href="#r-class.stream.supplier.transient">[class.stream.supplier.transient]</a></div>
 <p>For a transient stream, such as <code>STDIN</code>, the supplier does not number the
-lines it asks for. When the stream has been read from, as by <code>lineIn</code>,
-<code>charIn</code> or <code>lines</code>, every <code>lineIn</code> that the supplier sends, the first and each
-later one, has no argument, and the answers to <code>state</code> do not change that. The
-index of the supplier counts from 1 at the first line it reads, whatever the
-number of that line in the stream. When the stream has not been read from, the
-first <code>lineIn</code> is sent with the argument 1, as for a stream that was not read,
-and raises <code>SYNTAX 93.958</code> because a transient stream cannot be positioned;
-<code>supplier</code>, or <code>new</code> of <a href="streamsupplier.html#r-class.streamsupplier.sends"><code>StreamSupplier</code></a>,
-raises it. The examples run with an empty standard input, so they show these
+lines it asks for: every <code>lineIn</code> that the supplier sends, the first and each
+later one, has no argument, whether or not the stream has been read from, as
+by <code>lineIn</code>, <code>charIn</code> or <code>lines</code>, and the answers to <code>state</code> do not change
+that. A stream that was not open is opened for reading first, as <a href="#r-class.stream.supplier.sends">the rule of
+the sends</a> says, which is what tells the
+supplier that it is transient. The index of the supplier counts from 1 at the
+first line it reads, whatever the number of that line in the stream. The examples run with an empty standard input, so they show these
 sends and the end of the supplier and not lines of data; a transient stream
 that holds lines is not shown by an example.</p>
 <pre><code class="language-rexx">call try 'unread'
@@ -2402,7 +2401,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   self~log = self~log 'lineIn(' || arg(1) || ')'
   forward class (super)
 </code></pre>
-<pre><code class="language-output">unread =&gt; 93.958
+<pre><code class="language-output">unread 0  state state lineIn()
 read 0  state state lineIn()
 </code></pre>
 <div class="rule" id="r-class.stream.uninit"><a href="#r-class.stream.uninit">[class.stream.uninit]</a></div>

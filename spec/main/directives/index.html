@@ -268,6 +268,29 @@ p = .package~new('spec-dir-index-end2', src)
 </code></pre>
 <pre><code class="language-output">3
 </code></pre>
+<div class="rule" id="r-dir.index.options"><a href="#r-dir.index.options">[dir.index.options]</a></div>
+<p>The keywords that may follow a directive's name fall into groups, which each
+directive's page lists, and a directive gives at most one keyword of each
+group. A keyword of a group already given raises <code>SYNTAX 25.936</code> when it is
+the same keyword again and <code>25.937</code> when it is another keyword of that group.
+A word that is none of the directive's keywords raises the subcode of 25 that
+the directive's page names. These are found when the program is read.</p>
+<pre><code class="language-rexx">call try '::class k public public'
+call try '::class k public private'
+call try '::class k frob'
+exit
+try:
+  signal on syntax name e
+  p = .package~new('spec-dir-index-options', .array~of(arg(1)))
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::class k public public =&gt; 25.936
+::class k public private =&gt; 25.937
+::class k frob =&gt; 25.901
+</code></pre>
 <h2 id="the-prolog-and-the-sections"><a class="header" href="#the-prolog-and-the-sections">The prolog and the sections</a></h2>
 <div class="rule" id="r-dir.index.prolog"><a href="#r-dir.index.prolog">[dir.index.prolog]</a></div>
 <p>The clauses before the first directive are the prolog, the main code of the
@@ -480,7 +503,7 @@ try:
 e: say 'caught' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">caught 25.901
+<pre><code class="language-output">caught 25.937
 caught 98.909
 caught 43.901
 </code></pre>

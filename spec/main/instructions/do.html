@@ -177,7 +177,7 @@
 <pre><code>DO [LABEL name] [COUNTER name] [repetitor] [conditional]; instructions; END [name]
 </code></pre>
 <p class="references">ANSI: 6.3.2.12, 8.3.6; rexxref: Keyword Instructions &gt; DO</p>
-<p class="deviations">Deviations: D1, D25, D26, D38, D47, D118, D172</p>
+<p class="deviations">Deviations: D1, D25, D26, D38, D47, D118</p>
 <p>DO opens a block of instructions that ends at a matching END. Without
 anything after the keyword it groups the clauses so that they stand where
 the language expects one instruction. With a repetitor, a condition, or both,
@@ -1369,20 +1369,6 @@ end
 answered
 makearray sent
 answered
-</code></pre>
-<div class="rule" id="r-instr.do.deviation.172"><a href="#r-instr.do.deviation.172">[instr.do.deviation.172]</a></div>
-<p><code>DO OVER</code> a list with an entry that <a href="../classes/list.html#r-class.list.nothing">holds nothing</a>
-skips that entry, as it skips an index of the list's Array that holds no item
-(<a href="../classes/list.html#r-class.list.deviation.172">Deviation 172</a>). ooRexx assigns <code>.nil</code> for it.</p>
-<pre><code class="language-rexx">l = .list~of('a', 'b', 'c')
-l~put(, l~next(l~first))
-n = 0
-do x over l
-  n = n + 1
-end
-say n
-</code></pre>
-<pre><code class="language-output">2
 </code></pre>
 
                     </main>

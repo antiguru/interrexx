@@ -213,7 +213,7 @@ say center('abc', 5, '**')
 f: say condition('o')~code
 signal on syntax name g
 say center('abc', -1, '**')
-g: say wordpos(condition('o')~code, '93.923 40.23') &gt; 0
+g: say wordpos(condition('o')~code, '40.13 40.23') &gt; 0
 signal on syntax name h
 say center('abc', 1000000000000000000)
 h: say condition('o')~code
@@ -223,7 +223,7 @@ h: say condition('o')~code
 40.4
 40.5
 40.12
-93.923
+40.13
 40.23
 1
 40.12
@@ -238,7 +238,7 @@ say centre('abc', -1)
 a: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">..abc.. ..abc.. ..abc..
-93.923
+40.13
 </code></pre>
 <div class="rule" id="r-bif.center.pad.default"><a href="#r-bif.center.pad.default">[bif.center.pad.default]</a></div>
 <p>When <code>pad</code> is omitted, it is the blank, <code>'20'x</code>.</p>

@@ -177,6 +177,7 @@
 <pre><code>BEEP(frequency, duration)
 </code></pre>
 <p class="references">rexxref: Functions &gt; Built-in Functions &gt; BEEP</p>
+<p class="deviations">Deviations: D179</p>
 <p>BEEP asks the system to sound a tone of a given pitch and length, and answers
 the null string. It is meant to be used as a subroutine, for its effect.</p>
 <p>Whether a tone is heard depends on the system and on the terminal the program
@@ -197,6 +198,114 @@ raises <code>SYNTAX 97.1</code>. For the number of arguments it follows <a href=
 rule</a>, so <code>BEEP(100, 0, )</code> is a call with two
 arguments. The null string is not an omitted argument; it is a value that
 <a href="#r-bif.beep.range">fails the checks below</a>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say beep()
+a: say condition('c')
+signal on syntax name b
+say beep(100, 0, 1)
+b: say condition('c')
+signal on syntax name e
+say '100'~beep(0)
+e: say condition('o')~code
+signal off syntax
+say 'done'
+</code></pre>
+<pre><code class="language-output">SYNTAX
+SYNTAX
+97.1
+done
+</code></pre>
+<div class="rule" id="r-bif.beep.range"><a href="#r-bif.beep.range">[bif.beep.range]</a></div>
+<p><code>frequency</code> and <code>duration</code> are whole numbers in the <a href="../conventions.html#r-conv.whole.form">form</a>
+that rule gives. The value of each is its number rounded to 20 significant
+digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
+or more, the magnitude rounds up, otherwise down. This is not the rule of <a href="../conventions.html#r-conv.whole.digits">the
+conventions</a>, which rounds to 18 digits and raises
+<code>SYNTAX 40.12</code>. The frequency must be from 37 to 32767 and the duration from 0
+to 60000. An argument that is not in that form, whose rounded value has a
+fractional part other than zero, that is out of its range, or that is the null
+string raises <code>SYNTAX 88.907</code>, and so does an object whose string value fails
+these checks, such as <code>.nil</code>. A rounded value whose magnitude is 10**18 or
+more is not a whole number for this purpose, whichever sign it has: it fails
+the form check.</p>
+<pre><code class="language-rexx">call try 36, 0
+call try 32768, 0
+call try 100, 60001
+call try 100, -1
+call try 1.5, 0
+call try 100, ''
+call try .nil, 0
+call try 36, 'x'
+exit
+try:
+  signal on syntax name e
+  call beep arg(1), arg(2)
+  say 'accepted'
+  return
+e: say condition('c')
+  return
+</code></pre>
+<pre><code class="language-output">SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
+</code></pre>
+<div class="rule" id="r-bif.beep.order"><a href="#r-bif.beep.order">[bif.beep.order]</a></div>
+<p>A call with more than one fault, such as a third argument together with a
+frequency out of range, or a frequency that is not a whole number together
+with a missing duration, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
+rule</a> says.</p>
+<pre><code class="language-rexx">signal on syntax name d
+x = beep(100, 0, 1)
+d: say condition('c')
+signal on syntax name e
+x = beep(36, 0, 1)
+e: say condition('c')
+signal on syntax name f
+x = beep('x', )
+f: say condition('c')
+</code></pre>
+<pre><code class="language-output">SYNTAX
+SYNTAX
+SYNTAX
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.beep.answer"><a href="#r-bif.beep.answer">[bif.beep.answer]</a></div>
+<p>BEEP answers the null string, which is a string of length 0, for every
+accepted pair of arguments. A call as a subroutine therefore sets <code>RESULT</code> to
+the null string rather than dropping it. The test that cites this rule checks
+it on interrexx; the example under <a href="#r-bif.beep.deviation.179">the deviation</a>
+shows it with interrexx's bells.</p>
+<div class="rule" id="r-bif.beep.bell"><a href="#r-bif.beep.bell">[bif.beep.bell]</a></div>
+<p>When no tone can be sounded, as when the output of the program is not a
+console, an accepted call writes one bell character, code 7, to standard
+output, at the point of the call, and nothing else. It is not written through
+the <code>.OUTPUT</code> monitor: a program that has redirected <code>.OUTPUT</code> still has the
+bell written to standard output. A call that raises an error writes nothing.
+When a tone can be sounded the program cannot rely on anything being
+written.</p>
+<pre><code class="language-rexx">signal on syntax name a
+call beep 100, 60001
+a: say 'after' condition('c')
+</code></pre>
+<pre><code class="language-output">after SYNTAX
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.beep.deviation.179"><a href="#r-bif.beep.deviation.179">[bif.beep.deviation.179]</a></div>
+<p>BEEP is a routine of the REXX package, as at language level 6.06
+(<a href="../deviations.html">Deviation 179</a>). Its argument errors are those of <a href="index.html#r-bif.index.call.native">the
+native call rule</a> and of <a href="#r-bif.beep.range">the range
+rule</a>, of the 88.9xx family, and when no tone can be sounded
+an accepted call writes a bell character to standard output, as <a href="#r-bif.beep.bell">the bell
+rule</a> says. ooRexx, at level 6.07, makes BEEP a builtin: it
+raises errors of the 40.xxx family for the same faults, accepts some values
+that interrexx refuses, such as <code>36.9999999999999999994</code> and
+<code>60000.000000000000001</code>, and writes no bell. The examples are those of the
+rules above with the codes and the bells of interrexx.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say beep()
 a: say condition('o')~code
@@ -222,19 +331,6 @@ say 'done'
 97.1
 done
 </code></pre>
-<div class="rule" id="r-bif.beep.range"><a href="#r-bif.beep.range">[bif.beep.range]</a></div>
-<p><code>frequency</code> and <code>duration</code> are whole numbers in the <a href="../conventions.html#r-conv.whole.form">form</a>
-that rule gives. The value of each is its number rounded to 20 significant
-digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
-or more, the magnitude rounds up, otherwise down. This is not the rule of <a href="../conventions.html#r-conv.whole.digits">the
-conventions</a>, which rounds to 18 digits and raises
-<code>SYNTAX 40.12</code>. The frequency must be from 37 to 32767 and the duration from 0
-to 60000. An argument that is not in that form, whose rounded value has a
-fractional part other than zero, that is out of its range, or that is the null
-string raises <code>SYNTAX 88.907</code>, and so does an object whose string value fails
-these checks, such as <code>.nil</code>. A rounded value whose magnitude is 10**18 or
-more is not a whole number for this purpose, whichever sign it has: it fails
-the form check.</p>
 <pre><code class="language-rexx">signal on syntax name a
 call beep 36, 0
 a: say condition('o')~code
@@ -293,11 +389,6 @@ say 'done'
 88.907
 \a\a\a\a\a\a\a\adone
 </code></pre>
-<div class="rule" id="r-bif.beep.order"><a href="#r-bif.beep.order">[bif.beep.order]</a></div>
-<p>A call with more than one fault, such as a third argument together with a
-frequency out of range, or a frequency that is not a whole number together
-with a missing duration, raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
-rule</a> says.</p>
 <pre><code class="language-rexx">signal on syntax name d
 x = beep(100, 0, 1)
 d: say condition('o')~code
@@ -312,26 +403,6 @@ f: say wordpos(condition('o')~code, '88.907 88.901') &gt; 0
 1
 1
 </code></pre>
-<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
-<div class="rule" id="r-bif.beep.answer"><a href="#r-bif.beep.answer">[bif.beep.answer]</a></div>
-<p>BEEP answers the null string, which is a string of length 0, for every
-accepted pair of arguments. A call as a subroutine therefore sets <code>RESULT</code> to
-the null string rather than dropping it.</p>
-<pre><code class="language-rexx">say '[' || beep(100, 0) || ']' length(beep(37, 0))
-call beep 32767, 0
-say symbol('RESULT') length(result)
-</code></pre>
-<pre><code class="language-output escaped">\a\a[] 0
-\aVAR 0
-</code></pre>
-<div class="rule" id="r-bif.beep.bell"><a href="#r-bif.beep.bell">[bif.beep.bell]</a></div>
-<p>When no tone can be sounded, as when the output of the program is not a
-console, an accepted call writes one bell character, code 7, to standard
-output, at the point of the call, and nothing else. It is not written through
-the <code>.OUTPUT</code> monitor: a program that has redirected <code>.OUTPUT</code> still has the
-bell written to standard output. A call that raises an error writes nothing.
-When a tone can be sounded the program cannot rely on anything being
-written.</p>
 <pre><code class="language-rexx">call beep 100, 0
 say 'after'
 signal on syntax name a
@@ -356,6 +427,13 @@ exit
 <pre><code class="language-output escaped">\aafter
 88.907
 \ashown 1
+</code></pre>
+<pre><code class="language-rexx">say '[' || beep(100, 0) || ']' length(beep(37, 0))
+call beep 32767, 0
+say symbol('RESULT') length(result)
+</code></pre>
+<pre><code class="language-output escaped">\a\a[] 0
+\aVAR 0
 </code></pre>
 
                     </main>

@@ -468,8 +468,8 @@ answers some integers unrounded, depending on how the number is held.</p>
 <code>.nil</code>.</p>
 <h2 id="46-lineout-on-a-binary-record-stream"><a class="header" href="#46-lineout-on-a-binary-record-stream">46. LINEOUT on a binary record stream</a></h2>
 <p>On a stream opened <code>BINARY RECLENGTH n</code>, positioning with LINEOUT and closing
-clear no record, and only a LINEOUT with a string pads its record. ooRexx
-clears or pads a record when LINEOUT positions or closes.</p>
+pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
+a record that a write has started when LINEOUT positions or closes.</p>
 <h2 id="47-a-do-count-wider-than-numeric-digits"><a class="header" href="#47-a-do-count-wider-than-numeric-digits">47. A DO count wider than NUMERIC DIGITS</a></h2>
 <p>A DO repetitor or FOR count wider than NUMERIC DIGITS raises <code>26.2</code> or
 <code>26.3</code>, or LOSTDIGITS first when that is trapped. ooRexx refuses such a count
@@ -506,9 +506,8 @@ raises it only when the command answered 0, and otherwise ends the clause
 with the return code as if every write had succeeded.</p>
 <h2 id="53-numeric-rules-from-the-reference-manual"><a class="header" href="#53-numeric-rules-from-the-reference-manual">53. Numeric rules from the reference manual</a></h2>
 <p>A comparison under NUMERIC FUZZ checks LOSTDIGITS whatever the signs, MAX and
-MIN apply FUZZ to whole numbers, an omitted MAX or MIN argument is <code>40.5</code> for
-the function and <code>93.903</code> for the method, and a divisor is checked for
-LOSTDIGITS when the dividend is zero. A LOSTDIGITS description renders its
+MIN apply FUZZ to whole numbers, and a divisor is checked for LOSTDIGITS when
+the dividend is zero. A LOSTDIGITS description renders its
 operand the same way however it was produced. ooRexx departs from each of
 these.</p>
 <h2 id="54-chars-and-lines-on-a-transient-stream"><a class="header" href="#54-chars-and-lines-on-a-transient-stream">54. CHARS and LINES on a transient stream</a></h2>
@@ -1070,7 +1069,7 @@ nothing. ooRexx loses some sets of VALUE that follow in-process <code>export</co
 <code>unset</code> commands, which ones depending on what the program ran before for
 any variable (the second <code>unset</code> of a name among them), so that the variable
 has no value afterwards. For <code>export</code> with an empty name it stores an entry
-with no name, which a <code>$</code> reference with no name then finds.</p>
+with no name.</p>
 <h2 id="150-an-interpret-in-a-line-read-at-an-interactive-trace-stop"><a class="header" href="#150-an-interpret-in-a-line-read-at-an-interactive-trace-stop">150. An INTERPRET in a line read at an interactive trace stop</a></h2>
 <p>The clauses of a string that an INTERPRET in such a line runs are not traced,
 like the rest of the line, and no stop follows them. ooRexx traces them and
@@ -1127,11 +1126,10 @@ answered; SysRequestMutexSem with an event semaphore's handle hangs.</p>
 <p>A save of the macrospace onto a file that is there and may not be written
 answers <code>5</code> and leaves the file as it was. ooRexx answers <code>5</code> too, and keeps
 or removes the file depending on the calls the program made earlier.</p>
-<h2 id="160-a-guard-when-on-a-compound-variable-or-a-stem"><a class="header" href="#160-a-guard-when-on-a-compound-variable-or-a-stem">160. A GUARD WHEN on a compound variable or a stem</a></h2>
-<p>A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
-or a stem names the whole stem: it is evaluated again when another activity
-assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end.</p>
+<h2 id="160-withdrawn"><a class="header" href="#160-withdrawn">160. Withdrawn</a></h2>
+<p>A GUARD WHEN on a compound variable or a stem: ooRexx r13532 evaluates the
+condition again when another activity assigns to or drops a tail it names (SF
+#2167), so the wait ends there as it does in interrexx.</p>
 <h2 id="161-syssleep-and-whitespace-after-the-sign"><a class="header" href="#161-syssleep-and-whitespace-after-the-sign">161. SysSleep and whitespace after the sign</a></h2>
 <p>SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
 tab) may follow the sign: <code>'+ 0.5'</code> pauses for at least half a second, and <code>'- 1'</code> is a negative delay, which raises <code>SYNTAX 88.907</code>. ooRexx answers <code>0</code> at
@@ -1221,14 +1219,9 @@ no fault converts them from the left before the checks, as ooRexx does
 <p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, before
 anything is read or positioned, answers 0, the host's offset when nothing has
 been consumed. ooRexx answers the size of the file.</p>
-<h2 id="172-a-lists-array-counts-only-the-items-it-holds"><a class="header" href="#172-a-lists-array-counts-only-the-items-it-holds">172. A list's Array counts only the items it holds</a></h2>
-<p>The Array that <code>allItems</code> and <code>makeArray</code> answer for a <code>List</code> with an entry
-that holds nothing has no item at that entry's place, and its <code>items</code> counts
-only the items it holds, so <code>items</code> and <code>isEmpty</code> agree with what the Array
-holds; <code>DO OVER</code> the list skips that entry. ooRexx counts the empty place as an
-item: <code>items</code> stays one higher than the items the Array holds, and <code>isEmpty</code>
-answers 0 after its last item is removed. Its <code>DO OVER</code> assigns <code>.nil</code> for the
-entry.</p>
+<h2 id="172-withdrawn"><a class="header" href="#172-withdrawn">172. Withdrawn</a></h2>
+<p>A list entry that holds nothing: current ooRexx refuses an omitted item to
+<code>put</code> and <code>insert</code>, as interrexx does, so no such entry exists.</p>
 <h2 id="173-isstring-answers-true-for-every-string"><a class="header" href="#173-isstring-answers-true-for-every-string">173. IsString answers true for every String</a></h2>
 <p>The native API's <code>IsString</code> answers true for every instance of String, a number
 that an operator made included, so equal strings get the same answer however
@@ -1310,6 +1303,24 @@ until they are gone. A loop that polls for such a change runs for ever, and
 nothing is said. ooRexx runs each attached thread's messages on that thread,
 alongside the other activities, and each such program completes. Issue #681
 tracks doing the same.</p>
+<h2 id="179-language-level-606"><a class="header" href="#179-language-level-606">179. Language level 6.06</a></h2>
+<p>interrexx implements language level 6.06. BEEP, DIRECTORY and FILESPEC are
+routines of the REXX package, as at that level, not builtins: their argument
+errors are those of a native routine, of the 88.9xx family, a <code>::ROUTINE</code> of
+the same name or an RXFNC exit can replace them, the security manager is sent
+<code>CALL</code> for them, and an argument with no string value raises <code>SYNTAX 88.909</code>
+rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
+character to standard output. <code>.RexxInfo~languageLevel</code>, and the level in
+<code>PARSE VERSION</code> and <code>.RexxInfo~name</code>, read 6.06, ERRORTEXT takes one
+argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
+interrexx. ooRexx is at level 6.07: the three are builtins there, with argument
+errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
+argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
+(#796).</p>
+<h2 id="180-withdrawn"><a class="header" href="#180-withdrawn">180. Withdrawn</a></h2>
+<p>ERRORTEXT's argument: interrexx takes an error code <code>nn.nnn</code> as ooRexx does,
+ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
+level 6.07, is part of Deviation 179.</p>
 
                     </main>
 

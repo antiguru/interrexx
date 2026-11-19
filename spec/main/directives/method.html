@@ -278,9 +278,10 @@ in any case and in any order. A method names at most one keyword of each of
 these groups: access (PUBLIC, PRIVATE, PACKAGE), guarding (GUARDED,
 UNGUARDED), protection (PROTECTED, UNPROTECTED) and the kind of code
 (ABSTRACT, EXTERNAL, DELEGATE), and CLASS and ATTRIBUTE at most once each.
-ATTRIBUTE goes with any one keyword of the kind group. A word that is none of
-the keywords, a keyword repeated or a second keyword of one group raises
-<code>SYNTAX 25.902</code>. EXTERNAL and DELEGATE take an operand, and the other keywords
+ATTRIBUTE goes with any one keyword of the kind group. A keyword repeated
+raises <code>SYNTAX 25.936</code> and a second keyword of one group <code>25.937</code>, as <a href="index.html#r-dir.index.options">the
+options rule</a> says, and a word that is none of the
+keywords raises <code>25.902</code>. EXTERNAL and DELEGATE take an operand, and the other keywords
 do not. The errors of the directive are found when the program is read. A
 clause after an ATTRIBUTE method raises the error that <a href="#r-dir.method.attribute">the attribute
 rule</a> gives, except with DELEGATE, where it raises the
@@ -305,14 +306,14 @@ try:
 e: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">::method m public private =&gt; 25.902
-::method m private package =&gt; 25.902
-::method m guarded unguarded =&gt; 25.902
-::method m protected protected =&gt; 25.902
-::method m class class =&gt; 25.902
-::method m abstract delegate d =&gt; 25.902
+<pre><code class="language-output">::method m public private =&gt; 25.937
+::method m private package =&gt; 25.937
+::method m guarded unguarded =&gt; 25.937
+::method m protected protected =&gt; 25.936
+::method m class class =&gt; 25.936
+::method m abstract delegate d =&gt; 25.937
 ::method m frob =&gt; 25.902
-::method m abstract external "library x" =&gt; 25.902
+::method m abstract external "library x" =&gt; 25.937
 ::method m abstract attribute =&gt; ok
 ::method m attribute delegate d =&gt; ok
 ::method m Unguarded PRIVATE Protected =&gt; ok

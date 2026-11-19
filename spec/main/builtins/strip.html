@@ -205,7 +205,7 @@ say strip()
 d: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">[mn] [ pq]
-93.915
+40.904
 40.4
 40.5
 40.3
@@ -227,7 +227,8 @@ say '['strip('  a  ', 'lx')']' '['strip('  a  ', , )']'
 </code></pre>
 <div class="rule" id="r-bif.strip.option.check"><a href="#r-bif.strip.option.check">[bif.strip.option.check]</a></div>
 <p>An <code>option</code> whose first character is not one of those six, and an <code>option</code>
-that is the null string, raise <code>SYNTAX 93.915</code>. No other argument has a
+that is the null string, raise <code>SYNTAX 40.904</code> (<a href="../conventions.html#r-conv.method.option">an
+option</a>); sent as a message, they raise <code>SYNTAX 93.915</code>. No other argument has a
 check, so this is the only check STRIP makes of its own after the argument
 count, and it is made whatever <code>string</code> and <code>chars</code> are.</p>
 <pre><code class="language-rexx">signal on syntax name a
@@ -249,18 +250,18 @@ signal on syntax name g
 say strip(, 'Y')
 g: say condition('o')~code
 </code></pre>
-<pre><code class="language-output">93.915
-93.915
-93.915
-93.915
-93.915
+<pre><code class="language-output">40.904
+40.904
+40.904
+40.904
+40.904
 40.5
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The reference manual names error 93.915 for a method option that
 is not one of those allowed. The ANSI draft (9.3.20) reads <code>option</code> the same
 way, by its first character in either case, but raises 40.21 for a null
-option and 40.28 for any other bad one, where ooRexx raises 93.915; and it
+option and 40.28 for any other bad one, where this book raises 40.904; and it
 makes <code>chars</code> one character, where ooRexx takes the characters of <code>chars</code> as
 a set, as <a href="#r-bif.strip.chars">the rule below</a> says.</p>
 </blockquote>

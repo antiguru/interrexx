@@ -729,7 +729,7 @@ while <code>NUMERIC DIGITS</code> is the number given to <code>init</code> (the 
 that sent <code>compare</code> do not matter), and answers the sign of the difference: -1,
 0 or 1. Two numbers whose difference is lost in the rounding to those digits are
 equal, so a comparator of 3 digits finds 1000 and 1001 equal and 1000 and 1010
-not. A difference that is no number raises <code>SYNTAX 93.943</code>; a string that is no
+not. A difference that is no number raises <code>SYNTAX 40.11</code>; a string that is no
 number raises <code>SYNTAX 41.1</code>; a first argument that has no <code>-</code> method raises
 <code>SYNTAX 97.1</code>. Argument errors are those of
 <a href="#r-class.comparators.comparator.compare"><code>Comparator</code></a>. The difference is read
@@ -786,8 +786,8 @@ n~compare("a", "b") =&gt; 41.1
 n~compare(1, "") =&gt; 41.1
 n~compare(.nil, 1) =&gt; 97.1
 n~compare(1, .nil) =&gt; 41.1
-n~compare(.pad~new("x"), 1) =&gt; 93.943
-n~compare(.pad~new(.nil), 1) =&gt; 93.943
+n~compare(.pad~new("x"), 1) =&gt; 40.11
+n~compare(.pad~new(.nil), 1) =&gt; 40.11
 n~compare(.pad~new(40), 1) =&gt; 1
 -1 -1
 n~compare(1) =&gt; 93.901
@@ -925,7 +925,7 @@ caselesscolumn:  caselessCompareTo/3 =&gt; ANSWER
 descending:  compareTo/1 answer-/0 =&gt; String
 caselessdescending:  caselessCompareTo/1 answer-/0 =&gt; String
 inverting:  compare/2 answer-/0 =&gt; String
-numeric:  -/1 =&gt; 93.943
+numeric:  -/1 =&gt; 40.11
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.comparators.deviation.109"><a href="#r-class.comparators.deviation.109">[class.comparators.deviation.109]</a></div>

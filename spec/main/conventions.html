@@ -431,7 +431,12 @@ receiver; the others become the message's arguments, in their order. The
 builtin and the message then give the same result for the same arguments. A
 builtin page says when its builtin is one of these. The range checks below,
 and <a href="#r-conv.check.order">the checks they belong to</a>, are rules for these
-builtins only; any other builtin's page states its own range checks.</p>
+builtins only; any other builtin's page states its own range checks. Where one
+of those checks finds a fault, or the <a href="#r-conv.method.number">number</a> or the
+<a href="#r-conv.method.option">option</a> check below does, the builtin raises an error
+40 of its own; the same check reached by sending the message raises the
+method's error 93, as <a href="classes/string.html#r-class.string.builtins.errors">the message rule</a> gives
+it.</p>
 <pre><code class="language-rexx">say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
 </code></pre>
 <pre><code class="language-output">bc bc aB aB
@@ -444,7 +449,8 @@ String methods, does not.</p>
 <div class="rule" id="r-conv.position.check"><a href="#r-conv.position.check">[conv.position.check]</a></div>
 <p>In a builtin that runs as a String method, a position argument is a
 whole-number argument whose value must be positive. A value of 0 or less
-raises <code>SYNTAX 93.924</code>; <code>-0</code> is 0.</p>
+raises <code>SYNTAX 40.14</code>; <code>-0</code> is 0. Sent as a message, the same value raises
+<code>SYNTAX 93.924</code>.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say substr('abc', 0)
 a: say condition('o')~code
@@ -454,31 +460,89 @@ b: say condition('o')~code
 signal on syntax name c
 say substr('abc', -1)
 c: say condition('o')~code
+signal on syntax name d
+say 'abc'~substr(0)
+d: say condition('o')~code
 </code></pre>
-<pre><code class="language-output">93.924
-93.924
+<pre><code class="language-output">40.14
+40.14
+40.14
 93.924
 </code></pre>
 <div class="rule" id="r-conv.length.check"><a href="#r-conv.length.check">[conv.length.check]</a></div>
 <p>In a builtin that runs as a String method, a length argument is a
 whole-number argument whose value must not be negative. A negative value
-raises <code>SYNTAX 93.923</code>. A length of 0 is allowed, and so is <code>-0</code>, which is
-0.</p>
+raises <code>SYNTAX 40.13</code>. A length of 0 is allowed, and so is <code>-0</code>, which is
+0. A count, such as the <code>n</code> of <code>COPIES</code> or the count of <code>CHANGESTR</code>, is
+checked the same way. Sent as a message, a negative length raises <code>SYNTAX 93.923</code> and a negative count <code>SYNTAX 93.906</code>.</p>
 <pre><code class="language-rexx">say '['substr('abc', 2, 0)']' '['substr('abc', 2, '-0')']'
 signal on syntax name a
 say substr('abc', 1, -1)
 a: say condition('o')~code
+signal on syntax name b
+say copies('ab', -1)
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~substr(1, -1)
+c: say condition('o')~code
+signal on syntax name d
+say 'ab'~copies(-1)
+d: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">[] []
+40.13
+40.13
 93.923
+93.906
+</code></pre>
+<div class="rule" id="r-conv.method.number"><a href="#r-conv.method.number">[conv.method.number]</a></div>
+<p>In a builtin that runs as a String method, an argument that the builtin reads
+as a number and that is not one raises <code>SYNTAX 40.11</code>. Such an argument is the
+number of <code>ABS</code>, <code>FORMAT</code>, <code>SIGN</code> and <code>TRUNC</code>, and each number of <code>MAX</code> and
+<code>MIN</code>, the first and the others alike. Sent as a message, a receiver that is
+not a number raises <code>SYNTAX 93.943</code>, and a further number of <code>MAX</code> or <code>MIN</code>
+that is not one <code>SYNTAX 93.904</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say abs('x')
+a: say condition('o')~code
+signal on syntax name b
+say max(1, 'x')
+b: say condition('o')~code
+signal on syntax name c
+say 'x'~abs
+c: say condition('o')~code
+signal on syntax name d
+say 1~max('x')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.11
+40.11
+93.943
+93.904
+</code></pre>
+<div class="rule" id="r-conv.method.option"><a href="#r-conv.method.option">[conv.method.option]</a></div>
+<p>In a builtin that runs as a String method, an option argument whose first
+character is not one of the letters the builtin's page lists, and one that is
+the null string, raise <code>SYNTAX 40.904</code>. Such an argument is the option of
+<code>STRIP</code> and of <code>VERIFY</code> and the type of <code>DATATYPE</code>. Sent as a message, the same
+option raises <code>SYNTAX 93.915</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say strip('abc', 'X')
+a: say condition('o')~code
+signal on syntax name b
+say datatype('1', 'Q')
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~strip('X')
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.904
+40.904
+93.915
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> These two codes follow from the reference manual: a builtin of
-this kind sends a String message, the range of a position or length is
-checked by that method, and an incorrect call to a method is error 93, whose
-subcodes 924 and 923 are the position and length cases. The ANSI draft
-(9.2.1), which has no such methods, raises 40.14 for a position and 40.13
-for a length.</p>
+<p><strong>Note.</strong> The ANSI draft (9.2.1), which has no String methods, raises the
+same 40.14 for a position and 40.13 for a length.</p>
 </blockquote>
 <h2 id="pad-arguments"><a class="header" href="#pad-arguments">Pad arguments</a></h2>
 <div class="rule" id="r-conv.pad"><a href="#r-conv.pad">[conv.pad]</a></div>
@@ -564,7 +628,7 @@ say 'x' + f()
 c: say condition('o')~code
 signal on syntax name d
 say substr('abc', 0, 'x')
-d: say wordpos(condition('o')~code, '93.924 40.12') &gt; 0
+d: say wordpos(condition('o')~code, '40.14 40.12') &gt; 0
 signal on syntax name e
 say substr('abc', 'x', 1, ' ', 5)
 e: say wordpos(condition('o')~code, '40.4 40.12') &gt; 0
@@ -572,7 +636,7 @@ exit
 f: say 'f ran'
 return 'y'
 </code></pre>
-<pre><code class="language-output">93.924
+<pre><code class="language-output">40.14
 40.12
 f ran
 41.1
@@ -599,11 +663,11 @@ say substr('abc', 1, -1)
 f: say condition('o')~code
 signal on syntax name g
 say substr('abc', 'x', -1, '**')
-g: say wordpos(condition('o')~code, '40.12 93.923 40.23') &gt; 0
+g: say wordpos(condition('o')~code, '40.12 40.13 40.23') &gt; 0
 </code></pre>
 <pre><code class="language-output">40.23
 40.23
-93.923
+40.13
 1
 </code></pre>
 <blockquote>
@@ -625,7 +689,7 @@ x = substr('abc', 0)
 say 'not reached'
 e: say condition('c') condition('o')~code rc
 </code></pre>
-<pre><code class="language-output">SYNTAX 93.924 93
+<pre><code class="language-output">SYNTAX 40.14 40
 </code></pre>
 <div class="rule" id="r-conv.error.text"><a href="#r-conv.error.text">[conv.error.text]</a></div>
 <p>The wording of a message is unspecified wherever it reaches a program: the
@@ -647,7 +711,7 @@ that stay as they are, not wording that is free.</p>
 <pre><code class="language-rexx">signal on syntax name e
 x = substr('abc', 0)
 e: o = condition('o')
-say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
+say (errortext(40) \== '') (o~errortext == errortext(40)) (o~message \== '')
 </code></pre>
 <pre><code class="language-output">1 1 1
 </code></pre>
@@ -782,9 +846,9 @@ such as a count, a length or a position, raises <code>SYNTAX 40.12</code>; a pad
 another single character <code>40.23</code>; an option <code>40.904</code>; the date or time that
 <code>DATE</code> or <code>TIME</code> converts <code>40.19</code>; a separator of <code>DATE</code> <code>40.43</code>; an argument
 of <code>XRANGE</code> that may be a class name <code>40.28</code>; the setting of <code>TRACE</code> <code>24.1</code>;
-and the queue name of <code>RXQUEUE</code> <code>40.26</code>. The number that <code>ABS</code>, <code>FORMAT</code>,
-<code>MAX</code>, <code>MIN</code>, <code>SIGN</code> and <code>TRUNC</code> work on raises <code>93.943</code>, a further number of
-<code>MAX</code> and <code>MIN</code> <code>93.904</code>, the number of <code>D2C</code> and of <code>D2X</code> <code>93.929</code> and
+and the queue name of <code>RXQUEUE</code> <code>40.26</code>. A number that <code>ABS</code>, <code>FORMAT</code>,
+<code>MAX</code>, <code>MIN</code>, <code>SIGN</code> and <code>TRUNC</code> work on raises <code>40.11</code> (<a href="#r-conv.method.number">the number
+rule</a>), the number of <code>D2C</code> and of <code>D2X</code> <code>93.929</code> and
 <code>93.928</code>, and the string of <code>X2B</code>, <code>X2C</code> and <code>X2D</code> and of <code>B2X</code> <code>93.933</code> and
 <code>93.934</code>, as for a string that is not a number, or not hexadecimal or binary.
 The name of a stream raises <code>93.938</code>, numbered 1, the error of the argument of
@@ -834,8 +898,8 @@ date('S', , , o) =&gt; 40.43
 xrange(o) =&gt; 40.28
 trace(o) =&gt; 24.1
 rxqueue('S', o) =&gt; 40.26
-abs(o) =&gt; 93.943
-max(1, o) =&gt; 93.904
+abs(o) =&gt; 40.11
+max(1, o) =&gt; 40.11
 d2c(o) =&gt; 93.929
 x2d(o) =&gt; 93.933
 linein(o) =&gt; 93.938

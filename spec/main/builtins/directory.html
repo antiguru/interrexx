@@ -177,6 +177,7 @@
 <pre><code>DIRECTORY([newdirectory])
 </code></pre>
 <p class="references">rexxref: Functions &gt; Built-in Functions &gt; DIRECTORY</p>
+<p class="deviations">Deviations: D179</p>
 <p>DIRECTORY answers the name of the current directory, and with an argument
 first makes another directory the current one. The current directory is where
 a relative file name starts: the <a href="index.html#r-bif.index.stream.name">stream builtins</a>,
@@ -202,28 +203,20 @@ string, such as <code>.nil</code> or <code>.object~new</code>.</p>
 <pre><code class="language-rexx">here = directory()
 signal on syntax name a
 say directory('/', 'x')
-a: say condition('o')~code
+a: say condition('c')
 signal on syntax name b
 say directory(, 'x')
-b: say condition('o')~code
-signal on syntax name c
-say directory(.nil)
-c: say condition('o')~code
+b: say condition('c')
 signal on syntax name d
 say '/'~directory
 d: say condition('o')~code
-signal on syntax name e
-say directory(.object~new)
-e: say condition('o')~code
 signal off syntax
 say (directory(,) == here) (directory() == here)
 say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
 </code></pre>
-<pre><code class="language-output">88.922
-88.922
-88.909
+<pre><code class="language-output">SYNTAX
+SYNTAX
 97.1
-88.909
 1 1
 / /usr
 </code></pre>
@@ -396,6 +389,44 @@ say out.1
 <pre><code class="language-output">/x /y/z
 1
 /
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.directory.deviation.179"><a href="#r-bif.directory.deviation.179">[bif.directory.deviation.179]</a></div>
+<p>DIRECTORY is a routine of the REXX package, as at language level 6.06
+(<a href="../deviations.html">Deviation 179</a>). Its argument errors are those of <a href="index.html#r-bif.index.call.native">the
+native call rule</a>, of the 88.9xx family, and an
+argument that is an object whose <code>request</code> answers no string, such as <code>.nil</code>
+or <code>.object~new</code>, raises <code>SYNTAX 88.909</code>. ooRexx, at level 6.07, makes DIRECTORY
+a builtin: it raises <code>SYNTAX 40.4</code> for an argument too many, and reads such an
+object by its <code>STRING</code> method, so the call tries to make a directory of that
+name the current one.</p>
+<pre><code class="language-rexx">here = directory()
+signal on syntax name a
+say directory('/', 'x')
+a: say condition('o')~code
+signal on syntax name b
+say directory(, 'x')
+b: say condition('o')~code
+signal on syntax name c
+say directory(.nil)
+c: say condition('o')~code
+signal on syntax name d
+say '/'~directory
+d: say condition('o')~code
+signal on syntax name e
+say directory(.object~new)
+e: say condition('o')~code
+signal off syntax
+say (directory(,) == here) (directory() == here)
+say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
+</code></pre>
+<pre><code class="language-output">88.922
+88.922
+88.909
+97.1
+88.909
+1 1
+/ /usr
 </code></pre>
 
                     </main>

@@ -351,8 +351,9 @@ null string, even when a later directory holds a file of the name. A symbolic
 link that points to nothing, and a name in a directory that the program may
 not search, are no entry, and the search goes on. A <code>name</code> that is not found,
 or is the null string or <code>.</code>, has no answer: the call answers the null
-string. Blanks, <code>*</code> and <code>?</code> are characters of the name, so <code>g </code> is not <code>g</code> and
-no pattern is expanded. The name is not found in another case.</p>
+string. A <code>name</code> that ends in a slash names a directory, so it finds no file:
+<code>g/</code> is not <code>g</code>. Blanks, <code>*</code> and <code>?</code> are characters of the name, so <code>g </code> is
+not <code>g</code> and no pattern is expanded. The name is not found in another case.</p>
 <pre><code class="language-rexx">here = directory()
 call SysMkDir 'c1zqsfa'
 call SysMkDir 'c1zqsfb'
@@ -374,7 +375,7 @@ say '[' || SysSearchPath('C1ZQSF', 'x', 'N') || ']'
 say SysSearchPath('C1ZQSF', 'lk', 'N') == here || '/c1zqsfb/lk'
 say SysSearchPath('C1ZQSF', 'sub/k', 'N') == here || '/c1zqsfb/sub/k'
 say SysSearchPath('C1ZQSF', 'ls/k', 'N') == here || '/c1zqsfb/ls/k'
-say SysSearchPath('C1ZQSF', 'g/', 'N') == here || '/c1zqsfa/g'
+say '[' || SysSearchPath('C1ZQSF', 'g/', 'N') || ']'
 say SysSearchPath('C1ZQSF', 'x/../sub/k', 'N') == here || '/c1zqsfb/sub/k'
 say '[' || SysSearchPath('C1ZQSF', 'sub', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '.', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g ', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSF', 'G', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g*', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'c1zqsfnone', 'N') || ']'
@@ -391,7 +392,7 @@ call SysRmDir 'c1zqsfb'
 1
 1
 1
-1
+[]
 1
 [] [] [] []
 [] [] []
@@ -424,11 +425,11 @@ call SysRmDir 'c1zqsfb'
 resolved first, and <code>~</code> is the home directory. A <code>name</code> that starts with a
 slash is a full name, and is not searched for: the answer is the name, cleaned
 up, when it is the name of a file, and the null string when it is not,
-whatever <code>option</code> and the list are. A <code>name</code> that starts with <code>./</code> or with
-<code>../</code> is taken from the current directory and is not searched for along the
-list either, with <code>N</code> too. Any other <code>name</code> is joined to the directories of
-the list, and to the current directory first when <code>option</code> is <code>C</code>, so that a
-<code>name</code> with a slash in it, such as <code>sub/k</code>, is a path from each of them.</p>
+whatever <code>option</code> and the list are. Any other <code>name</code> is joined to the
+directories of the list, and to the current directory first when <code>option</code> is
+<code>C</code>, so that a <code>name</code> with a slash in it, such as <code>sub/k</code>, is a path from each
+of them. A <code>name</code> that starts with <code>./</code> or with <code>../</code> is joined in the same
+way: <code>./f</code> is found where <code>f</code> is.</p>
 <pre><code class="language-rexx">here = directory()
 call SysMkDir 'c1zqsna'
 call SysMkDir 'c1zqsnh'
@@ -444,8 +445,8 @@ say SysSearchPath('C1ZQSN', here || '/c1zqsna/c1zqsnf', 'N') == here || '/c1zqsn
 say '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna/none') || ']' '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna') || ']'
 say SysSearchPath('C1ZQSN', here || '/c1zqsna//./c1zqsnf') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', 'c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
-say SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsnf'
-say SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') == here || '/c1zqsnf'
+say (SysSearchPath('C1ZQSN', './c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf') (SysSearchPath('C1ZQSN', './c1zqsnf', 'C') == here || '/c1zqsnf')
+say '[' || SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf', 'N') || ']' (SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf') == here || '/c1zqsna/c1zqsnf')
 say SysSearchPath('C1ZQSN', 'c1zqsnh/../c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', '~/hf', 'N') == here || '/c1zqsnh/hf'
@@ -461,8 +462,8 @@ call SysRmDir 'c1zqsnh'
 [] []
 1
 1
-1
-1
+1 1
+[]
 [] 1
 1
 1

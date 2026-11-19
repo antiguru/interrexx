@@ -207,7 +207,8 @@ e: say condition('o')~code
 <div class="rule" id="r-util.sysisfile.answer"><a href="#r-util.sysisfile.answer">[util.sysisfile.answer]</a></div>
 <p>The answer is <code>1</code> for a regular file, and for a symbolic link whose target is
 a regular file. It is <code>0</code> for a directory, a fifo and a character device such
-as <code>/dev/null</code>, for a name that nothing has, for a symbolic link that points
+as <code>/dev/null</code>, for a name that ends in a slash, which names a directory, for
+a name that nothing has, for a symbolic link that points
 to nothing, and for a name that the program may not look up. The call never
 raises a condition for a name. This book does not specify the answer for a
 block device.</p>
@@ -221,7 +222,7 @@ say SysIsFile('c1zqifb') SysIsFile('c1zqifnone') SysIsFile('/dev/null')
 address system 'rm c1zqifl c1zqifk c1zqifb c1zqifp c1zqiff'
 call SysRmDir 'c1zqifd'
 </code></pre>
-<pre><code class="language-output">1 1 1
+<pre><code class="language-output">1 1 0
 0 0 0
 0 0 0
 </code></pre>

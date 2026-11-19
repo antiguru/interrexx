@@ -271,7 +271,7 @@ say ('1e2' = '100') ('1e2' = '1e+2') ('5e-1' = '0.5')
 form</a> when it runs, and the error depends on the operation.
 An operand of an arithmetic operator that is a string and not a number raises
 <code>SYNTAX 41.1</code>, the null string and a string of only whitespace included. A
-<a href="../builtins/index.html#r-bif.index.num.arg">number argument</a> of a builtin raises <code>SYNTAX 93.943</code> for
+<a href="../builtins/index.html#r-bif.index.num.arg">number argument</a> of a builtin raises <code>SYNTAX 40.11</code> for
 the same strings, and a <a href="../conventions.html#r-conv.whole.form">whole-number argument</a> raises
 <code>SYNTAX 40.12</code>. A string that is not used as a number is never checked. A left
 operand that is not a string does not reach this check, because an operator is
@@ -311,7 +311,7 @@ say -.nil
 i: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">41.1
-93.943
+40.11
 40.12
 41.1
 41.1

@@ -246,11 +246,11 @@ e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
 <p>The keywords after the name are METACLASS, SUBCLASS, MIXINCLASS, PUBLIC,
 PRIVATE, ABSTRACT and INHERIT, in any case. They may stand in any order,
 except that INHERIT takes every word that follows it as the name of a class,
-so it comes last. Each of the four groups METACLASS, SUBCLASS or MIXINCLASS,
-PUBLIC or PRIVATE and ABSTRACT may appear once. A word that is none of the
-keywords, a keyword repeated, and a keyword that excludes one already given,
-such as PRIVATE after PUBLIC or SUBCLASS after MIXINCLASS, raise
-<code>SYNTAX 25.901</code>. METACLASS, SUBCLASS, MIXINCLASS and INHERIT without a name
+so it comes last. METACLASS, SUBCLASS or MIXINCLASS, PUBLIC or PRIVATE, and
+ABSTRACT are the <a href="index.html#r-dir.index.options">groups</a>: a keyword repeated raises
+<code>SYNTAX 25.936</code>, and a keyword that excludes one already given, such as
+PRIVATE after PUBLIC or SUBCLASS after MIXINCLASS, raises <code>25.937</code>. A word
+that is none of the keywords raises <code>25.901</code>. METACLASS, SUBCLASS, MIXINCLASS and INHERIT without a name
 after them raise <code>19.906</code>, <code>19.907</code>, <code>19.913</code> and <code>19.908</code>, and a ::CLASS with
 no name raises <code>19.901</code>. Every one of these is found when the program is read.</p>
 <pre><code class="language-rexx">call try '::class a public private'
@@ -276,10 +276,10 @@ try:
 e: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output">::class a public private =&gt; 25.901
-::class a public public =&gt; 25.901
-::class a mixinclass object subclass object =&gt; 25.901
-::class a abstract abstract =&gt; 25.901
+<pre><code class="language-output">::class a public private =&gt; 25.937
+::class a public public =&gt; 25.936
+::class a mixinclass object subclass object =&gt; 25.937
+::class a abstract abstract =&gt; 25.936
 ::class a frob =&gt; 25.901
 ::class a inherit m public =&gt; 98.909
 ::class A SubClass Object Public Abstract =&gt; ok

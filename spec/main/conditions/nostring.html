@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="nostring"><a class="header" href="#nostring">NOSTRING</a></h1>
 <p class="references">rexxref: Conditions and Condition Traps; Conditions and Condition Traps &gt; Condition Information &gt; Descriptive Strings; Conditions and Condition Traps &gt; Condition Information &gt; Additional Object Information; Conditions and Condition Traps &gt; Action Taken when a Condition Is Trapped</p>
-<p class="deviations">Deviations: D30, D77</p>
+<p class="deviations">Deviations: D30, D77, D179</p>
 <p>NOSTRING is the condition of needing the string value of an object that does
 not provide one. Most values a program handles are strings or answer as
 strings, and the interpreter converts them without notice. An object of a
@@ -264,7 +264,7 @@ exit
     when j = 3 then do; t = .object~new; a.t = 5; end
     when j = 4 then x = 'a' || .ps~new
     when j = 5 then x = 'a' || .pm~new
-    when j = 6 then x = filespec('n', .object~new)
+    when j = 6 then x = sysfileexists(.object~new)
     when j = 7 then parse value .ps~new with x .
     when j = 8 then do; t = .pm~new; a.t = 5; end
   end
@@ -461,6 +461,24 @@ bad text
 darr text
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-cond.nostring.deviation.179"><a href="#r-cond.nostring.deviation.179">[cond.nostring.deviation.179]</a></div>
+<p>BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
+level 6.06 (<a href="../deviations.html">Deviation 179</a>), and link <a href="../builtins/index.html#r-bif.index.call.native">the native call
+rule</a>, so an argument of theirs that has no string
+value raises <code>SYNTAX 88.909</code> and no NOSTRING. ooRexx, at level 6.07, makes
+them builtins, and raises NOSTRING for such an argument as for one of any
+other builtin.</p>
+<pre><code class="language-rexx">signal on syntax name s
+signal on nostring name n
+x = filespec('n', .object~new)
+say 'nothing'
+exit
+n: say 'NOSTRING'
+exit
+s: say 'SYNTAX' condition('o')~code
+</code></pre>
+<pre><code class="language-output">SYNTAX 88.909
+</code></pre>
 <div class="rule" id="r-cond.nostring.deviation.77"><a href="#r-cond.nostring.deviation.77">[cond.nostring.deviation.77]</a></div>
 <p>The string value of a stem is its default value's, and NOSTRING is raised,
 with the default's description, only when the default has no string value. A

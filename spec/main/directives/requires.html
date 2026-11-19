@@ -380,7 +380,8 @@ cannot be loaded raises before any required program has run its prolog. A
 library can be required more than once. Whether a library name is case
 sensitive, and where libraries are searched for, are <a href="../environment/search.html#r-env.search.library">the library
 rule</a>. The LIBRARY option does not combine with
-NAMESPACE: the two together raise <code>SYNTAX 25.904</code>.</p>
+NAMESPACE: the two are one <a href="index.html#r-dir.index.options">group</a>, and together they
+raise <code>SYNTAX 25.937</code>.</p>
 <pre><code class="language-rexx">f = 'rq-p.tmp'
 call sysfiledelete f
 call lineout f, 'say "required prolog"'
@@ -409,8 +410,8 @@ e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
 ::requires "rexxutil" library / ::requires "rexxutil" LIBRARY =&gt; ok
 ::requires "rq-p.tmp" / ::requires "spec_no_such_lib_xyz" library =&gt; 98.903
 ::requires "spec_no_such_lib_xyz" library / ::requires "rq-p.tmp" =&gt; 98.903
-::requires "rexxutil" library namespace a =&gt; 25.904
-::requires "rexxutil" namespace a library =&gt; 25.904
+::requires "rexxutil" library namespace a =&gt; 25.937
+::requires "rexxutil" namespace a library =&gt; 25.937
 </code></pre>
 <h2 id="namespaces"><a class="header" href="#namespaces">Namespaces</a></h2>
 <div class="rule" id="r-dir.requires.namespace"><a href="#r-dir.requires.namespace">[dir.requires.namespace]</a></div>
@@ -422,9 +423,9 @@ the namespace is matched without regard to case. The unqualified name is
 looked up as <a href="routine.html#r-dir.routine.public">the routine rule</a> and <a href="class.html#r-dir.class.visibility">the class
 rule</a> say. When two directives give one namespace
 name, the later one names its package. A string, or no symbol after NAMESPACE,
-raises <code>SYNTAX 20.920</code>, and a keyword other than LIBRARY or NAMESPACE, a
-repeated keyword or any further word raises <code>25.904</code>, found when the program
-is read. The namespace name <code>REXX</code> belongs to the interpreter and raises
+raises <code>SYNTAX 20.920</code>. A repeated keyword raises <code>25.936</code>, and a keyword
+other than LIBRARY or NAMESPACE or any further word raises <code>25.904</code>, found
+when the program is read. The namespace name <code>REXX</code> belongs to the interpreter and raises
 <code>99.944</code>.</p>
 <pre><code class="language-rexx">fa = 'spec-dir-requires-nsa.tmp'
 fb = 'spec-dir-requires-nsb.tmp'
@@ -480,7 +481,7 @@ hello B
 ::requires "spec-dir-requires-nsa.tmp" namespace =&gt; 20.920
 ::requires "spec-dir-requires-nsa.tmp" namespace "a" =&gt; 20.920
 ::requires "spec-dir-requires-nsa.tmp" namespace a b =&gt; 25.904
-::requires "spec-dir-requires-nsa.tmp" namespace a namespace b =&gt; 25.904
+::requires "spec-dir-requires-nsa.tmp" namespace a namespace b =&gt; 25.936
 ::requires "spec-dir-requires-nsa.tmp" frob =&gt; 25.904
 ::requires "spec-dir-requires-nsa.tmp" namespace rexx =&gt; 99.944
 ::requires "spec-dir-requires-nsa.tmp" Namespace a =&gt; ok

@@ -214,8 +214,8 @@ c: say condition('o')~code
 <div class="rule" id="r-bif.trunc.errors"><a href="#r-bif.trunc.errors">[bif.trunc.errors]</a></div>
 <p>The call checks the <a href="../conventions.html#r-conv.whole.form">form</a> and
 <a href="../conventions.html#r-conv.whole.digits">value</a> of <code>n</code>, which raise <code>SYNTAX 40.12</code>; that <code>number</code>
-is a <a href="index.html#r-bif.index.num.arg">number</a>, <code>SYNTAX 93.943</code>; and that <code>n</code> is not
-negative, <code>SYNTAX 93.906</code>. A call that fails more than one of these checks
+is a <a href="index.html#r-bif.index.num.arg">number</a>, <code>SYNTAX 40.11</code>; and that <code>n</code> is not
+negative, <code>SYNTAX 40.13</code>. A call that fails more than one of these checks
 raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence
 rule</a> says. <code>n</code> is a whole-number argument, so the
 <a href="../conventions.html#r-conv.arg.empty">null string</a> raises 40.12 and <code>-0</code> is 0.</p>
@@ -239,8 +239,8 @@ e: say condition('o')~code
 <pre><code class="language-output">5 5.00 5.0000000000
 40.12
 40.12
-93.943
-93.906
+40.11
+40.13
 40.12
 </code></pre>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
@@ -282,8 +282,8 @@ negative zero.</p>
 <pre><code class="language-output">0 -0.50 0.00 -0.001 0 0.0 -1
 </code></pre>
 <blockquote>
-<p><strong>Note.</strong> The ANSI draft (9.4.6) raises <code>SYNTAX 40.13</code> for a negative <code>n</code>,
-where ooRexx raises 93.906.</p>
+<p><strong>Note.</strong> The ANSI draft (9.4.6) raises the same <code>SYNTAX 40.13</code> for a
+negative <code>n</code>.</p>
 </blockquote>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-bif.trunc.deviation.4"><a href="#r-bif.trunc.deviation.4">[bif.trunc.deviation.4]</a></div>

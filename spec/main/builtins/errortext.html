@@ -177,24 +177,25 @@
 <pre><code>ERRORTEXT(n)
 </code></pre>
 <p class="references">ANSI: 9.5.5; rexxref: Functions &gt; Built-in Functions &gt; ERRORTEXT</p>
-<p>ERRORTEXT answers the message that goes with an error number: the text that
-names the kind of error, without the number, the program or the line. What
+<p class="deviations">Deviations: D179</p>
+<p>ERRORTEXT answers the message that goes with an error number or an error code:
+the text that names the kind of error, or the one that says what went wrong,
+without the number, the program or the line. What
 the text says is not part of the book (see <a href="../conventions.html#r-conv.error.name">the rule on error
 messages</a>), so the examples of this page look at whether a
 message exists and at which numbers share one, never at its words.</p>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
 <div class="rule" id="r-bif.errortext.args"><a href="#r-bif.errortext.args">[bif.errortext.args]</a></div>
-<p>ERRORTEXT takes one argument, <code>n</code>, and nothing else. The argument count is
-checked by the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: one argument is
-required and one is the most, so a call with two raises <code>SYNTAX 40.4</code>,
-whatever the second is. ERRORTEXT does not run as a <a href="../classes/string.html#r-class.string.builtins">String
+<p>ERRORTEXT takes one argument, <code>n</code>. The argument count is checked by the
+<a href="index.html#r-bif.index.call.count">builtin call rules</a>: one argument is required, so a
+call with none raises <code>SYNTAX 40.3</code>, and a call with three raises <code>SYNTAX 40.4</code>. A second argument is <a href="#r-bif.errortext.deviation.179">Deviation 179</a>'s. ERRORTEXT does not run as a <a href="../classes/string.html#r-class.string.builtins">String
 method</a>: sending the message <code>ERRORTEXT</code> to a string
 raises <code>SYNTAX 97.1</code>.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say errortext()
 a: say condition('o')~code
 signal on syntax name b
-say errortext(26, 'S')
+say errortext(26, 'S', 1)
 b: say condition('o')~code
 signal on syntax name c
 say errortext(, )
@@ -209,59 +210,70 @@ d: say condition('o')~code
 97.1
 </code></pre>
 <div class="rule" id="r-bif.errortext.n"><a href="#r-bif.errortext.n">[bif.errortext.n]</a></div>
-<p><code>n</code> is a whole number that passes the
-<a href="../conventions.html#r-conv.whole.form">whole-number rules</a>, so a number such as <code>26.0</code>, <code>2.6e1</code>,
-<code>' 26 '</code> or <code>026</code> is 26. Its value must be in the range 0 to 99: a whole number
-outside it raises <code>SYNTAX 40.903</code>, <code>-0</code> is 0, and a string that is not a whole
-number, the null string included, raises <code>SYNTAX 40.12</code>, as does a number
-whose magnitude is <a href="../conventions.html#r-conv.whole.digits">too large</a>. The caller's NUMERIC
-DIGITS plays no part. A number that is both out of range and not whole, such
-as 100.5, raises one of the two errors, as <a href="../conventions.html#r-conv.error.precedence">the precedence
-rule</a> says.</p>
+<p><code>n</code> is an error number or an error code. A whole number that passes the
+<a href="../conventions.html#r-conv.whole.form">whole-number rules</a> is an error number, so a number such as
+<code>26.0</code>, <code>2.6e1</code>, <code>' 26 '</code> or <code>026</code> is 26, and <code>40.0</code> is the error number 40.
+Its value must be in the range 0 to 99: a whole number outside it raises
+<code>SYNTAX 40.903</code>, and <code>-0</code> is 0. Any other string that holds a period is an
+error code, as <a href="../instructions/raise.html#r-instr.raise.syntax"><code>RAISE SYNTAX</code></a> and the <code>CODE</code> entry of a
+condition object write one: the part before the first period is the error
+number and the part after it the subcode, each read as a whole number by the
+same rules, so blanks around a part, leading zeros and an exponent are allowed.
+The error number must be in the range 0 to 99 and the subcode in the range 0
+to 999; anything else raises <code>SYNTAX 40.926</code>. The subcode is read as written,
+not as the fraction of a number: <code>40.1</code> and <code>40.001</code> are both subcode 1, and
+<code>40.10</code> is subcode 10. A computed number can lose or keep trailing zeros, so an
+error code is passed as the string it is written as. A string with no period
+that is not a whole number, the null string included, raises <code>SYNTAX 40.12</code>, as
+does a whole number whose magnitude is <a href="../conventions.html#r-conv.whole.digits">too large</a>. The
+caller's NUMERIC DIGITS plays no part.</p>
 <pre><code class="language-rexx">numeric digits 1
 say (errortext(26) \== '') (errortext(26.0) == errortext(26)) (errortext(' 26 ') == errortext(26)),
     (errortext('026') == errortext(26)) (errortext(2.6e1) == errortext(26)) (errortext(99) \== '')
-say '['errortext('-0')']'
-signal on syntax name a
-say errortext(100)
-a: say condition('o')~code
-signal on syntax name b
-say errortext(-1)
-b: say condition('o')~code
-signal on syntax name c
-say errortext(1.5)
-c: say condition('o')~code
-signal on syntax name d
-say errortext('')
-d: say condition('o')~code
-signal on syntax name e
-say errortext('1e2')
-e: say condition('o')~code
-signal on syntax name f
-say errortext(1e30)
-f: say condition('o')~code
-signal on syntax name g
-say errortext(100.5)
-g: say wordpos(condition('o')~code, '40.12 40.903') &gt; 0
+say '['errortext('-0')']' (errortext('40.0') == errortext(40))
+say (errortext('40.1') == errortext('40.001')) (errortext('40.1') == errortext(' 40 . 1 ')),
+    (errortext('40.1') \== errortext('40.10')) (errortext('4.01e1') == errortext('4.010'))
+do n over .array~of(100, -1, '', '1e2', 1e30, '15e-1', '40.1000', '100.5', '.5',,
+    '40.-1', 'x.y', '40.1.1')
+  call try n
+end
+exit
+try:
+  signal on syntax name bad
+  say errortext(arg(1))
+  return
+bad: say '['arg(1)']' condition('o')~code
+  return
 </code></pre>
 <pre><code class="language-output">1 1 1 1 1 1
-[]
-40.903
-40.903
-40.12
-40.12
-40.903
-40.12
-1
+[] 1
+1 1 1 1
+[100] 40.903
+[-1] 40.903
+[] 40.12
+[1e2] 40.903
+[1E30] 40.12
+[15e-1] 40.12
+[40.1000] 40.926
+[100.5] 40.926
+[.5] 40.926
+[40.-1] 40.926
+[x.y] 40.926
+[40.1.1] 40.926
 </code></pre>
 <h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <div class="rule" id="r-bif.errortext.result"><a href="#r-bif.errortext.result">[bif.errortext.result]</a></div>
 <p>For an error number <code>n</code> that has a message, ERRORTEXT returns the text of the
 message, which is not the null string, with no error number and no subcode.
 Its wording is unspecified. Error numbers are the major numbers of the
-<code>SYNTAX</code> conditions, and a subcode is not an argument: <code>ERRORTEXT(40)</code> is the
-text for every error <code>40.n</code>. The numbers 3 to 11, 13 to 31, 33 to 49, 88 to 93
-and 97 to 99 have a message, and the example lists them all.</p>
+<code>SYNTAX</code> conditions: <code>ERRORTEXT(40)</code> is the text that every error <code>40.n</code> shares.
+For an error code that has a message, ERRORTEXT returns the message of that
+subcode, which is not the null string. The places where a raised error puts its
+values are shown in it as <code>&amp;1</code>, <code>&amp;2</code> and so on, as they stand in the message,
+not necessarily in order; a subcode whose message has no values has none. For
+an error code that has no message, it returns the null string. The numbers 3
+to 11, 13 to 31, 33 to 49, 88 to 93 and 97 to 99 have a message, and the first
+example lists them all.</p>
 <pre><code class="language-rexx">do i = 0 to 99
   if errortext(i) \== '' then say i
 end
@@ -321,6 +333,12 @@ end
 98
 99
 </code></pre>
+<pre><code class="language-rexx">t = errortext('40.1')
+say (t \== '') (pos('&amp;1', t) &gt; 0) (pos('&amp;', errortext('10.1')) = 0),
+    '['errortext('40.10')']' '['errortext('1.5')']'
+</code></pre>
+<pre><code class="language-output">1 1 1 [] []
+</code></pre>
 <div class="rule" id="r-bif.errortext.undefined"><a href="#r-bif.errortext.undefined">[bif.errortext.undefined]</a></div>
 <p>For an error number in the range 0 to 99 that has no message, ERRORTEXT
 returns the null string: 0 to 2, 12, 32, 50 to 87, and 94 to 96.</p>
@@ -349,10 +367,26 @@ say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The ANSI draft (9.5.5) gives ERRORTEXT a second argument, <code>S</code>,
-that selects the standard English text. ooRexx takes one argument only, and
-so does interrexx: a second argument raises <code>SYNTAX 40.4</code>. The texts are
-interrexx's own and are not specified.</p>
+that selects the standard English text. interrexx takes one argument only, as
+<a href="#r-bif.errortext.deviation.179">Deviation 179</a> says. The texts are interrexx's
+own and are not specified.</p>
 </blockquote>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.errortext.deviation.179"><a href="#r-bif.errortext.deviation.179">[bif.errortext.deviation.179]</a></div>
+<p>ERRORTEXT takes one argument, as at language level 6.06 (<a href="../deviations.html">Deviation
+179</a>), so a second argument raises <code>SYNTAX 40.4</code>, whatever it
+is. ooRexx, at level 6.07, takes a second argument of values that fill the
+<code>&amp;1</code>, <code>&amp;2</code> places of an error code's message.</p>
+<pre><code class="language-rexx">signal on syntax name b
+say errortext(26, 'S')
+b: say condition('o')~code
+signal on syntax name c
+say errortext('40.1', 'x')
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.4
+40.4
+</code></pre>
 
                     </main>
 

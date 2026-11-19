@@ -242,8 +242,9 @@ written, so the variable of <code>::attribute "Mixed"</code> is not the one that
 symbol <code>mixed</code> names in an EXPOSE, and while it is unset the getter answers
 <code>Mixed</code>. The messages <code>mixed</code> and <code>mixed=</code> still reach the methods, because
 the lookup of a method by name <a href="method.html#r-dir.method.name">ignores case</a>. A name that
-cannot be the name of a variable, such as a string with a blank or a number,
-raises <code>SYNTAX 99.925</code>, and a directive whose name is missing or is neither a
+cannot be the name of a variable, such as a string with a blank, a number, or
+a string with a sign such as <code>"a.e+5"</code>, which a variable name cannot hold
+because an exponent belongs only to a number, raises <code>SYNTAX 99.925</code>, and a directive whose name is missing or is neither a
 symbol nor a string raises <code>19.914</code>. Both are found when the program is read.</p>
 <pre><code class="language-rexx">o = .box~new
 o~"Mixed" = 5
@@ -254,6 +255,7 @@ o2 = .box~new
 say o2~mixed
 call try '::attribute "a b"'
 call try '::attribute 1'
+call try '::attribute "a.e+5"'
 call try '::attribute'
 call try '::attribute +'
 exit
@@ -276,13 +278,14 @@ MIXED 6
 Mixed
 ::attribute "a b" =&gt; 99.925
 ::attribute 1 =&gt; 99.925
+::attribute "a.e+5" =&gt; 99.925
 ::attribute =&gt; 19.914
 ::attribute + =&gt; 19.914
 </code></pre>
 <h2 id="get-and-set"><a class="header" href="#get-and-set">GET and SET</a></h2>
 <div class="rule" id="r-dir.attribute.getset"><a href="#r-dir.attribute.getset">[dir.attribute.getset]</a></div>
 <p>GET declares only the getter and SET only the setter, so that the two can have
-different options. GET and SET together raise <code>SYNTAX 25.925</code>. A GET or SET
+different options. GET and SET together raise <code>SYNTAX 25.937</code>. A GET or SET
 directive without a keyword of the kind group (ABSTRACT, EXTERNAL, DELEGATE)
 that has a section takes the section as the code of its method,
 with the directive clause left out, and without a section it declares the
@@ -326,8 +329,10 @@ tag: abc
 GUARDED, UNGUARDED, PROTECTED, UNPROTECTED, ABSTRACT, EXTERNAL and DELEGATE,
 in any case and in any order. The groups and the rules about them are those of
 <a href="method.html#r-dir.method.options">::METHOD</a>, except that ATTRIBUTE is not a keyword and
-GET and SET make a group of their own: a word that is none of the keywords, a
-keyword repeated or a second keyword of one group raises <code>SYNTAX 25.925</code>. The
+GET and SET make a group of their own: a keyword repeated raises
+<code>SYNTAX 25.936</code> and a second keyword of one group <code>25.937</code>, as <a href="index.html#r-dir.index.options">the options
+rule</a> says, and a word that is none of the keywords
+raises <code>25.925</code>. The
 access, guarding and protection options apply to every method that the
 directive declares, as <a href="method.html#r-dir.method.access">access</a>,
 <a href="method.html#r-dir.method.guard">guarding</a> and <a href="method.html#r-dir.method.protected">protection</a> say
@@ -372,12 +377,12 @@ e2: say arg(1) '=&gt;' condition('o')~code
 o~level = 4 =&gt; 97.2
 say o~secret =&gt; 97.2
 o~secret = 1 =&gt; 97.2
-::attribute a get set =&gt; 25.925
-::attribute a public private =&gt; 25.925
-::attribute a class class =&gt; 25.925
+::attribute a get set =&gt; 25.937
+::attribute a public private =&gt; 25.937
+::attribute a class class =&gt; 25.936
 ::attribute a frob =&gt; 25.925
 ::attribute a attribute =&gt; 25.925
-::attribute a abstract delegate d =&gt; 25.925
+::attribute a abstract delegate d =&gt; 25.937
 ::attribute a Package Get Class Guarded Protected =&gt; ok
 </code></pre>
 <h2 id="class-attributes"><a class="header" href="#class-attributes">Class attributes</a></h2>

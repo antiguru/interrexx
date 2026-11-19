@@ -210,7 +210,7 @@ call sysfiledelete f
 </code></pre>
 <pre><code class="language-output">40.4
 40.12
-93.907
+40.14
 0 0
 x2
 </code></pre>
@@ -297,16 +297,16 @@ call sysfiledelete f
 of characters of <code>string</code>, and raises <a href="index.html#r-bif.index.stream.notready">NOTREADY</a>.
 That is the case when the name cannot be opened for writing, as a name in a
 directory that does not exist, or a directory, and when the name is <code>STDIN</code>.
-For a name that cannot be opened, a <code>start</code> is not checked (see <a href="index.html#r-bif.index.stream.start">the start
-rule</a>). Nor is a <code>start</code> given with the name
-<code>STDIN</code> checked beyond its form, whatever its value (see <a href="index.html#r-bif.index.stream.transient">the transient
+A <code>start</code> below 1 raises <code>SYNTAX 40.14</code> all the same, as <a href="index.html#r-bif.index.stream.start">the start
+rule</a> says. A valid <code>start</code> given with the name
+<code>STDIN</code> is not checked further (see <a href="index.html#r-bif.index.stream.transient">the transient
 rule</a>): the call fails in the same way, and
 without a <code>string</code> it answers 0.</p>
 <pre><code class="language-rexx">n = 0
 call on notready name nr
 x = charout('spec-charout-nodir/x.tmp', 'abc')
 say x n
-x = charout('.', 'hello', 0)
+x = charout('.', 'hello', 1)
 say x n
 x = charout('stdin', 'q')
 say x n
@@ -320,8 +320,8 @@ return
 </code></pre>
 <pre><code class="language-rexx">n = 0
 call on notready name nr
-say charout('stdin', 'a', 0) n
-say charout('STDIN:', 'abc', -1) n
+say charout('stdin', 'a', 1) n
+say charout('STDIN:', 'abc', 2) n
 say charout('stdin', , 1) n
 say n
 exit

@@ -216,10 +216,10 @@ d: say condition('o')~code
 <p><code>count</code> is a <a href="../conventions.html#r-conv.whole.form">whole-number</a> argument, so it raises
 <code>SYNTAX 40.12</code> when it does not have that form or has a
 <a href="../conventions.html#r-conv.whole.digits">value</a> that is not a whole number. A whole number
-below 0 raises <code>SYNTAX 93.906</code>; <code>-0</code> is 0. The null string is not a
-whole number, so an empty <code>count</code> raises 40.12 and does not stand for an
-omitted one. The form check comes first, so a <code>count</code> that fails it raises
-40.12 whatever its sign.</p>
+below 0 raises <code>SYNTAX 40.13</code> (<a href="../conventions.html#r-conv.length.check">a count</a>); <code>-0</code> is 0.
+The null string is not a whole number, so an empty <code>count</code> raises 40.12 and
+does not stand for an omitted one. The form check comes first, so a <code>count</code>
+that fails it raises 40.12 whatever its sign.</p>
 <pre><code class="language-rexx">say changestr('a', 'banana', 'x', ' + 2 ') changestr('a', 'banana', 'x', '-0'),
     changestr('a', 'banana', 'x', '2.000')
 signal on syntax name a
@@ -236,10 +236,10 @@ say changestr('a', 'banana', 'x', '-1e5')
 d: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">bxnxna banana bxnxna
-93.906
+40.13
 40.12
 40.12
-93.906
+40.13
 </code></pre>
 <div class="rule" id="r-bif.changestr.count.default"><a href="#r-bif.changestr.count.default">[bif.changestr.count.default]</a></div>
 <p>When <code>count</code> is omitted, every occurrence that
@@ -311,7 +311,7 @@ say changestr('a', '', 'x', -1)
 a: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">[] []
-93.906
+40.13
 </code></pre>
 <div class="rule" id="r-bif.changestr.empty-newneedle"><a href="#r-bif.changestr.empty-newneedle">[bif.changestr.empty-newneedle]</a></div>
 <p>When <code>newneedle</code> is the null string, the occurrences replaced are deleted:

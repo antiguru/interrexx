@@ -307,7 +307,8 @@ call answers <code>2</code> when a component of either before the last does not 
 <code>20</code> when one is a file, whether <code>source</code> exists or not, so that
 <code>SysFileMove('none', 'f/x')</code> answers <code>20</code> and <code>SysFileMove('none/x', 'f/x')</code>
 answers <code>2</code>. Otherwise it answers <code>2</code> when <code>source</code> names nothing, <code>21</code> when a
-file is moved to a directory, <code>39</code> when a directory is moved to a directory
+file is moved to a directory, <code>20</code> when a file is moved to a name that ends in
+a slash, <code>39</code> when a directory is moved to a directory
 that has entries, <code>20</code> when a directory is moved to a symbolic link or to an
 entry, such as a fifo, that is neither a directory nor a regular file, <code>22</code>
 when a directory is moved into itself, and <code>13</code> when the system refuses, as it
@@ -338,7 +339,7 @@ call SysRmDir 'c1zqmfd'
 17 3 6
 17 17 3
 21 1 1
-21 0
+20 0
 2 1
 20 20 20 17
 2 20

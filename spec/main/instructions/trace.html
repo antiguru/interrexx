@@ -473,7 +473,9 @@ is a monitor, and by default it writes to the error stream, so a program that
 traces shows nothing on its standard output. A program sets another
 destination with the message <code>DESTINATION</code> to <code>.TRACEOUTPUT</code>: any object that
 understands <code>LINEOUT</code> will do, and <code>.OUTPUT</code> sends the lines to standard
-output.</p>
+output. A destination that raises a condition for a line refuses it: the line
+is written to standard output, and the condition is raised in the program, as
+it would be by the clause the line traces.</p>
 <pre><code class="language-rexx">trace r
 x = 1
 say 'done'
@@ -494,6 +496,27 @@ exit
 <pre><code class="language-output">got &lt;     3 *-* x = 1&gt;
 got &lt;       &gt;&gt;&gt;   "1"&gt;
 got &lt;     4 *-* trace n&gt;
+</code></pre>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace r
+nop
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 1 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* nop
+caught 93.900
 </code></pre>
 <h2 id="the-format-of-a-line"><a class="header" href="#the-format-of-a-line">The format of a line</a></h2>
 <div class="rule" id="r-instr.trace.line"><a href="#r-instr.trace.line">[instr.trace.line]</a></div>
@@ -1378,7 +1401,8 @@ say 'caught' condition('o')~code symbol('x')
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">a
+<pre><code class="language-output">       &gt;&gt;&gt;   "a"
+a
 caught 93.900 LIT
 </code></pre>
 

@@ -327,7 +327,7 @@ up as a variable. A missing value, or one that is not a symbol or a string,
 such as a sign or parentheses, raises <code>19.917</code> for DIGITS and <code>19.918</code> for
 FUZZ. FORM takes the symbol SCIENTIFIC or ENGINEERING in any case, and no
 abbreviation. A missing value or a string raises <code>SYNTAX 20.925</code>, and any
-other symbol <code>25.11</code>. The faults are found when the program is read.</p>
+other symbol <code>25.938</code>. The faults are found when the program is read.</p>
 <pre><code class="language-rexx">call try '::options digits "7" fuzz 05'
 call try '::options digits 1e2'
 call try '::options digits 5.0'
@@ -371,7 +371,7 @@ e: say arg(1) '=&gt;' condition('o')~code
 ::options fuzz =&gt; 19.918
 9 0 ENGINEERING
 ::options form Engineering =&gt; ok
-::options form sci =&gt; 25.11
+::options form sci =&gt; 25.938
 ::options form "scientific" =&gt; 20.925
 ::options form =&gt; 20.925
 </code></pre>

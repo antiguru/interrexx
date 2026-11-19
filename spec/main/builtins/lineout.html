@@ -214,8 +214,8 @@ call sysfiledelete f
 </code></pre>
 <pre><code class="language-output">40.4
 40.12
-93.907
-93.907
+40.14
+40.14
 0 0
 780A0A
 </code></pre>
@@ -377,8 +377,8 @@ call sysfiledelete f
 raises <a href="index.html#r-bif.index.stream.notready">NOTREADY</a>. That is the case when the name
 cannot be opened for writing, as a name in a directory that does not exist, or
 a directory; when the stream was opened for reading only; and when the name is
-<code>STDIN</code> and a <code>string</code> is given. For a name that cannot be opened, a <code>line</code> is
-not checked (see <a href="index.html#r-bif.index.stream.start">the start rule</a>). What a <code>line</code>
+<code>STDIN</code> and a <code>string</code> is given. A <code>line</code> below 1 raises <code>SYNTAX 40.14</code> all
+the same, as <a href="index.html#r-bif.index.stream.start">the start rule</a> says. What a <code>line</code>
 does together with the name <code>STDIN</code> is <a href="index.html#r-bif.index.stream.transient">not
 specified</a>, and so is a call with that name and
 neither a <code>string</code> nor a <code>line</code>.</p>
@@ -390,7 +390,7 @@ n = 0
 call on notready name nr
 x = lineout('spec-lineout-nodir/x.tmp', 'abc')
 say x n
-x = lineout('spec-lineout-nodir/x.tmp', , 0)
+x = lineout('spec-lineout-nodir/x.tmp', , 1)
 say x n
 x = lineout('.', 'hello')
 say x n

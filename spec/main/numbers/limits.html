@@ -211,7 +211,7 @@ say (12345e-999999999 + 0) (0.0000001e999999999 + 0)
 number</a> but is not a number, whatever its other
 characters. DATATYPE with type <code>N</code> answers <code>0</code> for it, an
 arithmetic operator raises <code>SYNTAX 41.1</code>, and a number argument of a builtin
-raises <code>SYNTAX 93.943</code>, as <a href="index.html#r-num.index.use">the use rule</a> says of every
+raises <code>SYNTAX 40.11</code>, as <a href="index.html#r-num.index.use">the use rule</a> says of every
 string that is not a number. A comparison raises no error: it treats such a
 string as it treats any other that is not a number, and compares it as text.</p>
 <pre><code class="language-rexx">signal on syntax name a
@@ -228,7 +228,7 @@ say ('1e1000000000' = '1.0e1000000000') ('1e999999999' = '1.0e999999999')
 </code></pre>
 <pre><code class="language-output">41.1
 41.1
-93.943
+40.11
 1 0 0
 0 1
 </code></pre>
