@@ -74451,8 +74451,11 @@ a <code>StringTable</code> with the entries <code>NAME</code>, <code>VALUE</code
 for an assignment and <code>0</code> for a read. Which clause the <code>STACKFRAME</code> of the <code>&gt;I&gt;</code>
 line shows, in its <code>LINE</code> and its <code>TRACELINE</code>, and the values of <code>HASSCOPELOCK</code>
 and <code>SCOPELOCKCOUNT</code> of the lines that follow an <code>EXPOSE</code> in a method, are not
-specified. The example shows each set of entries once, with the first word of
-the line that has it.</p>
+specified. The <code>NAME</code> of the <code>STACKFRAME</code> of a <code>&gt;I&gt;</code> line is what
+<a href="classes/stackframe.html#r-class.stackframe.name"><code>name</code></a> answers for the level it announces, the name a
+routine was called by or the message name of a method. The first example shows
+each set of entries once, with the first word of the line that has it, and the
+second the <code>NAME</code> of the announcements.</p>
 <pre><code class="language-rexx">.traceoutput~destination(.sink~new)
 .traceobject~notify = .rec~new
 trace i
@@ -74542,6 +74545,28 @@ exit
   STACKFRAME StringTable METHOD
   line 17
   VARIABLE ASSIGNMENT NAME VALUE W 1
+</code></pre>
+<pre><code class="language-rexx">log = .array~new
+.traceobject~option = 'P'
+.traceobject~collector = log
+call oha
+call 'Oha'
+x = .o~new~m
+.traceobject~collector = .nil
+do t over log
+  if t~traceline~word(1) = '&gt;I&gt;' then say t~stackframe~type t~stackframe~name
+end
+exit
+::routine oha
+  return
+::class o
+::method m
+  return 1
+::options trace label
+</code></pre>
+<pre><code class="language-output">ROUTINE OHA
+ROUTINE Oha
+METHOD M
 </code></pre>
 <h2 id="class-attributes-1"><a class="header" href="#class-attributes-1">Class attributes</a></h2>
 <div class="rule" id="r-class.traceobject.collector"><a href="classes/traceobject.html#r-class.traceobject.collector">[class.traceobject.collector]</a></div>
