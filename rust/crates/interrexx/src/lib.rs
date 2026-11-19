@@ -3060,7 +3060,6 @@ impl Interp {
         let caller_levels = own_level.then(|| {
             (
                 std::mem::take(&mut self.activity.activation_indent),
-                std::mem::take(&mut self.activity.indent_offset),
                 self.activity.clause_line_override.take(),
             )
         });
@@ -3143,9 +3142,8 @@ impl Interp {
         let activation = self.pop_activation().expect("the frame just pushed");
         self.roots.activity_mut().pop_slots(activation.frame);
         self.restore_clause_state(caller_clause);
-        if let Some((base, offset, line)) = caller_levels {
+        if let Some((base, line)) = caller_levels {
             self.activity.activation_indent = base;
-            self.activity.indent_offset = offset;
             self.activity.clause_line_override = line;
         }
         let exit = if !nested && let Some(refusal) = self.trace_refusal.take() {

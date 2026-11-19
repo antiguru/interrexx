@@ -119,10 +119,6 @@ pub(crate) enum Op {
         path: NodePath,
         src: u16,
     },
-    /// Hands the `SELECT` at `index` the value an **absorbed** `WHEN CASE`
-    /// compares against, from register `case`, or clears it for a plain
-    /// `SELECT` that has no `CASE` expression at all.
-    SelectCaseText { index: u32, case: Option<u16> },
     /// Tests the listed `WHEN`/`WHEN CASE` at `index` and stores whether it
     /// holds in register `dst`, as the Rexx logical value [`Op::JumpUnless`]
     /// reads back.
@@ -652,7 +648,7 @@ pub(crate) struct ClausePosition {
     /// `Plan::lines`' own entry: the source line the clause starts on.
     pub(crate) line: u32,
     /// `Plan::indents`' own entry: the nesting indent **before**
-    /// `Activity::activation_indent` and `Activity::indent_offset` are added,
+    /// `Activity::activation_indent` is added,
     /// which is what `Interp::printed_indent` adds to it.
     pub(crate) indent: u32,
 }

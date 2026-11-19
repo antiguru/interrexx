@@ -320,7 +320,9 @@ const SEEDED_SENDS: &[(&str, &str)] = &[
 /// Sends whose answer differs from the oracle's by a Deviation: the
 /// language level, 6.06 here and 6.07 in ooRexx (Deviation 179), which
 /// `RexxInfo~languageLevel` answers and `RexxInfo~name` includes. Such a row is
-/// `diverge`, and reaching that from `answers` is not a regression.
+/// `diverge`, and reaching that from `answers` is not a regression. What
+/// either side answers is not left open: `corpus/introspection-arity.tsv`
+/// records both values in full, and its test fails when either moves.
 const DEVIATING_SENDS: &[(&str, &str)] = &[("RexxInfo", "languageLevel"), ("RexxInfo", "name")];
 
 /// A class whose `class-set.txt` construction expression cannot be this

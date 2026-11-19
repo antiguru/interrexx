@@ -192,6 +192,7 @@ impl Interp {
             ReturnStatus::Normal
         };
         Ok(CommandOutcome {
+            shown: None,
             rc: whole_value(&text).unwrap_or(0),
             status,
             supplied: Some(Supplied { object, text }),

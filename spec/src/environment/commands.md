@@ -509,7 +509,9 @@ other string is run as the environment runs every command, by a shell or, for
 program ends with it, so that a tab in place of the blank after the word, a
 capital letter, or a `;` sends the string that way. A command that the interpreter
 does itself writes nothing, and its return code is set as the rules of the
-four commands say.
+four commands say. An ERROR or FAILURE condition it raises names it, in
+`CONDITION('D')`, without the blanks and tabs before its word, where a
+command that a shell runs keeps them.
 
 ```rexx
 call directory '/'
@@ -582,6 +584,21 @@ call directory '/'
 0 /usr
 0 [1]
 0 []
+```
+
+```rexx
+call on error name e
+address system
+' cd /a4zq_none '
+'  false  '
+exit
+e: say '['condition('d')']' rc
+  return
+```
+
+```output
+[cd /a4zq_none ] 2
+[  false  ] 1
 ```
 
 r[env.commands.cd]

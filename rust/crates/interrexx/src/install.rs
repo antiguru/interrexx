@@ -2485,7 +2485,13 @@ impl Interp {
             // naming one is 90.999 (r[dir.routine.deviation.143]).
             let classic_library = match self.resolve_library(&spec.library) {
                 LibraryLoad::Missing => true,
-                LibraryLoad::Raised(failure) => return Err(refuse(failure, true)),
+                LibraryLoad::Raised(failure) => {
+                    // No registration is left behind on this path either.
+                    if made {
+                        crate::builtin::registrations::drop_function(&upper);
+                    }
+                    return Err(refuse(failure, true));
+                }
                 LibraryLoad::Loaded(_) | LibraryLoad::Version => false,
             };
             if classic_library

@@ -33,10 +33,13 @@ const DECLARED_GAPS: &[&str] = &[];
 /// either but answer rather than refuse: ERRORTEXT takes one argument, a
 /// whole number, here, and ooRexx also takes an error code `nn.nnn`,
 /// answering the null string for `1.5`, and a second argument (Deviation 180).
-const DEVIATING: &[&str] = &[
-    "errortext_arity",
-    "errortext_not_whole",
-    "errortext_not_whole_digits_crossed",
+///
+/// Each case names the error this crate raises for it, which
+/// [`every_deviating_case_raises_its_own_error`] holds it to.
+const DEVIATING: &[(&str, &str)] = &[
+    ("errortext_arity", "Error 40.4:"),
+    ("errortext_not_whole", "Error 40.12:"),
+    ("errortext_not_whole_digits_crossed", "Error 40.12:"),
 ];
 
 const CASES: &[Case] = &[
@@ -503,12 +506,14 @@ fn every_state_builtin_case_matches_the_oracle_except_the_declared_gaps() {
     let unexpected: Vec<&str> = differing
         .iter()
         .copied()
-        .filter(|name| !DECLARED_GAPS.contains(name) && !DEVIATING.contains(name))
+        .filter(|name| {
+            !DECLARED_GAPS.contains(name) && !DEVIATING.iter().any(|(case, _)| case == name)
+        })
         .collect();
     let closed: Vec<&str> = DECLARED_GAPS
         .iter()
-        .chain(DEVIATING)
         .copied()
+        .chain(DEVIATING.iter().map(|(case, _)| *case))
         .filter(|name| !differing.contains(name))
         .collect();
 
@@ -565,4 +570,28 @@ fn every_declared_gap_names_a_case_and_fails_loudly() {
         );
     }
     let _ = fs::remove_dir_all(&run_root);
+}
+
+/// A Deviation-licensed difference is still a fixed answer of this crate's:
+/// each [`DEVIATING`] case raises the error it names, so a change in what
+/// interrexx answers is not hidden by the difference being licensed.
+#[test]
+fn every_deviating_case_raises_its_own_error() {
+    for (name, error) in DEVIATING {
+        let case = CASES
+            .iter()
+            .find(|case| case.name == *name)
+            .unwrap_or_else(|| panic!("{name} is a deviating case with no case of that name"));
+        let rust = interrexx::run_program(
+            "/deviating.rex",
+            format!("{}\n", case.source).into_bytes(),
+            interrexx::Invocation::none().with_deadline(support::oracle::RUN_DEADLINE),
+        );
+        let stderr = String::from_utf8_lossy(&rust.stderr);
+        assert!(
+            rust.exit_code == 216 && stderr.contains(error),
+            "{name} should raise {error} (exit 216), and gave exit {}: {stderr}",
+            rust.exit_code
+        );
+    }
 }

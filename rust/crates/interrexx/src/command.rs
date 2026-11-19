@@ -95,6 +95,10 @@ pub(crate) struct CommandOutcome {
     /// The condition a registered handler raised, which the command raises
     /// in place of the one its status would.
     pub(crate) condition: Option<Box<HandlerCondition>>,
+    /// The command as the condition it raises names it, where that is not
+    /// the command as written: one the interpreter ran itself without the
+    /// blanks before its word (`r[env.commands.inprocess]`).
+    pub(crate) shown: Option<Vec<u8>>,
 }
 
 /// A condition a registered handler raised through its thread context, as the
@@ -123,6 +127,7 @@ impl CommandOutcome {
             _ => ReturnStatus::Error,
         };
         CommandOutcome {
+            shown: None,
             rc,
             status,
             supplied: None,
@@ -133,6 +138,7 @@ impl CommandOutcome {
     /// An environment no handler answers: `RXSUBCOM_NOTREG` as a `FAILURE`.
     fn of_failure(rc: i32) -> CommandOutcome {
         CommandOutcome {
+            shown: None,
             rc,
             status: ReturnStatus::Failure,
             supplied: None,
@@ -269,19 +275,23 @@ fn run_internally(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcome>
         .position(|byte| !matches!(*byte, b' ' | b'\t'))
         .unwrap_or(command.len());
     let command = &command[lead..];
-    if command == b"cd" || command.starts_with(b"cd ") {
-        return change_directory(interp, command);
-    }
-    if command.starts_with(b"set ") {
-        return assign_environment(interp, after_keyword(command, 3), Assignment::Set);
-    }
-    if command.starts_with(b"unset ") {
-        return assign_environment(interp, after_keyword(command, 5), Assignment::Unset);
-    }
-    if command.starts_with(b"export ") {
-        return assign_environment(interp, after_keyword(command, 6), Assignment::Export);
-    }
-    None
+    let outcome = if command == b"cd" || command.starts_with(b"cd ") {
+        change_directory(interp, command)
+    } else if command.starts_with(b"set ") {
+        assign_environment(interp, after_keyword(command, 3), Assignment::Set)
+    } else if command.starts_with(b"unset ") {
+        assign_environment(interp, after_keyword(command, 5), Assignment::Unset)
+    } else if command.starts_with(b"export ") {
+        assign_environment(interp, after_keyword(command, 6), Assignment::Export)
+    } else {
+        None
+    };
+    outcome.map(|mut outcome| {
+        if lead > 0 {
+            outcome.shown = Some(command.to_vec());
+        }
+        outcome
+    })
 }
 
 /// Every `"` dropped, and a backslash dropped with the byte after it kept. A
@@ -1066,6 +1076,7 @@ impl Interp {
             _ => ReturnStatus::Normal,
         };
         Ok(CommandOutcome {
+            shown: None,
             rc: whole_value(&text).unwrap_or(0),
             status,
             supplied: Some(Supplied { object, text }),
@@ -1119,6 +1130,7 @@ impl Interp {
         let text = self.to_text(text).into_owned();
         let rc = whole_value(&text).unwrap_or(0);
         Ok(CommandOutcome {
+            shown: None,
             rc,
             status,
             supplied: Some(Supplied { object, text }),
@@ -1486,7 +1498,8 @@ impl Interp {
             None => {
                 if let Some(condition) = outcome.status.condition() {
                     let supplied = outcome.supplied.as_ref().map(|supplied| supplied.object);
-                    self.raise_command_condition(condition, command, outcome.rc, supplied)?;
+                    let shown = outcome.shown.as_deref().unwrap_or(command);
+                    self.raise_command_condition(condition, shown, outcome.rc, supplied)?;
                 }
             }
         }

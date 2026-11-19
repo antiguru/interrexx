@@ -621,7 +621,6 @@ impl Interp {
             Flow::Signal(target) => {
                 self.activation_mut().pc = target;
                 self.activity.activation_indent = 0;
-                self.activity.indent_offset = 0;
             }
             // **The one place an activation's value stops being a clause's
             // temporary**, which is why the root that outlives the temps
@@ -902,7 +901,6 @@ impl Interp {
                 let base_line = self.clause_site(source, instruction).map(|(line, _)| line);
                 let saved_base =
                     std::mem::replace(&mut self.activity.activation_indent, base_indent);
-                let saved_offset = std::mem::take(&mut self.activity.indent_offset);
                 let saved_line =
                     std::mem::replace(&mut self.activity.clause_line_override, base_line);
                 // **The fragment's own condition queue**, which the depth is the
@@ -957,7 +955,6 @@ impl Interp {
                 // The `INTERPRET` clause is the one stopped on again.
                 self.activity.clause_state.current_value_indent = base_indent;
                 self.activity.activation_indent = saved_base;
-                self.activity.indent_offset = saved_offset;
                 self.activity.clause_line_override = saved_line;
                 flow
             }
@@ -992,84 +989,19 @@ impl Interp {
             // -- a *listed* `When`/`WhenCase` node (one collected into this
             // `whens` list, `ast.rs`'s own doc comment) must never be
             // independently stepped for a decision of its own, only ever
-            // run past inside a bounded sub-loop. An *absorbed* one (never
-            // collected here at all, because it is itself another `When`/
-            // `WhenCase`'s own `THEN`) is the exception, and is
-            // independently stepped -- see the `When`/`WhenCase` arm,
-            // below, for both halves.
-
-            // **Fixed after review: this used to be a bare `Ok(Flow::Next)`,
-            // and that was a silently wrong answer, not a formatting gap.**
-            // A `When`/`WhenCase` is only ever reached here through the
-            // absorbed-`WHEN` shape -- a `WHEN` whose own `THEN` consequence
-            // is itself a `WHEN`/`WHEN CASE` clause, which the enclosing
-            // `SELECT`'s own `whens` never collects (`ast.rs`'s own doc
-            // comment on `whens`) -- since a
-            // *listed* `When`/`WhenCase` is always fully handled by
-            // `Select`'s own explicit arm, above, without ever calling
-            // `step` on itself (its own body range never contains another
-            // listed sibling's index).
-            InstructionKind::When { condition, .. } => {
-                self.eval_condition(
-                    code,
-                    condition,
-                    ConditionTrace::Result(self.activity.clause_state.current_value_indent),
-                    raised_when_not_logical,
-                )?;
-                Ok(Flow::Next)
-            }
-            // `SELECT CASE`'s own absorbed form.
-            InstructionKind::WhenCase {
-                values,
-                false_target,
-                ..
-            } => match self.activation().current_case {
-                Some(case) => {
-                    let indent = self.activity.clause_state.current_value_indent;
-                    if self.test_case_when(code, values, case, indent)? {
-                        Ok(Flow::Next)
-                    } else {
-                        // **Corrected after a second re-verification found the
-                        // first version of this line wrong under nesting.**
-                        // `current_value_indent.saturating_sub (2)` (this
-                        // line's own first attempt) gave the right answer at
-                        // the top level by coincidence (`6 - 2 = 4`) and the
-                        // *wrong* one nested one `DO` deeper (`8 - 2 = 6`,
-                        // where `4` is still wanted), as a `TRACE R` transcript
-                        // one level deeper again shows. The offset is the
-                        // **constant** `4`, not a function of how deep the
-                        // absorbed condition itself sits: it is exactly two
-                        // `indent()` bumps -- the enclosing, listed
-                        // `WHEN`/`WHEN CASE`'s own marker, then its own body
-                        // entry -- past wherever an *ordinary* `SELECT` -level
-                        // construct (`END`, `OTHERWISE`) would sit, and that
-                        // gap is the same two bumps regardless of how many
-                        // other constructs enclose the whole `SELECT`.
-                        // Confirmed at both nesting depths for all three
-                        // landing shapes (`END`, `OTHERWISE`'s own marker,
-                        // `OTHERWISE`'s own body) before trusting it a second
-                        // time.
-                        self.activity.indent_offset = 4;
-                        Ok(Flow::Goto(
-                            false_target.unwrap_or(code.body.instructions.len()),
-                        ))
-                    }
-                }
-                None => {
-                    for value in values {
-                        let v = self.eval(code, value)?;
-                        self.roots.activity_mut().push_temp(v);
-                    }
-                    Ok(Flow::Next)
-                }
-            },
+            // run past inside a bounded sub-loop.
             InstructionKind::Otherwise => Ok(Flow::Next),
 
-            // `DO`/`LOOP`, `IF` and `SELECT` are **not** reachable here.
+            // `DO`/`LOOP`, `IF` and `SELECT` are **not** reachable here, and
+            // neither is a `WHEN`/`WHEN CASE`: every one is a listed branch of
+            // its `SELECT`, which tests it without stepping it, since the
+            // parser refuses a `WHEN` anywhere else with 9.1.
             InstructionKind::Do(_)
             | InstructionKind::Loop(_)
             | InstructionKind::If { .. }
-            | InstructionKind::Select { .. } => Err(Loud::instruction(&instruction.kind).into()),
+            | InstructionKind::Select { .. }
+            | InstructionKind::When { .. }
+            | InstructionKind::WhenCase { .. } => Err(Loud::instruction(&instruction.kind).into()),
 
             // `LEAVE`/`ITERATE`, bare or by name. Resolves to
             // data, not a failure (`Flow::Leave`'s own doc comment): whether
@@ -1089,17 +1021,8 @@ impl Interp {
             // are reached only by that `OTHERWISE`'s own ordinary body
             // fallthrough and do nothing. `EndStyle::Select`'s own doc
             // comment: "Reaching this END at run time is error 7.3, because
-            // every WHEN was false" -- the ordinary way to land here, but
-            // **not the only one since F3**: an absorbed `WhenCase`'s own
-            // false-branch escape (`InstructionKind::WhenCase`'s own arm,
-            // above) can also `Goto` straight onto this exact instruction,
-            // carrying its own residual indent along in `pending_escape_
-            // indent` for this arm's own 7.3 to be reported at rather than
-            // this position's ordinary `static_indent`. An earlier version
-            // of this comment said `Select`'s own arm "sends every other
-            // path around this instruction entirely," which was true of
-            // every path *it* controls directly and false of this one,
-            // which escapes through it rather than being dispatched by it.
+            // every WHEN was false" -- `Select`'s own arm sends every other
+            // path around this instruction.
             InstructionKind::End { closes, .. } => {
                 let closes = closes
                     .as_ref()
@@ -2607,7 +2530,7 @@ impl Interp {
         let indent = if let Some(indent) = rerun {
             indent
         } else if shortcut {
-            position.indent as usize + self.activity.activation_indent + self.activity.indent_offset
+            position.indent as usize + self.activity.activation_indent
         } else {
             self.printed_indent(code, index)
         };
@@ -2993,14 +2916,6 @@ impl Interp {
     ) -> LeaveOrigin {
         LeaveOrigin {
             site: self.clause_site(source, instruction),
-            // `+ self.indent_offset` (F-EX1's own correction to F3,
-            // `lib.rs`'s own doc comment): found missing here on the
-            // *second* re-verification of F-EX1's own fix, not the first --
-            // a `LEAVE`/`ITERATE` inside an escaped `OTHERWISE`'s own body
-            // captures its own origin indent here, not through `step_in_
-            // temps_frame`'s own computation at all (`Flow::Leave`'s own
-            // doc comment: eagerly, before any propagation), so it needs
-            // the identical addition independently, not by inheritance.
             indent: self.failure_indent(code, index),
             // Already this instruction's own line: `Op::Clause`'s region's
             // `in_clause` set it before dispatching this `step`, through the

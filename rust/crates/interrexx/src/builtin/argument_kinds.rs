@@ -147,7 +147,7 @@ enum Kind {
     Character,
     /// An option, one of the letters or words given: 40.904.
     Option(&'static str),
-    /// The number a numeric builtin works on: 93.943.
+    /// The number a numeric builtin works on: 40.11.
     Target,
     /// The number `D2C` converts: 93.929.
     D2c,

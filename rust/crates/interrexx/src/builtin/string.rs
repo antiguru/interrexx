@@ -461,7 +461,7 @@ pub(crate) fn delstr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
         None => 1,
     };
     // Range-checked before the out-of-range start is answered, which is the
-    // order of the checks: `delstr('abc',9,-1)` is 93.923 rather than the
+    // order of the checks: `delstr('abc',9,-1)` is 40.13 rather than the
     // unchanged string.
     let deleted = requested
         .map(|value| length_of(name, 3, value))

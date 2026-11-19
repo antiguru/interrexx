@@ -56,7 +56,6 @@ impl Root {
             | Op::Clause { .. }
             | Op::CallingClause { .. }
             | Op::TraceClause { .. }
-            | Op::SelectCaseText { .. }
             | Op::WhenTest { .. }
             | Op::TraceLiteral { .. }
             | Op::TraceRead { .. }

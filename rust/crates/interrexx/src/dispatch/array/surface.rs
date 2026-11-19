@@ -414,13 +414,11 @@ fn native_array_insert(
         // at all.
         Some(Some(index)) if index == ObjRef::NIL => 0,
         Some(Some(index)) => {
-            // An Array index holding more than one subscript is too many for a
-            // queue's one dimension (`r[class.queue.insert]`).
+            // An Array index holding more than one item is too many subscripts
+            // for a queue's one dimension (`r[class.queue.insert]`): the items
+            // are counted, not the slots up to the last one.
             let held = interp.array_slots(index).map_or(0, |slots| {
-                slots
-                    .iter()
-                    .rposition(Option::is_some)
-                    .map_or(0, |at| at + 1)
+                slots.iter().filter(|slot| slot.is_some()).count()
             });
             if held > 1 && is_queue(interp, receiver) {
                 return Err(Raised::too_many_subscripts(1).into());

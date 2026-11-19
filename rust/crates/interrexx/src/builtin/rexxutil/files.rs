@@ -240,7 +240,8 @@ pub(crate) fn is_file_directory(
 }
 
 /// `SysIsFileLink(name)`: whether the name itself is a symbolic link. The
-/// name is qualified first, so a trailing `/` is gone before `lstat` reads it.
+/// name is qualified first, which keeps a trailing `/`, so `lstat` reads the
+/// directory a link names rather than the link (`r[util.sysisfilelink.answer]`).
 pub(crate) fn is_file_link(
     interp: &mut Interp,
     _name: &'static [u8],

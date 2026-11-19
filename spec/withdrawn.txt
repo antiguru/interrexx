@@ -16,3 +16,6 @@ num.arithmetic.deviation.102
 bif.index.call.native.deviation.101
 util.index.deviation.101
 bif.index.call.convert.deviation.170
+class.list.deviation.172
+instr.do.deviation.172
+conc.locks.deviation.160

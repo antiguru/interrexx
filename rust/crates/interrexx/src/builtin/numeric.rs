@@ -1,9 +1,9 @@
 //! The numeric builtins: `ABS`, `FORMAT`, `MAX`, `MIN`, `RANDOM`, `SIGN` and
 //! `TRUNC`.
 //! ```text
-//! max('a',1,3)   93.943   names MAX and the value a.
-//! max(1,'a',3)   93.904   names argument 1 and the value a.
-//! max(1,2,'a')   93.904   names argument 2 and the value a.
+//! max('a',1,3)   40.11    names MAX, argument 1 and the value a.
+//! max(1,'a',3)   40.11    names MAX, argument 2 and the value a.
+//! max(1,2,'a')   40.11    names MAX, argument 3 and the value a.
 //! ```
 //! ```rexx
 //! numeric digits 5 ; x = max(123456789,1) ; numeric digits 12 ; say x
@@ -167,8 +167,8 @@ pub(crate) fn sign_of(interp: &mut Interp, value: &Number) -> Result<ObjRef, Fai
 /// `TRUNC(number, decimals)`.
 /// ```text
 /// trunc('AB.CD','V')   40.12   names TRUNC, argument 2 and the value V.
-/// trunc('AB.CD',-1)    93.943  names TRUNC and the value AB.CD.
-/// trunc(1.5,-1)        93.906  names argument 1.
+/// trunc('AB.CD',-1)    40.11   names TRUNC, argument 1 and the value AB.CD.
+/// trunc(1.5,-1)        40.13   names TRUNC, argument 2 and the value -1.
 /// ```
 pub(crate) fn trunc(
     interp: &mut Interp,

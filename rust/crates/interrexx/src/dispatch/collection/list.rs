@@ -23,8 +23,9 @@ fn list_index_argument(args: &[Option<ObjRef>], at: usize) -> Result<ObjRef, Fai
 ///
 /// The array starts with [`HEADER`] slots -- the first and last handle, the
 /// count of entries and the top of the free stack -- and then holds
-/// [`ENTRY`] slots per handle ever issued: the item ([`ITEM`], empty for an
-/// entry holding nothing), the next entry ([`NEXT`]) and the previous one
+/// [`ENTRY`] slots per handle ever issued: the item ([`ITEM`], which the
+/// layout lets be empty, though `put` and `insert` require an item, so no
+/// program makes such an entry: `r[class.list.nothing]`), the next entry ([`NEXT`]) and the previous one
 /// ([`PREV`]). A link is the handle plus one as an inline integer, `0` for
 /// none. An entry in use always has a `PREV` slot; a freed one has none, and
 /// its `NEXT` is the freed handle below it on the free stack. So lookup by
@@ -188,10 +189,9 @@ fn list_position(
     };
     // `isIndexValid` is `isInUse`, so `validateIndex` answers NoLink
     // for an entry holding nothing and every lookup reads it as
-    // absent. Measured over `l~put(, 1)`: `hasIndex(1)` is `0`,
-    // `at(1)` and `next(1)` are `.nil`, and `section(1,1)` raises --
-    // while the chain still walks through the entry, which is
-    // [`list_pairs`]'s business and not this function's.
+    // absent. No program makes one any more (`r[class.list.nothing]`);
+    // the test is kept so that the layout's empty item is never read as a
+    // live entry.
     read_chain(interp, chain, |chain| {
         (chain.in_use(wanted) && chain.item(wanted).is_some()).then_some(wanted)
     })

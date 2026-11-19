@@ -1511,7 +1511,8 @@ character to standard output. `.RexxInfo~languageLevel`, and the level in
 `PARSE VERSION` and `.RexxInfo~name`, read 6.06, and the CATCH and FINALLY
 clauses of level 6.07 are not part of interrexx. ooRexx is at level 6.07: the
 three are builtins there, with argument errors of the 40.xxx family, BEEP
-writes no bell, and the level reads 6.07.
+writes no bell, and the level reads 6.07. Ruled by the owner on 2026-11-17
+(#796).
 
 ## 180. ERRORTEXT's argument
 

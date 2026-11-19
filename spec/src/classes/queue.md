@@ -454,6 +454,8 @@ call try 'q~insert("q", 1, 1)'
 call try 'q~insert("q", q~items + 1)'
 call try 'q~insert("q", 99)'
 call try '.queue~new~insert("q", 1)'
+call try '.queue~of(1, 2, 3)~insert("q", .array~of(, 1))'
+call try '.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2))'
 say (q~items == n) q~allItems~makeString('L', ',')
 exit
 try:
@@ -481,6 +483,8 @@ q~insert("q", 1, 1) => 93.902
 q~insert("q", q~items + 1) => 93.966
 q~insert("q", 99) => 93.966
 .queue~new~insert("q", 1) => 93.966
+.queue~of(1, 2, 3)~insert("q", .array~of(, 1)) => 2
+.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2)) => 93.966
 1 y,q,a,q,x,v,b,c,z,w
 ```
 

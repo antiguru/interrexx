@@ -1161,8 +1161,7 @@ call rules](r:bif.index.call.count), with one required argument and no most, so
 a call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
 an omitted first argument raises `SYNTAX 40.5`. A function call that omits an
 argument after the first but passes one after it raises `SYNTAX 40.5` too, as
-Deviation 53 says for [MAX](r:bif.max.deviation.53) and
-[MIN](r:bif.min.deviation.53).
+the rules of [MAX](r:bif.max.omitted) and [MIN](r:bif.min.omitted) say.
 
 ```rexx
 say max(31,7,-4,19,22,-8,0,13,5,26,-15,9,17,2,28,-1,11,24,6,3,20,14,-9,25,12),
