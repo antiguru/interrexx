@@ -1,7 +1,7 @@
 //! The compiled template walk, run: each test names the part of the walk it
 //! is the only witness of.
 
-use crate::{Invocation, run_program};
+use crate::{Invocation, SimConfig, SwitchMode, run_program};
 
 /// The path these programs are reported under; nothing reads it back.
 const TEST_PATH: &str = "/nonexistent/parse-walk-test.rex";
@@ -81,4 +81,35 @@ fn an_unset_var_source_raises_novalue() {
 fn a_compound_var_source_reads_its_resolved_tail() {
     let printed = stdout_of("i = 7\ns.7 = 'p q'\nparse var s.i f ' ' g\nsay f'|'g'|'\n");
     assert_eq!(printed, "p|q|\n");
+}
+
+/// **The parse string stays rooted while a target overwrites its variable**:
+/// with a collection at every allocation, the pieces built after `s` is
+/// assigned would otherwise find their source collected.
+#[test]
+fn a_var_source_its_own_target_overwrites_stays_rooted() {
+    let config = SimConfig::parse("sim:7,gc=1").expect("a sim spec");
+    let outcome = run_program(
+        TEST_PATH,
+        b"do i = 1 to 3\n\
+          s = copies('x', 30) 'yyyyyyyyyyyy zzzzzzzzzzzzzz' i\n\
+          parse var s s ' ' t ' ' u ' ' v\n\
+          end\n\
+          say length(s) t u v\n"
+            .to_vec(),
+        Invocation::none().with_switch_mode(SwitchMode::Sim(config)),
+    );
+    assert_eq!(
+        outcome.exit_code,
+        0,
+        "stderr: {}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert!(
+        outcome
+            .stdout
+            .starts_with(b"30 yyyyyyyyyyyy zzzzzzzzzzzzzz 3\n"),
+        "{}",
+        String::from_utf8_lossy(&outcome.stdout)
+    );
 }

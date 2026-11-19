@@ -1439,7 +1439,7 @@ fn push_value<'a>(
 }
 
 /// Whether the template of `parse` is walked by [`Op::ParseBegin`] and its
-/// [`Op::ParseStep`]s: a source the compiled walk reads in place, no fold, and
+/// [`Op::ParseRun`]s: a source the compiled walk reads in place, no fold, and
 /// every trigger operand a literal or an expression of reads and operators,
 /// which runs without parking the driver and so between two steps. `PARSE VAR
 /// name w1 ... rest` keeps the template engine's own walk for that shape.
@@ -1467,11 +1467,12 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
 }
 
 /// The ops of a template [`compiled_template`] accepts: the walk's opening,
-/// and per entry its operand's ops, where it has an operand that is not a
-/// literal, then its step. An operand's ops follow the step before it,
-/// because it is evaluated after the earlier pieces' targets are assigned
+/// which walks the entries up to the first with an operand that is not a
+/// literal, and per such entry its operand's ops and the run from it to the
+/// next. An operand's ops follow the run before it, because it is evaluated
+/// after the earlier pieces' targets are assigned
 /// (`r[parse.patterns.variable]`). A literal is read off the template where
-/// the step runs, as the template engine reads it.
+/// its run reaches it, as the template engine reads it.
 #[expect(
     clippy::too_many_arguments,
     reason = "the emission sinks, the plan an operand's reads resolve against, and the clause \
@@ -1492,45 +1493,57 @@ fn push_template<'a>(
     for _ in 1..crate::parse_template::WALK_REGISTERS {
         registers.alloc()?;
     }
+    /// The operand of `entry` that the stream evaluates: one that is not a
+    /// literal.
+    fn evaluated(entry: &Option<interrexx_parse::ParseTrigger>) -> Option<&Expr> {
+        entry
+            .as_ref()
+            .and_then(|trigger| trigger.value.as_ref())
+            .filter(|operand| !matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_)))
+    }
+    let width = |at: usize| u16::try_from(at).map_err(|_| ChunkTooLarge { what: "template" });
+    // The entries whose operand the stream evaluates, each the start of a
+    // run, and the template's end.
+    let starts: Vec<usize> = (parse.template.iter().enumerate())
+        .filter(|(_, entry)| evaluated(entry).is_some())
+        .map(|(at, _)| at)
+        .collect();
+    let end = parse.template.len();
     let begin = op_index(ops)?;
     ops.push(Op::ParseBegin {
         index,
+        skip: 0,
         src: src.unwrap_or(Op::ARG_OMITTED),
         base,
-        skip: 0,
+        to: width(starts.first().copied().unwrap_or(end))?,
     });
-    for (entry, trigger) in parse.template.iter().enumerate() {
-        let entry = u16::try_from(entry).map_err(|_| ChunkTooLarge { what: "template" })?;
-        let operand = match trigger.as_ref().and_then(|trigger| trigger.value.as_ref()) {
-            Some(operand)
-                if !matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_)) =>
-            {
-                let mark = registers.mark();
-                let dst = registers.alloc()?;
-                push_native(
-                    ops,
-                    false,
-                    consts,
-                    registers,
-                    hints,
-                    calls,
-                    plan,
-                    operand,
-                    index,
-                    0,
-                    Some(NodePath::ROOT),
-                    dst,
-                )?;
-                registers.release(mark);
-                dst
-            }
-            _ => Op::ARG_OMITTED,
+    for (run, &from) in starts.iter().enumerate() {
+        let Some(operand) = evaluated(&parse.template[from]) else {
+            continue;
         };
-        ops.push(Op::ParseStep {
-            index,
-            entry,
-            base,
+        let mark = registers.mark();
+        let dst = registers.alloc()?;
+        push_native(
+            ops,
+            false,
+            consts,
+            registers,
+            hints,
+            calls,
+            plan,
             operand,
+            index,
+            0,
+            Some(NodePath::ROOT),
+            dst,
+        )?;
+        registers.release(mark);
+        ops.push(Op::ParseRun {
+            index,
+            base,
+            from: width(from)?,
+            to: width(starts.get(run + 1).copied().unwrap_or(end))?,
+            operand: dst,
         });
     }
     let past = op_index(ops)?;

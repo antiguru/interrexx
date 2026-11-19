@@ -52,8 +52,8 @@ impl ValidOps {
                             .checked_add(crate::parse_template::WALK_REGISTERS - 1)
                             .is_some_and(inside)
                 }
-                Op::ParseStep { base, operand, .. } => {
-                    arg(operand)
+                Op::ParseRun { base, operand, .. } => {
+                    inside(operand)
                         && base
                             .checked_add(crate::parse_template::WALK_REGISTERS - 1)
                             .is_some_and(inside)

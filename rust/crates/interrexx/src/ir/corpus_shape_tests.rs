@@ -54,7 +54,7 @@ impl Root {
             | Op::Signal { .. }
             | Op::Parse { .. }
             | Op::ParseBegin { .. }
-            | Op::ParseStep { .. }
+            | Op::ParseRun { .. }
             | Op::Clause { .. }
             | Op::CallingClause { .. }
             | Op::TraceClause { .. }

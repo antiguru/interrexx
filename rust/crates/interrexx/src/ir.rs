@@ -236,26 +236,30 @@ pub(crate) enum Op {
     Parse { index: u32, src: Option<u16> },
     /// Opens the compiled template walk of the `PARSE`, `ARG` or `PULL` at
     /// `index`: takes its first parse string, from register `src` for `PARSE
-    /// VALUE`, and files it and its cursor in the registers from `base` on
-    /// ([`crate::parse_template::WALK_REGISTERS`] of them), where the
-    /// [`Op::ParseStep`]s after it read and advance them. A clause this walk
-    /// does not take, because a line will be traced or the source is not a
-    /// string it can read in place, is run whole by `Interp::exec_parse`
-    /// instead, and the driver goes on at `skip`, past the last step.
+    /// VALUE`, and walks the template's entries up to `to`, the first whose
+    /// operand the stream evaluates. Where entries are left it files the walk
+    /// in the registers from `base` on
+    /// ([`crate::parse_template::WALK_REGISTERS`] of them) for the
+    /// [`Op::ParseRun`]s after it. A clause the walk does not take, because a
+    /// line will be traced or the source is not a string it can read in
+    /// place, is run whole by `Interp::exec_parse` instead, and the driver
+    /// goes on at `skip`, past the last run.
     ParseBegin {
         index: u32,
+        skip: u32,
         src: u16,
         base: u16,
-        skip: u32,
+        to: u16,
     },
-    /// Applies template entry `entry` of the `PARSE` at `index` to the walk
-    /// filed from register `base`: a trigger, with its operand in register
-    /// `operand` or, as [`Op::ARG_OMITTED`], read off the template, and then
-    /// its targets; or a comma, which steps to the next parse string.
-    ParseStep {
+    /// Walks template entries `from..to` of the `PARSE` at `index` on from
+    /// the walk filed from register `base`: entry `from` with its operand in
+    /// register `operand`, and the entries after it, whose operands are read
+    /// off the template.
+    ParseRun {
         index: u32,
-        entry: u16,
         base: u16,
+        from: u16,
+        to: u16,
         operand: u16,
     },
     /// Ends the activation at `index` with the value in register `src`, or

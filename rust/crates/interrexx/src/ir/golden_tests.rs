@@ -552,25 +552,36 @@ fn the_recorded_chunks_render_as_committed() {
     });
 }
 
-/// **A `PARSE` template compiles to its walk**: the opening, then per entry
-/// the ops of an operand that is not a literal and the entry's step, with the
-/// walk's registers below the operand's.
+/// **A `PARSE` template compiles to its walk**: the opening, which walks
+/// the entries before the first operand the stream evaluates, then per such
+/// operand its ops and the run from its entry to the next, with the walk's
+/// registers below the operand's.
 #[test]
 fn a_parse_template_compiles_to_its_walk() {
     let chunk =
         compile_for_test(b"parse var s a (p) b '-' c +(n + 1) d\n").expect("the chunk fits");
     assert_eq!(
         render(&chunk),
-        "0: Clause index=0 end=10\n\
-         1: ParseBegin index=0 src=omitted base=0 skip=10\n\
+        "0: Clause index=0 end=8\n\
+         1: ParseBegin index=0 src=omitted base=0 to=0 skip=8\n\
          2: Load read=Simple at=1 dst=8\n\
-         3: ParseStep index=0 entry=0 base=0 operand=8\n\
-         4: ParseStep index=0 entry=1 base=0 operand=omitted\n\
-         5: Load read=Simple at=4 dst=8\n\
-         6: LoadConstant dst=9\n\
-         7: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
-         8: ParseStep index=0 entry=2 base=0 operand=8\n\
-         9: ParseStep index=0 entry=3 base=0 operand=omitted\n"
+         3: ParseRun index=0 base=0 from=0 to=2 operand=8\n\
+         4: Load read=Simple at=4 dst=8\n\
+         5: LoadConstant dst=9\n\
+         6: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
+         7: ParseRun index=0 base=0 from=2 to=4 operand=8\n"
+    );
+}
+
+/// A template with no operand to evaluate is walked whole by its opening.
+#[test]
+fn a_template_of_literals_is_one_parse_begin() {
+    let chunk = compile_for_test(b"parse value v with a +5 b ',' c, d\n").expect("the chunk fits");
+    assert_eq!(
+        render(&chunk),
+        "0: Clause index=0 end=3\n\
+         1: Load read=Simple at=0 dst=0\n\
+         2: ParseBegin index=0 src=0 base=1 to=5 skip=3\n"
     );
 }
 

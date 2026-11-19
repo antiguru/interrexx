@@ -378,7 +378,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Signal { .. } => "Signal",
         Op::Parse { .. } => "Parse",
         Op::ParseBegin { .. } => "ParseBegin",
-        Op::ParseStep { .. } => "ParseStep",
+        Op::ParseRun { .. } => "ParseRun",
         Op::Return { .. } => "Return",
         Op::Queue { .. } => "Queue",
         Op::Call { .. } => "Call",
@@ -1220,53 +1220,25 @@ macro_rules! region_ops {
                     }
                     break $cold Ok(RegionEnd::Flowed(Flow::Next));
                 }
-                Op::ParseBegin { $index, src, base, skip } => {
+                Op::ParseBegin { $index, src, base, to, skip } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ParseBegin",
                     );
-                    let (InstructionKind::Parse(parse)
-                    | InstructionKind::Arg(parse)
-                    | InstructionKind::Pull(parse)) = &$clause.kind
-                    else {
-                        break $cold Err(Loud::instruction(&$clause.kind).into());
-                    };
-                    debug_assert!(
-                        $chunk.holds_register(*base + crate::parse_template::WALK_REGISTERS - 1),
-                        "op writes register {base} outside the region the chunk reserved"
-                    );
-                    let evaluated = (*src != Op::ARG_OMITTED).then(|| $registers.get(*src));
-                    match $self.parse_begin($code, parse, evaluated, $registers, *base) {
+                    match $self.parse_begin($code, $clause, *src, *base, *to, $registers) {
                         Ok(true) => {}
-                        // The clause is the template engine's whole, and the
-                        // steps after this op are not run.
-                        Ok(false) => {
-                            if let Err(failure) = $self.exec_parse($code, parse, evaluated) {
-                                break $cold Err(failure);
-                            }
-                            break $region *skip;
-                        }
+                        // The template engine ran the clause whole, and the
+                        // runs after this op are not driven.
+                        Ok(false) => break $region *skip,
                         Err(failure) => break $cold Err(failure),
                     }
                 }
-                Op::ParseStep { $index, entry, base, operand } => {
+                Op::ParseRun { $index, base, from, to, operand } => {
                     debug_assert_names_the_clause(
-                        $code, *$index, $clause, "ParseStep",
+                        $code, *$index, $clause, "ParseRun",
                     );
-                    let (InstructionKind::Parse(parse)
-                    | InstructionKind::Arg(parse)
-                    | InstructionKind::Pull(parse)) = &$clause.kind
-                    else {
-                        break $cold Err(Loud::instruction(&$clause.kind).into());
-                    };
-                    let value = (*operand != Op::ARG_OMITTED).then(|| $registers.get(*operand));
-                    if let Err(failure) = $self.parse_step(
-                        $code,
-                        parse,
-                        usize::from(*entry),
-                        value,
-                        $registers,
-                        *base,
-                    ) {
+                    if let Err(failure) =
+                        $self.parse_run($code, $clause, *base, *from, *to, *operand, $registers)
+                    {
                         break $cold Err(failure);
                     }
                 }
