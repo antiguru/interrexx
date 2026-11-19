@@ -35,6 +35,28 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     render_register(*src)
                 ));
             }
+            Op::ParseBegin {
+                index: at,
+                src,
+                base,
+                skip,
+            } => {
+                out.push_str(&format!(
+                    "{index}: ParseBegin index={at} src={} base={base} skip={skip}\n",
+                    render_arg(*src)
+                ));
+            }
+            Op::ParseStep {
+                index: at,
+                entry,
+                base,
+                operand,
+            } => {
+                out.push_str(&format!(
+                    "{index}: ParseStep index={at} entry={entry} base={base} operand={}\n",
+                    render_arg(*operand)
+                ));
+            }
             Op::LoopNext { index: at } => {
                 out.push_str(&format!("{index}: LoopNext index={at}\n"));
             }

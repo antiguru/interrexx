@@ -60,6 +60,13 @@ refused loudly.
 * **Calls are stackless.** A Rexx-to-Rexx call or send pushes the callee's frame and continues in
   the same driver loop; `RETURN` delivers into the caller's register. A depth cap raises Error 11.
 * **INTERPRET** compiles its fragment to a chunk of its own, resolved against the enclosing frame.
+* **PARSE templates compile to a walk.** In an untraced clause, a template whose source is a
+  value, a variable or the arguments, with no fold and no call in a trigger operand, compiles
+  to `ParseBegin` and one `ParseStep` per template entry. Each operand's ops sit between
+  two steps, and the parse string and cursor live in the clause's registers. `ParseBegin`
+  hands the clause to the template engine whole when a line will be traced or a parse string
+  is not its own string value, before anything is sent. Every other template is one `Parse`
+  op that the engine walks.
 
 ## Values and the object model
 

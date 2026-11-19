@@ -46,6 +46,18 @@ impl ValidOps {
                 | Op::Return { src, .. }
                 | Op::Queue { src, .. } => optional(src),
                 Op::JumpUnless { reg, .. } | Op::ConditionJump { reg, .. } => inside(reg),
+                Op::ParseBegin { src, base, .. } => {
+                    arg(src)
+                        && base
+                            .checked_add(crate::parse_template::WALK_REGISTERS - 1)
+                            .is_some_and(inside)
+                }
+                Op::ParseStep { base, operand, .. } => {
+                    arg(operand)
+                        && base
+                            .checked_add(crate::parse_template::WALK_REGISTERS - 1)
+                            .is_some_and(inside)
+                }
                 Op::Clause { .. }
                 | Op::CallingClause { .. }
                 | Op::LoopRun { .. }

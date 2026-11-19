@@ -874,8 +874,9 @@ fn compile_settled(
             // spellings and reach one `exec_parse`. The `SAY` shape, with the
             // expression present only for `PARSE VALUE expr WITH` -- every
             // other source reads a variable, an argument list or a line, none
-            // of which is an `Expr` a register could hold. `Op::Parse`'s own
-            // doc has why the template's `(expr)` patterns stay behind.
+            // of which is an `Expr` a register could hold. The template then
+            // compiles to its walk where `compiled_template` takes it, and is
+            // otherwise the one `Op::Parse` the template engine walks.
             InstructionKind::Parse(parse)
             | InstructionKind::Arg(parse)
             | InstructionKind::Pull(parse) => {
@@ -907,10 +908,24 @@ fn compile_settled(
                     }
                     _ => None,
                 };
-                ops.push(Op::Parse {
-                    index: instruction_index(index)?,
-                    src,
-                });
+                if !echoes_values && !echoes_keyword && compiled_template(parse) {
+                    push_template(
+                        &mut ops,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        parse,
+                        instruction_index(index)?,
+                        src,
+                    )?;
+                } else {
+                    ops.push(Op::Parse {
+                        index: instruction_index(index)?,
+                        src,
+                    });
+                }
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
@@ -1421,6 +1436,108 @@ fn push_value<'a>(
         ops.push(Op::EvalExpr { index, slot, dst });
         Ok(())
     }
+}
+
+/// Whether the template of `parse` is walked by [`Op::ParseBegin`] and its
+/// [`Op::ParseStep`]s: a source the compiled walk reads in place, no fold, and
+/// every trigger operand a literal or an expression of reads and operators,
+/// which runs without parking the driver and so between two steps. `PARSE VAR
+/// name w1 ... rest` keeps the template engine's own walk for that shape.
+fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
+    use interrexx_parse::TriggerKind;
+    let source = match &parse.source {
+        ParseSource::Value(_) | ParseSource::Arg => true,
+        ParseSource::Var(_) => !matches!(
+            parse.template.as_slice(),
+            [Some(trigger)] if trigger.kind == TriggerKind::End
+        ),
+        ParseSource::LineIn | ParseSource::Pull | ParseSource::Source | ParseSource::Version => {
+            false
+        }
+    };
+    source
+        && !(parse.upper || parse.lower)
+        && u16::try_from(parse.template.len()).is_ok()
+        && parse.template.iter().flatten().all(|trigger| {
+            trigger.value.as_ref().is_none_or(|operand| {
+                matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_))
+                    || (value_only(operand) && native_shape(operand, Some(NodePath::ROOT)))
+            })
+        })
+}
+
+/// The ops of a template [`compiled_template`] accepts: the walk's opening,
+/// and per entry its operand's ops, where it has an operand that is not a
+/// literal, then its step. An operand's ops follow the step before it,
+/// because it is evaluated after the earlier pieces' targets are assigned
+/// (`r[parse.patterns.variable]`). A literal is read off the template where
+/// the step runs, as the template engine reads it.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the emission sinks, the plan an operand's reads resolve against, and the clause \
+              the ops name"
+)]
+fn push_template<'a>(
+    ops: &mut Vec<Op>,
+    consts: &mut Constants<'a>,
+    registers: &mut Registers,
+    hints: &mut Hints,
+    calls: &mut Calls,
+    plan: &Plan,
+    parse: &'a interrexx_parse::Parse,
+    index: u32,
+    src: Option<u16>,
+) -> Result<(), ChunkTooLarge> {
+    let base = registers.alloc()?;
+    for _ in 1..crate::parse_template::WALK_REGISTERS {
+        registers.alloc()?;
+    }
+    let begin = op_index(ops)?;
+    ops.push(Op::ParseBegin {
+        index,
+        src: src.unwrap_or(Op::ARG_OMITTED),
+        base,
+        skip: 0,
+    });
+    for (entry, trigger) in parse.template.iter().enumerate() {
+        let entry = u16::try_from(entry).map_err(|_| ChunkTooLarge { what: "template" })?;
+        let operand = match trigger.as_ref().and_then(|trigger| trigger.value.as_ref()) {
+            Some(operand)
+                if !matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_)) =>
+            {
+                let mark = registers.mark();
+                let dst = registers.alloc()?;
+                push_native(
+                    ops,
+                    false,
+                    consts,
+                    registers,
+                    hints,
+                    calls,
+                    plan,
+                    operand,
+                    index,
+                    0,
+                    Some(NodePath::ROOT),
+                    dst,
+                )?;
+                registers.release(mark);
+                dst
+            }
+            _ => Op::ARG_OMITTED,
+        };
+        ops.push(Op::ParseStep {
+            index,
+            entry,
+            base,
+            operand,
+        });
+    }
+    let past = op_index(ops)?;
+    if let Some(Op::ParseBegin { skip, .. }) = ops.get_mut(begin as usize) {
+        *skip = past;
+    }
+    Ok(())
 }
 
 /// Whether `expr` compiles to native ops entire, with `eval.rs` not entered

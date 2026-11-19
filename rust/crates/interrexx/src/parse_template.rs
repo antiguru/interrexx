@@ -6,6 +6,9 @@
 //! ```
 
 mod trigger;
+mod walk;
+
+pub(crate) use walk::WALK_REGISTERS;
 
 use crate::error::{Failure, Raised};
 use crate::version::{PLATFORM, VERSION};

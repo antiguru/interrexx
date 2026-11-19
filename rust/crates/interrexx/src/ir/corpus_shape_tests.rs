@@ -53,6 +53,8 @@ impl Root {
             | Op::LoopNext { .. }
             | Op::Signal { .. }
             | Op::Parse { .. }
+            | Op::ParseBegin { .. }
+            | Op::ParseStep { .. }
             | Op::Clause { .. }
             | Op::CallingClause { .. }
             | Op::TraceClause { .. }

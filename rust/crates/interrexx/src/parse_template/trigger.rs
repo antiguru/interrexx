@@ -50,6 +50,19 @@ impl Interp {
             return Ok(());
         }
         let value = self.trigger_operand(code, operand)?;
+        self.apply_trigger_value(trigger, value, source, cursor, indent)
+    }
+
+    /// [`Interp::apply_trigger`] once the operand of a trigger that has one is
+    /// evaluated: its `>>>` line, its conversion and the cursor's movement.
+    pub(super) fn apply_trigger_value(
+        &mut self,
+        trigger: &ParseTrigger,
+        value: ObjRef,
+        source: &SourceText,
+        cursor: &mut Cursor,
+        indent: usize,
+    ) -> Result<(), Failure> {
         self.roots.activity_mut().push_temp(value);
         // `>>>` for the operand, after `eval`'s own `>L>`/`>V>` and before
         // the conversion that can fail: `integerTrigger` traces and only then

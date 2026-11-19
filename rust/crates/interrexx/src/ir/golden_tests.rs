@@ -551,3 +551,50 @@ fn the_recorded_chunks_render_as_committed() {
         });
     });
 }
+
+/// **A `PARSE` template compiles to its walk**: the opening, then per entry
+/// the ops of an operand that is not a literal and the entry's step, with the
+/// walk's registers below the operand's.
+#[test]
+fn a_parse_template_compiles_to_its_walk() {
+    let chunk =
+        compile_for_test(b"parse var s a (p) b '-' c +(n + 1) d\n").expect("the chunk fits");
+    assert_eq!(
+        render(&chunk),
+        "0: Clause index=0 end=10\n\
+         1: ParseBegin index=0 src=omitted base=0 skip=10\n\
+         2: Load read=Simple at=1 dst=8\n\
+         3: ParseStep index=0 entry=0 base=0 operand=8\n\
+         4: ParseStep index=0 entry=1 base=0 operand=omitted\n\
+         5: Load read=Simple at=4 dst=8\n\
+         6: LoadConstant dst=9\n\
+         7: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
+         8: ParseStep index=0 entry=2 base=0 operand=8\n\
+         9: ParseStep index=0 entry=3 base=0 operand=omitted\n"
+    );
+}
+
+/// The shapes the walk does not take keep the template engine's one op: a
+/// traced clause, a fold, a source read as a line, `PARSE VAR` into words,
+/// and an operand with a call in it.
+#[test]
+fn a_template_the_walk_does_not_take_stays_one_parse_op() {
+    for (source, trace) in [
+        (&b"parse value v with a (p) b\n"[..], traced()),
+        (b"parse value v with a (p) b\n", intermediates()),
+        (b"parse upper arg a b\n", ChunkTrace::of(TraceMode::NORMAL)),
+        (b"parse pull a b\n", ChunkTrace::of(TraceMode::NORMAL)),
+        (b"parse var s a b c\n", ChunkTrace::of(TraceMode::NORMAL)),
+        (
+            b"parse var s a (f()) b\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+    ] {
+        let rendered = render(&compile_for_test_under(source, trace).expect("the chunk fits"));
+        assert!(
+            rendered.contains(": Parse index=0") && !rendered.contains("ParseBegin"),
+            "{}\n{rendered}",
+            String::from_utf8_lossy(source)
+        );
+    }
+}

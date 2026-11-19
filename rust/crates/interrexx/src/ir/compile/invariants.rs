@@ -246,7 +246,9 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::LoopRun { index }
                 | Op::LoopNext { index }
                 | Op::Signal { index, .. }
-                | Op::Parse { index, .. } => Some(*index),
+                | Op::Parse { index, .. }
+                | Op::ParseBegin { index, .. }
+                | Op::ParseStep { index, .. } => Some(*index),
                 Op::TraceKeyword { .. }
                 | Op::LoopHeaderValue { .. }
                 | Op::Clause { .. }
