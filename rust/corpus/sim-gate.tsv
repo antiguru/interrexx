@@ -57,10 +57,10 @@ base/directives/CONSTANT.testGroup	whole	0	70	0	50	66	-	-
 base/directives/CONSTANT.testGroup	derived	0	70	14	50	55	-	-
 base/directives/METHOD.testGroup	whole	8	70	0	61	71	-	-
 base/directives/METHOD.testGroup	derived	8	70	14	55	71	-	-
-base/keyword/CALL.testGroup	whole	0	70	0	172	152	-	-
-base/keyword/CALL.testGroup	derived	0	70	14	50	61	-	-
-base/keyword/GUARD.testGroup	whole	252	70	0	55	61	-	-
-base/keyword/GUARD.testGroup	derived	252	70	14	51	56	-	-
+base/keyword/CALL.testGroup	whole	1	70	0	219	261	-	-
+base/keyword/CALL.testGroup	derived	1	70	14	138	133	-	-
+base/keyword/GUARD.testGroup	whole	336	70	0	29	31	-	-
+base/keyword/GUARD.testGroup	derived	336	70	14	25	56	-	-
 base/keyword/RAISE.testGroup	whole	3	70	0	55	61	-	-
 base/keyword/RAISE.testGroup	derived	3	70	14	56	56	-	-
 base/keyword/REPLY.testGroup	whole	1218	70	0	51	61	-	-
@@ -69,6 +69,8 @@ base/keyword/TRACE.testGroup	whole	4	70	0	81	96	-	-
 base/keyword/TRACE.testGroup	derived	3	70	14	50	66	-	-
 base/keyword/TRACE_TraceObject.testGroup	whole	9	70	0	56	71	-	-
 base/keyword/TRACE_TraceObject.testGroup	derived	9	70	14	51	66	-	-
+base/rexxutil/SysMutexSem.testGroup	whole	0	70	0	36	61	-	-
+base/rexxutil/SysMutexSem.testGroup	derived	0	70	14	36	30	-	-
 base/rexxutil/SysSleep.testGroup	whole	19	70	0	51	71	-	-
 base/rexxutil/SysSleep.testGroup	derived	19	70	14	50	56	-	-
 base/special.variables/RESULT_RC_SIGL.testGroup	whole	49	70	0	76	81	-	-

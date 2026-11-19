@@ -35,13 +35,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-/// The `memcap` limit each run is under.
-const MEMORY: &str = "2G";
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
 
-/// The address-space limit in KiB where `memcap` is not on `PATH`.
-const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
-
-/// The seconds after which `timeout` kills a run, so that one that hangs fails.
+/// The seconds after which `bounded-run` kills a run, so that one that hangs fails.
 const DEADLINE: &str = "120";
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
@@ -70,12 +67,6 @@ fn fresh_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Whether `name` is an executable file on this process's `PATH`.
-fn on_path(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
-}
-
 /// `g++` compiling the fixture `source` against this worktree's `include/`, with `arguments` after
 /// the source.
 fn compile(source: &str, arguments: &[&str]) {
@@ -91,26 +82,16 @@ fn compile(source: &str, arguments: &[&str]) {
     assert!(built.success(), "the fixture did not build: {arguments:?}");
 }
 
-/// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
-/// `memcap` is not on `PATH`, and killed by `timeout` after [`DEADLINE`].
+/// A command that runs its arguments under [`MEMORY_LIMIT_KIB`] of address space, killed by
+/// `bounded-run` after [`DEADLINE`].
 fn capped() -> Command {
-    let mut command = if on_path("memcap") {
-        let mut command = Command::new("memcap");
-        command.arg(MEMORY);
-        command
-    } else {
-        let mut command = Command::new("bash");
-        command.arg("-c").arg(format!(
-            "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
-        ));
-        command
-    };
-    command.args(["timeout", "-s", "KILL", DEADLINE]);
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
+    command.args(["-v", MEMORY_LIMIT_KIB, "-s", "KILL", DEADLINE]);
     command
 }
 
 /// Runs `program` with `argument` under `binary`, or `binary` alone where `program` is `None`,
-/// memory-capped by `memcap`, or by an address-space limit where `memcap` is not on `PATH`, from
+/// under [`MEMORY_LIMIT_KIB`] of address space, from
 /// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
 fn run(
     binary: &Path,
@@ -577,13 +558,7 @@ fn driver_runs(
             .stdin(Stdio::null())
             .output()
             .expect("the capped run spawns");
-        // The oracle's run starts its `rxapi` inside the run's `memcap` group, so `memcap` may
-        // report that it left the group behind. That line is the harness's, not the program's.
-        let stderr: String = String::from_utf8_lossy(&output.stderr)
-            .lines()
-            .filter(|line| !(line.starts_with("memcap: left ") && line.ends_with(" exit")))
-            .map(|line| format!("{line}\n"))
-            .collect();
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
         runs.push((
             String::from_utf8_lossy(&output.stdout).into_owned(),
             stderr,

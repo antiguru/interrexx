@@ -51,8 +51,8 @@ call sysfiledelete f
 ```output
 40.4
 40.12
-93.907
-93.907
+40.14
+40.14
 0 0
 780A0A
 ```
@@ -246,8 +246,8 @@ When the stream cannot be written, LINEOUT writes nothing, answers 1 and
 raises [NOTREADY](r:bif.index.stream.notready). That is the case when the name
 cannot be opened for writing, as a name in a directory that does not exist, or
 a directory; when the stream was opened for reading only; and when the name is
-`STDIN` and a `string` is given. For a name that cannot be opened, a `line` is
-not checked (see [the start rule](r:bif.index.stream.start)). What a `line`
+`STDIN` and a `string` is given. A `line` below 1 raises `SYNTAX 40.14` all
+the same, as [the start rule](r:bif.index.stream.start) says. What a `line`
 does together with the name `STDIN` is [not
 specified](r:bif.index.stream.transient), and so is a call with that name and
 neither a `string` nor a `line`.
@@ -261,7 +261,7 @@ n = 0
 call on notready name nr
 x = lineout('spec-lineout-nodir/x.tmp', 'abc')
 say x n
-x = lineout('spec-lineout-nodir/x.tmp', , 0)
+x = lineout('spec-lineout-nodir/x.tmp', , 1)
 say x n
 x = lineout('.', 'hello')
 say x n

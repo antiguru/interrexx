@@ -108,6 +108,8 @@ directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 `::REQUIRES` directive raises nothing, `loadLibrary` answers `1`, RXFUNCADD
 answers `1`, and none of its routines can be called.
+Whether the refused library's unloader runs when the instance ends is
+unspecified, and the loader never runs.
 
 ```rexx
 say 'not reached'
@@ -403,9 +405,9 @@ registers `name` for the function that the library exports under the name
 `procedure`, looked up as it is spelled and, when that finds nothing, in
 capitals. An omitted `procedure` is `name`. When the library exports such a
 function, the call answers `0` and `name` can be called from then on. When it
-does not, the call answers `1`, and `name` is registered nonetheless, as for
-[an unknown library](r:bif.rxfuncadd.unknown-library): RXFUNCQUERY answers
-`0`, a call raises `SYNTAX 43.1`, and RXFUNCDROP removes it. A registration of
+does not, the call answers `1` and registers nothing, as for [an unknown
+library](r:bif.rxfuncadd.unknown-library): RXFUNCQUERY answers `1` and a call
+raises `SYNTAX 43.1`. A registration of
 a classic function is the kind that RXFUNCDROP removes, after which a call
 raises `43.1`.
 
@@ -427,9 +429,9 @@ b: say condition('o')~code
 0
 MYJOIN:1:x
 0 MYUPPER:1:y
-1 0
+1 1
 43.1
-0 0 0
+0 0 1
 43.1
 ```
 
@@ -503,7 +505,7 @@ RXFUNCADD of the routine's name, the library and the entry registers it, and
 the routine is that function. An omitted entry is the routine's name, which is
 in capitals. The routine stays bound after RXFUNCDROP removes the
 registration. When the library exports no such function, the directive raises
-`SYNTAX 90.999` and leaves the registration behind.
+`SYNTAX 90.999` and leaves no registration behind.
 
 ```rexx
 say rxfuncquery('n1zqrr')
@@ -544,5 +546,5 @@ say rxfuncquery('n1zqqq') rxfuncdrop('n1zqqq') rxfuncquery('n1zqqq')
 
 ```output
 90.999
-0 0 1
+1 1 1
 ```

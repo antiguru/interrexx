@@ -50,7 +50,7 @@ say overlay('XY', 'abcd', 'x')
 g: say condition('o')~code
 signal on syntax name h
 say overlay('XY', 'abcd', 0, -1, '**')
-h: say wordpos(condition('o')~code, '93.924 93.923 40.23') > 0
+h: say wordpos(condition('o')~code, '40.14 40.13 40.23') > 0
 signal on syntax name i
 say overlay('XY', 'abcd', 1, 'x')
 i: say condition('o')~code
@@ -62,8 +62,8 @@ aXYd aXYd | aXY.
 40.4
 40.5
 40.5
-93.924
-93.923
+40.14
+40.13
 40.12
 1
 40.12

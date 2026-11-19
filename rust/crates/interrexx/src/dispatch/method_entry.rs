@@ -169,13 +169,11 @@ impl Interp {
         // `DO` blocks echoes the method's clauses at 0.
         let saved_clause_state = self.save_clause_state();
         let saved_base = std::mem::replace(&mut self.activity.activation_indent, 0);
-        let saved_offset = std::mem::take(&mut self.activity.indent_offset);
         let saved_line = std::mem::take(&mut self.activity.clause_line_override);
         self.activity.call_tails.push(crate::run::CallTail::method(
             saved_context,
             saved_clause_state,
             saved_base,
-            saved_offset,
             saved_line,
         ));
         Ok(())

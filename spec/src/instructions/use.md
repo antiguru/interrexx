@@ -537,7 +537,8 @@ r[instr.use.syntax]
 A fault in the form of the clause is raised when the program is read. USE
 with no word after it, and USE with a word that is not ARG, STRICT or LOCAL,
 raise `SYNTAX 25.905`. STRICT that is not followed by ARG raises `25.929`.
-Two targets that follow each other with no comma raise `46.902`. A target
+Two targets that follow each other with no comma raise `46.903` when the
+first could take a default, and `46.902` when it is a reference (`>a`). A target
 that starts with a digit raises `31.2`, one that starts with a period `31.3`,
 and a string or a parenthesis in a target's place `89.1`. The text of an
 INTERPRET raises the same errors when the INTERPRET runs.
@@ -547,6 +548,7 @@ call try 'use'
 call try 'use foo a'
 call try 'use strict a'
 call try 'use strict arg a b'
+call try 'use arg >a b'
 call try 'use arg 1'
 call try 'use arg .a'
 call try 'use arg "x"'
@@ -565,7 +567,8 @@ e: say arg(1) '=>' condition('o')~code
 use => 25.905
 use foo a => 25.905
 use strict a => 25.929
-use strict arg a b => 46.902
+use strict arg a b => 46.903
+use arg >a b => 46.902
 use arg 1 => 31.2
 use arg .a => 31.3
 use arg "x" => 89.1

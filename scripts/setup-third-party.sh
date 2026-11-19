@@ -2,8 +2,8 @@
 # Fetches and builds the unmodified third-party trees the tests compare against.
 set -eu
 cd "$(dirname "$0")/.."
-OOTEST_REVISION=13347
-OODOCS_REVISION=13347
+OOTEST_REVISION=13532
+OODOCS_REVISION=13532
 SVN=https://svn.code.sf.net/p/oorexx/code-0
 
 git submodule update --init third_party/ooRexx

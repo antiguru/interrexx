@@ -81,7 +81,7 @@ total = total + 'x'          41.1 41
 total = 9 // 0               42.3 42
 total = nosuchroutinexyz(1)  43.1 43
 total = abs()                40.3 40
-total = substr('abc', 0)     93.924 93
+total = substr('abc', 0)     40.14 40
 total = 3 +                  35.1 35
 seen
 say 'seen'; total = 4 * 'y'; 41.1 41
@@ -140,7 +140,7 @@ the text of the message, which is not specified.
 call try "x = abs()"
 call try "x = abs(1, 2)"
 call try "x = left('abc', -2)"
-call try "x = copies('ab', -2)"
+call try "x = 'ab'~copies(-2)"
 exit
 ::routine try
   use arg text
@@ -155,8 +155,8 @@ e: o = condition('o')
 ```output
 x = abs()              40.3 40 1 1
 x = abs(1, 2)          40.4 40 1 1
-x = left('abc', -2)    93.923 93 1 1
-x = copies('ab', -2)   93.906 93 1 1
+x = left('abc', -2)    40.13 40 1 1
+x = 'ab'~copies(-2)    93.906 93 1 1
 ```
 
 ## Which traps answer it

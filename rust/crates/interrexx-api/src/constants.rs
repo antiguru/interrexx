@@ -304,6 +304,7 @@ pub const API_VERSIONS: &[CConstant] = &[
     version("REXX_LANGUAGE_6_04", 0x0604),
     version("REXX_LANGUAGE_6_05", 0x0605),
     version("REXX_LANGUAGE_6_06", 0x0606),
+    version("REXX_LANGUAGE_6_07", 0x0607),
     version("REXX_CURRENT_LANGUAGE_LEVEL", CURRENT_LANGUAGE_LEVEL as i64),
 ];
 

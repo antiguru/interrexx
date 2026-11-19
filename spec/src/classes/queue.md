@@ -429,9 +429,10 @@ r[class.queue.insert]
 `insert(item, index)` adds the item as a new entry directly after the item at
 the index and answers the index of the new entry. An `index` of `.nil` makes
 the item the first, and an omitted `index` the last. The index is read as [the
-index rule](r:class.queue.indexes) says, and it must be one of an item: a
-number above the number of items raises `SYNTAX 93.966`, and the queue keeps
-its items. A third argument raises `SYNTAX 93.902`. The items behind the new
+index rule](r:class.queue.indexes) says, except that an `Array` holding more
+than one item raises `SYNTAX 93.926`, and it must be one of an item: a number
+above the number of items raises `SYNTAX 93.966`, and the queue keeps its
+items. A third argument raises `SYNTAX 93.902`. The items behind the new
 one move to the next index.
 
 ```rexx
@@ -453,6 +454,8 @@ call try 'q~insert("q", 1, 1)'
 call try 'q~insert("q", q~items + 1)'
 call try 'q~insert("q", 99)'
 call try '.queue~new~insert("q", 1)'
+call try '.queue~of(1, 2, 3)~insert("q", .array~of(, 1))'
+call try '.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2))'
 say (q~items == n) q~allItems~makeString('L', ',')
 exit
 try:
@@ -475,11 +478,13 @@ bad: say arg(1) '=>' condition('o')~code
 q~insert("q", 0) => 93.907
 q~insert("q", "x") => 93.907
 q~insert("q", -1) => 93.907
-q~insert("q", .array~of(1, 2)) => 93.907
+q~insert("q", .array~of(1, 2)) => 93.926
 q~insert("q", 1, 1) => 93.902
 q~insert("q", q~items + 1) => 93.966
 q~insert("q", 99) => 93.966
 .queue~new~insert("q", 1) => 93.966
+.queue~of(1, 2, 3)~insert("q", .array~of(, 1)) => 2
+.queue~of(1, 2, 3)~insert("q", .array~new(2)~~put(5, 2)) => 93.966
 1 y,q,a,q,x,v,b,c,z,w
 ```
 

@@ -1,0 +1,116 @@
+name: "Gate"
+# The workspace in gate mode (`REXX_CORPUS_GATE=1`), which compares against the oracle where
+# the regular tiers only run interrexx. Too long for every pull request, so it runs nightly on
+# main, on a change to the pinned ooRexx or its build script, on a pull request labelled `gate`,
+# and by hand.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - third_party/ooRexx
+      - scripts/setup-third-party.sh
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  # A pull request runs the gate when it carries the `gate` label or changes the pinned ooRexx
+  # or its build script. Adding a label runs it only when that label is `gate`, so another label
+  # neither starts a second run nor cancels one. Every other event runs it.
+  decide:
+    name: decide
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          submodules: false
+          fetch-depth: 0
+      - id: decide
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ADDED: ${{ github.event.label.name }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'gate') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" = pull_request ] && [ "$ACTION" = labeled ] && [ "$ADDED" != gate ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE...$HEAD" -- third_party/ooRexx scripts/setup-third-party.sh | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # One job, not shards: `docs/developing.md` runs the gate with `cargo test` in a debug build,
+  # not under nextest, because the group runner's quiet-machine and row bounds hold within one
+  # process.
+  gate:
+    name: workspace in gate mode
+    needs: decide
+    if: needs.decide.outputs.run == 'true'
+    # On the job, not the workflow, so a run whose `decide` says no cancels nothing.
+    concurrency:
+      group: gate-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    # Measured on 4 cores: 286 s to build and 1271 s to test.
+    timeout-minutes: 90
+    env:
+      # Without debug info: with it, the workspace's test binaries take more than 19 GB, more
+      # than a runner has free. `debug_assert` stays on, as it is tied to the profile's
+      # `debug-assertions`, not to debug info.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - id: key
+        # The same key as the Test Suite's `third-party` job, so either workflow's build serves
+        # the other.
+        working-directory: .
+        run: echo "key=third-party-${{ runner.os }}-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ steps.key.outputs.key }}
+      - name: Install oracle build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
+      - name: Build third-party trees
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ../scripts/setup-third-party.sh
+      - name: Install svn
+        # The extractor tests ask the oodocs working copy for its revision.
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: sudo apt-get update && sudo apt-get install -y subversion
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+          cache-key: gate
+      - name: Build the binaries
+        # The API tests start `rxapi`, which `cargo test` does not build.
+        run: cargo build --locked --workspace --bins
+      - name: Cargo test in gate mode
+        env:
+          REXX_CORPUS_GATE: "1"
+        run: cargo test --locked --workspace --no-fail-fast

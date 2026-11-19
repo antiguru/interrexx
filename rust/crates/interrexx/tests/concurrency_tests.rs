@@ -36,6 +36,8 @@ const EXCLUDED_DIRS: &[(&str, &str)] = &[
     ("extensions/", "native extension"),
     ("samples/", "native sample"),
     ("base/class/CommandHandler.testGroup", "CommandHandler"),
+    // FINALLY clauses are of language level 6.07 (decisions.md, the language level).
+    ("base/keyword/FINALLY.testGroup", "language level 6.07"),
 ];
 
 /// A `::METHOD`, `::ROUTINE` or `::RESOURCE` of a group file.

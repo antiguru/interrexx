@@ -3,7 +3,7 @@
 # of the row among the rows its own method yielded; lines starting with # are
 # comments.
 #
-# Measured at ooTest r13347. This is the committed set `bif_assertions.rs`
+# Measured at ooTest r13532. This is the committed set `bif_assertions.rs`
 # polices in both directions: a row here that starts passing is as red as a row
 # not here that starts failing, so an improvement shows up in a diff rather than
 # being quietly absorbed. The assertion runs under a plain `cargo test`.
@@ -17,7 +17,7 @@
 # a row carrying one is a divergence nothing is holding. MISMATCH is the sharp
 # one: both renderings produced output and they differ.
 # `every_exempt_attribution_is_a_known_phase_or_a_declared_outcome` pins them
-# at 7, 0 and 0. If it goes red, rule on the row first -- give it an owner, or
+# at 14, 0 and 21. If it goes red, rule on the row first -- give it an owner, or
 # record it as a known gap -- and then move the number to match.
 #
 ERRORTEXT::test_ERRORTEXT#22	MISMATCH
@@ -25,5 +25,33 @@ ERRORTEXT::test_ERRORTEXT#27	MISMATCH
 ERRORTEXT::test_ERRORTEXT#32	MISMATCH
 ERRORTEXT::test_ERRORTEXT#36	MISMATCH
 ERRORTEXT::test_ERRORTEXT#95	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#2	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#3	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#4	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#5	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#6	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#7	MISMATCH
+ERRORTEXT::test_ERRORTEXT_subcode#12	MISMATCH
+ERRORTEXT::test_ERRORTEXT_values#1	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#2	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#3	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#4	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#5	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#6	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#7	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#8	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#9	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#10	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#11	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#12	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values#13	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#1	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#2	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#3	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#4	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#5	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#6	ANOMALY
+ERRORTEXT::test_ERRORTEXT_values_rules#7	ANOMALY
+SETLOCAL::test_endlocal_no_setlocal#1	ANOMALY
 STREAM::test_relative_file_exists#1	MISMATCH
 STREAM::test_relative_file_exists2#1	MISMATCH

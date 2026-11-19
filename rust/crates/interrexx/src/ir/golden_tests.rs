@@ -214,40 +214,39 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=1\n\
-         1: SelectCaseText index=0 case=-\n\
-         2: Clause index=1 end=7\n\
-         3: LoadConstant dst=0\n\
-         4: LoadConstant dst=1\n\
-         5: Binary op== lhs=0 rhs=1 dst=0\n\
-         6: ConditionJump index=1 reg=0 keyword=WHEN target=13\n\
-         7: EnterWhen select=0 when=1\n\
-         8: Clause index=2 end=9\n\
-         9: Clause index=3 end=12\n\
-         10: Const dst=0 konst=0\n\
-         11: Say index=3 src=0\n\
-         12: EndWhen\n\
-         13: Clause index=4 end=18\n\
-         14: LoadConstant dst=0\n\
-         15: LoadConstant dst=1\n\
-         16: Binary op== lhs=0 rhs=1 dst=0\n\
-         17: ConditionJump index=4 reg=0 keyword=WHEN target=24\n\
-         18: EnterWhen select=0 when=4\n\
-         19: Clause index=5 end=20\n\
-         20: Clause index=6 end=23\n\
-         21: Const dst=0 konst=1\n\
-         22: Say index=6 src=0\n\
-         23: EndWhen\n\
-         24: EnterOtherwise select=0\n\
-         25: Clause index=7 end=26\n\
-         26: Clause index=8 end=29\n\
-         27: Const dst=0 konst=2\n\
-         28: Say index=8 src=0\n\
-         29: EndWhen\n\
-         30: Clause index=9 end=32\n\
-         31: Exec index=9\n\
-         32: Clause index=10 end=35\n\
-         33: Const dst=0 konst=3\n\
-         34: Say index=10 src=0\n"
+         1: Clause index=1 end=6\n\
+         2: LoadConstant dst=0\n\
+         3: LoadConstant dst=1\n\
+         4: Binary op== lhs=0 rhs=1 dst=0\n\
+         5: ConditionJump index=1 reg=0 keyword=WHEN target=12\n\
+         6: EnterWhen select=0 when=1\n\
+         7: Clause index=2 end=8\n\
+         8: Clause index=3 end=11\n\
+         9: Const dst=0 konst=0\n\
+         10: Say index=3 src=0\n\
+         11: EndWhen\n\
+         12: Clause index=4 end=17\n\
+         13: LoadConstant dst=0\n\
+         14: LoadConstant dst=1\n\
+         15: Binary op== lhs=0 rhs=1 dst=0\n\
+         16: ConditionJump index=4 reg=0 keyword=WHEN target=23\n\
+         17: EnterWhen select=0 when=4\n\
+         18: Clause index=5 end=19\n\
+         19: Clause index=6 end=22\n\
+         20: Const dst=0 konst=1\n\
+         21: Say index=6 src=0\n\
+         22: EndWhen\n\
+         23: EnterOtherwise select=0\n\
+         24: Clause index=7 end=25\n\
+         25: Clause index=8 end=28\n\
+         26: Const dst=0 konst=2\n\
+         27: Say index=8 src=0\n\
+         28: EndWhen\n\
+         29: Clause index=9 end=31\n\
+         30: Exec index=9\n\
+         31: Clause index=10 end=34\n\
+         32: Const dst=0 konst=3\n\
+         33: Say index=10 src=0\n"
     );
     assert_eq!(
         chunk.registers, 2,
@@ -256,7 +255,7 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
     );
     assert_eq!(
         chunk.op_of,
-        vec![0, 2, 8, 9, 12, 19, 20, 23, 26, 29, 32, 35]
+        vec![0, 1, 7, 8, 11, 18, 19, 22, 25, 28, 31, 34]
     );
 }
 
@@ -270,16 +269,15 @@ fn a_when_condition_outside_the_native_set_stays_one_when_test() {
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=1\n\
-         1: SelectCaseText index=0 case=-\n\
-         2: Clause index=1 end=5\n\
-         3: WhenTest index=1 case=- dst=0\n\
-         4: JumpUnless reg=0 target=9\n\
-         5: EnterWhen select=0 when=1\n\
-         6: Clause index=2 end=7\n\
-         7: Clause index=3 end=8\n\
-         8: EndWhen\n\
-         9: Clause index=4 end=11\n\
-         10: Exec index=4\n"
+         1: Clause index=1 end=4\n\
+         2: WhenTest index=1 case=- dst=0\n\
+         3: JumpUnless reg=0 target=8\n\
+         4: EnterWhen select=0 when=1\n\
+         5: Clause index=2 end=6\n\
+         6: Clause index=3 end=7\n\
+         7: EndWhen\n\
+         8: Clause index=4 end=10\n\
+         9: Exec index=4\n"
     );
 }
 

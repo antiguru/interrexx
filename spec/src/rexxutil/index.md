@@ -262,7 +262,8 @@ A name of a file or a directory is a string. A name that does not start with
 a slash is taken from the current directory. The function cleans the name up
 before it uses it, in the way [QUALIFY](r:bif.qualify.normal) does: a run of
 slashes is one slash, a component that is a single period is dropped, a slash
-at the end is dropped, and a component of two periods is dropped together with
+at the end is kept, so that the name is one of a directory and `file/` names
+no file, and a component of two periods is dropped together with
 the component before it, so that the name `c1zqidxd/../c1zqidxn` is the name
 `c1zqidxn` even when `c1zqidxd` does not exist. The characters `*` and `?` are
 characters of the name: no function except SysFileTree expands a pattern, so
@@ -294,7 +295,7 @@ call SysRmDir 'c1zqidxd'
 
 ```output
 1 1
-1 1
+0 1
 1 1
 0 0 0
 0 1 -1 0 0

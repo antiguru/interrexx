@@ -71,6 +71,35 @@ fn cd_home_with_home_unset_goes_to_the_shell() {
     assert_eq!(String::from_utf8_lossy(&outcome.stdout), "stayed 1\n");
 }
 
+/// The value half of an in-process `export`, read as a shell reads it: the
+/// braced reference, single quotes that stop expansion, a backslash that keeps
+/// the next byte, and a `$` that starts no reference. The oracle's answers.
+#[test]
+fn an_export_value_is_unquoted_and_expanded_as_a_shell_would() {
+    let source = b"e = 'ENVIRONMENT'\n\
+        call value 'A4ZQ_H', 'hv', e\n\
+        'export A4ZQ_V=${A4ZQ_H}x \"$A4ZQ_H y\" ''$A4ZQ_H'' \\$A4ZQ_H a$ ${A4ZQ_H $-'\n\
+        say '['value('A4ZQ_V', , e)']'\n";
+    let outcome = crate::run_program("/t.rex", source.to_vec(), crate::Invocation::none());
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "[hvx hv y $A4ZQ_H $A4ZQ_H a$ ${A4ZQ_H $-]\n"
+    );
+}
+
+/// Blanks and tabs before `cd` still leave it to the interpreter, and the
+/// blanks after a quoted directory are not part of its name.
+#[test]
+fn cd_after_leading_blanks_and_before_trailing_ones_is_done_here() {
+    let source = b"call directory '/'\n\
+        ' \tcd \"/usr\"  '\n\
+        say rc directory()\n";
+    let outcome = crate::run_program("/t.rex", source.to_vec(), crate::Invocation::none());
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(String::from_utf8_lossy(&outcome.stdout), "0 /usr\n");
+}
+
 /// `unquote`'s byte rules, the oracle's answers.
 #[test]
 fn unquote_drops_quotes_and_escapes_one_byte() {

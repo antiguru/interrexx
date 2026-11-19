@@ -51,10 +51,13 @@ helpers 1 1 1 1 1 1 1 1
 /// The lines only the C++ build says: `argumentExists` and `argumentOmitted`, the assignments
 /// to a `ValueDescriptor` (the codes of `RexxObjectPtr`, `RexxStringObject`, `RexxArrayObject`,
 /// `RexxStemObject`, `RexxMutableBufferObject`, `CSTRING`, `POINTER`, `wholenumber_t`, `float`
-/// and `double`, then whether the flags were kept), and a handle widened without a cast.
+/// and `double`, then whether the flags were kept), whether each conversion of a
+/// `ValueDescriptor` answers its member (the same types in the same order, with `stringsize_t`
+/// before `float`), and a handle widened without a cast.
 const CXX_ONLY: &str = "\
 exists OOO EOO OEO EEE O E
 assign 11 17 31 32 37 15 16 13 19 14 1
+convert 1 1 1 1 1 1 1 1 1 1 1
 widen 1
 ";
 

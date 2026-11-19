@@ -5,7 +5,9 @@
 # `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts each is
 # present. A `platform windows` row is a test of a group below
 # `extensions/platform/windows/`, which needs a Windows API this host lacks.
-# ootest revision 13347
+# ootest revision 13532
+base/rexxutil/SysMutexSem	TEST_CREATE_EMPTY_NAME	NotRun	restrictOS line 41
+base/rexxutil/SysMutexSem	TEST_CREATE_NO_NAME	NotRun	restrictOS line 41
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE2	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysCurPos	TESTCURPOS	NotRun	restrictOS line 43
@@ -42,6 +44,7 @@ base/rexxutil/platform/windows/SysFileTree	TESTNULLFILENAME	NotRun	restrictOS li
 base/rexxutil/platform/windows/SysFileTree	TESTSHORTNAME	NotRun	restrictOS line 44
 base/rexxutil/platform/windows/SysFileTree	TESTSPACES	NotRun	restrictOS line 44
 base/rexxutil/platform/windows/SysFileTree	TESTSPACESWITHQUOTES	NotRun	restrictOS line 44
+base/rexxutil/platform/windows/SysFileTree	TEST_BUG_1725	NotRun	restrictOS line 44
 base/rexxutil/platform/windows/SysFileTree	TEST_NAME_LEADING_BLANKS	NotRun	restrictOS line 44
 base/rexxutil/platform/windows/SysFileTree	TEST_NAME_UNC	NotRun	restrictOS line 44
 base/rexxutil/platform/windows/SysGetXxxPathName	TEST_ARG_ABSOLUTE	NotRun	restrictOS line 43
@@ -175,7 +178,15 @@ doc/rexxref/chapter7/Section4	TEST_BEEP_EXAMPLE_7_4_6	NotRun	test type DOC_EXAMP
 extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODCREATION	NotRun	platform windows
 extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODOS	NotRun	platform windows
 extensions/platform/windows/ole/OLEObject	TEST_CLSID_PROGID	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_ARGUMENTS_IN_ORDER	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_NO_VALUE_RETURNED	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_OUT_PARAMETER_CANCEL	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_OUT_PARAMETER_NOT_CONVERTED	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_OUT_PARAMETER_OK	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_EVENT_OUT_PARAMETER_THIRD_OF_FOUR	NotRun	platform windows
 extensions/platform/windows/ole/OLEObject	TEST_HASOLEMETHOD	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_LONG_EXCEPTION_DESCRIPTION	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_TYPE_MISMATCH_ARGUMENT_NUMBER	NotRun	platform windows
 extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS01	NotRun	platform windows
 extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS02	NotRun	platform windows
 extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS03	NotRun	platform windows

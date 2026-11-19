@@ -292,13 +292,15 @@ lineout: procedure expose m.
   return 0
 
 /* `CB`, which no Rexx operation is: blanks from the write position to the
-   end of its record, a whole record at a record boundary. It is the
-   oracle's padding by a LINEOUT that closes or only positions a binary
-   stream, which Deviation 46 licenses, and the driver puts it before such a
-   LINEOUT to build the answer the oracle is licensed to give. */
+   end of its record, and nothing at a record boundary, where no write has
+   started a record (ooRexx r13532, SF #2170). It is the oracle's padding by
+   a LINEOUT that closes or only positions a binary stream, which Deviation
+   46 licenses, and the driver puts it before such a LINEOUT to build the
+   answer the oracle is licensed to give. */
 pad_record: procedure expose m.
   if \writable() then return 0
   k = room(m.0write)
+  if k == m.0record then return 0
   call put copies(' ', k), landing(m.0write)
   m.0write = m.0write + k
   return 0

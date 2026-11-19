@@ -200,7 +200,10 @@ done:
   end
 
 /* The string value of an argument that is read through makeString, and
-   through string for an object that has only that. */
+   through string for an object that has only that. An answer that is no
+   string, as the one of a STRING method that answers an object with no
+   string value, reads as the string of .nil, which no word or command
+   starts with (r[class.stream.args.objects]). */
 ::method interrexx_value private
   use arg value
   /* An instance of a String subclass is read by its own characters
@@ -208,6 +211,7 @@ done:
   if value~isInstanceOf(.string) then return value~makeString:.string
   text = value~request('STRING')
   if .nil == text then text = value~string
+  if \text~isInstanceOf(.string) then text = .nil~string
   return text
 
 /* r[class.stream.say] and r[class.stream.say.sends] */

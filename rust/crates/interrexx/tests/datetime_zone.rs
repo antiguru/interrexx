@@ -9,6 +9,9 @@ use std::process::Command;
 
 use support::oracle::{Termination, locate};
 
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
+
 /// The zones each probe is run under, with why each earns its place.
 const ZONES: &[&str] = &["UTC", "Asia/Kolkata", "Etc/GMT+12", "America/New_York"];
 
@@ -242,8 +245,8 @@ fn an_overlap_probe_restores_absent_empty_and_present_timezone_settings() {
         let program = dir.join("restore.rex");
         fs::write(&program, source).unwrap();
         let cpp = oracle.run_in(&program, &empty_dir(&format!("restore-oracle-{name}")), &[]);
-        let out = Command::new("memcap")
-            .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "-k", "2", "20"])
+        let out = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+            .args(["-v", MEMORY_LIMIT_KIB, "-k", "2", "20"])
             .arg(env!("CARGO_BIN_EXE_rexx"))
             .arg(&program)
             .current_dir(empty_dir(&format!("restore-crate-{name}")))
@@ -263,14 +266,7 @@ fn an_overlap_probe_restores_absent_empty_and_present_timezone_settings() {
         );
         let cut = support::error_text::cut_error_texts;
         assert_eq!(out.stdout, cpp.stdout, "{name}");
-        // The program runs commands, so it starts an API daemon that ends just after it does;
-        // memcap may report that daemon as still in its group. That line is memcap's, not ours.
-        let stderr: Vec<u8> = String::from_utf8_lossy(&out.stderr)
-            .lines()
-            .filter(|line| !(line.starts_with("memcap: left ") && line.ends_with("still in it")))
-            .flat_map(|line| format!("{line}\n").into_bytes())
-            .collect();
-        assert_eq!(cut(&stderr), cut(&cpp.stderr), "{name}");
+        assert_eq!(cut(&out.stderr), cut(&cpp.stderr), "{name}");
         let stdout = String::from_utf8_lossy(&out.stdout);
         eprintln!("{name} restoration: {stdout}");
         assert!(

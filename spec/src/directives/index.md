@@ -117,6 +117,34 @@ p = .package~new('spec-dir-index-end2', src)
 3
 ```
 
+r[dir.index.options]
+The keywords that may follow a directive's name fall into groups, which each
+directive's page lists, and a directive gives at most one keyword of each
+group. A keyword of a group already given raises `SYNTAX 25.936` when it is
+the same keyword again and `25.937` when it is another keyword of that group.
+A word that is none of the directive's keywords raises the subcode of 25 that
+the directive's page names. These are found when the program is read.
+
+```rexx
+call try '::class k public public'
+call try '::class k public private'
+call try '::class k frob'
+exit
+try:
+  signal on syntax name e
+  p = .package~new('spec-dir-index-options', .array~of(arg(1)))
+  say arg(1) '=> ok'
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+::class k public public => 25.936
+::class k public private => 25.937
+::class k frob => 25.901
+```
+
 ## The prolog and the sections
 
 r[dir.index.prolog]
@@ -363,7 +391,7 @@ e: say 'caught' condition('o')~code
 ```
 
 ```output
-caught 25.901
+caught 25.937
 caught 98.909
 caught 43.901
 ```

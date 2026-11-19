@@ -119,7 +119,7 @@ An operation that needs a number checks its operand against [the
 form](r:num.index.form) when it runs, and the error depends on the operation.
 An operand of an arithmetic operator that is a string and not a number raises
 `SYNTAX 41.1`, the null string and a string of only whitespace included. A
-[number argument](r:bif.index.num.arg) of a builtin raises `SYNTAX 93.943` for
+[number argument](r:bif.index.num.arg) of a builtin raises `SYNTAX 40.11` for
 the same strings, and a [whole-number argument](r:conv.whole.form) raises
 `SYNTAX 40.12`. A string that is not used as a number is never checked. A left
 operand that is not a string does not reach this check, because an operator is
@@ -163,7 +163,7 @@ i: say condition('o')~code
 
 ```output
 41.1
-93.943
+40.11
 40.12
 41.1
 41.1

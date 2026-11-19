@@ -3,6 +3,7 @@ element: DIRECTORY
 kind: builtin
 syntax: "DIRECTORY([newdirectory])"
 rexxref: "Functions > Built-in Functions > DIRECTORY"
+deviations: [179]
 ---
 
 # DIRECTORY
@@ -36,30 +37,22 @@ string, such as `.nil` or `.object~new`.
 here = directory()
 signal on syntax name a
 say directory('/', 'x')
-a: say condition('o')~code
+a: say condition('c')
 signal on syntax name b
 say directory(, 'x')
-b: say condition('o')~code
-signal on syntax name c
-say directory(.nil)
-c: say condition('o')~code
+b: say condition('c')
 signal on syntax name d
 say '/'~directory
 d: say condition('o')~code
-signal on syntax name e
-say directory(.object~new)
-e: say condition('o')~code
 signal off syntax
 say (directory(,) == here) (directory() == here)
 say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
 ```
 
 ```output
-88.922
-88.922
-88.909
+SYNTAX
+SYNTAX
 97.1
-88.909
 1 1
 / /usr
 ```
@@ -267,4 +260,48 @@ say out.1
 /x /y/z
 1
 /
+```
+
+## Deviations
+
+r[bif.directory.deviation.179]
+DIRECTORY is a routine of the REXX package, as at language level 6.06
+([Deviation 179](../deviations.md)). Its argument errors are those of [the
+native call rule](r:bif.index.call.native), of the 88.9xx family, and an
+argument that is an object whose `request` answers no string, such as `.nil`
+or `.object~new`, raises `SYNTAX 88.909`. ooRexx, at level 6.07, makes DIRECTORY
+a builtin: it raises `SYNTAX 40.4` for an argument too many, and reads such an
+object by its `STRING` method, so the call tries to make a directory of that
+name the current one.
+
+```rexx
+here = directory()
+signal on syntax name a
+say directory('/', 'x')
+a: say condition('o')~code
+signal on syntax name b
+say directory(, 'x')
+b: say condition('o')~code
+signal on syntax name c
+say directory(.nil)
+c: say condition('o')~code
+signal on syntax name d
+say '/'~directory
+d: say condition('o')~code
+signal on syntax name e
+say directory(.object~new)
+e: say condition('o')~code
+signal off syntax
+say (directory(,) == here) (directory() == here)
+say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
+```
+
+```output
+88.922
+88.922
+88.909
+97.1
+88.909
+1 1
+/ /usr
 ```

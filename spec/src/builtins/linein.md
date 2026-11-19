@@ -48,14 +48,14 @@ call sysfiledelete f
 two | one
 40.4
 40.12
-93.907
+40.14
 ```
 
 r[bif.linein.count]
 `count` is 0 or 1, and 1 when it is omitted. A count of 1 reads a line and a
 count of 0 [reads nothing](r:bif.linein.zero). A `count` that is greater than 1
-raises `SYNTAX 93.0`; a negative `count` raises `SYNTAX 88.907`, as [the stream
-rule](r:bif.index.stream.args) says. A call whose `line` is also in error
+or negative raises `SYNTAX 40.904`, before the stream is looked at, as [the
+stream rule](r:bif.index.stream.args) says. A call whose `line` is also in error
 raises the error of one of them, as [the precedence
 rule](r:conv.error.precedence) says.
 
@@ -69,7 +69,7 @@ say linein(f, 1, 2)
 a: say condition('o')~code
 signal on syntax name b
 say linein(f, 0, 2)
-b: say wordpos(condition('o')~code, '93.0 93.907') > 0
+b: say wordpos(condition('o')~code, '40.904 40.14') > 0
 signal on syntax name c
 say linein(f, 1, -1)
 c: say condition('o')~code
@@ -78,9 +78,9 @@ call sysfiledelete f
 ```
 
 ```output
-93.0
+40.904
 1
-88.907
+40.904
 one one
 ```
 
@@ -256,16 +256,15 @@ return
 r[bif.linein.missing]
 A name that cannot be opened for reading, a file that does not exist or a
 directory for example, has no lines: LINEIN returns the null string and raises
-NOTREADY, and creates no file. Its `line` is not checked (see
-[the start rule](r:bif.index.stream.start)), but a `count` that is not
-valid is.
+NOTREADY, and creates no file. Its `line` and its `count` are checked all
+the same, as [the stream rule](r:bif.index.stream.args) says.
 
 ```rexx
 n = 0
 call on notready name nr
 x = linein('spec-linein-nofile.tmp')
 say '[' || x || ']' n
-x = linein('spec-linein-nofile.tmp', 0, 1)
+x = linein('spec-linein-nofile.tmp', 1, 1)
 say '[' || x || ']' n
 x = linein('.', 1)
 say '[' || x || ']' n
@@ -273,6 +272,9 @@ say stream('spec-linein-nofile.tmp', 'c', 'query exists') == ''
 signal on syntax name a
 say linein('spec-linein-nofile.tmp', 1, 2)
 a: say condition('o')~code
+signal on syntax name b
+say linein('spec-linein-nofile.tmp', 0)
+b: say condition('o')~code
 exit
 nr: n = n + 1
 return
@@ -283,7 +285,8 @@ return
 [] 2
 [] 3
 1
-93.0
+40.904
+40.14
 ```
 
 r[bif.linein.stdin]

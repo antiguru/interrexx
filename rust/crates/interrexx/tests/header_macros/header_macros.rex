@@ -76,6 +76,7 @@ if @CXX@ then do
   say 'exists' hmexists() hmexists(1) hmexists(, 'b') hmexists(1, 'b', a) -
     hmexistsaftername() hmexistsaftername(1)
   say 'assign' hmassign()
+  say 'convert' hmconvert()
   say 'widen' (hmwiden('w') == 'w')
 end
 

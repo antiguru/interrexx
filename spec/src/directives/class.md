@@ -89,11 +89,11 @@ r[dir.class.options]
 The keywords after the name are METACLASS, SUBCLASS, MIXINCLASS, PUBLIC,
 PRIVATE, ABSTRACT and INHERIT, in any case. They may stand in any order,
 except that INHERIT takes every word that follows it as the name of a class,
-so it comes last. Each of the four groups METACLASS, SUBCLASS or MIXINCLASS,
-PUBLIC or PRIVATE and ABSTRACT may appear once. A word that is none of the
-keywords, a keyword repeated, and a keyword that excludes one already given,
-such as PRIVATE after PUBLIC or SUBCLASS after MIXINCLASS, raise
-`SYNTAX 25.901`. METACLASS, SUBCLASS, MIXINCLASS and INHERIT without a name
+so it comes last. METACLASS, SUBCLASS or MIXINCLASS, PUBLIC or PRIVATE, and
+ABSTRACT are the [groups](r:dir.index.options): a keyword repeated raises
+`SYNTAX 25.936`, and a keyword that excludes one already given, such as
+PRIVATE after PUBLIC or SUBCLASS after MIXINCLASS, raises `25.937`. A word
+that is none of the keywords raises `25.901`. METACLASS, SUBCLASS, MIXINCLASS and INHERIT without a name
 after them raise `19.906`, `19.907`, `19.913` and `19.908`, and a ::CLASS with
 no name raises `19.901`. Every one of these is found when the program is read.
 
@@ -123,10 +123,10 @@ e: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-::class a public private => 25.901
-::class a public public => 25.901
-::class a mixinclass object subclass object => 25.901
-::class a abstract abstract => 25.901
+::class a public private => 25.937
+::class a public public => 25.936
+::class a mixinclass object subclass object => 25.937
+::class a abstract abstract => 25.936
 ::class a frob => 25.901
 ::class a inherit m public => 98.909
 ::class A SubClass Object Public Abstract => ok

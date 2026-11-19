@@ -35,12 +35,6 @@ impl Interp {
         Ok(value)
     }
 
-    /// Hands the activation the `SELECT CASE` value its **absorbed** `WHEN
-    /// CASE`s compare against, which have no other way to reach it.
-    pub(crate) fn open_select_case(&mut self, value: Option<ObjRef>) {
-        self.activation_mut().current_case = value;
-    }
-
     /// One listed `WHEN`/`WHEN CASE`'s own condition, and whether it holds.
     pub(crate) fn scan_when(
         &mut self,
@@ -63,10 +57,9 @@ impl Interp {
                 // A listed `WhenCase` with no `case` expression: a plain
                 // `SELECT` with no `CASE` at all, which the parser should
                 // never produce for a `WhenCase` node (only `SELECT CASE`
-                // ever builds one, `ast.rs`'s own doc comment) -- F-EX3, the
-                // same unproven parser invariant the absorbed `WhenCase` arm
-                // already refuses to crash on, and formerly an `.expect()`
-                // here that did. Evaluates `values` for side effects and
+                // ever builds one, `ast.rs`'s own doc comment) -- F-EX3, an
+                // unproven parser invariant, and formerly an `.expect()`
+                // here that crashed on it. Evaluates `values` for side effects and
                 // never matches, the identical fallback.
                 None => {
                     for value in values {
@@ -98,7 +91,6 @@ impl Interp {
             otherwise_range(code.body.instructions.len(), end),
             "an OTHERWISE branch was run over a range that is not its own"
         );
-        self.activity.indent_offset = 0;
         let resume = otherwise_resume(code.body.instructions.len(), end);
         self.leave_select(code, index, label, resume, flow)
     }

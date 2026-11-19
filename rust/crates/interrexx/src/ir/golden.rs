@@ -120,12 +120,6 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     render_path(*path)
                 ));
             }
-            Op::SelectCaseText { index: at, case } => {
-                out.push_str(&format!(
-                    "{index}: SelectCaseText index={at} case={}\n",
-                    render_register(*case)
-                ));
-            }
             Op::WhenTest {
                 index: at,
                 case,

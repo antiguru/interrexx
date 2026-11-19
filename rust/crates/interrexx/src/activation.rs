@@ -365,9 +365,6 @@ pub(crate) struct Activation {
     /// elapsed time is measured from, in [`cached_clock`]'s unit, or
     /// [`NO_CLOCK`] before this activation's first `E` or `R`.
     pub(crate) elapsed_anchor: i64,
-    /// The innermost `SELECT CASE`'s value here, which an absorbed `WHEN`
-    /// compares against; `None` inside a plain `SELECT`.
-    pub(crate) current_case: Option<ObjRef>,
     /// Whether [`cached_clock`] needs a fresh read before this activation's
     /// clause may trust it -- the per-clause half [`cached_clock`]'s own doc
     /// names, set `true` once per instruction by `Op::Clause`'s region on
@@ -486,7 +483,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
-const _: () = assert!(size_of::<Activation>() == 456);
+const _: () = assert!(size_of::<Activation>() == 440);
 
 impl ActivationFlags {
     const FORWARDED: u8 = 1;
@@ -494,6 +491,7 @@ impl ActivationFlags {
     const RESERVED: u8 = 4;
     const ELAPSED_RESET: u8 = 8;
     const DEBUG_PAUSE: u8 = 16;
+    const UNTRACED: u8 = 32;
 
     /// A method activation's flags: `guarded`, and holding its lock where
     /// `reserved`.
@@ -540,6 +538,20 @@ impl ActivationFlags {
 
     pub(crate) fn set_debug_pause(&mut self, paused: bool) {
         self.set(Self::DEBUG_PAUSE, paused);
+    }
+
+    /// Marks this activation as called, directly or through others, from a
+    /// line typed at a debug pause, so that it traces nothing and never
+    /// pauses while everything else about it runs as in a program.
+    pub(crate) fn set_untraced(&mut self, untraced: bool) {
+        self.set(Self::UNTRACED, untraced);
+    }
+
+    /// Whether the trace sink shows nothing for this activation: it runs a
+    /// line typed at a debug pause or was called from one.
+    #[inline(always)]
+    pub(crate) fn silenced(self) -> bool {
+        self.0 & (Self::DEBUG_PAUSE | Self::UNTRACED) != 0
     }
 
     fn set(&mut self, bit: u8, on: bool) {
@@ -776,7 +788,6 @@ impl Activation {
             cold: None,
             cached_clock: NO_CLOCK,
             elapsed_anchor: NO_CLOCK,
-            current_case: None,
             clock_stale: true,
             context_object: None,
             notify_message: None,
@@ -852,7 +863,6 @@ impl Activation {
             // left pending anchors to the caller's last reading.
             cached_clock: inherited.cached_clock,
             elapsed_anchor: inherited.elapsed_anchor,
-            current_case: None,
             clock_stale: true,
             context_object: None,
             notify_message: None,
@@ -910,7 +920,6 @@ impl Activation {
             cold: None,
             cached_clock: NO_CLOCK,
             elapsed_anchor: NO_CLOCK,
-            current_case: None,
             clock_stale: true,
             context_object: None,
             notify_message: None,
@@ -966,7 +975,6 @@ impl Activation {
             cold: None,
             cached_clock: NO_CLOCK,
             elapsed_anchor: NO_CLOCK,
-            current_case: None,
             clock_stale: true,
             context_object: None,
             notify_message: None,
@@ -1030,7 +1038,6 @@ impl Activation {
             cold,
             cached_clock,
             elapsed_anchor,
-            current_case,
             clock_stale,
             context_object,
             notify_message,
@@ -1070,7 +1077,6 @@ impl Activation {
         *cold = None;
         *cached_clock = NO_CLOCK;
         *elapsed_anchor = NO_CLOCK;
-        *current_case = None;
         *clock_stale = true;
         *context_object = None;
         *notify_message = None;
@@ -1163,7 +1169,6 @@ impl Activation {
             cold,
             cached_clock: _,
             elapsed_anchor: _,
-            current_case,
             clock_stale: _,
             context_object,
             notify_message,
@@ -1174,7 +1179,6 @@ impl Activation {
             streams,
         } = self;
         out.extend(*context_object);
-        out.extend(*current_case);
         out.extend(*notify_message);
         if let Some(replied) = replied {
             replied.object_roots(out);
@@ -1538,8 +1542,14 @@ impl Interp {
         self.shared_key_for = None;
         // `trace_cache`'s own invariant: the setting travels with whichever
         // activation is running, and this changes which one that is.
+        // A routine or method called from a line typed at a debug pause runs
+        // untraced: `r[env.debugging.deviation.182]`.
+        let mut boxed = boxed;
+        if self.silenced() {
+            boxed.flags.set_untraced(true);
+        }
         self.activity.trace_cache =
-            crate::trace::TraceCache::of(boxed.trace_mode, boxed.flags.debug_pause());
+            crate::trace::TraceCache::of(boxed.trace_mode, boxed.flags.silenced());
         // The clause the activation being suspended is stopped on, which is
         // what its own `StackFrame` reports for as long as it stays
         // suspended: `Activity::clause_state` is about to start describing the
@@ -1586,7 +1596,7 @@ impl Interp {
                 .running
                 .as_deref()
                 .map_or(TraceMode::OFF, |resumed| resumed.trace_mode),
-            self.debug_pause(),
+            self.silenced(),
         );
         Some(ended)
     }
@@ -1643,7 +1653,7 @@ impl Interp {
             activation.debug.prompt_issued = false;
         }
         activation.trace_mode = mode;
-        self.activity.trace_cache = crate::trace::TraceCache::of(mode, self.debug_pause());
+        self.activity.trace_cache = crate::trace::TraceCache::of(mode, self.silenced());
     }
 }
 
@@ -1921,7 +1931,6 @@ mod method_tests {
         activation.cold_mut();
         activation.cached_clock = 1;
         activation.elapsed_anchor = 1;
-        activation.current_case = Some(ObjRef::NIL);
         activation.clock_stale = false;
         activation.context_object = Some(ObjRef::NIL);
         activation.notify_message = Some(ObjRef::NIL);
@@ -1967,7 +1976,6 @@ mod method_tests {
             cold,
             cached_clock,
             elapsed_anchor,
-            current_case,
             clock_stale,
             context_object,
             notify_message,
@@ -2025,7 +2033,6 @@ mod method_tests {
         assert!(cold.is_none() && b.cold.is_none(), "cold");
         assert!(*cached_clock == b.cached_clock, "cached_clock");
         assert!(*elapsed_anchor == b.elapsed_anchor, "elapsed_anchor");
-        assert!(*current_case == b.current_case, "current_case");
         assert!(*clock_stale == b.clock_stale, "clock_stale");
         assert!(*context_object == b.context_object, "context_object");
         assert!(*notify_message == b.notify_message, "notify_message");

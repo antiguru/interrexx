@@ -9,8 +9,8 @@
  * function declaration, the RXSTRING macros and the descriptor helpers.
  *
  * The same file compiles as C and as C++. The C++ build adds the entries
- * that only C++ can write (argumentExists, argumentOmitted and the assignments
- * to a ValueDescriptor). header_macros.rs builds it both ways and runs
+ * that only C++ can write (argumentExists, argumentOmitted, and the assignments
+ * to and conversions of a ValueDescriptor). header_macros.rs builds it both ways and runs
  * header_macros.rex against each library.
  */
 
@@ -479,6 +479,74 @@ RexxRoutine0(CSTRING, HmAssign)
     return out;
 }
 
+/* Whether each C++ conversion of a ValueDescriptor answers the union member of
+ * its type. Each initialisation names one type, so overload resolution picks
+ * the conversion to exactly that type among the ones that could serve it.
+ * Before each value is stored, the union is filled with a byte pattern, and
+ * each value differs from what a narrower member, or float read as double and
+ * double as float, would give. The pointer members, and wholenumber_t and
+ * stringsize_t, share all their bits, so a mix-up among them reads the same
+ * value: the header generator checks that each conversion reads a member of
+ * its own type. POINTER is read into a const void pointer, which CSTRING and
+ * every object pointer convert to as well, so without its own conversion the
+ * initialisation is ambiguous. */
+RexxRoutine0(CSTRING, HmConvert)
+{
+    static char out[32];
+    static char marks[7];
+    static const char text[] = "c";
+    ValueDescriptor d;
+    int same[11];
+    d.type = 0;
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_RexxObjectPtr = (RexxObjectPtr)&marks[0];
+    RexxObjectPtr o = d;
+    same[0] = o == (RexxObjectPtr)&marks[0];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_RexxStringObject = (RexxStringObject)&marks[1];
+    RexxStringObject s = d;
+    same[1] = s == (RexxStringObject)&marks[1];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_RexxArrayObject = (RexxArrayObject)&marks[2];
+    RexxArrayObject a = d;
+    same[2] = a == (RexxArrayObject)&marks[2];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_RexxStemObject = (RexxStemObject)&marks[3];
+    RexxStemObject t = d;
+    same[3] = t == (RexxStemObject)&marks[3];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_RexxMutableBufferObject = (RexxMutableBufferObject)&marks[4];
+    RexxMutableBufferObject b = d;
+    same[4] = b == (RexxMutableBufferObject)&marks[4];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_CSTRING = text;
+    CSTRING c = d;
+    same[5] = c == text;
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_POINTER = &marks[6];
+    const void *p = d;
+    same[6] = p == &marks[6];
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_wholenumber_t = -(wholenumber_t)0x123456789;
+    wholenumber_t w = d;
+    same[7] = w == -(wholenumber_t)0x123456789;
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_stringsize_t = (stringsize_t)0x987654321;
+    stringsize_t z = d;
+    same[8] = z == (stringsize_t)0x987654321;
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_float = 1.5f;
+    float f = d;
+    same[9] = f == 1.5f;
+    memset(&d.value, 0xA5, sizeof d.value);
+    d.value.value_double = 2.5;
+    double x = d;
+    same[10] = x == 2.5;
+    snprintf(out, sizeof out, "%d %d %d %d %d %d %d %d %d %d %d", same[0], same[1], same[2],
+             same[3], same[4], same[5], same[6], same[7], same[8], same[9], same[10]);
+    return out;
+}
+
 #endif
 
 static RexxRoutineEntry hmRoutines[] = {
@@ -575,6 +643,7 @@ static RexxRoutineEntry hmRoutines[] = {
     REXX_TYPED_ROUTINE(HmExists, HmExists),
     REXX_TYPED_ROUTINE(HmExistsAfterName, HmExistsAfterName),
     REXX_TYPED_ROUTINE(HmAssign, HmAssign),
+    REXX_TYPED_ROUTINE(HmConvert, HmConvert),
     REXX_TYPED_ROUTINE(HmWiden, HmWiden),
 #endif
     /* A classic row: the package loads with it. */

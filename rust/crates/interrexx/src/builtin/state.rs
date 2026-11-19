@@ -137,20 +137,50 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     Ok(crate::eval::logical(true))
 }
 
-/// `ERRORTEXT(n)`: the major error message for `n`, or the null string when
-/// the catalogue has no entry.
+/// `ERRORTEXT(n)`: the message for the error number or error code `n`, or the
+/// null string when the catalogue has no entry (`r[bif.errortext.n]`).
+///
+/// A whole number is an error number, 0-99. Anything else holding a period is
+/// an error code: the part before the first period is the error number and
+/// the part after it the subcode, 0-999, each a whole number as written, so
+/// `40.1` and `40.001` are both subcode 1 and `40.10` is subcode 10. A
+/// subcode's message keeps its `&n` places.
 pub(crate) fn errortext(
     interp: &mut Interp,
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let number = whole_number(interp, name, args, 1)?.expect("check_arity admitted argument 1");
-    if !(0..=99).contains(&number) {
-        return Err(Raised::argument_out_of_range(name, 1, converted(number).as_bytes()).into());
-    }
-    let text = u16::try_from(number)
+    let (major, minor) = match whole_number(interp, name, args, 1) {
+        Ok(number) => {
+            let number = number.expect("check_arity admitted argument 1");
+            if !(0..=99).contains(&number) {
+                return Err(
+                    Raised::argument_out_of_range(name, 1, converted(number).as_bytes()).into(),
+                );
+            }
+            (number, 0)
+        }
+        Err(Failure::Raised(raised)) if (raised.number, raised.sub) == (40, 12) => {
+            let value = super::arg(args, 1).expect("check_arity admitted argument 1");
+            let text = interp.to_text(value).into_owned();
+            let Some(dot) = text.iter().position(|&byte| byte == b'.') else {
+                return Err(Failure::Raised(raised));
+            };
+            let part = |bytes: &[u8]| {
+                interrexx_num::Number::parse_bytes(bytes)
+                    .and_then(|number| number.whole_value(super::ARGUMENT_DIGITS))
+            };
+            match (part(&text[..dot]), part(&text[dot + 1..])) {
+                (Some(major @ 0..=99), Some(minor @ 0..=999)) => (major, minor),
+                _ => return Err(Raised::argument_not_an_error_code(name, 1, &text).into()),
+            }
+        }
+        Err(other) => return Err(other),
+    };
+    let text = u16::try_from(major)
         .ok()
-        .and_then(|major| interrexx_inventory::errors::lookup(major, 0))
+        .zip(u16::try_from(minor).ok())
+        .and_then(|(major, minor)| interrexx_inventory::errors::lookup(major, minor))
         .map(|message| message.text)
         .unwrap_or_default();
     Ok(interp.text(text.as_bytes()))
@@ -843,10 +873,11 @@ mod tests {
             ),
             // And the 40.12 half under the same crossing, which does read
             // the captured rendering: `1/3` at `DIGITS 3` is `0.333`, and
-            // stays `0.333` after `DIGITS 9`.
+            // stays `0.333` after `DIGITS 9`. (Not ERRORTEXT, which reads
+            // `0.333` as the error code 0.333.)
             (
-                b"numeric digits 3; z = 1/3; numeric digits 9; say errortext(z)\n".as_slice(),
-                "Error 40.12:  ⟨40.12¦ERRORTEXT¦1¦0.333⟩",
+                b"numeric digits 3; z = 1/3; numeric digits 9; say sourceline(z)\n".as_slice(),
+                "Error 40.12:  ⟨40.12¦SOURCELINE¦1¦0.333⟩",
             ),
         ] {
             let (code, stderr) = failure(source);

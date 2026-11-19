@@ -3281,9 +3281,10 @@ mod tests {
         }
     }
 
-    /// A library refused for its version keeps its unloader and not its loader:
-    /// such a library's unloader runs at termination and its loader never does,
-    /// since the version check raises before it.
+    /// Pins current behaviour, not a rule of `r[native.loading.version]`, which
+    /// leaves the unloader unspecified: a library refused for its version keeps
+    /// its unloader and not its loader. The unloader runs at termination and
+    /// the loader never does, since the version check raises before it.
     #[test]
     #[cfg(unix)]
     #[cfg_attr(miri, ignore = "opens the running image")]

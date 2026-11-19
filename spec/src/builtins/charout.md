@@ -47,7 +47,7 @@ call sysfiledelete f
 ```output
 40.4
 40.12
-93.907
+40.14
 0 0
 x2
 ```
@@ -157,9 +157,9 @@ When the stream cannot be written, CHAROUT writes nothing, answers the number
 of characters of `string`, and raises [NOTREADY](r:bif.index.stream.notready).
 That is the case when the name cannot be opened for writing, as a name in a
 directory that does not exist, or a directory, and when the name is `STDIN`.
-For a name that cannot be opened, a `start` is not checked (see [the start
-rule](r:bif.index.stream.start)). Nor is a `start` given with the name
-`STDIN` checked beyond its form, whatever its value (see [the transient
+A `start` below 1 raises `SYNTAX 40.14` all the same, as [the start
+rule](r:bif.index.stream.start) says. A valid `start` given with the name
+`STDIN` is not checked further (see [the transient
 rule](r:bif.index.stream.transient)): the call fails in the same way, and
 without a `string` it answers 0.
 
@@ -168,7 +168,7 @@ n = 0
 call on notready name nr
 x = charout('spec-charout-nodir/x.tmp', 'abc')
 say x n
-x = charout('.', 'hello', 0)
+x = charout('.', 'hello', 1)
 say x n
 x = charout('stdin', 'q')
 say x n
@@ -186,8 +186,8 @@ return
 ```rexx
 n = 0
 call on notready name nr
-say charout('stdin', 'a', 0) n
-say charout('STDIN:', 'abc', -1) n
+say charout('stdin', 'a', 1) n
+say charout('STDIN:', 'abc', 2) n
 say charout('stdin', , 1) n
 say n
 exit

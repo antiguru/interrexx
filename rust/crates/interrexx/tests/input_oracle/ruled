@@ -18,3 +18,71 @@ out>    [line1|line2|farend|]
 out> record append : L1=1 w9 C3=1 w9
 out>    [AAAABBBB]
 out> lines count after a read past the end : NOTREADY 2 READY
+
+# Outside lang/, so corpus/unfiled.txt does not name it. Deviation 110
+# (r[class.methods.deviation.110]): the instance made before the define
+# has the new method, where the oracle's has not; gate_table_c licenses the
+# same row.
+run
+gate-tables/concepts/objcla.rex
+----
+rc> 0
+out> before 0
+out> after 1
+out> fresh 1
+
+run
+lang/define_methods_runs.rex
+----
+rc> 0
+out> a ub K
+out> return "a"
+out> ub K K U
+
+run
+lang/instance_method_after_define.rex
+----
+rc> 0
+out> new new
+out> return "new" 0 1
+out> return "new" 1
+out> return "third" 1 0
+
+run
+lang/message_send_site_method_changes.rex
+----
+rc> 0
+out> start: K.m
+out> define, instance made before: K.m defined
+out> define, instance made after: K.m defined
+out> subclass inherits the define: K.m defined
+out> subclass sees a second define: K.m again
+out> delete: unknown M
+out> delete, instance made after: unknown M
+out> inherit: Mix.m
+out> uninherit: unknown M
+out> setMethod: own m
+out> unsetMethod: unknown M
+out> enhanced: enhanced m
+out> after enhanced: unknown M
+out> class method: C.m
+out> metaclass define: C.m
+out> class made after the metaclass define: Meta.m
+out> class setMethod: C own m
+out> alternating K: unknown M
+out> alternating S: unknown M
+out> alternating MIX2USER: Mix.m
+out> alternating S: unknown M
+out> alternating K: unknown M
+out> public: P.m
+out> private: error 97
+out> made and dropped: 0 wrong
+
+run
+lang/class_behaviour_snapshot_delete.rex
+----
+rc> 159
+out> a 0
+err>     13 *-* say 'b' o~gone
+err> Error 97 running <dir>/class_behaviour_snapshot_delete.rex line 13:  Object method not found.
+err> Error 97.1:  Method "GONE" not found in object "a K".

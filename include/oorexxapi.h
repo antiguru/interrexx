@@ -140,6 +140,17 @@ struct _ValueDescriptor {
     uint16_t type;
     uint16_t flags;
 #ifdef __cplusplus
+    operator RexxObjectPtr() { return value.value_RexxObjectPtr; }
+    operator RexxStringObject() { return value.value_RexxStringObject; }
+    operator RexxArrayObject() { return value.value_RexxArrayObject; }
+    operator RexxStemObject() { return value.value_RexxStemObject; }
+    operator RexxMutableBufferObject() { return value.value_RexxMutableBufferObject; }
+    operator CSTRING() { return value.value_CSTRING; }
+    operator POINTER() { return value.value_POINTER; }
+    operator wholenumber_t() { return value.value_wholenumber_t; }
+    operator stringsize_t() { return value.value_stringsize_t; }
+    operator float() { return value.value_float; }
+    operator double() { return value.value_double; }
     void operator=(RexxObjectPtr v) { type = 11; value.value_RexxObjectPtr = v; }
     void operator=(RexxStringObject v) { type = 17; value.value_RexxStringObject = v; }
     void operator=(RexxArrayObject v) { type = 31; value.value_RexxArrayObject = v; }
@@ -1350,6 +1361,7 @@ struct RexxIORedirectorContext_ {
 #define REXX_LANGUAGE_6_04 0x00000604
 #define REXX_LANGUAGE_6_05 0x00000605
 #define REXX_LANGUAGE_6_06 0x00000606
+#define REXX_LANGUAGE_6_07 0x00000607
 #define REXX_CURRENT_LANGUAGE_LEVEL 0x00000606
 
 #define REXX_OPTIONAL_ARGUMENT 0x8000

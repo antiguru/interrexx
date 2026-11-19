@@ -1,8 +1,0 @@
-/* A SELECT CASE typed at a debug pause leaves the value of the construct
-   the pause interrupted. */
-trace ?r
-select case 'a'
-  when 'a' then when 'zz' then say 'absorbed zz'
-  otherwise say 'other'
-end
-say 'done'

@@ -240,7 +240,7 @@ rz: raise syntax 40 return
 
 ```output
 1 41.1
-924 93.924
+14 40.14
 []
 0 40.0
 ```

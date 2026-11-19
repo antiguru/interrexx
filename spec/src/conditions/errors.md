@@ -3,6 +3,7 @@ element: "Error numbers"
 kind: concept
 ansi: "8.2.1, 8.4, 8.4.1"
 rexxref: "Conditions and Condition Traps > Condition Information > The Special Variable RC; Error Numbers and Messages"
+deviations: [179]
 ---
 
 # Error numbers
@@ -67,8 +68,8 @@ e: o = condition('o')
 ```
 
 ```output
-x = left("abc", -2)        93.923 93
-x = copies("ab", -2)       93.906 93
+x = left("abc", -2)        40.13 40
+x = copies("ab", -2)       40.13 40
 x = d2c(-1)                93.927 93
 x = "abc"~substr(0)        93.924 93
 ```
@@ -290,7 +291,8 @@ cause, at the clause that meets it.
 * 34, operand that is no truth value: `if 'a' then say 1` 34.1, `x = 1 & 'a'`
   34.901, `x = \'a'` 34.901; [rule](r:expr.logical.value).
 * 40, argument count or value refused: `x = abs()` 40.3, `x = abs(1, 2)` 40.4,
-  `x = left('abc', 'q')` 40.12, `x = random(5, 1)` 40.33;
+  `x = left('abc', 'q')` 40.12, `x = left('abc', -2)` 40.13,
+  `x = substr('abc', 0)` 40.14, `x = random(5, 1)` 40.33;
   [rule](r:bif.index.call.too-few), [rule](r:bif.index.call.too-many).
 * 41, arithmetic on a non-number: `x = 1 + 'a'` 41.1, `x = -'a'` 41.1,
   `x = 'a' % 2` 41.1; [rule](r:num.index.use).
@@ -331,6 +333,8 @@ call try "x = \'a'"
 call try "x = abs()"
 call try "x = abs(1, 2)"
 call try "x = left('abc', 'q')"
+call try "x = left('abc', -2)"
+call try "x = substr('abc', 0)"
 call try "x = random(5, 1)"
 call try "x = 1 + 'a'"
 call try "x = -'a'"
@@ -377,6 +381,8 @@ x = \'a'                                     34.901
 x = abs()                                    40.3
 x = abs(1, 2)                                40.4
 x = left('abc', 'q')                         40.12
+x = left('abc', -2)                          40.13
+x = substr('abc', 0)                         40.14
 x = random(5, 1)                             40.33
 x = 1 + 'a'                                  41.1
 x = -'a'                                     41.1
@@ -445,9 +451,9 @@ e: say condition('o')~code rc
 r[cond.errors.objects]
 The numbers from 88 up usually name faults of messages, of objects and of
 directives.
-* 88, argument value refused: `x = filespec('N')` 88.901,
-  [`x = .directory~new~put(1)`](r:class.directory.put) 88.901,
-  `x = charin('nofile_zz', 1, -1)` 88.907; [rule](r:bif.index.call.native).
+* 88, argument value refused: `x = sysfileexists()` 88.901,
+  [`x = .directory~new~put(1)`](r:class.directory.put) 88.901;
+  [rule](r:bif.index.call.native).
 * 89, USE target of the wrong kind: `use arg a, 'b'` 89.1, `use arg (a)` 89.1;
   [rule](r:instr.use.syntax).
 * 90, EXTERNAL entry that is not there:
@@ -455,8 +461,8 @@ directives.
   [rule](r:dir.routine.external).
 * 91, message term with no result: `say 'a' .m~new~bar 'b'` 91.999;
   [rule](r:expr.messages.cascade).
-* 93, argument value refused: `x = left('abc', -2)` 93.923,
-  `x = copies('ab', -2)` 93.906, `x = 'abc'~substr(0)` 93.924, `x = d2c(-1)`
+* 93, argument value refused: `x = 'abc'~left(-2)` 93.923,
+  `x = 'ab'~copies(-2)` 93.906, `x = 'abc'~substr(0)` 93.924, `x = d2c(-1)`
   93.927, [`x = .array~new('x')`](r:class.array.new) 93.906,
   `x = stream('nofile_zz', 'c', 'bogus')` 93.914;
   [rule](r:conv.position.check).
@@ -480,13 +486,12 @@ directives.
 > INTERPRET is no directive, so it raises 99 there.
 
 ```rexx
-call try "x = filespec('N')"
+call try "x = sysfileexists()"
 call try "x = .directory~new~put(1)"
-call try "x = charin('nofile_zz', 1, -1)"
 call try "use arg a, 'b'"
 call try "use arg (a)"
-call try "x = left('abc', -2)"
-call try "x = copies('ab', -2)"
+call try "x = 'abc'~left(-2)"
+call try "x = 'ab'~copies(-2)"
 call try "x = 'abc'~substr(0)"
 call try "x = d2c(-1)"
 call try "x = .array~new('x')"
@@ -511,13 +516,12 @@ e: label = arg(1)
 ```
 
 ```output
-x = filespec('N')                            88.901
+x = sysfileexists()                          88.901
 x = .directory~new~put(1)                    88.901
-x = charin('nofile_zz', 1, -1)               88.907
 use arg a, 'b'                               89.1
 use arg (a)                                  89.1
-x = left('abc', -2)                          93.923
-x = copies('ab', -2)                         93.906
+x = 'abc'~left(-2)                           93.923
+x = 'ab'~copies(-2)                          93.906
 x = 'abc'~substr(0)                          93.924
 x = d2c(-1)                                  93.927
 x = .array~new('x')                          93.906
@@ -582,4 +586,23 @@ e2: say condition('o')~code
 ```output
 91.999
 97.2
+```
+
+## Deviations
+
+r[cond.errors.deviation.179]
+BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
+level 6.06 ([Deviation 179](../deviations.md)), so the errors of their
+arguments are numbered 88, as [the native call rule](r:bif.index.call.native)
+says. ooRexx, at level 6.07, makes them builtins, and numbers the same faults
+40.
+
+```rexx
+signal on syntax name e
+x = filespec('N')
+e: say condition('o')~code
+```
+
+```output
+88.901
 ```

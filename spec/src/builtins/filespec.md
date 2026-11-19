@@ -3,6 +3,7 @@ element: FILESPEC
 kind: builtin
 syntax: "FILESPEC(option, filespec)"
 rexxref: "Functions > Built-in Functions > FILESPEC"
+deviations: [179]
 ---
 
 # FILESPEC
@@ -31,40 +32,29 @@ argument that is an object other than a string, such as `.nil`.
 ```rexx
 signal on syntax name a
 say filespec()
-a: say condition('o')~code
+a: say condition('c')
 signal on syntax name b
 say filespec('N')
-b: say condition('o')~code
+b: say condition('c')
 signal on syntax name c
 say filespec(, 'a/b')
-c: say condition('o')~code
+c: say condition('c')
 signal on syntax name d
 say filespec('N', 'a/b', 'c')
-d: say condition('o')~code
-signal on syntax name e
-say filespec('N', .nil)
-e: say condition('o')~code
+d: say condition('c')
 signal on syntax name f
 say 'a/b'~filespec('N')
 f: say condition('o')~code
-signal on syntax name g
-say filespec('N', .told~new)
-g: say condition('o')~code
 signal off syntax
 say filespec('N', 'a/b', ) filespec(.array~of('N'), .mutablebuffer~new('a/b'))
-::class told
-::method string
-  return 'a/b'
 ```
 
 ```output
-88.901
-88.901
-88.901
-88.922
-88.909
+SYNTAX
+SYNTAX
+SYNTAX
+SYNTAX
 97.1
-88.909
 b b
 ```
 
@@ -96,10 +86,10 @@ say filespec('X', .nil)
 d: say wordpos(condition('o')~code, '40.904 88.909') > 0
 signal on syntax name e
 say filespec('N', f, 'x')
-e: say condition('o')~code
+e: say condition('c')
 signal on syntax name g
 say filespec('X')
-g: say wordpos(condition('o')~code, '40.904 88.901') > 0
+g: say condition('c')
 ```
 
 ```output
@@ -110,8 +100,8 @@ libm.so libm.so libm.so
 40.904
 40.904
 1
-88.922
-1
+SYNTAX
+SYNTAX
 ```
 
 ## The pieces
@@ -231,4 +221,73 @@ say filespec('N', 12) filespec('E', 1.5) filespec('N', 'a b.c d')
 ```output
 [][][][][]
 12 5 a b.c d
+```
+
+## Deviations
+
+r[bif.filespec.deviation.179]
+FILESPEC is a routine of the REXX package, as at language level 6.06
+([Deviation 179](../deviations.md)). Its errors for the number of its
+arguments are those of [the native call rule](r:bif.index.call.native), of the
+88.9xx family, and an argument that is an object whose `request` answers no
+string, such as `.nil`, raises `SYNTAX 88.909`. ooRexx, at level 6.07, makes
+FILESPEC a builtin: it raises `SYNTAX 40.3`, `40.5` or `40.4` for a missing
+argument, an omitted one or one too many, and reads such an object by its
+`STRING` method. The second example holds the calls of the example of [the
+option rule](r:bif.filespec.option) that have a fault in the number of
+arguments.
+
+```rexx
+signal on syntax name a
+say filespec()
+a: say condition('o')~code
+signal on syntax name b
+say filespec('N')
+b: say condition('o')~code
+signal on syntax name c
+say filespec(, 'a/b')
+c: say condition('o')~code
+signal on syntax name d
+say filespec('N', 'a/b', 'c')
+d: say condition('o')~code
+signal on syntax name e
+say filespec('N', .nil)
+e: say condition('o')~code
+signal on syntax name f
+say 'a/b'~filespec('N')
+f: say condition('o')~code
+signal on syntax name g
+say filespec('N', .told~new)
+g: say condition('o')~code
+signal off syntax
+say filespec('N', 'a/b', ) filespec(.array~of('N'), .mutablebuffer~new('a/b'))
+::class told
+::method string
+  return 'a/b'
+```
+
+```output
+88.901
+88.901
+88.901
+88.922
+88.909
+97.1
+88.909
+b b
+```
+
+```rexx
+f = '/usr/lib/libm.so'
+signal on syntax name e
+say filespec('N', f, 'x')
+e: say condition('o')~code
+signal on syntax name g
+say filespec('X')
+g: say wordpos(condition('o')~code, '40.904 88.901') > 0
+```
+
+```output
+88.922
+1
 ```

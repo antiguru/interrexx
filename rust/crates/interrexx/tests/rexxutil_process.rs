@@ -4,6 +4,9 @@ use std::os::unix::process::CommandExt as _;
 use std::path::Path;
 use std::process::Command;
 
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
+
 /// `SysWait` from the main activity and from two activities started together.
 const PROGRAM: &str = "a = .w~new~start('WAIT')\nb = .w~new~start('WAIT')\n\
      say SysWait()\nsay a~result\nsay b~result\n\
@@ -97,8 +100,8 @@ fn competing_child_waiters_accept_either_valid_winner() {
         say 'failure' rc\n\
         return\n";
     let (_, dir) = rexx("sys-wait-race", program);
-    let output = Command::new("memcap")
-        .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "-k", "2", "30"])
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+        .args(["-v", MEMORY_LIMIT_KIB, "-k", "2", "30"])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(dir.join("p.rex"))
         .current_dir(&dir)
@@ -128,15 +131,8 @@ fn competing_child_waiters_accept_either_valid_winner() {
 /// Runs the owned-child fixture after the child is waitable without reaping.
 fn waitable_child(mode: &str) -> std::process::Output {
     let (_, dir) = rexx(&format!("sys-wait-owned-{mode}"), "say SysWait()\n");
-    let output = Command::new("memcap")
-        .args([
-            "2G",
-            env!("CARGO_BIN_EXE_bounded-run"),
-            "-k",
-            "2",
-            "15",
-            "python3",
-        ])
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+        .args(["-v", MEMORY_LIMIT_KIB, "-k", "2", "15", "python3"])
         .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/rexxutil_process/owned_child.py"))
         .arg(mode)
         .arg(env!("CARGO_BIN_EXE_rexx"))

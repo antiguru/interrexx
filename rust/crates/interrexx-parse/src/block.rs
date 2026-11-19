@@ -1,10 +1,10 @@
 //! Block structure: the control stack, and assembling one code body.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use interrexx_inventory::errors::{
-    E7_1, E7_2, E8_2, E9_2, E10_1, E10_2, E10_3, E10_4, E10_7, E14_1, E14_2, E14_3, E14_4, E14_5,
-    E14_901, E47_2, E47_3, E47_4, Msg,
+    E7_1, E7_2, E8_2, E9_1, E9_2, E10_1, E10_2, E10_3, E10_4, E10_5, E10_6, E10_7, E14_1, E14_2,
+    E14_3, E14_4, E14_5, E14_901, E47_2, E47_3, E47_4, Msg,
 };
 
 use crate::ProgramSource;
@@ -13,9 +13,6 @@ use crate::clause::{ClauseCursor, PendingThen};
 use crate::expr::display_value;
 use crate::instruction::{missing_then, parse_instruction};
 use crate::token::{ParseCtx, ParseError, SymbolId, SymbolTable, Tag};
-
-mod references;
-use references::for_each_variable_name;
 
 /// What a control-stack frame stands for: the `InstructionKeyword` values that
 /// the parser can put on the stack, and nothing else.
@@ -98,8 +95,8 @@ pub(crate) enum EnclosingSelect {
 /// One code body being assembled: the chain, the control stack, and the
 /// per-body tables that instruction parsing reads.
 pub(crate) struct Block<'a> {
-    /// Held so that a variable slot's `SymbolId` can be resolved to the name
-    /// `referenced` is keyed by.
+    /// Held so that an END's or a label's `SymbolId` can be resolved to its
+    /// name.
     symbols: &'a SymbolTable,
     /// Held so that an error can name the line an instruction starts on.
     source: &'a ProgramSource,
@@ -117,9 +114,6 @@ pub(crate) struct Block<'a> {
     /// The names `USE LOCAL` listed, seeded with the five names always present.
     /// `None` until a `USE LOCAL`.
     local: Option<Vec<Box<[u8]>>>,
-    /// Every variable name referenced by an instruction already in the chain,
-    /// which is the part of `variables` that is observable from here.
-    referenced: BTreeSet<Box<[u8]>>,
 }
 
 impl<'a> Block<'a> {
@@ -140,7 +134,6 @@ impl<'a> Block<'a> {
             pending_then: None,
             exposed: None,
             local: None,
-            referenced: BTreeSet::new(),
         }
     }
 
@@ -176,13 +169,6 @@ impl<'a> Block<'a> {
             return !local.iter().any(|n| n.as_ref() == name);
         }
         false
-    }
-
-    /// Whether a compound variable of this exact spelling has already been
-    /// referenced by an instruction in this body, which makes it come from the
-    /// cache and capture nothing.
-    pub(crate) fn compound_is_cached(&self, name: &[u8]) -> bool {
-        self.referenced.contains(name)
     }
 
     /// `expose`, called for each symbol an `EXPOSE` lists.
@@ -237,17 +223,6 @@ impl<'a> Block<'a> {
         if let InstructionKind::Label { name } = &instruction.kind {
             self.labels.entry(name.clone()).or_insert(index);
         }
-        // Registered here rather than during the parse, so that an instruction
-        // never sees its own references. That is what a `GUARD` needs: the
-        // cache is consulted as each reference is built, and within one clause
-        // the only reference that could precede the guard expression is in the
-        // guard expression itself, where the first occurrence captures and a
-        // later duplicate is a no-op on a set. So `guard on when a.1 & a.1` is
-        // rc 0.
-        let symbols = self.symbols;
-        for_each_variable_name(&instruction, symbols, &mut |name| {
-            self.referenced.insert(Box::from(name.as_bytes()));
-        });
         self.instructions.push(instruction);
         index
     }
@@ -574,14 +549,8 @@ impl<'a> Block<'a> {
     fn match_end(&mut self, end: usize, end_byte: usize) -> Result<(), ParseError> {
         let frame = self.pop();
         if !frame.kind.is_block() {
-            // There are two more specific numbers possible here, for an END
-            // closing a THEN and for one closing an ELSE, and neither is
-            // reachable. The argument is structural rather than empirical: an
-            // END is not a control instruction, so the pending control block is
-            // always flushed before this check, and that flush cannot return
-            // with an ELSE or a THEN on top -- it pops an ELSE outright and
-            // rewrites a THEN into a branch-end marker. The block type this arm
-            // tests for therefore cannot be present.
+            // An END right after a THEN or an ELSE was refused before the
+            // flush, so what is on top here is no pending branch.
             return Err(ParseError::raise(E10_1, end_byte, []));
         }
         // An END on an OTHERWISE really closes the SELECT behind it.
@@ -782,6 +751,19 @@ pub(crate) fn translate_block(
             }
         }
 
+        // An END cannot be the instruction of a pending THEN or ELSE
+        // (`r[instr.if.syntax]`). The flush below would take it as that
+        // instruction, so this is checked first.
+        if is_end {
+            match block.top().kind {
+                Control::IfThen | Control::WhenThen => {
+                    return Err(ParseError::raise(E10_5, byte, []));
+                }
+                Control::Else => return Err(ParseError::raise(E10_6, byte, [])),
+                _ => {}
+            }
+        }
+
         // A control instruction joins the chain at once. Anything else but an
         // ELSE goes through the control flush, which may close a branch first,
         // and an ELSE is added by its own arm below.
@@ -810,16 +792,18 @@ pub(crate) fn translate_block(
         }
 
         if is_when {
-            // The WHEN joins its SELECT's list only when the SELECT is the
-            // immediate top, which is narrower than "a SELECT is open": see
-            // `InstructionKind::Select::whens`.
+            // The WHEN joins the list of the SELECT on top.
             let frame = block.top();
-            if frame.kind.is_select() {
-                let when = index.expect("the WHEN was just added");
-                match &mut block.instructions[frame.index()].kind {
-                    InstructionKind::Select { whens, .. } => whens.push(when),
-                    other => panic!("a SELECT frame stands for a SELECT, not {other:?}"),
-                }
+            if !frame.kind.is_select() {
+                // Anything else on top is a THEN that took this WHEN as its
+                // instruction: the WHEN belongs to no SELECT
+                // (`r[instr.select.syntax]`).
+                return Err(ParseError::raise(E9_1, byte, []));
+            }
+            let when = index.expect("the WHEN was just added");
+            match &mut block.instructions[frame.index()].kind {
+                InstructionKind::Select { whens, .. } => whens.push(when),
+                other => panic!("a SELECT frame stands for a SELECT, not {other:?}"),
             }
             continue;
         }

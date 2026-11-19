@@ -741,30 +741,29 @@ say 'after'
 ----
 0: Clause index=0 end=2
 1: EvalExpr index=0 slot=0 dst=0
-2: SelectCaseText index=0 case=0
-3: Clause index=1 end=6
-4: WhenTest index=1 case=0 dst=1
-5: JumpUnless reg=1 target=12
-6: EnterWhen select=0 when=1
-7: Clause index=2 end=8
-8: Clause index=3 end=11
-9: Const dst=1 konst=0
-10: Say index=3 src=1
-11: EndWhen
-12: Clause index=4 end=15
-13: WhenTest index=4 case=0 dst=1
-14: JumpUnless reg=1 target=21
-15: EnterWhen select=0 when=4
-16: Clause index=5 end=17
-17: Clause index=6 end=20
-18: Const dst=1 konst=1
-19: Say index=6 src=1
-20: EndWhen
-21: Clause index=7 end=23
-22: Exec index=7
-23: Clause index=8 end=26
-24: Const dst=0 konst=2
-25: Say index=8 src=0
+2: Clause index=1 end=5
+3: WhenTest index=1 case=0 dst=1
+4: JumpUnless reg=1 target=11
+5: EnterWhen select=0 when=1
+6: Clause index=2 end=7
+7: Clause index=3 end=10
+8: Const dst=1 konst=0
+9: Say index=3 src=1
+10: EndWhen
+11: Clause index=4 end=14
+12: WhenTest index=4 case=0 dst=1
+13: JumpUnless reg=1 target=20
+14: EnterWhen select=0 when=4
+15: Clause index=5 end=16
+16: Clause index=6 end=19
+17: Const dst=1 konst=1
+18: Say index=6 src=1
+19: EndWhen
+20: Clause index=7 end=22
+21: Exec index=7
+22: Clause index=8 end=25
+23: Const dst=0 konst=2
+24: Say index=8 src=0
 registers: 2
 consts: 'a' 'b' 'after'
 
@@ -783,29 +782,28 @@ select
 end
 ----
 0: Clause index=0 end=1
-1: SelectCaseText index=0 case=-
-2: Clause index=1 end=7
-3: LoadConstant dst=0
-4: LoadConstant dst=1
-5: Binary op== lhs=0 rhs=1 dst=0
-6: ConditionJump index=1 reg=0 keyword=WHEN target=18
-7: EnterWhen select=0 when=1
-8: Clause index=2 end=9
-9: Clause index=3 end=14
-10: LoadConstant dst=0
-11: LoadConstant dst=1
-12: Binary op== lhs=0 rhs=1 dst=0
-13: ConditionJump index=3 reg=0 keyword=IF target=16
-14: Clause index=4 end=15
-15: Clause index=5 end=16
-16: EndWhen
-17: EndBranch
-18: EnterOtherwise select=0
-19: Clause index=6 end=20
-20: Clause index=7 end=21
-21: EndWhen
-22: Clause index=8 end=24
-23: Exec index=8
+1: Clause index=1 end=6
+2: LoadConstant dst=0
+3: LoadConstant dst=1
+4: Binary op== lhs=0 rhs=1 dst=0
+5: ConditionJump index=1 reg=0 keyword=WHEN target=17
+6: EnterWhen select=0 when=1
+7: Clause index=2 end=8
+8: Clause index=3 end=13
+9: LoadConstant dst=0
+10: LoadConstant dst=1
+11: Binary op== lhs=0 rhs=1 dst=0
+12: ConditionJump index=3 reg=0 keyword=IF target=15
+13: Clause index=4 end=14
+14: Clause index=5 end=15
+15: EndWhen
+16: EndBranch
+17: EnterOtherwise select=0
+18: Clause index=6 end=19
+19: Clause index=7 end=20
+20: EndWhen
+21: Clause index=8 end=23
+22: Exec index=8
 registers: 2
 consts:
 
@@ -821,23 +819,22 @@ end
 say 'after'
 ----
 0: Clause index=0 end=1
-1: SelectCaseText index=0 case=-
-2: Clause index=1 end=7
-3: LoadConstant dst=0
-4: LoadConstant dst=1
-5: Binary op== lhs=0 rhs=1 dst=0
-6: ConditionJump index=1 reg=0 keyword=WHEN target=13
-7: EnterWhen select=0 when=1
-8: Clause index=2 end=9
-9: Clause index=3 end=12
-10: Const dst=0 konst=0
-11: Say index=3 src=0
-12: EndWhen
-13: Clause index=4 end=15
-14: Exec index=4
-15: Clause index=5 end=18
-16: Const dst=0 konst=1
-17: Say index=5 src=0
+1: Clause index=1 end=6
+2: LoadConstant dst=0
+3: LoadConstant dst=1
+4: Binary op== lhs=0 rhs=1 dst=0
+5: ConditionJump index=1 reg=0 keyword=WHEN target=12
+6: EnterWhen select=0 when=1
+7: Clause index=2 end=8
+8: Clause index=3 end=11
+9: Const dst=0 konst=0
+10: Say index=3 src=0
+11: EndWhen
+12: Clause index=4 end=14
+13: Exec index=4
+14: Clause index=5 end=17
+15: Const dst=0 konst=1
+16: Say index=5 src=0
 registers: 2
 consts: 'a' 'after'
 
@@ -856,50 +853,21 @@ end
 1: Const dst=0 konst=0
 2: Store index=0 at=0 src=0
 3: Clause index=1 end=4
-4: SelectCaseText index=1 case=-
-5: CallingClause index=2 end=12
-6: Load read=Simple at=0 dst=1
-7: PushArg src=1
-8: CallArgs slot=0 path=root.L site=0 argc=1 dst=0
-9: LoadConstant dst=1
-10: Binary op=> lhs=0 rhs=1 dst=0
-11: ConditionJump index=2 reg=0 keyword=WHEN target=16
-12: EnterWhen select=1 when=2
-13: Clause index=3 end=14
-14: Clause index=4 end=15
-15: EndWhen
-16: Clause index=5 end=18
-17: Exec index=5
+4: CallingClause index=2 end=11
+5: Load read=Simple at=0 dst=1
+6: PushArg src=1
+7: CallArgs slot=0 path=root.L site=0 argc=1 dst=0
+8: LoadConstant dst=1
+9: Binary op=> lhs=0 rhs=1 dst=0
+10: ConditionJump index=2 reg=0 keyword=WHEN target=15
+11: EnterWhen select=1 when=2
+12: Clause index=3 end=13
+13: Clause index=4 end=14
+14: EndWhen
+15: Clause index=5 end=17
+16: Exec index=5
 registers: 2
 consts: 'abcd'
-
-# an absorbed when compiles to its own region
-# An **absorbed** `WHEN` -- one that is itself another `WHEN`'s consequence
-# rather than a branch its `SELECT` collected -- compiles to a region of its
-# own holding a single `super::Op::Exec`.
-compile
-select
-  when 1 = 1 then when 2 = 2 then nop
-end
-----
-0: Clause index=0 end=1
-1: SelectCaseText index=0 case=-
-2: Clause index=1 end=7
-3: LoadConstant dst=0
-4: LoadConstant dst=1
-5: Binary op== lhs=0 rhs=1 dst=0
-6: ConditionJump index=1 reg=0 keyword=WHEN target=14
-7: EnterWhen select=0 when=1
-8: Clause index=2 end=9
-9: Clause index=3 end=11
-10: Exec index=3
-11: EndWhen
-12: Clause index=4 end=13
-13: Clause index=5 end=14
-14: Clause index=6 end=16
-15: Exec index=6
-registers: 2
-consts:
 
 # a traced select echoes its header and each listed when
 # A traced `SELECT CASE`: **one echo per promoted clause, and exactly one**.
@@ -913,38 +881,37 @@ say 'after'
 0: Clause index=0 end=3
 1: TraceClause index=0
 2: EvalExpr index=0 slot=0 dst=0
-3: SelectCaseText index=0 case=0
-4: Clause index=1 end=8
-5: TraceClause index=1
-6: WhenTest index=1 case=0 dst=1
-7: JumpUnless reg=1 target=16
-8: EnterWhen select=0 when=1
-9: Clause index=2 end=11
-10: TraceClause index=2
-11: Clause index=3 end=15
-12: TraceClause index=3
-13: Const dst=1 konst=0
-14: Say index=3 src=1
-15: EndWhen
-16: Clause index=4 end=20
-17: TraceClause index=4
-18: WhenTest index=4 case=0 dst=1
-19: JumpUnless reg=1 target=28
-20: EnterWhen select=0 when=4
-21: Clause index=5 end=23
-22: TraceClause index=5
-23: Clause index=6 end=27
-24: TraceClause index=6
-25: Const dst=1 konst=1
-26: Say index=6 src=1
-27: EndWhen
-28: Clause index=7 end=31
-29: TraceClause index=7
-30: Exec index=7
-31: Clause index=8 end=35
-32: TraceClause index=8
-33: Const dst=0 konst=2
-34: Say index=8 src=0
+3: Clause index=1 end=7
+4: TraceClause index=1
+5: WhenTest index=1 case=0 dst=1
+6: JumpUnless reg=1 target=15
+7: EnterWhen select=0 when=1
+8: Clause index=2 end=10
+9: TraceClause index=2
+10: Clause index=3 end=14
+11: TraceClause index=3
+12: Const dst=1 konst=0
+13: Say index=3 src=1
+14: EndWhen
+15: Clause index=4 end=19
+16: TraceClause index=4
+17: WhenTest index=4 case=0 dst=1
+18: JumpUnless reg=1 target=27
+19: EnterWhen select=0 when=4
+20: Clause index=5 end=22
+21: TraceClause index=5
+22: Clause index=6 end=26
+23: TraceClause index=6
+24: Const dst=1 konst=1
+25: Say index=6 src=1
+26: EndWhen
+27: Clause index=7 end=30
+28: TraceClause index=7
+29: Exec index=7
+30: Clause index=8 end=34
+31: TraceClause index=8
+32: Const dst=0 konst=2
+33: Say index=8 src=0
 registers: 2
 consts: 'a' 'b' 'after'
 
@@ -966,31 +933,30 @@ end
 ----
 0: Clause index=0 end=2
 1: EvalExpr index=0 slot=0 dst=0
-2: SelectCaseText index=0 case=0
-3: Clause index=1 end=6
-4: WhenTest index=1 case=0 dst=1
-5: JumpUnless reg=1 target=17
-6: EnterWhen select=0 when=1
-7: Clause index=2 end=8
-8: Clause index=3 end=14
-9: LoadConstant dst=1
-10: LoopHeaderValue role=Initial src=1
-11: LoadConstant dst=2
-12: LoopHeaderValue role=To src=2
-13: LoopRun index=3
-14: Clause index=4 end=15
-15: LoopNext index=3
-16: EndWhen
-17: Clause index=6 end=19
-18: Exec index=6
-19: Clause index=7 end=25
-20: LoadConstant dst=0
-21: LoopHeaderValue role=Initial src=0
-22: LoadConstant dst=1
-23: LoopHeaderValue role=To src=1
-24: LoopRun index=7
-25: Clause index=8 end=26
-26: LoopNext index=7
+2: Clause index=1 end=5
+3: WhenTest index=1 case=0 dst=1
+4: JumpUnless reg=1 target=16
+5: EnterWhen select=0 when=1
+6: Clause index=2 end=7
+7: Clause index=3 end=13
+8: LoadConstant dst=1
+9: LoopHeaderValue role=Initial src=1
+10: LoadConstant dst=2
+11: LoopHeaderValue role=To src=2
+12: LoopRun index=3
+13: Clause index=4 end=14
+14: LoopNext index=3
+15: EndWhen
+16: Clause index=6 end=18
+17: Exec index=6
+18: Clause index=7 end=24
+19: LoadConstant dst=0
+20: LoopHeaderValue role=Initial src=0
+21: LoadConstant dst=1
+22: LoopHeaderValue role=To src=1
+23: LoopRun index=7
+24: Clause index=8 end=25
+25: LoopNext index=7
 registers: 3
 consts:
 

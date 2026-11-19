@@ -35,3 +35,4 @@
 35	934	Missing expression in WHEN case expression list.
 35	935	Missing expression following &1 keyword of a &2 instruction.
 35	936	Missing expression in ::CONSTANT directive.
+35	937	Error number following SYNTAX in a CATCH clause must be a valid error code; found "&1".

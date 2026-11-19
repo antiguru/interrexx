@@ -195,16 +195,6 @@ pub(crate) struct Activity {
     /// level whose trap took the condition, which seal no site: the trapping
     /// level's own site is the one the propagate restored.
     pub(crate) propagate_absorb: usize,
-    /// **F3's own perimeter, found by review -- and corrected twice more,
-    /// each correction found by re-verifying the previous one rather than
-    /// trusting it.** When an absorbed `WhenCase` (`run.rs`'s own doc
-    /// comment on that arm) takes its `Flow::Goto(false_target)` branch,
-    /// whatever it lands on -- `END`'s own 7.3, or (F-EX1) `OTHERWISE`'s
-    /// own marker *and its whole body*, redirected through `run_
-    /// otherwise` -- reports every indent it computes **`self` spaces
-    /// higher** than its own ordinary `static_indent` would give, for as
-    /// long as this stays non-zero.
-    pub(crate) indent_offset: usize,
     /// The absolute indent the next clause echoes at, in place of the one its
     /// position gives: a `LEAVE` or `ITERATE` that `=` runs again at a debug
     /// pause echoes at the indent of the loop level it reached, not the one
@@ -598,7 +588,6 @@ impl Activity {
             pending_result: None,
             pending_description: None,
             pending_rc: None,
-            indent_offset: 0,
             rerun_indent: None,
             rerun_failure_indent: None,
             rerun_pending: false,
@@ -782,7 +771,6 @@ impl Activity {
             pending_result,
             pending_description,
             pending_rc,
-            indent_offset: _,
             rerun_indent: _,
             rerun_failure_indent: _,
             rerun_pending: _,

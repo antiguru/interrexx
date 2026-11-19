@@ -188,13 +188,12 @@ fn has_extension(name: &str) -> bool {
     program_extension(name).is_some()
 }
 
-/// Whether `name` carries enough directory information to be checked directly
-/// rather than searched for along the path.
+/// Whether `name` is checked directly rather than searched for along the
+/// path: an absolute name or one from the home directory. `./name` and
+/// `../name` are searched for like any other relative name
+/// (`r[env.search.names]`).
 fn has_directory(name: &str) -> bool {
-    name.starts_with('~')
-        || name.starts_with('/')
-        || name.starts_with("./")
-        || name.starts_with("../")
+    name.starts_with('~') || name.starts_with('/')
 }
 
 /// The file a search for `name` finds, normalised against `cwd`, or `None`
@@ -421,15 +420,15 @@ mod tests {
         );
     }
 
-    /// A name qualified enough to stand on its own is checked directly and the
-    /// path is not searched, where a name merely carrying a directory is
-    /// searched over every entry.
+    /// An absolute name is checked directly and the path is not searched,
+    /// where a relative name, `./` and `../` ones included, is searched over
+    /// every entry.
     #[test]
-    fn a_directory_qualified_name_bypasses_the_path() {
+    fn only_an_absolute_name_bypasses_the_path() {
         let entries = search_entries(Some("/prog/"), None, None);
         assert_eq!(
             candidates("./sub/lib.rex", &entries, None, true),
-            vec![vec!["./sub/lib.rex"]]
+            vec![vec!["/prog/./sub/lib.rex", "././sub/lib.rex"]]
         );
         assert_eq!(
             candidates("/abs/lib.rex", &entries, None, true),
