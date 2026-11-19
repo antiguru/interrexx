@@ -133,7 +133,8 @@ if [ -n "$missing$added" ]; then
 fi
 
 # The expected-failure list: a group path relative to testUnits, then its reason, and under it an
-# indented line for each test the group fails, `failure` or `error` and then the test's name.
+# indented line for each test the group fails, `failure` or `error` and then the test's name, all of
+# it as ooTest prints it, spaces included.
 declare -A listed failing
 group=
 while IFS= read -r line; do
@@ -141,10 +142,10 @@ while IFS= read -r line; do
     case $line in
         [[:space:]]*)
             [ -n "$group" ] || die "$expected: a test before any group: $line"
-            read -r kind name rest <<< "$line"
+            read -r kind name <<< "$line"
             [ "$kind" = failure ] || [ "$kind" = error ] ||
                 die "$expected: not failure or error: $line"
-            [ -n "$name" ] && [ -z "$rest" ] || die "$expected: not a kind and one name: $line"
+            [ -n "$name" ] || die "$expected: not a kind and a name: $line"
             failing[$group]+="$kind $name"$'\n'
             ;;
         *)
@@ -220,7 +221,15 @@ field() { grep -a -m1 "^$1:" "$log" | awk '{ print $NF }' || true; }
 failed_tests() {
     awk '/^Tests ran:/ { summary = 1; next }
         summary && /^\[(failure|error)\] / { kind = substr($1, 2, length($1) - 2); next }
-        kind != "" { if ($1 == "Test:") print kind, $2; kind = "" }' "$log" | LC_ALL=C sort
+        kind != "" {
+            if ($1 == "Test:") {
+                name = $0
+                sub(/^[ \t]*Test:[ \t]*/, "", name)
+                sub(/[ \t]+$/, "", name)
+                print kind, name
+            }
+            kind = ""
+        }' "$log" | LC_ALL=C sort
 }
 declare -A seen
 [ "${#groups[@]}" -gt 0 ] || die "no .testGroup under $units"
