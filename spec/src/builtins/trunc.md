@@ -57,8 +57,8 @@ say trunc(7.9) trunc(7.9, ) trunc(7.9, 0)
 r[bif.trunc.errors]
 The call checks the [form](r:conv.whole.form) and
 [value](r:conv.whole.digits) of `n`, which raise `SYNTAX 40.12`; that `number`
-is a [number](r:bif.index.num.arg), `SYNTAX 93.943`; and that `n` is not
-negative, `SYNTAX 93.906`. A call that fails more than one of these checks
+is a [number](r:bif.index.num.arg), `SYNTAX 40.11`; and that `n` is not
+negative, `SYNTAX 40.13`. A call that fails more than one of these checks
 raises the error of one of them, as [the precedence
 rule](r:conv.error.precedence) says. `n` is a whole-number argument, so the
 [null string](r:conv.arg.empty) raises 40.12 and `-0` is 0.
@@ -86,8 +86,8 @@ e: say condition('o')~code
 5 5.00 5.0000000000
 40.12
 40.12
-93.943
-93.906
+40.11
+40.13
 40.12
 ```
 
@@ -145,8 +145,8 @@ say trunc(-0.5) trunc(-0.5, 2) trunc(-0.001, 2) trunc(-0.001, 3),
 0 -0.50 0.00 -0.001 0 0.0 -1
 ```
 
-> **Note.** The ANSI draft (9.4.6) raises `SYNTAX 40.13` for a negative `n`,
-> where ooRexx raises 93.906.
+> **Note.** The ANSI draft (9.4.6) raises the same `SYNTAX 40.13` for a
+> negative `n`.
 
 ## Deviations
 

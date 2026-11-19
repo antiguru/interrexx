@@ -61,7 +61,7 @@
 # said, so a divergence shows up as a test failure rather than as an expected
 # value.
 class	expect	line	program
-translation	25.925	1	::attribute a guarded unguarded\n
+translation	25.937	1	::attribute a guarded unguarded\n
 translation	31.3	1	drop (.a)
 -	ok	-	::class m1 mixinclass object\n::class m2 mixinclass object\n::class c inherit m1 m2\n
 translation	31.3	1	drop (.5)
@@ -80,7 +80,7 @@ translation	20.925	1	::options form "scientific"\n
 translation	24.1	1	trace 1234567890
 -	ok	-	say 1
 -	ok	-	do i = 1 to 3\nend
-translation	99.913	4	::method m\nexpose a.\nparse value 1 with a.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nparse value 1 with a.1\nguard on when a.1\n
 -	ok	-	arg a
 translation	21.903	1	call on error name lab x
 -	ok	-	use strict arg a
@@ -97,7 +97,7 @@ translation	21.913	1	::constant c 5 6\n
 translation	21.905	1	signal lab x
 translation	7.2	5	nop\n\nselect\n\ndo\n\nend\n\nend\n
 translation	25.904	1	::requires x DELEGATE\n
-translation	25.925	1	::attribute a class class\n
+translation	25.936	1	::attribute a class class\n
 -	ok	-	if 1 then   \nnop
 translation	49.2	1	do i over x for 1 to 2\nend
 -	ok	-	if(1) then nop
@@ -178,12 +178,12 @@ translation	99.917	1	::method m attribute external "junk"\n
 translation	20.905	1	numeric "x"
 -	ok	-	::routine r\n  return\n::annotate routine r k 1\n
 translation	25.901	1	::class c junk\n
-translation	25.902	1	::method m protected unprotected\n
+translation	25.937	1	::method m protected unprotected\n
 -	ok	-	raise halt
 -	ok	-	expose a\n\nnop\n
 -	ok	-	select\nwhen 1 = 1 then nop\notherwise nop\nend\n
-translation	25.925	1	::attribute a get set\n
-translation	10.1	5	nop\n\nselect\n\nwhen 1 = 1 then end\n
+translation	25.937	1	::attribute a get set\n
+translation	10.5	5	nop\n\nselect\n\nwhen 1 = 1 then end\n
 -	ok	-	drop a (v) b
 translation	27.901	1	do forever x\nend
 translation	8.1	1	then
@@ -193,17 +193,17 @@ translation	25.915	1	signal on error label lab
 -	ok	-	::attribute a package\n
 -	ok	-	do until 1\nend
 translation	25.904	1	::requires x UNPROTECTED\n
-translation	25.902	1	::method m abstract abstract\n
+translation	25.936	1	::method m abstract abstract\n
 translation	25.927	1	::options lostdigits error\n
 -	ok	-	::method m private\n  return 1\n
 -	ok	-	signal on novalue\nnovalue: nop
 -	ok	-	numeric form value 1
-translation	10.1	7	nop\n\nselect\n\nwhen 1 = 1 then\n\nend\n
+translation	10.5	7	nop\n\nselect\n\nwhen 1 = 1 then\n\nend\n
 -	ok	-	::options novalue condition\n
 -	ok	-	do label a label b\nend
 translation	99.925	1	::attribute "1e+5"\n
 translation	25.904	1	::requires x TRACE\n
-translation	10.1	7	nop\n\nif 1 = 1 then nop\n\nelse\n\nend\n
+translation	10.6	7	nop\n\nif 1 = 1 then nop\n\nelse\n\nend\n
 -	ok	-	call on user x\nx: return
 -	ok	-	::options digits "9."\n
 translation	20.924	1	::annotate "package"\n
@@ -228,12 +228,12 @@ translation	99.937	2	::attribute a\n  return 1\n
 translation	19.916	1	::constant c -.true\n
 translation	24.1	1	trace zzz
 translation	25.902	5	::class c\n\n\n\n::method m junk\n
-translation	25.903	1	::routine r public private\n
+translation	25.937	1	::routine r public private\n
 -	ok	-	::annotate package a 1 b "x"\n
 translation	10.3	7	nop\n\ndo\n\nnop\n\nend 1\n
 translation	99.936	2	::method m external "LIBRARY x"\n  return 1\n
 -	ok	-	::options digits " 9 "\n
-translation	99.913	4	::method m\nexpose a.\nnumeric digits a.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nnumeric digits a.1\nguard on when a.1\n
 -	ok	-	parse linein a
 -	ok	-	::requires x library\n
 -	ok	-	::method m protected\n  return 1\n
@@ -242,13 +242,13 @@ translation	99.913	4	::method m\nexpose a.\nnumeric digits a.1\nguard on when a.
 -	ok	-	code = "say 'interpreted'"\ninterpret code\nv = 0\ninterpret "v = 6 * 7"\nsay v\ndo i = 1 to 3\n  interpret "say 'loop" i "'"\nend\n
 translation	99.913	2	::method m\nguard off when a\n
 translation	25.906	1	raise any
-translation	25.902	1	::method m class class\n
+translation	25.936	1	::method m class class\n
 translation	25.17	1	procedure foo
 translation	25.904	1	::requires x CONDITION\n
 translation	99.934	2	::method m attribute external "junk"\n  return 1\n
 translation	99.913	3	::method m\nexpose a.1\nguard on when a.1\n
 translation	99.925	1	::method m delegate 5\n  return 1\n
-translation	99.913	4	::method m\nexpose a.\na.1~string\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\na.1~string\nguard on when a.1\n
 -	ok	-	::method m\nexpose i\nguard on when a.i\n
 translation	47.3	5	nop\n\nif 1 = 1 then\n\nlab:\n\nnop\n
 translation	25.1	1	call on nostring
@@ -258,12 +258,12 @@ translation	20.918	1	do label\nend
 -	ok	-	procedure expose a
 -	ok	-	::method m delegate p attribute\n
 -	ok	-	do label a.\nnop\nend a.
-translation	99.913	6	::method m\nexpose a.\ndo a.1 = 1 to 2\nnop\nend\nguard on when a.1\n
-translation	25.904	1	::requires x namespace a namespace b\n
+-	ok	-	::method m\nexpose a.\ndo a.1 = 1 to 2\nnop\nend\nguard on when a.1\n
+translation	25.936	1	::requires x namespace a namespace b\n
 translation	25.933	1	address system with input
 translation	99.925	1	::attribute 3\n  return 1\n
 -	ok	-	use arg , b
-translation	99.913	4	::method m\nexpose a.\nparse var a.1 x\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nparse var a.1 x\nguard on when a.1\n
 -	ok	-	top:\nnop\n::routine r\ntop:\nnop\n
 -	ok	-	::options error condition\n
 -	ok	-	nop;
@@ -271,16 +271,16 @@ translation	99.913	4	::method m\nexpose a.\nparse var a.1 x\nguard on when a.1\n
 translation	25.923	1	select "x"\nend
 -	ok	-	use arg a.b
 translation	35.930	1	use arg a =
-translation	46.902	1	use arg a b
+translation	46.903	1	use arg a b
 translation	25.904	1	::requires x METACLASS\n
 -	ok	-	do\nif 1 = 1\nthen nop\nend\n
 -	ok	-	address system with output replace stream "f"
-translation	25.901	1	::class c mixinclass object subclass object\n
+translation	25.937	1	::class c mixinclass object subclass object\n
 -	ok	-	::class m mixinclass object\n::class c inherit m\n
 translation	27.904	1	do with index i x\nend
 translation	25.904	1	::requires x EXTERNAL\n
 translation	27.902	1	do i = 1 by 2 by 3\nend
--	ok	-	::attribute "a.e+5"\n
+translation	99.925	1	::attribute "a.e+5"\n
 -	ok	-	guard off
 translation	35.914	1	address value with input normal
 translation	18.2	7	nop\n\nselect\n\nwhen 1 = 1\n\n::routine r\nnop\n
@@ -304,14 +304,14 @@ translation	19.3	1	call on error name
 -	ok	-	/* Keywords are not reserved words. Every instruction keyword is also a legal\n   variable name, so a symbol is a keyword only by *position* -- first token of\n   a clause that is not an assignment. A scanner that classifies keywords\n   lexically cannot produce this program's output. */\n\n/* Each of these is an assignment, because the second token is `=`. */\nif = 2\ndo = 3\nsay = 4\nend = 5\nparse = 6\nthen = 7\ncall = 8\nselect = 9\nwhen = 10\notherwise = 11\nreturn = 12\nexit = 13\nsignal = 14\ntrace = 15\nnumeric = 16\n\nsay if do say end parse then\nsay call select when otherwise\nsay return exit signal trace numeric\n\n/* The same spelling as keyword and as variable in one clause. */\nif if = 2 then say "if-as-keyword saw if-as-variable =" if\n                 else say "wrong branch"\n\n/* DO still loops while `do` holds a value. */\ndo i = 1 to 2\n  say "iteration" i "and do =" do\nend\n\n/* SELECT/WHEN/OTHERWISE while all three are variables. */\nselect\n  when when = 10 then say "when-as-keyword saw when =" when\n  otherwise say "otherwise"\nend\n\n/* A stem whose name is a keyword. */\nend. = 0\nend.1 = 7\nsay "end.1 =" end.1\n\n/* Keyword as a compound tail, and as a function-call target spelling. */\nstem. = 0\nstem.if = 99\nsay "stem.if =" stem.if\n\n/* PARSE using a variable named parse. */\nparse value "a b" with first second\nsay "parsed" first second "while parse =" parse\n\n/* A label may also spell a keyword. */\ncall trace_label\nexit 0\n\ntrace_label:\n  say "called a label named trace_label; trace =" trace\n  return\n
 -	ok	-	::resource a\nfirst\n::END\n::resource b\nsecond\n::END\n
 translation	19.925	1	::annotate class\n
-translation	25.904	1	::requires x library namespace ns\n
+translation	25.937	1	::requires x library namespace ns\n
 -	ok	-	use local a\n\nnop\n
 -	ok	-	address system with output append stream "f"
 translation	25.926	1	::resource d "end" x\nbody\n::END\n
 translation	20.905	1	numeric
 -	ok	-	raise syntax 1
 translation	35.912	1	interpret
-translation	25.901	1	::class c abstract abstract\n
+translation	25.936	1	::class c abstract abstract\n
 -	ok	-	::requires x\n
 translation	99.925	1	::attribute a delegate 5\n
 translation	25.916	1	forward foo
@@ -337,15 +337,15 @@ translation	35.935	1	address system with input stream
 translation	7.1	3	nop\n\nselect case 1\n\notherwise nop\n\nend\n
 -	ok	-	drop (v)
 -	ok	-	::options all condition\n
-translation	10.1	11	nop\n\ndo\n\nif 1 = 1 then nop\n\nelse\n\nend\n\nend\n
-translation	99.913	4	::method m\nexpose a.\nsay a.1\nguard on when a.1\n
+translation	10.6	9	nop\n\ndo\n\nif 1 = 1 then nop\n\nelse\n\nend\n\nend\n
+-	ok	-	::method m\nexpose a.\nsay a.1\nguard on when a.1\n
 -	ok	-	select label a\nwhen 1 = 1 then nop\notherwise nop\nend\n
 translation	14.2	5	nop\n\nselect case 1\n\nwhen 1 then nop\n
 -	ok	-	leave
 -	ok	-	::method m\nexpose a. b.\nsay a.1\nguard on when a.1 & b.1\n
 translation	25.904	1	::requires x FAILURE\n
 translation	18.2	3	select\nwhen 1 = 1\nlab: nop\nend
-translation	25.901	1	::class c public public\n
+translation	25.936	1	::class c public public\n
 translation	36.901	1	::constant c (1+2\n
 translation	25.912	1	guard on foo
 translation	25.904	1	::requires x CONSTANT\n
@@ -382,7 +382,7 @@ translation	24.1	1	trace '+ - 9'
 -	ok	-	::method m attribute\n
 -	ok	-	parse arg . a
 translation	99.925	1	::method m delegate .p\n
-translation	25.925	1	::attribute a get get\n
+translation	25.936	1	::attribute a get get\n
 -	ok	-	call on error\nerror: return
 -	ok	-	trace '+ 9'
 -	ok	-	here: ; nop
@@ -394,7 +394,7 @@ translation	25.925	1	::attribute a get get\n
 -	ok	-	::class c abstract\n
 translation	18.1	5	nop\n\nif 1 = 1\n\n::routine r\nnop\n
 -	ok	-	::options notready condition\n
-translation	25.901	1	::routine r external "LIBRARY x" external "LIBRARY y"\n
+translation	25.936	1	::routine r external "LIBRARY x" external "LIBRARY y"\n
 -	ok	-	use arg
 translation	25.934	1	address system with foo
 -	ok	-	select case 1\nwhen 1 then nop\nend
@@ -415,7 +415,7 @@ translation	35.1	3	select\nwhen 1 = 1\nthen: nop\nend
 translation	20.902	1	procedure expose
 translation	99.917	1	::method m external "junk"\n  return 1\n
 translation	35.933	1	select case\nend
-translation	25.901	1	::class c metaclass class metaclass class\n
+translation	25.936	1	::class c metaclass class metaclass class\n
 translation	99.925	1	::method .a attribute\n
 -	ok	-	trace 1e8
 translation	24.1	1	trace 1e9
@@ -424,7 +424,7 @@ translation	14.5	5	nop\n\ndo i over x\n\nnop\n
 translation	24.1	1	trace 1.5
 translation	26.5	1	::options digits "1e-2"\n
 -	ok	-	if 1 = 1 then say 1\n
-translation	99.913	4	::method m\nexpose a.\ndrop a.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\ndrop a.1\nguard on when a.1\n
 -	ok	-	a b c
 translation	99.917	1	::attribute a get external "junk"\n
 translation	14.901	7	nop\n\nselect\n\nwhen 1 = 1 then nop\n\notherwise\n
@@ -448,7 +448,7 @@ translation	25.904	1	::requires x PROLOG\n
 -	ok	-	do label a\nleave a\nend a
 translation	20.914	1	raise
 translation	25.15	1	numeric foo
-translation	25.904	1	::requires x library library\n
+translation	25.936	1	::requires x library library\n
 translation	31.2	1	use local 1
 -	ok	-	use local a
 -	ok	-	address system with input normal
@@ -495,7 +495,7 @@ translation	26.7	1	trace -a
 translation	9.1	5	nop\n\ndo\n\nwhen 1 = 1 then nop\n\nend\n
 -	ok	-	::class d\n::constant c (1+2)\n
 translation	20.935	1	::options numeric "inherit"\n
-translation	25.902	1	::method m guarded unguarded\n
+translation	25.937	1	::method m guarded unguarded\n
 translation	99.925	1	::attribute 3 external "LIBRARY x"\n
 -	ok	-	::options digits 12\n
 -	ok	-	if 1 then nop\nelse say 2
@@ -529,11 +529,11 @@ translation	99.950	1	use arg >a = 1
 translation	99.939	2	::routine r external "LIBRARY x"\n  return 1\n
 -	ok	-	reply 1
 -	ok	-	::method m\nexpose a.\nsay a.\nguard on when a.1\n
-translation	99.913	4	::method m\nexpose a.\na.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\na.1\nguard on when a.1\n
 translation	18.1	3	nop\nif 1 = 1\nnop\n
 translation	14.5	5	nop\n\nloop\n\nnop\n
 -	ok	-	numeric form
-translation	25.901	1	::class c public private\n
+translation	25.937	1	::class c public private\n
 translation	99.917	1	::routine r external "junk"\n  return 1\n
 -	ok	-	s = "Hello World"\nsay length(s)\nsay substr(s, 7, 5)\nsay pos("World", s)\nsay translate(s)\nsay reverse(s)\nsay word(s, 2) words(s)\nsay left(s, 5)"|"right(s, 5)\nsay strip("  pad  ")"|"\nsay changestr("o", s, "0")\nsay copies("ab", 3)\nsay center("x", 7, "-")\nsay abbrev("Hello", "Hel")\nsay compare("abc", "abd")\nsay verify("abc", "abc")\nsay delstr(s, 6, 6)\nsay countstr("l", s)\nsay c2x("AB")\nsay x2c("4142")\nsay d2x(255)\nsay x2d("FF")\n
 translation	18.1	2	nop\nif 1 = 1,\n   1 = 1\n
@@ -544,19 +544,19 @@ install	98.903	1	::routine r external "LIBRARY x"\n
 translation	99.925	1	::attribute 3 get\n
 translation	25.918	1	forward arguments (1) array (2)
 translation	99.913	2	::method m\nguard on when a\n
-translation	25.902	1	::method m delegate p delegate q\n
+translation	25.936	1	::method m delegate p delegate q\n
 -	ok	-	::method m\nexpose a.\ndo label a.1\nleave a.1\nend a.1\nguard on when a.1\n
 translation	25.933	1	address system with input foo
 -	ok	-	raise novalue
 translation	25.1	1	call on propagate
-translation	99.913	4	::method m\nexpose i\nsay a.i\nguard on when a.i\n
+-	ok	-	::method m\nexpose i\nsay a.i\nguard on when a.i\n
 -	ok	-	select\nwhen 1 = 1\nthen nop\nend\n
 translation	35.918	1	r =
 -	ok	-	::class c\n::constant k 1\n::annotate constant k x 1\n
 translation	20.921	1	::class c subclass rexx:\n
 translation	21.906	1	trace 5 x
 -	ok	-	nop\n\nif 1 = 1 then nop\n\nlab:\n\nnop\n
-translation	99.913	4	::method m\nexpose a.\nuse arg a.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nuse arg a.1\nguard on when a.1\n
 -	ok	-	parse arg q~x
 -	ok	-	::options novalue syntax\n
 translation	19.913	1	::class c mixinclass\n
@@ -574,16 +574,16 @@ translation	25.904	1	::requires x END\n
 translation	25.902	1	::method m junk\n
 -	ok	-	trace (e)
 -	ok	-	do label 1\nnop\nend 1\n
-translation	10.1	5	nop\n\nif 1 = 1 then\n\nend\n
+translation	10.5	5	nop\n\nif 1 = 1 then\n\nend\n
 -	ok	-	signal lab\nlab: nop
-translation	25.902	1	::method m abstract external "LIBRARY x"\n
+translation	25.937	1	::method m abstract external "LIBRARY x"\n
 translation	9.2	5	nop\n\ndo\n\notherwise nop\n\nend\n
 -	ok	-	forward message "x" class .a arguments (1) continue
 translation	99.944	1	::requires "x" namespace rexx\n
 translation	25.927	1	::options failure error\n
 translation	25.924	1	::options "digits" 9\n
 translation	25.904	1	::requires x junk\n
-translation	25.902	1	::method m external "LIBRARY x" abstract\n
+translation	25.937	1	::method m external "LIBRARY x" abstract\n
 -	ok	-	do v = 1 to 4\n  select\n    when v = 1 then say "one"\n    when v = 2 then say "two"\n    when v > 3 then say "big"\n    otherwise say "other"\n  end\nend\nselect case 2\n  when 1 then say "c1"\n  when 2 then say "c2"\n  otherwise say "cn"\nend\n
 translation	25.927	1	::options all error\n
 translation	25.1	1	call on syntax
@@ -616,9 +616,9 @@ translation	20.925	1	::options form\n
 -	ok	-	use strict arg a, b = 2
 translation	25.928	1	::annotate public k 1\n
 translation	24.1	1	trace '9 5'
-translation	25.901	1	::class c private public\n
+translation	25.937	1	::class c private public\n
 -	ok	-	::constant c 5\n
-translation	99.913	4	::method m\nexpose a.\na.1 = 1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\na.1 = 1\nguard on when a.1\n
 translation	8.2	7	nop\n\nselect\n\nwhen 1 = 1 then nop\n\nelse nop\n\nend\n
 -	ok	-	address system with output normal error normal
 translation	25.923	1	select label a "x"\nend
@@ -633,7 +633,7 @@ translation	35.1	1	a == 1
 -	ok	-	g = "global"\ncall show 1, 2\ncall exposed\nsay "after" g\ncall recurse 3\nexit 0\n\nshow: procedure\n  use arg a, b\n  say "show" a b arg()\n  return\n\nexposed: procedure expose g\n  say "exposed sees" g\n  g = "changed"\n  return\n\nrecurse: procedure\n  use arg n\n  if n = 0 then return 0\n  say "depth" n\n  return recurse(n - 1)\n
 translation	25.1	1	call on novalue
 translation	24.1	1	trace '99999999.6'
-translation	25.902	1	::method m attribute attribute\n
+translation	25.936	1	::method m attribute attribute\n
 -	ok	-	::method m\nexpose a.\ndo label a.1\niterate a.1\nend a.1\nguard on when a.1\n
 -	ok	-	::options form engineering\n
 translation	20.903	1	parse "x" a
@@ -665,7 +665,7 @@ translation	99.917	1	::method m external "libraryx x"\n
 translation	38.901	1	parse arg +
 -	ok	-	parse arg a
 -	ok	-	::method m\nexpose a\nsay a\nguard on when a\n
-translation	25.925	1	::attribute a abstract delegate p\n
+translation	25.937	1	::attribute a abstract delegate p\n
 translation	99.917	1	::method m external "REGISTERED x"\n
 translation	25.923	1	select x\nwhen 1 then nop\nend
 -	ok	-	::options lostdigits syntax\n
@@ -674,9 +674,9 @@ translation	25.912	1	guard on 1
 -	ok	-	loop counter c\nend
 -	ok	-	do label a counter c 3\nend a
 -	ok	-	'abc'~length
-translation	25.901	1	::class c subclass object mixinclass object\n
+translation	25.937	1	::class c subclass object mixinclass object\n
 -	ok	-	exit 1
-translation	25.901	1	::class c subclass object subclass object\n
+translation	25.936	1	::class c subclass object subclass object\n
 translation	20.911	1	call on
 -	ok	-	call ~x
 translation	20.920	1	::requires "x" namespace "ns"\n
@@ -724,11 +724,11 @@ translation	10.4	7	nop\n\nselect label a\n\nwhen 1 = 1 then nop\n\nend b\n
 translation	25.904	1	::requires x INHERIT\n
 translation	25.12	1	parse caseless caseless arg a
 translation	25.901	1	::class c, public\n
-translation	99.913	4	::method m\nexpose a.\ndrop (a.1)\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\ndrop (a.1)\nguard on when a.1\n
 -	ok	-	do i = 1 to 2 over x\nend
 translation	25.904	1	::requires x ALL\n
 translation	14.1	5	nop\n\ndo label a\n\nnop\n
-translation	99.913	4	::method m\nuse local x\nsay a.1\nguard on when a.1\n
+-	ok	-	::method m\nuse local x\nsay a.1\nguard on when a.1\n
 -	ok	-	trace '1.0000000001'
 translation	35.1	2	if 1 = 1\nthen: nop
 -	ok	-	trace - 5
@@ -753,7 +753,7 @@ translation	38.1	1	parse arg *3
 translation	31.3	1	parse arg .a
 -	ok	-	if = 2
 -	ok	-	::attribute a get\n  return 1\n
-translation	99.913	4	::method m\nexpose a.\nif a.1 = 1 then nop\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nif a.1 = 1 then nop\nguard on when a.1\n
 -	ok	-	select\nwhen 1 = 1 then nop\notherwise\nnop\nend\n
 translation	9.1	9	nop\n\nselect case 1\n\nwhen 1 then nop\n\notherwise nop\n\nwhen 2 then nop\n\nend\n
 -	ok	-	address system "cmd"
@@ -775,7 +775,7 @@ translation	46.901	1	drop (v
 translation	38.2	1	parse arg +"x"
 -	ok	-	use arg q~x
 -	ok	-	expose a\nguard on when a
--	ok	-	select\nwhen 1 = 1 then\nwhen 2 = 2 then nop\nend\n
+translation	9.1	3	select\nwhen 1 = 1 then\nwhen 2 = 2 then nop\nend\n
 translation	20.908	1	iterate "x"
 translation	25.904	1	::requires x NOVALUE\n
 translation	99.917	1	::method m external ""\n
@@ -786,7 +786,7 @@ translation	25.904	1	::requires x PUBLIC\n
 install	98.903	1	::method m external "\tLIBRARY\tx"\n
 -	ok	-	::method m\nexpose a.\ncall a.1\nguard on when a.1\n
 translation	19.916	1	::constant c -"5"\n
-translation	10.1	3	nop\n\nif 1 = 1 then end\n
+translation	10.5	3	nop\n\nif 1 = 1 then end\n
 -	ok	-	::constant c + 5\n
 -	ok	-	::method m\nexpose a.\nsignal a.1\nguard on when a.1\n
 -	ok	-	::constant k 1\n
@@ -822,7 +822,7 @@ translation	31.3	1	do .a = 1 to 2\nend
 translation	20.902	1	expose "x"
 -	ok	-	::method 3\n  return 1\n
 -	ok	-	do label a.1\nnop\nend a.1\n
-translation	25.902	1	::method m delegate p abstract\n
+translation	25.937	1	::method m delegate p abstract\n
 -	ok	-	raise error 1 description "d" additional (1)
 -	ok	-	do i over x\nend
 translation	20.929	1	::options novalue "syntax"\n
@@ -887,14 +887,14 @@ translation	26.5	1	::options digits 0\n
 -	ok	-	::method m\nexpose a.\nsay a.\nguard on when a.\n
 -	ok	-	loop\nend
 -	ok	-	signal (e)
-translation	25.904	1	::requires x namespace ns library\n
+translation	25.937	1	::requires x namespace ns library\n
 -	ok	-	s. = "default"\ns.1 = "one"\ns.2 = "two"\nsay s.1 s.2 s.3\ni = 2\nsay s.i\na.b.c = "nested"\nsay a.b.c\nt. = 0\ndo k = 1 to 3\n  t.k = k * k\nend\ndo k = 1 to 3\n  say "t."k"="t.k\nend\ndrop s.1\nsay s.1\nsay s.\n
 translation	25.916	1	forward 1
 translation	8.2	3	nop\n\nelse nop\n
 -	ok	-	raise error 1 array (1,2)
 translation	25.904	1	::requires x ROUTINE\n
 -	ok	-	push 1
-translation	25.925	1	::attribute a set get\n
+translation	25.937	1	::attribute a set get\n
 translation	25.904	1	::requires x NOTREADY\n
 translation	99.917	1	::routine r external "REGISTERED a b c"\n
 translation	31.2	1	parse var 1 a
@@ -908,12 +908,12 @@ translation	19.914	1	::attribute\n
 -	ok	-	q~append(1)
 translation	25.927	1	::options nostring error\n
 translation	25.904	1	::requires x ATTRIBUTE\n
-translation	25.11	1	::options form value\n
-translation	99.913	4	::method m\nexpose a.\ninterpret a.1\nguard on when a.1\n
+translation	25.938	1	::options form value\n
+-	ok	-	::method m\nexpose a.\ninterpret a.1\nguard on when a.1\n
 -	ok	-	loop forever\nleave\nend\n
 translation	14.1	2	do\nnop\n::routine r\nend\n
 translation	26.5	1	::options digits 1E18\n
-translation	99.913	4	::method m\nexpose a.\nguard on when a.1\nguard on when a.1\n
+-	ok	-	::method m\nexpose a.\nguard on when a.1\nguard on when a.1\n
 -	ok	-	do\nnop\nend\n
 -	ok	-	exit
 translation	14.2	5	nop\n\nselect\n\nwhen 1 = 1 then nop\n
@@ -935,34 +935,34 @@ translation	9.1	3	nop\n\nwhen 1 = 1 then nop\n
 translation	20.902	1	expose
 -	ok	-	select case 2\nwhen 1, 2 then nop\nend
 -	ok	-	do label 1\nnop\nend 1
-translation	25.925	1	::attribute a public private\n
+translation	25.937	1	::attribute a public private\n
 -	ok	-	if 1 = 1 then say 1\nelse do\nsay 2\nend\nnop\n
 -	ok	-	::options digits "9.0"\n
 translation	99.916	1	:: 5\n
 translation	99.917	1	::routine r external "REGISTERED"\n
 translation	99.910	3	nop\n\nuse local a\n
 -	ok	-	return 1
-translation	25.925	1	::attribute a protected unprotected\n
+translation	25.937	1	::attribute a protected unprotected\n
 translation	21.903	1	signal on error name lab x
 translation	25.929	1	use strict foo
 -	ok	-	q[1] = 2
 translation	25.904	1	::requires x GET\n
 -	ok	-	parse arg <2 a
 translation	20.922	1	call ns:
-translation	10.1	5	nop\n\nif 1 = 1 then nop\n\nelse end\n
+translation	10.6	5	nop\n\nif 1 = 1 then nop\n\nelse end\n
 translation	99.910	3	::method m\nnop\nuse local a\n
 translation	25.904	1	::requires x NUMERIC\n
 translation	10.3	7	nop\n\ndo 3\n\nnop\n\nend 1\n
 -	ok	-	trace ' 9 '
 translation	99.925	1	::attribute a get delegate 5\n  return 1\n
-translation	99.913	3	expose a.\nprocedure expose a.1\nguard on when a.1\n
+-	ok	-	expose a.\nprocedure expose a.1\nguard on when a.1\n
 translation	20.901	1	drop
 translation	18.1	5	nop\nnop\nnop\nif 1 = 1\nnop\n
 translation	35.929	2	select\nwhen 1 = 1, then nop\nend
 -	ok	-	parse source src\nparse var src sys mode .\nsay sys mode\nsay sourceline(1)\nsay sourceline()\nsay arg()\nsay arg(1, "o")\ncall sub "given"\nexit 0\nsub:\n  say arg(1)\n  say arg(1, "e")\n  return\n
 translation	35.929	1	if , 1 = 1 then nop
 -	ok	-	trace '- 9'
-translation	25.903	1	::routine r public public\n
+translation	25.936	1	::routine r public public\n
 translation	35.936	1	::constant c ()\n
 translation	25.903	1	::routine r class\n
 -	ok	-	reply
@@ -971,7 +971,7 @@ translation	25.903	1	::routine r class\n
 -	ok	-	if 1 = 1;\nthen say "a"
 translation	99.948	1	use local a.b
 -	ok	-	numeric form engineering
-translation	25.925	1	::attribute a abstract abstract\n
+translation	25.936	1	::attribute a abstract abstract\n
 -	ok	-	select label a case 1\nwhen 1 then nop\nend a
 -	ok	-	::options digits 1e2\n
 -	ok	-	parse caseless arg "lit" a
@@ -999,7 +999,7 @@ translation	20.904	1	parse var
 translation	19.907	1	::class c subclass\n
 install	98.903	1	::method m external "LIBRARY foo bar"\n
 -	ok	-	if 1 = 1   then    say "a"
-translation	25.902	1	::method m public private\n
+translation	25.937	1	::method m public private\n
 translation	25.11	1	numeric form foo
 translation	99.947	2	::attribute a get delegate p\n  return 1\n
 translation	25.3	1	signal on propagate

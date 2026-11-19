@@ -43,32 +43,32 @@
 # module is `src/docs/classes.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #
-# derived-at: oodocs/rexxref/en-US r13347
+# derived-at: oodocs/rexxref/en-US r13532
 
 Class	class	clsClass	fundclasses.xml:51	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Object~subclass('k')	-	-
 Message	class	clsMessage	fundclasses.xml:1093	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Message~new(.Object~new, 'STRING')	-	-
-Method	class	clsMethod	fundclasses.xml:1987	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.Object~method('objectName')	-	-
-Object	class	clsObject	fundclasses.xml:2519	covered	a bare ~new constructs an instance on the oracle	.Object~new	-	-
-Package	class	clsPackage	fundclasses.xml:3565	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.Class~package	-	-
-Routine	class	clsRoutine	fundclasses.xml:4693	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.routines~r	::routine r	-
-String	class	clsString	fundclasses.xml:5000	covered	a committed construction program answers an instance; a bare ~new raises 93.903 on the oracle	.String~new('abc')	-	-
+Method	class	clsMethod	fundclasses.xml:2057	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.Object~method('objectName')	-	-
+Object	class	clsObject	fundclasses.xml:2589	covered	a bare ~new constructs an instance on the oracle	.Object~new	-	-
+Package	class	clsPackage	fundclasses.xml:3635	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.Class~package	-	-
+Routine	class	clsRoutine	fundclasses.xml:4763	covered	a committed construction program answers an instance; a bare ~new raises 88.901 on the oracle	.routines~r	::routine r	-
+String	class	clsString	fundclasses.xml:5070	covered	a committed construction program answers an instance; a bare ~new raises 93.903 on the oracle	.String~new('abc')	-	-
 Collection	class	clsCollection	collclasses.xml:170	covered	a bare ~new constructs an instance on the oracle	.Collection~new	-	-
 MapCollection	class	clsMapCollection	collclasses.xml:612	covered	a bare ~new constructs an instance on the oracle	.MapCollection~new	-	-
 OrderedCollection	class	clsOrderedCollection	collclasses.xml:741	covered	a bare ~new constructs an instance on the oracle	.OrderedCollection~new	-	-
 SetCollection	class	clsSetCollection	collclasses.xml:1222	covered	a bare ~new constructs an instance on the oracle	.SetCollection~new	-	-
 Array	class	clsArray	collclasses.xml:1267	covered	a bare ~new constructs an instance on the oracle	.Array~new	-	-
-Bag	class	clsBag	collclasses.xml:2566	covered	a bare ~new constructs an instance on the oracle	.Bag~new	-	-
-CircularQueue	class	clsCircularQueue	collclasses.xml:3252	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.CircularQueue~new(5)	-	-
-Directory	class	clsDirectory	collclasses.xml:3943	covered	a bare ~new constructs an instance on the oracle	.Directory~new	-	-
-IdentityTable	class	clsIdentityTable	collclasses.xml:4609	covered	a bare ~new constructs an instance on the oracle	.IdentityTable~new	-	-
-List	class	clsList	collclasses.xml:5000	covered	a bare ~new constructs an instance on the oracle	.List~new	-	-
-Properties	class	clsProperties	collclasses.xml:5667	covered	a bare ~new constructs an instance on the oracle	.Properties~new	-	-
-Queue	class	clsQueue	collclasses.xml:5984	covered	a bare ~new constructs an instance on the oracle	.Queue~new	-	-
-Relation	class	clsRelation	collclasses.xml:6745	covered	a bare ~new constructs an instance on the oracle	.Relation~new	-	-
-Set	class	clsSet	collclasses.xml:7420	covered	a bare ~new constructs an instance on the oracle	.Set~new	-	-
-Stem	class	clsStem	collclasses.xml:7964	covered	a bare ~new constructs an instance on the oracle	.Stem~new	-	-
-StringTable	class	clsStringTable	collclasses.xml:8504	covered	a bare ~new constructs an instance on the oracle	.StringTable~new	-	-
-Table	class	clsTable	collclasses.xml:9048	covered	a bare ~new constructs an instance on the oracle	.Table~new	-	-
+Bag	class	clsBag	collclasses.xml:2570	covered	a bare ~new constructs an instance on the oracle	.Bag~new	-	-
+CircularQueue	class	clsCircularQueue	collclasses.xml:3256	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.CircularQueue~new(5)	-	-
+Directory	class	clsDirectory	collclasses.xml:3947	covered	a bare ~new constructs an instance on the oracle	.Directory~new	-	-
+IdentityTable	class	clsIdentityTable	collclasses.xml:4613	covered	a bare ~new constructs an instance on the oracle	.IdentityTable~new	-	-
+List	class	clsList	collclasses.xml:5004	covered	a bare ~new constructs an instance on the oracle	.List~new	-	-
+Properties	class	clsProperties	collclasses.xml:5671	covered	a bare ~new constructs an instance on the oracle	.Properties~new	-	-
+Queue	class	clsQueue	collclasses.xml:5988	covered	a bare ~new constructs an instance on the oracle	.Queue~new	-	-
+Relation	class	clsRelation	collclasses.xml:6749	covered	a bare ~new constructs an instance on the oracle	.Relation~new	-	-
+Set	class	clsSet	collclasses.xml:7424	covered	a bare ~new constructs an instance on the oracle	.Set~new	-	-
+Stem	class	clsStem	collclasses.xml:7968	covered	a bare ~new constructs an instance on the oracle	.Stem~new	-	-
+StringTable	class	clsStringTable	collclasses.xml:8508	covered	a bare ~new constructs an instance on the oracle	.StringTable~new	-	-
+Table	class	clsTable	collclasses.xml:9052	covered	a bare ~new constructs an instance on the oracle	.Table~new	-	-
 Alarm	class	clsAlarm	utilityclasses.xml:51	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Alarm~new(99999, .Message~new(.Object~new, 'STRING'))~~cancel	-	-
 AlarmNotification	class	clsAlarmNotification	utilityclasses.xml:322	covered	a bare ~new constructs an instance on the oracle	.AlarmNotification~new	-	-
 Buffer	class	clsBuffer	utilityclasses.xml:421	unreachable	the reference says instances come only from native code -- utilityclasses.xml:429	-	-	-

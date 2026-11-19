@@ -69,7 +69,9 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
             .as_bytes(),
     ))
     .into_owned();
-    let mut expected = String::from("    13 *-*     return 1/0\n");
+    // The traced clause's own line is refused first, and a refused line goes
+    // to stdout (`r[instr.trace.destination]`).
+    let mut expected = String::from("     3 *-* x = 1\n    13 *-*     return 1/0\n");
     for _ in 0..DEPTH {
         expected.push_str("    14 *-* call spin k - 1\n");
     }

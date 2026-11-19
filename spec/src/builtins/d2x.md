@@ -61,13 +61,13 @@ say d2x(65, -1)
 c: say condition('o')~code
 signal on syntax name d
 say d2x('abc', -1)
-d: say wordpos(condition('o')~code, '93.928 93.923') > 0
+d: say wordpos(condition('o')~code, '93.928 40.13') > 0
 ```
 
 ```output
 93.928
 40.12
-93.923
+40.13
 1
 ```
 

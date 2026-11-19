@@ -37,6 +37,7 @@
 98	948	Authorization failed; &1.
 98	951	Concurrency is not available.
 98	952	::REQUIRES of &1 forms a cycle.
+98	953	&1 must not transfer control out of the FINALLY clause on line &2.
 98	970	Command "&1" raised ERROR with return code &2.
 98	971	Command "&1" raised FAILURE with return code &2.
 98	972	Number &1 has more digits than NUMERIC DIGITS allows.

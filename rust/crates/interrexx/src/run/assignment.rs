@@ -18,8 +18,7 @@ impl Interp {
         // affected by the write it precedes.
         // Reads `current_value_indent` rather than recomputing
         // `static_indent(index)` independently -- the clause unit already
-        // computed exactly this value (`indent_offset` included, F-EX1's own
-        // correction to F3) for this same instruction right before the clause
+        // computed exactly this value for this same instruction right before the clause
         // ran, and a second computation of the identical quantity is how the
         // two drift, which is exactly what happened here before this fix: this
         // site's own copy never learned about the offset when the field was

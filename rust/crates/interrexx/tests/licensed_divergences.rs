@@ -128,7 +128,7 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
               \x20 call stream f, 'c', 'close'\n  return\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "r AAAAx___CCCCDDDD\np AAAAx___CCCC____\nn AAAAx___________\n",
+        oracle_stdout: "r AAAAx___CCCCDDDD\np AAAAx___CCCCDDDD\nn AAAAx___________\n",
         crate_stdout: "r AAAAxBBBCCCCDDDD\np AAAAxBBBCCCCDDDD\nn AAAAxBBBCCCCDDDD\n",
     },
     LicensedDivergence {
@@ -207,8 +207,9 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
         name: "undelivered-trace-clause-runs-first",
         // The routine's chunk is compiled untraced, so after `trace r` its
         // next clause is echoed from a stale chunk. That echo cannot be
-        // delivered: the oracle raises 97.1 before the clause runs, and this
-        // crate after it, so the counter is 0 there and 1 here.
+        // delivered, so it goes to stdout on both: the oracle raises 97.1
+        // before the clause runs, and this crate after it, so the counter is
+        // 0 there and 1 here.
         program: ".local~c = 0\n\
               signal on syntax\n\
               call r\n\
@@ -222,8 +223,8 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
               .local~c = .local~c + 1\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "syntax 97.1 c=0\n",
-        crate_stdout: "syntax 97.1 c=1\n",
+        oracle_stdout: "    11 *-* .local~c = .local~c + 1\nsyntax 97.1 c=0\n",
+        crate_stdout: "    11 *-* .local~c = .local~c + 1\nsyntax 97.1 c=1\n",
     },
     LicensedDivergence {
         name: "context-rs-in-interpret",

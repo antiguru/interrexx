@@ -310,7 +310,12 @@ receiver; the others become the message's arguments, in their order. The
 builtin and the message then give the same result for the same arguments. A
 builtin page says when its builtin is one of these. The range checks below,
 and [the checks they belong to](r:conv.check.order), are rules for these
-builtins only; any other builtin's page states its own range checks.
+builtins only; any other builtin's page states its own range checks. Where one
+of those checks finds a fault, or the [number](r:conv.method.number) or the
+[option](r:conv.method.option) check below does, the builtin raises an error
+40 of its own; the same check reached by sending the message raises the
+method's error 93, as [the message rule](r:class.string.builtins.errors) gives
+it.
 
 ```rexx
 say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
@@ -327,7 +332,8 @@ bc bc aB aB
 r[conv.position.check]
 In a builtin that runs as a String method, a position argument is a
 whole-number argument whose value must be positive. A value of 0 or less
-raises `SYNTAX 93.924`; `-0` is 0.
+raises `SYNTAX 40.14`; `-0` is 0. Sent as a message, the same value raises
+`SYNTAX 93.924`.
 
 ```rexx
 signal on syntax name a
@@ -339,38 +345,107 @@ b: say condition('o')~code
 signal on syntax name c
 say substr('abc', -1)
 c: say condition('o')~code
+signal on syntax name d
+say 'abc'~substr(0)
+d: say condition('o')~code
 ```
 
 ```output
-93.924
-93.924
+40.14
+40.14
+40.14
 93.924
 ```
 
 r[conv.length.check]
 In a builtin that runs as a String method, a length argument is a
 whole-number argument whose value must not be negative. A negative value
-raises `SYNTAX 93.923`. A length of 0 is allowed, and so is `-0`, which is
-0.
+raises `SYNTAX 40.13`. A length of 0 is allowed, and so is `-0`, which is
+0. A count, such as the `n` of `COPIES` or the count of `CHANGESTR`, is
+checked the same way. Sent as a message, a negative length raises `SYNTAX
+93.923` and a negative count `SYNTAX 93.906`.
 
 ```rexx
 say '['substr('abc', 2, 0)']' '['substr('abc', 2, '-0')']'
 signal on syntax name a
 say substr('abc', 1, -1)
 a: say condition('o')~code
+signal on syntax name b
+say copies('ab', -1)
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~substr(1, -1)
+c: say condition('o')~code
+signal on syntax name d
+say 'ab'~copies(-1)
+d: say condition('o')~code
 ```
 
 ```output
 [] []
+40.13
+40.13
 93.923
+93.906
 ```
 
-> **Note.** These two codes follow from the reference manual: a builtin of
-> this kind sends a String message, the range of a position or length is
-> checked by that method, and an incorrect call to a method is error 93, whose
-> subcodes 924 and 923 are the position and length cases. The ANSI draft
-> (9.2.1), which has no such methods, raises 40.14 for a position and 40.13
-> for a length.
+r[conv.method.number]
+In a builtin that runs as a String method, an argument that the builtin reads
+as a number and that is not one raises `SYNTAX 40.11`. Such an argument is the
+number of `ABS`, `FORMAT`, `SIGN` and `TRUNC`, and each number of `MAX` and
+`MIN`, the first and the others alike. Sent as a message, a receiver that is
+not a number raises `SYNTAX 93.943`, and a further number of `MAX` or `MIN`
+that is not one `SYNTAX 93.904`.
+
+```rexx
+signal on syntax name a
+say abs('x')
+a: say condition('o')~code
+signal on syntax name b
+say max(1, 'x')
+b: say condition('o')~code
+signal on syntax name c
+say 'x'~abs
+c: say condition('o')~code
+signal on syntax name d
+say 1~max('x')
+d: say condition('o')~code
+```
+
+```output
+40.11
+40.11
+93.943
+93.904
+```
+
+r[conv.method.option]
+In a builtin that runs as a String method, an option argument whose first
+character is not one of the letters the builtin's page lists, and one that is
+the null string, raise `SYNTAX 40.904`. Such an argument is the option of
+`STRIP` and of `VERIFY` and the type of `DATATYPE`. Sent as a message, the same
+option raises `SYNTAX 93.915`.
+
+```rexx
+signal on syntax name a
+say strip('abc', 'X')
+a: say condition('o')~code
+signal on syntax name b
+say datatype('1', 'Q')
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~strip('X')
+c: say condition('o')~code
+```
+
+```output
+40.904
+40.904
+93.915
+```
+
+> **Note.** The ANSI draft (9.2.1), which has no String methods, raises the
+> same 40.14 for a position and 40.13 for a length.
 
 ## Pad arguments
 
@@ -476,7 +551,7 @@ say 'x' + f()
 c: say condition('o')~code
 signal on syntax name d
 say substr('abc', 0, 'x')
-d: say wordpos(condition('o')~code, '93.924 40.12') > 0
+d: say wordpos(condition('o')~code, '40.14 40.12') > 0
 signal on syntax name e
 say substr('abc', 'x', 1, ' ', 5)
 e: say wordpos(condition('o')~code, '40.4 40.12') > 0
@@ -486,7 +561,7 @@ return 'y'
 ```
 
 ```output
-93.924
+40.14
 40.12
 f ran
 41.1
@@ -516,13 +591,13 @@ say substr('abc', 1, -1)
 f: say condition('o')~code
 signal on syntax name g
 say substr('abc', 'x', -1, '**')
-g: say wordpos(condition('o')~code, '40.12 93.923 40.23') > 0
+g: say wordpos(condition('o')~code, '40.12 40.13 40.23') > 0
 ```
 
 ```output
 40.23
 40.23
-93.923
+40.13
 1
 ```
 
@@ -549,7 +624,7 @@ e: say condition('c') condition('o')~code rc
 ```
 
 ```output
-SYNTAX 93.924 93
+SYNTAX 40.14 40
 ```
 
 r[conv.error.text]
@@ -575,7 +650,7 @@ that stay as they are, not wording that is free.
 signal on syntax name e
 x = substr('abc', 0)
 e: o = condition('o')
-say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
+say (errortext(40) \== '') (o~errortext == errortext(40)) (o~message \== '')
 ```
 
 ```output
@@ -740,9 +815,9 @@ such as a count, a length or a position, raises `SYNTAX 40.12`; a pad or
 another single character `40.23`; an option `40.904`; the date or time that
 `DATE` or `TIME` converts `40.19`; a separator of `DATE` `40.43`; an argument
 of `XRANGE` that may be a class name `40.28`; the setting of `TRACE` `24.1`;
-and the queue name of `RXQUEUE` `40.26`. The number that `ABS`, `FORMAT`,
-`MAX`, `MIN`, `SIGN` and `TRUNC` work on raises `93.943`, a further number of
-`MAX` and `MIN` `93.904`, the number of `D2C` and of `D2X` `93.929` and
+and the queue name of `RXQUEUE` `40.26`. A number that `ABS`, `FORMAT`,
+`MAX`, `MIN`, `SIGN` and `TRUNC` work on raises `40.11` ([the number
+rule](r:conv.method.number)), the number of `D2C` and of `D2X` `93.929` and
 `93.928`, and the string of `X2B`, `X2C` and `X2D` and of `B2X` `93.933` and
 `93.934`, as for a string that is not a number, or not hexadecimal or binary.
 The name of a stream raises `93.938`, numbered 1, the error of the argument of
@@ -796,8 +871,8 @@ date('S', , , o) => 40.43
 xrange(o) => 40.28
 trace(o) => 24.1
 rxqueue('S', o) => 40.26
-abs(o) => 93.943
-max(1, o) => 93.904
+abs(o) => 40.11
+max(1, o) => 40.11
 d2c(o) => 93.929
 x2d(o) => 93.933
 linein(o) => 93.938

@@ -259,17 +259,17 @@ x2d('a', o)
 ----
 40.12
 
-# oracle Error 93.904 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 checked
 max(1, o)
 ----
-93.904
+40.11
 
-# oracle Error 93.904 (3 of 3 runs)
+# oracle Error 40.11 (3 of 3 runs)
 checked
 min(1, o)
 ----
-93.904
+40.11
 
 # oracle Error 40.23 (3 of 3 runs)
 checked

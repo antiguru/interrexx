@@ -119,7 +119,9 @@ The words THEN, ELSE, WHEN, OTHERWISE and END are not instructions: they are
 parts of IF, SELECT and DO, and the pages of those instructions say where each
 may stand. A clause that begins with one of them where its construct does not
 expect it is not a command either. It raises a `SYNTAX` error: `8.1` for
-THEN, `8.2` for ELSE, `9.1` for WHEN, `9.2` for OTHERWISE and `10.1` for END.
+THEN, `8.2` for ELSE, `9.1` for WHEN, `9.2` for OTHERWISE and `10.1` for END,
+except an END right after a THEN or an ELSE, which [the IF
+rules](r:instr.if.syntax) give.
 In a program file the error is found when the program is read, as [the
 expression rules](r:expr.index.syntax) say, and the program writes nothing.
 

@@ -24,12 +24,10 @@ const CASES: &str = "tests/numeric_model";
 
 /// The cases whose native oracle answer differs from the model: the case,
 /// the numeric Deviation that licenses it, the rule it rests on, and the
-/// oracle's answer, untrapped and then trapped. The rules R1-R3 and R6 follow rexxref:
+/// oracle's answer, untrapped and then trapped. The rules R1, R2 and R6 follow rexxref:
 /// * `R1`: under FUZZ a comparison checks LOSTDIGITS at DIGITS minus FUZZ
 ///   whatever the signs;
 /// * `R2`: MAX and MIN apply FUZZ to whole numbers;
-/// * `R3`: an omitted MAX or MIN argument is 40.5 for the function and
-///   93.903 for the message, whatever the other arguments are;
 /// * `R6`: a zero dividend still checks its divisor for LOSTDIGITS;
 /// * `description`: this crate names an operator's operand as written and a
 ///   MAX, MIN or DO count argument rendered at the digits in force, whatever
@@ -109,7 +107,6 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
         "R2",
         "V[100000002] | V[100000002]",
     ),
-    ("max-missing-argument", 53, "R3", "S 93.903 | S 93.903"),
     (
         "max-fuzz-strings",
         44,
@@ -134,7 +131,6 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
         "written-value",
         "V[100000001] | L[100000002]",
     ),
-    ("min-missing-argument", 53, "R3", "S 93.903 | S 93.903"),
     ("div-zero-dividend", 53, "R6", "V[0] | V[0]"),
     ("div-zero-dividend-string", 53, "R6", "V[0] | V[0]"),
     ("intdiv-zero-dividend", 53, "R6", "V[0] | V[0]"),
@@ -187,9 +183,6 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
         "written-value",
         "V[-1.11111111E+9] | L[-1111111111]",
     ),
-    ("max-message-missing-first", 53, "R3", "S 40.5 | S 40.5"),
-    ("max-message-missing-middle", 53, "R3", "S 40.5 | S 40.5"),
-    ("min-message-missing-first", 53, "R3", "S 40.5 | S 40.5"),
     ("fuzz-sign-negative", 53, "R1", "V[1] | V[1]"),
     ("fuzz-zero-left", 53, "R1", "V[1] | V[1]"),
     (
@@ -203,7 +196,7 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
 /// The Deviation each rule's departures are licensed under.
 fn deviation_of(rule: &str) -> u32 {
     match rule {
-        "R1" | "R2" | "R3" | "R6" | "description" => 53,
+        "R1" | "R2" | "R6" | "description" => 53,
         "wide-integer" | "written-value" => 44,
         "do-count" => 47,
         other => panic!("unknown rule {other}"),

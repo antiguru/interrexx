@@ -404,7 +404,7 @@ fn a_callees_clauses_echo_at_the_calling_clauses_indent_plus_two() {
 
 /// `current_value_indent` is
 /// a fourth piece of level state `Interp::invoke_call` must restore on
-/// the way out, alongside `activation_indent`/`indent_offset`/
+/// the way out, alongside `activation_indent`/
 /// `clause_line_override` (that function's own doc comment) -- and this
 /// is the shape that tells a version missing the restore apart from a
 /// correct one: **two** internal-function calls inside *one* clause

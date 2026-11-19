@@ -31,15 +31,21 @@ pub(crate) fn length(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Resul
 }
 
 /// The upper-cased first letter of an option argument, checked against the
-/// set the builtin accepts.
-fn option_letter(option: Option<&[u8]>, valid: &str) -> Result<Option<u8>, Failure> {
+/// set the builtin accepts: another letter is the builtin's own 40.904
+/// (`r[conv.method.option]`) naming the argument's `position` in the call.
+fn option_letter(
+    name: &[u8],
+    position: usize,
+    option: Option<&[u8]>,
+    valid: &str,
+) -> Result<Option<u8>, Failure> {
     let Some(option) = option else {
         return Ok(None);
     };
     let letter = option.first().map(|byte| byte.to_ascii_uppercase());
     match letter {
         Some(letter) if letter == 0 || valid.as_bytes().contains(&letter) => Ok(Some(letter)),
-        _ => Err(Raised::invalid_option(valid, option).into()),
+        _ => Err(Raised::argument_not_in_list(name, position, valid, option).into()),
     }
 }
 
@@ -301,7 +307,7 @@ fn in_set(byte: u8, set: &[u8]) -> bool {
 pub(crate) fn center(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let width = whole_number(interp, name, args, 2)?.expect("check_arity admitted the width");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
-    let width = length_of(width)?;
+    let width = length_of(name, 2, width)?;
     let string = required_render(interp, args, 1);
     let string = string.text(interp);
     let out = match center_bytes(interp, string, width, pad)? {
@@ -347,7 +353,7 @@ pub(crate) fn center_bytes(
 pub(crate) fn left(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let size = whole_number(interp, name, args, 2)?.expect("check_arity admitted the length");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
-    let size = length_of(size)?;
+    let size = length_of(name, 2, size)?;
     let string = required_render(interp, args, 1);
     let out = left_bytes(interp, string.text(interp), size, pad)?;
     Ok(interp.text_built(out))
@@ -376,7 +382,7 @@ pub(crate) fn left_bytes(
 pub(crate) fn right(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let size = whole_number(interp, name, args, 2)?.expect("check_arity admitted the length");
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
-    let size = length_of(size)?;
+    let size = length_of(name, 2, size)?;
     let string = required_render(interp, args, 1);
     let string = string.text(interp);
     let out = match right_bytes(interp, string, size, pad)? {
@@ -435,8 +441,10 @@ pub(crate) fn substr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let pad = pad_byte(interp, name, args, 4)?.unwrap_or(b' ');
     let string = required_render(interp, args, 1);
 
-    let start = position_of(start)? - 1;
-    let length = requested.map(length_of).transpose()?;
+    let start = position_of(name, 2, start)? - 1;
+    let length = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
     let mut out = interp.take_result_buffer();
     substr_bytes(&mut out, string.text(interp), start, length, pad)?;
     Ok(interp.text_built(out))
@@ -449,13 +457,15 @@ pub(crate) fn delstr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let requested = whole_number(interp, name, args, 3)?;
 
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 2, value)?,
         None => 1,
     };
     // Range-checked before the out-of-range start is answered, which is the
-    // order of the checks: `delstr('abc',9,-1)` is 93.923 rather than the
+    // order of the checks: `delstr('abc',9,-1)` is 40.13 rather than the
     // unchanged string.
-    let deleted = requested.map(length_of).transpose()?;
+    let deleted = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
     delete_range(&mut string, start - 1, deleted);
     Ok(interp.text_built(string))
 }
@@ -502,10 +512,12 @@ pub(crate) fn insert(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let pad = pad_byte(interp, name, args, 5)?.unwrap_or(b' ');
 
     let start = match start {
-        Some(value) => count_of(value, 2)?,
+        Some(value) => count_of(name, 3, value)?,
         None => 0,
     };
-    let length = requested.map(length_of).transpose()?;
+    let length = requested
+        .map(|value| length_of(name, 4, value))
+        .transpose()?;
     let new = required_render(interp, args, 1);
     let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
@@ -558,10 +570,12 @@ pub(crate) fn overlay(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
     let pad = pad_byte(interp, name, args, 5)?.unwrap_or(b' ');
 
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 3, value)?,
         None => 1,
     } - 1;
-    let length = requested.map(length_of).transpose()?;
+    let length = requested
+        .map(|value| length_of(name, 4, value))
+        .transpose()?;
     let new = required_render(interp, args, 1);
     let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
@@ -589,11 +603,11 @@ pub(crate) fn pos(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
     let haystack = haystack.text(interp);
 
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 3, value)?,
         None => 1,
     };
     let range = match requested {
-        Some(value) => length_of(value)?,
+        Some(value) => length_of(name, 4, value)?,
         None => haystack.len().saturating_sub(start) + 1,
     };
     let found = find_forward(haystack, needle, start - 1, range);
@@ -604,8 +618,10 @@ pub(crate) fn pos(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
 pub(crate) fn lastpos(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let start = whole_number(interp, name, args, 3)?;
     let requested = whole_number(interp, name, args, 4)?;
-    let start = start.map(position_of).transpose()?;
-    let requested = requested.map(length_of).transpose()?;
+    let start = start.map(|value| position_of(name, 3, value)).transpose()?;
+    let requested = requested
+        .map(|value| length_of(name, 4, value))
+        .transpose()?;
     let found = {
         let needle = required_render(interp, args, 1);
         let haystack = required_render(interp, args, 2);
@@ -629,11 +645,11 @@ pub(crate) fn reverse(
 }
 
 /// `STRIP(string [,option] [,chars])`.
-pub(crate) fn strip(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
+pub(crate) fn strip(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let option = optional_string(interp, args, 2);
     let set = optional_string(interp, args, 3);
 
-    let option = option_letter(option.as_deref(), "BLT")?.unwrap_or(b'B');
+    let option = option_letter(name, 2, option.as_deref(), "BLT")?.unwrap_or(b'B');
     let string = required_render(interp, args, 1);
     let text = string.text(interp);
     let kept = strip_bytes(text, option, set.as_deref());
@@ -700,7 +716,7 @@ pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     let pad = pad_byte(interp, name, args, 3)?.unwrap_or(b' ');
 
     let gap = match requested {
-        Some(value) => length_of(value)?,
+        Some(value) => length_of(name, 2, value)?,
         None => 1,
     };
     let string = required_render(interp, args, 1);
@@ -712,7 +728,7 @@ pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
 /// `COPIES(string, n)`.
 pub(crate) fn copies(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let count = whole_number(interp, name, args, 2)?.expect("check_arity admitted the count");
-    let count = count_of(count, 1)?;
+    let count = count_of(name, 2, count)?;
     let string = required_render(interp, args, 1);
     let string = string.text(interp);
     let out = match copies_bytes(interp, string, count)? {
@@ -758,7 +774,7 @@ pub(crate) fn abbrev(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let requested = whole_number(interp, name, args, 3)?;
 
     let minimum = match requested {
-        Some(value) => Some(length_of(value)?),
+        Some(value) => Some(length_of(name, 3, value)?),
         None => None,
     };
     let answer = {
@@ -1000,7 +1016,7 @@ pub(crate) fn changestr(
     let replacement = required_render(interp, args, 3);
 
     let limit = match requested {
-        Some(value) => count_of(value, 3)?,
+        Some(value) => count_of(name, 4, value)?,
         None => usize::MAX,
     };
     // **The lent buffer, like every other sized result in this module.** A
@@ -1039,17 +1055,24 @@ pub(crate) fn translate(
     let range = whole_number(interp, name, args, 6)?;
 
     if out_table.is_none() && in_table.is_none() && pad.is_none() {
-        return case_shifted(interp, &string, start, range, u8::to_ascii_uppercase);
+        return case_shifted(
+            interp,
+            &string,
+            (name, 5, 6),
+            start,
+            range,
+            u8::to_ascii_uppercase,
+        );
     }
     let mut string = string.text(interp).to_vec();
     let out_table = out_table.unwrap_or_default();
     let pad = pad.unwrap_or(b' ');
 
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 5, value)?,
         None => 1,
     } - 1;
-    let range = range.map(length_of).transpose()?;
+    let range = range.map(|value| length_of(name, 6, value)).transpose()?;
     translate_bytes(
         &mut string,
         &out_table,
@@ -1104,12 +1127,12 @@ pub(crate) fn verify(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let start = whole_number(interp, name, args, 4)?;
     let range = whole_number(interp, name, args, 5)?;
 
-    let option = option_letter(option.as_deref(), "MN")?.unwrap_or(b'N');
+    let option = option_letter(name, 3, option.as_deref(), "MN")?.unwrap_or(b'N');
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 4, value)?,
         None => 1,
     } - 1;
-    let range = range.map(length_of).transpose()?;
+    let range = range.map(|value| length_of(name, 5, value)).transpose()?;
 
     let answer = {
         let string = required_render(interp, args, 1);
@@ -1158,7 +1181,14 @@ pub(crate) fn lower(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     let string = required_render(interp, args, 1);
     let start = whole_number(interp, name, args, 2)?;
     let range = whole_number(interp, name, args, 3)?;
-    case_shifted(interp, &string, start, range, u8::to_ascii_lowercase)
+    case_shifted(
+        interp,
+        &string,
+        (name, 2, 3),
+        start,
+        range,
+        u8::to_ascii_lowercase,
+    )
 }
 
 /// `UPPER(string [,n] [,length])`.
@@ -1166,26 +1196,37 @@ pub(crate) fn upper(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     let string = required_render(interp, args, 1);
     let start = whole_number(interp, name, args, 2)?;
     let range = whole_number(interp, name, args, 3)?;
-    case_shifted(interp, &string, start, range, u8::to_ascii_uppercase)
+    case_shifted(
+        interp,
+        &string,
+        (name, 2, 3),
+        start,
+        range,
+        u8::to_ascii_uppercase,
+    )
 }
 
 /// The body `LOWER`, `UPPER` and `TRANSLATE`'s no-table form share, built in
 /// the lent result buffer from the string where it lives rather than from a
 /// copy of it. Inlined so that `shift` is a known function and not a call
-/// per byte.
+/// per byte. `at` is the builtin's name and the call positions of the start
+/// and the length, which its range errors name.
 #[inline(always)]
 fn case_shifted(
     interp: &mut Interp,
     string: &Rendered,
+    (name, start_at, range_at): (&[u8], usize, usize),
     start: Option<i64>,
     range: Option<i64>,
     shift: fn(&u8) -> u8,
 ) -> Result<ObjRef, Failure> {
     let start = match start {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, start_at, value)?,
         None => 1,
     } - 1;
-    let range = range.map(length_of).transpose()?;
+    let range = range
+        .map(|value| length_of(name, range_at, value))
+        .transpose()?;
     // A string held in the handle is shifted in a local and answered as a
     // handle again, with no buffer to lend and take back.
     if let Some(bytes) = string.inline() {

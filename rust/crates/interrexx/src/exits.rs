@@ -223,6 +223,7 @@ impl Interp {
         };
         let object = self.text(&text);
         Ok(Some(CommandOutcome {
+            shown: None,
             rc: whole_value(&text).unwrap_or(0),
             status,
             supplied: Some(Supplied { object, text }),

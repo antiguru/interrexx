@@ -4025,7 +4025,6 @@ impl Interp {
             crate::CallContext::default(),
             self.save_clause_state(),
             0,
-            0,
             None,
         ));
         resumed.first = Some(crate::scheduler::First::Reply);

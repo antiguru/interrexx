@@ -48,6 +48,8 @@ The answer is `1` for the name of a symbolic link, whatever the link points
 to: a file, a directory, another link or nothing. The link itself is looked
 at, not its target, so the answer is `0` for the name of the target and for
 any other entry that is not a link, and a link to a link is a link. A name
+that ends in a slash names the directory a link points to, not the link, so
+the answer for it is `0`. A name
 with a `..` component is cleaned up first, as for every name. The call never
 raises a condition for a name.
 
@@ -65,6 +67,6 @@ call SysRmDir 'c1zqild'
 
 ```output
 1 1 1
-1 1 1
+1 0 1
 0 0 0
 ```

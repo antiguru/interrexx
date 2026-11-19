@@ -38,7 +38,7 @@ d: say condition('o')~code
 ```
 
 ```output
-93.924
+40.14
 40.12
 40.5
 40.4

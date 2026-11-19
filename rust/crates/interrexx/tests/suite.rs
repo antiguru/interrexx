@@ -1383,7 +1383,7 @@ mod row_checks {
         // An IF of an assertion, in a helper method that is no test.
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 188; asserts a wording, r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 189; asserts a wording, r[conv.error.text]",
         ),
         // IF lines of the row's test, with and without assertions.
         (
@@ -1470,11 +1470,11 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 170; r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 171; r[conv.error.text]",
         ),
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1190; r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1191; r[conv.error.text]",
         ),
         // A condition line that is not there, is no IF, is a DO, is in another
         // test, or is named as an assertion too; and a malformed replacement.

@@ -596,15 +596,7 @@ fn compile_settled(
                         dst,
                     });
                 }
-                // Closed here, so that `SelectCaseText` below is past the
-                // region's end -- setting the case value is the construct's
-                // business rather than the header clause's, and its own doc
-                // comment has why.
                 close_region(&mut ops, at)?;
-                ops.push(Op::SelectCaseText {
-                    index: instruction_index(index)?,
-                    case: case_reg,
-                });
                 // Past the whole construct, so nothing between here and the
                 // `END` can reuse the register. A `select_end` of `len` has no
                 // instruction to hang the release on and needs none: there is
@@ -662,11 +654,9 @@ fn compile_settled(
                 }
             }
             // A **listed** `WHEN`/`WHEN CASE`: one whose `SELECT` collected it,
-            // which is what `when_info` holds an entry for. An *absorbed* one
-            // -- itself another `WHEN`'s consequence, never collected -- has
-            // none, and falls to the absorbed arm below, where `Op::Exec`
-            // runs it through `Interp::exec_instruction`'s own arm for the
-            // kind.
+            // which is what `when_info` holds an entry for. The parser refuses
+            // a `WHEN` anywhere else with 9.1, so every one is listed; the
+            // arm below is for one that is not.
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. }
                 if when_info[index].is_some() =>
             {
@@ -676,9 +666,8 @@ fn compile_settled(
                 // **Where this `WHEN`'s branch runs out, taken from the
                 // instruction rather than from the `SELECT`'s scan chain.**
                 // `Interp::when_frame` reads `when_targets` for the frame's
-                // own `op_end`, and the two part company: a `WHEN` absorbed as
-                // another's `THEN` is not in the list the scan walks, so the
-                // next *listed* `WHEN` is not where this branch ends.
+                // own `op_end`, and the two need not agree, so the branch's end
+                // is the instruction's own.
                 before[when_targets(&instruction.kind, len).body_end].push(Before::SelectBranchEnd);
                 let mark = registers.mark();
                 let dst = registers.alloc()?;
@@ -1263,10 +1252,10 @@ fn compile_settled(
                 });
                 close_region(&mut ops, at)?;
             }
-            // An **absorbed** `WHEN` or `WHEN CASE`: one that is itself
-            // another `WHEN`'s consequence, so the enclosing `SELECT` never
-            // collected it and it is nobody's listed branch. The listed forms
-            // took their own arm above; this is what falls past it.
+            // A `WHEN` or `WHEN CASE` no `SELECT` collected, which the parser
+            // does not produce (9.1). It is compiled as a clause whose
+            // `Op::Exec` reaches `Interp::exec_instruction`, which refuses it
+            // loudly rather than guessing at its branch.
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. } => {
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);

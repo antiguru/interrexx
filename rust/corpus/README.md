@@ -221,16 +221,6 @@ LABEL name`** form (`do label outer i = 1 to 3` / `leave outer`, which also
 works on a plain non-repetitive block and is the only corpus program that
 constructs the parser's `Loop::label` field -- see `do_label.rex`).
 
-A `WHEN` whose `THEN` instruction is itself a `WHEN` clause
-(`select_when_absorption.rex`) parses and is accepted, and the second `WHEN` is
-never added to the enclosing `SELECT`'s clause list: it is silently swallowed as
-the first `WHEN`'s (empty) consequence. That is confirmed only for the case
-where the first `WHEN`'s condition is *true*, which is all the shipped program
-uses. The *false* variant crashes the oracle and is entry 1 of
-`oracle-crashes.txt`; it is deliberately not a corpus program, because the
-corpus's one rule is byte-identical output between the two interpreters, and a
-memory-safe reimplementation neither can nor should reproduce a C++ segfault.
-
 **Editing a `corpus/lang/*.rex` file invalidates its `sourceline_oracle`
 expectation, even if you only touched a comment.**
 `rust/crates/interrexx-parse/tests/sourceline_oracle/<name>.txt` records the oracle's

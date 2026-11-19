@@ -7,8 +7,10 @@
 ::class "StreamSupplier" subclass Supplier public
 
 /* r[class.streamsupplier.creation] r[class.streamsupplier.sends]
-   The stream is asked its kind, then `state` twice; the private messages are
-   not part of the specification. A transient stream is never given a line
+   The stream is asked `state`, opened for reading when that answer is
+   UNKNOWN, since its kind is known only once it is open, then asked its kind
+   and `state` again; the private messages are not part of the
+   specification. A transient stream is never given a line
    number. For any other stream, the supplier starts at the line its read
    position is in when the second answer is READY, and at line 1 otherwise. It
    is made inside that line when the position is not at its start
@@ -18,10 +20,11 @@
 ::method init
   expose stream index valid first plain transient closing
   use arg stream
-  transient = (stream~'!query_streamtype' == 'TRANSIENT')
   /* A stream that was not open when the supplier was made is closed again
      when a read finds no line left. */
   closing = (stream~state == 'UNKNOWN')
+  if closing then stream~open('read')
+  transient = (stream~'!query_streamtype' == 'TRANSIENT')
   state = stream~state
   index = 1
   plain = transient

@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/keyword/GUARD.testGroup derived, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/keyword/GUARD.testGroup derived, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
+30	0	d4a81c0e88b2a5a0	pass, assertions 21, rc 0, last started TEST_WHEN_USE_LOCAL_NO_WAIT, failing []
 5	0	c051c9d54caabda4	pass, assertions 17, rc 0, last started TEST_WHEN_USE_LOCAL_NO_WAIT, failing []

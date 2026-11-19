@@ -406,10 +406,7 @@ fn ops_naming_their_own_region_clause_are_accepted() {
             src: 0,
             shared: false,
         },
-        Op::SelectCaseText {
-            index: 7,
-            case: None,
-        },
+        Op::LoopRun { index: 7 },
         Op::Clause { index: 1, end: 6 },
         Op::Say {
             index: 1,

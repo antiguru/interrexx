@@ -317,6 +317,14 @@ const SEEDED_SENDS: &[(&str, &str)] = &[
     ("File", "hashCode"),
 ];
 
+/// Sends whose answer differs from the oracle's by a Deviation: the
+/// language level, 6.06 here and 6.07 in ooRexx (Deviation 179), which
+/// `RexxInfo~languageLevel` answers and `RexxInfo~name` includes. Such a row is
+/// `diverge`, and reaching that from `answers` is not a regression. What
+/// either side answers is not left open: `corpus/introspection-arity.tsv`
+/// records both values in full, and its test fails when either moves.
+const DEVIATING_SENDS: &[(&str, &str)] = &[("RexxInfo", "languageLevel"), ("RexxInfo", "name")];
+
 /// A class whose `class-set.txt` construction expression cannot be this
 /// table's receiver, with the expression that replaces it.
 const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
@@ -1374,8 +1382,12 @@ fn run_table(shard: Option<usize>) {
         let seeded = SEEDED_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
+        let deviating = DEVIATING_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method);
         if !(crashes && cell.verdict == Body::Uncomparable)
             && !(seeded && cell.verdict == Body::Unstable)
+            && !(deviating && cell.verdict == Body::Diverge)
             && regressed(was.verdict, cell.verdict)
         {
             regressions.push(format!(

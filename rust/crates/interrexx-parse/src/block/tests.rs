@@ -135,24 +135,27 @@ fn an_end_with_no_open_block_is_10_1() {
 }
 
 #[test]
-fn an_end_closing_a_then_or_an_else_is_also_10_1() {
-    // THE EVIDENCE FOR OMITTING TWO OF THE THIRTEEN.
-    for source in [
-        "nop\n\nif 1 = 1 then\n\nend\n",
-        "nop\n\nif 1 = 1 then end\n",
-        "nop\n\nselect\n\nwhen 1 = 1 then\n\nend\n",
-        "nop\n\nselect\n\nwhen 1 = 1 then end\n",
-        "nop\n\nif 1 = 1 then nop\n\nelse\n\nend\n",
-        "nop\n\nif 1 = 1 then nop\n\nelse end\n",
+fn an_end_right_after_a_then_is_10_5_and_after_an_else_10_6() {
+    // `r[instr.if.syntax]`: the END is refused as the branch's instruction,
+    // on its own line, before the branch is flushed.
+    for (source, line) in [
+        ("nop\n\nif 1 = 1 then\n\nend\n", 5),
+        ("nop\n\nif 1 = 1 then end\n", 3),
+        ("nop\n\nselect\n\nwhen 1 = 1 then\n\nend\n", 7),
+        ("nop\n\nselect\n\nwhen 1 = 1 then end\n", 5),
     ] {
-        assert_eq!(err(source), (10, 1), "{source:?}");
+        assert_eq!(err_at(source), (10, 5, line), "{source:?}");
     }
-    // The nested shape, where an outer DO means the stray END is not the last
-    // thing in the body. Measured 10.1 as well.
-    assert_eq!(
-        err("nop\n\ndo\n\nif 1 = 1 then nop\n\nelse\n\nend\n\nend\n"),
-        (10, 1)
-    );
+    for (source, line) in [
+        ("nop\n\nif 1 = 1 then nop\n\nelse\n\nend\n", 7),
+        ("nop\n\nif 1 = 1 then nop\n\nelse end\n", 5),
+        // Inside an outer DO, the END would otherwise close the DO and
+        // leave the ELSE with no instruction to take.
+        ("nop\n\ndo\n\nif 1 = 1 then nop\n\nelse\n\nend\n\nend\n", 9),
+        ("do; if 0 then nop; else; end\n", 1),
+    ] {
+        assert_eq!(err_at(source), (10, 6, line), "{source:?}");
+    }
 }
 
 #[test]
@@ -405,73 +408,20 @@ fn use_local_inverts_the_exposure_rule_and_seeds_five_names() {
 /// The compound cache, which is the one place a LATER guard is decided by an
 /// EARLIER instruction.
 #[test]
-fn a_compound_feeds_a_guard_only_on_its_first_reference_in_the_body() {
-    // The pair that shows it, and the direction is the surprising one: inserting
-    // a reference BEFORE the guard is what makes the guard illegal.
-    ok("::method m\nexpose a.\nguard on when a.1\n");
-    assert_eq!(
-        err("::method m\nexpose a.\nsay a.1\nguard on when a.1\n"),
-        (99, 913)
-    );
-    // The reverse order is fine, because the guard gets there first.
-    ok("::method m\nexpose a.\nguard on when a.1\nsay a.1\n");
-    // So two guards on one compound reject the second.
-    assert_eq!(
-        err("::method m\nexpose a.\nguard on when a.1\nguard on when a.1\n"),
-        (99, 913)
-    );
-    // But one guard naming the same compound twice is fine: the first occurrence
-    // captures and a repeat is a no-op on a set.
-    ok("::method m\nexpose a.\nguard on when a.1 & a.1\n");
-    // A simple variable and a stem are unaffected, because their own
-    // variable paths capture whatever the cache holds.
-    ok("::method m\nexpose a\nsay a\nguard on when a\n");
-    ok("::method m\nexpose a.\nsay a.\nguard on when a.\n");
-    // A stem reference does not cache the COMPOUND spelling, so a compound guard
-    // after one is still live.
-    ok("::method m\nexpose a.\nsay a.\nguard on when a.1\n");
-    // A different compound spelling is a different cache entry.
-    ok("::method m\nexpose a.\nsay a.2\nguard on when a.1\n");
-    // A variable tail behaves the same way.
-    ok("::method m\nexpose i\nguard on when a.i\n");
-    assert_eq!(
-        err("::method m\nexpose i\nsay a.i\nguard on when a.i\n"),
-        (99, 913)
-    );
-    // One killed compound does not kill a live one beside it.
-    ok("::method m\nexpose a. b.\nsay a.1\nguard on when a.1 & b.1\n");
-    // USE LOCAL exposure is decided the same way, so the cache applies there too.
-    ok("::method m\nuse local x\nguard on when a.1\n");
-    assert_eq!(
-        err("::method m\nuse local x\nsay a.1\nguard on when a.1\n"),
-        (99, 913)
-    );
-    // The cache is per body, so a reference in one method leaves another's guard
-    // alone. This is the row that would fail if the registry outlived a body.
-    ok("::method m\nexpose a.\nsay a.1\n::method n\nexpose a.\nguard on when a.1\n");
-}
-
-/// Which slots the cache is fed from, which is narrower than "every symbol".
-#[test]
-fn only_a_variable_slot_feeds_the_compound_cache() {
-    // Name slots: the guard stays legal.
+fn a_compound_of_an_exposed_stem_feeds_a_guard_wherever_else_it_is_referenced() {
+    // `r[instr.guard.when.exposed]`: what the rest of the body does with the
+    // compound does not matter, in a name slot or a variable slot, before the
+    // GUARD or after it, in the same clause or in another GUARD.
     for source in [
-        "::method m\nexpose a.\ndo label a.1\nnop\nend a.1\nguard on when a.1\n",
+        "::method m\nexpose a.\nsay a.1\nguard on when a.1\n",
+        "::method m\nexpose a.\nguard on when a.1\nguard on when a.1\n",
+        "::method m\nexpose a.\nguard on when a.1 & a.1\n",
+        "::method m\nexpose i\nsay a.i\nguard on when a.i\n",
+        "::method m\nuse local x\nsay a.1\nguard on when a.1\n",
         "::method m\nexpose a.\ndo label a.1\nleave a.1\nend a.1\nguard on when a.1\n",
-        "::method m\nexpose a.\ndo label a.1\niterate a.1\nend a.1\nguard on when a.1\n",
-        "::method m\nexpose a.\nselect label a.1\nwhen 1 = 1 then nop\nend a.1\nguard on when a.1\n",
-        "::method m\nexpose a.\nsignal a.1\nguard on when a.1\n",
-        "::method m\nexpose a.\ncall a.1\nguard on when a.1\n",
-        "::method m\nexpose a.\naddress a.1\nguard on when a.1\n",
         "::method m\nexpose a.\nsignal on syntax name a.1\nguard on when a.1\n",
-    ] {
-        ok(source);
-    }
-    // Variable slots: the guard is killed.
-    for source in [
         "::method m\nexpose a.\ndrop a.1\nguard on when a.1\n",
-        "::method m\nexpose a.1\nguard on when a.1\n",
-        "expose a.\nprocedure expose a.1\nguard on when a.1\n",
+        "::method m\nexpose a.\ndrop (a.1)\nguard on when a.1\n",
         "::method m\nexpose a.\nparse var a.1 x\nguard on when a.1\n",
         "::method m\nexpose a.\nparse value 1 with a.1\nguard on when a.1\n",
         "::method m\nexpose a.\nuse arg a.1\nguard on when a.1\n",
@@ -482,13 +432,14 @@ fn only_a_variable_slot_feeds_the_compound_cache() {
         "::method m\nexpose a.\nif a.1 = 1 then nop\nguard on when a.1\n",
         "::method m\nexpose a.\na.1\nguard on when a.1\n",
         "::method m\nexpose a.\na.1~string\nguard on when a.1\n",
-        // The `(name)` indirect spelling reaches the variable path through the
-        // symbol inside the parentheses, so it feeds the cache too. Measured
-        // 99.913, which is why `visit_refs` handles both `VariableRef` variants.
-        "::method m\nexpose a.\ndrop (a.1)\nguard on when a.1\n",
     ] {
-        assert_eq!(err(source), (99, 913), "{source:?}");
+        ok(source);
     }
+    // Exposing the compound by its own name is still not enough.
+    assert_eq!(
+        err("::method m\nexpose a.1\nguard on when a.1\n"),
+        (99, 913)
+    );
 }
 
 #[test]
@@ -662,32 +613,17 @@ fn a_whens_false_path_is_the_otherwise_when_there_is_one() {
 }
 
 #[test]
-fn a_when_that_is_another_whens_then_instruction_is_never_added_to_the_select() {
-    // A shape the oracle ACCEPTS, measured rc 0, and it is accepted because the
-    // second WHEN is the first one's THEN instruction. Adding a WHEN to its
-    // SELECT runs only when the SELECT is the immediate top of the stack, and by
-    // the second WHEN it is not, so the SELECT collects one WHEN and the second
-    // gets no exit at all. Reproducing the quirk is what transliterating rather
-    // than tidying buys. `select`(0) `when`(1) `then`(2) `when`(3) `then`(4)
-    // `nop`(5) `end`(6).
-    let program = ok("select\nwhen 1 = 1 then\nwhen 2 = 2 then nop\nend\n");
-    match &program.main.instructions[0].kind {
-        InstructionKind::Select { whens, .. } => assert_eq!(whens, &[1]),
-        other => panic!("expected a SELECT, got {other:?}"),
-    }
-    // The first WHEN's branch is closed by the arrival of the second, which is
-    // what makes a WHEN go through the control flush rather than joining the
-    // chain directly the way a control instruction does. Treating a WHEN as
-    // control instead leaves this branch open until the END and moves the target
-    // to 6.
-    match &program.main.instructions[1].kind {
-        InstructionKind::When { false_target, .. } => assert_eq!(*false_target, Some(4)),
-        other => panic!("expected the first WHEN, got {other:?}"),
-    }
-    match &program.main.instructions[3].kind {
-        InstructionKind::When { exit, .. } => assert_eq!(*exit, None),
-        other => panic!("expected the second WHEN, got {other:?}"),
-    }
+fn a_when_taken_as_another_whens_then_instruction_belongs_to_no_select() {
+    // `r[instr.select.syntax]`: on the WHEN's own line, with the first WHEN's
+    // condition true or false.
+    assert_eq!(
+        err_at("select\nwhen 1 = 1 then\nwhen 2 = 2 then nop\nend\n"),
+        (9, 1, 3)
+    );
+    assert_eq!(
+        err_at("select\nwhen 1 = 0 then\nwhen 2 = 2 then nop\nend\n"),
+        (9, 1, 3)
+    );
 }
 
 #[test]

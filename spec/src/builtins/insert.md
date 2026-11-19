@@ -59,8 +59,9 @@ a123bc a123bc | a12bc
 
 r[bif.insert.n.check]
 In INSERT, `n` is a [whole-number argument](r:conv.whole.digits) whose value
-must not be negative. A negative value raises `SYNTAX 93.906`. An `n` of 0 is
-allowed, and so is `-0`, which is 0. The check is a range check, one of [the
+must not be negative. A negative value raises `SYNTAX 40.13`, as [a
+count](r:conv.length.check) does; sent as a message, it raises `SYNTAX
+93.906`. An `n` of 0 is allowed, and so is `-0`, which is 0. The check is a range check, one of [the
 checks of the conventions](r:conv.check.order).
 
 ```rexx
@@ -70,7 +71,7 @@ say insert('X', 'abc', -1)
 a: say condition('o')~code
 signal on syntax name b
 say insert('X', 'abc', -1, -1)
-b: say wordpos(condition('o')~code, '93.906 93.923') > 0
+b: say condition('o')~code
 signal on syntax name c
 say insert('X', 'abc', 0, -1)
 c: say condition('o')~code
@@ -84,9 +85,9 @@ e: say condition('o')~code
 
 ```output
 Xabc Xabc
-93.906
-1
-93.923
+40.13
+40.13
+40.13
 40.12
 40.23
 ```

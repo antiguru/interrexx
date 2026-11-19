@@ -140,7 +140,6 @@ pub(crate) struct CallTail {
     kind: TailKind,
     saved_clause_state: crate::clause::SavedClauseState,
     saved_base: usize,
-    saved_offset: usize,
     saved_line: Option<usize>,
     saved_context: CallContext,
     stack: LentStack,
@@ -165,14 +164,12 @@ impl CallTail {
         saved_context: CallContext,
         saved_clause_state: crate::clause::SavedClauseState,
         saved_base: usize,
-        saved_offset: usize,
         saved_line: Option<usize>,
     ) -> CallTail {
         CallTail {
             kind: TailKind::Method,
             saved_clause_state,
             saved_base,
-            saved_offset,
             saved_line,
             saved_context,
             stack: LentStack::Kept,
@@ -1333,7 +1330,6 @@ impl Interp {
             Entered::Routine(_) => 0,
         };
         let saved_base = std::mem::replace(&mut self.activity.activation_indent, callee_indent);
-        let saved_offset = std::mem::take(&mut self.activity.indent_offset);
         let saved_line = std::mem::take(&mut self.activity.clause_line_override);
         let inherited = entered_receiver(entered, entry, self.activity.call_context.receiver);
         let arguments = self.shared_arguments(&arguments[from..]);
@@ -1358,7 +1354,6 @@ impl Interp {
             },
             saved_clause_state,
             saved_base,
-            saved_offset,
             saved_line,
             saved_context,
             stack: LentStack::Kept,
@@ -1394,7 +1389,6 @@ impl Interp {
             kind,
             saved_clause_state,
             saved_base,
-            saved_offset,
             saved_line,
             saved_context,
             stack,
@@ -1476,7 +1470,6 @@ impl Interp {
             }
         }
         self.activity.activation_indent = saved_base;
-        self.activity.indent_offset = saved_offset;
         self.activity.clause_line_override = saved_line;
         self.restore_clause_state(saved_clause_state);
         match stack {

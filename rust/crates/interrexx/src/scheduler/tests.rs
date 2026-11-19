@@ -1525,17 +1525,20 @@ fn a_reply_in_a_call_on_handler_does_not_reply_for_the_method() {
 
 /// A `SELECT CASE` value travels with the activation a `REPLY` moves, and
 /// an internal call's own `SELECT CASE` in the continuation does not reach
-/// it: oracle 5 of 5 runs `got 1`, `cont other`, `main done`.
+/// it: the WHEN after the call still compares against `b`, where the call's
+/// `zz` would fall to OTHERWISE. Oracle 5 of 5 runs `got 1`, `cont b`,
+/// `main done`.
 #[test]
 fn a_reply_continuation_keeps_its_select_case_value() {
     in_modes(
         "o = .t~new\nsay 'got' o~m\ncall SysSleep 0.2\nsay 'main done'\n\
          ::class t\n::method m\n  select case 'a'\n    when 'a' then do\n      reply 1\n      \
-         select case 'b'\n        when g() then when 'zz' then say 'cont absorbed zz'\n        \
+         select case 'b'\n        when g() then say 'cont g'\n        \
+         when 'b' then say 'cont b'\n        \
          otherwise say 'cont other'\n      end\n    end\n    otherwise nop\n  end\n  return\n\
-         g:\n  select case 'zz'\n    when 'zz' then return 'b'\n    otherwise return 'y'\n  end\n",
+         g:\n  select case 'zz'\n    when 'zz' then return 'y'\n    otherwise return 'x'\n  end\n",
         true,
-        "got 1\ncont other\nmain done\n",
+        "got 1\ncont b\nmain done\n",
     );
 }
 

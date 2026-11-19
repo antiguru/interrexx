@@ -45,7 +45,8 @@ e: say condition('o')~code
 r[util.sysisfile.answer]
 The answer is `1` for a regular file, and for a symbolic link whose target is
 a regular file. It is `0` for a directory, a fifo and a character device such
-as `/dev/null`, for a name that nothing has, for a symbolic link that points
+as `/dev/null`, for a name that ends in a slash, which names a directory, for
+a name that nothing has, for a symbolic link that points
 to nothing, and for a name that the program may not look up. The call never
 raises a condition for a name. This book does not specify the answer for a
 block device.
@@ -63,7 +64,7 @@ call SysRmDir 'c1zqifd'
 ```
 
 ```output
-1 1 1
+1 1 0
 0 0 0
 0 0 0
 ```

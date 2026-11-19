@@ -117,3 +117,6 @@ ENDLOCAL	implemented
 SETLOCAL	implemented
 QUALIFY	implemented
 GC	implemented
+BEEP	later-level
+DIRECTORY	later-level
+FILESPEC	later-level

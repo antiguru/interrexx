@@ -49,7 +49,7 @@ r[bif.format.errors]
 The call checks the [form](r:conv.whole.form) and
 [value](r:conv.whole.digits) of `before`, `after`, `expp` and `expt`, which
 raise `SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg),
-`SYNTAX 93.943`; that none of the four counts is negative, `SYNTAX 93.906`;
+`SYNTAX 40.11`; that none of the four counts is negative, `SYNTAX 40.13`;
 and the fit of the result: that the exponent has at most `expp` digits,
 `SYNTAX 93.941`, and that the integer part has at most `before` characters,
 `SYNTAX 93.942`. A call that fails more than one check raises the error of
@@ -86,8 +86,8 @@ g: say condition('o')~code
 [ 5]
 40.12
 40.12
-93.943
-93.906
+40.11
+40.13
 40.12
 93.941
 93.942

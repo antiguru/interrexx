@@ -2,6 +2,7 @@
 element: "Security manager"
 kind: concept
 rexxref: "The Security Manager; The Security Manager > Calls to the Security Manager; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager"
+deviations: [179]
 ---
 
 # Security manager
@@ -390,9 +391,9 @@ value](r:instr.call.result) does. A manager that answers `0` lets the search
 go on, and nothing it set in the directory counts: a name that the search does
 not find raises `SYNTAX 43.1` although `RESULT` was set, and a changed `NAME`
 does not change the routine that is searched for. The first example shows the
-name and the arguments, and each way that a call ends. In the second, each
-built-in function of this book is called once and the manager notes the names
-it is sent; it takes those calls over, so that nothing runs. In the third, a
+name and the arguments, and each way that a call ends. In the second, every
+other built-in function of this book is called once, and the manager, which
+notes each name it is sent and takes that call over, is sent none. In the third, a
 program file is offered at each of two calls, and the command in it is not,
 and so is a function of RexxUtil.
 
@@ -446,12 +447,12 @@ return envsecpass() => error 43.1
 ```
 
 ```rexx
-names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', 'beep', -
+names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', -
   'bitand', 'bitor', 'bitxor', 'c2d', 'c2x', 'center', 'changestr', -
   'charin', 'charout', 'chars', 'compare', 'condition', 'copies', -
   'countstr', 'd2c', 'd2x', 'datatype', 'date', 'delstr', 'delword', -
   'digits', -
-  'directory', 'endlocal', 'errortext', 'filespec', 'format', 'form', -
+  'endlocal', 'errortext', 'format', 'form', -
   'fuzz', 'gc', 'insert', 'lastpos', 'left', 'length', 'linein', 'lineout', -
   'lines', 'lower', 'max', 'min', 'overlay', 'pos', 'qualify', 'queued', -
   'random', 'reverse', 'right', 'rxfuncadd', 'rxfuncdrop', 'rxfuncquery', -
@@ -468,7 +469,7 @@ do n over names
   r~setSecurityManager(m)
   r~call
 end
-say m~seen~allItems~sort~makearray~makestring('l', ' ')
+say '[' || m~seen~allItems~sort~makearray~makestring('l', ' ') || ']'
 exit
 ::class mgr
 ::attribute seen
@@ -482,7 +483,7 @@ exit
 ```
 
 ```output
-BEEP DIRECTORY FILESPEC
+[]
 ```
 
 ```rexx
@@ -519,6 +520,38 @@ COMMAND exit 9
 5
 CALL SYSFILEEXISTS
 0
+```
+
+r[env.security.call.deviation.179]
+BEEP, DIRECTORY and FILESPEC are offered to the manager because they are
+routines of the REXX package, as at language level 6.06 ([Deviation
+179](../deviations.md)). ooRexx, at level 6.07, makes them builtins and offers
+none of them. In the example the manager notes the names it is sent and takes
+the calls over.
+
+```rexx
+m = .mgr~new
+do n over .array~of('beep', 'directory', 'filespec')
+  src = 'signal on syntax; x =' n || '(); syntax: return 0'
+  r = .routine~new('agent', src)
+  r~setSecurityManager(m)
+  r~call
+end
+say m~seen~allItems~sort~makearray~makestring('l', ' ')
+exit
+::class mgr
+::attribute seen
+::method init
+  self~seen = .list~new
+::method call
+  use arg info
+  self~seen~append(info~name)
+  info~result = 'R'
+  return 1
+```
+
+```output
+BEEP DIRECTORY FILESPEC
 ```
 
 r[env.security.command]

@@ -1584,7 +1584,7 @@ exit
   n = n + 1
 ```
 
-```output
+```output no-oracle
 failing target sent: 1 next target sent: 0
 1 1 1
 error 93.900

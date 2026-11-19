@@ -35,8 +35,8 @@ def missing_inputs(root, standalone=False):
 
 
 CHECKOUTS = (
-    "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
-    "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
+    "  svn checkout -r 13532 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
+    "  svn checkout -r 13532 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
 )
 BUILD = (
     "  systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release\n"

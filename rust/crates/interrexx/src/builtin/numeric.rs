@@ -1,9 +1,9 @@
 //! The numeric builtins: `ABS`, `FORMAT`, `MAX`, `MIN`, `RANDOM`, `SIGN` and
 //! `TRUNC`.
 //! ```text
-//! max('a',1,3)   93.943   names MAX and the value a.
-//! max(1,'a',3)   93.904   names argument 1 and the value a.
-//! max(1,2,'a')   93.904   names argument 2 and the value a.
+//! max('a',1,3)   40.11    names MAX, argument 1 and the value a.
+//! max(1,'a',3)   40.11    names MAX, argument 2 and the value a.
+//! max(1,2,'a')   40.11    names MAX, argument 3 and the value a.
 //! ```
 //! ```rexx
 //! numeric digits 5 ; x = max(123456789,1) ; numeric digits 12 ; say x
@@ -37,7 +37,8 @@ fn current(interp: &Interp) -> Numeric {
     }
 }
 
-/// Argument 1 as a number, or the 93.943 that names this builtin. The
+/// Argument 1 as a number, or the builtin's own 40.11
+/// (`r[conv.method.number]`). The
 /// builtins round it without LOSTDIGITS, as ooTest's `base/keyword/LOSTDIGITS
 /// TESTBIFS` reads rexxref.
 fn target_number(
@@ -50,17 +51,19 @@ fn target_number(
         Ok(number) => Ok(number),
         Err(_) => {
             let found = required_string(interp, args, 1);
-            Err(Raised::method_target_not_a_number(name, &found).into())
+            Err(Raised::argument_not_a_number(name, 1, &found).into())
         }
     }
 }
 
 /// The range half of an optional non-negative argument, after
-/// [`super::whole_number`] has already done the type half.
-fn non_negative(value: Option<i64>, method_position: usize) -> Result<Option<i64>, Failure> {
+/// [`super::whole_number`] has already done the type half: the builtin's own
+/// 40.13 naming the argument's `position` in the call.
+fn non_negative(name: &[u8], value: Option<i64>, position: usize) -> Result<Option<i64>, Failure> {
     match value {
-        Some(value) if value < 0 => Err(Raised::argument_not_non_negative(
-            method_position,
+        Some(value) if value < 0 => Err(Raised::argument_not_non_negative_call(
+            name,
+            position,
             value.to_string().as_bytes(),
         )
         .into()),
@@ -164,8 +167,8 @@ pub(crate) fn sign_of(interp: &mut Interp, value: &Number) -> Result<ObjRef, Fai
 /// `TRUNC(number, decimals)`.
 /// ```text
 /// trunc('AB.CD','V')   40.12   names TRUNC, argument 2 and the value V.
-/// trunc('AB.CD',-1)    93.943  names TRUNC and the value AB.CD.
-/// trunc(1.5,-1)        93.906  names argument 1.
+/// trunc('AB.CD',-1)    40.11   names TRUNC, argument 1 and the value AB.CD.
+/// trunc(1.5,-1)        40.13   names TRUNC, argument 2 and the value -1.
 /// ```
 pub(crate) fn trunc(
     interp: &mut Interp,
@@ -174,7 +177,7 @@ pub(crate) fn trunc(
 ) -> Result<ObjRef, Failure> {
     let places = whole_number(interp, name, args, 2)?;
     let value = target_number(interp, name, args)?;
-    trunc_of(interp, &value, non_negative(places, 1)?)
+    trunc_of(interp, &value, non_negative(name, places, 2)?)
 }
 
 /// [`trunc`]'s answer once its target and its places are in hand, shared with
@@ -209,8 +212,8 @@ pub(crate) fn format(
         && let Some(scaled) = interp
             .scaled_operand(arg(args, 1).expect("check_arity admitted the required first argument"))
     {
-        let before = non_negative(before, 1)?;
-        let after = non_negative(after, 2)?;
+        let before = non_negative(name, before, 2)?;
+        let after = non_negative(name, after, 3)?;
         let mut out = [0u8; 48];
         let width = |value: Option<i64>| value.map(u32::try_from).transpose().ok();
         if let (Some(before), Some(after)) = (width(before), width(after))
@@ -225,10 +228,10 @@ pub(crate) fn format(
     format_over(
         interp,
         &value,
-        non_negative(before, 1)?,
-        non_negative(after, 2)?,
-        non_negative(expp, 3)?,
-        non_negative(expt, 4)?,
+        non_negative(name, before, 2)?,
+        non_negative(name, after, 3)?,
+        non_negative(name, expp, 4)?,
+        non_negative(name, expt, 5)?,
     )
 }
 
@@ -396,7 +399,12 @@ pub(crate) fn max_min_over(
                 Some(object) => interp.string_value_text(object)?,
                 None => found,
             };
-            return Err(Raised::method_argument_not_a_number(index + 1, &named).into());
+            return Err(if message {
+                Raised::method_argument_not_a_number(index + 1, &named)
+            } else {
+                Raised::argument_not_a_number(name, index + 2, &named)
+            }
+            .into());
         };
         // The description is the number unrounded, rendered at DIGITS: `'
         // 4444444444 '` names `4444444444` and `44444444440E-1` names

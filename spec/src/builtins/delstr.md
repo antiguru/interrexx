@@ -46,13 +46,13 @@ say delstr('fghij', 'x')
 f: say condition('o')~code
 signal on syntax name g
 say delstr('fghij', 0, -1)
-g: say wordpos(condition('o')~code, '93.924 93.923') > 0
+g: say wordpos(condition('o')~code, '40.14 40.13') > 0
 ```
 
 ```output
 fgj fgj fg []
-93.924
-93.923
+40.14
+40.13
 40.3
 40.4
 40.5

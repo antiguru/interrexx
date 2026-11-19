@@ -395,8 +395,8 @@ answers some integers unrounded, depending on how the number is held.
 ## 46. LINEOUT on a binary record stream
 
 On a stream opened `BINARY RECLENGTH n`, positioning with LINEOUT and closing
-clear no record, and only a LINEOUT with a string pads its record. ooRexx
-clears or pads a record when LINEOUT positions or closes.
+pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
+a record that a write has started when LINEOUT positions or closes.
 
 ## 47. A DO count wider than NUMERIC DIGITS
 
@@ -447,9 +447,8 @@ with the return code as if every write had succeeded.
 ## 53. Numeric rules from the reference manual
 
 A comparison under NUMERIC FUZZ checks LOSTDIGITS whatever the signs, MAX and
-MIN apply FUZZ to whole numbers, an omitted MAX or MIN argument is `40.5` for
-the function and `93.903` for the method, and a divisor is checked for
-LOSTDIGITS when the dividend is zero. A LOSTDIGITS description renders its
+MIN apply FUZZ to whole numbers, and a divisor is checked for LOSTDIGITS when
+the dividend is zero. A LOSTDIGITS description renders its
 operand the same way however it was produced. ooRexx departs from each of
 these.
 
@@ -1205,7 +1204,7 @@ nothing. ooRexx loses some sets of VALUE that follow in-process `export` and
 `unset` commands, which ones depending on what the program ran before for
 any variable (the second `unset` of a name among them), so that the variable
 has no value afterwards. For `export` with an empty name it stores an entry
-with no name, which a `$` reference with no name then finds.
+with no name.
 
 ## 150. An INTERPRET in a line read at an interactive trace stop
 
@@ -1283,12 +1282,11 @@ A save of the macrospace onto a file that is there and may not be written
 answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
 or removes the file depending on the calls the program made earlier.
 
-## 160. A GUARD WHEN on a compound variable or a stem
+## 160. Withdrawn
 
-A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
-or a stem names the whole stem: it is evaluated again when another activity
-assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end.
+A GUARD WHEN on a compound variable or a stem: ooRexx r13532 evaluates the
+condition again when another activity assigns to or drops a tail it names (SF
+#2167), so the wait ends there as it does in interrexx.
 
 ## 161. SysSleep and whitespace after the sign
 
@@ -1402,15 +1400,10 @@ no fault converts them from the left before the checks, as ooRexx does
 anything is read or positioned, answers 0, the host's offset when nothing has
 been consumed. ooRexx answers the size of the file.
 
-## 172. A list's Array counts only the items it holds
+## 172. Withdrawn
 
-The Array that `allItems` and `makeArray` answer for a `List` with an entry
-that holds nothing has no item at that entry's place, and its `items` counts
-only the items it holds, so `items` and `isEmpty` agree with what the Array
-holds; `DO OVER` the list skips that entry. ooRexx counts the empty place as an
-item: `items` stays one higher than the items the Array holds, and `isEmpty`
-answers 0 after its last item is removed. Its `DO OVER` assigns `.nil` for the
-entry.
+A list entry that holds nothing: current ooRexx refuses an omitted item to
+`put` and `insert`, as interrexx does, so no such entry exists.
 
 ## 173. IsString answers true for every String
 
@@ -1505,3 +1498,25 @@ until they are gone. A loop that polls for such a change runs for ever, and
 nothing is said. ooRexx runs each attached thread's messages on that thread,
 alongside the other activities, and each such program completes. Issue #681
 tracks doing the same.
+
+## 179. Language level 6.06
+
+interrexx implements language level 6.06. BEEP, DIRECTORY and FILESPEC are
+routines of the REXX package, as at that level, not builtins: their argument
+errors are those of a native routine, of the 88.9xx family, a `::ROUTINE` of
+the same name or an RXFNC exit can replace them, the security manager is sent
+`CALL` for them, and an argument with no string value raises `SYNTAX 88.909`
+rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
+character to standard output. `.RexxInfo~languageLevel`, and the level in
+`PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
+argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
+interrexx. ooRexx is at level 6.07: the three are builtins there, with argument
+errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
+argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
+(#796).
+
+## 180. Withdrawn
+
+ERRORTEXT's argument: interrexx takes an error code `nn.nnn` as ooRexx does,
+ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
+level 6.07, is part of Deviation 179.

@@ -357,7 +357,6 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::TraceArgument { .. } => "TraceArgument",
         Op::CallArgs { .. } => "CallArgs",
         Op::TraceFunction { .. } => "TraceFunction",
-        Op::SelectCaseText { .. } => "SelectCaseText",
         Op::WhenTest { .. } => "WhenTest",
         Op::EndBranch => "EndBranch",
         Op::EndWhen => "EndWhen",
@@ -1719,11 +1718,6 @@ macro_rules! region_ops {
                 }
                 Op::CallingClause { .. } => {
                     break $cold Err(Loud::op_not_driven("CallingClause").into());
-                }
-                Op::SelectCaseText { .. } => {
-                    break $cold Err(
-                        Loud::op_not_driven("SelectCaseText").into()
-                    );
                 }
                 Op::EnterWhen { .. } => {
                     break $cold Err(Loud::op_not_driven("EnterWhen").into());
@@ -3548,7 +3542,6 @@ impl Interp {
         );
         continuation.clause_state = self.save_clause_state().into_state();
         continuation.activation_indent = self.activity.activation_indent;
-        continuation.indent_offset = self.activity.indent_offset;
         continuation.clause_line_override = self.activity.clause_line_override;
         if let Some(replied) = self.activation_mut().replied.as_mut() {
             replied.continuation = Some(idle);
@@ -3582,7 +3575,6 @@ impl Interp {
         let continuation = &mut idle.activity;
         continuation.clause_state = self.save_clause_state().into_state();
         continuation.activation_indent = self.activity.activation_indent;
-        continuation.indent_offset = self.activity.indent_offset;
         continuation.clause_line_override = self.activity.clause_line_override;
         self.activity.splits_owed -= 1;
         (callee, Some(idle))
@@ -4208,27 +4200,6 @@ impl Interp {
                                 return Err(Loud::jump_out_of_range().into());
                             }
                             pc = *target;
-                            continue 'ops;
-                        }
-                        // Handing an absorbed `WHEN CASE` the value it compares against
-                        // (`Op::SelectCaseText`'s own doc has why it is here rather
-                        // than inside the header's clause region), and opening a frame
-                        // over a branch. None of the three runs a clause or produces a
-                        // `Flow`, so each continues straight to the next op.
-                        Op::SelectCaseText { index, case } => {
-                            let value = case.map(|register| {
-                        debug_assert!(
-                            chunk.holds_register(register),
-                            "op reads register {register} outside the region the chunk reserved"
-                        );
-                        registers.get(register)
-                    });
-                            debug_assert!(
-                                code.body.instructions.get(*index as usize).is_some(),
-                                "a SelectCaseText op names an instruction outside its own body"
-                            );
-                            self.open_select_case(value);
-                            pc += 1;
                             continue 'ops;
                         }
                         // The boundary wrapper around an
