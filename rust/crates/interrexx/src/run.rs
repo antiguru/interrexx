@@ -2675,6 +2675,22 @@ impl Interp {
         }
     }
 
+    /// [`crate::ir::Op::ExecValue`]: the instruction `instruction` from the
+    /// value `value` its expression answered.
+    #[inline(never)]
+    pub(crate) fn exec_value(
+        &mut self,
+        instruction: &Instruction,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        match &instruction.kind {
+            InstructionKind::Numeric { setting, .. } => {
+                self.exec_numeric_value(setting, Some(value))
+            }
+            kind => Err(Loud::instruction(kind).into()),
+        }
+    }
+
     /// The stepped clause a loop's test region runs in, around the header
     /// clause `entry` [`Interp::open_loop_test`] opened: only the temps frame
     /// the condition's evaluation pushes into, since the echo, the line and
@@ -3579,6 +3595,15 @@ impl Interp {
                 _ => return None,
             },
             (InstructionKind::If { condition, .. }, 0) => condition,
+            // An instruction run by `Op::ExecValue`, whose expression is
+            // slot `0`.
+            (
+                InstructionKind::Numeric {
+                    expression: Some(expression),
+                    ..
+                },
+                0,
+            ) => expression,
             // A `SELECT CASE`'s expression.
             (
                 InstructionKind::Select {
@@ -3658,6 +3683,13 @@ impl Interp {
         slot: u32,
     ) -> Result<ObjRef, Failure> {
         match (&instruction.kind, slot) {
+            (
+                InstructionKind::Numeric {
+                    expression: Some(expression),
+                    ..
+                },
+                0,
+            ) => self.eval(code, expression),
             (InstructionKind::If { condition, .. }, 0) => {
                 let holds = self.eval_if_condition(code, condition)?;
                 // In range unconditionally: `SMALL_INT_MAX` is far above one.

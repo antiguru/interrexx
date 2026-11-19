@@ -38,6 +38,9 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             Op::LoopNext { index: at } => {
                 out.push_str(&format!("{index}: LoopNext index={at}\n"));
             }
+            Op::ExecValue { index: at, src } => {
+                out.push_str(&format!("{index}: ExecValue index={at} src={src}\n"));
+            }
             Op::SelectCase { index: at, src } => {
                 out.push_str(&format!("{index}: SelectCase index={at} src={src}\n"));
             }
