@@ -1309,7 +1309,7 @@ mod sim_gate {
                 (" --release", "release")
             };
             format!(
-                "REXX_CORPUS_GATE=1 {ONLY_ENV}='{}' memcap 8G cargo test -j 4{} -p \
+                "REXX_CORPUS_GATE=1 {ONLY_ENV}='{}' cargo test -j 4{} -p \
                          interrexx --test concurrency_tests the_seeded_gate -- --nocapture \
                          (profile={}, stack={}, REXX_SWITCH_MODE={}, scratch {})",
                 self.name(),

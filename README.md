@@ -32,8 +32,7 @@ The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubco
 ## Testing
 
 The regular tests need no ooRexx build and no submodule. They need the ooTest and ooRexx
-documentation checkouts, `svn` (the extractor tests read a checkout's revision), `memcap` on the
-path (some tests run a program under it) and a C and a C++ compiler (the ABI dump and the link test
+documentation checkouts, `svn` (the extractor tests read a checkout's revision) and a C and a C++ compiler (the ABI dump and the link test
 compile against `include/`). The preflight script lists the checkouts that are missing and prints
 the commands that fetch them:
 

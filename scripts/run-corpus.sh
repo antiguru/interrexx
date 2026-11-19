@@ -11,9 +11,15 @@ root=$PWD
     echo "run scripts/fetch-corpus.sh first" >&2
     exit 1
 }
-work=$(mktemp -d /tmp/corpus.XXXXXX)
 oracle=$root/third_party/oracle
 crate=$root/rust/target/debug
+for binary in rexx bounded-run; do
+    [ -x "$crate/$binary" ] || {
+        echo "$crate/$binary is missing: run cargo build -p interrexx in rust/ first" >&2
+        exit 1
+    }
+done
+work=$(mktemp -d /tmp/corpus.XXXXXX)
 # The oracle's Rexx-only packages, as the suite harness lays them beside this crate's rexx, less
 # the five this crate rewrites and embeds.
 mkdir "$work/packages"
@@ -26,11 +32,7 @@ done
 mkdir -m 700 "$work/service"
 
 capped() {
-    if command -v memcap >/dev/null; then
-        memcap 4G timeout -k 5 600 "$@"
-    else
-        (ulimit -v 4194304 && exec timeout -k 5 600 "$@")
-    fi
+    "$crate/bounded-run" -v 4194304 -k 5 600 "$@"
 }
 side() { # oracle|crate DIR ARGS...
     local which=$1 dir=$2

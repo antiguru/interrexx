@@ -8,7 +8,7 @@ and the reasons for them are in `docs/design/decisions.md`; read it before propo
 A regular build and test run need no submodule and no ooRexx build. `cargo build` and
 `cargo nextest run --workspace --profile standalone` read only files of this repository, plus the
 ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts, and the tools some tests run:
-`svn`, `memcap` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
+`svn` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
 lists whichever of the two checkouts is missing and prints the `svn checkout` commands that fetch
 them; it checks the checkouts only, not the tools. `test_preflight.py --standalone -- COMMAND` runs
 the command only if nothing is missing.
