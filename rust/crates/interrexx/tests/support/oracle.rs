@@ -286,6 +286,19 @@ impl Oracle {
         environment: &[(&str, &str)],
         stdin: Option<&[u8]>,
     ) -> CppOutcome {
+        self.run_in_within(path, cwd, environment, stdin, ORACLE_DEADLINE)
+    }
+
+    /// [`Oracle::run_in_with`] under `deadline` instead of [`ORACLE_DEADLINE`],
+    /// for a program that by design runs longer.
+    pub fn run_in_within(
+        &self,
+        path: &Path,
+        cwd: &Path,
+        environment: &[(&str, &str)],
+        stdin: Option<&[u8]>,
+        deadline: Duration,
+    ) -> CppOutcome {
         self.invocations.fetch_add(1, Ordering::Relaxed);
         let mut command = self.wrapped(path, &[]);
         command.current_dir(cwd);
@@ -304,7 +317,7 @@ impl Oracle {
         if let Some(bytes) = stdin {
             write_stdin(&mut child, bytes);
         }
-        let (stdout, stderr, termination) = wait_with_deadline(child, path, ORACLE_DEADLINE);
+        let (stdout, stderr, termination) = wait_with_deadline(child, path, deadline);
         CppOutcome {
             stdout,
             stderr,
@@ -331,7 +344,9 @@ impl Oracle {
             // it is the one the crate side is given (`super::PINNED_ZONE`),
             // not the developer's. A caller that asks about another zone
             // sets `TZ` after this and wins.
-            .env("TZ", super::PINNED_ZONE);
+            .env("TZ", super::PINNED_ZONE)
+            // This crate's hash seed, which a comparison leaves to each run.
+            .env_remove(interrexx::HASH_SEED_ENV);
         command
     }
 

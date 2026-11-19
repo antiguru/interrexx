@@ -20,9 +20,11 @@ method, such as `t~name`, reaches the `unknown` method of the class, which
 reads or sets the entry of that name in upper case
 ([the unknown rule](r:class.stringtable.unknown)). The page follows the order
 of the rexxref entry. Examples that show an error use a small routine `try`,
-as the builtin pages do. The page says nothing about which of two items equal
-to the argument `removeItem` removes ([the hash order
-rule](r:class.stringtable.deviation.33)).
+as the builtin pages do. A string table lists its entries in the order they
+were first put, and `index` and `removeItem` choose the oldest of several
+entries that qualify ([the hash order rule](r:class.stringtable.deviation.33)).
+ooRexx lists and chooses otherwise, so the examples outside that rule hold one
+such entry or sort the answers.
 
 ## The class
 
@@ -167,15 +169,16 @@ t~put("x", .plain~new) => 88.909
 r[class.stringtable.at]
 `at(name)` and `[name]` answer the item stored at the index, and `.nil` when
 there is none. The methods take exactly one argument: none, or an omitted one,
-raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; the number of
-arguments is checked before the name is read.
+raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`; with a second
+argument, whether the name is read is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 t = .stringtable~new
 t~put('item', 'k')
 say t~at('k') t['k'] t~at('K') (t~at('zz') == .nil)
 call try 't~at'
-call try 't~at(, "x")'
+call try 't~at("x", "x")'
 call try 't~at("a", "b")'
 call try 't[]'
 exit
@@ -191,7 +194,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 item item The NIL object 1
 t~at => 88.901
-t~at(, "x") => 93.902
+t~at("x", "x") => 93.902
 t~at("a", "b") => 93.902
 t[] => 88.901
 ```
@@ -398,10 +401,10 @@ t~hasIndex("a", "b") => 93.902
 r[class.stringtable.hasitem]
 `hasItem(item)` answers 1 when some item is equal to the argument and 0
 otherwise, and `index(item)` answers an index of such an item and `.nil` when
-there is none. Which index `index` answers when several items qualify is not
-specified ([the hash order rule](r:class.stringtable.deviation.33)). Both take
-exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
-second raises `SYNTAX 93.902`. `.nil` is an item like any other.
+there is none. When several items qualify, `index` answers the index of the
+oldest entry ([the oldest rule](r:class.stringtable.index.deviation.33)). Both
+take exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and
+a second raises `SYNTAX 93.902`. `.nil` is an item like any other.
 
 ```rexx
 t = .stringtable~new
@@ -411,7 +414,7 @@ say t~hasItem('x') t~hasItem('X') t~hasItem(.nil) t~hasItem('zz')
 say t~index('x') t~index(.nil) (t~index('q') == .nil)
 call try 't~hasItem'
 call try 't~index'
-call try 't~hasItem(, 1)'
+call try 't~hasItem(1, 1)'
 call try 't~index(1, 2)'
 exit
 try:
@@ -428,17 +431,18 @@ bad: say arg(1) '=>' condition('o')~code
 k1 k2 1
 t~hasItem => 93.903
 t~index => 93.903
-t~hasItem(, 1) => 93.902
+t~hasItem(1, 1) => 93.902
 t~index(1, 2) => 93.902
 ```
 
 r[class.stringtable.hasitem.sends]
 `hasItem`, `index` and `removeItem` send `==` to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the items are visited in an order that is not specified,
-so the number of messages is specified only when no item matches, as then every
-item is visited. The very object that is stored is found without a `==` sent to
-it ([the identity rule](r:class.collection.identity)).
+and send nothing else; the items are visited in the order of the entries ([the
+hash order rule](r:class.stringtable.deviation.33)), so the number of messages
+is specified only when no item matches, as then every item is visited. The very
+object that is stored is found without a `==` sent to it ([the identity
+rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -592,13 +596,14 @@ t~empty(1) => 93.902
 ## Lists of the entries
 
 r[class.stringtable.makearray]
-`allIndexes` and `makeArray` answer a new `Array` of the indexes of the
-entries, and `allItems` a new `Array` of their items. They are instances of
-`Array` for a subclass receiver too, never the receiver, and do not follow
-later changes. They take no argument: one raises `SYNTAX 93.902`. The order is
-not specified ([the hash order rule](r:class.stringtable.deviation.33)), and
-is the same for the three answers and for the supplier of one unchanged table,
-so the item at a position belongs to the index at the same position.
+`allIndexes` and `makeArray` answer a new `Array` of the indexes of the entries,
+and `allItems` a new `Array` of their items. They are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is that in which the
+entries were first put ([the hash order
+rule](r:class.stringtable.deviation.33)), and is the same for the three answers
+and for the supplier of one unchanged table, so the item at a position belongs
+to the index at the same position.
 
 ```rexx
 t = .many~new
@@ -873,25 +878,96 @@ before
 ```
 
 r[class.stringtable.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, and of the search of `hasItem`, `index` and `removeItem`, is not
-specified, and may differ from ooRexx's. Which entries are produced, and how
-often, is specified. In the example the answers are sorted.
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the entries in the
+order they were first put, and `hasItem`, `index` and `removeItem` compare the
+items in that order. Which entries are produced, and how often, is specified.
+The entry that a search acts on when an `==` that it sends changes the string
+table is not specified, and may be none of them. ooRexx lists the entries in an
+order that its storage fixes, so its answers can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
 t = .stringtable~new
-t~put(1, 'one')
-t~put(2, 'two')
-t~put(3, 'three')
-say t~allIndexes~sort~makeString('L', ',')
-say t~allItems~sort~makeString('L', ',')
-say t~items t~makeArray~items
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 ```
 
 ```output
-one,three,two
+c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+```
+
+r[class.stringtable.put.deviation.33]
+A `put` or `[]=` at an index that the string table holds leaves the entry in its
+place. An entry that is removed and then put again comes last. ooRexx's order
+does not follow the puts ([the hash order
+rule](r:class.stringtable.deviation.33)).
+
+```rexx
+t = .stringtable~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+```
+
+```output
+c,a,b 4,2,3
+a,b,c 2,3,5
+```
+
+r[class.stringtable.index.deviation.33]
+When several entries hold an item equal to the argument, `index` answers the
+index of the oldest of them and `removeItem` removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another ([the hash order
+rule](r:class.stringtable.deviation.33)).
+
+```rexx
+t = .stringtable~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+```
+
+```output
+c x a,b
+b
+```
+
+r[class.stringtable.copy.deviation.33]
+A copy lists its entries in the order of the receiver. After that each string
+table keeps its own order: an entry put into one comes last in that one only
+([the hash order rule](r:class.stringtable.deviation.33)).
+
+```rexx
+t = .stringtable~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+```
+
+```output
+a,b,c,z
+a,b,c,y
 ```
 
 r[class.stringtable.deviation.84]

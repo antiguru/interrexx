@@ -21,7 +21,7 @@ and `target`, its second argument, is the receiver; `new`, `n`, `length` and
 [strings](r:conv.string.null), `n` is a [whole number](r:conv.whole.form) of
 the kind [the next rule](r:bif.insert.n.check) describes, `length` is a
 [length](r:conv.length.check), and `pad` is a [pad](r:conv.pad). The arguments
-are checked in the [order](r:conv.check.order) the conventions give, and the
+are checked as [the conventions](r:conv.check.order) give, and the
 argument count by the [builtin call rules](r:bif.index.call.count): two are
 required and five is the most.
 
@@ -60,9 +60,8 @@ a123bc a123bc | a12bc
 r[bif.insert.n.check]
 In INSERT, `n` is a [whole-number argument](r:conv.whole.digits) whose value
 must not be negative. A negative value raises `SYNTAX 93.906`. An `n` of 0 is
-allowed, and so is `-0`, which is 0. The check is a range check, and falls
-with those of [the conventions](r:conv.check.order), from left to right with
-the check of `length`.
+allowed, and so is `-0`, which is 0. The check is a range check, one of [the
+checks of the conventions](r:conv.check.order).
 
 ```rexx
 say insert('X', 'abc', 0) insert('X', 'abc', '-0')
@@ -71,22 +70,22 @@ say insert('X', 'abc', -1)
 a: say condition('o')~code
 signal on syntax name b
 say insert('X', 'abc', -1, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '93.906 93.923') > 0
 signal on syntax name c
 say insert('X', 'abc', 0, -1)
 c: say condition('o')~code
 signal on syntax name d
-say insert('X', 'abc', -1, 'x')
+say insert('X', 'abc', 1, 'x')
 d: say condition('o')~code
 signal on syntax name e
-say insert('X', 'abc', -1, 1, '**')
+say insert('X', 'abc', 1, 1, '**')
 e: say condition('o')~code
 ```
 
 ```output
 Xabc Xabc
 93.906
-93.906
+1
 93.923
 40.12
 40.23

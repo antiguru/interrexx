@@ -140,12 +140,11 @@ r[rxmath.index.args]
 The functions follow [the native call rule](r:bif.index.call.native), as the
 [RexxUtil](../rexxutil/index.md) functions do. A required argument that is not
 given, or is omitted, raises `SYNTAX 88.901`. An argument past the last one of
-the function raises `SYNTAX 88.922`, and the count is checked before the
-arguments are read. An omitted place at the end of the call adds nothing to
-the count, so `RxCalcSqrt(4,,)` is a call with one argument. An argument that is
-an object other than a string is replaced by the string that its `request`
-with the argument `STRING` answers, and an object that has none raises `SYNTAX
-88.909`.
+the function raises `SYNTAX 88.922`. An omitted place at the end of the call
+adds nothing to the count, so `RxCalcSqrt(4,,)` is a call with one argument. An
+argument that is an object other than a string is replaced by the string that
+its `request` with the argument `STRING` answers, and an object that has none
+raises `SYNTAX 88.909`.
 
 ```rexx
 call try "RxCalcSqrt()"

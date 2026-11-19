@@ -111,6 +111,20 @@ pub trait Surface {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()>;
 
+    /// [`Surface::send`] of the method that the built-in class `id`, or a
+    /// subclass of it that the interpreter's own library defines, has for
+    /// `name` in `receiver`'s class order, so that a method a class of the
+    /// program or the object itself defines under that name does not run.
+    /// `None` where `receiver` is not an instance of that class or of a
+    /// subclass of it.
+    fn send_own(
+        &mut self,
+        receiver: ObjRef,
+        id: &str,
+        name: &[u8],
+        arguments: &[Option<ObjRef>],
+    ) -> Option<Result<Option<ObjRef>, ()>>;
+
     /// `get` on a hashed collection this host stores itself, run without a
     /// message send, so a subclass's `AT` is not what answers, the collection's
     /// own `get` being called. `None` where `table` is not such a collection;
@@ -999,6 +1013,33 @@ impl Activation<'_> {
         name: &[u8],
         arguments: &[Argument<'_>],
     ) -> Option<ObjRef> {
+        self.send_as(slot, receiver, None, name, arguments)
+    }
+
+    /// [`Activation::send_to`] of the method that the built-in class `id`
+    /// defines for `name`, as [`Surface::send_own`] runs it, where `receiver`
+    /// is an instance of that class, and the plain send otherwise.
+    fn send_own(
+        &self,
+        slot: &'static str,
+        receiver: Option<ObjRef>,
+        id: &'static str,
+        name: &[u8],
+        arguments: &[Argument<'_>],
+    ) -> Option<ObjRef> {
+        self.send_as(slot, receiver, Some(id), name, arguments)
+    }
+
+    /// [`Activation::send_to`], or [`Activation::send_own`] where `own` names
+    /// the class.
+    fn send_as(
+        &self,
+        slot: &'static str,
+        receiver: Option<ObjRef>,
+        own: Option<&'static str>,
+        name: &[u8],
+        arguments: &[Argument<'_>],
+    ) -> Option<ObjRef> {
         let receiver = receiver?;
         let mut objects = Vec::with_capacity(arguments.len());
         for argument in arguments {
@@ -1020,13 +1061,15 @@ impl Activation<'_> {
             });
         }
         self.with_surface(slot, None, |cx| {
-            let answer = cx
-                .host
-                .surface()
-                .expect("checked by with_surface")
-                .send(receiver, name, None, &objects)
-                .ok()
-                .flatten()?;
+            let surface = cx.host.surface().expect("checked by with_surface");
+            // A receiver of another class than `own` names is sent to as any
+            // message is, which is what the member did before it ran the
+            // class's own method.
+            let answered = match own.and_then(|id| surface.send_own(receiver, id, name, &objects)) {
+                Some(answered) => answered,
+                None => surface.send(receiver, name, None, &objects),
+            };
+            let answer = answered.ok().flatten()?;
             cx.host.register_local(answer);
             Some(answer)
         })
@@ -1040,21 +1083,20 @@ impl Activation<'_> {
         name: &[u8],
         arguments: &[Argument<'_>],
     ) -> RexxObjectPtr {
-        match self.send_to(slot, receiver, name, arguments) {
+        self.handle_of(self.send_to(slot, receiver, name, arguments))
+    }
+
+    /// An answer as a handle, null for nothing.
+    fn handle_of(&self, answer: Option<ObjRef>) -> RexxObjectPtr {
+        match answer {
             Some(object) => self.register(object),
             None => std::ptr::null_mut(),
         }
     }
 
-    /// [`Activation::send_to`] answering a whole number, zero for nothing.
-    fn send_for_count(
-        &self,
-        slot: &'static str,
-        receiver: Option<ObjRef>,
-        name: &[u8],
-        arguments: &[Argument<'_>],
-    ) -> usize {
-        let Some(answer) = self.send_to(slot, receiver, name, arguments) else {
+    /// An answer as a whole number, zero for nothing.
+    fn count_of(&self, answer: Option<ObjRef>) -> usize {
+        let Some(answer) = answer else {
             return 0;
         };
         let found = self.conversion().host.unsigned_integer(answer, u64::MAX);
@@ -1073,7 +1115,12 @@ impl Activation<'_> {
         name: &[u8],
         arguments: &[Argument<'_>],
     ) -> bool {
-        let Some(answer) = self.send_to(slot, receiver, name, arguments) else {
+        self.truth_of(self.send_to(slot, receiver, name, arguments))
+    }
+
+    /// An answer as its truth value, false for nothing.
+    fn truth_of(&self, answer: Option<ObjRef>) -> bool {
+        let Some(answer) = answer else {
             return false;
         };
         let found = self.conversion().host.logical(answer);
@@ -1092,18 +1139,20 @@ impl Activation<'_> {
 
     /// The item a collection holds at `index`, or `None` where it holds none,
     /// which `get` answers as a null reference where the message answers
-    /// `.nil`.
+    /// `.nil`. `own` names the built-in class whose own `HASINDEX` and `AT`
+    /// answer, as [`Activation::send_own`] runs them.
     fn item_at(
         &self,
         slot: &'static str,
         collection: RexxObjectPtr,
+        own: Option<&'static str>,
         index: Argument<'_>,
     ) -> RexxObjectPtr {
         let collection = self.resolve(collection);
-        if !self.send_for_truth(slot, collection, b"HASINDEX", &[index]) {
+        if !self.truth_of(self.send_as(slot, collection, own, b"HASINDEX", &[index])) {
             return std::ptr::null_mut();
         }
-        self.send_for_handle(slot, collection, b"AT", &[index])
+        self.handle_of(self.send_as(slot, collection, own, b"AT", &[index]))
     }
 
     /// The item a collection removes from `index`, null where it held none.
@@ -1137,10 +1186,11 @@ impl Activation<'_> {
             self.raise_not_positive(SLOT, 1);
             return std::ptr::null_mut();
         }
-        self.item_at(SLOT, array, Argument::Number(index))
+        self.item_at(SLOT, array, Some("Array"), Argument::Number(index))
     }
 
-    /// `ArrayPut`.
+    /// `ArrayPut`: the array's own `PUT`, as [`Activation::send_own`] runs
+    /// it.
     pub fn array_put(&self, array: RexxObjectPtr, item: RexxObjectPtr, index: usize) {
         const SLOT: &str = "RexxThreadInterface.ArrayPut";
         if index == 0 {
@@ -1148,9 +1198,10 @@ impl Activation<'_> {
             return;
         }
         let array = self.resolve(array);
-        self.send_to(
+        self.send_own(
             SLOT,
             array,
+            "Array",
             b"PUT",
             &[Argument::Handle(item), Argument::Number(index)],
         );
@@ -1164,13 +1215,13 @@ impl Activation<'_> {
         item: Argument<'_>,
     ) -> usize {
         let array = self.resolve(array);
-        self.send_for_count(slot, array, b"APPEND", &[item])
+        self.count_of(self.send_own(slot, array, "Array", b"APPEND", &[item]))
     }
 
     /// `ArraySize` and `ArrayItems`: what `SIZE` and `ITEMS` answer.
     pub fn array_count(&self, slot: &'static str, array: RexxObjectPtr, name: &[u8]) -> usize {
         let array = self.resolve(array);
-        self.send_for_count(slot, array, name, &[])
+        self.count_of(self.send_own(slot, array, "Array", name, &[]))
     }
 
     /// `ArrayDimension`: the number of dimensions, which is 1 for any
@@ -1178,9 +1229,10 @@ impl Activation<'_> {
     /// an empty one. Zero for anything that answers no dimension.
     pub fn array_dimension(&self, array: RexxObjectPtr) -> usize {
         let array = self.resolve(array);
-        let Some(answer) = self.send_to(
+        let Some(answer) = self.send_own(
             "RexxThreadInterface.ArrayDimension",
             array,
+            "Array",
             b"DIMENSION",
             &[],
         ) else {
@@ -1281,7 +1333,7 @@ impl Activation<'_> {
             surface.store_get(collection, index)
         }) {
             Some(answer) => answer,
-            None => self.item_at(slot, table, Argument::Text(index)),
+            None => self.item_at(slot, table, None, Argument::Text(index)),
         }
     }
 
@@ -1331,24 +1383,31 @@ impl Activation<'_> {
         name: &[u8],
     ) -> RexxObjectPtr {
         let supplier = self.resolve(supplier);
-        self.send_for_handle(slot, supplier, name, &[])
+        self.handle_of(self.send_own(slot, supplier, "Supplier", name, &[]))
     }
 
     /// `SupplierAvailable`.
     pub fn supplier_available(&self, supplier: RexxObjectPtr) -> bool {
         let supplier = self.resolve(supplier);
-        self.send_for_truth(
+        self.truth_of(self.send_own(
             "RexxThreadInterface.SupplierAvailable",
             supplier,
+            "Supplier",
             b"AVAILABLE",
             &[],
-        )
+        ))
     }
 
     /// `SupplierNext`.
     pub fn supplier_next(&self, supplier: RexxObjectPtr) {
         let supplier = self.resolve(supplier);
-        self.send_to("RexxThreadInterface.SupplierNext", supplier, b"NEXT", &[]);
+        self.send_own(
+            "RexxThreadInterface.SupplierNext",
+            supplier,
+            "Supplier",
+            b"NEXT",
+            &[],
+        );
     }
 
     /// `NewSupplier`.
@@ -1373,7 +1432,7 @@ impl Activation<'_> {
         value: RexxObjectPtr,
     ) {
         let stem = self.resolve(stem);
-        self.send_to(slot, stem, b"[]=", &[Argument::Handle(value), tail]);
+        self.send_own(slot, stem, "Stem", b"[]=", &[Argument::Handle(value), tail]);
     }
 
     /// `GetStemElement` and `GetStemArrayElement`: null for a tail the stem
@@ -1384,13 +1443,13 @@ impl Activation<'_> {
         stem: RexxObjectPtr,
         tail: Argument<'_>,
     ) -> RexxObjectPtr {
-        self.item_at(slot, stem, tail)
+        self.item_at(slot, stem, Some("Stem"), tail)
     }
 
     /// `DropStemElement` and `DropStemArrayElement`.
     pub fn stem_drop(&self, slot: &'static str, stem: RexxObjectPtr, tail: Argument<'_>) {
         let stem = self.resolve(stem);
-        self.send_to(slot, stem, b"REMOVE", &[tail]);
+        self.send_own(slot, stem, "Stem", b"REMOVE", &[tail]);
     }
 
     /// `GetAllStemElements` and `GetStemValue`: `TODIRECTORY` and the value
@@ -1402,7 +1461,7 @@ impl Activation<'_> {
         name: &[u8],
     ) -> RexxObjectPtr {
         let stem = self.resolve(stem);
-        self.send_for_handle(slot, stem, name, &[])
+        self.handle_of(self.send_own(slot, stem, "Stem", name, &[]))
     }
 
     /// Runs `serve` against the host's surface, answering its object as a
@@ -1698,6 +1757,7 @@ impl Activation<'_> {
         self.item_at(
             "MethodContextInterface.GetArgument",
             array,
+            Some("Array"),
             Argument::Number(index),
         )
     }
@@ -1765,7 +1825,13 @@ impl Activation<'_> {
         const SLOT: &str = "RexxThreadInterface.FindPackageClass";
         let package = self.resolve(package);
         let name = name.to_ascii_uppercase();
-        let found = self.send_to(SLOT, package, b"FINDCLASS", &[Argument::Text(&name)]);
+        let found = self.send_own(
+            SLOT,
+            package,
+            "Package",
+            b"FINDCLASS",
+            &[Argument::Text(&name)],
+        );
         let Some(found) = found else {
             return std::ptr::null_mut();
         };
@@ -1783,12 +1849,13 @@ impl Activation<'_> {
     /// `IsInstanceOf`: the object's `ISINSTANCEOF` over the class.
     pub fn is_instance_of(&self, object: RexxObjectPtr, class: RexxObjectPtr) -> bool {
         let object = self.resolve(object);
-        self.send_for_truth(
+        self.truth_of(self.send_own(
             "RexxThreadInterface.IsInstanceOf",
             object,
+            "Object",
             b"ISINSTANCEOF",
             &[Argument::Handle(class)],
-        )
+        ))
     }
 
     /// `IsOfType`: whether the object is an instance of the class `name`
@@ -1805,12 +1872,13 @@ impl Activation<'_> {
     pub fn has_method(&self, object: RexxObjectPtr, name: &[u8]) -> bool {
         let object = self.resolve(object);
         let name = name.to_ascii_uppercase();
-        self.send_for_truth(
+        self.truth_of(self.send_own(
             "RexxThreadInterface.HasMethod",
             object,
+            "Object",
             b"HASMETHOD",
             &[Argument::Text(&name)],
-        )
+        ))
     }
 
     /// `IsMethod` and `IsRoutine`: an instance of `Method` or `Routine`, a
@@ -1876,15 +1944,18 @@ impl Activation<'_> {
     }
 
     /// `GetPackageRoutines` and its neighbours: what the package answers
-    /// `name`.
+    /// `name`, or `GetRoutinePackage` and `GetMethodPackage`: what the routine
+    /// or method answers `PACKAGE`. `id` names the built-in class of the
+    /// object, whose own method answers, as [`Activation::send_own`] runs it.
     pub fn package_answer(
         &self,
         slot: &'static str,
         package: RexxObjectPtr,
+        id: &'static str,
         name: &[u8],
     ) -> RexxObjectPtr {
         let package = self.resolve(package);
-        self.send_for_handle(slot, package, name, &[])
+        self.handle_of(self.send_own(slot, package, id, name, &[]))
     }
 
     /// `CallRoutine`: the routine run with the array's items, or with none
@@ -1971,9 +2042,22 @@ impl Activation<'_> {
     }
 
     /// `ReleaseLocalReference`: the handle no longer roots its object, and
-    /// answers until a collection takes it.
+    /// answers until a collection takes it. Where the call's string pool
+    /// outlives the call ([`Activation::keep_pool`]), the copies and the
+    /// writable area made for the object are dropped with it.
     pub fn release_local_reference(&self, handle: RexxObjectPtr) {
-        self.conversion().host.release_local(handle);
+        let mut cx = self.conversion();
+        // An attached thread's pool lasts until it detaches, so what its
+        // released strings left there would otherwise pile up, and a later
+        // object at the same reference would find them. An ordinary call's
+        // pool ends with the call, and an address the extension read stays
+        // valid until then.
+        if self.pool_kept()
+            && let Some(object) = cx.host.resolve(handle)
+        {
+            cx.strings.forget(object);
+        }
+        cx.host.release_local(handle);
     }
 
     /// `AllocateObjectMemory`.

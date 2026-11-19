@@ -20,13 +20,13 @@ r[util.sysformatmessage.args]
 `message` and `substitutions` are required arguments. A call with either
 missing or omitted raises `SYNTAX 88.901`, and a third argument raises `SYNTAX
 88.922`; an omitted place at the end of the call adds nothing to the count
-([the argument rule](r:util.index.args), and for the order of the checks
-[Deviation 101](r:util.index.deviation.101)). `message` is checked before
-`substitutions`, and a third argument is reported before either. `message` is
-read as a string as [the argument rule](r:util.index.args) says: `.nil`, and
-an object that has no `MAKESTRING` method, raise `SYNTAX 88.909`, and an
-object with only a `STRING` method is such an object. A mutable buffer is read
-as the string that it holds.
+([the argument rule](r:util.index.args)). A call with more than one fault,
+among a third argument, `message` and `substitutions`, raises the error of one
+of them, as [the precedence rule](r:conv.error.precedence) says. `message` is
+read as a string as [the argument rule](r:util.index.args) says: `.nil`, and an
+object that has no `MAKESTRING` method, raise `SYNTAX 88.909`, and an object
+with only a `STRING` method is such an object. A mutable buffer is read as the
+string that it holds.
 
 ```rexx
 call try "SysFormatMessage()"
@@ -37,7 +37,6 @@ call try "SysFormatMessage(, 'x')"
 call try "SysFormatMessage('a', 'b', 'c')"
 call try "SysFormatMessage('[&1]', 'x', )"
 call try "SysFormatMessage(.nil, 'x')"
-call try "SysFormatMessage(.nil, .nil)"
 call try "SysFormatMessage(.object~new, 'x')"
 call try "SysFormatMessage(.c6zqs~new, 'x')"
 call try "SysFormatMessage(.c6zqt~new, 'x')"
@@ -68,7 +67,6 @@ e: say condition('o')~code
 88.901
 88.922
 [x]
-88.909
 88.909
 88.909
 88.909

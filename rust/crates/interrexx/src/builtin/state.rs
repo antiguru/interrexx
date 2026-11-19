@@ -107,14 +107,16 @@ pub(crate) fn queued(
     Ok(answer.unwrap_or_else(|| interp.text(b"0")))
 }
 
+/// The values `GC`'s option may take, as its 40.904 names them.
+pub(crate) const GC_OPTIONS: &str = "\"force\", \"Force\", \"f\", \"F\"";
+
 /// `GC()` / `GC('Force')`: whether a collection was run.
 pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    const VALID: &str = "\"force\", \"Force\", \"f\", \"F\"";
     let Some(text) = optional_string(interp, args, 1) else {
         return Ok(crate::eval::logical(false));
     };
     if !matches!(text.first(), Some(b'f' | b'F')) {
-        return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
+        return Err(Raised::argument_not_in_list(name, 1, GC_OPTIONS, &text).into());
     }
     // Really collect, the way a collect-and-uninit does, rather than report `.true`
     // for something that did not happen. Safe at exactly the point every
@@ -313,6 +315,9 @@ pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
     }
 }
 
+/// The letters `CONDITION`'s option may begin with.
+pub(crate) const CONDITION_OPTIONS: &str = "ACDEIORS";
+
 /// `CONDITION()` and `CONDITION(option)`: what the handler now running was
 /// entered for.
 /// ```text
@@ -338,8 +343,7 @@ pub(crate) fn condition(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    const VALID: &str = "ACDEIORS";
-    let style = option_letter(interp, name, args, 1, VALID)?.unwrap_or(b'I');
+    let style = option_letter(interp, name, args, 1, CONDITION_OPTIONS)?.unwrap_or(b'I');
     // Resolved before the option is answered, because two of the options
     // have a distinct answer when there is no condition at all and the rest
     // share one.
@@ -417,7 +421,7 @@ pub(crate) fn condition(
         }
         _ => {
             let found = optional_string(interp, args, 1).unwrap_or_default();
-            Err(Raised::argument_not_in_list(name, 1, VALID, &found).into())
+            Err(Raised::argument_not_in_list(name, 1, CONDITION_OPTIONS, &found).into())
         }
     }
 }
@@ -713,22 +717,22 @@ mod tests {
         );
     }
 
-    /// The order of `ARG`'s three checks, one probe per adjacent pair.
+    /// Each of `ARG`'s checks raises its own code when it is the only fault of
+    /// the call; which of several faults is raised is unspecified
+    /// (`r[conv.error.precedence]`).
     #[test]
-    fn args_three_checks_run_in_the_oracles_order() {
-        // A bad *type* in position 1 beats everything after it.
+    fn each_of_args_checks_raises_its_own_code() {
+        // A bad type in position 1.
         assert_eq!(
-            raised(b"ARG", &[b"x", b"q"]),
+            raised(b"ARG", &[b"x"]),
             (40, 12, vec![b"ARG".to_vec(), b"1".to_vec(), b"x".to_vec()])
         );
-        // A bad *range* in position 1 beats the option switch ...
+        // A bad range in position 1.
         assert_eq!(
-            raised(b"ARG", &[b"0", b""]),
+            raised(b"ARG", &[b"0", b"e"]),
             (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
         );
-        // ... and with the position good, that same empty option is the
-        // switch's own 40.904. Same two arguments, one changed, opposite
-        // answers: this is the pair, not two independent checks.
+        // An empty option with a good position.
         assert_eq!(
             raised(b"ARG", &[b"1", b""]),
             (

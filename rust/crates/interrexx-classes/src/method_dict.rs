@@ -118,6 +118,12 @@ impl MethodDict {
         self.scope_list.contains(&scope)
     }
 
+    /// Every scope folded in, in the order it was: a scope sees past itself
+    /// the scopes ahead of it in this list.
+    pub fn scopes(&self) -> &[ObjRef] {
+        &self.scope_list
+    }
+
     /// Fold a new scope into the ordering, after everything folded in so far.
     /// A repeat is a no-op.
     pub fn add_scope(&mut self, scope: ObjRef) {

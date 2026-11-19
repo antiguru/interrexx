@@ -546,14 +546,15 @@ fn a_bad_argument_range_reports_the_converted_value() {
     );
 }
 
-/// Every conversion runs before every range check, at the three shapes
-/// that can tell the two layers apart.
+/// A form check and a range check each raise their own code when they are
+/// the only fault of the call; which of several faults is raised is
+/// unspecified (`r[conv.error.precedence]`).
 #[test]
-fn the_call_layer_is_checked_before_the_operation_layer() {
+fn a_form_check_and_a_range_check_each_raise_their_own_code() {
     assert_eq!(
         raised(
             b"SUBSTR",
-            &[Some(b"abc"), Some(b"0"), Some(b"5"), Some(b"xx")]
+            &[Some(b"abc"), Some(b"1"), Some(b"5"), Some(b"xx")]
         ),
         (
             40,
@@ -572,7 +573,7 @@ fn the_call_layer_is_checked_before_the_operation_layer() {
     assert_eq!(
         raised(
             b"TRANSLATE",
-            &[Some(b"abc"), None, None, Some(b"$"), Some(b"0"), Some(b"q")]
+            &[Some(b"abc"), None, None, Some(b"$"), Some(b"1"), Some(b"q")]
         ),
         (
             40,
@@ -589,7 +590,7 @@ fn the_call_layer_is_checked_before_the_operation_layer() {
     );
 
     assert_eq!(
-        raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"X"), Some(b"q")]),
+        raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"M"), Some(b"q")]),
         (
             40,
             12,

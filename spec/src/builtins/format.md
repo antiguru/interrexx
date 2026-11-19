@@ -46,14 +46,15 @@ c: say condition('o')~code
 ```
 
 r[bif.format.errors]
-The checks run in this order, and the first that fails is raised: the
-[form](r:conv.whole.form) and [value](r:conv.whole.digits) of `before`,
-`after`, `expp` and `expt`, from left to right, which raise `SYNTAX 40.12`;
-that `number` is a [number](r:bif.index.num.arg), `SYNTAX 93.943`; that none
-of the four counts is negative, from left to right, `SYNTAX 93.906`; and
-last the fit of the result: that the exponent has at most `expp` digits,
-`SYNTAX 93.941`, and then that the integer part has at most `before`
-characters, `SYNTAX 93.942`. The null string is not [omitted](r:conv.arg.empty)
+The call checks the [form](r:conv.whole.form) and
+[value](r:conv.whole.digits) of `before`, `after`, `expp` and `expt`, which
+raise `SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg),
+`SYNTAX 93.943`; that none of the four counts is negative, `SYNTAX 93.906`;
+and the fit of the result: that the exponent has at most `expp` digits,
+`SYNTAX 93.941`, and that the integer part has at most `before` characters,
+`SYNTAX 93.942`. A call that fails more than one check raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. The null
+string is not [omitted](r:conv.arg.empty)
 and raises 40.12, and `-0` is 0.
 
 ```rexx
@@ -62,10 +63,10 @@ signal on syntax name a
 say format(5, , '')
 a: say condition('o')~code
 signal on syntax name b
-say format('x', 'y', -1)
+say format(5, 'y')
 b: say condition('o')~code
 signal on syntax name c
-say format('x', -1)
+say format('x', 1)
 c: say condition('o')~code
 signal on syntax name d
 say format(5, 1, -1, -1)
@@ -74,7 +75,7 @@ signal on syntax name e
 say format(5, , 1.5)
 e: say condition('o')~code
 signal on syntax name f
-say format('1e15', 0, , 1)
+say format('1e15', 1, , 1)
 f: say condition('o')~code
 signal on syntax name g
 say format('1e15', 1, , 0)
@@ -316,15 +317,13 @@ say '['format('-999.4', , , 1, 2)']' '['format('999.6', , 0, 1, 2)']'
 ```
 
 > **Note.** The ANSI draft (9.4.2) differs from ooRexx, which this book
-> follows, in three ways. It checks `number` before a count that is not a
-> whole number, where ooRexx raises `SYNTAX 40.12` for the count first (for a
-> negative count both check `number` first), and it raises
-> `SYNTAX 40.13` for a negative count and `SYNTAX 40.38` for a result that
-> does not fit, in the exponent or in the integer part. It decides the
-> notation before it rounds to `after`, so there a carry out of the integer
-> part does not make the number scientific: `format('99999.5', , 0, , 5)` is
-> `100000`. And it tests the zeros after the point against a fixed limit, as
-> the [note on the writing rule](r:bif.index.num.sci) says.
+> follows, in three ways. It raises `SYNTAX 40.13` for a negative count and
+> `SYNTAX 40.38` for a result that does not fit, in the exponent or in the
+> integer part. It decides the notation before it rounds to `after`, so there a
+> carry out of the integer part does not make the number scientific:
+> `format('99999.5', , 0, , 5)` is `100000`. And it tests the zeros after the
+> point against a fixed limit, as the [note on the writing
+> rule](r:bif.index.num.sci) says.
 
 ## Deviations
 

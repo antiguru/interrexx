@@ -37,9 +37,9 @@ r[bif.rxfuncadd.args]
 method](r:class.string.builtins): sending the message `RXFUNCADD` to a string
 raises `SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for the number
 of arguments hold: fewer than two raise `SYNTAX 40.3`, more than three raise
-`SYNTAX 40.4`, and an omitted `name` or `module` raises `SYNTAX 40.5`. The
-count is checked before the omissions, so a call with a fourth argument and no
-`name` raises `SYNTAX 40.4`.
+`SYNTAX 40.4`, and an omitted `name` or `module` raises `SYNTAX 40.5`. A call
+with a fourth argument and no `name` raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -57,9 +57,6 @@ d: say condition('o')~code
 signal on syntax name e
 say 'spec_rxfuncadd_args'~rxfuncadd('rxmath')
 e: say condition('o')~code
-signal on syntax name f
-say rxfuncadd(, 'rxmath', 'x', 'y')
-f: say condition('o')~code
 ```
 
 ```output
@@ -68,7 +65,6 @@ f: say condition('o')~code
 40.5
 40.4
 97.1
-40.4
 ```
 
 ## The result

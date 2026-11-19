@@ -159,6 +159,14 @@ impl Table {
     }
 }
 
+/// The handle [`Table::register`] answers for `object`, without registering
+/// it: what a thread table's data members carry for the interpreter's
+/// constants before any call has registered them.
+#[must_use]
+pub fn handle_of(object: ObjRef) -> RexxObjectPtr {
+    std::ptr::without_provenance_mut(address_of(object))
+}
+
 /// `object`'s handle, as an address.
 ///
 /// # Panics

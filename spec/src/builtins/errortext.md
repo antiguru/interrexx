@@ -53,8 +53,9 @@ r[bif.errortext.n]
 outside it raises `SYNTAX 40.903`, `-0` is 0, and a string that is not a whole
 number, the null string included, raises `SYNTAX 40.12`, as does a number
 whose magnitude is [too large](r:conv.whole.digits). The caller's NUMERIC
-DIGITS plays no part. The form is checked before the range, so a number that
-is both out of range and not whole, such as 100.5, raises `SYNTAX 40.12`.
+DIGITS plays no part. A number that is both out of range and not whole, such
+as 100.5, raises one of the two errors, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 1
@@ -81,7 +82,7 @@ say errortext(1e30)
 f: say condition('o')~code
 signal on syntax name g
 say errortext(100.5)
-g: say condition('o')~code
+g: say wordpos(condition('o')~code, '40.12 40.903') > 0
 ```
 
 ```output
@@ -93,7 +94,7 @@ g: say condition('o')~code
 40.12
 40.903
 40.12
-40.12
+1
 ```
 
 ## The result

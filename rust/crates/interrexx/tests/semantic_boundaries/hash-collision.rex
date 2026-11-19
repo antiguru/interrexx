@@ -1,3 +1,4 @@
+/* Which and how many stored indexes and items a search compares, beyond those it must, are unspecified: r[class.relation.deviation.33] */
 r = .relation~new
 r~put('first', .key~new('A'))
 r~put('second', .key~new('B'))
@@ -15,5 +16,4 @@ exit
 ::method '=='
   expose label
   use arg other
-  say 'equal' label other~label
   return label == other~label

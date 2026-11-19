@@ -5,7 +5,9 @@ call t .directory~new
 call t .ms~new
 call t .ma~new
 call t .list~of('return "L"')
-s.1 = 'return "S"'; s.0 = 1
+/* One tail: a stem converts its tails in an order that differs from the
+   oracle's (Deviation 1). */
+s.1 = 'return "S"'
 call t s.
 call t .queue~of('return "Q"')
 call t .mb~new

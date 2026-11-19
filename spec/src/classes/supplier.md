@@ -103,23 +103,21 @@ STAMPED first 1 p
 ```
 
 r[class.supplier.init]
-`init(items, indexes)` fills the supplier and puts it at its first entry. It
-checks in this order: more than two arguments raise `SYNTAX 93.902` before
-anything is read; a missing first argument raises `93.903`; the first argument
-is converted, as the next rule says, and an answer that is not accepted raises
-`98.913`; a missing second argument raises `93.903`; the second argument is
-converted the same way. So a call with one argument that cannot be converted
-raises `98.913`, and one with an argument that can raises `93.903`. Each
-answer must be an `Array` of one dimension, whatever its items; an answer that
-is `.nil`, a string or an array of more than one dimension raises `98.913`,
-and so does any other kind of object, a `Queue` included ([Deviation
-124](r:class.supplier.deviation.124)); the supplier then has as many entries
-as the first array has slots ([the walking
-rules](r:class.supplier.available)). `init` sent to a supplier that has been
-made already does the same again with new arrays and starts it over at its
+`init(items, indexes)` fills the supplier and puts it at its first entry. More
+than two arguments raise `SYNTAX 93.902`. A missing first or second argument
+raises `93.903`, and each argument is converted, the first before the second,
+as the next rule says, an answer that is not accepted raising `98.913`. A call
+with more than one of these faults raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. Each answer must be an `Array`
+of one dimension, whatever its items; an answer that is `.nil`, a string or an
+array of more than one dimension raises `98.913`, and so does any other kind of
+object, a `Queue` included ([Deviation 124](r:class.supplier.deviation.124));
+the supplier then has as many entries as the first array has slots ([the
+walking rules](r:class.supplier.available)). `init` sent to a supplier that has
+been made already does the same again with new arrays and starts it over at its
 first entry; the arguments are checked then as they are by `new`, and the
-arrays that `allItems` or `allIndexes` collected before are dropped
-([Deviation 138](r:class.supplier.deviation.138)).
+arrays that `allItems` or `allIndexes` collected before are dropped ([Deviation
+138](r:class.supplier.deviation.138)).
 
 ```rexx
 a = .array~of('p', 'q', 'r')
@@ -136,8 +134,7 @@ call try 's~init(.array~of(1), .object~new)'
 call try 's~init(.array~new(2, 2), .array~of(1))'
 call try 's~init(.array~of(1), .array~new(2, 2))'
 call try 's~init(.array~of(1), "text")'
-call try 's~init(.nil)'
-call try 's~init(.nil, .array~of(1), 1)'
+call try 's~init(.array~of(1), .array~of(1), 1)'
 exit
 try:
   signal on syntax name bad
@@ -159,8 +156,7 @@ s~init(.array~of(1), .object~new) => 98.913
 s~init(.array~new(2, 2), .array~of(1)) => 98.913
 s~init(.array~of(1), .array~new(2, 2)) => 98.913
 s~init(.array~of(1), "text") => ok
-s~init(.nil) => 98.913
-s~init(.nil, .array~of(1), 1) => 93.902
+s~init(.array~of(1), .array~of(1), 1) => 93.902
 ```
 
 r[class.supplier.init.convert]

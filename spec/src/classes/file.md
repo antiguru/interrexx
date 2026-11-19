@@ -278,30 +278,31 @@ writeChars string  [request STRING makeString]
 ```
 
 r[class.file.args.order]
-A method of `File` checks the number of its arguments before it reads an
-argument or sends a message to one. More arguments than the method takes raise
-`SYNTAX 93.902` and fewer than it needs `93.901`, and an omitted argument that
-the method needs before a given one raises `93.903` for `new`, `writeChars`,
-`writeLines` and `searchPath`. An omitted place at the end adds nothing to the
-count, so `.file~readChars(, )` has no argument. The values are checked after
-the count: in the example no probe is sent a message, and the log is empty.
+More arguments than a method of `File` takes raise `SYNTAX 93.902` and fewer
+than it needs `93.901`, and an omitted argument that the method needs before a
+given one raises `93.903` for `new`, `writeChars`, `writeLines` and
+`searchPath`. An omitted place at the end adds nothing to the count, so
+`.file~readChars(, )` has no argument. A call with a wrong count and another
+fault raises the error of one of them, and whether the checks after the first
+fault are made, with the messages they send, is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
-.environment~log = .array~new
 f = 'spec-file-args.tmp'
 o = .file~new(f)
-call try 'o~renameTo(.spy~new, 1)'
-call try 'o~compareTo(.spy~new, 1)'
-call try 'o~"LASTMODIFIED="(.spy~new, 1)'
-call try 'o~"LASTACCESSED="(.spy~new, 1)'
-call try '.file~new(.spy~new, .spy~new, 1)'
-call try '.file~readChars(.spy~new, 1)'
-call try '.file~readLines(.spy~new, 1)'
-call try '.file~searchPath(.spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeLines(.spy~new, .spy~new, .spy~new, 1)'
-call try '.file~writeChars(.spy~new)'
-call try '.file~writeLines(.spy~new)'
+d = .datetime~new
+call try 'o~renameTo(o, 1)'
+call try 'o~compareTo(o, 1)'
+call try 'o~"LASTMODIFIED="(d, 1)'
+call try 'o~"LASTACCESSED="(d, 1)'
+call try '.file~new(f, ".", 1)'
+call try '.file~readChars(f, 1)'
+call try '.file~readLines(f, 1)'
+call try '.file~searchPath(f, ".", 1)'
+call try '.file~writeChars(f, "x", "A", 1)'
+call try '.file~writeLines(f, .array~new, "A", 1)'
+call try '.file~writeChars(f)'
+call try '.file~writeLines(f)'
 call try '.file~writeChars(, "x")'
 call try '.file~writeChars(f, , "A")'
 call try '.file~writeLines(, .array~of("x"))'
@@ -309,7 +310,6 @@ call try '.file~writeLines(f, , "A")'
 call try '.file~searchPath(, ".")'
 call try '.file~readChars(, )'
 call try 'o~renameTo(, )'
-say '['.environment~log~toString(,' ')']'
 exit
 try:
   signal on syntax name bad
@@ -318,37 +318,21 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
-::class spy
-::method isA
-  .environment~log~append('isA')
-  return 0
-::method strip
-  .environment~log~append('strip')
-  return 'A'
-::method absolutePath
-  .environment~log~append('absolutePath')
-  return 'x'
-::method makeString
-  .environment~log~append('makeString')
-  return 'x'
-::method request
-  .environment~log~append('request')
-  return .nil
 ```
 
 ```output
-o~renameTo(.spy~new, 1) => 93.902
-o~compareTo(.spy~new, 1) => 93.902
-o~"LASTMODIFIED="(.spy~new, 1) => 93.902
-o~"LASTACCESSED="(.spy~new, 1) => 93.902
-.file~new(.spy~new, .spy~new, 1) => 93.902
-.file~readChars(.spy~new, 1) => 93.902
-.file~readLines(.spy~new, 1) => 93.902
-.file~searchPath(.spy~new, .spy~new, 1) => 93.902
-.file~writeChars(.spy~new, .spy~new, .spy~new, 1) => 93.902
-.file~writeLines(.spy~new, .spy~new, .spy~new, 1) => 93.902
-.file~writeChars(.spy~new) => 93.901
-.file~writeLines(.spy~new) => 93.901
+o~renameTo(o, 1) => 93.902
+o~compareTo(o, 1) => 93.902
+o~"LASTMODIFIED="(d, 1) => 93.902
+o~"LASTACCESSED="(d, 1) => 93.902
+.file~new(f, ".", 1) => 93.902
+.file~readChars(f, 1) => 93.902
+.file~readLines(f, 1) => 93.902
+.file~searchPath(f, ".", 1) => 93.902
+.file~writeChars(f, "x", "A", 1) => 93.902
+.file~writeLines(f, .array~new, "A", 1) => 93.902
+.file~writeChars(f) => 93.901
+.file~writeLines(f) => 93.901
 .file~writeChars(, "x") => 93.903
 .file~writeChars(f, , "A") => 93.903
 .file~writeLines(, .array~of("x")) => 93.903
@@ -356,7 +340,6 @@ o~"LASTACCESSED="(.spy~new, 1) => 93.902
 .file~searchPath(, ".") => 93.903
 .file~readChars(, ) => 93.901
 o~renameTo(, ) => 93.901
-[]
 ```
 
 ## The path and its text
@@ -1402,7 +1385,7 @@ signal on syntax name b2
 f~"LASTACCESSED="
 b2: say condition('o')~code
 signal on syntax name b3
-f~"LASTACCESSED="(1, 2)
+f~"LASTACCESSED="(.datetime~new, 2)
 b3: say condition('o')~code
 junk = f~delete
 ```
@@ -1901,19 +1884,18 @@ show:
 r[class.file.searchpath.order]
 `searchPath` reads its `path` before its `name`. A `path` that is no string is
 sent `request` with `ARRAY` first, and an answer that is no array raises
-`SYNTAX 98.913` whatever the `name` is, so `.nil` as `name` raises `88.909`
-only after the `path` was read. All the items of an array `path` are read as
-strings before any directory is searched, so a `.nil` item raises `SYNTAX
-88.909` even when a directory before it holds the file. A string `path` that
-is not empty is read after the class is sent `pathSeparator`, and before the
-`name` is read. How often an array `path` sends `pathSeparator` is not
-specified.
+`SYNTAX 98.913`. A call whose `path` and `name` are both wrong raises the error
+of one of them, as [the precedence rule](r:conv.error.precedence) says. All the
+items of an array `path` are read as strings before any directory is searched,
+so a `.nil` item raises `SYNTAX 88.909` even when a directory before it holds
+the file. A string `path` that is not empty is read after the class is sent
+`pathSeparator`, and before the `name` is read. How often an array `path` sends
+`pathSeparator` is not specified.
 
 ```rexx
 junk = .file~new('spec-file-sp-order.tmp')
 call lineout 'spec-file-sp-order.tmp', 'x'
 call lineout 'spec-file-sp-order.tmp'
-call try '.file~searchPath(.nil, .object~new)'
 call try '.file~searchPath(.nil, ".")'
 call try '.file~searchPath(.nil, .array~of("."))'
 call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil))'
@@ -1952,7 +1934,6 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-.file~searchPath(.nil, .object~new) => 98.913
 .file~searchPath(.nil, ".") => 88.909
 .file~searchPath(.nil, .array~of(".")) => 88.909
 .file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil)) => 88.909
@@ -2057,7 +2038,6 @@ call try '.file~readLines'
 call try '.file~readLines(f, 1)'
 call try '.file~readLines(.nil)'
 call try '.file~readLines(.object~new)'
-call try '.file~readLines(.nil, 1)'
 exit
 try:
   signal on syntax name bad
@@ -2083,7 +2063,6 @@ Array 5 1
 .file~readLines(f, 1) => 93.902
 .file~readLines(.nil) => 93.938
 .file~readLines(.object~new) => 93.938
-.file~readLines(.nil, 1) => 93.902
 ```
 
 r[class.file.writechars]
@@ -2091,18 +2070,19 @@ r[class.file.writechars]
 writes the string to the file, bytes unchanged, creating the file when it does
 not exist. It answers nothing, so a program that uses what it answers raises
 `SYNTAX 91.999`. The `mode` is sent `strip`, and the first character of the
-string that answers, in upper or lower case, decides: `A` appends the string
-to the content of the file and `R` replaces the content, whatever follows the
+string that answers, in upper or lower case, decides: `A` appends the string to
+the content of the file and `R` replaces the content, whatever follows the
 letter, so `Replace`, `r` and `repl!` replace. An omitted `mode` appends. Any
-other `mode`, the empty string among them, raises `SYNTAX 88.916`, and one
-that does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The
-name is read as [`readChars`](r:class.file.readchars) reads it, with the same
-error, after the `mode` has been checked. The string is read as the string
-value of an argument ([the string rule](r:class.index.string)), so `.nil` is
-written as `The NIL object` and no object is refused. A file that cannot be
-opened is not written, and nothing is reported. No argument raises
-`SYNTAX 93.901`, a call with only the name `93.901` as well, and a fourth
-argument `93.902`.
+other `mode`, the empty string among them, raises `SYNTAX 88.916`, and one that
+does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The name is
+read as [`readChars`](r:class.file.readchars) reads it, with the same error,
+and a call whose name and `mode` are both wrong raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The string is
+read as the string value of an argument ([the string
+rule](r:class.index.string)), so `.nil` is written as `The NIL object` and no
+object is refused. A file that cannot be opened is not written, and nothing is
+reported. No argument raises `SYNTAX 93.901`, a call with only the name
+`93.901` as well, and a fourth argument `93.902`.
 
 ```rexx
 f = 'spec-file-writechars.tmp'
@@ -2127,7 +2107,6 @@ say .file~new('spec-file-writechars-none.tmp')~exists
 call try '.file~writeChars(f, "x", "")'
 call try '.file~writeChars(f, "x", "Q")'
 call try '.file~writeChars(f, "x", .nil)'
-call try '.file~writeChars(.nil, "x", "Q")'
 call try '.file~writeChars(.nil, "x")'
 call try '.file~writeChars'
 call try '.file~writeChars(f)'
@@ -2155,7 +2134,6 @@ The NIL object12
 .file~writeChars(f, "x", "") => 88.916
 .file~writeChars(f, "x", "Q") => 88.916
 .file~writeChars(f, "x", .nil) => 97.1
-.file~writeChars(.nil, "x", "Q") => 88.916
 .file~writeChars(.nil, "x") => 93.938
 .file~writeChars => 93.901
 .file~writeChars(f) => 93.901
@@ -2167,22 +2145,22 @@ r[class.file.writelines]
 `writeLines` takes the name of a file, an ordered collection and an optional
 `mode`, and writes each item of the collection to the file followed by a line
 feed, creating the file when it does not exist. It answers nothing, as
-[`writeChars`](r:class.file.writechars) does, reads the `mode` as it does,
-with the same error, and appends when `mode` is omitted. The collection is
-sent `isA` with `.OrderedCollection`; one that answers false raises
-`SYNTAX 88.914`, as do a string, `.nil`, a `Set`, a `Bag`, a `Directory`, a
-`Table`, a `Stem` and a `MutableBuffer`. The checks are made in this order:
-the collection, the `mode`, the name, with the error of
-[`readChars`](r:class.file.readchars) for the name. The collection is then
-sent `request` with the argument `ARRAY`, a `List` subclass among them
+[`writeChars`](r:class.file.writechars) does, reads the `mode` as it does, with
+the same error, and appends when `mode` is omitted. The collection is sent
+`isA` with `.OrderedCollection`; one that answers false raises `SYNTAX 88.914`,
+as do a string, `.nil`, a `Set`, a `Bag`, a `Directory`, a `Table`, a `Stem`
+and a `MutableBuffer`. The name has the error of
+[`readChars`](r:class.file.readchars). A call that fails more than one of the
+checks of the collection, the `mode` and the name raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. The collection is
+then sent `request` with the argument `ARRAY`, a `List` subclass among them
 ([Deviation 118](r:class.file.deviation.118)), and the items of the array that
 answers are written in order, each as its string value ([the string
 rule](r:class.index.string)); a position with no item is left out, and an
 answer that is not an array raises `SYNTAX 98.913`. An `Array`, a `List` and a
-`Queue` are ordered collections. With `Replace` an empty collection empties
-the file, and with `Append` it leaves it as it was. No argument raises
-`SYNTAX 93.901`, one with only the name `93.901` too, and a fourth argument
-`93.902`.
+`Queue` are ordered collections. With `Replace` an empty collection empties the
+file, and with `Append` it leaves it as it was. No argument raises `SYNTAX
+93.901`, one with only the name `93.901` too, and a fourth argument `93.902`.
 
 ```rexx
 f = 'spec-file-writelines.tmp'
@@ -2211,8 +2189,6 @@ call try '.file~writeLines(f, .bag~of("s"))'
 call try '.file~writeLines(f, .table~new)'
 call try '.file~writeLines(f, .stem~new)'
 call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
-call try '.file~writeLines(.nil, "text", "Q")'
-call try '.file~writeLines(.nil, .array~of("a"), "Q")'
 call try '.file~writeLines(.nil, .array~of("a"))'
 call try '.file~writeLines(f, .array~of("a"), "")'
 call try '.file~writeLines(f, .array~of("a"), .nil)'
@@ -2263,8 +2239,6 @@ an Object
 .file~writeLines(f, .table~new) => 88.914
 .file~writeLines(f, .stem~new) => 88.914
 .file~writeLines(f, .mutablebuffer~new("abc")) => 88.914
-.file~writeLines(.nil, "text", "Q") => 88.914
-.file~writeLines(.nil, .array~of("a"), "Q") => 88.916
 .file~writeLines(.nil, .array~of("a")) => 93.938
 .file~writeLines(f, .array~of("a"), "") => 88.916
 .file~writeLines(f, .array~of("a"), .nil) => 97.1

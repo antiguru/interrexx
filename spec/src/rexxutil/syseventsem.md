@@ -38,10 +38,7 @@ first argument that is a string other than the null string, or an object whose
 string value is such a string, is a name, and asks for a semaphore that other
 programs can open, which [Deviation 43](r:util.syseventsem.deviation.43) says
 is refused. A first argument that is an object with no string value, as `.nil`
-is, raises `SYNTAX 88.909`; the third example shows it. Which handle a call
-answers is not specified. When an argument past the last one comes with an
-omitted or wrong argument, [Deviation 101](r:util.index.deviation.101) says
-which error is raised.
+is, raises `SYNTAX 88.909`; the third example shows it. Which handle a call answers is not specified. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised.
 
 ```rexx
 numeric digits 20
@@ -278,9 +275,7 @@ range raises `SYNTAX 88.907`: a word, the null string, a negative number, a
 number with a fraction and `.nil`. An object that is not a string is read by
 the string that its `STRING` method answers, as for `.nil`, so that an object
 whose `STRING` answers an open handle names that semaphore; the last example
-shows it. When an argument past the last one comes with an omitted or wrong
-argument, [Deviation 101](r:util.index.deviation.101) says which error is
-raised. A whole number that is not the handle of an open semaphore is answered
+shows it. When an argument past the last one comes with an omitted or wrong argument, [the precedence rule](r:conv.error.precedence) says which error is raised. A whole number that is not the handle of an open semaphore is answered
 as [Deviation 158](r:util.syseventsem.deviation.158) says.
 
 ```rexx
@@ -385,21 +380,18 @@ say SysCloseEventSem(h) SysCloseEventSem(h)
 
 r[util.syseventsem.open]
 SysOpenEventSem takes the name of a semaphore and answers its handle, or `0`
-for a name that it cannot open. The name is required: a call without one
-raises `SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that
-has no string value `SYNTAX 88.909`. The null string is no name of a
-semaphore, so that the call answers `0`. A name that is not the null string is
-refused ([Deviation 43](r:util.syseventsem.deviation.43)). An omitted name and
-an object that has no string value are reported before an argument that
-follows them: `SysOpenEventSem(, 1)` raises `SYNTAX 88.901` and
-`SysOpenEventSem(.nil, 1)` `SYNTAX 88.909`.
+for a name that it cannot open. The name is required: a call without one raises
+`SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that has no
+string value `SYNTAX 88.909`. The null string is no name of a semaphore, so
+that the call answers `0`. A name that is not the null string is refused
+([Deviation 43](r:util.syseventsem.deviation.43)). A call with a second
+argument and an omitted name, or a name that has no string value, raises the
+error of one of them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 call try "SysOpenEventSem()"
 call try "SysOpenEventSem(,)"
 call try "SysOpenEventSem('', 1)"
-call try "SysOpenEventSem(, 1)"
-call try "SysOpenEventSem(.nil, 1)"
 call try "SysOpenEventSem(.nil)"
 call try "SysOpenEventSem('')"
 call try "SysOpenEventSem(.mutablebuffer~new)"
@@ -417,8 +409,6 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
-88.901
-88.909
 88.909
 0
 0
@@ -460,7 +450,8 @@ e: say condition('o')~code
 r[util.syseventsem.deviation.20]
 A call of SysWaitEventSem that has no limit, and finds no post, while no other
 activity or timer of the program can post the semaphore, ends the program at
-once, with exit code `120` and a message on the error stream ([Deviation
+once, with exit code `120` and a message on the error stream, unless native
+code from outside the interpreter can run ([Deviation
 20](../deviations.md#20-a-wait-nothing-can-end)). ooRexx waits for ever.
 
 ```rexx

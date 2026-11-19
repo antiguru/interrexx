@@ -2226,7 +2226,16 @@ impl Interp {
     /// where the same directive spelling the name in lower case loads.
     pub(crate) fn resolve_library(&mut self, name: &[u8]) -> LibraryLoad {
         if let Some(held) = self.libraries.get(name) {
-            return LibraryLoad::Loaded(Rc::clone(held));
+            let held = Rc::clone(held);
+            // A loader runs with the baton vacated, so another thread may load
+            // the library through this interpreter while the load that holds
+            // it still runs the loader, and that load is to wait for it too
+            // (`r[native.loading.shared]`).
+            let identity = held.identity();
+            if crate::libraries::loader_to_await(name, identity) {
+                self.wait_vacated(|| crate::libraries::await_loader(name, identity));
+            }
+            return LibraryLoad::Loaded(held);
         }
         // An extension library this crate runs in Rust, ahead of any search.
         if let Some(library) = crate::extensions::library(name) {
@@ -2241,6 +2250,11 @@ impl Interp {
         }
         let spelling = String::from_utf8_lossy(name).into_owned();
         let opened = interrexx_api::load::open(&spelling, &self.library_search, &self.cwd);
+        // A library held, even one whose version check refused, is mapped and may have started
+        // threads that attach later (Deviation 20).
+        if !matches!(opened, Ok(None)) {
+            self.note_external_library();
+        }
         self.settle_library(name, opened)
     }
 
@@ -2253,11 +2267,21 @@ impl Interp {
         match opened {
             Ok(Some(mut library)) => {
                 library.keep_thread_context(&self.thread_context());
-                let held = self.libraries.hold(name, Rc::new(library));
+                let (held, loading) = self.hold_library(name, Box::new(library));
                 self.register_package_routines(name, &held);
+                // A live instance has loaded it already, and its loader ran
+                // there (`r[native.loading.shared]`).
+                let Some(loading) = loading else {
+                    return LibraryLoad::Loaded(held);
+                };
                 // For example, a loader that raises leaves the library held
                 // with its routines callable, and the ask raises.
-                match self.run_package_hook(&held, interrexx_api::load::Hook::Loader) {
+                // The loads of other instances, or of other threads of this
+                // one, waiting for this loader go on once it has returned or
+                // raised, which drops `loading`.
+                let ran =
+                    self.run_package_hook(&held, interrexx_api::load::Hook::Loader, Some(loading));
+                match ran {
                     Ok(()) => LibraryLoad::Loaded(held),
                     Err(failure) => LibraryLoad::Raised(failure),
                 }
@@ -2268,8 +2292,34 @@ impl Interp {
             }
             Err(mut refused) => {
                 refused.library.keep_thread_context(&self.thread_context());
-                self.libraries.hold(name, Rc::from(refused.library));
+                // A refused library runs no loader, so nothing waits on it.
+                let _ = self.hold_library(name, refused.library);
                 LibraryLoad::Version
+            }
+        }
+    }
+
+    /// [`crate::Libraries::hold`] for `name` and `library`, waiting first,
+    /// with the baton vacated, wherever another thread runs the loader of
+    /// that load: the loader may call into this interpreter meanwhile.
+    fn hold_library(
+        &mut self,
+        name: &[u8],
+        mut library: Box<interrexx_api::load::Library>,
+    ) -> (
+        Rc<interrexx_api::load::Library>,
+        Option<crate::libraries::Loading>,
+    ) {
+        loop {
+            match self.libraries.hold(name, library) {
+                Ok(held) => return held,
+                Err(back) => {
+                    let identity = back.identity();
+                    self.wait_vacated(|| {
+                        crate::libraries::await_loader(name, identity);
+                    });
+                    library = back;
+                }
             }
         }
     }

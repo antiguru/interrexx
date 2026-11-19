@@ -50,6 +50,11 @@ pub(crate) struct GuardTable {
     live: bool,
     locks: FxHashMap<GuardKey, Lock>,
     waiting: FxHashMap<ActivityId, Waiting>,
+    /// The places in a lock's queue kept for an attached activity whose
+    /// callback's send is to be sent again, by activity
+    /// ([`GuardTable::queue_retry`]). Such a place is a waiter with no wait
+    /// recorded: the activity waits for nothing until its send is served.
+    kept: FxHashMap<ActivityId, GuardKey>,
     pools: FxHashMap<GuardKey, u32>,
     last_pool: u32,
     /// Each watched variable's watchers, by owning object, in the order they
@@ -139,6 +144,101 @@ impl GuardTable {
         }
     }
 
+    /// Keeps a place in `key`'s queue for `held`, an attached activity whose
+    /// callback's send is to be sent again: at `at`, the place its wait had,
+    /// or else at the back, where its wait would have queued. Where `held`
+    /// owns `key` or has a place kept already, nothing changes, and where
+    /// nobody holds `key`, `held` owns it at count 0: the lock is granted and
+    /// not yet reserved, which the send's own reserve does.
+    pub(crate) fn queue_retry(&mut self, key: GuardKey, held: ActivityId, at: Option<usize>) {
+        match self.locks.entry(key) {
+            Entry::Vacant(vacant) => {
+                vacant.insert(Lock {
+                    owner: held,
+                    count: 0,
+                    waiters: VecDeque::new(),
+                });
+            }
+            Entry::Occupied(lock) if lock.get().owner == held => {}
+            Entry::Occupied(_) if self.kept.get(&held) == Some(&key) => {}
+            Entry::Occupied(mut lock) => {
+                let waiters = &mut lock.get_mut().waiters;
+                let at = at.map_or(waiters.len(), |at| at.min(waiters.len()));
+                waiters.insert(at, held);
+                self.kept.insert(held, key);
+            }
+        }
+    }
+
+    /// Turns `activity`'s wait for a guard lock into a place kept in that
+    /// lock's queue ([`GuardTable::queue_retry`]), where it stays until the
+    /// wait's end gives it up ([`GuardTable::give_up_place`]).
+    pub(crate) fn keep_place(&mut self, activity: ActivityId) {
+        if let Some(Waiting::Guard(key)) = self.waiting.remove(&activity) {
+            self.kept.insert(activity, key);
+        }
+    }
+
+    /// Takes `activity`'s kept place out of its lock's queue, answering where
+    /// it was.
+    pub(crate) fn give_up_place(&mut self, activity: ActivityId) -> Option<usize> {
+        let key = self.kept.remove(&activity)?;
+        let waiters = &mut self.locks.get_mut(&key)?.waiters;
+        let at = waiters.iter().position(|waiter| *waiter == activity)?;
+        waiters.remove(at);
+        Some(at)
+    }
+
+    /// Whether `next`, which a release just made `key`'s owner, had a place
+    /// kept in its queue, which the grant ends.
+    pub(crate) fn place_granted(&mut self, key: GuardKey, next: ActivityId) -> bool {
+        if self.kept.get(&next) != Some(&key) {
+            return false;
+        }
+        self.kept.remove(&next);
+        true
+    }
+
+    /// Takes back the reserve of `key` that a release just granted its new
+    /// owner, a held send's activity ([`GuardTable::queue_retry`]), so that
+    /// the send's own reserve makes it.
+    pub(crate) fn grant_unreserved(&mut self, key: GuardKey) {
+        if let Some(lock) = self.locks.get_mut(&key) {
+            lock.count = 0;
+        }
+    }
+
+    /// Whether `held` owns `key` granted and not reserved
+    /// ([`GuardTable::queue_retry`]).
+    pub(crate) fn granted_unreserved(&self, key: GuardKey, held: ActivityId) -> bool {
+        self.locks
+            .get(&key)
+            .is_some_and(|lock| lock.owner == held && lock.count == 0)
+    }
+
+    /// Passes `key`, granted to an owner that did not reserve it, to its
+    /// first waiter at count 1, answered for waking, or frees it.
+    pub(crate) fn pass_unreserved(&mut self, key: GuardKey) -> Option<ActivityId> {
+        let Entry::Occupied(mut held) = self.locks.entry(key) else {
+            return None;
+        };
+        let lock = held.get_mut();
+        if lock.count != 0 {
+            return None;
+        }
+        match lock.waiters.pop_front() {
+            Some(next) => {
+                lock.owner = next;
+                lock.count = 1;
+                Some(next)
+            }
+            None => {
+                held.remove();
+                None
+            }
+        }
+    }
+
     /// Moves `key`, held at count 1, to `to`.
     pub(crate) fn transfer(&mut self, key: GuardKey, to: ActivityId) {
         if let Some(lock) = self.locks.get_mut(&key) {
@@ -181,9 +281,16 @@ impl GuardTable {
                 if *waiter == lock.owner || !queued.insert((*waiter, *key)) {
                     return Some("a guard waiter queued twice or behind itself");
                 }
-                if self.waiting.get(waiter) != Some(&Waiting::Guard(*key)) {
+                if self.waiting.get(waiter) != Some(&Waiting::Guard(*key))
+                    && self.kept.get(waiter) != Some(key)
+                {
                     return Some("a guard waiter with no wait recorded for its guard");
                 }
+            }
+        }
+        for (activity, key) in &self.kept {
+            if !queued.contains(&(*activity, *key)) || self.waiting.contains_key(activity) {
+                return Some("a kept guard place missing from its queue or waiting too");
             }
         }
         for (activity, waiting) in &self.waiting {
@@ -520,6 +627,9 @@ impl Interp {
             self.blame_first_clause();
             return Err(Raised::deadlock().into());
         }
+        if self.retries_entry_guard(wait.key, true, None) {
+            return Err(crate::Loud::retried_send().into());
+        }
         let me = self.running_activity();
         self.activities.guards.enqueue(wait.key, me);
         if yields && self.activity.pin_depth == 0 {
@@ -536,7 +646,21 @@ impl Interp {
         if failure.is_none() || self.granted(wait.key) {
             self.activation_mut().flags.set_reserved(true);
         }
+        if failure.is_some() && self.lock_went_to_lender(wait.key, true) {
+            return Err(crate::Loud::retried_send().into());
+        }
         failure.map_or(Ok(()), Err)
+    }
+
+    /// Whether the pinned wait for `key` that just failed ended because a
+    /// release granted the lock to an activity the callback's lend stopped
+    /// ([`Interp::stop_callbacks_behind`]), and the callback's send is to be
+    /// sent again ([`Interp::retries_entry_guard`]), keeping the place in the
+    /// lock's queue that the wait had. Otherwise the wait's refusal stands.
+    pub(crate) fn lock_went_to_lender(&mut self, key: GuardKey, entered: bool) -> bool {
+        let place = self.activity.kept_place.take();
+        std::mem::take(&mut self.activity.lock_to_lender)
+            && self.retries_entry_guard(key, entered, place)
     }
 
     /// Blames the running activation's first clause for a failure raised before
@@ -618,7 +742,24 @@ impl Interp {
             return;
         }
         if let Some(next) = self.activities.guards.release(key) {
+            self.grant_guard(key, next);
+        }
+    }
+
+    /// Wakes `next`, which a release made `key`'s owner. An activity whose
+    /// place was kept for a send to be sent again is not parked: the lock
+    /// waits, granted, for its send ([`Interp::queue_held_retry`]).
+    pub(crate) fn grant_guard(&mut self, key: GuardKey, next: crate::scheduler::ActivityId) {
+        if self.activities.guards.place_granted(key, next) {
+            self.activities.guards.grant_unreserved(key);
+            self.activities.guards.woken(next);
+        } else {
             self.unpark(next);
+            self.stop_callbacks_behind(key, next);
+        }
+        // A callback held for a lock is served at the next drain.
+        if !self.activities.held.is_empty() {
+            self.timer.requests().set(crate::timer::INBOX);
         }
     }
 
@@ -936,6 +1077,59 @@ mod tests {
                 .unwrap_or_else(|| panic!("no {line} in {out}"))
         };
         assert!(at("D 1") < at("C 3"), "{out}");
+    }
+
+    /// A wait whose lock went to its lender keeps its place through the
+    /// wait's end and the send again, and the release that reaches the
+    /// place grants the lock there, with no wait recorded.
+    #[test]
+    fn a_place_kept_for_a_send_again_is_granted_in_its_turn() {
+        let (a, b, c, d) = (
+            ActivityId::test(1),
+            ActivityId::test(2),
+            ActivityId::test(3),
+            ActivityId::test(4),
+        );
+        let mut table = GuardTable::default();
+        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
+        table.enqueue(key(1), b);
+        table.enqueue(key(1), c);
+        table.enqueue(key(1), d);
+        table.keep_place(c);
+        assert_eq!(table.waiting(c), None);
+        assert_eq!(table.inconsistency(|_| true), None);
+        assert_eq!(table.give_up_place(c), Some(1));
+        table.queue_retry(key(1), c, Some(1));
+        assert_eq!(table.inconsistency(|_| true), None);
+        assert_eq!(table.release(key(1)), Some(b));
+        assert!(!table.place_granted(key(1), b));
+        table.woken(b);
+        assert_eq!(table.release(key(1)), Some(c));
+        assert!(table.place_granted(key(1), c));
+        assert_eq!(table.inconsistency(|_| true), None);
+        table.grant_unreserved(key(1));
+        assert_eq!(table.pass_unreserved(key(1)), Some(d));
+    }
+
+    /// A send again whose wait had no place takes one at the back of the
+    /// queue, once.
+    #[test]
+    fn a_send_again_with_no_place_queues_at_the_back_once() {
+        let (a, b, c) = (
+            ActivityId::test(1),
+            ActivityId::test(2),
+            ActivityId::test(3),
+        );
+        let mut table = GuardTable::default();
+        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
+        table.enqueue(key(1), b);
+        table.queue_retry(key(1), c, None);
+        table.queue_retry(key(1), c, Some(0));
+        assert_eq!(table.inconsistency(|_| true), None);
+        assert_eq!(table.release(key(1)), Some(b));
+        assert_eq!(table.release(key(1)), Some(c));
+        assert!(table.place_granted(key(1), c));
+        assert_eq!(table.release(key(1)), None);
     }
 
     #[test]

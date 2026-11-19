@@ -113,6 +113,16 @@ const COLLECTION_TIMED_PROGRAMS: &[&str] = &[
     "lang/uninit_drain_trace_line.rex",
 ];
 
+/// The programs whose stdout depends on whether a library an earlier run of
+/// this process loaded is found again by name: the stress run follows the
+/// plain run in one process, and a later load by the same name may find the
+/// copy the plain run loaded, though its own search would not reach it yet
+/// (`r[native.loading.static]`). `library_load_retried.rex` asks for
+/// `yyregexp` before its run directory holds the file, so the plain run prints
+/// `first 0` and the stress run may print `first 1`. Each still exits and
+/// writes stderr as its plain run does.
+const LIBRARY_REUSE_PROGRAMS: &[&str] = &["lang/library_load_retried.rex"];
+
 /// How many tests the subset is spread over. A program belongs to the shard
 /// its index in the list, modulo this count, names: the unit nextest runs in
 /// parallel is a test function.
@@ -144,7 +154,7 @@ fn every_l0_shard_has_a_test() {
 }
 
 /// The whole-set checks of the subset: it names programs, and every program
-/// the two committed lists name is in it, so a shard comparing its own
+/// the committed lists name is in it, so a shard comparing its own
 /// programs against the lists leaves none of the list entries unchecked.
 #[test]
 fn the_l0_subset_names_every_listed_program() {
@@ -158,6 +168,12 @@ fn the_l0_subset_names_every_listed_program() {
         assert!(
             subset.iter().any(|path| path == timed),
             "{timed} is not in the subset"
+        );
+    }
+    for reused in LIBRARY_REUSE_PROGRAMS {
+        assert!(
+            subset.iter().any(|path| path == reused),
+            "{reused} is not in the subset"
         );
     }
     for heavy in HEAVY_PROGRAMS {
@@ -247,9 +263,10 @@ fn check_l0_programs(what: &str, subset: &[String]) {
         }
         total_collections += stress.collections;
 
-        let timed = COLLECTION_TIMED_PROGRAMS.contains(&rel_path.as_str());
+        let stdout_open = COLLECTION_TIMED_PROGRAMS.contains(&rel_path.as_str())
+            || LIBRARY_REUSE_PROGRAMS.contains(&rel_path.as_str());
         if plain.exit_code != stress.exit_code
-            || (plain.stdout != stress.stdout && !timed)
+            || (plain.stdout != stress.stdout && !stdout_open)
             || plain.stderr != stress.stderr
         {
             mismatches.push(format!(

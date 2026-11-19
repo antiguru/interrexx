@@ -20,6 +20,15 @@ use crate::{Failure, Interp};
 
 impl Surface for Interp {
     fn clear_condition(&mut self) {
+        // A refusal is not a Rexx condition, so clearing does not take it
+        // back: the end of the run reports it whether or not the host cleared
+        // it. A message an attached thread sent had its refusal kept when it
+        // was held, so only the frames that were not kept then are kept now.
+        let kept_when_held = self.activity.attached && self.activity.native_handles.len() == 1;
+        if !kept_when_held && let Some(Failure::Loud(loud)) = &self.native_frame().raised {
+            let loud = loud.clone();
+            self.keep_late_failure(Failure::Loud(loud));
+        }
         let frame = self.native_frame_mut();
         frame.raised = None;
         frame.additional = None;
@@ -310,18 +319,31 @@ impl Surface for Interp {
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()> {
         let caller = self.caller();
-        match self.send_message(receiver, name, scope, arguments, caller) {
-            Ok(answer) => {
-                if let Some(answer) = answer {
-                    self.roots.activity_mut().push_temp(answer);
-                }
-                Ok(answer)
-            }
-            Err(failure) => {
-                self.hold_native_condition(failure);
-                Err(())
-            }
+        let answered = self.send_message(receiver, name, scope, arguments, caller);
+        self.sent(answered)
+    }
+
+    fn send_own(
+        &mut self,
+        receiver: ObjRef,
+        id: &str,
+        name: &[u8],
+        arguments: &[Option<ObjRef>],
+    ) -> Option<Result<Option<ObjRef>, ()>> {
+        let class = self.classes().lookup(id)?;
+        if !self.receiver_has_scope(receiver, class) {
+            return None;
         }
+        // A search that starts at a class finds that class's method ahead of
+        // a method of the same name a more derived class defines
+        // (r[class.methods.scoped]). Starting at the most derived class of
+        // the library run through `class` keeps a library subclass's own
+        // methods, such as those of the supplier a stream answers, which
+        // `class`'s methods would find uninitialised.
+        let start = self.library_scope_through(receiver, class);
+        let caller = self.caller();
+        let answered = self.send_past_own(receiver, name, start, arguments, caller);
+        Some(self.sent(answered))
     }
 
     fn store_get(&mut self, table: ObjRef, index: &[u8]) -> Option<Result<Option<ObjRef>, ()>> {
@@ -753,6 +775,12 @@ impl Surface for Interp {
         if self.libraries.get(name).is_some() {
             return false;
         }
+        // A library a host registers is native code from outside that may start threads that
+        // attach later, as a loaded one may (Deviation 20). The instance's own root library is
+        // the interpreter's.
+        if !matches!(library, Ok(None)) && name != crate::INSTANCE_LIBRARY {
+            self.note_external_library();
+        }
         match self.settle_library(name, library) {
             crate::LibraryLoad::Loaded(_) => true,
             crate::LibraryLoad::Missing => false,
@@ -791,8 +819,11 @@ impl Surface for Interp {
     }
 
     /// The running Rexx frame's external trace, `TRACE ?R` on and `TRACE O`
-    /// off. An idle activity's frame is not reached.
+    /// off. An idle activity's frame is not reached. From the first such request on, every
+    /// body compiles without settling a clause's trace setting, as after a `SetTrace`
+    /// ([`Interp::make_trace_switchable`], `r[native.threads.trace.deviation.166]`).
     fn set_trace(&mut self, _all: bool, on: bool) {
+        self.make_trace_switchable();
         self.set_external_trace(on);
     }
 
@@ -968,6 +999,25 @@ impl Interp {
             state.bytes.lend();
         }
         Some(state)
+    }
+
+    /// A send's answer as the surface reports it, rooted, or its condition
+    /// held.
+    fn sent(&mut self, answered: Result<Option<ObjRef>, Failure>) -> Result<Option<ObjRef>, ()> {
+        match answered {
+            Ok(answer) => {
+                if let Some(answer) = answer {
+                    self.roots.activity_mut().push_temp(answer);
+                }
+                Ok(answer)
+            }
+            // A send retried for a guard lock leaves nothing behind.
+            Err(_) if self.send_retried() => Err(()),
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                Err(())
+            }
+        }
     }
 
     /// A direct collection member's answer as the surface reports it, rooted,

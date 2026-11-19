@@ -45,8 +45,27 @@ impl Interp {
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
         let inbox = self.timer.inbox();
-        let (answered, pending) = {
-            let frame = self.native_token();
+        let frame = self.native_token();
+        // A classic handler is external code, which runs with the baton
+        // vacated (`r[native.threads.attach]`), except in a deterministic
+        // switch mode, which runs every native call on the baton.
+        let (answered, pending) = if self.switch.is_none() {
+            let vacated = self.vacated(frame);
+            let ran = {
+                let activation = Activation::new(Conversion {
+                    host: interrexx_api::values::HostRef::through(&vacated),
+                    strings: &mut strings,
+                });
+                activation.set_frame(frame);
+                activation.open_variable_pool();
+                let _reachable = crate::embedding::OtherRun::enter(&inbox);
+                let answered = thread.enter(&activation, |_| vacated.around(call));
+                (answered, activation.pending())
+            };
+            drop(vacated);
+            self.pop_vacancy(frame);
+            ran
+        } else {
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
@@ -389,13 +408,13 @@ impl Interp {
         for (name, value) in entries {
             let stem = match self.heap.get(value).map(|object| &object.body) {
                 Some(Body::Stem { default, tails, .. }) => {
-                    let mut held: Vec<(usize, Vec<u8>, ObjRef)> = tails
-                        .iter()
-                        .filter_map(|(tail, ordinal, value)| {
-                            value.map(|value| (ordinal, tail.to_vec(), value))
-                        })
+                    // RXSHV tail order is assignment order
+                    // (`r[class.stem.deviation.1]`).
+                    let held: Vec<(Vec<u8>, ObjRef)> = tails
+                        .in_order()
+                        .into_iter()
+                        .filter_map(|(tail, value)| Some((tail.to_vec(), value?)))
                         .collect();
-                    held.sort_by_key(|(ordinal, _, _)| *ordinal);
                     Some((*default, held))
                 }
                 _ => None,
@@ -411,7 +430,7 @@ impl Interp {
                 answered.push((name.clone(), text.clone()));
             }
             let lone = tails.is_empty();
-            for (_, tail, value) in tails {
+            for (tail, value) in tails {
                 if let Some(text) = self.pool_text(value) {
                     let mut compound = name.clone();
                     compound.extend_from_slice(&tail);

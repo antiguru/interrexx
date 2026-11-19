@@ -19,9 +19,9 @@ SUBSTR is a builtin that runs as a [String method](r:class.string.builtins),
 and `string`, its first argument, is the receiver. `string` is a
 [string](r:conv.string.null), `n` is a [position](r:conv.position.check),
 `length` is a [length](r:conv.length.check), and `pad` is a [pad](r:conv.pad).
-The arguments are checked in the [order](r:conv.check.order) the conventions
-give, and the argument count by the [builtin call
-rules](r:bif.index.call.count): two are required and four is the most.
+The arguments are checked as [the conventions](r:conv.check.order) give, and
+the argument count by the [builtin call rules](r:bif.index.call.count): two are
+required and four is the most.
 
 ```rexx
 signal on syntax name a

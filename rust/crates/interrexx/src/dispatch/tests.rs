@@ -1309,26 +1309,58 @@ fn a_stem_forwards_a_message_it_has_no_method_for_to_its_value() {
     assert_eq!(interp.to_text(answered).as_ref(), b"2");
 }
 
-/// `~identityHash` answers, and **the corpus cannot witness it**: the
-/// oracle's answer is derived from the object's address, so no differential
-/// row can compare the two and this test is the whole instrument.
+/// A string's hash code is the keyed hash of its characters, so **the corpus
+/// cannot witness it**: its characters differ between runs, and no
+/// differential row can compare them. These tests are the instrument.
 #[test]
-fn the_string_hash_matches_the_oracle_including_above_7f() {
-    // Measured with `c2x(<x>~hashCode)`, read back as little-endian.
-    assert_eq!(string_hash(b""), 0x0000_0000_0000_0000);
-    assert_eq!(string_hash(b"a"), 0x0000_0000_0000_0061);
-    assert_eq!(string_hash(b"abc"), 0x0000_0000_0001_7862);
-    assert_eq!(string_hash(b"5"), 0x0000_0000_0000_0035);
-    assert_eq!(string_hash(b"String"), 0x0000_0000_943a_4c31);
-    // Wraps the 64-bit register rather than saturating.
-    assert_eq!(
-        string_hash(b"abcdefghijklmnopqrstuvwxyz0123456789"),
-        0xa09f_2fd2_5824_3772
+fn a_string_hash_code_is_the_keyed_hash_under_the_interpreters_seed() {
+    let mut interp = Interp::new();
+    for seed in [
+        interrexx_core::HashSeed::new(1, 2),
+        interrexx_core::HashSeed::new(3, 4),
+    ] {
+        interp.hash_seed = seed;
+        let receiver = interp.text(b"abc");
+        let answered = interp
+            .send_message(receiver, b"HASHCODE", None, &[], no_caller())
+            .expect("hashCode answers")
+            .expect("hashCode answers a value");
+        assert_eq!(
+            interp.to_text(answered).as_ref(),
+            seed.hash(b"abc").to_le_bytes(),
+        );
+    }
+}
+
+/// Keys that all collide under the unkeyed `31 * h + byte` polynomial,
+/// built from the blocks `Aa` and `BB`, which hash alike under it. Under the
+/// keyed hash they spread, so they do not share one probe path.
+#[test]
+fn colliding_polynomial_keys_do_not_share_a_slot_path() {
+    fn polynomial(bytes: &[u8]) -> u64 {
+        bytes.iter().fold(0u64, |hash, &byte| {
+            hash.wrapping_mul(31).wrapping_add(u64::from(byte))
+        })
+    }
+    let keys: Vec<Vec<u8>> = (0..4096u32)
+        .map(|bits| {
+            (0..12)
+                .flat_map(|at| if bits >> at & 1 == 0 { *b"Aa" } else { *b"BB" })
+                .collect()
+        })
+        .collect();
+    let colliding: std::collections::HashSet<u64> =
+        keys.iter().map(|key| polynomial(key)).collect();
+    assert_eq!(colliding.len(), 1, "the keys collide unkeyed");
+    let seed = interrexx_core::HashSeed::new(0x5eed, 0xcafe);
+    let hashes: std::collections::HashSet<u64> =
+        keys.iter().map(|key| string_hash(seed, key)).collect();
+    assert!(
+        hashes.len() * 100 >= keys.len() * 99,
+        "{} distinct hashes for {} keys",
+        hashes.len(),
+        keys.len()
     );
-    // Signed: one byte of 0xff contributes -1, not 255.
-    assert_eq!(string_hash(b"\xff"), 0xffff_ffff_ffff_ffff);
-    assert_eq!(string_hash(b"\x80"), 0xffff_ffff_ffff_ff80);
-    assert_eq!(string_hash(b"\x7f"), 0x0000_0000_0000_007f);
 }
 
 /// `==` and not `=`, and `numeric digits 20` rather than the default:

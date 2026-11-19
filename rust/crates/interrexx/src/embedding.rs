@@ -216,7 +216,8 @@ pub fn rexx_start(start: Start) -> Started {
         .with_arguments(arguments)
         .with_start(start)
         .with_exits(exits)
-        .with_classic_thread(crate::signal::current_thread());
+        .with_classic_thread(crate::signal::current_thread())
+        .with_outside_host();
     if let Some(environment) = environment {
         invocation = invocation.with_address(environment);
     }
@@ -506,10 +507,7 @@ pub fn classic_halt(thread: usize) -> bool {
     let Some(inbox) = inbox else {
         return thread == current && interrexx_api::ffi::classic::halt_calling();
     };
-    inbox.post(crate::timer::Posted::Halt);
-    inbox
-        .requests()
-        .set(crate::timer::HALT | crate::timer::BOUNDARY);
+    inbox.post_halt();
     true
 }
 
@@ -570,6 +568,9 @@ struct Shared {
     state: std::sync::Mutex<State>,
     changed: std::sync::Condvar,
     inbox: std::sync::OnceLock<crate::sync::Arc<crate::timer::Inbox<crate::timer::Posted>>>,
+    /// The address of the interpreter's instance, which the instance members
+    /// name it by.
+    instance: std::sync::OnceLock<usize>,
     /// What the interpreter thread left unwritten, once it has ended.
     outcome: std::sync::Mutex<Option<crate::Outcome>>,
 }
@@ -591,7 +592,7 @@ impl Shared {
     }
 }
 
-/// The live instances, by root thread context address.
+/// The live instances, by instance address.
 static INSTANCES: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
     std::sync::Mutex::new(Vec::new());
 
@@ -601,10 +602,10 @@ fn instances() -> std::sync::MutexGuard<'static, Vec<(usize, std::sync::Arc<Shar
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn instance(context: usize) -> Option<std::sync::Arc<Shared>> {
+fn instance(address: usize) -> Option<std::sync::Arc<Shared>> {
     instances()
         .iter()
-        .find(|(at, _)| *at == context)
+        .find(|(at, _)| *at == address)
         .map(|(_, shared)| std::sync::Arc::clone(shared))
 }
 
@@ -625,15 +626,20 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     let shared = std::sync::Arc::new(Shared::default());
     let starting = std::sync::Arc::clone(&shared);
     let ending = std::sync::Arc::clone(&shared);
+    // This thread waits for the instance to start, so the instance must not
+    // wait for a library hook this thread is running.
+    let lineage = crate::libraries::lineage();
     let spawned = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(crate::INTERPRETER_STACK_BYTES)
         .spawn(move || {
+            crate::libraries::adopt(lineage);
             crate::signal::receive();
             let (outcome, kept) = crate::run_instance(
                 options,
-                Box::new(move |context, inbox| {
+                Box::new(move |context, instance, inbox| {
                     let _ = starting.inbox.set(inbox);
+                    let _ = starting.instance.set(instance);
                     STARTING
                         .lock()
                         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -684,7 +690,11 @@ pub(crate) fn wait_in_root(context: usize) {
         };
         starting.remove(at).1
     };
-    instances().push((context, std::sync::Arc::clone(&shared)));
+    let address = *shared
+        .instance
+        .get()
+        .expect("the interpreter thread sets the instance before its root waits here");
+    instances().push((address, std::sync::Arc::clone(&shared)));
     let mut state = shared.state();
     state.context = Some(context);
     shared.changed.notify_all();
@@ -720,8 +730,8 @@ struct Embedder;
 static EMBEDDER: Embedder = Embedder;
 
 impl interrexx_api::ffi::Embedder for Embedder {
-    fn terminate(&self, context: usize) -> bool {
-        let Some(shared) = instance(context) else {
+    fn terminate(&self, address: usize) -> bool {
+        let Some(shared) = instance(address) else {
             return false;
         };
         {
@@ -733,22 +743,70 @@ impl interrexx_api::ffi::Embedder for Embedder {
             shared.changed.notify_all();
         }
         end(&shared);
-        instances().retain(|(at, _)| *at != context);
+        instances().retain(|(at, _)| *at != address);
         true
     }
 
-    fn halt(&self, context: usize) -> bool {
-        let Some(shared) = instance(context) else {
+    fn halt(&self, address: usize) -> bool {
+        let Some(shared) = instance(address) else {
             return false;
         };
         if let Some(inbox) = shared.inbox.get() {
-            inbox.post(crate::timer::Posted::Halt);
-            inbox.requests().set(crate::timer::HALT);
+            inbox.post_halt();
         }
         true
     }
 
-    fn set_trace(&self, _context: usize, _on: bool) -> bool {
-        false
+    fn set_trace(&self, address: usize, on: bool) -> bool {
+        let Some(shared) = instance(address) else {
+            return false;
+        };
+        if let Some(inbox) = shared.inbox.get() {
+            inbox.post_trace_all(on);
+        }
+        true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use interrexx_api::ffi::Embedder as _;
+
+    /// An instance a host created, live in the process, leaves the refusal of a wait nothing can
+    /// end on in another interpreter of the same process, which no host runs (Deviation 20).
+    #[test]
+    fn an_instance_leaves_the_refusal_on_in_another_interpreter() {
+        // The instance installs the signal handlers, which stay for the
+        // process, and holds the round while it lives.
+        if !crate::test_process::alone(
+            "embedding::tests::an_instance_leaves_the_refusal_on_in_another_interpreter",
+        ) {
+            return;
+        }
+        assert!(super::create_instance(super::InstanceOptions::default()).is_some());
+        let outcome = crate::run_program(
+            "refused.rex",
+            b"say 'waits'\nsay .message~new(.object~new, 'string')~result\n".to_vec(),
+            // A bound, so that a wait not refused fails the test rather than hanging it.
+            crate::Invocation::none().with_deadline(std::time::Duration::from_secs(10)),
+        );
+        let address = super::instances()
+            .first()
+            .map(|(address, _)| *address)
+            .expect("the instance is live while the other interpreter runs");
+        assert!(super::EMBEDDER.terminate(address));
+        assert_eq!(
+            (
+                outcome.exit_code,
+                String::from_utf8_lossy(&outcome.stdout).into_owned(),
+                String::from_utf8_lossy(&outcome.stderr).into_owned(),
+            ),
+            (
+                120,
+                "waits\n".to_owned(),
+                "interrexx: a wait that nothing left to run can end is not implemented\n"
+                    .to_owned(),
+            )
+        );
     }
 }

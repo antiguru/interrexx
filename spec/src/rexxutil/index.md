@@ -2,7 +2,7 @@
 element: "RexxUtil"
 kind: chapter
 rexxref: "Rexx Utilities (RexxUtil); Rexx Utilities (RexxUtil) > A Note on Error Codes"
-deviations: [34, 101]
+deviations: [34]
 ---
 
 # RexxUtil
@@ -173,21 +173,22 @@ The RexxUtil functions follow [the native call rule](r:bif.index.call.native),
 not the rules for the number of arguments of the other builtins: a required
 argument that is not given, or is omitted, raises `SYNTAX 88.901`; an argument
 past the last one of the function raises `SYNTAX 88.922`; an argument that is
-an object other than a string is replaced by the string that its `request`
-with the argument `STRING` answers, and an object that has none raises `SYNTAX
+an object other than a string is replaced by the string that its `request` with
+the argument `STRING` answers, and an object that has none raises `SYNTAX
 88.909`, whatever its `STRING` method answers. Some arguments fall back to the
-`STRING` method when `request` answers no string: the stem name of
-SysStemCopy, SysStemDelete and SysStemInsert, the whole numbers of
-SysStemCopy, SysStemDelete, SysStemInsert and SysStemSort, the `mode` of
-SysMkDir, the number of SysGetErrorText, the `num` and the inserts of
-SysGetMessage, the `set`, the `num` and the inserts of SysGetMessageX, the
-arguments of SysSetPriority, a semaphore handle and a timeout, and the items
-of the `substitutions` of SysFormatMessage. The page of each says so. An
-omitted place at the end of the call adds nothing to the count, and an
-optional argument that is omitted takes the default that the function's page
-states. Each page says what its function reads as a string and what it reads
-as a number, and which other error codes it raises. The order of these checks
-is the subject of [Deviation 101](r:util.index.deviation.101).
+`STRING` method when `request` answers no string: the stem name of SysStemCopy,
+SysStemDelete and SysStemInsert, the whole numbers of SysStemCopy,
+SysStemDelete, SysStemInsert and SysStemSort, the `mode` of SysMkDir, the
+number of SysGetErrorText, the `num` and the inserts of SysGetMessage, the
+`set`, the `num` and the inserts of SysGetMessageX, the arguments of
+SysSetPriority, a semaphore handle and a timeout, and the items of the
+`substitutions` of SysFormatMessage. The page of each says so. An omitted place
+at the end of the call adds nothing to the count, and an optional argument that
+is omitted takes the default that the function's page states. Each page says
+what its function reads as a string and what it reads as a number, and which
+other error codes it raises. A call that fails more than one of these checks
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 call try "SysFileExists()"
@@ -699,88 +700,3 @@ call SysRmDir 'c1zqidxdd'
 1 1
 ```
 
-r[util.index.deviation.101]
-The functions check their arguments in the order that every other builtin
-follows: the number of arguments first, so that an argument past the last one
-raises `SYNTAX 88.922` before an omitted or wrong argument is reported
-([Deviation 101](r:bif.index.call.native.deviation.101)). ooRexx reports an
-omitted argument, an object whose `request` answers no string, a stem name of
-SysStemCopy, SysStemDelete or SysStemInsert that fails its check (SysStemSort
-checks its stem after the count, as interrexx does), a whole-number argument
-of SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its
-check, an argument that is not a whole number, a semaphore handle that is
-negative, a `substitutions` of SysFormatMessage that has no `MAKEARRAY`
-method, and a `mode` of SysMkDir that fails any of its checks before the
-count, and the count before a `filler` or an `option` that it does not allow.
-SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
-report an omitted name (`SYNTAX 88.901`) and an object that has no string
-value (`SYNTAX 88.909`) before the count, as [the event
-semaphore](syseventsem.md) and [the mutex semaphore](sysmutexsem.md) pages
-show.
-
-```rexx
-signal on syntax name a
-say SysFileExists(, 'x')
-a: say condition('o')~code
-signal on syntax name b
-say SysFileExists(.nil, 'x')
-b: say condition('o')~code
-signal on syntax name c
-say SysFileCopy(, 'x', 'y')
-c: say condition('o')~code
-signal on syntax name d
-say SysMkDir('c1zqidxdm', 'x', 'y')
-d: say condition('o')~code
-signal on syntax name f
-say SysTempFileName('c1zqidx?', .nil, 'y')
-f: say condition('o')~code
-signal on syntax name g
-say SysStemDelete('s.a', 1, 1, 1)
-g: say condition('o')~code
-signal on syntax name h
-say SysStemDelete('s.', 'x', 1, 1)
-h: say condition('o')~code
-signal on syntax name i
-say SysStemDelete('s.', 0, 1, 1)
-i: say condition('o')~code
-signal on syntax name j
-say SysGetErrorText('abc', 3)
-j: say condition('o')~code
-signal on syntax name k
-say SysGetKey(.nil, 'x')
-k: say condition('o')~code
-signal on syntax name l
-say SysGetErrorText('99999999999', 3)
-l: say condition('o')~code
-signal on syntax name m
-say SysFormatMessage(.nil, 'x', 'y')
-m: say condition('o')~code
-signal on syntax name n
-say SysFormatMessage('a', .c6zqm~new, 'c')
-n: say condition('o')~code
-signal on syntax name o
-say SysPostEventSem('-1', 'y')
-o: say condition('o')~code
-say SysIsFileDirectory('c1zqidxdm')
-::class c6zqm
-::method makestring
-  return 'M'
-```
-
-```output
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-88.922
-0
-```

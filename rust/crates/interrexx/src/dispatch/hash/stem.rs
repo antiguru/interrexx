@@ -1,4 +1,4 @@
-//! `Stem`'s primitive methods, and the tail tree that orders a stem's tails.
+//! `Stem`'s primitive methods.
 
 use super::{
     Arity, ArrayArgument, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised,
@@ -6,19 +6,6 @@ use super::{
 };
 
 // ---- `Stem` ----
-
-/// The stem's tails, as (name, value) pairs in insertion order, which is
-/// what the tree is built from, with a dropped tail's `None` kept.
-fn stem_tails(interp: &Interp, receiver: ObjRef) -> Vec<(Vec<u8>, Option<ObjRef>)> {
-    match interp.heap.get(receiver).map(|object| &object.body) {
-        Some(Body::Stem { tails, .. }) => tails
-            .in_order()
-            .into_iter()
-            .map(|(name, value)| (name.to_vec(), value))
-            .collect(),
-        _ => Vec::new(),
-    }
-}
 
 /// The value a tail read answers.
 fn stem_read(interp: &mut Interp, receiver: ObjRef, tail: &[u8]) -> ObjRef {
@@ -207,198 +194,17 @@ fn stem_refusal(interp: &mut Interp, receiver: ObjRef, method: &[u8]) -> Failure
     )
 }
 
-/// One node of the stem's tail tree, two links, a parent, and a depth per side
-/// rather than one height.
-struct TailNode {
-    tail: usize,
-    left: Option<usize>,
-    right: Option<usize>,
-    parent: Option<usize>,
-    left_depth: u16,
-    right_depth: u16,
-}
-
-/// **length first, bytes second**, which is why the tree's order is not
-/// alphabetical.
-fn tail_order(left: &[u8], right: &[u8]) -> std::cmp::Ordering {
-    left.len().cmp(&right.len()).then_with(|| left.cmp(right))
-}
-
-/// The order a stem answers its tails in: post-order over the tree the
-/// insertions built.
-fn stem_order(tails: &[(Vec<u8>, Option<ObjRef>)]) -> Vec<usize> {
-    let mut nodes: Vec<TailNode> = Vec::with_capacity(tails.len());
-    let mut root: Option<usize> = None;
-    for (at, (tail, _)) in tails.iter().enumerate() {
-        let mut anchor = root;
-        let mut previous = None;
-        let mut side = std::cmp::Ordering::Equal;
-        while let Some(node) = anchor {
-            side = tail_order(tail, &tails[nodes[node].tail].0);
-            match side {
-                std::cmp::Ordering::Greater => {
-                    previous = Some(node);
-                    anchor = nodes[node].right;
-                }
-                std::cmp::Ordering::Less => {
-                    previous = Some(node);
-                    anchor = nodes[node].left;
-                }
-                std::cmp::Ordering::Equal => break,
-            }
-        }
-        if anchor.is_some() {
-            continue;
-        }
-        nodes.push(TailNode {
-            tail: at,
-            left: None,
-            right: None,
-            parent: previous,
-            left_depth: 0,
-            right_depth: 0,
-        });
-        let fresh = nodes.len() - 1;
-        match previous {
-            None => root = Some(fresh),
-            Some(parent) => {
-                if side == std::cmp::Ordering::Greater {
-                    nodes[parent].right = Some(fresh);
-                } else {
-                    nodes[parent].left = Some(fresh);
-                }
-                rebalance(&mut nodes, &mut root, fresh);
-            }
-        }
-    }
-    let Some(root) = root else {
-        return Vec::new();
-    };
-    let mut order = Vec::with_capacity(nodes.len());
-    let mut cursor = Some(first_tail(&nodes, root));
-    while let Some(node) = cursor {
-        order.push(nodes[node].tail);
-        let Some(parent) = nodes[node].parent else {
-            break;
-        };
-        cursor = if nodes[parent].right == Some(node) {
-            Some(parent)
-        } else if let Some(right) = nodes[parent].right {
-            Some(first_tail(&nodes, right))
-        } else {
-            Some(parent)
-        };
-    }
-    order
-}
-
-/// As far left as possible, then one step right, repeatedly -- the first node
-/// of a post-order walk.
-fn first_tail(nodes: &[TailNode], mut node: usize) -> usize {
-    loop {
-        while let Some(left) = nodes[node].left {
-            node = left;
-        }
-        match nodes[node].right {
-            None => return node,
-            Some(right) => node = right,
-        }
-    }
-}
-
-/// One rotation, and the depth bookkeeping that goes with it.
-fn move_tail(
-    nodes: &mut [TailNode],
-    root: &mut Option<usize>,
-    anchor: usize,
-    toright: bool,
-) -> usize {
-    let original = nodes[anchor].parent;
-    let work = if toright {
-        let work = nodes[anchor].left.expect("a left child to rotate");
-        let moved = nodes[work].right;
-        nodes[anchor].left = moved;
-        nodes[anchor].left_depth = nodes[work].right_depth;
-        if let Some(moved) = moved {
-            nodes[moved].parent = Some(anchor);
-        }
-        nodes[work].right = Some(anchor);
-        nodes[work].right_depth += 1;
-        work
-    } else {
-        let work = nodes[anchor].right.expect("a right child to rotate");
-        let moved = nodes[work].left;
-        nodes[anchor].right = moved;
-        nodes[anchor].right_depth = nodes[work].left_depth;
-        if let Some(moved) = moved {
-            nodes[moved].parent = Some(anchor);
-        }
-        nodes[work].left = Some(anchor);
-        nodes[work].left_depth += 1;
-        work
-    };
-    nodes[work].parent = original;
-    nodes[anchor].parent = Some(work);
-    match original {
-        None => *root = Some(work),
-        Some(parent) => {
-            if nodes[parent].left == Some(anchor) {
-                nodes[parent].left = Some(work);
-            } else {
-                nodes[parent].right = Some(work);
-            }
-        }
-    }
-    work
-}
-
-/// Walk up from the new node, recording the depth on the side it came from and
-/// rotating once wherever that side has run more than one deeper than the
-/// other.
-fn rebalance(nodes: &mut [TailNode], root: &mut Option<usize>, node: usize) {
-    if *root == Some(node) {
-        return;
-    }
-    let mut node = node;
-    let mut parent = nodes[node].parent;
-    let mut depth: u16 = 1;
-    while let Some(mut current) = parent {
-        // **The rebalancing walk has no early return.** A test of the form `if
-        // depth > workingDepth { move } else { if workingDepth < depth { return
-        // } }` repeats the outer condition in the inner one, which can never
-        // hold in the `else`, so the walk always runs to the root. Keeping the
-        // dead branch changes no shape and clippy names it as `same condition`,
-        // so it is left out.
-        if nodes[current].right == Some(node) {
-            nodes[current].right_depth = depth;
-            if depth > nodes[current].left_depth + 1 {
-                current = move_tail(nodes, root, current, false);
-                depth = nodes[current].right_depth;
-            }
-        } else {
-            nodes[current].left_depth = depth;
-            if depth > nodes[current].right_depth + 1 {
-                current = move_tail(nodes, root, current, true);
-                depth = nodes[current].left_depth;
-            }
-        }
-        depth += 1;
-        node = current;
-        parent = nodes[current].parent;
-    }
-}
-
 /// Every tail that holds something, which is what `items` counts and
-/// `allIndexes` names.
+/// `allIndexes` names, in assignment order (`r[class.stem.deviation.1]`).
 fn stem_live(interp: &Interp, receiver: ObjRef) -> Vec<(Vec<u8>, ObjRef)> {
-    let tails = stem_tails(interp, receiver);
-    stem_order(&tails)
-        .into_iter()
-        .filter_map(|at| {
-            let (name, value) = &tails[at];
-            Some((name.clone(), (*value)?))
-        })
-        .collect()
+    match interp.heap.get(receiver).map(|object| &object.body) {
+        Some(Body::Stem { tails, .. }) => tails
+            .in_order()
+            .into_iter()
+            .filter_map(|(name, value)| Some((name.to_vec(), value?)))
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 fn native_stem_all_indexes(
@@ -497,7 +303,7 @@ fn native_stem_request(
 }
 
 /// A fresh `Directory` holding one entry per tail that HAS a value, keyed by
-/// the tail's name, added in the tail tree's own `first`/`next` order.
+/// the tail's name, added in assignment order (`r[class.stem.deviation.1]`).
 fn native_stem_to_directory(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -697,7 +503,7 @@ fn stem_write(interp: &mut Interp, receiver: ObjRef, tail: Vec<u8>, value: Optio
     if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(receiver).map(|held| &mut held.body)
     {
         // The ordinal survives a drop and an overwrite -- see `Body::Stem`.
-        tails.set(&tail, value);
+        tails.set(interp.hash_seed, &tail, value);
         interp.stem_changed(receiver);
     }
 }

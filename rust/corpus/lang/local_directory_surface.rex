@@ -5,7 +5,8 @@
  *
  * STDQUE's item is the external queue, which this crate does not build, so
  * the reads of indexes and counts come first and the reads that answer or
- * compare items come after STDQUE is replaced.
+ * compare items come after STDQUE is replaced. Where a program-added entry
+ * lands is Deviation 33, so the list taken after the puts is sorted.
  */
 
 l = .local
@@ -42,7 +43,7 @@ say 'syscargs ' l~syscargs~class~id l~syscargs~dimension
 l~myEntry = 'mine'
 l~put('kept as written', 'lower')
 say 'added    ' .myEntry l['MYENTRY'] l['lower'] l~hasIndex('LOWER')
-say 'order    ' l~allIndexes~makeString('L', ' ')
+say 'order    ' l~allIndexes~sort~makeString('L', ' ')
 l~setEntry('myEntry')
 say 'no value ' l~hasIndex('MYENTRY') l~items .myEntry
 say 'removeEnt' l~removeEntry('LOWER') l~remove('lower') l~items

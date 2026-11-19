@@ -22,6 +22,11 @@ fn body_variant_name(body: &Body) -> &'static str {
     }
 }
 
+/// A tail a read found holding a value: the stem, the tail's ordinal, and
+/// the epoch of the stem's tails that ordinal is numbered under
+/// ([`Interp::stem_set_held`]).
+pub(crate) type HeldTail = (ObjRef, usize, u64);
+
 /// The stem an `EXPOSE` made `key` of a stem whose exposed tails are
 /// `exposed` belong to, if one did.
 #[inline(always)]
@@ -298,28 +303,30 @@ impl Interp {
         (value, novalue)
     }
 
-    /// [`Interp::stem_get_at`], also answering the stem and the tail's
-    /// ordinal where the tail holds a value of its own: what a later write of
-    /// the same tail can use in place of the key ([`Interp::stem_set_held`]).
+    /// [`Interp::stem_get_at`], also answering the stem, the tail's ordinal
+    /// and the epoch it is numbered under, where the tail holds a value of
+    /// its own: what a later write of the same tail can use in place of the
+    /// key ([`Interp::stem_set_held`]).
     pub(crate) fn stem_get_holding(
         &mut self,
         stem_name: &[u8],
         at: Option<usize>,
         key: &[u8],
-    ) -> (ObjRef, Novalue, Option<(ObjRef, usize)>) {
+    ) -> (ObjRef, Novalue, Option<HeldTail>) {
         self.stem_lookup::<true>(stem_name, at, key)
     }
 
-    /// Writes `value` to the tail at `ordinal` of `stem`, the pair
+    /// Writes `value` to the tail at `ordinal` of `stem`, the triple
     /// [`Interp::stem_get_holding`] answered, where that is still the tail
     /// `key` names: the stem variable still holds `stem` (the handle carries
-    /// its generation), the tail is not exposed, and the slot still holds a
-    /// value. Answers `false`, writing nothing, where any of that fails.
+    /// its generation), the stem's ordinals are still numbered under `epoch`,
+    /// the tail is not exposed, and the slot still holds a value. Answers
+    /// `false`, writing nothing, where any of that fails.
     pub(crate) fn stem_set_held(
         &mut self,
         stem_name: &[u8],
         at: Option<usize>,
-        (stem, ordinal): (ObjRef, usize),
+        (stem, ordinal, epoch): HeldTail,
         key: &[u8],
         value: ObjRef,
     ) -> bool {
@@ -333,10 +340,16 @@ impl Interp {
         else {
             return false;
         };
-        if exposed_home(exposed, key).is_some() || tails.value_at(ordinal).is_none() {
+        // A compaction or a clear since the read renumbered the ordinals, so
+        // `ordinal` may now be another tail's. A tail dropped since the read
+        // left a tombstone, or a hole where it was assigned again, and
+        // `set_at` refuses both.
+        if exposed_home(exposed, key).is_some()
+            || tails.epoch() != epoch
+            || !tails.set_at(ordinal, Some(value))
+        {
             return false;
         }
-        tails.set_at(ordinal, Some(value));
         self.stem_changed(stem);
         true
     }
@@ -348,7 +361,7 @@ impl Interp {
         stem_name: &[u8],
         at: Option<usize>,
         key: &[u8],
-    ) -> (ObjRef, Novalue, Option<(ObjRef, usize)>) {
+    ) -> (ObjRef, Novalue, Option<HeldTail>) {
         let slot = self.stem_slot(stem_name, at);
         let frame = self.activation().frame;
         let stem_value = match self.variable(frame, slot) {
@@ -382,7 +395,9 @@ impl Interp {
                 (self.tail_value(home, key), None)
             } else {
                 match tails.lookup(key) {
-                    Some((ordinal, Some(value))) => (Some(value), Some((stem_value, ordinal))),
+                    Some((ordinal, Some(value))) => {
+                        (Some(value), Some((stem_value, ordinal, tails.epoch())))
+                    }
                     Some((_, None)) => (None, None), // the tombstone: absent from the default too
                     None => (*default, None),        // an untouched tail falls back to the default
                 }
@@ -474,12 +489,12 @@ impl Interp {
                     self.set_tail(home, key, Some(value));
                     return;
                 }
-                tails.set(key, Some(value));
+                tails.set(self.hash_seed, key, Some(value));
                 self.stem_changed(stem_value);
             }
             None => {
                 let mut tails = interrexx_core::Tails::new();
-                tails.set(key, Some(value));
+                tails.set(self.hash_seed, key, Some(value));
                 let stem = self.alloc_with(
                     BehaviourId::STEM,
                     Body::Stem {
@@ -522,8 +537,9 @@ impl Interp {
             self.set_tail(home, key, None);
             return;
         }
-        // A drop keeps the tail's place, so the ordinal survives it.
-        tails.set(key, None);
+        // A drop keeps the tail's place, so the ordinal survives it until the
+        // tail is assigned again, which moves it to the end.
+        tails.set(self.hash_seed, key, None);
         self.stem_changed(stem_value);
     }
 
@@ -592,7 +608,7 @@ impl Interp {
         if let Some(Body::Stem { default, tails, .. }) =
             self.heap.get_mut(home).map(|object| &mut object.body)
         {
-            tails.insert_if_absent(key, *default);
+            tails.insert_if_absent(self.hash_seed, key, *default);
         }
         let local = self.read_stem(stem_name);
         // `expose a. a.1`: the local stem is the object's own.
@@ -604,7 +620,7 @@ impl Interp {
         {
             // Held as a tail with no value of its own, which keeps its place
             // among the stem's tails and leaves it out of `items`.
-            tails.insert_if_absent(key, None);
+            tails.insert_if_absent(self.hash_seed, key, None);
             exposed
                 .get_or_insert_with(Default::default)
                 .insert(key.to_vec(), home);
@@ -737,7 +753,7 @@ impl Interp {
         if let Some(Body::Stem { tails, .. }) =
             self.heap.get_mut(stem).map(|object| &mut object.body)
         {
-            tails.set(key, value);
+            tails.set(self.hash_seed, key, value);
             self.stem_changed(stem);
         }
     }
@@ -942,6 +958,66 @@ mod tests {
             tails.clear();
         }
         assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+    }
+
+    /// The write by ordinal refuses, writing nothing, where the stem was
+    /// emptied in place since the read and another tail was assigned at the
+    /// held ordinal.
+    #[test]
+    fn a_held_tail_is_not_written_after_a_clear_reused_its_ordinal() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let one = interp.text(b"one");
+        let two = interp.text(b"two");
+        interp.stem_set(b"T.", b"A", one);
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        let stem = held.0;
+        if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(stem).map(|o| &mut o.body) {
+            tails.clear();
+        }
+        // B is the first tail after the clear, so it takes A's held ordinal.
+        interp.stem_set(b"T.", b"B", one);
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+        assert_eq!(interp.stem_get(b"T.", b"B").0, one);
+        assert_eq!(interp.stem_get(b"T.", b"A").1, Novalue::Unset);
+    }
+
+    /// The write by ordinal refuses, writing nothing, where the stem's tails
+    /// were renumbered since the read: a compaction between them may have
+    /// moved another tail to the held ordinal.
+    #[test]
+    fn a_held_tail_is_not_written_after_compaction() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let one = interp.text(b"one");
+        let two = interp.text(b"two");
+        let others: [&[u8]; 5] = [b"B", b"C", b"D", b"E", b"F"];
+        interp.stem_set(b"T.", b"B", one);
+        interp.stem_set(b"T.", b"A", one);
+        for other in &others[1..] {
+            interp.stem_set(b"T.", other, one);
+        }
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        let stem = held.0;
+        let epoch = |interp: &Interp| match interp.heap.get(stem).map(|o| &o.body) {
+            Some(Body::Stem { tails, .. }) => tails.epoch(),
+            _ => unreachable!("T. is a stem"),
+        };
+        let before = epoch(&interp);
+        // B, ahead of A, goes to the end and leaves a hole, so the compaction
+        // moves A down and some other tail onto A's held ordinal.
+        let mut cycles = 0;
+        while epoch(&interp) == before {
+            interp.stem_drop_tail(b"T.", b"B");
+            interp.stem_set(b"T.", b"B", one);
+            cycles += 1;
+            assert!(cycles < 1_000, "no compaction after {cycles} cycles");
+        }
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+        assert_eq!(interp.stem_get(b"T.", b"A").0, one);
+        for other in others {
+            assert_eq!(interp.stem_get(b"T.", other).0, one);
+        }
     }
 
     /// Parses `text` (one `SAY` of a compound expression) and returns its

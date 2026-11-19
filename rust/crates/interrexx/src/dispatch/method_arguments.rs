@@ -285,7 +285,7 @@ pub(super) fn whole_method_argument(
     };
     let number = match interp.to_number(value) {
         Ok(number) => Some(number),
-        Err(_) => interp.requested_number(value)?,
+        Err(_) => interp.requested_argument_number(value)?,
     };
     match number.and_then(|number| number.whole_value(METHOD_ARGUMENT_DIGITS)) {
         Some(whole) => Ok(Some(whole)),

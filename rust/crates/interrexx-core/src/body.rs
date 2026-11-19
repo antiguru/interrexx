@@ -77,14 +77,11 @@ pub enum Body {
     Stem {
         name: Box<[u8]>,
         default: Option<ObjRef>,
-        /// **Each tail's insertion ordinal is load-bearing.** A stem's tails are held in a balanced tree keyed
-        /// on (length, bytes) and walked in POST-ORDER, so the order
-        /// `allIndexes` and `supplier` answer in depends on the shape the
-        /// insertions built and not on the tail names alone -- measured, the
-        /// same five tails inserted forwards and backwards answer
-        /// `Q,MANGO,LONGKEYNAME,ZEBRA,APPLE` and
-        /// `APPLE,Q,ZEBRA,LONGKEYNAME,MANGO`. A `HashMap` cannot say which came
-        /// first, so [`crate::Tails`] keeps the ordinal with the value.
+        /// **Each tail's insertion ordinal is load-bearing.** `allIndexes`,
+        /// `supplier` and the other listings answer the tails in assignment
+        /// order (`r[class.stem.deviation.1]`), and a
+        /// `HashMap` cannot say which came first, so [`crate::Tails`] keeps
+        /// the ordinal with the value.
         tails: crate::Tails,
         /// The tails an `EXPOSE` or `PROCEDURE EXPOSE` made another stem's,
         /// each naming that stem: an exposed compound element's real element.
@@ -999,6 +996,24 @@ impl ScopePools {
         }
     }
 
+    /// Binds `value` to the entry of `scope`'s pool whose name is `name`
+    /// itself, the same allocation rather than equal bytes, and answers
+    /// whether there was one. A caller that bound a name from a copy it keeps
+    /// finds its entry this way without comparing any name's bytes.
+    #[inline]
+    pub fn set_shared(&mut self, scope: ObjRef, name: &Rc<[u8]>, value: ObjRef) -> bool {
+        let Some((_, pool)) = self.pools.iter_mut().find(|(s, _)| *s == scope) else {
+            return false;
+        };
+        match pool.iter_mut().find(|(bound, _)| Rc::ptr_eq(bound, name)) {
+            Some(entry) => {
+                entry.1 = value;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Returns `name` to the uninitialised state in `scope`'s pool, which is
     /// what `DROP` on an exposed variable does. A name the pool never held is
     /// a no-op, exactly as `DROP` on a never-assigned local is.
@@ -1246,11 +1261,6 @@ impl NativeObject {
 
     pub fn remove_entry(&mut self, key: &[u8]) {
         self.entries.remove(key);
-    }
-
-    /// Every key this object holds, as owned copies.
-    pub fn keys(&self) -> Vec<Box<[u8]>> {
-        self.entries.keys().cloned().collect()
     }
 
     /// The `StringTable` this object's `~annotations` answers, or `None` for

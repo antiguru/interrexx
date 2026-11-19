@@ -1831,9 +1831,15 @@ macro_rules! open_clause {
         // than as a program that silently stops tracing.
         // `debug_pause` is excluded because
         // [`Interp::traced_mode`] answers `OFF` under it by
-        // design, which is not the program's own setting.
+        // design, which is not the program's own setting. So is a
+        // run another thread's `SetTrace` has reached
+        // (`r[native.threads.trace]`), or a `SetThreadTrace`: a frame
+        // that was running a settled chunk then runs it to its end
+        // under the setting switched from outside, which the claim
+        // did not foresee (`r[native.threads.trace.deviation.166]`).
         #[cfg(debug_assertions)]
         if !$self.debug_pause()
+            && !$self.trace_switchable
             && let Some(crate::ir::trace_flow::Setting::Known(claimed)) = $chunk.setting_at($index)
         {
             debug_assert_eq!(
@@ -3615,9 +3621,14 @@ impl Interp {
     fn callee_level(&mut self, caller: &Level) -> Result<Option<Level>, Failure> {
         self.record_call_convention();
         let running = self.activation();
+        // An internal routine entered after the first `SetTrace` or
+        // `SetThreadTrace` prints every line (`r[native.threads.trace]`), so it
+        // does not run on a settled chunk its caller kept: only the caller's
+        // own run is what `r[native.threads.trace.deviation.166]` declares.
         if running.body == caller.selector
             && Rc::ptr_eq(&running.plan, &caller.plan)
             && caller.chunk.trace() == self.chunk_trace()
+            && !(self.trace_switchable && caller.chunk.settled())
         {
             return Ok(None);
         }

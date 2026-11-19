@@ -20,19 +20,41 @@ page records why they are the way they are.
   number parse error that carries the string that failed to parse, an item is stated only where it
   is needed to understand the error and the program cannot get it otherwise; the rest is
   unspecified under `r[conv.error.additional]`.
-* **Errors are checked in a precise order** (2026-11-12, #395). Operands are checked left before
-  right and a builtin checks its argument count before its arguments, from the left (ANSI 7.4,
-  9.2.1), with ooRexx's order where ANSI is silent. Which fault a program sees is part of the
-  contract. A relaxed order is a design for an optimising transpiler, which would declare its own
-  Deviation; the interpreter keeps the precise one.
+* **Evaluation order is specified; error precedence is not** (2026-11-16, #395, #757). An operator
+  evaluates its operands left before right, both before it checks either, and a call evaluates its
+  arguments from the left (ANSI 7.4, 9.2.1); each control expression of a DO is evaluated and
+  checked in its turn, in the written order, as its own operation (ANSI 8.3). An error raised while
+  an operand or an argument is evaluated is raised at that point. These stay specified because Rexx
+  side effects are observable: a function call in an operand or an argument runs or does not run.
+  When the checks of one operation (one operator, one builtin or method invocation, one
+  instruction's checks) find more than one fault, which of their errors is raised is unspecified;
+  it is the error of one of the faults. The faults include a wrong argument count, an omitted
+  required argument and a `STRING` answer that has no string value. A builtin's conversion of its
+  arguments by `STRING` is part of its checks: a call with no fault sends `STRING` to each argument
+  from the left before the other checks (`r[bif.index.call.convert]`), and for a call with a fault, whether and
+  how many `STRING` sends happen is unspecified. Whether the checks after the first fault are made,
+  and so whether the messages they send are sent, is unspecified too; and when an operation finds a
+  fault that raises a condition, such as LOSTDIGITS, and one that raises an error, which comes
+  first is unspecified, so Deviation 102 is withdrawn. This replaces the precise order of
+  2026-11-12, which took ANSI's results (ANSI 4.1 makes them normative) and ooRexx's order where
+  ANSI is silent. ooRexx follows ANSI's evaluation order but not its precedence: `LEFT`, `VERIFY`,
+  `X2D`, `FORMAT` and `STRIP` check a later argument first, several methods and RexxUtil functions
+  check arguments before their count, and it does not keep ANSI's subcodes either, raising 41.1 for
+  `1 + 'b'` where ANSI gives 41.2. Java, Python and Rust libraries, Haskell's imprecise exceptions
+  and SQL do not specify which of several faults is reported. interrexx keeps ooRexx's precedence
+  where it has it, so that comparisons stay quiet, but that is a convenience, not part of the
+  contract. Together with the entry below, the contract of an error ends here: a fault is reported,
+  by the code and subcode of a fault that is present.
 * **An error's contract is its code and subcode** (2026-11-14, #388, #672). The error number and,
   where the specification states one, the subcode are specified. The message text is not, and
   the items of `ADDITIONAL` for an error the interpreter raises are not unless a rule states one.
   Java, Python and Ruby draw the line in the same place: the exception's class and subclass are
   the contract, its message is not, and structured data on it is specified only through a
-  documented accessor. Objects a program supplies to `RAISE` may be specified to reach the
-  condition unchanged; the array the interpreter builds around them is not. Comparisons check
-  only what is specified (`docs/design/testing.md`).
+  documented accessor. A fault that is present is reported by its code and subcode; where an
+  operation has several, which of them is reported is unspecified (2026-11-16, see above).
+  Objects a program supplies to `RAISE` may be specified to reach the condition unchanged; the
+  array the interpreter builds around them is not. Comparisons check only what is specified
+  (`docs/design/testing.md`).
   Whether a built-in method is a level of a traceback is unspecified, because a build may not
   have it (2026-11-14, #388); comparisons drop those frame lines.
 * **Standard output is buffered, with a switch to write it unbuffered** (2026-11-15, #706,
@@ -51,13 +73,28 @@ page records why they are the way they are.
   Deviation 78 withdrawn). A lookup or a search compares identity first and sends `==` only to
   another object, as ooRexx does, and as Python's containers and Java's `HashMap` do: an object
   is taken to equal itself, whatever its `==` answers.
+* **A builtin's conversion of its arguments is part of its checks** (2026-11-16, Deviation 170
+  withdrawn). A call with no fault sends `STRING` to each object argument from the left before the
+  other checks, as ooRexx does; a sweep of the no-fault calls found no difference in the sends.
+  For a call with a fault, whether and how many sends happen stays unspecified.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.
-* **Hash collections are to iterate in insertion order** (2026-11-12, #36). This is not implemented
-  yet; #36 tracks it. The hash function is to be seeded against flooding, with the seed invisible to
-  programs. Python reached the same pair of decisions after randomised order proved noisy and
-  users came to rely on insertion order.
+* **Hash collections iterate in insertion order** (2026-11-12, #36, Deviation 33). Every hash
+  collection yields its entries in the order they were first put: a `put` that replaces an item
+  keeps its entry in place, and an entry removed and put again comes last. Where several entries
+  share an index or hold equal items, lookups and removals act on the oldest, and lists of them
+  answer oldest first. ooRexx's order follows its bucket layout; it acts on the newest of several
+  entries at one index and searches items in its storage order. The order is specified rather than
+  left to the implementation, because a deterministic order that ships becomes a contract in
+  practice, as Python's dict did between 3.6 and 3.7. A string's hash code is a keyed hash of its
+  characters under a seed drawn for each run, and a stem's tail map is keyed from the same seed, so
+  a program cannot choose many string keys of a hash collection, or many tails of a stem, that share
+  one probe path. The other maps keyed by names a program picks, the variables that `INTERPRET` and
+  `VALUE` create and a stem's exposed tails, are not keyed. The seed shows only in `hashCode`
+  answers, never in an order or in which entry a lookup finds. For objects that break the `hashCode`
+  contract, whether a lookup finds an entry is unspecified (2026-11-16), and so is which entry a
+  search acts on when an `==` or `hashCode` it sends changes the collection.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the

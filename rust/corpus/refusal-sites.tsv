@@ -167,6 +167,7 @@ Raised	invalid_routine_option	body	crates/interrexx/src/error.rs	off-send-surfac
 Raised	invalid_stream_name	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Loud	inverted_wait	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Loud	jump_out_of_range	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
+Raised	kind_refusal	body	crates/interrexx/src/builtin/argument_kinds.rs	off-send-surface	-	-	-
 Raised	label_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	length_required_for_negative	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	library_not_loaded	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
@@ -182,6 +183,7 @@ Raised	message_reuse	send	crates/interrexx/src/error.rs	agrees	yes	98.915	m~send
 Raised	metaclass_new_not_a_class	send	crates/interrexx/src/error.rs	recorded	yes	98.900	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return 'x' the oracle crashes, recorded as Deviation 114
 Loud	metaclass_new_reused_class	send	crates/interrexx/src/lib.rs	recorded	yes	a metaclass NEW answering a class	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return .array the oracle id Array, recorded as Deviation 32
 Raised	metaclass_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
+Raised	method_argument_needs_a_string_value	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	method_argument_not_a_number	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	method_argument_not_in_list	send	crates/interrexx/src/error.rs	agrees	yes	93.914	.Package~defaultOptions('FORM')
 Raised	method_argument_not_positive	send	crates/interrexx/src/error.rs	agrees	yes	93.907	(1,2,3)~at(0)
@@ -294,6 +296,7 @@ Raised	reply_outside_method	body	crates/interrexx/src/error.rs	off-send-surface	
 Raised	reply_twice	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	requires_file_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	restricted_method	send	crates/interrexx/src/error.rs	agrees	yes	98.991	'abc'~setMethod('Z', "return 1") from a ::method body
+Loud	retried_send	body+send	crates/interrexx/src/lib.rs	agrees	no	no route: the thread's SendMessage member runs the failed send again once the lock is free, so the failure reaches no program	tests/attached_threads/guard.rex, a callback's SendMessage waiting for an entry guard the main program holds: stdout ticked 1, rc 0 on both (attached_threads.rs a_callback_waiting_for_a_guard_the_main_program_holds_runs_after_it)
 Raised	return_after_reply	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	rexx_defined_class	send	crates/interrexx/src/error.rs	agrees	yes	98.985	.Array~define('ZZZ', "return 1")
 Raised	rexx_package_addition	send	crates/interrexx/src/error.rs	agrees	yes	98.984	.Array~package~addClass('ZZZ', .Object)
@@ -312,6 +315,7 @@ Loud	signal_op_off_its_node	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	
 Loud	sim_blocked_command	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_blocked_native	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_endless_wait	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
+Loud	sim_foreign_attach	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_foreign_post	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_replay_diverged	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_trace_unwritten	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-

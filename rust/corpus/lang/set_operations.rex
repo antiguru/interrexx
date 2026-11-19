@@ -10,7 +10,8 @@
  * mutate its receiver, which is invisible until a later operation reads the
  * receiver again -- so the order here matters: `union` runs first and
  * `intersection` after it, and the two `a contents` lines either side are
- * what a witness that only checked counts would miss.
+ * what a witness that only checked counts would miss.  The order a set lists
+ * its members in is Deviation 33, so the lists are sorted.
  *
  * The last send is untrapped so the 93.949 text and the frame line are
  * compared as bytes.  rc 163.
@@ -25,19 +26,19 @@ s~put('b','b')
 say 'indexed ' s~items
 say 'lookups ' s~hasIndex('a') s~hasItem('a') s~hasIndex('z') s~hasItem('z')
 say 'at      ' s['a'] s~index('a')
-say 'all     ' s~allIndexes~makeString('L',',') '/' s~allItems~makeString('L',',')
+say 'all     ' s~allIndexes~sort~makeString('L',',') '/' s~allItems~sort~makeString('L',',')
 say 'removeIt' s~removeItem('a') s~items
 say 'of      ' .Set~of('x','y')~items .Set~of('x','x')~items
-say 'makeArr ' .Set~of('p','q')~makeArray~makeString('L',',')
+say 'makeArr ' .Set~of('p','q')~makeArray~sort~makeString('L',',')
 
 a = .Set~of('x','y','z')
 b = .Set~of('y','z','w')
-say 'a before' a~allIndexes~makeString('L',',')
-say 'union   ' a~union(b)~allIndexes~makeString('L',',')
-say 'a after ' a~allIndexes~makeString('L',',')
-say 'isect   ' a~intersection(b)~allIndexes~makeString('L',',')
-say 'diff    ' a~difference(b)~allIndexes~makeString('L',',')
-say 'xor     ' a~xor(b)~allIndexes~makeString('L',',')
+say 'a before' a~allIndexes~sort~makeString('L',',')
+say 'union   ' a~union(b)~allIndexes~sort~makeString('L',',')
+say 'a after ' a~allIndexes~sort~makeString('L',',')
+say 'isect   ' a~intersection(b)~allIndexes~sort~makeString('L',',')
+say 'diff    ' a~difference(b)~allIndexes~sort~makeString('L',',')
+say 'xor     ' a~xor(b)~allIndexes~sort~makeString('L',',')
 say 'subset  ' .Set~of('y')~subset(a) a~subset(a)
 say 'disjoint' a~disjoint(b) a~disjoint(.Set~of('q'))
 say 'equiv   ' a~equivalent(a) a~equivalent(b)

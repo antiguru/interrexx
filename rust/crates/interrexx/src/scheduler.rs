@@ -185,8 +185,57 @@ pub(crate) enum Posted {
     /// `RexxSetTrace` (`true`) or `RexxResetTrace` named this run's thread: the running Rexx
     /// frame's external trace ([`Interp::set_external_trace`]).
     Trace(bool),
+    /// `SetTrace` of an instance: every activity's external trace, on or off
+    /// ([`Interp::set_external_trace_all`]).
+    TraceAll(bool),
     /// A chunk of standard input, empty at its end.
     Input(Vec<u8>),
+    /// `activity`'s native call in the native frame `frame`, which ran with
+    /// the baton vacated ([`Vacancy`]), has returned: the thread serving the
+    /// vacancy stops and gives the baton back.
+    Returned {
+        activity: ActivityId,
+        frame: u64,
+    },
+}
+
+/// A native call running with the baton vacated, from just before it
+/// prepares until it has finished: its activity, and its native frame as
+/// [`Interp::native_token`] names it. The calls nest, innermost last, as the
+/// vacancies on the baton do.
+pub(crate) struct Vacancy {
+    pub(crate) activity: ActivityId,
+    pub(crate) frame: u64,
+    /// Whether a thread serves it ([`Interp::serve_vacancy`]), which counts
+    /// it in flight.
+    served: bool,
+    /// Whether its call has returned ([`Posted::Returned`]).
+    returned: bool,
+    /// Whether the callback whose call it is was marked waiting before it,
+    /// where its activity is the innermost lend's callback: a callback that
+    /// arrives during the call is served rather than held.
+    waiting: Option<bool>,
+}
+
+impl crate::timer::Inbox<Posted> {
+    /// Asks every activity of the interpreter to halt at its next clause
+    /// (`r[native.threads.halt]`): `Halt` of an instance, from any thread, and
+    /// `RexxSetHalt` naming a run. A native call that finds the request pending when
+    /// it returns has the calling clause's boundary serve it.
+    pub(crate) fn post_halt(&self) {
+        if self.post_unless_closed(Posted::Halt) {
+            self.requests()
+                .set(crate::timer::HALT | crate::timer::BOUNDARY);
+        }
+    }
+
+    /// Asks every activity of the interpreter to turn its external trace on or off
+    /// (`r[native.threads.trace]`), served as [`Self::post_halt`]'s request is.
+    pub(crate) fn post_trace_all(&self, on: bool) {
+        if self.post_unless_closed(Posted::TraceAll(on)) {
+            self.requests().set(crate::timer::BOUNDARY);
+        }
+    }
 }
 
 // Another thread posts it, so it holds no `ObjRef`.
@@ -321,9 +370,16 @@ pub(crate) struct Activities {
     /// The native frames of calls abandoned while they ran, by frame token
     /// ([`Interp::native_token`]), until their completions are drained.
     abandoned: Vec<(u64, Box<crate::NativeFrame>)>,
-    /// Those of them whose run is below the running loop, under a callback,
-    /// so that no loop above them can wait for their completions.
-    runs_below: usize,
+    /// Those of the calls in flight whose run is below the running loop,
+    /// under a callback, so that no loop above them can wait for their
+    /// completions: each by its activity and native frame, once however
+    /// many lends nest above it.
+    runs_below: Vec<(ActivityId, u64)>,
+    /// An embedding instance's root call, by its activity and native frame,
+    /// once it has left its driver: it waits until `Terminate`.
+    root_call: Option<(ActivityId, u64)>,
+    /// The lends that run an attached thread's callback.
+    callbacks_lent: usize,
     /// The last token a blocking operation was posted under.
     next_block: u64,
     /// The tokens of blocking operations a halt abandoned, no longer in
@@ -340,7 +396,58 @@ pub(crate) struct Activities {
     /// Whether the program's end found activities that nothing can wake any
     /// more and refused their wait (Deviation 20).
     ended_stuck: bool,
+    /// The level of the loop [`Interp::run_started_activities`] runs the
+    /// other activities in at the program's end, while it does.
+    end_level: Option<usize>,
+    /// The attached activities filed ([`Interp::file_attached`]).
+    attached: usize,
+    /// The native calls running with the baton vacated, innermost last.
+    pub(crate) vacancies: Vec<Vacancy>,
+    /// The lends of the baton to a callback ([`Interp::serve_recall`]),
+    /// innermost last. Each lender runs again only once its lend has ended
+    /// (Deviation 178).
+    lends: Vec<Lend>,
+    /// The callbacks held while the innermost lend's callback runs, in the
+    /// order they arrived, each with the guard lock it waits to be granted,
+    /// and the attached activity queued for it, where it gave the baton back
+    /// for one ([`Interp::retries_entry_guard`]).
+    pub(crate) held: VecDeque<(Recall, Option<(crate::guards::GuardKey, ActivityId)>)>,
+    /// The thread contexts whose callback gave the baton back to wait for a
+    /// guard lock, each with that lock, until the callback's next recall.
+    retrying: Vec<(usize, crate::guards::GuardKey)>,
+    /// When the innermost callback wait that only an activity a lend stopped
+    /// may end, or the innermost inverted wait that goes on, is reported on
+    /// stderr, unless it has ended by then ([`Interp::report_stall`]).
+    stall: Option<Stall>,
 }
+
+/// A lend of the baton to a callback: the activity it stopped, the one it
+/// runs, and whether that one waits, so that a callback arriving meanwhile is
+/// served on top of it rather than held.
+#[derive(Clone, Copy)]
+struct Lend {
+    lender: ActivityId,
+    lendee: ActivityId,
+    waiting: bool,
+}
+
+/// A callback's wait that only an activity a lend stopped may end, or a
+/// pinned wait that is reported only once it is inverted, and when it is
+/// reported.
+#[derive(Clone, Copy)]
+struct Stall {
+    due: Instant,
+    reason: ParkReason,
+    /// The activity the callback's lend stopped, or `None` for a pinned wait
+    /// that is reported only where it is inverted (Deviation 14), naming the
+    /// activity below it that it keeps from running.
+    lender: Option<ActivityId>,
+}
+
+/// How long a callback waits, for something only an activity a lend stopped
+/// can give, or an inverted wait that is not refused goes on, before stderr
+/// says so.
+const STALL_REPORT: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
 /// remainder.
@@ -398,7 +505,9 @@ impl Activities {
             late_failures: Vec::new(),
             in_flight: 0,
             abandoned: Vec::new(),
-            runs_below: 0,
+            runs_below: Vec::new(),
+            root_call: None,
+            callbacks_lent: 0,
             next_block: 0,
             abandoned_blocks: Vec::new(),
             guards: crate::guards::GuardTable::default(),
@@ -406,6 +515,13 @@ impl Activities {
             switches: 0,
             main_finished: false,
             ended_stuck: false,
+            end_level: None,
+            attached: 0,
+            vacancies: Vec::new(),
+            lends: Vec::new(),
+            held: VecDeque::new(),
+            retrying: Vec::new(),
+            stall: None,
         }
     }
 
@@ -522,6 +638,12 @@ impl Activities {
 
     pub(crate) fn in_flight(&self) -> bool {
         self.in_flight > 0
+    }
+
+    /// Whether no message is held or to be sent again, and no call is in flight but those a
+    /// lend's callback runs above (`r[native.threads.attach.deviation.178]`).
+    fn nothing_held_or_in_flight(&self) -> bool {
+        self.in_flight == self.runs_below.len() && self.held.is_empty() && self.retrying.is_empty()
     }
 
     #[cfg(test)]
@@ -796,7 +918,7 @@ impl Scheduler for Interp {
             return;
         }
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
-        self.activities.runs_below += 1;
+        self.activities.runs_below.push((activity, frame));
         let watch = self.sim_watch_native();
         let pending = call.run(frame, pending, self, &baton, &thread, |completion| {
             Self::post_completion(&inbox, activity, frame, completion);
@@ -804,7 +926,7 @@ impl Scheduler for Interp {
         if let Some(watch) = watch {
             self.sim_end_watch(watch);
         }
-        self.activities.runs_below -= 1;
+        self.activities.runs_below.pop();
         pin_leave!(self);
         if let Some(record) = self.activity.native_call.as_mut() {
             self.activity.native_park = record.back(call, pending);
@@ -868,8 +990,9 @@ impl Scheduler for Interp {
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 /// The slices that fall due while a trace delivery holds a guard, with another
-/// activity ready, before the delivery is refused as an inverted wait: about
-/// six seconds, past what a destination that is doing work takes.
+/// activity ready, before the delivery is refused as an inverted wait, or,
+/// where waits are not refused as unending, reported on stderr. The bound lies
+/// well past the slices a destination that is doing work takes.
 const GUARDED_DELIVERY_SLICES: u32 = 250;
 
 impl Interp {
@@ -937,12 +1060,20 @@ impl Interp {
     }
 
     /// The running activity's thread context, made at its first native call
-    /// or package hook.
+    /// or package hook. The main activity's first one is the interpreter's
+    /// root context, which a thread running no native call of the
+    /// interpreter attaches to (`r[native.threads.instance]`).
     pub(crate) fn thread_context(&mut self) -> interrexx_api::ffi::ThreadContext {
+        let main = self.activities.running == MAIN;
         self.activity
             .thread
             .get_or_insert_with(|| {
-                interrexx_api::ffi::ThreadContext::linking(&self.activities.thread_table)
+                let thread =
+                    interrexx_api::ffi::ThreadContext::linking(&self.activities.thread_table);
+                if main {
+                    thread.make_root();
+                }
+                thread
             })
             .clone()
     }
@@ -1106,23 +1237,173 @@ impl Interp {
         let me = self.activities.running;
         let mut at = owner;
         for _ in 0..self.activities.idle.len() {
-            let next = match self.activities.guards.waiting(at) {
-                Some(crate::guards::Waiting::Guard(key)) => self.activities.guards.owner(key),
-                Some(crate::guards::Waiting::Message(id)) => self
-                    .activities
-                    .message_ids
-                    .iter()
-                    .find(|(_, waited)| **waited == id)
-                    .and_then(|(message, _)| self.message_runner(*message)),
-                None => None,
-            };
-            match next {
+            match self.waited_on(at) {
                 Some(next) if next == me => return true,
                 Some(next) => at = next,
                 None => return false,
             }
         }
         false
+    }
+
+    /// Whether some activity waits for the result or the completion of a
+    /// message whose send it runs itself and has not replied from: a wait
+    /// nothing can end, whatever was loaded (Deviation 20).
+    pub(crate) fn waits_on_its_own_message(&self) -> bool {
+        // The send completes only when its method returns, and its method is
+        // what waits, so no thread that attaches later can end the wait. A
+        // send whose method has replied has its result already, and its
+        // `result` and `wait` answer without a wait.
+        (self.activities.guards.waiters()).any(|waiter| self.waits_on_a_message_it_runs(waiter))
+    }
+
+    /// Whether `at` waits for the result or the completion of a message
+    /// whose send it runs itself and has not replied from.
+    fn waits_on_a_message_it_runs(&self, at: ActivityId) -> bool {
+        self.waited_on(at) == Some(at)
+    }
+
+    /// The activity `at` waits on, as [`Interp::waits_on`] names it.
+    fn waited_on(&self, at: ActivityId) -> Option<ActivityId> {
+        self.waits_on(self.activities.guards.waiting(at)?)
+    }
+
+    /// The activity a wait for `waiting` waits on: the owner of the guard
+    /// lock, or the activity running the send of the message whose
+    /// completion it waits for.
+    fn waits_on(&self, waiting: crate::guards::Waiting) -> Option<ActivityId> {
+        match waiting {
+            crate::guards::Waiting::Guard(key) => self.activities.guards.owner(key),
+            crate::guards::Waiting::Message(id) => self
+                .activities
+                .message_ids
+                .iter()
+                .find(|(_, waited)| **waited == id)
+                .and_then(|(message, _)| self.message_runner(*message)),
+        }
+    }
+
+    /// The activity a lend to a callback stopped that a wait for `reason`
+    /// waits on, through a chain of waits. It runs again only once that
+    /// callback has ended (Deviation 178).
+    fn lender_waited_on(&self, reason: ParkReason) -> Option<ActivityId> {
+        let lends = &self.activities.lends;
+        if lends.is_empty() {
+            return None;
+        }
+        let mut at = match reason {
+            ParkReason::Guard(key) => self.waits_on(crate::guards::Waiting::Guard(key)),
+            ParkReason::MessageResult(id) | ParkReason::MessageWait(id) => {
+                self.waits_on(crate::guards::Waiting::Message(id))
+            }
+            _ => None,
+        };
+        for _ in 0..self.activities.idle.len() {
+            let next = at?;
+            if lends.iter().any(|lend| lend.lender == next) {
+                return Some(next);
+            }
+            at = self.waited_on(next);
+        }
+        None
+    }
+
+    /// Whether a wait for `reason` is refused at once: it waits on an activity
+    /// a lend to a callback stopped, unless it waits for a guard lock and
+    /// that activity is an attached activity's callback, a wait that goes on
+    /// (Deviation 178).
+    fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
+        self.lender_waited_on(reason).is_some_and(|lender| {
+            !matches!(reason, ParkReason::Guard(_))
+                || !self.record(lender).is_some_and(|record| record.attached)
+        })
+    }
+
+    /// `activity`'s record, running or idle.
+    fn record(&self, activity: ActivityId) -> Option<&Activity> {
+        if activity == self.activities.running {
+            return Some(&self.activity);
+        }
+        (self.activities.idle.get(activity.0 as usize))
+            .and_then(Option::as_ref)
+            .map(|idle| &idle.activity)
+    }
+
+    /// Whether the guard lock `key` that a callback's top-level send waits
+    /// for at its entry, before it has run anything, is held by an activity
+    /// a lend to a callback stopped, and the callback's member sends again
+    /// when asked. If so, the callback's thread is asked to give the baton
+    /// back and send again, its attached activity keeps the place in `key`'s
+    /// queue that the wait took when it began, at `place` for a wait that
+    /// had queued, and its next recall is held until a release grants it the
+    /// lock in that turn ([`Interp::queue_held_retry`]), as ooRexx has the
+    /// send wait for the lock (`r[native.threads.attach.deviation.178]`).
+    /// The caller then fails the send with [`Loud::retried_send`], which the
+    /// send answers no one. `entered` says whether the running activation is
+    /// the method whose entry waits, rather than one the wait comes in the
+    /// middle of.
+    pub(crate) fn retries_entry_guard(
+        &mut self,
+        key: crate::guards::GuardKey,
+        entered: bool,
+        place: Option<usize>,
+    ) -> bool {
+        // Nothing of the callback's message has run only where no activation
+        // lies below the wait, and none is running but the one it enters: a
+        // send made by a running activation comes after that activation's
+        // earlier clauses, which a second send would run again.
+        if !self.activity.attached
+            || self.activity.native_handles.len() != 1
+            || !self.activity.suspended.is_empty()
+            || self.activity.running.is_some() != entered
+            || self.lender_waited_on(ParkReason::Guard(key)).is_none()
+        {
+            return false;
+        }
+        let Some(thread) = &self.activity.thread else {
+            return false;
+        };
+        if !thread.ask_retry() {
+            return false;
+        }
+        let address = thread.address();
+        self.activities.retrying.push((address, key));
+        let me = self.running_activity();
+        self.activities.guards.queue_retry(key, me, place);
+        // The send runs again from its entry, which announces the method once
+        // per message: this run leaves without `<I<`, and the next enters
+        // without `>I>`.
+        if entered && self.activation().trace_entry == crate::activation::TraceEntry::Done {
+            self.activation_mut().trace_entry = crate::activation::TraceEntry::Spent;
+            self.activity.retraced = Some(key);
+        }
+        true
+    }
+
+    /// Whether the running activation enters the method whose `>I>` its
+    /// callback wrote before it gave the baton back to send again
+    /// ([`Interp::retries_entry_guard`]). The record ends at the send's
+    /// next announced entry, whichever method that is.
+    pub(crate) fn entry_traced_before_retry(&mut self) -> bool {
+        let Some(key) = self.activity.retraced.take() else {
+            return false;
+        };
+        self.activity.suspended.is_empty()
+            && (self.running_activation())
+                .and_then(|running| running.method_identity.as_ref())
+                .is_some_and(|identity| {
+                    identity.receiver == key.object && identity.scope == key.scope
+                })
+    }
+
+    /// Whether the running activity's send failed only to be sent again
+    /// ([`Interp::retries_entry_guard`]).
+    pub(crate) fn send_retried(&self) -> bool {
+        let Some(thread) = &self.activity.thread else {
+            return false;
+        };
+        let address = thread.address();
+        (self.activities.retrying.iter()).any(|(context, _)| *context == address)
     }
 
     /// The activity running `message`'s send, started or sent, while it runs.
@@ -1311,16 +1592,31 @@ impl Interp {
                     // semaphore's post or release, a native call's or a
                     // command's end) or a guard (its release, a store a
                     // `GUARD WHEN` watches); a halt ends each of these.
+                    // An attached activity idle between its callbacks is woken
+                    // by the next callback its thread makes, and one whose native
+                    // call runs with the baton vacated by that call's return.
                     let wakes = parked[index]
                         || record.when_parked
                         || table.semaphores.queues(activity)
                         || record.native_call.is_some()
-                        || !record.blocked.is_empty();
+                        || !record.blocked.is_empty()
+                        || record.attached && record.running.is_none()
+                        || table
+                            .vacancies
+                            .iter()
+                            .any(|vacancy| vacancy.activity == activity);
                     if !ready[index] && !finished && !wakes {
                         return fail("a parked activity with no wake source");
                     }
                 }
             }
+        }
+        let attached = (table.idle.iter().flatten())
+            .filter(|idle| idle.activity.attached)
+            .count()
+            + usize::from(self.activity.attached);
+        if attached != self.attached_count() {
+            return fail("an attached activity not counted");
         }
         Ok(())
     }
@@ -1349,16 +1645,44 @@ impl Interp {
     /// on this stack until the running one is woken. Where nothing can run,
     /// the refusal is an inverted wait if an activity is ready whose frames
     /// lie below a loop on the stack, and a wait nothing can end where no
-    /// activity is ready at all.
+    /// activity is ready at all. A wait [`Interp::waits_on_a_lender`] finds
+    /// on an activity a callback stopped is refused as an inverted wait at
+    /// once, and so is a guard wait whose lock a release grants such an
+    /// activity later ([`Interp::stop_callbacks_behind`]), which leaves
+    /// [`Activity::lock_to_lender`] set for the caller.
     pub(crate) fn pinned_wait(&mut self, reason: ParkReason) -> Option<Failure> {
         pinned_park!(self, reason);
+        self.activity.lock_to_lender = false;
+        self.activity.kept_place = None;
         self.park(reason);
         if self.sim_fails_wait() {
             pinned_unpark!(self);
             self.cancel_wait();
             return Some(Raised::insufficient_stack().into());
         }
-        let waited = self.run_others(true);
+        // Whatever else could still run, nothing it does lets that activity
+        // run before this wait ends.
+        let waited = if self.waits_on_a_lender(reason) {
+            Ok(Waited::Blocked { inverted: true })
+        } else {
+            let waiting = self.set_callback_waiting(true);
+            let replaced = self.watch_stall(reason);
+            let waited = self.run_others(true);
+            // A watch this wait left in place is the loop's own, and where its
+            // line was written during the wait it stays consumed.
+            if let Some(previous) = replaced {
+                self.activities.stall = previous;
+            }
+            if let Some(waiting) = waiting {
+                self.set_callback_waiting(waiting);
+            }
+            match waited {
+                Ok(Waited::Woken) if self.activity.lock_to_lender => {
+                    Ok(Waited::Blocked { inverted: true })
+                }
+                waited => waited,
+            }
+        };
         pinned_unpark!(self);
         let failure = match waited {
             Ok(Waited::Woken) => return None,
@@ -1383,6 +1707,7 @@ impl Interp {
         self.activity.when_parked = false;
         self.activity.socket_wait = None;
         self.activities.guards.withdraw(running);
+        self.activity.kept_place = self.activities.guards.give_up_place(running);
         self.activity.guard_waits.retain(|wait| !wait.queued);
         self.activity.guarded_send = None;
         for waiters in self.activities.waiters.values_mut() {
@@ -1643,9 +1968,276 @@ impl Interp {
     /// call and readies that activity, and lends the baton to each thread
     /// that recalls it. What follows a recall goes back to the inbox before
     /// the lend, where a loop the lendee nests can drain it.
-    pub(crate) fn file_completions(&mut self, mut posted: VecDeque<Posted>, at: DrainAt) {
+    pub(crate) fn file_completions(&mut self, posted: VecDeque<Posted>, at: DrainAt) {
+        let hold = self.holds_callbacks();
+        self.file_posts(posted, at, hold);
+    }
+
+    /// Whether a callback that arrives now is held until the innermost
+    /// lend's callback returns or waits: that callback runs, so one served on
+    /// top of it would stop it between two of its clauses, holding what it
+    /// holds (`r[native.threads.attach.deviation.178]`).
+    fn holds_callbacks(&self) -> bool {
+        self.activities
+            .lends
+            .last()
+            .is_some_and(|lend| !lend.waiting)
+    }
+
+    /// Marks the innermost lend's callback, where it is the running activity,
+    /// as waiting or not, answering what it was.
+    fn set_callback_waiting(&mut self, waiting: bool) -> Option<bool> {
+        let running = self.activities.running;
+        let lend = (self.activities.lends.last_mut()).filter(|lend| lend.lendee == running)?;
+        Some(std::mem::replace(&mut lend.waiting, waiting))
+    }
+
+    /// Starts watching a pinned wait for `reason` of the running activity,
+    /// where it is an attached activity's callback and only an activity its
+    /// lend stopped may end it, or where waits are not refused as unending
+    /// ([`Interp::refuses_unending_waits`]) and it may turn out to be an
+    /// inverted wait. Answers `Some` with the watch it replaced, and `None`
+    /// where it left the watch in place. Waits that end by themselves, a
+    /// sleep's or a timed one's, are not watched, and a wait that is not a
+    /// callback's leaves a callback's watch in place.
+    fn watch_stall(&mut self, reason: ParkReason) -> Option<Option<Stall>> {
+        let previous = self.activities.stall;
+        let endless = match reason {
+            ParkReason::Guard(_)
+            | ParkReason::GuardWhen
+            | ParkReason::MessageResult(_)
+            | ParkReason::MessageWait(_) => true,
+            ParkReason::Semaphore(wait) => wait.deadline.is_none(),
+            _ => false,
+        };
+        let running = self.activities.running;
+        let lend = (self.activities.lends.iter().rev()).find(|lend| lend.lendee == running);
+        // An instance's root call waits until `Terminate` whatever the lend
+        // does, so the callback does not stop anything there that was making
+        // progress, and a line naming it would point at nothing frozen.
+        let root = self.root_call_in_flight().map(|(activity, _)| activity);
+        if let (true, true, Some(lend)) = (endless, self.activity.attached, lend)
+            && root != Some(lend.lender)
+        {
+            let lender = lend.lender;
+            self.activities.stall = Some(Stall {
+                due: self.now() + STALL_REPORT,
+                reason,
+                lender: Some(lender),
+            });
+            Some(previous)
+        } else if endless
+            && !self.refuses_unending_waits()
+            && previous.is_none_or(|stall| stall.lender.is_none())
+        {
+            // An inverted wait goes on where native code from outside may
+            // end it (Deviation 14). Whether it is inverted shows only once
+            // the loop has nothing to run, so the watch counts only then.
+            // A callback's watch stays: the wait made in its loop does not
+            // end it, and the callback's line must still come.
+            self.activities.stall = Some(Stall {
+                due: self.now() + STALL_REPORT,
+                reason,
+                lender: None,
+            });
+            Some(previous)
+        } else {
+            None
+        }
+    }
+
+    /// The watched wait of the loop at `level`, where it counts: a
+    /// callback's wait, or a pinned wait that is inverted there, with nothing
+    /// but a stopped activity left that could end it.
+    fn counted_stall(&self, level: usize) -> Option<Stall> {
+        (self.activities.stall).filter(|stall| {
+            (stall.lender.is_some() || self.stopped_below(level).is_some())
+                && self.only_stopped_activities_remain()
+        })
+    }
+
+    /// The activity the loop at `level` keeps from running where a wait in
+    /// it is inverted, as [`Interp::blocked`] counts it: one a recall
+    /// interrupted below the loop, the innermost, else one set aside. An
+    /// embedding instance's root activity is not one.
+    fn stopped_below(&self, level: usize) -> Option<ActivityId> {
+        let table = &self.activities;
+        // The root's call waits until `Terminate` whatever the loop does, as
+        // in [`Interp::watch_stall`], so a line naming it would point at
+        // nothing frozen.
+        let root = self.root_call_in_flight().map(|(activity, _)| activity);
+        (table.owners[..level].iter().rev())
+            .find(|&&(_, below)| below == Below::Interrupted)
+            .map(|&(owner, _)| owner)
+            .or_else(|| table.set_aside.first().map(|&(activity, _)| activity))
+            .filter(|&activity| Some(activity) != root)
+    }
+
+    /// Writes one line on stderr for the watched wait of the loop at `level`
+    /// once it is due and counts ([`Interp::counted_stall`]), naming what it
+    /// waits for and the activity it stopped, and stops watching it. The
+    /// wait goes on.
+    fn report_stall(&mut self, level: usize) {
+        let Some(stall) = self.counted_stall(level) else {
+            return;
+        };
+        if self.now() < stall.due {
+            return;
+        }
+        let Some(lender) = stall.lender.or_else(|| self.stopped_below(level)) else {
+            return;
+        };
+        self.activities.stall = None;
+        let stopped = if lender == MAIN {
+            "the main program".to_owned()
+        } else {
+            format!("activity {}", lender.0)
+        };
+        // The time the wait has gone on, which is past the bound where
+        // something else that could end it, such as a call in flight, did
+        // not end it in time.
+        let began = stall.due.checked_sub(STALL_REPORT).unwrap_or(stall.due);
+        let waited = self.now().saturating_duration_since(began).as_secs();
+        // A callback stops the activity its lend interrupted. A pinned wait
+        // that is not a callback's keeps the activity set aside below it from
+        // running.
+        let line = if stall.lender.is_some()
+            || (self.activities.owners[..level].iter())
+                .any(|&(owner, below)| owner == lender && below == Below::Interrupted)
+        {
+            format!(
+                "interrexx: a callback has waited {waited} s for {} while {stopped}, which it \
+                 stopped, makes no progress\n",
+                stall.reason.waits_for(),
+            )
+        } else {
+            format!(
+                "interrexx: a pinned wait has waited {waited} s for {} while {stopped}, which \
+                 it keeps from running, makes no progress\n",
+                stall.reason.waits_for(),
+            )
+        };
+        self.write_err(line.as_bytes());
+    }
+
+    /// Whether nothing the loop could run or wait for remains: no activity
+    /// ready, none asleep but one a lend stopped, no callback held or to be
+    /// sent again, and no call in flight but those a lend's callback runs
+    /// above. Only an
+    /// activity a lend stopped, or a callback that is yet to arrive, can then
+    /// end a wait.
+    fn only_stopped_activities_remain(&self) -> bool {
+        let table = &self.activities;
+        // A stopped activity's sleep ends with nothing it can do: the
+        // activity goes on only once the callback that stopped it has
+        // finished.
+        let stopped = |sleeper: ActivityId| {
+            (table.owners.iter()).any(|&(owner, below)| owner == sleeper && below != Below::Free)
+        };
+        table.ready.is_empty()
+            && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))
+            && table.nothing_held_or_in_flight()
+    }
+
+    /// Serves the held callbacks, the earliest first, each once nothing
+    /// holds it any more: one waiting for a guard lock once a release has
+    /// granted it the lock, in the turn its wait took in the lock's queue.
+    /// `drain` is where the drain serving them finds the running
+    /// activity.
+    fn serve_held(&mut self, drain: DrainAt) {
+        let mut at = 0;
+        while at < self.activities.held.len() && !self.holds_callbacks() {
+            let granted = match self.activities.held[at].1 {
+                Some((key, held)) => self.activities.guards.owner(key) == Some(held),
+                None => true,
+            };
+            if !granted {
+                at += 1;
+                continue;
+            }
+            let Some((recall, waited)) = self.activities.held.remove(at) else {
+                break;
+            };
+            self.serve_recall(recall, drain);
+            // A send that did not reserve the lock it was granted, as one
+            // refused once the interpreter has ended, passes it on.
+            if let Some((key, held)) = waited
+                && self.activities.guards.granted_unreserved(key, held)
+                && let Some(next) = self.activities.guards.pass_unreserved(key)
+            {
+                self.grant_guard(key, next);
+            }
+            at = 0;
+        }
+    }
+
+    /// Holds `recall`, queued for the guard lock of `retrying` where its
+    /// callback's send gave the baton back to be sent again.
+    fn file_held(&mut self, recall: Recall, retrying: Option<(usize, crate::guards::GuardKey)>) {
+        match retrying {
+            Some((address, key)) => self.queue_held_retry(recall, address, key),
+            None => self.activities.held.push_back((recall, None)),
+        }
+    }
+
+    /// Files `recall`, the next recall of a callback whose send gave the
+    /// baton back to be sent again once it is granted `key`
+    /// ([`Interp::retries_entry_guard`]): its attached activity has kept its
+    /// place in `key`'s queue, or been granted the lock from it, and the
+    /// recall is held until the lock is granted.
+    fn queue_held_retry(&mut self, recall: Recall, address: usize, key: crate::guards::GuardKey) {
+        let waited = self.context_owner(address).map(|held| {
+            self.activities.guards.queue_retry(key, held, None);
+            (key, held)
+        });
+        self.activities.held.push_back((recall, waited));
+    }
+
+    /// Ends the guard waits for `key` of the callbacks whose lends stopped
+    /// `granted`, which a release has just made its owner: `granted` runs
+    /// only once those callbacks have ended, so their waits would never end.
+    /// A wait ended so keeps its place in the lock's queue until it ends, and
+    /// is sent again from that place or refused by its caller, as one that
+    /// found the lock held so at its start is (Deviation 178). A lender that
+    /// is an attached activity's callback leaves the waits as they are, as
+    /// at their start.
+    pub(crate) fn stop_callbacks_behind(
+        &mut self,
+        key: crate::guards::GuardKey,
+        granted: ActivityId,
+    ) {
+        let lends = &self.activities.lends;
+        let Some(first) = lends.iter().position(|lend| lend.lender == granted) else {
+            return;
+        };
+        if self.record(granted).is_some_and(|record| record.attached) {
+            return;
+        }
+        let stopped: Vec<ActivityId> = (lends[first..].iter())
+            .map(|lend| lend.lendee)
+            .filter(|lendee| {
+                self.activities.guards.waiting(*lendee) == Some(crate::guards::Waiting::Guard(key))
+            })
+            .collect();
+        for lendee in stopped {
+            self.activities.guards.keep_place(lendee);
+            if let Some(record) = self.record_of(lendee) {
+                record.lock_to_lender = true;
+            }
+            self.unpark(lendee);
+        }
+    }
+
+    /// [`Interp::file_completions`], holding a callback's recall where
+    /// `hold`, and serving the held ones first where not.
+    fn file_posts(&mut self, mut posted: VecDeque<Posted>, at: DrainAt, hold: bool) {
         if self.sim.is_some() {
             self.sim_screen_posts(&posted);
+        }
+        if !hold && !self.activities.held.is_empty() {
+            self.timer.requeue(std::mem::take(&mut posted));
+            self.serve_held(at);
+            posted = self.timer.drain();
         }
         while let Some(next) = posted.pop_front() {
             match next {
@@ -1667,8 +2259,24 @@ impl Interp {
                     }
                 }
                 Posted::Recall(recall) => {
+                    let context = match recall.by {
+                        Recaller::Context(address) => Some(address),
+                        Recaller::Call { .. } => None,
+                    };
+                    let retrying = (self.activities.retrying.iter())
+                        .position(|(held, _)| Some(*held) == context)
+                        .map(|at| self.activities.retrying.swap_remove(at));
+                    if hold && context.is_some() {
+                        self.file_held(recall, retrying);
+                        continue;
+                    }
                     self.timer.requeue(std::mem::take(&mut posted));
-                    self.serve_recall(recall, at);
+                    if hold {
+                        self.serve_recall(recall, at);
+                    } else {
+                        self.file_held(recall, retrying);
+                        self.serve_held(at);
+                    }
                     posted = self.timer.drain();
                     if self.sim.is_some() {
                         self.sim_screen_posts(&posted);
@@ -1714,7 +2322,9 @@ impl Interp {
                     self.halt_all();
                 }
                 Posted::Trace(on) => self.set_external_trace(on),
+                Posted::TraceAll(on) => self.set_external_trace_all(on),
                 Posted::Input(chunk) => self.input.receive(chunk),
+                Posted::Returned { activity, frame } => self.vacancy_returned(activity, frame),
                 Posted::Unblocked {
                     activity,
                     token,
@@ -1765,17 +2375,51 @@ impl Interp {
             base,
             room,
         } = recall;
+        // Once the interpreter has terminated, a callback is refused
+        // (`r[native.threads.end]`): its thread is lent the baton only to
+        // find that out and give it straight back.
+        if matches!(by, Recaller::Context(address) if address != 0)
+            && self.timer.inbox().is_ending()
+        {
+            let baton = crate::sync::Arc::clone(&self.baton);
+            baton.lend(thread, crate::island::Island::of(self));
+            return;
+        }
         let outgoing = self.activities.running;
+        // An embedding instance's root call counts as run below for every
+        // lend, whoever calls back: only `Terminate` ends it, and its end
+        // can satisfy no wait a callback's loop refuses, a wait on the
+        // waiting activity's own message or an inverted one. A call a lend
+        // further down counts already is not counted again, so nested lends
+        // count each call once.
+        let below: Vec<_> = [
+            self.recalled_call_in_flight(&by),
+            self.root_call_in_flight(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let callback = matches!(by, Recaller::Context(_));
         let activity = match by {
-            Recaller::Call { activity, frame } => self
-                .activities
-                .idle
-                .get(activity.0 as usize)
-                .and_then(Option::as_ref)
-                .and_then(|idle| idle.activity.native_call.as_ref())
-                .is_some_and(|call| call.frame() == frame)
-                .then_some(activity),
-            Recaller::Context(address) => self.context_owner(address),
+            Recaller::Call { activity, frame } => {
+                self.activities
+                    .idle
+                    .get(activity.0 as usize)
+                    .and_then(Option::as_ref)
+                    .is_some_and(|idle| {
+                        idle.activity
+                            .native_call
+                            .as_ref()
+                            .is_some_and(|call| call.frame() == frame)
+                            || self.activities.vacancies.iter().any(|vacancy| {
+                                vacancy.activity == activity && vacancy.frame == frame
+                            })
+                    })
+                    .then_some(activity)
+            }
+            Recaller::Context(address) => self
+                .context_owner(address)
+                .or_else(|| self.file_attached(address)),
         }
         .filter(|activity| *activity != outgoing);
         if let Some(activity) = activity {
@@ -1785,9 +2429,24 @@ impl Interp {
                 DrainAt::Stopped => Below::Buried,
             };
             self.activities.owners.push((outgoing, below));
+            self.activities.lends.push(Lend {
+                lender: outgoing,
+                lendee: activity,
+                waiting: false,
+            });
         }
+        // An attached activity runs nothing between its callbacks, so what a
+        // callback rooted as a temporary is dropped once it gives the baton
+        // back. The references it made are in the base frame's table.
+        let temps = (self.activity.attached).then(|| self.roots.activity_mut().push_frame());
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
-        self.activities.runs_below += 1;
+        let counted = self.activities.runs_below.len();
+        for call in below {
+            if !self.activities.runs_below.contains(&call) {
+                self.activities.runs_below.push(call);
+            }
+        }
+        self.activities.callbacks_lent += usize::from(callback);
         let stack = (self.stack_base, self.stack_room);
         self.stack_base = base.unwrap_or(self.stack_base);
         self.stack_room = match (base, room) {
@@ -1798,11 +2457,302 @@ impl Interp {
         let baton = crate::sync::Arc::clone(&self.baton);
         baton.lend(thread, crate::island::Island::of(self));
         (self.stack_base, self.stack_room) = stack;
-        self.activities.runs_below -= 1;
+        self.activities.runs_below.truncate(counted);
+        self.activities.callbacks_lent -= usize::from(callback);
         pin_leave!(self);
+        if let Some(frame) = temps {
+            self.roots.activity_mut().pop_frame(frame);
+        }
         if let Some(activity) = activity {
+            self.activities.lends.pop();
             self.activities.owners.pop();
             self.swap_running(outgoing, activity);
+        }
+    }
+
+    /// The call `by` recalls the baton for, by its activity and native
+    /// frame, where it counts in flight ([`Activities::in_flight`]), so that
+    /// a lend for its callback counts it as run below
+    /// ([`Activities::runs_below`]): a pool thread's call, which counts from
+    /// its exit, a vacated call while a thread serves its vacancy, or the
+    /// call in flight of the activity whose thread context a thread calls
+    /// back through, as the thread that created an embedding instance does
+    /// for the root's call. An attached thread's callback recalls for no
+    /// call.
+    fn recalled_call_in_flight(&self, by: &Recaller) -> Option<(ActivityId, u64)> {
+        // A lend that counted a call below which is not in flight would hide
+        // an unrelated call in flight from the tests that compare the two,
+        // and a wait that call may end would be refused.
+        match *by {
+            Recaller::Call { activity, frame } => {
+                let record = if activity == self.activities.running {
+                    Some(&self.activity)
+                } else {
+                    (self.activities.idle.get(activity.0 as usize))
+                        .and_then(Option::as_ref)
+                        .map(|idle| &idle.activity)
+                };
+                let pooled = record.is_some_and(|record| {
+                    (record.native_call.as_ref()).is_some_and(|call| call.frame() == frame)
+                });
+                (pooled
+                    || self.activities.vacancies.iter().any(|vacancy| {
+                        vacancy.activity == activity && vacancy.frame == frame && vacancy.served
+                    }))
+                .then_some((activity, frame))
+            }
+            // The callback runs as the activity whose call is out, so that
+            // call's completion can resume nothing before the callback has
+            // returned.
+            Recaller::Context(address) => {
+                let (activity, record) = match self.context_owner(address) {
+                    Some(owner) => (
+                        owner,
+                        (self.activities.idle.get(owner.0 as usize))
+                            .and_then(Option::as_ref)
+                            .map(|idle| &idle.activity),
+                    ),
+                    None => (
+                        self.activities.running,
+                        (self.activity.thread.as_ref())
+                            .is_some_and(|thread| thread.address() == address)
+                            .then_some(&self.activity),
+                    ),
+                };
+                let call = record?.native_call.as_ref()?;
+                call.left().then_some((activity, call.frame()))
+            }
+        }
+    }
+
+    /// The embedding instance's root call, by its activity and native frame,
+    /// while it is in flight ([`Activities::in_flight`]).
+    fn root_call_in_flight(&self) -> Option<(ActivityId, u64)> {
+        let (activity, frame) = self.activities.root_call?;
+        let record = if activity == self.activities.running {
+            Some(&self.activity)
+        } else {
+            (self.activities.idle.get(activity.0 as usize))
+                .and_then(Option::as_ref)
+                .map(|idle| &idle.activity)
+        };
+        let call = record?.native_call.as_ref()?;
+        (call.frame() == frame && call.left()).then_some((activity, frame))
+    }
+
+    /// Notes that the running activity's native call, in its native frame
+    /// `frame`, is the embedding instance's root call, which waits until
+    /// `Terminate`.
+    pub(crate) fn note_root_call(&mut self, frame: u64) {
+        self.activities.root_call = Some((self.activities.running, frame));
+    }
+
+    /// Ends the embedding instance's root call where the running activity's
+    /// native call in its native frame `frame` is that call, once its
+    /// completion is drained or abandoned.
+    pub(crate) fn end_root_call(&mut self, frame: u64) {
+        if self.activities.root_call == Some((self.activities.running, frame)) {
+            self.activities.root_call = None;
+        }
+    }
+
+    /// Marks the running activity as a callback that runs, as a lend to it
+    /// does, where `running`, and ends that where not.
+    #[cfg(test)]
+    pub(crate) fn pretend_callback_runs(&mut self, running: bool) {
+        if running {
+            let activity = self.activities.running;
+            self.activities.lends.push(Lend {
+                lender: activity,
+                lendee: activity,
+                waiting: false,
+            });
+        } else {
+            self.activities.lends.pop();
+        }
+    }
+
+    /// The address of a context `AttachThread` would have built for a foreign
+    /// thread, pending until a callback through it files it.
+    #[cfg(test)]
+    pub(crate) fn pending_attached_context(&self) -> Option<usize> {
+        self.activities.thread_table.build_attached_context()
+    }
+
+    /// The attached activities filed and not yet ended.
+    pub(crate) fn attached_count(&self) -> usize {
+        self.activities.attached
+    }
+
+    /// The first callback through the context at `address` that `AttachThread`
+    /// built for a thread with no activity of this interpreter
+    /// (`r[native.threads.attach]`): files the attached activity whose context
+    /// it is, idle until a callback through it runs it, with a base native
+    /// frame for what those callbacks make, and answers its handle. `None`
+    /// where `address` is no such context. As a spawn does, it makes guards
+    /// live and numbers the running activity.
+    fn file_attached(&mut self, address: usize) -> Option<ActivityId> {
+        let thread = self.activities.thread_table.take_pending(address)?;
+        self.guards_go_live(None);
+        self.activity_number();
+        let mut idle = self.new_activity();
+        idle.activity.thread = Some(thread);
+        idle.activity.attached = true;
+        let table = &mut self.activities;
+        let id = match table.free.pop() {
+            Some(index) => ActivityId(index),
+            None => {
+                table.idle.push(None);
+                ActivityId(u32::try_from(table.idle.len() - 1).expect("handles fit u32"))
+            }
+        };
+        table.idle[id.index()] = Some(idle);
+        table.attached += 1;
+        self.with_idle_activity(id, Interp::push_attached_frame);
+        Some(id)
+    }
+
+    /// The last `DetachThread` of the attached activity whose thread context
+    /// is at `context`, idle: its base frame's references are released, and
+    /// its handle and number are freed, and the answer is true. The context,
+    /// which the thread holds the address of, is kept, as `AttachThread`
+    /// built it, and this interpreter holds no clone of it afterwards.
+    /// Anything else, an activity running or not attached, is left as it is.
+    pub(crate) fn detach_activity(&mut self, context: usize) -> bool {
+        let Some(id) = self.context_owner(context) else {
+            return false;
+        };
+        let attached = self.activities.idle[id.index()]
+            .as_ref()
+            .is_some_and(|idle| idle.activity.attached);
+        if !attached {
+            return false;
+        }
+        self.with_idle_activity(id, Interp::pop_attached_frame);
+        let table = &mut self.activities;
+        let Some(idle) = table.idle[id.index()].take() else {
+            unreachable!("an attached handle names an idle activity");
+        };
+        table.ready.retain(|ready| *ready != id);
+        table.free.push(id.0);
+        if table.pooled.len() <= MAX_POOLED {
+            table.pooled.push_back(idle.activity.number);
+        }
+        table.attached -= 1;
+        true
+    }
+
+    /// Starts a pool thread that serves the innermost vacancy, which the
+    /// calling thread has claimed from a native call running with the baton
+    /// vacated: it is handed the vacancy, runs the other activities and
+    /// serves the recalls posted meanwhile, until the call returns
+    /// ([`Interp::serve_vacancy`]). Answers the thread, or `None` where the
+    /// pool has none to give, so that the vacating thread serves what was
+    /// posted once it has the baton back.
+    pub(crate) fn start_vacancy_server(&self) -> Option<std::thread::ThreadId> {
+        let worker = self.pool.reserve().ok().flatten()?;
+        let server = worker.thread();
+        let baton = crate::sync::Arc::clone(&self.baton);
+        let inbox = self.timer.inbox();
+        worker.run(Box::new(move || {
+            pool::posting_panics(&inbox, &baton, || {
+                let probe = 0u8;
+                let mut lent = crate::island::Lent::wait(&baton);
+                lent.interp().serve_vacancy(&raw const probe as usize);
+            });
+        }));
+        Some(server)
+    }
+
+    /// On the thread the innermost vacancy was handed to, `base` the address
+    /// of a local near its stack's base: runs the other activities, with the
+    /// one whose call vacated the baton buried below, since its frames are on
+    /// the vacating thread's stack, and serves what is posted, until that
+    /// call has returned. The call counts in flight meanwhile, so a loop
+    /// idles for its return rather than refusing a wait. A failure the other
+    /// activities answer that is not a condition is kept for the program's
+    /// end, and only posts are served after it.
+    pub(crate) fn serve_vacancy(&mut self, base: usize) {
+        let Some(at) = self.activities.vacancies.len().checked_sub(1) else {
+            return;
+        };
+        let me = self.activities.running;
+        debug_assert!(
+            self.activities.vacancies[at].activity == me,
+            "a vacancy served with another activity running than its call's"
+        );
+        self.activities.vacancies[at].served = true;
+        self.activities.in_flight += 1;
+        let stack = (self.stack_base, self.stack_room);
+        self.stack_base = base;
+        self.stack_room = self.pool.stack().saturating_sub(STACK_MARGIN);
+        let mut running_others = true;
+        while !self.activities.vacancies[at].returned {
+            if running_others {
+                match self.run_others(true) {
+                    Ok(Waited::Woken) => continue,
+                    Ok(Waited::Blocked { .. }) => {}
+                    Err(failure) => {
+                        self.keep_late_failure(failure);
+                        running_others = false;
+                    }
+                }
+            }
+            if !self.activities.vacancies[at].returned {
+                let posted = self.timer.idle();
+                self.file_completions(posted, DrainAt::Stopped);
+            }
+        }
+        // Readied by the return, where no loop took it.
+        self.activities.ready.retain(|ready| *ready != me);
+        (self.stack_base, self.stack_room) = stack;
+    }
+
+    /// The return of `activity`'s native call in the native frame `frame`,
+    /// which ran with the baton vacated: the thread serving the vacancy
+    /// stops. A return posted for a vacancy nobody served, or one already
+    /// reclaimed, changes nothing.
+    fn vacancy_returned(&mut self, activity: ActivityId, frame: u64) {
+        let Some(vacancy) = (self.activities.vacancies.iter_mut())
+            .find(|vacancy| vacancy.activity == activity && vacancy.frame == frame)
+        else {
+            return;
+        };
+        vacancy.returned = true;
+        if vacancy.served {
+            self.activities.in_flight -= 1;
+            self.activities.make_ready(activity);
+        }
+    }
+
+    /// Records the native call of the running activity in the native frame
+    /// `frame` as one about to run with the baton vacated.
+    pub(crate) fn push_vacancy(&mut self, frame: u64) {
+        #[cfg(test)]
+        VACATES.with(|vacates| vacates.set(vacates.get() + 1));
+        let activity = self.activities.running;
+        let waiting = self.set_callback_waiting(true);
+        self.activities.vacancies.push(Vacancy {
+            activity,
+            frame,
+            served: false,
+            returned: false,
+            waiting,
+        });
+    }
+
+    /// Drops the record [`Interp::push_vacancy`] made, once the call has
+    /// finished on the baton.
+    pub(crate) fn pop_vacancy(&mut self, frame: u64) {
+        let popped = self.activities.vacancies.pop();
+        debug_assert!(
+            popped
+                .as_ref()
+                .is_some_and(|vacancy| vacancy.frame == frame),
+            "a vacancy dropped out of order"
+        );
+        if let Some(waiting) = popped.and_then(|vacancy| vacancy.waiting) {
+            self.set_callback_waiting(waiting);
         }
     }
 
@@ -1896,7 +2846,7 @@ impl Interp {
 
     /// A failure another activity answered main's root loop with after
     /// main's own end, kept for the program's end to report.
-    fn keep_late_failure(&mut self, failure: Failure) {
+    pub(crate) fn keep_late_failure(&mut self, failure: Failure) {
         self.activities.late_failures.push(failure);
     }
 
@@ -1904,28 +2854,57 @@ impl Interp {
     /// Where the activities that remain wait for something nothing left can
     /// bring about, the wait is refused as it is while the main program runs
     /// (`r[conc.halt.end.alive]`, Deviation 20), and the program ends without
-    /// waiting for them (`r[conc.halt.deviation.21]`).
+    /// waiting for them (`r[conc.halt.deviation.21]`). Once waits are no
+    /// longer refused as unending, the end waits for them instead.
     pub(crate) fn run_started_activities(&mut self) -> Result<(), Failure> {
         self.activities.main_finished = true;
         self.cancel_wait();
+        self.activities.end_level = Some(self.activities.owners.len());
+        let ended = self.run_to_end();
+        self.activities.end_level = None;
+        ended
+    }
+
+    /// [`Interp::run_started_activities`]' loop. Where the activities that
+    /// remain wait for something nothing left can bring about and waits are
+    /// not refused as unending ([`Interp::refuses_unending_waits`]), it
+    /// waits for a post and runs them again, unless one of them waits on its
+    /// own message ([`Interp::waits_on_its_own_message`]), which is refused.
+    fn run_to_end(&mut self) -> Result<(), Failure> {
         loop {
             self.run_others(false)?;
             let table = &self.activities;
             let me = table.running.0 as usize;
-            let others =
-                (table.idle.iter().enumerate()).any(|(index, idle)| index != me && idle.is_some());
+            // An attached activity idle between its callbacks does not hold
+            // the end (`r[native.threads.end]`). One running a callback holds
+            // the baton, so the end comes after it.
+            // One parked inside a callback holds it too: the callback's lend
+            // lasts until the callback returns, and this loop goes on only
+            // once the lend has ended, so an attached activity it finds here
+            // is between callbacks.
+            let others = (table.idle.iter().enumerate()).any(|(index, idle)| {
+                index != me && idle.as_ref().is_some_and(|idle| !idle.activity.attached)
+            });
             if !others {
                 return Ok(());
             }
+            // A held callback can run, so it keeps the end from refusing.
             if table.ready.is_empty()
                 && table.sleepers.is_empty()
-                && table.in_flight == table.runs_below
+                && table.held.is_empty()
+                && table.in_flight == table.runs_below.len()
             {
                 if self.sim.is_some() {
                     return Err(self.sim_endless_wait());
                 }
-                self.activities.ended_stuck = true;
-                return Err(Loud::unsatisfiable_wait().into());
+                if self.refuses_unending_waits() || self.waits_on_its_own_message() {
+                    self.activities.ended_stuck = true;
+                    return Err(Loud::unsatisfiable_wait().into());
+                }
+                // A thread an external native library started may attach
+                // and end the wait, so the end waits for it as ooRexx does
+                // (Deviation 20).
+                self.idle_for_posts()?;
             }
         }
     }
@@ -2016,7 +2995,8 @@ impl Interp {
     /// The loop at `level` has nothing to run: inverted where some activity
     /// is ready whose frames lie below a loop on the stack, which only that
     /// loop can run, or where a recall below this loop interrupted an
-    /// activity, which runs on only once that recall's lend returns.
+    /// activity, which runs on only once that recall's lend returns, and the
+    /// running activity does not wait on a message it runs itself.
     ///
     /// Both are a best guess at what the blocked wait is for: neither asks
     /// whether the activity below could end it. Any interrupted owner below
@@ -2030,8 +3010,12 @@ impl Interp {
         let interrupted = table.owners[..level]
             .iter()
             .any(|&(_, below)| below == Below::Interrupted);
+        // An activity set aside or interrupted cannot end a wait on a message
+        // the running activity runs itself either, so that wait is not
+        // inverted.
         Waited::Blocked {
-            inverted: !table.set_aside.is_empty() || interrupted,
+            inverted: (!table.set_aside.is_empty() || interrupted)
+                && !self.waits_on_a_message_it_runs(table.running),
         }
     }
 
@@ -2045,6 +3029,60 @@ impl Interp {
             .is_some_and(|idle| idle.activity.root_end.is_some())
     }
 
+    /// Whether waits are refused where nothing left to run can end them
+    /// (Deviation 20): while no external native library has loaded and no
+    /// host outside the interpreter runs the program, and never again in the
+    /// run once either holds, also after the library is dropped. Libraries
+    /// built into the interpreter do not count.
+    pub(crate) fn refuses_unending_waits(&self) -> bool {
+        // Only native code from outside can start a thread that attaches
+        // later and ends the wait, and dropping a library does not end the
+        // threads it started.
+        !self.external_native_code
+    }
+
+    /// Notes that an external native library has loaded, through
+    /// `::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`, a
+    /// classic registration or a library a host registers: waits are no
+    /// longer refused as unending.
+    pub(crate) fn note_external_library(&mut self) {
+        self.external_native_code = true;
+    }
+
+    /// Notes that a host outside the interpreter runs the program through
+    /// the API, `RexxStart` or `RexxCreateInterpreter`: waits are not refused
+    /// as unending.
+    pub(crate) fn note_outside_host(&mut self) {
+        self.external_native_code = true;
+    }
+
+    /// Whether the loop at `level`, with nothing to run and nothing in
+    /// flight, waits for a post rather than answering that it is blocked:
+    /// where waits are not refused as unending
+    /// ([`Interp::refuses_unending_waits`]), an inverted wait above an
+    /// activity set aside or interrupted included, except for a wait on the
+    /// waiting activity's own message
+    /// ([`Interp::waits_on_its_own_message`]), the loop of the program's end
+    /// and the simulation mode.
+    fn waits_for_attaching_threads(&self, level: usize) -> bool {
+        // A thread an external library started may attach later and end the
+        // wait (Deviation 20). An inverted wait, one an activity set aside
+        // makes or one an activity a recall interrupted below this loop
+        // makes, as [`Interp::blocked`] counts them, follows the same switch
+        // (Deviation 14): such a thread may end what it waits on too, and
+        // the loop below runs once it has. Where it goes on, stderr says so
+        // once it has waited a while ([`Interp::report_stall`]). The
+        // program's end loop answers that it is blocked, and waits for posts
+        // itself only while an activity waits ([`Interp::run_to_end`]). The
+        // simulation mode refuses every attach, so nothing can post there. No
+        // thread can end an activity's wait on its own message, so the loop
+        // refuses it whatever was loaded.
+        !self.refuses_unending_waits()
+            && self.sim.is_none()
+            && !self.waits_on_its_own_message()
+            && self.activities.end_level != Some(level)
+    }
+
     /// The next ready activity the loop at `level` can run, or `me`; a buried
     /// activity is set aside. With none ready, this thread idles until the
     /// earliest sleeper is due; the run's deadline passing first fails it.
@@ -2053,7 +3091,9 @@ impl Interp {
         me: ActivityId,
         level: usize,
     ) -> Result<Option<ActivityId>, Failure> {
-        if self.timer.requests().pending(crate::timer::INBOX) {
+        if self.timer.requests().pending(crate::timer::INBOX)
+            || (!self.activities.held.is_empty() && !self.holds_callbacks())
+        {
             self.drain_completions(DrainAt::Stopped);
         }
         loop {
@@ -2066,14 +3106,36 @@ impl Interp {
                 self.activities.ready.pop_front()
             };
             let Some(ready) = next else {
-                let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
-                    if self.activities.in_flight == self.activities.runs_below {
-                        return Ok(None);
-                    }
-                    self.idle_for_posts()?;
-                    continue;
-                };
-                self.idle_until(due)?;
+                let sleeper = (self.activities.sleepers.peek()).map(|Reverse((due, _, _))| *due);
+                // While an attached thread's callback runs, a later callback
+                // may end a wait, so a loop with nothing else to run or wait
+                // for idles for posts instead of refusing the wait
+                // (`r[native.threads.attach.deviation.178]`).
+                // No callback can end this loop's own wait on a message its
+                // activity runs, so that wait is refused even inside a
+                // callback, a host's call included (Deviation 20). A callback
+                // whose send is to be sent again counts as held before its
+                // recall arrives, as its place in a guard lock's queue may
+                // be the turn the other waits wait for.
+                if sleeper.is_none()
+                    && self.activities.nothing_held_or_in_flight()
+                    && (self.waits_on_a_message_it_runs(me)
+                        || (self.activities.callbacks_lent == 0
+                            && !self.waits_for_attaching_threads(level)))
+                {
+                    return Ok(None);
+                }
+                // A watched wait is reported only once nothing else could
+                // end it, so a sleeper, which may, keeps it unreported. A
+                // sleeper a lend stopped may not, so it does not hold the
+                // report back to its wake.
+                let stall = self.counted_stall(level).map(|stall| stall.due);
+                match (sleeper, stall) {
+                    (Some(sleeper), Some(stall)) => self.idle_until(sleeper.min(stall))?,
+                    (Some(due), None) | (None, Some(due)) => self.idle_until(due)?,
+                    (None, None) => self.idle_for_posts()?,
+                }
+                self.report_stall(level);
                 continue;
             };
             let buried = self
@@ -2556,7 +3618,11 @@ impl Interp {
         // A delivery that holds a guard never yields (a second delivery
         // waiting for that guard would be an inverted wait), so one that
         // waits for another activity to act spins. After a bound of slices
-        // it is refused as the inverted wait it is (Deviation 14).
+        // it is refused as the inverted wait it is (Deviation 14), where
+        // waits are refused as unending. Where they are not, a thread that
+        // native code from outside started may still end the spin, so it
+        // goes on, and stderr says so once.
+        let refuses = self.refuses_unending_waits();
         if fresh
             && self.slice_deferred
             && self.activity.routing_trace
@@ -2564,11 +3630,17 @@ impl Interp {
             && self.delivery_holds_a_guard()
             && let Some(delivery) = self.deliveries.last_mut()
         {
-            delivery.guarded_slices += 1;
-            if delivery.guarded_slices > GUARDED_DELIVERY_SLICES {
+            delivery.guarded_slices = delivery.guarded_slices.saturating_add(1);
+            if delivery.guarded_slices > GUARDED_DELIVERY_SLICES && refuses {
                 self.slice_deferred = false;
                 inverted_wait!(self, ParkReason::GuardWhen);
                 return Err(Loud::inverted_wait("a guard").into());
+            }
+            if delivery.guarded_slices == GUARDED_DELIVERY_SLICES + 1 {
+                self.write_err(
+                    b"interrexx: a trace line's delivery holds a guard and has kept the \
+                      activities ready to run from running for several seconds\n",
+                );
             }
         }
         if fresh && !self.slice_deferred {
@@ -2845,6 +3917,22 @@ impl Interp {
         }
     }
 
+    /// [`Interp::set_external_trace`] for every activity of the interpreter, as a halt
+    /// reaches them (`r[native.threads.trace]`): the running one and each idle one, whose
+    /// frames are reached by putting it in the running one's place, as a read of it is.
+    /// From the first such request on, every body compiles without settling a clause's
+    /// trace setting ([`Interp::make_trace_switchable`]).
+    pub(crate) fn set_external_trace_all(&mut self, on: bool) {
+        self.make_trace_switchable();
+        self.set_external_trace(on);
+        for index in 0..self.activities.idle.len() {
+            if self.activities.idle[index].is_some() {
+                let activity = ActivityId(u32::try_from(index).expect("handles fit u32"));
+                self.with_idle_activity(activity, |interp| interp.set_external_trace(on));
+            }
+        }
+    }
+
     /// Ends `activity`'s park, if it is in one a halt ends.
     fn wake_for_halt(&mut self, activity: ActivityId) {
         let table = &mut self.activities;
@@ -3012,6 +4100,19 @@ pub(crate) fn abandoned_held() -> usize {
 #[cfg(test)]
 pub(crate) fn note_abandoned_held(activities: &Activities) {
     ABANDONED_HELD.with(|held| held.set(activities.abandoned.len()));
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many native calls this thread's interpreters ran with the baton
+    /// vacated.
+    static VACATES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// [`VACATES`]'s count.
+#[cfg(test)]
+pub(crate) fn vacates() -> u64 {
+    VACATES.with(std::cell::Cell::get)
 }
 
 /// [`NATIVE_EXITS`]'s count.

@@ -145,10 +145,8 @@ call try 'c~stableSort(1)'
 call try 'c~sortWith'
 call try 'c~sortWith(.numericComparator~new)'
 call try 'c~sortWith(.nil)'
-call try 'c~sortWith(1, 2)'
 call try 'c~stableSortWith'
 call try 'c~stableSortWith("not a comparator")'
-call try 'c~stableSortWith(1, 2)'
 exit
 try:
   signal on syntax name bad
@@ -167,10 +165,8 @@ c~stableSort(1) => 93.902
 c~sortWith => 93.901
 c~sortWith(.numericComparator~new) => 93.965
 c~sortWith(.nil) => 93.965
-c~sortWith(1, 2) => 93.902
 c~stableSortWith => 93.901
 c~stableSortWith("not a comparator") => 93.965
-c~stableSortWith(1, 2) => 93.902
 ```
 
 ```rexx
@@ -255,7 +251,7 @@ r = s~appendAll(.array~new)
 say s
 say s~appendAll(.words~new)
 call try 's~appendAll'
-call try 's~appendAll(1, 2)'
+call try 's~appendAll(.array~new, 2)'
 call try 's~appendAll("text")'
 call try 's~appendAll(.nil)'
 call try 's~appendAll(.nothing~new)'
@@ -306,7 +302,7 @@ a b c a b c
 a b c a b c
 a b c a b c one string
 s~appendAll => 93.901
-s~appendAll(1, 2) => 93.902
+s~appendAll(.array~new, 2) => 93.902
 s~appendAll("text") => 93.948
 s~appendAll(.nil) => 93.948
 s~appendAll(.nothing~new) => 98.913

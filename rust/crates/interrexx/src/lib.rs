@@ -426,7 +426,7 @@ impl StackSpan {
 
 /// A construct this crate does not implement, on its way to becoming an exit
 /// code and a line on stderr.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Loud {
     message: String,
 }
@@ -964,6 +964,16 @@ impl Loud {
         }
     }
 
+    /// A callback's send whose thread gives the baton back to send again
+    /// once it is granted a guard lock in the turn its wait took
+    /// ([`Interp::retries_entry_guard`]). Nothing
+    /// reports it: the send answers no one.
+    fn retried_send() -> Loud {
+        Loud {
+            message: "a callback's send given back to wait for a guard lock".to_string(),
+        }
+    }
+
     /// A `REPLY` with Rust frames between its method body's driver and
     /// itself, which cannot move to a new activity.
     fn immovable_reply() -> Loud {
@@ -1194,11 +1204,11 @@ struct Interp {
     /// that could assign a tail variable.
     shared_key: Vec<u8>,
     shared_key_for: Option<SymbolId>,
-    /// The stem and the tail's ordinal the same read found, where the tail
-    /// held a value of its own: what the write uses in place of the key, see
-    /// [`Interp::stem_set_held`]. Read only beside `shared_key_for`, so every
-    /// rule that drops the key drops this with it.
-    shared_tail: Option<(ObjRef, usize)>,
+    /// The stem, the tail's ordinal and its epoch the same read found, where
+    /// the tail held a value of its own: what the write uses in place of the
+    /// key, see [`Interp::stem_set_held`]. Read only beside `shared_key_for`,
+    /// so every rule that drops the key drops this with it.
+    shared_tail: Option<crate::stem::HeldTail>,
     /// What a `.local~novalue` hook a read sent came to, answered or failed,
     /// held from that read to the `novalue_check` after it.
     novalue_hooked: std::cell::Cell<Option<Result<(), Failure>>>,
@@ -1308,15 +1318,25 @@ struct Interp {
     timer: crate::timer::Registration,
     /// The right to touch this interpreter's state.
     baton: crate::sync::Arc<crate::island::InterpBaton>,
+    /// Closes `baton` when the interpreter is dropped, waking a callback
+    /// whose recall nothing served (`r[native.threads.end]`).
+    _closing: crate::island::Closing,
     /// The deterministic switch mode, where a test set one.
     switch: Option<crate::scheduler::Switch>,
     /// The simulation mode's state, where the switch mode is `Sim`.
     sim: Option<Box<crate::sim::Sim>>,
+    /// The seed every string's hash is keyed with (`r[class.string.hashcode]`),
+    /// and every stem's tail map. Fixed before the first string is hashed.
+    hash_seed: interrexx_core::HashSeed,
     /// Whether the pending `SLICE` has been counted as deferred.
     slice_deferred: bool,
     /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
     /// setting the chunk was compiled under**.
     chunks: NameMap<(BodyKey, ChunkTrace), Rc<crate::ir::Chunk>>,
+    /// The chunks [`Interp::make_trace_switchable`] took out of `chunks`, kept until their
+    /// program is freed: a frame may still run one, and its interned literals, pinned copies
+    /// and call-site holds are released with the program's rows, as a cached chunk's are.
+    retired_chunks: Vec<(BodyKey, Rc<crate::ir::Chunk>)>,
     /// How many times `chunk_for` has refused a body because it does not fit
     /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
     /// never because a body contains a construct the compiler does not
@@ -1485,6 +1505,11 @@ struct Interp {
     /// load and asked for again; a library whose version check refused is,
     /// because that check raises between the `put` and the `remove`.
     libraries: Libraries,
+    /// Whether native code from outside the interpreter may run in this run:
+    /// an external native library has loaded, or a host outside the
+    /// interpreter runs it. [`Interp::refuses_unending_waits`] answers the
+    /// opposite. Never reset.
+    external_native_code: bool,
     /// The thread context [`Interp::terminate`] ran on, which an extension
     /// may have kept. Declared after `libraries`, so a library's destructor
     /// run when they drop still finds it allocated.
@@ -1515,7 +1540,8 @@ struct Interp {
     /// boundary.
     pub(crate) clause_exits: bool,
     /// Whether another thread can switch the trace of this run at a clause boundary
-    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    /// (`RexxSetTrace`, or `SetTrace` through the instance once it has been served), so that
+    /// no chunk compiled from then on settles a clause's trace setting at compile time.
     pub(crate) trace_switchable: bool,
     /// A native call posted to this interpreter's own inbox, which the clause boundary that
     /// ends the calling clause serves: the activation depth of that clause. It sets
@@ -2306,13 +2332,23 @@ impl Interp {
                 .collect()
         };
         with_session_variable(&mut env);
+        let hash_seed = hash_seed_of(&env, None);
         // The creating thread holds the baton until a driver exit releases it.
         let baton = crate::sync::Arc::new(crate::island::InterpBaton::new());
         baton.acquire();
         let timer = crate::timer::Registration::new();
         let requester = crate::dispatch::library::Requester::new(&baton, timer.inbox());
-        let thread_table =
-            interrexx_api::ffi::ThreadTable::requesting(crate::sync::Arc::new(requester));
+        let constants = crate::dispatch::library::constant_objects();
+        let handle = interrexx_api::handles::handle_of;
+        let thread_table = interrexx_api::ffi::ThreadTable::requesting(
+            crate::sync::Arc::new(requester),
+            interrexx_api::values::Constants {
+                nil: handle(constants.nil),
+                true_object: handle(constants.true_object),
+                false_object: handle(constants.false_object),
+                null_string: handle(constants.null_string),
+            },
+        );
         Interp {
             heap: Heap::new(),
             roots: RootSet::new(),
@@ -2350,11 +2386,14 @@ impl Interp {
             stack_base: 0,
             stack_room: usize::MAX,
             timer,
+            _closing: crate::island::Closing(crate::sync::Arc::clone(&baton)),
             baton,
             switch: None,
             sim: None,
+            hash_seed,
             slice_deferred: false,
             chunks: NameMap::default(),
+            retired_chunks: Vec::new(),
             chunks_refused: 0,
             routines_written: false,
             routines_tables: false,
@@ -2398,6 +2437,7 @@ impl Interp {
             native_externals: FxHashMap::default(),
             guarded_externals: rustc_hash::FxHashSet::default(),
             libraries: Libraries::new(),
+            external_native_code: false,
             termination_thread: None,
             #[cfg(test)]
             library_open_attempts: 0,
@@ -3434,13 +3474,17 @@ impl Interp {
             stack_room: _,
             timer: _,
             baton: _,
+            // The baton again, which it closes when dropped.
+            _closing: _,
             pool: _,
             switch: _,
             sim: _,
+            hash_seed: _,
             slice_deferred: _,
             // A chunk's interned literals are allocated immortal, and
             // released when the chunk is dropped.
             chunks: _,
+            retired_chunks: _,
             chunks_refused: _,
             routines_written: _,
             routines_tables: _,
@@ -3524,6 +3568,7 @@ impl Interp {
             guarded_externals: _,
             // Library handles and procedure names, no `ObjRef` in either.
             libraries: _,
+            external_native_code: _,
             termination_thread: _,
             #[cfg(test)]
                 library_open_attempts: _,
@@ -3840,12 +3885,22 @@ impl Interp {
         let mut interned = Vec::new();
         let mut pinned = Vec::new();
         let mut holds = 0;
+        let mut release = |chunk: &crate::ir::Chunk| {
+            interned.extend(chunk.interned_values());
+            pinned.extend(chunk.pinned_copies());
+            holds += chunk.site_holds().count() as u32;
+        };
         self.chunks.retain(|(key, _), chunk| {
             let keep = !dead(&key.program);
             if !keep {
-                interned.extend(chunk.interned_values());
-                pinned.extend(chunk.pinned_copies());
-                holds += chunk.site_holds().count() as u32;
+                release(chunk);
+            }
+            keep
+        });
+        self.retired_chunks.retain(|(key, chunk)| {
+            let keep = !dead(&key.program);
+            if !keep {
+                release(chunk);
             }
             keep
         });
@@ -3997,6 +4052,71 @@ impl Interp {
 /// a line at a time, as ooRexx writes it, rather than in blocks: any value but
 /// the empty string (r[instr.say.deviation.40]).
 pub const UNBUFFERED_ENV: &str = "REXX_UNBUFFERED";
+
+/// The environment variable that fixes the seed of the keyed string hash, so
+/// that a run's `hashCode` answers can be had again: decimal digits naming a
+/// number below 2**64. The empty string is the same as no value.
+pub const HASH_SEED_ENV: &str = "REXX_HASH_SEED";
+
+/// What a [`HASH_SEED_ENV`] value says: `Ok(None)` for the empty string, which
+/// leaves the seed unset, `Ok(Some(seed))` for decimal digits, with no sign,
+/// naming a number below 2**64, and otherwise `Err` with the message that
+/// refuses it.
+pub fn parse_hash_seed(value: &[u8]) -> Result<Option<u64>, String> {
+    if value.is_empty() {
+        return Ok(None);
+    }
+    std::str::from_utf8(value)
+        .ok()
+        .filter(|text| text.bytes().all(|byte| byte.is_ascii_digit()))
+        .and_then(|text| text.parse().ok())
+        .map(Some)
+        .ok_or_else(|| {
+            format!(
+                "{HASH_SEED_ENV} must be empty or decimal digits naming a number below \
+                 2**64, not `{}`",
+                String::from_utf8_lossy(value)
+            )
+        })
+}
+
+/// The [`HASH_SEED_ENV`] value of `environment`, as [`parse_hash_seed`] reads
+/// it, `Ok(None)` where there is none.
+fn named_hash_seed(environment: &[(Vec<u8>, Vec<u8>)]) -> Result<Option<u64>, String> {
+    environment
+        .iter()
+        .find(|(name, _)| name == HASH_SEED_ENV.as_bytes())
+        .map_or(Ok(None), |(_, value)| parse_hash_seed(value))
+}
+
+/// The hash seed of a run: the one [`HASH_SEED_ENV`] in `environment` names,
+/// else the simulation seed's, else a random one. A value
+/// [`parse_hash_seed`] refuses counts as unset, and
+/// [`Interp::warn_of_refused_hash_seed`] says so where the run can.
+fn hash_seed_of(
+    environment: &[(Vec<u8>, Vec<u8>)],
+    sim: Option<&SimConfig>,
+) -> interrexx_core::HashSeed {
+    match (named_hash_seed(environment).ok().flatten(), sim) {
+        (Some(seed), _) => interrexx_core::HashSeed::from_u64(seed),
+        (None, Some(config)) => crate::sim::hash_seed(config),
+        (None, None) => interrexx_core::HashSeed::random(),
+    }
+}
+
+impl Interp {
+    /// Writes to the run's standard error that its [`HASH_SEED_ENV`] value
+    /// was refused, and the seed drawn as if it were unset, where it was: an
+    /// embedding cannot be refused a run the way the `rexx` command refuses
+    /// one.
+    fn warn_of_refused_hash_seed(&mut self) {
+        if let Err(message) = named_hash_seed(&self.env) {
+            self.write_err(
+                format!("interrexx: {message}; the seed is drawn as if unset\n").as_bytes(),
+            );
+        }
+    }
+}
 
 /// Writes out what native code left in C's standard streams, for a sink to
 /// call before it writes, so that what C wrote first lands first
@@ -4236,10 +4356,14 @@ fn on_thread_of(
     body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
 ) -> Outcome {
     let (deliver, delivered) = std::sync::mpsc::channel();
+    #[cfg(test)]
+    let family = libraries::round_gate::family();
     let interpreter = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(stack)
         .spawn(move || {
+            #[cfg(test)]
+            libraries::round_gate::started_by(family);
             signal::receive();
             let (outcome, kept) = body();
             let _ = deliver.send(outcome);
@@ -4437,6 +4561,10 @@ fn execute_kept(
     let _classic = parts.classic_thread.map(|caller| {
         embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
     });
+    // The host's native code may end a wait nothing in the program can.
+    if parts.hosted {
+        interp.note_outside_host();
+    }
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4452,6 +4580,23 @@ fn execute_kept(
     if let Some(environment) = parts.environment {
         interp.adopt_environment(environment);
     }
+    // A seed the environment names is recorded in the simulation's own
+    // configuration, so that its trace header and report name it.
+    let mut switch_mode = switch_mode;
+    if let Some(SwitchMode::Sim(config)) = &mut switch_mode
+        && let Ok(Some(seed)) = named_hash_seed(&interp.env)
+    {
+        config.knobs.hash = Some(seed);
+    }
+    let sim_config = match &switch_mode {
+        Some(SwitchMode::Sim(config)) => Some(config),
+        _ => None,
+    };
+    // Before the bootstrap, which hashes the first strings: a store holds
+    // hashes made under the seed of its time, so the seed never changes once
+    // one is made.
+    interp.hash_seed = hash_seed_of(&interp.env, sim_config);
+    interp.warn_of_refused_hash_seed();
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
     // below runs clauses of its own and is inside the bound, which is what a
@@ -4705,12 +4850,12 @@ const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
 
 /// Everything an embedding instance's interpreter thread does: the
 /// interpreter is built and bootstrapped, `options` applied, `started` told
-/// the root thread context and the inbox, and the root activity waits in a
+/// the root thread context, the instance and the inbox, and the root activity waits in a
 /// native call that leaves the driver free to serve the attached threads'
 /// callbacks; once it returns, the run ends as a program's does.
 pub(crate) fn run_instance(
     options: embedding::InstanceOptions,
-    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+    started: Box<dyn FnOnce(usize, usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
 ) -> (Outcome, Option<Interp>) {
     use interrexx_api::callbacks::Surface as _;
     let probe = 0u8;
@@ -4721,6 +4866,9 @@ pub(crate) fn run_instance(
     ))
     .unwrap_or_else(|_| panic!("the instance's root program parses"));
     let mut interp = Interp::new();
+    // Only `RexxCreateInterpreter` creates an instance, for a host that holds
+    // it and may attach a thread at any time (Deviation 20).
+    interp.note_outside_host();
     interp.measure_stack(base, INTERPRETER_STACK_BYTES);
     interp.program_path = b"RexxCreateInterpreter".to_vec();
     interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);
@@ -4745,6 +4893,7 @@ pub(crate) fn run_instance(
         unbuffered,
         own_descriptors: true,
     });
+    interp.warn_of_refused_hash_seed();
     let result = interp.bootstrap_library().and_then(|()| {
         interp.default_address = options.initial_address.as_deref().map(Rc::from);
         interp.call_search = require::Instance {
@@ -4772,7 +4921,11 @@ pub(crate) fn run_instance(
         let thread = interp.thread_context();
         thread.keep();
         thread.set_application_data(options.application_data);
-        started(thread.address(), interp.timer.inbox());
+        started(
+            thread.address(),
+            thread.instance_address(),
+            interp.timer.inbox(),
+        );
         interp.leave_next_native = true;
         let program = Rc::new(program);
         let program_id = interp.load_program(Rc::clone(&program));

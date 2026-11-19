@@ -74,9 +74,14 @@ impl Settlement {
             let attached = interp.native_entry(message, crate::dispatch::MESSAGE_CONDITION);
             let code = attached
                 .and_then(|condition| {
-                    match directory_get(interp, condition, Key::new(b"CODE"), None)
-                        .ok()?
-                        .0
+                    match directory_get(
+                        interp,
+                        condition,
+                        Key::new(interp.hash_seed, b"CODE"),
+                        None,
+                    )
+                    .ok()?
+                    .0
                     {
                         DirectoryEntry::Found(value) => Some(interp.to_text(value).into_owned()),
                         _ => None,

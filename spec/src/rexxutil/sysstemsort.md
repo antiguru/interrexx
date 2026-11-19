@@ -28,8 +28,7 @@ argument takes its default: `order` is `A`, `type` is `C`, `start` is `1`,
 each item. `stem` names a stem as [the stem name rule](r:util.index.stemname)
 says, with the addition of [the next rule](r:util.sysstemsort.name). The call
 follows [the argument rule](r:util.index.args): a missing `stem` raises
-`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922` ([Deviation
-101](r:util.index.deviation.101) is about which of the two comes first).
+`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922` ([the precedence rule](r:conv.error.precedence) says which of the two a call with both raises).
 `start`, `end`, `firstcol` and `lastcol` are read as whole numbers that are at
 least `1`, with their blanks, a leading plus sign, a decimal point and an
 exponent. The value is read as [the whole-number rule](r:util.index.whole)
@@ -365,9 +364,9 @@ range, as with `start` equal to `end`, is still read. The call raises `SYNTAX
 the stem. An `end` of `999999999999999999`, the largest that is allowed, is
 taken as an `end` that is left out, the count of the stem. A stem with the
 count `0` has no item, and then no range is checked: the call answers `0` and
-does nothing, for every `start` and `end` that pass the checks before the tail
-`0` ([the order rule](r:util.sysstemsort.order)), so that a `start` above a
-given `end` still raises `SYNTAX 40.921`. The tail `0` is never changed, and
+does nothing, for every `start` and `end` that pass their own checks ([the
+order rule](r:util.sysstemsort.order)), so that a `start` above a given `end`
+still raises `SYNTAX 40.921`. The tail `0` is never changed, and
 the tails above the count are not touched. A count below `0` raises `SYNTAX
 40.922`.
 
@@ -499,37 +498,32 @@ say s.2~class~id s.2
 String zz
 ```
 
-## Order of the checks
+## The checks
 
 r[util.sysstemsort.order]
-When several things are wrong, the call raises the condition of the first of
-these checks that fails: a missing `stem` raises `SYNTAX 88.901`; then an
-`order` or a `type` that is `.nil` raises `SYNTAX 88.909`; then `start`,
-`end`, `firstcol` and `lastcol` raise `SYNTAX 88.905`; then the name of the
-stem raises `SYNTAX 40.919`; then `order` and `type` raise `SYNTAX 40.920`;
-then a `start` that is more than an `end` that is given, and a `firstcol` that
-is more than a `lastcol` that is given, raise `SYNTAX 40.921`; then the tail
-`0` of the stem raises `SYNTAX 40.922`; then the range raises `SYNTAX 40.923`;
-and last an item without a value raises `SYNTAX 40.924`. A `start` that is
-more than the default `end`, the count of the stem, is a range that is outside
-the stem and raises `SYNTAX 40.923`, not `SYNTAX 40.921`. The other three
-functions that take a stem name check the name before any number.
+The call can fail these checks: a missing `stem` raises `SYNTAX 88.901`; an
+`order` or a `type` that is `.nil` raises `SYNTAX 88.909`; `start`, `end`,
+`firstcol` and `lastcol` raise `SYNTAX 88.905`; the name of the stem raises
+`SYNTAX 40.919`; `order` and `type` raise `SYNTAX 40.920`; a `start` that is
+more than an `end` that is given, and a `firstcol` that is more than a
+`lastcol` that is given, raise `SYNTAX 40.921`; the tail `0` of the stem raises
+`SYNTAX 40.922`; the range raises `SYNTAX 40.923`; and an item without a value
+raises `SYNTAX 40.924`. When several of them fail, the call raises the error of
+one of them, as [the precedence rule](r:conv.error.precedence) says. A `start`
+that is more than the default `end`, the count of the stem, is a range that is
+outside the stem and raises `SYNTAX 40.923`, not `SYNTAX 40.921`.
 
 ```rexx
-call try "SysStemSort(, .nil)", ""
-call try "SysStemSort(, , , 0)", ""
-call try "SysStemSort('s-.', .nil, , 'x')", ""
-call try "SysStemSort('s-.', 'x', , 'x')", ""
-call try "SysStemSort('s-.', 'x')", ""
-call try "SysStemSort('s.', 'x', , 4, 2)", ""
-call try "SysStemSort('s.', , , 4, 2)", "drop s.0"
-call try "SysStemSort('s.', , , , , 3, 2)", "drop s.0"
-call try "SysStemSort('s.', , , 9, 8)", ""
+call try "SysStemSort()", ""
+call try "SysStemSort('s.', .nil)", ""
+call try "SysStemSort('s.', , , 0)", ""
+call try "SysStemSort('s-.')", ""
+call try "SysStemSort('s.', 'x')", ""
+call try "SysStemSort('s.', , , 4, 2)", ""
+call try "SysStemSort('s.', , , , , 3, 2)", ""
 call try "SysStemSort('s.', , , 7)", ""
 call try "SysStemSort('s.')", "drop s.0"
-call try "SysStemSort('s.', , , , 9)", "drop s.3"
 call try "SysStemSort('s.')", "drop s.3"
-call try "SysStemInsert('s-.', 'x', 'v')", ""
 exit
 try:
   parse arg ex, setup
@@ -545,17 +539,13 @@ e: say condition('o')~code
 
 ```output
 88.901
-88.901
 88.909
 88.905
 40.919
 40.920
 40.921
 40.921
-40.921
 40.923
 40.922
-40.923
 40.924
-40.919
 ```

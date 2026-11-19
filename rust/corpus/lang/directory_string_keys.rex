@@ -14,20 +14,23 @@
  *
  * `setEntry` with no value removes, and the entry mechanism answers a message
  * of the entry's own name.
+ *
+ * The lists are sorted: the order a directory lists its entries in is
+ * Deviation 33.
  */
 
 d = .Directory~new
 d['lower'] = 1
 d['UPPER'] = 2
 d['MiXeD'] = 3
-say 'indexes ' d~allIndexes~makeString('L',',')
+say 'indexes ' d~allIndexes~sort~makeString('L',',')
 say 'case    ' d['lower'] d['LOWER'] d~hasIndex('lower') d~hasIndex('LOWER')
 d~setEntry('viaEntry', 9)
-say 'setEntry' d~allIndexes~makeString('L',',')
+say 'setEntry' d~allIndexes~sort~makeString('L',',')
 say 'both    ' d['viaEntry'] d['VIAENTRY'] d~entry('viaEntry') d~entry('VIAENTRY')
 say 'lowered ' d~entry('lower') d~hasEntry('lower') d~hasEntry('VIAENTRY') d~hasEntry('nope')
-say 'counts  ' d~items d~allItems~makeString('L',',')
-say 'makeArr ' d~makeArray~makeString('L',',')
+say 'counts  ' d~items d~allItems~sort~makeString('L',',')
+say 'makeArr ' d~makeArray~sort~makeString('L',',')
 d~removeEntry('VIAENTRY')
 say 'removed ' d~items
 
@@ -38,7 +41,7 @@ say 'no value' gone~items gone~entry('beta')
 
 numbered = .Directory~new
 numbered[1] = 'one'
-say 'numeric ' numbered[1] numbered['1'] numbered~allIndexes~makeString('L',',')
+say 'numeric ' numbered[1] numbered['1'] numbered~allIndexes~sort~makeString('L',',')
 numbered[.Array~new] = 'x'
 say 'object  ' numbered~items
 
@@ -50,7 +53,7 @@ say 'assigned' named~beta named~entry('beta') named['BETA']
 
 st = .StringTable~new
 st~setEntry('gamma', 3)
-say 'st      ' st~entry('gamma') st~gamma st~allIndexes~makeString('L',',')
+say 'st      ' st~entry('gamma') st~gamma st~allIndexes~sort~makeString('L',',')
 st['plain'] = 4
 say 'st index' st['plain'] st~entry('plain') st~items
 
@@ -58,7 +61,7 @@ p = .Properties~new
 p['a'] = 'b'
 p~setProperty('k', 'v')
 say 'props   ' p['a'] p~getProperty('k') p~getProperty('absent') p~getProperty('absent','dflt')
-say 'p index ' p~allIndexes~makeString('L',',') p~items
+say 'p index ' p~allIndexes~sort~makeString('L',',') p~items
 
 /* The environment keeps the store it was built on, and keeps answering. */
 say 'env     ' .environment['ARRAY']~id .environment~local~class~id

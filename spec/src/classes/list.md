@@ -378,7 +378,7 @@ a = l~append('a'); b = l~append('b'); n = l~append(.nil)
 say l~at(a) l~at(b) (l~at(n) == .nil) l~hasIndex(n) (l~last == n)
 say l~items l~lastItem~class~id (l~lastItem == .nil)
 call try 'l~append'
-call try 'l~append(, 1)'
+call try 'l~append(1, 1)'
 call try 'l~append(1, 2)'
 exit
 try:
@@ -394,7 +394,7 @@ bad: say arg(1) '=>' condition('o')~code
 a b 1 1 1
 3 Object 1
 l~append => 93.903
-l~append(, 1) => 93.902
+l~append(1, 1) => 93.902
 l~append(1, 2) => 93.902
 ```
 
@@ -500,7 +500,7 @@ say l~removeItem('a') l~hasIndex(h[1]) l~hasIndex(h[2]) l~hasIndex(h[3])
 say l~removeItem('a') l~hasIndex(h[2]) l~hasIndex(h[3]) l~hasIndex(h[4])
 say (l~removeItem('a') == .nil) l~items (l~removeItem(1.0) == .nil)
 call try 'l~removeItem'
-call try 'l~removeItem(, 1)'
+call try 'l~removeItem(1, 1)'
 call try 'l~removeItem(1, 2)'
 exit
 try:
@@ -517,7 +517,7 @@ a 0 1 1
 a 1 0 1
 1 2 1
 l~removeItem => 93.903
-l~removeItem(, 1) => 93.902
+l~removeItem(1, 1) => 93.902
 l~removeItem(1, 2) => 93.902
 ```
 
@@ -599,7 +599,7 @@ l = .list~of(1, 'x', .nil)
 say l~hasItem(1) l~hasItem('1') l~hasItem(1.0) l~hasItem('X') l~hasItem(.nil)
 say .list~of(1)~hasItem(.nil)
 call try 'l~hasItem'
-call try 'l~hasItem(, 1)'
+call try 'l~hasItem(1, 1)'
 call try 'l~hasItem(1, 2)'
 exit
 try:
@@ -615,7 +615,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 1 0 0 1
 0
 l~hasItem => 93.903
-l~hasItem(, 1) => 93.902
+l~hasItem(1, 1) => 93.902
 l~hasItem(1, 2) => 93.902
 ```
 

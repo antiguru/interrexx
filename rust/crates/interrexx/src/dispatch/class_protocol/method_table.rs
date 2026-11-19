@@ -51,9 +51,7 @@ fn string_keyed_table(interp: &mut Interp, value: ObjRef) -> bool {
 }
 
 /// The (name, value) pairs `createMethodDictionary` obtains from `table`'s
-/// `SUPPLIER`, each index as its string value, in supplier order. Native
-/// directories using the compatibility path return their own entries sorted by
-/// name.
+/// `SUPPLIER`, each index as its string value, in supplier order.
 pub(super) fn method_table_pairs(
     interp: &mut Interp,
     table: ObjRef,
@@ -61,7 +59,7 @@ pub(super) fn method_table_pairs(
     if string_keyed_table(interp, table) {
         // **Asked before the walk**, because the walk cannot see the
         // difference: a collection whose entries this crate answers per name
-        // rather than storing looks empty to `native_keys`, and a mutation
+        // rather than storing looks empty to a walk of its store, and a mutation
         // over an empty walk is a mutation that silently does nothing.
         if interp.holds_unbuilt_entry(table) {
             return Err(Loud::unreadable_collection().into());
@@ -69,29 +67,6 @@ pub(super) fn method_table_pairs(
     }
     // A user SUPPLIER can send protected methods or install methods
     // recursively. Run that method under the normal dispatch context.
-    // Native directories have no hash store for the primitive supplier to
-    // walk. Keep their existing walk only for an unrestricted primitive.
-    let native_table = matches!(
-        interp.heap.get(table).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && string_keyed_table(interp, table);
-    let plain_supplier = native_table
-        && interp
-            .lookup(table, b"SUPPLIER", None)
-            .is_some_and(|found| {
-                interp.object_model().natives.get(found.method).is_some()
-                    && interp.access_scope_of(found.method).is_none()
-            });
-    if plain_supplier {
-        let mut names = interp.native_keys(table);
-        names.sort();
-        let mut pairs = Vec::with_capacity(names.len());
-        for name in names {
-            let value = interp.native_entry(table, &name).unwrap_or(ObjRef::NIL);
-            pairs.push((name, value));
-        }
-        return Ok(pairs);
-    }
     let caller = interp.caller();
     let supplier = interp
         .send_message(table, b"SUPPLIER", None, &[], caller)?

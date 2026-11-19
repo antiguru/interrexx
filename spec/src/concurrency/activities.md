@@ -833,6 +833,47 @@ rule](r:conc.locks.deviation.20). The refusal holds after the main program has
 ended too, when every activity that remains waits for something nothing can
 bring about ([the end rule](r:conc.halt.end.alive)); the second example is
 such a program.
+The refusal applies only while no native code from outside the interpreter
+can run, since a thread such code starts may [attach](r:native.threads.attach)
+later and end the wait. That code is an external library, loaded through
+`::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`,
+`~loadLibrary` or a call by name of a function another process registered
+with the API service, or behind a registered subcommand environment or a
+registered exit, and it is the host of an embedding, which runs the program
+through `RexxStart` or `RexxCreateInterpreter`, together with any library it
+registers. Once such code is present, every such wait goes on, as in ooRexx,
+for the rest of the run, also after a library has been dropped. Neither SIGINT
+nor SIGTERM ends such a wait for the result of a message never sent, as [the
+signal rule](r:conc.halt.deviation.10) says of a wait for a message. The libraries
+that come with interrexx, such as RexxUtil, do not count, and the `rexx`
+command runs a program with no host. This holds for each interpreter on its
+own: a host's instance does not turn the refusal off for another interpreter
+in the same process.
+A wait for the result or the completion of a message whose method the waiting
+activity itself runs, and has not yet replied from, is refused whatever was
+loaded, since the message completes only when that method returns. The other
+activities run on while it waits, and the refusal comes once nothing else can
+run, during the main program or at its end, so their output and their errors
+come first. Inside a message that an attached thread sends, or a routine that
+an embedding host calls, it comes there too, where another wait goes on for a
+later message. In a program the `rexx` command or `RexxStart` runs, the
+refusal ends the run, even where native code could still end another
+activity's wait. A call that a host makes on an instance it created with
+`RexxCreateInterpreter`, from any thread, answers no result and leaves a
+condition pending, and the instance takes further calls until `Terminate`.
+The refusal's text is written when the host terminates the instance, or at the
+end of the run, whether or not the host cleared the condition. The refusal
+claims only that the wait can never be satisfied.
+After a `reply` the result is settled, and the method's own `result` and
+`wait` answer at once.
+A wait that would close a ring of waits between activities raises `SYNTAX
+98.905` whatever was loaded ([the deadlock rule](r:conc.locks.deadlock)).
+In the third example the program loads [the fixture library
+`specfixture`](../native/index.md#the-fixture-libraries), whose thread may
+attach only after the main program has begun to wait on the semaphore it
+posts. In the fourth the program loads the same library, and a method waits
+for the result of the message that runs it. Each program runs as a separate
+`rexx` command, so that the outcome is that program's output and return code.
 
 ```rexx
 m = .message~new(.object~new, 'string')
@@ -864,4 +905,58 @@ say 'main ends'
 ```output rc=120
 main ends
 stuck: waiting
+```
+
+```rexx
+src = .array~of( -
+  "sem = .eventsemaphore~new", -
+  "call fxonthread sem, 'POST'", -
+  "sem~wait", -
+  "say 'posted'", -
+  "::requires 'specfixture' LIBRARY")
+call sysfiledelete 'a7zqlater.rex'
+do line over src
+  call lineout 'a7zqlater.rex', line
+end
+call lineout 'a7zqlater.rex'
+address system 'rexx a7zqlater.rex 2>/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqlater.rex'
+```
+
+```output
+rc 0
+posted
+```
+
+```rexx
+src = .array~of( -
+  "m = .message~new(.a7zqself~new, 'run')", -
+  ".environment~a7zqm = m", -
+  "m~send", -
+  "say 'not reached'", -
+  "::requires 'specfixture' LIBRARY", -
+  "::class a7zqself", -
+  "::method run", -
+  "  say 'running'", -
+  "  say .environment~a7zqm~result")
+call sysfiledelete 'a7zqself.rex'
+do line over src
+  call lineout 'a7zqself.rex', line
+end
+call lineout 'a7zqself.rex'
+address system 'rexx a7zqself.rex 2>/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqself.rex'
+```
+
+```output
+rc 120
+running
 ```

@@ -44,7 +44,9 @@ budget is a small whole-process percentage per program, so cumulative drift is v
 `varlookup`, `compound`, `strings`, `arith`, `bigdigits` (`NUMERIC DIGITS 1000`), `textnum`,
 `decloop`, `decrender`, `parse`, `alloc`, `alloc4c`, `churn`, `heapshape` (full-GC pause), `nop`
 and `assign` (per-clause cost), `fibcall`,
-`fibfunc`, `intcall`, `extcall` (a native extension call), `dirread`, `hashnew`, `pkglocal`,
+`fibfunc`, `intcall`, `extcall` (a native extension call), `dirread`, `hashnew`, `hashgrow`,
+`hashlookup`, `hashchurn`, `hashiter`, `hashdup`, `hashcopy` (the hash store) and `stemchurn` (stem
+tails), `pkglocal`,
 `interpret`, `define`, `listops` (`List` operations at the ends and after a handle), `startup`, and `pingpong/` (message, semaphore and guard handoffs between
 activities). `rust/bench-rexxcps/rexxcps.rex` is REXXCPS with fixed loop counts, so both sides do
 identical work. Each program's output is deterministic, and the README says what each covers.

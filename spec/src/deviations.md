@@ -23,12 +23,14 @@ an enclosing construct restores it.
 
 ## 1. DO OVER order on a stem
 
-DO OVER on a stem visits its tails in an order this book does not specify,
-and so do the `Stem` methods that list or search its tails: `allIndexes`,
-`allItems`, `makeArray` and `supplier`, the tail that `index` and `removeItem`
-choose, and the order in which `hasItem`, `index` and `removeItem` compare the
-items. ooRexx visits them in an order fixed by its internal storage, which is
-neither insertion nor sorted order.
+DO OVER on a stem, the `Stem` methods that list or search its tails
+(`allIndexes`, `allItems`, `makeArray`, `supplier`, `index`, `removeItem` and
+`hasItem`), the variable pool's `RXSHV_NEXTV` walk and `SysDumpVariables` visit
+the tails in the order they were first assigned, a tail that was dropped and
+assigned again counting from its new assignment. A dropped tail is not listed.
+`index` and `removeItem` choose the first match in that order. ooRexx visits
+them in an order fixed by its internal storage, which is neither insertion nor
+sorted order.
 
 ## 2. Withdrawn
 
@@ -68,8 +70,8 @@ interrexx gives one of the orders ooRexx can give.
 
 ## 8. Withdrawn
 
-Output that lists a hash collection now matches ooRexx; hash iteration order
-is [Deviation 33](#33-hash-iteration-order).
+The order in which output lists a hash collection is [Deviation
+33](#33-hash-iteration-order).
 
 ## 9. MutableBuffer storage held by a native call
 
@@ -110,7 +112,17 @@ activity that has not yet started to run.
 An activity waiting inside a nested construct, such as INTERPRET or a method
 that `run` runs, for something, such as a lock, a result or the change of a
 variable, that only an activity suspended beneath it can provide is refused,
-exit code 120. ooRexx runs each activity on its own thread and completes.
+exit code 120. ooRexx runs each activity on its own thread and completes. The
+refusal comes once nothing else can run, and only where the wait provably
+never ends: while no native code from outside the interpreter can run, as
+[the rule of Deviation 20](r:conc.activities.deviation.20) defines such code.
+Once such code is present, a thread it started may still end the wait, so the
+wait goes on. Once it has waited five seconds with nothing else left to run, a
+line on stderr says so, and the program otherwise runs as it would without the
+line. A HALT the host asks for ends such a wait where it ends the same wait
+elsewhere. A trace line's delivery that holds a guard and spins until another
+activity acts ([the locks page's rule](r:conc.locks.trace.deviation.14))
+follows the same switch: it is refused only while no such code is present.
 
 ## 15. Withdrawn
 
@@ -135,15 +147,48 @@ end. ooRexx preempts both and they complete.
 
 ## 19. Callback from a foreign thread
 
-A callback into the interpreter from a thread that runs no native call waits
-for a native call that holds the interpreter; if that call joins the thread,
-the program hangs. ooRexx aborts. Both fail.
+A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
+too for its whole run, and the callback waits until that call returns, while
+`SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx aborts the process.
+
+A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.
 
 ## 20. A wait nothing can end
 
 A wait that no other activity, timer or call can end, such as the result of
 a message never sent or a GUARD WHEN nothing can make true, is refused, exit
-code 120. ooRexx blocks for ever.
+code 120, while no native code from outside the interpreter can run. ooRexx
+blocks for ever. Such code is an external library a program loads, through
+`::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`,
+`~loadLibrary` or a call by name of a function another process registered with
+the API service, or behind a registered subcommand environment or a registered
+exit, and it is the host of an embedding, which runs the program through
+`RexxStart` or `RexxCreateInterpreter`, together with the libraries it
+registers. Each may start a thread that attaches later and ends the wait, so
+once one is present, interrexx waits as ooRexx does, for the rest of the run,
+also after a library is dropped. Neither SIGINT nor SIGTERM ends such a wait
+for the result of a message never sent, as Deviation 10 says of a wait for a
+message. The libraries that come with interrexx, such
+as RexxUtil, start no such thread and do not count, and the `rexx` command
+runs a program with no host. A wait for the result or the completion of a
+message whose method the waiting activity itself runs, and has not yet
+replied from, is refused whatever was loaded: the message completes only when
+that method returns, and the method is what waits. The refusal comes once
+nothing else can run, after the other activities' output and errors, also
+inside a message an attached thread sends or a routine an embedding host
+calls. ooRexx blocks for ever there too.
 
 ## 21. Activities at program end
 
@@ -235,11 +280,31 @@ class in place.
 
 ## 33. Hash iteration order
 
-The order in which a hash collection yields its entries, and the order of
-anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search compares, by `==` or `hashCode`, beyond those it must
-compare, and how often, is not specified either.
+A hash collection, a `Directory`, `StringTable`, `Properties`, `Table`,
+`IdentityTable`, `Set`, `Bag` or `Relation`, yields its entries in the order
+they were first put, and so does everything that lists or walks one. A `put`
+that replaces the item of an index already there keeps the entry in its place,
+and an entry that is removed and put again comes last. A `Directory` lists its
+entries first and then the names that `setMethod` gave it, each in the order
+they were put. Where several entries share an index or hold equal items, `at`,
+`[]`, `remove`, `index` and `removeItem` act on the oldest of them, a method
+that answers several of them lists them oldest first, and `uniqueIndexes`
+answers the oldest index of each group. ooRexx yields the entries in an order
+that its storage fixes, which is neither the order of insertion nor a sorted
+order, acts on the newest of several entries at one index, and searches the
+items in the order of its storage.
+
+Which entries are yielded, and how often, is specified. Which stored indexes or
+items a search compares, by `==` or `hashCode`, beyond those it must compare,
+and how often, is not specified. When a method that a search sends, `==` or
+`hashCode`, changes the collection being searched, which entry the search
+finds, answers or removes is not specified either, and it may act on none of
+them: a `removeAll` can answer an empty array while the entries under its index
+stay. The order is not specified for the methods that `methods` and
+`instanceMethods` list, for the variables that `.context~variables` and
+`SysDumpVariables` list, and for the entries that the interpreter itself puts
+in `.environment` and `.local`; the entries that a program puts there follow
+the order above.
 
 ## 34. `..` in a file name
 
@@ -691,31 +756,16 @@ characters there.
 `QUERY POSITION` of a transient standard stream answers the null string,
 because a transient stream has no position. ooRexx answers 1.
 
-## 101. Argument checks of the native builtins
+## 101. Withdrawn
 
-DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
-SysFileDelete and SysStemSort, check their arguments in the order that every
-other builtin follows, the ANSI order: the count of arguments first, so that
-an argument past the last one raises `SYNTAX 88.922` before an omitted or
-wrong argument is reported. ooRexx reports an omitted argument, an object
-whose `request` with the argument `STRING` answers no string and an argument
-that is not a whole number before the count, and so does the substitutions
-argument of SysFormatMessage when it has no `MAKEARRAY` method. It also
-reports these before the count: the stem name of SysStemCopy, SysStemDelete
-and SysStemInsert when it fails its check, and a whole-number argument of
-SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
-a number out of range among them. It reports the count before an argument's
-value: an option it does not allow, or any other number out of range, except a
-negative semaphore handle, which it reports before the count. SysOpenEventSem
-and SysOpenMutexSem are the exception: in both engines they report an omitted
-name and an object that has no string value before the count.
+Which of the argument count and another fault of a native builtin or a
+RexxUtil function is reported is unspecified ([the precedence
+rule](r:conv.error.precedence)).
 
-## 102. LOSTDIGITS before the right operand's errors
+## 102. Withdrawn
 
-When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
-before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
-for an exponent that is not a whole number, as the ANSI standard orders the
-operations. ooRexx raises the error for the right operand first.
+Which of LOSTDIGITS and the error of the same operator is raised first is
+unspecified ([the precedence rule](r:conv.error.precedence)).
 
 ## 103. TRACE() under ::OPTIONS TRACE ?
 
@@ -1291,6 +1341,20 @@ letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
 
+## 166. Trace lines of code already running when native code first switches the trace
+
+When native code first turns the external trace of the interpreter, or of one
+activity, on or off, each run of a program, method, `::ROUTINE` or internal
+routine that an activity had begun, a caller that waits for a call to return
+included, may print fewer trace lines than the trace asks for until that run
+ends. It can leave out the `>K>` lines of a `DO` or `LOOP` header for `TO`,
+`BY`, `FOR`, `OVER` and `WITH`, and the `>L>`, `>V>`, `>E>`, `>O>`, `>P>` and
+`>A>` lines that `TRACE I` asks for once it is set at an interactive pause. A
+line is left out only at a clause where the setting the run began under, as
+the run's own TRACE instructions change it, did not print that line. Code
+entered after that first request prints every line. ooRexx prints every line
+in both.
+
 ## 167. The line of a position after a last line with no line end
 
 The line that a position is in is one more than the number of line ends before
@@ -1317,27 +1381,20 @@ error that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING, whether or not the
 program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
 untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
 takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. A builtin's
-argument that the builtin reads as a string is not part of this Deviation:
-there interrexx raises what ooRexx raises, `SYNTAX 88.909` with the argument's
-position ([the rule](r:conv.string.builtin-argument)). The
+sees an address-like number, a different error or a crash. The arguments of a
+builtin are not part of this Deviation, except the string the builtin works on
+and the names that the conventions list: an argument raises the error of its
+own kind, `SYNTAX 88.909` with its position where the builtin reads it as a
+string ([the rule](r:conv.string.builtin-argument)) and the error of its check
+otherwise ([the kind rule](r:conv.string.argument-kind)). The
 [conventions](r:conv.string.deviation.169) state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.
 
-## 170. A builtin converts every argument before it checks any
+## 170. Withdrawn
 
-A builtin whose page calls an argument a string converts each such argument
-that is an object other than a string, sending `STRING` (or `REQUEST` and
-`MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
-to right, after it has checked the number of its arguments and that every
-argument it requires is there, and before it checks any argument. An omitted
-argument that the builtin requires is therefore reported before any conversion
-runs, as in ooRexx. A `STRING` method of a later argument therefore runs even
-when an earlier argument is in error, and the call raises the same error as in
-ooRexx, which converts an argument as it checks it and stops at the first one
-in error, so that the method of a later argument never runs. The difference
-shows only in what such a method does: counting, input or output, or raising a
-condition of its own.
+A builtin's conversion of its arguments is part of its checks, and a call with
+no fault converts them from the left before the checks, as ooRexx does
+([the conversion rule](r:bif.index.call.convert)); no difference remains.
 
 ## 171. QUERY POSITION SYS of a stream just opened for reading
 
@@ -1387,3 +1444,64 @@ significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
 DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
 3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
 the owner on 2026-11-14 (#554).
+
+## 176. A callback after the embedding ends the interpreter
+
+A thread that stays attached after the embedding calls `Terminate` can still
+make callbacks through its context, and each one is refused: it answers the
+failure value of the member, runs nothing, and does not wait. The interpreter
+no longer exists once `Terminate` returns. ooRexx runs such a callback and
+answers its result.
+
+## 177. An attached thread's context used from another thread
+
+`DetachThread`, `HaltThread` and `SetThreadTrace` called through an attached
+thread's context from any other thread return at once and do nothing, and so
+does a second `DetachThread` from the thread that attached it. The attachment
+stays as the first detach left it, or as it was, and the call never waits for
+a message the attached thread runs. Halting or tracing the interpreter from
+another thread remains the work of the instance's `Halt` and `SetTrace`.
+ooRexx aborts the process or hangs in these cases.
+
+## 178. A message from an attached thread stops the activity it interrupts
+
+While a message that a thread attached to the interpreter sends runs, the
+activity that was running when it arrived, the main program or another, makes
+no progress in Rexx clauses. The message runs at that activity's next clause
+boundary, or during a wait of the activity, such as `SysSleep`, a semaphore's
+`wait`, a guard or a message's `result`, or during a call it makes into a
+native library that is not built into the interpreter. The activity goes on
+only once the message has finished, even where its wait or its call ended
+first. A message that arrives while another runs is held until that one has
+returned, waits or calls into such a library, the earliest held first. One
+that arrives while another waits runs on top of it, and the earlier goes on
+only once the later has finished. A message the thread sends with
+`SendMessage` or one of its variants, whose method needs at its entry a guard
+lock that a stopped activity holds, waits for the lock as in ooRexx: nothing of
+the message has run yet, so the interpreter sends it again, in the place in the
+lock's queue that its wait took when it began, and `TRACE` announces its
+method's entry once. A guard lock that a stopped activity acquires after a
+message began to wait for it counts from then as one it holds. Any other wait
+for a guard lock counts as one of a message that has begun: a wait in a method
+or routine the message's own code reaches, and a wait of a routine the thread
+calls with `CallRoutine` or of a method that another of the thread's API calls
+sends to, such as the `MAKESTRING` that `ObjectToString` sends. Once a message
+has begun, a wait of it for something only a stopped activity can give never
+ends. Where it waits for a guard lock that such an activity holds and no other
+message does, or for the completion of a message whose send such an activity
+runs, directly or through a chain of such waits, the wait is refused at once as
+[Deviation 14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an
+inverted wait: the thread's send answers nothing, and the program, which runs
+on to its end, ends with exit code 120. Any other such wait, such as a `GUARD
+WHEN`, a semaphore's `wait` with no timeout, or a wait for a guard lock another
+message holds, goes on for ever. Once it has waited five seconds, and nothing
+else is left that could end it, a line on stderr says so and says how many
+seconds it has waited: no activity is ready, none is asleep but one a message
+stopped, no message is held or to be sent again, and no call is in flight but
+those the waiting messages run above. A stopped activity's sleep does not hold
+the line back, since the activity cannot go on when it wakes. A wait that
+another sleeping activity or a call in flight may still end is not reported
+until they are gone. A loop that polls for such a change runs for ever, and
+nothing is said. ooRexx runs each attached thread's messages on that thread,
+alongside the other activities, and each such program completes. Issue #681
+tracks doing the same.

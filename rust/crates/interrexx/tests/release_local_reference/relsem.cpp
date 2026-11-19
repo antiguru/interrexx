@@ -1,3 +1,4 @@
+#include <string.h>
 #include "oorexxapi.h"
 
 static RexxThreadContext *kept;
@@ -49,12 +50,26 @@ RexxRoutine0(size_t, RelLength)
     return context->StringLength(s);
 }
 
+// Writes a buffer string's bytes through the address `BufferStringData`
+// answered, releases the string, and finishes it: the writable area the call
+// made for it lasts until the call returns, so the finished string holds what
+// was written.
+RexxRoutine0(RexxObjectPtr, RelBuffer)
+{
+    RexxBufferStringObject buffer = context->NewBufferString(5);
+    POINTER data = context->BufferStringData(buffer);
+    memcpy(data, "bytes", 5);
+    context->ReleaseLocalReference(buffer);
+    return context->FinishBufferString(buffer, 5);
+}
+
 RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(RelTwice, RelTwice),
     REXX_TYPED_ROUTINE(RelStash, RelStash),
     REXX_TYPED_ROUTINE(RelStale, RelStale),
     REXX_TYPED_ROUTINE(RelOne, RelOne),
     REXX_TYPED_ROUTINE(RelLength, RelLength),
+    REXX_TYPED_ROUTINE(RelBuffer, RelBuffer),
     REXX_LAST_ROUTINE()
 };
 RexxPackageEntry relsem_package_entry = {

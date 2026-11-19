@@ -149,9 +149,10 @@ r[bif.random.range-limit]
 The range from `min` to `max` can span at most 999999999: a call with `max`
 more than 999999999 above `min` raises `SYNTAX 40.32`. A call with `max`
 below `min` raises `SYNTAX 40.33`, and so does a call with one argument
-that is negative, since that argument is `max`. The range checks come after
-the [whole-number checks](r:conv.whole.form) and after the
-[check of the seed](r:bif.random.seed.check).
+that is negative, since that argument is `max`. A call that also fails a
+[whole-number check](r:conv.whole.form) or [the check of the
+seed](r:bif.random.seed.check) raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 r = random(0, 999999999)
@@ -221,9 +222,9 @@ say random(0, 999999999, 5) random() random()
 ```
 
 r[bif.random.seed.check]
-A `seed` must not be negative: a negative seed raises `SYNTAX 40.13`. This
-check comes after the checks of the form of all three arguments, and before
-those of the range of the numbers. A seed of 0 is a seed like any other, and
+A `seed` must not be negative: a negative seed raises `SYNTAX 40.13`. A call
+that also fails another check raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says. A seed of 0 is a seed like any other, and
 `-0` is 0. A seed is any [whole-number argument](r:conv.whole.digits) that is
 not negative, and the sequence is the same for it on every run. A seed that
 rule refuses as too large raises `SYNTAX 40.12`, as it says.
@@ -237,16 +238,16 @@ say random(,, -1)
 a: say condition('o')~code
 signal on syntax name b
 say random(5, 2, -1)
-b: say condition('o')~code
+b: say wordpos(condition('o')~code, '40.13 40.33') > 0
 signal on syntax name c
 say random(-1000000000, 0, -1)
-c: say condition('o')~code
+c: say wordpos(condition('o')~code, '40.13 40.32') > 0
 signal on syntax name d
 say random('x', 2, -1)
-d: say condition('o')~code
+d: say wordpos(condition('o')~code, '40.12 40.13') > 0
 signal on syntax name e
 say random(5, 2, 'x')
-e: say condition('o')~code
+e: say wordpos(condition('o')~code, '40.12 40.33') > 0
 signal on syntax name f
 say random(,, 1000000000000000000)
 f: say condition('o')~code
@@ -257,10 +258,10 @@ f: say condition('o')~code
 608 162 861
 768 891 817
 40.13
-40.13
-40.13
-40.12
-40.12
+1
+1
+1
+1
 40.12
 ```
 

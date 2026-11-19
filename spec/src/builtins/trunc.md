@@ -55,13 +55,13 @@ say trunc(7.9) trunc(7.9, ) trunc(7.9, 0)
 ```
 
 r[bif.trunc.errors]
-The checks run in this order, and the first that fails is raised: the
-[form](r:conv.whole.form) and [value](r:conv.whole.digits) of `n`, which raise
-`SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg),
-`SYNTAX 93.943`; and last that `n` is not negative, `SYNTAX 93.906`. `n` is a
-whole-number argument, so the [null string](r:conv.arg.empty) raises 40.12 and
-`-0` is 0. A string that is not a number is therefore raised even when `n` is
-negative, and a negative `n` is raised only for a number that is valid.
+The call checks the [form](r:conv.whole.form) and
+[value](r:conv.whole.digits) of `n`, which raise `SYNTAX 40.12`; that `number`
+is a [number](r:bif.index.num.arg), `SYNTAX 93.943`; and that `n` is not
+negative, `SYNTAX 93.906`. A call that fails more than one of these checks
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. `n` is a whole-number argument, so the
+[null string](r:conv.arg.empty) raises 40.12 and `-0` is 0.
 
 ```rexx
 say trunc(5, '-0') trunc(5, ' 2 ') trunc(5, '1e1')
@@ -69,10 +69,10 @@ signal on syntax name a
 say trunc(5, '')
 a: say condition('o')~code
 signal on syntax name b
-say trunc('x', 'y')
+say trunc(5, 'y')
 b: say condition('o')~code
 signal on syntax name c
-say trunc('x', -1)
+say trunc('x', 1)
 c: say condition('o')~code
 signal on syntax name d
 say trunc(5, -1)
@@ -145,10 +145,8 @@ say trunc(-0.5) trunc(-0.5, 2) trunc(-0.001, 2) trunc(-0.001, 3),
 0 -0.50 0.00 -0.001 0 0.0 -1
 ```
 
-> **Note.** The ANSI draft (9.4.6) checks `number` before an `n` that is not
-> a whole number, where ooRexx, which this book follows, raises 40.12 for `n`
-> first (for a negative `n` both check `number` first). It raises
-> `SYNTAX 40.13` for a negative `n`, where ooRexx raises 93.906.
+> **Note.** The ANSI draft (9.4.6) raises `SYNTAX 40.13` for a negative `n`,
+> where ooRexx raises 93.906.
 
 ## Deviations
 

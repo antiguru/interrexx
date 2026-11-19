@@ -24,9 +24,12 @@ method search](r:class.methods.unknown) finds no method, such as `d~name`,
 reaches the `unknown` method of the class, which reads or sets the entry of that
 name in upper case ([the unknown rule](r:class.directory.unknown)). The page
 follows the order of the rexxref entry. Examples that show an error use a small
-routine `try`, as the builtin pages do. The page says nothing about which of
-two items equal to the argument `removeItem` removes ([the hash order
-rule](r:class.directory.deviation.33)).
+routine `try`, as the builtin pages do. A directory lists its entries in the
+order they were first put, and then the names its methods were set under, and
+`index` and `removeItem` choose the oldest of several entries that qualify
+([the hash order rule](r:class.directory.deviation.33)). ooRexx lists and
+chooses otherwise, so the examples outside that rule hold one such entry or
+sort the answers.
 
 ## The class
 
@@ -195,11 +198,12 @@ there is none. When the name is the name of a method that
 [`setMethod`](r:class.directory.setmethod) associated, the method runs, with
 the directory as `self` and no argument, and the answer is what it returns, so
 it is run again for each read, and `.nil` when it returns nothing. When there
-is neither an item nor a method and the directory has an `UNKNOWN` method,
-that method runs with the name as its only argument, as the name was given,
-and its answer is the answer of `at`. The methods take exactly one argument:
-none, or an omitted one, raises `SYNTAX 88.901`, and a second raises
-`SYNTAX 93.902`; the number of arguments is checked before the name is read.
+is neither an item nor a method and the directory has an `UNKNOWN` method, that
+method runs with the name as its only argument, as the name was given, and its
+answer is the answer of `at`. The methods take exactly one argument: none, or
+an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX 93.902`;
+with a second argument, whether the name is read is unspecified, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 d = .directory~new
@@ -209,7 +213,7 @@ say d~at('k') d['k'] d~at('K') d~at('CALC') d~at('calc')
 d~setMethod('unknown', .method~new('', 'return "none:" arg(1)'))
 say d~at('missing') d['MISSING'] d~at('k')
 call try 'd~at'
-call try 'd~at(, "x")'
+call try 'd~at("x", "x")'
 call try 'd~at("a", "b")'
 call try 'd[]'
 exit
@@ -226,7 +230,7 @@ bad: say arg(1) '=>' condition('o')~code
 item item The NIL object Directory 0 The NIL object
 none: missing none: MISSING item
 d~at => 88.901
-d~at(, "x") => 93.902
+d~at("x", "x") => 93.902
 d~at("a", "b") => 93.902
 d[] => 88.901
 ```
@@ -376,14 +380,14 @@ d~hasIndex("a", "b") => 93.902
 r[class.directory.hasitem]
 `hasItem(item)` answers 1 when some item is equal to the argument and 0
 otherwise, and `index(item)` answers an index of such an item and `.nil` when
-there is none. The stored items are searched first. When none of them is
-equal, the methods are run one after the other, and the answer of each is
-compared before the next one runs, so a method runs only when nothing searched
-before it was equal, and at most once. The `UNKNOWN` method is not searched.
-Which index `index` answers when several items qualify is not specified ([the
-hash order rule](r:class.directory.deviation.33)). Both take exactly one
-argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second raises
-`SYNTAX 93.902`. `.nil` is an item like any other.
+there is none. The stored items are searched first. When none of them is equal,
+the methods are run one after the other, and the answer of each is compared
+before the next one runs, so a method runs only when nothing searched before it
+was equal, and at most once. The `UNKNOWN` method is not searched. When several
+stored items qualify, `index` answers the index of the oldest entry ([the oldest
+rule](r:class.directory.index.deviation.33)). Both take exactly one argument:
+none, or an omitted one, raises `SYNTAX 93.903`, and a second raises `SYNTAX
+93.902`. `.nil` is an item like any other.
 
 ```rexx
 d = .directory~new
@@ -394,7 +398,7 @@ say d~hasItem('x') d~hasItem('X') d~hasItem(.nil) d~hasItem('computed')
 say d~index('x') d~index('computed') d~index(.nil) (d~index('q') == .nil)
 call try 'd~hasItem'
 call try 'd~index'
-call try 'd~hasItem(, 1)'
+call try 'd~hasItem(1, 1)'
 call try 'd~index(1, 2)'
 exit
 try:
@@ -411,18 +415,19 @@ bad: say arg(1) '=>' condition('o')~code
 k1 CALC k2 1
 d~hasItem => 93.903
 d~index => 93.903
-d~hasItem(, 1) => 93.902
+d~hasItem(1, 1) => 93.902
 d~index(1, 2) => 93.902
 ```
 
 r[class.directory.hasitem.sends]
 `hasItem`, `index` and `removeItem` send `==` to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the stored items are visited first, in an order that is
-not specified, and then the answers of the methods, in an order that is not
-specified either, so the number of messages is specified only when no item
-matches, as then every item is visited. The very object that is stored is found
-without a `==` sent to it ([the identity rule](r:class.collection.identity)).
+and send nothing else; the stored items are visited first, in the order of the
+entries, and then the answers of the methods, in the order the methods were set
+([the hash order rule](r:class.directory.deviation.33)), so the number of
+messages is specified only when no item matches, as then every item is visited.
+The very object that is stored is found without a `==` sent to it ([the identity
+rule](r:class.collection.identity)).
 
 ```rexx
 .local~n = 0
@@ -811,15 +816,16 @@ d~unknown("x", .nil) => 98.913
 ## Lists of the entries
 
 r[class.directory.makearray]
-`allIndexes` and `makeArray` answer a new `Array` of the indexes of the
-entries, and `allItems` a new `Array` of their items, with the answer of each
-method (run once for each call of `allItems`; `makeArray` and `allIndexes` do
-not run the methods). They are instances of `Array` for a subclass receiver
-too, never the receiver, and do not follow later changes. They take no
-argument: one raises `SYNTAX 93.902`. The order is not specified ([the hash
-order rule](r:class.directory.deviation.33)), and is the same for the three
-answers and for the supplier of one unchanged directory, so the item at a
-position belongs to the index at the same position.
+`allIndexes` and `makeArray` answer a new `Array` of the indexes of the entries,
+and `allItems` a new `Array` of their items, with the answer of each method (run
+once for each call of `allItems`; `makeArray` and `allIndexes` do not run the
+methods). They are instances of `Array` for a subclass receiver too, never the
+receiver, and do not follow later changes. They take no argument: one raises
+`SYNTAX 93.902`. The order is that in which the entries were first put, and then
+that in which the methods were first set ([the hash order
+rule](r:class.directory.deviation.33)), and is the same for the three answers
+and for the supplier of one unchanged directory, so the item at a position
+belongs to the index at the same position.
 
 ```rexx
 d = .many~new
@@ -1105,25 +1111,124 @@ before
 ```
 
 r[class.directory.deviation.33]
-The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, and of the search of `hasItem`, `index` and `removeItem`, is not
-specified, and may differ from ooRexx's. Which entries are produced, and how
-often, is specified. In the example the answers are sorted.
+`allIndexes`, `allItems`, `makeArray` and `supplier` list the entries in the
+order they were first put, and `hasItem`, `index` and `removeItem` compare the
+items in that order. The names that `setMethod` gave the directory come after
+the entries. Which entries are produced, and how often, is specified. The entry
+that a search acts on when an `==` that it sends changes the directory is not
+specified, and may be none of them. ooRexx lists the entries in an order that
+its storage fixes, so its answers can differ. See [Deviation
+33](../deviations.md#33-hash-iteration-order).
 
 ```rexx
-d = .directory~new
-d~put(1, 'one')
-d~put(2, 'two')
-d~put(3, 'three')
-say d~allIndexes~sort~makeString('L', ',')
-say d~allItems~sort~makeString('L', ',')
-say d~items d~makeArray~items
+t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+say t~allIndexes~makeString('L', ',')
+say t~allItems~makeString('L', ',')
+s = t~supplier
+say s~index s~item t~makeArray~makeString('L', ',')
 ```
 
 ```output
-one,three,two
+c,a,b
 1,2,3
-3 3
+c 1 c,a,b
+```
+
+r[class.directory.put.deviation.33]
+A `put` or `[]=` at an index that the directory holds leaves the entry in its
+place. An entry that is removed and then put again comes last. ooRexx's order
+does not follow the puts ([the hash order
+rule](r:class.directory.deviation.33)).
+
+```rexx
+t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t['b'] = 3
+t['c'] = 4
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+t~remove('c')
+t['c'] = 5
+say t~allIndexes~makeString('L', ',') t~allItems~makeString('L', ',')
+```
+
+```output
+c,a,b 4,2,3
+a,b,c 2,3,5
+```
+
+r[class.directory.index.deviation.33]
+When several entries hold an item equal to the argument, `index` answers the
+index of the oldest of them and `removeItem` removes the oldest. ooRexx searches
+the items in the order of its storage, so it can choose another ([the hash order
+rule](r:class.directory.deviation.33)).
+
+```rexx
+t = .directory~new
+t['c'] = 'x'
+t['a'] = 'y'
+t['b'] = 'x'
+say t~index('x') t~removeItem('x') t~allIndexes~makeString('L', ',')
+say t~index('x')
+```
+
+```output
+c x a,b
+b
+```
+
+r[class.directory.copy.deviation.33]
+A copy lists its entries in the order of the receiver. After that each directory
+keeps its own order: an entry put into one comes last in that one only ([the
+hash order rule](r:class.directory.deviation.33)).
+
+```rexx
+t = .directory~new
+t['c'] = 1
+t['a'] = 2
+t~remove('c')
+t['b'] = 3
+t['c'] = 4
+c = t~copy
+c['z'] = 5
+t['y'] = 6
+say c~allIndexes~makeString('L', ',')
+say t~allIndexes~makeString('L', ',')
+```
+
+```output
+a,b,c,z
+a,b,c,y
+```
+
+r[class.directory.setmethod.deviation.33]
+The names of the methods are listed after the entries, in the order in which
+`setMethod` first set them. Setting a method again under a name leaves it in its
+place, and a name whose method was unset and is then set again comes last ([the
+hash order rule](r:class.directory.deviation.33)).
+
+```rexx
+d = .directory~new
+d['c'] = 1
+d~setMethod('M', 'return 2')
+d['a'] = 3
+d~setMethod('K', 'return 4')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('M', 'return 6')
+d~setMethod('A', 'return 7')
+say d~allIndexes~makeString('L', ',') d~allItems~makeString('L', ',')
+d~setMethod('K')
+d~setMethod('K', 'return 8')
+say d~allIndexes~makeString('L', ',')
+```
+
+```output
+c,a,M,K 1,3,2,4
+c,a,M,K,A 1,3,6,4,7
+c,a,M,A,K
 ```
 
 r[class.directory.deviation.109]

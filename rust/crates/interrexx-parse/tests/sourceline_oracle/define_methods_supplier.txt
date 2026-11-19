@@ -1,6 +1,9 @@
-count 33
+count 38
 /* ~defineMethods, ~subclass's class methods and ~enhanced walk a table
-   that is not string-keyed through its SUPPLIER, in supplier order. */
+   that is not string-keyed through its SUPPLIER, in supplier order. Two
+   names that fold to one method come from a supplier of a fixed order, as a
+   table or a relation yields its entries in another order on the oracle
+   (Deviation 33). */
 t = .table~new; t['M'] = 'return 11'
 .k~defineMethods(t); say .k~new~m
 .k~defineMethods(.array~of('return 12')); say .k~new~send('1')
@@ -11,10 +14,8 @@ u = .table~new; u['C'] = 'return 15'
 c = .object~subclass('c', .class, u); say c~c
 v = .table~new; v['E'] = 'return 16'
 o = .object~enhanced(v); say o~e
-w = .table~new; w['M'] = 'return 1'; w['m'] = 'return 2'
-.k~defineMethods(w); say .k~new~m
-x = .relation~new; x['Q'] = 'return 3'; x['Q'] = 'return 4'
-.k~defineMethods(x); say .k~new~q
+.k~defineMethods(.s3~new); say .k~new~m
+say .k~new~q
 .k~defineMethods(.array~of('return 5', 'return 6')); say .k~new~send('2')
 .k~defineMethods(.s2~new); say .k~new~z
 y = .table~new; y['M1'] = .nil
@@ -30,5 +31,9 @@ syntax:
 ::method supplier; return .supplier~new(.array~of('return 13'), .array~of('Q'))
 ::class s2
 ::method supplier; return .t~new(.array~of('return 17'), .array~of('Z'))
+::class s3
+::method supplier
+  return .supplier~new(.array~of('return 1', 'return 2', 'return 3', 'return 4'),,
+    .array~of('M', 'm', 'Q', 'Q'))
 ::class t subclass supplier
 ::method item; return 'return 99'

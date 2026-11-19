@@ -15,6 +15,43 @@ const SUBCOM_ERROR: u16 = 1;
 const SUBCOM_FAILURE: u16 = 2;
 
 impl Interp {
+    /// The handler `name` resolves to in `registry`, as [`capi::resolve`] finds it, with
+    /// this interpreter's library search. A library it loads counts as an external native
+    /// library ([`Interp::load_classic_procedure`]).
+    pub(crate) fn resolve_classic(
+        &mut self,
+        registry: Registry,
+        name: &[u8],
+        start: bool,
+    ) -> Result<Option<ClassicEntry>, u64> {
+        match capi::registration(registry, name, start)? {
+            capi::Registration::Entry(entry) => Ok(Some(entry)),
+            capi::Registration::Library { library, procedure } => self
+                .load_classic_procedure(&library, &procedure)
+                .map(Some)
+                .ok_or(capi::NOT_REGISTERED),
+            capi::Registration::Unbound => Ok(None),
+        }
+    }
+
+    /// The entry point `procedure` names in the classic library `library`, loaded as
+    /// [`interrexx_api::load::classic_procedure`] loads it. Once it has loaded, waits are no
+    /// longer refused as unending ([`Interp::refuses_unending_waits`]).
+    pub(crate) fn load_classic_procedure(
+        &mut self,
+        library: &[u8],
+        procedure: &[u8],
+    ) -> Option<ClassicEntry> {
+        let entry = interrexx_api::load::classic_procedure(
+            library,
+            procedure,
+            &self.library_search,
+            &self.cwd,
+        )?;
+        self.note_external_library();
+        Some(entry)
+    }
+
     /// The classic handler `name` names, kept from an earlier call or resolved now. A lookup
     /// starts no service.
     pub(crate) fn classic_function(&mut self, name: &[u8]) -> Option<ClassicEntry> {
@@ -22,15 +59,10 @@ impl Interp {
         if let Some(entry) = self.classic_functions.get(&upper) {
             return Some(*entry);
         }
-        let entry = capi::resolve(
-            Registry::Function,
-            &upper,
-            &self.library_search,
-            &self.cwd,
-            false,
-        )
-        .ok()
-        .flatten()?;
+        let entry = self
+            .resolve_classic(Registry::Function, &upper, false)
+            .ok()
+            .flatten()?;
         self.classic_functions.insert(upper, entry);
         Some(entry)
     }
@@ -38,13 +70,7 @@ impl Interp {
     /// Resolves `name` as `RxFuncAdd` does once it has registered it, starting a service if
     /// needed, and keeps the handler. Whether it resolved.
     pub(crate) fn resolve_classic_function(&mut self, upper: &[u8]) -> bool {
-        match capi::resolve(
-            Registry::Function,
-            upper,
-            &self.library_search,
-            &self.cwd,
-            true,
-        ) {
+        match self.resolve_classic(Registry::Function, upper, true) {
             Ok(Some(entry)) => {
                 self.classic_functions.insert(upper.to_vec(), entry);
                 true
@@ -124,15 +150,10 @@ impl Interp {
             .get(&upper)
             .cloned()
             .unwrap_or_else(|| environment.to_vec());
-        let entry = capi::resolve(
-            Registry::Subcom,
-            &registered,
-            &self.library_search,
-            &self.cwd,
-            false,
-        )
-        .ok()
-        .flatten()?;
+        let entry = self
+            .resolve_classic(Registry::Subcom, &registered, false)
+            .ok()
+            .flatten()?;
         self.classic_subcoms.insert(upper, entry);
         Some(entry)
     }

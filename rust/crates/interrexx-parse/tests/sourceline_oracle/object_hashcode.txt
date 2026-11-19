@@ -1,4 +1,4 @@
-count 46
+count 50
 /* Object~hashCode, declared at arity 0: the object's hash value
  * rendered as its own eight
  * bytes, little-endian.
@@ -10,30 +10,34 @@ count 46
  * that a hash equals itself, that two objects differ, and that the width is
  * eight -- all of which hold on either side.
  *
- * The string hash accumulates `31 * h + byte` in a wrapping 64-bit register
- * with the byte SIGNED, which only shows above 0x7f.
+ * A string's hash code is keyed by a seed drawn for each run of interrexx,
+ * so the string rows print RELATIONS too: equal characters give equal codes,
+ * a number and its rendering agree, and the codes of the strings below
+ * differ from one another.
  *
- * DateTime and TimeSpan reach this through their own Rexx-level hashCode in
- * the embedded core library, which returns `timestamp~hashcode` -- a number's hash, so
- * two equal instants agree and two different ones do not.
+ * DateTime and TimeSpan answer through their own Rexx-level hashCode in the
+ * embedded core library: DateTime the hash code of its instant as a number,
+ * TimeSpan an unkeyed hash it computes itself, so two equal values agree.
  */
 
-say 'null' c2x(''~hashCode)
-say 'one'  c2x('a'~hashCode)
-say 'abc'  c2x('abc'~hashCode)
-say 'wrap' c2x('abcdefghijklmnopqrstuvwxyz0123456789'~hashCode)
-say 'high' c2x('ff'x~hashCode) c2x('80'x~hashCode) c2x('7f'x~hashCode)
+strings = .array~of('', 'a', 'abc', 'abcdefghijklmnopqrstuvwxyz0123456789', 'ff'x, '80'x, '7f'x)
+codes = .set~new
+do s over strings
+  codes~put(s~hashCode)
+end
+say 'distinct' codes~items strings~items
+say 'equal' (('ab' || 'c')~hashCode == 'abc'~hashCode) ('ff'x~hashCode == x2c('FF')~hashCode)
 say 'nil'  c2x(.nil~hashCode)
 say 'cls'  c2x(.String~hashCode) c2x(.Object~hashCode)
-say 'num'  c2x(55~hashCode) c2x('55'~hashCode)
+say 'num'  (55~hashCode == '55'~hashCode)
 say 'rend' (c2x((2**40)~hashCode) == c2x('1.09951163E+12'~hashCode))
 say 'wide' length('abc'~hashCode) length(.Object~new~hashCode)
 
 d1 = .DateTime~fromIsoDate('2020-01-01T00:00:00.000000')
 d2 = .DateTime~fromIsoDate('2020-01-01T00:00:00.000000')
 d3 = .DateTime~fromIsoDate('2021-06-15T12:30:00.000000')
-say 'dt'   c2x(d1~hashCode) (c2x(d1~hashCode) == c2x(d2~hashCode)) (c2x(d1~hashCode) == c2x(d3~hashCode))
-say 'ts'   c2x(.TimeSpan~fromSeconds(5)~hashCode)
+say 'dt'   length(d1~hashCode) (c2x(d1~hashCode) == c2x(d2~hashCode)) (c2x(d1~hashCode) == c2x(d3~hashCode))
+say 'ts'   length(.TimeSpan~fromSeconds(5)~hashCode) (.TimeSpan~fromSeconds(5)~hashCode == .TimeSpan~fromSeconds(5)~hashCode)
 
 /* The identity arm, as relations only. Two buffers holding equal text hash
  * differently, which is what says the rule is the receiver's kind and not

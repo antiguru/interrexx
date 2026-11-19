@@ -106,6 +106,9 @@ struct Mapping {
     /// `None` for this image's own stubs, which nothing closes, and once
     /// closed.
     handle: Mutex<Option<libloading::Library>>,
+    /// The `dlopen` handle's address, the same for every load of one file
+    /// while it stays loaded, or `0` for no handle.
+    identity: usize,
     open: AtomicBool,
     /// Calls into the mapping in flight, which a close waits out by refusing.
     calls: AtomicUsize,
@@ -113,8 +116,25 @@ struct Mapping {
 
 impl Mapping {
     fn new(handle: Option<libloading::Library>) -> Arc<Mapping> {
+        Mapping::keyed(handle, None)
+    }
+
+    /// A mapping whose identity is `key` where it is given, and its handle's
+    /// otherwise.
+    fn keyed(handle: Option<libloading::Library>, key: Option<usize>) -> Arc<Mapping> {
+        let (handle, identity) = match handle {
+            Some(handle) => {
+                let raw = libloading::os::unix::Library::from(handle).into_raw();
+                // SAFETY: `raw` came from `into_raw` just above and is turned back into the one
+                // owner it was, so the reference `dlopen` counted is still held once.
+                let handle = unsafe { libloading::os::unix::Library::from_raw(raw) };
+                (Some(handle.into()), raw as usize)
+            }
+            None => (None, 0),
+        };
         Arc::new(Mapping {
             handle: Mutex::new(handle),
+            identity: key.unwrap_or(identity),
             open: AtomicBool::new(true),
             calls: AtomicUsize::new(0),
         })
@@ -148,14 +168,45 @@ impl Mapping {
             self.open.store(true, Ordering::SeqCst);
             return false;
         }
-        drop(
-            self.handle
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .take(),
-        );
+        let handle = self
+            .handle
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
+        if let Some(handle) = handle {
+            release(handle);
+        }
         true
     }
+}
+
+/// A handle not closed keeps its reference until the mapping goes, which
+/// releases it as a close does.
+impl Drop for Mapping {
+    fn drop(&mut self) {
+        let handle = self
+            .handle
+            .get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
+        if let Some(handle) = handle {
+            release(handle);
+        }
+    }
+}
+
+/// Gives up the process's use of `handle` without unmapping its library, which
+/// stays mapped until the process exits.
+fn release(handle: libloading::Library) {
+    // An attached thread can still be returning from its last call into the
+    // interpreter, or from `DetachThread`, into the library's code when the
+    // last instance ends, and so can a thread the library started that never
+    // attached, and nothing here can wait for either
+    // (`r[native.threads.end]`). Leaving the code mapped is allowed
+    // (`r[native.loading.static]`), so nothing is unmapped. Loading the file
+    // again answers the same `dlopen` handle, so the process holds one mapping
+    // per distinct library however many interpreters load it.
+    std::mem::forget(handle);
 }
 
 impl std::fmt::Debug for Mapping {
@@ -2229,7 +2280,12 @@ pub fn classic_procedure(
                 .and_then(|address| ClassicEntry::new(*address))
         }
     };
-    let entry = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase()))?;
+    let Some(entry) = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase())) else {
+        // The file may be mapped for another use already, so a miss gives
+        // up the handle without unmapping it.
+        release(handle);
+        return None;
+    };
     CLASSIC_LIBRARIES
         .lock()
         .expect("the libraries' critical section cannot panic")
@@ -2588,6 +2644,44 @@ pub struct Library {
     thread: Option<ThreadContext>,
 }
 
+/// A library's unloader and its mapping, without its rows, which an
+/// interpreter that did not load the library holds to run the unloader and
+/// close the library. It can be sent between threads.
+#[derive(Clone)]
+pub struct Unload {
+    /// Private for the reason `entry_point` is.
+    unloader: Option<PackageHook>,
+    mapping: Arc<Mapping>,
+}
+
+impl Unload {
+    /// A library with no rows and no loader, whose unloader and mapping are
+    /// these, for the interpreter that runs the unloader.
+    #[must_use]
+    pub fn library(&self) -> Library {
+        Library {
+            name: None,
+            version: None,
+            methods: Vec::new(),
+            routines: Vec::new(),
+            loader: None,
+            unloader: self.unloader,
+            mapping: Arc::clone(&self.mapping),
+            thread: None,
+        }
+    }
+}
+
+impl std::fmt::Debug for Unload {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Unload")
+            .field("unloader", &self.unloader.is_some())
+            .field("mapping", &self.mapping)
+            .finish()
+    }
+}
+
 impl std::fmt::Debug for Library {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -2661,9 +2755,62 @@ impl Library {
 
     /// Closes the library, after which none of its rows
     /// or hooks calls in, and answers whether it closed, which it does not
-    /// while a call into it is in flight.
+    /// while a call into it is in flight. The file stays mapped until the
+    /// process exits.
     pub fn close(&self) -> bool {
         self.mapping.close()
+    }
+
+    /// The file the library was loaded from: two libraries loaded from one
+    /// file while it stays loaded answer the same number, and two from
+    /// different files different ones. `0` for a library with no `dlopen`
+    /// handle of its own.
+    #[must_use]
+    pub fn identity(&self) -> usize {
+        self.mapping.identity
+    }
+
+    /// What an instance other than the one that loaded this library needs
+    /// to run its unloader and close it, which keeps the file loaded.
+    #[must_use]
+    pub fn unload(&self) -> Unload {
+        Unload {
+            unloader: self.unloader,
+            mapping: Arc::clone(&self.mapping),
+        }
+    }
+
+    /// Whether `unload` came from this library or one sharing its rows.
+    #[must_use]
+    pub fn is_unloaded_by(&self, unload: &Unload) -> bool {
+        Arc::ptr_eq(&self.mapping, &unload.mapping)
+    }
+
+    /// Makes this library, loaded from the file `unload`'s library was
+    /// loaded from, use that library's mapping for its rows and hooks
+    /// instead of its own, which goes. Closing either then stops both, and a
+    /// close waits out the calls in flight through either.
+    pub fn share_mapping(&mut self, unload: &Unload) {
+        if Arc::ptr_eq(&self.mapping, &unload.mapping) {
+            return;
+        }
+        for method in &mut self.methods {
+            method.mapping = Arc::clone(&unload.mapping);
+        }
+        for routine in &mut self.routines {
+            routine.mapping = Arc::clone(&unload.mapping);
+        }
+        self.mapping = Arc::clone(&unload.mapping);
+    }
+
+    /// Keeps the thread context [`Library::keep_thread_context`] kept for the
+    /// rest of the process, for a library that stays loaded after the
+    /// interpreter that loaded it has ended: the library's code may call
+    /// through the context it was handed as long as it is loaded.
+    pub fn keep_thread_context_for_process(&self) {
+        if let Some(thread) = &self.thread {
+            thread.keep();
+        }
     }
 
     /// Whether [`Library::close`] has not yet closed it.
@@ -2877,20 +3024,25 @@ fn dlopen(path: &Path) -> Option<libloading::Library> {
 fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>, Refused> {
     type GetPackage = unsafe extern "C" fn() -> *mut RexxPackageEntry;
 
+    // A library that is no package stays mapped as one that is does
+    // (`r[native.loading.static]`): its file may be mapped for another use
+    // already, such as a classic registration's, so the handle is given up
+    // without unmapping it.
     let get_package = {
         // SAFETY: the symbol is read at the signature `OOREXX_GET_PACKAGE`
         // expands to, a nullary function answering a `RexxPackageEntry *`.
         // D5 freezes that header and makes it the
         // declaration both sides compile against, so an extension exporting
         // the name at another signature is outside the contract.
-        let symbol: libloading::Symbol<'_, GetPackage> =
-            match unsafe { handle.get(GET_PACKAGE_SYMBOL) } {
-                Ok(symbol) => symbol,
-                // A library without the exporter is a classic registration
-                // rather than a failure.
-                Err(_) => return Ok(None),
-            };
-        *symbol
+        let symbol: Option<libloading::Symbol<'_, GetPackage>> =
+            unsafe { handle.get(GET_PACKAGE_SYMBOL) }.ok();
+        symbol.map(|symbol| *symbol)
+    };
+    // A library without the exporter is a classic registration rather than a
+    // failure.
+    let Some(get_package) = get_package else {
+        release(handle);
+        return Ok(None);
     };
 
     // SAFETY: the address came from `dlsym` on a library `handle` still holds,
@@ -2899,6 +3051,7 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
     let entry = unsafe { get_package() };
     if entry.is_null() {
         // A null table is "not a package".
+        release(handle);
         return Ok(None);
     }
 
@@ -2927,9 +3080,18 @@ pub unsafe fn registered(
     if entry.is_null() {
         return Ok(None);
     }
+    // Every package of the running image shares its one handle, so the
+    // entry's address tells two of them apart as two files' handles do.
     // SAFETY: the caller guarantees the entry, its tables and its strings,
     // and the running image's handle keeps them mapped.
-    unsafe { library_of(&*entry, libloading::os::unix::Library::this().into(), name) }
+    unsafe {
+        library_keyed(
+            &*entry,
+            libloading::os::unix::Library::this().into(),
+            name,
+            Some(entry as usize),
+        )
+    }
 }
 
 /// The library `entry` describes, refused where its version check refuses.
@@ -2943,8 +3105,23 @@ unsafe fn library_of(
     handle: libloading::Library,
     name: &str,
 ) -> Result<Option<Library>, Refused> {
+    // SAFETY: the caller's guarantee.
+    unsafe { library_keyed(entry, handle, name, None) }
+}
+
+/// [`library_of`], whose identity ([`Library::identity`]) is `key` where it
+/// is given, and the handle's otherwise.
+///
+/// # Safety
+/// As [`library_of`].
+unsafe fn library_keyed(
+    entry: &RexxPackageEntry,
+    handle: libloading::Library,
+    name: &str,
+    key: Option<usize>,
+) -> Result<Option<Library>, Refused> {
     let refused = check_version(entry, name).err();
-    let mapping = Mapping::new(Some(handle));
+    let mapping = Mapping::keyed(Some(handle), key);
 
     // SAFETY: the caller guarantees the tables and strings.
     let (package_name, version, methods) = unsafe {
@@ -3215,5 +3392,44 @@ mod tests {
             ]
         );
         assert_eq!(found(&library, b"Foo"), Some(3));
+    }
+
+    /// Two loads of one file have one identity while it stays loaded, and another file has
+    /// another.
+    #[test]
+    fn one_file_has_one_identity() {
+        let mapping = |file: &str| {
+            // SAFETY: both are system libraries this process already links, so their
+            // initialisers have run.
+            let handle = unsafe { libloading::Library::new(file) }.expect("the library opens");
+            super::Mapping::new(Some(handle))
+        };
+        let first = mapping("libm.so.6");
+        let second = mapping("libm.so.6");
+        assert_ne!(first.identity, 0);
+        assert_eq!(first.identity, second.identity);
+        assert_ne!(first.identity, mapping("libc.so.6").identity);
+        assert_eq!(super::Mapping::new(None).identity, 0);
+    }
+
+    /// Two packages the running image registers share its one handle, and still have two
+    /// identities, while one package registered twice has one.
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(miri, ignore = "opens the running image")]
+    fn two_registered_packages_of_the_image_have_two_identities() {
+        let first = Box::leak(Box::new(entry_asking_for(0)));
+        let second = Box::leak(Box::new(entry_asking_for(0)));
+        let identity = |entry: &RexxPackageEntry| {
+            // SAFETY: the entry is leaked, so it outlives the process's use of it, and has no
+            // tables or strings.
+            unsafe { super::registered(entry, "SAME") }
+                .ok()
+                .flatten()
+                .expect("an entry asking for no version registers")
+                .identity()
+        };
+        assert_ne!(identity(first), identity(second));
+        assert_eq!(identity(first), identity(first));
     }
 }

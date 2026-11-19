@@ -2,25 +2,30 @@
    each hashed collection: the oracle's stubs call the collection's own put,
    get and remove, so a Relation and a Bag add a second entry under an index
    they hold, and every other class replaces. An IdentityTable is put once:
-   the stub's index is a new string, which DEVIATION 4 does not model. */
+   the stub's index is a new string, which DEVIATION 4 does not model. Which
+   of two entries at one index a Relation or a Bag answers or removes is
+   Deviation 33, so those lines show that the answer is one of the two and
+   that the other stays. */
 t = .T~new
 r = .relation~new
 t~TestDirectoryPut(r, 'p', 'P')
 t~TestDirectoryPut(r, 'q', 'P')
-say 'relation put' r~items r~allAt('P')~makeString('l', ',')
-say 'relation at' t~TestDirectoryAt(r, 'P')
-say 'relation remove' t~TestDirectoryRemove(r, 'P') r~items r~allAt('P')~makeString('l', ',')
+say 'relation put' r~items r~allAt('P')~sort~makeString('l', ',')
+say 'relation at' (wordpos(t~TestDirectoryAt(r, 'P'), 'p q') > 0)
+x = t~TestDirectoryRemove(r, 'P')
+say 'relation remove' (wordpos(x, 'p q') > 0) r~items (r~allAt('P')[1] \== x)
 say 'relation stringtable put'
 t~TestStringTablePut(r, 's', 'S')
 t~TestStringTablePut(r, 'u', 'S')
-say r~items r~allAt('S')~makeString('l', ',') t~TestStringTableAt(r, 'S')
-say 'relation stringtable remove' t~TestStringTableRemove(r, 'S') r~allAt('S')~makeString('l', ',')
+say r~items r~allAt('S')~sort~makeString('l', ',') (wordpos(t~TestStringTableAt(r, 'S'), 's u') > 0)
+x = t~TestStringTableRemove(r, 'S')
+say 'relation stringtable remove' (wordpos(x, 's u') > 0) (r~allAt('S')[1] \== x)
 b = .bag~new
 t~TestDirectoryPut(b, 'p', 'P')
 t~TestDirectoryPut(b, 'q', 'P')
-say 'bag put' b~items b~allAt('P')~makeString('l', ',')
-say 'bag at' t~TestDirectoryAt(b, 'P')
-say 'bag remove' t~TestDirectoryRemove(b, 'P') b~items
+say 'bag put' b~items b~allAt('P')~sort~makeString('l', ',')
+say 'bag at' (wordpos(t~TestDirectoryAt(b, 'P'), 'p q') > 0)
+say 'bag remove' (wordpos(t~TestDirectoryRemove(b, 'P'), 'p q') > 0) b~items
 s = .set~new
 t~TestDirectoryPut(s, 'p', 'P')
 t~TestDirectoryPut(s, 'q', 'P')

@@ -51,36 +51,35 @@ r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
 replacement is found by sending the object the message `REQUEST` with the
-argument `STRING`, and nothing else is sent first. When the answer is a
-string, it is the replacement. When the answer is `.nil` or another object
-that is not a string, the replacement is the answer of the object's public
+argument `STRING`, and nothing else is sent first. When the answer is a string,
+it is the replacement. When the answer is `.nil` or another object that is not
+a string, the replacement is the answer of the object's public
 [`STRING`](r:class.object.string) method, and when that answer is not a string
 either, see [Deviation 30](r:conv.string.deviation.30). The
 [`REQUEST`](r:class.object.request) of `Object` sends the object `MAKESTRING`
 when it has one and answers what that answers, and answers `.nil` when it has
-none. So an object with a `MAKESTRING` method is replaced by its answer, as
-for an [`Array`](r:class.array.makestring) or a
+none. So an object with a `MAKESTRING` method is replaced by its answer, as for
+an [`Array`](r:class.array.makestring) or a
 [`MutableBuffer`](r:class.mutablebuffer.makestring), and an object with only a
 `STRING` method by the answer of that method. A class that declares its own
-`REQUEST` method decides the answer itself: its `MAKESTRING` method is not
-used unless its `REQUEST` sends it, and a `REQUEST` that answers a string is
-used even when the class has a `STRING` method. A `MAKESTRING` that answers
-`.nil` or an object that is not a string is like a `REQUEST` that does. An
-instance of a subclass of `String` is a string here, whether it is passed
-directly or is what `REQUEST` answers: the builtin works on its own
-characters, and no message is sent to it for that ([Deviation
-109](r:class.string.deviation.109)). A builtin that reads several such
-arguments reads them from left to right, after it has checked the number of
-its arguments and before it checks any of them ([Deviation
-170](r:bif.index.call.convert.deviation.170)). An argument that a builtin reads as a whole number or as a
-number is read this way too, and the replacement must then be a number. A
-builtin whose page links [the native call rule](r:bif.index.call.native) has
-no fallback to `STRING`, as that rule says, and the same holds for the string
-arguments of methods ([the method argument rule](r:class.index.string)). A
-`REQUEST`, `MAKESTRING` or `STRING` method that is private and would be sent
-is not one the replacement can use: the call raises `SYNTAX 97.2`. A
-comparison operator converts its right operand once, as [the comparison
-rule](r:expr.comparison.object) says.
+`REQUEST` method decides the answer itself: its `MAKESTRING` method is not used
+unless its `REQUEST` sends it, and a `REQUEST` that answers a string is used
+even when the class has a `STRING` method. A `MAKESTRING` that answers `.nil`
+or an object that is not a string is like a `REQUEST` that does. An instance of
+a subclass of `String` is a string here, whether it is passed directly or is
+what `REQUEST` answers: the builtin works on its own characters, and no message
+is sent to it for that ([Deviation 109](r:class.string.deviation.109)). A
+builtin that reads several such arguments reads them from left to right, before
+it checks any of them, when the call has no fault ([the conversion
+rule](r:bif.index.call.convert)). An argument that a builtin reads
+as a whole number or as a number is read this way too, and the replacement must
+then be a number. A builtin whose page links [the native call
+rule](r:bif.index.call.native) has no fallback to `STRING`, as that rule says,
+and the same holds for the string arguments of methods ([the method argument
+rule](r:class.index.string)). A `REQUEST`, `MAKESTRING` or `STRING` method that
+is private and would be sent is not one the replacement can use: the call
+raises `SYNTAX 97.2`. A comparison operator converts its right operand once, as
+[the comparison rule](r:expr.comparison.object) says.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
@@ -310,7 +309,7 @@ arguments, usually the first and for a few builtins the second, is the
 receiver; the others become the message's arguments, in their order. The
 builtin and the message then give the same result for the same arguments. A
 builtin page says when its builtin is one of these. The range checks below,
-and the [order of the checks](r:conv.check.order), are rules for these
+and [the checks they belong to](r:conv.check.order), are rules for these
 builtins only; any other builtin's page states its own range checks.
 
 ```rexx
@@ -437,51 +436,100 @@ b: say condition('o')~code
 40.23
 ```
 
-## The order of the checks
+## Evaluation order and several faults
 
-r[conv.check.order]
-In a builtin that runs as a String method, when more than one argument
-fails, the form checks run first: the
-whole-number checks of [form](r:conv.whole.form) and
-[value](r:conv.whole.digits), and the [pad](r:conv.pad) check, applied to
-the arguments from left to right, and the first failure is raised. Only when
-every argument passes them do the range checks of
-[positions](r:conv.position.check) and [lengths](r:conv.length.check) run,
-again from left to right. A builtin page that has checks of its own states
-where they fall in this order.
+r[conv.error.precedence]
+An operator evaluates both operands, the left before the right, before it
+checks either, and a call evaluates its arguments from left to right before
+the call is made. An error raised while an operand or an argument is evaluated
+is raised at that point, and nothing after it is evaluated. Each control
+expression of a DO is an operation of its own: the instruction evaluates and
+checks them one at a time, in the order they are written ([the DO
+rule](r:instr.do.control.check)). A builtin's
+[conversion](r:bif.index.call.convert) of the arguments that are
+objects, by sending them `STRING`, is part of its checks: a call that has no
+fault sends `STRING` to each such argument, from left to right, before its
+other checks. When the checks of one operation, which is one operator, one
+call of a builtin or a method, or the checks of one instruction, find one
+fault, the operation raises the error that the rule for that fault gives; a
+`STRING` answer that has no string value is such a fault. When they find more
+than one, a wrong number of arguments or an omitted required argument among
+them, the operation raises the error of one of them, and which one is
+unspecified. Whether the checks after the first fault found are made, and so
+whether the messages they would send are sent, is unspecified too, and for a
+builtin call with a fault, whether and to how many arguments it sends `STRING`
+is unspecified. When one operation finds a fault that raises a condition, such
+as LOSTDIGITS, and another that raises an error, which of the two it raises
+first is unspecified, and so whether a trap for the condition runs. A page
+that lists the checks of an operation lists what is checked, not an order
+among them.
 
 ```rexx
 signal on syntax name a
-say substr('abc', 0, 'x')
+say substr('abc', 0)
 a: say condition('o')~code
 signal on syntax name b
-say substr('abc', 0, 1, '**')
+say substr('abc', 1, 'x')
 b: say condition('o')~code
 signal on syntax name c
-say substr('abc', 'x', 1, '**')
+say 'x' + f()
 c: say condition('o')~code
 signal on syntax name d
-say translate('abc', , , '**', 'x')
-d: say condition('o')~code
-signal on syntax name f
-say substr('abc', 0, -1)
-f: say condition('o')~code
+say substr('abc', 0, 'x')
+d: say wordpos(condition('o')~code, '93.924 40.12') > 0
+signal on syntax name e
+say substr('abc', 'x', 1, ' ', 5)
+e: say wordpos(condition('o')~code, '40.4 40.12') > 0
+exit
+f: say 'f ran'
+return 'y'
 ```
 
 ```output
-40.12
-40.23
-40.12
-40.23
 93.924
+40.12
+f ran
+41.1
+1
+1
 ```
 
-> **Note.** The range checks come last because they belong to the String
-> method, which runs only once the call has been made. The reference manual
-> does not say that the function call checks the form of its arguments, under
-> error 40, before it sends the message; that part matches ooRexx. The ANSI
-> draft (9.2.1) checks each argument's form and range together, one argument
-> at a time.
+r[conv.check.order]
+In a builtin that runs as a String method, the arguments have the form checks
+of a [whole number](r:conv.whole.form), its [value](r:conv.whole.digits) and a
+[pad](r:conv.pad), and the range checks of [positions](r:conv.position.check)
+and [lengths](r:conv.length.check). A builtin page that has checks of its own
+names them. A call with one argument in error raises that argument's error.
+When more than one argument fails, or one argument fails more than one check,
+the call raises one of their errors, as [the precedence
+rule](r:conv.error.precedence) says.
+
+```rexx
+signal on syntax name a
+say substr('abc', 1, 2, '**')
+a: say condition('o')~code
+signal on syntax name b
+say translate('abc', , , '**')
+b: say condition('o')~code
+signal on syntax name f
+say substr('abc', 1, -1)
+f: say condition('o')~code
+signal on syntax name g
+say substr('abc', 'x', -1, '**')
+g: say wordpos(condition('o')~code, '40.12 93.923 40.23') > 0
+```
+
+```output
+40.23
+40.23
+93.923
+1
+```
+
+> **Note.** ANSI (9.2.1) checks each argument's form and range together, one
+> argument at a time, and gives which fault of several a call raises. ooRexx
+> departs from that order, and interrexx keeps ooRexx's where they differ, so
+> neither is part of this book.
 
 ## Errors and results
 
@@ -573,9 +621,9 @@ r[conv.string.deviation.30]
 interrexx does not convert an argument whose `STRING` method answers an object
 that is not a string, such as a `Directory`, by reading the answer as a
 string. When a builtin receives such an argument where its page calls for a
-string, interrexx raises `SYNTAX 98.973`, or `SYNTAX 88.909` for an argument
-the builtin reads as a string, as [Deviation
-169](r:conv.string.deviation.169) says, after raising
+string, interrexx raises `SYNTAX 98.973`, or for an argument that [the
+argument rules](r:conv.string.builtin-argument) name the error they give, as
+[Deviation 169](r:conv.string.deviation.169) says, after raising
 [`NOSTRING`](r:cond.nostring.raise) when a trap for it is set. ooRexx reads
 the answer as a string, and what it does then depends on the builtin: `UPPER`
 ends the program with Error 5, `LENGTH` answers an unrelated number, and
@@ -604,11 +652,14 @@ condition is an ordinary SYNTAX condition: `SIGNAL ON SYNTAX` and `CALL ON
 SYNTAX` take it, `RC` is 98 there, and untrapped it ends the program with exit
 code 158. The clauses that do this include `SAY`, the three concatenation
 operators, the ordering comparisons, `PARSE VALUE`, `PARSE ARG`, `OPTIONS` and
-the receiver of a builtin, the string the builtin works on. A clause that reads
-the answer as an object, such as a truth value, a logical operator or an
-equality comparison, takes it as `.nil`. An argument of a builtin that the
-builtin reads as a string has its own error, which
-[the next rule](r:conv.string.builtin-argument) states. ooRexx reads the answer
+the receiver of a builtin, the string the builtin works on, and the name that
+`SYMBOL`, `VAR`, `VALUE`, `QUALIFY`, `RXFUNCADD`, `RXFUNCDROP` or
+`RXFUNCQUERY` reads, and the selector of `VALUE`. A clause that reads the
+answer as an object, such as a truth value, a logical operator or an equality
+comparison, takes it as `.nil`. Every other argument of a builtin has the error
+of its own kind, which [the next rule](r:conv.string.builtin-argument) states
+for an argument read as a string and [the rule after
+it](r:conv.string.argument-kind) for the others. ooRexx reads the answer
 as a string in each of the clauses above, with garbage results or a crash, so
 no answer of it is specified. The text of the message is not specified.
 
@@ -643,16 +694,16 @@ arguments of that method, which does not count the receiver, the string the
 builtin works on. So `CHANGESTR(needle, haystack, new)` numbers the needle 1
 and the replacement 2, and `STRIP(string, option, char)` numbers the option 1
 and the character 2. The arguments that are read as strings are those named
-here, and the others keep `SYNTAX 98.973` (the previous rule): the needle of
+here, and [the next rule](r:conv.string.argument-kind) gives the error of the
+others: the needle of
 `CHANGESTR`, `COUNTSTR`, `POS`, `LASTPOS` and `WORDPOS` and the replacement of
 `CHANGESTR`; the inserted string of `INSERT` and `OVERLAY`; the second string
 of `ABBREV`, `COMPARE`, `BITAND`, `BITOR` and `BITXOR`; the type of
 `DATATYPE`; the option and the character of `STRIP`; the two tables of
 `TRANSLATE`; the reference and the option of `VERIFY`; and the data of
-`CHAROUT` and `LINEOUT`. The conversions run in argument order, before any other argument check, so the error names the first argument
-whose answer has no string value, even where a later argument is also in
-error. A method's argument and a native routine's argument that has no string
-value raise the same error with their own position.
+`CHAROUT` and `LINEOUT`. A method's argument and a native routine's argument that has no string
+value raise the same error with their own position. When the call has another
+fault as well, [the precedence rule](r:conv.error.precedence) applies.
 
 ```rexx
 o = .weird~new
@@ -678,6 +729,81 @@ v: say condition('o')~code rc
 88.909 88
 88.909 88
 88.909 88
+```
+
+r[conv.string.argument-kind]
+Where the `STRING` method of a builtin's argument answers an object with no
+string value, and the builtin reads that argument as something other than a
+string, the argument fails the check of its kind, and the builtin raises the
+error that a string of the wrong form raises at that argument. A whole number,
+such as a count, a length or a position, raises `SYNTAX 40.12`; a pad or
+another single character `40.23`; an option `40.904`; the date or time that
+`DATE` or `TIME` converts `40.19`; a separator of `DATE` `40.43`; an argument
+of `XRANGE` that may be a class name `40.28`; the setting of `TRACE` `24.1`;
+and the queue name of `RXQUEUE` `40.26`. The number that `ABS`, `FORMAT`,
+`MAX`, `MIN`, `SIGN` and `TRUNC` work on raises `93.943`, a further number of
+`MAX` and `MIN` `93.904`, the number of `D2C` and of `D2X` `93.929` and
+`93.928`, and the string of `X2B`, `X2C` and `X2D` and of `B2X` `93.933` and
+`93.934`, as for a string that is not a number, or not hexadecimal or binary.
+The name of a stream raises `93.938`, numbered 1, the error of the argument of
+the `Stream` method the builtin sends, and the command of `STREAM` raises
+`93.914`, the error of a command that is not one. When the call has another
+fault as well, it raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. In the message form of a method of `String`,
+an argument that the method reads as a number raises the error of the
+method's own check of it, as [the message
+rule](r:class.string.builtins.errors) gives it, and an argument it reads as a
+string, a pad among them, raises `88.909` (the previous rule). The string a
+builtin works on keeps `98.973` ([Deviation 169](r:conv.string.deviation.169)).
+
+```rexx
+o = .weird~new
+call try "left('abc', o)"
+call try "left('abc', 2, o)"
+call try "date(o)"
+call try "date('N', o, 'S')"
+call try "date('S', , , o)"
+call try "xrange(o)"
+call try "trace(o)"
+call try "rxqueue('S', o)"
+call try "abs(o)"
+call try "max(1, o)"
+call try "d2c(o)"
+call try "x2d(o)"
+call try "linein(o)"
+call try "'abc'~left(o)"
+call try "'abc'~substr(o)"
+call try "'abc'~left(2, o)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class weird
+::method string
+  return .directory~new
+```
+
+```output
+left('abc', o) => 40.12
+left('abc', 2, o) => 40.23
+date(o) => 40.904
+date('N', o, 'S') => 40.19
+date('S', , , o) => 40.43
+xrange(o) => 40.28
+trace(o) => 24.1
+rxqueue('S', o) => 40.26
+abs(o) => 93.943
+max(1, o) => 93.904
+d2c(o) => 93.929
+x2d(o) => 93.933
+linein(o) => 93.938
+'abc'~left(o) => 93.923
+'abc'~substr(o) => 93.924
+'abc'~left(2, o) => 88.909
 ```
 
 r[conv.string.deviation.109]

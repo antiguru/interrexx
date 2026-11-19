@@ -3,7 +3,7 @@ element: "Arithmetic"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10"
 rexxref: "Numbers and Arithmetic > Arithmetic"
-deviations: [53, 102, 174, 175]
+deviations: [53, 174, 175]
 ---
 
 # Arithmetic
@@ -23,16 +23,17 @@ expressions chapter](../expressions/arithmetic.md).
 r[num.arithmetic.operand]
 Each operand of an arithmetic operator must be a [number](r:num.index.form),
 and a string that is not one raises `SYNTAX 41.1`, as [the use
-rule](r:num.index.use) says. Both operands, and the operand of a prefix
-operator, are checked before the operator does anything else, so a bad operand
-wins over a zero divisor or any other error that the operator would otherwise
-find. The right operand of `**` is the exception: it is the exponent and is
-checked by [its own rule](r:num.arithmetic.exponent). A string whose exponent
-is out of [range](r:num.limits.not-number) is not a number either.
+rule](r:num.index.use) says. An operation that has a bad operand and another
+fault, a second bad operand, a zero divisor or any other error that the
+operator would find, raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. The right operand of `**` is the
+exception: it is the exponent and is checked by [its own
+rule](r:num.arithmetic.exponent). A string whose exponent is out of
+[range](r:num.limits.not-number) is not a number either.
 
 ```rexx
 signal on syntax name a
-say 'ten' / 0
+say 'ten' / 2
 a: say condition('o')~code
 signal on syntax name b
 say 10 % 'x'
@@ -243,9 +244,9 @@ The right operand of `**` must be a whole number of at most DIGITS digits,
 after it is rounded to DIGITS digits as `exponent + 0` would round it, and
 its value may be negative. A string that is not a number at all, a number
 with a fraction after that rounding, and a number of more than DIGITS digits
-raise `SYNTAX 26.8` where the other operators raise `SYNTAX 41.1`. The
-base is checked first, so a base that is not a number raises 41.1 even when
-the exponent is bad too.
+raise `SYNTAX 26.8` where the other operators raise `SYNTAX 41.1`. A power
+whose base and exponent are both bad raises the error of one of them, as [the
+precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 3
@@ -260,7 +261,7 @@ signal on syntax name c
 say 2 ** 1000
 c: say condition('o')~code
 signal on syntax name d
-say 'x' ** 'y'
+say 'x' ** 2
 d: say condition('o')~code
 signal on syntax name e
 say 2 ** ''
@@ -426,17 +427,18 @@ An operand of an arithmetic operator that has more digits than NUMERIC DIGITS
 raises the [LOSTDIGITS](r:cond.lostdigits.information) condition, and so does
 the base of `**` but not its exponent. The digits counted are those from the
 first nonzero digit to the last one written, so zeros that end the operand
-count, and the exponent and the zeros that start the operand do not. An
-operand of value zero has no digits. The condition is raised for the left
-operand first and only after both operands were found to be numbers, and the
-builtins raise no such condition. When the condition is not trapped the
-operation goes on with the digits it has, cut as the [cut
-rule](r:num.arithmetic.cut) says. Both operands are checked for lost digits
-before the operator looks at their values, so a wide left operand raises
-LOSTDIGITS before `SYNTAX 42.3` for a zero divisor of `/`, `%` and `//` ([the
-zero rule](r:num.arithmetic.zero)) and before `SYNTAX 26.8` for an exponent of
-`**` that is a number but not a whole number of at most DIGITS digits ([the
-exponent rule](r:num.arithmetic.exponent)).
+count, and the exponent and the zeros that start the operand do not. An operand
+of value zero has no digits, and the builtins raise no such condition. When the
+condition is not trapped the operation goes on with the digits it has, cut as
+the [cut rule](r:num.arithmetic.cut) says. When both operands are too wide,
+which of them the condition is raised for first is unspecified. When an
+operation has a wide operand and another fault, such as an operand that is not
+a number, a zero divisor of `/`, `%` and `//` ([the zero
+rule](r:num.arithmetic.zero)) or an exponent of `**` that is not a whole number
+of at most DIGITS digits ([the exponent rule](r:num.arithmetic.exponent)),
+which of LOSTDIGITS and the error it raises first is unspecified, and so
+whether a trap for LOSTDIGITS runs, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 numeric digits 3
@@ -513,29 +515,6 @@ d: say condition('d')
 1.234E3
 1.234E3
 1234.5
-```
-
-r[num.arithmetic.deviation.102]
-When LOSTDIGITS is trapped, an operand that is wider than NUMERIC DIGITS
-raises it before the operator checks a zero divisor or an exponent that is
-not a whole number. ooRexx checks the right operand first and raises
-`SYNTAX 42.3` or `SYNTAX 26.8` instead.
-
-```rexx
-numeric digits 3
-signal on lostdigits name a
-signal on syntax name a
-say 1234 / 0
-a: say condition('c')
-signal on lostdigits name b
-signal on syntax name b
-say 1234 ** 0.5
-b: say condition('c')
-```
-
-```output
-LOSTDIGITS
-LOSTDIGITS
 ```
 
 r[num.arithmetic.deviation.174]

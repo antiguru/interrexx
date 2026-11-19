@@ -358,7 +358,7 @@ pub struct CStringPool {
     /// The bytes an extension writes a buffer string's value into, by string.
     /// A vector's elements are addressed through its own pointer, so moving
     /// the vector as this list grows does not move them.
-    writable: Vec<(ObjRef, Vec<u8>)>,
+    writable: std::collections::HashMap<ObjRef, Vec<u8>>,
 }
 
 impl CStringPool {
@@ -422,33 +422,42 @@ impl CStringPool {
         self.writable.clear();
     }
 
-    /// Makes `length` zero bytes the extension writes `string`'s value into.
+    /// Makes `length` zero bytes the extension writes `string`'s value into,
+    /// in place of any `string` had.
     pub fn writable(&mut self, string: ObjRef, length: usize) {
-        self.writable.push((string, vec![0; length]));
+        // A string with an area here already is gone and its object reused:
+        // the insert replaces that area, so the lookups below answer the new
+        // one, and it costs one probe however many areas the pool holds.
+        self.writable.insert(string, vec![0; length]);
+    }
+
+    /// Drops the copies and the writable area made for `object`, whose
+    /// reference the extension released: an address it read for the object
+    /// is no longer valid, and a later object at the same reference gets
+    /// areas of its own.
+    pub fn forget(&mut self, object: ObjRef) {
+        self.entries.retain(|(key, _)| *key != Some(object));
+        self.writable.remove(&object);
     }
 
     /// The length [`CStringPool::writable`] made `string`'s bytes at.
     pub fn writable_length(&self, string: ObjRef) -> Option<usize> {
-        self.writable
-            .iter()
-            .find(|(key, _)| *key == string)
-            .map(|(_, bytes)| bytes.len())
+        self.writable.get(&string).map(Vec::len)
     }
 
     /// The address of `string`'s writable bytes, valid until the pool is
     /// cleared.
     pub fn writable_address(&mut self, string: ObjRef) -> Option<POINTER> {
         self.writable
-            .iter_mut()
-            .find(|(key, _)| *key == string)
-            .map(|(_, bytes)| bytes.as_mut_ptr().cast())
+            .get_mut(&string)
+            .map(|bytes| bytes.as_mut_ptr().cast())
     }
 
     /// Every byte written for `string`, and `length` capped at how many were
     /// made, which becomes the area's length. The area stays where it is
     /// until the pool is cleared.
     pub fn written(&mut self, string: ObjRef, length: usize) -> Option<(Vec<u8>, usize)> {
-        let (_, bytes) = self.writable.iter_mut().find(|(key, _)| *key == string)?;
+        let bytes = self.writable.get_mut(&string)?;
         let made = bytes.clone();
         bytes.truncate(length);
         Some((made, bytes.len()))
@@ -700,10 +709,28 @@ pub trait Baton {
 
     /// [`Baton::take_unless_held`] for a thread running no native call of
     /// the host's, with the activity whose thread context is at `context`
-    /// running while this thread holds it.
-    fn take_for(&self, context: usize) -> bool {
+    /// running while this thread holds it. [`TakeFor::Refused`] where the
+    /// host has ended, or ends while this thread waits: nothing is taken.
+    fn take_for(&self, context: usize) -> TakeFor {
         let _ = context;
-        self.take_unless_held()
+        if self.take_unless_held() {
+            TakeFor::Taken
+        } else {
+            TakeFor::Held
+        }
+    }
+
+    /// Whether the host has ended, so a request ([`Baton::post_halt`],
+    /// [`Baton::post_trace`]) is not posted.
+    fn ended(&self) -> bool {
+        false
+    }
+
+    /// Whether the host's end has begun, so a callback from a thread running
+    /// none of its native calls is refused and a thread attaches to nothing.
+    /// It begins no later than [`Baton::ended`].
+    fn ending(&self) -> bool {
+        self.ended()
     }
 
     /// Whether the host refuses a callback from a thread running none of its
@@ -711,6 +738,43 @@ pub trait Baton {
     fn refuses_foreign(&self) -> bool {
         false
     }
+
+    /// Whether the host refuses a thread running none of its native calls
+    /// that attaches, which then attaches to nothing and takes no baton.
+    fn refuses_attach(&self) -> bool {
+        false
+    }
+
+    /// The last `DetachThread` of the attached activity whose thread context
+    /// is at `context`: the host ends that activity, answering whether it
+    /// did. A host that has ended, or files no such activity, ends nothing.
+    fn detach_activity(&self, context: usize) -> bool {
+        let _ = context;
+        false
+    }
+
+    /// Asks every activity of the host to halt (`r[native.threads.halt]`),
+    /// from any thread and without taking the baton: the request is served
+    /// at the holder's next boundary. A host that cannot be asked does
+    /// nothing.
+    fn post_halt(&self) {}
+
+    /// Asks every activity of the host to turn external tracing on or off,
+    /// served as [`Baton::post_halt`] is.
+    fn post_trace(&self, on: bool) {
+        let _ = on;
+    }
+}
+
+/// What [`Baton::take_for`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TakeFor {
+    /// This thread took the baton, and gives it up with [`Baton::release`].
+    Taken,
+    /// This thread held it already.
+    Held,
+    /// The host has ended: nothing was taken, and the callback does nothing.
+    Refused,
 }
 
 pub use crate::ffi::HostRef;
@@ -759,10 +823,15 @@ impl<'a> BatonHold<'a> {
         BatonHold { _taken: None }
     }
 
-    /// [`Baton::take_for`] `context`, given up when the answer drops.
-    pub(crate) fn take_for(baton: &'a dyn Baton, context: usize) -> BatonHold<'a> {
-        BatonHold {
-            _taken: baton.take_for(context).then(|| Taken(baton)),
+    /// [`Baton::take_for`] `context`, given up when the answer drops, or
+    /// `None` where the host refused it.
+    pub(crate) fn take_for(baton: &'a dyn Baton, context: usize) -> Option<BatonHold<'a>> {
+        match baton.take_for(context) {
+            TakeFor::Taken => Some(BatonHold {
+                _taken: Some(Taken(baton)),
+            }),
+            TakeFor::Held => Some(BatonHold::none()),
+            TakeFor::Refused => None,
         }
     }
 }
@@ -819,6 +888,9 @@ pub struct Activation<'a> {
     /// The variables an `RXSHV_NEXTV` sequence has still to answer, taken
     /// at its first request and dropped once it answers `RXSHV_LVAR`.
     pool_cursor: RefCell<Option<std::collections::VecDeque<(Vec<u8>, Vec<u8>)>>>,
+    /// Whether the string pool is the context's own, which outlives the
+    /// activation's calls ([`Activation::keep_pool`]).
+    pool_kept: Cell<bool>,
 }
 
 impl<'a> Activation<'a> {
@@ -832,7 +904,22 @@ impl<'a> Activation<'a> {
             between_halves: Cell::new(false),
             pool: Cell::new(false),
             pool_cursor: RefCell::new(None),
+            pool_kept: Cell::new(false),
         }
+    }
+
+    /// Marks the string pool as one that outlives the calls through this
+    /// activation, an attached activity's context pool, so that
+    /// `ReleaseLocalReference` drops what it holds for the object. An
+    /// ordinary native call's pool ends with the call, and what the
+    /// extension read stays valid until then.
+    pub fn keep_pool(&self) {
+        self.pool_kept.set(true);
+    }
+
+    /// Whether [`Activation::keep_pool`] was called.
+    pub fn pool_kept(&self) -> bool {
+        self.pool_kept.get()
     }
 
     /// Lets `RexxVariablePool` reach the calling activation's variables

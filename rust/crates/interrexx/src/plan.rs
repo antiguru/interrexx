@@ -436,6 +436,12 @@ impl Plan {
         }
     }
 
+    /// Forgets the chunk [`Interp::chunk_for`] last answered for this plan, so the next
+    /// lookup asks the cache.
+    pub(crate) fn forget_last_chunk(&self) {
+        *self.last_chunk.0.borrow_mut() = None;
+    }
+
     /// The static clause indent of `target`.
     pub(crate) fn indent_of(&self, instructions: &[Instruction], target: usize) -> usize {
         match self.indents.get(target) {
@@ -1016,11 +1022,7 @@ impl Interp {
         }
         let chunk = match self.chunks.get(&(key, trace)) {
             Some(chunk) => Rc::clone(chunk),
-            None => match if self.clause_exits || self.trace_switchable {
-                crate::ir::compile_unsettled(body, plan, trace)
-            } else {
-                crate::ir::compile(body, plan, trace)
-            } {
+            None => match self.compile_chunk(body, plan, trace) {
                 Ok(chunk) => {
                     let chunk = Rc::new(chunk);
                     self.chunks.insert((key, trace), Rc::clone(&chunk));
@@ -1034,6 +1036,45 @@ impl Interp {
         };
         *plan.last_chunk.0.borrow_mut() = Some((key, trace, Rc::clone(&chunk)));
         Some(chunk)
+    }
+
+    /// `body` compiled under `trace`, settling each clause's trace setting at compile time
+    /// unless something outside the body can switch it between two of its clauses: a clause
+    /// exit, or another thread's `RexxSetTrace` or `SetTrace`.
+    pub(crate) fn compile_chunk(
+        &self,
+        body: &CodeBody,
+        plan: &Plan,
+        trace: ChunkTrace,
+    ) -> Result<crate::ir::Chunk, crate::ir::ChunkTooLarge> {
+        if self.clause_exits || self.trace_switchable {
+            crate::ir::compile_unsettled(body, plan, trace)
+        } else {
+            crate::ir::compile(body, plan, trace)
+        }
+    }
+
+    /// The first `SetTrace` served on the instance (`r[native.threads.trace]`), or the first
+    /// `SetThreadTrace`: from here on every body compiles unsettled, and each cached chunk is
+    /// retired, so a body compiles again the next time it is entered. A frame running a
+    /// retired chunk keeps it to the end of that run, which is what
+    /// `r[native.threads.trace.deviation.166]` declares.
+    #[cold]
+    pub(crate) fn make_trace_switchable(&mut self) {
+        if self.trace_switchable {
+            return;
+        }
+        self.trace_switchable = true;
+        // Frames hold their chunk by `Rc`, so taking it out of the cache frees nothing a
+        // frame runs. The resources a chunk holds go when its program does.
+        self.retired_chunks
+            .extend(self.chunks.drain().map(|((key, _), chunk)| (key, chunk)));
+        for plan in self.plans.values() {
+            plan.forget_last_chunk();
+        }
+        if let Some((_, plan)) = &self.last_plan {
+            plan.forget_last_chunk();
+        }
     }
 
     /// The slot `name` resolves to in the current frame, allocating one if it

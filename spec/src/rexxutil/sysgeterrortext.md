@@ -17,16 +17,17 @@ descriptions with each other and with the null string and never print one.
 
 r[util.sysgeterrortext.args]
 `errornumber` is a required argument. A call with no argument, or with the
-argument omitted, raises `SYNTAX 88.901`, and a second argument raises
-`SYNTAX 88.922`; an omitted place at the end of the call adds nothing to the
-count ([the argument rule](r:util.index.args), and for the order of the checks
-[Deviation 101](r:util.index.deviation.101)). An object other than a string is
-replaced by the string that its `request` with the argument `STRING` answers.
-When that answer is not a string, the object is replaced by the answer of its
-`STRING` method. The replacement is then read as a number, so a mutable buffer
-that holds `2` is read as `2`. An object whose replacement is not a number
-raises `SYNTAX 88.907`, not the 88.909 of the argument rule. That includes
-`.nil` and an object with neither `MAKESTRING` nor its own `STRING`.
+argument omitted, raises `SYNTAX 88.901`, and a second argument raises `SYNTAX
+88.922`; an omitted place at the end of the call adds nothing to the count
+([the argument rule](r:util.index.args)), and a call with both faults raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says. An object other than a string is replaced by the string that its
+`request` with the argument `STRING` answers. When that answer is not a string,
+the object is replaced by the answer of its `STRING` method. The replacement is
+then read as a number, so a mutable buffer that holds `2` is read as `2`. An
+object whose replacement is not a number raises `SYNTAX 88.907`, not the 88.909
+of the argument rule. That includes `.nil` and an object with neither
+`MAKESTRING` nor its own `STRING`.
 
 ```rexx
 call try "SysGetErrorText()"

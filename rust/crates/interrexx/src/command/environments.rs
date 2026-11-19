@@ -199,8 +199,20 @@ impl Interp {
         self.classic_subcom(environment).map(NativeKind::Classic)
     }
 
+    /// Takes the command handlers extensions registered out of use where a
+    /// library this interpreter holds has closed since, at the end of
+    /// another instance that was the last of its round, as that instance's
+    /// own close takes its handlers out of use (`r[native.loading.again]`).
+    fn close_handlers_of_a_closed_round(&mut self) {
+        if self.libraries.first_closed() {
+            self.command_handlers.clear();
+            self.environments.close_registered();
+        }
+    }
+
     /// What a command to `environment` runs.
     pub(crate) fn resolve_environment(&mut self, environment: &[u8]) -> Resolved {
+        self.close_handlers_of_a_closed_round();
         let upper = environment.to_ascii_uppercase();
         if let Some(stack) = self.environments.stacks.get(upper.as_slice()) {
             return match stack.last() {
@@ -225,6 +237,7 @@ impl Interp {
     /// stack of the name's own first, so that it stays one object; `None`
     /// for a name nothing answers.
     fn environment_in_use(&mut self, environment: &[u8]) -> Option<Entry> {
+        self.close_handlers_of_a_closed_round();
         let upper: Box<[u8]> = environment.to_ascii_uppercase().into();
         let native = match self.environments.stacks.get(&upper) {
             None => Some(self.native_environment(environment)?),

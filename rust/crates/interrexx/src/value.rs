@@ -1054,6 +1054,25 @@ impl Interp {
         Ok(self.to_number(text).ok())
     }
 
+    /// [`Interp::requested_number`] for a method argument that has a check of
+    /// its own: a `STRING` answer with no string value is no number, so the
+    /// caller raises that check's error (`r[conv.string.argument-kind]`).
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn requested_argument_number(
+        &mut self,
+        value: ObjRef,
+    ) -> Result<Option<Number>, Failure> {
+        if let Ok(number) = self.to_number(value) {
+            return Ok(Some(number));
+        }
+        let text = self.required_string_or_nil(value)?;
+        if text == ObjRef::NIL {
+            return Ok(None);
+        }
+        Ok(self.to_number(text).ok())
+    }
+
     /// [`Interp::to_number`] for the receiver of an operator: a `String`
     /// subclass instance is `NotNumeric` here, because the operator is sent to
     /// it rather than computed.

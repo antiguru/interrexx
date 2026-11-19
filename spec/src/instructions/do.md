@@ -69,14 +69,15 @@ r[instr.do.count]
 evaluated once, when the DO is reached, and its value is the number of passes,
 so a later assignment to a variable of the expression changes nothing. The
 value must be a whole number that is not negative. It may be written with a
-decimal point or an exponent when that is its value, and it must be below 10
-to the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4`
-is a count and `1e5` is not. No count may reach 10 to the power of 18,
-whatever DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs
-no pass and does not raise an error. When
-[LOSTDIGITS](r:cond.lostdigits.information) is trapped, a count written with
-more than DIGITS digits raises that condition before the error, if any, as
-[the lost-digits rule](r:num.arithmetic.lostdigits) describes for an operand.
+decimal point or an exponent when that is its value, and it must be below 10 to
+the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4` is a
+count and `1e5` is not. No count may reach 10 to the power of 18, whatever
+DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs no pass
+and does not raise an error. A count written with more than DIGITS digits
+raises [LOSTDIGITS](r:cond.lostdigits.information), as [the lost-digits
+rule](r:num.arithmetic.lostdigits) describes for an operand; with an error as
+well, which of the two is raised first is unspecified, as [the precedence
+rule](r:conv.error.precedence) says.
 
 ```rexx
 n = 3
@@ -102,7 +103,7 @@ call try 'numeric digits 20; do 999999999999999999; leave; end'
 call try 'numeric digits 20; do 1000000000000000000; leave; end'
 signal on lostdigits name wide
 numeric digits 5
-do 123456
+do 99999.0
   say 'never'
 end
 wide: say condition('c') condition('d')
@@ -131,7 +132,7 @@ numeric digits 5; do 9.9999e4; leave; end => ok
 numeric digits 5; do 1e5; leave; end => 26.2
 numeric digits 20; do 999999999999999999; leave; end => ok
 numeric digits 20; do 1000000000000000000; leave; end => 26.2
-LOSTDIGITS 123456
+LOSTDIGITS 99999.0
 ```
 
 r[instr.do.forever]
@@ -261,6 +262,7 @@ zero after the point stays.
 
 ```rexx
 call try 'do i = "a" to "b"; end'
+call try 'do i = "a" to f(); end'
 call try 'do i = 1 to "b" by 1/0; end'
 call try 'do i = 1 by 1/0 to "b"; end'
 call try 'do i = 1 to 2 by "c"; end'
@@ -280,10 +282,13 @@ try:
   return
 e: say arg(1) '=>' condition('o')~code
   return
+f: say 'f ran'
+  return 2
 ```
 
 ```output
 do i = "a" to "b"; end => 41.1
+do i = "a" to f(); end => 41.1
 do i = 1 to "b" by 1/0; end => 41.1
 do i = 1 by 1/0 to "b"; end => 42.3
 do i = 1 to 2 by "c"; end => 41.1
@@ -434,9 +439,10 @@ lines, so a null string yields none. A [Stem](r:class.stem.makearray), a
 [Directory](r:class.directory.makearray) and a
 [Table](r:class.table.makearray) yield their indexes, which for a Stem are the
 tails of the existing compound variables, and a [Set](r:class.set.makearray)
-yields its members. The order of those four is not specified, as [Deviation
-1](r:instr.do.deviation.1) says for a Stem and [Deviation
-33](../deviations.md#33-hash-iteration-order) for the others. A collection
+yields its members. The order of a Stem is that of assignment ([Deviation
+1](r:instr.do.deviation.1)), and that of the others is the order in which their
+entries were first put ([Deviation
+33](../deviations.md#33-hash-iteration-order)). A collection
 that yields nothing leaves `name` as it was, and otherwise `name` holds the
 last item after the loop.
 
@@ -1084,11 +1090,11 @@ do 2 counter c; end => 26.2
 ## Deviations
 
 r[instr.do.deviation.1]
-The order in which a DO OVER over a Stem visits its tails is not specified.
-ooRexx visits them in an order that its storage fixes, which is neither the
-order of assignment nor a sorted order, and interrexx may visit them in
-another. Which tails the loop visits is specified, as [the OVER
-rule](r:instr.do.over) says.
+A DO OVER over a Stem visits its tails in the order they were first assigned, a
+tail that was dropped and assigned again counting from its new assignment. A
+dropped tail is not listed. ooRexx visits them in an order that its storage
+fixes, which is neither the order of assignment nor a sorted order. Which tails
+the loop visits is specified, as [the OVER rule](r:instr.do.over) says.
 
 ```rexx
 s. = 'dflt'
@@ -1097,11 +1103,19 @@ seen = .array~new
 do t over s.
   seen~append(t)
 end
-say seen~items seen~sort~makeString('l', ' ')
+say seen~makeString('l', ' ')
+drop s.alpha
+s.alpha = 4
+seen = .array~new
+do t over s.
+  seen~append(t)
+end
+say seen~makeString('l', ' ')
 ```
 
 ```output
-3 ALPHA BETA GAMMA
+BETA ALPHA GAMMA
+BETA GAMMA ALPHA
 ```
 
 r[instr.do.deviation.25]

@@ -91,6 +91,10 @@ pub(crate) struct Activity {
     /// which an extension may keep for as long as this interpreter runs;
     /// made by the first ([`crate::Interp::thread_context`]).
     pub(crate) thread: Option<interrexx_api::ffi::ThreadContext>,
+    /// Whether this is an attached activity (`r[native.threads.attach]`):
+    /// driven by the thread attached to its thread context, which runs it for
+    /// each callback, and idle between them, which is its wake source.
+    pub(crate) attached: bool,
     /// `current_value_indent` and `current_clause_line`, bundled -- see
     /// `ClauseState`'s own doc comment for what the two share, the property
     /// that decides what belongs alongside them, and why they are one field
@@ -372,6 +376,18 @@ pub(crate) struct Activity {
     /// A send to a guarded method other than a Rexx body, run once its
     /// guard lock is granted.
     pub(crate) guarded_send: Option<Box<crate::dispatch::GuardedSend>>,
+    /// The guard lock of the method an attached activity's callback entered,
+    /// with its `>I>` written, before it gave the baton back to send again
+    /// (`Interp::retries_entry_guard`), until the send's next entry.
+    pub(crate) retraced: Option<crate::guards::GuardKey>,
+    /// Whether a release granted the guard lock this activity's callback
+    /// waited for to an activity the callback's lend stopped, which ended
+    /// the wait (`Interp::release_guard`), until its next pinned wait.
+    pub(crate) lock_to_lender: bool,
+    /// Where, in the queue of the guard lock that [`Activity::lock_to_lender`]
+    /// says went to a lender, the wait it ended had its place, given up when
+    /// the wait ended (`Interp::cancel_wait`), until its next pinned wait.
+    pub(crate) kept_place: Option<usize>,
     /// The methods other than Rexx bodies and attributes that are running on
     /// this activity's Rust stack, innermost last.
     pub(crate) running_methods: Vec<interrexx_classes::MethodId>,
@@ -552,6 +568,7 @@ impl Activity {
             spare_activations: Vec::new(),
             spare_exposed: None,
             thread: None,
+            attached: false,
             native_handles: Vec::new(),
             native_spares: Vec::new(),
             internal_levels: Vec::new(),
@@ -633,6 +650,9 @@ impl Activity {
             failed_sends: Vec::new(),
             guard_waits: Vec::new(),
             guarded_send: None,
+            retraced: None,
+            lock_to_lender: false,
+            kept_place: None,
             running_methods: Vec::new(),
             guard_exec: None,
             guard_posted: false,
@@ -718,6 +738,7 @@ impl Activity {
             // Handles for constants that are not heap objects, and the
             // innermost native call, whose frame `native_handles` roots.
             thread: _,
+            attached: _,
             native_handles,
             // A pop clears the buffers that held objects, and a push
             // overwrites the handle fields before anything reads them, so a
@@ -820,6 +841,9 @@ impl Activity {
             // Each key's object is its waiting activation's receiver.
             guard_waits: _,
             guarded_send,
+            retraced,
+            lock_to_lender: _,
+            kept_place: _,
             running_methods: _,
             guard_exec,
             guard_posted: _,
@@ -844,6 +868,7 @@ impl Activity {
         if let Some(send) = guarded_send {
             send.object_roots(out);
         }
+        out.extend(retraced.iter().flat_map(|key| [key.object, key.scope]));
         // The raise's own `ADDITIONAL`, alive between the raise and the
         // condition object that will hold it.
         out.extend(*pending_additional);

@@ -2,6 +2,8 @@
 //! `setMethod`, `copy`, `request`, and `run`/`send`/`start` with the `Message`
 //! readers.
 
+use interrexx_core::HashSeed;
+
 use crate::scheduler::{First, ParkReason, Scheduler, StartedSend};
 
 use super::{
@@ -152,10 +154,20 @@ pub(super) fn native_identity_hash(
 /// rather than derived from anything.
 const NIL_HASH: u64 = 0xdead_beef;
 
-/// The string hash computed over the bytes rather than the text.
-pub(super) fn string_hash(bytes: &[u8]) -> u64 {
+/// A string's hash value: the keyed hash of its characters under the
+/// interpreter's `seed` (`r[class.string.hashcode]`). Strings that collide
+/// under one seed do not in general collide under another, which is what
+/// keeps a program from choosing keys that share one probe path.
+#[inline]
+pub(super) fn string_hash(seed: HashSeed, bytes: &[u8]) -> u64 {
+    seed.hash(bytes)
+}
+
+/// A class's hash value: an unkeyed hash of its id, the same in every run.
+/// Only a string's hash code takes the seed.
+fn class_hash(id: &[u8]) -> u64 {
     let mut hash: u64 = 0;
-    for byte in bytes {
+    for byte in id {
         hash = hash
             .wrapping_mul(31)
             .wrapping_add(*byte as i8 as i64 as u64);
@@ -183,14 +195,16 @@ pub(super) fn hash_value(interp: &mut Interp, receiver: ObjRef) -> u64 {
         return NIL_HASH;
     }
     match interp.receiver_kind(receiver) {
-        Ok(Primitive::String | Primitive::SmallInt) => string_hash(&interp.to_text(receiver)),
-        Ok(Primitive::Class(class)) => string_hash(interp.classes().id_string(class).as_bytes()),
+        Ok(Primitive::String | Primitive::SmallInt) => {
+            string_hash(interp.hash_seed, &interp.to_text(receiver))
+        }
+        Ok(Primitive::Class(class)) => class_hash(interp.classes().id_string(class).as_bytes()),
         // A string's hash value is the bytes' hash for a subclass instance as
         // well, and a copy of `.nil` keeps `.nil`'s member.
         Ok(Primitive::Instance { behaviour, .. }) => {
             let nil = interp.object_model().nil_behaviour;
             match super::string::subclass_text(interp, receiver) {
-                Some(text) => string_hash(text),
+                Some(text) => string_hash(interp.hash_seed, text),
                 None if behaviour == nil => NIL_HASH,
                 None => receiver.bits(),
             }
@@ -772,12 +786,14 @@ pub(super) const COLLECTION_STORES: &[(&str, &[u8])] = &[
     ("Table", b"HASHINDEXES"),
     ("Table", b"HASHITEMS"),
     ("Table", b"HASHNEXT"),
+    ("Table", b"HASHBUCKETS"),
     // A `Directory`'s method table travels with the copy and is its own: the
     // copy duplicates it rather than sharing it. Measured: `g = f~copy` then
     // `g~unsetMethod('M')` leaves `f['M']` answering.
     ("Table", b"METHODINDEXES"),
     ("Table", b"METHODITEMS"),
     ("Table", b"METHODNEXT"),
+    ("Table", b"METHODBUCKETS"),
 ];
 
 /// Replaces each of [`COLLECTION_STORES`] on `copy` with an array of its own.
@@ -1627,7 +1643,13 @@ pub(super) fn native_message_result(
 /// of waits, on the running one.
 fn check_message_deadlock(interp: &Interp, message: ObjRef) -> Result<(), Failure> {
     match interp.message_runner(message) {
-        Some(runner) if interp.deadlocks(runner) => Err(crate::error::Raised::deadlock().into()),
+        // Where the running activity runs that send itself, the wait parks
+        // like any other, so the other activities still run, and it is
+        // refused once nothing else can run, whatever was loaded
+        // ([`Interp::waits_on_its_own_message`], Deviation 20).
+        Some(runner) if runner != interp.running_activity() && interp.deadlocks(runner) => {
+            Err(crate::error::Raised::deadlock().into())
+        }
         _ => Ok(()),
     }
 }

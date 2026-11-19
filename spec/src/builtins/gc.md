@@ -54,8 +54,9 @@ the letter `F`, in either case: `force`, `Force`, `FORCE` and `f` are
 accepted, and so is any other string whose first character is `F` or `f`.
 Any other value raises `SYNTAX 40.904`: a string whose first character is
 something else, a blank or the digit `1` among them, the null string, and an
-object whose string value starts otherwise, such as `.nil` or `.false`. The
-argument is checked after the count of arguments.
+object whose string value starts otherwise, such as `.nil` or `.false`. A call
+with a second argument and a wrong `force` raises the error of one of them, as
+[the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
@@ -74,7 +75,7 @@ signal on syntax name e
 say gc(.false)
 e: say condition('o')~code
 signal on syntax name f
-say gc('x', 'y')
+say gc('force', 'y')
 f: say condition('o')~code
 signal off syntax
 say gc('force') gc('Force') gc('F') gc('f') gc('fx') gc(.mutablebuffer~new('f'))

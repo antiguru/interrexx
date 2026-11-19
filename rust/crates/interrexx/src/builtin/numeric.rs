@@ -378,10 +378,17 @@ pub(crate) fn max_min_over(
             }
             .into());
         };
-        let candidate = interp.required_string_value(*candidate)?;
+        // A `STRING` answer with no string value is no number
+        // (`r[conv.string.argument-kind]`).
+        let candidate = interp.required_string_or_nil(*candidate)?;
         interp.roots.activity_mut().push_temp(candidate);
         let found = interp.to_text(candidate).into_owned();
-        let Ok(number) = interp.to_number(candidate) else {
+        let number = if candidate == ObjRef::NIL {
+            None
+        } else {
+            interp.to_number(candidate).ok()
+        };
+        let Some(number) = number else {
             // The object rather than the conversion, which is every
             // argument message's rule -- `whole_number`'s own doc has the
             // measurement behind it.
@@ -474,7 +481,9 @@ fn convert_extreme_arguments<'a>(
     let mut converted = std::borrow::Cow::Borrowed(rest);
     for (at, slot) in rest.iter().enumerate() {
         let Some(value) = slot else { break };
-        let text = interp.required_string_value(*value)?;
+        // A `STRING` answer with no string value is `.nil` here, no number
+        // (`r[conv.string.argument-kind]`).
+        let text = interp.required_string_or_nil(*value)?;
         interp.roots.activity_mut().push_temp(text);
         if text != *value {
             converted.to_mut()[at] = Some(text);

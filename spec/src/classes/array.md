@@ -278,13 +278,12 @@ r[class.array.put]
 there, and answers no value. `a[i] = v` is the message `[]=` with the item
 first and the indexes after, and it is `put` under another name. The method
 needs at least the item and one index: fewer arguments raise `SYNTAX 93.901`,
-and an omitted item raises `SYNTAX 93.903`; both come before any check of the
-indexes. The indexes are read as [the index rule](r:class.array.indexes) says.
-A put beyond the present size of a dimension makes the dimension as large as
-the index, and the array grows. The first put into an array that has no
-dimension yet gives it as many dimensions as it has indexes, each as large as
-its index. `.nil` is an item like any other. A subclass's own `put` is not
-asked for `[]=`, nor the other way round.
+and an omitted item raises `SYNTAX 93.903`. The indexes are read as [the index
+rule](r:class.array.indexes) says. A put beyond the present size of a dimension
+makes the dimension as large as the index, and the array grows. The first put
+into an array that has no dimension yet gives it as many dimensions as it has
+indexes, each as large as its index. `.nil` is an item like any other. A
+subclass's own `put` is not asked for `[]=`, nor the other way round.
 
 ```rexx
 a = .array~new
@@ -409,7 +408,6 @@ call try '.array~of(1)~insert(1, 0)'
 call try '.array~of(1)~insert(1, "x")'
 call try '.array~of(1)~insert(1, 1, 1)'
 call try '.array~new(2, 2)~insert(1, 0)'
-call try '.array~new(2, 2)~insert(1, 1, 1)'
 exit
 try:
   signal on syntax name bad
@@ -431,7 +429,6 @@ bad: say arg(1) '=>' condition('o')~code
 .array~of(1)~insert(1, "x") => 93.907
 .array~of(1)~insert(1, 1, 1) => 93.902
 .array~new(2, 2)~insert(1, 0) => 93.954
-.array~new(2, 2)~insert(1, 1, 1) => 93.902
 ```
 
 r[class.array.insert.omitted]
@@ -482,7 +479,6 @@ call try 'a~delete(0)'
 call try 'a~delete("x")'
 call try 'a~delete(.array~of(1, 2))'
 call try '.array~new(2, 2)~delete(1)'
-call try '.array~new(2, 2)~delete(1, 2)'
 exit
 try:
   signal on syntax name bad
@@ -505,7 +501,6 @@ a~delete(0) => 93.907
 a~delete("x") => 93.907
 a~delete(.array~of(1, 2)) => 93.926
 .array~new(2, 2)~delete(1) => 93.954
-.array~new(2, 2)~delete(1, 2) => 93.902
 ```
 
 r[class.array.remove]
@@ -692,7 +687,7 @@ a = .array~of(1, 'x', , .nil)
 say a~hasItem(1) a~hasItem('1') a~hasItem(1.0) a~hasItem('X') a~hasItem(.nil)
 say .array~of(1, , 3)~hasItem(.nil)
 call try 'a~hasItem'
-call try 'a~hasItem(, 1)'
+call try 'a~hasItem(1, 1)'
 call try 'a~hasItem(1, 2)'
 exit
 try:
@@ -708,7 +703,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 1 0 0 1
 0
 a~hasItem => 93.903
-a~hasItem(, 1) => 93.902
+a~hasItem(1, 1) => 93.902
 a~hasItem(1, 2) => 93.902
 ```
 
@@ -989,7 +984,7 @@ b = .array~new(2, 2)~fill('k')
 say b~items b[2, 2]
 say .array~new~fill('q')~items
 call try 'a~fill'
-call try 'a~fill(, 1)'
+call try 'a~fill(1, 1)'
 call try 'a~fill(1, 2)'
 exit
 try:
@@ -1006,7 +1001,7 @@ bad: say arg(1) '=>' condition('o')~code
 4 k
 0
 a~fill => 93.903
-a~fill(, 1) => 93.902
+a~fill(1, 1) => 93.902
 a~fill(1, 2) => 93.902
 ```
 
@@ -1060,19 +1055,21 @@ a~dimensions(1) => 93.902
 r[class.array.section]
 `section(start, count)` answers a new array that holds the entries from the
 index `start` on: `count` of them, or all of them up to the end of the array
-when `count` is omitted or runs past the end. The first entry of the section
-is at index 1, and an empty slot of the receiver stays an empty slot. The
-items are the receiver's own objects, and the receiver is not changed. A
-`start` beyond the size of the receiver, or a `count` of 0, gives an array
-with no entries and no dimension. The index is read as [the index
+when `count` is omitted or runs past the end. The first entry of the section is
+at index 1, and an empty slot of the receiver stays an empty slot. The items
+are the receiver's own objects, and the receiver is not changed. A `start`
+beyond the size of the receiver, or a `count` of 0, gives an array with no
+entries and no dimension. The index is read as [the index
 rule](r:class.array.indexes) says, so an array of one index is accepted, and
 `SYNTAX 93.907` is raised for a `start` that is not a whole number of at least
 1. The `count` is read as [the index rule](r:class.array.indexes) reads an
 index and must be a whole number of 0 or more, or `SYNTAX 93.923` is raised. No
-`start`, or an omitted one, raises `SYNTAX 93.903`, and a third
-argument `SYNTAX 93.902`; for an array of more than one dimension
-`SYNTAX 93.954` is raised after the count of arguments has been checked,
-whatever they are. The answer is an instance of the class of the receiver.
+`start`, or an omitted one, raises `SYNTAX 93.903`, and a third argument
+`SYNTAX 93.902`; for an array of more than one dimension `SYNTAX 93.954` is
+raised, whatever the arguments are when they are not too many; a call with too
+many raises one of the two errors, as [the precedence
+rule](r:conv.error.precedence) says. The answer is an instance of the class of
+the receiver.
 
 ```rexx
 a = .array~of('a', 'b', , 'd', 'e')
@@ -1241,25 +1238,24 @@ a~supplier(1) => 93.902
 ## The items as text
 
 r[class.array.makestring]
-`makeString(mode, separator)` answers a string made from the items of the
-array in the order of the slots, with the first dimension changing fastest,
-and `toString` is the same method under another name. The first letter of
-`mode`, in either case, chooses the form and nothing after it counts: `L` puts
-the separator between one item and the next, and is the form when `mode` is
+`makeString(mode, separator)` answers a string made from the items of the array
+in the order of the slots, with the first dimension changing fastest, and
+`toString` is the same method under another name. The first letter of `mode`,
+in either case, chooses the form and nothing after it counts: `L` puts the
+separator between one item and the next, and is the form when `mode` is
 omitted, and `C` joins the items directly. The separator is read from its
-string value and is the line end `'0A'x` when it is omitted; it may be the
-null string. A `mode` that does not begin with `L` or `C` raises
-`SYNTAX 93.915`; a separator with `C`, even a null one, raises
-`SYNTAX 93.902`, as a third argument does; a mode or a separator that has no
-string value raises `SYNTAX 88.909`. The mode is checked first, its string
-value and then its letter, and the separator after it. An item that is a string
-is used as it is, and
-any other object, `.nil` included, gives the answer of its `objectName`
-message (a whole-number answer is written as its digits, [Deviation
-107](r:class.array.deviation.107)). An empty slot gives nothing, and no
-separator is added for it, but an
-item that is the null string still takes its separator. An array with no item
-answers the null string.
+string value and is the line end `'0A'x` when it is omitted; it may be the null
+string. A `mode` that does not begin with `L` or `C` raises `SYNTAX 93.915`; a
+separator with `C`, even a null one, raises `SYNTAX 93.902`, as a third
+argument does; a mode or a separator that has no string value raises `SYNTAX
+88.909`. The string value of the mode is read before that of the separator. A
+call whose mode and separator are both in error raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. An item that is a
+string is used as it is, and any other object, `.nil` included, gives the
+answer of its `objectName` message (a whole-number answer is written as its
+digits, [Deviation 107](r:class.array.deviation.107)). An empty slot gives
+nothing, and no separator is added for it, but an item that is the null string
+still takes its separator. An array with no item answers the null string.
 
 ```rexx
 a = .array~of(1, 2, 3)

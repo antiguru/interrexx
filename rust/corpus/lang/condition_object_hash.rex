@@ -1,12 +1,14 @@
 /* A condition object is a Directory: its hash methods answer, CONDITION('O')
-   is a copy of it, and re-raising it through ~result keeps its identity. */
+   is a copy of it, and re-raising it through ~result keeps its identity. The
+   order of the interpreter's own entries is not specified, so the indexes are
+   listed sorted. */
 m = .message~new(.t~new, 'BOOM')
 signal on syntax name s1
 m~send
 s1:
 c = m~errorCondition
 say c~class c~items
-s = ''; do i over c~allIndexes; s = s i; end
+s = ''; do i over c~allIndexes~sort; s = s i; end
 say s
 say c~hasIndex('CODE') c~hasIndex('NOPE') c~hasIndex('code')
 say c~at('CODE') c['CODE'] c~code
@@ -33,7 +35,7 @@ h3:
 c = condition('O')
 call show 'propagated' c~propagated, c
 do k over c; nop; end
-say k
+say c~hasIndex(k)
 exit
 h1:
 call show 'call-on', condition('O')
@@ -41,7 +43,7 @@ return
 show: procedure
   use arg tag, c
   s = ''
-  do i over c~allIndexes; s = s i; end
+  do i over c~allIndexes~sort; s = s i; end
   say tag c~items':'s
   return
 raiser:

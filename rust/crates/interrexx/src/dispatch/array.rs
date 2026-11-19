@@ -17,12 +17,20 @@ pub(super) mod surface;
 
 /// An array receiver's own slots, borrowed, or the refusal for a receiver that
 /// is not one.
+#[inline]
 pub(super) fn array_slots(interp: &Interp, receiver: ObjRef) -> Result<&[Option<ObjRef>], Failure> {
     // An array itself, which is what nearly every caller holds, in one lookup
     // rather than [`collection_store`]'s check and then another.
     if let Some(slots) = interp.array_slots(receiver) {
         return Ok(slots);
     }
+    stored_array_slots(interp, receiver)
+}
+
+/// [`array_slots`] for a receiver that is not an array itself.
+#[cold]
+#[inline(never)]
+fn stored_array_slots(interp: &Interp, receiver: ObjRef) -> Result<&[Option<ObjRef>], Failure> {
     let receiver = collection_store(interp, receiver);
     interp
         .array_slots(receiver)

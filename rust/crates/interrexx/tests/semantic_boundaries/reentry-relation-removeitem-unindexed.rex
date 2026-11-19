@@ -1,7 +1,10 @@
+/* Which entry the search acts on is unspecified when its own == changes the collection: r[class.relation.deviation.33] */
 t = .relation~new
 t~put('victim', .key~new(1))
 w = .wanted~new(t)
-say 'removed' t~removeItem(w) 'items' t~items 'victim-still-present' t~hasIndex(.key~new(1))
+removed = t~removeItem(w)
+left = t~allItems[1]
+say 'removed-one-of-two' (removed == 'victim' | removed == 'extra') 'items' t~items 'other-left' (left \== removed & (left == 'victim' | left == 'extra'))
 exit
 ::class key
 ::attribute label

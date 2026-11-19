@@ -45,7 +45,7 @@ impl Interp {
         // it has to propagate rather than stop here -- `run_bounded`'s own
         // catch-all does exactly that for anything it does not own, `Exit`
         // included, with nothing fragment-specific to add.
-        let chunk = match crate::ir::compile(&fragment.body, &fragment_plan, self.chunk_trace()) {
+        let chunk = match self.compile_chunk(&fragment.body, &fragment_plan, self.chunk_trace()) {
             Ok(chunk) => chunk,
             Err(_) => {
                 self.seal_site_level();

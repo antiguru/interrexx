@@ -306,6 +306,17 @@ fn method_name_literal(name: &str) -> &str {
     }
 }
 
+/// Sends whose answer is a string's hash code, which this crate keys by the
+/// hash seed drawn for each run (`r[class.string.hashcode]`), so that two
+/// runs answer differently by specification. `DateTime` and `File` answer the
+/// hash code of a string of their own. Such a row is `unstable` in this
+/// crate, and reaching that from `answers` is not the row stopping.
+const SEEDED_SENDS: &[(&str, &str)] = &[
+    ("String", "hashCode"),
+    ("DateTime", "hashCode"),
+    ("File", "hashCode"),
+];
+
 /// A class whose `class-set.txt` construction expression cannot be this
 /// table's receiver, with the expression that replaces it.
 const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
@@ -355,7 +366,10 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
     ),
     ("Set", ".Set~of('a','b','c')"),
     ("Bag", ".Bag~of('a','a','b')"),
-    ("Relation", ".Relation~new~~put('v1','k')~~put('v2','k')"),
+    // Two equal entries at one index: a Relation lists its entries in the
+    // order they were put and the oracle does not (Deviation 33), so two
+    // distinct items would diverge on every listing.
+    ("Relation", ".Relation~new~~put('v','k')~~put('v','k')"),
     (
         "Directory",
         ".Directory~new~~put('v1','k1')~~put('v2','k2')",
@@ -368,7 +382,9 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
         "Properties",
         ".Properties~new~~put('v1','k1')~~put('v2','k2')",
     ),
-    ("Stem", ".Stem~new~~put('v1','k1')~~put('v2','k2')"),
+    // One tail: a Stem lists its tails in assignment order, which the oracle
+    // does not (Deviation 1), so two tails would diverge on every listing.
+    ("Stem", ".Stem~new~~put('v1','k1')"),
     // A cancelled timer whose replied activity has ended, by a `SysSleep`
     // after the cancel: a second cancel before the alarm clears
     // `eventSemHandle` posts the oracle's freed semaphore (`oracle-crashes.txt`
@@ -463,6 +479,11 @@ fn probe_text(class: &ClassRow, row: &MethodRow) -> String {
         "class" => format!(".{}", class.name),
         _ => instance_receiver(class),
     };
+    probe_text_to(class, row, &receiver)
+}
+
+/// The text of one row's probe program, sending to `receiver`.
+fn probe_text_to(class: &ClassRow, row: &MethodRow, receiver: &str) -> String {
     let mut text = format!(
         "/* Method-body row: {} {} ({} arm). The documented name is sent with no\n\
          \x20  arguments to `{receiver}`. Derived by\n\
@@ -514,7 +535,7 @@ fn run_probe_twice(abs: &Path, text: &[u8]) -> CrateSide {
     let bounded = watchdog::run_bounded(
         path,
         text.to_vec(),
-        Invocation::none().with_environment(support::zone_pinned_environment(&[])),
+        Invocation::none().with_environment(unseeded_environment()),
     );
     assert!(
         bounded.chunks_refused == 0,
@@ -543,11 +564,23 @@ fn same_outcome(left: &Outcome, right: &Outcome) -> bool {
         && left.stderr == right.stderr
 }
 
-/// This crate's answer to `abs` with `TZ` set, as a subprocess.
+/// [`support::zone_pinned_environment`] without [`interrexx::HASH_SEED_ENV`]:
+/// each run of this crate draws its own hash seed, as a [`SEEDED_SENDS`] row
+/// needs to come out `unstable` rather than `diverge`, whatever the
+/// developer's environment fixes.
+fn unseeded_environment() -> Vec<(Vec<u8>, Vec<u8>)> {
+    let mut environment = support::zone_pinned_environment(&[]);
+    environment.retain(|(name, _)| name != interrexx::HASH_SEED_ENV.as_bytes());
+    environment
+}
+
+/// This crate's answer to `abs` with `TZ` set, as a subprocess, under a hash
+/// seed of its own ([`unseeded_environment`]).
 fn run_crate_in_zone(abs: &Path, zone: &str) -> Outcome {
     let out = Command::new(env!("CARGO_BIN_EXE_rexx"))
         .arg(abs)
         .env("TZ", zone)
+        .env_remove(interrexx::HASH_SEED_ENV)
         .stdin(std::process::Stdio::null())
         .output()
         .unwrap_or_else(|e| {
@@ -1338,7 +1371,12 @@ fn run_table(shard: Option<usize>) {
         let crashes = ORACLE_CRASHING_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
-        if !(crashes && cell.verdict == Body::Uncomparable) && regressed(was.verdict, cell.verdict)
+        let seeded = SEEDED_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method);
+        if !(crashes && cell.verdict == Body::Uncomparable)
+            && !(seeded && cell.verdict == Body::Unstable)
+            && regressed(was.verdict, cell.verdict)
         {
             regressions.push(format!(
                 "{} {} ({} arm): {} -> {} [{}]",
@@ -1413,6 +1451,93 @@ fn run_table(shard: Option<usize>) {
         drifted.join("\n  "),
     );
 
+    let _ = fs::remove_dir_all(&staging);
+}
+
+/// The second `Stem` receiver, holding several tails where the table's own
+/// holds one, so that a method's answer over several items is compared too.
+const STEM_SEVERAL_TAILS: &str = ".Stem~new~~put('v1','k1')~~put('v2','k2')~~put('v3','k3')";
+
+/// The lines of `out`, sorted, so that two listings of one set of tails in
+/// different orders read the same.
+fn sorted_lines(out: &[u8]) -> Vec<u8> {
+    let mut lines: Vec<&[u8]> = out.split_inclusive(|byte| *byte == b'\n').collect();
+    lines.sort_unstable();
+    lines.concat()
+}
+
+/// **Every `Stem` row the table records as `answers` answers the oracle's
+/// way over a stem of several tails too, up to the order of the lines on
+/// standard output.** The table's own `Stem` receiver holds one tail, since a
+/// stem lists its tails in assignment order and the oracle does not
+/// (Deviation 1). Sorting the output lines compares which tails and items an
+/// answer holds, and how often, without their order.
+#[test]
+fn a_stem_of_several_tails_answers_as_the_oracle_does_up_to_order() {
+    let oracle = support::oracle::locate();
+    let corpus = corpus_dir();
+    let classes = read_classes(&corpus);
+    let rows = read_method_rows(&corpus);
+    let committed = read_committed(&corpus, false);
+    let stem = classes
+        .iter()
+        .find(|class| class.name == "Stem")
+        .expect("class-set.txt carries Stem");
+    let staging = staging_root(Some(SHARDS));
+    let mut compared = 0;
+    let mut differ = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
+        if row.class != "Stem" || row.arm != "instance" {
+            continue;
+        }
+        // The oracle crashes on these sends whenever the stem holds a tail.
+        if ORACLE_CRASHING_SENDS
+            .iter()
+            .any(|(class, method)| *class == row.class && *method == row.method)
+        {
+            continue;
+        }
+        if committed.get(&row.key()).map(|cell| cell.verdict) != Some(Body::Answers) {
+            continue;
+        }
+        let text = probe_text_to(stem, row, STEM_SEVERAL_TAILS);
+        let dir = staging.join(format!("{index:04}"));
+        fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+        let file = dir.join("probe.rex");
+        fs::write(&file, &text).unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+        let abs = fs::canonicalize(&file)
+            .unwrap_or_else(|e| panic!("cannot canonicalize {}: {e}", file.display()));
+        let mut ours = run_crate_in_zone(&abs, support::PINNED_ZONE);
+        let mut cpp: CppOutcome = oracle.run(&abs);
+        assert!(
+            !did_not_finish(&cpp),
+            "the oracle did not finish Stem {}: {:?}",
+            row.method,
+            cpp.termination
+        );
+        ours.stdout = sorted_lines(&ours.stdout);
+        cpp.stdout = sorted_lines(&cpp.stdout);
+        compared += 1;
+        if verdict(compare_raw(&ours, &cpp)) != gate_tables::Verdict::Agree {
+            differ.push(format!(
+                "Stem {}: oracle rc={} out={} err={}, crate rc={} out={} err={}",
+                row.method,
+                cpp.expect_exit_code(),
+                excerpt(&cpp.stdout),
+                excerpt(&cpp.stderr),
+                wrapped_exit_code(ours.exit_code),
+                excerpt(&ours.stdout),
+                excerpt(&ours.stderr),
+            ));
+        }
+    }
+    assert!(compared > 0, "no Stem row was compared");
+    assert!(
+        differ.is_empty(),
+        "{} Stem row(s) answer differently over several tails:\n  {}",
+        differ.len(),
+        differ.join("\n  "),
+    );
     let _ = fs::remove_dir_all(&staging);
 }
 

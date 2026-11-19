@@ -1154,8 +1154,7 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
     // the standard initialisation and nothing else.
     ("Bag", "NEW", Arity::Counted, hash::native_hash_new),
     // `Table`'s and `IdentityTable`'s `new` take an optional
-    // initial capacity, and it is observable: it decides the bucket count,
-    // which decides the order every iteration answers in.
+    // initial capacity, a sizing hint that no iteration order depends on.
     (
         "IdentityTable",
         "NEW",
@@ -1405,12 +1404,6 @@ impl ObjectModel {
     /// What `class` keeps alive through the class graph, for the collector.
     pub(crate) fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
         self.classes.class_references(class, out);
-    }
-
-    /// The hash-collection class a `DO OVER` target may be, for a caller
-    /// asking whether an object is one.
-    pub(crate) fn iterable_collection_class(&self) -> ObjRef {
-        self.string_table
     }
 
     /// The native class set, plus the lookup from each implemented
@@ -2583,6 +2576,78 @@ impl Interp {
         Err(Raised::scope_override_not_a_scope(&named_target, &named_scope).into())
     }
 
+    /// The scope a member of the native interface starts its search at to
+    /// run `class`'s own method on `receiver`, whose behaviour holds
+    /// `class`: the most derived class of the run of the receiver's classes
+    /// that ends at `class` and that the interpreter's own library defines.
+    pub(crate) fn library_scope_through(&mut self, receiver: ObjRef, class: ObjRef) -> ObjRef {
+        let scopes = match self.receiver_behaviour(receiver) {
+            Ok(Behaviour::Instance { methods, .. }) => self.classes().scopes_at(methods).to_vec(),
+            Ok(Behaviour::ClassSide(owner)) => self.classes().class_scopes(owner).to_vec(),
+            Err(_) => return class,
+        };
+        let Some(at) = scopes.iter().position(|scope| *scope == class) else {
+            return class;
+        };
+        // A scope sees past itself the scopes ahead of it in the list, so the
+        // classes after `class` are the more derived ones. The run stops at
+        // the first class a program made, so a library mixin that a class of
+        // the program inherits ahead of another class of the program does not
+        // bring that other class into the search.
+        scopes[at..]
+            .iter()
+            .take_while(|scope| self.is_library_class(**scope))
+            .last()
+            .copied()
+            .unwrap_or(class)
+    }
+
+    /// Whether the interpreter's own library defines `class`, as a built-in
+    /// class or as a class of its Rexx-coded program. Every other class a
+    /// program's directive, `~subclass`, `~mixinClass`, `Class~new` or
+    /// `~enhanced` made, and the scope `.nil` an enhancing method carries is
+    /// none of the library's.
+    fn is_library_class(&mut self, class: ObjRef) -> bool {
+        // `record_package_class` enters every class but those of the library
+        // programs, and `record_packageless_class` every class `~subclass`,
+        // `~mixinClass` or `~enhanced` built. A class `Class~new` built takes
+        // its receiver's package, so the table can leave it out, and the
+        // registry's mark for it is what tells it apart.
+        class != ObjRef::NIL
+            && !self.class_packages.contains_key(&class)
+            && !self.classes().is_cloned(class)
+    }
+
+    /// [`Interp::send_message`] with the search started at `scope`, a class
+    /// in `receiver`'s behaviour, and the receiver's own methods passed
+    /// over, so a method `setMethod` gave the object itself does not run.
+    pub(crate) fn send_past_own(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+        scope: ObjRef,
+        args: &[Option<ObjRef>],
+        caller: Caller,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let behaviour = match self.receiver_behaviour(receiver) {
+            Ok(behaviour) => behaviour,
+            Err(kind) => return Err(Loud::unknown_receiver(kind).into()),
+        };
+        let resolved = match self.lookup_behaviour(behaviour, name, Some(scope)) {
+            Some(resolution) => self.admit(resolution, receiver, caller),
+            None => Err(Miss::NoMethod),
+        };
+        let started = match resolved {
+            Ok(resolution) => {
+                self.begin_invoke(resolution, Some(behaviour), receiver, name, args)?
+            }
+            Err(miss) => self
+                .begin_unknown_or_nomethod(receiver, name, args, miss, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran))?,
+        };
+        self.complete_send(started)
+    }
+
     fn receiver_has_scope(&mut self, receiver: ObjRef, scope: ObjRef) -> bool {
         match self.receiver_behaviour(receiver) {
             Ok(Behaviour::Instance { methods, .. }) => {
@@ -3132,6 +3197,9 @@ impl Interp {
         if self.deadlocks(owner) {
             return Err(Raised::deadlock().into());
         }
+        if self.retries_entry_guard(send.key, false, None) {
+            return Err(crate::Loud::retried_send().into());
+        }
         let (key, receiver) = (send.key, send.receiver);
         let me = self.running_activity();
         self.activities.guards.enqueue(key, me);
@@ -3147,6 +3215,9 @@ impl Interp {
                 self.activity.guarded_send = None;
                 if self.granted(key) {
                     self.release_guard(key);
+                }
+                if self.lock_went_to_lender(key, false) {
+                    return Err(crate::Loud::retried_send().into());
                 }
                 Err(failure)
             }

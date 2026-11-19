@@ -606,14 +606,16 @@ interpret inherited 1
 
 r[bif.time.elapsed.convert]
 A call with a `string` and the option E or R raises `SYNTAX 40.29`, whatever
-`string` and `informat` are.
+`string` is when it is valid for `informat`. A call whose `string` or
+`informat` is also in error raises the error of one of them, as [the order
+rule](r:bif.time.order) says.
 
 ```rexx
 signal on syntax name a
 say time('E', '13:05:09')
 a: say condition('o')~code
 signal on syntax name b
-say time('R', 'junk', 'Q')
+say time('R', '13:05:09', 'N')
 b: say condition('o')~code
 signal on syntax name c
 say time('r', 5, 'H')
@@ -626,31 +628,26 @@ c: say condition('o')~code
 40.29
 ```
 
-## The order of the checks
+## The checks
 
 r[bif.time.order]
-A call is checked in this order, and the first failure is the one raised: the
-[argument count](r:bif.index.call.count); a missing `string` that an `informat`
-needs ([40.5](r:bif.index.dt.convert)); the options E and R with a `string`
-([40.29](r:bif.time.elapsed.convert)); the letter of `informat`; the string
-itself (`40.19`); and, last, the letter of `option`.
+A call can fail these checks: the [argument count](r:bif.index.call.count); a
+missing `string` that an `informat` needs ([40.5](r:bif.index.dt.convert)); the
+options E and R with a `string` ([40.29](r:bif.time.elapsed.convert)); the
+letter of `informat`; the string itself (`40.19`); and the letter of `option`.
+A call that fails more than one of these checks raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name a
-say time('X', 'junk', 'Q', 1)
+say time('N', '13:05:09', 'N', 1)
 a: say condition('o')~code
 signal on syntax name b
 say time('E', , 'N')
 b: say condition('o')~code
 signal on syntax name c
 say time('E', 'junk', 'Q')
-c: say condition('o')~code
-signal on syntax name d
-say time('X', 'junk', 'Q')
-d: say condition('o')~code
-signal on syntax name e
-say time('X', 'junk')
-e: say condition('o')~code
+c: say wordpos(condition('o')~code, '40.29 40.904 40.19') > 0
 signal on syntax name f
 say time('X', '13:05:09')
 f: say condition('o')~code
@@ -659,9 +656,7 @@ f: say condition('o')~code
 ```output
 40.4
 40.5
-40.29
-40.904
-40.19
+1
 40.904
 ```
 

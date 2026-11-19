@@ -292,28 +292,26 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.datetime.new.checks]
-The values are checked in this order, and the first that fails raises its error.
 In the one-argument and two-argument form the number of microseconds must be a
-whole number in its range, or `SYNTAX 40.19` is raised, and then the offset is
+whole number in its range, or `SYNTAX 40.19` is raised, and the offset is
 checked as [the offset rule](r:class.datetime.offset) says. Each whole number,
-here and below, is read as a whole-number argument of a builtin is, by [the form
-rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits), with the
-codes of this rule in place of SYNTAX 40.12 ([Deviation
+here and below, is read as a whole-number argument of a builtin is, by [the
+form rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits), with
+the codes of this rule in place of SYNTAX 40.12 ([Deviation
 130](r:class.datetime.deviation.130)). In the other forms year, month and day
-are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its
-range, one that is no number and one that is not whole, such as 1.5, raise
-`SYNTAX 88.907`. A day that the month does not have, such as 30 February, then
-raises `SYNTAX 40.19`. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and
-microseconds (0 to 999999) are checked last, each a whole number in its range,
-and then the offset, as [the offset rule](r:class.datetime.offset) says; a value
-outside its range, one that is no number and one that is not whole raise `SYNTAX
-88.907`. A day that does not exist is thus reported before an hour that is out
-of range, and a day of 32 before one that does not exist.
+are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside
+its range, one that is no number and one that is not whole, such as 1.5, raise
+`SYNTAX 88.907`. A day that the month does not have, such as 30 February,
+raises `SYNTAX 40.19`. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59)
+and microseconds (0 to 999999) are each a whole number in its range, and the
+offset is checked as [the offset rule](r:class.datetime.offset) says; a value
+outside its range, one that is no number and one that is not whole raise
+`SYNTAX 88.907`. A call that fails more than one of these checks, such as a day
+that does not exist with an hour out of range, raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
-call try '.datetime~new(2017, 2, 30, 25, 0, 0, 0)'
-call try '.datetime~new(2017, 2, 32)'
-call try '.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901)'
+call try '.datetime~new(2017, 1, 32)'
 call try '.datetime~new(2017, 2, 29)'
 call try '.datetime~new(2016, 2, 29)'
 call try '.datetime~new(2017, 6, 30, 24, 0, 0, 0)'
@@ -329,7 +327,6 @@ call try '.datetime~new(-1)'
 call try '.datetime~new(315537897600000000)'
 call try '.datetime~new(1.5)'
 call try '.datetime~new("x")'
-call try '.datetime~new(-5, 901)'
 call try '.datetime~new(5, 901)'
 call try '.datetime~new(9999, 12, 31, 23, 59, 59, 999999)'
 exit
@@ -343,9 +340,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-.datetime~new(2017, 2, 30, 25, 0, 0, 0) => 40.19
-.datetime~new(2017, 2, 32) => 88.907
-.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901) => 40.19
+.datetime~new(2017, 1, 32) => 88.907
 .datetime~new(2017, 2, 29) => 40.19
 .datetime~new(2016, 2, 29) => 2016-02-29T00:00:00.000000
 .datetime~new(2017, 6, 30, 24, 0, 0, 0) => 88.907
@@ -361,7 +356,6 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~new(315537897600000000) => 40.19
 .datetime~new(1.5) => 40.19
 .datetime~new("x") => 40.19
-.datetime~new(-5, 901) => 40.19
 .datetime~new(5, 901) => 88.907
 .datetime~new(9999, 12, 31, 23, 59, 59, 999999) => 9999-12-31T23:59:59.999999
 ```
@@ -452,7 +446,7 @@ r[class.datetime.today]
 default offset or the one its optional argument gives ([the offset
 rule](r:class.datetime.offset)). The day is the current one and is not
 specified, so the example checks the time of day and the offset only. It takes
-at most one argument: a second raises `SYNTAX 93.902`, whatever the first is.
+at most one argument: a second raises `SYNTAX 93.902`.
 
 ```rexx
 t = .datetime~today
@@ -462,7 +456,7 @@ signal on syntax name bad
 say .datetime~today(901)
 bad: say condition('o')~code
 signal on syntax name bad2
-say .datetime~today(901, 1)
+say .datetime~today(90, 1)
 bad2: say condition('o')~code
 ```
 

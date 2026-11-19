@@ -74,24 +74,23 @@ say sysfiletree(.mutablebuffer~new('c2zqft01*'), 'f.', .array~of('D'))
 ```
 
 r[util.sysfiletree.order]
-The arguments are checked in this order, and the first failure decides the
-code: the number of arguments and the conversion of each argument to a string
-(`88.9xx`); the name of the stem (`SYNTAX 40.925`); a `filespec` that is the
-null string (`SYNTAX 40.21`); `options` (`SYNTAX 40.21` for the null string,
-`SYNTAX 40.900` for a letter that is not an option); and last the two
-attribute masks (`SYNTAX 40.900`). Nothing is searched until every check has
+The number of arguments is checked, the conversion of each argument to a string
+can raise `88.9xx`, the name of the stem can raise `SYNTAX 40.925`, a
+`filespec` that is the null string `SYNTAX 40.21`, `options` `SYNTAX 40.21` for
+the null string and `SYNTAX 40.900` for a letter that is not an option, and the
+two attribute masks `SYNTAX 40.900`. A call that fails more than one of these
+checks raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. Nothing is searched until every check has
 passed.
 
 ```rexx
-call try "sysfiletree('', 'a b', 'X', 'zz', 'qq')"
-call try "sysfiletree('', 'f.', 'X', 'zz', 'qq')"
-call try "sysfiletree('', 'f.', '', 'zz', 'qq')"
-call try "sysfiletree('c2zqft04*', 'f.', 'X', 'zz', 'qq')"
-call try "sysfiletree('c2zqft04*', 'f.', '', 'zz', 'qq')"
+call try "sysfiletree('c2zqft04*', 'a b')"
+call try "sysfiletree('', 'f.')"
+call try "sysfiletree('c2zqft04*', 'f.', '')"
+call try "sysfiletree('c2zqft04*', 'f.', 'X')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', 'zz', 'qq')"
-call try "sysfiletree('c2zqft04*', 'a b', 'X', 'zz', .nil)"
 call try "sysfiletree('c2zqft04*', .object~new)"
-call try "sysfiletree(.nil, 'a b', 'X', 'zz', 'qq')"
+call try "sysfiletree(.nil, 'f.')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', '*****', 'qq')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', 'zz', '*****')"
 exit
@@ -110,9 +109,7 @@ return
 40.21
 40.21
 40.900
-40.21
 40.900
-88.909
 40.925
 88.909
 40.900

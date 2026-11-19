@@ -411,6 +411,16 @@ impl Surface for FakeHost {
         }
     }
 
+    fn send_own(
+        &mut self,
+        _receiver: ObjRef,
+        _id: &str,
+        _name: &[u8],
+        _arguments: &[Option<ObjRef>],
+    ) -> Option<Result<Option<ObjRef>, ()>> {
+        None
+    }
+
     fn store_get(&mut self, _table: ObjRef, _index: &[u8]) -> Option<Result<Option<ObjRef>, ()>> {
         None
     }

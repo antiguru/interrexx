@@ -184,10 +184,11 @@ impl Probe {
             .interp
             .dot_variable(b".ENVIRONMENT")
             .expect("a directory");
+        let seed = self.interp.hash_seed;
         match directory_get(
             &mut self.interp,
             environment,
-            Key::new(name.as_bytes()),
+            Key::new(seed, name.as_bytes()),
             None,
         ) {
             Ok((DirectoryEntry::Found(entry), _)) if entry == class => "same",

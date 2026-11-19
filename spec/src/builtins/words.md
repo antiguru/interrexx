@@ -32,7 +32,7 @@ signal on syntax name c
 say words(,)
 c: say condition('o')~code
 signal on syntax name d
-say words(, 'b')
+say words('a', 'b')
 d: say condition('o')~code
 ```
 

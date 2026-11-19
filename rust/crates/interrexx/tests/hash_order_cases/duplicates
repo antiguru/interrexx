@@ -1,0 +1,240 @@
+# Where several entries share an index (`Relation`, `Bag`) they come out
+# oldest first, and `at`, `[]`, `remove`, `allAt` and `supplier(index)` act
+# on or start from the oldest. Where several entries hold an item,
+# `index(item)` and `removeItem(item)` choose the first in insertion order.
+# The expected blocks follow from those rules alone.
+
+# a Relation's duplicates answer oldest first, and remove takes the oldest
+program
+r = .relation~new
+r~put(1, 'k'); r~put(9, 'j'); r~put(2, 'k'); r~put(3, 'k')
+say 'at' r~at('k') r['k']
+say 'allAt' r~allAt('k')~toString('l', ' ')
+s = r~supplier('k'); line = ''
+do while s~available; line = line s~index'='s~item; s~next; end
+say 'supplier'line
+say 'remove' r~remove('k') 'allAt' r~allAt('k')~toString('l', ' ')
+say 'remove' r~remove('k') 'allAt' r~allAt('k')~toString('l', ' ')
+----
+at 1 1
+allAt 1 2 3
+supplier k=1 k=2 k=3
+remove 1 allAt 2 3
+remove 2 allAt 3
+
+# a Bag's equal items answer oldest first, and remove takes the oldest
+program
+b = .bag~new
+b~put(.key~new('k', 'first')); b~put(.key~new('j', 'other'))
+b~put(.key~new('k', 'second')); b~put(.key~new('k', 'third'))
+k = .key~new('k', 'probe')
+say 'at' b~at(k)~tag b[k]~tag
+line = ''; do held over b~allAt(k); line = line held~tag; end
+say 'allAt'line
+s = b~supplier(k); line = ''
+do while s~available; line = line s~item~tag; s~next; end
+say 'supplier'line
+say 'remove' b~remove(k)~tag 'items' b~items(k)
+say 'removeItem' b~removeItem(k)~tag 'items' b~items(k)
+say 'at' b~at(k)~tag
+::class key
+::attribute v
+::attribute tag
+::method init
+  expose v tag
+  use arg v, tag
+::method hashCode
+  expose v
+  return v~hashCode
+::method '=='
+  expose v
+  use arg other
+  return v == other~v
+----
+at first first
+allAt first second third
+supplier first second third
+remove first items 2
+removeItem second items 1
+at third
+
+# index and removeItem choose the oldest entry holding an item
+program
+r = .relation~new
+r~put(.item~new('first'), 'b'); r~put(.item~new('other', 'w'), 'a')
+r~put(.item~new('second'), 'a')
+v = .item~new('probe')
+say 'relation index' r~index(v)
+say 'relation removeItem' r~removeItem(v)~tag 'allIndex' r~allIndex(v)~toString('l', ' ')
+r~put(.item~new('third'), 'a')
+say 'relation removeItem(v, a)' r~removeItem(v, 'a')~tag 'left' r~at('a')~tag r~allAt('a')~lastItem~tag
+t = .table~new
+t['y'] = .item~new('first'); t['x'] = .item~new('second')
+say 'table index' t~index(v)
+say 'table removeItem' t~removeItem(v)~tag 'left' t~allIndexes~toString('l', ' ')
+::class item
+::attribute v
+::attribute tag
+::method init
+  expose v tag
+  use arg tag, v = 'v'
+::method hashCode
+  expose v
+  return v~hashCode
+::method '=='
+  expose v
+  use arg other
+  return v == other~v
+----
+relation index b
+relation removeItem first allIndex a
+relation removeItem(v, a) second left other third
+table index y
+table removeItem first left x
+
+# a supplier taken before a removal of the oldest duplicate keeps its snapshot
+program
+r = .relation~new
+r~put(1, 'k'); r~put(2, 'k'); r~put(3, 'k')
+whole = r~supplier
+some = r~supplier('k')
+say 'remove' r~remove('k') 'removeItem' r~removeItem(2, 'k')
+line = ''; do while whole~available; line = line whole~index'='whole~item; whole~next; end
+say 'whole'line
+line = ''; do while some~available; line = line some~item; some~next; end
+say 'index'line
+say 'allAt' r~allAt('k')~toString('l', ' ')
+----
+remove 1 removeItem 2
+whole k=1 k=2 k=3
+index 1 2 3
+allAt 3
+
+# uniqueIndexes lists each index once, in order of its first appearance
+program
+r = .relation~new
+r~put(1, 'q'); r~put(2, 'b'); r~put(3, 'q'); r~put(4, 'zz'); r~put(5, 'b')
+r~remove('q')
+say r~uniqueIndexes~toString('l', ' ')
+b = .bag~new
+b~put('q'); b~put('b'); b~put('q'); b~put('zz'); b~put('b')
+say b~uniqueIndexes~toString('l', ' ')
+----
+b q zz
+q b zz
+
+# duplicates keep their order through removal of the oldest, of a middle
+# one and of the newest, through growth, in a copy, and after empty
+program
+r = .relation~new
+do i = 1 to 6; r~put('k'i, 'k'); r~put('o'i, 'o'i); end
+r~remove('k')
+r~removeItem('k3', 'k')
+r~removeItem('k6', 'k')
+r~put('k7', 'k')
+say 'holes' r~allAt('k')~toString('l', ' ') r~items('k') r~items
+c = r~copy
+r~put('k8', 'k'); c~put('c8', 'k')
+r~remove('k'); c~removeItem('k5', 'k')
+say 'source' r~allAt('k')~toString('l', ' ')
+say 'copy  ' c~allAt('k')~toString('l', ' ')
+do i = 1 to 100; r~put('g'i, 'g'i); r~put('x'i, 'k'); end
+all = r~allAt('k')
+say 'grown' r~at('k') r~items('k') all[4] all[5] all~lastItem r~items
+r~removeItem('x100', 'k'); r~put('y', 'k'); r~removeItem('k5', 'k')
+all = r~allAt('k')
+say 'tail' r~at('k') all[3] all[4] all[5] all~lastItem r~items('k')
+do while r~hasIndex('k'); r~remove('k'); end
+r~put('n1', 'k'); r~put('n2', 'k')
+say 'drained' r~allAt('k')~toString('l', ' ') r~items
+r~empty
+r~put('e1', 'k'); r~put('e2', 'k'); r~remove('k'); r~put('e3', 'k')
+say 'emptied' r~allAt('k')~toString('l', ' ') r~items
+say 'copy  ' c~allAt('k')~toString('l', ' ') c~at('o3') c~items
+----
+holes k2 k4 k5 k7 4 10
+source k4 k5 k7 k8
+copy   k2 k4 k7 c8
+grown k4 104 k8 x1 x100 210
+tail k4 k8 x1 x2 y 103
+drained n1 n2 108
+emptied e2 e3 2
+copy   k2 k4 k7 c8 o3 10
+
+# distinct indexes of one hash keep their order through removals, growth and
+# a copy
+program
+t = .table~new
+do i = 1 to 6; t[.key~new('k'i)] = i; end
+t~remove(.key~new('k1')); t~remove(.key~new('k3')); t~remove(.key~new('k6'))
+t[.key~new('k7')] = 7
+say 'holes' labels(t) t[.key~new('k4')] t[.key~new('k7')] t~hasIndex(.key~new('k3'))
+c = t~copy
+t[.key~new('k8')] = 8; c~remove(.key~new('k2'))
+do i = 1 to 20; t[.key~new('g'i)] = i; end
+say 'source' t~items t[.key~new('k8')] t[.key~new('g20')] t~hasIndex(.key~new('k6'))
+say 'copy  ' labels(c) c[.key~new('k7')] c~hasIndex(.key~new('k8'))
+::routine labels
+  use arg t
+  line = ''
+  do k over t; line = line k~label; end
+  return strip(line)
+::class key
+::attribute label
+::method init
+  expose label
+  use arg label
+::method hashCode
+  return 'same hash'
+::method '=='
+  expose label
+  use arg other
+  return label == other~label
+----
+holes k2 k4 k5 k7 4 7 0
+source 25 8 20 0
+copy   k4 k5 k7 7 0
+
+# a store of distinct keys that later takes two keys of one hash, after
+# removals left holes, keeps its order and finds every key
+program
+t = .table~new
+do i = 1 to 8; t['s'i] = i; end
+t~remove('s2'); t~remove('s5')
+t[.key~new('k1')] = 'k1'
+t['s9'] = 9
+t[.key~new('k2')] = 'k2'
+t~remove('s1')
+t[.key~new('k3')] = 'k3'
+line = ''; do k over t; line = line k~string; end
+say strip(line)
+say t['s3'] t['s8'] t['s9'] t[.key~new('k1')] t[.key~new('k2')] t[.key~new('k3')] t~items
+t~remove(.key~new('k1'))
+t[.key~new('k4')] = 'k4'
+c = t~copy
+t~remove(.key~new('k3')); c~remove(.key~new('k2'))
+t[.key~new('k5')] = 'k5'; c[.key~new('k6')] = 'k6'
+line = ''; do k over t; line = line k~string; end
+say strip(line)
+line = ''; do k over c; line = line k~string; end
+say strip(line)
+::class key
+::attribute label
+::method init
+  expose label
+  use arg label
+::method string
+  expose label
+  return label
+::method hashCode
+  return 'same hash'
+::method '=='
+  expose label
+  use arg other
+  if \other~isA(.key) then return 0
+  return label == other~label
+----
+s3 s4 s6 s7 s8 k1 s9 k2 k3
+3 8 9 k1 k2 k3 9
+s3 s4 s6 s7 s8 s9 k2 k4 k5
+s3 s4 s6 s7 s8 s9 k3 k4 k6

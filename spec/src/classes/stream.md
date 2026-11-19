@@ -217,7 +217,7 @@ say 'first sends' o~log
 t = .loud~new(o)
 say 'second sends' o~log
 call try '.loud~new'
-call try '.loud~new(.nil, 2)'
+call try '.loud~new(o, 2)'
 exit
 try:
   signal on syntax name bad
@@ -247,7 +247,7 @@ second sends  makestring makestring
 init gets 0 argument(s)
 .loud~new => 93.901
 init gets 2 argument(s)
-.loud~new(.nil, 2) => 93.902
+.loud~new(o, 2) => 93.902
 ```
 
 ```rexx
@@ -554,33 +554,31 @@ READY: READY:
 ```
 
 r[class.stream.args]
-The arguments of a message are checked in this order, and the first error is
-the one raised. First comes the form of the arguments that a method reads
-before it counts them: a start, a line number or a count of `charIn`,
-`lineIn`, `charOut` and `lineOut` that is no whole number in the range that
-[the arguments](r:class.stream.args.numbers) give raises `SYNTAX 88.907`, and
-a string to write that has no `makeString` method raises `SYNTAX 88.909`
-([the strings rule](r:class.stream.args.strings)); the option of `open`,
-`lines`, `seek` and `position` is read through `makeString` too, and one
-without it raises `SYNTAX 88.909` ([the objects
-rule](r:class.stream.args.objects)). Then comes the count of arguments, as
-[the count rule](r:class.index.args.count) says, and before the stream is
-opened: a message with more arguments than the method takes raises `SYNTAX
-88.922` for `chars`, `charIn`, `charOut`, `close`, `description`, `flush`,
-`lineIn`, `lineOut`, `lines`, `open`, `position`, `qualify`, `seek`, `state`
-and `uninit`, and `SYNTAX 93.902` for `arrayIn`, `arrayOut`, `command`,
-`init`, `makeArray`, `query`, `say`, `string` and `supplier`; for these
-nothing is read before the count. Last come the values: a `lineIn` count above
-1 raises `SYNTAX 93.0`, an option that is not allowed raises `SYNTAX 93.0` or
-`93.915` as the rule of the method says, and, once the stream is open, a start
-or a line number below 1 raises `SYNTAX 93.907`. `charIn`, `charOut`,
-`lineIn`, `lineOut` and `arrayOut` take two arguments, `lines`, `open`,
-`position`, `seek`, `arrayIn`, `makeArray`, `command`, `init`, `query` and
-`say` one, and the others none. `arrayOut`, `command`, `init` and `query` need
-their argument, and a message without it raises `SYNTAX 93.901`; `position`
-and `seek` raise `SYNTAX 88.901`. No argument is required by `say`, `lines`,
-`open`, `arrayIn` or `makeArray`. In the example the state is still `UNKNOWN`
-after every message that raised.
+A start, a line number or a count of `charIn`, `lineIn`, `charOut` and
+`lineOut` that is no whole number in the range that [the
+arguments](r:class.stream.args.numbers) give raises `SYNTAX 88.907`, and a
+string to write that has no `makeString` method raises `SYNTAX 88.909` ([the
+strings rule](r:class.stream.args.strings)); the option of `open`, `lines`,
+`seek` and `position` is read through `makeString` too, and one without it
+raises `SYNTAX 88.909` ([the objects rule](r:class.stream.args.objects)). A
+message with more arguments than the method takes, as [the count
+rule](r:class.index.args.count) says, raises `SYNTAX 88.922` for `chars`,
+`charIn`, `charOut`, `close`, `description`, `flush`, `lineIn`, `lineOut`,
+`lines`, `open`, `position`, `qualify`, `seek`, `state` and `uninit`, and
+`SYNTAX 93.902` for `arrayIn`, `arrayOut`, `command`, `init`, `makeArray`,
+`query`, `say`, `string` and `supplier`. A `lineIn` count above 1 raises
+`SYNTAX 93.0`, an option that is not allowed raises `SYNTAX 93.0` or `93.915`
+as the rule of the method says, and, once the stream is open, a start or a line
+number below 1 raises `SYNTAX 93.907`. These are checked before the stream is
+opened, except the last. A message with more than one of these faults raises
+the error of one of them, as [the precedence rule](r:conv.error.precedence)
+says. `charIn`, `charOut`, `lineIn`, `lineOut` and `arrayOut` take two
+arguments, `lines`, `open`, `position`, `seek`, `arrayIn`, `makeArray`,
+`command`, `init`, `query` and `say` one, and the others none. `arrayOut`,
+`command`, `init` and `query` need their argument, and a message without it
+raises `SYNTAX 93.901`; `position` and `seek` raise `SYNTAX 88.901`. No
+argument is required by `say`, `lines`, `open`, `arrayIn` or `makeArray`. In
+the example the state is still `UNKNOWN` after every message that raised.
 
 ```rexx
 f = 'spec-stream-args-zq.tmp'
@@ -602,14 +600,9 @@ do m over 'arrayOut command init query position seek'~makearray(' ')
 end
 say s~state
 say '--'
-call try 's~charIn("x", 1, 2)'
-call try 's~lineIn(, -1, 3)'
-call try 's~lineOut(.nil, 1, 2)'
-call try 's~charOut(.object~new, 1, 2)'
-call try 's~lineIn(1, 5, 2)'
-call try 's~charIn(0, 1, 2)'
-call try 's~lines("x", 1)'
-call try 's~open("bogus", 1)'
+call try 's~lineIn(1, 1, 2)'
+call try 's~lines("N", 1)'
+call try 's~open("read", 1)'
 say s~state
 say '--'
 call try 's~say'
@@ -662,14 +655,9 @@ s~position => 88.901
 s~seek => 88.901
 UNKNOWN
 --
-s~charIn("x", 1, 2) => 88.907
-s~lineIn(, -1, 3) => 88.907
-s~lineOut(.nil, 1, 2) => 88.909
-s~charOut(.object~new, 1, 2) => 88.909
-s~lineIn(1, 5, 2) => 88.922
-s~charIn(0, 1, 2) => 88.922
-s~lines("x", 1) => 88.922
-s~open("bogus", 1) => 88.922
+s~lineIn(1, 1, 2) => 88.922
+s~lines("N", 1) => 88.922
+s~open("read", 1) => 88.922
 UNKNOWN
 --
 s~say => no error
@@ -686,15 +674,16 @@ a whole number from -9223372036854775808 to 9223372036854775807. An argument
 that is outside that range, is not whole, or has a form that is no number,
 raises `SYNTAX 88.907`; the functions raise `SYNTAX 40.12` for it. A negative
 count raises `SYNTAX 88.907` too, and a `lineIn` count above 1 raises `SYNTAX
-93.0`. The form is checked, from left to right, before the count of arguments
-and before the stream is opened ([the order](r:class.stream.args)). Once the
-stream is open, a start or a line number below 1 raises `SYNTAX 93.907`, the
-value `-0` and -9223372036854775808 among them. A stream that cannot be opened
-is not asked: the call has the [NOTREADY outcome](r:bif.index.stream.start) of
-a function that finds no stream, whatever the start is. An argument that is an
-object and no string is read as [the objects
-rule](r:class.stream.args.objects) says. What `charIn` does with a count
-larger than the memory of the host allows is not specified.
+93.0`. The form is checked before the stream is opened ([the arguments
+rule](r:class.stream.args)). Once the stream is open, a start or a line number
+below 1 raises `SYNTAX 93.907`, the value `-0` and -9223372036854775808 among
+them. A call with more than one of these faults raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. A stream that
+cannot be opened is not asked: the call has the [NOTREADY
+outcome](r:bif.index.stream.start) of a function that finds no stream, whatever
+the start is. An argument that is an object and no string is read as [the
+objects rule](r:class.stream.args.objects) says. What `charIn` does with a
+count larger than the memory of the host allows is not specified.
 
 ```rexx
 f = 'spec-stream-numbers-zq.tmp'
@@ -718,9 +707,9 @@ call try 's~linein(1, 2)'
 call try 's~charin("-9223372036854775809", 1)'
 say '--'
 t = .stream~new('spec-stream-numbers-none-zq.tmp')
-call try 't~charin(0, "x")'
+call try 't~charin(1, "x")'
 say t~state
-call try 't~charin(0, 1, 1)'
+call try 't~charin(1, 1, 1)'
 call try 't~linein(, 2)'
 say t~state
 call try 's~charin(0, 1)'
@@ -763,9 +752,9 @@ s~linein(, -1) => 88.907
 s~linein(1, 2) => 93.0
 s~charin("-9223372036854775809", 1) => 88.907
 --
-t~charin(0, "x") => 88.907
+t~charin(1, "x") => 88.907
 UNKNOWN
-t~charin(0, 1, 1) => 88.922
+t~charin(1, 1, 1) => 88.922
 t~linein(, 2) => 93.0
 UNKNOWN
 s~charin(0, 1) => 93.907
@@ -792,12 +781,10 @@ count is a count of 2, and `.nil` and an object whose string value is no
 number, such as a plain `Object`, raise `SYNTAX 88.907`. The option that
 `open`, `lines`, `seek` and `position` take is read as a string argument,
 through `makeString` alone: an object that has no such method, `.nil` and an
-object that has only `string` among them, raises `SYNTAX 88.909`, and it does
-so before the count of arguments is checked, so that `open(.nil, 1)` raises
-`SYNTAX 88.909` and not 88.922. The argument of `query` and of `command` is
-read through its string value with the fallback to `string`: an object that
-has only `string` is read by that answer, and `.nil` is read as `The NIL
-object`, which no word or command starts with.
+object that has only `string` among them, raises `SYNTAX 88.909`. The argument
+of `query` and of `command` is read through its string value with the fallback
+to `string`: an object that has only `string` is read by that answer, and
+`.nil` is read as `The NIL object`, which no word or command starts with.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -827,10 +814,6 @@ call try 't~open(.nil)'
 call try 't~lines(.os~new("N"))'
 call try 't~seek(.object~new)'
 call try 't~position(.nil)'
-call try 't~open(.nil, 1)'
-call try 't~lines(.nil, 1)'
-call try 't~seek(.nil, 1)'
-call try 't~position(.os~new("=1"), 1)'
 call try 't~query(.os~new("size"))'
 call try 't~query(.nil)'
 call try 't~command(.os~new("query size"))'
@@ -881,10 +864,6 @@ t~open(.nil) => 88.909
 t~lines(.os~new("N")) => 88.909
 t~seek(.object~new) => 88.909
 t~position(.nil) => 88.909
-t~open(.nil, 1) => 88.909
-t~lines(.nil, 1) => 88.909
-t~seek(.nil, 1) => 88.909
-t~position(.os~new("=1"), 1) => 88.909
 t~query(.os~new("size")) => [4]
 t~query(.nil) => 93.0
 t~command(.os~new("query size")) => [4]
@@ -896,14 +875,15 @@ The string that `charOut`, `lineOut` and `say` write is read as [the string
 value](r:class.index.string) that a method takes from an argument: the
 `makeString` method of an object that is not a string is sent to it and its
 answer is written. An argument that has no `makeString` method, `.nil` and an
-object that has only `string` among them, raises `SYNTAX 88.909`; it is
-checked before the stream is opened, and before the start or line number that
-follows it, [from left to right](r:class.stream.args). An argument that is a
-`String`, a number or a `MutableBuffer`, or an object with a `makeString`
-method, is written as that string. The items that `arrayOut` writes are read
-in the same way, one at a time, by the `lineOut` or `charOut` that `arrayOut`
-sends; the items before a failing one are written ([the `arrayOut`
-rule](r:class.stream.arrayout) has the details).
+object that has only `string` among them, raises `SYNTAX 88.909`; it is checked
+before the stream is opened. A call whose start or line number is also in error
+raises the error of one of them, as [the precedence
+rule](r:conv.error.precedence) says. An argument that is a `String`, a number
+or a `MutableBuffer`, or an object with a `makeString` method, is written as
+that string. The items that `arrayOut` writes are read in the same way, one at
+a time, by the `lineOut` or `charOut` that `arrayOut` sends; the items before a
+failing one are written ([the `arrayOut` rule](r:class.stream.arrayout) has the
+details).
 
 ```rexx
 f = 'spec-stream-strings-zq.tmp'
@@ -913,8 +893,6 @@ call try 's~lineOut(.object~new)'
 call try 's~lineOut(.only_string~new)'
 call try 's~charOut(.nil)'
 call try 's~say(.object~new)'
-call try 's~lineOut(.nil, "x")'
-call try 's~lineOut(.nil, 0)'
 say s~state
 call try 's~lineOut(12)'
 call try 's~lineOut(.has_makestring~new)'
@@ -948,8 +926,6 @@ s~lineOut(.object~new) => 88.909
 s~lineOut(.only_string~new) => 88.909
 s~charOut(.nil) => 88.909
 s~say(.object~new) => 88.909
-s~lineOut(.nil, "x") => 88.909
-s~lineOut(.nil, 0) => 88.909
 UNKNOWN
 s~lineOut(12) => [0]
 s~lineOut(.has_makestring~new) => [0]
@@ -2018,14 +1994,16 @@ argument `ARRAY`, which an `Array`, a `List`, a `Set`, a `Queue` and a stream
 answer with an array of their items, and the items are written in the order of
 that array, an empty slot giving none; an argument whose answer is not an
 array, `.nil` among them, raises `SYNTAX 98.913`. The second argument is
-optional: it is sent `left` with the argument 1, and the answer must be `L`
-for lines or `C` for characters, in either case, or `SYNTAX 93.0` is raised;
-the option is checked before the first argument is. An item is written as
-`lineOut` and `charOut` read their string, so an item that has no `makeString`
-method raises `SYNTAX 88.909` in the write of that item, after the items
-before it were written. When a write raises NOTREADY the writing ends at that
-item, which was not written: the answer is the number of items from it to the
-end. A missing first argument raises `SYNTAX 93.901` when there is no other
+optional: it is sent `left` with the argument 1, and the answer must be `L` for
+lines or `C` for characters, in either case, or `SYNTAX 93.0` is raised. The
+option is sent `left` before the first argument is sent `request`, and a call
+whose option and first argument are both in error raises the error of one of
+them, as [the precedence rule](r:conv.error.precedence) says. An item is
+written as `lineOut` and `charOut` read their string, so an item that has no
+`makeString` method raises `SYNTAX 88.909` in the write of that item, after the
+items before it were written. When a write raises NOTREADY the writing ends at
+that item, which was not written: the answer is the number of items from it to
+the end. A missing first argument raises `SYNTAX 93.901` when there is no other
 argument, and `SYNTAX 93.903` when the option follows it; that check comes
 before the option is read. More than two arguments raise `SYNTAX 93.902`. An
 empty array writes nothing and does not open the stream.
@@ -2045,10 +2023,8 @@ say e~arrayout(.array~new) e~state '[' || e~query('exists') || ']'
 s~close
 say translate(charin(f, 1, 200), '~', '0a'x)
 call try 's~arrayout'
-call try 's~arrayout(, "x")'
 call try 's~arrayout(, "L")'
 call try 's~arrayout(.array~of(1), "x")'
-call try 's~arrayout(.nil, "x")'
 call try 's~arrayout(.nil)'
 call try 's~arrayout(.object~new)'
 call try 's~arrayout(.array~of(1), "L", 3)'
@@ -2088,10 +2064,8 @@ bad: say arg(1) '=>' condition('o')~code
 0 UNKNOWN []
 one~two~three~45six~eight~x~y~zset~q1~q2~
 s~arrayout => 93.901
-s~arrayout(, "x") => 93.903
 s~arrayout(, "L") => 93.903
 s~arrayout(.array~of(1), "x") => 93.0
-s~arrayout(.nil, "x") => 93.0
 s~arrayout(.nil) => 98.913
 s~arrayout(.object~new) => 98.913
 s~arrayout(.array~of(1), "L", 3) => 93.902
