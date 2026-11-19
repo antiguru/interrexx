@@ -329,7 +329,11 @@ for group in "${groups[@]}"; do
                 bad=$((bad + 1))
             fi
         elif [ "$rc" != 0 ]; then
-            verdict="FAIL: exit status $rc, not 0 as a group with only failed tests exits"
+            if [ "${failures:-0}" = 0 ] && [ "${errors:-0}" = 0 ]; then
+                verdict="FAIL: exit status $rc without a failed test"
+            else
+                verdict="FAIL: exit status $rc, not 0 as a group with only failed tests exits"
+            fi
             verdict+=" (listed for ${listed[$group]})"
             bad=$((bad + 1))
         else
