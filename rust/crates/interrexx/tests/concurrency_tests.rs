@@ -1421,7 +1421,8 @@ mod measured {
         ),
         (
             "LoopHeader",
-            "do i = 1 to 2 while f()\nend\nexit\nf:\n  call SysSleep 0\n  return 1\n",
+            "do with index i over .w~new\nend\n::class w\n::method supplier\n  \
+             call SysSleep 0\n  return .array~of(1)~supplier\n",
         ),
         (
             "Conversion",
@@ -1505,8 +1506,9 @@ mod measured {
     }
 
     /// Calls and sends in argument positions, sends, the natives that run a
-    /// Rexx body, and calls inside an unlabelled plain `DO` block run on the driver's
-    /// frame, so a park inside them has no pinned frame above it.
+    /// Rexx body, calls inside an unlabelled plain `DO` block, and calls and
+    /// sends in a loop's `WHILE` or `UNTIL` run on the driver's frame, so a
+    /// park inside them has no pinned frame above it.
     #[test]
     fn a_park_inside_a_stackless_entry_is_under_no_pinned_frame() {
         const CLASS: &str = "::class c\n::method m\n  call SysSleep 0\n  return 1\n\
@@ -1529,6 +1531,9 @@ mod measured {
             "x = .context~package~findRoutine('R')~call\n::routine r\n  call SysSleep 0\n",
             "if 1 then do\n  x = g()\n  y = .c~new~m\n  call g\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "do i = 1 to 2\n  do\n    x = g()\n  end\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
+            "do i = 1 to 1 while g()\nend\nexit\ng:\n  call SysSleep 0\n  return 1\n",
+            "do i = 1 to 1 while .c~new~m\nend\n",
+            "do until .c~new~m\nend\n",
             "x = .f~new~f\n::class f\n::method f\n  forward to (.c~new) message('M')\n",
             "x = .f~new~f\n::class f\n::method f\n  forward continue to (.c~new) message('M')\n  \
              return result\n",
