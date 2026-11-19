@@ -314,6 +314,59 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
         oracle_stdout: "v2 v2 v2,v1 v2\nj j,k\nv1 k,k v2 v1\n",
         crate_stdout: "v1 v1 v1,v2 v1\nk k,j\nv1 k,j v2 v1\n",
     },
+    LicensedDivergence {
+        // The line typed at the stop is `interpret 'x = 1'`: the oracle stops
+        // once more after the clause of the string, so it reads one line more
+        // than this crate does (Deviation 150).
+        name: "typed-interpret-takes-a-stop-of-its-own",
+        program: ".traceoutput~destination(.quiet~new)\n\
+                  .debuginput~destination(.in~new(\"interpret 'x = 1'\"))\n\
+                  trace ?a\nnop\nnop\nnop\nsay 'reads' .in~count\nexit\n\
+                  ::class quiet\n::method lineout\n  return 0\n\
+                  ::class in\n::attribute count class\n::method init\n\
+                  \x20 expose line\n  use arg line\n  .in~count = 0\n\
+                  ::method linein\n  expose line\n  .in~count += 1\n\
+                  \x20 if .in~count = 1 then return line\n  return ''\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "reads 5\n",
+        crate_stdout: "reads 4\n",
+    },
+    LicensedDivergence {
+        // The line typed at the stop is `interpret 'trace off'`: the oracle
+        // ignores the instruction and goes on stopping (Deviation 181).
+        name: "typed-interpret-trace-takes-effect",
+        program: ".traceoutput~destination(.quiet~new)\n\
+                  .debuginput~destination(.in~new(\"interpret 'trace off'\"))\n\
+                  trace ?a\nnop\nnop\nnop\nsay 'reads' .in~count trace()\nexit\n\
+                  ::class quiet\n::method lineout\n  return 0\n\
+                  ::class in\n::attribute count class\n::method init\n\
+                  \x20 expose line\n  use arg line\n  .in~count = 0\n\
+                  ::method linein\n  expose line\n  .in~count += 1\n\
+                  \x20 if .in~count = 1 then return line\n  return ''\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "reads 5 ?A\n",
+        crate_stdout: "reads 1 O\n",
+    },
+    LicensedDivergence {
+        // The line typed at the stop calls a routine: the oracle traces it
+        // and stops after its clauses (Deviation 182).
+        name: "typed-call-runs-untraced",
+        program: ".traceoutput~destination(.quiet~new)\n\
+                  .debuginput~destination(.in~new(\"call sub\"))\n\
+                  trace ?a\nnop\nnop\nnop\nsay 'reads' .in~count trace()\nexit\n\
+                  sub: procedure\n  nop\n  return\n\
+                  ::class quiet\n::method lineout\n  return 0\n\
+                  ::class in\n::attribute count class\n::method init\n\
+                  \x20 expose line\n  use arg line\n  .in~count = 0\n\
+                  ::method linein\n  expose line\n  .in~count += 1\n\
+                  \x20 if .in~count = 1 then return line\n  return ''\n",
+        exit_code: 0,
+        stderr: "",
+        oracle_stdout: "reads 7 ?A\n",
+        crate_stdout: "reads 4 ?A\n",
+    },
 ];
 
 /// A directory of this run's own, because an unresolved Rexx name searches the

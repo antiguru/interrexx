@@ -70,10 +70,11 @@ impl Interp {
     /// Sets the running activation's debug-pause flag, answering the value it
     /// replaces.
     pub(crate) fn replace_debug_pause(&mut self, paused: bool) -> bool {
-        self.activity.trace_cache = TraceCache::of(self.activity.trace_cache.mode(), paused);
         let flags = &mut self.activation_mut().flags;
         let was = flags.debug_pause();
         flags.set_debug_pause(paused);
+        let silenced = flags.silenced();
+        self.activity.trace_cache = TraceCache::of(self.activity.trace_cache.mode(), silenced);
         was
     }
 
@@ -83,6 +84,14 @@ impl Interp {
     pub(crate) fn debug_pause(&self) -> bool {
         self.running_activation()
             .is_some_and(|activation| activation.flags.debug_pause())
+    }
+
+    /// Whether the running activation shows nothing in the trace sink: it
+    /// runs a line typed at a debug pause, or was called from one.
+    #[inline(always)]
+    pub(crate) fn silenced(&self) -> bool {
+        self.running_activation()
+            .is_some_and(|activation| activation.flags.silenced())
     }
 
     /// The setting the trace sink obeys, which is [`TraceMode::OFF`] while a
@@ -99,7 +108,7 @@ impl Interp {
         let traced = self.activity.trace_cache.traced();
         debug_assert_eq!(
             traced,
-            if self.debug_pause() {
+            if self.silenced() {
                 TraceMode::OFF
             } else {
                 self.trace_mode()

@@ -1823,7 +1823,7 @@ macro_rules! open_clause {
         // compile-time emission decision rests on; a missing
         // control-flow edge shows up here as a mismatch rather
         // than as a program that silently stops tracing.
-        // `debug_pause` is excluded because
+        // A silenced activation is excluded because
         // [`Interp::traced_mode`] answers `OFF` under it by
         // design, which is not the program's own setting. So is a
         // run another thread's `SetTrace` has reached
@@ -1832,7 +1832,7 @@ macro_rules! open_clause {
         // under the setting switched from outside, which the claim
         // did not foresee (`r[native.threads.trace.deviation.166]`).
         #[cfg(debug_assertions)]
-        if !$self.debug_pause()
+        if !$self.silenced()
             && !$self.trace_switchable
             && let Some(crate::ir::trace_flow::Setting::Known(claimed)) = $chunk.setting_at($index)
         {
