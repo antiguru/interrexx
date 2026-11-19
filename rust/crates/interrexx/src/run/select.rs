@@ -16,8 +16,18 @@ impl Interp {
     ) -> Result<ObjRef, Failure> {
         // The clause unit set this to the `SELECT`'s own printed indent on the
         // way in.
-        let indent = self.activity.clause_state.current_value_indent;
         let value = self.eval(code, case_expr)?;
+        self.select_case_value(value)
+    }
+
+    /// What a `SELECT CASE` owes once its expression has answered `value`:
+    /// the value rooted for the construct, its `>K>` line, and the block
+    /// opened. [`crate::ir::Op::SelectCase`] runs this behind the
+    /// expression's native ops.
+    pub(crate) fn select_case_value(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
+        // The clause unit set this to the `SELECT`'s own printed indent on the
+        // way in.
+        let indent = self.activity.clause_state.current_value_indent;
         self.roots.activity_mut().push_temp(value);
         let text = self.to_text(value).to_vec();
         // The `>K>` line is at the `SELECT`'s own level -- measured, `>K>   "CASE" => "2"` sits

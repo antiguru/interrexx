@@ -1,0 +1,63 @@
+# A comma list in a condition runs as native ops: each item is judged in
+# turn and the items after one that does not hold are not evaluated.
+
+# trace r: one `>>>` per item judged, then the IF's own
+program
+trace r
+i = 2
+if i > 1, f('second') then say 'both'
+if i > 5, f('never') then nop
+exit
+f:
+say 'f' arg(1)
+return 1
+----
+rc> 0
+out> f second
+out> both
+err>      2 *-* i = 2
+err>        >>>   "2"
+err>      3 *-* if i > 1, f('second') 
+err>        >>>   "1"
+err>      6 *-*   f:
+err>      7 *-*   say 'f' arg(1)
+err>        >>>     "f second"
+err>      8 *-*   return 1
+err>        >>>     "1"
+err>        >>>   "1"
+err>        >>>   "1"
+err>      3 *-*   then
+err>      3 *-*     say 'both'
+err>        >>>       "both"
+err>      4 *-* if i > 5, f('never') 
+err>        >>>   "0"
+err>        >>>   "0"
+err>      5 *-* exit
+
+# a WHEN and a WHILE with comma lists
+program
+i = 2
+select
+  when i = 2, i // 2 = 0 then say 'when list'
+  otherwise nop
+end
+k = 0
+do while k < 3, g(k)
+  k = k + 1
+end
+say k
+exit
+g: return 1
+----
+rc> 0
+out> when list
+out> 3
+
+# an item that is not 0 or 1 is 34.6
+program
+if 1, 'x' then nop
+----
+rc> 222
+err>      1 *-* if 1, 'x' 
+err> Error 34 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 34.6:

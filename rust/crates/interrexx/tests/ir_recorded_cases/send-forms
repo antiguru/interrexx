@@ -1,0 +1,114 @@
+# A send with a `:scope` override or a `~~` cascade runs as native ops.
+# Each stanza answers what the walked term answered.
+
+# a scoped send as a value, a RETURN expression and a message assignment,
+# under trace i
+program
+trace i
+o = .b~new
+say o~m(1)
+o~set = 5
+say o~v
+exit
+::class a
+::method m
+  return 'a' arg(1)
+::attribute v
+::method 'set='
+  expose v
+  use arg v
+  v = v * 10
+::class b subclass a
+::method m
+  x = self~m:super(arg(1) + 1)
+  return 'b' x
+::method 'set='
+  self~"set=":super(arg(1) + 1)
+----
+rc> 0
+out> b a 2
+out> 60
+err>      2 *-* o = .b~new
+err>        >E>   .B => "The B class"
+err>        >M>   "NEW" => "a B"
+err>        >>>   "a B"
+err>        >=>   O <= "a B"
+err>      3 *-* say o~m(1)
+err>        >V>   O => "a B"
+err>        >L>   "1"
+err>        >A>   "1"
+err>        >M>   "M" => "b a 2"
+err>        >>>   "b a 2"
+err>      4 *-* o~set = 5
+err>        >V>   O => "a B"
+err>        >L>   "5"
+err>        >A>   "5"
+err>      5 *-* say o~v
+err>        >V>   O => "a B"
+err>        >M>   "V" => "60"
+err>        >>>   "60"
+err>      6 *-* exit
+
+# the scope must be a class, and one in the receiver's behaviour
+program
+signal on syntax name s1
+o = .b~new
+say o~m
+s1:
+say 'syntax' condition('O')~code sigl
+signal on syntax name s2
+say o~k
+s2:
+say 'syntax' condition('O')~code sigl
+exit
+::class a
+::method m
+  return 'a'
+::class b subclass a
+::method m
+  x = 'notaclass'
+  return self~m:x
+::method k
+  return self~m:.string
+----
+rc> 0
+out> syntax 88.914 3
+out> syntax 93.957 7
+
+# a cascade answers its receiver, and its `>M>` line shows the receiver
+program
+trace i
+a = .array~new~~append(1)~~append(2)
+say a~items
+say .array~new~~put('x', 1)~at(1)
+----
+rc> 0
+out> 2
+out> x
+err>      2 *-* a = .array~new~~append(1)~~append(2)
+err>        >E>   .ARRAY => "The Array class"
+err>        >M>   "NEW" => "an Array"
+err>        >L>   "1"
+err>        >A>   "1"
+err>        >M>   "APPEND" => "an Array"
+err>        >L>   "2"
+err>        >A>   "2"
+err>        >M>   "APPEND" => "an Array"
+err>        >>>   "an Array"
+err>        >=>   A <= "an Array"
+err>      3 *-* say a~items
+err>        >V>   A => "an Array"
+err>        >M>   "ITEMS" => "2"
+err>        >>>   "2"
+err>      4 *-* say .array~new~~put('x', 1)~at(1)
+err>        >E>   .ARRAY => "The Array class"
+err>        >M>   "NEW" => "an Array"
+err>        >L>   "x"
+err>        >A>   "x"
+err>        >L>   "1"
+err>        >A>   "1"
+err>        >M>   "PUT" => "an Array"
+err>        >L>   "1"
+err>        >A>   "1"
+err>        >M>   "AT" => "x"
+err>        >>>   "x"

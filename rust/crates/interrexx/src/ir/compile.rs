@@ -631,12 +631,33 @@ fn compile_settled(
                     end: 0,
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
-                if let Some(dst) = case_reg {
-                    ops.push(Op::EvalExpr {
-                        index: instruction_index(index)?,
-                        slot: 0,
-                        dst,
-                    });
+                if let (Some(dst), Some(case)) = (case_reg, case) {
+                    if native_shape(case, Some(NodePath::ROOT)) {
+                        push_native(
+                            &mut ops,
+                            echoes_values,
+                            &mut consts,
+                            &mut registers,
+                            &mut hints,
+                            &mut calls,
+                            plan,
+                            case,
+                            instruction_index(index)?,
+                            0,
+                            Some(NodePath::ROOT),
+                            dst,
+                        )?;
+                        ops.push(Op::SelectCase {
+                            index: instruction_index(index)?,
+                            src: dst,
+                        });
+                    } else {
+                        ops.push(Op::EvalExpr {
+                            index: instruction_index(index)?,
+                            slot: 0,
+                            dst,
+                        });
+                    }
                 }
                 // Closed here, so that `SelectCaseText` below is past the
                 // region's end -- setting the case value is the construct's
@@ -1108,7 +1129,11 @@ fn compile_settled(
                 if native_message_instruction(term, value.as_ref()) =>
             {
                 let ExprKind::Message {
-                    target, name, args, ..
+                    target,
+                    name,
+                    super_class,
+                    args,
+                    ..
                 } = &term.kind
                 else {
                     unreachable!("the guard above admits only a message term")
@@ -1134,6 +1159,18 @@ fn compile_settled(
                     instruction_index(index)?,
                     0,
                     NodePath::ROOT.nth(0),
+                    recv,
+                )?;
+                let scope = push_scope(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    super_class.as_deref(),
+                    instruction_index(index)?,
                     recv,
                 )?;
                 let assigned = match value {
@@ -1189,6 +1226,7 @@ fn compile_settled(
                     recv,
                     argc,
                     dst: recv,
+                    scope,
                     form,
                 });
                 close_region(&mut ops, at)?;
@@ -1481,19 +1519,32 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         // before there was an address at all.
         ExprKind::Call { .. } => path.is_some(),
         // A send needs an address for the same reason; the receiver is child
-        // 0 and the arguments follow it.
+        // 0 and the arguments follow it. A `:scope` override has no address
+        // of its own, so a call in it leaves the slot general.
         ExprKind::Message {
             target,
-            super_class: None,
+            super_class,
             args,
-            cascade: false,
             ..
         } => {
             path.is_some()
                 && native_shape(target, descend_nth(path, 0))
+                && super_class
+                    .as_deref()
+                    .is_none_or(|scope| native_shape(scope, None))
                 && native_arguments(args, path, 1)
         }
         ExprKind::List(items) => native_arguments(items, path, 0),
+        // A reference names its variable through its address.
+        ExprKind::VariableReference(_) | ExprKind::ClassResolver { .. } => path.is_some(),
+        // A comma list, which only a condition is.
+        ExprKind::Logical(items) => {
+            u32::try_from(items.len()).is_ok()
+                && items
+                    .iter()
+                    .enumerate()
+                    .all(|(k, item)| native_shape(item, descend_nth(path, k)))
+        }
         ExprKind::Binary { op, left, right } => {
             is_native_binary(*op)
                 && native_shape(left, descend(path, false))
@@ -1514,7 +1565,7 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
 fn native_message_instruction(term: &Expr, value: Option<&Expr>) -> bool {
     let ExprKind::Message {
         target,
-        super_class: None,
+        super_class,
         args,
         cascade,
         ..
@@ -1524,6 +1575,9 @@ fn native_message_instruction(term: &Expr, value: Option<&Expr>) -> bool {
     };
     (value.is_some() || !cascade)
         && native_shape(target, NodePath::ROOT.nth(0))
+        && super_class
+            .as_deref()
+            .is_none_or(|scope| native_shape(scope, None))
         && native_arguments(args, Some(NodePath::ROOT), 1)
         && value.is_none_or(|value| native_shape(value, Some(NodePath::ROOT)))
 }
@@ -1604,6 +1658,48 @@ fn push_arguments<'a>(
         }
     }
     Ok(argc)
+}
+
+/// The ops of a send's `:scope` override, if it has one, into a register of
+/// their own, and its check against the receiver in `recv`; answers that
+/// register, or [`Op::NO_SCOPE`]. The override has no address, so it holds no
+/// call ([`native_shape`]).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the emission sinks, the plan a read resolves its slot against, and the receiver"
+)]
+fn push_scope<'a>(
+    ops: &mut Vec<Op>,
+    echoes_values: bool,
+    consts: &mut Constants<'a>,
+    registers: &mut Registers,
+    hints: &mut Hints,
+    calls: &mut Calls,
+    plan: &Plan,
+    scope: Option<&'a Expr>,
+    index: u32,
+    recv: u16,
+) -> Result<u16, ChunkTooLarge> {
+    let Some(scope) = scope else {
+        return Ok(Op::NO_SCOPE);
+    };
+    let reg = registers.alloc()?;
+    push_native(
+        ops,
+        echoes_values,
+        consts,
+        registers,
+        hints,
+        calls,
+        plan,
+        scope,
+        index,
+        0,
+        None,
+        reg,
+    )?;
+    ops.push(Op::SendScope { recv, scope: reg });
+    Ok(reg)
 }
 
 /// The ops that leave `expr` -- which [`native_shape`] has already accepted --
@@ -1856,7 +1952,11 @@ fn push_native<'a>(
         // The receiver lands in `dst` itself, which the send reads before it
         // writes its answer there.
         ExprKind::Message {
-            target, name, args, ..
+            target,
+            name,
+            super_class,
+            args,
+            cascade,
         } => {
             let path = path.expect("native_shape accepts a send only where an address reaches it");
             push_native(
@@ -1874,6 +1974,18 @@ fn push_native<'a>(
                 dst,
             )?;
             let mark = registers.mark();
+            let scope = push_scope(
+                ops,
+                echoes_values,
+                consts,
+                registers,
+                hints,
+                calls,
+                plan,
+                super_class.as_deref(),
+                index,
+                dst,
+            )?;
             let argc = push_arguments(
                 ops,
                 echoes_values,
@@ -1892,9 +2004,80 @@ fn push_native<'a>(
                 recv: dst,
                 argc,
                 dst,
-                form: SendForm::Value,
+                scope,
+                // `~~` answers the receiver.
+                form: if *cascade {
+                    SendForm::Cascade
+                } else {
+                    SendForm::Value
+                },
             });
             registers.release(mark);
+        }
+        // `>name`/`<name`, which traces as an operator (`>O>`) through the
+        // same node-addressed echo a call's `>F>` uses.
+        ExprKind::VariableReference(_) => {
+            let slot = u16::try_from(slot).map_err(|_| ChunkTooLarge {
+                what: "expression slots past u16",
+            })?;
+            let path =
+                path.expect("native_shape accepts a reference only where an address reaches it");
+            ops.push(Op::Reference { slot, path, dst });
+            if echoes_values {
+                ops.push(Op::TraceFunction {
+                    index,
+                    slot,
+                    path,
+                    src: dst,
+                });
+            }
+        }
+        // `namespace:Name`, whose `>N>` line is the node-addressed echo too.
+        ExprKind::ClassResolver { .. } => {
+            let slot = u16::try_from(slot).map_err(|_| ChunkTooLarge {
+                what: "expression slots past u16",
+            })?;
+            let path = path
+                .expect("native_shape accepts a class resolver only where an address reaches it");
+            ops.push(Op::ClassAt { slot, path, dst });
+            if echoes_values {
+                ops.push(Op::TraceFunction {
+                    index,
+                    slot,
+                    path,
+                    src: dst,
+                });
+            }
+        }
+        // Each item lands in `dst` and is judged there, in order, until one
+        // does not hold; the items after it are not evaluated
+        // (`eval_logical_list`).
+        ExprKind::Logical(items) => {
+            let mut judged = Vec::with_capacity(items.len());
+            for (k, item) in items.iter().enumerate() {
+                push_native(
+                    ops,
+                    echoes_values,
+                    consts,
+                    registers,
+                    hints,
+                    calls,
+                    plan,
+                    item,
+                    index,
+                    slot,
+                    descend_nth(path, k),
+                    dst,
+                )?;
+                judged.push(op_index(ops)?);
+                ops.push(Op::LogicalItem { reg: dst, skip: 0 });
+            }
+            let last = *judged.last().expect("a comma list has two items or more");
+            for at in judged {
+                if let Op::LogicalItem { skip, .. } = &mut ops[at as usize] {
+                    *skip = last - at;
+                }
+            }
         }
         // An omitted item owes no `>A>` line, where an omitted argument owes
         // an empty one (`eval_list`).

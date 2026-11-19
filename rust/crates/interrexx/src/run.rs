@@ -3579,6 +3579,13 @@ impl Interp {
                 _ => return None,
             },
             (InstructionKind::If { condition, .. }, 0) => condition,
+            // A `SELECT CASE`'s expression.
+            (
+                InstructionKind::Select {
+                    case: Some(case), ..
+                },
+                0,
+            ) => case,
             // A **plain** `WHEN`'s condition. A `WhenCase`'s values are not a
             // condition and compile to no native op at all, so no address ever
             // names one and this arm does not answer for them.
@@ -3625,6 +3632,10 @@ impl Interp {
                 (ExprKind::Call { args, .. } | ExprKind::List(args), _) => {
                     let index = list_step(step, &mut steps)?;
                     args.get(index)?.as_ref()?
+                }
+                (ExprKind::Logical(items), _) => {
+                    let index = list_step(step, &mut steps)?;
+                    items.get(index)?
                 }
                 (ExprKind::Message { target, args, .. }, _) => {
                     match list_step(step, &mut steps)?.checked_sub(1) {

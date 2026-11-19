@@ -26,6 +26,9 @@ enum Root {
     CallExpr,
     Send,
     List,
+    Logical,
+    Reference,
+    ClassAt,
     EvalExpr,
 }
 
@@ -44,6 +47,9 @@ impl Root {
             Op::CallExpr { .. } | Op::CallArgs { .. } => Some(Root::CallExpr),
             Op::Send { .. } => Some(Root::Send),
             Op::List { .. } => Some(Root::List),
+            Op::LogicalItem { .. } => Some(Root::Logical),
+            Op::Reference { .. } => Some(Root::Reference),
+            Op::ClassAt { .. } => Some(Root::ClassAt),
             Op::CallNamed { .. }
             | Op::PushArg { .. }
             | Op::TraceArgument { .. }
@@ -53,6 +59,8 @@ impl Root {
             | Op::LoopNext { .. }
             | Op::LoopTest { .. }
             | Op::LoopTested { .. }
+            | Op::SelectCase { .. }
+            | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::Parse { .. }
             | Op::Clause { .. }
@@ -132,6 +140,9 @@ fn root_of(expr: &Expr) -> Root {
         | ExprKind::DotVariable(_) => Root::Load,
         ExprKind::Message { .. } if native(expr, Some(0)) => Root::Send,
         ExprKind::List(_) if native(expr, Some(0)) => Root::List,
+        ExprKind::Logical(_) if native(expr, Some(0)) => Root::Logical,
+        ExprKind::VariableReference(_) => Root::Reference,
+        ExprKind::ClassResolver { .. } => Root::ClassAt,
         ExprKind::Binary { op, left, right }
             if native(left, step(Some(0), 1)) && native(right, step(Some(0), 1)) =>
         {
@@ -178,15 +189,28 @@ fn native(expr: &Expr, taken: Option<usize>) -> bool {
         | ExprKind::Stem(_)
         | ExprKind::Compound(_)
         | ExprKind::DotVariable(_) => true,
-        ExprKind::Call { .. } => taken.is_some(),
+        ExprKind::Call { .. } | ExprKind::VariableReference(_) | ExprKind::ClassResolver { .. } => {
+            taken.is_some()
+        }
+        // A `:scope` override has no route of its own.
         ExprKind::Message {
             target,
-            super_class: None,
+            super_class,
             args,
-            cascade: false,
             ..
-        } => taken.is_some() && native(target, step(taken, 1)) && arguments(args, taken, 1),
+        } => {
+            taken.is_some()
+                && native(target, step(taken, 1))
+                && super_class
+                    .as_deref()
+                    .is_none_or(|scope| native(scope, None))
+                && arguments(args, taken, 1)
+        }
         ExprKind::List(items) => arguments(items, taken, 0),
+        ExprKind::Logical(items) => items
+            .iter()
+            .enumerate()
+            .all(|(k, item)| native(item, step(taken, k + 1))),
         ExprKind::Binary { op, left, right } => {
             (arithmetic(*op) || other_family(*op))
                 && native(left, step(taken, 1))
@@ -254,13 +278,16 @@ fn other_family(op: Operator) -> bool {
     )
 }
 
-/// Whether `expr` holds a function call or a message send anywhere.
-fn calls_or_sends(expr: &Expr) -> bool {
+/// Whether `expr` holds a function call, a message send or a comma list
+/// anywhere, which the side table of loop conditions cannot run.
+fn outside_side_table(expr: &Expr) -> bool {
     match &expr.kind {
-        ExprKind::Call { .. } | ExprKind::Message { .. } => true,
-        ExprKind::Binary { left, right, .. } => calls_or_sends(left) || calls_or_sends(right),
-        ExprKind::Prefix { operand, .. } => calls_or_sends(operand),
-        ExprKind::List(items) => items.iter().flatten().any(calls_or_sends),
+        ExprKind::Call { .. } | ExprKind::Message { .. } | ExprKind::Logical(_) => true,
+        ExprKind::Binary { left, right, .. } => {
+            outside_side_table(left) || outside_side_table(right)
+        }
+        ExprKind::Prefix { operand, .. } => outside_side_table(operand),
+        ExprKind::List(items) => items.iter().flatten().any(outside_side_table),
         _ => false,
     }
 }
@@ -428,7 +455,7 @@ fn check_body(
                          that is not native\n{}",
                         render(&chunk)
                     );
-                } else if calls_or_sends(&conditional.condition) {
+                } else if outside_side_table(&conditional.condition) {
                     let test = test.unwrap_or_else(|| {
                         panic!(
                             "{where_}: instruction {index} ({construct}) has a condition that \
@@ -469,11 +496,9 @@ fn check_body(
 
         // The expression a promoted clause's region must end in, for the
         // constructs whose expression `compile` offers to `push_native` as a
-        // whole slot. A `SELECT`'s own expression is offered to no such thing
-        // and evaluates through `Op::EvalExpr` unconditionally; a `WHEN
-        // CASE`'s values are compared inside `Op::WhenTest`. Neither is a slot
-        // this file has anything to state about that the op's presence in the
-        // stream has not already said.
+        // whole slot. A `WHEN CASE`'s values are compared inside
+        // `Op::WhenTest`, which is not a slot this file has anything to state
+        // about that the op's presence in the stream has not already said.
         let expected = match &instruction.kind {
             InstructionKind::Assignment { value, .. } => Some(root_of(value)),
             // A `SAY`, a `RETURN`, an `EXIT`, a `PUSH` and a `QUEUE` are one
@@ -486,6 +511,9 @@ fn check_body(
             | InstructionKind::Push { expression }
             | InstructionKind::Queue { expression } => expression.as_ref().map(root_of),
             InstructionKind::If { condition, .. } => Some(root_of(condition)),
+            // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
+            // it, and a plain `SELECT`'s region, which ends in no `Root`.
+            InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
             InstructionKind::When { condition, .. } => match root_of(condition) {
                 Root::EvalExpr => None,
                 root => Some(root),
@@ -496,13 +524,16 @@ fn check_body(
                 let native_term = match &term.kind {
                     ExprKind::Message {
                         target,
-                        super_class: None,
+                        super_class,
                         args,
                         cascade,
                         ..
                     } => {
                         (value.is_some() || !cascade)
                             && native(target, Some(1))
+                            && super_class
+                                .as_deref()
+                                .is_none_or(|scope| native(scope, None))
                             && arguments(args, Some(0), 1)
                             && value.as_ref().is_none_or(|value| native(value, Some(0)))
                     }
@@ -710,6 +741,8 @@ fn sweep_every_corpus_body() {
         Root::CallExpr,
         Root::Send,
         Root::List,
+        Root::Logical,
+        Root::Reference,
         Root::Const,
         Root::LoadConstant,
         Root::Load,

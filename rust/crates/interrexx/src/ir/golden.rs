@@ -38,6 +38,9 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             Op::LoopNext { index: at } => {
                 out.push_str(&format!("{index}: LoopNext index={at}\n"));
             }
+            Op::SelectCase { index: at, src } => {
+                out.push_str(&format!("{index}: SelectCase index={at} src={src}\n"));
+            }
             Op::LoopTest { index: at, end } => {
                 out.push_str(&format!("{index}: LoopTest index={at} end={end}\n"));
             }
@@ -91,11 +94,36 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 recv,
                 argc,
                 dst,
+                scope,
                 form,
             } => {
+                let scope = if *scope == Op::NO_SCOPE {
+                    String::new()
+                } else {
+                    format!(" scope={scope}")
+                };
                 out.push_str(&format!(
-                    "{index}: Send site={site} recv={recv} argc={argc} dst={dst} form={form:?}\n"
+                    "{index}: Send site={site} recv={recv} argc={argc} dst={dst}{scope} \
+                     form={form:?}\n"
                 ));
+            }
+            Op::Reference { slot, path, dst } => {
+                out.push_str(&format!(
+                    "{index}: Reference slot={slot} path={} dst={dst}\n",
+                    render_path(*path)
+                ));
+            }
+            Op::ClassAt { slot, path, dst } => {
+                out.push_str(&format!(
+                    "{index}: ClassAt slot={slot} path={} dst={dst}\n",
+                    render_path(*path)
+                ));
+            }
+            Op::LogicalItem { reg, skip } => {
+                out.push_str(&format!("{index}: LogicalItem reg={reg} skip={skip}\n"));
+            }
+            Op::SendScope { recv, scope } => {
+                out.push_str(&format!("{index}: SendScope recv={recv} scope={scope}\n"));
             }
             Op::List { argc, dst } => {
                 out.push_str(&format!("{index}: List argc={argc} dst={dst}\n"));

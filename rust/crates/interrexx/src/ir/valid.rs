@@ -38,7 +38,12 @@ impl ValidOps {
                     inside(lhs) && inside(rhs) && inside(dst)
                 }
                 Op::Prefix { src, dst, .. } => inside(src) && inside(dst),
-                Op::Send { recv, dst, .. } => inside(recv) && inside(dst),
+                Op::Send {
+                    recv, dst, scope, ..
+                } => inside(recv) && inside(dst) && (scope == Op::NO_SCOPE || inside(scope)),
+                Op::SendScope { recv, scope } => inside(recv) && inside(scope),
+                Op::LogicalItem { reg, .. } => inside(reg),
+                Op::Reference { dst, .. } | Op::ClassAt { dst, .. } => inside(dst),
                 Op::List { dst, .. } => inside(dst),
                 Op::Say { src, .. }
                 | Op::Signal { src, .. }
@@ -46,7 +51,7 @@ impl ValidOps {
                 | Op::Return { src, .. }
                 | Op::Queue { src, .. } => optional(src),
                 Op::JumpUnless { reg, .. } | Op::ConditionJump { reg, .. } => inside(reg),
-                Op::LoopTested { src, .. } => inside(src),
+                Op::LoopTested { src, .. } | Op::SelectCase { src, .. } => inside(src),
                 Op::Clause { .. }
                 | Op::CallingClause { .. }
                 | Op::LoopRun { .. }

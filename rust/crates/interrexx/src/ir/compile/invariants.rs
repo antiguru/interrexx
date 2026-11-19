@@ -159,7 +159,11 @@ pub(super) fn assert_call_echoes_follow_their_op(ops: &[Op]) {
                     // gives it the echo's instead.
                     Op::CallArgs {
                         slot, path, dst, ..
-                    } => slot == echoed_slot && path == echoed_path && dst == src,
+                    }
+                    | Op::Reference { slot, path, dst }
+                    | Op::ClassAt { slot, path, dst } => {
+                        slot == echoed_slot && path == echoed_path && dst == src
+                    }
                     _ => false,
                 }
             });
@@ -249,6 +253,7 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::LoopRun { index }
                 | Op::LoopNext { index }
                 | Op::LoopTested { index, .. }
+                | Op::SelectCase { index, .. }
                 | Op::Signal { index, .. }
                 | Op::Parse { index, .. } => Some(*index),
                 Op::TraceKeyword { .. }
@@ -257,6 +262,10 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::CallingClause { .. }
                 | Op::LoopTest { .. }
                 | Op::Send { .. }
+                | Op::SendScope { .. }
+                | Op::LogicalItem { .. }
+                | Op::Reference { .. }
+                | Op::ClassAt { .. }
                 | Op::List { .. }
                 | Op::SelectCaseText { .. }
                 | Op::EndBranch
