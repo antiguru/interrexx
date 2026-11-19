@@ -778,13 +778,23 @@ count is read through the `makeString` method of the object, or through its
 `string` method when it has only that, and then as [the rule of the
 arguments](r:class.stream.args.numbers) says: an object that answers 2 for a
 count is a count of 2, and `.nil` and an object whose string value is no
-number, such as a plain `Object`, raise `SYNTAX 88.907`. The option that
+number, such as a plain `Object`, raise `SYNTAX 88.907`; so does an object
+whose `string` method answers an object with no string value, which fails the
+check of its kind as [the kind rule](r:conv.string.argument-kind) says. The option that
 `open`, `lines`, `seek` and `position` take is read as a string argument,
 through `makeString` alone: an object that has no such method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`. The argument
 of `query` and of `command` is read through its string value with the fallback
 to `string`: an object that has only `string` is read by that answer, and
-`.nil` is read as `The NIL object`, which no word or command starts with.
+`.nil` is read as `The NIL object`, which no word or command starts with, and
+so is an answer of `string` that has no string value: `query` raises `SYNTAX
+93.0` and `command` `SYNTAX 93.914` for it, as for a word that nothing starts
+with. The argument that `arrayIn`, `makeArray` and `arrayOut` take as the option
+is no string argument: a message is sent to it, and an object that does not
+understand the message raises `SYNTAX 97.1`. The second example reads an
+object whose `string` method answers an object with no string value: the start,
+the count and the line number raise `SYNTAX 88.907`, a string to write and an
+option `SYNTAX 88.909`.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -868,6 +878,43 @@ t~query(.os~new("size")) => [4]
 t~query(.nil) => 93.0
 t~command(.os~new("query size")) => [4]
 t~command(.nil) => 93.914
+```
+
+```rexx
+o = .nostr~new
+s = .stream~new('spec-stream-nostring-zq.tmp')
+call try 's~charin(o)'
+call try 's~charin(1, o)'
+call try 's~linein(o)'
+call try 's~linein(1, o)'
+call try 's~charout("x", o)'
+call try 's~lineout("x", o)'
+call try 's~lineout(o, 1)'
+call try 's~open(o)'
+call try 's~arrayin(o)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> [' || r || ']'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class nostr
+::method string
+  return .object~new
+```
+
+```output
+s~charin(o) => 88.907
+s~charin(1, o) => 88.907
+s~linein(o) => 88.907
+s~linein(1, o) => 88.907
+s~charout("x", o) => 88.907
+s~lineout("x", o) => 88.907
+s~lineout(o, 1) => 88.909
+s~open(o) => 88.909
+s~arrayin(o) => 97.1
 ```
 
 r[class.stream.args.strings]
