@@ -38,7 +38,7 @@ set -euo pipefail
 
 # The pinned BSF4ooRexx branch and revision, the one place they are written.
 BSF_BRANCH=branches/850
-BSF_REVISION=1131
+BSF_REVISION=1132
 BSF_URL=https://svn.code.sf.net/p/bsf4oorexx/code/$BSF_BRANCH
 
 mode=run
@@ -160,7 +160,7 @@ for group in "${!listed[@]}"; do
 done
 
 mkdir -p "$work"
-rm -rf "${work:?}/classes" "${work:?}/lib" "${work:?}/logs" "${work:?}/api" "${work:?}/source_cc"
+rm -rf "${work:?}/classes" "${work:?}/lib" "${work:?}/logs" "${work:?}/api"
 mkdir -p "$work/classes" "$work/lib" "$work/logs" "$work/api"
 work=$(cd "$work" && pwd)
 lib=$work/lib
@@ -175,23 +175,9 @@ for library in librexx librexxapi; do
     cp "$release/$library.so" "$lib/$library.so.4"
     ln -sfn "$library.so.4" "$lib/$library.so"
 done
-# BsfLoadJava sizes its JavaVMOption array for one entry beyond its arguments but, on Unix, adds two
-# when the arguments set neither java.class.path nor java.library.path: a call without arguments, as
-# lex/procedural/Bean and 201811_strictArg make, writes past the heap block. The copy built here
-# sizes the array for both. The edit must apply exactly once, so a revision that changes the line
-# stops the run until the edit is reviewed. The edit is temporary: drop it once BSF4ooRexx sizes
-# the array itself.
-cp -R "$dev/source_cc" "$work/source_cc"
-undersized='malloc( sizeof( JavaVMOption ) * (numArgs+1) )'
-[ "$(grep -a -o -F "$undersized" "$work/source_cc/BSF4ooRexx.cc" | wc -l)" = 1 ] ||
-    die "BSF4ooRexx.cc no longer has one '$undersized'. Review the BsfLoadJava edit."
-sed -i 's/malloc( sizeof( JavaVMOption ) \* (numArgs+1) )/malloc( sizeof( JavaVMOption ) * (numArgs+2) )/' \
-    "$work/source_cc/BSF4ooRexx.cc"
-grep -a -q -F 'malloc( sizeof( JavaVMOption ) * (numArgs+2) )' "$work/source_cc/BSF4ooRexx.cc" ||
-    die "the BsfLoadJava edit did not apply"
 api=$root/include
 . "$root/scripts/api-flags.sh"
-(cd "$work/source_cc" && "$api_cxx" -w -shared -O2 -DUNIX -DUSE_OREXX -DBSF4REXX_64_BIT \
+(cd "$dev/source_cc" && "$api_cxx" -w -shared -O2 -DUNIX -DUSE_OREXX -DBSF4REXX_64_BIT \
     "${api_flags[@]}" -I. -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
     -o "$lib/libBSF4ooRexx850.so" BSF4ooRexx.cc \
     -L"$lib" -Wl,--disable-new-dtags,-rpath,"$lib" -lrexx -lrexxapi -lpthread)
