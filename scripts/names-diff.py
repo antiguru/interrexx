@@ -408,7 +408,13 @@ class Walker:
                     f"variable {owner}{name} {qual(node.get('type'))}"
                     + flags(node, ("storageClass",))
                 )
-            elif kind in ("FunctionDecl", "CXXMethodDecl", "CXXConstructorDecl", "CXXDestructorDecl"):
+            elif kind in (
+                "FunctionDecl",
+                "CXXMethodDecl",
+                "CXXConversionDecl",
+                "CXXConstructorDecl",
+                "CXXDestructorDecl",
+            ):
                 self.lines.add(f"{kind} {owner}{signature(node)}")
         for child in node.get("inner", []):
             self.walk(child, owner)

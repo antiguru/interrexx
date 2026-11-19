@@ -361,6 +361,9 @@ its type to the code, leaving its flags. Compiled as C++, a
 `RexxArrayObject`, `RexxStemObject`, `RexxMutableBufferObject`, `CSTRING`,
 `POINTER`, `wholenumber_t`, `float` or `double`: the assignment stores the
 value as the code of that type's own name and sets the type in the same way.
+It also converts implicitly to each of those types and to `stringsize_t`,
+answering the value stored as the code of that type's own name, whatever its
+type says.
 
 r[native.header.tables]
 A routine table is an array of `RexxRoutineEntry` and a method table one of
