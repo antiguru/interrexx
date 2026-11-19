@@ -133,8 +133,8 @@ if [ -n "$missing$added" ]; then
 fi
 
 # The expected-failure list: a group path relative to testUnits, then its reason, and under it an
-# indented line for each test the group fails, `failure` or `error` and then the test's name, all of
-# it as ooTest prints it, spaces included.
+# indented line for each test the group fails: `failure` or `error`, then the test's class and its
+# name joined by `::`, each as ooTest prints it, spaces included.
 declare -A listed failing
 group=
 while IFS= read -r line; do
@@ -145,7 +145,10 @@ while IFS= read -r line; do
             read -r kind name <<< "$line"
             [ "$kind" = failure ] || [ "$kind" = error ] ||
                 die "$expected: not failure or error: $line"
-            [ -n "$name" ] || die "$expected: not a kind and a name: $line"
+            case $name in
+                ?*::?*) ;;
+                *) die "$expected: not a kind and a CLASS::NAME: $line" ;;
+            esac
             failing[$group]+="$kind $name"$'\n'
             ;;
         *)
@@ -216,19 +219,31 @@ row "| group | rc | ran | assertions | failures | errors | secs | verdict |"
 row "|---|---|---|---|---|---|---|---|"
 passed=0 total=0 bad=0
 field() { grep -a -m1 "^$1:" "$log" | awk '{ print $NF }' || true; }
-# The tests the log reports as failed, one `failure NAME` or `error NAME` per line, sorted. ooTest
-# prints each after the summary: a `[failure]` or `[error]` line, then the test's `Test:` line.
+# The tests the log reports as failed, one `failure CLASS::NAME` or `error CLASS::NAME` per line,
+# sorted. ooTest prints each after the summary: a `[failure]` or `[error]` line, then the test's
+# `Test:` line and the `Class:` line of the test's class, each as the whole rest of its line. A test
+# that does not show both lines in that order is not named.
 failed_tests() {
-    awk '/^Tests ran:/ { summary = 1; next }
-        summary && /^\[(failure|error)\] / { kind = substr($1, 2, length($1) - 2); next }
-        kind != "" {
-            if ($1 == "Test:") {
-                name = $0
-                sub(/^[ \t]*Test:[ \t]*/, "", name)
-                sub(/[ \t]+$/, "", name)
-                print kind, name
-            }
-            kind = ""
+    awk 'function rest(label, text) {
+            text = $0
+            sub("^[ \t]*" label ":[ \t]*", "", text)
+            sub(/[ \t]+$/, "", text)
+            return text
+        }
+        /^Tests ran:/ { summary = 1; next }
+        summary && /^\[(failure|error)\] / {
+            kind = substr($1, 2, length($1) - 2)
+            want = "Test"
+            next
+        }
+        want == "Test" {
+            want = ""
+            if ($1 == "Test:") { name = rest("Test"); want = "Class" }
+            next
+        }
+        want == "Class" {
+            want = ""
+            if ($1 == "Class:") print kind, rest("Class") "::" name
         }' "$log" | LC_ALL=C sort
 }
 declare -A seen
