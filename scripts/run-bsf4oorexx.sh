@@ -328,8 +328,13 @@ for group in "${groups[@]}"; do
                 [ -z "$gone" ] || verdict+=" Listed but did not fail: ${gone//,/, }."
                 bad=$((bad + 1))
             fi
+        elif [ "$rc" != 0 ]; then
+            verdict="FAIL: exit status $rc, not 0 as a group with only failed tests exits"
+            verdict+=" (listed for ${listed[$group]})"
+            bad=$((bad + 1))
         else
-            verdict="FAIL: exit status $rc without a failed test (listed for ${listed[$group]})"
+            verdict="FAIL: the summary has no Failures or Errors count"
+            verdict+=" (listed for ${listed[$group]})"
             bad=$((bad + 1))
         fi
     elif [ -n "$clean" ]; then
