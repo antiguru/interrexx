@@ -1315,6 +1315,16 @@ impl Interp {
                     start.apply(&mut callee);
                 }
                 self.push_activation(callee);
+                if self.trace_mode().labels {
+                    // The `>I>` line's `STACKFRAME` names the routine by the
+                    // name it was called by (`r[class.stackframe.name]`), and
+                    // its calling convention is installed only after this.
+                    let called_as = self.activity.invocation_name(name);
+                    let called_with = self.shared_arguments(&arguments[from..]);
+                    let callee = self.activation_mut();
+                    callee.call_name = Some(called_as);
+                    callee.call_arguments = Some(called_with);
+                }
                 self.trace_package_invocation_entry();
             }
         }

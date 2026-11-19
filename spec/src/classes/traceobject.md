@@ -251,8 +251,11 @@ a `StringTable` with the entries `NAME`, `VALUE` and `ASSIGNMENT`, which is `1`
 for an assignment and `0` for a read. Which clause the `STACKFRAME` of the `>I>`
 line shows, in its `LINE` and its `TRACELINE`, and the values of `HASSCOPELOCK`
 and `SCOPELOCKCOUNT` of the lines that follow an `EXPOSE` in a method, are not
-specified. The example shows each set of entries once, with the first word of
-the line that has it.
+specified. The `NAME` of the `STACKFRAME` of a `>I>` line is what
+[`name`](r:class.stackframe.name) answers for the level it announces, the name a
+routine was called by or the message name of a method. The first example shows
+each set of entries once, with the first word of the line that has it, and the
+second the `NAME` of the announcements.
 
 ```rexx
 .traceoutput~destination(.sink~new)
@@ -346,6 +349,32 @@ exit
   STACKFRAME StringTable METHOD
   line 17
   VARIABLE ASSIGNMENT NAME VALUE W 1
+```
+
+```rexx
+log = .array~new
+.traceobject~option = 'P'
+.traceobject~collector = log
+call oha
+call 'Oha'
+x = .o~new~m
+.traceobject~collector = .nil
+do t over log
+  if t~traceline~word(1) = '>I>' then say t~stackframe~type t~stackframe~name
+end
+exit
+::routine oha
+  return
+::class o
+::method m
+  return 1
+::options trace label
+```
+
+```output
+ROUTINE OHA
+ROUTINE Oha
+METHOD M
 ```
 
 ## Class attributes
