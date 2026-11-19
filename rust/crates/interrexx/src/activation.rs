@@ -491,6 +491,7 @@ impl ActivationFlags {
     const RESERVED: u8 = 4;
     const ELAPSED_RESET: u8 = 8;
     const DEBUG_PAUSE: u8 = 16;
+    const UNTRACED: u8 = 32;
 
     /// A method activation's flags: `guarded`, and holding its lock where
     /// `reserved`.
@@ -537,6 +538,20 @@ impl ActivationFlags {
 
     pub(crate) fn set_debug_pause(&mut self, paused: bool) {
         self.set(Self::DEBUG_PAUSE, paused);
+    }
+
+    /// Marks this activation as called, directly or through others, from a
+    /// line typed at a debug pause, so that it traces nothing and never
+    /// pauses while everything else about it runs as in a program.
+    pub(crate) fn set_untraced(&mut self, untraced: bool) {
+        self.set(Self::UNTRACED, untraced);
+    }
+
+    /// Whether the trace sink shows nothing for this activation: it runs a
+    /// line typed at a debug pause or was called from one.
+    #[inline(always)]
+    pub(crate) fn silenced(self) -> bool {
+        self.0 & (Self::DEBUG_PAUSE | Self::UNTRACED) != 0
     }
 
     fn set(&mut self, bit: u8, on: bool) {
@@ -1527,8 +1542,14 @@ impl Interp {
         self.shared_key_for = None;
         // `trace_cache`'s own invariant: the setting travels with whichever
         // activation is running, and this changes which one that is.
+        // A routine or method called from a line typed at a debug pause runs
+        // untraced: `r[env.debugging.deviation.182]`.
+        let mut boxed = boxed;
+        if self.silenced() {
+            boxed.flags.set_untraced(true);
+        }
         self.activity.trace_cache =
-            crate::trace::TraceCache::of(boxed.trace_mode, boxed.flags.debug_pause());
+            crate::trace::TraceCache::of(boxed.trace_mode, boxed.flags.silenced());
         // The clause the activation being suspended is stopped on, which is
         // what its own `StackFrame` reports for as long as it stays
         // suspended: `Activity::clause_state` is about to start describing the
@@ -1575,7 +1596,7 @@ impl Interp {
                 .running
                 .as_deref()
                 .map_or(TraceMode::OFF, |resumed| resumed.trace_mode),
-            self.debug_pause(),
+            self.silenced(),
         );
         Some(ended)
     }
@@ -1632,7 +1653,7 @@ impl Interp {
             activation.debug.prompt_issued = false;
         }
         activation.trace_mode = mode;
-        self.activity.trace_cache = crate::trace::TraceCache::of(mode, self.debug_pause());
+        self.activity.trace_cache = crate::trace::TraceCache::of(mode, self.silenced());
     }
 }
 

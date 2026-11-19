@@ -4018,7 +4018,7 @@ impl Interp {
             resumed.guard_waits.push(wait);
         }
         resumed.trace_cache =
-            crate::trace::TraceCache::of(activation.trace_mode, activation.flags.debug_pause());
+            crate::trace::TraceCache::of(activation.trace_mode, activation.flags.silenced());
         resumed.running = Some(activation);
         resumed.call_context = context;
         resumed.call_tails.push(crate::run::CallTail::method(

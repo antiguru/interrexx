@@ -1520,3 +1520,22 @@ argument of values for an error code's message, and the level reads 6.07. Ruled 
 ERRORTEXT's argument: interrexx takes an error code `nn.nnn` as ooRexx does,
 ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
 level 6.07, is part of Deviation 179.
+
+## 181. A TRACE in a string that an INTERPRET in a typed line runs
+
+A TRACE instruction or a call of the TRACE function with an argument in a
+string that an INTERPRET in a line read at an interactive trace stop runs takes
+effect, a number included, and ends the stop, as in the line itself. ooRexx
+ignores the instruction there, as the ANSI standard (8.3.26) ignores a TRACE
+instruction in program source while interactive tracing is on, so that
+`interpret 'trace off'` leaves tracing and the stop as they were. Ruled by the
+owner on 2026-11-16 (#758).
+
+## 182. A routine or method called from a line typed at a trace stop runs untraced
+
+A routine or method that a line read at an interactive trace stop calls shows
+no clause and takes no stop, and a TRACE instruction in it is ignored. A method
+that the line starts runs on an activity of its own and is traced as it would
+be in the program. ooRexx traces the routine and stops after its clauses,
+reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
+runs. Ruled by the owner on 2026-11-16 (#758).
