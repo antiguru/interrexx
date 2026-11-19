@@ -130,10 +130,13 @@ impl Side {
     }
 }
 
-/// A fresh directory below the target's temporary directory.
+/// A fresh directory below the target's temporary directory, numbered so that
+/// tests running at once never share one: every oracle side is `oracle`.
 fn scratch(name: &str) -> PathBuf {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let number = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("compiled-{name}-{}", std::process::id()));
+        .join(format!("compiled-{name}-{}-{number}", std::process::id()));
     if dir.exists() {
         std::fs::remove_dir_all(&dir).expect("an old scratch directory");
     }
