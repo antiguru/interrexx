@@ -157,12 +157,6 @@ jobs:
         with:
           name: nextest-archive
           path: rust
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
@@ -200,12 +194,6 @@ jobs:
         with:
           name: nextest-archive
           path: rust
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
@@ -244,12 +232,6 @@ jobs:
         with:
           name: nextest-archive
           path: rust
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
@@ -306,12 +288,6 @@ jobs:
             oodocs
           key: ${{ needs.third-party.outputs.key }}
           fail-on-cache-miss: true
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
@@ -394,12 +370,6 @@ jobs:
         with:
           name: nextest-archive
           path: rust
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
@@ -473,12 +443,6 @@ jobs:
           test ! -e build && test ! -L build
           test -d ootest
           test -d oodocs
-      - name: Provide memcap
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
-          chmod +x "$HOME/.local/bin/memcap"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install nextest
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:

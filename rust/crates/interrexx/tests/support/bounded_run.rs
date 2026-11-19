@@ -9,8 +9,16 @@
 //! about a kill at the bound does not depend on the machine:
 //!
 //! ```text
-//! bounded-run [--foreground] [-s SIGNAL] [-k DURATION] DURATION COMMAND [ARG]...
+//! bounded-run [--foreground] [-s SIGNAL] [-k DURATION] [-v KIB] DURATION COMMAND [ARG]...
 //! ```
+//!
+//! `-v` is not `timeout`'s: it limits the command's address space to `KIB`
+//! KiB, as `ulimit -v` does, so that a test bounds a program's memory without
+//! a tool of the machine's. The limit is on reserved address space, not on
+//! memory in use: glibc reserves an arena of 64 MiB for each of up to eight
+//! threads per core, so a program with many threads reaches it sooner than
+//! its resident set suggests. macOS accepts the limit and does not enforce
+//! it, so there `-v` bounds nothing.
 //!
 //! The command runs with this process's standard streams and environment.
 //! Arguments are taken as bytes, so any of them may be non-UTF-8. When the
@@ -36,7 +44,9 @@ use std::process::{Child, Command, ExitCode};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-use rustix::process::{Pid, Signal, kill_process, kill_process_group};
+use rustix::process::{
+    Pid, Resource, Rlimit, Signal, getrlimit, kill_process, kill_process_group, setrlimit,
+};
 
 const USAGE_STATUS: u8 = 125;
 const TIMED_OUT_STATUS: u8 = 124;
@@ -138,6 +148,7 @@ fn main() -> ExitCode {
     let mut foreground = false;
     let mut signal = Signal::TERM;
     let mut kill_after = None;
+    let mut address_space = None;
     let duration = loop {
         let Some(arg) = args.pop() else {
             return usage("missing operand");
@@ -162,6 +173,15 @@ fn main() -> ExitCode {
                 };
                 kill_after = Some(parsed);
             }
+            b"-v" => {
+                let Some(value) = args.pop() else {
+                    return usage("option requires an argument -- 'v'");
+                };
+                let Some(kib) = value.to_str().and_then(|text| text.parse::<u64>().ok()) else {
+                    return usage("invalid address-space limit");
+                };
+                address_space = Some(kib.saturating_mul(1024));
+            }
             _ => match parse_duration(&arg) {
                 Some(duration) => break duration,
                 None => return usage("invalid time interval"),
@@ -172,6 +192,20 @@ fn main() -> ExitCode {
         return usage("missing command");
     };
     args.reverse();
+    // Set on this process and inherited by the command, which needs no `unsafe`
+    // `pre_exec`; this process maps little. Only the soft limit is set, and never
+    // above the hard one, so a run already under a lower limit keeps it.
+    if let Some(bytes) = address_space {
+        let maximum = getrlimit(Resource::As).maximum;
+        let limit = Rlimit {
+            current: Some(maximum.map_or(bytes, |hard| hard.min(bytes))),
+            maximum,
+        };
+        if let Err(error) = setrlimit(Resource::As, limit) {
+            eprintln!("bounded-run: cannot limit the address space: {error}");
+            return ExitCode::from(USAGE_STATUS);
+        }
+    }
     let mut command = Command::new(&program);
     command.args(&args);
     if !foreground {

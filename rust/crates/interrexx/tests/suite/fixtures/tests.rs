@@ -7,8 +7,7 @@ use super::group_runner::{interpreter_bin, started_in_file};
 use super::{
     CapKind, CrateSettings, GroupRun, check_path, crate_bin, crate_run_once,
     crate_side_environment, discover_groups, end_reason, expected_set_in, floor_from, marker,
-    path_of, resolve, run_group_on_crate_within, run_group_on_oracle_from, service_binaries,
-    testbinaries,
+    resolve, run_group_on_crate_within, run_group_on_oracle_from, service_binaries, testbinaries,
 };
 
 fn root() -> PathBuf {
@@ -18,7 +17,6 @@ fn root() -> PathBuf {
 fn settings() -> CrateSettings {
     CrateSettings {
         root: root(),
-        memcap: "memcap".to_string(),
         floor: Duration::from_secs(60),
         max_runs: 60,
     }
@@ -93,7 +91,6 @@ fn a_fractional_deadline_is_not_truncated_to_whole_seconds() {
         "",
         "Hangs",
         &BTreeSet::new(),
-        None,
         Duration::from_millis(1700),
     );
     assert!(started.contains(&"TEST_B".to_string()), "{started:?}");
@@ -110,14 +107,12 @@ fn the_marker_file_names_the_test_a_kill_at_the_bound_ended_in() {
     let run = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("suite-kill-{}", std::process::id()))
         .join("run");
-    let memcap = resolve("memcap", &path_of(std::env::var_os("PATH")));
     let (process, tests) = crate_run_once(
         &root(),
         &run,
         "",
         "Hangs",
         &BTreeSet::new(),
-        memcap.as_deref(),
         Duration::from_secs(5),
     );
     assert_eq!(process.run.status, Some(137));
@@ -145,19 +140,10 @@ fn the_run_cap_stops_a_group_that_hangs_on_every_test() {
 }
 
 #[test]
-fn without_memcap_the_crate_run_is_under_the_ulimit_fallback() {
-    let fallback = CrateSettings {
-        memcap: "memcap-is-not-on-this-path".to_string(),
-        ..settings()
-    };
-    let run = crate_run(&fallback, "AddressSpace");
-    assert_eq!(run.cap, CapKind::UlimitFallback);
+fn the_crate_run_is_under_its_address_space_limit() {
+    let run = crate_run(&settings(), "AddressSpace");
+    assert_eq!(run.cap, CapKind::CrateLimit);
     assert_eq!(run.passed, names(&["TEST_LIMIT"]));
-    if resolve("memcap", &path_of(std::env::var_os("PATH"))).is_some() {
-        let run = crate_run(&settings(), "AddressSpace");
-        assert_eq!(run.cap, CapKind::Memcap);
-        assert_eq!(run.failed, names(&["TEST_LIMIT"]));
-    }
 }
 
 #[test]
@@ -220,10 +206,6 @@ fn scratch_run(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("suite-{name}-{}", std::process::id()))
         .join("run")
-}
-
-fn memcap() -> Option<PathBuf> {
-    resolve("memcap", &path_of(std::env::var_os("PATH")))
 }
 
 #[test]
@@ -317,7 +299,6 @@ fn a_child_refusing_on_the_inherited_stderr_leaves_the_run_ended_normally() {
         "",
         "ChildRefuses",
         &BTreeSet::new(),
-        memcap().as_deref(),
         Duration::from_secs(60),
     );
     assert_eq!(tests, ["TEST_A"]);
@@ -345,7 +326,6 @@ fn a_command_a_test_leaves_running_is_killed_with_the_run() {
         "",
         "Grandchild",
         &BTreeSet::new(),
-        memcap().as_deref(),
         Duration::from_secs(60),
     );
     assert_eq!(tests, ["TEST_A"]);
@@ -366,7 +346,6 @@ fn a_command_the_crate_side_runs_finds_its_rexx_and_rexxc() {
         "",
         "ChildPath",
         &BTreeSet::new(),
-        memcap().as_deref(),
         Duration::from_secs(60),
     );
     assert_eq!(tests, ["TEST_A"]);
@@ -473,7 +452,6 @@ fn the_crate_side_bin_holds_the_oracle_bins_class_files_and_no_other_binary() {
         "",
         "ChildPath",
         &BTreeSet::new(),
-        memcap().as_deref(),
         Duration::from_secs(60),
     );
     let bin = interpreter_bin(&run);

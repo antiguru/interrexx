@@ -18,8 +18,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-/// The `memcap` limit each run is under.
-const MEMORY: &str = "2G";
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
 
 fn worktree() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
@@ -57,25 +57,14 @@ fn fresh_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Whether `name` is an executable file on this process's `PATH`.
-fn on_path(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
-}
-
 /// Runs `source` with the forge on the library path, answering its Rexx
 /// lines, the forge's lines, its stderr and its exit status.
 fn run(dir: &Path, name: &str, source: &str) -> (Vec<String>, Vec<String>, String, Option<i32>) {
     let program = dir.join(format!("{name}.rex"));
     fs::write(&program, source).expect("the program is writable");
-    let mut command = if on_path("memcap") {
-        let mut command = Command::new("memcap");
-        command.arg(MEMORY).arg(env!("CARGO_BIN_EXE_rexx"));
-        command
-    } else {
-        Command::new(env!("CARGO_BIN_EXE_rexx"))
-    };
-    let output = command
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+        .args(["-v", MEMORY_LIMIT_KIB, "-k", "5", "120"])
+        .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
         .current_dir(dir)
         .env("LD_LIBRARY_PATH", dir)
