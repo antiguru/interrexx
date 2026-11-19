@@ -201,14 +201,18 @@ fn find_daemon() -> Result<PathBuf, TransportError> {
 pub const DETACH_VARIABLE: &str = "REXX_API_DETACH";
 
 fn start_daemon(daemon: &Path, dir: &Path) -> Result<(), TransportError> {
-    let status = Command::new(daemon)
+    let mut command = Command::new(daemon);
+    command
         .env("REXX_API_DIR", dir)
         .env(DETACH_VARIABLE, "1")
         .current_dir("/")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .stderr(Stdio::null());
+    // Started under the lock and waited for outside it, so that a client
+    // thread does not hold up descriptor creation while the service starts.
+    let status = crate::inheritance::spawning(|| command.spawn())
+        .and_then(|mut child| child.wait())
         .map_err(|error| unavailable(&error))?;
     if status.success() {
         Ok(())
@@ -390,8 +394,11 @@ impl Unix {
 
     /// Connects to the service in the private `dir`, which must run as `uid`.
     fn attempt(dir: &Path, version: u32, uid: u32) -> Result<Unix, ConnectFailure> {
+        // Made close-on-exec apart from the call where the host has no
+        // `SOCK_CLOEXEC`, so under the inheritance lock.
         let stream = reserve(
-            UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?,
+            crate::inheritance::creating(|| UnixStream::connect(socket_path(dir, version)))
+                .map_err(ConnectFailure::Absent)?,
         );
         no_sigpipe(&stream).map_err(ConnectFailure::Absent)?;
         let peer = peer_uid(&stream).map_err(ConnectFailure::Absent)?;

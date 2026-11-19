@@ -91,7 +91,9 @@ impl Canceller {
         }
         #[cfg(not(any(target_os = "linux", target_os = "android")))]
         {
-            let (read, write) = crate::host::pipe_cloexec().ok()?;
+            let (read, write) = crate::host::pipe().ok()?;
+            let (read, write): (std::os::fd::OwnedFd, std::os::fd::OwnedFd) =
+                (read.into(), write.into());
             rustix::fs::fcntl_setfl(&write, rustix::fs::OFlags::NONBLOCK).ok()?;
             Some(Canceller {
                 pipe: (read, write),

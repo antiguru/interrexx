@@ -221,7 +221,8 @@ under a seed are reported, never gating.
 ## Hosts
 
 interrexx builds for Linux and macOS; Linux is the reference host, and the specification states
-its behaviour. Windows is not supported yet (#215).
+its behaviour. Windows is not supported yet (#215), and neither are the BSDs: `host.rs` refuses
+to compile for any other target.
 
 * Code that differs by host sits behind one function per concern, with an implementation per
   host chosen by `cfg`, so a new host adds implementations and no caller changes. The
@@ -238,9 +239,10 @@ its behaviour. Windows is not supported yet (#215).
 * Where Linux has a mechanism and another Unix has none, the other host takes the fallback the
   code already had: socket waits without `epoll` poll on a pool thread, and the timer without
   `timerfd` uses the poll's timeout.
-* Where a host cannot create a descriptor close-on-exec in one call, the interpreter's own
+* Where a host cannot create a descriptor close-on-exec in one call, the process's own
   descriptors are made under a shared lock that the start of a child process takes exclusively,
-  so no child inherits one half made.
+  so no child inherits one half made. The lock is `interrexx-rxapi/src/inheritance.rs`, the
+  lowest crate the API client and the interpreter share, so both take the same one.
 * Tests that read `/proc`, set another process's limits or use GNU `env` are compiled on Linux
   only, each with the reason beside its `cfg`.
 * On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and

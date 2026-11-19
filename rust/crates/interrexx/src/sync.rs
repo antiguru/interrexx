@@ -51,8 +51,7 @@ pub(crate) struct Wake {
 #[cfg(not(all(loom, test)))]
 impl Wake {
     pub(crate) fn new() -> Wake {
-        let (reader, writer) =
-            std::os::unix::net::UnixStream::pair().expect("the timer's wake socket");
+        let (reader, writer) = crate::host::unix_stream_pair().expect("the timer's wake socket");
         for end in [&reader, &writer] {
             end.set_nonblocking(true)
                 .expect("a nonblocking wake socket");

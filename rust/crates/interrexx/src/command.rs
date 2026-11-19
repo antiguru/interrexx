@@ -787,7 +787,7 @@ fn start(
     // unix handler performs before the spawn. Two pipes read separately
     // could not put the two streams back in the order the child wrote them.
     let merged = match io.is_some_and(IoContext::shares_one_target) {
-        true => Some(std::io::pipe().map_err(|error| pipe_failed(&error))?),
+        true => Some(crate::host::pipe().map_err(|error| pipe_failed(&error))?),
         false => None,
     };
     match &merged {

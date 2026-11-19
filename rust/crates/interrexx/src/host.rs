@@ -2,6 +2,16 @@
 //! function with an implementation per host, chosen by `cfg`, so a port adds
 //! an implementation beside the others and no caller changes. The raw calls
 //! some hosts need, where no safe crate offers them, are in [`sys`].
+//!
+//! The hosts are Linux and Apple's systems. On Linux the `cfg` arms say
+//! `linux` or `android`, and the other arm of a pair is Apple's; a new host
+//! adds its own arm to each pair and its name to the check below.
+
+#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
+compile_error!(
+    "interrexx builds for Linux and Apple's systems only; a new host adds its implementations to \
+     host.rs (#215)"
+);
 
 use std::os::fd::{BorrowedFd, OwnedFd};
 use std::process::Child;
@@ -117,26 +127,10 @@ impl SelectTable {
         reason = "the table is read when it is asked, not when it is taken"
     )]
     pub(crate) fn reaches(&self, fd: i32) -> bool {
-        fd >= 0 && (sys::is_open(fd) || sys::select_rejects(fd))
-    }
-}
-
-/// Hosts with no means to learn their table's size take every number that
-/// is not negative to be inside it.
-#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
-impl SelectTable {
-    /// The table as it is now.
-    pub(crate) fn now() -> SelectTable {
-        SelectTable {}
-    }
-
-    /// Whether `select` looks at the descriptor numbered `fd`.
-    #[expect(
-        clippy::unused_self,
-        reason = "the table is read when it is asked, not when it is taken"
-    )]
-    pub(crate) fn reaches(&self, fd: i32) -> bool {
-        fd >= 0
+        // `select` first: a number closed when it asks and opened again before
+        // the second question is then open, and reached, either way. Only a
+        // close racing the call itself can differ from `select`, as it can in C.
+        fd >= 0 && (sys::select_rejects(fd) || sys::is_open(fd))
     }
 }
 
@@ -163,56 +157,31 @@ pub(crate) fn bytes_waiting(file: BorrowedFd<'_>) -> Option<u64> {
     (count > 0 || !fifo()).then_some(count)
 }
 
-/// Serialises the creation of the interpreter's own descriptors with the
-/// start of child processes, on hosts that cannot create a descriptor
-/// close-on-exec in the same call: a child started in between would inherit
-/// it. Creating takes the lock shared, starting a child exclusive.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
-static INHERITANCE: std::sync::RwLock<()> = std::sync::RwLock::new(());
+/// Starts a child process with `spawn`, while no descriptor of the process's
+/// own is half made: one the child would inherit before it is set
+/// close-on-exec (`interrexx_rxapi::inheritance`, whose lock the API client
+/// takes as well).
+pub(crate) use interrexx_rxapi::inheritance::spawning;
 
-/// Runs `create`, which makes descriptors and sets them close-on-exec, so
-/// that no child [`spawning`] starts meanwhile inherits them.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
-fn creating<T>(create: impl FnOnce() -> T) -> T {
-    let _shared = INHERITANCE
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    create()
+// Makes descriptors with `create`, which sets them close-on-exec, so that no
+// child `spawning` starts meanwhile inherits them.
+use interrexx_rxapi::inheritance::creating;
+
+/// A pipe of the interpreter's own, its two ends close-on-exec, as `(read,
+/// write)`; no child process inherits either. Where there is no `pipe2`,
+/// `std` sets the flag apart from the call, so the pipe is made while
+/// [`spawning`] waits.
+pub(crate) fn pipe() -> std::io::Result<(std::io::PipeReader, std::io::PipeWriter)> {
+    creating(std::io::pipe)
 }
 
-/// Runs `spawn`, which starts a child process, while no descriptor of the
-/// interpreter's own is half made: one the child would inherit before it
-/// is set close-on-exec.
-#[cfg(any(target_os = "linux", target_os = "android"))]
-pub(crate) fn spawning<T>(spawn: impl FnOnce() -> T) -> T {
-    spawn()
-}
-
-/// Runs `spawn`, which starts a child process, while no descriptor of the
-/// interpreter's own is half made: one the child would inherit before it
-/// is set close-on-exec.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
-pub(crate) fn spawning<T>(spawn: impl FnOnce() -> T) -> T {
-    let _exclusive = INHERITANCE
-        .write()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    spawn()
-}
-
-/// A pipe whose two ends are close-on-exec, as `(read, write)`; no child
-/// process inherits either. There is no `pipe2` here, so the flag is set
-/// apart from the call, while [`spawning`] waits. Linux's waits use an
-/// `eventfd` and a pidfd, made close-on-exec in their one call, and need no
-/// pipe.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
-pub(crate) fn pipe_cloexec() -> rustix::io::Result<(OwnedFd, OwnedFd)> {
-    creating(|| {
-        let (read, write) = rustix::pipe::pipe()?;
-        for end in [&read, &write] {
-            rustix::io::fcntl_setfd(end, rustix::io::FdFlags::CLOEXEC)?;
-        }
-        Ok((read, write))
-    })
+/// A connected pair of Unix stream sockets of the interpreter's own, both
+/// close-on-exec, made as [`pipe`] makes its pipe.
+pub(crate) fn unix_stream_pair() -> std::io::Result<(
+    std::os::unix::net::UnixStream,
+    std::os::unix::net::UnixStream,
+)> {
+    creating(std::os::unix::net::UnixStream::pair)
 }
 
 /// `bits` as the host's `mode_t`, cut to its width as C's conversion cuts it.
@@ -267,12 +236,6 @@ pub(crate) fn drop_supplementary_groups() -> nix::Result<()> {
     sys::setgroups_none()
 }
 
-/// Drops the process's supplementary groups.
-#[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
-pub(crate) fn drop_supplementary_groups() -> nix::Result<()> {
-    nix::unistd::setgroups(&[])
-}
-
 /// A descriptor that becomes readable once `child` has ended, and stays
 /// readable; it reaps nothing. `None` where the host cannot say, and the
 /// caller then waits for the child's pipes to close instead.
@@ -286,13 +249,7 @@ pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
 /// readable; it reaps nothing. A `kqueue` holding the child's exit event,
 /// which stays pending since nothing collects it. A child that has already
 /// ended cannot be registered, and is answered by a pipe that holds a byte.
-#[cfg(any(
-    target_vendor = "apple",
-    target_os = "freebsd",
-    target_os = "netbsd",
-    target_os = "openbsd",
-    target_os = "dragonfly"
-))]
+#[cfg(target_vendor = "apple")]
 pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
     use nix::errno::Errno;
     use nix::sys::event::{EvFlags, EventFilter, FilterFlag, KEvent, Kqueue};
@@ -312,26 +269,12 @@ pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
     match queue.kevent(&[exit], &mut [], None) {
         Ok(_) => Some(queue.into()),
         Err(Errno::ESRCH) => {
-            let (read, write) = pipe_cloexec().ok()?;
+            let (read, write) = pipe().ok()?;
             rustix::io::write(&write, &[1]).ok()?;
-            Some(read)
+            Some(read.into())
         }
         Err(_) => None,
     }
-}
-
-/// Hosts with no way to watch a process: the caller reads the pipes to their end.
-#[cfg(not(any(
-    target_os = "linux",
-    target_os = "android",
-    target_vendor = "apple",
-    target_os = "freebsd",
-    target_os = "netbsd",
-    target_os = "openbsd",
-    target_os = "dragonfly"
-)))]
-pub(crate) fn exit_watch(_child: &Child) -> Option<OwnedFd> {
-    None
 }
 
 #[cfg(test)]

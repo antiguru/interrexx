@@ -10,8 +10,9 @@ use rustix::fs::{Dir, Mode, OFlags};
 /// client started holds none of that client's pipes or sockets open. Call it while the process
 /// has one thread and no descriptor besides `keep` and the standard three that anything owns.
 pub(crate) fn close_inherited(keep: &[BorrowedFd<'_>]) {
-    // Linux lists a process's descriptors under `/proc`; the BSDs and Apple's
-    // systems under `/dev/fd`.
+    // Linux lists a process's descriptors under `/proc`, Apple's systems
+    // under `/dev/fd`. (FreeBSD's `/dev/fd` lists only 0 to 2 unless fdescfs
+    // is mounted, so a BSD port needs a listing of its own.)
     let listed = if cfg!(target_os = "linux") {
         "/proc/self/fd"
     } else {
