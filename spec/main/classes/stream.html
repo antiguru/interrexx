@@ -879,13 +879,22 @@ count is read through the <code>makeString</code> method of the object, or throu
 <code>string</code> method when it has only that, and then as <a href="#r-class.stream.args.numbers">the rule of the
 arguments</a> says: an object that answers 2 for a
 count is a count of 2, and <code>.nil</code> and an object whose string value is no
-number, such as a plain <code>Object</code>, raise <code>SYNTAX 88.907</code>. The option that
+number, such as a plain <code>Object</code>, raise <code>SYNTAX 88.907</code>; so does an object
+whose <code>string</code> method answers an object with no string value, which fails the
+check of its kind as <a href="../conventions.html#r-conv.string.argument-kind">the kind rule</a> says. The option that
 <code>open</code>, <code>lines</code>, <code>seek</code> and <code>position</code> take is read as a string argument,
 through <code>makeString</code> alone: an object that has no such method, <code>.nil</code> and an
 object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>. The argument
 of <code>query</code> and of <code>command</code> is read through its string value with the fallback
 to <code>string</code>: an object that has only <code>string</code> is read by that answer, and
-<code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with.</p>
+<code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with, and
+so is an answer of <code>string</code> that has no string value: <code>query</code> raises <code>SYNTAX 93.0</code> and <code>command</code> <code>SYNTAX 93.914</code> for it, as for a word that nothing starts
+with. The argument that <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> take as the option
+is no string argument: a message is sent to it, and an object that does not
+understand the message raises <code>SYNTAX 97.1</code>. The second example reads an
+object whose <code>string</code> method answers an object with no string value: the start,
+the count and the line number raise <code>SYNTAX 88.907</code>, a string to write and an
+option <code>SYNTAX 88.909</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-objects-zq.tmp'
 g = 'spec-stream-objects-w-zq.tmp'
 call lineout f, 'abc'
@@ -965,6 +974,39 @@ t~query(.os~new("size")) =&gt; [4]
 t~query(.nil) =&gt; 93.0
 t~command(.os~new("query size")) =&gt; [4]
 t~command(.nil) =&gt; 93.914
+</code></pre>
+<pre><code class="language-rexx">o = .nostr~new
+s = .stream~new('spec-stream-nostring-zq.tmp')
+call try 's~charin(o)'
+call try 's~charin(1, o)'
+call try 's~linein(o)'
+call try 's~linein(1, o)'
+call try 's~charout("x", o)'
+call try 's~lineout("x", o)'
+call try 's~lineout(o, 1)'
+call try 's~open(o)'
+call try 's~arrayin(o)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class nostr
+::method string
+  return .object~new
+</code></pre>
+<pre><code class="language-output">s~charin(o) =&gt; 88.907
+s~charin(1, o) =&gt; 88.907
+s~linein(o) =&gt; 88.907
+s~linein(1, o) =&gt; 88.907
+s~charout("x", o) =&gt; 88.907
+s~lineout("x", o) =&gt; 88.907
+s~lineout(o, 1) =&gt; 88.909
+s~open(o) =&gt; 88.909
+s~arrayin(o) =&gt; 97.1
 </code></pre>
 <div class="rule" id="r-class.stream.args.strings"><a href="#r-class.stream.args.strings">[class.stream.args.strings]</a></div>
 <p>The string that <code>charOut</code>, <code>lineOut</code> and <code>say</code> write is read as <a href="index.html#r-class.index.string">the string
