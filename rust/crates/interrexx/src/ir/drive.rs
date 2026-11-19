@@ -402,8 +402,8 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::JumpUnless { .. } => "JumpUnless",
         Op::ConditionJump { .. } => "ConditionJump",
         Op::Send { .. } => "Send",
+        Op::SendWith { .. } => "SendWith",
         Op::SendScope { .. } => "SendScope",
-        Op::LogicalItem { .. } => "LogicalItem",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -444,8 +444,7 @@ macro_rules! region_ops {
         $region:lifetime,
         $park:lifetime
     ) => {
-        let mut region_iter = $ops.iter();
-        'region_loop: while let Some(region_op) = region_iter.next() {
+        'region_loop: for region_op in $ops {
             let deliver: Deliver = 'entered: {
             match region_op {
                 // **No gate**: this op exists only in a chunk
@@ -626,7 +625,7 @@ macro_rules! region_ops {
                 // A send whose receiver and arguments ops of this region
                 // computed. Its body is behind a call for the reason
                 // `Op::CallArgs`'s arm gives.
-                Op::Send { recv, dst, .. } => {
+                Op::Send { recv, dst, .. } | Op::SendWith { recv, dst, .. } => {
                     debug_assert!(
                         $chunk.holds_register(*recv) && $chunk.holds_register(*dst),
                         "op reads or writes a register outside the region the chunk \
@@ -675,25 +674,6 @@ macro_rules! region_ops {
                     };
                     match $self.resolve_class_at($code, *namespace, *name) {
                         Ok(value) => $registers.set(*dst, value),
-                        Err(failure) => break $cold Err(failure),
-                    }
-                }
-                Op::LogicalItem { reg, skip } => {
-                    debug_assert!(
-                        $chunk.holds_register(*reg),
-                        "op reads register {reg} outside the region the chunk reserved"
-                    );
-                    match $self.judge_logical_item($registers.get(*reg)) {
-                        Ok(holds) => {
-                            if holds && *skip == 0 {
-                                $registers.set(*reg, crate::eval::logical(true));
-                            } else if !holds {
-                                $registers.set(*reg, crate::eval::logical(false));
-                                if *skip > 0 {
-                                    region_iter.nth(*skip as usize - 1);
-                                }
-                            }
-                        }
                         Err(failure) => break $cold Err(failure),
                     }
                 }
@@ -2560,14 +2540,10 @@ impl Interp {
         op: &Op,
     ) -> Result<Started<ObjRef>, Failure> {
         let Op::Send {
-            site,
-            recv,
-            argc,
-            scope,
-            ..
+            site, recv, argc, ..
         } = *op
         else {
-            return Err(Loud::call_op_off_its_node().into());
+            return self.begin_send_with_op(chunk, registers, op);
         };
         let (Some((name, memo)), Some(mark)) = (
             chunk.send_site(site),
@@ -2583,17 +2559,7 @@ impl Interp {
         self.enter_eval_node(&raw const probe)?;
         let caller = self.caller();
         let mut values = std::mem::take(&mut self.activity.value_buffer);
-        let started = if scope == Op::NO_SCOPE {
-            self.begin_send_at(receiver, name, memo, &values[mark..], caller)
-        } else {
-            self.begin_send(
-                receiver,
-                name,
-                Some(registers.get(scope)),
-                &values[mark..],
-                caller,
-            )
-        };
+        let started = self.begin_send_at(receiver, name, memo, &values[mark..], caller);
         values.truncate(mark);
         self.lend_stack(
             matches!(started, Ok(Started::Entered)) && self.activity.native_park.is_none(),
@@ -2632,7 +2598,7 @@ impl Interp {
                 return self.finish_sent(chunk, registers, op, ended);
             }
         };
-        if let Op::Send { dst, .. } = *op {
+        if let Op::Send { dst, .. } | Op::SendWith { dst, .. } = *op {
             registers.set(dst, value);
         }
         Ok(())
@@ -2676,7 +2642,7 @@ impl Interp {
         };
         self.activity.depth -= 1;
         let value = self.deliver_sent(chunk, registers, op, sent?)?;
-        if let Op::Send { dst, .. } = *op {
+        if let Op::Send { dst, .. } | Op::SendWith { dst, .. } = *op {
             registers.set(dst, value);
         }
         Ok(())
@@ -2693,7 +2659,7 @@ impl Interp {
         let sent = self.finish_send(ended);
         self.activity.depth -= 1;
         let value = self.deliver_sent(chunk, registers, op, sent?)?;
-        if let Op::Send { dst, .. } = *op {
+        if let Op::Send { dst, .. } | Op::SendWith { dst, .. } = *op {
             registers.set(dst, value);
         }
         Ok(())
@@ -2711,20 +2677,22 @@ impl Interp {
         op: &Op,
         sent: Option<ObjRef>,
     ) -> Result<ObjRef, Failure> {
-        let Op::Send {
-            site, recv, form, ..
-        } = *op
-        else {
-            return Err(Loud::call_op_off_its_node().into());
+        let Op::Send { site, form, .. } = *op else {
+            return self.deliver_sent_with(chunk, registers, op, sent);
         };
-        // `~~` answers the receiver in place of what the send answered,
-        // before the `>M>` line, which shows the receiver
-        // (`Interp::message_term`).
-        let sent = if form == SendForm::Cascade {
-            Some(registers.get(recv))
-        } else {
-            sent
-        };
+        self.deliver_answer(chunk, site, form, sent)
+    }
+
+    /// [`Interp::deliver_sent`] past the op: what a send at `site` that
+    /// answered `sent` owes, delivered as `form` says.
+    #[inline(always)]
+    fn deliver_answer(
+        &mut self,
+        chunk: &Chunk,
+        site: u32,
+        form: SendForm,
+        sent: Option<ObjRef>,
+    ) -> Result<ObjRef, Failure> {
         if form == SendForm::Value && sent.is_none() {
             return Err(Raised::no_result(chunk.send_name(site).unwrap_or_default()).into());
         }
@@ -2733,7 +2701,7 @@ impl Interp {
         {
             self.trace_sent(chunk.send_name(site).unwrap_or_default(), value)?;
         }
-        if matches!(form, SendForm::Value | SendForm::Cascade) {
+        if form == SendForm::Value {
             return Ok(sent.unwrap_or(ObjRef::NIL));
         }
         let slot = self.reserved_result_slot();
@@ -2839,14 +2807,84 @@ impl Interp {
         }
     }
 
-    /// [`Op::LogicalItem`]'s `>>>` line and judgement of one comma-list item,
-    /// as `Interp::eval_logical_list` makes them.
+    /// [`Interp::begin_send_op`] for an [`Op::SendWith`]: a scoped send
+    /// looks its method up from the class in its `scope` register, and a
+    /// cascade from its receiver's.
+    #[cold]
     #[inline(never)]
-    fn judge_logical_item(&mut self, value: ObjRef) -> Result<bool, Failure> {
-        let indent = self.activity.clause_state.current_value_indent;
-        let text = self.to_text(value).to_vec();
-        self.trace_result(indent, &text);
-        self.truth(value, Raised::logical_list_element)
+    fn begin_send_with_op(
+        &mut self,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        op: &Op,
+    ) -> Result<Started<ObjRef>, Failure> {
+        let Op::SendWith {
+            site,
+            recv,
+            argc,
+            scope,
+            ..
+        } = *op
+        else {
+            return Err(Loud::call_op_off_its_node().into());
+        };
+        let (Some((name, _)), Some(mark)) = (
+            chunk.send_site(site),
+            self.activity
+                .value_buffer
+                .len()
+                .checked_sub(usize::from(argc)),
+        ) else {
+            return Err(Loud::call_op_off_its_node().into());
+        };
+        let receiver = registers.get(recv);
+        let probe = 0u8;
+        self.enter_eval_node(&raw const probe)?;
+        let caller = self.caller();
+        let mut values = std::mem::take(&mut self.activity.value_buffer);
+        // Without the site's memo, which keeps `begin_send_at` to the one
+        // caller an ordinary send's path inlines it into.
+        let scope = (scope != Op::NO_SCOPE).then(|| registers.get(scope));
+        let started = self.begin_send(receiver, name, scope, &values[mark..], caller);
+        values.truncate(mark);
+        self.lend_stack(
+            matches!(started, Ok(Started::Entered)) && self.activity.native_park.is_none(),
+            values,
+        );
+        match started {
+            Ok(Started::Entered) => Ok(Started::Entered),
+            Ok(Started::Ran(sent)) => {
+                self.activity.depth -= 1;
+                self.deliver_sent(chunk, registers, op, sent)
+                    .map(Started::Ran)
+            }
+            Err(failure) => {
+                self.activity.depth -= 1;
+                Err(failure)
+            }
+        }
+    }
+
+    /// [`Interp::deliver_sent`] for an [`Op::SendWith`].
+    #[cold]
+    #[inline(never)]
+    fn deliver_sent_with(
+        &mut self,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        op: &Op,
+        sent: Option<ObjRef>,
+    ) -> Result<ObjRef, Failure> {
+        let Op::SendWith {
+            site, recv, form, ..
+        } = *op
+        else {
+            return Err(Loud::call_op_off_its_node().into());
+        };
+        if form == SendForm::Cascade {
+            return self.deliver_cascade(chunk, registers.get(recv), site);
+        }
+        self.deliver_answer(chunk, site, form, sent)
     }
 
     /// [`Op::SendScope`]: the scope override `scope` of a send to `receiver`
@@ -2858,6 +2896,23 @@ impl Interp {
             return Err(Raised::scope_override_not_a_class().into());
         }
         self.validate_scope_override(receiver, Some(scope))
+    }
+
+    /// A `~~` send's delivery: it answers its receiver `receiver` in place
+    /// of what the send answered, and the `>M>` line shows the receiver
+    /// (`Interp::message_term`).
+    #[cold]
+    #[inline(never)]
+    fn deliver_cascade(
+        &mut self,
+        chunk: &Chunk,
+        receiver: ObjRef,
+        site: u32,
+    ) -> Result<ObjRef, Failure> {
+        if self.tracing_intermediates() {
+            self.trace_sent(chunk.send_name(site).unwrap_or_default(), receiver)?;
+        }
+        Ok(receiver)
     }
 
     /// The `>M>` line a send of `name` that answered `value` owes.

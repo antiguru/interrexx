@@ -94,16 +94,27 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 recv,
                 argc,
                 dst,
+                form,
+            } => {
+                out.push_str(&format!(
+                    "{index}: Send site={site} recv={recv} argc={argc} dst={dst} form={form:?}\n"
+                ));
+            }
+            Op::SendWith {
+                site,
+                recv,
+                argc,
+                dst,
                 scope,
                 form,
             } => {
                 let scope = if *scope == Op::NO_SCOPE {
-                    String::new()
+                    "-".to_string()
                 } else {
-                    format!(" scope={scope}")
+                    scope.to_string()
                 };
                 out.push_str(&format!(
-                    "{index}: Send site={site} recv={recv} argc={argc} dst={dst}{scope} \
+                    "{index}: SendWith site={site} recv={recv} argc={argc} dst={dst} scope={scope} \
                      form={form:?}\n"
                 ));
             }
@@ -118,9 +129,6 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     "{index}: ClassAt slot={slot} path={} dst={dst}\n",
                     render_path(*path)
                 ));
-            }
-            Op::LogicalItem { reg, skip } => {
-                out.push_str(&format!("{index}: LogicalItem reg={reg} skip={skip}\n"));
             }
             Op::SendScope { recv, scope } => {
                 out.push_str(&format!("{index}: SendScope recv={recv} scope={scope}\n"));

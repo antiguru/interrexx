@@ -1,5 +1,5 @@
-# A comma list in a condition runs as native ops: each item is judged in
-# turn and the items after one that does not hold are not evaluated.
+# A comma list in a condition: each item is judged in turn and the items
+# after one that does not hold are not evaluated.
 
 # trace r: one `>>>` per item judged, then the IF's own
 program

@@ -54,7 +54,7 @@ impl Op {
     /// omitted argument position.
     pub(crate) const ARG_OMITTED: u16 = u16::MAX;
 
-    /// The `scope` an [`Op::Send`] carries for a send with no `:scope`
+    /// The `scope` an [`Op::SendWith`] carries for a send with no `:scope`
     /// override.
     pub(crate) const NO_SCOPE: u16 = u16::MAX;
 }
@@ -310,10 +310,21 @@ pub(crate) enum Op {
     },
     /// Sends the message [`Chunk`]'s send site `site` names to the receiver
     /// in `recv`, over the `argc` arguments on top of the driver's argument
-    /// stack, and delivers the answer as `form` says. The method is looked
-    /// up from the class in register `scope`, which [`Op::SendScope`] has
-    /// checked, or from the receiver's own where it is [`Op::NO_SCOPE`].
+    /// stack, and delivers the answer as `form` says.
     Send {
+        site: u32,
+        recv: u16,
+        argc: u16,
+        dst: u16,
+        form: SendForm,
+    },
+    /// [`Op::Send`] for a send with a `:scope` override or a `~~` cascade:
+    /// the method is looked up from the class in register `scope`, which
+    /// [`Op::SendScope`] has checked, or from the receiver's own where it is
+    /// [`Op::NO_SCOPE`], and a [`SendForm::Cascade`] answers the receiver.
+    /// An op of its own, so that an ordinary send's path makes neither
+    /// test.
+    SendWith {
         site: u32,
         recv: u16,
         argc: u16,
@@ -327,12 +338,6 @@ pub(crate) enum Op {
     /// The class the `namespace:Name` at `path` inside expression `slot`
     /// resolves to, into register `dst`.
     ClassAt { slot: u16, path: NodePath, dst: u16 },
-    /// One item of a comma list (`IF a, b THEN`), whose value is in `reg`:
-    /// echoed as `>>>` and judged, a value that is not `0` or `1` raising
-    /// 34.6. An item that does not hold leaves `0` in `reg` and the list
-    /// ends, past the `skip` ops of the items after it; the last item, whose
-    /// `skip` is `0`, leaves `1` where it holds.
-    LogicalItem { reg: u16, skip: u32 },
     /// Checks the scope override in register `scope` of a send to the
     /// receiver in `recv`: a class, and one in the receiver's behaviour.
     /// Between the override's own ops and the arguments', which is the
@@ -349,7 +354,8 @@ pub(crate) enum SendForm {
     /// Into `dst`, as an expression's value, which a send that answers
     /// nothing cannot give.
     Value,
-    /// The receiver into `dst`, for a `~~` term, whatever the send answered.
+    /// The receiver into `dst`, for a `~~` term, whatever the send answered
+    /// ([`Op::SendWith`] only).
     Cascade,
     /// Into `RESULT`, as the message instruction does.
     Clause,

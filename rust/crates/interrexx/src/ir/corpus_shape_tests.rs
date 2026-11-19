@@ -26,7 +26,6 @@ enum Root {
     CallExpr,
     Send,
     List,
-    Logical,
     Reference,
     ClassAt,
     EvalExpr,
@@ -45,9 +44,8 @@ impl Root {
             Op::Prefix { .. } => Some(Root::Prefix),
             Op::EvalExpr { .. } => Some(Root::EvalExpr),
             Op::CallExpr { .. } | Op::CallArgs { .. } => Some(Root::CallExpr),
-            Op::Send { .. } => Some(Root::Send),
+            Op::Send { .. } | Op::SendWith { .. } => Some(Root::Send),
             Op::List { .. } => Some(Root::List),
-            Op::LogicalItem { .. } => Some(Root::Logical),
             Op::Reference { .. } => Some(Root::Reference),
             Op::ClassAt { .. } => Some(Root::ClassAt),
             Op::CallNamed { .. }
@@ -140,7 +138,6 @@ fn root_of(expr: &Expr) -> Root {
         | ExprKind::DotVariable(_) => Root::Load,
         ExprKind::Message { .. } if native(expr, Some(0)) => Root::Send,
         ExprKind::List(_) if native(expr, Some(0)) => Root::List,
-        ExprKind::Logical(_) if native(expr, Some(0)) => Root::Logical,
         ExprKind::VariableReference(_) => Root::Reference,
         ExprKind::ClassResolver { .. } => Root::ClassAt,
         ExprKind::Binary { op, left, right }
@@ -207,10 +204,6 @@ fn native(expr: &Expr, taken: Option<usize>) -> bool {
                 && arguments(args, taken, 1)
         }
         ExprKind::List(items) => arguments(items, taken, 0),
-        ExprKind::Logical(items) => items
-            .iter()
-            .enumerate()
-            .all(|(k, item)| native(item, step(taken, k + 1))),
         ExprKind::Binary { op, left, right } => {
             (arithmetic(*op) || other_family(*op))
                 && native(left, step(taken, 1))
@@ -741,7 +734,6 @@ fn sweep_every_corpus_body() {
         Root::CallExpr,
         Root::Send,
         Root::List,
-        Root::Logical,
         Root::Reference,
         Root::Const,
         Root::LoadConstant,
