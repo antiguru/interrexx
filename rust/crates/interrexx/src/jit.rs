@@ -86,6 +86,9 @@ pub(crate) trait Host {
     fn close(&mut self, next: u32) -> u32;
     /// Runs the op at `pc` the way the driver does.
     fn op(&mut self, pc: u32) -> u32;
+    /// Whether the op just run left everything the block holds as it was, so
+    /// that [`Host::leave`] has nothing to read again; asking clears it.
+    fn quiet(&mut self) -> bool;
     /// Hands back the clause [`Host::adopt`] took, answering [`FAST`], where
     /// the driver's hot exit would close it plainly; [`CONTINUE`] otherwise.
     fn release(&mut self) -> u32;
@@ -227,19 +230,27 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// The op at `pc`, after the host takes over the clause at `adopt` that
 /// generated code opened, unless that is [`NO_ADOPT`]: one call for both.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, adopt: u32, pc: u32) -> u32 {
-    bracket(ctx, |host| {
-        if adopt == NO_ADOPT {
-            return host.op(pc);
-        }
-        let answer = host.adopt(adopt);
-        if answer != CONTINUE {
-            return answer;
+    // SAFETY: property 4 of the module doc.
+    let ctx = unsafe { &mut *ctx };
+    ctx.host.enter(&mut ctx.native);
+    let host = &mut *ctx.host;
+    let answer = 'ran: {
+        if adopt != NO_ADOPT {
+            let answer = host.adopt(adopt);
+            if answer != CONTINUE {
+                break 'ran answer;
+            }
         }
         match host.op(pc) {
-            CONTINUE => host.release(),
+            CONTINUE if adopt != NO_ADOPT => host.release(),
             answer => answer,
         }
-    })
+    };
+    // `bracket`'s second half, unless the op changed nothing it reads.
+    if !(ctx.host.quiet() && (answer == CONTINUE || answer == FAST)) {
+        ctx.host.leave(&mut ctx.native);
+    }
+    answer
 }
 
 extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
