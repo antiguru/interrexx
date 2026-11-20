@@ -241,3 +241,4 @@ under a seed are reported, never gating.
 | D-U2 | the interpreter island is `Send` only inside `island.rs`'s baton wrapper | moving a driver between threads; `Rc` and `Cell` are touched by the baton holder only |
 | D-U3 | signal handlers in `signal.rs` only set an atomic and write to a self-pipe | async-signal safety |
 | D-U4 | one frame arena per activity | frames stay LIFO within an activity while activities interleave |
+| D-U5 | the `jit` feature's generated code and its helpers are the `unsafe` of `interrexx/src/jit.rs` only; generated code touches the `jit::layout::Native` block, the register frame and the slot window, at offsets taken from those types | Cranelift-compiled loops behind one module, with the invariant stated and checked there |
