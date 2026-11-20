@@ -293,10 +293,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                 continue;
             }
             // A `SELECT`'s own ops, which the host runs as the driver does.
-            Op::SelectCaseText { .. }
-            | Op::EnterWhen { .. }
-            | Op::EnterOtherwise { .. }
-            | Op::EndWhen => {
+            Op::EnterWhen { .. } | Op::EnterOtherwise { .. } | Op::EndWhen => {
                 steps.push(Step::Between { pc });
                 pc += 1;
                 continue;
@@ -666,11 +663,6 @@ impl Host for Driven<'_, '_> {
                     Err(failure) => self.stop(JitExit::Fail(failure)),
                 };
             }
-            Some(&Op::SelectCaseText { case, .. }) => {
-                let value = case.map(|register| self.registers.get(register));
-                self.interp.open_select_case(value);
-                return CONTINUE;
-            }
             Some(&Op::EnterWhen { select, when }) => {
                 return match self.interp.when_frame(
                     self.code,
@@ -818,8 +810,7 @@ impl Host for Driven<'_, '_> {
         let fuzz = settings.fuzz();
         native.small_int_bound = crate::value::small_int_bound(digits);
         native.quick_values = u64::from(fuzz == 0 && !mode.results);
-        native.indent_base =
-            (interp.activity.activation_indent + interp.activity.indent_offset) as u64;
+        native.indent_base = interp.activity.activation_indent as u64;
         // The clause the interpreter has running, so that a pass boundary
         // compiled code takes, which moves only the line and the indent,
         // leaves the instruction it names as it is.

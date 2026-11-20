@@ -573,13 +573,13 @@ jobs:
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt]
+    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}"
+          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.upstream-tier.result }}" = success
           test "${{ needs.msrv-standalone.result }}" = success
@@ -591,6 +591,36 @@ jobs:
           test "${{ needs.upstream-interface.result }}" = success
           test "${{ needs.clippy.result }}" = success
           test "${{ needs.fmt.result }}" = success
+          test "${{ needs.jit.result }}" = success
+
+  # The `jit` feature (Cranelift), which no other job builds: clippy with it, and the JIT's
+  # own tests in debug, where the Cranelift verifier runs on every loop compiled, a refused
+  # function panics, and the slot window is checked after each unbracketed call.
+  jit:
+    name: jit feature
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          components: clippy
+          cache-workspaces: rust
+          # See the build job.
+          cache-key: no-submodule-jit
+      - name: Assert the upstream tier is absent
+        # See the build job.
+        working-directory: .
+        run: |
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+      - name: Cargo clippy with jit
+        run: cargo clippy --locked --workspace --all-targets --features interrexx/jit -- -D warnings
+      - name: JIT tests, debug
+        run: cargo test --locked -p interrexx --features jit --lib -- jit
 
   fmt:
     name: Cargo fmt

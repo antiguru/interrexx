@@ -128,8 +128,8 @@ page records why they are the way they are.
 * **A regular build does not read `third_party/`** (2026-11-13, #388). Tables derived from ooRexx
   are checked in, with a CI job that checks them against the pinned revision. The C and C++
   headers in `include/` are generated from the Rust layout definitions, in a per-platform layout
-  that holds Unix content only so far. The `build`, `shard`, `doctest` and `clippy` CI jobs
-  run on a checkout without the submodule. `build`, `doctest`, `clippy` and `msrv-standalone` keep
+  that holds Unix content only so far. The `build`, `shard`, `doctest`, `clippy` and `jit` CI
+  jobs run on a checkout without the submodule. `build`, `doctest`, `clippy`, `jit` and `msrv-standalone` keep
   a cargo cache that no job with the submodule saved, and `shard` keeps none, so a build script
   that reads the tree fails there. Tests that need the tree are held out of that run by a filter
   that names each one with its reason, not skipped at run time.

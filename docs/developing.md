@@ -149,9 +149,9 @@ From `rust/`, under the memory cap:
   exception. A new test that reads the submodule or runs the
   oracle is added to the filter with its tier and reason. The `build` CI job checks every name in
   the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
-  test cannot leave the filter unnoticed. The `build`, `shard`, `doctest` and `clippy` CI jobs
-  run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
-  asserting that before it starts, and `build`, `doctest`, `clippy` and `msrv-standalone` keep a
+  test cannot leave the filter unnoticed. The `build`, `shard`, `doctest`, `clippy` and `jit` CI
+  jobs run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
+  asserting that before it starts, and `build`, `doctest`, `clippy`, `jit` and `msrv-standalone` keep a
   cargo cache of their own that no job with the submodule saved, where `shard` keeps none. So a
   build script or test that reads the tree fails there. The six shards run this profile over the archive that `build` made without the submodule; the
   `upstream-tier` job runs the complement, `--ignore-default-filter -E 'not default()'`, on a
