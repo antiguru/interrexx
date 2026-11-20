@@ -278,13 +278,11 @@ impl Interp {
 
     /// The entry for a clause whose boundary compiled code opened itself
     /// (`crate::ir::drive::jit_host`), which makes exactly the writes this
-    /// function makes and only while the value buffer is already empty.
+    /// function makes, and opens only while the value buffer is empty
+    /// (`Driven::steady`). The buffer may hold the clause's own arguments by
+    /// the time the clause is adopted: compiled code pushes them itself.
     #[cfg(feature = "jit")]
     pub(crate) fn adopt_clause_entry(&self) -> ClauseEntry {
-        debug_assert!(
-            self.activity.value_buffer.is_empty(),
-            "a compiled clause opened with the argument stack in use"
-        );
         ClauseEntry(())
     }
 

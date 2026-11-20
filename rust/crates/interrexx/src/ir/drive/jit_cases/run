@@ -88,15 +88,16 @@ Error 42 running t.rex line 4:  Arithmetic overflow/underflow.
 Error 42.3:  Arithmetic overflow; divisor must not be zero.
 compiled: yes
 
-# values that outgrow DIGITS part way, so the native path declines
+# values that outgrow DIGITS after the loop is compiled (past pass 8,944), so
+# the native path declines from then on
 run
 x = 0
 do i = 1 to 10000
-  x = x + i * 1000
+  x = x + i * 25
 end
 say x
 ----
-5.00050000E+10
+1.25012764E+9
 compiled: yes
 
 # a method whose loop variable is EXPOSEd

@@ -29,13 +29,18 @@
 //!    `ObjRef`.
 //! 3. Generated code reads and writes a variable slot only at an index below
 //!    `Native::slot_count`, through `Native::slots`, which [`Host::leave`]
-//!    sets from `RootSet::top_window` after every call into the host and
-//!    which nothing but a call into the host can invalidate; a null window is
-//!    never dereferenced. It writes a slot only as `VarSlot::of` would.
+//!    sets from `RootSet::top_window` after every bracketed call into the host
+//!    and which nothing but a call into the host can invalidate; a null window
+//!    is never dereferenced. It writes a slot only as `VarSlot::of` would. The
+//!    one unbracketed call, [`Host::push_arg`], appends to the argument stack
+//!    and touches no frame, which a debug check of the window after it
+//!    asserts.
 //! 4. The helpers are the only code that turns the `Ctx` pointer back into a
 //!    reference, and only while generated code is suspended in that call.
-//! 5. The machine code lives in the [`JITModule`] that [`Compiled`] owns, and
-//!    a module is never freed while its `Compiled` lives.
+//! 5. The machine code lives in the [`JITModule`] that [`Compiled`] owns,
+//!    which frees it when dropped. Its code runs only inside `run`, whose
+//!    `&self` keeps the `Compiled` alive for the call, and `entry` is never
+//!    copied out of it.
 
 #![allow(unsafe_code)]
 
@@ -46,7 +51,9 @@ use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{Linkage, Module, default_libcall_names};
 use interrexx_core::RegFrame;
+use std::any::Any;
 use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 
 pub(crate) mod layout;
 
@@ -86,9 +93,6 @@ pub(crate) trait Host {
     fn close(&mut self, next: u32) -> u32;
     /// Runs the op at `pc` the way the driver does.
     fn op(&mut self, pc: u32) -> u32;
-    /// Whether the op just run left everything the block holds as it was, so
-    /// that [`Host::leave`] has nothing to read again; asking clears it.
-    fn quiet(&mut self) -> bool;
     /// Hands back the clause [`Host::adopt`] took, answering [`FAST`], where
     /// the driver's hot exit would close it plainly; [`CONTINUE`] otherwise.
     fn release(&mut self) -> u32;
@@ -96,6 +100,9 @@ pub(crate) trait Host {
     /// argument stack. Reads nothing the block holds and changes nothing it
     /// does, so it is called with no bracket.
     fn push_arg(&mut self, src: u16);
+    /// Whether the block's slot window is still the running frame's: what
+    /// [`Host::leave`] would set it to.
+    fn window_holds(&mut self, native: &Native) -> bool;
 }
 
 /// One step of a pass.
@@ -192,21 +199,39 @@ pub(crate) struct Pass {
     pub(crate) end: u32,
 }
 
-/// What a helper is handed: the block, and the host it belongs to.
+/// What a helper is handed: the block, the host it belongs to, and a panic
+/// a helper caught, which [`Compiled::run`] resumes once generated code has
+/// returned. A panic cannot unwind through generated code, and an
+/// `extern "C"` helper that let one escape would abort the process.
 #[repr(C)]
 struct Ctx<'h> {
     native: Native,
     host: &'h mut dyn Host,
+    panic: Option<Box<dyn Any + Send>>,
+}
+
+/// Runs `step` with the `Ctx` behind `ctx`, answering [`STOP`] and keeping the
+/// panic if it panics.
+fn guarded(ctx: *mut Ctx<'_>, step: impl FnOnce(&mut Ctx<'_>) -> u32) -> u32 {
+    // SAFETY: property 4 of the module doc.
+    let ctx = unsafe { &mut *ctx };
+    match catch_unwind(AssertUnwindSafe(|| step(&mut *ctx))) {
+        Ok(answer) => answer,
+        Err(panic) => {
+            ctx.panic = Some(panic);
+            STOP
+        }
+    }
 }
 
 /// Runs `step` on the host between [`Host::enter`] and [`Host::leave`].
 fn bracket(ctx: *mut Ctx<'_>, step: impl FnOnce(&mut dyn Host) -> u32) -> u32 {
-    // SAFETY: property 4 of the module doc.
-    let ctx = unsafe { &mut *ctx };
-    ctx.host.enter(&mut ctx.native);
-    let answer = step(&mut *ctx.host);
-    ctx.host.leave(&mut ctx.native);
-    answer
+    guarded(ctx, |ctx| {
+        ctx.host.enter(&mut ctx.native);
+        let answer = step(&mut *ctx.host);
+        ctx.host.leave(&mut ctx.native);
+        answer
+    })
 }
 
 extern "C" fn pass_helper(ctx: *mut Ctx<'_>) -> u32 {
@@ -230,44 +255,52 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// The op at `pc`, after the host takes over the clause at `adopt` that
 /// generated code opened, unless that is [`NO_ADOPT`]: one call for both.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, adopt: u32, pc: u32) -> u32 {
-    // SAFETY: property 4 of the module doc.
-    let ctx = unsafe { &mut *ctx };
-    ctx.host.enter(&mut ctx.native);
-    let host = &mut *ctx.host;
-    let answer = 'ran: {
+    bracket(ctx, |host| {
         if adopt != NO_ADOPT {
             let answer = host.adopt(adopt);
             if answer != CONTINUE {
-                break 'ran answer;
+                return answer;
             }
         }
         match host.op(pc) {
             CONTINUE if adopt != NO_ADOPT => host.release(),
             answer => answer,
         }
-    };
-    // `bracket`'s second half, unless the op changed nothing it reads.
-    if !(ctx.host.quiet() && (answer == CONTINUE || answer == FAST)) {
-        ctx.host.leave(&mut ctx.native);
-    }
-    answer
+    })
 }
 
+/// The one helper that is not bracketed (property 3 of the module doc).
 extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
-    // SAFETY: property 4 of the module doc.
-    let ctx = unsafe { &mut *ctx };
-    ctx.host.push_arg(src as u16);
-    CONTINUE
+    guarded(ctx, |ctx| {
+        ctx.host.push_arg(src as u16);
+        debug_assert!(
+            ctx.host.window_holds(&ctx.native),
+            "a push onto the argument stack moved the slot window"
+        );
+        CONTINUE
+    })
 }
 
 type Entry = extern "C" fn(*mut Ctx<'_>) -> u32;
 
 /// A compiled pass.
 pub(crate) struct Compiled {
-    /// Owns the code `entry` points into (property 5).
-    _module: JITModule,
+    /// Owns the code `entry` points into (property 5), and frees it when
+    /// dropped.
+    module: Option<JITModule>,
     entry: Entry,
     registers: u16,
+}
+
+impl Drop for Compiled {
+    fn drop(&mut self) {
+        if let Some(module) = self.module.take() {
+            // SAFETY: property 5 of the module doc: `entry` is the only pointer
+            // into the module, it is called only through `run`'s `&self`, and
+            // so no code of this module is running and none is called again.
+            unsafe { module.free_memory() };
+        }
+    }
 }
 
 impl Compiled {
@@ -279,8 +312,15 @@ impl Compiled {
         );
         let mut native = Native::new(registers.as_ptr().cast());
         host.leave(&mut native);
-        let mut ctx = Ctx { native, host };
+        let mut ctx = Ctx {
+            native,
+            host,
+            panic: None,
+        };
         let answer = (self.entry)(&mut ctx);
+        if let Some(panic) = ctx.panic.take() {
+            resume_unwind(panic);
+        }
         // Every exit is a helper's answer, so `enter` has already written
         // the block back; this is the same call made idempotent.
         ctx.host.enter(&mut ctx.native);
@@ -759,7 +799,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
     // `Entry`'s: one pointer in, one `u32` out, the platform's C convention.
     let entry = unsafe { std::mem::transmute::<*const u8, Entry>(code) };
     Some(Compiled {
-        _module: module,
+        module: Some(module),
         entry,
         registers: pass.registers,
     })

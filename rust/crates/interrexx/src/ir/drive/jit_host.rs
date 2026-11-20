@@ -155,11 +155,6 @@ struct Driven<'a, 'c> {
     /// Whether the loop is being retired: it leaves for the driver at the
     /// next clause opening or pass boundary and is not compiled again.
     retire: bool,
-    /// Whether the last op left the block's state as it was ([`Host::quiet`]).
-    quiet: bool,
-    /// Per `Op::CallArgs` site, whether its builtin is one of
-    /// [`QUIET_BUILTINS`].
-    quiet_sites: Vec<(u32, bool)>,
     /// Whether the clause's last op closed it, so its `Step::Close` has
     /// nothing left to do.
     closed: bool,
@@ -228,8 +223,6 @@ impl Interp {
             budget,
             hosted: 0,
             retire: false,
-            quiet: false,
-            quiet_sites: Vec::new(),
             closed: false,
             exit: None,
         };
@@ -494,86 +487,7 @@ fn quick_compare(op: Operator) -> Option<Compare> {
     })
 }
 
-/// Builtins that read their arguments and the settings and change nothing but
-/// their answer: no variable, setting, trace state, clock, stream or queue.
-/// Given plain strings and numbers they run no Rexx code either, which is
-/// what lets a call to one skip [`Host::leave`].
-const QUIET_BUILTINS: &[&[u8]] = &[
-    b"ABBREV",
-    b"ABS",
-    b"BITAND",
-    b"BITOR",
-    b"BITXOR",
-    b"B2X",
-    b"CENTER",
-    b"CENTRE",
-    b"CHANGESTR",
-    b"COMPARE",
-    b"COPIES",
-    b"COUNTSTR",
-    b"C2D",
-    b"C2X",
-    b"DELSTR",
-    b"DELWORD",
-    b"D2C",
-    b"D2X",
-    b"FORMAT",
-    b"INSERT",
-    b"LASTPOS",
-    b"LEFT",
-    b"LENGTH",
-    b"LOWER",
-    b"MAX",
-    b"MIN",
-    b"OVERLAY",
-    b"POS",
-    b"REVERSE",
-    b"RIGHT",
-    b"SIGN",
-    b"SPACE",
-    b"STRIP",
-    b"SUBSTR",
-    b"SUBWORD",
-    b"TRANSLATE",
-    b"TRUNC",
-    b"UPPER",
-    b"VERIFY",
-    b"WORD",
-    b"WORDINDEX",
-    b"WORDLENGTH",
-    b"WORDPOS",
-    b"WORDS",
-    b"XRANGE",
-    b"X2B",
-    b"X2C",
-    b"X2D",
-];
-
 impl Driven<'_, '_> {
-    /// Whether the call at `pc` names one of [`QUIET_BUILTINS`].
-    fn quiet_site(
-        &mut self,
-        pc: u32,
-        clause: &Instruction,
-        slot: u16,
-        path: super::super::NodePath,
-    ) -> bool {
-        if let Some(&(_, quiet)) = self.quiet_sites.iter().find(|&&(at, _)| at == pc) {
-            return quiet;
-        }
-        let quiet = match Interp::chunk_node_at(clause, slot, path).map(|node| &node.kind) {
-            Some(ExprKind::Call { target, .. }) => {
-                let (name, _) = call_target_name(self.code, target);
-                QUIET_BUILTINS
-                    .iter()
-                    .any(|quiet| quiet.eq_ignore_ascii_case(name))
-            }
-            _ => false,
-        };
-        self.quiet_sites.push((pc, quiet));
-        quiet
-    }
-
     /// Leaves for the driver at `pc`, a clause opening or the pass boundary,
     /// and keeps the loop from being compiled again.
     fn retired(&mut self, pc: u32) -> u32 {
@@ -822,21 +736,12 @@ impl Host for Driven<'_, '_> {
                 let Some(clause) = self.code.body.instructions.get(open.index) else {
                     return self.stop(JitExit::Fail(Loud::chunk_map_too_short().into()));
                 };
-                let quiet = self.quiet_site(pc, clause, slot, path) && {
-                    let buffer = &self.interp.activity.value_buffer;
-                    let from = buffer.len().saturating_sub(argc as usize);
-                    buffer[from..]
-                        .iter()
-                        .flatten()
-                        .all(|&value| self.interp.plain_string(value))
-                };
                 return match self
                     .interp
                     .begin_call_args(self.code, self.chunk, clause, slot, path, site, argc)
                 {
                     Ok(Started::Ran(value)) => {
                         self.registers.set(dst, value);
-                        self.quiet = quiet;
                         CONTINUE
                     }
                     Ok(Started::Entered) => self.stop(JitExit::Fail(
@@ -992,10 +897,6 @@ impl Host for Driven<'_, '_> {
         }
     }
 
-    fn quiet(&mut self) -> bool {
-        std::mem::take(&mut self.quiet)
-    }
-
     fn release(&mut self) -> u32 {
         if !self.interp.activity.pending_traps.is_empty() || self.interp.clause_exits {
             return CONTINUE;
@@ -1010,6 +911,18 @@ impl Host for Driven<'_, '_> {
 
     fn push_arg(&mut self, src: u16) {
         self.interp.push_call_arg(self.registers, src);
+    }
+
+    fn window_holds(&mut self, native: &Native) -> bool {
+        let frame = self.interp.activation().frame;
+        match self.interp.roots.top_window(frame) {
+            Some(window) => {
+                native.slots.is_null()
+                    || (window.as_mut_ptr() == native.slots
+                        && window.len() as u64 == native.slot_count)
+            }
+            None => native.slots.is_null(),
+        }
     }
 
     fn adopt(&mut self, pc: u32) -> u32 {
