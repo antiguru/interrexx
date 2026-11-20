@@ -8,8 +8,10 @@
 //! after the fact. That finds a program that grows by gigabytes, which is what
 //! these tests guard against, but it does not stop one that never ends.
 
+// Included by every test binary that declares `mod support`, most of which
+// never call it, and so the lint it silences is never raised there.
 #![allow(dead_code)]
-#![expect(clippy::disallowed_methods, reason = "this harness bounds a real run")]
+#![allow(clippy::disallowed_methods, reason = "this harness bounds a real run")]
 
 use std::ffi::OsStr;
 use std::path::Path;

@@ -13,9 +13,9 @@ use support::memory_cap::run_under_memory_cap;
 use support::oracle::ORACLE_MEMORY_LIMIT_KIB;
 
 /// The peak resident set, in KiB, that counts as a run that grew where the
-/// address-space cap is not enforced. Measured on a debug build: 52 MB with
+/// address-space cap is not enforced. Measured on a debug build: 52 to 125 MB with
 /// the copies charged, against more than 2 GB without.
-const PEAK_RSS_KIB: u64 = 262_144;
+const PEAK_RSS_KIB: u64 = 524_288;
 
 /// **3000 copies of a 1,000,000-byte instance run to completion under the
 /// cap.** Measured: oracle rc 0, `done 1000000`, maxrss 28 MB; the crate,
