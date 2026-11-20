@@ -643,6 +643,14 @@ Each interpreter instance has its own `.environment`, and an object passed
 between instances through the native API is refused. ooRexx shares one
 `.environment` between every instance in a process.
 
+Each instance also has its own objects. A reference that native code got from
+one instance names no object in another: passed as an argument there it is
+omitted, a message sent to it answers `NULLOBJECT`, and any other call given
+it answers as for `NULLOBJECT`.
+ooRexx keeps the objects of every instance in a process in one space, so an
+extension that holds an object it got from one instance, as BSF4ooRexx does
+for the objects it hands to Java, can use it from any other.
+
 ## 86. The API daemon
 
 The rxapi daemon starts only when a program first needs it, and prints its
