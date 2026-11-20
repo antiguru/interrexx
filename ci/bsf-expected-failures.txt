@@ -4,18 +4,19 @@
 # group that crashes, is killed, times out or runs no tests fails the run too.
 #
 # The indented lines under a group name each test it fails, as ooTest reports the test in the
-# group's log: `failure` or `error`, then the test's name. The group is an expected failure only
-# when the tests it fails are exactly these, so a test that starts or stops failing fails the run.
+# group's log: `failure` or `error`, then the test's class and its name joined by `::`. The group is
+# an expected failure only when the tests it fails are exactly these, so a test that starts or stops
+# failing, or moves to another class, fails the run.
 
 # A second interpreter instance in the process cannot reach the objects of the first (Deviation 85).
 bsf4rexx/rgf/G_misc/07_rexx_JSR_223.testGroup #731
-    error TEST_02_REXX_SCRIPT_ENGINE
-    error TEST_03_REXX__SCRIPT_CONTEXT
+    error testJSR223::TEST_02_REXX_SCRIPT_ENGINE
+    error testJSR223::TEST_03_REXX__SCRIPT_CONTEXT
 bsf4rexx/rgf/H_850/05_redirectingHandler.testGroup #731
-    error TEST_01_REDIRECTINGHANDLER
+    error test850rediretingHandler::TEST_01_REDIRECTINGHANDLER
 bsf4rexx/rgf/H_850/06_redirectingHandler_preconfigured.testGroup #731
-    error TEST_01_REDIRECTINGHANDLER_PRECONFIGURED
+    error test850rediretingHandler_preconfigured::TEST_01_REDIRECTINGHANDLER_PRECONFIGURED
 bsf4rexx/rgf_multithreading/80_test_MultiThreading_via_Java_threads.testGroup #731
-    failure TEST_01_PLAIN_BSFREXXPROXY_REXXPROXY
+    failure testMultiThreadingUsing_via_java_01::TEST_01_PLAIN_BSFREXXPROXY_REXXPROXY
 bsf4rexx/rgf_multithreading/81_test_MultiThreading_via_Java_threads.testGroup #731
-    failure TEST_01_PLAIN_BSFREXXPROXY_REXXPROXY
+    failure testMultiThreadingUsing_via_java_01::TEST_01_PLAIN_BSFREXXPROXY_REXXPROXY
