@@ -399,7 +399,9 @@ description that DESCRIPTION gave, which is the null string without it. Its
 empty when the clause has neither ADDITIONAL nor ARRAY, it is the array of
 ARRAY's values, and it is the value of ADDITIONAL made an array, where an
 array stays as it is, a string becomes an array of one item and a list becomes
-an array of its items. The null object `.nil` and an instance of the class
+an array of its items. An object whose `makeArray` answers an instance of a
+subclass of `Array` gives that instance itself, whose items the message
+names. The null object `.nil` and an instance of the class
 Object cannot be made an array, and an ADDITIONAL with such a value raises
 `SYNTAX 98.939` in the raising code, as [the SYNTAX rule](r:instr.raise.here)
 says; whether an object of any other class is converted is not specified. The
@@ -409,7 +411,7 @@ condition has the entry only when the clause gave one, as [the rule for the
 options](r:instr.raise.additional) says.
 
 ```rexx
-do i = 1 to 5
+do i = 1 to 6
   call go 'R'i
 end
 exit
@@ -426,6 +428,11 @@ s: o = condition('o')
 ::routine r3; raise syntax 40.3 additional (.array~of('p', 'q'))
 ::routine r4; raise syntax 40.3 array ('p', 'q', 'r')
 ::routine r5; raise syntax 40.3 additional (.list~of('l', 'm'))
+::routine r6; raise syntax 40.3 additional (.mk~new)
+::class mk
+::method makeArray
+  return .arr~of('s', 't')
+::class arr subclass array
 ```
 
 ```output
@@ -438,6 +445,8 @@ R4 40.3 40 [] The Array class 3
    first p
 R5 40.3 40 [] The Array class 2
    first l
+R6 40.3 40 [] The ARR class 2
+   first s
 ```
 
 ```rexx

@@ -72,11 +72,14 @@ pub(super) fn method_table_pairs(
         .send_message(table, b"SUPPLIER", None, &[], caller)?
         .unwrap_or(ObjRef::NIL);
     interp.roots.activity_mut().push_temp(supplier);
-    let walked = if is_supplier(interp, supplier) {
-        crate::dispatch::collection::supplier::drain_supplier(interp, supplier)?
-    } else {
-        walk_by_messages(interp, supplier)?
-    };
+    // Only a `Supplier`, an instance of a subclass included, is read: any
+    // other answer, `.nil` or none among them, is 98.994 naming the object
+    // the methods were taken from (`r[class.class.methods-supplier]`).
+    if !is_supplier(interp, supplier) {
+        let shown = interp.string_value_text(table)?;
+        return Err(Raised::no_supplier(&shown).into());
+    }
+    let walked = crate::dispatch::collection::supplier::drain_supplier(interp, supplier)?;
     let mut pairs = Vec::new();
     for (index, item) in walked {
         let name = interp.string_value_text(index)?.into_boxed_slice();
@@ -91,38 +94,4 @@ fn is_supplier(interp: &mut Interp, value: ObjRef) -> bool {
     let class = interp.class_of_value(value);
     let wanted = interp.classes().lookup("Supplier");
     matches!((class, wanted), (Some(class), Some(wanted)) if interp.classes().is_a(class, wanted))
-}
-
-/// The pairs of an object that is not a `Supplier`, read through the messages
-/// `available`, `index`, `item` and `next` (Deviation 108): a message the
-/// object does not answer raises as any message would.
-fn walk_by_messages(
-    interp: &mut Interp,
-    supplier: ObjRef,
-) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
-    let mut pairs = Vec::new();
-    loop {
-        let available = send_to_supplier(interp, supplier, b"AVAILABLE")?;
-        if !interp.truth(available, crate::run::raised::raised_available_not_logical)? {
-            return Ok(pairs);
-        }
-        let index = send_to_supplier(interp, supplier, b"INDEX")?;
-        let item = send_to_supplier(interp, supplier, b"ITEM")?;
-        pairs.push((index, item));
-        send_to_supplier(interp, supplier, b"NEXT")?;
-    }
-}
-
-/// `message` sent to `supplier`, rooted, `.nil` for no result.
-fn send_to_supplier(
-    interp: &mut Interp,
-    supplier: ObjRef,
-    message: &[u8],
-) -> Result<ObjRef, Failure> {
-    let caller = interp.caller();
-    let answered = interp
-        .send_message(supplier, message, None, &[], caller)?
-        .unwrap_or(ObjRef::NIL);
-    interp.roots.activity_mut().push_temp(answered);
-    Ok(answered)
 }

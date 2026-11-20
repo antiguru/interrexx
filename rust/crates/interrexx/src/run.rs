@@ -2217,8 +2217,8 @@ impl Interp {
             }
             Conversion::Refused => return Err(Raised::forward_arguments().into()),
             Conversion::Requested => match self.single_dimension_request(value)? {
-                Some(array) => {
-                    let slots = self.array_slots_of(array).unwrap_or_default();
+                Some((_, store)) => {
+                    let slots = self.array_slots_of(store).unwrap_or_default();
                     values.extend(slots);
                 }
                 None => return Err(Raised::forward_arguments().into()),
@@ -2228,19 +2228,22 @@ impl Interp {
     }
 
     /// An array request over `value` when it answers a single-dimensional
-    /// array, rooted; `None` where the answer is `.nil` or multi-dimensional.
+    /// array, rooted: the answer and the array that holds its items, which
+    /// differ for an instance of an `Array` subclass; `None` where the answer
+    /// is `.nil`, no array or multi-dimensional.
     pub(crate) fn single_dimension_request(
         &mut self,
         value: ObjRef,
-    ) -> Result<Option<ObjRef>, Failure> {
+    ) -> Result<Option<(ObjRef, ObjRef)>, Failure> {
         let Some(array) = self.request_array_value(value)? else {
             return Ok(None);
         };
         self.roots.activity_mut().push_temp(array);
-        if self.array_slots_of(array).is_none() || self.is_multi_dimensional_array(array) {
+        let store = crate::dispatch::array_store(self, array);
+        if self.array_slots_of(store).is_none() || self.is_multi_dimensional_array(store) {
             return Ok(None);
         }
-        Ok(Some(array))
+        Ok(Some((array, store)))
     }
 
     /// Which arm of the array request this value takes.

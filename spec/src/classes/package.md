@@ -2,7 +2,7 @@
 element: "Package"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Package Class; Builtin Classes > Fundamental Classes > Package Class > new (Class Method); Builtin Classes > Fundamental Classes > Package Class > defaultOptions (Class Method); Builtin Classes > Fundamental Classes > Package Class > addClass; Builtin Classes > Fundamental Classes > Package Class > addPackage; Builtin Classes > Fundamental Classes > Package Class > addPublicClass; Builtin Classes > Fundamental Classes > Package Class > addPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > addRoutine; Builtin Classes > Fundamental Classes > Package Class > annotation; Builtin Classes > Fundamental Classes > Package Class > annotations; Builtin Classes > Fundamental Classes > Package Class > classes; Builtin Classes > Fundamental Classes > Package Class > definedMethods; Builtin Classes > Fundamental Classes > Package Class > digits; Builtin Classes > Fundamental Classes > Package Class > findClass; Builtin Classes > Fundamental Classes > Package Class > findNamespace; Builtin Classes > Fundamental Classes > Package Class > findProgram; Builtin Classes > Fundamental Classes > Package Class > findPublicClass; Builtin Classes > Fundamental Classes > Package Class > findPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > findRoutine; Builtin Classes > Fundamental Classes > Package Class > form; Builtin Classes > Fundamental Classes > Package Class > fuzz; Builtin Classes > Fundamental Classes > Package Class > importedClasses; Builtin Classes > Fundamental Classes > Package Class > importedPackages; Builtin Classes > Fundamental Classes > Package Class > importedRoutines; Builtin Classes > Fundamental Classes > Package Class > loadLibrary; Builtin Classes > Fundamental Classes > Package Class > loadPackage; Builtin Classes > Fundamental Classes > Package Class > local; Builtin Classes > Fundamental Classes > Package Class > name; Builtin Classes > Fundamental Classes > Package Class > namespaces; Builtin Classes > Fundamental Classes > Package Class > options; Builtin Classes > Fundamental Classes > Package Class > prolog; Builtin Classes > Fundamental Classes > Package Class > publicClasses; Builtin Classes > Fundamental Classes > Package Class > publicRoutines; Builtin Classes > Fundamental Classes > Package Class > resource; Builtin Classes > Fundamental Classes > Package Class > resources; Builtin Classes > Fundamental Classes > Package Class > routines; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > source; Builtin Classes > Fundamental Classes > Package Class > sourceLine; Builtin Classes > Fundamental Classes > Package Class > sourceSize; Builtin Classes > Fundamental Classes > Package Class > trace"
-deviations: [41, 109, 112, 115, 118]
+deviations: [41, 109, 112, 118]
 ---
 
 # Package
@@ -157,8 +157,9 @@ that is not a string and not an array, `request` with `ARRAY` and then with
 `objectName`), and then sends the new package `init`, after the package has
 been installed, with the arguments from the fourth on, or from the third on
 when the source is omitted. An answer to `request` with `ARRAY` that is
-neither an array nor `.nil` raises `SYNTAX 88.913`, and no `request` with
-`STRING` follows it ([Deviation 115](r:class.package.deviation.115)). An
+neither an array nor `.nil` raises `SYNTAX 93.961` when it came from
+`makeArray`, and is taken as `.nil` when it came from a `request` method of the
+source's own ([the answer rule](r:class.package.new.request-answer)). An
 instance of a subclass of `List` is sent `request` as well ([Deviation
 118](r:class.package.deviation.118)). A name that is an object is sent
 `request` with the argument `STRING`, once, first, before the messages to the
@@ -2800,6 +2801,59 @@ done
 p~setSecurityManager(.guard~new, 1) => 93.902
 ```
 
+r[class.package.new.request-answer]
+A source whose `request` with `ARRAY` answers an object that is neither an
+array nor `.nil` makes `new` raise `SYNTAX 93.961` when the `request` is the one
+of `Object`, so that the answer is what `makeArray` answered, and no `request`
+with `STRING` is sent after it; when the source has a `request` method of its
+own the answer is taken as `.nil` and `request` with `STRING` follows, as [the
+rule of `Method`](r:class.method.new.request-answer) says. In the examples `mk`
+answers by `makeArray` and `src` by a `request` of its own.
+
+```rexx
+call try '.package~new("n", .mk~new("nop"))'
+call try '.package~new("n", .mk~new(.list~of("nop")))'
+call try '.package~new("n", .src~new(.list~of("nop")))~source[1]'
+call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'nop'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+```
+
+```output
+makeArray
+.package~new("n", .mk~new("nop")) => 93.961
+makeArray
+.package~new("n", .mk~new(.list~of("nop"))) => 93.961
+request ARRAY
+request STRING
+.package~new("n", .src~new(.list~of("nop")))~source[1] => nop
+request ARRAY
+.package~new("n", .src~new(.array~of("nop")))~source[1] => nop
+```
+
 ## Deviations
 
 r[class.package.deviation.41]
@@ -2897,45 +2951,6 @@ fourth
 p~loadPackage("cp112b_zq.cls", .array~of("nop", .object~new)) => 93.952
 p~loadPackage("cp112c_zq.cls", .array~of("nop", .nil)) => 93.952
 p~loadPackage("cp112d_zq.cls", .array~of(.array~of("nop", "nop"))) => 13.1
-```
-
-r[class.package.deviation.115]
-A source that answers `request` with `ARRAY` by an object that is neither an
-array nor `.nil` makes `new` raise `SYNTAX 88.913`, as [the rule of
-`Method`](r:class.method.deviation.115) says, and no `request` with `STRING` is
-sent after it. ooRexx crashes. The examples have `request` answer a string
-and a list.
-
-```rexx
-call try '.package~new("n", .src~new("nop"))'
-call try '.package~new("n", .src~new(.list~of("nop")))'
-call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=>' zres
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'nop'
-```
-
-```output
-request ARRAY
-.package~new("n", .src~new("nop")) => 88.913
-request ARRAY
-.package~new("n", .src~new(.list~of("nop"))) => 88.913
-request ARRAY
-.package~new("n", .src~new(.array~of("nop")))~source[1] => nop
 ```
 
 r[class.package.deviation.118]

@@ -20,3 +20,10 @@ class.list.deviation.172
 instr.do.deviation.172
 conc.locks.deviation.160
 bif.errortext.deviation.180
+class.class.deviation.108
+class.class.deviation.114
+dir.class.deviation.114
+class.index.deviation.114
+class.method.deviation.115
+class.routine.deviation.115
+class.package.deviation.115

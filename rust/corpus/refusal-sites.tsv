@@ -181,7 +181,6 @@ Raised	lostdigits	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	message_array_shape	send	crates/interrexx/src/error.rs	agrees	yes	93.946	say o~sendWith(.array~new(2,2)) -- the message-NAME array; the argument array's own multidimensional case is a separate silent divergence
 Raised	message_name_shape	send	crates/interrexx/src/error.rs	agrees	yes	93.972	o~sendWith(o, (1))
 Raised	message_reuse	send	crates/interrexx/src/error.rs	agrees	yes	98.915	m~send over m = .message~new(o, 'N'); m~start -- corpus/lang/message_reuse.rex, which also sends ~start and ~sendWith to started messages
-Raised	metaclass_new_not_a_class	send	crates/interrexx/src/error.rs	recorded	yes	98.900	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return 'x' the oracle crashes, recorded as Deviation 114
 Loud	metaclass_new_reused_class	send	crates/interrexx/src/lib.rs	recorded	yes	a metaclass NEW answering a class	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return .array the oracle id Array, recorded as Deviation 32
 Raised	metaclass_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	method_argument_needs_a_string_value	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
@@ -230,6 +229,7 @@ Raised	no_data_returned	body+ir	crates/interrexx/src/error.rs	off-send-surface	-
 Raised	no_method	body+send	crates/interrexx/src/error.rs	diverges	yes	97.1	.DN~new~zzz under a ::method defaultName
 Raised	no_more_supplier_items	send	crates/interrexx/src/error.rs	agrees	yes	93.937	.Supplier~new(.Array~new,.Array~new)~item
 Raised	no_result	body+ir+send	crates/interrexx/src/error.rs	agrees	yes	91.999	.Array~of(2,1)~sortWith(a Comparator whose compare returns nothing)
+Raised	no_supplier	send	crates/interrexx/src/error.rs	agrees	yes	98.994	.K~defineMethods(.H~new) over ::class H / ::method supplier; return 'x' -- trapped, saying the code; any non-Supplier answer reaches it, .nil and an object answering AVAILABLE among them
 Raised	nomethod	send	crates/interrexx/src/error.rs	agrees	yes	NOMETHOD	signal on nomethod over o~zzz
 Raised	nonnumeric	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	nostring	send	crates/interrexx/src/error.rs	agrees	yes	NOSTRING	substr('abcdef', o)
