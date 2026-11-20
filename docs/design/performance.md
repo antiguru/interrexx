@@ -75,6 +75,16 @@ The most recent run counting cycles on both sides (2026-08-20, at `d90de68e3`) g
 (allocation, string materialisation, `PARSE`, decimal loop control); it has fewer cache and branch
 misses than ooRexx on every axis measured except L1i.
 
+## Measured ceilings
+
+What an optimisation could win at best, measured before building it (step 5 above). Instruction
+counts at `9a290e1`, release builds, whole process; startup is 19M and is left in.
+
+**Specialising PARSE templates** (2026-11-19). Skipping the template walk entirely, while keeping
+the source read, the piece strings and the stores, saved 8.3% on `parse` and 1.3% on `rexxcps`:
+`PARSE` costs its strings, allocations and collections, not its interpretation. Blanking every
+target (no pieces built) saved 45% and 9.4%, which is not a reachable bound.
+
 ## Tried and rejected
 
 * **A bytecode VM replacing the execution core**: ooRexx is a tree walker of the same family, and

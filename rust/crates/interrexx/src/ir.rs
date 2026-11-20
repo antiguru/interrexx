@@ -226,9 +226,35 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
-    /// The `PARSE`, `ARG` or `PULL` at `index`, with its template walked by
-    /// `Interp::exec_parse`.
-    Parse { index: u32, src: Option<u16> },
+    /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
+    /// string, from register `src` for `PARSE VALUE`, and walks the
+    /// template's entries up to `to`, the first whose operand the stream
+    /// evaluates. Where entries are left it files the walk in the registers
+    /// from `base` on ([`crate::parse_template::WALK_REGISTERS`] of them) for
+    /// the [`Op::ParseRun`]s after it; a template with none has `base`
+    /// [`Op::ARG_OMITTED`]. A clause the walk does not take -- a line will be
+    /// traced, a fold, a source read as a line, a parse string that is not a
+    /// string it can read in place -- is run whole by `Interp::exec_parse`,
+    /// and the runs after this op are not driven.
+    ParseBegin {
+        index: u32,
+        src: u16,
+        base: u16,
+        to: u16,
+        opening: ParseOpening,
+        strings: u8,
+    },
+    /// Walks template entries `from..to` of the `PARSE` at `index` on from
+    /// the walk filed from register `base`: entry `from` with its operand in
+    /// register `operand`, and the entries after it, whose operands are read
+    /// off the template.
+    ParseRun {
+        index: u32,
+        base: u16,
+        from: u16,
+        to: u16,
+        operand: u16,
+    },
     /// Ends the activation at `index` with the value in register `src`, or
     /// with no value at all for the bare form, and answers the `Flow` its
     /// keyword calls for.
@@ -325,6 +351,25 @@ impl ConditionKeyword {
             ConditionKeyword::When => raised_when_not_logical,
         }
     }
+}
+
+/// How an [`Op::ParseBegin`] takes its clause, as far as the compiler can
+/// tell: the template engine whole, or the walk over a source it reads in
+/// place, which the opening still hands back to the engine where a line will
+/// be traced or the value is not its own string value.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub(crate) enum ParseOpening {
+    /// A fold, a source read as a line or built by the interpreter, `PARSE
+    /// VAR` into words or of a stem or a compound, or an `ARG` with more
+    /// strings than [`Op::ParseBegin`]'s count holds.
+    Engine,
+    /// `PARSE VALUE`, from the op's `src` or the null string.
+    Value,
+    /// `PARSE VAR` of a simple name.
+    Var,
+    /// `PARSE ARG`, over the op's `strings` parse strings.
+    Arg,
 }
 
 /// Which driver steps the member clauses of a construct that resolves the

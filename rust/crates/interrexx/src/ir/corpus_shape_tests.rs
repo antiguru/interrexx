@@ -52,7 +52,8 @@ impl Root {
             | Op::LoopRun { .. }
             | Op::LoopNext { .. }
             | Op::Signal { .. }
-            | Op::Parse { .. }
+            | Op::ParseBegin { .. }
+            | Op::ParseRun { .. }
             | Op::Clause { .. }
             | Op::CallingClause { .. }
             | Op::TraceClause { .. }
