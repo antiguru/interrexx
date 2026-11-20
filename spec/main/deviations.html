@@ -1044,6 +1044,12 @@ directive ends. ooRexx accepts the directive for some such entries,
 <code>RxCalcTan</code> of <code>rxmath</code> among them, and the process ends when the routine is
 called; for others, <code>SysSleep</code> of <code>rexxutil</code> among them, it raises the same
 error.</p>
+<p>A library with a package entry is loaded as a package to find which kind its
+entry is, so its loader runs. When the loader raises a condition, the
+directive raises that condition instead, and leaves no registration behind.
+ooRexx looks the entry up in the library without loading it as a package: the
+loader does not run, the directive installs, the registration stays, and
+calling the routine calls the entry. Ruled by the owner on 2026-11-20 (#853).</p>
 <h2 id="144-lines-of-a-standard-stream-in-normal-mode"><a class="header" href="#144-lines-of-a-standard-stream-in-normal-mode">144. LINES of a standard stream in normal mode</a></h2>
 <p>LINES with a name that denotes the standard input, output or error stream, and
 no option or an option other than <code>C</code>, sends the message <code>LINES</code> to that entry
