@@ -139,7 +139,10 @@ pub fn exported_rexx_functions(path: &Path) -> BTreeSet<String> {
 /// Every symbol `path`'s symbol tables name, one line each.
 pub fn symbol_table(path: &Path) -> String {
     if cfg!(target_vendor = "apple") {
-        run_tool("nm", &["-a"], path)
+        // Without `-a`: it adds the debug map, whose `SO` entries name the source files of a
+        // build with debug info, so a checkout path that contains a crate's name would read as
+        // that crate's code. Local and global symbols are listed either way.
+        run_tool("nm", &[], path)
     } else {
         run_tool("readelf", &["--syms", "-W"], path)
     }

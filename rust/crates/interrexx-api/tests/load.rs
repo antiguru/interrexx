@@ -181,14 +181,15 @@ fn a_closed_library_stays_mapped() {
     assert!(mapped());
 }
 
-/// A shared object named `lib<name>.so` in a directory of its own, built from the C `source`, and
+/// A shared object named `lib<name>` plus the host's shared-library suffix in a directory of its own, built from the C `source`, and
 /// whether the process has it mapped.
 fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
     let dir = std::env::temp_dir().join(format!("interrexx-plain-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("the directory is creatable");
     let file_source = dir.join("plain.c");
     std::fs::write(&file_source, source).expect("the source is writable");
-    let file = format!("lib{name}.so");
+    // The host's suffix, as `classic_procedure` spells the file it searches for.
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
     let built = std::process::Command::new("cc")
         .args(["-shared", "-fPIC", "-o"])
         .arg(dir.join(&file))
@@ -212,7 +213,7 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
         "void *RexxGetPackage(void) { return (void *)0; }\n",
     );
     assert!(!mapped());
-    let answer = load::open_path(&dir.join("libnullpackage.so"), "nullpackage")
+    let answer = load::open_path(&dir.join(format!("libnullpackage{}", std::env::consts::DLL_SUFFIX)), "nullpackage")
         .expect("a null package entry is not an error");
     assert!(answer.is_none());
     assert!(mapped());
@@ -225,7 +226,7 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
 fn a_library_without_the_exporter_stays_mapped() {
     let (dir, mapped) = plain_library("plainpackage", NO_EXPORTER);
     assert!(!mapped());
-    let answer = load::open_path(&dir.join("libplainpackage.so"), "plainpackage")
+    let answer = load::open_path(&dir.join(format!("libplainpackage{}", std::env::consts::DLL_SUFFIX)), "plainpackage")
         .expect("a library with no exporter is not an error");
     assert!(answer.is_none());
     assert!(mapped());
