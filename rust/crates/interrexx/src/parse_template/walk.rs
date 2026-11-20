@@ -1,0 +1,340 @@
+//! The template walk as the compiled stream drives it. [`Op::ParseBegin`]
+//! takes the first parse string and walks the entries up to the first whose
+//! operand the stream evaluates, and each [`Op::ParseRun`] walks one such
+//! entry, with its operand from a register, and the entries after it up to
+//! the next. Inside one op the walk is the template engine's own loop, with
+//! the cursor in locals; between two ops it lives in registers of the
+//! clause's own frame, so it is rooted, it is the frame's to move and to drop,
+//! and a nested activation that parses has a walk of its own.
+//!
+//! [`Op::ParseBegin`]: crate::ir::Op::ParseBegin
+//! [`Op::ParseRun`]: crate::ir::Op::ParseRun
+
+use super::*;
+use crate::ir::ParseOpening;
+use interrexx_core::RegFrame;
+use interrexx_parse::Instruction;
+use interrexx_parse::InstructionKind;
+
+/// How many registers one compiled walk keeps, from its base.
+pub(crate) const WALK_REGISTERS: u16 = 5;
+
+/// The parse string: a string that is its own string value.
+const SOURCE: u16 = 0;
+/// The number the parse string renders, which a piece covering the whole
+/// string assigns, or `.nil`.
+const ORIGIN: u16 = 1;
+/// Where the last match began and one past where it ended, as small
+/// integers: all of [`Cursor`] an op hands the next. The section and the word
+/// position are not filed, because the entry a run starts at is a trigger,
+/// and every movement and search sets them afresh from these two.
+const PATTERN_START: u16 = 2;
+const PATTERN_END: u16 = 3;
+/// `PARSE ARG`: the argument the next template reads.
+const NEXT_ARGUMENT: u16 = 4;
+
+/// A position or count as the small integer a register holds. A string is
+/// far shorter than the range a small integer covers.
+fn position(at: usize) -> ObjRef {
+    i64::try_from(at)
+        .ok()
+        .and_then(ObjRef::small_int)
+        .unwrap_or(ObjRef::NIL)
+}
+
+/// The position a register filed by [`position`] holds.
+fn at(registers: RegFrame<'_>, base: u16, offset: u16) -> usize {
+    match registers.get(base + offset).decode() {
+        Decoded::SmallInt(at) => usize::try_from(at).unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// The `PARSE` a walk op's clause is.
+fn parse_of(clause: &Instruction) -> Result<&Parse, Failure> {
+    match &clause.kind {
+        InstructionKind::Parse(parse)
+        | InstructionKind::Arg(parse)
+        | InstructionKind::Pull(parse) => Ok(parse),
+        kind => Err(Loud::instruction(kind).into()),
+    }
+}
+
+/// What the opening found: the walk's parse string, in place, with the
+/// number a whole-string piece assigns, or the clause for the template
+/// engine with the source value already in hand.
+enum Opened {
+    Walk(ObjRef, SourceText, Option<ObjRef>),
+    Engine(Option<ObjRef>),
+}
+
+/// One walk in hand: the parse string, the cursor over it, and for `PARSE
+/// ARG` the argument the next template reads.
+struct Walk {
+    value: ObjRef,
+    source: SourceText,
+    cursor: Cursor,
+    next_argument: usize,
+}
+
+impl Interp {
+    /// `value` as a parse string read in place, and the number a whole-string
+    /// piece assigns: what [`Interp::source_text`] answers for a string that
+    /// is its own string value and needs no rendering, or `None` for any
+    /// other value. Asking sends nothing and changes nothing, so a `None` can
+    /// still hand the clause to [`Interp::exec_parse`].
+    fn plain_parse_source(&self, value: ObjRef) -> Option<(SourceText, Option<ObjRef>)> {
+        match value.decode() {
+            Decoded::Text(inline) => Some((SourceText::Inline(inline), None)),
+            Decoded::SmallInt(number) => crate::value::small_int_inline_text(number)
+                .map(|inline| (SourceText::Inline(inline), Some(value))),
+            Decoded::Heap { .. } => self.heap.body_text(value).map(|bytes| {
+                (
+                    SourceText::Text {
+                        value,
+                        length: bytes.len(),
+                    },
+                    None,
+                )
+            }),
+            _ => None,
+        }
+    }
+
+    /// A walk over `value`, which [`Interp::plain_parse_source`] took, from
+    /// its origin.
+    fn walk_over(&self, value: ObjRef, next_argument: usize) -> Walk {
+        let (source, origin) = self
+            .plain_parse_source(value)
+            .unwrap_or((SourceText::Owned(Vec::new()), None));
+        let mut cursor = Cursor::new(source.len());
+        cursor.origin = origin;
+        Walk {
+            value,
+            source,
+            cursor,
+            next_argument,
+        }
+    }
+
+    /// The argument `PARSE ARG` reads for template `at`, as a parse string:
+    /// an omitted or absent one is the null string.
+    fn argument_parse_value(&self, at: usize) -> ObjRef {
+        match self.activity.call_context.arguments.get(at) {
+            Some(Some(argument)) => *argument,
+            Some(None) | None => ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL),
+        }
+    }
+
+    /// Files `walk` in the registers from `base`, for the op that goes on
+    /// with it.
+    fn file_walk(registers: RegFrame<'_>, base: u16, walk: &Walk) {
+        let cursor = &walk.cursor;
+        registers.set(base + SOURCE, walk.value);
+        registers.set(base + ORIGIN, cursor.origin.unwrap_or(ObjRef::NIL));
+        registers.set(base + PATTERN_START, position(cursor.pattern_start));
+        registers.set(base + PATTERN_END, position(cursor.pattern_end));
+        registers.set(base + NEXT_ARGUMENT, position(walk.next_argument));
+    }
+
+    /// The walk [`Interp::file_walk`] filed from `base`.
+    fn filed_walk(&self, registers: RegFrame<'_>, base: u16) -> Walk {
+        let value = registers.get(base + SOURCE);
+        let mut walk = self.walk_over(value, at(registers, base, NEXT_ARGUMENT));
+        let origin = registers.get(base + ORIGIN);
+        walk.cursor.origin = (origin != ObjRef::NIL).then_some(origin);
+        walk.cursor.pattern_start = at(registers, base, PATTERN_START);
+        walk.cursor.pattern_end = at(registers, base, PATTERN_END);
+        walk
+    }
+
+    /// Template entries `from..to` of `parse` applied to `walk`, the first
+    /// with `operand` where the stream evaluated it: a trigger and then its
+    /// targets, or a comma, which steps to the next parse string
+    /// (`r[parse.multiple.comma]`).
+    fn walk_entries(
+        &mut self,
+        code: &Code<'_>,
+        parse: &Parse,
+        from: usize,
+        to: usize,
+        mut operand: Option<ObjRef>,
+        walk: &mut Walk,
+    ) -> Result<(), Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        for entry in parse.template.get(from..to).unwrap_or(&[]) {
+            let Some(trigger) = entry else {
+                // The next argument for `PARSE ARG`, and the null string for
+                // every other source, parsed from its first character.
+                let next = match parse.source {
+                    ParseSource::Arg => {
+                        walk.next_argument += 1;
+                        self.argument_parse_value(walk.next_argument - 1)
+                    }
+                    _ => ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL),
+                };
+                *walk = self.walk_over(next, walk.next_argument);
+                continue;
+            };
+            match operand.take() {
+                Some(value) => self.apply_trigger_value(
+                    trigger,
+                    value,
+                    &walk.source,
+                    &mut walk.cursor,
+                    indent,
+                )?,
+                None => {
+                    self.apply_trigger(code, trigger, &walk.source, &mut walk.cursor, indent)?;
+                }
+            }
+            self.assign_targets(code, trigger, &walk.source, &mut walk.cursor, indent)?;
+        }
+        Ok(())
+    }
+
+    /// [`crate::ir::Op::ParseBegin`]: takes the first parse string of the
+    /// clause and walks its entries up to `to`, and answers whether the
+    /// compiled walk took the clause. It does not where a `>K>`, `>>>` or
+    /// `>=>` line will be traced, under a fold, for a source read as a line
+    /// or built by the interpreter, for `PARSE VAR` into words, or where a
+    /// parse string is not a string that is its own string value -- a number
+    /// to render, an object to ask, a stem or a compound to read -- and
+    /// [`Interp::exec_parse`] then runs the clause whole, with nothing done
+    /// that it would do again.
+    #[inline(never)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the op's own fields, beside the clause and the frame they index"
+    )]
+    pub(crate) fn parse_begin(
+        &mut self,
+        code: &Code<'_>,
+        clause: &Instruction,
+        src: u16,
+        base: u16,
+        to: u16,
+        opening: ParseOpening,
+        strings: u8,
+        registers: RegFrame<'_>,
+    ) -> Result<bool, Failure> {
+        let parse = parse_of(clause)?;
+        let evaluated = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
+        let (first, source, origin) =
+            match self.walked_source(code, parse, evaluated, opening, strings)? {
+                Opened::Walk(first, source, origin) => (first, source, origin),
+                Opened::Engine(evaluated) => {
+                    self.exec_parse(code, parse, evaluated)?;
+                    return Ok(false);
+                }
+            };
+        let mut cursor = Cursor::new(source.len());
+        cursor.origin = origin;
+        let mut walk = Walk {
+            value: first,
+            source,
+            cursor,
+            next_argument: 1,
+        };
+        let to = usize::from(to);
+        self.walk_entries(code, parse, 0, to, None, &mut walk)?;
+        if to < parse.template.len() && base != crate::ir::Op::ARG_OMITTED {
+            Self::file_walk(registers, base, &walk);
+        }
+        Ok(true)
+    }
+
+    /// The first parse string the compiled walk takes, read in place, and
+    /// the number a whole-string piece assigns; or, for a clause it hands to
+    /// the template engine, the source value already in hand, which the engine
+    /// takes rather than evaluating or reading it again. The engine has the
+    /// clause where the compiler handed it over, where a line will be traced,
+    /// and where the parse string is not its own string value.
+    fn walked_source(
+        &mut self,
+        code: &Code<'_>,
+        parse: &Parse,
+        evaluated: Option<ObjRef>,
+        opening: ParseOpening,
+        strings: u8,
+    ) -> Result<Opened, Failure> {
+        if opening == ParseOpening::Engine {
+            return Ok(Opened::Engine(evaluated));
+        }
+        let traced = self.traced_mode();
+        if traced.results || traced.intermediates {
+            return Ok(Opened::Engine(evaluated));
+        }
+        let (first, hand_over) = match (opening, &parse.source) {
+            // Held by the register the stream evaluated it into, for the
+            // whole clause.
+            (ParseOpening::Value, _) => (
+                evaluated.unwrap_or_else(|| ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL)),
+                evaluated,
+            ),
+            // A simple name, which the compiler judged: its read is the
+            // variable's value and `NOVALUE` for an unset one, whose
+            // `.local~novalue` hook the read has then sent. Read once, here,
+            // before any target is assigned, so a target that is the source
+            // variable does not change what is parsed (`r[parse.index.order]`);
+            // and rooted for the clause, because that target is then all that
+            // held it, and the pieces built after it are allocations.
+            (ParseOpening::Var, ParseSource::Var(id)) => {
+                let (value, novalue) = self.read(code, *id);
+                self.novalue_check(novalue, value)?;
+                self.roots.activity_mut().push_temp(value);
+                (value, Some(value))
+            }
+            // Every argument a template of this clause will read, judged
+            // before the first is taken, since a later one that needs
+            // rendering could no longer hand the clause back. Held by the
+            // call's own argument list.
+            (ParseOpening::Arg, _) => {
+                if (0..usize::from(strings)).any(|at| {
+                    self.plain_parse_source(self.argument_parse_value(at))
+                        .is_none()
+                }) {
+                    return Ok(Opened::Engine(evaluated));
+                }
+                (self.argument_parse_value(0), evaluated)
+            }
+            _ => return Ok(Opened::Engine(evaluated)),
+        };
+        Ok(match self.plain_parse_source(first) {
+            Some((source, origin)) => Opened::Walk(first, source, origin),
+            None => Opened::Engine(hand_over),
+        })
+    }
+
+    /// [`crate::ir::Op::ParseRun`]: template entries `from..to` of the
+    /// clause applied to the walk filed from `base`, entry `from` with its
+    /// operand in register `operand`.
+    #[inline(never)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the op's own fields, beside the clause and the frame they index"
+    )]
+    pub(crate) fn parse_run(
+        &mut self,
+        code: &Code<'_>,
+        clause: &Instruction,
+        base: u16,
+        from: u16,
+        to: u16,
+        operand: u16,
+        registers: RegFrame<'_>,
+    ) -> Result<(), Failure> {
+        let parse = parse_of(clause)?;
+        let mut walk = self.filed_walk(registers, base);
+        let value = registers.get(operand);
+        let to = usize::from(to);
+        self.walk_entries(code, parse, usize::from(from), to, Some(value), &mut walk)?;
+        if to < parse.template.len() {
+            Self::file_walk(registers, base, &walk);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests;

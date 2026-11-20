@@ -1357,6 +1357,19 @@ pub(crate) fn within_digits(value: i64, digits: u64) -> bool {
     digits >= POW10.len() as u64 || value.unsigned_abs() < POW10[digits as usize]
 }
 
+/// The bound [`within_digits`] and [`ObjRef::small_int`] together put on a
+/// small-integer result under `digits`: a value `v` with `|v| < bound` is one
+/// [`exact_small_int`] answers a handle for. Conservative by one at the
+/// handle's own lower end, which only sends that value the general way.
+#[cfg(feature = "jit")]
+pub(crate) fn small_int_bound(digits: u64) -> i64 {
+    let handle = interrexx_core::SMALL_INT_MAX;
+    match POW10.get(digits as usize) {
+        Some(&power) => i64::try_from(power).map_or(handle, |power| power.min(handle)),
+        None => handle,
+    }
+}
+
 /// An exact integer result as a `SmallInt`, when that handle is the same
 /// value [`Interp::number`] would have produced for it -- and `None` when it
 /// is not, so the caller runs the general path instead.

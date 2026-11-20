@@ -349,7 +349,9 @@ ooRexx raises `35.1` at the colon.
 
 A standard output that is a pipe or a file is buffered and handed over
 before a read, before the program idles, before an ADDRESS command, at 64 KiB
-and at exit. While it is buffered, the order of its text against what native
+and at exit. For an instance that an embedding creates, exit is the
+embedding's call to `Terminate`.
+While it is buffered, the order of its text against what native
 code writes to the same descriptor itself, an external routine, a handler, an
 exit or the program that embeds the interpreter, is unspecified, except that
 what native code wrote through C's standard streams before the program's text
@@ -640,6 +642,14 @@ its REMOVEALL and ALLAT go on comparing with an object that is no stored index.
 Each interpreter instance has its own `.environment`, and an object passed
 between instances through the native API is refused. ooRexx shares one
 `.environment` between every instance in a process.
+
+Each instance also has its own objects. A reference that native code got from
+one instance names no object in another: passed as an argument there it is
+omitted, a message sent to it answers `NULLOBJECT`, and any other call given
+it answers as for `NULLOBJECT`.
+ooRexx keeps the objects of every instance in a process in one space, so an
+extension that holds an object it got from one instance, as BSF4ooRexx does
+for the objects it hands to Java, can use it from any other.
 
 ## 86. The API daemon
 
@@ -1539,3 +1549,12 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).
+
+## 183. The option of arrayIn, makeArray and arrayOut is read as a string
+
+The option of `Stream`'s `arrayIn`, `makeArray` and `arrayOut` is read as a
+string argument, as the option of `open` is: through its `makeString` method,
+so an object whose `makeString` answers `L` or `C` is that option, and an
+object with no such method, `.nil` among them, raises `SYNTAX 88.909`. ooRexx
+sends the option `caselessStartsWith` and raises `SYNTAX 97.1` for any object
+that is no string and for `.nil`, whatever its `makeString` answers.

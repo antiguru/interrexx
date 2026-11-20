@@ -549,3 +549,68 @@ fn the_recorded_chunks_render_as_committed() {
         });
     });
 }
+
+/// **A `PARSE` template compiles to its walk**: the opening, which walks
+/// the entries before the first operand the stream evaluates, then per such
+/// operand its ops and the run from its entry to the next, with the walk's
+/// registers below the operand's. A simple variable, like a literal, is read
+/// where the walk reaches it.
+#[test]
+fn a_parse_template_compiles_to_its_walk() {
+    let chunk =
+        compile_for_test(b"parse var s a (p) b '-' c +(n + 1) d\n").expect("the chunk fits");
+    assert_eq!(
+        render(&chunk),
+        "0: Clause index=0 end=6\n\
+         1: ParseBegin index=0 src=omitted base=0 to=2 opening=Var strings=0\n\
+         2: Load read=Simple at=4 dst=5\n\
+         3: LoadConstant dst=6\n\
+         4: Arith op=+ hint=0 lhs=5 rhs=6 dst=5\n\
+         5: ParseRun index=0 base=0 from=2 to=4 operand=5\n"
+    );
+}
+
+/// A template with no operand to evaluate is walked whole by its opening.
+#[test]
+fn a_template_of_literals_is_one_parse_begin() {
+    let chunk = compile_for_test(b"parse value v with a +5 b ',' c, d\n").expect("the chunk fits");
+    assert_eq!(
+        render(&chunk),
+        "0: Clause index=0 end=3\n\
+         1: Load read=Simple at=0 dst=0\n\
+         2: ParseBegin index=0 src=0 base=omitted to=5 opening=Value strings=0\n"
+    );
+}
+
+/// The shapes the walk takes no runs for are its opening alone, with no
+/// walk registers, and the opening names the ones it hands to the template
+/// engine whole: a fold, a source read as a line, `PARSE VAR` into words or
+/// of a compound. A clause that may trace is walked whole while it does not,
+/// and an operand with a call in it is evaluated where the walk reaches it.
+#[test]
+fn a_template_with_no_runs_is_its_opening_alone() {
+    let normal = || ChunkTrace::of(TraceMode::NORMAL);
+    for (source, trace, opening) in [
+        (&b"parse value v with a (p + 1) b\n"[..], traced(), "Value"),
+        (
+            b"parse value v with a (p + 1) b\n",
+            intermediates(),
+            "Value",
+        ),
+        (b"parse upper arg a (p + 1) b\n", normal(), "Engine"),
+        (b"parse pull a (p + 1) b\n", normal(), "Engine"),
+        (b"parse var s a b c\n", normal(), "Engine"),
+        (b"parse var s.i a ' ' b\n", normal(), "Engine"),
+        (b"parse var s a (f()) b\n", normal(), "Var"),
+        (b"parse arg a ' ' b, c, d\n", normal(), "Arg strings=3"),
+    ] {
+        let rendered = render(&compile_for_test_under(source, trace).expect("the chunk fits"));
+        assert!(
+            rendered.contains("base=omitted to=")
+                && rendered.contains(&format!("opening={opening}"))
+                && !rendered.contains("ParseRun"),
+            "{}\n{rendered}",
+            String::from_utf8_lossy(source)
+        );
+    }
+}

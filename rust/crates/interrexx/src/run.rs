@@ -78,6 +78,8 @@ use call::{Entered, entered_receiver};
 
 // `DO`/`LOOP`: the header, each kind of repetition, and the flat-loop path the op driver takes.
 mod loops;
+#[cfg(feature = "jit")]
+pub(crate) use loops::QuickKind;
 #[cfg(test)]
 use loops::numeric_less;
 pub(crate) use loops::{
@@ -2615,6 +2617,21 @@ impl Interp {
         }
     }
 
+    /// The [`SteppedClause`] for a clause compiled code opened itself, with
+    /// every write [`Interp::enter_stepped_clause`] makes already made
+    /// (`crate::ir::drive::jit_host`), so that the interpreter can close it.
+    #[cfg(feature = "jit")]
+    pub(crate) fn adopt_stepped_clause(&mut self) -> SteppedClause {
+        let entry = self.adopt_clause_entry();
+        let temps_at_entry = self.roots.activity().temps_len();
+        let frame = self.roots.activity_mut().push_frame();
+        SteppedClause {
+            entry,
+            frame,
+            temps_at_entry,
+        }
+    }
+
     /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
     /// interactive-debug `=` re-runs: takes and answers the indent it is
     /// re-run at, or ends the one recorded for an earlier clause.
@@ -3605,7 +3622,7 @@ impl Interp {
                 self.eval(code, expr)
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
-            // `>K>` echo and the whole template walk are `Op::Parse`'s; only
+            // `>K>` echo and the whole template walk are `Op::ParseBegin`'s; only
             // the source is a register, and only this source has one --
             // `compile` emits no register for any other, so reaching here with
             // one is an op off its node.

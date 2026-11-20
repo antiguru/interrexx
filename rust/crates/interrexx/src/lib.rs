@@ -153,6 +153,10 @@ use trace::ChunkTrace;
 // rather than once per entry.
 mod ir;
 
+// Native code for hot flat loops, behind the `jit` feature.
+#[cfg(feature = "jit")]
+mod jit;
+
 // Message dispatch: the object model a send resolves against, the
 // `resolve`/`invoke` pair, and the one security chokepoint (D12).
 mod dispatch;

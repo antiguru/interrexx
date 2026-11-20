@@ -3,6 +3,67 @@ use std::rc::Rc;
 use crate::ObjRef;
 use crate::frame::{FrameArena, FrameBlock};
 
+/// One variable slot: a value, or unset.
+///
+/// With the `jit` feature its layout is fixed, because compiled code reads and
+/// writes a slot in place (`interrexx`'s `jit::layout`): `repr(C)`, a word that
+/// is `1` when the slot is set and the handle beside it. `ObjRef::NIL` is itself
+/// a value (`x = .nil`), so unset cannot be a handle. Without the feature it is
+/// the `Option` itself, which nothing outside this module reads in place.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg(feature = "jit")]
+#[repr(C)]
+pub struct VarSlot {
+    set: u64,
+    value: ObjRef,
+}
+
+#[cfg(feature = "jit")]
+impl VarSlot {
+    pub const UNSET: VarSlot = VarSlot {
+        set: 0,
+        value: ObjRef::NIL,
+    };
+
+    #[inline(always)]
+    pub fn of(value: Option<ObjRef>) -> VarSlot {
+        match value {
+            Some(value) => VarSlot { set: 1, value },
+            None => VarSlot::UNSET,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get(self) -> Option<ObjRef> {
+        (self.set != 0).then_some(self.value)
+    }
+
+    /// Where `set` sits in a slot, for code that reads one in place.
+    pub const SET_AT: usize = std::mem::offset_of!(VarSlot, set);
+    /// Where `value` sits in a slot.
+    pub const VALUE_AT: usize = std::mem::offset_of!(VarSlot, value);
+}
+
+/// See the `jit` form above.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg(not(feature = "jit"))]
+pub struct VarSlot(Option<ObjRef>);
+
+#[cfg(not(feature = "jit"))]
+impl VarSlot {
+    pub const UNSET: VarSlot = VarSlot(None);
+
+    #[inline(always)]
+    pub fn of(value: Option<ObjRef>) -> VarSlot {
+        VarSlot(value)
+    }
+
+    #[inline(always)]
+    pub fn get(self) -> Option<ObjRef> {
+        self.0
+    }
+}
+
 /// A position in the temporary stack that a frame will unwind to.
 #[derive(Copy, Clone, Debug)]
 pub struct FrameId(usize);
@@ -110,7 +171,7 @@ pub struct ActivityRoots {
     /// missing one -- unlike `temps`, whose entries are always live values,
     /// a slot must be able to say "no value" without that colliding with
     /// `ObjRef::NIL`, which is itself a legal Rexx value (`x = .nil`).
-    slots: Vec<Option<ObjRef>>,
+    slots: Vec<VarSlot>,
     /// Parallel to a prefix of `slots`: `Some(target)` at position `p` means
     /// that slot is an **alias** for `target`, and every read and write
     /// addressed to it is served by `target` instead. `None`, or a position
@@ -239,7 +300,7 @@ impl RootSet {
         };
         let position = self.activity.position(frame, index);
         let storage = &mut self.cells[cell as usize];
-        storage.value = self.activity.slots[position].take();
+        storage.value = std::mem::replace(&mut self.activity.slots[position], VarSlot::UNSET).get();
         let target = Target::Cell(CellRef {
             object,
             index: cell,
@@ -288,9 +349,22 @@ impl RootSet {
                 "slot {position} redirects while the count says none does"
             );
             assert!(position < activity.slots.len());
-            return activity.slots[position];
+            return activity.slots[position].get();
         }
         self.frame_slot_of(frame, index)
+    }
+
+    /// The slots of `frame` as one slice, when `frame` is the top frame and
+    /// none of its slots is an alias: then slot `i` of `frame` is element
+    /// `i`, which is what [`RootSet::frame_slot`] reads and
+    /// [`RootSet::set_frame_slot`] writes.
+    pub fn top_window(&mut self, frame: SlotFrame) -> Option<&mut [VarSlot]> {
+        let activity = &mut self.activity;
+        if frame.serial != activity.fast_serial {
+            return None;
+        }
+        let end = activity.end_of(frame);
+        activity.slots.get_mut(activity.top_start..end)
     }
 
     /// [`RootSet::frame_slot`] for a frame that need not be the top one.
@@ -301,7 +375,7 @@ impl RootSet {
         let position = activity.top_start + index;
         if activity.unaliased_top(frame, position) {
             activity.debug_assert_top(frame);
-            return activity.slots[position];
+            return activity.slots[position].get();
         }
         self.at(activity.resolve(frame, index))
     }
@@ -318,7 +392,7 @@ impl RootSet {
                 "slot {position} redirects while the count says none does"
             );
             assert!(position < activity.slots.len());
-            activity.slots[position] = Some(value);
+            activity.slots[position] = VarSlot::of(Some(value));
             return;
         }
         self.set_frame_slot_of(frame, index, value);
@@ -332,7 +406,7 @@ impl RootSet {
         let position = activity.top_start + index;
         if activity.unaliased_top(frame, position) {
             activity.debug_assert_top(frame);
-            activity.slots[position] = Some(value);
+            activity.slots[position] = VarSlot::of(Some(value));
             return;
         }
         let target = self.activity.resolve(frame, index);
@@ -353,7 +427,7 @@ impl RootSet {
             activity.debug_assert_top(frame);
             let position = activity.top_start + index;
             assert!(position < activity.slots.len());
-            activity.slots[position] = None;
+            activity.slots[position] = VarSlot::UNSET;
             return;
         }
         self.clear_frame_slot_of(frame, index);
@@ -368,7 +442,7 @@ impl RootSet {
         let position = activity.top_start + index;
         if activity.unaliased_top(frame, position) {
             activity.debug_assert_top(frame);
-            activity.slots[position] = None;
+            activity.slots[position] = VarSlot::UNSET;
             return;
         }
         let target = self.activity.resolve(frame, index);
@@ -396,7 +470,7 @@ impl RootSet {
     fn at(&self, target: Target) -> Option<ObjRef> {
         match target {
             Target::Slot { frame, index } => {
-                self.activity.slots[self.activity.position(frame, index)]
+                self.activity.slots[self.activity.position(frame, index)].get()
             }
             Target::Cell(cell) => self.cell(cell).value,
         }
@@ -408,7 +482,7 @@ impl RootSet {
         match target {
             Target::Slot { frame, index } => {
                 let position = self.activity.position(frame, index);
-                self.activity.slots[position] = value;
+                self.activity.slots[position] = VarSlot::of(value);
             }
             Target::Cell(cell) => {
                 self.cell(cell);
@@ -545,7 +619,7 @@ impl ActivityRoots {
     /// numbered `serial`.
     fn push_segment(&mut self, initial_len: usize, serial: u64) -> SlotFrame {
         let start = self.slots.len();
-        self.slots.resize(start + initial_len, None);
+        self.slots.resize(start + initial_len, VarSlot::UNSET);
         let depth = self.segments.len();
         self.segments.push(Segment { start, serial });
         self.top_start = start;
@@ -780,7 +854,8 @@ impl ActivityRoots {
     pub fn grow_slots_of(&mut self, frame: SlotFrame, n: usize) -> usize {
         let start = self.segment(frame).start;
         let end = self.end_of(frame);
-        self.slots.splice(end..end, std::iter::repeat_n(None, n));
+        self.slots
+            .splice(end..end, std::iter::repeat_n(VarSlot::UNSET, n));
         if self.aliases.len() > end {
             self.aliases.splice(end..end, std::iter::repeat_n(None, n));
         }
@@ -798,7 +873,7 @@ impl ActivityRoots {
             .iter()
             .copied()
             .chain(self.frames.iter())
-            .chain(self.slots.iter().filter_map(|s| *s))
+            .chain(self.slots.iter().filter_map(|s| s.get()))
             .chain(self.aliases.iter().filter_map(|alias| match alias {
                 Some(Target::Cell(cell)) => Some(cell.object),
                 _ => None,
