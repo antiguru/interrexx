@@ -265,7 +265,7 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
 /// `a_condition_outside_the_native_set_stays_one_eval_expr`.
 #[test]
 fn a_when_condition_outside_the_native_set_stays_one_when_test() {
-    let chunk = compile_for_test(b"select\n  when za~~x then nop\nend\n").expect("compiles");
+    let chunk = compile_for_test(b"select\n  when zn:zf() then nop\nend\n").expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=1\n\
@@ -509,7 +509,7 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
 /// fallback and **not** the `IF` one.
 #[test]
 fn a_return_expression_outside_the_native_set_keeps_its_return_op() {
-    let chunk = compile_for_test(b"return za~~x\n").expect("compiles");
+    let chunk = compile_for_test(b"return zn:zf()\n").expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=3\n\

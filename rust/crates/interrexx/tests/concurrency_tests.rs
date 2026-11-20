@@ -1138,7 +1138,7 @@ mod measured {
     fn a_slice_deferred_before_a_pinned_park_stays_with_its_activity() {
         let source = ".local['ARR'] = .array~of(2, 1)\n\
                       .local~~put(.array~of(3, 1, 2)~start('sortWith', .cmpb~new), 'M')\
-                      ~~put(.t~new~start('run'), 'C')~at('ARR')~sortWith(.cmpa~new)\n\
+                      ~~put(.t~new~start('run'), 'C')~at('ARR')~~sortWith(.cmpa~new)\n\
                       say 'done'\n\
                       ::class cmpa\n::method compare\n  \
                       return .m~result~items * 0 + arg(1) - arg(2)\n\
@@ -1430,19 +1430,19 @@ mod measured {
         ),
         (
             "TreeEval",
-            "x = .c~new~~m\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = rexx:g(.c~new~m)\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "x = f(.c~new~~m)\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "call f .c~new~~m\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n",
+            "call f rexx:g(.c~new~m)\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "x = length(.c~new~~m)\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = length(rexx:g(.c~new~m))\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeSend",

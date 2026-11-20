@@ -16,9 +16,12 @@ zz = 'abc'; zz~length:.object
 0: Clause index=0 end=3
 1: Const dst=0 konst=0
 2: Store index=0 at=0 src=0
-3: Clause index=1 end=5
-4: Message index=1
-registers: 1
+3: CallingClause index=1 end=8
+4: Load read=Simple at=0 dst=0
+5: Load read=Environment site=0 dst=1
+6: SendScope recv=0 scope=1
+7: SendWith site=0 recv=0 argc=0 dst=0 scope=1 form=Clause
+registers: 2
 consts: 'abc'
 
 # a message send clause whose term compiles ends in one send op
@@ -257,7 +260,7 @@ compile
 zw = >zv
 ----
 0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
+1: Reference slot=0 path=root dst=0
 2: Store index=0 at=0 src=0
 registers: 1
 consts:
@@ -305,26 +308,30 @@ consts:
 compile
 zw = za~~x
 ----
-0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
-2: Store index=0 at=0 src=0
+0: CallingClause index=0 end=4
+1: Load read=Simple at=1 dst=0
+2: SendWith site=0 recv=0 argc=0 dst=0 scope=- form=Cascade
+3: Store index=0 at=0 src=0
 registers: 1
 consts:
 
 compile
 zw = za~~x || zb
 ----
-0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
-2: Store index=0 at=0 src=0
-registers: 1
+0: CallingClause index=0 end=6
+1: Load read=Simple at=1 dst=0
+2: SendWith site=0 recv=0 argc=0 dst=0 scope=- form=Cascade
+3: Load read=Simple at=2 dst=1
+4: Binary op=|| lhs=0 rhs=1 dst=0
+5: Store index=0 at=0 src=0
+registers: 2
 consts:
 
 compile
 zw = >za
 ----
 0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
+1: Reference slot=0 path=root dst=0
 2: Store index=0 at=0 src=0
 registers: 1
 consts:
@@ -332,11 +339,16 @@ consts:
 compile
 zw = za~~x || length('a')
 ----
-0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
-2: Store index=0 at=0 src=0
-registers: 1
-consts:
+0: CallingClause index=0 end=8
+1: Load read=Simple at=1 dst=0
+2: SendWith site=0 recv=0 argc=0 dst=0 scope=- form=Cascade
+3: Const dst=2 konst=0
+4: PushArg src=2
+5: CallArgs slot=0 path=root.R site=0 argc=1 dst=1
+6: Binary op=|| lhs=0 rhs=1 dst=0
+7: Store index=0 at=0 src=0
+registers: 3
+consts: 'a'
 
 compile
 zw = zv || za
@@ -559,14 +571,15 @@ do i = za~~x to 3
   nop
 end
 ----
-0: Clause index=0 end=6
-1: EvalExpr index=0 slot=0 dst=0
-2: LoopHeaderValue role=Initial src=0
-3: LoadConstant dst=1
-4: LoopHeaderValue role=To src=1
-5: LoopRun index=0
-6: Clause index=1 end=7
-7: LoopNext index=0
+0: CallingClause index=0 end=7
+1: Load read=Simple at=1 dst=0
+2: SendWith site=0 recv=0 argc=0 dst=0 scope=- form=Cascade
+3: LoopHeaderValue role=Initial src=0
+4: LoadConstant dst=1
+5: LoopHeaderValue role=To src=1
+6: LoopRun index=0
+7: Clause index=1 end=8
+8: LoopNext index=0
 registers: 2
 consts:
 
@@ -683,12 +696,13 @@ consts: 'a' 'b'
 compile
 if za~~x then nop
 ----
-0: Clause index=0 end=3
-1: EvalExpr index=0 slot=0 dst=0
-2: JumpUnless reg=0 target=6
-3: Clause index=1 end=4
-4: Clause index=2 end=5
-5: EndBranch
+0: CallingClause index=0 end=4
+1: Load read=Simple at=0 dst=0
+2: SendWith site=0 recv=0 argc=0 dst=0 scope=- form=Cascade
+3: ConditionJump index=0 reg=0 keyword=IF target=7
+4: Clause index=1 end=5
+5: Clause index=2 end=6
+6: EndBranch
 registers: 1
 consts:
 
@@ -739,31 +753,34 @@ select case 1 + 1
 end
 say 'after'
 ----
-0: Clause index=0 end=2
-1: EvalExpr index=0 slot=0 dst=0
-2: Clause index=1 end=5
-3: WhenTest index=1 case=0 dst=1
-4: JumpUnless reg=1 target=11
-5: EnterWhen select=0 when=1
-6: Clause index=2 end=7
-7: Clause index=3 end=10
-8: Const dst=1 konst=0
-9: Say index=3 src=1
-10: EndWhen
-11: Clause index=4 end=14
-12: WhenTest index=4 case=0 dst=1
-13: JumpUnless reg=1 target=20
-14: EnterWhen select=0 when=4
-15: Clause index=5 end=16
-16: Clause index=6 end=19
-17: Const dst=1 konst=1
-18: Say index=6 src=1
-19: EndWhen
-20: Clause index=7 end=22
-21: Exec index=7
-22: Clause index=8 end=25
-23: Const dst=0 konst=2
-24: Say index=8 src=0
+0: Clause index=0 end=5
+1: LoadConstant dst=0
+2: LoadConstant dst=1
+3: Arith op=+ hint=0 lhs=0 rhs=1 dst=0
+4: SelectCase index=0 src=0
+5: Clause index=1 end=8
+6: WhenTest index=1 case=0 dst=1
+7: JumpUnless reg=1 target=14
+8: EnterWhen select=0 when=1
+9: Clause index=2 end=10
+10: Clause index=3 end=13
+11: Const dst=1 konst=0
+12: Say index=3 src=1
+13: EndWhen
+14: Clause index=4 end=17
+15: WhenTest index=4 case=0 dst=1
+16: JumpUnless reg=1 target=23
+17: EnterWhen select=0 when=4
+18: Clause index=5 end=19
+19: Clause index=6 end=22
+20: Const dst=1 konst=1
+21: Say index=6 src=1
+22: EndWhen
+23: Clause index=7 end=25
+24: Exec index=7
+25: Clause index=8 end=28
+26: Const dst=0 konst=2
+27: Say index=8 src=0
 registers: 2
 consts: 'a' 'b' 'after'
 
@@ -878,40 +895,43 @@ select case 1 + 1
 end
 say 'after'
 ----
-0: Clause index=0 end=3
+0: Clause index=0 end=6
 1: TraceClause index=0
-2: EvalExpr index=0 slot=0 dst=0
-3: Clause index=1 end=7
-4: TraceClause index=1
-5: WhenTest index=1 case=0 dst=1
-6: JumpUnless reg=1 target=15
-7: EnterWhen select=0 when=1
-8: Clause index=2 end=10
-9: TraceClause index=2
-10: Clause index=3 end=14
-11: TraceClause index=3
-12: Const dst=1 konst=0
-13: Say index=3 src=1
-14: EndWhen
-15: Clause index=4 end=19
-16: TraceClause index=4
-17: WhenTest index=4 case=0 dst=1
-18: JumpUnless reg=1 target=27
-19: EnterWhen select=0 when=4
-20: Clause index=5 end=22
-21: TraceClause index=5
-22: Clause index=6 end=26
-23: TraceClause index=6
-24: Const dst=1 konst=1
-25: Say index=6 src=1
-26: EndWhen
-27: Clause index=7 end=30
-28: TraceClause index=7
-29: Exec index=7
-30: Clause index=8 end=34
-31: TraceClause index=8
-32: Const dst=0 konst=2
-33: Say index=8 src=0
+2: LoadConstant dst=0
+3: LoadConstant dst=1
+4: Arith op=+ hint=0 lhs=0 rhs=1 dst=0
+5: SelectCase index=0 src=0
+6: Clause index=1 end=10
+7: TraceClause index=1
+8: WhenTest index=1 case=0 dst=1
+9: JumpUnless reg=1 target=18
+10: EnterWhen select=0 when=1
+11: Clause index=2 end=13
+12: TraceClause index=2
+13: Clause index=3 end=17
+14: TraceClause index=3
+15: Const dst=1 konst=0
+16: Say index=3 src=1
+17: EndWhen
+18: Clause index=4 end=22
+19: TraceClause index=4
+20: WhenTest index=4 case=0 dst=1
+21: JumpUnless reg=1 target=30
+22: EnterWhen select=0 when=4
+23: Clause index=5 end=25
+24: TraceClause index=5
+25: Clause index=6 end=29
+26: TraceClause index=6
+27: Const dst=1 konst=1
+28: Say index=6 src=1
+29: EndWhen
+30: Clause index=7 end=33
+31: TraceClause index=7
+32: Exec index=7
+33: Clause index=8 end=37
+34: TraceClause index=8
+35: Const dst=0 konst=2
+36: Say index=8 src=0
 registers: 2
 consts: 'a' 'b' 'after'
 
@@ -931,32 +951,33 @@ do j = 1 to 2
             nop
 end
 ----
-0: Clause index=0 end=2
-1: EvalExpr index=0 slot=0 dst=0
-2: Clause index=1 end=5
-3: WhenTest index=1 case=0 dst=1
-4: JumpUnless reg=1 target=16
-5: EnterWhen select=0 when=1
-6: Clause index=2 end=7
-7: Clause index=3 end=13
-8: LoadConstant dst=1
-9: LoopHeaderValue role=Initial src=1
-10: LoadConstant dst=2
-11: LoopHeaderValue role=To src=2
-12: LoopRun index=3
-13: Clause index=4 end=14
-14: LoopNext index=3
-15: EndWhen
-16: Clause index=6 end=18
-17: Exec index=6
-18: Clause index=7 end=24
-19: LoadConstant dst=0
-20: LoopHeaderValue role=Initial src=0
-21: LoadConstant dst=1
-22: LoopHeaderValue role=To src=1
-23: LoopRun index=7
-24: Clause index=8 end=25
-25: LoopNext index=7
+0: Clause index=0 end=3
+1: LoadConstant dst=0
+2: SelectCase index=0 src=0
+3: Clause index=1 end=6
+4: WhenTest index=1 case=0 dst=1
+5: JumpUnless reg=1 target=17
+6: EnterWhen select=0 when=1
+7: Clause index=2 end=8
+8: Clause index=3 end=14
+9: LoadConstant dst=1
+10: LoopHeaderValue role=Initial src=1
+11: LoadConstant dst=2
+12: LoopHeaderValue role=To src=2
+13: LoopRun index=3
+14: Clause index=4 end=15
+15: LoopNext index=3
+16: EndWhen
+17: Clause index=6 end=19
+18: Exec index=6
+19: Clause index=7 end=25
+20: LoadConstant dst=0
+21: LoopHeaderValue role=Initial src=0
+22: LoadConstant dst=1
+23: LoopHeaderValue role=To src=1
+24: LoopRun index=7
+25: Clause index=8 end=26
+26: LoopNext index=7
 registers: 3
 consts:
 
@@ -1001,8 +1022,10 @@ call zsub >zp
 0: Clause index=0 end=3
 1: LoadConstant dst=0
 2: Store index=0 at=0 src=0
-3: Clause index=1 end=5
-4: Call index=1 site=0
+3: Clause index=1 end=7
+4: Reference slot=0 path=root dst=0
+5: PushArg src=0
+6: CallNamed index=1 site=0 argc=1
 registers: 1
 consts:
 
@@ -1342,5 +1365,120 @@ end
 7: Clause index=1 end=9
 8: TraceClause index=1
 9: LoopNext index=0
+registers: 1
+consts:
+
+# A `SELECT CASE` expression is native ops, filed by `SelectCase` behind them.
+compile
+select case length(s)
+  when 1 then nop
+  otherwise nop
+end
+----
+0: CallingClause index=0 end=5
+1: Load read=Simple at=0 dst=1
+2: PushArg src=1
+3: CallArgs slot=0 path=root site=0 argc=1 dst=0
+4: SelectCase index=0 src=0
+5: Clause index=1 end=8
+6: WhenTest index=1 case=0 dst=1
+7: JumpUnless reg=1 target=12
+8: EnterWhen select=0 when=1
+9: Clause index=2 end=10
+10: Clause index=3 end=11
+11: EndWhen
+12: EnterOtherwise select=0
+13: Clause index=4 end=14
+14: Clause index=5 end=15
+15: EndWhen
+16: Clause index=6 end=18
+17: Exec index=6
+registers: 2
+consts:
+
+# The same under `TRACE I`, its intermediates echoed by the ops.
+compile trace=i
+select case s~size + 1
+  when 1 then nop
+  otherwise nop
+end
+----
+0: CallingClause index=0 end=10
+1: TraceClause index=0
+2: Load read=Simple at=0 dst=0
+3: TraceRead read=Simple src=0
+4: Send site=0 recv=0 argc=0 dst=0 form=Value
+5: LoadConstant dst=1
+6: TraceLiteral src=1
+7: Arith op=+ hint=0 lhs=0 rhs=1 dst=0
+8: TraceOperator op=+ src=0
+9: SelectCase index=0 src=0
+10: Clause index=1 end=14
+11: TraceClause index=1
+12: WhenTest index=1 case=0 dst=1
+13: JumpUnless reg=1 target=20
+14: EnterWhen select=0 when=1
+15: Clause index=2 end=17
+16: TraceClause index=2
+17: Clause index=3 end=19
+18: TraceClause index=3
+19: EndWhen
+20: EnterOtherwise select=0
+21: Clause index=4 end=23
+22: TraceClause index=4
+23: Clause index=5 end=25
+24: TraceClause index=5
+25: EndWhen
+26: Clause index=6 end=29
+27: TraceClause index=6
+28: Exec index=6
+registers: 2
+consts:
+
+# A `:scope` override is evaluated into a register of its own and checked by
+# `SendScope` before the arguments; the send names that register.
+compile
+x = self~m:super(1)
+----
+0: CallingClause index=0 end=8
+1: Load read=Simple at=1 dst=0
+2: Load read=Simple at=2 dst=1
+3: SendScope recv=0 scope=1
+4: LoadConstant dst=2
+5: PushArg src=2
+6: SendWith site=0 recv=0 argc=1 dst=0 scope=1 form=Value
+7: Store index=0 at=0 src=0
+registers: 3
+consts:
+
+# A cascade's send answers its receiver.
+compile
+a = b~~append(1)
+----
+0: CallingClause index=0 end=6
+1: Load read=Simple at=1 dst=0
+2: LoadConstant dst=1
+3: PushArg src=1
+4: SendWith site=0 recv=0 argc=1 dst=0 scope=- form=Cascade
+5: Store index=0 at=0 src=0
+registers: 2
+consts:
+
+# A reference and a namespace class are addressed like a call, and echo
+# through the same node-addressed line.
+compile trace=i
+zr = >zv
+zc = rexx:string
+----
+0: Clause index=0 end=5
+1: TraceClause index=0
+2: Reference slot=0 path=root dst=0
+3: TraceFunction index=0 slot=0 path=root src=0
+4: Store index=0 at=0 src=0
+5: Clause index=1 end=10
+6: TraceClause index=1
+7: ClassAt slot=0 path=root dst=0
+8: TraceFunction index=1 slot=0 path=root src=0
+9: Store index=1 at=2 src=0
 registers: 1
 consts:

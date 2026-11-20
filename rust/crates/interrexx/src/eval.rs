@@ -589,10 +589,7 @@ impl Interp {
             // `ns:Name`, the qualified class lookup. The `>N>` line it owes
             // is this hook's sibling below, in `trace_intermediate`.
             ExprKind::ClassResolver { namespace, name } => {
-                let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
-                let name = code.symbols.name(*name).as_bytes().to_vec();
-                let package = self.running_program().ok_or_else(Loud::missing_body)?;
-                self.namespace_class(package, &namespace, &name)
+                self.resolve_class_at(code, *namespace, *name)
             }
             // `ns:name(...)`, resolved against that namespace's public
             // routines alone -- so none of `resolve_call`'s four steps runs,
@@ -612,6 +609,20 @@ impl Interp {
             }
             other => Err(Loud::expression(other).into()),
         }
+    }
+
+    /// The class `namespace:name` names, from the running program's
+    /// namespaces; [`crate::ir::Op::ClassAt`] and the walker share it.
+    pub(crate) fn resolve_class_at(
+        &mut self,
+        code: &Code<'_>,
+        namespace: SymbolId,
+        name: SymbolId,
+    ) -> Result<ObjRef, Failure> {
+        let namespace = code.symbols.name(namespace).as_bytes().to_vec();
+        let name = code.symbols.name(name).as_bytes().to_vec();
+        let package = self.running_program().ok_or_else(Loud::missing_body)?;
+        self.namespace_class(package, &namespace, &name)
     }
 
     /// `ExprKind::List`: a fresh `.Array` whose slots are the list's

@@ -307,7 +307,7 @@ Raised	routine_not_found	body	crates/interrexx/src/error.rs	off-send-surface	-	-
 Raised	routine_null_argument	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	routine_user_defined	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Loud	scheduler_inconsistency	body+ir+send	crates/interrexx/src/lib.rs	agrees	no	no route: a guard wait's send is kept until its resume takes it, and a guarded method whose body parks is unguarded in the library	t~v over ::attribute v while a REPLY continuation holds the lock (guarded_getter_waits_for_reply.rex)
-Raised	scope_override_not_a_class	body+send	crates/interrexx/src/error.rs	agrees	yes	88.914	o~m:v with v holding 5
+Raised	scope_override_not_a_class	body+ir+send	crates/interrexx/src/error.rs	agrees	yes	88.914	o~m:v with v holding 5
 Raised	scope_override_not_a_scope	send	crates/interrexx/src/error.rs	agrees	yes	93.957	o~m:.Array
 Loud	select_op_off_its_node	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	separator_not_a_char	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
