@@ -388,7 +388,8 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Store { .. } => "Store",
         Op::Say { .. } => "Say",
         Op::Signal { .. } => "Signal",
-        Op::Parse { .. } => "Parse",
+        Op::ParseBegin { .. } => "ParseBegin",
+        Op::ParseRun { .. } => "ParseRun",
         Op::Return { .. } => "Return",
         Op::Queue { .. } => "Queue",
         Op::Call { .. } => "Call",
@@ -1246,34 +1247,31 @@ macro_rules! region_ops {
                     };
                     break $cold Ok(RegionEnd::Flowed(flow));
                 }
-                // `PARSE`/`ARG`/`PULL`. The whole instruction is
-                // `exec_parse`, which both engines enter; what
-                // this op adds is the source expression already
-                // evaluated, for the one source that has one.
-                Op::Parse { $index, src } => {
+                // `PARSE`/`ARG`/`PULL`: the compiled walk, or the
+                // whole instruction run by `exec_parse`, which can read
+                // a line or run Rexx code and so ends the region as a
+                // settled `Flow`, with the runs after this op not driven.
+                Op::ParseBegin { $index, src, base, to, opening, strings } => {
                     debug_assert_names_the_clause(
-                        $code, *$index, $clause, "Parse",
+                        $code, *$index, $clause, "ParseBegin",
                     );
-                    let (InstructionKind::Parse(parse)
-                    | InstructionKind::Arg(parse)
-                    | InstructionKind::Pull(parse)) = &$clause.kind
-                    else {
-                        break $cold Err(Loud::instruction(&$clause.kind).into());
-                    };
-                    let evaluated = src.map(|register| {
-                    debug_assert!(
-                        $chunk.holds_register(register),
-                        "op reads register {register} outside the region the \
-                         chunk reserved"
+                    match $self.parse_begin(
+                        $code, $clause, *src, *base, *to, *opening, *strings, $registers,
+                    ) {
+                        Ok(true) => {}
+                        Ok(false) => break $cold Ok(RegionEnd::Flowed(Flow::Next)),
+                        Err(failure) => break $cold Err(failure),
+                    }
+                }
+                Op::ParseRun { $index, base, from, to, operand } => {
+                    debug_assert_names_the_clause(
+                        $code, *$index, $clause, "ParseRun",
                     );
-                    $registers.get(register)
-                });
                     if let Err(failure) =
-                        $self.exec_parse($code, parse, evaluated)
+                        $self.parse_run($code, $clause, *base, *from, *to, *operand, $registers)
                     {
                         break $cold Err(failure);
                     }
-                    break $cold Ok(RegionEnd::Flowed(Flow::Next));
                 }
                 Op::Say { $index, src } => {
                     debug_assert_names_the_clause($code, *$index, $clause, "Say");
@@ -4623,6 +4621,35 @@ impl Interp {
                                 Some(*index as usize),
                                 "a LoopNext op ended a pass of a loop other than the one it names"
                             );
+                            // Compiled passes, once the loop is hot: the
+                            // same boundary and clauses, run until one of
+                            // them needs the driver.
+                            #[cfg(feature = "jit")]
+                            if !GRANTING
+                                && chunk.jit.hot(*index)
+                                && stream.len() == full.len()
+                                && let Some(action) = self.jit_passes(
+                                    code,
+                                    chunk,
+                                    registers,
+                                    source,
+                                    pc,
+                                    *index,
+                                    TOP,
+                                    (base, start, end),
+                                )
+                            {
+                                match action {
+                                    jit_host::JitAction::At(target) => {
+                                        pc = target;
+                                        continue 'ops;
+                                    }
+                                    jit_host::JitAction::Settle(flow, next) => {
+                                        break 'step (flow, next);
+                                    }
+                                    jit_host::JitAction::Return(exit) => return exit,
+                                }
+                            }
                             // The pass's header clause, counted here so a
                             // slice that ends at it leaves this op to run
                             // afresh.
@@ -5069,6 +5096,9 @@ impl Interp {
         }
     }
 }
+
+#[cfg(feature = "jit")]
+pub(crate) mod jit_host;
 
 #[cfg(test)]
 mod tests;

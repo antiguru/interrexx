@@ -6,6 +6,9 @@
 //! ```
 
 mod trigger;
+mod walk;
+
+pub(crate) use walk::WALK_REGISTERS;
 
 use crate::error::{Failure, Raised};
 use crate::version::{PLATFORM, VERSION};
@@ -566,6 +569,10 @@ impl Interp {
     }
 
     /// One `PARSE` instruction: resolve the source, then walk the template.
+    /// `evaluated` is the source already in hand: `PARSE VALUE`'s expression
+    /// as the stream evaluated it, or a simple `PARSE VAR` name as the
+    /// compiled walk read it before handing the clause over, so that neither
+    /// is evaluated or read, nor a `NOVALUE` hook sent, a second time.
     pub(crate) fn exec_parse(
         &mut self,
         code: &Code<'_>,
@@ -788,8 +795,15 @@ impl Interp {
             // and `>V>` for a compound, and `NOVALUE` for an unset name --
             // measured, `signal on novalue` traps on `parse var zzunset t`.
             ParseSource::Var(id) => {
-                let value = self.read_parse_var(code, *id, indent)?;
-                self.roots.activity_mut().push_temp(value);
+                let value = match evaluated {
+                    // Rooted by the walk that read it.
+                    Some(value) => value,
+                    None => {
+                        let value = self.read_parse_var(code, *id, indent)?;
+                        self.roots.activity_mut().push_temp(value);
+                        value
+                    }
+                };
                 ("VAR", Subject::Value(value))
             }
             // The second word is the *calling context* rather than the call
@@ -913,6 +927,7 @@ impl Interp {
 
     /// Carves the current section into this trigger's targets: a blank
     /// delimited word each, and the whole remainder for the last one.
+    #[inline(always)]
     fn assign_targets(
         &mut self,
         code: &Code<'_>,

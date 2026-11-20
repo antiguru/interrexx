@@ -34,7 +34,9 @@ pub use hash_seed::HashSeed;
 #[cfg(feature = "sharing")]
 pub use heap::SharingCount;
 pub use heap::{CollectStats, Heap};
-pub use roots::{ActivityRoots, FrameAliases, FrameId, Parked, RootSet, SlotFrame, SlotRef};
+pub use roots::{
+    ActivityRoots, FrameAliases, FrameId, Parked, RootSet, SlotFrame, SlotRef, VarSlot,
+};
 pub use slots::ArraySlots;
 pub use tails::Tails;
 

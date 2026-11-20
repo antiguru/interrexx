@@ -60,6 +60,16 @@ refused loudly.
 * **Calls are stackless.** A Rexx-to-Rexx call or send pushes the callee's frame and continues in
   the same driver loop; `RETURN` delivers into the caller's register. A depth cap raises Error 11.
 * **INTERPRET** compiles its fragment to a chunk of its own, resolved against the enclosing frame.
+* **PARSE templates compile to a walk.** Every `PARSE`, `ARG` and `PULL` opens with
+  `ParseBegin`, which carries what the compiler knows about how to take it: the template
+  engine whole (a fold, a source read as a line or built by the interpreter, `PARSE VAR` into
+  words or of a stem or compound), or the walk over a value, a simple variable or the
+  arguments, with their count. The walk goes up to the first operand the stream computes;
+  in a clause that cannot trace, each such operand's ops are followed by a `ParseRun` that
+  walks on to the next. Literals and simple variables are read where the walk reaches them.
+  Between two ops the parse string and cursor live in the clause's registers. At run time
+  `ParseBegin` still hands the clause to the engine when a line will be traced or a parse
+  string is not its own string value, before anything is sent.
 
 ## Values and the object model
 
@@ -231,3 +241,4 @@ under a seed are reported, never gating.
 | D-U2 | the interpreter island is `Send` only inside `island.rs`'s baton wrapper | moving a driver between threads; `Rc` and `Cell` are touched by the baton holder only |
 | D-U3 | signal handlers in `signal.rs` only set an atomic and write to a self-pipe | async-signal safety |
 | D-U4 | one frame arena per activity | frames stay LIFO within an activity while activities interleave |
+| D-U5 | the `jit` feature's generated code and its helpers are the `unsafe` of `interrexx/src/jit.rs` only; generated code touches the `jit::layout::Native` block, the register frame and the slot window, at offsets taken from those types | Cranelift-compiled loops behind one module, with the invariant stated and checked there |

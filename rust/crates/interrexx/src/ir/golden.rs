@@ -29,10 +29,30 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     render_register(*src)
                 ));
             }
-            Op::Parse { index: at, src } => {
+            Op::ParseBegin {
+                index: at,
+                src,
+                base,
+                to,
+                opening,
+                strings,
+            } => {
                 out.push_str(&format!(
-                    "{index}: Parse index={at} src={}\n",
-                    render_register(*src)
+                    "{index}: ParseBegin index={at} src={} base={} to={to} opening={opening:?} \
+                     strings={strings}\n",
+                    render_arg(*src),
+                    render_arg(*base)
+                ));
+            }
+            Op::ParseRun {
+                index: at,
+                base,
+                from,
+                to,
+                operand,
+            } => {
+                out.push_str(&format!(
+                    "{index}: ParseRun index={at} base={base} from={from} to={to} operand={operand}\n"
                 ));
             }
             Op::LoopNext { index: at } => {
