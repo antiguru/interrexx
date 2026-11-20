@@ -456,15 +456,19 @@ impl Unix {
 
 fn handshake(stream: &UnixStream, version: u32) -> Result<(), ConnectFailure> {
     let absent = ConnectFailure::Absent;
-    send_all(stream, &wire::hello(version)).map_err(absent)?;
+    // The timeout is set before the `hello` goes out. A service of another version answers and
+    // closes at once, and macOS then fails `setsockopt` on the closed socket with `EINVAL`, which
+    // would turn a refusal into an absent service.
     stream
         .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
         .map_err(absent)?;
+    send_all(stream, &wire::hello(version)).map_err(absent)?;
     let mut welcome = [0; wire::WELCOME_LENGTH];
     (&*stream).read_exact(&mut welcome).map_err(absent)?;
-    stream.set_read_timeout(None).map_err(absent)?;
     match wire::read_welcome(&welcome) {
-        (true, _) => Ok(()),
+        // Only an accepting service keeps the connection open, so only here can the timeout still
+        // be cleared.
+        (true, _) => stream.set_read_timeout(None).map_err(absent),
         (false, theirs) => Err(ConnectFailure::Refused { theirs }),
     }
 }
