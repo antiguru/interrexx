@@ -60,6 +60,9 @@ pub(crate) struct Native {
     /// Non-zero when `NUMERIC FUZZ` is 0 and `TRACE` shows no results: what
     /// the driver's own quick comparison and quick condition test ask.
     pub(crate) quick_values: u64,
+    /// Pass boundaries generated code has reached, which the host weighs the
+    /// ops it ran against.
+    pub(crate) passes: u64,
 }
 
 impl Native {
@@ -85,6 +88,7 @@ impl Native {
             loop_value: 0,
             loop_dirty: 0,
             quick_values: 0,
+            passes: 0,
         }
     }
 }
@@ -115,6 +119,7 @@ pub(crate) const LOOP_INDENT: i32 = at(offset_of!(Native, loop_indent));
 pub(crate) const LOOP_VALUE: i32 = at(offset_of!(Native, loop_value));
 pub(crate) const LOOP_DIRTY: i32 = at(offset_of!(Native, loop_dirty));
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
+pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
 
 /// A variable slot's size, and where its two words are.
 pub(crate) const SLOT_SIZE: i64 = size_of::<VarSlot>() as i64;

@@ -695,6 +695,9 @@ fn open(
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
 fn pass_step(e: &mut Emit<'_, '_>) {
+    let passes = e.load_native(types::I64, layout::PASSES);
+    let passes = e.b.ins().iadd_imm_u(passes, 1);
+    e.store_native(passes, layout::PASSES);
     let slow = e.b.create_block();
     let body = e.b.create_block();
     let check = e.b.create_block();

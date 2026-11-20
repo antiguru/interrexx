@@ -36,6 +36,8 @@ const THRESHOLD: u32 = 64;
 /// A body is compiled only when it has at least this many steps compiled code
 /// does itself for each op the host runs.
 const HOSTED_SHARE: usize = 4;
+/// Passes a compiled loop runs before its hosted ops are weighed.
+const RETIRE_AFTER: u64 = 16;
 /// A loop whose body has an op the compiled code does not take.
 const REFUSED: u32 = u32::MAX;
 
@@ -45,7 +47,9 @@ pub(crate) struct Loops {
     /// Below [`THRESHOLD`], passes so far; [`THRESHOLD`] plus `k`, the `k`th
     /// entry of `compiled`; [`REFUSED`], never compiled.
     state: Box<[Cell<u32>]>,
-    compiled: RefCell<Vec<Rc<jit::Compiled>>>,
+    /// Each compiled loop with its budget: how many ops per pass the host
+    /// may run before the loop is retired.
+    compiled: RefCell<Vec<(Rc<jit::Compiled>, u64)>>,
 }
 
 impl Loops {
@@ -102,6 +106,14 @@ struct Driven<'a, 'c> {
     open: Option<Open>,
     /// Whether [`Host::leave`] works out the loop's quick pass.
     ask_loop: bool,
+    /// Ops per pass the host may run, and the ops it has run: a loop whose
+    /// values keep the compiled code's own paths from answering costs more
+    /// compiled than driven, so past its budget it is retired.
+    budget: u64,
+    hosted: u64,
+    /// Whether the loop is being retired: it leaves for the driver at the
+    /// next clause opening or pass boundary and is not compiled again.
+    retire: bool,
     /// Whether the clause's last op closed it, so its `Step::Close` has
     /// nothing left to do.
     closed: bool,
@@ -133,8 +145,8 @@ impl Interp {
                 return None;
             }
             passes if passes == THRESHOLD - 1 => {
-                let Some(compiled) =
-                    pass_of(chunk, pc, do_index).and_then(|(pass, _)| jit::compile(&pass))
+                let Some((compiled, budget)) = pass_of(chunk, pc, do_index)
+                    .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
                 else {
                     state.set(REFUSED);
                     return None;
@@ -142,11 +154,16 @@ impl Interp {
                 let compiled = Rc::new(compiled);
                 let mut all = chunk.jit.compiled.borrow_mut();
                 state.set(THRESHOLD + all.len() as u32);
-                all.push(Rc::clone(&compiled));
-                compiled
+                all.push((Rc::clone(&compiled), budget));
+                (compiled, budget)
             }
-            at => Rc::clone(chunk.jit.compiled.borrow().get((at - THRESHOLD) as usize)?),
+            at => {
+                let all = chunk.jit.compiled.borrow();
+                let (compiled, budget) = all.get((at - THRESHOLD) as usize)?;
+                (Rc::clone(compiled), *budget)
+            }
         };
+        let (compiled, budget) = compiled;
         let body_start = chunk.op_at(do_index as usize + 1)?;
         let mut driven = Driven {
             interp: self,
@@ -160,6 +177,9 @@ impl Interp {
             body_start,
             open: None,
             ask_loop: true,
+            budget,
+            hosted: 0,
+            retire: false,
             closed: false,
             exit: None,
         };
@@ -180,7 +200,7 @@ impl Interp {
 /// The body of the loop whose `Op::DO` is instruction `do_index` and whose
 /// `Op::LoopNext` is at `loop_pc`, as a [`Pass`], or `None` where it holds
 /// anything but plain clause regions of value ops and stores.
-fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
+fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
     let body_start = chunk.op_at(do_index as usize + 1)?;
     if body_start >= loop_pc {
         return None;
@@ -361,13 +381,14 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
     if hosted * HOSTED_SHARE > native {
         return None;
     }
+    let budget = (native / HOSTED_SHARE).max(1) as u64;
     Some((
         Pass {
             steps,
             registers: chunk.registers,
             end: loop_pc,
         },
-        body_start,
+        budget,
     ))
 }
 
@@ -388,6 +409,15 @@ fn quick_compare(op: Operator) -> Option<Compare> {
 }
 
 impl Driven<'_, '_> {
+    /// Leaves for the driver at `pc`, a clause opening or the pass boundary,
+    /// and keeps the loop from being compiled again.
+    fn retired(&mut self, pc: u32) -> u32 {
+        if let Some(state) = self.chunk.jit.state.get(self.do_index) {
+            state.set(REFUSED);
+        }
+        self.stop(JitExit::At(pc))
+    }
+
     fn stop(&mut self, exit: JitExit) -> u32 {
         self.exit = Some(exit);
         STOP
@@ -447,6 +477,9 @@ impl Driven<'_, '_> {
 
 impl Host for Driven<'_, '_> {
     fn pass(&mut self) -> u32 {
+        if self.retire {
+            return self.retired(self.loop_pc);
+        }
         self.ask_loop = true;
         let counted = match self.interp.count_clause_against_deadline(self.top) {
             Ok(counted) => counted,
@@ -469,6 +502,9 @@ impl Host for Driven<'_, '_> {
     }
 
     fn open(&mut self, pc: u32) -> u32 {
+        if self.retire {
+            return self.retired(pc);
+        }
         let Some(&(Op::Clause { index, end } | Op::CallingClause { index, end })) =
             self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
         else {
@@ -534,6 +570,7 @@ impl Host for Driven<'_, '_> {
     }
 
     fn op(&mut self, pc: u32) -> u32 {
+        self.hosted += 1;
         // Between clauses: the driver's own `Op::EndBranch` arm.
         if let Some(Op::EndBranch) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
             return match self.interp.end_promoted_branch(Flow::Next) {
@@ -625,6 +662,17 @@ impl Host for Driven<'_, '_> {
         native.quick_values =
             u64::from(self.interp.activation().settings.fuzz() == 0 && !mode.results);
         native.loop_ready = 0;
+        if !self.retire
+            && native.passes >= RETIRE_AFTER
+            && self.hosted > native.passes * self.budget
+        {
+            self.retire = true;
+        }
+        if self.retire {
+            // Every opening and boundary goes through the host, which leaves.
+            native.steady = 0;
+            return;
+        }
         // Asked only where a pass boundary was just crossed, or the run is
         // starting: any other call clears it, so the next boundary is the
         // host's, which asks again. A call can change what the answer rests
