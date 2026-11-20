@@ -1399,7 +1399,7 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     // raises HALT on the `SockSend` line.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
-            let flags = flags | crate::host::SEND_FLAGS;
+            let flags = flags | crate::host::no_sigpipe_flags(socket);
             rustix::net::send(socket, &bytes, flags)
                 .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
                 .map_err(os)
@@ -1431,7 +1431,7 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     // As `SockSend`: a halting signal ends a blocked send at this clause.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
-            let flags = flags | crate::host::SEND_FLAGS;
+            let flags = flags | crate::host::no_sigpipe_flags(socket);
             let count = match target(address) {
                 Target::Inet(v4) | Target::Unspec(v4) => {
                     rustix::net::sendto(socket, &bytes, flags, &v4)

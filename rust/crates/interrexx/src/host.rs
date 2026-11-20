@@ -20,23 +20,31 @@ use rustix::net::SendFlags;
 
 mod sys;
 
-/// The flags of every send on a socket: they keep it from raising `SIGPIPE`
-/// where the send can say so. Elsewhere [`prepare_socket`] sets that on the
-/// socket instead, and a socket the interpreter did not make relies on
-/// `SIGPIPE` being ignored, as every interpreter start makes it.
+/// The flags of a send on `socket` that keep it from raising `SIGPIPE`: on
+/// Linux the send says so itself.
 #[cfg(any(target_os = "linux", target_os = "android"))]
-pub(crate) const SEND_FLAGS: SendFlags = SendFlags::NOSIGNAL;
+pub(crate) fn no_sigpipe_flags(_socket: BorrowedFd<'_>) -> SendFlags {
+    SendFlags::NOSIGNAL
+}
 
-/// The flags of every send on a socket: they keep it from raising `SIGPIPE`
-/// where the send can say so. Elsewhere [`prepare_socket`] sets that on the
-/// socket instead, and a socket the interpreter did not make relies on
-/// `SIGPIPE` being ignored, as every interpreter start makes it.
+/// The flags of a send on `socket` that keep it from raising `SIGPIPE`. No
+/// send can say so here, so the socket is set to answer `EPIPE` before every
+/// send, since it may be one the interpreter did not make and an embedding
+/// program may have restored `SIGPIPE`. Apple's kernel refuses the option on
+/// a socket whose connection has ended, with `EINVAL`; the send then goes
+/// ahead, so that it answers the host's own failure. A socket the interpreter
+/// made had the option set when it was made ([`prepare_socket`]), so only a
+/// socket from elsewhere, already ended, in a process that does not ignore
+/// `SIGPIPE`, can still raise it.
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
-pub(crate) const SEND_FLAGS: SendFlags = SendFlags::empty();
+pub(crate) fn no_sigpipe_flags(socket: BorrowedFd<'_>) -> SendFlags {
+    let _ = rustix::net::sockopt::set_socket_nosigpipe(socket, true);
+    SendFlags::empty()
+}
 
-/// Readies a socket the interpreter has just made or accepted: where the
-/// send cannot say so, its writes answer `EPIPE` instead of raising
-/// `SIGPIPE`.
+/// Readies a socket the interpreter has just made or accepted: where no send
+/// can keep it from raising `SIGPIPE`, it answers `EPIPE` instead for its
+/// whole life.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 #[expect(
     clippy::unnecessary_wraps,
@@ -46,9 +54,9 @@ pub(crate) fn prepare_socket(_socket: BorrowedFd<'_>) -> rustix::io::Result<()> 
     Ok(())
 }
 
-/// Readies a socket the interpreter has just made or accepted: where the
-/// send cannot say so, its writes answer `EPIPE` instead of raising
-/// `SIGPIPE`.
+/// Readies a socket the interpreter has just made or accepted: where no send
+/// can keep it from raising `SIGPIPE`, it answers `EPIPE` instead for its
+/// whole life.
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 pub(crate) fn prepare_socket(socket: BorrowedFd<'_>) -> rustix::io::Result<()> {
     rustix::net::sockopt::set_socket_nosigpipe(socket, true)
@@ -281,7 +289,27 @@ pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
 mod tests {
     use std::os::fd::{AsFd as _, AsRawFd as _};
 
-    use super::{SelectTable, bytes_waiting};
+    use super::{SelectTable, bytes_waiting, no_sigpipe_flags};
+
+    /// A send on a socket the interpreter did not make is kept from raising
+    /// `SIGPIPE` all the same: by the send's own flag on Linux, and by the
+    /// option the send path sets on the socket elsewhere.
+    #[test]
+    fn a_send_on_any_socket_is_kept_from_raising_sigpipe() {
+        let (socket, _peer) = std::os::unix::net::UnixStream::pair().expect("a socket pair");
+        let flags = no_sigpipe_flags(socket.as_fd());
+        #[cfg(any(target_os = "linux", target_os = "android"))]
+        assert_eq!(flags, rustix::net::SendFlags::NOSIGNAL);
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        {
+            assert_eq!(flags, rustix::net::SendFlags::empty());
+            assert_eq!(
+                rustix::net::sockopt::socket_nosigpipe(&socket),
+                Ok(true),
+                "SO_NOSIGPIPE"
+            );
+        }
+    }
 
     /// A descriptor just closed lies inside the table, which grew to hold it,
     /// so `select` looks at it (and answers `EBADF`); a negative one never.
