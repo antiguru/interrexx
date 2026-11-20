@@ -464,10 +464,8 @@ fn native_stem_has_item(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"HASITEM")?;
-    // Optional, unlike every other class's, where a missing item is 93.903.
-    let Some(wanted) = args.first().copied().flatten() else {
-        return Ok(Some(crate::eval::logical(false)));
-    };
+    // Required, as every other class's: a missing item is 93.903 (`r[class.stem.hasitem]`).
+    let wanted = super::collection::item_argument(args)?;
     for (_, value) in stem_live(interp, receiver) {
         if super::collection::same_item(interp, wanted, value)? {
             return Ok(Some(crate::eval::logical(true)));
@@ -483,9 +481,8 @@ fn native_stem_index(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"INDEX")?;
-    let Some(wanted) = args.first().copied().flatten() else {
-        return Ok(Some(ObjRef::NIL));
-    };
+    // Required: a missing item is 93.903 (`r[class.stem.index]`).
+    let wanted = super::collection::item_argument(args)?;
     for (name, value) in stem_live(interp, receiver) {
         if super::collection::same_item(interp, wanted, value)? {
             return Ok(Some(interp.text_built(name)));
