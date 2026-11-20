@@ -6,9 +6,10 @@
 #
 # --out  where the libraries go. Default: rust/target/spec-fixture.
 #
-# The products are libspecfixture.so, libspecclassic.so and libspecnewer.so. They link nothing
-# from an interpreter, so the same files load into interrexx and into the oracle; the build fails
-# if `ldd` shows either interpreter library among a product's dependencies.
+# The products are libspecfixture.so, libspecclassic.so, libspecnewer.so and libspecraising.so.
+# They link nothing from an interpreter, so the same files load into interrexx and into the
+# oracle; the build fails if `ldd` shows either interpreter library among a product's
+# dependencies.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -40,7 +41,7 @@ if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
 fi
 rm -f "$out/.stamp"
 
-for variant in PACKAGE:specfixture CLASSIC:specclassic NEWER:specnewer; do
+for variant in PACKAGE:specfixture CLASSIC:specclassic NEWER:specnewer RAISING:specraising; do
     define=${variant%%:*}
     name=${variant#*:}
     "$api_cxx" -shared -o "$out/lib$name.so.tmp" "$src" "${api_flags[@]}" -pthread \
