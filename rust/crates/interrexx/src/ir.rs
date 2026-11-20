@@ -792,6 +792,9 @@ pub(crate) struct Chunk {
     /// Instruction index -> the range of [`Chunk::conditions`] its loop's
     /// condition compiled to, for a `DO`/`LOOP` whose condition did.
     condition_of: Box<[Option<ConditionOps>]>,
+    /// Which of this chunk's loops run compiled (`crate::jit`).
+    #[cfg(feature = "jit")]
+    pub(crate) jit: drive::jit_host::Loops,
 }
 
 impl Chunk {

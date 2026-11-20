@@ -2674,6 +2674,21 @@ impl Interp {
         }
     }
 
+    /// The [`SteppedClause`] for a clause compiled code opened itself, with
+    /// every write [`Interp::enter_stepped_clause`] makes already made
+    /// (`crate::ir::drive::jit_host`), so that the interpreter can close it.
+    #[cfg(feature = "jit")]
+    pub(crate) fn adopt_stepped_clause(&mut self) -> SteppedClause {
+        let entry = self.adopt_clause_entry();
+        let temps_at_entry = self.roots.activity().temps_len();
+        let frame = self.roots.activity_mut().push_frame();
+        SteppedClause {
+            entry,
+            frame,
+            temps_at_entry,
+        }
+    }
+
     /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
     /// interactive-debug `=` re-runs: takes and answers the indent it is
     /// re-run at, or ends the one recorded for an earlier clause.

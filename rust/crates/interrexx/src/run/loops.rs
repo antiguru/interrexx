@@ -201,6 +201,19 @@ pub(crate) enum FlatStart {
 }
 
 /// What one pass boundary decided.
+/// [`Interp::quick_pass`]'s answer.
+#[cfg(feature = "jit")]
+pub(crate) struct QuickPass {
+    /// The control variable's slot.
+    pub(crate) slot: usize,
+    pub(crate) step: i64,
+    pub(crate) to: i64,
+    /// The `END`'s line, which the header clause runs at.
+    pub(crate) line: usize,
+    /// The value indent a pass that carries on leaves.
+    pub(crate) open_indent: usize,
+}
+
 pub(crate) enum FlatStep {
     /// One more pass, from this op.
     Body(u32),
@@ -1337,6 +1350,68 @@ impl Interp {
         })? {
             ClauseOutcome::Ended(exit) => Ok(FlatStart::Ended(Flow::Exit(exit.value()))),
             ClauseOutcome::Ran(ran) => ran.map(|()| FlatStart::Block),
+        }
+    }
+
+    /// The innermost flat loop's next pass, when it is
+    /// [`Interp::loop_advance_quick`]'s ordinary counted one and the header
+    /// clause it runs in is a plain `END` with nothing to echo: what compiled
+    /// code needs to take that pass itself (`crate::ir::drive::jit_host`).
+    /// Such a pass is a countdown tick, the clause line and indent, and the
+    /// control variable's read, add, write and compare, and nothing else.
+    #[cfg(feature = "jit")]
+    pub(crate) fn quick_pass(&self, do_index: usize) -> Option<QuickPass> {
+        let flat = self.activity.flat_top.as_deref()?;
+        if flat.do_index != do_index
+            || flat.test != PassTest::Plain
+            || !matches!(flat.header_clause, HeaderClause::End)
+        {
+            return None;
+        }
+        let LoopState::Controlled {
+            at: Some(slot),
+            current: ControlValue::Small(_),
+            for_remaining: None,
+            cached_digits,
+            to_int: Some(to),
+            by_int: Some(step),
+            shape: NameShape::Simple,
+            stepped: true,
+            ..
+        } = &flat.state
+        else {
+            return None;
+        };
+        let settings = &self.activation().settings;
+        let mode = self.trace_mode();
+        if *cached_digits != settings.digits()
+            || settings.fuzz() != 0
+            || mode.all
+            || mode.results
+            || mode.intermediates
+        {
+            return None;
+        }
+        Some(QuickPass {
+            slot: *slot,
+            step: *step,
+            to: *to,
+            line: flat.end_line,
+            open_indent: flat.do_indent + 2,
+        })
+    }
+
+    /// Records `value` as the innermost flat loop's running control value,
+    /// which compiled passes reached and wrote to the variable.
+    #[cfg(feature = "jit")]
+    pub(crate) fn quick_passes_reached(&mut self, value: i64) {
+        if let Some(flat) = self.activity.flat_top.as_deref_mut()
+            && let LoopState::Controlled {
+                current: ControlValue::Small(running),
+                ..
+            } = &mut flat.state
+        {
+            *running = value;
         }
     }
 
