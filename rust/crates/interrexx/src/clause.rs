@@ -262,6 +262,30 @@ impl Interp {
         ClauseEntry(())
     }
 
+    /// Makes the clause compiled code opened the running one, as
+    /// [`Interp::enter_stepped_clause`] would have for a tabled clause with
+    /// nothing pending: its instruction, line and indent, and the trace
+    /// setting it began under.
+    #[cfg(feature = "jit")]
+    pub(crate) fn enter_compiled_clause(&mut self, index: usize, line: usize, indent: usize) {
+        let all = self.trace_mode().all;
+        let state = &mut self.activity.clause_state;
+        state.current_clause_index = index;
+        state.current_clause_line = line;
+        state.current_value_indent = indent;
+        state.instructions_traced_at_entry = all;
+    }
+
+    /// The entry for a clause whose boundary compiled code opened itself
+    /// (`crate::ir::drive::jit_host`), which makes exactly the writes this
+    /// function makes, and opens only while the value buffer is empty
+    /// (`Driven::steady`). The buffer may hold the clause's own arguments by
+    /// the time the clause is adopted: compiled code pushes them itself.
+    #[cfg(feature = "jit")]
+    pub(crate) fn adopt_clause_entry(&self) -> ClauseEntry {
+        ClauseEntry(())
+    }
+
     /// Counts one clause against this run's deadline, and answers the proof
     /// [`Interp::enter_clause`] needs. Only a clause a root driver can leave
     /// `yields` its activity's slice.

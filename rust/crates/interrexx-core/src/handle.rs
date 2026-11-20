@@ -58,6 +58,9 @@ pub const SMALL_INT_MIN: i64 = -(1 << 61);
 /// require_sync(0u64);
 /// ```
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+/// `repr(transparent)`, so a register holding one is the `u64` itself, which
+/// is what code generated for a frame reads and writes.
+#[repr(transparent)]
 pub struct ObjRef(u64, PhantomData<*const ()>);
 
 /// A byte string held in the handle, with no heap object behind it.

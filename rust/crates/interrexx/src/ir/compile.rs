@@ -1355,6 +1355,8 @@ fn compile_settled(
         #[cfg(debug_assertions)]
         settings,
         ops: super::valid::ValidOps::new(ops, registers)?,
+        #[cfg(feature = "jit")]
+        jit: super::drive::jit_host::Loops::new(op_of.len()),
         op_of,
         registers,
         openings: clause_openings(body, plan, &register_tops),

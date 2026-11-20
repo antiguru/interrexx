@@ -106,6 +106,18 @@ dns-lookup = "4"
 
 # The time limit the tests put around a program they start, so that no test
 # depends on which `timeout` the system has (`tests/support/bounded_run.rs`).
+
+# The native code generator behind the `jit` feature (`src/jit.rs`): a flat
+# loop's passes compiled to machine code. Pure Rust; optional, so a build
+# without the feature compiles none of it. The family is pinned to one release,
+# which needs Rust 1.97: the feature asks a newer toolchain than the
+# workspace's `rust-version`, which the default build keeps.
+cranelift-codegen = { version = "=0.137.3", optional = true }
+cranelift-frontend = { version = "=0.137.3", optional = true }
+cranelift-jit = { version = "=0.137.3", optional = true }
+cranelift-module = { version = "=0.137.3", optional = true }
+cranelift-native = { version = "=0.137.3", optional = true }
+
 [[bin]]
 name = "bounded-run"
 path = "tests/support/bounded_run.rs"
@@ -167,6 +179,8 @@ assets = [
 pinning = []
 # The sharing-fraction instrument, `Outcome::sharing`.
 sharing = ["interrexx-core/sharing"]
+# Compiles hot flat loops to native code (`src/jit.rs`).
+jit = ["interrexx-core/jit", "dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
 
 [dev-dependencies]
 # Path-only dev-dependencies on workspace crates carry no version: cargo drops them

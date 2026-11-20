@@ -164,6 +164,11 @@ page records why they are the way they are.
   its own sake; a targeted performance round handles it.
 * **The speed of a traced program is not a target** (2026-10-19). What counts is what tracing
   support costs a program that does not trace.
+* **Hot loops may be compiled with Cranelift, behind the `jit` feature** (2026-11-20, #842). The
+  `unsafe` this needs is granted to `jit.rs` (D-U5), and the Cranelift crates are a dependency of
+  the feature only, off by default. The feature may need a newer Rust than the workspace's
+  `rust-version`, which the default build keeps (2026-11-20). `INTERPRET`ed code is never compiled: each execution would
+  compile afresh, and it is not expected to be fast.
 
 ## Code and pull requests
 

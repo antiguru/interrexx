@@ -4250,6 +4250,35 @@ impl Interp {
                                 Some(*index as usize),
                                 "a LoopNext op ended a pass of a loop other than the one it names"
                             );
+                            // Compiled passes, once the loop is hot: the
+                            // same boundary and clauses, run until one of
+                            // them needs the driver.
+                            #[cfg(feature = "jit")]
+                            if !GRANTING
+                                && chunk.jit.hot(*index)
+                                && stream.len() == full.len()
+                                && let Some(action) = self.jit_passes(
+                                    code,
+                                    chunk,
+                                    registers,
+                                    source,
+                                    pc,
+                                    *index,
+                                    TOP,
+                                    (base, start, end),
+                                )
+                            {
+                                match action {
+                                    jit_host::JitAction::At(target) => {
+                                        pc = target;
+                                        continue 'ops;
+                                    }
+                                    jit_host::JitAction::Settle(flow, next) => {
+                                        break 'step (flow, next);
+                                    }
+                                    jit_host::JitAction::Return(exit) => return exit,
+                                }
+                            }
                             // The pass's header clause, counted here so a
                             // slice that ends at it leaves this op to run
                             // afresh.
@@ -4693,6 +4722,9 @@ impl Interp {
         }
     }
 }
+
+#[cfg(feature = "jit")]
+pub(crate) mod jit_host;
 
 #[cfg(test)]
 mod tests;

@@ -78,6 +78,8 @@ use call::{Entered, entered_receiver};
 
 // `DO`/`LOOP`: the header, each kind of repetition, and the flat-loop path the op driver takes.
 mod loops;
+#[cfg(feature = "jit")]
+pub(crate) use loops::QuickKind;
 #[cfg(test)]
 use loops::numeric_less;
 pub(crate) use loops::{
@@ -2588,6 +2590,21 @@ impl Interp {
         // frame across to the matching half, which is where the check reads
         // them; that type's own doc comment has what it checks and why it is
         // there rather than in `pop_frame`.
+        let temps_at_entry = self.roots.activity().temps_len();
+        let frame = self.roots.activity_mut().push_frame();
+        SteppedClause {
+            entry,
+            frame,
+            temps_at_entry,
+        }
+    }
+
+    /// The [`SteppedClause`] for a clause compiled code opened itself, with
+    /// every write [`Interp::enter_stepped_clause`] makes already made
+    /// (`crate::ir::drive::jit_host`), so that the interpreter can close it.
+    #[cfg(feature = "jit")]
+    pub(crate) fn adopt_stepped_clause(&mut self) -> SteppedClause {
+        let entry = self.adopt_clause_entry();
         let temps_at_entry = self.roots.activity().temps_len();
         let frame = self.roots.activity_mut().push_frame();
         SteppedClause {

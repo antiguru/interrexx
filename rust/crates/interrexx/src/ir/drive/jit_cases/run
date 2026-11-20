@@ -1,0 +1,217 @@
+# a counted loop of small-integer arithmetic
+run
+x = 0; y = 0
+do i = 1 to 10000
+  x = x + 3
+  y = x * 2 - i
+end
+say x y i
+----
+30000 50000 10001
+compiled: yes
+
+# IF and ELSE, nested, with % and // of negative values
+run
+a = 0; b = 0; c = 0; d = 0
+do i = -5000 to 5000
+  if i // 3 = 0 then a = a + 1
+  else if i // 3 = 1 then b = b + i % 7
+  else c = c - 1
+  if i >= 0 then if i \= 50 then d = d + 1
+end
+say a b c d
+----
+3333 594643 -5001 5000
+compiled: yes
+
+# a SELECT whose branches run between native work
+run
+a = 0; b = 0; c = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  q = x + y; r = q - z; s = r + w; t = s - x
+  select
+    when i // 3 = 0 then a = a + 1
+    when i // 3 = 1 then b = b + 1
+    otherwise c = c + 1
+  end
+end
+say a b c t
+----
+3333 3334 3333 0
+compiled: yes
+
+# DO n, and DO FOREVER left by LEAVE
+run
+k = 0
+do 10000
+  k = k + 2
+end
+j = 0
+do forever
+  j = j + 1
+  if j = 12000 then leave
+end
+say k j
+----
+20000 12000
+compiled: yes
+
+# NOVALUE from a stem read in a compiled loop: SIGL and the description
+run
+signal on novalue
+do i = 1 to 9999; v.i = i; end
+t = 0
+do i = 1 to 20000
+  t = t + 1
+  u = t * 2
+  w = v.i
+end
+exit
+novalue: say 'novalue at' sigl 'i='i 't='t condition('D')
+----
+novalue at 7 i=10000 t=10000 V.10000
+compiled: yes
+
+# a division by zero raised from the second clause of a compiled body
+run
+q = 1
+do i = 1 to 20000
+  q = q + 1
+  r = q % (15000 - i)
+end
+----
+     4 *-*   r = q % (15000 - i)
+Error 42 running t.rex line 4:  Arithmetic overflow/underflow.
+Error 42.3:  Arithmetic overflow; divisor must not be zero.
+compiled: yes
+
+# values that outgrow DIGITS after the loop is compiled (past pass 8,944), so
+# the native path declines from then on
+run
+x = 0
+do i = 1 to 10000
+  x = x + i * 25
+end
+say x
+----
+1.25012764E+9
+compiled: yes
+
+# a method whose loop variable is EXPOSEd
+run
+c = .counter~new
+say c~run(10000)
+::class counter
+::method run
+  expose total
+  total = 0
+  do i = 1 to arg(1)
+    total = total + i
+  end
+  return total
+----
+50005000
+compiled: yes
+
+# a body holding a TRACE instruction keeps its clause echoes behind run-time
+# gates, which compiled code does not take, so it stays driven
+run
+n = 0
+do i = 1 to 10000
+  n = n + 1
+  if i = 9998 then trace r
+  m = n
+end
+trace o
+say n m
+----
+10000 10000
+     5 *-*   m = n
+       >>>     "9998"
+     6 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9998"
+       >>>     "9999"
+     3 *-*   n = n + 1
+       >>>     "9999"
+     4 *-*   if i = 9998 
+       >>>     "0"
+     5 *-*   m = n
+       >>>     "9999"
+     6 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9999"
+       >>>     "10000"
+     3 *-*   n = n + 1
+       >>>     "10000"
+     4 *-*   if i = 9998 
+       >>>     "0"
+     5 *-*   m = n
+       >>>     "10000"
+     6 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "10000"
+       >>>     "10001"
+     7 *-* trace o
+compiled: no
+
+# a builtin call in a compiled body
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + 1; m = m + 2; o = n + m; p = o - n; q = p * 2; r = q - m
+  if i // 1000 = 0 then m = m + length(i)
+end
+say n m r
+----
+10000 20041 20036
+compiled: yes
+
+# WHILE, UNTIL, a TO with WHILE, and FOR: the body compiled, each pass
+# boundary the host's
+run
+a = 0; i = 0
+do while i < 10000
+  i = i + 1
+  a = a + i // 7
+end
+b = 0
+do until b >= 30000
+  b = b + 3
+end
+c = 0
+do j = 1 to 20000 while c < 15000
+  c = c + 2
+end
+d = 0
+do j = 1 for 9000
+  d = d + j
+end
+say a i b c j d
+----
+29998 10000 30000 15000 9001 40504500
+compiled: yes
+
+# an inner loop compiled during its second entry and entered compiled after
+run
+s = 0
+do i = 1 to 3
+  do j = 1 to 5000
+    s = s + i * j
+  end
+end
+say s i j
+----
+75015000 4 5001
+compiled: yes
+
+# an INTERPRETed loop stays driven, however hot
+run
+interpret "s = 0; do i = 1 to 10000; s = s + i; end"
+say s
+----
+50005000
+compiled: no
