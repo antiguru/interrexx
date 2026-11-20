@@ -379,7 +379,8 @@ impl Raised {
     }
 
     /// 99.927: a `METACLASS` target that resolves to a class which is not a
-    /// metaclass. One substitution, the target's `~defaultName`.
+    /// metaclass, or a metaclass whose `NEW` answers something other than a
+    /// class. One substitution, the metaclass's `~defaultName`.
     pub(crate) fn bad_metaclass(metaclass: &[u8]) -> Raised {
         Raised::syntax(99, 927, vec![metaclass.to_vec()])
     }
@@ -1090,10 +1091,11 @@ impl Raised {
         Raised::syntax(98, 900, vec![text.as_bytes().to_vec()])
     }
 
-    /// 98.900 for a metaclass `NEW` that answers an object that is not a class
-    /// (r[class.index.deviation.114]).
-    pub(crate) fn metaclass_new_not_a_class() -> Raised {
-        Raised::execution_user_defined("a metaclass NEW answered something other than a class")
+    /// 98.994: the object `SUPPLIER` answered for a methods argument is not a
+    /// `Supplier`. One substitution, the default name of the object the
+    /// methods were taken from.
+    pub(crate) fn no_supplier(found: &[u8]) -> Raised {
+        Raised::syntax(98, 994, vec![found.to_vec()])
     }
 
     /// 26.900: `Error_Invalid_whole_number_user_defined`, whose whole

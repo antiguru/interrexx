@@ -398,8 +398,9 @@ raises nothing when the package is loaded; the process ends when the routine
 is called. For other such entries, `SysSleep` of `rexxutil` among them,
 ooRexx raises the same error.
 interrexx raises the error where the directive is, so a package with the
-declaration never loads. The first example is not run against ooRexx, whose
-process would end.
+declaration never loads. The examples are not run against ooRexx: the
+process would end in the first, and in the second ooRexx installs the
+directive and prints `installed`.
 A library with a package entry is loaded as a package to find which kind its
 entry is, so its loader runs. When the loader raises a condition, the
 directive raises that condition, and leaves no registration behind: [the

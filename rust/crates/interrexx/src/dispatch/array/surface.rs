@@ -423,6 +423,7 @@ fn native_array_insert(
             if held > 1 && is_queue(interp, receiver) {
                 return Err(Raised::too_many_subscripts(1).into());
             }
+            one_subscript_list(interp, receiver, index, 2)?;
             let position = single_subscript(interp, receiver, index, 2)?;
             // "the position must be location of an existing item within the
             // bounds of the queue, unlike an array which can insert at empty
@@ -452,8 +453,9 @@ pub(in crate::dispatch) fn native_array_delete(
 ) -> Result<Option<ObjRef>, Failure> {
     // A required-argument check on the index comes FIRST and is 93.903, where
     // the index-validating family is 93.901.
-    item_argument(args)?;
+    let index = item_argument(args)?;
     single_dimension_only(interp, receiver, "DELETE")?;
+    one_subscript_list(interp, receiver, index, 1)?;
     let Some(position) = position_in(interp, receiver, args, IndexUse::Get)? else {
         return Ok(Some(ObjRef::NIL));
     };
@@ -483,6 +485,25 @@ fn native_array_fill(
             Ok(Some(receiver))
         }
         _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
+    }
+}
+
+/// Refuses an `Array` index of more than one subscript to `insert` and `delete` with 93.926,
+/// also on an array with no dimension yet, which these methods take as single-dimensional
+/// (`r[class.array.insert]`, `r[class.array.delete]`). A list with a hole is 98.975 first, as
+/// [`super::index_list`] reads it; a queue reads its index by [`queue_index`] instead.
+fn one_subscript_list(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    value: ObjRef,
+    position: usize,
+) -> Result<(), Failure> {
+    if is_queue(interp, receiver) {
+        return Ok(());
+    }
+    match super::index_list(interp, value, position)? {
+        Some(spread) if spread.len() > 1 => Err(Raised::too_many_subscripts(1).into()),
+        _ => Ok(()),
     }
 }
 

@@ -268,15 +268,19 @@ pub(super) fn method_source_lines(
         // its slots are held in, and is sent nothing
         // (r[class.package.loadpackage.sends]).
         let converted = converted.map(|answer| array_store(interp, answer));
-        // An instance's `REQUEST('ARRAY')` that answers an object that is
-        // neither an array nor `.nil` is refused here, and no
-        // `REQUEST('STRING')` follows it (Deviation 115).
+        // An answer that is neither an array nor `.nil` is refused as a source
+        // that is neither a string nor an array, 93.961, with no
+        // `REQUEST('STRING')` after it, when it came from `Object`'s own
+        // `REQUEST`, that is from a `MAKEARRAY`; a `REQUEST` method of the
+        // source's own that answers one is taken as having answered `.nil`
+        // (`r[class.method.new.request-answer]`).
         if let Some(answer) = converted
             && answer != ObjRef::NIL
             && interp.array_slots_of(answer).is_none()
             && !interp.is_base_class(source)
+            && !interp.answers_by_method(source, b"REQUEST")
         {
-            return Err(Raised::argument_not_single_dimensional(position).into());
+            return Err(Raised::source_not_string_or_array(position).into());
         }
         converted.filter(|array| interp.array_slots_of(*array).is_some())
     };
@@ -318,7 +322,7 @@ pub(super) fn method_source_lines(
 
 /// The array that holds the slots of `value`: the store behind an instance of
 /// an `Array` subclass, and `value` itself for anything else.
-fn array_store(interp: &mut Interp, value: ObjRef) -> ObjRef {
+pub(crate) fn array_store(interp: &mut Interp, value: ObjRef) -> ObjRef {
     let plain_array = interp.object_model().array;
     let is_array = interp
         .class_of_value(value)
@@ -782,10 +786,11 @@ pub(crate) fn new_subclass(
         interp.roots.activity_mut().push_temp(argument);
         let caller = interp.caller();
         let answer = interp.send_message(metaclass, b"NEW", None, &[Some(argument)], caller)?;
-        // An answer that is not a class raises 98.900 in the program that sent
-        // the request, where it can be trapped (r[class.index.deviation.114]).
+        // An answer that is not a class is 99.927 naming the metaclass, as a
+        // metaclass that is not one is (`r[class.class.metaclass-new]`).
         let Some(id) = answer.filter(|answer| interp.heap.is_class(*answer)) else {
-            return Err(Raised::metaclass_new_not_a_class().into());
+            let shown = interp.string_value_text(metaclass)?;
+            return Err(Raised::bad_metaclass(&shown).into());
         };
         // A class `Class~new` did not build, or one a subclass already took, is
         // not rewired in place here, as that would damage a class others hold

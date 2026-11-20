@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109, 111, 115, 118, 124, 134]
+deviations: [41, 109, 111, 118, 124, 134]
 ---
 
 # Routine
@@ -148,8 +148,9 @@ r[class.routine.new.sends]
 (the line is a string answer itself, and any other answer's `objectName`), and,
 when the routine has been made, `init` with the arguments of `new` from the
 fourth on. An answer to `request` with `ARRAY` that is neither an array nor
-`.nil` raises `SYNTAX 88.913`, and no `request` with `STRING` follows it
-([Deviation 115](r:class.routine.deviation.115)). An instance of a subclass of
+`.nil` raises `SYNTAX 93.961` when it came from `makeArray`, and is taken as
+`.nil` when it came from a `request` method of the source's own ([the answer
+rule](r:class.routine.new.request-answer)). An instance of a subclass of
 `List` is sent `request` as well ([Deviation
 118](r:class.routine.deviation.118)).
 
@@ -1383,6 +1384,67 @@ bad: say condition('o')~code
 91.999
 ```
 
+r[class.routine.new.request-answer]
+A `new` whose source's `request` with `ARRAY` answers an object that is neither
+an array nor `.nil` raises `SYNTAX 93.961` when the `request` is the one of
+`Object`, so that the answer is what `makeArray` answered, and sends no
+`request` with `STRING`; when the source has a `request` method of its own the
+answer is taken as `.nil` and `request` with `STRING` follows, as [the rule of
+`Method`](r:class.method.new.request-answer) states. In the examples `mk`
+answers by `makeArray` a string, a list and an object that is none of them, and
+`src` by a `request` of its own.
+
+```rexx
+call try '.routine~new("n", .mk~new("return 1"))'
+call try '.routine~new("n", .mk~new(.list~of("return 1")))'
+call try '.routine~new("n", .mk~new(.object~new))'
+call try '.routine~new("n", .src~new(.list~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.nil))~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+```
+
+```output
+makeArray
+.routine~new("n", .mk~new("return 1")) => 93.961
+makeArray
+.routine~new("n", .mk~new(.list~of("return 1"))) => 93.961
+makeArray
+.routine~new("n", .mk~new(.object~new)) => 93.961
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.list~of("return 1")))~call => 2
+request ARRAY
+.routine~new("n", .src~new(.array~of("return 1")))~call => 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil))~call => 2
+```
+
 ## Deviations
 
 r[class.routine.deviation.41]
@@ -1422,53 +1484,6 @@ say r~package~name r~source[1]
 
 ```output
 Foo say "src"
-```
-
-r[class.routine.deviation.115]
-A `new` whose source answers `request` with `ARRAY` by an object that is neither
-an array nor `.nil` raises `SYNTAX 88.913`, as [the rule of
-`Method`](r:class.method.deviation.115) states, and no `request` with `STRING`
-is sent. ooRexx crashes.
-The examples have `request` answer a string, a list and an object that is none
-of them.
-
-```rexx
-call try '.routine~new("n", .src~new("return 1"))'
-call try '.routine~new("n", .src~new(.list~of("return 1")))'
-call try '.routine~new("n", .src~new(.object~new))'
-call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
-call try '.routine~new("n", .src~new(.nil))~call'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=>' zres
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-```
-
-```output
-request ARRAY
-.routine~new("n", .src~new("return 1")) => 88.913
-request ARRAY
-.routine~new("n", .src~new(.list~of("return 1"))) => 88.913
-request ARRAY
-.routine~new("n", .src~new(.object~new)) => 88.913
-request ARRAY
-.routine~new("n", .src~new(.array~of("return 1")))~call => 1
-request ARRAY
-request STRING
-.routine~new("n", .src~new(.nil))~call => 2
 ```
 
 r[class.routine.deviation.118]

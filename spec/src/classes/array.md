@@ -389,8 +389,11 @@ The index is read as [the index rule](r:class.array.indexes) says, so an array
 of one index is accepted. The
 method takes one or two arguments: a third raises `SYNTAX 93.902`; an array of
 more than one dimension raises `SYNTAX 93.954` whatever the index is, after
-the argument count has been checked. An index that is not a whole number of at
-least 1 and is not `.nil` raises `SYNTAX 93.907`.
+the argument count has been checked. An index that is an array of more than
+one index raises `SYNTAX 93.926`, also when the array has no dimension yet,
+whatever the indexes are, and leaves the array unchanged; an array of indexes
+with one omitted raises `SYNTAX 98.975` instead. An index that is not a whole
+number of at least 1 and is not `.nil` raises `SYNTAX 93.907`.
 
 ```rexx
 a = .array~of('a', 'b', 'c')
@@ -408,6 +411,11 @@ call try '.array~of(1)~insert(1, 0)'
 call try '.array~of(1)~insert(1, "x")'
 call try '.array~of(1)~insert(1, 1, 1)'
 call try '.array~new(2, 2)~insert(1, 0)'
+d = .array~new
+call try 'd~insert("i", .array~of(2, 2))'
+call try 'd~insert("i", .array~of("x", 0))'
+call try 'd~insert("i", .array~of(, 1))'
+say d~dimension d~items
 exit
 try:
   signal on syntax name bad
@@ -429,6 +437,10 @@ bad: say arg(1) '=>' condition('o')~code
 .array~of(1)~insert(1, "x") => 93.907
 .array~of(1)~insert(1, 1, 1) => 93.902
 .array~new(2, 2)~insert(1, 0) => 93.954
+d~insert("i", .array~of(2, 2)) => 93.926
+d~insert("i", .array~of("x", 0)) => 93.926
+d~insert("i", .array~of(, 1)) => 98.975
+0 0
 ```
 
 r[class.array.insert.omitted]
@@ -462,7 +474,7 @@ array of more than one dimension raises `SYNTAX 93.954` whatever the index is,
 after the argument count has been checked; otherwise the index is read as [the
 index rule](r:class.array.indexes) says, with `SYNTAX 93.907` for an index
 that is not a whole number of at least 1 and `SYNTAX 93.926` for an array of
-two.
+more than one index, also when the array has no dimension yet.
 
 ```rexx
 a = .array~of('a', 'b', 'c', 'd')
@@ -479,6 +491,7 @@ call try 'a~delete(0)'
 call try 'a~delete("x")'
 call try 'a~delete(.array~of(1, 2))'
 call try '.array~new(2, 2)~delete(1)'
+call try '.array~new~delete(.array~of(2, 2))'
 exit
 try:
   signal on syntax name bad
@@ -501,6 +514,7 @@ a~delete(0) => 93.907
 a~delete("x") => 93.907
 a~delete(.array~of(1, 2)) => 93.926
 .array~new(2, 2)~delete(1) => 93.954
+.array~new~delete(.array~of(2, 2)) => 93.926
 ```
 
 r[class.array.remove]

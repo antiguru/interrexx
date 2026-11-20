@@ -219,8 +219,9 @@ message `REQUEST` with the argument `ARRAY` (the
 argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
-line, and a [list](r:class.list.makearray) supplies its items. A value that
-cannot be made into an array raises `SYNTAX 98.946`. An instance of a subclass
+line, and a [list](r:class.list.makearray) supplies its items, as does an
+object whose `makeArray` answers an instance of a subclass of `Array`. A value
+that cannot be made into an array raises `SYNTAX 98.946`. An instance of a subclass
 of `List` is sent `REQUEST` as well ([Deviation
 118](r:instr.forward.deviation.118)).
 
@@ -234,6 +235,7 @@ call try 'lines', 'x'||'0a'x||'y'
 call try 'list', .list~of(1, 2)
 call try 'nil', .nil
 call try 'object', .object~new
+call try 'subclass', .mk~new
 exit
 try:
   signal on syntax name e
@@ -251,6 +253,10 @@ e: say arg(1) '=>' condition('o')~code
     else s = s i'=-'
   end
   return s
+::class mk
+::method makeArray
+  return .arr~of('a', 'b')
+::class arr subclass array
 ```
 
 ```output
@@ -262,6 +268,7 @@ lines => 2 1=x 2=y
 list => 2 1=1 2=2
 nil => 98.946
 object => 98.946
+subclass => 2 1=a 2=b
 ```
 
 r[instr.forward.class]
