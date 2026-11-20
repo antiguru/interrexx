@@ -63,6 +63,8 @@ pub(crate) struct Native {
     /// Pass boundaries generated code has reached, which the host weighs the
     /// ops it ran against.
     pub(crate) passes: u64,
+    /// The op a [`super::JUMP`] answer goes on at.
+    pub(crate) jump_to: u64,
 }
 
 impl Native {
@@ -89,6 +91,7 @@ impl Native {
             loop_dirty: 0,
             quick_values: 0,
             passes: 0,
+            jump_to: 0,
         }
     }
 }
@@ -120,6 +123,7 @@ pub(crate) const LOOP_VALUE: i32 = at(offset_of!(Native, loop_value));
 pub(crate) const LOOP_DIRTY: i32 = at(offset_of!(Native, loop_dirty));
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
+pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
 
 /// A variable slot's size, and where its two words are.
 pub(crate) const SLOT_SIZE: i64 = size_of::<VarSlot>() as i64;

@@ -28,7 +28,7 @@ use interrexx_parse::Operator;
 
 use super::*;
 use crate::jit::layout::Native;
-use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, Pass, STOP, Step};
+use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, JUMP, Pass, STOP, Step};
 use crate::run::FlatStep;
 
 /// Passes a loop runs driven before it is compiled.
@@ -82,6 +82,8 @@ pub(super) enum JitExit {
     /// A clause answered this `Flow`, settled from this op.
     Flow(Flow, u32),
     Fail(Failure),
+    /// A `SELECT`'s close let this `Flow` escape the range being driven.
+    Escaped(Flow),
     /// A call op parked the open clause for its callee: what
     /// `clause_region!` hands `Interp::park_call`.
     Parked {
@@ -113,6 +115,11 @@ struct Driven<'a, 'c> {
     do_index: usize,
     body_start: u32,
     open: Option<Open>,
+    /// The driver's frame base and the instruction range it drives, which a
+    /// `SELECT`'s close settles against.
+    range: (usize, usize, usize),
+    /// Where the last [`JUMP`] answer goes on.
+    jump_to: u32,
     /// Whether [`Host::leave`] works out the loop's quick pass.
     ask_loop: bool,
     /// Ops per pass the host may run, and the ops it has run: a loop whose
@@ -146,6 +153,7 @@ impl Interp {
         pc: u32,
         do_index: u32,
         top: bool,
+        range: (usize, usize, usize),
     ) -> Option<JitExit> {
         let state = chunk.jit.state.get(do_index as usize)?;
         let compiled = match state.get() {
@@ -186,6 +194,8 @@ impl Interp {
             do_index: do_index as usize,
             body_start,
             open: None,
+            range,
+            jump_to: 0,
             ask_loop: true,
             budget,
             hosted: 0,
@@ -225,6 +235,15 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
             Op::Clause { index, end } | Op::CallingClause { index, end } => (index, end),
             Op::EndBranch => {
                 steps.push(Step::EndBranch { pc });
+                pc += 1;
+                continue;
+            }
+            // A `SELECT`'s own ops, which the host runs as the driver does.
+            Op::SelectCaseText { .. }
+            | Op::EnterWhen { .. }
+            | Op::EnterOtherwise { .. }
+            | Op::EndWhen => {
+                steps.push(Step::Between { pc });
                 pc += 1;
                 continue;
             }
@@ -380,14 +399,14 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
     // of those runs slower compiled than driven.
     let hosted = steps
         .iter()
-        .filter(|step| matches!(step, Step::Op { .. }))
+        .filter(|step| matches!(step, Step::Op { .. } | Step::Between { .. }))
         .count();
     let native = steps
         .iter()
         .filter(|step| {
             !matches!(
                 step,
-                Step::Op { .. } | Step::Open { .. } | Step::Close { .. }
+                Step::Op { .. } | Step::Between { .. } | Step::Open { .. } | Step::Close { .. }
             )
         })
         .count();
@@ -584,13 +603,69 @@ impl Host for Driven<'_, '_> {
 
     fn op(&mut self, pc: u32) -> u32 {
         self.hosted += 1;
-        // Between clauses: the driver's own `Op::EndBranch` arm.
-        if let Some(Op::EndBranch) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
-            return match self.interp.end_promoted_branch(Flow::Next) {
-                Ok(Flow::Next) => CONTINUE,
-                Ok(flow) => self.stop(JitExit::Flow(flow, pc + 1)),
-                Err(failure) => self.stop(JitExit::Fail(failure)),
-            };
+        // Between clauses: the driver's own arms for these ops.
+        match self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
+            Some(Op::EndBranch) => {
+                return match self.interp.end_promoted_branch(Flow::Next) {
+                    Ok(Flow::Next) => CONTINUE,
+                    Ok(flow) => self.stop(JitExit::Flow(flow, pc + 1)),
+                    Err(failure) => self.stop(JitExit::Fail(failure)),
+                };
+            }
+            Some(&Op::SelectCaseText { case, .. }) => {
+                let value = case.map(|register| self.registers.get(register));
+                self.interp.open_select_case(value);
+                return CONTINUE;
+            }
+            Some(&Op::EnterWhen { select, when }) => {
+                return match self.interp.when_frame(
+                    self.code,
+                    self.chunk,
+                    select as usize,
+                    when as usize,
+                ) {
+                    Ok(frame) => {
+                        self.interp.activity.frames.push(Frame::select(frame));
+                        CONTINUE
+                    }
+                    Err(failure) => self.stop(JitExit::Fail(failure)),
+                };
+            }
+            Some(&Op::EnterOtherwise { select }) => {
+                return match self
+                    .interp
+                    .otherwise_frame(self.code, self.chunk, select as usize)
+                {
+                    Ok(frame) => {
+                        self.interp.activity.frames.push(Frame::select(frame));
+                        CONTINUE
+                    }
+                    Err(failure) => self.stop(JitExit::Fail(failure)),
+                };
+            }
+            Some(Op::EndWhen) => {
+                let (base, start, end) = self.range;
+                return match self.interp.leave_ended_select_branch(
+                    self.code,
+                    self.chunk,
+                    base,
+                    pc,
+                    start,
+                    end,
+                    self.source,
+                ) {
+                    Ok(BranchEnd::At(target)) => {
+                        self.jump_to = target;
+                        self.exit = Some(JitExit::At(target));
+                        JUMP
+                    }
+                    Ok(BranchEnd::Escaped(flow)) => self.stop(JitExit::Escaped(flow)),
+                    // The driver's `(Flow::Next, pc + 1)`, settled.
+                    Ok(BranchEnd::None) => CONTINUE,
+                    Err(failure) => self.stop(JitExit::Fail(failure)),
+                };
+            }
+            _ => {}
         }
         // `Op::Load`'s and `Op::Store`'s own fast paths for a simple
         // variable whose slot the plan resolved, taken here for the same
@@ -639,6 +714,7 @@ impl Host for Driven<'_, '_> {
     }
 
     fn leave(&mut self, native: &mut Native) {
+        native.jump_to = u64::from(self.jump_to);
         native.countdown = u64::from(self.interp.clause_countdown);
         native.small_int_bound =
             crate::value::small_int_bound(self.interp.activation().settings.digits());

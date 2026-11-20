@@ -59,6 +59,10 @@ pub(crate) const STOP: u32 = 1;
 /// An `IF`'s condition did not hold, and the host closed its clause: the
 /// generated code goes on at the branch's target.
 pub(crate) const BRANCH: u32 = 2;
+/// The host ran an op between clauses that answered where the program goes
+/// on, `Native::jump_to`; an op with no label in the pass leaves for the
+/// driver there, which the host has already recorded.
+pub(crate) const JUMP: u32 = 3;
 
 /// What the generated code calls back into. Each step is bracketed by
 /// [`Host::enter`] and [`Host::leave`].
@@ -123,6 +127,9 @@ pub(crate) enum Step {
     Jump { target: u32 },
     /// `Op::EndBranch` at `pc`.
     EndBranch { pc: u32 },
+    /// An op between clause regions the host runs, which may answer
+    /// [`JUMP`]: a `SELECT`'s own ops.
+    Between { pc: u32 },
     /// A comparison of two registers: done here when both are small
     /// integers the driver's own quick comparison takes, else the op at `pc`
     /// through the host.
@@ -314,6 +321,30 @@ impl Emit<'_, '_> {
         self.b.switch_to_block(on);
     }
 
+    /// [`Emit::call`] for a helper that may also answer [`JUMP`], which goes
+    /// to `dispatch`.
+    fn call_jumping(&mut self, helper: *const (), pc: u32, dispatch: Block) {
+        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
+        let pc = self.b.ins().iconst(types::I32, i64::from(pc));
+        let call = self
+            .b
+            .ins()
+            .call_indirect(self.with_pc, address, &[self.ctx, pc]);
+        let answer = self.b.inst_results(call)[0];
+        let jumps = self
+            .b
+            .ins()
+            .icmp_imm_u(IntCC::Equal, answer, i64::from(JUMP));
+        let other = self.b.create_block();
+        let on = self.b.create_block();
+        self.b.ins().brif(jumps, dispatch, &[], other, &[]);
+        self.b.switch_to_block(other);
+        self.b
+            .ins()
+            .brif(answer, self.exit, &[answer.into()], on, &[]);
+        self.b.switch_to_block(on);
+    }
+
     fn register(&mut self, register: u16) -> Value {
         self.b.ins().load(
             types::I64,
@@ -404,7 +435,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Close { .. }
             | Step::Op { .. }
             | Step::Jump { .. }
-            | Step::EndBranch { .. } => None,
+            | Step::EndBranch { .. }
+            | Step::Between { .. } => None,
         };
         // Property 2 of the module doc.
         if named.is_some_and(|register| register >= pass.registers) {
@@ -484,7 +516,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let mut labels: HashMap<u32, Block> = HashMap::new();
         labels.insert(pass.end, head);
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } = *step {
+            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
                 labels.insert(pc, e.b.create_block());
             }
         }
@@ -495,13 +527,14 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 return None;
             }
         }
+        let dispatch = e.b.create_block();
         e.b.switch_to_block(head);
         pass_step(&mut e);
         let mut clause_pc = 0;
         // Whether the block being emitted into can still fall through.
         let mut live = true;
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } = *step {
+            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
                 let block = labels[&pc];
                 if live {
                     e.b.ins().jump(block, &[]);
@@ -554,6 +587,9 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     live = false;
                 }
                 Step::EndBranch { pc } => end_branch(&mut e, pc),
+                Step::Between { pc } => {
+                    e.call_jumping(op_helper as *const (), pc, dispatch);
+                }
                 Step::Compare {
                     pc,
                     op,
@@ -621,6 +657,22 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         if live {
             e.b.ins().jump(head, &[]);
         }
+
+        // Where a JUMP answer lands: the label of the op it names, or the
+        // driver, at the op the host recorded.
+        e.b.switch_to_block(dispatch);
+        let to = e.load_native(types::I64, layout::JUMP_TO);
+        let mut targets: Vec<(u32, Block)> =
+            labels.iter().map(|(&pc, &block)| (pc, block)).collect();
+        targets.sort_unstable_by_key(|&(pc, _)| pc);
+        for (pc, block) in targets {
+            let next = e.b.create_block();
+            let here = e.b.ins().icmp_imm_u(IntCC::Equal, to, i64::from(pc));
+            e.b.ins().brif(here, block, &[], next, &[]);
+            e.b.switch_to_block(next);
+        }
+        let stop = e.b.ins().iconst(types::I32, i64::from(STOP));
+        e.b.ins().jump(exit, &[stop.into()]);
 
         e.b.switch_to_block(exit);
         let answer = e.b.block_params(exit)[0];

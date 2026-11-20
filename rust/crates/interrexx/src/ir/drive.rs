@@ -4286,8 +4286,16 @@ impl Interp {
                             if !GRANTING
                                 && chunk.jit.may_compile(*index)
                                 && stream.len() == full.len()
-                                && let Some(exit) =
-                                    self.jit_passes(code, chunk, registers, source, pc, *index, TOP)
+                                && let Some(exit) = self.jit_passes(
+                                    code,
+                                    chunk,
+                                    registers,
+                                    source,
+                                    pc,
+                                    *index,
+                                    TOP,
+                                    (base, start, end),
+                                )
                             {
                                 match exit {
                                     jit_host::JitExit::At(target) => {
@@ -4303,6 +4311,9 @@ impl Interp {
                                         break 'step (flow, next);
                                     }
                                     jit_host::JitExit::Fail(failure) => return Err(failure),
+                                    jit_host::JitExit::Escaped(flow) => {
+                                        return Ok(Exit::Flow(flow));
+                                    }
                                     jit_host::JitExit::Parked {
                                         park,
                                         entry,
