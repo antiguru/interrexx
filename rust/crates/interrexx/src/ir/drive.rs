@@ -4284,9 +4284,9 @@ impl Interp {
                             // them needs the driver.
                             #[cfg(feature = "jit")]
                             if !GRANTING
-                                && chunk.jit.may_compile(*index)
+                                && chunk.jit.hot(*index)
                                 && stream.len() == full.len()
-                                && let Some(exit) = self.jit_passes(
+                                && let Some(action) = self.jit_passes(
                                     code,
                                     chunk,
                                     registers,
@@ -4297,35 +4297,15 @@ impl Interp {
                                     (base, start, end),
                                 )
                             {
-                                match exit {
-                                    jit_host::JitExit::At(target) => {
+                                match action {
+                                    jit_host::JitAction::At(target) => {
                                         pc = target;
                                         continue 'ops;
                                     }
-                                    jit_host::JitExit::Slice(at) => return Ok(Exit::Slice(at)),
-                                    jit_host::JitExit::Done(flow) => {
-                                        self.activity.frames.pop();
-                                        break 'step (flow, pc);
-                                    }
-                                    jit_host::JitExit::Flow(flow, next) => {
+                                    jit_host::JitAction::Settle(flow, next) => {
                                         break 'step (flow, next);
                                     }
-                                    jit_host::JitExit::Fail(failure) => return Err(failure),
-                                    jit_host::JitExit::Escaped(flow) => {
-                                        return Ok(Exit::Flow(flow));
-                                    }
-                                    jit_host::JitExit::Parked {
-                                        park,
-                                        entry,
-                                        clause_pc,
-                                        end,
-                                        index,
-                                    } => {
-                                        self.park_call(
-                                            park, entry, clause_pc, end, index, false, false,
-                                        );
-                                        return Ok(Exit::Parked);
-                                    }
+                                    jit_host::JitAction::Return(exit) => return exit,
                                 }
                             }
                             // The pass's header clause, counted here so a

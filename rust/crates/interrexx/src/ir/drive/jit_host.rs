@@ -58,13 +58,23 @@ pub(crate) struct Loops {
 }
 
 impl Loops {
-    /// Whether the loop at instruction `do_index` is not refused: asked
-    /// before the out-of-line call into [`Interp::jit_passes`].
+    /// Counts a pass of the loop at instruction `do_index`, answering whether
+    /// it is hot: compiled, or due to be. Asked in the `Op::LoopNext` arm
+    /// itself, so a loop that is still being counted, or was refused, costs
+    /// no call into [`Interp::jit_passes`].
     #[inline(always)]
-    pub(super) fn may_compile(&self, do_index: u32) -> bool {
-        self.state
-            .get(do_index as usize)
-            .is_some_and(|state| state.get() != REFUSED)
+    pub(super) fn hot(&self, do_index: u32) -> bool {
+        let Some(state) = self.state.get(do_index as usize) else {
+            return false;
+        };
+        match state.get() {
+            REFUSED => false,
+            passes if passes < THRESHOLD - 1 => {
+                state.set(passes + 1);
+                false
+            }
+            _ => true,
+        }
     }
 
     pub(crate) fn new(instructions: usize) -> Loops {
@@ -75,9 +85,16 @@ impl Loops {
     }
 }
 
-/// How a run of compiled passes ended, which the `Op::LoopNext` arm turns
-/// into what the driver does next.
-pub(super) enum JitExit {
+/// What the `Op::LoopNext` arm does after compiled passes: carry on at an op,
+/// end the range with what `ops_loop` returns, or settle a `Flow` from an op.
+pub(super) enum JitAction {
+    At(u32),
+    Return(Result<Exit, Failure>),
+    Settle(Flow, u32),
+}
+
+/// How a run of compiled passes ended.
+enum JitExit {
     /// Drive on from this op.
     At(u32),
     /// The slice ended before the clause, or the pass boundary, at this op.
@@ -167,14 +184,11 @@ impl Interp {
         do_index: u32,
         top: bool,
         range: (usize, usize, usize),
-    ) -> Option<JitExit> {
+    ) -> Option<JitAction> {
         let state = chunk.jit.state.get(do_index as usize)?;
         let compiled = match state.get() {
             REFUSED => return None,
-            passes if passes < THRESHOLD - 1 => {
-                state.set(passes + 1);
-                return None;
-            }
+            passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
                 let Some((compiled, budget)) = pass_of(chunk, pc, do_index)
                     .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
@@ -227,11 +241,33 @@ impl Interp {
             driven.open.is_none(),
             "compiled passes ended with a clause open"
         );
-        Some(
-            driven
-                .exit
-                .unwrap_or_else(|| JitExit::Fail(Loud::op_not_driven("a compiled pass").into())),
-        )
+        let exit = driven
+            .exit
+            .unwrap_or_else(|| JitExit::Fail(Loud::op_not_driven("a compiled pass").into()));
+        // Everything but where the driver goes on is settled here, out of
+        // the driver's loop: the `Op::LoopNext` arm's own answers, and
+        // `clause_region!`'s for a parked call.
+        Some(match exit {
+            JitExit::At(target) => JitAction::At(target),
+            JitExit::Slice(at) => JitAction::Return(Ok(Exit::Slice(at))),
+            JitExit::Done(flow) => {
+                self.activity.frames.pop();
+                JitAction::Settle(flow, pc)
+            }
+            JitExit::Flow(flow, next) => JitAction::Settle(flow, next),
+            JitExit::Fail(failure) => JitAction::Return(Err(failure)),
+            JitExit::Escaped(flow) => JitAction::Return(Ok(Exit::Flow(flow))),
+            JitExit::Parked {
+                park,
+                entry,
+                clause_pc,
+                end,
+                index,
+            } => {
+                self.park_call(park, entry, clause_pc, end, index, false, false);
+                JitAction::Return(Ok(Exit::Parked))
+            }
+        })
     }
 }
 
