@@ -168,3 +168,41 @@ say n m r
 ----
 10000 20041 20036
 compiled: yes
+
+# WHILE, UNTIL, a TO with WHILE, and FOR: the body compiled, each pass
+# boundary the host's
+run
+a = 0; i = 0
+do while i < 10000
+  i = i + 1
+  a = a + i // 7
+end
+b = 0
+do until b >= 30000
+  b = b + 3
+end
+c = 0
+do j = 1 to 20000 while c < 15000
+  c = c + 2
+end
+d = 0
+do j = 1 for 9000
+  d = d + j
+end
+say a i b c j d
+----
+29998 10000 30000 15000 9001 40504500
+compiled: yes
+
+# an inner loop compiled during its second entry and entered compiled after
+run
+s = 0
+do i = 1 to 3
+  do j = 1 to 5000
+    s = s + i * j
+  end
+end
+say s i j
+----
+75015000 4 5001
+compiled: yes
