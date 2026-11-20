@@ -1336,6 +1336,13 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).</p>
+<h2 id="183-the-option-of-arrayin-makearray-and-arrayout-is-read-as-a-string"><a class="header" href="#183-the-option-of-arrayin-makearray-and-arrayout-is-read-as-a-string">183. The option of arrayIn, makeArray and arrayOut is read as a string</a></h2>
+<p>The option of <code>Stream</code>'s <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a
+string argument, as the option of <code>open</code> is: through its <code>makeString</code> method,
+so an object whose <code>makeString</code> answers <code>L</code> or <code>C</code> is that option, and an
+object with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>. ooRexx
+sends the option <code>caselessStartsWith</code> and raises <code>SYNTAX 97.1</code> for any object
+that is no string and for <code>.nil</code>, whatever its <code>makeString</code> answers.</p>
 
                     </main>
 

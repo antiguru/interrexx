@@ -85488,7 +85488,7 @@ say condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stream"><a class="header" href="#stream">Stream</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Stream Classes &gt; Stream Class; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; new (Inherited Class Method); Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; chars; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; close; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; command; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; description; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; flush; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; init; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lines; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; makeArray; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; open; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; position; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; qualify; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; query; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; say; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; seek; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; state; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; string; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; supplier; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; uninit</p>
-<p class="deviations">Deviations: D34, D55, D58, D59, D62, D109, D135, D139, D140, D142</p>
+<p class="deviations">Deviations: D34, D55, D58, D59, D62, D109, D135, D139, D140, D142, D183</p>
 <p>A <code>Stream</code> is an object that stands for a stream: the file, or the standard
 stream, that its name denotes. Its methods do what the stream built-in
 functions do, with the stream as the receiver in place of a name argument, and
@@ -86202,12 +86202,14 @@ of <code>query</code> and of <code>command</code> is read through its string val
 to <code>string</code>: an object that has only <code>string</code> is read by that answer, and
 <code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with, and
 so is an answer of <code>string</code> that has no string value: <code>query</code> raises <code>SYNTAX 93.0</code> and <code>command</code> <code>SYNTAX 93.914</code> for it, as for a word that nothing starts
-with. The argument that <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> take as the option
-is no string argument: a message is sent to it, and an object that does not
-understand the message raises <code>SYNTAX 97.1</code>. The second example reads an
-object whose <code>string</code> method answers an object with no string value: the start,
-the count and the line number raise <code>SYNTAX 88.907</code>, a string to write and an
-option <code>SYNTAX 88.909</code>.</p>
+with. The option that <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> take is read as a
+string argument as that of <code>open</code> is, through <code>makeString</code> alone, so an object
+with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code> at its position,
+1 for <code>arrayIn</code> and <code>makeArray</code> and 2 for <code>arrayOut</code> (<a href="classes/stream.html#r-class.stream.deviation.183">Deviation
+183</a> is the difference from ooRexx). The second example reads an object whose
+<code>string</code> method answers an object with no string value: the start, the count
+and the line number raise <code>SYNTAX 88.907</code>, a string to write and an option
+<code>SYNTAX 88.909</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-objects-zq.tmp'
 g = 'spec-stream-objects-w-zq.tmp'
 call lineout f, 'abc'
@@ -86298,7 +86300,6 @@ call try 's~charout("x", o)'
 call try 's~lineout("x", o)'
 call try 's~lineout(o, 1)'
 call try 's~open(o)'
-call try 's~arrayin(o)'
 exit
 try:
   signal on syntax name bad
@@ -86319,7 +86320,72 @@ s~charout("x", o) =&gt; 88.907
 s~lineout("x", o) =&gt; 88.907
 s~lineout(o, 1) =&gt; 88.909
 s~open(o) =&gt; 88.909
-s~arrayin(o) =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.183"><a href="classes/stream.html#r-class.stream.deviation.183">[class.stream.deviation.183]</a></div>
+<p>The option of <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a string
+argument, as the option of <code>open</code> is: its <code>makeString</code> method is sent to it,
+and the characters of the answer decide. An object whose <code>makeString</code> answers
+<code>L</code> or <code>C</code> works as that string does; an object with no <code>makeString</code> method,
+one that has only <code>string</code> among them, and <code>.nil</code> raise <code>SYNTAX 88.909</code>, at
+argument 1 for <code>arrayIn</code> and <code>makeArray</code> and at argument 2 for <code>arrayOut</code>. A
+string whose first character is neither is the wrong option, <code>SYNTAX 93.915</code> for
+<code>arrayIn</code> and <code>makeArray</code> and <code>SYNTAX 93.0</code> for <code>arrayOut</code>. ooRexx sends the
+option the message <code>caselessStartsWith</code> instead, so for every object that is no
+string, one whose <code>makeString</code> answers <code>L</code> among them, and for <code>.nil</code>, it
+raises <code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-optobj-zq.tmp'
+g = 'spec-stream-optobj-w-zq.tmp'
+call charout f, 'ab'
+call charout f
+s = .stream~new(f)
+w = .stream~new(g)
+a = .array~of('x')
+call try 's~arrayin(.ms~new("L"))~items'
+call try 's~makearray(.ms~new("c"))~items'
+call try 's~arrayin(.ms~new("Q"))'
+call try 's~arrayin(.os~new("L"))'
+call try 's~makearray(.nil)'
+call try 'w~arrayout(a, .ms~new("L"))'
+call try 'w~arrayout(a, .ms~new("Q"))'
+call try 'w~arrayout(a, .os~new("L"))'
+call try 'w~arrayout(a, .nil)'
+w~close
+s~close
+call sysfiledelete f
+call sysfiledelete g
+exit
+try:
+  signal on syntax name bad
+  s~close
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class ms
+::method init
+  expose v
+  use arg v
+::method makestring
+  expose v
+  return v
+::class os
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+</code></pre>
+<pre><code class="language-output">s~arrayin(.ms~new("L"))~items =&gt; [1]
+s~makearray(.ms~new("c"))~items =&gt; [2]
+s~arrayin(.ms~new("Q")) =&gt; 93.915
+s~arrayin(.os~new("L")) =&gt; 88.909
+s~makearray(.nil) =&gt; 88.909
+w~arrayout(a, .ms~new("L")) =&gt; [0]
+w~arrayout(a, .ms~new("Q")) =&gt; 93.0
+w~arrayout(a, .os~new("L")) =&gt; 88.909
+w~arrayout(a, .nil) =&gt; 88.909
 </code></pre>
 <div class="rule" id="r-class.stream.args.strings"><a href="classes/stream.html#r-class.stream.args.strings">[class.stream.args.strings]</a></div>
 <p>The string that <code>charOut</code>, <code>lineOut</code> and <code>say</code> write is read as <a href="classes/index.html#r-class.index.string">the string
@@ -87147,10 +87213,10 @@ cats 21
 0 ERROR ERROR:
 </code></pre>
 <div class="rule" id="r-class.stream.arrayin.sends"><a href="classes/stream.html#r-class.stream.arrayin.sends">[class.stream.arrayin.sends]</a></div>
-<p>When <code>arrayIn</code> has an argument that is not a string, it sends it
-<code>caselessStartsWith('L')</code> and, when that answers false,
-<code>caselessStartsWith('C')</code>, and no other message, to find the option; when both
-answer false the option is wrong and <code>SYNTAX 93.915</code> is raised. Then, for the
+<p><code>arrayIn</code> reads its argument as a string argument, as <a href="classes/stream.html#r-class.stream.deviation.183">Deviation
+183</a> says, and sends it no other message to find
+the option; when the first character is neither <code>L</code> nor <code>C</code> the option is
+wrong and <code>SYNTAX 93.915</code> is raised. Then, for the
 lines, it sends <code>lines</code> with no argument to the receiver once, before it
 reads, and reads that answer as a whole number that is not negative, whatever
 it is used for: another answer raises <code>SYNTAX 93.906</code>, and the array is the
@@ -87181,11 +87247,6 @@ s~count = 0
 .local~log = ''
 a = s~arrayin('chars')
 say a~items a~makeString('L', ',') .local~log
-do o over .opt~new('1'), .opt~new('0 1'), .opt~new('0 0')
-  .local~log = ''
-  s~close
-  call try2 o
-end
 s~close
 call sysfiledelete f
 exit
@@ -87196,13 +87257,6 @@ try:
   say '[' || arg(1) || ']' '-&gt;' a~items .local~log
   return
 bad: say '[' || arg(1) || ']' '=&gt;' condition('o')~code .local~log
-  return
-try2:
-  signal on syntax name bad2
-  a = s~arrayin(arg(1))
-  say a~items .local~log
-  return
-bad2: say condition('o')~code .local~log
   return
 ::class spy subclass stream
 ::attribute count
@@ -87222,16 +87276,6 @@ bad2: say condition('o')~code .local~log
   self~reads = self~reads + 1
   if self~reads &gt; 3 then raise notready
   return 'c' || self~reads
-::class opt
-::attribute answers
-::method init
-  expose answers
-  use arg answers
-::method caselessStartsWith
-  expose answers
-  .local~log = .local~log 'caselessStartsWith(' || arg(1) || ')'
-  parse var answers first answers
-  return first
 </code></pre>
 <pre><code class="language-output">2 one,two  lines
 [0] -&gt; 2  lines
@@ -87242,9 +87286,6 @@ bad2: say condition('o')~code .local~log
 [x] =&gt; 93.906  lines
 [The NIL object] =&gt; 93.906  lines
 3 c1,c2,c3  chars charin charin charin charin
-2  caselessStartsWith(L) lines
-3  caselessStartsWith(L) caselessStartsWith(C) chars charin charin charin charin
-93.915  caselessStartsWith(L) caselessStartsWith(C)
 </code></pre>
 <div class="rule" id="r-class.stream.makearray"><a href="classes/stream.html#r-class.stream.makearray">[class.stream.makearray]</a></div>
 <p><code>makeArray</code> does what <a href="classes/stream.html#r-class.stream.arrayin"><code>arrayIn</code></a> does, with the same
@@ -87345,9 +87386,10 @@ argument <code>ARRAY</code>, which an <code>Array</code>, a <code>List</code>, a
 answer with an array of their items, and the items are written in the order of
 that array, an empty slot giving none; an argument whose answer is not an
 array, <code>.nil</code> among them, raises <code>SYNTAX 98.913</code>. The second argument is
-optional: it is sent <code>left</code> with the argument 1, and the answer must be <code>L</code> for
+optional: it is read as a string argument (<a href="classes/stream.html#r-class.stream.deviation.183">Deviation
+183</a>), and its first character must be <code>L</code> for
 lines or <code>C</code> for characters, in either case, or <code>SYNTAX 93.0</code> is raised. The
-option is sent <code>left</code> before the first argument is sent <code>request</code>, and a call
+option is read before the first argument is sent <code>request</code>, and a call
 whose option and first argument are both in error raises the error of one of
 them, as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence rule</a> says. An item is
 written as <code>lineOut</code> and <code>charOut</code> read their string, so an item that has no
@@ -87364,7 +87406,7 @@ say s~arrayout(.array~of('one', 'two')) s~state
 say s~arrayout(.list~of('three')) s~arrayout(.array~of(4, 5), 'C')
 say s~arrayout(.array~new(3)~~put('six', 1)~~put('eight', 3), 'lines')
 say s~arrayout(.array~new) s~arrayout(.array~new(2))
-say s~arrayout(.array~of('x', 'y'), .opt~new('L'))
+say s~arrayout(.array~of('x', 'y'), 'L')
 say s~arrayout(.array~of('z'), 'c')
 say s~arrayout(.set~of('set')) s~arrayout(.queue~of('q1', 'q2'))
 e = .stream~new('spec-stream-arrayout-empty-zq.tmp')
@@ -87422,8 +87464,7 @@ one~two~three~45six~eight~x~y~zset~q1~q2~p~a
 3 ERROR 0
 </code></pre>
 <div class="rule" id="r-class.stream.arrayout.sends"><a href="classes/stream.html#r-class.stream.arrayout.sends">[class.stream.arrayout.sends]</a></div>
-<p><code>arrayOut</code> sends, in this order: <code>left(1)</code> to the second argument when it has
-one and it is not a string, <code>request('ARRAY')</code> to the first argument, and then
+<p><code>arrayOut</code> sends, in this order: <code>request('ARRAY')</code> to the first argument, and then
 <code>lineOut</code>, or <code>charOut</code> for the characters, to the receiver for each item in
 turn, with the item itself as the one argument. It sends no other message to
 the receiver, the array or an item; what the sends answer is not looked at,
@@ -87451,7 +87492,7 @@ end
 .local~log = ''
 s = .spy~new(f)
 s~mode = 'record'
-say s~arrayout(.arr~of('p', 'q'), .opt~new) .local~log s~log
+say s~arrayout(.arr~of('p', 'q'), 'L') .local~log s~log
 call sysfiledelete f
 exit
 ::routine help
@@ -87489,10 +87530,6 @@ exit
 ::method charout
   self~log = self~log 'charOut'
   return 0
-::class opt
-::method left
-  .local~log = .local~log 'left(' || arg(1) || ')'
-  return 'L'
 ::class arr subclass array
 ::method request
   .local~log = .local~log 'request(' || arg(1) || ')'
@@ -87504,7 +87541,7 @@ continue  0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
 super     0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
 raise     3 READY  lineOut(String)
 helper    0 READY  lineOut(String) lineOut(SHOWN) lineOut(String)
-0  left(1) request(ARRAY) lineOut lineOut  lineOut(String) lineOut(String)
+0  request(ARRAY) lineOut lineOut  lineOut(String) lineOut(String)
 </code></pre>
 <div class="rule" id="r-class.stream.supplier"><a href="classes/stream.html#r-class.stream.supplier">[class.stream.supplier]</a></div>
 <p><code>supplier</code> answers a new <a href="classes/streamsupplier.html"><code>StreamSupplier</code></a> that stands for
@@ -130365,6 +130402,13 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).</p>
+<h2 id="183-the-option-of-arrayin-makearray-and-arrayout-is-read-as-a-string"><a class="header" href="#183-the-option-of-arrayin-makearray-and-arrayout-is-read-as-a-string">183. The option of arrayIn, makeArray and arrayOut is read as a string</a></h2>
+<p>The option of <code>Stream</code>'s <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a
+string argument, as the option of <code>open</code> is: through its <code>makeString</code> method,
+so an object whose <code>makeString</code> answers <code>L</code> or <code>C</code> is that option, and an
+object with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>. ooRexx
+sends the option <code>caselessStartsWith</code> and raises <code>SYNTAX 97.1</code> for any object
+that is no string and for <code>.nil</code>, whatever its <code>makeString</code> answers.</p>
 
                     </main>
 
