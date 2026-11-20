@@ -103,3 +103,7 @@ result.
 
 `specnewer` has a package entry that asks for an interpreter newer than any
 there is, with the one routine `FxNewer`.
+
+`specraising` has a package entry whose loader raises `SYNTAX 93.900` with the
+message `raising loader`, and whose one routine is the classic function
+`FxClassicJoin`, as `specclassic`'s.

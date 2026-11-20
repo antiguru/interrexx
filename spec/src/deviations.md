@@ -1159,6 +1159,13 @@ directive ends. ooRexx accepts the directive for some such entries,
 called; for others, `SysSleep` of `rexxutil` among them, it raises the same
 error.
 
+A library with a package entry is loaded as a package to find which kind its
+entry is, so its loader runs. When the loader raises a condition, the
+directive raises that condition instead, and leaves no registration behind.
+ooRexx looks the entry up in the library without loading it as a package: the
+loader does not run, the directive installs, the registration stays, and
+calling the routine calls the entry. Ruled by the owner on 2026-11-20 (#853).
+
 ## 144. LINES of a standard stream in normal mode
 
 LINES with a name that denotes the standard input, output or error stream, and

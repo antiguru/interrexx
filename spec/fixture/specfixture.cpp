@@ -566,7 +566,7 @@ OOREXX_GET_PACKAGE(newer);
 #elif defined(SPEC_FIXTURE_RAISING)
 
 // Raises SYNTAX 93.900 with the message `raising loader`.
-// Serves r[native.loading.registered].
+// Serves r[dir.routine.deviation.143].
 static void RexxEntry raisingLoader(RexxThreadContext *context)
 {
     context->RaiseException1(Rexx_Error_Incorrect_method_user_defined,

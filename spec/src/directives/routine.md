@@ -398,8 +398,15 @@ raises nothing when the package is loaded; the process ends when the routine
 is called. For other such entries, `SysSleep` of `rexxutil` among them,
 ooRexx raises the same error.
 interrexx raises the error where the directive is, so a package with the
-declaration never loads. The example is not run against ooRexx, whose process
-would end.
+declaration never loads. The first example is not run against ooRexx, whose
+process would end.
+A library with a package entry is loaded as a package to find which kind its
+entry is, so its loader runs. When the loader raises a condition, the
+directive raises that condition, and leaves no registration behind: [the
+fixture library `specraising`](../native/index.md#the-fixture-libraries) has
+a loader that raises `SYNTAX 93.900`. ooRexx looks the entry up without
+loading the library as a package, so its loader does not run; the directive
+installs, the registration stays, and the routine calls the entry.
 
 ```rexx
 signal on syntax name e
@@ -412,4 +419,18 @@ e: say condition('o')~code
 
 ```output
 90.999
+```
+
+```rexx
+signal on syntax name e
+p = .package~new('n1zqrl', -
+  .array~of('::routine n1zqrl external "REGISTERED specraising FxClassicJoin"'))
+say 'installed'
+e: say condition('o')~code
+say rxfuncquery('n1zqrl')
+```
+
+```output
+93.900
+1
 ```
