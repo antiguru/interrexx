@@ -64,6 +64,12 @@ page records why they are the way they are.
   place, with `PYTHONUNBUFFERED` and `-u`. Handing the buffer over at every entry into native
   code and every return from it would keep ooRexx's order unasked, but costs a write per call,
   and per clause where an RXHLT or RXTRC exit is registered.
+* **Interpreter instances share no objects** (2026-11-20, #731, Deviation 85). Each instance
+  owns its objects and collects them alone, so a reference one instance hands out names nothing
+  in another. Sharing them, as ooRexx does, would need a collector that sees the roots of every
+  instance at once, or a handle that keeps an object of one instance alive from another, and
+  either would tie the instances' lifetimes and collections together. BSF4ooRexx's tests that
+  reach one instance's objects from a second are listed as expected failures.
 * **Comparing a `DateTime`, `TimeSpan` or `File` with an object of another class** (2026-11-15,
   #74, Deviation 126). `compareTo` and the ordering operators raise `SYNTAX 88.914`, since any
   order between the two would be arbitrary. The equality operators answer not equal, as ooRexx
