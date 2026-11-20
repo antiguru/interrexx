@@ -2032,7 +2032,7 @@ bad: say 'SYNTAX' condition('o')~code
 <p>A <code>.ROUTINES</code> entry that is not a routine is refused when it is called: the
 program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
 A metaclass <code>new</code> that answers something other than a class raises a
-condition instead (<a href="class.html#r-class.class.deviation.114">Deviation 114</a>), and so does
+condition instead (<a href="class.html#r-class.class.metaclass-new">its rule</a>), and so does
 a native method run on a receiver of the wrong kind (<a href="#r-class.object.borrowed-native">its
 rule</a>).</p>
 <pre><code class="language-rexx">.routines['F'] = 'x'

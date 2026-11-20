@@ -353,7 +353,7 @@ were a string, running garbage or crashing.</p>
 <p>A <code>.ROUTINES</code> entry written to a package that is not a routine is refused when
 it is called, exit code 120. ooRexx casts the object unchecked and crashes.
 Not covered: a metaclass <code>NEW</code> that answers something other than a class
-raises <code>SYNTAX 98.900</code> (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and a
+raises <code>SYNTAX 99.927</code> (<a href="classes/class.html#r-class.class.metaclass-new">its rule</a>), and a
 native method run on a receiver of the wrong kind raises a trappable
 <code>SYNTAX 93.900</code>, as <a href="classes/object.html#r-class.object.borrowed-native">the rule</a> says.</p>
 <h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
@@ -771,17 +771,9 @@ so a quoted <code>'12'</code> behaves the same way when the literal <code>12</co
 it. The same storage shows where a string is read as text: an item of an
 <code>Array</code> whose <code>objectName</code> answers such a number is written by <code>makeString</code>
 and <code>toString</code> as the digits; ooRexx writes bytes of its stored form.</p>
-<h2 id="108-a-supplier-that-is-not-a-supplier"><a class="header" href="#108-a-supplier-that-is-not-a-supplier">108. A supplier that is not a Supplier</a></h2>
-<p>When <code>subclass</code>, <code>mixinclass</code>, <code>defineMethods</code> or <code>enhanced</code> takes the methods
-of an object through its <code>supplier</code> method, the object that <code>supplier</code>
-answers is used through the messages <code>available</code>, <code>index</code>, <code>item</code> and <code>next</code>
-when it is not a <code>Supplier</code>; an object that does not answer one of them raises
-<code>SYNTAX 97.1</code> as for any message. A <code>Supplier</code>, an instance of a subclass
-included, is read directly, as a String subclass instance is read by its
-characters
-(<a href="#109-string-subclass-instances-are-their-characters">Deviation 109</a>). ooRexx
-reads the answer as a Supplier without checking it and crashes when it is not
-one.</p>
+<h2 id="108-withdrawn"><a class="header" href="#108-withdrawn">108. Withdrawn</a></h2>
+<p>A supplier that is not a Supplier: interrexx raises <code>SYNTAX 98.994</code> as ooRexx
+does since upstream bug #2152, ruled by the owner on 2026-11-20 (#855).</p>
 <h2 id="109-string-subclass-instances-are-their-characters"><a class="header" href="#109-string-subclass-instances-are-their-characters">109. String subclass instances are their characters</a></h2>
 <p>An instance of a subclass of <code>String</code> is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as receiver and
@@ -838,14 +830,14 @@ the array of arguments that <code>Message~sendWith</code>, <code>startWith</code
 take is copied and counted the same way. ooRexx keeps the caller's array
 itself and passes its size as the number of arguments, trailing empty
 positions included, in all four.</p>
-<h2 id="114-a-metaclass-new-that-answers-an-object-that-is-not-a-class"><a class="header" href="#114-a-metaclass-new-that-answers-an-object-that-is-not-a-class">114. A metaclass NEW that answers an object that is not a class</a></h2>
-<p>When <code>subclass</code>, <code>mixinclass</code> or a <code>::CLASS</code> directive sends <code>new</code> to a
-metaclass and the answer is not a class, <code>SYNTAX 98.900</code> is raised in the
-program that made the request, and it can be trapped. ooRexx crashes.</p>
-<h2 id="115-a-requestarray-answer-that-is-neither-an-array-nor-nil"><a class="header" href="#115-a-requestarray-answer-that-is-neither-an-array-nor-nil">115. A request('ARRAY') answer that is neither an array nor .nil</a></h2>
-<p>When <code>Method~new</code>, <code>Routine~new</code> or <code>Package~new</code> sends its source <code>request</code>
-with the argument <code>ARRAY</code> and the answer is neither an array nor <code>.nil</code>,
-<code>SYNTAX 88.913</code> is raised. ooRexx crashes.</p>
+<h2 id="114-withdrawn"><a class="header" href="#114-withdrawn">114. Withdrawn</a></h2>
+<p>A metaclass NEW that answers an object that is not a class: interrexx raises
+<code>SYNTAX 99.927</code> as ooRexx does since upstream bug #2164, ruled by the owner on
+2026-11-20 (#855).</p>
+<h2 id="115-withdrawn"><a class="header" href="#115-withdrawn">115. Withdrawn</a></h2>
+<p>A request('ARRAY') answer that is neither an array nor .nil: interrexx raises
+<code>SYNTAX 93.961</code> as ooRexx does since upstream bug #2150, ruled by the owner on
+2026-11-20 (#855).</p>
 <h2 id="116-a-failing-notification-target-is-sent-messagecomplete-once"><a class="header" href="#116-a-failing-notification-target-is-sent-messagecomplete-once">116. A failing notification target is sent messageComplete once</a></h2>
 <p>When a <code>messageComplete</code> sent to a notification target of a started message
 raises an error, that target is not sent <code>messageComplete</code> again. ooRexx sends

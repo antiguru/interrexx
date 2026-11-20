@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="routine"><a class="header" href="#routine">Routine</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Routine Class; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; loadExternalRoutine (Class method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; []; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; call; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; callWith; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; source; The Security Manager</p>
-<p class="deviations">Deviations: D41, D109, D111, D115, D118, D124, D134</p>
+<p class="deviations">Deviations: D41, D109, D111, D118, D124, D134</p>
 <p>A <code>Routine</code> object is a piece of code that is called with arguments and
 answers a value, as a routine of a program is. A <code>::ROUTINE</code> directive makes
 one for each directive, and a program makes one of its own from source text
@@ -296,8 +296,9 @@ bad: say arg(1) '=&gt;' condition('o')~code
 (the line is a string answer itself, and any other answer's <code>objectName</code>), and,
 when the routine has been made, <code>init</code> with the arguments of <code>new</code> from the
 fourth on. An answer to <code>request</code> with <code>ARRAY</code> that is neither an array nor
-<code>.nil</code> raises <code>SYNTAX 88.913</code>, and no <code>request</code> with <code>STRING</code> follows it
-(<a href="#r-class.routine.deviation.115">Deviation 115</a>). An instance of a subclass of
+<code>.nil</code> raises <code>SYNTAX 93.961</code> when it came from <code>makeArray</code>, and is taken as
+<code>.nil</code> when it came from a <code>request</code> method of the source's own (<a href="#r-class.routine.new.request-answer">the answer
+rule</a>). An instance of a subclass of
 <code>List</code> is sent <code>request</code> as well (<a href="#r-class.routine.deviation.118">Deviation
 118</a>).</p>
 <pre><code class="language-rexx">call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -1392,6 +1393,62 @@ bad: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">91.999
 </code></pre>
+<div class="rule" id="r-class.routine.new.request-answer"><a href="#r-class.routine.new.request-answer">[class.routine.new.request-answer]</a></div>
+<p>A <code>new</code> whose source's <code>request</code> with <code>ARRAY</code> answers an object that is neither
+an array nor <code>.nil</code> raises <code>SYNTAX 93.961</code> when the <code>request</code> is the one of
+<code>Object</code>, so that the answer is what <code>makeArray</code> answered, and sends no
+<code>request</code> with <code>STRING</code>; when the source has a <code>request</code> method of its own the
+answer is taken as <code>.nil</code> and <code>request</code> with <code>STRING</code> follows, as <a href="method.html#r-class.method.new.request-answer">the rule of
+<code>Method</code></a> states. In the examples <code>mk</code>
+answers by <code>makeArray</code> a string, a list and an object that is none of them, and
+<code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.routine~new("n", .mk~new("return 1"))'
+call try '.routine~new("n", .mk~new(.list~of("return 1")))'
+call try '.routine~new("n", .mk~new(.object~new))'
+call try '.routine~new("n", .src~new(.list~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.nil))~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.routine~new("n", .mk~new("return 1")) =&gt; 93.961
+makeArray
+.routine~new("n", .mk~new(.list~of("return 1"))) =&gt; 93.961
+makeArray
+.routine~new("n", .mk~new(.object~new)) =&gt; 93.961
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.list~of("return 1")))~call =&gt; 2
+request ARRAY
+.routine~new("n", .src~new(.array~of("return 1")))~call =&gt; 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil))~call =&gt; 2
+</code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.routine.deviation.41"><a href="#r-class.routine.deviation.41">[class.routine.deviation.41]</a></div>
 <p>A source that is an encoded program image whose decoded bytes lack the tag of
@@ -1421,48 +1478,6 @@ say r~package~name r~source[1]
   return 'other'
 </code></pre>
 <pre><code class="language-output">Foo say "src"
-</code></pre>
-<div class="rule" id="r-class.routine.deviation.115"><a href="#r-class.routine.deviation.115">[class.routine.deviation.115]</a></div>
-<p>A <code>new</code> whose source answers <code>request</code> with <code>ARRAY</code> by an object that is neither
-an array nor <code>.nil</code> raises <code>SYNTAX 88.913</code>, as <a href="method.html#r-class.method.deviation.115">the rule of
-<code>Method</code></a> states, and no <code>request</code> with <code>STRING</code>
-is sent. ooRexx crashes.
-The examples have <code>request</code> answer a string, a list and an object that is none
-of them.</p>
-<pre><code class="language-rexx">call try '.routine~new("n", .src~new("return 1"))'
-call try '.routine~new("n", .src~new(.list~of("return 1")))'
-call try '.routine~new("n", .src~new(.object~new))'
-call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
-call try '.routine~new("n", .src~new(.nil))~call'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.routine~new("n", .src~new("return 1")) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.list~of("return 1"))) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.object~new)) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.array~of("return 1")))~call =&gt; 1
-request ARRAY
-request STRING
-.routine~new("n", .src~new(.nil))~call =&gt; 2
 </code></pre>
 <div class="rule" id="r-class.routine.deviation.118"><a href="#r-class.routine.deviation.118">[class.routine.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with

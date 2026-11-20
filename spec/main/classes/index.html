@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
 <p class="references">rexxref: Builtin Classes; Objects and Classes &gt; Mixin Classes; Objects and Classes &gt; Overview of Classes Provided by Rexx; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName=; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; string</p>
-<p class="deviations">Deviations: D30, D32, D36, D109, D114</p>
+<p class="deviations">Deviations: D30, D32, D36, D109</p>
 <p>This chapter specifies the classes that every program can use without
 declaring them: the classes of the class library. It has a page for each
 class, or for a few classes that belong together, and a page, <a href="methods.html">the method
@@ -1018,6 +1018,39 @@ say r~items r~allIndexes~items
 3 7,8,9
 2 2
 </code></pre>
+<div class="rule" id="r-class.index.metaclass-new"><a href="#r-class.index.metaclass-new">[class.index.metaclass-new]</a></div>
+<p>When <code>subclass</code> or <code>mixinclass</code> sends <code>new</code> to a metaclass and the answer is not
+a class, <code>SYNTAX 99.927</code> is raised by the message, in the program that sent it,
+where it can be trapped, as for a metaclass that is not one; the first
+substitution of the error is the metaclass's default name. The object that
+<code>new</code> answered may be any object, a string and <code>.nil</code> included. The metaclass
+answers a string for the first class of the example, <code>.nil</code> for the second and
+an instance of <code>Object</code> for the third, and makes the class <code>K</code> of the directive
+as <code>Class</code> does. The directive case is <a href="../directives/class.html#r-dir.class.metaclass-new">the METACLASS
+rule</a>.</p>
+<pre><code class="language-rexx">call try '.k~subclass("S")'
+call try '.k~subclass("N")'
+call try '.k~mixinclass("O")'
+exit
+try:
+  signal on syntax name e
+  interpret 'z =' arg(1)
+  say arg(1) '=&gt; made'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class meta subclass class
+::method new class
+  if arg(1) = 'S' then return 'a string'
+  if arg(1) = 'N' then return .nil
+  if arg(1) = 'O' then return .object~new
+  forward class (super)
+::class k metaclass meta
+</code></pre>
+<pre><code class="language-output">.k~subclass("S") =&gt; 99.927
+.k~subclass("N") =&gt; 99.927
+.k~mixinclass("O") =&gt; 99.927
+</code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.index.deviation.30"><a href="#r-class.index.deviation.30">[class.index.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a
@@ -1093,37 +1126,6 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 </code></pre>
 <pre><code class="language-output">String 0
 String 0
-</code></pre>
-<div class="rule" id="r-class.index.deviation.114"><a href="#r-class.index.deviation.114">[class.index.deviation.114]</a></div>
-<p>When <code>subclass</code> or <code>mixinclass</code> sends <code>new</code> to a metaclass and the answer is not
-a class, <code>SYNTAX 98.900</code> is raised by the message, in the program that sent it,
-where it can be trapped. The object that <code>new</code> answered may be any object, a
-string and <code>.nil</code> included. ooRexx crashes. The metaclass answers a string for
-the first class of the example, <code>.nil</code> for the second and an instance of
-<code>Object</code> for the third, and makes the class <code>K</code> of the directive as <code>Class</code>
-does. The directive case is <a href="../directives/class.html#r-dir.class.deviation.114">the METACLASS rule</a>.</p>
-<pre><code class="language-rexx">call try '.k~subclass("S")'
-call try '.k~subclass("N")'
-call try '.k~mixinclass("O")'
-exit
-try:
-  signal on syntax name e
-  interpret 'z =' arg(1)
-  say arg(1) '=&gt; made'
-  return
-e: say arg(1) '=&gt;' condition('o')~code
-  return
-::class meta subclass class
-::method new class
-  if arg(1) = 'S' then return 'a string'
-  if arg(1) = 'N' then return .nil
-  if arg(1) = 'O' then return .object~new
-  forward class (super)
-::class k metaclass meta
-</code></pre>
-<pre><code class="language-output">.k~subclass("S") =&gt; 98.900
-.k~subclass("N") =&gt; 98.900
-.k~mixinclass("O") =&gt; 98.900
 </code></pre>
 <div class="rule" id="r-class.index.deviation.36"><a href="#r-class.index.deviation.36">[class.index.deviation.36]</a></div>
 <p><code>objectName=</code> sent to a String of no subclass and no enhancement, a number

@@ -368,8 +368,9 @@ message <code>REQUEST</code> with the argument <code>ARRAY</code> (the
 argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
-line, and a <a href="../classes/list.html#r-class.list.makearray">list</a> supplies its items. A value that
-cannot be made into an array raises <code>SYNTAX 98.946</code>. An instance of a subclass
+line, and a <a href="../classes/list.html#r-class.list.makearray">list</a> supplies its items, as does an
+object whose <code>makeArray</code> answers an instance of a subclass of <code>Array</code>. A value
+that cannot be made into an array raises <code>SYNTAX 98.946</code>. An instance of a subclass
 of <code>List</code> is sent <code>REQUEST</code> as well (<a href="#r-instr.forward.deviation.118">Deviation
 118</a>).</p>
 <pre><code class="language-rexx">t = .target~new
@@ -381,6 +382,7 @@ call try 'lines', 'x'||'0a'x||'y'
 call try 'list', .list~of(1, 2)
 call try 'nil', .nil
 call try 'object', .object~new
+call try 'subclass', .mk~new
 exit
 try:
   signal on syntax name e
@@ -398,6 +400,10 @@ e: say arg(1) '=&gt;' condition('o')~code
     else s = s i'=-'
   end
   return s
+::class mk
+::method makeArray
+  return .arr~of('a', 'b')
+::class arr subclass array
 </code></pre>
 <pre><code class="language-output">array =&gt; 3 1=1 2=- 3=3
 empty =&gt; 0
@@ -407,6 +413,7 @@ lines =&gt; 2 1=x 2=y
 list =&gt; 2 1=1 2=2
 nil =&gt; 98.946
 object =&gt; 98.946
+subclass =&gt; 2 1=a 2=b
 </code></pre>
 <div class="rule" id="r-instr.forward.class"><a href="#r-instr.forward.class">[instr.forward.class]</a></div>
 <p>CLASS is the class at which <a href="../classes/methods.html#r-class.methods.forward">the search</a> for the

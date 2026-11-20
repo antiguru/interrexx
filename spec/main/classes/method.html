@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="method"><a class="header" href="#method">Method</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Method Class; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; loadExternalMethod (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAbstract; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAttribute; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isConstant; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPackage; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; scope; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setUnguarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; source</p>
-<p class="deviations">Deviations: D41, D109, D115, D118, D134</p>
+<p class="deviations">Deviations: D41, D109, D118, D134</p>
 <p>A <code>Method</code> object is the code of one method together with the facts that
 decide who may send it and how it runs: whether it is private, package-scope,
 protected or guarded, which class it belongs to, and the package whose classes
@@ -404,8 +404,9 @@ it makes. A source that is not a string and not an array, and an instance of a
 subclass of <code>String</code> or <code>Array</code>, is sent <code>request</code> with the argument <code>ARRAY</code>;
 when that answers an array its items are the lines, read as <a href="#r-class.method.new.source">the source
 rule</a> reads an array. When it answers an object that
-is neither an array nor <code>.nil</code>, <code>new</code> raises <code>SYNTAX 88.913</code> and sends no
-<code>request</code> with <code>STRING</code> (<a href="#r-class.method.deviation.115">Deviation 115</a>). An
+is neither an array nor <code>.nil</code>, <code>new</code> raises <code>SYNTAX 93.961</code> if the answer came
+from <code>makeArray</code>, and takes it as <code>.nil</code> if it came from a <code>request</code> method of
+the source's own (<a href="#r-class.method.new.request-answer">the answer rule</a>). An
 instance of a subclass of <code>List</code> is sent <code>request</code> as well (<a href="#r-class.method.deviation.118">Deviation
 118</a>). When it answers <code>.nil</code> the source is sent
 <code>request</code> with the argument <code>STRING</code>: an answer that is a string is the one-line
@@ -1322,6 +1323,64 @@ ran
 1
 m~setSecurityManager(1, 2) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.method.new.request-answer"><a href="#r-class.method.new.request-answer">[class.method.new.request-answer]</a></div>
+<p>When a source's <code>request</code> with <code>ARRAY</code> answers an object that is neither an
+array nor <code>.nil</code>, what follows depends on where the answer came from. When the
+<code>request</code> is the one of <code>Object</code>, so that the answer is what the source's
+<code>makeArray</code> answered, <code>new</code> raises <code>SYNTAX 93.961</code> and sends no <code>request</code> with
+<code>STRING</code>. When the source has a <code>request</code> method of its own, the answer is
+taken as <code>.nil</code>: <code>request</code> with <code>STRING</code> follows, and its answer gives the
+line. <a href="routine.html#r-class.routine.new.request-answer">The Routine page rule</a> has the
+examples for <code>Routine~new</code>; in the examples here <code>mk</code> answers by <code>makeArray</code>
+and <code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.method~new("n", .mk~new("return 1"))'
+call try '.method~new("n", .mk~new(.directory~new))'
+call try '.method~new("n", .src~new("return 1"))~source[1]'
+call try '.method~new("n", .src~new(.directory~new))~source[1]'
+call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
+call try '.method~new("n", .src~new(.nil))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.method~new("n", .mk~new("return 1")) =&gt; 93.961
+makeArray
+.method~new("n", .mk~new(.directory~new)) =&gt; 93.961
+request ARRAY
+request STRING
+.method~new("n", .src~new("return 1"))~source[1] =&gt; return 2
+request ARRAY
+request STRING
+.method~new("n", .src~new(.directory~new))~source[1] =&gt; return 2
+request ARRAY
+.method~new("n", .src~new(.array~of("return 1")))~source[1] =&gt; return 1
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil))~source[1] =&gt; return 2
+</code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.method.deviation.41"><a href="#r-class.method.deviation.41">[class.method.deviation.41]</a></div>
 <p>A source that is an encoded program image, which has the line
@@ -1354,45 +1413,6 @@ say m~package~name m~source[1]
   return 'other'
 </code></pre>
 <pre><code class="language-output">Foo say "src"
-</code></pre>
-<div class="rule" id="r-class.method.deviation.115"><a href="#r-class.method.deviation.115">[class.method.deviation.115]</a></div>
-<p>A source that answers <code>request</code> with <code>ARRAY</code> by an object that is neither an
-array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 88.913</code>, whatever the object is: a
-string, a list or any other object, and no <code>request</code> with <code>STRING</code> is sent after
-it. ooRexx crashes. <a href="routine.html#r-class.routine.deviation.115">The
-Routine page rule</a> has the examples for
-<code>Routine~new</code>; the examples here have <code>request</code> answer a string and a directory.</p>
-<pre><code class="language-rexx">call try '.method~new("n", .src~new("return 1"))'
-call try '.method~new("n", .src~new(.directory~new))'
-call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
-call try '.method~new("n", .src~new(.nil))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.method~new("n", .src~new("return 1")) =&gt; 88.913
-request ARRAY
-.method~new("n", .src~new(.directory~new)) =&gt; 88.913
-request ARRAY
-.method~new("n", .src~new(.array~of("return 1")))~source[1] =&gt; return 1
-request ARRAY
-request STRING
-.method~new("n", .src~new(.nil))~source[1] =&gt; return 2
 </code></pre>
 <div class="rule" id="r-class.method.deviation.118"><a href="#r-class.method.deviation.118">[class.method.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with

@@ -177,7 +177,7 @@
 <pre><code>::CLASS name [METACLASS m] [SUBCLASS s | MIXINCLASS s] [PUBLIC | PRIVATE] [ABSTRACT] [INHERIT i ...]
 </code></pre>
 <p class="references">rexxref: Directives &gt; ::CLASS</p>
-<p class="deviations">Deviations: D32, D114</p>
+<p class="deviations">Deviations: D32</p>
 <p>::CLASS declares a class. The class comes into being when the package is
 installed, before the prolog runs, and the methods that the ::METHOD
 directives after it declare belong to it until the next ::CLASS. This page
@@ -558,8 +558,8 @@ subclass of <code>Class</code> raises <code>SYNTAX 99.927</code> when the packag
 after the classes created before it have received INIT as <a href="index.html#r-dir.index.failure">the failure
 rule</a> says, and a metaclass that is the class itself
 raises <code>98.911</code>. A <code>new</code> of the METACLASS that answers an object that is not a
-class raises <code>SYNTAX 98.900</code> when the package is installed (<a href="#r-dir.class.deviation.114">Deviation
-114</a>).</p>
+class raises <code>SYNTAX 99.927</code> when the package is installed (<a href="#r-dir.class.metaclass-new">the METACLASS
+NEW rule</a>).</p>
 <pre><code class="language-rexx">say .k~hello .k~both
 say .sub~hello .sub~both .sub~metaclass~id
 say .sub2~hello .sub2~metaclass~id
@@ -733,6 +733,19 @@ exit
   say 'init z'
 </code></pre>
 <pre><code class="language-output rc=158"></code></pre>
+<div class="rule" id="r-dir.class.metaclass-new"><a href="#r-dir.class.metaclass-new">[dir.class.metaclass-new]</a></div>
+<p>When the <code>new</code> of the METACLASS answers an object that is not a class, the
+package is not installed: <code>SYNTAX 99.927</code> is raised while the directive is
+read, so the program writes nothing, as
+<a href="../classes/index.html#r-class.index.metaclass-new">the chapter rule</a> states for <code>subclass</code> and
+<code>mixinclass</code>.</p>
+<pre><code class="language-rexx">say 'before'
+::class meta subclass class
+::method new class
+  return .nil
+::class k metaclass meta
+</code></pre>
+<pre><code class="language-output rc=157"></code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-dir.class.deviation.32"><a href="#r-dir.class.deviation.32">[dir.class.deviation.32]</a></div>
 <p>When the <code>new</code> of the METACLASS answers a class that <code>Class</code> did not build,
@@ -748,19 +761,6 @@ runs the program. See <a href="../deviations.html">Deviation 32</a>.</p>
 ::class k metaclass meta
 </code></pre>
 <pre><code class="language-output rc=120"></code></pre>
-<div class="rule" id="r-dir.class.deviation.114"><a href="#r-dir.class.deviation.114">[dir.class.deviation.114]</a></div>
-<p>When the <code>new</code> of the METACLASS answers an object that is not a class, the
-package is not installed: <code>SYNTAX 98.900</code> is raised while the directive is
-read, so the program writes nothing, as
-<a href="../classes/index.html#r-class.index.deviation.114">the chapter rule</a> states for <code>subclass</code> and
-<code>mixinclass</code>. ooRexx crashes.</p>
-<pre><code class="language-rexx">say 'before'
-::class meta subclass class
-::method new class
-  return .nil
-::class k metaclass meta
-</code></pre>
-<pre><code class="language-output rc=158"></code></pre>
 
                     </main>
 

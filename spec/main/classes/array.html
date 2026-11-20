@@ -513,8 +513,11 @@ The index is read as <a href="#r-class.array.indexes">the index rule</a> says, s
 of one index is accepted. The
 method takes one or two arguments: a third raises <code>SYNTAX 93.902</code>; an array of
 more than one dimension raises <code>SYNTAX 93.954</code> whatever the index is, after
-the argument count has been checked. An index that is not a whole number of at
-least 1 and is not <code>.nil</code> raises <code>SYNTAX 93.907</code>.</p>
+the argument count has been checked. An index that is an array of more than
+one index raises <code>SYNTAX 93.926</code>, also when the array has no dimension yet,
+whatever the indexes are, and leaves the array unchanged; an array of indexes
+with one omitted raises <code>SYNTAX 98.975</code> instead. An index that is not a whole
+number of at least 1 and is not <code>.nil</code> raises <code>SYNTAX 93.907</code>.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', 'c')
 say a~insert('x', 1) a~allItems~makeString('L', ',')
 say a~insert('y', .nil) a~allItems~makeString('L', ',')
@@ -530,6 +533,11 @@ call try '.array~of(1)~insert(1, 0)'
 call try '.array~of(1)~insert(1, "x")'
 call try '.array~of(1)~insert(1, 1, 1)'
 call try '.array~new(2, 2)~insert(1, 0)'
+d = .array~new
+call try 'd~insert("i", .array~of(2, 2))'
+call try 'd~insert("i", .array~of("x", 0))'
+call try 'd~insert("i", .array~of(, 1))'
+say d~dimension d~items
 exit
 try:
   signal on syntax name bad
@@ -549,6 +557,10 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .array~of(1)~insert(1, "x") =&gt; 93.907
 .array~of(1)~insert(1, 1, 1) =&gt; 93.902
 .array~new(2, 2)~insert(1, 0) =&gt; 93.954
+d~insert("i", .array~of(2, 2)) =&gt; 93.926
+d~insert("i", .array~of("x", 0)) =&gt; 93.926
+d~insert("i", .array~of(, 1)) =&gt; 98.975
+0 0
 </code></pre>
 <div class="rule" id="r-class.array.insert.omitted"><a href="#r-class.array.insert.omitted">[class.array.insert.omitted]</a></div>
 <p>An <code>insert</code> whose item is omitted makes an empty slot where the item would
@@ -576,7 +588,7 @@ array of more than one dimension raises <code>SYNTAX 93.954</code> whatever the 
 after the argument count has been checked; otherwise the index is read as <a href="#r-class.array.indexes">the
 index rule</a> says, with <code>SYNTAX 93.907</code> for an index
 that is not a whole number of at least 1 and <code>SYNTAX 93.926</code> for an array of
-two.</p>
+more than one index, also when the array has no dimension yet.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', 'c', 'd')
 say a~delete(2) a~size a~allItems~makeString('L', ',')
 say a~delete(9) a~size
@@ -591,6 +603,7 @@ call try 'a~delete(0)'
 call try 'a~delete("x")'
 call try 'a~delete(.array~of(1, 2))'
 call try '.array~new(2, 2)~delete(1)'
+call try '.array~new~delete(.array~of(2, 2))'
 exit
 try:
   signal on syntax name bad
@@ -611,6 +624,7 @@ a~delete(0) =&gt; 93.907
 a~delete("x") =&gt; 93.907
 a~delete(.array~of(1, 2)) =&gt; 93.926
 .array~new(2, 2)~delete(1) =&gt; 93.954
+.array~new~delete(.array~of(2, 2)) =&gt; 93.926
 </code></pre>
 <div class="rule" id="r-class.array.remove"><a href="#r-class.array.remove">[class.array.remove]</a></div>
 <p><code>remove(index)</code> takes the item at the index out of its slot and answers it,

@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="package"><a class="header" href="#package">Package</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Package Class; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; defaultOptions (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; classes; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; definedMethods; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; digits; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findNamespace; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findProgram; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; form; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; fuzz; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedPackages; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadLibrary; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; local; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; name; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; namespaces; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; options; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; prolog; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resource; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resources; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; routines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; source; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceLine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceSize; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; trace</p>
-<p class="deviations">Deviations: D41, D109, D112, D115, D118</p>
+<p class="deviations">Deviations: D41, D109, D112, D118</p>
 <p>A <code>Package</code> object is a unit of code that the interpreter loads: the program
 that a user runs, a file that <code>::REQUIRES</code> loads, a source that <code>new</code> is
 given. It holds the source text, the classes, routines and unattached methods
@@ -310,8 +310,9 @@ that is not a string and not an array, <code>request</code> with <code>ARRAY</co
 <code>objectName</code>), and then sends the new package <code>init</code>, after the package has
 been installed, with the arguments from the fourth on, or from the third on
 when the source is omitted. An answer to <code>request</code> with <code>ARRAY</code> that is
-neither an array nor <code>.nil</code> raises <code>SYNTAX 88.913</code>, and no <code>request</code> with
-<code>STRING</code> follows it (<a href="#r-class.package.deviation.115">Deviation 115</a>). An
+neither an array nor <code>.nil</code> raises <code>SYNTAX 93.961</code> when it came from
+<code>makeArray</code>, and is taken as <code>.nil</code> when it came from a <code>request</code> method of the
+source's own (<a href="#r-class.package.new.request-answer">the answer rule</a>). An
 instance of a subclass of <code>List</code> is sent <code>request</code> as well (<a href="#r-class.package.deviation.118">Deviation
 118</a>). A name that is an object is sent
 <code>request</code> with the argument <code>STRING</code>, once, first, before the messages to the
@@ -2664,6 +2665,54 @@ done
 1 1
 p~setSecurityManager(.guard~new, 1) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.package.new.request-answer"><a href="#r-class.package.new.request-answer">[class.package.new.request-answer]</a></div>
+<p>A source whose <code>request</code> with <code>ARRAY</code> answers an object that is neither an
+array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 93.961</code> when the <code>request</code> is the one
+of <code>Object</code>, so that the answer is what <code>makeArray</code> answered, and no <code>request</code>
+with <code>STRING</code> is sent after it; when the source has a <code>request</code> method of its
+own the answer is taken as <code>.nil</code> and <code>request</code> with <code>STRING</code> follows, as <a href="method.html#r-class.method.new.request-answer">the
+rule of <code>Method</code></a> says. In the examples <code>mk</code>
+answers by <code>makeArray</code> and <code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.package~new("n", .mk~new("nop"))'
+call try '.package~new("n", .mk~new(.list~of("nop")))'
+call try '.package~new("n", .src~new(.list~of("nop")))~source[1]'
+call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'nop'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.package~new("n", .mk~new("nop")) =&gt; 93.961
+makeArray
+.package~new("n", .mk~new(.list~of("nop"))) =&gt; 93.961
+request ARRAY
+request STRING
+.package~new("n", .src~new(.list~of("nop")))~source[1] =&gt; nop
+request ARRAY
+.package~new("n", .src~new(.array~of("nop")))~source[1] =&gt; nop
+</code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.package.deviation.41"><a href="#r-class.package.deviation.41">[class.package.deviation.41]</a></div>
 <p>A source that is an encoded program image whose decoded bytes lack the tag of
@@ -2746,40 +2795,6 @@ fourth
 p~loadPackage("cp112b_zq.cls", .array~of("nop", .object~new)) =&gt; 93.952
 p~loadPackage("cp112c_zq.cls", .array~of("nop", .nil)) =&gt; 93.952
 p~loadPackage("cp112d_zq.cls", .array~of(.array~of("nop", "nop"))) =&gt; 13.1
-</code></pre>
-<div class="rule" id="r-class.package.deviation.115"><a href="#r-class.package.deviation.115">[class.package.deviation.115]</a></div>
-<p>A source that answers <code>request</code> with <code>ARRAY</code> by an object that is neither an
-array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 88.913</code>, as <a href="method.html#r-class.method.deviation.115">the rule of
-<code>Method</code></a> says, and no <code>request</code> with <code>STRING</code> is
-sent after it. ooRexx crashes. The examples have <code>request</code> answer a string
-and a list.</p>
-<pre><code class="language-rexx">call try '.package~new("n", .src~new("nop"))'
-call try '.package~new("n", .src~new(.list~of("nop")))'
-call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'nop'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.package~new("n", .src~new("nop")) =&gt; 88.913
-request ARRAY
-.package~new("n", .src~new(.list~of("nop"))) =&gt; 88.913
-request ARRAY
-.package~new("n", .src~new(.array~of("nop")))~source[1] =&gt; nop
 </code></pre>
 <div class="rule" id="r-class.package.deviation.118"><a href="#r-class.package.deviation.118">[class.package.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with

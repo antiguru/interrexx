@@ -416,7 +416,8 @@ say s~hasIndex('a', 'b') s~hasIndex(5) s~hasIndex
 <p><code>hasItem(item)</code> answers 1 when an item stored at some tail is equal to the
 argument, and <code>index(item)</code> answers the tail of such an item, as a string, and
 <code>.nil</code> when there is none. The default of the stem is not an item. Both take
-exactly one argument: a second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
+exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
+second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
 answers when several items qualify is the first in the order of assignment
 (<a href="#r-class.stem.deviation.1">the order rule</a>).</p>
 <pre><code class="language-rexx">s = .stem~new('N.')
@@ -431,6 +432,9 @@ t['p'] = 'v'
 say t~hasItem('v') t~index('v')
 call try 't~hasItem("a", "b")'
 call try 't~index(1, 2)'
+call try 't~hasItem'
+call try 't~index'
+call try 't~hasItem()'
 exit
 try:
   signal on syntax name bad
@@ -446,6 +450,9 @@ k1 k2 1
 1 p
 t~hasItem("a", "b") =&gt; 93.902
 t~index(1, 2) =&gt; 93.902
+t~hasItem =&gt; 93.903
+t~index =&gt; 93.903
+t~hasItem() =&gt; 93.903
 </code></pre>
 <div class="rule" id="r-class.stem.items"><a href="#r-class.stem.items">[class.stem.items]</a></div>
 <p><code>items</code> answers the number of tails that have an item, the default not

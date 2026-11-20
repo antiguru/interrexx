@@ -9583,8 +9583,9 @@ message <code>REQUEST</code> with the argument <code>ARRAY</code> (the
 argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
-line, and a <a href="instructions/../classes/list.html#r-class.list.makearray">list</a> supplies its items. A value that
-cannot be made into an array raises <code>SYNTAX 98.946</code>. An instance of a subclass
+line, and a <a href="instructions/../classes/list.html#r-class.list.makearray">list</a> supplies its items, as does an
+object whose <code>makeArray</code> answers an instance of a subclass of <code>Array</code>. A value
+that cannot be made into an array raises <code>SYNTAX 98.946</code>. An instance of a subclass
 of <code>List</code> is sent <code>REQUEST</code> as well (<a href="instructions/forward.html#r-instr.forward.deviation.118">Deviation
 118</a>).</p>
 <pre><code class="language-rexx">t = .target~new
@@ -9596,6 +9597,7 @@ call try 'lines', 'x'||'0a'x||'y'
 call try 'list', .list~of(1, 2)
 call try 'nil', .nil
 call try 'object', .object~new
+call try 'subclass', .mk~new
 exit
 try:
   signal on syntax name e
@@ -9613,6 +9615,10 @@ e: say arg(1) '=&gt;' condition('o')~code
     else s = s i'=-'
   end
   return s
+::class mk
+::method makeArray
+  return .arr~of('a', 'b')
+::class arr subclass array
 </code></pre>
 <pre><code class="language-output">array =&gt; 3 1=1 2=- 3=3
 empty =&gt; 0
@@ -9622,6 +9628,7 @@ lines =&gt; 2 1=x 2=y
 list =&gt; 2 1=1 2=2
 nil =&gt; 98.946
 object =&gt; 98.946
+subclass =&gt; 2 1=a 2=b
 </code></pre>
 <div class="rule" id="r-instr.forward.class"><a href="instructions/forward.html#r-instr.forward.class">[instr.forward.class]</a></div>
 <p>CLASS is the class at which <a href="instructions/../classes/methods.html#r-class.methods.forward">the search</a> for the
@@ -13668,7 +13675,9 @@ description that DESCRIPTION gave, which is the null string without it. Its
 empty when the clause has neither ADDITIONAL nor ARRAY, it is the array of
 ARRAY's values, and it is the value of ADDITIONAL made an array, where an
 array stays as it is, a string becomes an array of one item and a list becomes
-an array of its items. The null object <code>.nil</code> and an instance of the class
+an array of its items. An object whose <code>makeArray</code> answers an instance of a
+subclass of <code>Array</code> gives that instance itself, whose items the message
+names. The null object <code>.nil</code> and an instance of the class
 Object cannot be made an array, and an ADDITIONAL with such a value raises
 <code>SYNTAX 98.939</code> in the raising code, as <a href="instructions/raise.html#r-instr.raise.here">the SYNTAX rule</a>
 says; whether an object of any other class is converted is not specified. The
@@ -13676,7 +13685,7 @@ values of the array are what the message of the error names, and the text of
 the message is not specified. Every other
 condition has the entry only when the clause gave one, as <a href="instructions/raise.html#r-instr.raise.additional">the rule for the
 options</a> says.</p>
-<pre><code class="language-rexx">do i = 1 to 5
+<pre><code class="language-rexx">do i = 1 to 6
   call go 'R'i
 end
 exit
@@ -13693,6 +13702,11 @@ s: o = condition('o')
 ::routine r3; raise syntax 40.3 additional (.array~of('p', 'q'))
 ::routine r4; raise syntax 40.3 array ('p', 'q', 'r')
 ::routine r5; raise syntax 40.3 additional (.list~of('l', 'm'))
+::routine r6; raise syntax 40.3 additional (.mk~new)
+::class mk
+::method makeArray
+  return .arr~of('s', 't')
+::class arr subclass array
 </code></pre>
 <pre><code class="language-output">R1 40.3 40 [] The Array class 0
 R2 40.3 40 [why] The Array class 1
@@ -13703,6 +13717,8 @@ R4 40.3 40 [] The Array class 3
    first p
 R5 40.3 40 [] The Array class 2
    first l
+R6 40.3 40 [] The ARR class 2
+   first s
 </code></pre>
 <pre><code class="language-rexx">do i = 1 to 2
   call ('R'i)
@@ -19073,7 +19089,7 @@ does with a duplicate.</p>
 <pre><code>::CLASS name [METACLASS m] [SUBCLASS s | MIXINCLASS s] [PUBLIC | PRIVATE] [ABSTRACT] [INHERIT i ...]
 </code></pre>
 <p class="references">rexxref: Directives &gt; ::CLASS</p>
-<p class="deviations">Deviations: D32, D114</p>
+<p class="deviations">Deviations: D32</p>
 <p>::CLASS declares a class. The class comes into being when the package is
 installed, before the prolog runs, and the methods that the ::METHOD
 directives after it declare belong to it until the next ::CLASS. This page
@@ -19454,8 +19470,8 @@ subclass of <code>Class</code> raises <code>SYNTAX 99.927</code> when the packag
 after the classes created before it have received INIT as <a href="directives/index.html#r-dir.index.failure">the failure
 rule</a> says, and a metaclass that is the class itself
 raises <code>98.911</code>. A <code>new</code> of the METACLASS that answers an object that is not a
-class raises <code>SYNTAX 98.900</code> when the package is installed (<a href="directives/class.html#r-dir.class.deviation.114">Deviation
-114</a>).</p>
+class raises <code>SYNTAX 99.927</code> when the package is installed (<a href="directives/class.html#r-dir.class.metaclass-new">the METACLASS
+NEW rule</a>).</p>
 <pre><code class="language-rexx">say .k~hello .k~both
 say .sub~hello .sub~both .sub~metaclass~id
 say .sub2~hello .sub2~metaclass~id
@@ -19629,6 +19645,19 @@ exit
   say 'init z'
 </code></pre>
 <pre><code class="language-output rc=158"></code></pre>
+<div class="rule" id="r-dir.class.metaclass-new"><a href="directives/class.html#r-dir.class.metaclass-new">[dir.class.metaclass-new]</a></div>
+<p>When the <code>new</code> of the METACLASS answers an object that is not a class, the
+package is not installed: <code>SYNTAX 99.927</code> is raised while the directive is
+read, so the program writes nothing, as
+<a href="directives/../classes/index.html#r-class.index.metaclass-new">the chapter rule</a> states for <code>subclass</code> and
+<code>mixinclass</code>.</p>
+<pre><code class="language-rexx">say 'before'
+::class meta subclass class
+::method new class
+  return .nil
+::class k metaclass meta
+</code></pre>
+<pre><code class="language-output rc=157"></code></pre>
 <h2 id="deviations-19"><a class="header" href="#deviations-19">Deviations</a></h2>
 <div class="rule" id="r-dir.class.deviation.32"><a href="directives/class.html#r-dir.class.deviation.32">[dir.class.deviation.32]</a></div>
 <p>When the <code>new</code> of the METACLASS answers a class that <code>Class</code> did not build,
@@ -19644,19 +19673,6 @@ runs the program. See <a href="directives/../deviations.html">Deviation 32</a>.<
 ::class k metaclass meta
 </code></pre>
 <pre><code class="language-output rc=120"></code></pre>
-<div class="rule" id="r-dir.class.deviation.114"><a href="directives/class.html#r-dir.class.deviation.114">[dir.class.deviation.114]</a></div>
-<p>When the <code>new</code> of the METACLASS answers an object that is not a class, the
-package is not installed: <code>SYNTAX 98.900</code> is raised while the directive is
-read, so the program writes nothing, as
-<a href="directives/../classes/index.html#r-class.index.deviation.114">the chapter rule</a> states for <code>subclass</code> and
-<code>mixinclass</code>. ooRexx crashes.</p>
-<pre><code class="language-rexx">say 'before'
-::class meta subclass class
-::method new class
-  return .nil
-::class k metaclass meta
-</code></pre>
-<pre><code class="language-output rc=158"></code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="method"><a class="header" href="#method">::METHOD</a></h1>
 <pre><code>::METHOD name [CLASS] [PUBLIC | PRIVATE | PACKAGE] [GUARDED | UNGUARDED] [PROTECTED | UNPROTECTED] [ATTRIBUTE | ABSTRACT | EXTERNAL spec | DELEGATE var]
 </code></pre>
@@ -21556,8 +21572,9 @@ raises nothing when the package is loaded; the process ends when the routine
 is called. For other such entries, <code>SysSleep</code> of <code>rexxutil</code> among them,
 ooRexx raises the same error.
 interrexx raises the error where the directive is, so a package with the
-declaration never loads. The first example is not run against ooRexx, whose
-process would end.
+declaration never loads. The examples are not run against ooRexx: the
+process would end in the first, and in the second ooRexx installs the
+directive and prints <code>installed</code>.
 A library with a package entry is loaded as a package to find which kind its
 entry is, so its loader runs. When the loader raises a condition, the
 directive raises that condition, and leaves no registration behind: <a href="directives/../native/index.html#the-fixture-libraries">the
@@ -26950,7 +26967,7 @@ e: say condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
 <p class="references">rexxref: Builtin Classes; Objects and Classes &gt; Mixin Classes; Objects and Classes &gt; Overview of Classes Provided by Rexx; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName=; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; string</p>
-<p class="deviations">Deviations: D30, D32, D36, D109, D114</p>
+<p class="deviations">Deviations: D30, D32, D36, D109</p>
 <p>This chapter specifies the classes that every program can use without
 declaring them: the classes of the class library. It has a page for each
 class, or for a few classes that belong together, and a page, <a href="classes/methods.html">the method
@@ -27793,6 +27810,39 @@ say r~items r~allIndexes~items
 3 7,8,9
 2 2
 </code></pre>
+<div class="rule" id="r-class.index.metaclass-new"><a href="classes/index.html#r-class.index.metaclass-new">[class.index.metaclass-new]</a></div>
+<p>When <code>subclass</code> or <code>mixinclass</code> sends <code>new</code> to a metaclass and the answer is not
+a class, <code>SYNTAX 99.927</code> is raised by the message, in the program that sent it,
+where it can be trapped, as for a metaclass that is not one; the first
+substitution of the error is the metaclass's default name. The object that
+<code>new</code> answered may be any object, a string and <code>.nil</code> included. The metaclass
+answers a string for the first class of the example, <code>.nil</code> for the second and
+an instance of <code>Object</code> for the third, and makes the class <code>K</code> of the directive
+as <code>Class</code> does. The directive case is <a href="classes/../directives/class.html#r-dir.class.metaclass-new">the METACLASS
+rule</a>.</p>
+<pre><code class="language-rexx">call try '.k~subclass("S")'
+call try '.k~subclass("N")'
+call try '.k~mixinclass("O")'
+exit
+try:
+  signal on syntax name e
+  interpret 'z =' arg(1)
+  say arg(1) '=&gt; made'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class meta subclass class
+::method new class
+  if arg(1) = 'S' then return 'a string'
+  if arg(1) = 'N' then return .nil
+  if arg(1) = 'O' then return .object~new
+  forward class (super)
+::class k metaclass meta
+</code></pre>
+<pre><code class="language-output">.k~subclass("S") =&gt; 99.927
+.k~subclass("N") =&gt; 99.927
+.k~mixinclass("O") =&gt; 99.927
+</code></pre>
 <h2 id="deviations-27"><a class="header" href="#deviations-27">Deviations</a></h2>
 <div class="rule" id="r-class.index.deviation.30"><a href="classes/index.html#r-class.index.deviation.30">[class.index.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a
@@ -27868,37 +27918,6 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 </code></pre>
 <pre><code class="language-output">String 0
 String 0
-</code></pre>
-<div class="rule" id="r-class.index.deviation.114"><a href="classes/index.html#r-class.index.deviation.114">[class.index.deviation.114]</a></div>
-<p>When <code>subclass</code> or <code>mixinclass</code> sends <code>new</code> to a metaclass and the answer is not
-a class, <code>SYNTAX 98.900</code> is raised by the message, in the program that sent it,
-where it can be trapped. The object that <code>new</code> answered may be any object, a
-string and <code>.nil</code> included. ooRexx crashes. The metaclass answers a string for
-the first class of the example, <code>.nil</code> for the second and an instance of
-<code>Object</code> for the third, and makes the class <code>K</code> of the directive as <code>Class</code>
-does. The directive case is <a href="classes/../directives/class.html#r-dir.class.deviation.114">the METACLASS rule</a>.</p>
-<pre><code class="language-rexx">call try '.k~subclass("S")'
-call try '.k~subclass("N")'
-call try '.k~mixinclass("O")'
-exit
-try:
-  signal on syntax name e
-  interpret 'z =' arg(1)
-  say arg(1) '=&gt; made'
-  return
-e: say arg(1) '=&gt;' condition('o')~code
-  return
-::class meta subclass class
-::method new class
-  if arg(1) = 'S' then return 'a string'
-  if arg(1) = 'N' then return .nil
-  if arg(1) = 'O' then return .object~new
-  forward class (super)
-::class k metaclass meta
-</code></pre>
-<pre><code class="language-output">.k~subclass("S") =&gt; 98.900
-.k~subclass("N") =&gt; 98.900
-.k~mixinclass("O") =&gt; 98.900
 </code></pre>
 <div class="rule" id="r-class.index.deviation.36"><a href="classes/index.html#r-class.index.deviation.36">[class.index.deviation.36]</a></div>
 <p><code>objectName=</code> sent to a String of no subclass and no enhancement, a number
@@ -31651,7 +31670,7 @@ bad: say 'SYNTAX' condition('o')~code
 <p>A <code>.ROUTINES</code> entry that is not a routine is refused when it is called: the
 program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
 A metaclass <code>new</code> that answers something other than a class raises a
-condition instead (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and so does
+condition instead (<a href="classes/class.html#r-class.class.metaclass-new">its rule</a>), and so does
 a native method run on a receiver of the wrong kind (<a href="classes/object.html#r-class.object.borrowed-native">its
 rule</a>).</p>
 <pre><code class="language-rexx">.routines['F'] = 'x'
@@ -31909,7 +31928,7 @@ o~go(a) =&gt; 88.913
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="class-1"><a class="header" href="#class-1">Class</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass); Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; Comparison Methods; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; activate; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; baseClass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; define; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; defineMethods; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; delete; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; enhanced; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; id; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; inherit; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; isAbstract; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; isMetaclass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; isSubclassOf; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; metaClass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; method; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; methods; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; mixinClass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; new; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; queryMixinClass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; subclass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; subclasses; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; superClass; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; superClasses; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; uninherit</p>
-<p class="deviations">Deviations: D32, D33, D63, D108, D109, D110, D114</p>
+<p class="deviations">Deviations: D32, D33, D63, D109, D110</p>
 <p><code>Class</code> is the class of the class objects: every class is an instance of it,
 or of a subclass of it, which is a metaclass. Its instance methods are
 therefore what every class object understands: the methods that make and
@@ -32935,8 +32954,8 @@ that the class holds is replaced. The method sends the argument the message
 answers one after the other, so any object that answers a supplier will do, and
 the indexes of an array are the names <code>1</code>, <code>2</code> and so on. An object that has no
 <code>supplier</code> method raises <code>SYNTAX 97.1</code>, as <code>.nil</code> does. The object that
-<code>supplier</code> answers need not be a <code>Supplier</code> (<a href="classes/class.html#r-class.class.deviation.108">Deviation
-108</a>). The argument is required (<code>88.901</code>) and a
+<code>supplier</code> answers must be a <code>Supplier</code> (<a href="classes/class.html#r-class.class.methods-supplier">the supplier
+rule</a>). The argument is required (<code>88.901</code>) and a
 second raises <code>93.902</code>. The method answers no value, and the classes of the
 class library accept it as little as <code>define</code>: they raise <code>98.985</code>. A call that
 fails more than one check, the number of arguments among them, raises the error
@@ -33020,8 +33039,8 @@ once, and nothing else to the argument; it sends nothing to the class. The
 indexes and items it takes are those that the supplier answers in turn. A
 <code>Supplier</code> is read without sending it messages: overrides of <code>available</code>,
 <code>index</code>, <code>item</code> and <code>next</code> do not run. Any other object that <code>supplier</code>
-answers is used through those four messages, as
-<a href="classes/class.html#r-class.class.deviation.108">Deviation 108</a> states.</p>
+answers raises <code>SYNTAX 98.994</code>, as <a href="classes/class.html#r-class.class.methods-supplier">the supplier
+rule</a> states.</p>
 <pre><code class="language-rexx">.k~defineMethods(.sp~new)
 say .k~new~one .k~new~two
 ::class k
@@ -33400,8 +33419,8 @@ sent. A <code>new</code> of the metaclass that answers a class that <code>subcla
 <code>mixinclass</code> or a <code>::CLASS</code> directive has already completed, or a class of the
 library, is treated as <a href="classes/class.html#r-class.class.deviation.32">Deviation 32</a> states. A
 <code>new</code> of the metaclass that answers an object that is not a class raises
-<code>SYNTAX 98.900</code> from <code>subclass</code> or <code>mixinclass</code>, in the program that sent it,
-where it can be trapped (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>).</p>
+<code>SYNTAX 99.927</code> from <code>subclass</code> or <code>mixinclass</code>, in the program that sent it,
+where it can be trapped (<a href="classes/class.html#r-class.class.metaclass-new">the metaclass rule</a>).</p>
 <pre><code class="language-rexx">x = .k~subclass('S1')
 say 'plain done'
 y = .k~subclass('S2', .meta)
@@ -33552,8 +33571,8 @@ no argument, and then sends the receiver the message <code>new</code> with the r
 arguments, so that the class method <code>new</code> that the class declares runs and
 <code>init</code> gets those arguments. The answer of <code>supplier</code> is read as <a href="classes/class.html#r-class.class.definemethods.sends">the
 <code>defineMethods</code> sends rule</a> says: a
-<code>Supplier</code> directly, any other object through four messages (<a href="classes/class.html#r-class.class.deviation.108">Deviation
-108</a>). The object that <code>new</code> answers gets the
+<code>Supplier</code> directly, and any other object raises <code>SYNTAX 98.994</code> (<a href="classes/class.html#r-class.class.methods-supplier">the
+supplier rule</a>). The object that <code>new</code> answers gets the
 methods and is the answer. Its class is the receiver; the object follows the
 rules of <a href="classes/methods.html#r-class.methods.enhanced">the enhanced rule</a> for the search, and its
 default name is that of <a href="classes/object.html#r-class.object.defaultname">the default name rule</a>.
@@ -33658,6 +33677,76 @@ init sent 1
 enhanced: K
 93.974
 </code></pre>
+<div class="rule" id="r-class.class.methods-supplier"><a href="classes/class.html#r-class.class.methods-supplier">[class.class.methods-supplier]</a></div>
+<p>When <code>subclass</code>, <code>mixinclass</code>, <code>defineMethods</code> or <code>enhanced</code> takes the methods
+of an object through its <code>supplier</code> method, the object that <code>supplier</code> answers
+must be a <code>Supplier</code>, an instance of a subclass of <code>Supplier</code> included, which
+is read as <a href="classes/class.html#r-class.class.definemethods.sends">the sends rule</a> says. Any other
+answer, <code>.nil</code> and no answer at all among them, raises <code>SYNTAX 98.994</code>, and
+nothing is sent to it: an object that answers <code>available</code>, <code>index</code>, <code>item</code> and
+<code>next</code> is not used through them. The first substitution of the error is the
+default name of the object the methods were taken from. In the example the
+<code>supplier</code> method of <code>holder</code> answers its argument, and <code>duck</code> records whether
+it is sent <code>available</code>.</p>
+<pre><code class="language-rexx">call try '.k~defineMethods(.holder~new("x"))'
+call try '.k~defineMethods(.holder~new(.nil))'
+call try '.k~defineMethods(.holder~new(.duck~new))'
+call try 'x = .k~enhanced(.holder~new(.duck~new))'
+call try 'x = .k~subclass("S", , .holder~new("x"))'
+call try 'x = .k~mixinclass("M", , .holder~new("x"))'
+call try '.k~defineMethods(.holder~new(.supplier~new(.array~of("return 1"), .array~of("m1"))))'
+say .k~new~m1 (.local~duck == .nil)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; made'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code condition('o')~additional[1]
+  return
+::class k
+::class holder
+::method init
+  expose obj
+  use arg obj
+::method supplier
+  expose obj
+  return obj
+::class duck
+::method available
+  .local~duck = 'sent'
+  return 0
+</code></pre>
+<pre><code class="language-output">.k~defineMethods(.holder~new("x")) =&gt; 98.994 a HOLDER
+.k~defineMethods(.holder~new(.nil)) =&gt; 98.994 a HOLDER
+.k~defineMethods(.holder~new(.duck~new)) =&gt; 98.994 a HOLDER
+x = .k~enhanced(.holder~new(.duck~new)) =&gt; 98.994 a HOLDER
+x = .k~subclass("S", , .holder~new("x")) =&gt; 98.994 a HOLDER
+x = .k~mixinclass("M", , .holder~new("x")) =&gt; 98.994 a HOLDER
+.k~defineMethods(.holder~new(.supplier~new(.array~of("return 1"), .array~of("m1")))) =&gt; made
+1 1
+</code></pre>
+<div class="rule" id="r-class.class.metaclass-new"><a href="classes/class.html#r-class.class.metaclass-new">[class.class.metaclass-new]</a></div>
+<p>A metaclass whose <code>new</code> answers an object that is not a class makes <code>subclass</code>
+or <code>mixinclass</code> raise <code>SYNTAX 99.927</code>, whatever the object is, <code>.nil</code> and a
+string included, and the error can be trapped by the program that sent the
+message, as <a href="classes/index.html#r-class.index.metaclass-new">the chapter rule</a> says. The metaclass
+is the second argument in the example.</p>
+<pre><code class="language-rexx">signal on syntax name e1
+y = .object~subclass('Y', .meta)
+say 'not reached'
+e1: say 'subclass' condition('o')~code condition('o')~additional[1]
+signal on syntax name e2
+z = .object~mixinclass('Z', .meta)
+say 'not reached'
+e2: say 'mixinclass' condition('o')~code condition('o')~additional[1]
+::class meta subclass class
+::method new class
+  return .nil
+</code></pre>
+<pre><code class="language-output">subclass 99.927 The META class
+mixinclass 99.927 The META class
+</code></pre>
 <h2 id="deviations-30"><a class="header" href="#deviations-30">Deviations</a></h2>
 <div class="rule" id="r-class.class.deviation.32"><a href="classes/class.html#r-class.class.deviation.32">[class.class.deviation.32]</a></div>
 <p>When the <code>new</code> of a metaclass answers a class that <code>subclass</code>,
@@ -33703,27 +33792,6 @@ say 'after' y~id
 </code></pre>
 <pre><code class="language-output rc=120">before
 </code></pre>
-<div class="rule" id="r-class.class.deviation.114"><a href="classes/class.html#r-class.class.deviation.114">[class.class.deviation.114]</a></div>
-<p>A metaclass whose <code>new</code> answers an object that is not a class makes <code>subclass</code>
-or <code>mixinclass</code> raise <code>SYNTAX 98.900</code>, whatever the object is, <code>.nil</code> and a
-string included, and the error can be trapped by the program that sent the
-message, as <a href="classes/index.html#r-class.index.deviation.114">the chapter rule</a> says. ooRexx
-crashes. The metaclass is the second argument in the example.</p>
-<pre><code class="language-rexx">signal on syntax name e1
-y = .object~subclass('Y', .meta)
-say 'not reached'
-e1: say 'subclass' condition('o')~code
-signal on syntax name e2
-z = .object~mixinclass('Z', .meta)
-say 'not reached'
-e2: say 'mixinclass' condition('o')~code
-::class meta subclass class
-::method new class
-  return .nil
-</code></pre>
-<pre><code class="language-output">subclass 98.900
-mixinclass 98.900
-</code></pre>
 <div class="rule" id="r-class.class.deviation.33"><a href="classes/class.html#r-class.class.deviation.33">[class.class.deviation.33]</a></div>
 <p>The order of the entries that <code>methods</code> yields is not specified and may differ
 from ooRexx's (<a href="classes/../deviations.html#33-hash-iteration-order">Deviation 33</a>); which
@@ -33765,96 +33833,6 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .a~copy:.class =&gt; 93.970
 .object~copy:.object =&gt; 93.970
 .a~send(.array~of("copy", .object)) =&gt; 93.970
-</code></pre>
-<div class="rule" id="r-class.class.deviation.108"><a href="classes/class.html#r-class.class.deviation.108">[class.class.deviation.108]</a></div>
-<p>When <code>subclass</code>, <code>mixinclass</code>, <code>defineMethods</code> or <code>enhanced</code> takes the methods
-of an object through its <code>supplier</code> method, the object that <code>supplier</code> answers
-is used through the messages <code>available</code>, <code>index</code>, <code>item</code> and <code>next</code> when it
-is not a <code>Supplier</code>; an object that does not answer one of them raises <code>SYNTAX 97.1</code> as for any message (<a href="classes/../deviations.html">Deviation 108</a>). A <code>Supplier</code>, an
-instance of a subclass of <code>Supplier</code> included, is read directly, as <a href="classes/class.html#r-class.class.definemethods.sends">the sends
-rule</a> says. ooRexx reads the answer as a
-Supplier without checking it, and crashes when it is not one. In the first
-example the <code>supplier</code> method of <code>holder</code> answers its argument, <code>lister</code> is no
-<code>Supplier</code> and records the messages sent to it, and <code>broken</code> lacks <code>next</code>. The
-second example gives <code>enhanced</code> such a collection.</p>
-<pre><code class="language-rexx">.local~seen = .directory~new
-.k~defineMethods(.holder~new(.lister~new))
-say .k~new~m1 .k~new~m2 .local~seen~allIndexes~sort~makestring('l', ' ')
-x = .k~subclass('S', , .holder~new(.lister~new))
-y = .k~mixinclass('M', , .holder~new(.lister~new))
-say x~m1 y~m2
-signal on syntax name bad
-.k~defineMethods(.holder~new(.broken~new))
-exit
-bad: say condition('o')~code
-::class k
-::class holder
-::method init
-  expose obj
-  use arg obj
-::method supplier
-  expose obj
-  return obj
-::class lister
-::method init
-  expose i
-  i = 1
-::method available
-  expose i
-  .local~seen['available'] = 1
-  return i &lt;= 2
-::method index
-  expose i
-  .local~seen['index'] = 1
-  return 'M'i
-::method item
-  expose i
-  .local~seen['item'] = 1
-  return 'return' i
-::method next
-  expose i
-  .local~seen['next'] = 1
-  i = i + 1
-::class broken
-::method available
-  return 1
-::method index
-  return 'M9'
-::method item
-  return 'return 9'
-</code></pre>
-<pre><code class="language-output">1 2 available index item next
-1 2
-97.1
-</code></pre>
-<pre><code class="language-rexx">e = .k~enhanced(.holder~new(.lister~new))
-say e~m1 e~m2 .k~new~hasMethod('m1')
-::class k
-::class holder
-::method init
-  expose obj
-  use arg obj
-::method supplier
-  expose obj
-  return obj
-::class lister
-::method init
-  expose i
-  i = 1
-::method available
-  expose i
-  return i &lt;= 2
-::method index
-  expose i
-  return 'M'i
-::method item
-  expose i
-  return 'return' i
-::method next
-  expose i
-  i = i + 1
-</code></pre>
-<pre><code class="language-output">1 2 0
 </code></pre>
 <div class="rule" id="r-class.class.deviation.109"><a href="classes/class.html#r-class.class.deviation.109">[class.class.deviation.109]</a></div>
 <p>An instance of a subclass of <code>String</code> that is the id of <code>subclass</code> or
@@ -35537,7 +35515,7 @@ say .local~n
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="method-1"><a class="header" href="#method-1">Method</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Method Class; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; loadExternalMethod (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAbstract; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAttribute; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isConstant; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPackage; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; scope; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setUnguarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; source</p>
-<p class="deviations">Deviations: D41, D109, D115, D118, D134</p>
+<p class="deviations">Deviations: D41, D109, D118, D134</p>
 <p>A <code>Method</code> object is the code of one method together with the facts that
 decide who may send it and how it runs: whether it is private, package-scope,
 protected or guarded, which class it belongs to, and the package whose classes
@@ -35766,8 +35744,9 @@ it makes. A source that is not a string and not an array, and an instance of a
 subclass of <code>String</code> or <code>Array</code>, is sent <code>request</code> with the argument <code>ARRAY</code>;
 when that answers an array its items are the lines, read as <a href="classes/method.html#r-class.method.new.source">the source
 rule</a> reads an array. When it answers an object that
-is neither an array nor <code>.nil</code>, <code>new</code> raises <code>SYNTAX 88.913</code> and sends no
-<code>request</code> with <code>STRING</code> (<a href="classes/method.html#r-class.method.deviation.115">Deviation 115</a>). An
+is neither an array nor <code>.nil</code>, <code>new</code> raises <code>SYNTAX 93.961</code> if the answer came
+from <code>makeArray</code>, and takes it as <code>.nil</code> if it came from a <code>request</code> method of
+the source's own (<a href="classes/method.html#r-class.method.new.request-answer">the answer rule</a>). An
 instance of a subclass of <code>List</code> is sent <code>request</code> as well (<a href="classes/method.html#r-class.method.deviation.118">Deviation
 118</a>). When it answers <code>.nil</code> the source is sent
 <code>request</code> with the argument <code>STRING</code>: an answer that is a string is the one-line
@@ -36684,6 +36663,64 @@ ran
 1
 m~setSecurityManager(1, 2) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.method.new.request-answer"><a href="classes/method.html#r-class.method.new.request-answer">[class.method.new.request-answer]</a></div>
+<p>When a source's <code>request</code> with <code>ARRAY</code> answers an object that is neither an
+array nor <code>.nil</code>, what follows depends on where the answer came from. When the
+<code>request</code> is the one of <code>Object</code>, so that the answer is what the source's
+<code>makeArray</code> answered, <code>new</code> raises <code>SYNTAX 93.961</code> and sends no <code>request</code> with
+<code>STRING</code>. When the source has a <code>request</code> method of its own, the answer is
+taken as <code>.nil</code>: <code>request</code> with <code>STRING</code> follows, and its answer gives the
+line. <a href="classes/routine.html#r-class.routine.new.request-answer">The Routine page rule</a> has the
+examples for <code>Routine~new</code>; in the examples here <code>mk</code> answers by <code>makeArray</code>
+and <code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.method~new("n", .mk~new("return 1"))'
+call try '.method~new("n", .mk~new(.directory~new))'
+call try '.method~new("n", .src~new("return 1"))~source[1]'
+call try '.method~new("n", .src~new(.directory~new))~source[1]'
+call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
+call try '.method~new("n", .src~new(.nil))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.method~new("n", .mk~new("return 1")) =&gt; 93.961
+makeArray
+.method~new("n", .mk~new(.directory~new)) =&gt; 93.961
+request ARRAY
+request STRING
+.method~new("n", .src~new("return 1"))~source[1] =&gt; return 2
+request ARRAY
+request STRING
+.method~new("n", .src~new(.directory~new))~source[1] =&gt; return 2
+request ARRAY
+.method~new("n", .src~new(.array~of("return 1")))~source[1] =&gt; return 1
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil))~source[1] =&gt; return 2
+</code></pre>
 <h2 id="deviations-32"><a class="header" href="#deviations-32">Deviations</a></h2>
 <div class="rule" id="r-class.method.deviation.41"><a href="classes/method.html#r-class.method.deviation.41">[class.method.deviation.41]</a></div>
 <p>A source that is an encoded program image, which has the line
@@ -36716,45 +36753,6 @@ say m~package~name m~source[1]
   return 'other'
 </code></pre>
 <pre><code class="language-output">Foo say "src"
-</code></pre>
-<div class="rule" id="r-class.method.deviation.115"><a href="classes/method.html#r-class.method.deviation.115">[class.method.deviation.115]</a></div>
-<p>A source that answers <code>request</code> with <code>ARRAY</code> by an object that is neither an
-array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 88.913</code>, whatever the object is: a
-string, a list or any other object, and no <code>request</code> with <code>STRING</code> is sent after
-it. ooRexx crashes. <a href="classes/routine.html#r-class.routine.deviation.115">The
-Routine page rule</a> has the examples for
-<code>Routine~new</code>; the examples here have <code>request</code> answer a string and a directory.</p>
-<pre><code class="language-rexx">call try '.method~new("n", .src~new("return 1"))'
-call try '.method~new("n", .src~new(.directory~new))'
-call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
-call try '.method~new("n", .src~new(.nil))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.method~new("n", .src~new("return 1")) =&gt; 88.913
-request ARRAY
-.method~new("n", .src~new(.directory~new)) =&gt; 88.913
-request ARRAY
-.method~new("n", .src~new(.array~of("return 1")))~source[1] =&gt; return 1
-request ARRAY
-request STRING
-.method~new("n", .src~new(.nil))~source[1] =&gt; return 2
 </code></pre>
 <div class="rule" id="r-class.method.deviation.118"><a href="classes/method.html#r-class.method.deviation.118">[class.method.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with
@@ -36807,7 +36805,7 @@ NEW 2 2 2
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="routine-1"><a class="header" href="#routine-1">Routine</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Routine Class; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; loadExternalRoutine (Class method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; []; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; call; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; callWith; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; source; The Security Manager</p>
-<p class="deviations">Deviations: D41, D109, D111, D115, D118, D124, D134</p>
+<p class="deviations">Deviations: D41, D109, D111, D118, D124, D134</p>
 <p>A <code>Routine</code> object is a piece of code that is called with arguments and
 answers a value, as a routine of a program is. A <code>::ROUTINE</code> directive makes
 one for each directive, and a program makes one of its own from source text
@@ -36928,8 +36926,9 @@ bad: say arg(1) '=&gt;' condition('o')~code
 (the line is a string answer itself, and any other answer's <code>objectName</code>), and,
 when the routine has been made, <code>init</code> with the arguments of <code>new</code> from the
 fourth on. An answer to <code>request</code> with <code>ARRAY</code> that is neither an array nor
-<code>.nil</code> raises <code>SYNTAX 88.913</code>, and no <code>request</code> with <code>STRING</code> follows it
-(<a href="classes/routine.html#r-class.routine.deviation.115">Deviation 115</a>). An instance of a subclass of
+<code>.nil</code> raises <code>SYNTAX 93.961</code> when it came from <code>makeArray</code>, and is taken as
+<code>.nil</code> when it came from a <code>request</code> method of the source's own (<a href="classes/routine.html#r-class.routine.new.request-answer">the answer
+rule</a>). An instance of a subclass of
 <code>List</code> is sent <code>request</code> as well (<a href="classes/routine.html#r-class.routine.deviation.118">Deviation
 118</a>).</p>
 <pre><code class="language-rexx">call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -38024,6 +38023,62 @@ bad: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">91.999
 </code></pre>
+<div class="rule" id="r-class.routine.new.request-answer"><a href="classes/routine.html#r-class.routine.new.request-answer">[class.routine.new.request-answer]</a></div>
+<p>A <code>new</code> whose source's <code>request</code> with <code>ARRAY</code> answers an object that is neither
+an array nor <code>.nil</code> raises <code>SYNTAX 93.961</code> when the <code>request</code> is the one of
+<code>Object</code>, so that the answer is what <code>makeArray</code> answered, and sends no
+<code>request</code> with <code>STRING</code>; when the source has a <code>request</code> method of its own the
+answer is taken as <code>.nil</code> and <code>request</code> with <code>STRING</code> follows, as <a href="classes/method.html#r-class.method.new.request-answer">the rule of
+<code>Method</code></a> states. In the examples <code>mk</code>
+answers by <code>makeArray</code> a string, a list and an object that is none of them, and
+<code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.routine~new("n", .mk~new("return 1"))'
+call try '.routine~new("n", .mk~new(.list~of("return 1")))'
+call try '.routine~new("n", .mk~new(.object~new))'
+call try '.routine~new("n", .src~new(.list~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.nil))~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.routine~new("n", .mk~new("return 1")) =&gt; 93.961
+makeArray
+.routine~new("n", .mk~new(.list~of("return 1"))) =&gt; 93.961
+makeArray
+.routine~new("n", .mk~new(.object~new)) =&gt; 93.961
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.list~of("return 1")))~call =&gt; 2
+request ARRAY
+.routine~new("n", .src~new(.array~of("return 1")))~call =&gt; 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil))~call =&gt; 2
+</code></pre>
 <h2 id="deviations-33"><a class="header" href="#deviations-33">Deviations</a></h2>
 <div class="rule" id="r-class.routine.deviation.41"><a href="classes/routine.html#r-class.routine.deviation.41">[class.routine.deviation.41]</a></div>
 <p>A source that is an encoded program image whose decoded bytes lack the tag of
@@ -38053,48 +38108,6 @@ say r~package~name r~source[1]
   return 'other'
 </code></pre>
 <pre><code class="language-output">Foo say "src"
-</code></pre>
-<div class="rule" id="r-class.routine.deviation.115"><a href="classes/routine.html#r-class.routine.deviation.115">[class.routine.deviation.115]</a></div>
-<p>A <code>new</code> whose source answers <code>request</code> with <code>ARRAY</code> by an object that is neither
-an array nor <code>.nil</code> raises <code>SYNTAX 88.913</code>, as <a href="classes/method.html#r-class.method.deviation.115">the rule of
-<code>Method</code></a> states, and no <code>request</code> with <code>STRING</code>
-is sent. ooRexx crashes.
-The examples have <code>request</code> answer a string, a list and an object that is none
-of them.</p>
-<pre><code class="language-rexx">call try '.routine~new("n", .src~new("return 1"))'
-call try '.routine~new("n", .src~new(.list~of("return 1")))'
-call try '.routine~new("n", .src~new(.object~new))'
-call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
-call try '.routine~new("n", .src~new(.nil))~call'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.routine~new("n", .src~new("return 1")) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.list~of("return 1"))) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.object~new)) =&gt; 88.913
-request ARRAY
-.routine~new("n", .src~new(.array~of("return 1")))~call =&gt; 1
-request ARRAY
-request STRING
-.routine~new("n", .src~new(.nil))~call =&gt; 2
 </code></pre>
 <div class="rule" id="r-class.routine.deviation.118"><a href="classes/routine.html#r-class.routine.deviation.118">[class.routine.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with
@@ -38211,7 +38224,7 @@ say p~findRoutine('Q')~source~items p~findRoutine('Q')~source~items
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="package"><a class="header" href="#package">Package</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Package Class; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; defaultOptions (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; classes; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; definedMethods; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; digits; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findNamespace; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findProgram; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; form; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; fuzz; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedPackages; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadLibrary; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; local; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; name; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; namespaces; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; options; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; prolog; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resource; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resources; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; routines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; source; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceLine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceSize; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; trace</p>
-<p class="deviations">Deviations: D41, D109, D112, D115, D118</p>
+<p class="deviations">Deviations: D41, D109, D112, D118</p>
 <p>A <code>Package</code> object is a unit of code that the interpreter loads: the program
 that a user runs, a file that <code>::REQUIRES</code> loads, a source that <code>new</code> is
 given. It holds the source text, the classes, routines and unattached methods
@@ -38346,8 +38359,9 @@ that is not a string and not an array, <code>request</code> with <code>ARRAY</co
 <code>objectName</code>), and then sends the new package <code>init</code>, after the package has
 been installed, with the arguments from the fourth on, or from the third on
 when the source is omitted. An answer to <code>request</code> with <code>ARRAY</code> that is
-neither an array nor <code>.nil</code> raises <code>SYNTAX 88.913</code>, and no <code>request</code> with
-<code>STRING</code> follows it (<a href="classes/package.html#r-class.package.deviation.115">Deviation 115</a>). An
+neither an array nor <code>.nil</code> raises <code>SYNTAX 93.961</code> when it came from
+<code>makeArray</code>, and is taken as <code>.nil</code> when it came from a <code>request</code> method of the
+source's own (<a href="classes/package.html#r-class.package.new.request-answer">the answer rule</a>). An
 instance of a subclass of <code>List</code> is sent <code>request</code> as well (<a href="classes/package.html#r-class.package.deviation.118">Deviation
 118</a>). A name that is an object is sent
 <code>request</code> with the argument <code>STRING</code>, once, first, before the messages to the
@@ -40700,6 +40714,54 @@ done
 1 1
 p~setSecurityManager(.guard~new, 1) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.package.new.request-answer"><a href="classes/package.html#r-class.package.new.request-answer">[class.package.new.request-answer]</a></div>
+<p>A source whose <code>request</code> with <code>ARRAY</code> answers an object that is neither an
+array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 93.961</code> when the <code>request</code> is the one
+of <code>Object</code>, so that the answer is what <code>makeArray</code> answered, and no <code>request</code>
+with <code>STRING</code> is sent after it; when the source has a <code>request</code> method of its
+own the answer is taken as <code>.nil</code> and <code>request</code> with <code>STRING</code> follows, as <a href="classes/method.html#r-class.method.new.request-answer">the
+rule of <code>Method</code></a> says. In the examples <code>mk</code>
+answers by <code>makeArray</code> and <code>src</code> by a <code>request</code> of its own.</p>
+<pre><code class="language-rexx">call try '.package~new("n", .mk~new("nop"))'
+call try '.package~new("n", .mk~new(.list~of("nop")))'
+call try '.package~new("n", .src~new(.list~of("nop")))~source[1]'
+call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'nop'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+</code></pre>
+<pre><code class="language-output">makeArray
+.package~new("n", .mk~new("nop")) =&gt; 93.961
+makeArray
+.package~new("n", .mk~new(.list~of("nop"))) =&gt; 93.961
+request ARRAY
+request STRING
+.package~new("n", .src~new(.list~of("nop")))~source[1] =&gt; nop
+request ARRAY
+.package~new("n", .src~new(.array~of("nop")))~source[1] =&gt; nop
+</code></pre>
 <h2 id="deviations-34"><a class="header" href="#deviations-34">Deviations</a></h2>
 <div class="rule" id="r-class.package.deviation.41"><a href="classes/package.html#r-class.package.deviation.41">[class.package.deviation.41]</a></div>
 <p>A source that is an encoded program image whose decoded bytes lack the tag of
@@ -40782,40 +40844,6 @@ fourth
 p~loadPackage("cp112b_zq.cls", .array~of("nop", .object~new)) =&gt; 93.952
 p~loadPackage("cp112c_zq.cls", .array~of("nop", .nil)) =&gt; 93.952
 p~loadPackage("cp112d_zq.cls", .array~of(.array~of("nop", "nop"))) =&gt; 13.1
-</code></pre>
-<div class="rule" id="r-class.package.deviation.115"><a href="classes/package.html#r-class.package.deviation.115">[class.package.deviation.115]</a></div>
-<p>A source that answers <code>request</code> with <code>ARRAY</code> by an object that is neither an
-array nor <code>.nil</code> makes <code>new</code> raise <code>SYNTAX 88.913</code>, as <a href="classes/method.html#r-class.method.deviation.115">the rule of
-<code>Method</code></a> says, and no <code>request</code> with <code>STRING</code> is
-sent after it. ooRexx crashes. The examples have <code>request</code> answer a string
-and a list.</p>
-<pre><code class="language-rexx">call try '.package~new("n", .src~new("nop"))'
-call try '.package~new("n", .src~new(.list~of("nop")))'
-call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=&gt;' zres
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'nop'
-</code></pre>
-<pre><code class="language-output">request ARRAY
-.package~new("n", .src~new("nop")) =&gt; 88.913
-request ARRAY
-.package~new("n", .src~new(.list~of("nop"))) =&gt; 88.913
-request ARRAY
-.package~new("n", .src~new(.array~of("nop")))~source[1] =&gt; nop
 </code></pre>
 <div class="rule" id="r-class.package.deviation.118"><a href="classes/package.html#r-class.package.deviation.118">[class.package.deviation.118]</a></div>
 <p>A source that is an instance of a subclass of <code>List</code> is sent <code>request</code> with
@@ -47805,8 +47833,11 @@ The index is read as <a href="classes/array.html#r-class.array.indexes">the inde
 of one index is accepted. The
 method takes one or two arguments: a third raises <code>SYNTAX 93.902</code>; an array of
 more than one dimension raises <code>SYNTAX 93.954</code> whatever the index is, after
-the argument count has been checked. An index that is not a whole number of at
-least 1 and is not <code>.nil</code> raises <code>SYNTAX 93.907</code>.</p>
+the argument count has been checked. An index that is an array of more than
+one index raises <code>SYNTAX 93.926</code>, also when the array has no dimension yet,
+whatever the indexes are, and leaves the array unchanged; an array of indexes
+with one omitted raises <code>SYNTAX 98.975</code> instead. An index that is not a whole
+number of at least 1 and is not <code>.nil</code> raises <code>SYNTAX 93.907</code>.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', 'c')
 say a~insert('x', 1) a~allItems~makeString('L', ',')
 say a~insert('y', .nil) a~allItems~makeString('L', ',')
@@ -47822,6 +47853,11 @@ call try '.array~of(1)~insert(1, 0)'
 call try '.array~of(1)~insert(1, "x")'
 call try '.array~of(1)~insert(1, 1, 1)'
 call try '.array~new(2, 2)~insert(1, 0)'
+d = .array~new
+call try 'd~insert("i", .array~of(2, 2))'
+call try 'd~insert("i", .array~of("x", 0))'
+call try 'd~insert("i", .array~of(, 1))'
+say d~dimension d~items
 exit
 try:
   signal on syntax name bad
@@ -47841,6 +47877,10 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .array~of(1)~insert(1, "x") =&gt; 93.907
 .array~of(1)~insert(1, 1, 1) =&gt; 93.902
 .array~new(2, 2)~insert(1, 0) =&gt; 93.954
+d~insert("i", .array~of(2, 2)) =&gt; 93.926
+d~insert("i", .array~of("x", 0)) =&gt; 93.926
+d~insert("i", .array~of(, 1)) =&gt; 98.975
+0 0
 </code></pre>
 <div class="rule" id="r-class.array.insert.omitted"><a href="classes/array.html#r-class.array.insert.omitted">[class.array.insert.omitted]</a></div>
 <p>An <code>insert</code> whose item is omitted makes an empty slot where the item would
@@ -47868,7 +47908,7 @@ array of more than one dimension raises <code>SYNTAX 93.954</code> whatever the 
 after the argument count has been checked; otherwise the index is read as <a href="classes/array.html#r-class.array.indexes">the
 index rule</a> says, with <code>SYNTAX 93.907</code> for an index
 that is not a whole number of at least 1 and <code>SYNTAX 93.926</code> for an array of
-two.</p>
+more than one index, also when the array has no dimension yet.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', 'c', 'd')
 say a~delete(2) a~size a~allItems~makeString('L', ',')
 say a~delete(9) a~size
@@ -47883,6 +47923,7 @@ call try 'a~delete(0)'
 call try 'a~delete("x")'
 call try 'a~delete(.array~of(1, 2))'
 call try '.array~new(2, 2)~delete(1)'
+call try '.array~new~delete(.array~of(2, 2))'
 exit
 try:
   signal on syntax name bad
@@ -47903,6 +47944,7 @@ a~delete(0) =&gt; 93.907
 a~delete("x") =&gt; 93.907
 a~delete(.array~of(1, 2)) =&gt; 93.926
 .array~new(2, 2)~delete(1) =&gt; 93.954
+.array~new~delete(.array~of(2, 2)) =&gt; 93.926
 </code></pre>
 <div class="rule" id="r-class.array.remove"><a href="classes/array.html#r-class.array.remove">[class.array.remove]</a></div>
 <p><code>remove(index)</code> takes the item at the index out of its slot and answers it,
@@ -62269,7 +62311,8 @@ say s~hasIndex('a', 'b') s~hasIndex(5) s~hasIndex
 <p><code>hasItem(item)</code> answers 1 when an item stored at some tail is equal to the
 argument, and <code>index(item)</code> answers the tail of such an item, as a string, and
 <code>.nil</code> when there is none. The default of the stem is not an item. Both take
-exactly one argument: a second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
+exactly one argument: none, or an omitted one, raises <code>SYNTAX 93.903</code>, and a
+second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
 answers when several items qualify is the first in the order of assignment
 (<a href="classes/stem.html#r-class.stem.deviation.1">the order rule</a>).</p>
 <pre><code class="language-rexx">s = .stem~new('N.')
@@ -62284,6 +62327,9 @@ t['p'] = 'v'
 say t~hasItem('v') t~index('v')
 call try 't~hasItem("a", "b")'
 call try 't~index(1, 2)'
+call try 't~hasItem'
+call try 't~index'
+call try 't~hasItem()'
 exit
 try:
   signal on syntax name bad
@@ -62299,6 +62345,9 @@ k1 k2 1
 1 p
 t~hasItem("a", "b") =&gt; 93.902
 t~index(1, 2) =&gt; 93.902
+t~hasItem =&gt; 93.903
+t~index =&gt; 93.903
+t~hasItem() =&gt; 93.903
 </code></pre>
 <div class="rule" id="r-class.stem.items"><a href="classes/stem.html#r-class.stem.items">[class.stem.items]</a></div>
 <p><code>items</code> answers the number of tails that have an item, the default not
@@ -129440,7 +129489,7 @@ were a string, running garbage or crashing.</p>
 <p>A <code>.ROUTINES</code> entry written to a package that is not a routine is refused when
 it is called, exit code 120. ooRexx casts the object unchecked and crashes.
 Not covered: a metaclass <code>NEW</code> that answers something other than a class
-raises <code>SYNTAX 98.900</code> (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and a
+raises <code>SYNTAX 99.927</code> (<a href="classes/class.html#r-class.class.metaclass-new">its rule</a>), and a
 native method run on a receiver of the wrong kind raises a trappable
 <code>SYNTAX 93.900</code>, as <a href="classes/object.html#r-class.object.borrowed-native">the rule</a> says.</p>
 <h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
@@ -129858,17 +129907,9 @@ so a quoted <code>'12'</code> behaves the same way when the literal <code>12</co
 it. The same storage shows where a string is read as text: an item of an
 <code>Array</code> whose <code>objectName</code> answers such a number is written by <code>makeString</code>
 and <code>toString</code> as the digits; ooRexx writes bytes of its stored form.</p>
-<h2 id="108-a-supplier-that-is-not-a-supplier"><a class="header" href="#108-a-supplier-that-is-not-a-supplier">108. A supplier that is not a Supplier</a></h2>
-<p>When <code>subclass</code>, <code>mixinclass</code>, <code>defineMethods</code> or <code>enhanced</code> takes the methods
-of an object through its <code>supplier</code> method, the object that <code>supplier</code>
-answers is used through the messages <code>available</code>, <code>index</code>, <code>item</code> and <code>next</code>
-when it is not a <code>Supplier</code>; an object that does not answer one of them raises
-<code>SYNTAX 97.1</code> as for any message. A <code>Supplier</code>, an instance of a subclass
-included, is read directly, as a String subclass instance is read by its
-characters
-(<a href="deviations.html#109-string-subclass-instances-are-their-characters">Deviation 109</a>). ooRexx
-reads the answer as a Supplier without checking it and crashes when it is not
-one.</p>
+<h2 id="108-withdrawn"><a class="header" href="#108-withdrawn">108. Withdrawn</a></h2>
+<p>A supplier that is not a Supplier: interrexx raises <code>SYNTAX 98.994</code> as ooRexx
+does since upstream bug #2152, ruled by the owner on 2026-11-20 (#855).</p>
 <h2 id="109-string-subclass-instances-are-their-characters"><a class="header" href="#109-string-subclass-instances-are-their-characters">109. String subclass instances are their characters</a></h2>
 <p>An instance of a subclass of <code>String</code> is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as receiver and
@@ -129925,14 +129966,14 @@ the array of arguments that <code>Message~sendWith</code>, <code>startWith</code
 take is copied and counted the same way. ooRexx keeps the caller's array
 itself and passes its size as the number of arguments, trailing empty
 positions included, in all four.</p>
-<h2 id="114-a-metaclass-new-that-answers-an-object-that-is-not-a-class"><a class="header" href="#114-a-metaclass-new-that-answers-an-object-that-is-not-a-class">114. A metaclass NEW that answers an object that is not a class</a></h2>
-<p>When <code>subclass</code>, <code>mixinclass</code> or a <code>::CLASS</code> directive sends <code>new</code> to a
-metaclass and the answer is not a class, <code>SYNTAX 98.900</code> is raised in the
-program that made the request, and it can be trapped. ooRexx crashes.</p>
-<h2 id="115-a-requestarray-answer-that-is-neither-an-array-nor-nil"><a class="header" href="#115-a-requestarray-answer-that-is-neither-an-array-nor-nil">115. A request('ARRAY') answer that is neither an array nor .nil</a></h2>
-<p>When <code>Method~new</code>, <code>Routine~new</code> or <code>Package~new</code> sends its source <code>request</code>
-with the argument <code>ARRAY</code> and the answer is neither an array nor <code>.nil</code>,
-<code>SYNTAX 88.913</code> is raised. ooRexx crashes.</p>
+<h2 id="114-withdrawn"><a class="header" href="#114-withdrawn">114. Withdrawn</a></h2>
+<p>A metaclass NEW that answers an object that is not a class: interrexx raises
+<code>SYNTAX 99.927</code> as ooRexx does since upstream bug #2164, ruled by the owner on
+2026-11-20 (#855).</p>
+<h2 id="115-withdrawn"><a class="header" href="#115-withdrawn">115. Withdrawn</a></h2>
+<p>A request('ARRAY') answer that is neither an array nor .nil: interrexx raises
+<code>SYNTAX 93.961</code> as ooRexx does since upstream bug #2150, ruled by the owner on
+2026-11-20 (#855).</p>
 <h2 id="116-a-failing-notification-target-is-sent-messagecomplete-once"><a class="header" href="#116-a-failing-notification-target-is-sent-messagecomplete-once">116. A failing notification target is sent messageComplete once</a></h2>
 <p>When a <code>messageComplete</code> sent to a notification target of a started message
 raises an error, that target is not sent <code>messageComplete</code> again. ooRexx sends
