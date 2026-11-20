@@ -63,6 +63,10 @@ pub(crate) const BRANCH: u32 = 2;
 /// on, `Native::jump_to`; an op with no label in the pass leaves for the
 /// driver there, which the host has already recorded.
 pub(crate) const JUMP: u32 = 3;
+/// The op ran in a clause generated code opened, and the host handed the
+/// clause back with nothing queued at its boundary: its close is generated
+/// code's again.
+pub(crate) const FAST: u32 = 4;
 
 /// What the generated code calls back into. Each step is bracketed by
 /// [`Host::enter`] and [`Host::leave`].
@@ -82,6 +86,13 @@ pub(crate) trait Host {
     fn close(&mut self, next: u32) -> u32;
     /// Runs the op at `pc` the way the driver does.
     fn op(&mut self, pc: u32) -> u32;
+    /// Hands back the clause [`Host::adopt`] took, answering [`FAST`], where
+    /// the driver's hot exit would close it plainly; [`CONTINUE`] otherwise.
+    fn release(&mut self) -> u32;
+    /// `Op::PushArg`: register `src`, or an omitted argument, onto the
+    /// argument stack. Reads nothing the block holds and changes nothing it
+    /// does, so it is called with no bracket.
+    fn push_arg(&mut self, src: u16);
 }
 
 /// One step of a pass.
@@ -119,6 +130,8 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// `Op::PushArg` of register `src`.
+    PushArg { src: u16 },
     /// An `IF`'s `Op::ConditionJump` at `pc` on register `reg`, the last op
     /// of its clause: falls through to the clause's close when the value
     /// holds, and otherwise closes the clause and goes on at `target`.
@@ -201,6 +214,9 @@ extern "C" fn open_helper(ctx: *mut Ctx<'_>, pc: u32) -> u32 {
     bracket(ctx, |host| host.open(pc))
 }
 
+/// What [`Step::PushArg`] carries for an omitted argument (`Op::ARG_OMITTED`).
+pub(crate) const OMITTED: u16 = crate::ir::Op::ARG_OMITTED;
+
 /// `adopt` names no clause: the op runs in one the host already has open.
 const NO_ADOPT: u32 = u32::MAX;
 
@@ -212,14 +228,25 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// generated code opened, unless that is [`NO_ADOPT`]: one call for both.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, adopt: u32, pc: u32) -> u32 {
     bracket(ctx, |host| {
-        if adopt != NO_ADOPT {
-            let answer = host.adopt(adopt);
-            if answer != CONTINUE {
-                return answer;
-            }
+        if adopt == NO_ADOPT {
+            return host.op(pc);
         }
-        host.op(pc)
+        let answer = host.adopt(adopt);
+        if answer != CONTINUE {
+            return answer;
+        }
+        match host.op(pc) {
+            CONTINUE => host.release(),
+            answer => answer,
+        }
     })
+}
+
+extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
+    // SAFETY: property 4 of the module doc.
+    let ctx = unsafe { &mut *ctx };
+    ctx.host.push_arg(src as u16);
+    CONTINUE
 }
 
 type Entry = extern "C" fn(*mut Ctx<'_>) -> u32;
@@ -334,6 +361,21 @@ impl Emit<'_, '_> {
             .call_indirect(self.with_two, address, &[self.ctx, adopt, pc]);
         let answer = self.b.inst_results(call)[0];
         let on = self.b.create_block();
+        if clause_pc.is_some() {
+            // The clause handed back: generated code closes it again.
+            let handed = self.b.create_block();
+            let other = self.b.create_block();
+            let back = self
+                .b
+                .ins()
+                .icmp_imm_u(IntCC::Equal, answer, i64::from(FAST));
+            self.b.ins().brif(back, handed, &[], other, &[]);
+            self.b.switch_to_block(handed);
+            let yes = self.b.ins().iconst(types::I8, 1);
+            self.b.def_var(self.fast, yes);
+            self.b.ins().jump(on, &[]);
+            self.b.switch_to_block(other);
+        }
         if let Some((code, block)) = also {
             let matches = self
                 .b
@@ -431,6 +473,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Jump { .. }
             | Step::EndBranch { .. }
             | Step::Between { .. } => None,
+            Step::PushArg { src } => (src != OMITTED).then_some(src),
         };
         // Property 2 of the module doc.
         if named.is_some_and(|register| register >= pass.registers) {
@@ -591,6 +634,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     live = false;
                 }
                 Step::EndBranch { pc } => end_branch(&mut e, pc),
+                Step::PushArg { src } => {
+                    let address =
+                        e.b.ins()
+                            .iconst(e.pointer, push_arg_helper as *const () as usize as i64);
+                    let src = e.b.ins().iconst(types::I32, i64::from(src));
+                    e.b.ins().call_indirect(e.with_pc, address, &[e.ctx, src]);
+                }
                 Step::Between { pc } => {
                     e.call_op(None, pc, Some((JUMP, dispatch)));
                 }

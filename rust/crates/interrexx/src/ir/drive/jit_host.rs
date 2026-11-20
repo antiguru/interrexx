@@ -28,7 +28,7 @@ use interrexx_parse::Operator;
 
 use super::*;
 use crate::jit::layout::{self, Native};
-use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, JUMP, Pass, STOP, Step};
+use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, FAST, Host, JUMP, Pass, STOP, Step};
 use crate::run::FlatStep;
 use crate::run::QuickKind;
 
@@ -377,12 +377,12 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                 }
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
+                Op::PushArg { src } => Step::PushArg { src },
                 Op::Load { .. }
                 | Op::Binary { .. }
                 | Op::Prefix { .. }
                 | Op::Store { .. }
                 | Op::Exec { .. }
-                | Op::PushArg { .. }
                 | Op::CallArgs { .. }
                 | Op::CallExpr { .. }
                 | Op::CallNamed { .. }
@@ -676,10 +676,6 @@ impl Host for Driven<'_, '_> {
                     Err(failure) => self.stop(JitExit::Fail(failure)),
                 };
             }
-            Some(&Op::PushArg { src }) => {
-                self.interp.push_call_arg(self.registers, src);
-                return CONTINUE;
-            }
             _ => {}
         }
         // `Op::Load`'s and `Op::Store`'s own fast paths for a simple
@@ -825,6 +821,22 @@ impl Host for Driven<'_, '_> {
                 self.loop_key = Some(key);
             }
         }
+    }
+
+    fn release(&mut self) -> u32 {
+        if !self.interp.activity.pending_traps.is_empty() || self.interp.clause_exits {
+            return CONTINUE;
+        }
+        // The region's last op may have closed the clause already.
+        let Some(open) = self.open.take() else {
+            return CONTINUE;
+        };
+        self.interp.finish_plain_clause(open.entry);
+        FAST
+    }
+
+    fn push_arg(&mut self, src: u16) {
+        self.interp.push_call_arg(self.registers, src);
     }
 
     fn adopt(&mut self, pc: u32) -> u32 {
