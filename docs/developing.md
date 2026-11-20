@@ -114,9 +114,20 @@ systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 COMMAND
 interpreter stack before running anything, so under the same `ulimit -v` it has 512 MiB less to
 allocate than ooRexx.
 
-macOS has neither: there is no `systemd-run`, and its kernel does not enforce `ulimit -v`. Until
-interrexx has a cap of its own for macOS, its tests run there only on CI runners
-(`docs/design/architecture.md`, Hosts).
+macOS has neither: there is no `systemd-run`, and it refuses a `ulimit -v` below what a process
+has already reserved. There, `scripts/rss-cap.sh` stands in for the cap: it runs a command, sums
+the resident sets of the command and every process below it twice a second, and kills them all
+once the sum passes the bound, exiting 137.
+
+```sh
+scripts/rss-cap.sh 8388608 COMMAND
+```
+
+It is a watchdog, not a limit: a process that allocates faster than it polls can pass the bound
+by up to half a second's allocation before it is killed. Running the `standalone` profile under it
+with `--test-threads 4` stays within 8 GiB. interrexx's own bound on memory is #840. macOS also
+limits a socket path to 104 bytes, and tests bind sockets under the target directory, so from a
+deep worktree set `CARGO_TARGET_DIR` to a shorter path.
 
 * Probe from a fresh empty directory, with absolute paths: the current directory is on the external
   routine search path, and a stray `.rex` there runs instead of a typo'd name.
