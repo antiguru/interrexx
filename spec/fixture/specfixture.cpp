@@ -7,6 +7,7 @@
 //   SPEC_FIXTURE_PACKAGE  libspecfixture.so: a package entry with routines, methods and a loader.
 //   SPEC_FIXTURE_CLASSIC  libspecclassic.so: classic function handlers only, no package entry.
 //   SPEC_FIXTURE_NEWER    libspecnewer.so:   a package entry that asks for a newer interpreter.
+//   SPEC_FIXTURE_RAISING  libspecraising.so: a package entry whose loader raises.
 //
 // The entries are described, by their Rexx-side behaviour, in `spec/src/native/index.md`. No
 // entry keeps state of its own between calls: an interpreter may load the library once for
@@ -562,6 +563,36 @@ static RexxPackageEntry newer_package_entry =
 
 OOREXX_GET_PACKAGE(newer);
 
+#elif defined(SPEC_FIXTURE_RAISING)
+
+// Raises SYNTAX 93.900 with the message `raising loader`.
+// Serves r[dir.routine.deviation.143].
+static void RexxEntry raisingLoader(RexxThreadContext *context)
+{
+    context->RaiseException1(Rexx_Error_Incorrect_method_user_defined,
+                             context->String("raising loader"));
+}
+
+static RexxRoutineEntry raisingRoutines[] =
+{
+    REXX_CLASSIC_ROUTINE(FxClassicJoin, FxClassicJoin),
+    REXX_LAST_ROUTINE()
+};
+
+static RexxPackageEntry raising_package_entry =
+{
+    STANDARD_PACKAGE_HEADER
+    REXX_INTERPRETER_4_0_0,
+    "specraising",
+    "1.0.0",
+    raisingLoader,
+    NULL,
+    raisingRoutines,
+    NULL
+};
+
+OOREXX_GET_PACKAGE(raising);
+
 #elif !defined(SPEC_FIXTURE_CLASSIC)
-#error "define one of SPEC_FIXTURE_PACKAGE, SPEC_FIXTURE_CLASSIC or SPEC_FIXTURE_NEWER"
+#error "define one of SPEC_FIXTURE_PACKAGE, SPEC_FIXTURE_CLASSIC, SPEC_FIXTURE_NEWER or SPEC_FIXTURE_RAISING"
 #endif
