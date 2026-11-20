@@ -252,6 +252,9 @@ pub(crate) struct QuickPass {
     pub(crate) kind: QuickKind,
     /// The `END`'s line, which the header clause runs at.
     pub(crate) line: usize,
+    /// The `END`'s instruction, which the header clause is, as
+    /// `flat_loop_step` makes it for a header blamed on the `END`.
+    pub(crate) end_index: usize,
     /// The value indent a pass that carries on leaves.
     pub(crate) open_indent: usize,
 }
@@ -1492,6 +1495,7 @@ impl Interp {
         Some(QuickPass {
             kind,
             line: flat.end_line,
+            end_index: flat.end_index,
             open_indent: flat.do_indent + 2,
         })
     }

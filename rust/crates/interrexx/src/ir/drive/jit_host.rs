@@ -787,12 +787,12 @@ impl Host for Driven<'_, '_> {
         }
         match std::mem::replace(&mut native.clause_at, layout::CLAUSE_NONE) {
             layout::CLAUSE_NONE => {}
-            // A pass boundary moves only the line and the indent; the
-            // instruction is the one already running.
+            // A pass boundary's header clause is the loop's `END`, as the
+            // driver's `flat_loop_step` makes it (`Interp::quick_pass` takes
+            // only a header blamed on the `END`).
             layout::CLAUSE_HEADER => {
-                let index = self.interp.activity.clause_state.current_clause_index;
                 self.interp.enter_compiled_clause(
-                    index,
+                    native.loop_end as usize,
                     native.loop_line as usize,
                     native.loop_indent as usize,
                 );
@@ -800,18 +800,22 @@ impl Host for Driven<'_, '_> {
             // A clause compiled code opened, which `pass_of` took only from
             // an `Op::Clause` or `Op::CallingClause` and the chunk's table.
             pc => {
-                let Ok(pc) = u32::try_from(pc) else {
-                    return;
-                };
-                if let Some(&(Op::Clause { index, .. } | Op::CallingClause { index, .. })) =
-                    self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
-                {
+                let op = u32::try_from(pc)
+                    .ok()
+                    .and_then(|pc| self.chunk.ops_in(pc, pc + 1))
+                    .and_then(<[Op]>::first);
+                if let Some(&(Op::Clause { index, .. } | Op::CallingClause { index, .. })) = op {
                     let position = self.chunk.opening_at(index as usize).position;
                     let indent = position.indent as usize + self.interp.activity.activation_indent;
                     self.interp.enter_compiled_clause(
                         index as usize,
                         position.line as usize,
                         indent,
+                    );
+                } else {
+                    debug_assert!(
+                        false,
+                        "compiled code opened a clause at {pc}, which no clause op is"
                     );
                 }
             }
@@ -902,6 +906,7 @@ impl Host for Driven<'_, '_> {
             }
             native.loop_line = quick.line as u64;
             native.loop_indent = quick.open_indent as u64;
+            native.loop_end = quick.end_index as u64;
             if native.loop_ready != 0 {
                 self.loop_key = Some(key);
             }

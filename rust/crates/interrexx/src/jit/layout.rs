@@ -38,7 +38,7 @@ pub(crate) struct Native {
     /// been told of: the pc of its `Op::Clause`, from which the host reads its
     /// instruction, line and indent; [`CLAUSE_HEADER`] for the loop's header
     /// clause at a pass boundary, whose line and indent are `loop_line` and
-    /// `loop_indent`; or [`CLAUSE_NONE`].
+    /// `loop_indent` and whose instruction is `loop_end`; or [`CLAUSE_NONE`].
     pub(crate) clause_at: u64,
     /// Non-zero when generated code may take the loop's next pass itself,
     /// which is `run::QuickPass`'s: the control variable in slot `loop_slot`
@@ -53,6 +53,9 @@ pub(crate) struct Native {
     pub(crate) loop_to: i64,
     pub(crate) loop_line: u64,
     pub(crate) loop_indent: u64,
+    /// The header clause's instruction, the loop's `END`, which the host
+    /// alone reads.
+    pub(crate) loop_end: u64,
     /// The control value generated code last wrote, which
     /// [`Native::loop_dirty`] says the loop's own state has not been given.
     pub(crate) loop_value: i64,
@@ -89,6 +92,7 @@ impl Native {
             loop_to: 0,
             loop_line: 0,
             loop_indent: 0,
+            loop_end: 0,
             loop_value: 0,
             loop_dirty: 0,
             quick_values: 0,
