@@ -28,7 +28,7 @@ use interrexx_parse::Operator;
 
 use super::*;
 use crate::jit::layout::Native;
-use crate::jit::{self, Arith, CONTINUE, Host, Pass, STOP, Step};
+use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, Pass, STOP, Step};
 use crate::run::FlatStep;
 
 /// Passes a loop runs driven before it is compiled.
@@ -97,6 +97,8 @@ struct Driven<'a, 'c> {
     do_index: usize,
     body_start: u32,
     open: Option<Open>,
+    /// Whether [`Host::leave`] works out the loop's quick pass.
+    ask_loop: bool,
     /// Whether the clause's last op closed it, so its `Step::Close` has
     /// nothing left to do.
     closed: bool,
@@ -154,6 +156,7 @@ impl Interp {
             do_index: do_index as usize,
             body_start,
             open: None,
+            ask_loop: true,
             closed: false,
             exit: None,
         };
@@ -181,11 +184,23 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
     }
     let mut steps = Vec::new();
     let mut pc = body_start;
+    // An `IF`'s branches stay inside the body, and its `EndBranch` and
+    // `Jump` sit between clause regions.
+    let inside = |target: u32| (body_start..=loop_pc).contains(&target);
     while pc < loop_pc {
-        let (Some(&Op::Clause { index, end }) | Some(&Op::CallingClause { index, end })) =
-            chunk.ops_in(pc, pc + 1)?.first()
-        else {
-            return None;
+        let (index, end) = match *chunk.ops_in(pc, pc + 1)?.first()? {
+            Op::Clause { index, end } | Op::CallingClause { index, end } => (index, end),
+            Op::EndBranch => {
+                steps.push(Step::EndBranch { pc });
+                pc += 1;
+                continue;
+            }
+            Op::Jump { target } if inside(target) => {
+                steps.push(Step::Jump { target });
+                pc += 1;
+                continue;
+            }
+            _ => return None,
         };
         if end <= pc || end > loop_pc {
             return None;
@@ -239,8 +254,45 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
                         rhs,
                         dst,
                     },
+                    Operator::IntDiv => Step::Arith {
+                        pc: at,
+                        op: Arith::IntDiv,
+                        lhs,
+                        rhs,
+                        dst,
+                    },
+                    Operator::Remainder => Step::Arith {
+                        pc: at,
+                        op: Arith::Remainder,
+                        lhs,
+                        rhs,
+                        dst,
+                    },
                     _ => Step::Op { pc: at },
                 },
+                // A comparison the compiler did not route to the string rule.
+                Op::Binary {
+                    op,
+                    lhs,
+                    rhs,
+                    dst,
+                    text: false,
+                    ..
+                } if let Some(op) = quick_compare(op) => Step::Compare {
+                    pc: at,
+                    op,
+                    lhs,
+                    rhs,
+                    dst,
+                },
+                // The region's last op, so the clause's close follows it.
+                Op::ConditionJump { reg, target, .. } if at + 1 == end && inside(target) => {
+                    Step::Branch {
+                        pc: at,
+                        reg,
+                        target,
+                    }
+                }
                 Op::Load {
                     read: SymbolRead::Simple,
                     at: slot,
@@ -290,9 +342,26 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
         Pass {
             steps,
             registers: chunk.registers,
+            end: loop_pc,
         },
         body_start,
     ))
+}
+
+/// The comparisons [`Step::Compare`] answers, by `compare_op`'s mapping: the
+/// non-strict ones, which `small_int_compare` settles for two small integers.
+fn quick_compare(op: Operator) -> Option<Compare> {
+    Some(match op {
+        Operator::Equal => Compare::Equal,
+        Operator::BackslashEqual
+        | Operator::LessThanGreaterThan
+        | Operator::GreaterThanLessThan => Compare::NotEqual,
+        Operator::GreaterThan => Compare::Greater,
+        Operator::LessThan => Compare::Less,
+        Operator::GreaterThanEqual | Operator::BackslashLessThan => Compare::GreaterEqual,
+        Operator::LessThanEqual | Operator::BackslashGreaterThan => Compare::LessEqual,
+        _ => return None,
+    })
 }
 
 impl Driven<'_, '_> {
@@ -355,6 +424,7 @@ impl Driven<'_, '_> {
 
 impl Host for Driven<'_, '_> {
     fn pass(&mut self) -> u32 {
+        self.ask_loop = true;
         let counted = match self.interp.count_clause_against_deadline(self.top) {
             Ok(counted) => counted,
             Err(Failure::Slice) => return self.stop(JitExit::Slice(self.loop_pc)),
@@ -441,6 +511,14 @@ impl Host for Driven<'_, '_> {
     }
 
     fn op(&mut self, pc: u32) -> u32 {
+        // Between clauses: the driver's own `Op::EndBranch` arm.
+        if let Some(Op::EndBranch) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
+            return match self.interp.end_promoted_branch(Flow::Next) {
+                Ok(Flow::Next) => CONTINUE,
+                Ok(flow) => self.stop(JitExit::Flow(flow, pc + 1)),
+                Err(failure) => self.stop(JitExit::Fail(failure)),
+            };
+        }
         // `Op::Load`'s and `Op::Store`'s own fast paths for a simple
         // variable whose slot the plan resolved, taken here for the same
         // reason they are taken there; everything else is `general`.
@@ -520,8 +598,17 @@ impl Host for Driven<'_, '_> {
         native.clause_index = state.current_clause_index as u64;
         native.clause_line = state.line() as u64;
         native.clause_indent = state.current_value_indent as u64;
+        let mode = self.interp.trace_mode();
+        native.quick_values =
+            u64::from(self.interp.activation().settings.fuzz() == 0 && !mode.results);
         native.loop_ready = 0;
-        if native.steady != 0
+        // Asked only where a pass boundary was just crossed, or the run is
+        // starting: any other call clears it, so the next boundary is the
+        // host's, which asks again. A call can change what the answer rests
+        // on (`DIGITS`, the trace setting, the loop's own state), and asking
+        // after every one costs more than the boundary it would save.
+        if std::mem::take(&mut self.ask_loop)
+            && native.steady != 0
             && let Some(quick) = self.interp.quick_pass(self.do_index)
             && (quick.slot as u64) < native.slot_count
         {
@@ -625,6 +712,19 @@ impl Driven<'_, '_> {
             };
             Ok(RegionEnd::At(next))
         };
+        // A condition that did not hold: the region left for the branch's
+        // target, which the driver's hot exit closes plainly when nothing is
+        // queued at the boundary.
+        if let Ok(RegionEnd::At(next)) = ran
+            && let Some(&Op::ConditionJump { target, .. }) = ops.first()
+            && next == target
+            && self.interp.activity.pending_traps.is_empty()
+            && !self.interp.clause_exits
+            && let Some(open) = self.open.take()
+        {
+            self.interp.finish_plain_clause(open.entry);
+            return BRANCH;
+        }
         // The region's last op answering `Flow::Next` is the clause done, which
         // the driver settles at `end`: the op after this one, where compiled
         // code carries on.

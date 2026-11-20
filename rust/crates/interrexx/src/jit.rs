@@ -40,12 +40,13 @@
 #![allow(unsafe_code)]
 
 use cranelift_codegen::ir::condcodes::IntCC;
-use cranelift_codegen::ir::{AbiParam, InstBuilder, MemFlagsData, Signature, Value, types};
+use cranelift_codegen::ir::{AbiParam, Block, InstBuilder, MemFlagsData, Signature, Value, types};
 use cranelift_codegen::settings::{self, Configurable};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{Linkage, Module, default_libcall_names};
 use interrexx_core::RegFrame;
+use std::collections::HashMap;
 
 pub(crate) mod layout;
 
@@ -55,6 +56,9 @@ use layout::Native;
 pub(crate) const CONTINUE: u32 = 0;
 /// Any other answer ends the run; the host has recorded what happened.
 pub(crate) const STOP: u32 = 1;
+/// An `IF`'s condition did not hold, and the host closed its clause: the
+/// generated code goes on at the branch's target.
+pub(crate) const BRANCH: u32 = 2;
 
 /// What the generated code calls back into. Each step is bracketed by
 /// [`Host::enter`] and [`Host::leave`].
@@ -111,6 +115,36 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// An `IF`'s `Op::ConditionJump` at `pc` on register `reg`, the last op
+    /// of its clause: falls through to the clause's close when the value
+    /// holds, and otherwise closes the clause and goes on at `target`.
+    Branch { pc: u32, reg: u16, target: u32 },
+    /// `Op::Jump` to `target`.
+    Jump { target: u32 },
+    /// `Op::EndBranch` at `pc`.
+    EndBranch { pc: u32 },
+    /// A comparison of two registers: done here when both are small
+    /// integers the driver's own quick comparison takes, else the op at `pc`
+    /// through the host.
+    Compare {
+        pc: u32,
+        op: Compare,
+        lhs: u16,
+        rhs: u16,
+        dst: u16,
+    },
+}
+
+/// The comparisons [`Step::Compare`] does itself, as `small_int_compare`
+/// answers them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Compare {
+    Equal,
+    NotEqual,
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
 }
 
 /// The operators [`Step::Arith`] does itself.
@@ -119,6 +153,10 @@ pub(crate) enum Arith {
     Add,
     Subtract,
     Multiply,
+    /// `%`: the quotient truncated, as `checked_div` answers it.
+    IntDiv,
+    /// `//`: the remainder with the dividend's sign, as `checked_rem`.
+    Remainder,
 }
 
 /// One loop's passes: the boundary, then `steps`, then the boundary again.
@@ -127,6 +165,8 @@ pub(crate) struct Pass {
     pub(crate) steps: Vec<Step>,
     /// How many registers the frame the code runs against holds.
     pub(crate) registers: u16,
+    /// The pass boundary's own op, which a branch to it reaches.
+    pub(crate) end: u32,
 }
 
 /// What a helper is handed: the block, and the host it belongs to.
@@ -250,6 +290,70 @@ impl Emit<'_, '_> {
         self.b.switch_to_block(on);
     }
 
+    /// [`Emit::call`] for a helper that may also answer [`BRANCH`], which
+    /// goes on at `branch`.
+    fn call_branching(&mut self, helper: *const (), pc: u32, branch: Block) {
+        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
+        let pc = self.b.ins().iconst(types::I32, i64::from(pc));
+        let call = self
+            .b
+            .ins()
+            .call_indirect(self.with_pc, address, &[self.ctx, pc]);
+        let answer = self.b.inst_results(call)[0];
+        let branches = self
+            .b
+            .ins()
+            .icmp_imm_u(IntCC::Equal, answer, i64::from(BRANCH));
+        let other = self.b.create_block();
+        let on = self.b.create_block();
+        self.b.ins().brif(branches, branch, &[], other, &[]);
+        self.b.switch_to_block(other);
+        self.b
+            .ins()
+            .brif(answer, self.exit, &[answer.into()], on, &[]);
+        self.b.switch_to_block(on);
+    }
+
+    fn register(&mut self, register: u16) -> Value {
+        self.b.ins().load(
+            types::I64,
+            Self::flags(),
+            self.registers,
+            Self::register_at(register),
+        )
+    }
+
+    fn set_register(&mut self, register: u16, value: Value) {
+        self.b.ins().store(
+            Self::flags(),
+            value,
+            self.registers,
+            Self::register_at(register),
+        );
+    }
+
+    /// Whether both handles carry the small-integer tag.
+    fn both_small(&mut self, left: Value, right: Value) -> Value {
+        let tags = self.b.ins().band(left, right);
+        let tags = self.b.ins().band_imm_u(tags, layout::TAG_MASK);
+        let either = self.b.ins().bor(left, right);
+        let either = self
+            .b
+            .ins()
+            .band_imm_u(either, layout::TAG_MASK & !layout::TAG_INT);
+        let tagged = self.b.ins().icmp_imm_u(IntCC::Equal, tags, layout::TAG_INT);
+        let clear = self.b.ins().icmp_imm_u(IntCC::Equal, either, 0);
+        self.b.ins().band(tagged, clear)
+    }
+
+    /// Whether `v` is strictly inside `(-bound, bound)`.
+    fn within(&mut self, v: Value, bound: Value) -> Value {
+        let negative = self.b.ins().ineg(bound);
+        let below = self.b.ins().icmp(IntCC::SignedLessThan, v, bound);
+        let above = self.b.ins().icmp(IntCC::SignedGreaterThan, v, negative);
+        self.b.ins().band(below, above)
+    }
+
     /// The op at `pc` through the host, from a clause generated code may have
     /// opened itself: adopted first, so the interpreter can close it.
     fn slow_op(&mut self, clause_pc: u32, pc: u32) {
@@ -292,8 +396,15 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let named = match *step {
             Step::Const { dst, .. } | Step::Load { dst, .. } => Some(dst),
             Step::Store { src, .. } => Some(src),
-            Step::Arith { lhs, rhs, dst, .. } => Some(lhs.max(rhs).max(dst)),
-            Step::Open { .. } | Step::Close { .. } | Step::Op { .. } => None,
+            Step::Arith { lhs, rhs, dst, .. } | Step::Compare { lhs, rhs, dst, .. } => {
+                Some(lhs.max(rhs).max(dst))
+            }
+            Step::Branch { reg, .. } => Some(reg),
+            Step::Open { .. }
+            | Step::Close { .. }
+            | Step::Op { .. }
+            | Step::Jump { .. }
+            | Step::EndBranch { .. } => None,
         };
         // Property 2 of the module doc.
         if named.is_some_and(|register| register >= pass.registers) {
@@ -363,10 +474,40 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             fast,
             _module: std::marker::PhantomData,
         };
+        // Every op a branch can land on: a clause's opening, an
+        // `EndBranch`, and the pass boundary.
+        let mut labels: HashMap<u32, Block> = HashMap::new();
+        labels.insert(pass.end, head);
+        for step in &pass.steps {
+            if let Step::Open { pc, .. } | Step::EndBranch { pc } = *step {
+                labels.insert(pc, e.b.create_block());
+            }
+        }
+        for step in &pass.steps {
+            if let Step::Branch { target, .. } | Step::Jump { target } = *step
+                && !labels.contains_key(&target)
+            {
+                return None;
+            }
+        }
         e.b.switch_to_block(head);
         pass_step(&mut e);
         let mut clause_pc = 0;
+        // Whether the block being emitted into can still fall through.
+        let mut live = true;
         for step in &pass.steps {
+            if let Step::Open { pc, .. } | Step::EndBranch { pc } = *step {
+                let block = labels[&pc];
+                if live {
+                    e.b.ins().jump(block, &[]);
+                }
+                e.b.switch_to_block(block);
+                live = true;
+            } else if !live {
+                let unreachable = e.b.create_block();
+                e.b.switch_to_block(unreachable);
+                live = true;
+            }
             match *step {
                 Step::Open {
                     pc,
@@ -397,7 +538,24 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.call(close_helper as *const (), Some(next));
                     e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(done);
+                    let no = e.b.ins().iconst(types::I8, 0);
+                    e.b.def_var(e.fast, no);
                 }
+                Step::Branch { pc, reg, target } => {
+                    branch(&mut e, clause_pc, pc, reg, labels[&target], target);
+                }
+                Step::Jump { target } => {
+                    e.b.ins().jump(labels[&target], &[]);
+                    live = false;
+                }
+                Step::EndBranch { pc } => end_branch(&mut e, pc),
+                Step::Compare {
+                    pc,
+                    op,
+                    lhs,
+                    rhs,
+                    dst,
+                } => compare(&mut e, clause_pc, pc, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
                 Step::Const { dst, bits } => {
                     let value = e.b.ins().iconst(types::I64, bits as i64);
@@ -455,7 +613,9 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 } => arith(&mut e, clause_pc, pc, op, lhs, rhs, dst),
             }
         }
-        e.b.ins().jump(head, &[]);
+        if live {
+            e.b.ins().jump(head, &[]);
+        }
 
         e.b.switch_to_block(exit);
         let answer = e.b.block_params(exit)[0];
@@ -632,79 +792,208 @@ fn clear_registers(e: &mut Emit<'_, '_>, top: u16, registers: u16) {
 }
 
 fn arith(e: &mut Emit<'_, '_>, clause_pc: u32, pc: u32, op: Arith, lhs: u16, rhs: u16, dst: u16) {
-    let b = &mut e.b;
-    let left = b.ins().load(
-        types::I64,
-        Emit::flags(),
-        e.registers,
-        Emit::register_at(lhs),
-    );
-    let right = b.ins().load(
-        types::I64,
-        Emit::flags(),
-        e.registers,
-        Emit::register_at(rhs),
-    );
-    let fast = b.create_block();
-    let store = b.create_block();
-    let slow = b.create_block();
-    let join = b.create_block();
-    b.append_block_param(store, types::I64);
-    // Both handles carry the small-integer tag: bit 0 set in both and bit
-    // 1 clear in both.
-    let tags = b.ins().band(left, right);
-    let tags = b.ins().band_imm_u(tags, layout::TAG_MASK);
-    let either = b.ins().bor(left, right);
-    let either = b
-        .ins()
-        .band_imm_u(either, layout::TAG_MASK & !layout::TAG_INT);
-    let tagged = b.ins().icmp_imm_u(IntCC::Equal, tags, layout::TAG_INT);
-    let clear = b.ins().icmp_imm_u(IntCC::Equal, either, 0);
-    let both = b.ins().band(tagged, clear);
-    b.ins().brif(both, fast, &[], slow, &[]);
+    let left = e.register(lhs);
+    let right = e.register(rhs);
+    let fast = e.b.create_block();
+    let store = e.b.create_block();
+    let slow = e.b.create_block();
+    let join = e.b.create_block();
+    e.b.append_block_param(store, types::I64);
+    let both = e.both_small(left, right);
+    e.b.ins().brif(both, fast, &[], slow, &[]);
 
-    b.switch_to_block(fast);
-    let bound = b
-        .ins()
-        .load(types::I64, Emit::flags(), e.ctx, layout::SMALL_INT_BOUND);
-    let a = b.ins().sshr_imm_u(left, layout::TAG_BITS);
-    let c = b.ins().sshr_imm_u(right, layout::TAG_BITS);
+    e.b.switch_to_block(fast);
+    let bound = e.load_native(types::I64, layout::SMALL_INT_BOUND);
+    let a = e.b.ins().sshr_imm_u(left, layout::TAG_BITS);
+    let c = e.b.ins().sshr_imm_u(right, layout::TAG_BITS);
+    // A division by zero is the driver's to raise.
+    if matches!(op, Arith::IntDiv | Arith::Remainder) {
+        let divides = e.b.create_block();
+        e.b.ins().brif(c, divides, &[], slow, &[]);
+        e.b.switch_to_block(divides);
+    }
     let (result, overflow) = match op {
-        Arith::Add => (b.ins().iadd(a, c), None),
-        Arith::Subtract => (b.ins().isub(a, c), None),
+        Arith::Add => (e.b.ins().iadd(a, c), None),
+        Arith::Subtract => (e.b.ins().isub(a, c), None),
         Arith::Multiply => {
-            let (product, overflow) = b.ins().smul_overflow(a, c);
+            let (product, overflow) = e.b.ins().smul_overflow(a, c);
             (product, Some(overflow))
         }
+        // Both operands are tagged, so neither is `i64::MIN` and the quotient
+        // cannot overflow.
+        Arith::IntDiv => (e.b.ins().sdiv(a, c), None),
+        Arith::Remainder => (e.b.ins().srem(a, c), None),
     };
-    let negative = b.ins().ineg(bound);
-    let within = |b: &mut FunctionBuilder<'_>, v: Value| {
-        let below = b.ins().icmp(IntCC::SignedLessThan, v, bound);
-        let above = b.ins().icmp(IntCC::SignedGreaterThan, v, negative);
-        b.ins().band(below, above)
-    };
-    let mut ok = within(b, a);
-    let c_ok = within(b, c);
-    ok = b.ins().band(ok, c_ok);
-    let r_ok = within(b, result);
-    ok = b.ins().band(ok, r_ok);
+    let mut ok = e.within(a, bound);
+    let c_ok = e.within(c, bound);
+    ok = e.b.ins().band(ok, c_ok);
+    let r_ok = e.within(result, bound);
+    ok = e.b.ins().band(ok, r_ok);
     if let Some(overflow) = overflow {
-        let fine = b.ins().icmp_imm_u(IntCC::Equal, overflow, 0);
-        ok = b.ins().band(ok, fine);
+        let fine = e.b.ins().icmp_imm_u(IntCC::Equal, overflow, 0);
+        ok = e.b.ins().band(ok, fine);
     }
-    b.ins().brif(ok, store, &[result.into()], slow, &[]);
+    e.b.ins().brif(ok, store, &[result.into()], slow, &[]);
 
-    b.switch_to_block(store);
-    let result = b.block_params(store)[0];
-    let shifted = b.ins().ishl_imm_u(result, layout::TAG_BITS);
-    let handle = b.ins().bor_imm_u(shifted, layout::TAG_INT);
-    b.ins()
-        .store(Emit::flags(), handle, e.registers, Emit::register_at(dst));
-    b.ins().jump(join, &[]);
+    e.b.switch_to_block(store);
+    let result = e.b.block_params(store)[0];
+    let shifted = e.b.ins().ishl_imm_u(result, layout::TAG_BITS);
+    let handle = e.b.ins().bor_imm_u(shifted, layout::TAG_INT);
+    e.set_register(dst, handle);
+    e.b.ins().jump(join, &[]);
 
-    b.switch_to_block(slow);
+    e.b.switch_to_block(slow);
     e.slow_op(clause_pc, pc);
     e.b.ins().jump(join, &[]);
 
+    e.b.switch_to_block(join);
+}
+
+/// `small_int_compare`'s answer for two small integers within `DIGITS`, under
+/// a `FUZZ` of 0 and no `TRACE` of results; the op through the host otherwise.
+fn compare(
+    e: &mut Emit<'_, '_>,
+    clause_pc: u32,
+    pc: u32,
+    op: Compare,
+    lhs: u16,
+    rhs: u16,
+    dst: u16,
+) {
+    let left = e.register(lhs);
+    let right = e.register(rhs);
+    let fast = e.b.create_block();
+    let slow = e.b.create_block();
+    let join = e.b.create_block();
+    let both = e.both_small(left, right);
+    let quick = e.load_native(types::I64, layout::QUICK_VALUES);
+    let quick = e.b.ins().icmp_imm_u(IntCC::NotEqual, quick, 0);
+    let both = e.b.ins().band(both, quick);
+    e.b.ins().brif(both, fast, &[], slow, &[]);
+
+    e.b.switch_to_block(fast);
+    let bound = e.load_native(types::I64, layout::SMALL_INT_BOUND);
+    let a = e.b.ins().sshr_imm_u(left, layout::TAG_BITS);
+    let c = e.b.ins().sshr_imm_u(right, layout::TAG_BITS);
+    let a_ok = e.within(a, bound);
+    let c_ok = e.within(c, bound);
+    let ok = e.b.ins().band(a_ok, c_ok);
+    let answer = e.b.create_block();
+    e.b.ins().brif(ok, answer, &[], slow, &[]);
+
+    e.b.switch_to_block(answer);
+    let cc = match op {
+        Compare::Equal => IntCC::Equal,
+        Compare::NotEqual => IntCC::NotEqual,
+        Compare::Greater => IntCC::SignedGreaterThan,
+        Compare::Less => IntCC::SignedLessThan,
+        Compare::GreaterEqual => IntCC::SignedGreaterThanOrEqual,
+        Compare::LessEqual => IntCC::SignedLessThanOrEqual,
+    };
+    let holds = e.b.ins().icmp(cc, a, c);
+    let yes = e.b.ins().iconst(types::I64, layout::TRUE_BITS);
+    let no = e.b.ins().iconst(types::I64, layout::FALSE_BITS);
+    let value = e.b.ins().select(holds, yes, no);
+    e.set_register(dst, value);
+    e.b.ins().jump(join, &[]);
+
+    e.b.switch_to_block(slow);
+    e.slow_op(clause_pc, pc);
+    e.b.ins().jump(join, &[]);
+
+    e.b.switch_to_block(join);
+}
+
+/// An `IF`'s condition: the driver's quick test of a value that is already
+/// logical, under no `TRACE` of results; the op through the host otherwise.
+/// A condition that does not hold closes the clause as the driver's hot exit
+/// does and goes on at `target`.
+fn branch(
+    e: &mut Emit<'_, '_>,
+    clause_pc: u32,
+    pc: u32,
+    reg: u16,
+    target_block: Block,
+    target: u32,
+) {
+    let value = e.register(reg);
+    let quick = e.load_native(types::I64, layout::QUICK_VALUES);
+    let quick = e.b.ins().icmp_imm_u(IntCC::NotEqual, quick, 0);
+    let is_true = e.b.ins().icmp_imm_u(IntCC::Equal, value, layout::TRUE_BITS);
+    let is_one = e.b.ins().icmp_imm_u(IntCC::Equal, value, layout::ONE_BITS);
+    let holds = e.b.ins().bor(is_true, is_one);
+    let is_false =
+        e.b.ins()
+            .icmp_imm_u(IntCC::Equal, value, layout::FALSE_BITS);
+    let is_zero = e.b.ins().icmp_imm_u(IntCC::Equal, value, layout::ZERO_BITS);
+    let fails = e.b.ins().bor(is_false, is_zero);
+    let holds = e.b.ins().band(holds, quick);
+    let fails = e.b.ins().band(fails, quick);
+
+    let fall = e.b.create_block();
+    let other = e.b.create_block();
+    let take = e.b.create_block();
+    let slow = e.b.create_block();
+    e.b.ins().brif(holds, fall, &[], other, &[]);
+    e.b.switch_to_block(other);
+    e.b.ins().brif(fails, take, &[], slow, &[]);
+
+    // The clause closes before the jump: free when generated code opened it,
+    // the host's close otherwise.
+    e.b.switch_to_block(take);
+    let fast = e.b.use_var(e.fast);
+    let closing = e.b.create_block();
+    let closed = e.b.create_block();
+    e.b.ins().brif(fast, closed, &[], closing, &[]);
+    e.b.switch_to_block(closing);
+    e.call(close_helper as *const (), Some(target));
+    e.b.ins().jump(closed, &[]);
+    e.b.switch_to_block(closed);
+    let no = e.b.ins().iconst(types::I8, 0);
+    e.b.def_var(e.fast, no);
+    e.b.ins().jump(target_block, &[]);
+
+    e.b.switch_to_block(slow);
+    let fast = e.b.use_var(e.fast);
+    let adopt = e.b.create_block();
+    let run = e.b.create_block();
+    e.b.ins().brif(fast, adopt, &[], run, &[]);
+    e.b.switch_to_block(adopt);
+    e.call(adopt_helper as *const (), Some(clause_pc));
+    e.b.ins().jump(run, &[]);
+    e.b.switch_to_block(run);
+    let no = e.b.ins().iconst(types::I8, 0);
+    e.b.def_var(e.fast, no);
+    let branched = e.b.create_block();
+    e.call_branching(op_helper as *const (), pc, branched);
+    e.b.ins().jump(fall, &[]);
+    e.b.switch_to_block(branched);
+    e.b.ins().jump(target_block, &[]);
+
+    e.b.switch_to_block(fall);
+}
+
+/// `Op::EndBranch`: a clause counted at the line in force, which while the
+/// block is steady and the countdown has more than this in it is the count
+/// alone; the host's `end_promoted_branch` otherwise.
+fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
+    let steady = e.load_native(types::I64, layout::STEADY);
+    let countdown = e.load_native(types::I64, layout::COUNTDOWN);
+    let left =
+        e.b.ins()
+            .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
+    let ready = e.b.ins().icmp_imm_u(IntCC::NotEqual, steady, 0);
+    let ready = e.b.ins().band(ready, left);
+    let fast = e.b.create_block();
+    let slow = e.b.create_block();
+    let join = e.b.create_block();
+    e.b.ins().brif(ready, fast, &[], slow, &[]);
+    e.b.switch_to_block(fast);
+    let countdown = e.b.ins().iadd_imm_s(countdown, -1);
+    e.store_native(countdown, layout::COUNTDOWN);
+    e.b.ins().jump(join, &[]);
+    e.b.switch_to_block(slow);
+    e.call(op_helper as *const (), Some(pc));
+    e.b.ins().jump(join, &[]);
     e.b.switch_to_block(join);
 }

@@ -57,6 +57,9 @@ pub(crate) struct Native {
     /// [`Native::loop_dirty`] says the loop's own state has not been given.
     pub(crate) loop_value: i64,
     pub(crate) loop_dirty: u64,
+    /// Non-zero when `NUMERIC FUZZ` is 0 and `TRACE` shows no results: what
+    /// the driver's own quick comparison and quick condition test ask.
+    pub(crate) quick_values: u64,
 }
 
 impl Native {
@@ -81,6 +84,7 @@ impl Native {
             loop_indent: 0,
             loop_value: 0,
             loop_dirty: 0,
+            quick_values: 0,
         }
     }
 }
@@ -110,6 +114,7 @@ pub(crate) const LOOP_LINE: i32 = at(offset_of!(Native, loop_line));
 pub(crate) const LOOP_INDENT: i32 = at(offset_of!(Native, loop_indent));
 pub(crate) const LOOP_VALUE: i32 = at(offset_of!(Native, loop_value));
 pub(crate) const LOOP_DIRTY: i32 = at(offset_of!(Native, loop_dirty));
+pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 
 /// A variable slot's size, and where its two words are.
 pub(crate) const SLOT_SIZE: i64 = size_of::<VarSlot>() as i64;
@@ -127,6 +132,12 @@ const fn small(value: i64) -> u64 {
 pub(crate) const TAG_INT: i64 = small(0) as i64;
 pub(crate) const TAG_BITS: i64 = (small(1) - small(0)).trailing_zeros() as i64;
 pub(crate) const TAG_MASK: i64 = (1 << TAG_BITS) - 1;
+/// What a comparison answers, and the small integers a condition also
+/// accepts as logical (`crate::eval::truth_without_conversion`).
+pub(crate) const TRUE_BITS: i64 = crate::eval::LOGICAL_TRUE.bits() as i64;
+pub(crate) const FALSE_BITS: i64 = crate::eval::LOGICAL_FALSE.bits() as i64;
+pub(crate) const ONE_BITS: i64 = small(1) as i64;
+pub(crate) const ZERO_BITS: i64 = small(0) as i64;
 /// What a cleared register holds.
 pub(crate) const NIL_BITS: u64 = ObjRef::NIL.bits();
 
