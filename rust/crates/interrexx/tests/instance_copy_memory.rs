@@ -9,9 +9,13 @@ mod support;
 
 use std::fs;
 use std::path::Path;
-use std::process::{Command, Stdio};
-
+use support::memory_cap::run_under_memory_cap;
 use support::oracle::ORACLE_MEMORY_LIMIT_KIB;
+
+/// The peak resident set, in KiB, that counts as a run that grew where the
+/// address-space cap is not enforced. Measured on a debug build: 52 MB with
+/// the copies charged, against more than 2 GB without.
+const PEAK_RSS_KIB: u64 = 262_144;
 
 /// **3000 copies of a 1,000,000-byte instance run to completion under the
 /// cap.** Measured: oracle rc 0, `done 1000000`, maxrss 28 MB; the crate,
@@ -33,16 +37,13 @@ fn copies_of_a_large_string_subclass_instance_run_under_the_oracles_memory_cap()
          ::class k subclass string\n",
     )
     .expect("the program is writable");
-    let output = Command::new("bash")
-        .arg("-c")
-        .arg(format!(
-            "ulimit -v {ORACLE_MEMORY_LIMIT_KIB} && exec \"$0\" main.rex"
-        ))
-        .arg(env!("CARGO_BIN_EXE_rexx"))
-        .current_dir(&dir)
-        .stdin(Stdio::null())
-        .output()
-        .expect("the capped run spawns");
+    let output = run_under_memory_cap(
+        ORACLE_MEMORY_LIMIT_KIB,
+        PEAK_RSS_KIB,
+        env!("CARGO_BIN_EXE_rexx"),
+        &["main.rex".as_ref()],
+        &dir,
+    );
     assert_eq!(
         (
             output.status.code(),

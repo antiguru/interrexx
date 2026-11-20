@@ -740,6 +740,14 @@ fn ootest_dir(suite: &str) -> PathBuf {
         .join(suite)
 }
 
+/// The corpus programs whose expected answer is the allocator refusing a
+/// request far beyond any machine's memory (5.0 raised by `try_reserve`). The
+/// request is refused on Linux. macOS grants it (measured: a run passed 7 GB)
+/// and the program then touches the pages until the machine is out of memory,
+/// and no address-space limit can stop that there (`setrlimit(RLIMIT_AS)` is
+/// refused below what a process has reserved). They are left out on macOS.
+const ALLOCATOR_REFUSAL_PROGRAMS: &[&str] = &["lang/collection_array_grow_refused.rex"];
+
 /// Every corpus program the corpus list names, each once.
 fn corpus_cases() -> Vec<Case> {
     let dir = corpus_dir();
@@ -751,6 +759,12 @@ fn corpus_cases() -> Vec<Case> {
             .unwrap_or_else(|e| panic!("cannot read {}: {e}", list_path.display()));
         for line in text.lines().map(str::trim) {
             if line.is_empty() || line.starts_with('#') || !seen.insert(line.to_string()) {
+                continue;
+            }
+            // These runs are in-process and uncapped, so a program that waits
+            // for the allocator to refuse a request has nothing to refuse it
+            // on a host that grants any request below its address space.
+            if cfg!(target_vendor = "apple") && ALLOCATOR_REFUSAL_PROGRAMS.contains(&line) {
                 continue;
             }
             let path = dir.join(line);

@@ -132,8 +132,20 @@ fn subset() -> Vec<String> {
         .iter()
         .map(|name| corpus_dir.join(name))
         .collect();
-    read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+    let mut subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    if cfg!(target_vendor = "apple") {
+        subset.retain(|path| !ALLOCATOR_REFUSAL_PROGRAMS.contains(&path.as_str()));
+    }
+    subset
 }
+
+/// The corpus programs whose expected answer is the allocator refusing a
+/// request far beyond any machine's memory (5.0 raised by `try_reserve`). The
+/// request is refused on Linux. macOS grants it (measured: a run passed 7 GB)
+/// and the program then touches the pages until the machine is out of memory,
+/// and no address-space limit can stop that there (`setrlimit(RLIMIT_AS)` is
+/// refused below what a process has reserved). They are left out on macOS.
+const ALLOCATOR_REFUSAL_PROGRAMS: &[&str] = &["lang/collection_array_grow_refused.rex"];
 
 /// Every shard index below `SHARDS` has a test running it, so no program of
 /// the subset falls between the shards.

@@ -53,6 +53,10 @@ pub mod native_table;
 /// to invoke the oracle identically or their results are not comparable.
 pub mod oracle;
 
+/// A run under a memory bound: an address-space cap where the host enforces
+/// one, a measured peak resident set where it does not.
+pub mod memory_cap;
+
 /// Drops the message text of an error report from output, for comparisons with the
 /// oracle that must not depend on wording.
 pub mod error_text;

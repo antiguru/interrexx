@@ -10,9 +10,13 @@ mod support;
 use interrexx_inventory::errors::expand;
 use std::fs;
 use std::path::Path;
-use std::process::{Command, Stdio};
-
+use support::memory_cap::run_under_memory_cap;
 use support::oracle::ORACLE_MEMORY_LIMIT_KIB;
+
+/// The peak resident set, in KiB, that counts as a run that grew where the
+/// address-space cap is not enforced. Measured on a debug build: 39 MB with
+/// each failed delivery dropped, against more than 431 MB without.
+const PEAK_RSS_KIB: u64 = 262_144;
 
 /// The recursion each failed delivery runs before it raises.
 const DEPTH: usize = 800;
@@ -49,17 +53,13 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
     fs::create_dir_all(&dir).expect("a probe directory of this run's own");
     let file = dir.join("main.rex");
     fs::write(&file, source).expect("the program is writable");
-    let output = Command::new("bash")
-        .arg("-c")
-        .arg(format!(
-            "ulimit -v {ORACLE_MEMORY_LIMIT_KIB} && exec \"$0\" \"$1\""
-        ))
-        .arg(env!("CARGO_BIN_EXE_rexx"))
-        .arg(&file)
-        .current_dir(&dir)
-        .stdin(Stdio::null())
-        .output()
-        .expect("the capped run spawns");
+    let output = run_under_memory_cap(
+        ORACLE_MEMORY_LIMIT_KIB,
+        PEAK_RSS_KIB,
+        env!("CARGO_BIN_EXE_rexx"),
+        &[file.as_os_str()],
+        &dir,
+    );
     let path = file.to_string_lossy().into_owned();
     // A line number in the class library is unspecified
     // (`r[cond.information.library]`), so it is compared as a placeholder.
