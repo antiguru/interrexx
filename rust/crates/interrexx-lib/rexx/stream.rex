@@ -214,6 +214,17 @@ done:
   if \text~isInstanceOf(.string) then text = .nil~string
   return text
 
+/* The string value of the option of arrayIn and arrayOut, which sits at
+   argument position `n`: read through makeString as the option of open is,
+   so an object with no such method, and .nil, raise 88.909
+   (r[class.stream.deviation.183]). */
+::method interrexx_option private
+  use arg value, n
+  if value~isInstanceOf(.string) then return value~makeString:.string
+  text = value~request('STRING')
+  if \text~isInstanceOf(.string) then raise syntax 88.909 array (n)
+  return text
+
 /* r[class.stream.say] and r[class.stream.say.sends] */
 ::method say unguarded
   use strict arg line = ''
@@ -227,8 +238,9 @@ done:
   if arg() = 0 then kind = 'L'
   else do
     option = arg(1)
-    if option~caselessStartsWith('L') then kind = 'L'
-    else if option~caselessStartsWith('C') then kind = 'C'
+    letter = self~interrexx_option(option, 1)~left(1)~translate
+    if letter == 'L' then kind = 'L'
+    else if letter == 'C' then kind = 'C'
     else raise syntax 93.915 array ('CL', option)
   end
   if kind == 'L' then count = self~lines
@@ -255,7 +267,7 @@ done:
 ::method arrayOut
   expose stream_name
   use strict arg collection, option = 'L'
-  letter = option~left(1)~translate
+  letter = self~interrexx_option(option, 2)~left(1)~translate
   if letter \== 'L' & letter \== 'C' then raise syntax 93.0
   items = collection~request('ARRAY')
   if .nil == items then raise syntax 98.913 array (collection)

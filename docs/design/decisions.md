@@ -64,6 +64,12 @@ page records why they are the way they are.
   place, with `PYTHONUNBUFFERED` and `-u`. Handing the buffer over at every entry into native
   code and every return from it would keep ooRexx's order unasked, but costs a write per call,
   and per clause where an RXHLT or RXTRC exit is registered.
+* **Interpreter instances share no objects** (2026-11-20, #731, Deviation 85). Each instance
+  owns its objects and collects them alone, so a reference one instance hands out names nothing
+  in another. Sharing them, as ooRexx does, would need a collector that sees the roots of every
+  instance at once, or a handle that keeps an object of one instance alive from another, and
+  either would tie the instances' lifetimes and collections together. BSF4ooRexx's tests that
+  reach one instance's objects from a second are listed as expected failures.
 * **Comparing a `DateTime`, `TimeSpan` or `File` with an object of another class** (2026-11-15,
   #74, Deviation 126). `compareTo` and the ordering operators raise `SYNTAX 88.914`, since any
   order between the two would be arbitrary. The equality operators answer not equal, as ooRexx
@@ -158,6 +164,11 @@ page records why they are the way they are.
   its own sake; a targeted performance round handles it.
 * **The speed of a traced program is not a target** (2026-10-19). What counts is what tracing
   support costs a program that does not trace.
+* **Hot loops may be compiled with Cranelift, behind the `jit` feature** (2026-11-20, #842). The
+  `unsafe` this needs is granted to `jit.rs` (D-U5), and the Cranelift crates are a dependency of
+  the feature only, off by default. The feature may need a newer Rust than the workspace's
+  `rust-version`, which the default build keeps (2026-11-20). `INTERPRET`ed code is never compiled: each execution would
+  compile afresh, and it is not expected to be fast.
 
 ## Code and pull requests
 

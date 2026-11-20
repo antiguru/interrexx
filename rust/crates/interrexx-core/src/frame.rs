@@ -138,6 +138,13 @@ impl RegFrame<'_> {
         }
     }
 
+    /// The address of register 0. Registers are consecutive `ObjRef`s, so
+    /// register `i` is at `i` elements past it, for `i < len`; the address
+    /// stays valid for as long as this frame's arena lives (property 1).
+    pub fn as_ptr(self) -> *mut ObjRef {
+        self.base.as_ptr().cast()
+    }
+
     /// How many registers this frame holds.
     pub fn len(self) -> u16 {
         self.len

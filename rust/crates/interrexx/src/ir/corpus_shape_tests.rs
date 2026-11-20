@@ -61,7 +61,8 @@ impl Root {
             | Op::ExecValue { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
-            | Op::Parse { .. }
+            | Op::ParseBegin { .. }
+            | Op::ParseRun { .. }
             | Op::Clause { .. }
             | Op::CallingClause { .. }
             | Op::TraceClause { .. }
