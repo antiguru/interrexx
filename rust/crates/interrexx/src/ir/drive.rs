@@ -4285,9 +4285,8 @@ impl Interp {
                             #[cfg(feature = "jit")]
                             if !GRANTING
                                 && stream.len() == full.len()
-                                && let Some(exit) = self.jit_passes(
-                                    code, chunk, registers, source, pc, *index, TOP,
-                                )
+                                && let Some(exit) =
+                                    self.jit_passes(code, chunk, registers, source, pc, *index, TOP)
                             {
                                 match exit {
                                     jit_host::JitExit::At(target) => {
@@ -4299,7 +4298,9 @@ impl Interp {
                                         self.activity.frames.pop();
                                         break 'step (flow, pc);
                                     }
-                                    jit_host::JitExit::Flow(flow, next) => break 'step (flow, next),
+                                    jit_host::JitExit::Flow(flow, next) => {
+                                        break 'step (flow, next);
+                                    }
                                     jit_host::JitExit::Fail(failure) => return Err(failure),
                                 }
                             }

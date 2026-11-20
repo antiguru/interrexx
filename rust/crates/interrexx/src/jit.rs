@@ -292,7 +292,10 @@ impl Emit<'_> {
     /// Reads every field and register into its variable.
     fn reload(&mut self) {
         for (at, &(offset, _)) in FIELDS.iter().enumerate() {
-            let value = self.b.ins().load(types::I64, Self::flags(), self.ctx, offset);
+            let value = self
+                .b
+                .ins()
+                .load(types::I64, Self::flags(), self.ctx, offset);
             self.b.def_var(self.fields[at], value);
         }
         for register in 0..self.regs.len() {
@@ -458,9 +461,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
 
         b.switch_to_block(entry);
         let ctx = b.block_params(entry)[0];
-        let registers = b
-            .ins()
-            .load(pointer, Emit::flags(), ctx, layout::REGISTERS);
+        let registers = b.ins().load(pointer, Emit::flags(), ctx, layout::REGISTERS);
         let no = b.ins().iconst(types::I8, 0);
         b.def_var(fast, no);
 
@@ -514,21 +515,15 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     let join = e.b.create_block();
                     let slot = e.b.ins().iconst(types::I64, i64::from(slot));
                     let address = e.slot_address(slot, slow);
-                    let set = e.b.ins().load(
-                        types::I64,
-                        Emit::flags(),
-                        address,
-                        layout::SLOT_SET_AT,
-                    );
+                    let set =
+                        e.b.ins()
+                            .load(types::I64, Emit::flags(), address, layout::SLOT_SET_AT);
                     let on = e.b.create_block();
                     e.b.ins().brif(set, on, &[], slow, &[]);
                     e.b.switch_to_block(on);
-                    let value = e.b.ins().load(
-                        types::I64,
-                        Emit::flags(),
-                        address,
-                        layout::SLOT_VALUE_AT,
-                    );
+                    let value =
+                        e.b.ins()
+                            .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
                     e.set_reg(dst, value);
                     e.b.ins().jump(join, &[]);
                     e.b.switch_to_block(slow);
@@ -601,10 +596,9 @@ fn open(
     if tabled {
         let steady = e.get(layout::STEADY);
         let countdown = e.get(layout::COUNTDOWN);
-        let left = e
-            .b
-            .ins()
-            .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
+        let left =
+            e.b.ins()
+                .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
         let ready = e.b.ins().icmp_imm_u(IntCC::NotEqual, steady, 0);
         let ready = e.b.ins().band(ready, left);
         let fast = e.b.create_block();
@@ -650,10 +644,9 @@ fn pass_step(e: &mut Emit<'_>) {
 
     let ready = e.get(layout::LOOP_READY);
     let countdown = e.get(layout::COUNTDOWN);
-    let left = e
-        .b
-        .ins()
-        .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
+    let left =
+        e.b.ins()
+            .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
     let ready = e.b.ins().icmp_imm_u(IntCC::NotEqual, ready, 0);
     let ready = e.b.ins().band(ready, left);
     e.b.ins().brif(ready, check, &[], slow, &[]);
@@ -661,17 +654,15 @@ fn pass_step(e: &mut Emit<'_>) {
     e.b.switch_to_block(check);
     let slot = e.get(layout::LOOP_SLOT);
     let address = e.slot_address(slot, slow);
-    let set = e
-        .b
-        .ins()
-        .load(types::I64, Emit::flags(), address, layout::SLOT_SET_AT);
+    let set =
+        e.b.ins()
+            .load(types::I64, Emit::flags(), address, layout::SLOT_SET_AT);
     e.b.ins().brif(set, read, &[], slow, &[]);
 
     e.b.switch_to_block(read);
-    let value = e
-        .b
-        .ins()
-        .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
+    let value =
+        e.b.ins()
+            .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
     let mut ok = e.small(value);
     let running = e.b.ins().sshr_imm_u(value, layout::TAG_BITS);
     let step = e.get(layout::LOOP_STEP);

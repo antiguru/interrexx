@@ -830,7 +830,8 @@ impl ActivityRoots {
     pub fn grow_slots_of(&mut self, frame: SlotFrame, n: usize) -> usize {
         let start = self.segment(frame).start;
         let end = self.end_of(frame);
-        self.slots.splice(end..end, std::iter::repeat_n(VarSlot::UNSET, n));
+        self.slots
+            .splice(end..end, std::iter::repeat_n(VarSlot::UNSET, n));
         if self.aliases.len() > end {
             self.aliases.splice(end..end, std::iter::repeat_n(None, n));
         }

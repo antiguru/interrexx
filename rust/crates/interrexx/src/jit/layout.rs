@@ -157,5 +157,4 @@ mod tests {
             assert_ne!(other.bits() & TAG_MASK as u64, TAG_INT as u64);
         }
     }
-
 }

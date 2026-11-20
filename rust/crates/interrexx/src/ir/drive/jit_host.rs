@@ -146,7 +146,10 @@ impl Interp {
         };
         let answer = compiled.run(registers, &mut driven);
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
-        debug_assert!(driven.open.is_none(), "compiled passes ended with a clause open");
+        debug_assert!(
+            driven.open.is_none(),
+            "compiled passes ended with a clause open"
+        );
         Some(
             driven
                 .exit
@@ -240,10 +243,9 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
                     Step::Store { pc: at, slot, src }
                 }
                 // Ops that neither park, jump nor trace: what `op` runs.
-                Op::Load { .. }
-                | Op::Binary { .. }
-                | Op::Prefix { .. }
-                | Op::Store { .. } => Step::Op { pc: at },
+                Op::Load { .. } | Op::Binary { .. } | Op::Prefix { .. } | Op::Store { .. } => {
+                    Step::Op { pc: at }
+                }
                 _ => return None,
             });
         }
@@ -269,7 +271,9 @@ impl Driven<'_, '_> {
     /// region that did not end plainly.
     fn leave(&mut self, ran: Result<RegionEnd, Failure>) -> u32 {
         let Some(open) = self.open.take() else {
-            return self.stop(JitExit::Fail(Loud::op_not_driven("a close with no clause").into()));
+            return self.stop(JitExit::Fail(
+                Loud::op_not_driven("a close with no clause").into(),
+            ));
         };
         let Some(clause) = self.code.body.instructions.get(open.index) else {
             return self.stop(JitExit::Fail(Loud::chunk_map_too_short().into()));
@@ -277,8 +281,14 @@ impl Driven<'_, '_> {
         // `open` hands a debugging clause to the driver, so this is the
         // driver's own test with its `debugging` false.
         let ran = if self.interp.activity.debug_stop_owed.is_some() {
-            self.interp
-                .debug_pause_in_region(ran, self.code, open.index, clause, self.source, open.pc)
+            self.interp.debug_pause_in_region(
+                ran,
+                self.code,
+                open.index,
+                clause,
+                self.source,
+                open.pc,
+            )
         } else {
             ran
         };
@@ -322,9 +332,12 @@ impl Host for Driven<'_, '_> {
     }
 
     fn open(&mut self, pc: u32) -> u32 {
-        let Some(&Op::Clause { index, end }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        let Some(&Op::Clause { index, end }) =
+            self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
         else {
-            return self.stop(JitExit::Fail(Loud::op_not_driven("a compiled clause").into()));
+            return self.stop(JitExit::Fail(
+                Loud::op_not_driven("a compiled clause").into(),
+            ));
         };
         // A clause whose echo the chunk no longer answers for, or one under
         // interactive debug, is the driver's: asked before the clause is
@@ -370,8 +383,9 @@ impl Host for Driven<'_, '_> {
     fn close(&mut self, next: u32) -> u32 {
         if self.interp.activity.pending_traps.is_empty() && !self.interp.clause_exits {
             let Some(open) = self.open.take() else {
-                return self
-                    .stop(JitExit::Fail(Loud::op_not_driven("a close with no clause").into()));
+                return self.stop(JitExit::Fail(
+                    Loud::op_not_driven("a close with no clause").into(),
+                ));
             };
             self.interp.finish_plain_clause(open.entry);
             return CONTINUE;
@@ -437,13 +451,12 @@ impl Host for Driven<'_, '_> {
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
         // results; the window is offered only where both hold.
         let frame = self.interp.activation().frame;
-        let window = if self.interp.activation().exposed.is_none()
-            && !self.interp.trace_mode().results
-        {
-            self.interp.roots.top_window(frame)
-        } else {
-            None
-        };
+        let window =
+            if self.interp.activation().exposed.is_none() && !self.interp.trace_mode().results {
+                self.interp.roots.top_window(frame)
+            } else {
+                None
+            };
         // Kept as raw parts and not as the slice: the interpreter writes these
         // slots through `RootSet` while compiled code is suspended in a call,
         // and its `Vec` may move them then, so no reference may outlive this
@@ -475,9 +488,12 @@ impl Host for Driven<'_, '_> {
     }
 
     fn adopt(&mut self, pc: u32) -> u32 {
-        let Some(&Op::Clause { index, end }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        let Some(&Op::Clause { index, end }) =
+            self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
         else {
-            return self.stop(JitExit::Fail(Loud::op_not_driven("a compiled clause").into()));
+            return self.stop(JitExit::Fail(
+                Loud::op_not_driven("a compiled clause").into(),
+            ));
         };
         let entry = self.interp.adopt_stepped_clause();
         self.open = Some(Open {
@@ -520,7 +536,9 @@ impl Driven<'_, '_> {
     #[inline(never)]
     fn general(&mut self, pc: u32) -> u32 {
         let Some(open) = &self.open else {
-            return self.stop(JitExit::Fail(Loud::op_not_driven("an op with no clause").into()));
+            return self.stop(JitExit::Fail(
+                Loud::op_not_driven("an op with no clause").into(),
+            ));
         };
         let index: usize = open.index;
         let end: u32 = open.end;
