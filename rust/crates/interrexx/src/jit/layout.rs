@@ -48,6 +48,9 @@ pub(crate) struct Native {
     /// stepped by `loop_step` and compared with `loop_to`, in a header clause
     /// at `loop_line` that leaves the value indent at `loop_indent`.
     pub(crate) loop_ready: u64,
+    /// Which step: [`LOOP_CONTROLLED`], [`LOOP_COUNT`] (with the passes left in
+    /// `loop_value`) or [`LOOP_FOREVER`].
+    pub(crate) loop_kind: u64,
     pub(crate) loop_slot: u64,
     pub(crate) loop_step: i64,
     pub(crate) loop_to: i64,
@@ -82,6 +85,7 @@ impl Native {
             clause_dirty: 0,
             indent_base: 0,
             loop_ready: 0,
+            loop_kind: 0,
             loop_slot: 0,
             loop_step: 0,
             loop_to: 0,
@@ -114,6 +118,10 @@ pub(crate) const CLAUSE_INDENT: i32 = at(offset_of!(Native, clause_indent));
 pub(crate) const CLAUSE_DIRTY: i32 = at(offset_of!(Native, clause_dirty));
 pub(crate) const INDENT_BASE: i32 = at(offset_of!(Native, indent_base));
 pub(crate) const LOOP_READY: i32 = at(offset_of!(Native, loop_ready));
+pub(crate) const LOOP_KIND: i32 = at(offset_of!(Native, loop_kind));
+pub(crate) const LOOP_CONTROLLED: u64 = 0;
+pub(crate) const LOOP_COUNT: u64 = 1;
+pub(crate) const LOOP_FOREVER: u64 = 2;
 pub(crate) const LOOP_SLOT: i32 = at(offset_of!(Native, loop_slot));
 pub(crate) const LOOP_STEP: i32 = at(offset_of!(Native, loop_step));
 pub(crate) const LOOP_TO: i32 = at(offset_of!(Native, loop_to));

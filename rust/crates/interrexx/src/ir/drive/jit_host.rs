@@ -27,12 +27,13 @@ use std::rc::Rc;
 use interrexx_parse::Operator;
 
 use super::*;
-use crate::jit::layout::Native;
+use crate::jit::layout::{self, Native};
 use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, JUMP, Pass, STOP, Step};
 use crate::run::FlatStep;
+use crate::run::QuickKind;
 
 /// Passes a loop runs driven before it is compiled.
-const THRESHOLD: u32 = 64;
+const THRESHOLD: u32 = 1024;
 /// A body is compiled only when it has at least this many steps compiled code
 /// does itself for each op the host runs.
 const HOSTED_SHARE: usize = 4;
@@ -770,12 +771,26 @@ impl Host for Driven<'_, '_> {
         if std::mem::take(&mut self.ask_loop)
             && native.steady != 0
             && let Some(quick) = self.interp.quick_pass(self.do_index)
-            && (quick.slot as u64) < native.slot_count
         {
-            native.loop_ready = 1;
-            native.loop_slot = quick.slot as u64;
-            native.loop_step = quick.step;
-            native.loop_to = quick.to;
+            match quick.kind {
+                QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
+                    native.loop_ready = 1;
+                    native.loop_kind = layout::LOOP_CONTROLLED;
+                    native.loop_slot = slot as u64;
+                    native.loop_step = step;
+                    native.loop_to = to;
+                }
+                QuickKind::Controlled { .. } => {}
+                QuickKind::Count { remaining } => {
+                    native.loop_ready = 1;
+                    native.loop_kind = layout::LOOP_COUNT;
+                    native.loop_value = i64::try_from(remaining).unwrap_or(i64::MAX);
+                }
+                QuickKind::Forever => {
+                    native.loop_ready = 1;
+                    native.loop_kind = layout::LOOP_FOREVER;
+                }
+            }
             native.loop_line = quick.line as u64;
             native.loop_indent = quick.open_indent as u64;
         }

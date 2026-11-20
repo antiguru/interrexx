@@ -444,7 +444,11 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         }
     }
     let mut flags = settings::builder();
-    flags.set("opt_level", "speed").ok()?;
+    // Compile time is paid on the first hot entry and has to be earned back
+    // by the passes after it, and this code is mostly guards and calls: the
+    // quick allocator and no mid-end optimisation cost it little.
+    flags.set("opt_level", "none").ok()?;
+    flags.set("regalloc_algorithm", "single_pass").ok()?;
     flags.set("is_pic", "false").ok()?;
     // The verifier checks this generator rather than the program, and costs
     // more than the code it checks; debug builds keep it.
@@ -771,7 +775,41 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let ready = e.b.ins().band(ready, left);
     e.b.ins().brif(ready, check, &[], slow, &[]);
 
+    // `DO expr` and `DO FOREVER` share the header clause's tail with the
+    // controlled step, which `take` is.
+    let counted = e.b.create_block();
+    let not_counted = e.b.create_block();
+    let forever = e.b.create_block();
+    let tail = e.b.create_block();
     e.b.switch_to_block(check);
+    let kind = e.load_native(types::I64, layout::LOOP_KIND);
+    let is_count =
+        e.b.ins()
+            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_COUNT as i64);
+    e.b.ins().brif(is_count, counted, &[], not_counted, &[]);
+    e.b.switch_to_block(not_counted);
+    let is_forever =
+        e.b.ins()
+            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_FOREVER as i64);
+    let controlled = e.b.create_block();
+    e.b.ins().brif(is_forever, forever, &[], controlled, &[]);
+
+    // One fewer pass left; none left is the loop ending, the host's.
+    e.b.switch_to_block(counted);
+    let left = e.load_native(types::I64, layout::LOOP_VALUE);
+    let more = e.b.create_block();
+    e.b.ins().brif(left, more, &[], slow, &[]);
+    e.b.switch_to_block(more);
+    let left = e.b.ins().iadd_imm_s(left, -1);
+    e.store_native(left, layout::LOOP_VALUE);
+    let one = e.b.ins().iconst(types::I64, 1);
+    e.store_native(one, layout::LOOP_DIRTY);
+    e.b.ins().jump(tail, &[]);
+
+    e.b.switch_to_block(forever);
+    e.b.ins().jump(tail, &[]);
+
+    e.b.switch_to_block(controlled);
     let slot = e.load_native(types::I64, layout::LOOP_SLOT);
     let count = e.load_native(types::I64, layout::SLOT_COUNT);
     let held = e.b.ins().icmp(IntCC::UnsignedLessThan, slot, count);
@@ -817,8 +855,6 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     e.b.ins().brif(ok, take, &[], slow, &[]);
 
     e.b.switch_to_block(take);
-    let countdown = e.b.ins().iadd_imm_s(countdown, -1);
-    e.store_native(countdown, layout::COUNTDOWN);
     let one = e.b.ins().iconst(types::I64, 1);
     e.b.ins()
         .store(Emit::flags(), one, address, layout::SLOT_SET_AT);
@@ -828,6 +864,15 @@ fn pass_step(e: &mut Emit<'_, '_>) {
         .store(Emit::flags(), handle, address, layout::SLOT_VALUE_AT);
     e.store_native(sum, layout::LOOP_VALUE);
     e.store_native(one, layout::LOOP_DIRTY);
+    e.b.ins().jump(tail, &[]);
+
+    // The header clause every quick pass runs in: a countdown tick, its line
+    // and the indent it leaves.
+    e.b.switch_to_block(tail);
+    let countdown = e.load_native(types::I64, layout::COUNTDOWN);
+    let countdown = e.b.ins().iadd_imm_s(countdown, -1);
+    e.store_native(countdown, layout::COUNTDOWN);
+    let one = e.b.ins().iconst(types::I64, 1);
     let line = e.load_native(types::I64, layout::LOOP_LINE);
     e.store_native(line, layout::CLAUSE_LINE);
     let indent = e.load_native(types::I64, layout::LOOP_INDENT);

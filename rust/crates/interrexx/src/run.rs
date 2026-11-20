@@ -78,6 +78,8 @@ use call::{Entered, entered_receiver};
 
 // `DO`/`LOOP`: the header, each kind of repetition, and the flat-loop path the op driver takes.
 mod loops;
+#[cfg(feature = "jit")]
+pub(crate) use loops::QuickKind;
 #[cfg(test)]
 use loops::numeric_less;
 pub(crate) use loops::{

@@ -204,14 +204,23 @@ pub(crate) enum FlatStart {
 /// [`Interp::quick_pass`]'s answer.
 #[cfg(feature = "jit")]
 pub(crate) struct QuickPass {
-    /// The control variable's slot.
-    pub(crate) slot: usize,
-    pub(crate) step: i64,
-    pub(crate) to: i64,
+    pub(crate) kind: QuickKind,
     /// The `END`'s line, which the header clause runs at.
     pub(crate) line: usize,
     /// The value indent a pass that carries on leaves.
     pub(crate) open_indent: usize,
+}
+
+/// What a quick pass steps.
+#[cfg(feature = "jit")]
+pub(crate) enum QuickKind {
+    /// The control variable in `slot`, by `step`, while it has not passed
+    /// `to`.
+    Controlled { slot: usize, step: i64, to: i64 },
+    /// `DO expr`: one fewer of `remaining`, while any are left.
+    Count { remaining: u64 },
+    /// `DO FOREVER`: nothing but the header clause.
+    Forever,
 }
 
 pub(crate) enum FlatStep {
@@ -1368,50 +1377,67 @@ impl Interp {
         {
             return None;
         }
-        let LoopState::Controlled {
-            at: Some(slot),
-            current: ControlValue::Small(_),
-            for_remaining: None,
-            cached_digits,
-            to_int: Some(to),
-            by_int: Some(step),
-            shape: NameShape::Simple,
-            stepped: true,
-            ..
-        } = &flat.state
-        else {
-            return None;
-        };
-        let settings = &self.activation().settings;
         let mode = self.trace_mode();
-        if *cached_digits != settings.digits()
-            || settings.fuzz() != 0
-            || mode.all
-            || mode.results
-            || mode.intermediates
-        {
+        // `flat_loop_step` echoes the `END` and the header under this.
+        if mode.all {
             return None;
         }
+        let kind = match &flat.state {
+            LoopState::Controlled {
+                at: Some(slot),
+                current: ControlValue::Small(_),
+                for_remaining: None,
+                cached_digits,
+                to_int: Some(to),
+                by_int: Some(step),
+                shape: NameShape::Simple,
+                stepped: true,
+                ..
+            } => {
+                let settings = &self.activation().settings;
+                if *cached_digits != settings.digits()
+                    || settings.fuzz() != 0
+                    || mode.results
+                    || mode.intermediates
+                {
+                    return None;
+                }
+                QuickKind::Controlled {
+                    slot: *slot,
+                    step: *step,
+                    to: *to,
+                }
+            }
+            LoopState::Count { remaining } => QuickKind::Count {
+                remaining: *remaining,
+            },
+            LoopState::Forever => QuickKind::Forever,
+            _ => return None,
+        };
         Some(QuickPass {
-            slot: *slot,
-            step: *step,
-            to: *to,
+            kind,
             line: flat.end_line,
             open_indent: flat.do_indent + 2,
         })
     }
 
-    /// Records `value` as the innermost flat loop's running control value,
-    /// which compiled passes reached and wrote to the variable.
+    /// Records `value` as where the innermost flat loop's compiled passes
+    /// left it: the running control value they wrote to the variable, or the
+    /// passes a count has left.
     #[cfg(feature = "jit")]
     pub(crate) fn quick_passes_reached(&mut self, value: i64) {
-        if let Some(flat) = self.activity.flat_top.as_deref_mut()
-            && let LoopState::Controlled {
+        match self
+            .activity
+            .flat_top
+            .as_deref_mut()
+            .map(|flat| &mut flat.state)
+        {
+            Some(LoopState::Controlled {
                 current: ControlValue::Small(running),
                 ..
-            } = &mut flat.state
-        {
-            *running = value;
+            }) => *running = value,
+            Some(LoopState::Count { remaining }) => *remaining = value as u64,
+            _ => {}
         }
     }
 
