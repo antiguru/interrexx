@@ -3,6 +3,9 @@ base/class/CommandHandler.testGroup TEST_COMMAND_FROM_ANOTHER_THREAD -- CommandH
 base/class/CommandHandler.testGroup TEST_CONCURRENT_NESTED_COMMANDS -- CommandHandler
 base/class/RexxQueue.testGroup TEST_DELETE_WHILE_LINEIN -- RexxQueue
 base/class/RexxQueue.testGroup TEST_LINEIN_WAITS_PULL_DOESNT -- RexxQueue
+base/class/Stream.testGroup TEST_STREAM_STDIN_SOCKET_2173 -- rxapi persistent state
+base/keyword/FINALLY.testGroup TEST_REPLY_FROM_CATCH_CLAUSE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_REPLY -- language level 6.07
 extensions/rxsock/socketClass.testGroup TEST_005 -- native extension
 extensions/rxsock/socketClass.testGroup TEST_006 -- native extension
 extensions/rxsock/socketClass.testGroup TEST_007 -- native extension

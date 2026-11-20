@@ -237,7 +237,8 @@ cannot be loaded raises before any required program has run its prolog. A
 library can be required more than once. Whether a library name is case
 sensitive, and where libraries are searched for, are [the library
 rule](r:env.search.library). The LIBRARY option does not combine with
-NAMESPACE: the two together raise `SYNTAX 25.904`.
+NAMESPACE: the two are one [group](r:dir.index.options), and together they
+raise `SYNTAX 25.937`.
 
 ```rexx
 f = 'rq-p.tmp'
@@ -270,8 +271,8 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ::requires "rexxutil" library / ::requires "rexxutil" LIBRARY => ok
 ::requires "rq-p.tmp" / ::requires "spec_no_such_lib_xyz" library => 98.903
 ::requires "spec_no_such_lib_xyz" library / ::requires "rq-p.tmp" => 98.903
-::requires "rexxutil" library namespace a => 25.904
-::requires "rexxutil" namespace a library => 25.904
+::requires "rexxutil" library namespace a => 25.937
+::requires "rexxutil" namespace a library => 25.937
 ```
 
 ## Namespaces
@@ -285,9 +286,9 @@ the namespace is matched without regard to case. The unqualified name is
 looked up as [the routine rule](r:dir.routine.public) and [the class
 rule](r:dir.class.visibility) say. When two directives give one namespace
 name, the later one names its package. A string, or no symbol after NAMESPACE,
-raises `SYNTAX 20.920`, and a keyword other than LIBRARY or NAMESPACE, a
-repeated keyword or any further word raises `25.904`, found when the program
-is read. The namespace name `REXX` belongs to the interpreter and raises
+raises `SYNTAX 20.920`. A repeated keyword raises `25.936`, and a keyword
+other than LIBRARY or NAMESPACE or any further word raises `25.904`, found
+when the program is read. The namespace name `REXX` belongs to the interpreter and raises
 `99.944`.
 
 ```rexx
@@ -347,7 +348,7 @@ hello B
 ::requires "spec-dir-requires-nsa.tmp" namespace => 20.920
 ::requires "spec-dir-requires-nsa.tmp" namespace "a" => 20.920
 ::requires "spec-dir-requires-nsa.tmp" namespace a b => 25.904
-::requires "spec-dir-requires-nsa.tmp" namespace a namespace b => 25.904
+::requires "spec-dir-requires-nsa.tmp" namespace a namespace b => 25.936
 ::requires "spec-dir-requires-nsa.tmp" frob => 25.904
 ::requires "spec-dir-requires-nsa.tmp" namespace rexx => 99.944
 ::requires "spec-dir-requires-nsa.tmp" Namespace a => ok

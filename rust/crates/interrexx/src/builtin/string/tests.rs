@@ -505,44 +505,90 @@ fn a_bad_argument_kind_names_the_routine_and_the_call_position() {
 fn a_bad_argument_range_reports_the_converted_value() {
     assert_eq!(
         raised(b"LEFT", &[Some(b"ab"), Some(b"-1.0")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"LEFT".to_vec(), b"2".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"0.0")]),
-        (93, 924, vec![b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"SUBSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"COPIES", &[Some(b"ab"), Some(b"-1.0")]),
-        (93, 906, vec![b"1".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"COPIES".to_vec(), b"2".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"INSERT", &[Some(b"a"), Some(b"b"), Some(b"-1")]),
-        (93, 906, vec![b"2".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"INSERT".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(
             b"CHANGESTR",
             &[Some(b"a"), Some(b"b"), Some(b"c"), Some(b"-1")]
         ),
-        (93, 906, vec![b"3".to_vec(), b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"CHANGESTR".to_vec(), b"4".to_vec(), b"-1".to_vec()]
+        )
     );
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(b"Xyz")]),
-        (93, 915, vec![b"BLT".to_vec(), b"Xyz".to_vec()])
+        (
+            40,
+            904,
+            vec![
+                b"STRIP".to_vec(),
+                b"2".to_vec(),
+                b"BLT".to_vec(),
+                b"Xyz".to_vec()
+            ]
+        )
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"")]),
-        (93, 915, vec![b"MN".to_vec(), Vec::new()])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                Vec::new()
+            ]
+        )
     );
     // A range error inside a builtin whose start is out of range is
     // still raised, which is the ordering `delstr`'s own comment names.
     assert_eq!(
         raised(b"DELSTR", &[Some(b"abc"), Some(b"9"), Some(b"-1")]),
-        (93, 923, vec![b"-1".to_vec()])
+        (
+            40,
+            13,
+            vec![b"DELSTR".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+        )
     );
 }
 
@@ -567,7 +613,11 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"SUBSTR",
             &[Some(b"abc"), Some(b"0"), Some(b"5"), Some(b"x")]
         ),
-        (93, 924, vec![b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"SUBSTR".to_vec(), b"2".to_vec(), b"0".to_vec()]
+        )
     );
 
     assert_eq!(
@@ -586,7 +636,11 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
             b"TRANSLATE",
             &[Some(b"abc"), None, None, Some(b"$"), Some(b"0"), Some(b"1")]
         ),
-        (93, 924, vec![b"0".to_vec()])
+        (
+            40,
+            14,
+            vec![b"TRANSLATE".to_vec(), b"5".to_vec(), b"0".to_vec()]
+        )
     );
 
     assert_eq!(
@@ -599,7 +653,16 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(b"X"), Some(b"1")]),
-        (93, 915, vec![b"MN".to_vec(), b"X".to_vec()])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                b"X".to_vec()
+            ]
+        )
     );
 }
 
@@ -691,17 +754,16 @@ fn a_counting_builtin_answers_text_that_no_digits_setting_reshapes() {
     }
 }
 
-/// The condition every 93.9xx here carries is rc 163, not the 40.x
-/// family's 216, which is the observable that made the two families
-/// worth separating.
+/// A builtin's range error is of the 40.x family, as its form error is, so
+/// both exit 216; the String method's own 93.9xx, 163, is not used here.
 #[test]
-fn the_two_argument_families_exit_differently() {
+fn a_range_error_and_a_form_error_exit_alike() {
     let failure =
         call(b"SUBSTR", &[Some(b"abc"), Some(b"2"), Some(b"-1")]).expect_err("a negative length");
     let Failure::Raised(range) = failure else {
         panic!("expected Raised");
     };
-    assert_eq!(range.exit_code(), 163);
+    assert_eq!(range.exit_code(), 216);
 
     let failure = call(b"SUBSTR", &[Some(b"abc"), Some(b"x")]).expect_err("a non-numeric position");
     let Failure::Raised(kind) = failure else {
@@ -780,11 +842,29 @@ fn a_null_option_byte_is_accepted_and_matches_no_letter() {
 
     assert_eq!(
         raised(b"STRIP", &[Some(b"ab"), Some(&[0x01])]),
-        (93, 915, vec![b"BLT".to_vec(), vec![0x01]])
+        (
+            40,
+            904,
+            vec![
+                b"STRIP".to_vec(),
+                b"2".to_vec(),
+                b"BLT".to_vec(),
+                vec![0x01]
+            ]
+        )
     );
     assert_eq!(
         raised(b"VERIFY", &[Some(b"a"), Some(b"b"), Some(&[0x01])]),
-        (93, 915, vec![b"MN".to_vec(), vec![0x01]])
+        (
+            40,
+            904,
+            vec![
+                b"VERIFY".to_vec(),
+                b"3".to_vec(),
+                b"MN".to_vec(),
+                b"".to_vec()
+            ]
+        )
     );
 }
 
@@ -808,8 +888,12 @@ fn the_new_raisers_render_the_oracles_own_message_text() {
             expand("⟨93.906¦1¦-1⟩"),
         ),
         (
-            Raised::invalid_option("BLT", b"Xyz"),
-            expand("⟨93.915¦BLT¦Xyz⟩"),
+            Raised::argument_not_in_list(b"STRIP", 2, "BLT", b"Xyz"),
+            expand("⟨40.904¦STRIP¦2¦BLT¦Xyz⟩"),
+        ),
+        (
+            Raised::argument_not_a_number(b"ABS", 1, b"x"),
+            expand("⟨40.11¦ABS¦1¦x⟩"),
         ),
         (Raised::system_resources(), expand("⟨5⟩")),
     ];

@@ -182,7 +182,9 @@ s~available(1) => 93.902
 ```
 
 r[class.streamsupplier.sends]
-`init` sends the stream `state` twice and then sends the receiver `next`,
+`init` sends the stream `state`, then `open` with the argument `read` when
+that answer is `UNKNOWN`, since the kind of a stream is known only once it is
+open, then `state` again, and then sends the receiver `next`,
 which sends the stream the first `lineIn`. What that `lineIn` is sent with,
 and which line the supplier starts at, is stated once, in [the rule of
 `supplier`](r:class.stream.supplier.sends), and holds here: no argument when
@@ -197,7 +199,7 @@ transient, and nothing else. `init` also sends the stream private messages of
 its own, which are not part of this specification, and the answers to them
 decide how the supplier starts. So the outcome is specified only for a stream,
 and for an argument that is not a `Stream` only when it answers every message
-other than `state` and `lineIn` with the string `UNKNOWN` and its second
+other than `state`, `open` and `lineIn` with the string `UNKNOWN` and its second
 answer to `state` is not `READY`: the supplier then starts at line 1, as for a
 stream that was not read. An argument that answers other things behaves as its
 answers decide, which may be an error such as `SYNTAX 41.1`, `97.1` or

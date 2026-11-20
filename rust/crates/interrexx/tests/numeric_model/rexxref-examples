@@ -411,7 +411,7 @@ model: S 93.941 | S 93.941
 case name=format-not-number
 bif FORMAT | 'a'
 ----
-model: S 93.943 | S 93.943
+model: S 40.11 | S 40.11
 
 case name=format-not-whole
 bif FORMAT | 1 | 'a'
@@ -421,7 +421,7 @@ model: S 40.12 | S 40.12
 case name=format-negative-width
 bif FORMAT | 1 | '-1'
 ----
-model: S 93.906 | S 93.906
+model: S 40.13 | S 40.13
 
 case name=trunc-negative-zero
 bif TRUNC | '-0.04' | 1
@@ -441,32 +441,32 @@ model: S 40.12 | S 40.12
 case name=trunc-negative-places
 bif TRUNC | 1 | '-1'
 ----
-model: S 93.906 | S 93.906
+model: S 40.13 | S 40.13
 
 case name=trunc-not-number
 bif TRUNC | 'a'
 ----
-model: S 93.943 | S 93.943
+model: S 40.11 | S 40.11
 
 case name=abs-not-number
 bif ABS | 'a'
 ----
-model: S 93.943 | S 93.943
+model: S 40.11 | S 40.11
 
 case name=sign-not-number
 bif SIGN | 'a'
 ----
-model: S 93.943 | S 93.943
+model: S 40.11 | S 40.11
 
 case name=max-not-number
 bif MAX | 1 | 'a'
 ----
-model: S 93.904 | S 93.904
+model: S 40.11 | S 40.11
 
 case name=max-target-not-number
 bif MAX | 'a' | 1
 ----
-model: S 93.943 | S 93.943
+model: S 40.11 | S 40.11
 
 case name=max-message-not-number
 msg MAX | 1 | 'a'

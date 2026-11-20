@@ -101,27 +101,14 @@ pub fn run_group_on_crate_within(
     renamed_out: &BTreeSet<String>,
     deadline: Duration,
 ) -> GroupRun {
-    let memcap = resolve(&settings.memcap, &path_of(std::env::var_os("PATH")));
-    let cap = if memcap.is_some() {
-        CapKind::Memcap
-    } else {
-        CapKind::UlimitFallback
-    };
     let source = read_bytes(&settings.root.join(dir).join(format!("{group}.testGroup")));
     let mut left_out = left_out(group, renamed_out);
-    let mut result = GroupRun::new(group_path(dir, group), cap);
+    let mut result = GroupRun::new(group_path(dir, group), CapKind::CrateLimit);
     let work = work_dir(&result.group, "crate");
     let run = work.join("run");
     while result.iterations < settings.max_runs {
-        let (process, tests) = crate_run_once(
-            &settings.root,
-            &run,
-            dir,
-            group,
-            &left_out,
-            memcap.as_deref(),
-            deadline,
-        );
+        let (process, tests) =
+            crate_run_once(&settings.root, &run, dir, group, &left_out, deadline);
         let last = tests.last().cloned();
         let reason = record(&mut result, &process, tests, deadline);
         diagnostics::capture(&run, "crate", &process, &result);
@@ -146,16 +133,14 @@ pub fn run_group_on_crate_within(
 }
 
 /// One run of the copy `run` of `group` on this crate under `deadline`, with
-/// `left_out` renamed out, under `memcap` where given and the
-/// [`FALLBACK_LIMIT_KIB`] address-space limit otherwise, and the tests it
-/// started.
+/// `left_out` renamed out, under the [`CRATE_MEMORY_LIMIT_KIB`] address-space
+/// limit, and the tests it started.
 pub fn crate_run_once(
     root: &Path,
     run: &Path,
     dir: &str,
     group: &str,
     left_out: &BTreeSet<String>,
-    memcap: Option<&Path>,
     deadline: Duration,
 ) -> (ProcessRun, Vec<String>) {
     let group_file = prepare(root, run, dir, group, left_out);
@@ -173,29 +158,17 @@ pub fn crate_run_once(
     // `--foreground` keeps `bounded-run` in the run's process group, so the kill
     // `run_process` sends the group once the run ends reaches what a test left
     // running.
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     let mut words = vec![
-        env!("CARGO_BIN_EXE_bounded-run").to_string(),
         "--foreground".to_string(),
+        "-v".to_string(),
+        CRATE_MEMORY_LIMIT_KIB.to_string(),
         "-s".to_string(),
         "KILL".to_string(),
         deadline.as_secs_f64().to_string(),
         bin.join("rexx").to_string_lossy().into_owned(),
     ];
     words.extend(driver_args(run, &group_file));
-    let mut command = match memcap {
-        Some(memcap) => {
-            let mut command = Command::new(memcap);
-            command.arg(CRATE_MEMORY);
-            command
-        }
-        None => {
-            let mut command = Command::new("sh");
-            command.arg("-c").arg(format!(
-                "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
-            ));
-            command
-        }
-    };
     command.args(&words).current_dir(run);
     set_environment(&mut command, environment);
     if let Some(temporary) = temporary {

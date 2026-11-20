@@ -63,24 +63,44 @@ pub(crate) fn rxfuncadd(
         LibraryLoad::Version => return Err(Raised::library_version(&module).into()),
         LibraryLoad::Missing => {}
     }
-    register_function(&upper, &module, &procedure);
+    let made = register_function(&upper, &module, &procedure);
     let resolved = interp.resolve_classic_function(&upper);
+    if !resolved && made {
+        drop_function(&upper);
+    }
     interp.routines_changed();
     Ok(boolean(interp, !resolved))
 }
 
-/// Registers `name` as `library`'s `procedure` with the service, whatever the outcome.
-pub(crate) fn register_function(name: &[u8], library: &[u8], procedure: &[u8]) {
-    if let Ok(client) = rxapi_client::client() {
-        let _ = client.call(Request::Register {
-            registry: Registry::Function,
-            name: name.to_ascii_uppercase(),
-            library: library.to_vec(),
-            procedure: procedure.to_vec(),
-            user_area: None,
-            owner_only: true,
-        });
-    }
+/// Registers `name` as `library`'s `procedure` with the service, and answers
+/// whether this call made the registration, rather than finding one there.
+pub(crate) fn register_function(name: &[u8], library: &[u8], procedure: &[u8]) -> bool {
+    let Ok(client) = rxapi_client::client() else {
+        return false;
+    };
+    let reply = client.call(Request::Register {
+        registry: Registry::Function,
+        name: name.to_ascii_uppercase(),
+        library: library.to_vec(),
+        procedure: procedure.to_vec(),
+        user_area: None,
+        owner_only: true,
+    });
+    matches!(
+        reply,
+        Ok(Reply::Status(OK) | Reply::Registration { status: OK, .. })
+    )
+}
+
+/// Drops the registration of `name` that a call just made, when the function
+/// it names cannot be resolved: a failed registration leaves nothing
+/// registered (`r[bif.rxfuncadd.unknown-library]`).
+pub(crate) fn drop_function(name: &[u8]) {
+    let _ = registry_status(Request::Deregister {
+        registry: Registry::Function,
+        name: name.to_ascii_uppercase(),
+        library: Vec::new(),
+    });
 }
 
 /// `RXFUNCQUERY(name)`: 0 where the function is loaded here or registered, 1 otherwise.

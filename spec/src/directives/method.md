@@ -121,9 +121,10 @@ in any case and in any order. A method names at most one keyword of each of
 these groups: access (PUBLIC, PRIVATE, PACKAGE), guarding (GUARDED,
 UNGUARDED), protection (PROTECTED, UNPROTECTED) and the kind of code
 (ABSTRACT, EXTERNAL, DELEGATE), and CLASS and ATTRIBUTE at most once each.
-ATTRIBUTE goes with any one keyword of the kind group. A word that is none of
-the keywords, a keyword repeated or a second keyword of one group raises
-`SYNTAX 25.902`. EXTERNAL and DELEGATE take an operand, and the other keywords
+ATTRIBUTE goes with any one keyword of the kind group. A keyword repeated
+raises `SYNTAX 25.936` and a second keyword of one group `25.937`, as [the
+options rule](r:dir.index.options) says, and a word that is none of the
+keywords raises `25.902`. EXTERNAL and DELEGATE take an operand, and the other keywords
 do not. The errors of the directive are found when the program is read. A
 clause after an ATTRIBUTE method raises the error that [the attribute
 rule](r:dir.method.attribute) gives, except with DELEGATE, where it raises the
@@ -152,14 +153,14 @@ e: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-::method m public private => 25.902
-::method m private package => 25.902
-::method m guarded unguarded => 25.902
-::method m protected protected => 25.902
-::method m class class => 25.902
-::method m abstract delegate d => 25.902
+::method m public private => 25.937
+::method m private package => 25.937
+::method m guarded unguarded => 25.937
+::method m protected protected => 25.936
+::method m class class => 25.936
+::method m abstract delegate d => 25.937
 ::method m frob => 25.902
-::method m abstract external "library x" => 25.902
+::method m abstract external "library x" => 25.937
 ::method m abstract attribute => ok
 ::method m attribute delegate d => ok
 ::method m Unguarded PRIVATE Protected => ok

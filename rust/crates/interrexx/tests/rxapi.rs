@@ -168,8 +168,8 @@ fn a_started_daemon_is_no_child_of_the_program() {
 #[test]
 fn a_stop_with_the_detach_variable_set_stops_before_it_returns() {
     let service = Service::new();
-    let first = service.run("say rxfuncadd('NOFN', 'nosuchlib')\n");
-    assert_eq!(stdout(&first), "1\n", "{}", stderr(&first));
+    let first = service.run("say rxqueue('create', 'STOPQ')\n");
+    assert_eq!(stdout(&first), "STOPQ\n", "{}", stderr(&first));
     assert!(service.has_socket());
     let stopped = Command::new(bin_dir().join("rxapi"))
         .arg("--stop")
@@ -500,14 +500,15 @@ fn the_oracles_daemon_stops_with_its_test_process() {
     );
 }
 
-/// Review Focus 4: a function one program registers is registered for the next.
+/// Review Focus 4: a registration is global, so one that a failed RXFUNCADD left behind would
+/// be found by every later program. The call leaves none (ooRexx SF #2134).
 #[test]
-fn a_registration_outlives_its_program() {
+fn a_failed_registration_does_not_outlive_its_program() {
     let service = Service::new();
     let first = service.run("say rxfuncadd('NOFN', 'nosuchlib') rxfuncquery('NOFN')\n");
-    assert_eq!(stdout(&first), "1 0\n", "{}", stderr(&first));
+    assert_eq!(stdout(&first), "1 1\n", "{}", stderr(&first));
     let second = service.run("say rxfuncquery('NOFN') rxfuncquery('OTHERFN')\n");
-    assert_eq!(stdout(&second), "0 1\n", "{}", stderr(&second));
+    assert_eq!(stdout(&second), "1 1\n", "{}", stderr(&second));
 }
 
 /// A macro one program adds is found by the next, before or after external files as ordered.
@@ -570,10 +571,10 @@ fn rxqueue_selects_and_manages_named_queues() {
     );
 }
 
-/// A `REGISTERED` routine is registered before its entry point fails to resolve, so a later
-/// program finds the name registered.
+/// A `REGISTERED` routine whose entry point fails to resolve leaves no registration, so a
+/// later program does not find the name (ooRexx SF #2134).
 #[test]
-fn a_registered_routine_stays_registered_after_its_program_fails() {
+fn a_registered_routine_that_fails_leaves_no_registration() {
     let service = Service::new();
     let first = service.run("say 'main ran'\n::routine foo6 external \"REGISTERED nosuchlib\"\n");
     assert_eq!(stdout(&first), "");
@@ -584,7 +585,7 @@ fn a_registered_routine_stays_registered_after_its_program_fails() {
     );
     assert_eq!(first.status.code(), Some(166));
     let second = service.run("say rxfuncquery('FOO6')\n");
-    assert_eq!(stdout(&second), "0\n", "{}", stderr(&second));
+    assert_eq!(stdout(&second), "1\n", "{}", stderr(&second));
 }
 
 /// A waiting `lineIn` gives up its guard, as the oracle's `SetGuardOff` does, so another

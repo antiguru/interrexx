@@ -337,7 +337,8 @@ fn expect_condition_blocks_rather_than_silently_passing_through() {
 
 /// A method whose name is not `test`-prefixed is not run by the ooTest
 /// framework at all (matching `extract`'s own existing filter), so an
-/// `assertSame` inside one must not produce a row.
+/// `assertSame` inside one must not produce a row; it is accounted as a drop,
+/// so the whole-corpus conservation still holds.
 #[test]
 fn a_non_test_method_produces_no_rows() {
     let source = r#"
@@ -348,7 +349,9 @@ fn a_non_test_method_produces_no_rows() {
 "#;
     let out = extract_assertions("N", source);
     assert!(out.rows.is_empty());
-    assert!(out.blocked.is_empty());
+    assert_eq!(out.blocked.len(), 1);
+    assert_eq!(out.blocked[0].dropped, 1);
+    assert_eq!(out.blocked[0].method, "<outside any test-prefixed method>");
 }
 
 /// Every row and every blocked entry carries the caller-supplied group
@@ -412,7 +415,8 @@ fn every_assert_same_in_base_expressions_is_a_row_or_an_accounted_for_drop() {
 /// `PRECEDENCE`, 388 in `CONCATENATION`. Pinning the totals (4,259
 /// extractable, 10 blocked, across `Literals` (6, five `DO`/`OVER` and
 /// `DO`-controlled loop methods), `MULTIPLICATION` (2, one more such loop)
-/// and `SPECIAL` (2, a method that calls a local label as a pseudo-function)
+/// and `SPECIAL` (2, a method that calls a local label as a pseudo-function,
+/// and 1 in a helper method that is not a test)
 /// means a change in what this scanner accepts shows up here immediately,
 /// by name, rather than as a silent drift in a percentage.
 #[test]
@@ -437,7 +441,7 @@ fn base_expressions_yields_the_measured_row_and_blocked_counts() {
         rows_by_group.insert(group_name, out.rows.len());
     }
     assert_eq!(total_rows, 4267);
-    assert_eq!(total_dropped, 13);
+    assert_eq!(total_dropped, 14);
     assert_eq!(rows_by_group["PRECEDENCE"], 1226);
     assert_eq!(rows_by_group["CONCATENATION"], 388);
     assert_eq!(rows_by_group["MULTIPLICATION"], 1048);

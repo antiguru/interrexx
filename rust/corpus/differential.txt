@@ -105,7 +105,6 @@ lang/leave_nested_outer.rex
 lang/iterate_from_select.rex
 lang/if_else_chain.rex
 lang/select_when_bodies.rex
-lang/select_when_absorption.rex
 lang/leave_iterate_variants.rex
 lang/drop_stem_tail.rex
 lang/stem_aliasing.rex
@@ -254,7 +253,6 @@ lang/raise_keyword_object_traces.rex
 lang/raise_array_nested.rex
 lang/raise_additional_nested.rex
 lang/message_send_unknown_forward.rex
-lang/message_send_site_method_changes.rex
 lang/environment_symbol_site_changes.rex
 lang/condition_nomethod.rex
 lang/method_access_private.rex
@@ -382,10 +380,8 @@ lang/uninit_class_uninherit.rex
 lang/uninit_allocating_finalizer.rex
 lang/uninit_nested_collection.rex
 lang/uninit_nested_collection_at_exit.rex
-gate-tables/concepts/objcla.rex
 lang/class_behaviour_snapshot_inherit.rex
 lang/class_behaviour_snapshot_uninherit.rex
-lang/class_behaviour_snapshot_delete.rex
 lang/class_behaviour_snapshot_subclass.rex
 gate-tables/concepts/usesem.rex
 lang/setmethod_precedence.rex
@@ -578,11 +574,8 @@ lang/scope_setlocal_method.rex
 lang/scope_setlocal_routine.rex
 lang/scope_propagate_routine.rex
 lang/scope_propagate_after_routine.rex
-lang/scope_case_text_absorbed.rex
-lang/scope_case_text_absorbed_other.rex
 lang/scope_internal_depth.rex
 lang/scope_debug_pause_routine.rex
-lang/scope_case_text_debug_line.rex
 lang/do_counter_ctrl.rex
 lang/do_counter_rep.rex
 lang/do_counter_forever.rex
@@ -660,7 +653,6 @@ lang/define_source_runs.rex
 lang/setmethod_unattached_generated.rex
 lang/setmethod_unattached_constant.rex
 lang/setmethod_copy_private.rex
-lang/define_methods_runs.rex
 lang/setmethod_native_nil_scope_traceback.rex
 lang/run_native_traceback.rex
 lang/setmethod_native_object_scope_traceback.rex
@@ -1284,7 +1276,6 @@ lang/routine_call_frame_names.rex
 lang/routine_copy_internal_executable.rex
 lang/main_executable_annotations.rex
 lang/context_name_install.rex
-lang/instance_method_after_define.rex
 lang/enhanced_unguarded_copy_executable.rex
 lang/raise_syntax_string_additional.rex
 lang/call_site_kept_routine_collected.rex

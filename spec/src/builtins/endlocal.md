@@ -55,23 +55,22 @@ say endlocal(,)
 r[bif.endlocal.none]
 A call when no save is outstanding answers `0` and changes nothing: not the
 current directory, not an environment variable. A program that has never
-called SETLOCAL is in this state.
-
-> **Note.** In the reference implementation, a call with no save outstanding
-> crashes the interpreter when SETLOCAL has been called earlier by the same
-> program, `::routine` or method, its internal routines and
-> [INTERPRET](r:instr.interpret.scope) included. It is specified here as it is
-> before the first SETLOCAL, and the example does not go beyond that.
+called SETLOCAL is in this state, and so is one whose saves have all been
+taken back.
 
 ```rexx
 here = directory()
 call value 'SPEC_ENDLOCAL_A', 'a0', 'ENVIRONMENT'
 say endlocal() endlocal()
 say (directory() == here) value('SPEC_ENDLOCAL_A',, 'ENVIRONMENT')
+say setlocal() endlocal() endlocal()
+say (directory() == here) value('SPEC_ENDLOCAL_A',, 'ENVIRONMENT')
 ```
 
 ```output
 0 0
+1 a0
+1 1 0
 1 a0
 ```
 
@@ -143,9 +142,9 @@ call answers `0`.
 r[bif.endlocal.scope]
 ENDLOCAL restores only the directory and the environment variables. A
 variable of the program, the NUMERIC settings and the trace setting keep the
-values they have when ENDLOCAL is called, and an environment variable that
-did not exist when the save was made is not removed: it keeps the value the
-program gave it. The commands that the program starts afterwards see the
+values they have when ENDLOCAL is called. An environment variable that did
+not exist when the save was made is removed, so that the environment is the
+one that was saved. The commands that the program starts afterwards see the
 restored environment.
 
 ```rexx
@@ -163,6 +162,6 @@ say out.1
 ```
 
 ```output
-5 12 O e1
+5 12 O 
 d0
 ```

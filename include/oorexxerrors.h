@@ -48,6 +48,13 @@
 #define Rexx_Error_Unexpected_end_then 10005
 #define Rexx_Error_Unexpected_end_else 10006
 #define Rexx_Error_Unexpected_end_select_nolabel 10007
+#define Rexx_Error_Unexpected_end_catch 10008
+#define Rexx_Error_Unexpected_end_catch_then 10009
+#define Rexx_Error_Unexpected_end_catch_else 10011
+#define Rexx_Error_Unexpected_end_finally 10012
+#define Rexx_Error_Unexpected_end_finally_then 10013
+#define Rexx_Error_Unexpected_end_finally_else 10014
+#define Rexx_Error_Unexpected_end_after_finally 10015
 #define Rexx_Error_Unexpected_end 10000
 #define Rexx_Error_Control_stack_full 11001
 #define Rexx_Error_Control_stack_user_defined 11900
@@ -144,6 +151,7 @@
 #define Rexx_Error_Symbol_expected_address_with 20933
 #define Rexx_Error_Symbol_expected_counter 20934
 #define Rexx_Error_Symbol_expected_numeric_subdirective 20935
+#define Rexx_Error_Symbol_expected_catch 20936
 #define Rexx_Error_Symbol_expected 20000
 #define Rexx_Error_Invalid_data_user_defined 21900
 #define Rexx_Error_Invalid_data_nop 21901
@@ -212,6 +220,10 @@
 #define Rexx_Error_Invalid_subkeyword_address_with_io_option 25933
 #define Rexx_Error_Invalid_subkeyword_address_with_option 25934
 #define Rexx_Error_Invalid_subkeyword_numeric_subdirective 25935
+#define Rexx_Error_Invalid_subkeyword_duplicate 25936
+#define Rexx_Error_Invalid_subkeyword_conflict 25937
+#define Rexx_Error_Invalid_subkeyword_options_form 25938
+#define Rexx_Error_Invalid_subkeyword_catch 25939
 #define Rexx_Error_Invalid_subkeyword 25000
 #define Rexx_Error_Invalid_whole_number_repeat 26002
 #define Rexx_Error_Invalid_whole_number_for 26003
@@ -240,6 +252,8 @@
 #define Rexx_Error_Invalid_leave_leavevar 28003
 #define Rexx_Error_Invalid_leave_iteratevar 28004
 #define Rexx_Error_Invalid_leave_iterate_name 28005
+#define Rexx_Error_Invalid_leave_leave_catch 28006
+#define Rexx_Error_Invalid_leave_iterate_catch 28007
 #define Rexx_Error_Invalid_leave 28000
 #define Rexx_Error_Environment_name_name 29001
 #define Rexx_Error_Environment_name 29000
@@ -309,6 +323,7 @@
 #define Rexx_Error_Invalid_expression_case_when_list 35934
 #define Rexx_Error_Invalid_expression_missing_general 35935
 #define Rexx_Error_Invalid_expression_missing_constant 35936
+#define Rexx_Error_Invalid_expression_catch_syntax 35937
 #define Rexx_Error_Invalid_expression 35000
 #define Rexx_Error_Unmatched_parenthesis_user_defined 36900
 #define Rexx_Error_Unmatched_parenthesis_paren 36901
@@ -370,6 +385,8 @@
 #define Rexx_Error_Incorrect_call_stem_range 40923
 #define Rexx_Error_Incorrect_call_stem_sparse_array 40924
 #define Rexx_Error_Incorrect_call_noarray_nostem 40925
+#define Rexx_Error_Incorrect_call_error_code 40926
+#define Rexx_Error_Incorrect_call_range_limits 40927
 #define Rexx_Error_Incorrect_call 40000
 #define Rexx_Error_Conversion_operator 41001
 #define Rexx_Error_Conversion_prefix 41003
@@ -402,6 +419,7 @@
 #define Rexx_Error_Variable_reference_user_defined 46900
 #define Rexx_Error_Variable_reference_missing 46901
 #define Rexx_Error_Variable_reference_use 46902
+#define Rexx_Error_Variable_reference_use_default 46903
 #define Rexx_Error_Variable_reference 46000
 #define Rexx_Error_Unexpected_label_interpret 47001
 #define Rexx_Error_Unexpected_label_do 47002
@@ -593,6 +611,7 @@
 #define Rexx_Error_Execution_authorization 98948
 #define Rexx_Error_Execution_no_concurrency 98951
 #define Rexx_Error_Execution_circular_requires 98952
+#define Rexx_Error_Execution_finally_exit 98953
 #define Rexx_Error_Execution_error_syntax 98970
 #define Rexx_Error_Execution_failure_syntax 98971
 #define Rexx_Error_Execution_lostdigits_syntax 98972
@@ -673,6 +692,7 @@
 #define Rexx_Error_Translation_use_local_compound 99948
 #define Rexx_Error_Translation_bad_class 99949
 #define Rexx_Error_Translation_use_arg_reference_no_default 99950
+#define Rexx_Error_Translation_finally_exit 99951
 #define Rexx_Error_Translation 99000
 /* END GENERATED errors */
 

@@ -15,8 +15,9 @@ pub(crate) fn os_path(path: &[u8]) -> &std::path::Path {
 /// canonical name followed by path normalisation. Purely lexical, so that a
 /// path that does not exist still normalises. Each `..` removes the component
 /// before it, which the reference loop does not do after a doubled slash or
-/// after a component starting with `.` (Deviation 34). A name that is not UTF-8
-/// keeps its bytes.
+/// after a component starting with `.` (Deviation 34). A name that ends with a
+/// slash keeps it, since `file/` names a directory and not the file `file`
+/// (`r[bif.qualify.normal]`). A name that is not UTF-8 keeps its bytes.
 pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
     let mut absolute = Vec::with_capacity(cwd.len() + path.len() + 1);
     if path.first() != Some(&b'/') {
@@ -39,7 +40,7 @@ pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
         out.push(b'/');
         out.extend_from_slice(part);
     }
-    if out.is_empty() {
+    if out.is_empty() || path.last() == Some(&b'/') {
         out.push(b'/');
     }
     out
@@ -61,7 +62,8 @@ mod tests {
         assert_eq!(normalize("./lib.rex", "/a/b"), "/a/b/lib.rex");
         assert_eq!(normalize("../lib.rex", "/a/b"), "/a/lib.rex");
         assert_eq!(normalize("/a//b/./c/../d", "/x"), "/a/b/d");
-        assert_eq!(normalize("/a/b/", "/x"), "/a/b");
+        // A trailing slash names a directory, so it stays.
+        assert_eq!(normalize("/a/b/", "/x"), "/a/b/");
         assert_eq!(normalize("/..", "/x"), "/");
         // `..b` is a file name, not a parent reference.
         assert_eq!(normalize("/a/..b", "/x"), "/a/..b");
@@ -94,6 +96,6 @@ mod tests {
     #[test]
     fn normalize_bytes_keeps_bytes_that_are_not_utf8() {
         assert_eq!(normalize_bytes(b"a/\xff/../\xfe", b"/x/"), b"/x/a/\xfe");
-        assert_eq!(normalize_bytes(b"/\xff/", b"/x"), b"/\xff");
+        assert_eq!(normalize_bytes(b"/\xff/", b"/x"), b"/\xff/");
     }
 }

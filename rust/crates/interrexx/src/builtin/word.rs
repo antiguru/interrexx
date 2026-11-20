@@ -5,8 +5,8 @@
 //! word/wordindex/wordlength at 3     cc   8  2
 //! word/wordindex/wordlength at 4     ''   0  0        one past the last
 //! word/wordindex/wordlength at 999999 ''  0  0
-//! word/wordindex/wordlength at 0                      93.924, rc 163
-//! word/wordindex/wordlength at -1                     93.924, rc 163
+//! word/wordindex/wordlength at 0                      40.14, rc 216
+//! word/wordindex/wordlength at -1                     40.14, rc 216
 //! ```
 //! ```rexx
 //! numeric digits 12
@@ -297,7 +297,7 @@ fn converted_position(
 /// `WORD(string, n)`: the `n`th word, or the null string if there is no such
 /// word.
 pub(crate) fn word(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let value = arg(args, 1).expect("check_arity admitted the string");
     let string = required_render(interp, args, 1);
     let bytes = string.text(interp);
@@ -445,7 +445,7 @@ pub(crate) fn word_index(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let string = required_render(interp, args, 1);
 
     let index = word_range(string.text(interp), position).map_or(0, |word| word.start + 1);
@@ -458,7 +458,7 @@ pub(crate) fn word_length(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let position = position_of(name, 2, converted_position(interp, name, args, 2)?)?;
     let string = required_render(interp, args, 1);
 
     let length = word_range(string.text(interp), position).map_or(0, |word| word.len());
@@ -470,8 +470,10 @@ pub(crate) fn word_length(
 pub(crate) fn subword(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let n = converted_position(interp, name, args, 2)?;
     let requested = whole_number(interp, name, args, 3)?;
-    let position = position_of(n)?;
-    let count = requested.map(length_of).transpose()?;
+    let position = position_of(name, 2, n)?;
+    let count = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
 
     let string = required_render(interp, args, 1);
     let string = string.text(interp);
@@ -486,8 +488,10 @@ pub(crate) fn delword(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
     let mut string = required_string(interp, args, 1);
     let n = converted_position(interp, name, args, 2)?;
     let requested = whole_number(interp, name, args, 3)?;
-    let position = position_of(n)?;
-    let count = requested.map(length_of).transpose()?;
+    let position = position_of(name, 2, n)?;
+    let count = requested
+        .map(|value| length_of(name, 3, value))
+        .transpose()?;
 
     delword_bytes(&mut string, position, count);
     Ok(interp.text_built(string))
@@ -501,7 +505,7 @@ pub(crate) fn word_pos(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let start = match whole_number(interp, name, args, 3)? {
-        Some(value) => position_of(value)?,
+        Some(value) => position_of(name, 3, value)?,
         None => 1,
     };
 
@@ -839,8 +843,8 @@ mod tests {
         assert_eq!(answer(b"WORDPOS", &[b"", b""]), b"0");
     }
 
-    /// A position of zero or below is 93.924, and it is the same answer for
-    /// every builtin that takes one.
+    /// A position of zero or below is 40.14, and it is the same answer for
+    /// every builtin that takes one, naming the builtin and the position.
     #[test]
     fn a_non_positive_position_is_the_operation_layers_own_error() {
         for name in [
@@ -852,13 +856,13 @@ mod tests {
         ] {
             assert_eq!(
                 raised(name, &[Some(b"a b"), Some(b"0")]),
-                (93, 924, vec![b"0".to_vec()]),
+                (40, 14, vec![name.to_vec(), b"2".to_vec(), b"0".to_vec()]),
                 "{} did not refuse position 0",
                 String::from_utf8_lossy(name)
             );
             assert_eq!(
                 raised(name, &[Some(b"a b"), Some(b"-1")]),
-                (93, 924, vec![b"-1".to_vec()]),
+                (40, 14, vec![name.to_vec(), b"2".to_vec(), b"-1".to_vec()]),
                 "{} did not refuse a negative position",
                 String::from_utf8_lossy(name)
             );
@@ -868,14 +872,22 @@ mod tests {
         // refusal reaches it.
         assert_eq!(
             raised(b"WORDPOS", &[Some(b"a"), Some(b"a b"), Some(b"0")]),
-            (93, 924, vec![b"0".to_vec()])
+            (
+                40,
+                14,
+                vec![b"WORDPOS".to_vec(), b"3".to_vec(), b"0".to_vec()]
+            )
         );
         assert_eq!(
             raised(b"WORDPOS", &[Some(b"a"), Some(b"a b"), Some(b"-1")]),
-            (93, 924, vec![b"-1".to_vec()])
+            (
+                40,
+                14,
+                vec![b"WORDPOS".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+            )
         );
         // A position argument the string is far too short for is not an
-        // error at all, which is what separates 93.924 from "out of range".
+        // error at all, which is what separates 40.14 from "out of range".
         assert_eq!(answer(b"WORD", &[b"a b", b"999999999999999999"]), b"");
         assert_eq!(
             answer(b"WORDPOS", &[b"a", b"a b", b"999999999999999999"]),
@@ -883,17 +895,25 @@ mod tests {
         );
     }
 
-    /// A negative count is 93.923, the *length* member of the operation-layer
-    /// family rather than the position one.
+    /// A negative count is 40.13, the non-negative member of the argument
+    /// family rather than the positive one.
     #[test]
     fn a_negative_count_is_an_invalid_length() {
         assert_eq!(
             raised(b"SUBWORD", &[Some(b"a b"), Some(b"1"), Some(b"-1")]),
-            (93, 923, vec![b"-1".to_vec()])
+            (
+                40,
+                13,
+                vec![b"SUBWORD".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+            )
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"a b"), Some(b"1"), Some(b"-1")]),
-            (93, 923, vec![b"-1".to_vec()])
+            (
+                40,
+                13,
+                vec![b"DELWORD".to_vec(), b"3".to_vec(), b"-1".to_vec()]
+            )
         );
         // Zero is the adjacent legal value, and it is not the same answer as
         // omitting the argument.
@@ -925,11 +945,19 @@ mod tests {
     fn the_position_is_range_checked_before_the_count_is_honoured() {
         assert_eq!(
             raised(b"SUBWORD", &[Some(b"SUBWORD"), Some(b"0"), Some(b"0")]),
-            (93, 924, vec![b"0".to_vec()])
+            (
+                40,
+                14,
+                vec![b"SUBWORD".to_vec(), b"2".to_vec(), b"0".to_vec()]
+            )
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"delWord"), Some(b"0"), Some(b"0")]),
-            (93, 924, vec![b"0".to_vec()])
+            (
+                40,
+                14,
+                vec![b"DELWORD".to_vec(), b"2".to_vec(), b"0".to_vec()]
+            )
         );
         // The adjacent successes: with the position made legal, the zero
         // count is honoured rather than raising anything.
@@ -1059,7 +1087,11 @@ mod tests {
         );
         assert_eq!(
             raised(b"SUBWORD", &[Some(b"a b"), Some(b"0"), Some(b"1")]),
-            (93, 924, vec![b"0".to_vec()])
+            (
+                40,
+                14,
+                vec![b"SUBWORD".to_vec(), b"2".to_vec(), b"0".to_vec()]
+            )
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"a b"), Some(b"1"), Some(b"q")]),
@@ -1071,7 +1103,11 @@ mod tests {
         );
         assert_eq!(
             raised(b"DELWORD", &[Some(b"a b"), Some(b"0"), Some(b"1")]),
-            (93, 924, vec![b"0".to_vec()])
+            (
+                40,
+                14,
+                vec![b"DELWORD".to_vec(), b"2".to_vec(), b"0".to_vec()]
+            )
         );
     }
 

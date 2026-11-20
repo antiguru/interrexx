@@ -8,7 +8,7 @@ and the reasons for them are in `docs/design/decisions.md`; read it before propo
 A regular build and test run need no submodule and no ooRexx build. `cargo build` and
 `cargo nextest run --workspace --profile standalone` read only files of this repository, plus the
 ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts, and the tools some tests run:
-`svn`, `memcap` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
+`svn` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
 lists whichever of the two checkouts is missing and prints the `svn checkout` commands that fetch
 them; it checks the checkouts only, not the tools. `test_preflight.py --standalone -- COMMAND` runs
 the command only if nothing is missing.
@@ -162,7 +162,9 @@ From `rust/`, under the memory cap:
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
   nextest: the group runner's quiet-machine and row bounds hold within one process. Release
-  compiles out `debug_assert`, which carries some of the interpreter's invariants.
+  compiles out `debug_assert`, which carries some of the interpreter's invariants. CI runs the
+  gate this way in `.github/workflows/gate.yml`: nightly on main, on a change to the pinned
+  ooRexx or `scripts/setup-third-party.sh`, on a pull request labelled `gate`, and by hand.
 * `cargo test --workspace --no-fail-fast` runs the same tests, one binary after another, and
   stays supported. `cargo nextest run -p interrexx --test NAME` or `-E 'test(NAME)'` runs a
   subset; `cargo nextest list` shows what a filter matches.

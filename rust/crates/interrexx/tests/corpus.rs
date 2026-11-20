@@ -969,7 +969,6 @@ const NON_LANG_PROGRAMS: &[&str] = &[
     "gate-tables/concepts/creo.rex",
     "gate-tables/concepts/abscla.rex",
     "gate-tables/concepts/obdes.rex",
-    "gate-tables/concepts/objcla.rex",
     "gate-tables/concepts/usesem.rex",
     "gate-tables/directives/method__delegate__subkeyword.rex",
     "gate-tables/directives/attribute__delegate__subkeyword.rex",

@@ -196,7 +196,7 @@ RexxInfo	fuzz	instance	agree	rc0
 RexxInfo	internalDigits	instance	agree	rc0
 RexxInfo	internalMaxNumber	instance	agree	rc0
 RexxInfo	internalMinNumber	instance	agree	rc0
-RexxInfo	languageLevel	instance	agree	rc0
+RexxInfo	languageLevel	instance	send-differs	oracle rc0 VALUE 6.07; crate rc0 VALUE 6.06
 RexxInfo	libraryPath	instance	agree	rc0
 RexxInfo	majorVersion	instance	agree	rc0
 RexxInfo	maxArraySize	instance	agree	rc0
@@ -204,7 +204,7 @@ RexxInfo	maxExponent	instance	agree	rc0
 RexxInfo	maxPathLength	instance	agree	rc0
 RexxInfo	minExponent	instance	agree	rc0
 RexxInfo	modification	instance	agree	rc0
-RexxInfo	name	instance	agree	rc0
+RexxInfo	name	instance	send-differs	oracle rc0 VALUE REXX-ooRexx_5.3.0(MT)_64-bit 6.07 5; crate rc0 VALUE REXX-ooRexx_5.3.0(MT)_64-bit 6.06 5
 RexxInfo	package	instance	agree	rc0
 RexxInfo	pathSeparator	instance	agree	rc0
 RexxInfo	platform	instance	agree	rc0

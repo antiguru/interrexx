@@ -15,7 +15,7 @@
 # module is `src/docs/hierarchy.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #
-# derived-at: oodocs/rexxref/en-US r13347
+# derived-at: oodocs/rexxref/en-US r13532
 
 Alarm	Object	0	841
 AlarmNotification	Object	0	842

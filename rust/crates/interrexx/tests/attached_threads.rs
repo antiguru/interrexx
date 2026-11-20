@@ -18,27 +18,17 @@ use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 
-/// The `memcap` limit each run is under.
-const MEMORY: &str = "2G";
+/// The address-space limit in KiB each run is under, which `bounded-run -v` sets.
+const MEMORY_LIMIT_KIB: &str = "4194304";
 
-/// The address-space limit in KiB where `memcap` is not on `PATH`.
-const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
-
-/// The seconds `timeout` gives each run before it kills it, so a run that deadlocks fails
-/// instead of hanging. It runs inside the memory cap, so the signal reaches `rexx` itself. An
-/// oracle run whose output is compared gets the same.
+/// The seconds `bounded-run` gives each run before it kills it, so a run that deadlocks fails
+/// instead of hanging. An oracle run whose output is compared gets the same.
 const SECONDS: &str = "120";
 
 /// The exit status a run answers: its exit code, or 128 plus the signal that killed it, as a
-/// shell reports it. A run `timeout` kills dies by SIGKILL, which reads 137 whether `timeout`
-/// itself or a shell between it and this test reports it.
+/// shell reports it. A run killed by SIGKILL reads 137, whether `bounded-run` sent the signal or
+/// the test did.
 const KILLED: i32 = 137;
-
-/// Whether `name` is an executable file on this process's `PATH`.
-fn on_path(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
-}
 
 /// The `rxapi` service binary beside `rexx`, which `rexx` starts for an API call that needs it.
 fn rxapi() -> PathBuf {
@@ -58,21 +48,11 @@ fn assert_rxapi() {
     );
 }
 
-/// A command that runs its arguments memory-capped by `memcap`, or by an address-space limit where
-/// `memcap` is not on `PATH`, and killed by `timeout` after `seconds`.
+/// A command that runs its arguments under [`MEMORY_LIMIT_KIB`] of address space, killed by
+/// `bounded-run` after `seconds`.
 fn capped(seconds: &str) -> Command {
-    let mut command = if on_path("memcap") {
-        let mut command = Command::new("memcap");
-        command.arg(MEMORY);
-        command
-    } else {
-        let mut command = Command::new("bash");
-        command.arg("-c").arg(format!(
-            "ulimit -v {FALLBACK_LIMIT_KIB} && exec \"$0\" \"$@\""
-        ));
-        command
-    };
-    command.args(["timeout", "-s", "KILL", seconds]);
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
+    command.args(["-v", MEMORY_LIMIT_KIB, "-s", "KILL", seconds]);
     command
 }
 
@@ -173,7 +153,7 @@ fn build(name: &str) -> PathBuf {
 type Answer = (String, String, i32);
 
 /// Runs the fixture program `program` under `rexx`, memory-capped ([`capped`]) and limited in time
-/// by `timeout`, from a directory holding the extension, answering its stdout, stderr and exit
+/// by `bounded-run`, from a directory holding the extension, answering its stdout, stderr and exit
 /// status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the same directory and
 /// must answer the same.
 fn run(name: &str, program: &str) -> Answer {
@@ -1818,8 +1798,8 @@ fn the_switch_survives_rxfuncdrop() {
         .expect("the capped run spawns");
     std::thread::sleep(std::time::Duration::from_secs(2));
     let still_running = child.try_wait().expect("the run's status").is_none();
-    // The memory cap may run `timeout` as a child or exec it, and `timeout` runs `rexx` as its
-    // own child: killing `rexx`, wherever it is below the spawned process, ends them all.
+    // `bounded-run` runs `rexx` as its child: killing `rexx`, wherever it is below the spawned
+    // process, ends them both.
     for rexx in descendants(child.id())
         .into_iter()
         .filter(|pid| process_name(*pid).as_deref() == Some("rexx"))

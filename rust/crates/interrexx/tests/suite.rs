@@ -85,11 +85,11 @@ pub const GROUPS_AT_ONCE: usize = 8;
 /// The crate side's `PATH` after its own `bin`.
 pub const SYSTEM_PATH: &[&str] = &["/usr/local/bin", "/usr/bin", "/bin"];
 
-/// The crate's memory cap under `memcap`.
-pub const CRATE_MEMORY: &str = "2G";
-
-/// The crate's address-space limit in KiB where `memcap` is not found.
-pub const FALLBACK_LIMIT_KIB: u64 = 4_194_304;
+/// The crate's address-space limit in KiB, which `bounded-run -v` sets. It bounds
+/// reserved address space, which a group that starts many threads fills well
+/// before its resident set does (`tests/support/bounded_run.rs`), so an
+/// out-of-memory end can be this limit rather than a leak.
+pub const CRATE_MEMORY_LIMIT_KIB: u64 = 4_194_304;
 
 /// The file the ootest checkout's svn revision is recorded in, relative to
 /// `rust/`.
@@ -127,10 +127,8 @@ pub fn schedule(groups: Vec<(String, String)>) -> (Vec<(String, String)>, Vec<(S
 /// What bounded a side's memory.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CapKind {
-    /// `memcap` at [`CRATE_MEMORY`].
-    Memcap,
-    /// `ulimit -v` at [`FALLBACK_LIMIT_KIB`], `memcap` not being found.
-    UlimitFallback,
+    /// The crate's `bounded-run -v` at [`CRATE_MEMORY_LIMIT_KIB`].
+    CrateLimit,
     /// The oracle's `ulimit -v` at [`ORACLE_MEMORY_LIMIT_KIB`].
     OracleUlimit,
 }
@@ -138,8 +136,7 @@ pub enum CapKind {
 impl CapKind {
     pub fn label(self) -> String {
         match self {
-            CapKind::Memcap => format!("memcap {CRATE_MEMORY}"),
-            CapKind::UlimitFallback => format!("ulimit -v {FALLBACK_LIMIT_KIB} (no memcap)"),
+            CapKind::CrateLimit => format!("bounded-run -v {CRATE_MEMORY_LIMIT_KIB}"),
             CapKind::OracleUlimit => format!("ulimit -v {ORACLE_MEMORY_LIMIT_KIB}"),
         }
     }
@@ -214,8 +211,6 @@ impl GroupRun {
 pub struct CrateSettings {
     /// The directory the groups' `dir`s are below.
     pub root: PathBuf,
-    /// The name `memcap` is looked up by on this process's `PATH`.
-    pub memcap: String,
     pub floor: Duration,
     pub max_runs: usize,
 }
@@ -224,7 +219,6 @@ impl CrateSettings {
     pub fn from_env() -> CrateSettings {
         CrateSettings {
             root: groups_root(),
-            memcap: "memcap".to_string(),
             floor: floor_from(std::env::var(FLOOR_ENV).ok().as_deref()),
             max_runs: MAX_RUNS,
         }
@@ -605,9 +599,7 @@ fn end_reason(process: &ProcessRun, deadline: Duration) -> Option<String> {
             .find(|line| line.contains(needle))
             .map(str::to_string)
     };
-    if let Some(line) =
-        line_with("memcap: OOM-killed").or_else(|| line_with("memory allocation of"))
-    {
+    if let Some(line) = line_with("memory allocation of") {
         return Some(format!("out of memory: {line}"));
     }
     Some(match process.ended {
@@ -1168,7 +1160,7 @@ mod judging {
     /// A run that ended normally, expecting `expected`, starting
     /// `started` and passing `passed`.
     fn run(expected: &[&str], started: &[&str], passed: &[&str]) -> GroupRun {
-        let mut run = GroupRun::new("base/x/G".to_string(), CapKind::Memcap);
+        let mut run = GroupRun::new("base/x/G".to_string(), CapKind::CrateLimit);
         run.expected = set(expected);
         run.started = set(started);
         run.passed = set(passed);
@@ -1391,7 +1383,7 @@ mod row_checks {
         // An IF of an assertion, in a helper method that is no test.
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 188; asserts a wording, r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 189; asserts a wording, r[conv.error.text]",
         ),
         // IF lines of the row's test, with and without assertions.
         (
@@ -1478,11 +1470,11 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 170; r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 171; r[conv.error.text]",
         ),
         (
             LICENCES,
-            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1190; r[conv.error.text]",
+            "base/keyword/TRACE\tTEST_TRACE_EXPOSE\tUnspecified\tassertions 1191; r[conv.error.text]",
         ),
         // A condition line that is not there, is no IF, is a DO, is in another
         // test, or is named as an assertion too; and a malformed replacement.

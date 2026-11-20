@@ -51,8 +51,8 @@ call sysfiledelete f
 b cd |
 40.4
 40.12
-88.907
-93.907
+40.13
+40.14
 ```
 
 r[bif.charin.length.default]
@@ -195,16 +195,16 @@ r[bif.charin.missing]
 A file that does not exist has no characters: CHARIN returns the null string
 and raises NOTREADY, whatever `start` is and whatever the valid `length` is,
 and creates no file. A name that cannot be opened for another reason, a
-directory for example, is answered the same way. The `start` of such a call is
-not checked (see [the start rule](r:bif.index.stream.start)), but a `length`
-that is not valid is.
+directory for example, is answered the same way. The `start` and the `length`
+of such a call are checked all the same, as [the stream
+rule](r:bif.index.stream.args) says.
 
 ```rexx
 n = 0
 call on notready name nr
 x = charin('spec-charin-nofile.tmp')
 say '[' || x || ']' n
-x = charin('spec-charin-nofile.tmp', 0, 5)
+x = charin('spec-charin-nofile.tmp', 1, 5)
 say '[' || x || ']' n
 x = charin('.', 1, 1)
 say '[' || x || ']' n
@@ -212,6 +212,9 @@ say stream('spec-charin-nofile.tmp', 'c', 'query exists') == ''
 signal on syntax name a
 say charin('spec-charin-nofile.tmp', 1, -1)
 a: say condition('o')~code
+signal on syntax name b
+say charin('spec-charin-nofile.tmp', 0, 5)
+b: say condition('o')~code
 exit
 nr: n = n + 1
 return
@@ -222,7 +225,8 @@ return
 [] 2
 [] 3
 1
-88.907
+40.13
+40.14
 ```
 
 r[bif.charin.stdin]

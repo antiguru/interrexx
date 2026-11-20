@@ -158,11 +158,10 @@ relative: REXX_PATH second
 
 r[env.search.names]
 A name that begins with a slash is an absolute path, and is looked for there
-and nowhere else. A name that begins with `./` or `../` is a path from the
-current directory, and is looked for there and nowhere else: neither the
-directory of the caller nor `REXX_PATH` nor `PATH` is tried for it. Any other
-name, one with slashes inside it such as `sub/name` included, is joined to
-each place of [the places rule](r:env.search.places) in turn. The extensions
+and nowhere else. Any other name, one with slashes inside it such as
+`sub/name` included, and one that begins with `./` or `../` too, is joined to
+each place of [the places rule](r:env.search.places) in turn: `./name` is
+found in `REXX_PATH` as `name` is. The extensions
 and the case of [the following rules](r:env.search.extension) apply to the
 name of every kind.
 
@@ -204,10 +203,10 @@ e: say arg(1)':' condition('o')~code
 
 ```output
 plain: plain
-dot: 43.1
+dot: plain
 absolute: plain
 sub: deep
-dot sub: 43.1
+dot sub: deep
 dotdot: plain
 dotdot sub: deep
 ```

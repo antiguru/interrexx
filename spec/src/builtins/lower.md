@@ -45,8 +45,8 @@ f: say condition('o')~code
 
 ```output
 mixed case Mixed case
-93.924
-93.923
+40.14
+40.13
 40.12
 40.4
 40.5

@@ -186,9 +186,27 @@ pub struct AssertionExtraction {
 /// settings and any assignment prelude sequentially through the method
 /// exactly as the interpreter would.
 pub fn extract_assertions(group: &str, source: &str) -> AssertionExtraction {
+    fn calls_in(text: &str) -> usize {
+        text.to_ascii_lowercase().matches("self~assertsame").count()
+    }
     let mut out = AssertionExtraction::default();
+    let mut inside = 0usize;
     for method in extract(source) {
+        inside += calls_in(&method.body);
         scan_method_for_assertions(group, &method.name, &method.body, &mut out);
+    }
+    // A call in a helper method or other text `extract` does not yield is
+    // never scanned; it is accounted here so that every call in the file is
+    // a row or a drop.
+    let outside = calls_in(source) - inside;
+    if outside > 0 {
+        out.blocked.push(BlockedMethod {
+            group: group.to_string(),
+            method: "<outside any test-prefixed method>".to_string(),
+            reason: "not inside a `test`-prefixed ::method, so `extract` never yields it"
+                .to_string(),
+            dropped: outside,
+        });
     }
     out
 }

@@ -36,6 +36,8 @@ const EXCLUDED_DIRS: &[(&str, &str)] = &[
     ("extensions/", "native extension"),
     ("samples/", "native sample"),
     ("base/class/CommandHandler.testGroup", "CommandHandler"),
+    // FINALLY clauses are of language level 6.07 (decisions.md, the language level).
+    ("base/keyword/FINALLY.testGroup", "language level 6.07"),
 ];
 
 /// A `::METHOD`, `::ROUTINE` or `::RESOURCE` of a group file.
@@ -1136,7 +1138,7 @@ mod measured {
     fn a_slice_deferred_before_a_pinned_park_stays_with_its_activity() {
         let source = ".local['ARR'] = .array~of(2, 1)\n\
                       .local~~put(.array~of(3, 1, 2)~start('sortWith', .cmpb~new), 'M')\
-                      ~~put(.t~new~start('run'), 'C')~at('ARR')~sortWith(.cmpa~new)\n\
+                      ~~put(.t~new~start('run'), 'C')~at('ARR')~~sortWith(.cmpa~new)\n\
                       say 'done'\n\
                       ::class cmpa\n::method compare\n  \
                       return .m~result~items * 0 + arg(1) - arg(2)\n\
@@ -1419,7 +1421,8 @@ mod measured {
         ),
         (
             "LoopHeader",
-            "do i = 1 to 2 while f()\nend\nexit\nf:\n  call SysSleep 0\n  return 1\n",
+            "do with index i over .w~new\nend\n::class w\n::method supplier\n  \
+             call SysSleep 0\n  return .array~of(1)~supplier\n",
         ),
         (
             "Conversion",
@@ -1427,19 +1430,19 @@ mod measured {
         ),
         (
             "TreeEval",
-            "x = .c~new~~m\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = rexx:g(.c~new~m)\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "x = f(.c~new~~m)\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "call f .c~new~~m\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n",
+            "call f rexx:g(.c~new~m)\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeEval",
-            "x = length(.c~new~~m)\n::class c\n::method m\n  call SysSleep 0\n",
+            "x = length(rexx:g(.c~new~m))\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
         ),
         (
             "TreeSend",
@@ -1503,8 +1506,9 @@ mod measured {
     }
 
     /// Calls and sends in argument positions, sends, the natives that run a
-    /// Rexx body, and calls inside an unlabelled plain `DO` block run on the driver's
-    /// frame, so a park inside them has no pinned frame above it.
+    /// Rexx body, calls inside an unlabelled plain `DO` block, and calls and
+    /// sends in a loop's `WHILE` or `UNTIL` run on the driver's frame, so a
+    /// park inside them has no pinned frame above it.
     #[test]
     fn a_park_inside_a_stackless_entry_is_under_no_pinned_frame() {
         const CLASS: &str = "::class c\n::method m\n  call SysSleep 0\n  return 1\n\
@@ -1527,6 +1531,9 @@ mod measured {
             "x = .context~package~findRoutine('R')~call\n::routine r\n  call SysSleep 0\n",
             "if 1 then do\n  x = g()\n  y = .c~new~m\n  call g\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "do i = 1 to 2\n  do\n    x = g()\n  end\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
+            "do i = 1 to 1 while g()\nend\nexit\ng:\n  call SysSleep 0\n  return 1\n",
+            "do i = 1 to 1 while .c~new~m\nend\n",
+            "do until .c~new~m\nend\n",
             "x = .f~new~f\n::class f\n::method f\n  forward to (.c~new) message('M')\n",
             "x = .f~new~f\n::class f\n::method f\n  forward continue to (.c~new) message('M')\n  \
              return result\n",

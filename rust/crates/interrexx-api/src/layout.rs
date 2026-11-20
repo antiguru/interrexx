@@ -740,6 +740,23 @@ pub const VALUE_ASSIGNMENTS: &[(&str, &str)] = &[
     ("f64", "double"),
 ];
 
+/// The C++ conversions of a `ValueDescriptor`: for each, the tokens of the
+/// Rust type it converts to and the name of the value code whose union member
+/// it answers. A conversion reads that member whatever `type` holds.
+pub const VALUE_CONVERSIONS: &[(&str, &str)] = &[
+    ("RexxObjectPtr", "RexxObjectPtr"),
+    ("RexxStringObject", "RexxStringObject"),
+    ("RexxArrayObject", "RexxArrayObject"),
+    ("RexxStemObject", "RexxStemObject"),
+    ("RexxMutableBufferObject", "RexxMutableBufferObject"),
+    ("CSTRING", "CSTRING"),
+    ("POINTER", "POINTER"),
+    ("wholenumber_t", "wholenumber_t"),
+    ("stringsize_t", "stringsize_t"),
+    ("f32", "float"),
+    ("f64", "double"),
+];
+
 /// Defines each handler type the header declares: a function the interpreter
 /// calls, whose C name is the function type and whose Rust name is the
 /// pointer to it. Beside them, in the table `$table`, each name with the

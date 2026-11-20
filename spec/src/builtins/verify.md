@@ -46,8 +46,8 @@ f: say condition('o')~code
 
 ```output
 2 2
-93.924
-93.923
+40.14
+40.13
 40.12
 40.4
 40.5
@@ -70,7 +70,9 @@ say verify('xy', 'x') verify('xy', 'x', 'n') verify('xy', 'x', 'Nope'),
 
 r[bif.verify.option.check]
 An `option` whose first character is not one of those four, and an `option`
-that is the null string, raise `SYNTAX 93.915`. It is made whatever `string`
+that is the null string, raise `SYNTAX 40.904` ([an
+option](r:conv.method.option)); sent as a message, they raise `SYNTAX
+93.915`. The check is made whatever `string`
 and `reference` are. A call whose `start` or `length` is also in error raises
 the error of one of them, as [the checks of the
 conventions](r:conv.check.order) say.
@@ -90,17 +92,17 @@ say verify('', '', 'Z')
 d: say condition('o')~code
 signal on syntax name f
 say verify('abc', 'a', 'Y', 'z')
-f: say wordpos(condition('o')~code, '93.915 40.12') > 0
+f: say wordpos(condition('o')~code, '40.904 40.12') > 0
 signal on syntax name g
 say verify('abc', 'a', 'Y', 0)
-g: say wordpos(condition('o')~code, '93.915 93.924') > 0
+g: say wordpos(condition('o')~code, '40.904 40.14') > 0
 ```
 
 ```output
-93.915
-93.915
-93.915
-93.915
+40.904
+40.904
+40.904
+40.904
 1
 1
 ```

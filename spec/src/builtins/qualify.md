@@ -100,7 +100,8 @@ say qualify('/spec-qualify/x') qualify('/') qualify('/spec-qualify/x y')
 
 r[bif.qualify.normal]
 The answer is cleaned up. A run of slashes is one slash. A component that is
-a single period is dropped, and so is a slash at the end of the name. A
+a single period is dropped. A slash at the end of the name stays, since the
+name then names a directory: `file/` is not the file `file`. A
 component of two periods, and the component before it, are dropped
 together; at the root there is no component to drop, and the double period
 goes alone. The root is the answer `/` when nothing else is left, and a
@@ -113,12 +114,12 @@ say qualify('/a//b///c') qualify('/a/./b/.') qualify('/a/b/') qualify('/a/b//')
 say qualify('/a/b/../c') qualify('/a/b/c/../..') qualify('/a/..') qualify('/..') qualify('/../../a')
 say qualify('//') qualify('/./') qualify('///a')
 say qualify('/a/.../b') qualify('/a/..b/c') qualify('/a/.b/c/../d')
-say (qualify('x//y') == p || 'x/y') (qualify('./x/') == p || 'x') (qualify('x/..') == directory())
-say (qualify('.') == directory()) (qualify('./') == directory()) (qualify('x/../y') == p || 'y')
+say (qualify('x//y') == p || 'x/y') (qualify('./x/') == p || 'x/') (qualify('x/..') == directory())
+say (qualify('.') == directory()) (qualify('./') == p) (qualify('x/../y') == p || 'y')
 ```
 
 ```output
-/a/b/c /a/b /a/b /a/b
+/a/b/c /a/b /a/b/ /a/b/
 /a/c /a / / /a
 / / /a
 /a/.../b /a/..b/c /a/.b/d

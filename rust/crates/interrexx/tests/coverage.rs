@@ -617,8 +617,8 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
     let names = interrexx_inventory::builtins::NAMES;
     assert_eq!(
         names.len(),
-        81,
-        "BuiltinFunctions.cpp's table moved off 81 entries -- this test's own \
+        84,
+        "BuiltinFunctions.cpp's table moved off 84 entries -- this test's own \
          derivation below needs revisiting"
     );
 
@@ -659,10 +659,30 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
         "no builtin is in scope in one form and out of it in another"
     );
 
+    // A later-level name is in the table, and neither excluded nor in scope.
+    let later = interrexx_inventory::builtins::LATER_LEVEL;
+    for (name, _level) in later {
+        assert!(
+            names.contains(name),
+            "{name} is listed as of a later level but is not in \
+             BuiltinFunctions.cpp's builtin table at all"
+        );
+        assert!(
+            !EXCLUDED_BUILTINS
+                .iter()
+                .any(|(excluded, _, _)| excluded == name),
+            "{name} is listed both as of a later level and as excluded"
+        );
+    }
+
     // Derived, not asserted: the number is read from the table rather than
     // copied.
-    let in_scope = names.len() - interrexx_inventory::builtins::wholly_excluded().len();
-    assert_eq!(in_scope, 81, "all 81 builtins are in scope");
+    let in_scope =
+        names.len() - interrexx_inventory::builtins::wholly_excluded().len() - later.len();
+    assert_eq!(
+        in_scope, 81,
+        "all 81 builtins of this crate's level are in scope"
+    );
     assert_eq!(
         interrexx_inventory::builtins::in_scope().len(),
         in_scope,

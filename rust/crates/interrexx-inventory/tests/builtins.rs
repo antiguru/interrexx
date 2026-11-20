@@ -1,17 +1,18 @@
 #[test]
-fn the_builtin_table_has_81_entries() {
-    // The oracle's builtin table holds 81 entries plus a leading
+fn the_builtin_table_has_84_entries() {
+    // The oracle's builtin table holds 84 entries plus a leading
     // NULL dummy, which the extractor skips.
-    assert_eq!(interrexx_inventory::builtins::NAMES.len(), 81);
+    assert_eq!(interrexx_inventory::builtins::NAMES.len(), 84);
 }
 
 #[test]
 fn table_order_is_preserved_because_the_parser_indexes_by_position() {
     // NOT alphabetical: the table is mostly sorted but has an appended tail
     // (...X2D, XRANGE, USERID, LOWER, UPPER, RXFUNCADD, RXFUNCDROP,
-    // RXFUNCQUERY, ENDLOCAL, SETLOCAL, QUALIFY, GC). Sorting it would break
+    // RXFUNCQUERY, ENDLOCAL, SETLOCAL, QUALIFY, GC, BEEP, DIRECTORY, FILESPEC). Sorting it would break
     // the index the parser resolves builtins through, so the test pins the
     // ends rather than asserting an ordering.
     assert_eq!(interrexx_inventory::builtins::NAMES[0], "ABBREV");
     assert_eq!(interrexx_inventory::builtins::NAMES[80], "GC");
+    assert_eq!(interrexx_inventory::builtins::NAMES[83], "FILESPEC");
 }

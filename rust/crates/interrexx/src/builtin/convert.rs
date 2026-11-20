@@ -462,12 +462,12 @@ fn x2d_c2d(
 ) -> Result<ObjRef, Failure> {
     let requested = whole_number(interp, name, args, 2)?;
     // The length's range check runs before anything looks at the string,
-    // which is the one ordering a program can see: measured, `x2d('ZZ',-1)`
-    // is 93.923 where `x2d('ZZ',4)` is the invalid-character 93.933. The
+    // which is the one ordering a program can see: `x2d('ZZ',-1)` is the
+    // length's 40.13 where `x2d('ZZ',4)` is the invalid-character 93.933. The
     // method form gets that ordering by reading its own length before it
     // calls the core below.
     let requested = match requested {
-        Some(value) => Some(length_of(value)?),
+        Some(value) => Some(length_of(name, 2, value)?),
         None => None,
     };
     let (text, digits) = {
@@ -754,7 +754,7 @@ fn d2x_d2c(
     // out here -- for it the value beats the length outright.
     let raw = whole_number(interp, name, args, 2)?;
     d2x_d2c_over(interp, &text, numeric, character, move |_| match raw {
-        Some(length) => Ok(Some(length_of(length)?)),
+        Some(length) => Ok(Some(length_of(name, 2, length)?)),
         None => Ok(None),
     })
 }

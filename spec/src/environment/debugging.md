@@ -1,7 +1,7 @@
 ---
 element: "Debugging"
 kind: concept
-deviations: [150, 151, 152]
+deviations: [150, 151, 152, 181, 182]
 rexxref: "Debugging Aids; Debugging Aids > Interactive Debugging of Programs; Debugging Aids > RXTRACE Variable"
 ---
 
@@ -1657,7 +1657,13 @@ A TRACE instruction that a line runs takes effect, unlike one in the
 program, and so does a call of the TRACE function with an argument; either
 ends the stop, whatever setting it leaves: the program runs on to its next
 stop, if any. The rest of the line still runs. A call with no argument, and a
-TRACE that the line holds but does not run, end nothing.
+TRACE that the line holds but does not run, end nothing. A TRACE in a string
+that an INTERPRET in the line runs counts as the line's own ([Deviation
+181](r:env.debugging.deviation.181)). A routine or method that the line calls
+runs untraced ([Deviation 182](r:env.debugging.deviation.182)): it shows no
+clause and never stops. It inherits interactive tracing, so a TRACE instruction
+in it is ignored like one in the program ([the rule](r:bif.trace.instruction)),
+and the stop of the line does not change.
 `trace o`, `trace off`,
 the bare `trace`, and a setting with a letter and no question mark, as
 `trace r`, turn interactive tracing off and set the letter, as [the prefix
@@ -2318,4 +2324,120 @@ two
 three
 [read 4: ]
      7 *-* exit
+```
+
+r[env.debugging.deviation.181]
+A TRACE in a string that an INTERPRET in a line runs takes effect as one in
+the line itself does, instruction or function with an argument, a number
+included, and ends the stop. ooRexx and the ANSI standard (8.3.26) treat the
+string as program source and ignore the instruction while interactive tracing
+is on, so that `interpret 'trace off'` changes nothing and the stop goes on;
+the function takes effect there. The example shows the setting that `body`
+answers and the number of lines read. The example is not run against ooRexx.
+
+```rexx
+.traceoutput~destination(.quiet~new)
+call try "interpret 'trace ?a'"
+call try "interpret 'trace ?n'"
+call try "interpret 'trace off'"
+call try "interpret 'interpret ''trace off'''"
+call try "interpret 'trace 2'"
+call try "interpret 'x = trace(''?a'')'"
+call try "interpret 'x = trace(''n'')'"
+exit
+try: procedure
+  .debuginput~destination(.in~new(arg(1)))
+  call body
+  say arg(1)~left(36) 'reads' .in~count 'setting' result
+  return
+body:
+  trace ?a
+  nop
+  nop
+  nop
+  return trace()
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute count class
+::method init
+  expose line
+  use arg line
+  .in~count = 0
+::method linein
+  expose line
+  .in~count += 1
+  if .in~count = 1 then return line
+  return ''
+```
+
+```output
+interpret 'trace ?a'                 reads 3 setting ?A
+interpret 'trace ?n'                 reads 1 setting ?N
+interpret 'trace off'                reads 1 setting O
+interpret 'interpret ''trace off'''  reads 1 setting O
+interpret 'trace 2'                  reads 1 setting ?A
+interpret 'x = trace(''?a'')'        reads 3 setting ?A
+interpret 'x = trace(''n'')'         reads 1 setting N
+```
+
+r[env.debugging.deviation.182]
+A routine or method that a line calls runs untraced: it writes no trace line,
+takes no stop and reads no line, the routines and methods it calls included, and
+in all else runs as it would in the program. A method that the line starts runs
+on an activity of its own, which the untraced state does not follow, so it is
+traced as it would be in the program. In the example the line `call sub` is read
+once, and the routine's clauses are not shown. ooRexx traces the routine and
+stops after its clauses, reading lines for them; the ANSI standard (8.2.4) has
+no tracing and no stop while the line runs, which includes the routines it
+calls. The example is not run against ooRexx.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('call sub', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+exit
+sub: procedure
+  say 'in sub' trace()
+  trace off
+  say 'after off' trace()
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+```
+
+```output
+     4 *-* say 'one'
+one
+<notice>
+[read 1: call sub]
+in sub ?A
+after off ?A
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* exit
 ```

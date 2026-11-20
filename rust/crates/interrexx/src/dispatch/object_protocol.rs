@@ -1828,8 +1828,8 @@ pub(super) fn decode_message_name(
     }
     // A plain `Array` is read as it stands, holes and all. Any other object
     // is sent `request('ARRAY')`, so an `Array` subclass and an object that
-    // answers an array name a message too. An answer of `.nil` is the 93.972;
-    // an answer that is no array has the wrong shape.
+    // answers an array name a message too. An answer that is not an Array,
+    // `.nil` included, is the 93.972 (`r[class.object.send]`).
     let plain_array = interp.object_model().array;
     let answered = if interp.array_body(message).is_some()
         && interp.class_of_value(message) == Some(plain_array)
@@ -1838,13 +1838,13 @@ pub(super) fn decode_message_name(
     } else {
         interp.request_array_value(message)?
     };
-    let Some(answered) = answered.filter(|answered| *answered != ObjRef::NIL) else {
+    let slots = answered.and_then(|answered| {
+        interp.roots.activity_mut().push_temp(answered);
+        interp.array_slots_of(answered)
+    });
+    let Some(slots) = slots else {
         let rendered = interp.string_value_text(message)?;
         return Err(Raised::message_name_shape(&rendered).into());
-    };
-    interp.roots.activity_mut().push_temp(answered);
-    let Some(slots) = interp.array_slots_of(answered) else {
-        return Err(Raised::message_array_shape().into());
     };
     // `messageArgCount() != 2`, which is `lastItem` and not the slot count: a
     // trailing empty slot is not an element. For example, `o~send(('M',))` is

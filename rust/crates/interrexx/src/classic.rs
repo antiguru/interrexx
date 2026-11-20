@@ -126,13 +126,19 @@ impl Interp {
         Ok(called.value.map(|bytes| self.text(&bytes)))
     }
 
-    /// The name `RXQUEUE('Get')` answers.
+    /// The name `RXQUEUE('Get')` answers. The `GET` it sends runs Rexx, under a pinned frame:
+    /// a slice of the activity cannot end inside it.
     pub(crate) fn current_queue_name(&mut self) -> Result<Vec<u8>, Failure> {
         let Some(queue) = self.local_route(b"STDQUE")? else {
             return Ok(b"SESSION".to_vec());
         };
         let caller = self.caller();
-        match self.send_message(queue, b"GET", None, &[], caller)? {
+        let sent = pinned!(
+            self,
+            crate::pinning::PinKind::PullWrapper,
+            self.send_message(queue, b"GET", None, &[], caller)
+        );
+        match sent? {
             Some(name) => self.string_value_text(name),
             None => Ok(b"SESSION".to_vec()),
         }
@@ -186,6 +192,7 @@ impl Interp {
             ReturnStatus::Normal
         };
         Ok(CommandOutcome {
+            shown: None,
             rc: whole_value(&text).unwrap_or(0),
             status,
             supplied: Some(Supplied { object, text }),

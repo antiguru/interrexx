@@ -379,8 +379,10 @@ program that has one runs none of its clauses. A SELECT with no WHEN before
 its OTHERWISE or END raises `SYNTAX 7.1`, and another clause where a WHEN is
 required raises `7.2`. A WHEN or an OTHERWISE outside a SELECT raises the
 codes of [a part out of place](r:instr.index.parts). A WHEN with no THEN
-raises `18.2`, and an END where the instruction of a THEN should be is
-[a part out of place](r:instr.index.parts), as is a stray END. A SELECT with
+raises `18.2`, and an END where the instruction of a THEN should be raises
+`10.5`. A WHEN where the instruction of a THEN should be belongs to no SELECT
+and raises `9.1`, and a stray END is [a part out of
+place](r:instr.index.parts). A SELECT with
 no END raises `14.2` and one whose OTHERWISE part has no END `14.901`.
 
 ```rexx
@@ -403,6 +405,7 @@ call try 'do; when 1 then say "a"; end'
 call try 'otherwise say 1'
 call try 'select; when 1 say "a"; end'
 call try 'select; when 1 then end'
+call try 'select; when 1 then; when 2 then nop; end'
 call try 'select; when 1 then say 1'
 call try 'select; when 1 then say 1; otherwise say 2'
 call try 'select; when 1 then say 1; end; end'
@@ -425,7 +428,8 @@ select; when 1 then say "a"; say "b"; end => 7.2
 do; when 1 then say "a"; end => 9.1
 otherwise say 1 => 9.2
 select; when 1 say "a"; end => 18.2
-select; when 1 then end => 10.1
+select; when 1 then end => 10.5
+select; when 1 then; when 2 then nop; end => 9.1
 select; when 1 then say 1 => 14.2
 select; when 1 then say 1; otherwise say 2 => 14.901
 select; when 1 then say 1; end; end => 10.1

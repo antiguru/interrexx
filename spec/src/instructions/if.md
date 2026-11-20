@@ -272,9 +272,11 @@ r[instr.if.syntax]
 Errors in the shape of an IF are found when the program is read, so a program
 that has one runs none of its clauses. An IF with no THEN raises
 `SYNTAX 18.1`. A THEN with no instruction after it raises `14.3`, and an ELSE
-with no instruction `14.4`. A THEN that no IF waits for, an ELSE with no IF,
-and an END or a WHEN where the instruction of a branch should be, raise the
-codes of [a part out of place](r:instr.index.parts). An error in the
+with no instruction `14.4`. An END where the instruction of a THEN should be
+raises `10.5`, and one where the instruction of an ELSE should be `10.6`. A
+THEN that no IF waits for, an ELSE with no IF, and a WHEN where the
+instruction of a branch should be, raise the codes of [a part out of
+place](r:instr.index.parts). An error in the
 expression is raised when the clause runs, as it is for any expression, and
 when a branch is not taken, its expression is not evaluated.
 
@@ -293,6 +295,7 @@ call try 'if 0 then nop; else'
 call try 'then say 1'
 call try 'else say 1'
 call try 'if 1 then end'
+call try 'if 0 then nop; else; end'
 call try 'if 1 then when 1'
 call try 'if 0 then say 1/0; else say "other branch"'
 call try 'if 1/0 then say 1'
@@ -312,7 +315,8 @@ if 1 then => 14.3
 if 0 then nop; else => 14.4
 then say 1 => 8.1
 else say 1 => 8.2
-if 1 then end => 10.1
+if 1 then end => 10.5
+if 0 then nop; else; end => 10.6
 if 1 then when 1 => 9.1
 other branch
 if 0 then say 1/0; else say "other branch" => ok

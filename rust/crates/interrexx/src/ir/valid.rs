@@ -32,7 +32,6 @@ impl ValidOps {
                 | Op::Const { dst, .. }
                 | Op::LoadConstant { dst, .. }
                 | Op::Load { dst, .. } => inside(dst),
-                Op::SelectCaseText { case, .. } => optional(case),
                 Op::WhenTest { case, dst, .. } => optional(case) && inside(dst),
                 Op::Arith { lhs, rhs, dst, .. } | Op::Binary { lhs, rhs, dst, .. } => {
                     inside(lhs) && inside(rhs) && inside(dst)

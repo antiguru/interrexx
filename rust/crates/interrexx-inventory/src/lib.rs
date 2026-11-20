@@ -125,15 +125,33 @@ pub mod builtins {
             .collect()
     }
 
+    /// The names of [`NAMES`] that are builtins only at a language level above
+    /// the one this crate implements (`docs/design/decisions.md`, the
+    /// language level), each with that level. At this crate's level each is
+    /// a routine of the `REXX` package, so a call to one is resolved past the
+    /// builtins and the running package's routines, and the name is neither
+    /// in scope nor excluded.
+    pub const LATER_LEVEL: &[(&str, &str)] = &[
+        ("BEEP", "6.07"),
+        ("DIRECTORY", "6.07"),
+        ("FILESPEC", "6.07"),
+    ];
+
+    /// Whether `name` is listed in [`LATER_LEVEL`].
+    pub fn is_later_level(name: &str) -> bool {
+        LATER_LEVEL.iter().any(|(later, _)| *later == name)
+    }
+
     /// The builtins this crate must be able to run: every name in [`NAMES`] that
-    /// is not excluded outright, in `NAMES` order. A partially excluded name
-    /// is in here, because its in-scope form still has to work.
+    /// is not excluded outright and not of a [later level](LATER_LEVEL), in
+    /// `NAMES` order. A partially excluded name is in here, because its
+    /// in-scope form still has to work.
     pub fn in_scope() -> Vec<&'static str> {
         let whole = wholly_excluded();
         NAMES
             .iter()
             .copied()
-            .filter(|name| !whole.contains(name))
+            .filter(|name| !whole.contains(name) && !is_later_level(name))
             .collect()
     }
 }

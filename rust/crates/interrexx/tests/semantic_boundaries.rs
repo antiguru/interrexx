@@ -143,8 +143,9 @@ fn check_owned_stdout(case: &str, source: &[u8], expected: &[u8], errors: &[u8],
         .create_new(true)
         .open(directory.join("captured-output.bin"))
         .unwrap();
-    let child = Command::new("memcap")
-        .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "20"])
+    // The address-space limit in KiB, as `bounded-run -v` takes it.
+    let child = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+        .args(["-v", "4194304", "20"])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
         .current_dir(&directory)

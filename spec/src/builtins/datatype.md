@@ -51,8 +51,9 @@ characters after the first are not looked at. The letters that select a
 test are `A`, `B`, `I`, `L`, `M`, `N`, `O`, `S`, `U`, `V`, `W` and `X`, and
 the digit `9`. A `type` whose first character is another character,
 including a blank, or a `type` that is the null string, raises
-`SYNTAX 93.915`. The `type` is checked before the string is examined, so it
-raises the error for every `string`, the null string included.
+`SYNTAX 40.904` ([an option](r:conv.method.option)); sent as a message, it
+raises `SYNTAX 93.915`. The `type` is checked before the string is examined,
+so it raises the error for every `string`, the null string included.
 
 ```rexx
 say datatype('12', 'n') datatype('12', 'Number') datatype('12', 'Nonsense'),
@@ -73,10 +74,10 @@ d: say condition('o')~code
 
 ```output
 1 1 1 1
-93.915
-93.915
-93.915
-93.915
+40.904
+40.904
+40.904
+40.904
 ```
 
 r[bif.datatype.omitted]
@@ -98,7 +99,7 @@ r[bif.datatype.number]
 Type `N` answers `1` when the string is a number: a string of the
 [whole-number form](r:conv.whole.form) whose value is within the [exponent
 range](r:bif.index.num.limit) of the language. The strings that
-[a number argument](r:bif.index.num.arg) rejects with `SYNTAX 93.943` are
+[a number argument](r:bif.index.num.arg) rejects with `SYNTAX 40.11` are
 exactly the strings for which `N` answers `0`: the null string, a string of
 only whitespace, a string with a character that the form does
 not allow, and a number whose exponent is out of range. The digits of the
