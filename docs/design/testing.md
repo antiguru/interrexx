@@ -149,7 +149,9 @@ tests compile or run. The oracle tier runs or loads the built ooRexx, `third_par
 * The `upstream-tier` CI job runs the rest of the archive, the upstream tier, with the same
   profile and `--ignore-default-filter -E 'not default()'`, on a checkout with the submodule and
   the oracle build. The `ci` profile still runs every test in one go. The `spec-oracle` job runs
-  the specification's examples on the oracle, and the `pinning` job runs the pinning reports.
+  the specification's examples on the oracle, and the `pinning` job runs the pinning reports. The `jit` job builds the `jit` feature, runs
+  clippy with it, and runs the JIT's own tests in debug, where the Cranelift verifier checks every
+  loop compiled.
 * The `upstream-interface` CI job needs the submodule and no oracle. It checks the generated
   tables against the pinned sources, the internal routine names, the ABI dump against the pinned
   headers, and the names of `include/` against them.

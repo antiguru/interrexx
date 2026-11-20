@@ -38,3 +38,5 @@ jobs:
         with:
           tool: cargo-deny@0.20.2
       - run: cargo deny check licenses
+      # The `jit` feature's dependencies (Cranelift) are outside the default graph.
+      - run: cargo deny --features interrexx/jit check licenses
