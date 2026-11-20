@@ -208,6 +208,8 @@ impl Interp {
             closed: false,
             exit: None,
         };
+        #[cfg(test)]
+        COMPILED_RUNS.with(|runs| runs.set(runs.get() + 1));
         let answer = compiled.run(registers, &mut driven);
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
         debug_assert!(
@@ -911,3 +913,23 @@ impl Driven<'_, '_> {
         self.leave_from(ran, in_place)
     }
 }
+
+// Test-only instrumentation: how many times compiled passes have run on this
+// thread.
+#[cfg(test)]
+thread_local! {
+    static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
+}
+
+#[cfg(test)]
+fn compiled_runs() -> usize {
+    COMPILED_RUNS.with(Cell::get)
+}
+
+#[cfg(test)]
+fn reset_compiled_runs() {
+    COMPILED_RUNS.with(|runs| runs.set(0));
+}
+
+#[cfg(test)]
+mod tests;
