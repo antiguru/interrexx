@@ -96,6 +96,25 @@ fn a_computed_operand_reads_a_target_the_template_assigned_before_it() {
     assert_eq!(printed, "k| more|\n");
 }
 
+/// **An unset source's `NOVALUE` hook is sent once** when the walk reads the
+/// variable and then hands the clause to the engine: the hook's answer, a
+/// number object, is not its own string value, and the engine takes the
+/// value the walk read rather than reading the variable again.
+#[test]
+fn a_var_source_handed_to_the_engine_sends_the_novalue_hook_once() {
+    let printed = stdout_of(
+        ".local~sent = 0\n\
+         .local~novalue = .hook~new\n\
+         parse var zzunset p ' ' q\n\
+         say p'|'q'|'.local~sent\n\
+         ::class hook\n\
+         ::method novalue\n\
+         .local~sent = .local~sent + 1\n\
+         return 1/3\n",
+    );
+    assert_eq!(printed, "0.333333333||1\n");
+}
+
 /// An unset `PARSE VAR` source raises `NOVALUE` from the walk's own read.
 #[test]
 fn an_unset_var_source_raises_novalue() {

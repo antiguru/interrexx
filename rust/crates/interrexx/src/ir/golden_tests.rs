@@ -565,10 +565,10 @@ fn a_parse_template_compiles_to_its_walk() {
         render(&chunk),
         "0: Clause index=0 end=6\n\
          1: ParseBegin index=0 src=omitted base=0 to=2 opening=Var strings=0\n\
-         2: Load read=Simple at=4 dst=8\n\
-         3: LoadConstant dst=9\n\
-         4: Arith op=+ hint=0 lhs=8 rhs=9 dst=8\n\
-         5: ParseRun index=0 base=0 from=2 to=4 operand=8\n"
+         2: Load read=Simple at=4 dst=5\n\
+         3: LoadConstant dst=6\n\
+         4: Arith op=+ hint=0 lhs=5 rhs=6 dst=5\n\
+         5: ParseRun index=0 base=0 from=2 to=4 operand=5\n"
     );
 }
 

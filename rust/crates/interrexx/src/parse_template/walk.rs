@@ -17,21 +17,21 @@ use interrexx_parse::Instruction;
 use interrexx_parse::InstructionKind;
 
 /// How many registers one compiled walk keeps, from its base.
-pub(crate) const WALK_REGISTERS: u16 = 8;
+pub(crate) const WALK_REGISTERS: u16 = 5;
 
 /// The parse string: a string that is its own string value.
 const SOURCE: u16 = 0;
 /// The number the parse string renders, which a piece covering the whole
 /// string assigns, or `.nil`.
 const ORIGIN: u16 = 1;
-/// [`Cursor`]'s five positions, as small integers.
-const START: u16 = 2;
-const END: u16 = 3;
-const PATTERN_START: u16 = 4;
-const PATTERN_END: u16 = 5;
-const SUBCURRENT: u16 = 6;
+/// Where the last match began and one past where it ended, as small
+/// integers: all of [`Cursor`] an op hands the next. The section and the word
+/// position are not filed, because the entry a run starts at is a trigger,
+/// and every movement and search sets them afresh from these two.
+const PATTERN_START: u16 = 2;
+const PATTERN_END: u16 = 3;
 /// `PARSE ARG`: the argument the next template reads.
-const NEXT_ARGUMENT: u16 = 7;
+const NEXT_ARGUMENT: u16 = 4;
 
 /// A position or count as the small integer a register holds. A string is
 /// far shorter than the range a small integer covers.
@@ -58,6 +58,14 @@ fn parse_of(clause: &Instruction) -> Result<&Parse, Failure> {
         | InstructionKind::Pull(parse) => Ok(parse),
         kind => Err(Loud::instruction(kind).into()),
     }
+}
+
+/// What the opening found: the walk's parse string, in place, with the
+/// number a whole-string piece assigns, or the clause for the template
+/// engine with the source value already in hand.
+enum Opened {
+    Walk(ObjRef, SourceText, Option<ObjRef>),
+    Engine(Option<ObjRef>),
 }
 
 /// One walk in hand: the parse string, the cursor over it, and for `PARSE
@@ -124,11 +132,8 @@ impl Interp {
         let cursor = &walk.cursor;
         registers.set(base + SOURCE, walk.value);
         registers.set(base + ORIGIN, cursor.origin.unwrap_or(ObjRef::NIL));
-        registers.set(base + START, position(cursor.start));
-        registers.set(base + END, position(cursor.end));
         registers.set(base + PATTERN_START, position(cursor.pattern_start));
         registers.set(base + PATTERN_END, position(cursor.pattern_end));
-        registers.set(base + SUBCURRENT, position(cursor.subcurrent));
         registers.set(base + NEXT_ARGUMENT, position(walk.next_argument));
     }
 
@@ -138,11 +143,8 @@ impl Interp {
         let mut walk = self.walk_over(value, at(registers, base, NEXT_ARGUMENT));
         let origin = registers.get(base + ORIGIN);
         walk.cursor.origin = (origin != ObjRef::NIL).then_some(origin);
-        walk.cursor.start = at(registers, base, START);
-        walk.cursor.end = at(registers, base, END);
         walk.cursor.pattern_start = at(registers, base, PATTERN_START);
         walk.cursor.pattern_end = at(registers, base, PATTERN_END);
-        walk.cursor.subcurrent = at(registers, base, SUBCURRENT);
         walk
     }
 
@@ -218,18 +220,14 @@ impl Interp {
     ) -> Result<bool, Failure> {
         let parse = parse_of(clause)?;
         let evaluated = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
-        let Some((first, source, origin)) =
-            self.walked_source(code, parse, evaluated, opening, strings)?
-        else {
-            self.exec_parse(code, parse, evaluated)?;
-            return Ok(false);
-        };
-        // Read once, here, before any target is assigned, so a target that is
-        // the source variable does not change what is parsed
-        // (`r[parse.index.order]`). Rooted for the clause, because that
-        // target is then all that held it, and the pieces built after it
-        // are allocations.
-        self.roots.activity_mut().push_temp(first);
+        let (first, source, origin) =
+            match self.walked_source(code, parse, evaluated, opening, strings)? {
+                Opened::Walk(first, source, origin) => (first, source, origin),
+                Opened::Engine(evaluated) => {
+                    self.exec_parse(code, parse, evaluated)?;
+                    return Ok(false);
+                }
+            };
         let mut cursor = Cursor::new(source.len());
         cursor.origin = origin;
         let mut walk = Walk {
@@ -247,14 +245,11 @@ impl Interp {
     }
 
     /// The first parse string the compiled walk takes, read in place, and
-    /// the number a whole-string piece assigns, or `None` for a clause it
-    /// hands to the template engine: one the compiler handed it, one that
-    /// will trace a line, and one whose parse string is not its own string
-    /// value.
-    #[allow(
-        clippy::type_complexity,
-        reason = "the value, its bytes and its origin, once"
-    )]
+    /// the number a whole-string piece assigns; or, for a clause it hands to
+    /// the template engine, the source value already in hand, which the engine
+    /// takes rather than evaluating or reading it again. The engine has the
+    /// clause where the compiler handed it over, where a line will be traced,
+    /// and where the parse string is not its own string value.
     fn walked_source(
         &mut self,
         code: &Code<'_>,
@@ -262,42 +257,53 @@ impl Interp {
         evaluated: Option<ObjRef>,
         opening: ParseOpening,
         strings: u8,
-    ) -> Result<Option<(ObjRef, SourceText, Option<ObjRef>)>, Failure> {
+    ) -> Result<Opened, Failure> {
         if opening == ParseOpening::Engine {
-            return Ok(None);
+            return Ok(Opened::Engine(evaluated));
         }
         let traced = self.traced_mode();
         if traced.results || traced.intermediates {
-            return Ok(None);
+            return Ok(Opened::Engine(evaluated));
         }
-        let first = match (opening, &parse.source) {
-            (ParseOpening::Value, _) => {
-                evaluated.unwrap_or_else(|| ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL))
-            }
+        let (first, hand_over) = match (opening, &parse.source) {
+            // Held by the register the stream evaluated it into, for the
+            // whole clause.
+            (ParseOpening::Value, _) => (
+                evaluated.unwrap_or_else(|| ObjRef::inline_text(b"").unwrap_or(ObjRef::NIL)),
+                evaluated,
+            ),
             // A simple name, which the compiler judged: its read is the
-            // variable's value and `NOVALUE` for an unset one.
+            // variable's value and `NOVALUE` for an unset one, whose
+            // `.local~novalue` hook the read has then sent. Read once, here,
+            // before any target is assigned, so a target that is the source
+            // variable does not change what is parsed (`r[parse.index.order]`);
+            // and rooted for the clause, because that target is then all that
+            // held it, and the pieces built after it are allocations.
             (ParseOpening::Var, ParseSource::Var(id)) => {
                 let (value, novalue) = self.read(code, *id);
                 self.novalue_check(novalue, value)?;
-                value
+                self.roots.activity_mut().push_temp(value);
+                (value, Some(value))
             }
             // Every argument a template of this clause will read, judged
             // before the first is taken, since a later one that needs
-            // rendering could no longer hand the clause back.
+            // rendering could no longer hand the clause back. Held by the
+            // call's own argument list.
             (ParseOpening::Arg, _) => {
                 if (0..usize::from(strings)).any(|at| {
                     self.plain_parse_source(self.argument_parse_value(at))
                         .is_none()
                 }) {
-                    return Ok(None);
+                    return Ok(Opened::Engine(evaluated));
                 }
-                self.argument_parse_value(0)
+                (self.argument_parse_value(0), evaluated)
             }
-            _ => return Ok(None),
+            _ => return Ok(Opened::Engine(evaluated)),
         };
-        Ok(self
-            .plain_parse_source(first)
-            .map(|(source, origin)| (first, source, origin)))
+        Ok(match self.plain_parse_source(first) {
+            Some((source, origin)) => Opened::Walk(first, source, origin),
+            None => Opened::Engine(hand_over),
+        })
     }
 
     /// [`crate::ir::Op::ParseRun`]: template entries `from..to` of the
