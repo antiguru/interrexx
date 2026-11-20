@@ -376,7 +376,7 @@ impl Host for Driven<'_, '_> {
     }
 
     fn open(&mut self, pc: u32) -> u32 {
-        let Some(&Op::Clause { index, end }) =
+        let Some(&(Op::Clause { index, end } | Op::CallingClause { index, end })) =
             self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
         else {
             return self.stop(JitExit::Fail(
@@ -535,7 +535,7 @@ impl Host for Driven<'_, '_> {
     }
 
     fn adopt(&mut self, pc: u32) -> u32 {
-        let Some(&Op::Clause { index, end }) =
+        let Some(&(Op::Clause { index, end } | Op::CallingClause { index, end })) =
             self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
         else {
             return self.stop(JitExit::Fail(
