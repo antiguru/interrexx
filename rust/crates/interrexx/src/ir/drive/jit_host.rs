@@ -66,6 +66,15 @@ pub(super) enum JitExit {
     /// A clause answered this `Flow`, settled from this op.
     Flow(Flow, u32),
     Fail(Failure),
+    /// A call op parked the open clause for its callee: what
+    /// `clause_region!` hands `Interp::park_call`.
+    Parked {
+        park: Park,
+        entry: SteppedClause,
+        clause_pc: u32,
+        end: u32,
+        index: usize,
+    },
 }
 
 /// The clause a compiled pass has open.
@@ -88,6 +97,9 @@ struct Driven<'a, 'c> {
     do_index: usize,
     body_start: u32,
     open: Option<Open>,
+    /// Whether the clause's last op closed it, so its `Step::Close` has
+    /// nothing left to do.
+    closed: bool,
     exit: Option<JitExit>,
 }
 
@@ -142,6 +154,7 @@ impl Interp {
             do_index: do_index as usize,
             body_start,
             open: None,
+            closed: false,
             exit: None,
         };
         let answer = compiled.run(registers, &mut driven);
@@ -169,7 +182,9 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
     let mut steps = Vec::new();
     let mut pc = body_start;
     while pc < loop_pc {
-        let Some(&Op::Clause { index, end }) = chunk.ops_in(pc, pc + 1)?.first() else {
+        let (Some(&Op::Clause { index, end }) | Some(&Op::CallingClause { index, end })) =
+            chunk.ops_in(pc, pc + 1)?.first()
+        else {
             return None;
         };
         if end <= pc || end > loop_pc {
@@ -242,10 +257,29 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
                 {
                     Step::Store { pc: at, slot, src }
                 }
-                // Ops that neither park, jump nor trace: what `op` runs.
-                Op::Load { .. } | Op::Binary { .. } | Op::Prefix { .. } | Op::Store { .. } => {
-                    Step::Op { pc: at }
-                }
+                // Ops that neither jump nor trace, which `general` runs; one
+                // that parks the clause for a callee hands it to the driver.
+                Op::Load { .. }
+                | Op::Binary { .. }
+                | Op::Prefix { .. }
+                | Op::Store { .. }
+                | Op::Exec { .. }
+                | Op::PushArg { .. }
+                | Op::CallArgs { .. }
+                | Op::CallExpr { .. }
+                | Op::CallNamed { .. }
+                | Op::Call { .. }
+                | Op::Send { .. }
+                | Op::List { .. }
+                | Op::Say { .. }
+                | Op::Queue { .. }
+                | Op::ParseBegin { .. }
+                | Op::ParseRun { .. }
+                | Op::Message { .. }
+                | Op::EvalExpr { .. }
+                | Op::Escape { .. }
+                | Op::Return { .. }
+                | Op::Signal { .. } => Step::Op { pc: at },
                 _ => return None,
             });
         }
@@ -270,6 +304,12 @@ impl Driven<'_, '_> {
     /// Closes the open clause around `ran`: `clause_region!`'s path for a
     /// region that did not end plainly.
     fn leave(&mut self, ran: Result<RegionEnd, Failure>) -> u32 {
+        self.leave_from(ran, false)
+    }
+
+    /// [`Driven::leave`], carrying on in compiled code where `in_place` and
+    /// the clause closed with the `Flow::Next` its region answered.
+    fn leave_from(&mut self, ran: Result<RegionEnd, Failure>, in_place: bool) -> u32 {
         let Some(open) = self.open.take() else {
             return self.stop(JitExit::Fail(
                 Loud::op_not_driven("a close with no clause").into(),
@@ -301,6 +341,10 @@ impl Driven<'_, '_> {
             ran,
         ) {
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) => JitExit::At(next),
+            Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(Flow::Next)))) if in_place => {
+                self.closed = true;
+                return CONTINUE;
+            }
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(flow)))) => JitExit::Flow(flow, open.end),
             Ok(ClauseOutcome::Ran(Err(failure))) | Err(failure) => JitExit::Fail(failure),
             Ok(ClauseOutcome::Ended(exit)) => JitExit::Flow(Flow::Exit(exit.value()), open.pc),
@@ -381,6 +425,9 @@ impl Host for Driven<'_, '_> {
     }
 
     fn close(&mut self, next: u32) -> u32 {
+        if std::mem::take(&mut self.closed) {
+            return CONTINUE;
+        }
         if self.interp.activity.pending_traps.is_empty() && !self.interp.clause_exits {
             let Some(open) = self.open.take() else {
                 return self.stop(JitExit::Fail(
@@ -558,17 +605,30 @@ impl Driven<'_, '_> {
         let ran: Result<RegionEnd, Failure> = 'cold: {
             let next: u32 = 'region: {
                 let mut header: Option<LoopHeaderValues> = None;
-                let _parked: Park = 'park: {
+                let park: Park = 'park: {
                     region_ops!(
                         interp, code, chunk, registers, source, clause, index, stale, header, end,
                         ops, pc, top, 'cold, 'region, 'park
                     );
                     return CONTINUE;
                 };
-                break 'cold Err(Loud::op_not_driven("a parking op in a compiled pass").into());
+                let Some(open) = self.open.take() else {
+                    break 'cold Err(Loud::op_not_driven("a park with no clause").into());
+                };
+                return self.stop(JitExit::Parked {
+                    park,
+                    entry: open.entry,
+                    clause_pc: open.pc,
+                    end: open.end,
+                    index: open.index,
+                });
             };
             Ok(RegionEnd::At(next))
         };
-        self.leave(ran)
+        // The region's last op answering `Flow::Next` is the clause done, which
+        // the driver settles at `end`: the op after this one, where compiled
+        // code carries on.
+        let in_place = pc + 1 == end && matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)));
+        self.leave_from(ran, in_place)
     }
 }

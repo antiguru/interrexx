@@ -4302,6 +4302,18 @@ impl Interp {
                                         break 'step (flow, next);
                                     }
                                     jit_host::JitExit::Fail(failure) => return Err(failure),
+                                    jit_host::JitExit::Parked {
+                                        park,
+                                        entry,
+                                        clause_pc,
+                                        end,
+                                        index,
+                                    } => {
+                                        self.park_call(
+                                            park, entry, clause_pc, end, index, false, false,
+                                        );
+                                        return Ok(Exit::Parked);
+                                    }
                                 }
                             }
                             // The pass's header clause, counted here so a
