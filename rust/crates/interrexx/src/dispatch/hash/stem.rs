@@ -481,7 +481,7 @@ fn native_stem_index(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"INDEX")?;
-    // Required: a missing item is 93.903 (`r[class.stem.index]`).
+    // Required: a missing item is 93.903 (`r[class.stem.hasitem]`).
     let wanted = super::collection::item_argument(args)?;
     for (name, value) in stem_live(interp, receiver) {
         if super::collection::same_item(interp, wanted, value)? {
