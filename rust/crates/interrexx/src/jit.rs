@@ -201,16 +201,25 @@ extern "C" fn open_helper(ctx: *mut Ctx<'_>, pc: u32) -> u32 {
     bracket(ctx, |host| host.open(pc))
 }
 
-extern "C" fn adopt_helper(ctx: *mut Ctx<'_>, pc: u32) -> u32 {
-    bracket(ctx, |host| host.adopt(pc))
-}
+/// `adopt` names no clause: the op runs in one the host already has open.
+const NO_ADOPT: u32 = u32::MAX;
 
 extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
     bracket(ctx, |host| host.close(next))
 }
 
-extern "C" fn op_helper(ctx: *mut Ctx<'_>, pc: u32) -> u32 {
-    bracket(ctx, |host| host.op(pc))
+/// The op at `pc`, after the host takes over the clause at `adopt` that
+/// generated code opened, unless that is [`NO_ADOPT`]: one call for both.
+extern "C" fn op_helper(ctx: *mut Ctx<'_>, adopt: u32, pc: u32) -> u32 {
+    bracket(ctx, |host| {
+        if adopt != NO_ADOPT {
+            let answer = host.adopt(adopt);
+            if answer != CONTINUE {
+                return answer;
+            }
+        }
+        host.op(pc)
+    })
 }
 
 type Entry = extern "C" fn(*mut Ctx<'_>) -> u32;
@@ -250,6 +259,7 @@ struct Emit<'a, 'b> {
     exit: cranelift_codegen::ir::Block,
     bare: cranelift_codegen::ir::SigRef,
     with_pc: cranelift_codegen::ir::SigRef,
+    with_two: cranelift_codegen::ir::SigRef,
     /// Whether the open clause was opened by generated code and not yet
     /// adopted, which is what makes its close free.
     fast: Variable,
@@ -297,48 +307,42 @@ impl Emit<'_, '_> {
         self.b.switch_to_block(on);
     }
 
-    /// [`Emit::call`] for a helper that may also answer [`BRANCH`], which
-    /// goes on at `branch`.
-    fn call_branching(&mut self, helper: *const (), pc: u32, branch: Block) {
-        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
+    /// Calls `op_helper` for the op at `pc`, adopting the clause at
+    /// `clause_pc` first where generated code opened it, and leaves for `exit`
+    /// unless the answer is CONTINUE or, with `also`, that answer and block.
+    fn call_op(&mut self, clause_pc: Option<u32>, pc: u32, also: Option<(u32, Block)>) {
+        let adopt = match clause_pc {
+            Some(clause_pc) => {
+                let fast = self.b.use_var(self.fast);
+                let clause = self.b.ins().iconst(types::I32, i64::from(clause_pc));
+                let none = self.b.ins().iconst(types::I32, i64::from(NO_ADOPT));
+                self.b.ins().select(fast, clause, none)
+            }
+            None => self.b.ins().iconst(types::I32, i64::from(NO_ADOPT)),
+        };
+        // Whatever the op answers, the clause is the host's from here.
+        let no = self.b.ins().iconst(types::I8, 0);
+        self.b.def_var(self.fast, no);
+        let address = self
+            .b
+            .ins()
+            .iconst(self.pointer, op_helper as *const () as usize as i64);
         let pc = self.b.ins().iconst(types::I32, i64::from(pc));
         let call = self
             .b
             .ins()
-            .call_indirect(self.with_pc, address, &[self.ctx, pc]);
+            .call_indirect(self.with_two, address, &[self.ctx, adopt, pc]);
         let answer = self.b.inst_results(call)[0];
-        let branches = self
-            .b
-            .ins()
-            .icmp_imm_u(IntCC::Equal, answer, i64::from(BRANCH));
-        let other = self.b.create_block();
         let on = self.b.create_block();
-        self.b.ins().brif(branches, branch, &[], other, &[]);
-        self.b.switch_to_block(other);
-        self.b
-            .ins()
-            .brif(answer, self.exit, &[answer.into()], on, &[]);
-        self.b.switch_to_block(on);
-    }
-
-    /// [`Emit::call`] for a helper that may also answer [`JUMP`], which goes
-    /// to `dispatch`.
-    fn call_jumping(&mut self, helper: *const (), pc: u32, dispatch: Block) {
-        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
-        let pc = self.b.ins().iconst(types::I32, i64::from(pc));
-        let call = self
-            .b
-            .ins()
-            .call_indirect(self.with_pc, address, &[self.ctx, pc]);
-        let answer = self.b.inst_results(call)[0];
-        let jumps = self
-            .b
-            .ins()
-            .icmp_imm_u(IntCC::Equal, answer, i64::from(JUMP));
-        let other = self.b.create_block();
-        let on = self.b.create_block();
-        self.b.ins().brif(jumps, dispatch, &[], other, &[]);
-        self.b.switch_to_block(other);
+        if let Some((code, block)) = also {
+            let matches = self
+                .b
+                .ins()
+                .icmp_imm_u(IntCC::Equal, answer, i64::from(code));
+            let other = self.b.create_block();
+            self.b.ins().brif(matches, block, &[], other, &[]);
+            self.b.switch_to_block(other);
+        }
         self.b
             .ins()
             .brif(answer, self.exit, &[answer.into()], on, &[]);
@@ -388,17 +392,7 @@ impl Emit<'_, '_> {
     /// The op at `pc` through the host, from a clause generated code may have
     /// opened itself: adopted first, so the interpreter can close it.
     fn slow_op(&mut self, clause_pc: u32, pc: u32) {
-        let fast = self.b.use_var(self.fast);
-        let adopt = self.b.create_block();
-        let run = self.b.create_block();
-        self.b.ins().brif(fast, adopt, &[], run, &[]);
-        self.b.switch_to_block(adopt);
-        self.call(adopt_helper as *const (), Some(clause_pc));
-        let no = self.b.ins().iconst(types::I8, 0);
-        self.b.def_var(self.fast, no);
-        self.b.ins().jump(run, &[]);
-        self.b.switch_to_block(run);
-        self.call(op_helper as *const (), Some(pc));
+        self.call_op(Some(clause_pc), pc, None);
     }
 
     /// Branches to `slow` unless the window holds slot `slot`, answering the
@@ -489,6 +483,11 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let mut b = FunctionBuilder::new(&mut context.func, &mut builder_context);
         let bare = b.import_signature(helper_signature(false));
         let with_pc = b.import_signature(helper_signature(true));
+        let with_two = {
+            let mut s = helper_signature(true);
+            s.params.push(AbiParam::new(types::I32));
+            b.import_signature(s)
+        };
         let fast = b.declare_var(types::I8);
 
         let entry = b.create_block();
@@ -512,6 +511,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             exit,
             bare,
             with_pc,
+            with_two,
             fast,
             _module: std::marker::PhantomData,
         };
@@ -592,7 +592,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 }
                 Step::EndBranch { pc } => end_branch(&mut e, pc),
                 Step::Between { pc } => {
-                    e.call_jumping(op_helper as *const (), pc, dispatch);
+                    e.call_op(None, pc, Some((JUMP, dispatch)));
                 }
                 Step::Compare {
                     pc,
@@ -1065,18 +1065,8 @@ fn branch(
     e.b.ins().jump(target_block, &[]);
 
     e.b.switch_to_block(slow);
-    let fast = e.b.use_var(e.fast);
-    let adopt = e.b.create_block();
-    let run = e.b.create_block();
-    e.b.ins().brif(fast, adopt, &[], run, &[]);
-    e.b.switch_to_block(adopt);
-    e.call(adopt_helper as *const (), Some(clause_pc));
-    e.b.ins().jump(run, &[]);
-    e.b.switch_to_block(run);
-    let no = e.b.ins().iconst(types::I8, 0);
-    e.b.def_var(e.fast, no);
     let branched = e.b.create_block();
-    e.call_branching(op_helper as *const (), pc, branched);
+    e.call_op(Some(clause_pc), pc, Some((BRANCH, branched)));
     e.b.ins().jump(fall, &[]);
     e.b.switch_to_block(branched);
     e.b.ins().jump(target_block, &[]);
@@ -1104,7 +1094,7 @@ fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
     e.store_native(countdown, layout::COUNTDOWN);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(slow);
-    e.call(op_helper as *const (), Some(pc));
+    e.call_op(None, pc, None);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(join);
 }

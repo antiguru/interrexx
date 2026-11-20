@@ -127,6 +127,9 @@ struct Driven<'a, 'c> {
     jump_to: u32,
     /// Whether [`Host::leave`] works out the loop's quick pass.
     ask_loop: bool,
+    /// The settings the quick pass in the block was worked out under, while
+    /// it stands.
+    loop_key: Option<(u64, u64, crate::trace::TraceMode)>,
     /// Ops per pass the host may run, and the ops it has run: a loop whose
     /// values keep the compiled code's own paths from answering costs more
     /// compiled than driven, so past its budget it is retired.
@@ -202,6 +205,7 @@ impl Interp {
             range,
             jump_to: 0,
             ask_loop: true,
+            loop_key: None,
             budget,
             hosted: 0,
             retire: false,
@@ -672,6 +676,10 @@ impl Host for Driven<'_, '_> {
                     Err(failure) => self.stop(JitExit::Fail(failure)),
                 };
             }
+            Some(&Op::PushArg { src }) => {
+                self.interp.push_call_arg(self.registers, src);
+                return CONTINUE;
+            }
             _ => {}
         }
         // `Op::Load`'s and `Op::Store`'s own fast paths for a simple
@@ -723,21 +731,34 @@ impl Host for Driven<'_, '_> {
     fn leave(&mut self, native: &mut Native) {
         native.jump_to = u64::from(self.jump_to);
         native.countdown = u64::from(self.interp.clause_countdown);
-        native.small_int_bound =
-            crate::value::small_int_bound(self.interp.activation().settings.digits());
         native.steady = u64::from(self.steady());
+        let mode = self.interp.trace_mode();
+        let interp = &*self.interp;
+        let activation = interp.activation();
+        let settings = &activation.settings;
+        let digits = settings.digits();
+        let fuzz = settings.fuzz();
+        native.small_int_bound = crate::value::small_int_bound(digits);
+        native.quick_values = u64::from(fuzz == 0 && !mode.results);
         native.indent_base =
-            (self.interp.activity.activation_indent + self.interp.activity.indent_offset) as u64;
+            (interp.activity.activation_indent + interp.activity.indent_offset) as u64;
+        // The clause the interpreter has running, so that a pass boundary
+        // compiled code takes, which moves only the line and the indent,
+        // leaves the instruction it names as it is.
+        let state = &interp.activity.clause_state;
+        native.clause_index = state.current_clause_index as u64;
+        native.clause_line = state.line() as u64;
+        native.clause_indent = state.current_value_indent as u64;
         // `Op::Load`'s and `Op::Store`'s fast paths reach the slot only for a
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
         // results; the window is offered only where both hold.
-        let frame = self.interp.activation().frame;
-        let window =
-            if self.interp.activation().exposed.is_none() && !self.interp.trace_mode().results {
-                self.interp.roots.top_window(frame)
-            } else {
-                None
-            };
+        let frame = activation.frame;
+        let exposed = activation.exposed.is_some();
+        let window = if !exposed && !mode.results {
+            self.interp.roots.top_window(frame)
+        } else {
+            None
+        };
         // Kept as raw parts and not as the slice: the interpreter writes these
         // slots through `RootSet` while compiled code is suspended in a call,
         // and its `Vec` may move them then, so no reference may outlive this
@@ -747,37 +768,38 @@ impl Host for Driven<'_, '_> {
             Some(window) => (window.as_mut_ptr(), window.len() as u64),
             None => (std::ptr::null_mut(), 0),
         };
-        // The clause the interpreter has running, so that a pass boundary
-        // compiled code takes, which moves only the line and the indent,
-        // leaves the instruction it names as it is.
-        let state = &self.interp.activity.clause_state;
-        native.clause_index = state.current_clause_index as u64;
-        native.clause_line = state.line() as u64;
-        native.clause_indent = state.current_value_indent as u64;
-        let mode = self.interp.trace_mode();
-        native.quick_values =
-            u64::from(self.interp.activation().settings.fuzz() == 0 && !mode.results);
-        native.loop_ready = 0;
         if !self.retire
             && native.passes >= RETIRE_AFTER
             && self.hosted > native.passes * self.budget
         {
             self.retire = true;
         }
-        if self.retire {
-            // Every opening and boundary goes through the host, which leaves.
-            native.steady = 0;
+        if self.retire || native.steady == 0 {
+            // Every opening and boundary goes through the host: a retired
+            // loop leaves there, and an unsteady one is the host's to step.
+            if self.retire {
+                native.steady = 0;
+            }
+            native.loop_ready = 0;
+            self.loop_key = None;
             return;
         }
-        // Asked only where a pass boundary was just crossed, or the run is
-        // starting: any other call clears it, so the next boundary is the
-        // host's, which asks again. A call can change what the answer rests
-        // on (`DIGITS`, the trace setting, the loop's own state), and asking
-        // after every one costs more than the boundary it would save.
-        if std::mem::take(&mut self.ask_loop)
-            && native.steady != 0
-            && let Some(quick) = self.interp.quick_pass(self.do_index)
-        {
+        // **What the quick pass rests on that a call can change**: `DIGITS`
+        // and `FUZZ`, which only this activation's own instructions set, and
+        // the trace setting, which a `TRACE()` call also sets. The loop's own
+        // state changes only at a pass boundary the host takes, which asks
+        // again; the control variable is read from its slot on every pass.
+        let key = (digits, fuzz, mode);
+        if !std::mem::take(&mut self.ask_loop) && self.loop_key == Some(key) {
+            if native.loop_kind == layout::LOOP_CONTROLLED && native.loop_slot >= native.slot_count
+            {
+                native.loop_ready = 0;
+            }
+            return;
+        }
+        native.loop_ready = 0;
+        self.loop_key = None;
+        if let Some(quick) = self.interp.quick_pass(self.do_index) {
             match quick.kind {
                 QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
                     native.loop_ready = 1;
@@ -799,6 +821,9 @@ impl Host for Driven<'_, '_> {
             }
             native.loop_line = quick.line as u64;
             native.loop_indent = quick.open_indent as u64;
+            if native.loop_ready != 0 {
+                self.loop_key = Some(key);
+            }
         }
     }
 
