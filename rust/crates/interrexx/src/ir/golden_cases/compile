@@ -1263,3 +1263,84 @@ za = (zb = zc) || zd
 6: Store index=0 at=0 src=0
 registers: 2
 consts:
+
+# A `WHILE` that sends is a test region between the header's region and the
+# body: `LoopTest`, the condition's ops at slot 65535, then `LoopTested`.
+compile
+do while s~available
+  say s~item
+end
+----
+0: Clause index=0 end=2
+1: LoopRun index=0
+2: LoopTest index=0 end=6
+3: Load read=Simple at=0 dst=0
+4: Send site=0 recv=0 argc=0 dst=0 form=Value
+5: LoopTested index=0 src=0
+6: CallingClause index=1 end=10
+7: Load read=Simple at=0 dst=1
+8: Send site=1 recv=1 argc=0 dst=1 form=Value
+9: Say index=1 src=1
+10: LoopNext index=0
+registers: 2
+consts:
+
+# An `UNTIL` that calls has the same region, which its first pass jumps over.
+compile
+do until f(n) > 3
+  n = n + 1
+end
+----
+0: Clause index=0 end=2
+1: LoopRun index=0
+2: LoopTest index=0 end=9
+3: Load read=Simple at=0 dst=1
+4: PushArg src=1
+5: CallArgs slot=65535 path=root.L site=0 argc=1 dst=0
+6: LoadConstant dst=1
+7: Binary op=> lhs=0 rhs=1 dst=0
+8: LoopTested index=0 src=0
+9: Clause index=1 end=14
+10: Load read=Simple at=0 dst=1
+11: LoadConstant dst=2
+12: Arith op=+ hint=0 lhs=1 rhs=2 dst=1
+13: Store index=1 at=0 src=1
+14: LoopNext index=0
+registers: 3
+consts:
+
+# A condition of reads and operators stays in the side table.
+compile
+do while n < 3
+  n = n + 1
+end
+----
+0: Clause index=0 end=2
+1: LoopRun index=0
+2: Clause index=1 end=7
+3: Load read=Simple at=0 dst=1
+4: LoadConstant dst=2
+5: Arith op=+ hint=0 lhs=1 rhs=2 dst=1
+6: Store index=1 at=0 src=1
+7: LoopNext index=0
+registers: 3
+consts:
+
+# The test region carries no echo under `TRACE I`, which walks the condition.
+compile trace=i
+do while s~available
+  nop
+end
+----
+0: Clause index=0 end=3
+1: TraceClause index=0
+2: LoopRun index=0
+3: LoopTest index=0 end=7
+4: Load read=Simple at=0 dst=0
+5: Send site=0 recv=0 argc=0 dst=0 form=Value
+6: LoopTested index=0 src=0
+7: Clause index=1 end=9
+8: TraceClause index=1
+9: LoopNext index=0
+registers: 1
+consts:

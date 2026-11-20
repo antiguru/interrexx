@@ -301,6 +301,14 @@ impl Interp {
         Ok(DeadlineCounted(()))
     }
 
+    /// Hands back the count `counted` stands for, for a clause that another
+    /// op counts as it opens it.
+    #[inline(always)]
+    pub(crate) fn uncount_clause(&mut self, counted: DeadlineCounted) {
+        let DeadlineCounted(()) = counted;
+        self.clause_countdown += 1;
+    }
+
     /// Reads the clock and either ends the run or reloads the countdown and
     /// serves the requests pending.
     #[cold]
@@ -417,6 +425,17 @@ impl Interp {
         ran: Result<T, Failure>,
     ) -> Result<ClauseOutcome<T>, Failure> {
         let ClauseEntry(()) = entry;
+        self.clause_boundary(ran)
+    }
+
+    /// The boundary [`Interp::leave_clause`] runs, for a clause whose entry
+    /// is held by a region that closes without one: a loop's header test,
+    /// whose region closes as its `DO` instruction's does.
+    #[inline(always)]
+    pub(crate) fn clause_boundary<T: ClauseValue>(
+        &mut self,
+        ran: Result<T, Failure>,
+    ) -> Result<ClauseOutcome<T>, Failure> {
         let Ok(value) = &ran else {
             // A clause that is unwinding never reached a boundary, so it
             // delivers nothing.

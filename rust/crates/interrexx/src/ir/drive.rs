@@ -27,10 +27,10 @@ use crate::{Code, Failure, Interp, Loud, Raised};
 use super::counters::{
     arith_hint_skips, call_site_hits, clause_op_entries, condition_runs, const_builds,
     count_arith_hint_skip, count_call_site_hit, count_clause_op_entry, count_condition_run,
-    count_const_build, count_exec_split, count_load_constant_build, count_run_chunk_entry,
-    count_stackless_entry, count_trace_op_echo, exec_splits, frame_floor_high_water,
-    load_constant_builds, record_frame_floor, run_chunk_entries, stackless_entries,
-    trace_op_echoes,
+    count_const_build, count_exec_split, count_load_constant_build, count_loop_test,
+    count_run_chunk_entry, count_stackless_entry, count_trace_op_echo, exec_splits,
+    frame_floor_high_water, load_constant_builds, loop_tests, record_frame_floor,
+    run_chunk_entries, stackless_entries, trace_op_echoes,
 };
 #[cfg(test)]
 pub(crate) use super::counters::{counting, resume_counters, suspend_counters};
@@ -133,6 +133,16 @@ enum Deliver {
     /// A `FORWARD CONTINUE`'s answer, as `RESULT`, its `>>>` line traced at
     /// the clause's value indent, which resuming the clause restores.
     ForwardContinue,
+}
+
+/// What [`Interp::loop_test_entry`] made of a loop's header test region.
+enum TestEntry {
+    /// The region, opened, to run from the op after its `Op::LoopTest`.
+    Region(ParkedCall),
+    /// The header ended the loop before its condition was needed.
+    Done(Flow),
+    /// The slice ended at the region, which runs afresh from its opening op.
+    Slice,
 }
 
 /// What [`Interp::exec_suspends`] makes of an [`Op::Exec`] outcome other
@@ -348,6 +358,8 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::LoopHeaderValue { .. } => "LoopHeaderValue",
         Op::LoopRun { .. } => "LoopRun",
         Op::LoopNext { .. } => "LoopNext",
+        Op::LoopTest { .. } => "LoopTest",
+        Op::LoopTested { .. } => "LoopTested",
         Op::Clause { .. } => "Clause",
         Op::CallingClause { .. } => "CallingClause",
         Op::TraceClause { .. } => "TraceClause",
@@ -1686,7 +1698,24 @@ macro_rules! region_ops {
                             $self.activity
                                 .frames
                                 .push(Frame::loop_pass(body_start, end_index));
-                            break $region $end;
+                            // Past the loop's test region where it has one.
+                            break $region $self
+                                .activity
+                                .flat_top
+                                .as_ref()
+                                .map_or($end, |flat| flat.op_body);
+                        }
+                        // The first test is the loop's test region's, which
+                        // the region's end leaves the counter at.
+                        Ok(crate::run::FlatStart::Test {
+                            body_start,
+                            end_index,
+                            test,
+                        }) => {
+                            $self.activity
+                                .frames
+                                .push(Frame::loop_pass(body_start, end_index));
+                            break $region test;
                         }
                         Ok(crate::run::FlatStart::Ended(flow)) => {
                             break $cold Ok(RegionEnd::Flowed(flow));
@@ -1716,6 +1745,27 @@ macro_rules! region_ops {
                 }
                 Op::CallingClause { .. } => {
                     break $cold Err(Loud::op_not_driven("CallingClause").into());
+                }
+                Op::LoopTest { .. } => {
+                    break $cold Err(Loud::op_not_driven("LoopTest").into());
+                }
+                // The end of a loop's header test region: the pass it
+                // decided, from the condition's value, and the header
+                // clause's boundary. A loop that is over leaves its frame
+                // here, as `Op::LoopNext` leaves it when its step is.
+                Op::LoopTested { $index, src } => {
+                    debug_assert_names_the_clause(
+                        $code, *$index, $clause, "LoopTested",
+                    );
+                    debug_assert!(
+                        $chunk.holds_register(*src),
+                        "op reads register {src} outside the region the chunk \
+                     reserved"
+                    );
+                    match $self.loop_tested_op($code, $source, $chunk, $registers, *src) {
+                        Ok(op_body) => break $region op_body,
+                        Err(ended) => break $cold ended,
+                    }
                 }
                 Op::EnterWhen { .. } => {
                     break $cold Err(Loud::op_not_driven("EnterWhen").into());
@@ -1977,6 +2027,9 @@ macro_rules! clause_region {
                 } else {
                     ran
                 };
+                if ran.is_err() {
+                    $self.blame_failed_test($code, $chunk, $clause_pc, $source);
+                }
                 break 'arm match $self
                     .leave_stepped_clause($entry, $code, $index, $clause, $source, ran)?
                 {
@@ -2583,6 +2636,95 @@ impl Interp {
         Ok(ObjRef::NIL)
     }
 
+    /// A loop's header test region at op `pc`, which a pass boundary jumped
+    /// to: its clause counted and opened, as a clause region is, though its
+    /// echo, line and indent are the boundary's. The region is handed back as
+    /// a parked one, which the driver resumes at the op after
+    /// [`Op::LoopTest`] the way it resumes a region a callee returned to.
+    #[cold]
+    #[inline(never)]
+    fn loop_test_entry(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        source: Option<&ProgramSource>,
+        pc: u32,
+        top: bool,
+    ) -> Result<TestEntry, Failure> {
+        let counted = match self.count_clause_against_deadline(top) {
+            Ok(counted) => counted,
+            Err(Failure::Slice) => return Ok(TestEntry::Slice),
+            Err(failure) => return Err(failure),
+        };
+        let Some(&Op::LoopTest { index, end }) = chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        else {
+            return Err(Loud::op_not_driven("LoopTest").into());
+        };
+        match self.open_loop_test(code, source, counted)? {
+            crate::run::TestOpen::Run(opened) => {
+                #[cfg(test)]
+                count_loop_test();
+                let sink = self.chunk_trace();
+                Ok(TestEntry::Region(ParkedCall {
+                    clause_pc: pc,
+                    at: pc + 1,
+                    end,
+                    index: index as usize,
+                    entry: self.enter_loop_test_clause(opened),
+                    stale: chunk.trace().clause_echoes() != sink.clause_echoes(),
+                    debugging: sink.debugging(),
+                    header: None,
+                    deliver: Deliver::Exec,
+                }))
+            }
+            crate::run::TestOpen::Done(flow) => Ok(TestEntry::Done(flow)),
+        }
+    }
+
+    /// A failure of the region opened at `clause_pc`, blamed by the loop
+    /// whose header test the region is ([`Op::LoopTest`]), and by nothing
+    /// for any other region.
+    #[cold]
+    #[inline(never)]
+    fn blame_failed_test(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        clause_pc: u32,
+        source: Option<&ProgramSource>,
+    ) {
+        if let Some(Op::LoopTest { .. }) = chunk
+            .ops_in(clause_pc, clause_pc + 1)
+            .and_then(<[Op]>::first)
+        {
+            self.blame_loop_test_failure(code, source);
+        }
+    }
+
+    /// [`Op::LoopTested`]: the body's first op for another pass, or the
+    /// region's answer, the loop's `Flow` once its frame is closed or a
+    /// failure.
+    #[cold]
+    #[inline(never)]
+    fn loop_tested_op(
+        &mut self,
+        code: &Code<'_>,
+        source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        src: u16,
+    ) -> Result<u32, Result<RegionEnd, Failure>> {
+        let value = registers.get(src);
+        match self.loop_tested(code, source, chunk, registers, value) {
+            Ok(crate::run::FlatStep::Body(op_body)) => Ok(op_body),
+            Ok(crate::run::FlatStep::Done(flow)) => {
+                self.activity.frames.pop();
+                Err(Ok(RegionEnd::Flowed(flow)))
+            }
+            Err(failure) => Err(Err(failure)),
+        }
+    }
+
     /// The `>M>` line a send of `name` that answered `value` owes.
     #[cold]
     #[inline(never)]
@@ -2795,6 +2937,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         source: Option<&ProgramSource>,
         arrival: Flow,
     ) -> Result<crate::run::FlatStep, Failure> {
@@ -2814,7 +2957,7 @@ impl Interp {
             .flat_top
             .as_ref()
             .map(|flat| (flat.do_indent, flat.loop_indent));
-        let step = self.flat_loop_step_top(code, source, chunk, None, arrival, |it| {
+        let step = self.flat_loop_step_top(code, source, chunk, registers, arrival, |it| {
             it.count_clause_against_deadline(false)
         })?;
         let Some(index) = iterated else {
@@ -3028,6 +3171,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         source: Option<&ProgramSource>,
         base: usize,
         len: usize,
@@ -3036,7 +3180,7 @@ impl Interp {
     ) -> Result<Exit, Failure> {
         let sent = self.finish_send(ended);
         let ran = self.settle_parked_forward(parked.deliver, sent);
-        self.leave_parked(code, chunk, source, base, len, parked, ran)
+        self.leave_parked(code, chunk, registers, source, base, len, parked, ran)
     }
 
     /// The `FORWARD` a parked region answers through `deliver`, given what
@@ -3062,6 +3206,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         base: usize,
         pc: u32,
         start: usize,
@@ -3085,7 +3230,7 @@ impl Interp {
         };
         let flow = self.leave_branch(code, &frame, Flow::Next)?;
         Ok(
-            match self.settle(code, chunk, base, flow, pc, start, end, source)? {
+            match self.settle(code, chunk, registers, base, flow, pc, start, end, source)? {
                 Settled::At(target) => BranchEnd::At(target),
                 Settled::Escaped(other) => BranchEnd::Escaped(other),
             },
@@ -3282,6 +3427,7 @@ impl Interp {
                                             Deliver::Flow(base_indent) => self.resume_call(
                                                 code,
                                                 chunk,
+                                                registers,
                                                 source,
                                                 base,
                                                 len,
@@ -3636,6 +3782,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         source: Option<&ProgramSource>,
         base: usize,
         len: usize,
@@ -3650,7 +3797,7 @@ impl Interp {
             .finish_call(ended)
             .and_then(|ended| self.settle_call_result(ended, base_indent))
             .map(RegionEnd::Flowed);
-        self.leave_parked(code, chunk, source, base, len, parked, ran)
+        self.leave_parked(code, chunk, registers, source, base, len, parked, ran)
     }
 
     /// The level [`Interp::drive`] has just taken back from
@@ -3687,7 +3834,8 @@ impl Interp {
             Deliver::Flow(_) => Err(Loud::op_not_driven("a parked CALL resumed mid-region").into()),
             Deliver::Exec => Err(Loud::op_not_driven("a parked instruction with a callee").into()),
             Deliver::ForwardReturn | Deliver::ForwardContinue => {
-                return self.resume_forward(code, chunk, source, base, len, parked, ended);
+                return self
+                    .resume_forward(code, chunk, registers, source, base, len, parked, ended);
             }
         };
         match delivered {
@@ -3703,7 +3851,16 @@ impl Interp {
                 NO_GRANT,
                 Some(parked),
             ),
-            Err(failure) => self.leave_parked(code, chunk, source, base, len, parked, Err(failure)),
+            Err(failure) => self.leave_parked(
+                code,
+                chunk,
+                registers,
+                source,
+                base,
+                len,
+                parked,
+                Err(failure),
+            ),
         }
     }
 
@@ -3776,11 +3933,11 @@ impl Interp {
                 let ran = sent
                     .and_then(|value| self.settle_call_result(Ended::Returned(value), base_indent))
                     .map(RegionEnd::Flowed);
-                return self.leave_parked(code, chunk, source, base, len, parked, ran);
+                return self.leave_parked(code, chunk, registers, source, base, len, parked, ran);
             }
             Deliver::ForwardReturn | Deliver::ForwardContinue => {
                 let ran = self.settle_parked_forward(parked.deliver, sent);
-                return self.leave_parked(code, chunk, source, base, len, parked, ran);
+                return self.leave_parked(code, chunk, registers, source, base, len, parked, ran);
             }
         };
         let mut parked = parked;
@@ -3801,7 +3958,16 @@ impl Interp {
                 NO_GRANT,
                 Some(parked),
             ),
-            Err(failure) => self.leave_parked(code, chunk, source, base, len, parked, Err(failure)),
+            Err(failure) => self.leave_parked(
+                code,
+                chunk,
+                registers,
+                source,
+                base,
+                len,
+                parked,
+                Err(failure),
+            ),
         }
     }
 
@@ -3816,6 +3982,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         source: Option<&ProgramSource>,
         base: usize,
         len: usize,
@@ -3838,6 +4005,9 @@ impl Interp {
         } else {
             ran
         };
+        if ran.is_err() {
+            self.blame_failed_test(code, chunk, clause_pc, source);
+        }
         let (flow, next) =
             match self.leave_stepped_clause(entry, code, index, clause, source, ran)? {
                 ClauseOutcome::Ran(region) => match region? {
@@ -3847,7 +4017,7 @@ impl Interp {
                 ClauseOutcome::Ended(exit) => (Flow::Exit(exit.value()), clause_pc),
             };
         Ok(
-            match self.settle(code, chunk, base, flow, next, 0, len, source)? {
+            match self.settle(code, chunk, registers, base, flow, next, 0, len, source)? {
                 Settled::At(pc) => Exit::At(pc),
                 Settled::Escaped(other) => Exit::Flow(other),
             },
@@ -4109,9 +4279,9 @@ impl Interp {
                             }
                             continue 'ops;
                         }
-                        match self
-                            .leave_ended_select_branch(code, chunk, base, pc, start, end, source)?
-                        {
+                        match self.leave_ended_select_branch(
+                            code, chunk, registers, base, pc, start, end, source,
+                        )? {
                             BranchEnd::At(target) => {
                                 pc = target;
                                 continue 'ops;
@@ -4209,7 +4379,7 @@ impl Interp {
                         }
                         Op::EndWhen => {
                             match self.leave_ended_select_branch(
-                                code, chunk, base, pc, start, end, source,
+                                code, chunk, registers, base, pc, start, end, source,
                             )? {
                                 BranchEnd::At(target) => {
                                     pc = target;
@@ -4233,6 +4403,25 @@ impl Interp {
                             self.activity.frames.push(Frame::select(frame));
                             pc += 1;
                             continue 'ops;
+                        }
+                        // A loop's header test region, which a pass
+                        // boundary jumped to: counted and opened here, like
+                        // a clause, though its echo, line and indent are the
+                        // boundary's. The condition's ops and `LoopTested`
+                        // run as the region's ops.
+                        Op::LoopTest { .. } => {
+                            match self.loop_test_entry(code, chunk, source, pc, TOP)? {
+                                TestEntry::Region(parked) => {
+                                    resume = Some(parked);
+                                    pc = u32::MAX;
+                                    continue 'ops;
+                                }
+                                TestEntry::Done(flow) => {
+                                    self.activity.frames.pop();
+                                    break 'step (flow, pc);
+                                }
+                                TestEntry::Slice => return Ok(Exit::Slice(pc)),
+                            }
                         }
                         // The bottom of a flattened pass, reached by the
                         // body falling out of its last clause into the `END`'s own op.
@@ -4291,7 +4480,7 @@ impl Interp {
                                 code,
                                 source,
                                 chunk,
-                                Some(registers),
+                                registers,
                                 Flow::Next,
                                 |_| Ok(counted),
                             )? {
@@ -4334,7 +4523,7 @@ impl Interp {
                 "a clause left the activation stack changed, so this loop's `code` and its `pc` \
                  no longer describe the same frame"
             );
-            match self.settle(code, chunk, base, flow, next, start, end, source)? {
+            match self.settle(code, chunk, registers, base, flow, next, start, end, source)? {
                 Settled::At(target) => pc = target,
                 Settled::Escaped(other) => return Ok(Exit::Flow(other)),
             }
@@ -4379,6 +4568,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         chunk: &Chunk,
+        registers: RegFrame<'_>,
         base: usize,
         mut flow: Flow,
         next: u32,
@@ -4443,7 +4633,9 @@ impl Interp {
                         // resumes at the body's first op -- the same place
                         // `Op::LoopNext` resumes a pass that fell through.
                         FrameKind::Loop => {
-                            match self.flat_loop_step_escaped(code, chunk, source, other)? {
+                            match self
+                                .flat_loop_step_escaped(code, chunk, registers, source, other)?
+                            {
                                 crate::run::FlatStep::Body(op_body) => {
                                     self.activity.frames.push(Frame {
                                         op_end: u32::MAX,

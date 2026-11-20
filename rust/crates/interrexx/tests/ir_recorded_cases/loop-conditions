@@ -1,0 +1,456 @@
+# A `WHILE`/`UNTIL` condition that calls or sends runs from the loop's test
+# region; `TRACE I` walks it. Each stanza answers what the walked condition
+# answered.
+
+# a sending WHILE re-tested at the DO, after an END and after an ITERATE,
+# under trace r: the `>K>` of each test follows the method's own clauses
+program
+trace r
+o = .c~new
+do while o~more
+  if o~n = 2 then iterate
+  say o~n
+end
+exit
+::class c
+::method init
+  expose n
+  n = 0
+::method more
+  expose n
+  n = n + 1
+  return n < 4
+::method n
+  expose n
+  return n
+----
+rc> 0
+out> 1
+out> 3
+err>      2 *-* o = .c~new
+err>        >>>   "a C"
+err>      3 *-* do while o~more
+err>        >K>     "WHILE" => "1"
+err>      4 *-*   if o~n = 2 
+err>        >>>     "0"
+err>      5 *-*   say o~n
+err>        >>>     "1"
+err>      6 *-* end
+err>      3 *-* do while o~more
+err>        >K>     "WHILE" => "1"
+err>      4 *-*   if o~n = 2 
+err>        >>>     "1"
+err>      4 *-*     then
+err>      4 *-*       iterate
+err>      3 *-* do while o~more
+err>        >K>     "WHILE" => "1"
+err>      4 *-*   if o~n = 2 
+err>        >>>     "0"
+err>      5 *-*   say o~n
+err>        >>>     "3"
+err>      6 *-* end
+err>      3 *-* do while o~more
+err>        >K>     "WHILE" => "0"
+err>      7 *-* exit
+
+# the same loop under trace i, which walks the condition
+program
+trace i
+o = .c~new
+do while o~more
+  if o~n = 2 then iterate
+end
+exit
+::class c
+::method init
+  expose n
+  n = 0
+::method more
+  expose n
+  n = n + 1
+  return n < 3
+::method n
+  expose n
+  return n
+----
+rc> 0
+err>      2 *-* o = .c~new
+err>        >E>   .C => "The C class"
+err>        >M>   "NEW" => "a C"
+err>        >>>   "a C"
+err>        >=>   O <= "a C"
+err>      3 *-* do while o~more
+err>        >V>     O => "a C"
+err>        >M>     "MORE" => "1"
+err>        >K>     "WHILE" => "1"
+err>      4 *-*   if o~n = 2 
+err>        >V>     O => "a C"
+err>        >M>     "N" => "1"
+err>        >L>     "2"
+err>        >O>     "=" => "0"
+err>        >>>     "0"
+err>      5 *-* end
+err>      3 *-* do while o~more
+err>        >V>     O => "a C"
+err>        >M>     "MORE" => "1"
+err>        >K>     "WHILE" => "1"
+err>      4 *-*   if o~n = 2 
+err>        >V>     O => "a C"
+err>        >M>     "N" => "2"
+err>        >L>     "2"
+err>        >O>     "=" => "1"
+err>        >>>     "1"
+err>      4 *-*     then
+err>      4 *-*       iterate
+err>      3 *-* do while o~more
+err>        >V>     O => "a C"
+err>        >M>     "MORE" => "0"
+err>        >K>     "WHILE" => "0"
+err>      6 *-* exit
+
+# an UNTIL calling a function, skipped on the first pass, under trace r
+program
+trace r
+k = 0
+do until f(k) > 2
+  k = k + 1
+end
+say k
+exit
+f: return arg(1)
+----
+rc> 0
+out> 3
+err>      2 *-* k = 0
+err>        >>>   "0"
+err>      3 *-* do until f(k) > 2
+err>      4 *-*   k = k + 1
+err>        >>>     "1"
+err>      5 *-* end
+err>      3 *-* do until f(k) > 2
+err>      8 *-*     f:
+err>      8 *-*     return arg(1)
+err>        >>>       "1"
+err>        >K>     "UNTIL" => "0"
+err>      4 *-*   k = k + 1
+err>        >>>     "2"
+err>      5 *-* end
+err>      3 *-* do until f(k) > 2
+err>      8 *-*     f:
+err>      8 *-*     return arg(1)
+err>        >>>       "2"
+err>        >K>     "UNTIL" => "0"
+err>      4 *-*   k = k + 1
+err>        >>>     "3"
+err>      5 *-* end
+err>      3 *-* do until f(k) > 2
+err>      8 *-*     f:
+err>      8 *-*     return arg(1)
+err>        >>>       "3"
+err>        >K>     "UNTIL" => "1"
+err>      6 *-* say k
+err>        >>>   "3"
+err>      7 *-* exit
+
+# a raise from a send in the middle of the DO's first test is blamed on the DO
+program
+o = .c~new
+do while 1 & o~bad
+  say 'never'
+end
+exit
+::class c
+::method bad
+  raise syntax 40.1
+----
+rc> 216
+err>      8 *-* raise syntax 40.1
+err>      2 *-*   do while 1 & o~bad
+err> Error 40 running /nonexistent/ir-dual-case.rex line 8:
+err> Error 40.1:
+
+# a non-logical answer at the test after an END is blamed on the END
+program
+o = .c~new
+do while o~ok
+  say o~n
+end
+exit
+::class c
+::method init
+  expose n
+  n = 0
+::method n
+  expose n
+  return n
+::method ok
+  expose n
+  n = n + 1
+  if n = 3 then return 'nope'
+  return 1
+----
+rc> 222
+out> 1
+out> 2
+err>      4 *-*   end
+err> Error 34 running /nonexistent/ir-dual-case.rex line 4:
+err> Error 34.3:
+
+# a raise at the test after an ITERATE is blamed on the ITERATE
+program
+o = .c~new
+do while o~ok
+  if o~n = 2 then iterate
+  say o~n
+end
+exit
+::class c
+::method init
+  expose n
+  n = 0
+::method n
+  expose n
+  return n
+::method ok
+  expose n
+  n = n + 1
+  if n = 2 then return 1
+  if n = 3 then return 1 + 'a'
+  return 1
+----
+rc> 215
+out> 1
+err>     18 *-*     return 1 + 'a'
+err>      3 *-*   iterate
+err> Error 41 running /nonexistent/ir-dual-case.rex line 18:
+err> Error 41.1:
+
+# a non-logical UNTIL is blamed on the END, under trace r
+program
+trace r
+k = 0
+do until f(k)
+  k = k + 1
+end
+exit
+f: return arg(1) + 1
+----
+rc> 222
+err>      2 *-* k = 0
+err>        >>>   "0"
+err>      3 *-* do until f(k)
+err>      4 *-*   k = k + 1
+err>        >>>     "1"
+err>      5 *-* end
+err>      3 *-* do until f(k)
+err>      7 *-*     f:
+err>      7 *-*     return arg(1) + 1
+err>        >>>       "2"
+err>        >K>     "UNTIL" => "2"
+err>      5 *-*   end
+err> Error 34 running /nonexistent/ir-dual-case.rex line 5:
+err> Error 34.4:
+
+# a USER condition the sent method raises is not the caller's to trap, so it
+# ends the program as 91.999, blamed on the END whose test sent it
+program
+call on user zz name h
+o = .c~new
+do while o~more
+  say 'pass'
+end
+say 'after'
+exit
+h:
+say 'handler' sigl
+return
+::class c
+::method init
+  expose n
+  n = 0
+::method more
+  expose n
+  n = n + 1
+  if n = 2 then raise user zz
+  return n < 3
+----
+rc> 165
+out> pass
+err>      5 *-*   end
+err> Error 91 running /nonexistent/ir-dual-case.rex line 5:
+err> Error 91.999:
+
+# a LEAVE out of an UNTIL loop, and a NOVALUE in an argument of the send
+program
+signal on novalue
+o = .c~new
+do until o~id(1)
+  leave
+end
+do while o~id(zq)
+end
+exit
+novalue:
+say 'novalue' sigl condition('D')
+exit
+::class c
+::method id
+  return arg(1)
+----
+rc> 0
+out> novalue 6 ZQ
+
+# an UNTIL or WHILE that calls or sends, in a loop with a COUNTER, with and
+# without a control variable: every pass advances and counts
+program
+k = 0
+do counter c i = 1 to 3 until f(i)
+  k = k + 1; if k > 9 then leave
+  say i c
+end
+say 'after' i c
+do counter c 3 until f(0)
+  k = k + 1; if k > 19 then leave
+  say c
+end
+say 'after' c
+o = .c~new
+do counter c j = 1 to 2 until o~no
+  k = k + 1; if k > 29 then leave
+  say j c
+end
+say 'after' j c
+do counter c i = 1 to 3 while f(i) = 0
+  say i c
+end
+say 'after' i c
+do counter c 2 while o~no = 0
+  say c
+end
+say 'after' c
+exit
+f: return 0
+::class c
+::method no
+  return 0
+----
+rc> 0
+out> 1 1
+out> 2 2
+out> 3 3
+out> after 4 3
+out> 1
+out> 2
+out> 3
+out> after 3
+out> 1 1
+out> 2 2
+out> after 3 2
+out> 1 1
+out> 2 2
+out> 3 3
+out> after 4 3
+out> 1
+out> 2
+out> after 2
+
+# the same calling UNTIL with a COUNTER under trace r
+program
+trace r
+k = 0
+do counter c i = 1 to 2 until f(i)
+  k = k + 1; if k > 4 then leave
+end
+say 'after' i c
+exit
+f: return 0
+----
+rc> 0
+out> after 3 2
+err>      2 *-* k = 0
+err>        >>>   "0"
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>        >K>   "COUNTER" => "0"
+err>        >K>   "TO" => "2"
+err>        >K>     "COUNTER" => "1"
+err>      4 *-*   k = k + 1;
+err>        >>>     "1"
+err>      4 *-*   if k > 4 
+err>        >>>     "0"
+err>      5 *-* end
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>      8 *-*     f:
+err>      8 *-*     return 0
+err>        >>>       "0"
+err>        >K>     "UNTIL" => "0"
+err>        >>>     "1"
+err>        >>>     "2"
+err>        >K>     "COUNTER" => "2"
+err>      4 *-*   k = k + 1;
+err>        >>>     "2"
+err>      4 *-*   if k > 4 
+err>        >>>     "0"
+err>      5 *-* end
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>      8 *-*     f:
+err>      8 *-*     return 0
+err>        >>>       "0"
+err>        >K>     "UNTIL" => "0"
+err>        >>>     "2"
+err>        >>>     "3"
+err>      6 *-* say 'after' i c
+err>        >>>   "after 3 2"
+err>      7 *-* exit
+
+# a TRACE() call in the condition switches to TRACE I mid-test: the rest of
+# that test is echoed, so such a loop walks its condition
+program
+n = 0
+do while trace('I') \== 'x' & n < 1
+  n = n + 1
+end
+----
+rc> 0
+err>        >F>     TRACE => "N"
+err>        >L>     "x"
+err>        >O>     "\==" => "1"
+err>        >V>     N => "0"
+err>        >L>     "1"
+err>        >O>     "<" => "1"
+err>        >O>     "&" => "1"
+err>        >K>     "WHILE" => "1"
+err>      3 *-*   n = n + 1
+err>        >V>     N => "0"
+err>        >L>     "1"
+err>        >O>     "+" => "1"
+err>        >>>     "1"
+err>        >=>     N <= "1"
+err>      4 *-* end
+err>      2 *-* do while trace('I') \== 'x' & n < 1
+err>        >L>     "I"
+err>        >A>     "I"
+err>        >F>     TRACE => "I"
+err>        >L>     "x"
+err>        >O>     "\==" => "1"
+err>        >V>     N => "1"
+err>        >L>     "1"
+err>        >O>     "<" => "0"
+err>        >O>     "&" => "0"
+err>        >K>     "WHILE" => "0"
+
+# TRACE('?R') in an UNTIL: interactive debug starts after the next clause,
+# not at the end of the test
+program
+n = 0
+do until n > 0 & trace('?R') \== 'x'
+  n = n + 1
+end
+say 'after' n
+----
+rc> 0
+out> after 1
+err>        >K>     "UNTIL" => "1"
+err>        +++ "LINUX COMMAND /nonexistent/ir-dual-case.rex"
+err>      5 *-* say 'after' n
+err>        >>>   "after 1"
+err> +++

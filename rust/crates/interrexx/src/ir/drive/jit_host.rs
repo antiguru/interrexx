@@ -576,7 +576,7 @@ impl Host for Driven<'_, '_> {
             self.code,
             self.source,
             self.chunk,
-            Some(self.registers),
+            self.registers,
             Flow::Next,
             |_| Ok(counted),
         ) {
@@ -702,6 +702,7 @@ impl Host for Driven<'_, '_> {
                 return match self.interp.leave_ended_select_branch(
                     self.code,
                     self.chunk,
+                    self.registers,
                     base,
                     pc,
                     start,

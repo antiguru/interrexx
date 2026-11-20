@@ -79,6 +79,17 @@ pub(crate) enum Op {
     /// `DO`/`LOOP` at `index`: what the body just did, then the next pass's
     /// header test, then either back to the body or on past the `END`.
     LoopNext { index: u32 },
+    /// Opens the header test of the flat `DO`/`LOOP` at `index` whose
+    /// `WHILE` or `UNTIL` condition compiled into the stream, as a region of
+    /// that instruction ending at `end`: the clause the test runs in, at the
+    /// header's own line, entered here rather than by the pass boundary that
+    /// jumped to it. The condition's ops follow, and [`Op::LoopTested`] ends
+    /// the region.
+    LoopTest { index: u32, end: u32 },
+    /// The end of the header test [`Op::LoopTest`] opened: the condition
+    /// value in register `src` decides the pass, and the header clause's
+    /// boundary runs. Continues at the body or settles the loop's answer.
+    LoopTested { index: u32, src: u16 },
     /// Echoes the `*-*` line of the clause of the instruction at `index`.
     TraceClause { index: u32 },
     /// Evaluates expression `slot` of the instruction at `index` into
@@ -719,6 +730,14 @@ pub(crate) struct ClauseOpening {
     pub(crate) register_top: u16,
 }
 
+/// Where a loop's header test sits in the stream: its [`Op::LoopTest`], and
+/// the body's first op, past the test's region.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct LoopTestOps {
+    pub(crate) test: u32,
+    pub(crate) body: u32,
+}
+
 /// Where a loop's `WHILE` or `UNTIL` condition sits in
 /// [`Chunk::conditions`]: the ops of `[start, end)` leave its value in
 /// register `dst`.
@@ -788,6 +807,10 @@ pub(crate) struct Chunk {
     /// Instruction index -> the range of [`Chunk::conditions`] its loop's
     /// condition compiled to, for a `DO`/`LOOP` whose condition did.
     condition_of: Box<[Option<ConditionOps>]>,
+    /// Instruction index -> the header test region of a `DO`/`LOOP` whose
+    /// condition calls or sends, which [`Chunk::conditions`] cannot hold
+    /// because a call op parks the region it is in.
+    loop_test_of: Box<[Option<LoopTestOps>]>,
     /// Which of this chunk's loops run compiled (`crate::jit`).
     #[cfg(feature = "jit")]
     pub(crate) jit: drive::jit_host::Loops,
@@ -833,6 +856,12 @@ impl Chunk {
     /// compiled to [`Chunk::conditions`].
     pub(crate) fn condition_at(&self, index: usize) -> Option<ConditionOps> {
         self.condition_of.get(index).copied().flatten()
+    }
+
+    /// The header test region of the loop at instruction `index`, if its
+    /// condition compiled into the stream.
+    pub(crate) fn loop_test_at(&self, index: usize) -> Option<LoopTestOps> {
+        self.loop_test_of.get(index).copied().flatten()
     }
 
     /// The ops of `condition`, or `None` when its range is not one of

@@ -51,6 +51,8 @@ impl Root {
             | Op::LoopHeaderValue { .. }
             | Op::LoopRun { .. }
             | Op::LoopNext { .. }
+            | Op::LoopTest { .. }
+            | Op::LoopTested { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
             | Op::ParseRun { .. }
@@ -252,6 +254,21 @@ fn other_family(op: Operator) -> bool {
     )
 }
 
+/// Whether `expr` holds a function call or a message send anywhere.
+fn calls_or_sends(expr: &Expr) -> bool {
+    match &expr.kind {
+        ExprKind::Call { .. } | ExprKind::Message { .. } => true,
+        ExprKind::Binary { left, right, .. } => calls_or_sends(left) || calls_or_sends(right),
+        ExprKind::Prefix { operand, .. } => calls_or_sends(operand),
+        ExprKind::List(items) => items.iter().flatten().any(calls_or_sends),
+        _ => false,
+    }
+}
+
+fn at_u32(index: usize) -> u32 {
+    u32::try_from(index).expect("a corpus body is not four billion instructions")
+}
+
 /// The compiled region of each promoted clause, keyed by instruction index:
 /// the ops strictly inside `Op::Clause`'s own `(here, end)`.
 fn regions(chunk: &Chunk) -> BTreeMap<u32, &[Op]> {
@@ -296,6 +313,10 @@ struct Seen {
     /// How many `DO`/`LOOP` header slots compiled to something other than one
     /// `Op::EvalExpr`.
     native_header_values: usize,
+    /// How many `WHILE`/`UNTIL` conditions compiled to a test region in the
+    /// stream, and how many to [`Chunk::conditions`].
+    loop_tests: usize,
+    side_conditions: usize,
 }
 
 /// Checks one body's compiled stream against what its instructions call for,
@@ -391,6 +412,57 @@ fn check_body(
                 }
                 group = op_at + 1;
                 slot += 1;
+            }
+            // **The `WHILE`/`UNTIL` condition**: a native one that calls or
+            // sends is a test region in the stream ending in its own
+            // `LoopTested`, and one that does neither is in the side table.
+            // Neither walks.
+            if let Some(conditional) = &loop_.conditional {
+                let expected = root_of(&conditional.condition);
+                let test = chunk.loop_test_at(index);
+                let side = chunk.condition_at(index);
+                if expected == Root::EvalExpr {
+                    assert!(
+                        test.is_none() && side.is_none(),
+                        "{where_}: instruction {index} ({construct}) compiled a condition \
+                         that is not native\n{}",
+                        render(&chunk)
+                    );
+                } else if calls_or_sends(&conditional.condition) {
+                    let test = test.unwrap_or_else(|| {
+                        panic!(
+                            "{where_}: instruction {index} ({construct}) has a condition that \
+                             calls or sends and no test region\n{}",
+                            render(&chunk)
+                        )
+                    });
+                    let ops = &chunk.ops[test.test as usize..test.body as usize];
+                    assert!(
+                        matches!(ops.first(), Some(Op::LoopTest { index: at, .. }) if *at == at_u32(index))
+                            && matches!(ops.last(), Some(Op::LoopTested { index: at, .. }) if *at == at_u32(index)),
+                        "{where_}: instruction {index} ({construct}) has a test region that is \
+                         not its own LoopTest .. LoopTested\n{}",
+                        render(&chunk)
+                    );
+                    let actual = ops.iter().filter_map(Root::of).next_back();
+                    assert_eq!(
+                        actual,
+                        Some(expected),
+                        "{where_}: instruction {index} ({construct}) has a condition calling \
+                         for {expected:?} and a test region ending in {actual:?}\n{}",
+                        render(&chunk)
+                    );
+                    assert!(side.is_none());
+                    seen.loop_tests += 1;
+                } else {
+                    assert!(
+                        side.is_some() && test.is_none(),
+                        "{where_}: instruction {index} ({construct}) has a value-only \
+                         condition outside the side table\n{}",
+                        render(&chunk)
+                    );
+                    seen.side_conditions += 1;
+                }
             }
             continue;
         }
@@ -622,6 +694,13 @@ fn sweep_every_corpus_body() {
              above hold only because every condition declined"
         );
     }
+    assert!(
+        seen.loop_tests > 0 && seen.side_conditions > 0,
+        "no corpus loop condition compiled to a test region ({}) or to the side table ({}), so \
+         the condition rows above hold only over an empty set",
+        seen.loop_tests,
+        seen.side_conditions
+    );
     assert!(
         seen.native_header_values > 0,
         "no corpus DO/LOOP header slot compiled to native ops, so the header rows above hold \

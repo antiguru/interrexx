@@ -3,7 +3,7 @@
 use super::super::{CALL_SITE_CACHE, QUICKENING};
 use super::{
     arith_hint_skips, call_site_hits, clause_op_entries, condition_runs, const_builds, exec_splits,
-    frame_floor_high_water, load_constant_builds, run_chunk_entries, stackless_entries,
+    frame_floor_high_water, load_constant_builds, loop_tests, run_chunk_entries, stackless_entries,
     trace_op_echoes,
 };
 use crate::scheduler::{Scripted, script, take_scripted};
@@ -815,7 +815,16 @@ fn loop_conditions_run_from_their_compiled_ops() {
             ".\n"
         ),
         0,
-        "a condition that calls a function compiled to the condition ops"
+        "a condition that calls a function ran from the side table, which cannot park"
+    );
+    // Tested at the `DO` and after each `ITERATE`: the pass boundary an
+    // `ITERATE` reaches runs the compiled condition too.
+    assert_eq!(
+        runs(
+            b"k = 0\ndo while k < 3\n  k = k + 1\n  iterate\nend\nsay k\n",
+            "3\n"
+        ),
+        4
     );
     assert_eq!(
         runs(
@@ -825,4 +834,48 @@ fn loop_conditions_run_from_their_compiled_ops() {
         0,
         "a condition run from ops under TRACE I would drop its intermediate lines"
     );
+}
+
+/// A loop's `WHILE` or `UNTIL` that calls or sends runs from the loop's test
+/// region on every test -- the `DO`'s, after a pass that fell through, and
+/// after an `ITERATE` -- and a Rexx method it sends to runs on the driver's
+/// own frame; `TRACE I` walks the condition instead.
+#[test]
+fn loop_conditions_that_send_run_from_their_test_region() {
+    let run = |program: &[u8], expected_stdout: &str| {
+        let (tests, entered) = (loop_tests(), stackless_entries());
+        let outcome = execute(
+            TEST_PATH,
+            program.to_vec(),
+            false,
+            Invocation::none().with_deadline(RUN_DEADLINE),
+        );
+        assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+        assert_eq!(String::from_utf8_lossy(&outcome.stdout), expected_stdout);
+        (loop_tests() - tests, stackless_entries() - entered)
+    };
+    const COUNTER: &str = "::class c\n::method init\n  expose n\n  n = 0\n\
+        ::method more\n  expose n\n  n = n + 1\n  return n < 5\n\
+        ::method n\n  expose n\n  return n\n";
+    // `more` is sent at n = 1 .. 5, and passes 2 and 4 end in an `ITERATE`.
+    let program = format!(
+        "o = .c~new\ndo while o~more\n  if o~n // 2 = 0 then iterate\n  say o~n\nend\nexit\n{COUNTER}"
+    );
+    let (tests, entered) = run(program.as_bytes(), "1\n3\n");
+    assert_eq!(
+        tests, 5,
+        "a WHILE tested at the DO, two ENDs and two ITERATEs"
+    );
+    // INIT, and `more` five times; `n` six times from the body's clauses.
+    assert_eq!(entered, 12);
+    // An `UNTIL`'s first pass has no test.
+    let program = format!("o = .c~new\ndo until \\o~more\nend\nsay o~n\nexit\n{COUNTER}");
+    let (tests, entered) = run(program.as_bytes(), "5\n");
+    assert_eq!(tests, 5);
+    assert_eq!(entered, 7, "INIT, more five times and n");
+    // `TRACE I` walks the condition.
+    let program =
+        format!("trace i\no = .c~new\ndo while o~more\nend\ntrace o\nsay o~n\nexit\n{COUNTER}");
+    let (tests, _) = run(program.as_bytes(), "5\n");
+    assert_eq!(tests, 0);
 }
