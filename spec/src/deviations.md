@@ -349,7 +349,9 @@ ooRexx raises `35.1` at the colon.
 
 A standard output that is a pipe or a file is buffered and handed over
 before a read, before the program idles, before an ADDRESS command, at 64 KiB
-and at exit. While it is buffered, the order of its text against what native
+and at exit. For an instance that an embedding creates, exit is the
+embedding's call to `Terminate`.
+While it is buffered, the order of its text against what native
 code writes to the same descriptor itself, an external routine, a handler, an
 exit or the program that embeds the interpreter, is unspecified, except that
 what native code wrote through C's standard streams before the program's text
