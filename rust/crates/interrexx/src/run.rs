@@ -1752,7 +1752,12 @@ impl Interp {
                 {
                     let rendered = self.render(value);
                     let mut out = std::mem::take(&mut self.out);
-                    out.extend_from_slice(rendered.text(self));
+                    let text = rendered.text(self);
+                    // Room for the newline too: growing a buffer the line
+                    // filled exactly can move it, and a host whose
+                    // reallocation copies then holds the line twice.
+                    out.reserve(text.len() + 1);
+                    out.extend_from_slice(text);
                     self.out = out;
                     self.write_out_line(b"");
                     return self.say_written();
