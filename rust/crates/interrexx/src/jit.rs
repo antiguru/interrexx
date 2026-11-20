@@ -684,7 +684,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         e.b.seal_all_blocks();
         e.b.finalize(module.target_config());
     }
-    module.define_function(id, &mut context).ok()?;
+    // A function Cranelift refuses is this generator's fault, never the
+    // program's: loud where the verifier runs, and a loop left to the driver
+    // where it does not.
+    if let Err(error) = module.define_function(id, &mut context) {
+        debug_assert!(false, "Cranelift refused a compiled pass: {error:?}");
+        return None;
+    }
     module.clear_context(&mut context);
     module.finalize_definitions().ok()?;
     let code = module.get_finalized_function(id);

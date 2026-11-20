@@ -84,7 +84,7 @@ do i = 1 to 20000
 end
 ----
      4 *-*   r = q % (15000 - i)
-Error 42 running /tmp/claude-0/-home-user-interrexx/32a8e9c6-3568-50b8-bf6f-bd7e758a6f8a/scratchpad/cases/t.rex line 4:  Arithmetic overflow/underflow.
+Error 42 running t.rex line 4:  Arithmetic overflow/underflow.
 Error 42.3:  Arithmetic overflow; divisor must not be zero.
 compiled: yes
 
@@ -115,7 +115,8 @@ say c~run(10000)
 50005000
 compiled: yes
 
-# TRACE R switched on inside a compiled loop
+# a body holding a TRACE instruction keeps its clause echoes behind run-time
+# gates, which compiled code does not take, so it stays driven
 run
 n = 0
 do i = 1 to 10000
@@ -154,7 +155,7 @@ say n m
        >>>     "10000"
        >>>     "10001"
      7 *-* trace o
-compiled: yes
+compiled: no
 
 # a builtin call in a compiled body
 run
