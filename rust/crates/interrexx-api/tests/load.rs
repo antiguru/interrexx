@@ -213,8 +213,11 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
         "void *RexxGetPackage(void) { return (void *)0; }\n",
     );
     assert!(!mapped());
-    let answer = load::open_path(&dir.join(format!("libnullpackage{}", std::env::consts::DLL_SUFFIX)), "nullpackage")
-        .expect("a null package entry is not an error");
+    let answer = load::open_path(
+        &dir.join(format!("libnullpackage{}", std::env::consts::DLL_SUFFIX)),
+        "nullpackage",
+    )
+    .expect("a null package entry is not an error");
     assert!(answer.is_none());
     assert!(mapped());
     std::fs::remove_dir_all(&dir).expect("the directory is removable");
@@ -226,8 +229,11 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
 fn a_library_without_the_exporter_stays_mapped() {
     let (dir, mapped) = plain_library("plainpackage", NO_EXPORTER);
     assert!(!mapped());
-    let answer = load::open_path(&dir.join(format!("libplainpackage{}", std::env::consts::DLL_SUFFIX)), "plainpackage")
-        .expect("a library with no exporter is not an error");
+    let answer = load::open_path(
+        &dir.join(format!("libplainpackage{}", std::env::consts::DLL_SUFFIX)),
+        "plainpackage",
+    )
+    .expect("a library with no exporter is not an error");
     assert!(answer.is_none());
     assert!(mapped());
     std::fs::remove_dir_all(&dir).expect("the directory is removable");
