@@ -33,6 +33,9 @@ use crate::run::FlatStep;
 
 /// Passes a loop runs driven before it is compiled.
 const THRESHOLD: u32 = 64;
+/// A body is compiled only when it has at least this many steps compiled code
+/// does itself for each op the host runs.
+const HOSTED_SHARE: usize = 4;
 /// A loop whose body has an op the compiled code does not take.
 const REFUSED: u32 = u32::MAX;
 
@@ -337,6 +340,26 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u32)> {
         }
         steps.push(Step::Close { next: end });
         pc = end;
+    }
+    // **Compiled only where it pays.** An op the host runs costs a call, the
+    // block written back and read again, and the driver's own arm, which is
+    // several times what the driver spends dispatching it; a body made mostly
+    // of those runs slower compiled than driven.
+    let hosted = steps
+        .iter()
+        .filter(|step| matches!(step, Step::Op { .. }))
+        .count();
+    let native = steps
+        .iter()
+        .filter(|step| {
+            !matches!(
+                step,
+                Step::Op { .. } | Step::Open { .. } | Step::Close { .. }
+            )
+        })
+        .count();
+    if hosted * HOSTED_SHARE > native {
+        return None;
     }
     Some((
         Pass {
