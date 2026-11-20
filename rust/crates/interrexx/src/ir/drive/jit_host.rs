@@ -293,9 +293,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                 continue;
             }
             // A `SELECT`'s own ops, which the host runs as the driver does.
-            Op::EnterWhen { .. }
-            | Op::EnterOtherwise { .. }
-            | Op::EndWhen => {
+            Op::EnterWhen { .. } | Op::EnterOtherwise { .. } | Op::EndWhen => {
                 steps.push(Step::Between { pc });
                 pc += 1;
                 continue;
