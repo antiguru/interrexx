@@ -1752,7 +1752,12 @@ impl Interp {
                 {
                     let rendered = self.render(value);
                     let mut out = std::mem::take(&mut self.out);
-                    out.extend_from_slice(rendered.text(self));
+                    let text = rendered.text(self);
+                    // Room for the newline too: growing a buffer the line
+                    // filled exactly can move it, and a host whose
+                    // reallocation copies then holds the line twice.
+                    out.reserve(text.len() + 1);
+                    out.extend_from_slice(text);
                     self.out = out;
                     self.write_out_line(b"");
                     return self.say_written();
@@ -2597,6 +2602,22 @@ impl Interp {
             entry,
             frame,
             temps_at_entry,
+        }
+    }
+
+    /// [`crate::ir::Op::ExecValue`]: the instruction `instruction` from the
+    /// value `value` its expression answered.
+    #[inline(never)]
+    pub(crate) fn exec_value(
+        &mut self,
+        instruction: &Instruction,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        match &instruction.kind {
+            InstructionKind::Numeric { setting, .. } => {
+                self.exec_numeric_value(setting, Some(value))
+            }
+            kind => Err(Loud::instruction(kind).into()),
         }
     }
 
@@ -3511,6 +3532,22 @@ impl Interp {
                 _ => return None,
             },
             (InstructionKind::If { condition, .. }, 0) => condition,
+            // An instruction run by `Op::ExecValue`, whose expression is
+            // slot `0`.
+            (
+                InstructionKind::Numeric {
+                    expression: Some(expression),
+                    ..
+                },
+                0,
+            ) => expression,
+            // A `SELECT CASE`'s expression.
+            (
+                InstructionKind::Select {
+                    case: Some(case), ..
+                },
+                0,
+            ) => case,
             // A **plain** `WHEN`'s condition. A `WhenCase`'s values are not a
             // condition and compile to no native op at all, so no address ever
             // names one and this arm does not answer for them.
@@ -3579,6 +3616,13 @@ impl Interp {
         slot: u32,
     ) -> Result<ObjRef, Failure> {
         match (&instruction.kind, slot) {
+            (
+                InstructionKind::Numeric {
+                    expression: Some(expression),
+                    ..
+                },
+                0,
+            ) => self.eval(code, expression),
             (InstructionKind::If { condition, .. }, 0) => {
                 let holds = self.eval_if_condition(code, condition)?;
                 // In range unconditionally: `SMALL_INT_MAX` is far above one.

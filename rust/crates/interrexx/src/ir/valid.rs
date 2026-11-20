@@ -38,13 +38,20 @@ impl ValidOps {
                 }
                 Op::Prefix { src, dst, .. } => inside(src) && inside(dst),
                 Op::Send { recv, dst, .. } => inside(recv) && inside(dst),
+                Op::SendWith {
+                    recv, dst, scope, ..
+                } => inside(recv) && inside(dst) && (scope == Op::NO_SCOPE || inside(scope)),
+                Op::SendScope { recv, scope } => inside(recv) && inside(scope),
+                Op::Reference { dst, .. } | Op::ClassAt { dst, .. } => inside(dst),
                 Op::List { dst, .. } => inside(dst),
                 Op::Say { src, .. }
                 | Op::Signal { src, .. }
                 | Op::Return { src, .. }
                 | Op::Queue { src, .. } => optional(src),
                 Op::JumpUnless { reg, .. } | Op::ConditionJump { reg, .. } => inside(reg),
-                Op::LoopTested { src, .. } => inside(src),
+                Op::LoopTested { src, .. }
+                | Op::SelectCase { src, .. }
+                | Op::ExecValue { src, .. } => inside(src),
                 Op::ParseBegin { src, base, .. } => {
                     arg(src)
                         && (base == Op::ARG_OMITTED

@@ -13,14 +13,17 @@ use interrexx_api::layout::{
     CONSTRXSTRING, REXXDATETIME, REXXPFN, RXSTRING, RexxQueueTime, RexxReturnCode,
 };
 
-/// The definition of `name` in `librexx.so.4`, which the loader mapped as this library's
-/// `NEEDED` entry. Lookup goes through `librexx.so.4`'s handle, never the global scope, where
+/// The definition of `name` in `librexx` (`librexx.so.4` on ELF hosts), which the loader mapped
+/// as a dependency of this library. Lookup goes through `librexx`'s handle, never the global scope, where
 /// this library's own definition may come first. Aborts where the library or the name is missing:
 /// there is no state to answer from.
 fn target(name: &CStr) -> *mut c_void {
     static LIBREXX: OnceLock<usize> = OnceLock::new();
     let handle = *LIBREXX.get_or_init(|| {
-        let soname = c"librexx.so.4";
+        let beside = env!("REXX_LIBREXX_BESIDE");
+        let Ok(soname) = std::ffi::CString::new(beside) else {
+            failed("the name of librexx holds a NUL");
+        };
         // SAFETY: `soname` is NUL-terminated; `RTLD_NOLOAD` maps nothing new.
         let mut handle =
             unsafe { libc::dlopen(soname.as_ptr(), libc::RTLD_NOW | libc::RTLD_NOLOAD) };
@@ -29,7 +32,7 @@ fn target(name: &CStr) -> *mut c_void {
             handle = unsafe { libc::dlopen(soname.as_ptr(), libc::RTLD_NOW) };
         }
         if handle.is_null() {
-            failed("librexx.so.4 is not loaded and cannot be");
+            failed(&format!("{beside} is not loaded and cannot be"));
         }
         handle as usize
     });
@@ -37,7 +40,8 @@ fn target(name: &CStr) -> *mut c_void {
     let symbol = unsafe { libc::dlsym(handle as *mut c_void, name.as_ptr()) };
     if symbol.is_null() {
         failed(&format!(
-            "librexx.so.4 defines no {}",
+            "{} defines no {}",
+            env!("REXX_LIBREXX"),
             name.to_string_lossy()
         ));
     }
@@ -45,7 +49,7 @@ fn target(name: &CStr) -> *mut c_void {
 }
 
 fn failed(what: &str) -> ! {
-    eprintln!("librexxapi.so.4: {what}");
+    eprintln!("{}: {what}", env!("REXX_LIBREXXAPI"));
     std::process::abort()
 }
 

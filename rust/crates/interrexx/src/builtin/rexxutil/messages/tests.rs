@@ -169,7 +169,13 @@ fn strerror_text_drops_exactly_the_standard_library_suffix() {
         );
     }
     assert_eq!(strerror(2), b"No such file or directory");
-    assert_eq!(strerror(-1), b"Unknown error -1");
+    // The C library's text for an unknown number is the host's (`docs/design/decisions.md`).
+    let unknown: &[u8] = if cfg!(target_vendor = "apple") {
+        b"Unknown error: -1"
+    } else {
+        b"Unknown error -1"
+    };
+    assert_eq!(strerror(-1), unknown);
 }
 
 /// `corpus/oracle-crashes.txt` entry 41: the oracle formats the message with

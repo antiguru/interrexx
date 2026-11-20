@@ -13,8 +13,9 @@
 #               this repository owns link against that directory.
 #
 # Every product records only --out as its search path (DT_RPATH, which the loader consults before
-# LD_LIBRARY_PATH). The build fails if `ldd` resolves either library anywhere else, with or
-# without the oracle's lib directory on LD_LIBRARY_PATH.
+# LD_LIBRARY_PATH, or LC_RPATH on macOS). The build fails if either library resolves anywhere
+# else, with or without the oracle's lib directory on LD_LIBRARY_PATH (api_resolves in
+# api-flags.sh).
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -37,6 +38,7 @@ fi
 
 src=$root/third_party/ooRexx/testbinaries
 api=$root/include
+. "$root/scripts/api-flags.sh"
 samples=$root/third_party/ooRexx/samples/api/classic/unix/callrexx
 
 mkdir -p "$out"
@@ -48,13 +50,14 @@ out=$(cd "$out" && pwd)
 stamp=
 if [ -n "$libs" ]; then
     exec 9>"$out.lock"
-    flock 9
+    api_lock 9
 fi
 stage() {
     for library in librexx librexxapi; do
-        cp -f "$libs/$library.so" "$out/$library.so.4.tmp"
-        mv -f "$out/$library.so.4.tmp" "$out/$library.so.4"
-        ln -sfn "$library.so.4" "$out/$library.so"
+        versioned=$(api_versioned "$library")
+        cp -f "$libs/$library.$api_dylib" "$out/$versioned.tmp"
+        mv -f "$out/$versioned.tmp" "$out/$versioned"
+        ln -sfn "$versioned" "$out/$library.$api_dylib"
     done
 }
 if [ -n "$stage_only" ]; then
@@ -63,13 +66,12 @@ if [ -n "$stage_only" ]; then
     exit 0
 fi
 
-. "$root/scripts/api-flags.sh"
 if [ -n "$libs" ]; then
     # The stamp names the inputs of the build: the libraries, this script, the headers, and the
     # upstream sources it compiles (size and time, as a submodule update rewrites them).
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
+    stamp=$(api_file_stamp "$libs/librexx.$api_dylib" "$libs/librexxapi.$api_dylib" "$0" "$root/scripts/api-flags.sh"
         api_stamp
-        find "$src" "$samples" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %.9Y'
+        find "$src" "$samples" -type f -print0 | LC_ALL=C sort -z | xargs -0 "${api_stat[@]}"
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-testbinaries.sh: $out is up to date"
@@ -79,12 +81,13 @@ if [ -n "$libs" ]; then
 fi
 stage
 
-flags=("${api_flags[@]}" -L"$out" -Wl,--disable-new-dtags -Wl,-rpath,"$out")
+api_rpath "$out"
+flags=("${api_flags[@]}" -L"$out" "${api_rpath_flags[@]}")
 
 shared() {
     local compiler=$1 name=$2
     shift 2
-    "$compiler" -shared -o "$out/lib$name.so" "$@" "${flags[@]}"
+    "$compiler" -shared -o "$out/lib$name.$api_dylib" "$@" "${flags[@]}"
 }
 
 shared c++ orxfunction "$src/orxfunction.cpp" -lrexx -lrexxapi
@@ -102,20 +105,21 @@ if [ -f "$samples/callrexx1.cpp" ]; then
     c++ -o "$out/callrexx1" "$samples/callrexx1.cpp" "${flags[@]}" -lrexx -lrexxapi
 fi
 
-products=("$out"/liborx*.so "$out/rexxinstance" "$out/provoke_locks" "$out/detach_root_terminate")
+products=("$out"/liborx*."$api_dylib" "$out/rexxinstance" "$out/provoke_locks"
+    "$out/detach_root_terminate")
 [ -f "$out/callrexx1" ] && products+=("$out/callrexx1")
 
 # Each of the two libraries a product needs must resolve to --out, under the caller's environment
-# and with the oracle's lib directory first on LD_LIBRARY_PATH.
+# and with the oracle's lib directory first on LD_LIBRARY_PATH (api_resolves says what the check
+# reads on each host).
 check() {
-    local product=$1 resolved library
+    local product=$1 library status
     shift
-    resolved=$(env "$@" ldd "$product")
-    for library in librexx.so.4 librexxapi.so.4; do
-        grep -q "^[[:space:]]*$library " <<<"$resolved" || continue
-        if ! grep -q "^[[:space:]]*$library => $out/$library " <<<"$resolved"; then
-            echo "build-testbinaries.sh: $product resolves $library outside $out ($*):" >&2
-            grep "$library" <<<"$resolved" >&2 || echo "  (not resolved)" >&2
+    for library in $(api_versioned librexx) $(api_versioned librexxapi); do
+        status=0
+        api_resolves "$product" "$library" "$out" "$@" || status=$?
+        if [ "$status" -eq 1 ]; then
+            echo "build-testbinaries.sh: $product resolves $library outside $out ($*)" >&2
             exit 1
         fi
     done

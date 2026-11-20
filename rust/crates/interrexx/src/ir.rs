@@ -53,6 +53,10 @@ impl Op {
     /// The `src` an [`Op::PushArg`] or [`Op::TraceArgument`] carries for an
     /// omitted argument position.
     pub(crate) const ARG_OMITTED: u16 = u16::MAX;
+
+    /// The `scope` an [`Op::SendWith`] carries for a send with no `:scope`
+    /// override.
+    pub(crate) const NO_SCOPE: u16 = u16::MAX;
 }
 
 /// One step in a compiled stream.
@@ -90,6 +94,13 @@ pub(crate) enum Op {
     /// value in register `src` decides the pass, and the header clause's
     /// boundary runs. Continues at the body or settles the loop's answer.
     LoopTested { index: u32, src: u16 },
+    /// Files the `SELECT CASE` value of the instruction at `index`, which the
+    /// ops before it left in register `src`: rooted, echoed as `>K>` and the
+    /// block opened, as the walked expression's caller does.
+    SelectCase { index: u32, src: u16 },
+    /// Runs the instruction at `index` from the value its expression left in
+    /// register `src`: everything the instruction does past evaluating it.
+    ExecValue { index: u32, src: u16 },
     /// Echoes the `*-*` line of the clause of the instruction at `index`.
     TraceClause { index: u32 },
     /// Evaluates expression `slot` of the instruction at `index` into
@@ -123,7 +134,10 @@ pub(crate) enum Op {
         argc: u16,
         dst: u16,
     },
-    /// The `>F>` line [`Op::CallExpr`] owes, for the value now in `src`.
+    /// The value line the node at `path` inside expression `slot` owes, for
+    /// the value now in `src`: `>F>` behind [`Op::CallExpr`] or
+    /// [`Op::CallArgs`], `>O>` behind [`Op::Reference`], `>N>` behind
+    /// [`Op::ClassAt`].
     TraceFunction {
         index: u32,
         slot: u16,
@@ -329,6 +343,31 @@ pub(crate) enum Op {
         dst: u16,
         form: SendForm,
     },
+    /// [`Op::Send`] for a send with a `:scope` override or a `~~` cascade:
+    /// the method is looked up from the class in register `scope`, which
+    /// [`Op::SendScope`] has checked, or from the receiver's own where it is
+    /// [`Op::NO_SCOPE`], and a [`SendForm::Cascade`] answers the receiver.
+    /// An op of its own, so that an ordinary send's path makes neither
+    /// test.
+    SendWith {
+        site: u32,
+        recv: u16,
+        argc: u16,
+        dst: u16,
+        scope: u16,
+        form: SendForm,
+    },
+    /// The `>name`/`<name` reference at `path` inside expression `slot`,
+    /// into register `dst`: the variable itself rather than its value.
+    Reference { slot: u16, path: NodePath, dst: u16 },
+    /// The class the `namespace:Name` at `path` inside expression `slot`
+    /// resolves to, into register `dst`.
+    ClassAt { slot: u16, path: NodePath, dst: u16 },
+    /// Checks the scope override in register `scope` of a send to the
+    /// receiver in `recv`: a class, and one in the receiver's behaviour.
+    /// Between the override's own ops and the arguments', which is the
+    /// order the checks are made in.
+    SendScope { recv: u16, scope: u16 },
     /// Builds the array a parenthesised list is from the `argc` values on top
     /// of the driver's argument stack, into register `dst`.
     List { argc: u16, dst: u16 },
@@ -340,6 +379,9 @@ pub(crate) enum SendForm {
     /// Into `dst`, as an expression's value, which a send that answers
     /// nothing cannot give.
     Value,
+    /// The receiver into `dst`, for a `~~` term, whatever the send answered
+    /// ([`Op::SendWith`] only).
+    Cascade,
     /// Into `RESULT`, as the message instruction does.
     Clause,
     /// Into `RESULT`, for the message-assignment form, whose message name is

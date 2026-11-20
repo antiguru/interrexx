@@ -1,0 +1,105 @@
+name: "macOS nightly"
+on:
+  # Once a night, on `main`. A pull request builds and lints on macOS (`macos-build` in
+  # `test.yml`) and runs the tests on Linux; the tests run here on macOS.
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: "A nextest filter expression run instead of the whole profile, e.g. binary(classic_api)"
+        required: false
+        default: ""
+  # A change to this workflow runs it on its pull request.
+  pull_request:
+    paths:
+      - .github/workflows/macos-nightly.yml
+
+# A newer run of the same pull request supersedes one still queued or running: each run takes most
+# of an hour of a macOS runner. Runs of different events never share a group, and a scheduled or
+# dispatched run is never cancelled, so a dispatch on `main` does not end that night's run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  # The `standalone` profile, as the Linux shards run it, on a checkout without the submodule.
+  # The profile reads only the ooTest and documentation checkouts, which this job fetches at the
+  # revisions `scripts/setup-third-party.sh` pins.
+  standalone:
+    name: macOS standalone tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+          # Shared with `macos-build`, which saves it from a checkout without the submodule too.
+          cache-key: macos-no-submodule
+      - name: Assert the upstream tier is absent
+        # See the build job of `test.yml`.
+        working-directory: .
+        run: |
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+      - id: revisions
+        name: Read the pinned revisions
+        working-directory: .
+        run: |
+          ootest=$(sed -n 's/^OOTEST_REVISION=//p' scripts/setup-third-party.sh)
+          oodocs=$(sed -n 's/^OODOCS_REVISION=//p' scripts/setup-third-party.sh)
+          test -n "$ootest" && test -n "$oodocs"
+          echo "ootest=$ootest" >> "$GITHUB_OUTPUT"
+          echo "oodocs=$oodocs" >> "$GITHUB_OUTPUT"
+      - id: checkouts
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ootest
+            oodocs/rexxref
+          key: standalone-checkouts-${{ runner.os }}-${{ steps.revisions.outputs.ootest }}-${{ steps.revisions.outputs.oodocs }}
+      - name: Install svn
+        # The checkouts below, and the extractor tests, which ask the oodocs working copy for its
+        # revision.
+        run: brew install subversion
+      - name: Fetch the ooTest and documentation checkouts
+        if: steps.checkouts.outputs.cache-hit != 'true'
+        working-directory: .
+        env:
+          SVN: https://svn.code.sf.net/p/oorexx/code-0
+        run: |
+          svn checkout -q -r "${{ steps.revisions.outputs.ootest }}" "$SVN/test/trunk" ootest
+          svn checkout -q -r "${{ steps.revisions.outputs.oodocs }}" "$SVN/docs/trunk/rexxref" oodocs/rexxref
+      - name: Save the checkouts
+        # Saved here rather than at the job's end, which a failing test run never reaches.
+        if: steps.checkouts.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ootest
+            oodocs/rexxref
+          key: ${{ steps.checkouts.outputs.cache-primary-key }}
+      - name: Check the standalone inputs
+        working-directory: .
+        run: python3 rust/scripts/test_preflight.py --standalone
+      - name: Install nextest
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: nextest@0.9.150
+      - name: Cargo nextest
+        env:
+          FILTER: ${{ inputs.filter }}
+        run: |
+          if [ -n "$FILTER" ]; then
+            cargo nextest run --locked --workspace --profile standalone --no-fail-fast -E "$FILTER"
+          else
+            cargo nextest run --locked --workspace --profile standalone --no-fail-fast
+          fi

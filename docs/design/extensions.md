@@ -9,8 +9,10 @@ packages that ship with them (`rxregexp.cls`, `socket.cls`, `streamsocket.cls`, 
 builds them.
 
 OS calls go through `rustix` or safe crates (`nix`, `dns-lookup`, `if-addrs`). The granted
-`unsafe` is `interrexx/src/builtin/rxsock_sys.rs` (raw socket options on a borrowed descriptor) and
-`set_disposition` and `send` in `interrexx/src/signal.rs` for `SysSignal` and `SysKill`.
+`unsafe` is `interrexx/src/builtin/rxsock_sys.rs` (raw socket options on a borrowed descriptor),
+`set_disposition` and `send` in `interrexx/src/signal.rs` for `SysSignal` and `SysKill`, and
+`interrexx/src/host/sys.rs` for `SysSetuid`'s `setgroups` and `SockSelect`'s descriptor table
+on macOS.
 
 ## Shared conventions
 

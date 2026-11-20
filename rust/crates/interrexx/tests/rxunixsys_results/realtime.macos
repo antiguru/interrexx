@@ -1,0 +1,20 @@
+# Real-time signals are the host's (`docs/design/decisions.md`): macOS has none, and no signal 40. These answers are
+# interrexx's on macOS, recorded on a CI runner; the oracle has not been run there.
+# Real-time signals by number: ignored, then sent; then their default
+# action, which ends the process.
+program
+say 'signal' SysSignal(40, 'I')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'signal' SysSignal(40, 'D')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'alive'
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+signal 0
+kill -1
+signal 0
+kill -1
+alive
+[stderr]

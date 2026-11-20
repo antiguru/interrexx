@@ -342,7 +342,7 @@ pub(super) fn qualify(
 /// The errno a failed open reports when there is nothing to open. A directory
 /// opens on unix and `SysFile::open` closes it again and substitutes this, so
 /// a directory answers `ERROR:2` rather than `ERROR:21`.
-const ENOENT: i32 = 2;
+const ENOENT: i32 = libc::ENOENT;
 
 /// Puts the stream in `status` and raises `NOTREADY` for it, answering
 /// `answer`: what the entry point returns when no trap transfers control,
@@ -1204,7 +1204,7 @@ fn unreadable(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>, F
 }
 
 /// The errno of a read on a descriptor open only for writing.
-const EBADF: i32 = 9;
+const EBADF: i32 = libc::EBADF;
 
 /// `stream_linein`: one line from `line`, or from the read position. At the
 /// end of the file the answer is the null string and the state is
@@ -1906,7 +1906,7 @@ fn whole_number(interp: &mut Interp, value: ObjRef, which: usize) -> Result<u64,
 
 /// The errno a write to a read-only stream reports, which the stream layer
 /// chooses rather than the system call reporting it.
-const EACCES: i32 = 13;
+const EACCES: i32 = libc::EACCES;
 
 /// Which end a `SEEK` offset is measured from.
 #[derive(Copy, Clone, PartialEq, Eq)]

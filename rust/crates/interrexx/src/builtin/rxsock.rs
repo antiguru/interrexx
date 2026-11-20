@@ -26,7 +26,7 @@ mod hosts;
 use super::rxsock_wait;
 
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::os::fd::{BorrowedFd, IntoRawFd as _, OwnedFd};
+use std::os::fd::{AsFd as _, BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -44,14 +44,14 @@ use crate::{Failure, Interp};
 
 type Result<T> = std::result::Result<T, Failure>;
 
-const EINTR: i32 = 4;
-const EAGAIN: i32 = 11;
-const EBADF: i32 = 9;
-const EINVAL: i32 = 22;
-const EDOM: i32 = 33;
-const ENOPROTOOPT: i32 = 92;
-const EAFNOSUPPORT: i32 = 97;
-const EINPROGRESS: i32 = 115;
+const EINTR: i32 = libc::EINTR;
+const EAGAIN: i32 = libc::EAGAIN;
+const EBADF: i32 = libc::EBADF;
+const EINVAL: i32 = libc::EINVAL;
+const EDOM: i32 = libc::EDOM;
+const ENOPROTOOPT: i32 = libc::ENOPROTOOPT;
+const EAFNOSUPPORT: i32 = libc::EAFNOSUPPORT;
+const EINPROGRESS: i32 = libc::EINPROGRESS;
 
 /// How often a waiting call polls its sockets.
 const WAIT_POLL: Duration = Duration::from_millis(5);
@@ -60,41 +60,41 @@ const WAIT_POLL: Duration = Duration::from_millis(5);
 /// out of its polls for reporting what does not answer its wait.
 const MUTED_RECHECK: Duration = Duration::from_millis(50);
 
-/// The `errno` values the variable names symbolically; any other is set in
-/// decimal.
+/// The `errno` values the variable names symbolically, by the host's number
+/// for each name; any other is set in decimal.
 const ERRNO_NAMES: &[(i32, &str)] = &[
-    (11, "EWOULDBLOCK"),
-    (115, "EINPROGRESS"),
-    (114, "EALREADY"),
-    (88, "ENOTSOCK"),
-    (89, "EDESTADDRREQ"),
-    (90, "EMSGSIZE"),
-    (91, "EPROTOTYPE"),
-    (92, "ENOPROTOOPT"),
-    (93, "EPROTONOSUPPORT"),
-    (94, "ESOCKTNOSUPPORT"),
-    (95, "EOPNOTSUPP"),
-    (96, "EPFNOSUPPORT"),
-    (97, "EAFNOSUPPORT"),
-    (98, "EADDRINUSE"),
-    (99, "EADDRNOTAVAIL"),
-    (100, "ENETDOWN"),
-    (101, "ENETUNREACH"),
-    (102, "ENETRESET"),
-    (103, "ECONNABORTED"),
-    (104, "ECONNRESET"),
-    (105, "ENOBUFS"),
-    (106, "EISCONN"),
-    (107, "ENOTCONN"),
-    (108, "ESHUTDOWN"),
-    (109, "ETOOMANYREFS"),
-    (110, "ETIMEDOUT"),
-    (111, "ECONNREFUSED"),
-    (40, "ELOOP"),
-    (36, "ENAMETOOLONG"),
-    (112, "EHOSTDOWN"),
-    (113, "EHOSTUNREACH"),
-    (39, "ENOTEMPTY"),
+    (libc::EWOULDBLOCK, "EWOULDBLOCK"),
+    (libc::EINPROGRESS, "EINPROGRESS"),
+    (libc::EALREADY, "EALREADY"),
+    (libc::ENOTSOCK, "ENOTSOCK"),
+    (libc::EDESTADDRREQ, "EDESTADDRREQ"),
+    (libc::EMSGSIZE, "EMSGSIZE"),
+    (libc::EPROTOTYPE, "EPROTOTYPE"),
+    (libc::ENOPROTOOPT, "ENOPROTOOPT"),
+    (libc::EPROTONOSUPPORT, "EPROTONOSUPPORT"),
+    (libc::ESOCKTNOSUPPORT, "ESOCKTNOSUPPORT"),
+    (libc::EOPNOTSUPP, "EOPNOTSUPP"),
+    (libc::EPFNOSUPPORT, "EPFNOSUPPORT"),
+    (libc::EAFNOSUPPORT, "EAFNOSUPPORT"),
+    (libc::EADDRINUSE, "EADDRINUSE"),
+    (libc::EADDRNOTAVAIL, "EADDRNOTAVAIL"),
+    (libc::ENETDOWN, "ENETDOWN"),
+    (libc::ENETUNREACH, "ENETUNREACH"),
+    (libc::ENETRESET, "ENETRESET"),
+    (libc::ECONNABORTED, "ECONNABORTED"),
+    (libc::ECONNRESET, "ECONNRESET"),
+    (libc::ENOBUFS, "ENOBUFS"),
+    (libc::EISCONN, "EISCONN"),
+    (libc::ENOTCONN, "ENOTCONN"),
+    (libc::ESHUTDOWN, "ESHUTDOWN"),
+    (libc::ETOOMANYREFS, "ETOOMANYREFS"),
+    (libc::ETIMEDOUT, "ETIMEDOUT"),
+    (libc::ECONNREFUSED, "ECONNREFUSED"),
+    (libc::ELOOP, "ELOOP"),
+    (libc::ENAMETOOLONG, "ENAMETOOLONG"),
+    (libc::EHOSTDOWN, "EHOSTDOWN"),
+    (libc::EHOSTUNREACH, "EHOSTUNREACH"),
+    (libc::ENOTEMPTY, "ENOTEMPTY"),
 ];
 
 /// The text the `errno` variable gets for `errno`.
@@ -847,7 +847,7 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             // Not writable is the deadline: `SO_SNDTIMEO` 500 then a
             // `SockConnect` that cannot complete gives -1 with `errno` 115
             // after half a second, and the connection goes on.
-            let result = if any_ready(&[(fd, PollFlags::OUT)]) {
+            let result = if any_ready(&[(fd, crate::host::CONNECT_WAIT_EVENTS)]) {
                 with_socket(fd, |socket| finish_connect(socket, to))
             } else {
                 Err(EINPROGRESS)
@@ -950,7 +950,10 @@ pub(crate) fn socket_new(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
         _ => return Err(failed(interp)),
     };
     let made = rustix::net::socket(rustix::net::AddressFamily::INET, kind, protocol)
-        .map(|socket| i64::from(socket.into_raw_fd()))
+        .and_then(|socket| {
+            crate::host::prepare_socket(socket.as_fd())?;
+            Ok(i64::from(socket.into_raw_fd()))
+        })
         .map_err(os);
     Ok(answer(interp, made))
 }
@@ -1046,7 +1049,7 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     match begun {
         Ok(Some(to)) => {
             let wait = SocketWait {
-                polls: vec![(fd, PollFlags::OUT)],
+                polls: vec![(fd, crate::host::CONNECT_WAIT_EVENTS)],
                 deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Send),
                 helper: None,
                 op: Pending::Connect { fd, to },
@@ -1067,7 +1070,12 @@ fn finish_connect(socket: BorrowedFd<'_>, to: SocketAddrV4) -> Os<()> {
     let connected = rustix::net::connect(socket, &to);
     let _ = rustix::fs::fcntl_setfl(socket, flags);
     match connected {
-        Ok(()) | Err(rustix::io::Errno::ISCONN) => Ok(()),
+        // Apple's second `connect` answers `EISCONN` for a refused connection
+        // too and leaves its error in `SO_ERROR`, where Linux's answers the
+        // error. On Linux `EISCONN` is a connection made and `SO_ERROR` is 0.
+        Ok(()) | Err(rustix::io::Errno::ISCONN) => rustix::net::sockopt::socket_error(socket)
+            .map_err(os)?
+            .map_err(os),
         Err(error) => Err(os(error)),
     }
 }
@@ -1115,7 +1123,10 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
 
 /// `accept` on the socket numbered `fd` without blocking: a blocking socket
-/// is made non-blocking for the call.
+/// is made non-blocking for the call. The socket it answers has the mode the
+/// host's `accept` gives it for the listening socket's own mode, which the
+/// call's toggle does not change. A socket it cannot ready is closed and the
+/// failure answered.
 fn try_accept(fd: i32) -> Os<Accepted> {
     with_socket(fd, |socket| {
         let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
@@ -1127,8 +1138,36 @@ fn try_accept(fd: i32) -> Os<Accepted> {
         if toggled {
             let _ = rustix::fs::fcntl_setfl(socket, flags);
         }
-        accepted
+        let (new, address) = accepted?;
+        // A host whose accepted socket takes the listening socket's mode
+        // gave it the toggle's `O_NONBLOCK`, which the program never set.
+        if toggled && crate::host::ACCEPT_INHERITS_NONBLOCK {
+            blocking(&new).map_err(os)?;
+        }
+        crate::host::prepare_socket(new.as_fd()).map_err(os)?;
+        Ok((new, address))
     })
+}
+
+/// Makes `socket` blocking. A socket `accept` answers starts blocking on
+/// Linux; Apple's systems and the BSDs give it the listening socket's
+/// `O_NONBLOCK`, which [`try_accept`] sets for its call.
+fn blocking(socket: &OwnedFd) -> rustix::io::Result<()> {
+    let flags = rustix::fs::fcntl_getfl(socket)?;
+    if flags.contains(rustix::fs::OFlags::NONBLOCK) {
+        rustix::fs::fcntl_setfl(socket, flags - rustix::fs::OFlags::NONBLOCK)?;
+    }
+    Ok(())
+}
+
+/// Whether a receive on `socket` can never be answered by data: a listening
+/// socket, and where the host's poll does not report it hung up, a stream
+/// socket with no peer.
+fn unconnected_stream(socket: std::os::fd::BorrowedFd<'_>) -> bool {
+    crate::host::is_listening(socket)
+        || (!crate::host::POLL_HANGS_UP_UNCONNECTED
+            && rustix::net::sockopt::socket_type(socket) == Ok(rustix::net::SocketType::STREAM)
+            && rustix::net::getpeername(socket) == Err(rustix::io::Errno::NOTCONN))
 }
 
 /// The deadline a socket's `SO_RCVTIMEO` (`Timeout::Recv`) or `SO_SNDTIMEO`
@@ -1300,15 +1339,20 @@ pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resul
                 .and_then(|address| address.as_sockaddr_in().map(|v4| v4.ip()))
         })
         .collect();
-    let examined = addresses.len().saturating_sub(1);
-    match addresses[..examined]
-        .iter()
-        .map(Ipv4Addr::to_string)
-        .find(|text| !text.starts_with("127"))
-    {
+    match host_id(&addresses) {
         Some(text) => Ok(interp.text_built(text.into_bytes())),
         None => Err(failed(interp)),
     }
+}
+
+/// [`get_host_id`]'s choice among the interfaces' IPv4 `addresses`, in list
+/// order: the first whose text does not begin `127`, the last never examined.
+fn host_id(addresses: &[Ipv4Addr]) -> Option<String> {
+    let examined = addresses.len().saturating_sub(1);
+    addresses[..examined]
+        .iter()
+        .map(Ipv4Addr::to_string)
+        .find(|text| !text.starts_with("127"))
 }
 
 // --- Data -------------------------------------------------------------------
@@ -1335,7 +1379,7 @@ fn send_flags(text: &[u8], oob: bool) -> SendFlags {
             ("MSG_DONTROUTE", SendFlags::DONTROUTE.bits()),
         ],
     );
-    SendFlags::from_bits_retain(bits) | SendFlags::NOSIGNAL
+    SendFlags::from_bits_retain(bits)
 }
 
 fn recv_flags(text: &[u8]) -> RecvFlags {
@@ -1360,6 +1404,7 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     // raises HALT on the `SockSend` line.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
+            let flags = flags | crate::host::no_sigpipe_flags(socket);
             rustix::net::send(socket, &bytes, flags)
                 .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
                 .map_err(os)
@@ -1391,6 +1436,7 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     // As `SockSend`: a halting signal ends a blocked send at this clause.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
+            let flags = flags | crate::host::no_sigpipe_flags(socket);
             let count = match target(address) {
                 Target::Inet(v4) | Target::Unspec(v4) => {
                     rustix::net::sendto(socket, &bytes, flags, &v4)
@@ -1452,12 +1498,14 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
         return Ok(number(interp, 0));
     }
     let flags = recv_flags(&flags);
-    // A listening socket is not connected: the receive fails at once with
-    // ENOTCONN (r[rxsock.sockets.stream]) instead of waiting for data that
-    // can never come.
+    // A stream socket that is not connected, a listening one included, fails
+    // at once with ENOTCONN (r[rxsock.sockets.stream]) instead of waiting for
+    // data that can never come. Linux's poll reports a socket never connected
+    // as hung up, which ends its wait at once; Apple's does not, so there it
+    // is asked here.
     let waits = !flags.contains(RecvFlags::OOB)
         && with_socket(fd, |socket| {
-            Ok(blocks(socket) && !rustix::net::sockopt::socket_acceptconn(socket).unwrap_or(false))
+            Ok(blocks(socket) && !unconnected_stream(socket))
         })
         .unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);
@@ -1521,7 +1569,9 @@ fn finish_recv(
 
 // --- Options and control ----------------------------------------------------
 
-/// The option names and their Linux numbers.
+/// The option names and the numbers that identify them here, which are
+/// Linux's; an option passed to the kernel by number takes the host's
+/// ([`raw_option`]).
 const OPTIONS: &[(&str, i32)] = &[
     ("SO_DEBUG", 1),
     ("SO_REUSEADDR", 2),
@@ -1562,6 +1612,18 @@ fn check_level(interp: &Interp, level: &[u8]) -> Result<()> {
 /// `SO_USELOOPBACK` passes.
 const RAW_OPTIONS: [i32; 4] = [1, 18, 19, 64];
 
+/// The host's number for the raw option `option` identifies. On Apple's
+/// systems the option numbers are not Linux's (`SO_RCVLOWAT` is 0x1004, not
+/// 18); 64 is passed as itself on every host.
+fn raw_option(option: i32) -> i32 {
+    match option {
+        1 => libc::SO_DEBUG,
+        18 => libc::SO_RCVLOWAT,
+        19 => libc::SO_SNDLOWAT,
+        other => other,
+    }
+}
+
 fn timeval_millis(seconds: i64, micros: i64) -> i64 {
     seconds * 1000 + micros / 1000
 }
@@ -1580,7 +1642,8 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
     let read: Os<String> = match option {
         None => Err(ENOPROTOOPT),
         Some(option) if RAW_OPTIONS.contains(&option) => with_socket(fd, |socket| {
-            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, option).map(|on| on.to_string())
+            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, raw_option(option))
+                .map(|on| on.to_string())
         }),
         Some(option) => with_socket(fd, |socket| {
             match option {
@@ -1664,7 +1727,12 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
         let size = numeric as u32 as usize;
         let set = match option {
             option if RAW_OPTIONS.contains(&option) => {
-                return rxsock_sys::set_int_option(socket, libc::SOL_SOCKET, option, numeric);
+                return rxsock_sys::set_int_option(
+                    socket,
+                    libc::SOL_SOCKET,
+                    raw_option(option),
+                    numeric,
+                );
             }
             2 => setsockopt(&socket, sockopt::ReuseAddr, &on),
             5 => setsockopt(&socket, sockopt::DontRoute, &on),
@@ -1785,34 +1853,33 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
 
 const SET_EVENTS: [PollFlags; 3] = [PollFlags::IN, PollFlags::OUT, PollFlags::PRI];
 
-/// The size of this process's descriptor table, `FDSize` in
-/// `/proc/self/status`: `select` reads no descriptor at or above it.
-fn descriptor_table_size() -> i32 {
-    std::fs::read_to_string("/proc/self/status")
-        .ok()
-        .and_then(|status| {
-            status
-                .lines()
-                .find_map(|line| line.strip_prefix("FDSize:"))
-                .and_then(|size| size.trim().parse().ok())
+/// Whether `select` looks at each entry of `sets`, per set
+/// ([`crate::host::SelectTable`]): a negative entry or one past the
+/// descriptor table is never ready and no error, while a closed one inside it
+/// answers -1 with `EBADF`. Taken once per call, so the polls and the walk of
+/// their answers agree on every entry.
+fn reached(sets: &[Option<Set>; 3]) -> [Vec<bool>; 3] {
+    let table = crate::host::SelectTable::now();
+    sets.each_ref().map(|set| {
+        set.as_ref().map_or_else(Vec::new, |set| {
+            set.sockets.iter().map(|fd| table.reaches(*fd)).collect()
         })
-        .unwrap_or(i32::MAX)
+    })
 }
 
-/// Whether `select` looks at `fd`: a negative entry or one past the descriptor
-/// table is never ready and no error, while a closed one below it answers -1
-/// with `EBADF`.
-fn selectable(fd: i32, table: i32) -> bool {
-    (0..table).contains(&fd)
-}
-
-fn select_polls(sets: &[Option<Set>; 3]) -> Vec<(i32, PollFlags)> {
-    let table = descriptor_table_size();
+/// The polls for the entries of `sets` that `reached` says `select` looks at.
+fn select_polls(sets: &[Option<Set>; 3], reached: &[Vec<bool>; 3]) -> Vec<(i32, PollFlags)> {
     sets.iter()
         .zip(SET_EVENTS)
-        .filter_map(|(set, events)| set.as_ref().map(|set| (set, events)))
-        .flat_map(|(set, events)| set.sockets.iter().map(move |fd| (*fd, events)))
-        .filter(|(fd, _)| selectable(*fd, table))
+        .zip(reached)
+        .filter_map(|((set, events), reached)| set.as_ref().map(|set| (set, events, reached)))
+        .flat_map(|(set, events, reached)| {
+            set.sockets
+                .iter()
+                .zip(reached)
+                .filter(|(_, reached)| **reached)
+                .map(move |(fd, _)| (*fd, events))
+        })
         .collect()
 }
 
@@ -1827,7 +1894,7 @@ pub(crate) fn select(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
         None => None,
     };
     let sets = [reads, writes, excepts];
-    let polls = select_polls(&sets);
+    let polls = select_polls(&sets, &reached(&sets));
     let ready = any_ready(&polls);
     if ready || timeout.is_some_and(|seconds| seconds <= 0.0) {
         return Ok(finish_select(interp, &sets));
@@ -1849,23 +1916,23 @@ pub(crate) fn select(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 }
 
 fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
-    let table = descriptor_table_size();
-    let polls = select_polls(sets);
+    let reached = reached(sets);
+    let polls = select_polls(sets, &reached);
     let Some(revents) = poll_now(&polls) else {
         return answer(interp, Err(EBADF));
     };
     let mut revents = revents.into_iter();
     let mut count = 0;
     let mut kept: Vec<Option<Vec<i32>>> = Vec::new();
-    for (set, events) in sets.iter().zip(SET_EVENTS) {
+    for ((set, events), reached) in sets.iter().zip(SET_EVENTS).zip(&reached) {
         let Some(set) = set else {
             kept.push(None);
             continue;
         };
         let mut ready = Vec::new();
         let mut counted = Vec::new();
-        for fd in set.sockets.iter().copied() {
-            if !selectable(fd, table) {
+        for (fd, reached) in set.sockets.iter().copied().zip(reached) {
+            if !reached {
                 continue;
             }
             let revents = revents.next().unwrap_or_else(PollFlags::empty);
@@ -1899,7 +1966,27 @@ fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
 mod tests {
     use std::os::fd::AsRawFd as _;
 
-    use super::{EAGAIN, blocks, try_accept, with_socket};
+    use std::net::Ipv4Addr;
+
+    use rustix::event::{PollFd, PollFlags};
+
+    use super::{EAGAIN, blocks, host_id, try_accept, with_socket};
+
+    /// `SockGetHostId` answers the first address not beginning `127`, and
+    /// never examines the last interface, so an address there alone is not
+    /// found.
+    #[test]
+    fn the_host_id_skips_loopback_and_never_examines_the_last_interface() {
+        let lo = Ipv4Addr::new(127, 0, 0, 1);
+        let a = Ipv4Addr::new(10, 0, 0, 5);
+        let b = Ipv4Addr::new(192, 168, 1, 2);
+        assert_eq!(host_id(&[lo, a, b]).as_deref(), Some("10.0.0.5"));
+        assert_eq!(host_id(&[a, b]).as_deref(), Some("10.0.0.5"));
+        assert_eq!(host_id(&[lo, a]), None);
+        assert_eq!(host_id(&[a]), None);
+        assert_eq!(host_id(&[]), None);
+        assert_eq!(host_id(&[lo, Ipv4Addr::new(127, 9, 9, 9), a]), None);
+    }
 
     /// A blocking listening socket whose connection another accept took is
     /// tried without blocking (PR 4 review M3): `EAGAIN` at once, the socket
@@ -1910,8 +1997,44 @@ mod tests {
         let fd = listener.as_raw_fd();
         assert_eq!(try_accept(fd).err(), Some(EAGAIN));
         assert_eq!(with_socket(fd, |socket| Ok(blocks(socket))), Ok(true));
-        let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
-            .expect("a connection");
+        let _client = connected(&listener);
         assert!(try_accept(fd).is_ok());
+    }
+
+    /// A client connected to `listener`, once the connection is in its accept
+    /// queue: it may reach the queue after `connect` returns.
+    fn connected(listener: &std::net::TcpListener) -> std::net::TcpStream {
+        let client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
+            .expect("a connection");
+        let mut ready = [PollFd::new(listener, PollFlags::IN)];
+        let five_seconds = rustix::event::Timespec {
+            tv_sec: 5,
+            tv_nsec: 0,
+        };
+        rustix::event::poll(&mut ready, Some(&five_seconds)).expect("a poll");
+        client
+    }
+
+    /// A blocking listening socket's connection is accepted blocking on every
+    /// host, the toggle that tried it without blocking undone. A non-blocking
+    /// one's, the program's own choice, is accepted as the host's `accept`
+    /// gives it: blocking on Linux, non-blocking where the mode is inherited.
+    #[test]
+    fn an_accepted_socket_has_the_mode_the_host_gives_it() {
+        use std::os::fd::AsFd as _;
+        for listener_blocks in [true, false] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a listener");
+            listener
+                .set_nonblocking(!listener_blocks)
+                .expect("the listener's mode");
+            let _client = connected(&listener);
+            let (accepted, _) = try_accept(listener.as_raw_fd()).expect("the connection");
+            let expected = listener_blocks || !crate::host::ACCEPT_INHERITS_NONBLOCK;
+            assert_eq!(
+                blocks(accepted.as_fd()),
+                expected,
+                "listener blocking: {listener_blocks}"
+            );
+        }
     }
 }

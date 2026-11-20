@@ -132,8 +132,21 @@ fn subset() -> Vec<String> {
         .iter()
         .map(|name| corpus_dir.join(name))
         .collect();
-    read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+    let mut subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    if cfg!(target_vendor = "apple") {
+        subset.retain(|path| !ALLOCATOR_REFUSAL_PROGRAMS.contains(&path.as_str()));
+    }
+    subset
 }
+
+/// The corpus programs whose expected answer is the allocator refusing a
+/// request far beyond any machine's memory (5.0 raised by `try_reserve`). The
+/// request is refused on Linux. macOS grants it (measured: a run passed 7 GB)
+/// and the program then touches the pages until the machine is out of memory,
+/// and no address-space limit can stop that there (`setrlimit(RLIMIT_AS)` is
+/// refused below what a process has reserved). They are left out on macOS
+/// until an interpreter heap limit refuses the request on every host (#840).
+const ALLOCATOR_REFUSAL_PROGRAMS: &[&str] = &["lang/collection_array_grow_refused.rex"];
 
 /// Every shard index below `SHARDS` has a test running it, so no program of
 /// the subset falls between the shards.
@@ -1660,12 +1673,13 @@ fn a_dropped_package_is_collected() {
 
 /// Runs `read` after an external routine's public routines were merged into
 /// the main program's package by a call from a procedure, and a loop that
-/// allocates, and asserts it printed `expected`.
+/// allocates, and asserts it printed `expected`. The routine is called by its file's exact name,
+/// so the package name it prints is the file's on a file system that ignores case too.
 fn assert_external_merge_prints(label: &str, read: &str, expected: &str) {
     let ext5 = "return 1\n::routine pubr public\n  return .context~package~name~right(8)\n";
     let program = format!(
         "call sub\ndo zi = 1 to 3\n  zz = copies('x', 100000)\nend\n{read}exit\n\
-         sub: procedure\n  x = ext5()\n  return\n"
+         sub: procedure\n  x = 'ext5'()\n  return\n"
     );
     assert_stress_prints_beside(label, &[("ext5.rex", ext5)], &program, expected);
 }

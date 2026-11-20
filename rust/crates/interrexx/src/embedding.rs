@@ -614,6 +614,21 @@ fn instance(address: usize) -> Option<std::sync::Arc<Shared>> {
 static STARTING: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
     std::sync::Mutex::new(Vec::new());
 
+/// Holds an instance's [`State::ended`] to be set when it drops, as the
+/// interpreter thread leaves its body, normally or by unwinding.
+struct Ending(std::sync::Arc<Shared>);
+
+impl Drop for Ending {
+    fn drop(&mut self) {
+        self.0.state().ended = true;
+        self.0.changed.notify_all();
+    }
+}
+
+/// Has the root call of each instance panic once `Terminate` has woken it.
+#[cfg(test)]
+static PANIC_IN_ROOT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// `RexxCreateInterpreter`: an interpreter of its own on a thread of its own,
 /// whose root activity waits in a native call that the calling thread, now
 /// attached to it, acts as; answers the root thread context's address, or
@@ -625,7 +640,9 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     crate::timer::install_signals();
     let shared = std::sync::Arc::new(Shared::default());
     let starting = std::sync::Arc::clone(&shared);
-    let ending = std::sync::Arc::clone(&shared);
+    // Marks the instance ended however the thread leaves, a panic included:
+    // the panic is reported by the hook, and `Terminate` returns.
+    let ending = Ending(std::sync::Arc::clone(&shared));
     // This thread waits for the instance to start, so the instance must not
     // wait for a library hook this thread is running.
     let lineage = crate::libraries::lineage();
@@ -647,11 +664,11 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
                 }),
             );
             *ending
+                .0
                 .outcome
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(outcome);
-            ending.state().ended = true;
-            ending.changed.notify_all();
+            drop(ending);
             if let Some(interp) = kept {
                 interp.wind_down();
             }
@@ -700,6 +717,11 @@ pub(crate) fn wait_in_root(context: usize) {
     shared.changed.notify_all();
     while !state.terminating {
         state = shared.wait(state);
+    }
+    drop(state);
+    #[cfg(test)]
+    if PANIC_IN_ROOT.load(std::sync::atomic::Ordering::SeqCst) {
+        panic!("the instance's root call panicked");
     }
 }
 
@@ -808,5 +830,33 @@ mod tests {
                     .to_owned(),
             )
         );
+    }
+
+    /// A panic on an instance's interpreter thread ends the instance: `Terminate` returns, rather
+    /// than waiting for ever for a thread that has gone (#810).
+    #[test]
+    fn terminate_returns_when_the_interpreter_thread_panics() {
+        if !crate::test_process::alone(
+            "embedding::tests::terminate_returns_when_the_interpreter_thread_panics",
+        ) {
+            return;
+        }
+        super::PANIC_IN_ROOT.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(super::create_instance(super::InstanceOptions::default()).is_some());
+        let address = super::instances()
+            .first()
+            .map(|(address, _)| *address)
+            .expect("the instance is live");
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(super::EMBEDDER.terminate(address));
+        });
+        // A bound, so that a Terminate that waits for ever fails the test rather than hanging it;
+        // the process ends with the waiting thread when the test does.
+        let terminated = receiver
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .expect("Terminate returns after the interpreter thread panicked");
+        assert!(terminated);
+        assert!(super::instances().is_empty());
     }
 }

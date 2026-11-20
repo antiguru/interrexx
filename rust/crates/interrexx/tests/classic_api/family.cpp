@@ -47,7 +47,7 @@ static void *runner(void *)
 static size_t SelfHalt(const char *, size_t, PCONSTRXSTRING, const char *, PRXSTRING ret)
 {
     int rc = RexxSetHalt(getpid(), (thread_id_t)pthread_self());
-    sprintf(ret->strptr, "%d", rc);
+    snprintf(ret->strptr, RXAUTOBUFLEN, "%d", rc);
     ret->strlength = strlen(ret->strptr);
     return 0;
 }
@@ -56,7 +56,7 @@ static size_t SelfTrace(const char *, size_t argc, PCONSTRXSTRING, const char *,
 {
     int rc = argc ? RexxResetTrace(getpid(), (thread_id_t)pthread_self())
                   : RexxSetTrace(getpid(), (thread_id_t)pthread_self());
-    sprintf(ret->strptr, "%d", rc);
+    snprintf(ret->strptr, RXAUTOBUFLEN, "%d", rc);
     ret->strlength = strlen(ret->strptr);
     return 0;
 }

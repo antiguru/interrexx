@@ -588,6 +588,51 @@ fn a_registered_routine_that_fails_leaves_no_registration() {
     assert_eq!(stdout(&second), "1\n", "{}", stderr(&second));
 }
 
+/// The spec's fixture libraries (`spec/fixture/specfixture.cpp`), built by
+/// `scripts/build-spec-fixture.sh` where the spec tests build them; the script leaves an
+/// up-to-date build alone.
+fn spec_fixture() -> PathBuf {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("spec-fixture");
+    let output = Command::new(root.join("scripts/build-spec-fixture.sh"))
+        .arg("--out")
+        .arg(&out)
+        .output()
+        .expect("running build-spec-fixture.sh");
+    assert!(
+        output.status.success(),
+        "build-spec-fixture.sh failed:\n{}{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    out
+}
+
+/// spec: dir.routine.deviation.143
+///
+/// A `REGISTERED` routine whose library's package loader raises raises that condition and
+/// leaves no registration, so neither the same program nor a later one finds the name.
+#[test]
+fn a_registered_routine_whose_loader_raises_leaves_no_registration() {
+    let service = Service::new();
+    let fixture = spec_fixture();
+    let run = |program: &str| {
+        service
+            .command(program)
+            .env("LD_LIBRARY_PATH", &fixture)
+            .output()
+            .expect("rexx runs")
+    };
+    let first = run("signal on syntax name e\n\
+         p = .package~new('n1zqrl', -\n  \
+         .array~of('::routine n1zqrl external \"REGISTERED specraising FxClassicJoin\"'))\n\
+         say 'installed'\n\
+         e: say condition('o')~code rxfuncquery('n1zqrl')\n");
+    assert_eq!(stdout(&first), "93.900 1\n", "{}", stderr(&first));
+    let second = run("say rxfuncquery('N1ZQRL')\n");
+    assert_eq!(stdout(&second), "1\n", "{}", stderr(&second));
+}
+
 /// A waiting `lineIn` gives up its guard, as the oracle's `SetGuardOff` does, so another
 /// activity's guarded `lineOut` on the same queue object delivers its line: run directly and
 /// from inside an `INTERPRET`, where the wait does not return to the scheduler.

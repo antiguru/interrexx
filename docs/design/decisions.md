@@ -101,6 +101,12 @@ page records why they are the way they are.
   answers, never in an order or in which entry a lookup finds. For objects that break the `hashCode`
   contract, whether a lookup finds an entry is unspecified (2026-11-16), and so is which entry a
   search acts on when an `==` or `hashCode` it sends changes the collection.
+* **What the host decides is the host's** (2026-11-16, #215, #759). Where a result comes from
+  the host system (an `errno` number, a C library's error text, a time zone's name), a rule
+  states it by the error's name where the name is the same on every host (`EAGAIN`, not 11), and
+  otherwise as the host's value, with a test expectation per host. interrexx does not translate
+  one host's values into another's. Linux is the reference host the specification's examples
+  show.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the
@@ -128,8 +134,8 @@ page records why they are the way they are.
 * **A regular build does not read `third_party/`** (2026-11-13, #388). Tables derived from ooRexx
   are checked in, with a CI job that checks them against the pinned revision. The C and C++
   headers in `include/` are generated from the Rust layout definitions, in a per-platform layout
-  that holds Unix content only so far. The `build`, `shard`, `doctest` and `clippy` CI jobs
-  run on a checkout without the submodule. `build`, `doctest`, `clippy` and `msrv-standalone` keep
+  that holds Unix content only so far. The `build`, `shard`, `doctest`, `clippy` and `jit` CI
+  jobs run on a checkout without the submodule. `build`, `doctest`, `clippy`, `jit` and `msrv-standalone` keep
   a cargo cache that no job with the submodule saved, and `shard` keeps none, so a build script
   that reads the tree fails there. Tests that need the tree are held out of that run by a filter
   that names each one with its reason, not skipped at run time.

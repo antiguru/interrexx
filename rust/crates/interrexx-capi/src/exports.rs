@@ -329,6 +329,19 @@ pub unsafe extern "C-unwind" fn RexxCallBack(
     unsafe { interrexx_api::ffi::classic::call_back(label, argc, argv, rc, result) }
 }
 
+/// The key a `RexxStart` run is found by, from the `pthread_t` its thread is.
+#[cfg(not(target_vendor = "apple"))]
+fn thread_key(thread: thread_id_t) -> usize {
+    thread as usize
+}
+
+/// The key a `RexxStart` run is found by, from the `pthread_t` its thread is: a
+/// pointer on Apple's systems, whose address is the key.
+#[cfg(target_vendor = "apple")]
+fn thread_key(thread: thread_id_t) -> usize {
+    thread.addr()
+}
+
 /// `RXARI_OK` where `done`, else `RXARI_NOT_FOUND`.
 fn found(done: bool) -> RexxReturnCode {
     if done { 0 } else { TARGET_NOT_FOUND }
@@ -338,19 +351,25 @@ fn found(done: bool) -> RexxReturnCode {
 /// ignored.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxSetHalt(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
-    found(interrexx::embedding::classic_halt(thread as usize))
+    found(interrexx::embedding::classic_halt(thread_key(thread)))
 }
 
 /// `RexxSetTrace`: the external trace of the `RexxStart` run on `thread` turned on.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxSetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread as usize, true))
+    found(interrexx::embedding::classic_trace(
+        thread_key(thread),
+        true,
+    ))
 }
 
 /// `RexxResetTrace`: the external trace of the `RexxStart` run on `thread` turned off.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxResetTrace(_process: process_id_t, thread: thread_id_t) -> RexxReturnCode {
-    found(interrexx::embedding::classic_trace(thread as usize, false))
+    found(interrexx::embedding::classic_trace(
+        thread_key(thread),
+        false,
+    ))
 }
 
 /// `RexxContextEnvironment`, `RexxRedirectingEnvironment` and

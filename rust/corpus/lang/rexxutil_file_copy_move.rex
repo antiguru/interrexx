@@ -27,11 +27,11 @@ say 'copy nul cut   ' SysFileCopy(d'/a.txt' || '00'x || 'junk', d'/cut.txt' || '
 -- times kept to the second, mode given only to a target the copy creates
 'chmod 640' d'/a.txt'
 call SysSetFileDateTime d'/a.txt', '2001-02-03', '04:05:06'
-'touch -a -d @1000000000' d'/a.txt'
+'env TZ=UTC touch -a -t 200109090146.40' d'/a.txt'
 'chmod 600' d'/b.txt'
 say 'copy times     ' SysFileCopy(d'/a.txt', d'/new.txt') SysFileCopy(d'/a.txt', d'/b.txt')
-'stat -c "%n %a %X %Y"' d'/new.txt'
-'stat -c "%n %a %Y"' d'/b.txt'
+'stat -c "%n %a %X %Y"' d'/new.txt' '2>/dev/null || stat -f "%N %Lp %a %m"' d'/new.txt'
+'stat -c "%n %a %Y"' d'/b.txt' '2>/dev/null || stat -f "%N %Lp %m"' d'/b.txt'
 -- links: a copy follows them, a move keeps them
 'ln -s a.txt' d'/link'
 'ln -s nowhere' d'/dangling'

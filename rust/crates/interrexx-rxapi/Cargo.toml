@@ -20,5 +20,9 @@ rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
 interrexx-api.workspace = true
 interrexx-inventory.workspace = true
 
+# `getpeereid`, the peer's user where the kernel has no `SO_PEERCRED`.
+[target.'cfg(not(any(target_os = "linux", target_os = "android")))'.dependencies]
+nix = { version = "0.31.3", default-features = false, features = ["socket", "user"] }
+
 [lints]
 workspace = true

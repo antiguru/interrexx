@@ -449,7 +449,7 @@ fn spawn_failure_preserves_partial_input_and_requeues_other_posts() {
         return;
     }
     let mut interp = Interp::new();
-    interp.pool = crate::scheduler::Pool::new(1 << 46, 1);
+    interp.pool = crate::scheduler::Pool::new(crate::test_process::UNSPAWNABLE_STACK, 1);
     interp.input = Input::new(ProgramInput::Stdin);
     interp.input.exhausted = true;
     assert!(interp.input.start_stdin_read());
@@ -498,7 +498,7 @@ fn spawn_failure_on_stdin_reaches_syntax_without_reading() {
         let outcome = std::thread::Builder::new()
             .stack_size(crate::INTERPRETER_STACK_BYTES)
             .spawn(move || {
-                crate::set_pool_stack(1 << 46);
+                crate::set_pool_stack(crate::test_process::UNSPAWNABLE_STACK);
                 crate::execute_on(
                     b"/stdin.rex",
                     source.into_bytes(),
@@ -518,7 +518,7 @@ fn spawn_failure_on_stdin_reaches_syntax_without_reading() {
 fn recover_stdin(bound: usize) {
     let mut interp = Interp::new();
     interp.input = Input::new(ProgramInput::Stdin);
-    interp.pool = crate::scheduler::Pool::new(1 << 46, 1);
+    interp.pool = crate::scheduler::Pool::new(crate::test_process::UNSPAWNABLE_STACK, 1);
     assert!(interp.input_line().is_err());
     interp.pool = crate::scheduler::Pool::new(1 << 20, bound);
     assert_eq!(

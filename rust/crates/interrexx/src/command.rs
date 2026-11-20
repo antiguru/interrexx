@@ -366,8 +366,8 @@ fn change_directory(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcom
 /// The directory `chdir(target)` would enter, by its physical path, or the
 /// `errno` it would fail with.
 fn physical_directory(interp: &Interp, target: &[u8]) -> Result<std::path::PathBuf, i32> {
-    const ENOENT: i32 = 2;
-    const ENOTDIR: i32 = 20;
+    const ENOENT: i32 = libc::ENOENT;
+    const ENOTDIR: i32 = libc::ENOTDIR;
     if target.is_empty() {
         return Err(ENOENT);
     }
@@ -787,7 +787,7 @@ fn start(
     // unix handler performs before the spawn. Two pipes read separately
     // could not put the two streams back in the order the child wrote them.
     let merged = match io.is_some_and(IoContext::shares_one_target) {
-        true => Some(std::io::pipe().map_err(|error| pipe_failed(&error))?),
+        true => Some(crate::host::pipe().map_err(|error| pipe_failed(&error))?),
         false => None,
     };
     match &merged {
@@ -815,7 +815,7 @@ fn start(
     } else {
         interp.pool.reserve()?.map(ReservedWorker::new)
     };
-    let Ok(running) = builder.spawn() else {
+    let Ok(running) = crate::host::spawning(|| builder.spawn()) else {
         return Ok(nothing(UNKNOWN_COMMAND));
     };
     // **Every writing half of a merged pipe closes here**, and there are

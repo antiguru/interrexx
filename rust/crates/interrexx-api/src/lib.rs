@@ -8,6 +8,7 @@ pub mod handles;
 pub mod header;
 pub mod invoke;
 pub mod layout;
+pub mod library_names;
 pub mod load;
 pub mod redirect;
 pub mod values;

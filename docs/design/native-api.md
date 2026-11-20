@@ -104,7 +104,8 @@ Raising and throwing differ, as in ooRexx:
 
 ## Loading libraries
 
-* A library name becomes `lib<name>.so`, tried with `dlopen` and then under `/usr/lib`.
+* A library name becomes `lib<name>` with the host's suffix (`.so`, `.dylib` on macOS), tried
+  with `dlopen` and then under `/usr/lib`.
 * The package entry is the exported `RexxGetPackage`. A `requiredVersion` above the interpreter's
   raises 98.982. Routines and methods are registered from its tables; its `loader` hook runs after
   registration, and `unloader` hooks run at termination in ooRexx's table order.
@@ -153,6 +154,9 @@ Raising and throwing differ, as in ooRexx:
   `rexx.h`'s) and also the classic API's names. It owns all API client state.
 * `librexxapi.so.4` exports the classic queue, registration, macrospace and memory names and
   forwards each to `librexx.so.4`, which it names as `NEEDED` and finds through a `$ORIGIN` rpath.
+* On macOS the two are `librexx.4.dylib` and `librexxapi.4.dylib`, with install names under
+  `@rpath`; `librexxapi` records `@loader_path/librexx.4.dylib` as a load command and opens it by
+  that path. `interrexx-api/src/library_names.rs` holds the names of each host.
 * The `rexx` executable compiles the same export module, so an extension it loads reaches the
   interpreter it is running in.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic

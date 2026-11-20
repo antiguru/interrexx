@@ -18,6 +18,8 @@
     reason = "this harness times or bounds real runs"
 )]
 
+#[path = "support/host_process.rs"]
+mod host_process;
 mod support;
 
 use interrexx_inventory::errors::expand;
@@ -75,6 +77,24 @@ struct Ended {
     stderr: String,
 }
 
+/// Sends the signal named `name` (`INT`, `TERM`, `HUP`) to process `pid`, or to its process
+/// group where `launch` started one: whether it was sent.
+fn send(name: &str, launch: &Launch, pid: u32) -> bool {
+    use rustix::process::{Pid, Signal, kill_process, kill_process_group};
+    let signal = match name {
+        "INT" => Signal::INT,
+        "TERM" => Signal::TERM,
+        "HUP" => Signal::HUP,
+        other => panic!("no signal {other} among the halting ones"),
+    };
+    let pid = Pid::from_raw(i32::try_from(pid).expect("a pid")).expect("a positive pid");
+    match launch {
+        Launch::Group => kill_process_group(pid, signal),
+        _ => kill_process(pid, signal),
+    }
+    .is_ok()
+}
+
 /// Runs `source` under `rexx` started as `launch`, takes `steps` once
 /// `ready` is on its stdout, or after [`UNREADY_WAIT`] where `ready` is
 /// empty, and answers how it ended and how long after the first signal.
@@ -91,8 +111,7 @@ fn run_steps(
     std::fs::create_dir_all(&dir).expect("the probe directory");
     let file = dir.join(format!("{name}.rex"));
     std::fs::write(&file, source).expect("the probe");
-    let mut command = Command::new("env");
-    command.arg("--default-signal=INT,TERM,HUP");
+    let mut command = host_process::with_default_halting_signals();
     match launch {
         Launch::Nohup => {
             command.arg("nohup");
@@ -141,20 +160,13 @@ fn run_steps(
             seen.extend(bytes);
         }
     }
-    let target = match launch {
-        Launch::Group => format!("-{}", child.id()),
-        _ => child.id().to_string(),
-    };
     let mut signalled = None;
     let mut sent = true;
     for step in steps {
         match *step {
             Step::Signal(signal) => {
                 signalled.get_or_insert_with(Instant::now);
-                sent &= Command::new("kill")
-                    .args([&format!("-{signal}"), "--", &target])
-                    .status()
-                    .is_ok_and(|status| status.success());
+                sent &= send(signal, &launch, child.id());
             }
             Step::Pause(pause) => std::thread::sleep(pause),
             Step::Write(text) => {
@@ -1222,15 +1234,9 @@ fn a_halted_read_loses_no_input() {
     );
 }
 
-/// `/proc/<pid>/stat`'s user and system time, in clock ticks.
+/// Process `pid`'s user and system time, in hundredths of a second.
 fn cpu_ticks(pid: u32) -> u64 {
-    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).expect("the process's stat");
-    let (_, fields) = stat
-        .rsplit_once(')')
-        .expect("stat names the command in parentheses");
-    let fields: Vec<&str> = fields.split_whitespace().collect();
-    let field = |at: usize| fields[at].parse::<u64>().expect("a tick count");
-    field(11) + field(12)
+    host_process::cpu_centiseconds(pid).expect("the process's CPU time")
 }
 
 /// A read of standard input idles while another activity's command end
@@ -1327,7 +1333,9 @@ fn no_activity_runs_while_main_reads() {
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 }
 
-/// Each thread's blocked halting signals, by thread name.
+/// Each thread's blocked halting signals, by thread name. Another process's per-thread signal
+/// masks are read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 fn halting_blocked(pid: u32) -> Vec<(String, bool)> {
     let mut threads = Vec::new();
     for task in std::fs::read_dir(format!("/proc/{pid}/task")).expect("the threads") {
@@ -1354,7 +1362,9 @@ fn halting_blocked(pid: u32) -> Vec<(String, bool)> {
 
 /// The halting signals reach only the interpreter's thread and a thread in a
 /// command's wait or a read of standard input: measured on each
-/// thread while a command runs, after it, and while a read waits.
+/// thread while a command runs, after it, and while a read waits. Per-thread signal masks are
+/// read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 #[test]
 fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))

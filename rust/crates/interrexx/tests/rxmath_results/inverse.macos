@@ -1,0 +1,9 @@
+# The inverse functions at 16 digits, where the host's maths library decides the last digit
+# (`docs/design/decisions.md`): one file per host, named for it. These answers are interrexx's on
+# macOS, recorded on a CI runner; the oracle has not been run there.
+eval digits=9
+RxCalcArcSin(.5,16)
+RxCalcArcCos(0.5,16)
+----
+30.00000000000000
+59.99999999999999

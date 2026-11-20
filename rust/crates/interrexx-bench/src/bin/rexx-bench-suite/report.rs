@@ -178,7 +178,14 @@ pub(super) fn write_provenance(
     );
     let _ = writeln!(
         report,
-        "| address-space cap | `ulimit -v {ADDRESS_SPACE_LIMIT_KIB}` KiB, **both sides, every axis** |"
+        "| address-space cap | {} |",
+        // macOS cannot apply the cap (see `child::SHELL_SCRIPT`), and a
+        // report must not claim one it did not run under.
+        if cfg!(target_os = "macos") {
+            "none, `ulimit -v` fails on macOS".to_string()
+        } else {
+            format!("`ulimit -v {ADDRESS_SPACE_LIMIT_KIB}` KiB, **both sides, every axis**")
+        }
     );
     let _ = writeln!(
         report,

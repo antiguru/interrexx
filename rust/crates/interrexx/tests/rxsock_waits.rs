@@ -53,7 +53,9 @@ fn finish(mut child: Child, dir: &PathBuf) {
     let _ = std::fs::remove_dir_all(dir);
 }
 
-/// Context switches, voluntary and not, of every thread of process `pid`.
+/// Context switches, voluntary and not, of every thread of process `pid`. Another process's
+/// per-thread counts are read from `/proc`, which only Linux has.
+#[cfg(target_os = "linux")]
 fn switches(pid: u32) -> u64 {
     let tasks = format!("/proc/{pid}/task");
     std::fs::read_dir(&tasks)
@@ -139,6 +141,8 @@ fn a_select_with_a_timeout_ends_at_the_timeout() {
 /// A program blocked in `SockRecv` uses no CPU while it waits: over half a
 /// second, its threads are switched in a handful of times at most, where a
 /// wait that polled every 5 ms would be woken a hundred times.
+/// It counts the process's context switches, which only Linux's `/proc` gives per thread.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_blocked_receive_does_not_wake_while_idle() {
     let (mut child, dir) = start(
@@ -163,6 +167,8 @@ fn a_blocked_receive_does_not_wake_while_idle() {
 /// `poll` reports as hung up whatever it is asked, waits out its timeout
 /// without spinning: a hang-up answers no wait for priority data, and the
 /// wait must not wake on it again and again.
+/// It counts the process's context switches, which only Linux's `/proc` gives per thread.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_hung_up_exception_entry_does_not_spin_a_select() {
     let (mut child, dir) = start(
@@ -371,4 +377,43 @@ fn a_halt_ends_many_socket_waits_promptly() {
     assert!(!status.success(), "a halted program fails: {status:?}");
     assert!(!rest.contains("after"), "the select answered: {rest}");
     assert!(took < Duration::from_millis(500), "the halt took {took:?}");
+}
+
+/// A blocking `SockConnect` to a port nobody listens on answers -1 with
+/// `errno` ECONNREFUSED as the refusal arrives. Apple's `poll` reports the
+/// refused socket as hung up alone, not writable, and a second `connect`
+/// answers `EISCONN`: a wait for writability alone never ended, and a
+/// connect that ended it would have answered success. The first answer is
+/// the same on every host.
+#[test]
+fn a_refused_connect_answers_as_the_refusal_arrives() {
+    let (mut child, dir) = start(
+        "refused",
+        &format!(
+            "{LISTEN}call SockClose s\n\
+             c = SockSocket('AF_INET', 'SOCK_STREAM', 0)\n\
+             a.family = 'AF_INET'; a.port = n.port; a.addr = '127.0.0.1'\n\
+             t = .datetime~new\n\
+             say SockConnect(c, 'a.') errno\n\
+             say (.datetime~new - t)~seconds < 5\n\
+             say SockConnect(c, 'a.') errno\n"
+        ),
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    let _port = line(&mut out);
+    let answer = line(&mut out);
+    let timely = line(&mut out);
+    let again = line(&mut out);
+    finish(child, &dir);
+    assert_eq!(answer, "-1 ECONNREFUSED");
+    assert_eq!(timely, "1");
+    // What a second connect on a socket whose connect failed answers is the
+    // host's (`docs/design/decisions.md`): Linux's goes back to unconnected,
+    // Apple's stays connected in error.
+    let host_answer = if cfg!(target_os = "macos") {
+        "-1 EISCONN"
+    } else {
+        "-1 ECONNREFUSED"
+    };
+    assert_eq!(again, host_answer);
 }

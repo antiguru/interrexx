@@ -13,8 +13,15 @@
 mod build_date;
 
 fn main() {
-    println!("cargo:rustc-link-arg-bin=rexx=-Wl,--export-dynamic-symbol=Rexx*");
-    println!("cargo:rustc-link-arg-tests=-Wl,--export-dynamic-symbol=Rexx*");
+    // Apple's linker spells the export with the C symbol prefix, and an exported symbol is also
+    // kept from dead stripping.
+    let export = if std::env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple") {
+        "-Wl,-exported_symbol,_Rexx*"
+    } else {
+        "-Wl,--export-dynamic-symbol=Rexx*"
+    };
+    println!("cargo:rustc-link-arg-bin=rexx={export}");
+    println!("cargo:rustc-link-arg-tests={export}");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=build_date.rs");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");

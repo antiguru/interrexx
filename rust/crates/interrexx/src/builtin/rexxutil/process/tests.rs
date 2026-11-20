@@ -81,13 +81,24 @@ fn key_typed(typed: &[u8], echo: bool) -> (Option<u8>, Vec<u8>, LocalModes, Loca
     (key, echoed(&controller), before, after)
 }
 
+/// The local modes a program sets: all but `PENDIN`, which the kernel sets
+/// itself where canonical input is to be retyped, as Apple's does once
+/// canonical mode returns with input pending.
+fn set_by_the_program(modes: LocalModes) -> LocalModes {
+    modes - LocalModes::PENDIN
+}
+
 #[test]
 fn a_key_is_read_without_a_line_end_and_echoed() {
     let (key, echo, before, after) = key_typed(b"k", true);
     assert_eq!(key, Some(b'k'));
     assert_eq!(echo, b"k");
     assert!(before.contains(LocalModes::ICANON | LocalModes::ECHO));
-    assert_eq!(after, before, "the settings are restored");
+    assert_eq!(
+        set_by_the_program(after),
+        set_by_the_program(before),
+        "the settings are restored"
+    );
 }
 
 #[test]
@@ -95,7 +106,11 @@ fn noecho_reads_one_key_and_echoes_nothing() {
     let (key, echo, before, after) = key_typed(b"qr", false);
     assert_eq!(key, Some(b'q'));
     assert_eq!(echo, b"");
-    assert_eq!(after, before, "the settings are restored");
+    assert_eq!(
+        set_by_the_program(after),
+        set_by_the_program(before),
+        "the settings are restored"
+    );
 }
 
 #[test]
@@ -149,13 +164,19 @@ fn a_failed_read_answers_none_and_restores_the_settings() {
     let after = rustix::termios::tcgetattr(&terminal)
         .expect("terminal settings")
         .local_modes;
-    assert_eq!(after, before, "the settings are restored");
+    assert_eq!(
+        set_by_the_program(after),
+        set_by_the_program(before),
+        "the settings are restored"
+    );
 }
 
 /// **`SysCls` runs its shell in a working directory whose name is not
 /// UTF-8**, as `system` does wherever the process stands. `-1` is the answer
 /// for no child at all. The adjacent success is the same call from a
-/// directory whose name is UTF-8.
+/// directory whose name is UTF-8. Apple's file systems refuse such a name
+/// (`EILSEQ`), so the case cannot arise there.
+#[cfg(not(target_vendor = "apple"))]
 #[test]
 fn sys_cls_runs_in_a_directory_whose_name_is_not_utf8() {
     use std::os::unix::ffi::OsStrExt as _;

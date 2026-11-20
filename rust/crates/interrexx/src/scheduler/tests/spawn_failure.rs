@@ -39,7 +39,7 @@ fn native_spawn_failure_reaches_main_and_started_handlers() {
     let ran = run_shaped(
         source,
         Shape {
-            stack: Some(1 << 46),
+            stack: Some(crate::test_process::UNSPAWNABLE_STACK),
             library: (b"pooltest", counted_library),
             ..SHAPE
         },
@@ -89,7 +89,7 @@ fn command_spawn_failure_creates_no_child_and_repeats() {
     let ran = run_shaped(
         &source,
         Shape {
-            stack: Some(1 << 46),
+            stack: Some(crate::test_process::UNSPAWNABLE_STACK),
             ..SHAPE
         },
     )
@@ -122,7 +122,7 @@ fn guarded_native_spawn_failure_releases_receiver_for_progress() {
     let ran = run_shaped(
         source,
         Shape {
-            stack: Some(1 << 46),
+            stack: Some(crate::test_process::UNSPAWNABLE_STACK),
             ..SHAPE
         },
     )
@@ -135,7 +135,7 @@ fn guarded_native_spawn_failure_releases_receiver_for_progress() {
 
 #[test]
 fn configured_inline_and_fixed_saturation_are_not_spawn_errors() {
-    let disabled = crate::scheduler::Pool::new(1 << 46, 0);
+    let disabled = crate::scheduler::Pool::new(crate::test_process::UNSPAWNABLE_STACK, 0);
     assert!(matches!(disabled.reserve(), Ok(None)));
     let pool = crate::scheduler::Pool::new(1 << 20, 1);
     pool.fix_at_bound();

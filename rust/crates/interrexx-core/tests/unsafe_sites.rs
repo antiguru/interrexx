@@ -75,6 +75,7 @@ fn only_the_granted_module_may_say_unsafe() {
         granted,
         vec![
             "crates/interrexx/src/builtin/rxsock_sys.rs".to_string(),
+            "crates/interrexx/src/host/sys.rs".to_string(),
             "crates/interrexx/src/island.rs".to_string(),
             "crates/interrexx/src/jit.rs".to_string(),
             "crates/interrexx/src/signal.rs".to_string(),
@@ -103,6 +104,7 @@ fn only_the_granted_module_may_say_unsafe() {
         uses,
         vec![
             "crates/interrexx/src/builtin/rxsock_sys.rs".to_string(),
+            "crates/interrexx/src/host/sys.rs".to_string(),
             "crates/interrexx/src/island.rs".to_string(),
             "crates/interrexx/src/jit.rs".to_string(),
             "crates/interrexx/src/signal.rs".to_string(),

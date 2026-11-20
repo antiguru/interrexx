@@ -1,0 +1,98 @@
+# A `SELECT CASE` expression runs as native ops, filed by `Op::SelectCase`.
+# Each stanza answers what the walked expression answered.
+
+# trace i: the expression's intermediates, then the `>K>` line
+program
+trace i
+s = 'abc'
+select case length(s) + 1
+  when 4 then say 'four'
+  otherwise say 'other'
+end
+----
+rc> 0
+out> four
+err>      2 *-* s = 'abc'
+err>        >L>   "abc"
+err>        >>>   "abc"
+err>        >=>   S <= "abc"
+err>      3 *-* select case length(s) + 1
+err>        >V>   S => "abc"
+err>        >A>   "abc"
+err>        >F>   LENGTH => "3"
+err>        >L>   "1"
+err>        >O>   "+" => "4"
+err>        >K>   "CASE" => "4"
+err>      4 *-*   when 4 
+err>        >L>     "4"
+err>        >>>     "4"
+err>        >>>     "1"
+err>      4 *-*     then
+err>      4 *-*       say 'four'
+err>        >L>         "four"
+err>        >>>         "four"
+
+# trace r: only the `>K>` line
+program
+trace r
+o = .array~of(1, 2)
+select case o~items
+  when 2 then say 'two'
+  otherwise nop
+end
+----
+rc> 0
+out> two
+err>      2 *-* o = .array~of(1, 2)
+err>        >>>   "an Array"
+err>      3 *-* select case o~items
+err>        >K>   "CASE" => "2"
+err>      4 *-*   when 2 
+err>        >>>     "2"
+err>        >>>     "1"
+err>      4 *-*     then
+err>      4 *-*       say 'two'
+err>        >>>         "two"
+
+# a raise in the middle of the expression is the SELECT's
+program
+select case 1 + f()
+  when 1 then nop
+end
+exit
+f: return 'x'
+----
+rc> 215
+err>      1 *-* select case 1 + f()
+err> Error 41 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 41.1:
+
+# a CALL ON handler queued by the expression runs at the SELECT's boundary,
+# inside the block
+program
+call on user zz name h
+select case g()
+  when 1 then say 'one'
+end
+say 'after'
+exit
+g: raise user zz return 1
+h:
+say 'handler' sigl
+return
+----
+rc> 0
+out> handler 2
+out> one
+out> after
+
+# no WHEN matches and there is no OTHERWISE
+program
+select case 'b' || 'c'
+  when 'bd' then nop
+end
+----
+rc> 249
+err>      3 *-* end
+err> Error 7 running /nonexistent/ir-dual-case.rex line 3:
+err> Error 7.3:

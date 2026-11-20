@@ -91,7 +91,9 @@ impl Canceller {
         }
         #[cfg(not(any(target_os = "linux", target_os = "android")))]
         {
-            let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC).ok()?;
+            let (read, write) = crate::host::pipe().ok()?;
+            let (read, write): (std::os::fd::OwnedFd, std::os::fd::OwnedFd) =
+                (read.into(), write.into());
             rustix::fs::fcntl_setfl(&write, rustix::fs::OFlags::NONBLOCK).ok()?;
             Some(Canceller {
                 pipe: (read, write),
@@ -177,6 +179,7 @@ mod none {
 /// Registrations and cancellations reach the thread through a command
 /// queue and an `eventfd` that wakes it; its `epoll_wait` timeout is the
 /// earliest deadline or muted descriptor's recheck.
+#[cfg(any(target_os = "linux", target_os = "android"))]
 mod epoll {
     use super::{OnEnd, PollFlags};
     use crate::builtin::rxsock::answers;

@@ -1,0 +1,31 @@
+# Extended attributes are the host's (`docs/design/decisions.md`): a missing one is ENODATA (61)
+# on Linux and ENOATTR (93) on macOS, which has no namespaces and so takes any name. These answers are
+# interrexx's on macOS, recorded on a CI runner; the oracle has not been run there.
+# Extended attributes on the case's file, which starts with none in the
+# user namespace.
+program
+call directory '{dir}'
+initial = SysListxattr('f')
+say 'list' initial~class SysListxattr('nothere')~class '['SysListxattr('nothere')']' SysGeterrno()
+say 'set' SysSetxattr('f', 'user.a', 'v1') SysGetxattr('f', 'user.a')
+say 'missing' '['SysGetxattr('f', 'user.zz')']' SysGeterrno()
+say 'bad namespace' SysSetxattr('f', 'bad.a', 'v1') SysGeterrno()
+say 'listed' SysListxattr('f')~difference(initial)~toString('L', ',')
+say 'remove' SysRemovexattr('f', 'user.a') SysRemovexattr('f', 'user.a') SysGeterrno()
+say 'nul' SysSetxattr('f', 'user.n', 'a'||'00'x||'b') length(SysGetxattr('f', 'user.n'))
+say 'empty' SysSetxattr('f', 'user.e', '') '['SysGetxattr('f', 'user.e')']'
+say 'long' SysSetxattr('f', 'user.l', copies('x', 1000)) length(SysGetxattr('f', 'user.l'))
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+list The Array class The String class [] 2
+set 0 v1
+missing [] 93
+bad namespace 0 93
+listed bad.a,user.a
+remove 0 -1 93
+nul 0 1
+empty 0 []
+long 0 1000
+[stderr]

@@ -113,8 +113,13 @@ fn a_search_directory_resolves_a_name_the_undecorated_attempt_misses() {
 fn a_library_without_the_exporter_is_not_an_error() {
     // Without the first assertion the second cannot tell "loaded, no
     // `RexxGetPackage`" from "did not load": both answer `Ok(None)`.
-    let libc = Path::new("libc.so.6");
-    assert!(load::loads(libc), "libc.so.6 did not load");
+    // The host's C library, by the name its loader knows it by.
+    let libc = Path::new(if cfg!(target_vendor = "apple") {
+        "/usr/lib/libSystem.B.dylib"
+    } else {
+        "libc.so.6"
+    });
+    assert!(load::loads(libc), "{} did not load", libc.display());
     let answer = load::open_path(libc, "c").expect("a library with no exporter is not an error");
     assert!(answer.is_none());
 }
@@ -166,11 +171,7 @@ fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
 /// `r[native.loading.static]`, #683).
 #[test]
 fn a_closed_library_stays_mapped() {
-    let mapped = || {
-        std::fs::read_to_string("/proc/self/maps")
-            .expect("the process's maps")
-            .contains("librxregexp.so")
-    };
+    let mapped = || mapped_files().contains("librxregexp.so");
     let library = open_rxregexp();
     assert!(mapped());
     assert!(library.close());
@@ -180,14 +181,15 @@ fn a_closed_library_stays_mapped() {
     assert!(mapped());
 }
 
-/// A shared object named `lib<name>.so` in a directory of its own, built from the C `source`, and
+/// A shared object named `lib<name>` plus the host's shared-library suffix in a directory of its own, built from the C `source`, and
 /// whether the process has it mapped.
 fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
     let dir = std::env::temp_dir().join(format!("interrexx-plain-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("the directory is creatable");
     let file_source = dir.join("plain.c");
     std::fs::write(&file_source, source).expect("the source is writable");
-    let file = format!("lib{name}.so");
+    // The host's suffix, as `classic_procedure` spells the file it searches for.
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
     let built = std::process::Command::new("cc")
         .args(["-shared", "-fPIC", "-o"])
         .arg(dir.join(&file))
@@ -195,11 +197,7 @@ fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
         .status()
         .expect("cc runs, which this test needs to build its fixture");
     assert!(built.success(), "the fixture did not build");
-    let mapped = move || {
-        std::fs::read_to_string("/proc/self/maps")
-            .expect("the process's maps")
-            .contains(&file)
-    };
+    let mapped = move || mapped_files().contains(&file);
     (dir, mapped)
 }
 
@@ -215,8 +213,11 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
         "void *RexxGetPackage(void) { return (void *)0; }\n",
     );
     assert!(!mapped());
-    let answer = load::open_path(&dir.join("libnullpackage.so"), "nullpackage")
-        .expect("a null package entry is not an error");
+    let answer = load::open_path(
+        &dir.join(format!("libnullpackage{}", std::env::consts::DLL_SUFFIX)),
+        "nullpackage",
+    )
+    .expect("a null package entry is not an error");
     assert!(answer.is_none());
     assert!(mapped());
     std::fs::remove_dir_all(&dir).expect("the directory is removable");
@@ -228,8 +229,11 @@ fn a_library_whose_exporter_answers_no_entry_stays_mapped() {
 fn a_library_without_the_exporter_stays_mapped() {
     let (dir, mapped) = plain_library("plainpackage", NO_EXPORTER);
     assert!(!mapped());
-    let answer = load::open_path(&dir.join("libplainpackage.so"), "plainpackage")
-        .expect("a library with no exporter is not an error");
+    let answer = load::open_path(
+        &dir.join(format!("libplainpackage{}", std::env::consts::DLL_SUFFIX)),
+        "plainpackage",
+    )
+    .expect("a library with no exporter is not an error");
     assert!(answer.is_none());
     assert!(mapped());
     std::fs::remove_dir_all(&dir).expect("the directory is removable");
@@ -250,4 +254,18 @@ fn a_classic_miss_leaves_its_library_mapped() {
     assert!(found.is_none());
     assert!(mapped());
     std::fs::remove_dir_all(&dir).expect("the directory is removable");
+}
+
+/// The files this process has mapped, one per line: `/proc/self/maps` on Linux, and on Apple's
+/// hosts the open files `lsof` lists, which take in every library mapped from a file outside the
+/// system's shared cache.
+fn mapped_files() -> String {
+    if cfg!(target_os = "linux") {
+        return std::fs::read_to_string("/proc/self/maps").expect("the process's maps");
+    }
+    let listed = std::process::Command::new("lsof")
+        .args(["-p", &std::process::id().to_string(), "-Fn"])
+        .output()
+        .expect("lsof runs");
+    String::from_utf8_lossy(&listed.stdout).into_owned()
 }

@@ -1,0 +1,76 @@
+# `>name` and `<name` run as native ops: the variable itself, traced `>O>`.
+
+program
+trace i
+v = 5
+r = >v
+say r~class~id r~value
+r~value = 7
+say v
+s.1 = 'a'
+q = <s.
+say q~class~id
+----
+rc> 0
+out> VariableReference 5
+out> 7
+out> VariableReference
+err>      2 *-* v = 5
+err>        >L>   "5"
+err>        >>>   "5"
+err>        >=>   V <= "5"
+err>      3 *-* r = >v
+err>        >O>   ">" => "V"
+err>        >>>   "5"
+err>        >=>   R <= "5"
+err>      4 *-* say r~class~id r~value
+err>        >V>   R => "5"
+err>        >M>   "CLASS" => "The VariableReference class"
+err>        >M>   "ID" => "VariableReference"
+err>        >V>   R => "5"
+err>        >M>   "VALUE" => "5"
+err>        >O>   " " => "VariableReference 5"
+err>        >>>   "VariableReference 5"
+err>      5 *-* r~value = 7
+err>        >V>   R => "5"
+err>        >L>   "7"
+err>        >A>   "7"
+err>      6 *-* say v
+err>        >V>   V => "7"
+err>        >>>   "7"
+err>      7 *-* s.1 = 'a'
+err>        >L>   "a"
+err>        >>>   "a"
+err>        >C>   S.1 => "S.1"
+err>        >=>   S.1 <= "a"
+err>      8 *-* q = <s.
+err>        >O>   ">" => "S."
+err>        >>>   "S."
+err>        >=>   Q <= "S."
+err>      9 *-* say q~class~id
+err>        >V>   Q => "S."
+err>        >M>   "CLASS" => "The VariableReference class"
+err>        >M>   "ID" => "VariableReference"
+err>        >>>   "VariableReference"
+
+# a namespace class, traced `>N>`, and one that is not there
+program
+trace i
+c = rexx:string
+say c~id
+d = rexx:nosuchclass
+----
+rc> 158
+out> String
+err>      2 *-* c = rexx:string
+err>        >N>   REXX:STRING => "The String class"
+err>        >>>   "The String class"
+err>        >=>   C <= "The String class"
+err>      3 *-* say c~id
+err>        >V>   C => "The String class"
+err>        >M>   "ID" => "String"
+err>        >>>   "String"
+err>      4 *-* d = rexx:nosuchclass
+err>      4 *-* d = rexx:nosuchclass
+err> Error 98 running /nonexistent/ir-dual-case.rex line 4:
+err> Error 98.988:

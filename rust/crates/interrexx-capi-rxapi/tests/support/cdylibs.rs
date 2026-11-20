@@ -1,5 +1,5 @@
-//! Where cargo left this workspace's shared objects, `librexx.so` of `interrexx-capi` and
-//! `librexxapi.so` of `interrexx-capi-rxapi`.
+//! Where cargo left this workspace's shared objects, `librexx` of `interrexx-capi` and
+//! `librexxapi` of `interrexx-capi-rxapi` (`.so`, or `.dylib` on Apple's hosts).
 //!
 //! They are cargo's own artifacts, not a build script's output, so no `OUT_DIR` or `DEP_*`
 //! variable names them, and cargo has no compile-time variable for a library's path as it has
@@ -16,14 +16,24 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-/// `librexx.so`, built by the package named `interrexx-capi`.
-pub fn librexx() -> PathBuf {
-    locate("interrexx-capi", "librexx.so")
+/// The file cargo builds for the library `name`: `lib<name>.so`, or `lib<name>.dylib` on Apple's
+/// hosts.
+pub fn cargo_file(name: &str) -> String {
+    format!(
+        "{}{name}{}",
+        std::env::consts::DLL_PREFIX,
+        std::env::consts::DLL_SUFFIX
+    )
 }
 
-/// `librexxapi.so`, built by the package named `interrexx-capi-rxapi`.
+/// `librexx`, built by the package named `interrexx-capi`.
+pub fn librexx() -> PathBuf {
+    locate("interrexx-capi", &cargo_file("rexx"))
+}
+
+/// `librexxapi`, built by the package named `interrexx-capi-rxapi`.
 pub fn librexxapi() -> PathBuf {
-    locate("interrexx-capi-rxapi", "librexxapi.so")
+    locate("interrexx-capi-rxapi", &cargo_file("rexxapi"))
 }
 
 /// A directory under `scratch` holding both libraries, which `scripts/build-*.sh --libs` read

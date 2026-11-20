@@ -114,6 +114,21 @@ systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 COMMAND
 interpreter stack before running anything, so under the same `ulimit -v` it has 512 MiB less to
 allocate than ooRexx.
 
+macOS has neither: there is no `systemd-run`, and it refuses a `ulimit -v` below what a process
+has already reserved. There, `scripts/rss-cap.sh` stands in for the cap: it runs a command, sums
+the resident sets of the command and every process below it twice a second, and kills them all
+once the sum passes the bound, exiting 137.
+
+```sh
+scripts/rss-cap.sh 8388608 COMMAND
+```
+
+It is a watchdog, not a limit: a process that allocates faster than it polls can pass the bound
+by up to half a second's allocation before it is killed. Running the `standalone` profile under it
+with `--test-threads 4` stays within 8 GiB. interrexx's own bound on memory is #840. macOS also
+limits a socket path to 104 bytes, and tests bind sockets under the target directory, so from a
+deep worktree set `CARGO_TARGET_DIR` to a shorter path.
+
 * Probe from a fresh empty directory, with absolute paths: the current directory is on the external
   routine search path, and a stray `.rex` there runs instead of a typo'd name.
 * Give each ooRexx run its own `XDG_RUNTIME_DIR`, so its `rxapi` daemon is private, and each
@@ -149,9 +164,9 @@ From `rust/`, under the memory cap:
   exception. A new test that reads the submodule or runs the
   oracle is added to the filter with its tier and reason. The `build` CI job checks every name in
   the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
-  test cannot leave the filter unnoticed. The `build`, `shard`, `doctest` and `clippy` CI jobs
-  run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
-  asserting that before it starts, and `build`, `doctest`, `clippy` and `msrv-standalone` keep a
+  test cannot leave the filter unnoticed. The `build`, `shard`, `doctest`, `clippy` and `jit` CI
+  jobs run on a checkout with no submodule, no `third_party/` directory and no `build` link, each
+  asserting that before it starts, and `build`, `doctest`, `clippy`, `jit` and `msrv-standalone` keep a
   cargo cache of their own that no job with the submodule saved, where `shard` keeps none. So a
   build script or test that reads the tree fails there. The six shards run this profile over the archive that `build` made without the submodule; the
   `upstream-tier` job runs the complement, `--ignore-default-filter -E 'not default()'`, on a
