@@ -34,15 +34,12 @@ pub(crate) struct Native {
     pub(crate) steady: u64,
     /// The interpreter's clause countdown.
     pub(crate) countdown: u64,
-    /// The clause generated code opened last: its instruction, line and
-    /// indent, which [`Native::clause_dirty`] says the interpreter has not
-    /// been given yet.
-    pub(crate) clause_index: u64,
-    pub(crate) clause_line: u64,
-    pub(crate) clause_indent: u64,
-    pub(crate) clause_dirty: u64,
-    /// What a clause's own indent is offset by in the running activation.
-    pub(crate) indent_base: u64,
+    /// The clause generated code entered last and the interpreter has not
+    /// been told of: the pc of its `Op::Clause`, from which the host reads its
+    /// instruction, line and indent; [`CLAUSE_HEADER`] for the loop's header
+    /// clause at a pass boundary, whose line and indent are `loop_line` and
+    /// `loop_indent`; or [`CLAUSE_NONE`].
+    pub(crate) clause_at: u64,
     /// Non-zero when generated code may take the loop's next pass itself,
     /// which is `run::QuickPass`'s: the control variable in slot `loop_slot`
     /// stepped by `loop_step` and compared with `loop_to`, in a header clause
@@ -68,6 +65,11 @@ pub(crate) struct Native {
     pub(crate) passes: u64,
     /// The op a [`super::JUMP`] answer goes on at.
     pub(crate) jump_to: u64,
+    /// Non-zero when generated code opened the running clause and the host
+    /// has not taken it over, which is what makes its close free. The host's
+    /// helpers clear it when they take the clause, and set it when an op
+    /// hands the clause back.
+    pub(crate) opened: u64,
 }
 
 impl Native {
@@ -79,11 +81,7 @@ impl Native {
             small_int_bound: 0,
             steady: 0,
             countdown: 0,
-            clause_index: 0,
-            clause_line: 0,
-            clause_indent: 0,
-            clause_dirty: 0,
-            indent_base: 0,
+            clause_at: CLAUSE_NONE,
             loop_ready: 0,
             loop_kind: 0,
             loop_slot: 0,
@@ -96,6 +94,7 @@ impl Native {
             quick_values: 0,
             passes: 0,
             jump_to: 0,
+            opened: 0,
         }
     }
 }
@@ -112,11 +111,11 @@ pub(crate) const SLOT_COUNT: i32 = at(offset_of!(Native, slot_count));
 pub(crate) const SMALL_INT_BOUND: i32 = at(offset_of!(Native, small_int_bound));
 pub(crate) const STEADY: i32 = at(offset_of!(Native, steady));
 pub(crate) const COUNTDOWN: i32 = at(offset_of!(Native, countdown));
-pub(crate) const CLAUSE_INDEX: i32 = at(offset_of!(Native, clause_index));
-pub(crate) const CLAUSE_LINE: i32 = at(offset_of!(Native, clause_line));
-pub(crate) const CLAUSE_INDENT: i32 = at(offset_of!(Native, clause_indent));
-pub(crate) const CLAUSE_DIRTY: i32 = at(offset_of!(Native, clause_dirty));
-pub(crate) const INDENT_BASE: i32 = at(offset_of!(Native, indent_base));
+pub(crate) const CLAUSE_AT: i32 = at(offset_of!(Native, clause_at));
+/// [`Native::clause_at`] with no clause to tell the interpreter of.
+pub(crate) const CLAUSE_NONE: u64 = u64::MAX;
+/// [`Native::clause_at`] for the loop's header clause.
+pub(crate) const CLAUSE_HEADER: u64 = u64::MAX - 1;
 pub(crate) const LOOP_READY: i32 = at(offset_of!(Native, loop_ready));
 pub(crate) const LOOP_KIND: i32 = at(offset_of!(Native, loop_kind));
 pub(crate) const LOOP_CONTROLLED: u64 = 0;
@@ -125,13 +124,12 @@ pub(crate) const LOOP_FOREVER: u64 = 2;
 pub(crate) const LOOP_SLOT: i32 = at(offset_of!(Native, loop_slot));
 pub(crate) const LOOP_STEP: i32 = at(offset_of!(Native, loop_step));
 pub(crate) const LOOP_TO: i32 = at(offset_of!(Native, loop_to));
-pub(crate) const LOOP_LINE: i32 = at(offset_of!(Native, loop_line));
-pub(crate) const LOOP_INDENT: i32 = at(offset_of!(Native, loop_indent));
 pub(crate) const LOOP_VALUE: i32 = at(offset_of!(Native, loop_value));
 pub(crate) const LOOP_DIRTY: i32 = at(offset_of!(Native, loop_dirty));
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
 pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
+pub(crate) const OPENED: i32 = at(offset_of!(Native, opened));
 
 /// A variable slot's size, and where its two words are.
 pub(crate) const SLOT_SIZE: i64 = size_of::<VarSlot>() as i64;

@@ -37,7 +37,7 @@ use crate::run::QuickKind;
 /// earn a compile back are about the same for any body; this many bounds what
 /// a loop that ends just after it is compiled pays for it at about the time it
 /// already spent driven.
-const THRESHOLD: u32 = 8192;
+const THRESHOLD: u32 = 7168;
 /// A body is compiled only when it has at least this many steps compiled code
 /// does itself for each op the host runs.
 const HOSTED_SHARE: usize = 8;
@@ -311,10 +311,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
         let opening = chunk.opening_at(index as usize);
         steps.push(Step::Open {
             pc,
-            index,
             tabled: opening.tabled,
-            line: opening.position.line,
-            indent: opening.position.indent,
             register_top: opening.register_top,
         });
         for (at, op) in (pc + 1..).zip(chunk.ops_in(pc + 1, end)?) {
@@ -788,13 +785,36 @@ impl Host for Driven<'_, '_> {
             native.loop_dirty = 0;
             self.interp.quick_passes_reached(native.loop_value);
         }
-        if native.clause_dirty != 0 {
-            native.clause_dirty = 0;
-            self.interp.enter_compiled_clause(
-                native.clause_index as usize,
-                native.clause_line as usize,
-                native.clause_indent as usize,
-            );
+        match std::mem::replace(&mut native.clause_at, layout::CLAUSE_NONE) {
+            layout::CLAUSE_NONE => {}
+            // A pass boundary moves only the line and the indent; the
+            // instruction is the one already running.
+            layout::CLAUSE_HEADER => {
+                let index = self.interp.activity.clause_state.current_clause_index;
+                self.interp.enter_compiled_clause(
+                    index,
+                    native.loop_line as usize,
+                    native.loop_indent as usize,
+                );
+            }
+            // A clause compiled code opened, which `pass_of` took only from
+            // an `Op::Clause` or `Op::CallingClause` and the chunk's table.
+            pc => {
+                let Ok(pc) = u32::try_from(pc) else {
+                    return;
+                };
+                if let Some(&(Op::Clause { index, .. } | Op::CallingClause { index, .. })) =
+                    self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+                {
+                    let position = self.chunk.opening_at(index as usize).position;
+                    let indent = position.indent as usize + self.interp.activity.activation_indent;
+                    self.interp.enter_compiled_clause(
+                        index as usize,
+                        position.line as usize,
+                        indent,
+                    );
+                }
+            }
         }
     }
 
@@ -810,14 +830,6 @@ impl Host for Driven<'_, '_> {
         let fuzz = settings.fuzz();
         native.small_int_bound = crate::value::small_int_bound(digits);
         native.quick_values = u64::from(fuzz == 0 && !mode.results);
-        native.indent_base = interp.activity.activation_indent as u64;
-        // The clause the interpreter has running, so that a pass boundary
-        // compiled code takes, which moves only the line and the indent,
-        // leaves the instruction it names as it is.
-        let state = &interp.activity.clause_state;
-        native.clause_index = state.current_clause_index as u64;
-        native.clause_line = state.line() as u64;
-        native.clause_indent = state.current_value_indent as u64;
         // `Op::Load`'s and `Op::Store`'s fast paths reach the slot only for a
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
         // results; the window is offered only where both hold.
