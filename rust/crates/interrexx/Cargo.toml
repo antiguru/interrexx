@@ -179,7 +179,7 @@ pinning = []
 # The sharing-fraction instrument, `Outcome::sharing`.
 sharing = ["interrexx-core/sharing"]
 # Compiles hot flat loops to native code (`src/jit.rs`).
-jit = ["dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
+jit = ["interrexx-core/jit", "dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
 
 [dev-dependencies]
 # Path-only dev-dependencies on workspace crates carry no version: cargo drops them

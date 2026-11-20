@@ -3,18 +3,22 @@ use std::rc::Rc;
 use crate::ObjRef;
 use crate::frame::{FrameArena, FrameBlock};
 
-/// One variable slot: a value, or unset. `ObjRef::NIL` is itself a value
-/// (`x = .nil`), so unset is a flag beside the handle rather than a handle.
-/// `repr(C)` so that its layout is fixed: compiled code reads and writes a
-/// slot as these two words (`interrexx`'s `jit::layout`).
+/// One variable slot: a value, or unset.
+///
+/// With the `jit` feature its layout is fixed, because compiled code reads and
+/// writes a slot in place (`interrexx`'s `jit::layout`): `repr(C)`, a word that
+/// is `1` when the slot is set and the handle beside it. `ObjRef::NIL` is itself
+/// a value (`x = .nil`), so unset cannot be a handle. Without the feature it is
+/// the `Option` itself, which nothing outside this module reads in place.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg(feature = "jit")]
 #[repr(C)]
 pub struct VarSlot {
-    /// `1` when `value` is the slot's value, `0` when it is unset.
     set: u64,
     value: ObjRef,
 }
 
+#[cfg(feature = "jit")]
 impl VarSlot {
     pub const UNSET: VarSlot = VarSlot {
         set: 0,
@@ -38,6 +42,26 @@ impl VarSlot {
     pub const SET_AT: usize = std::mem::offset_of!(VarSlot, set);
     /// Where `value` sits in a slot.
     pub const VALUE_AT: usize = std::mem::offset_of!(VarSlot, value);
+}
+
+/// See the `jit` form above.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg(not(feature = "jit"))]
+pub struct VarSlot(Option<ObjRef>);
+
+#[cfg(not(feature = "jit"))]
+impl VarSlot {
+    pub const UNSET: VarSlot = VarSlot(None);
+
+    #[inline(always)]
+    pub fn of(value: Option<ObjRef>) -> VarSlot {
+        VarSlot(value)
+    }
+
+    #[inline(always)]
+    pub fn get(self) -> Option<ObjRef> {
+        self.0
+    }
 }
 
 /// A position in the temporary stack that a frame will unwind to.

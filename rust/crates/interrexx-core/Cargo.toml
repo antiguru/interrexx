@@ -35,6 +35,9 @@ hashbrown = { version = "0.16.1", default-features = false }
 [features]
 # The sharing-fraction instrument's tags, `Heap::sharing_counts`.
 sharing = []
+# Variable slots laid out for compiled code to read and write in place
+# (`VarSlot`), which `interrexx`'s own `jit` feature turns on.
+jit = []
 
 [dev-dependencies]
 criterion = "0.8.2"
