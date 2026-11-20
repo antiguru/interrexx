@@ -32,8 +32,12 @@ use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, Host, JUMP, Pass, STOP,
 use crate::run::FlatStep;
 use crate::run::QuickKind;
 
-/// Passes a loop runs driven before it is compiled.
-const THRESHOLD: u32 = 1024;
+/// Passes a loop runs driven before it is compiled. Compiling a body and the
+/// saving on each pass of it both grow with its length, so the passes that
+/// earn a compile back are about the same for any body; this many bounds what
+/// a loop that ends just after it is compiled pays for it at about the time it
+/// already spent driven.
+const THRESHOLD: u32 = 8192;
 /// A body is compiled only when it has at least this many steps compiled code
 /// does itself for each op the host runs.
 const HOSTED_SHARE: usize = 4;

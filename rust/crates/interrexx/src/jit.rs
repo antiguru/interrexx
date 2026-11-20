@@ -445,10 +445,10 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
     }
     let mut flags = settings::builder();
     // Compile time is paid on the first hot entry and has to be earned back
-    // by the passes after it, and this code is mostly guards and calls: the
-    // quick allocator and no mid-end optimisation cost it little.
+    // by the passes after it. The mid-end finds little in code that is mostly
+    // guards and calls; the register allocator is what the code's speed
+    // rests on, so it keeps its default.
     flags.set("opt_level", "none").ok()?;
-    flags.set("regalloc_algorithm", "single_pass").ok()?;
     flags.set("is_pic", "false").ok()?;
     // The verifier checks this generator rather than the program, and costs
     // more than the code it checks; debug builds keep it.
