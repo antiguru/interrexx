@@ -847,7 +847,7 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             // Not writable is the deadline: `SO_SNDTIMEO` 500 then a
             // `SockConnect` that cannot complete gives -1 with `errno` 115
             // after half a second, and the connection goes on.
-            let result = if any_ready(&[(fd, PollFlags::OUT)]) {
+            let result = if any_ready(&[(fd, crate::host::CONNECT_WAIT_EVENTS)]) {
                 with_socket(fd, |socket| finish_connect(socket, to))
             } else {
                 Err(EINPROGRESS)
@@ -1049,7 +1049,7 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     match begun {
         Ok(Some(to)) => {
             let wait = SocketWait {
-                polls: vec![(fd, PollFlags::OUT)],
+                polls: vec![(fd, crate::host::CONNECT_WAIT_EVENTS)],
                 deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Send),
                 helper: None,
                 op: Pending::Connect { fd, to },
@@ -1070,7 +1070,12 @@ fn finish_connect(socket: BorrowedFd<'_>, to: SocketAddrV4) -> Os<()> {
     let connected = rustix::net::connect(socket, &to);
     let _ = rustix::fs::fcntl_setfl(socket, flags);
     match connected {
-        Ok(()) | Err(rustix::io::Errno::ISCONN) => Ok(()),
+        // Apple's second `connect` answers `EISCONN` for a refused connection
+        // too and leaves its error in `SO_ERROR`, where Linux's answers the
+        // error. On Linux `EISCONN` is a connection made and `SO_ERROR` is 0.
+        Ok(()) | Err(rustix::io::Errno::ISCONN) => rustix::net::sockopt::socket_error(socket)
+            .map_err(os)?
+            .map_err(os),
         Err(error) => Err(os(error)),
     }
 }

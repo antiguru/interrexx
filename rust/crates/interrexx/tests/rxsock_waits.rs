@@ -378,3 +378,42 @@ fn a_halt_ends_many_socket_waits_promptly() {
     assert!(!rest.contains("after"), "the select answered: {rest}");
     assert!(took < Duration::from_millis(500), "the halt took {took:?}");
 }
+
+/// A blocking `SockConnect` to a port nobody listens on answers -1 with
+/// `errno` ECONNREFUSED as the refusal arrives. Apple's `poll` reports the
+/// refused socket as hung up alone, not writable, and a second `connect`
+/// answers `EISCONN`: a wait for writability alone never ended, and a
+/// connect that ended it would have answered success. The first answer is
+/// the same on every host.
+#[test]
+fn a_refused_connect_answers_as_the_refusal_arrives() {
+    let (mut child, dir) = start(
+        "refused",
+        &format!(
+            "{LISTEN}call SockClose s\n\
+             c = SockSocket('AF_INET', 'SOCK_STREAM', 0)\n\
+             a.family = 'AF_INET'; a.port = n.port; a.addr = '127.0.0.1'\n\
+             t = .datetime~new\n\
+             say SockConnect(c, 'a.') errno\n\
+             say (.datetime~new - t)~seconds < 5\n\
+             say SockConnect(c, 'a.') errno\n"
+        ),
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    let _port = line(&mut out);
+    let answer = line(&mut out);
+    let timely = line(&mut out);
+    let again = line(&mut out);
+    finish(child, &dir);
+    assert_eq!(answer, "-1 ECONNREFUSED");
+    assert_eq!(timely, "1");
+    // What a second connect on a socket whose connect failed answers is the
+    // host's (`docs/design/decisions.md`): Linux's goes back to unconnected,
+    // Apple's stays connected in error.
+    let host_answer = if cfg!(target_os = "macos") {
+        "-1 EISCONN"
+    } else {
+        "-1 ECONNREFUSED"
+    };
+    assert_eq!(again, host_answer);
+}

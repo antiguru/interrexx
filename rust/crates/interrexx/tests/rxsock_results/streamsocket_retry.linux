@@ -1,0 +1,36 @@
+# A stream socket that opens again after a refused connect answers as the host does (docs/design/decisions.md): Linux goes back to unconnected, Apple answers EISCONN.
+# streamsocket.cls without a connection: a refused open, the stream methods
+# that raise, and a write or read that first opens and fails.
+program
+s = .StreamSocket~new('127.0.0.1', 1)
+say s~state '['s~description']' s~string s~chars s~lines
+say s~lineOut('x') '['s~lineIn']' '['s~charIn(, 2)']' s~charOut('y')
+say s~open
+say s~close
+signal on syntax name e1
+s~arrayIn
+e1: say condition('o')~code
+signal on syntax name e2
+s~lineIn(, 2)
+e2: say condition('o')~code
+signal on syntax name e3
+s~charIn(, -1)
+e3: say condition('o')~code
+signal on syntax name e4
+s = .StreamSocket~new('x')
+e4: say condition('o')~code
+say '['s~lineIn(, 0)']'
+::requires 'streamsocket.cls'
+----
+rc 0
+[stdout]
+READY [READY:] 127.0.0.1:1 0 0
+0 [] [] 0
+NOTREADY: ECONNREFUSED
+READY: ECONNREFUSED
+93.963
+93.908
+93.906
+93.914
+[]
+[stderr]

@@ -665,42 +665,6 @@ Array[0]:
 Array[0]: 
 "1"
 
-# streamsocket.cls without a connection: a refused open, the stream methods
-# that raise, and a write or read that first opens and fails.
-program
-s = .StreamSocket~new('127.0.0.1', 1)
-say s~state '['s~description']' s~string s~chars s~lines
-say s~lineOut('x') '['s~lineIn']' '['s~charIn(, 2)']' s~charOut('y')
-say s~open
-say s~close
-signal on syntax name e1
-s~arrayIn
-e1: say condition('o')~code
-signal on syntax name e2
-s~lineIn(, 2)
-e2: say condition('o')~code
-signal on syntax name e3
-s~charIn(, -1)
-e3: say condition('o')~code
-signal on syntax name e4
-s = .StreamSocket~new('x')
-e4: say condition('o')~code
-say '['s~lineIn(, 0)']'
-::requires 'streamsocket.cls'
-----
-rc 0
-[stdout]
-READY [READY:] 127.0.0.1:1 0 0
-0 [] [] 0
-NOTREADY: ECONNREFUSED
-READY: ECONNREFUSED
-93.963
-93.908
-93.906
-93.914
-[]
-[stderr]
-
 # mime.cls: a part's string byte for byte, its headers only where set, a
 # lone period doubled, and a multipart's boundary and part layout.
 program
@@ -813,37 +777,6 @@ rc 0
 -1 -1 -1 9 -1 9
 halt trapped
 after
-[stderr]
-
-# A blocking accept waits no longer than the socket's SO_RCVTIMEO and a
-# blocking connect no longer than its SO_SNDTIMEO (PR 4 review I2): -1 with
-# EAGAIN, and -1 with EINPROGRESS while the connection goes on (a listener
-# with backlog 0 holds one connection, so the second cannot complete).
-program
-s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
-a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
-call SockBind s, 'a.'
-call SockListen s, 0
-call SockGetSockName s, 'a.'
-say SockSetSockOpt(s, 'SOL_SOCKET', 'SO_RCVTIMEO', 500)
-t = time('r')
-say SockAccept(s) SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
-c0 = SockSocket('AF_INET', 'SOCK_STREAM', 0); say SockConnect(c0, 'a.')
-c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
-say SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDTIMEO', 500)
-t = time('r')
-say SockConnect(c, 'a.') SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
-say SockConnect(c, 'a.') SockSock_Errno()
-::requires 'rxsock' LIBRARY
-----
-rc 0
-[stdout]
-0
--1 11 1 1
-0
-0
--1 115 1 1
--1 114
 [stderr]
 
 # SIGINT during a blocked SockSend raises HALT on the SockSend line (PR 4

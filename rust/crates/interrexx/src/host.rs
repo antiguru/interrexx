@@ -81,6 +81,17 @@ pub(crate) fn is_listening(socket: BorrowedFd<'_>) -> bool {
 pub(crate) const POLL_HANGS_UP_UNCONNECTED: bool =
     cfg!(any(target_os = "linux", target_os = "android"));
 
+/// What a wait for a connection under way asks `poll` for. Linux reports a
+/// refused connection as writable and in error; Apple's reports it as hung up
+/// alone, which `rxsock::answers` reads as an answer to a wait for
+/// readability only. Asking for both ends the wait on either host.
+pub(crate) const CONNECT_WAIT_EVENTS: rustix::event::PollFlags =
+    if cfg!(any(target_os = "linux", target_os = "android")) {
+        rustix::event::PollFlags::OUT
+    } else {
+        rustix::event::PollFlags::OUT.union(rustix::event::PollFlags::IN)
+    };
+
 /// Whether a socket `accept` answers takes the listening socket's
 /// `O_NONBLOCK`. Linux's starts without it, whatever the listening socket's
 /// mode; Apple's systems and the BSDs copy it.
