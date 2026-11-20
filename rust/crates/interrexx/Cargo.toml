@@ -109,13 +109,14 @@ dns-lookup = "4"
 
 # The native code generator behind the `jit` feature (`src/jit.rs`): a flat
 # loop's passes compiled to machine code. Pure Rust; optional, so a build
-# without the feature compiles none of it. Pinned to the last release whose
-# `rust-version` is the workspace's own.
-cranelift-codegen = { version = "=0.135.0", optional = true }
-cranelift-frontend = { version = "=0.135.0", optional = true }
-cranelift-jit = { version = "=0.135.0", optional = true }
-cranelift-module = { version = "=0.135.0", optional = true }
-cranelift-native = { version = "=0.135.0", optional = true }
+# without the feature compiles none of it. The family is pinned to one release,
+# which needs Rust 1.97: the feature asks a newer toolchain than the
+# workspace's `rust-version`, which the default build keeps.
+cranelift-codegen = { version = "=0.137.3", optional = true }
+cranelift-frontend = { version = "=0.137.3", optional = true }
+cranelift-jit = { version = "=0.137.3", optional = true }
+cranelift-module = { version = "=0.137.3", optional = true }
+cranelift-native = { version = "=0.137.3", optional = true }
 
 [[bin]]
 name = "bounded-run"
