@@ -52,6 +52,11 @@ impl Interp {
                 return Err(Loud::chunk_refused().into());
             }
         };
+        // An `INTERPRET`ed string's loops stay driven: each execution compiles
+        // a chunk of its own, so a compiled loop would be compiled again every
+        // time, and no fragment is expected to be fast.
+        #[cfg(feature = "jit")]
+        chunk.jit.refuse_all();
         // The literals this chunk interns are interned after this count.
         let interned_from = self.heap.immortal_count();
         // Truncated on the way out, so a temp this chunk leaks does not outlive it.

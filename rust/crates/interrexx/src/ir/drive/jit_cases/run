@@ -207,3 +207,11 @@ say s i j
 ----
 75015000 4 5001
 compiled: yes
+
+# an INTERPRETed loop stays driven, however hot
+run
+interpret "s = 0; do i = 1 to 10000; s = s + i; end"
+say s
+----
+50005000
+compiled: no

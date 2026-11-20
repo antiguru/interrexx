@@ -58,6 +58,13 @@ pub(crate) struct Loops {
 }
 
 impl Loops {
+    /// Keeps every loop of this chunk from being compiled.
+    pub(crate) fn refuse_all(&self) {
+        for state in &self.state {
+            state.set(REFUSED);
+        }
+    }
+
     /// Counts a pass of the loop at instruction `do_index`, answering whether
     /// it is hot: compiled, or due to be. Asked in the `Op::LoopNext` arm
     /// itself, so a loop that is still being counted, or was refused, costs
