@@ -56,11 +56,11 @@ call s '2020-01-01', '1: 2:3'
 call s '2020-01-01', '1 :2:3'
 call s '2020-01-01', '1:2:'
 call s '2020-01-01', '-:2:3'
-'touch -a -d @1000000000' f
+'env TZ=UTC touch -a -t 200109090146.40' f
 say 'keeps access' SysSetFileDateTime(f, '2011-12-13', '14:15:16')
-'stat -c "%X %Y"' f
+'stat -c "%X %Y"' f '2>/dev/null || stat -f "%a %m"' f
 say 'now         ' SysSetFileDateTime(f) (left(SysGetFileDateTime(f), 10) == date('I'))
-'stat -c "%X"' f
+'stat -c "%X"' f '2>/dev/null || stat -f "%a"' f
 call SysSetFileDateTime f, '2002-02-02', '02:02:02'
 say 'selectors   ' SysGetFileDateTime(f, 'w') SysGetFileDateTime(f, 'Write') ,
   SysGetFileDateTime(f, 'axe') SysGetFileDateTime(f, 'A' || '00'x)
@@ -121,9 +121,9 @@ s: procedure expose f
   else r = SysSetFileDateTime(f, , arg(2))
   say left('['translate(arg(1), '?', '00'x)'] ['translate(arg(2), '?', '00'x)']', 34) r ,
     SysGetFileDateTime(f) SysGetFileDateTime(f, 'W')
-  if arg(3) == 'epoch' then 'stat -c "  %Y"' f
+  if arg(3) == 'epoch' then 'stat -c "  %Y"' f '2>/dev/null || stat -f "  %m"' f
   if arg(3) == 'overlap' then do
-    address system 'stat -c %Y' f with output stem epoch.
+    address system 'stat -c %Y' f '2>/dev/null || stat -f %m' f with output stem epoch.
     say '  valid overlap' (wordpos(strip(epoch.1), arg(4)) > 0) ,
       (SysGetFileDateTime(f) == arg(1)' 'arg(2))
   end
