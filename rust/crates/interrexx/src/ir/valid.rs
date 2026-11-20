@@ -49,7 +49,9 @@ impl ValidOps {
                 | Op::Return { src, .. }
                 | Op::Queue { src, .. } => optional(src),
                 Op::JumpUnless { reg, .. } | Op::ConditionJump { reg, .. } => inside(reg),
-                Op::LoopTested { src, .. } | Op::SelectCase { src, .. } => inside(src),
+                Op::LoopTested { src, .. }
+                | Op::SelectCase { src, .. }
+                | Op::ExecValue { src, .. } => inside(src),
                 Op::ParseBegin { src, base, .. } => {
                     arg(src)
                         && (base == Op::ARG_OMITTED

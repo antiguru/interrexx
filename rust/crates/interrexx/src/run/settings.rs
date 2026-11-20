@@ -343,9 +343,25 @@ impl Interp {
         setting: &NumericSetting,
         expression: &Option<Expr>,
     ) -> Result<(), Failure> {
+        let value = match expression {
+            Some(expression) => Some(self.eval(code, expression)?),
+            None => None,
+        };
+        self.exec_numeric_value(setting, value)
+    }
+
+    /// `NUMERIC` once its expression, if it has one, has answered `value`:
+    /// everything the instruction does past the evaluation, which comes
+    /// first in every form. [`crate::ir::Op::ExecValue`] runs this behind the
+    /// expression's native ops.
+    pub(crate) fn exec_numeric_value(
+        &mut self,
+        setting: &NumericSetting,
+        value: Option<ObjRef>,
+    ) -> Result<(), Failure> {
         match setting {
             NumericSetting::Digits => {
-                match self.numeric_operand(code, expression, "DIGITS")? {
+                match self.numeric_operand(value, "DIGITS")? {
                     Some((operand, text)) => {
                         let parsed = String::from_utf8_lossy(&text);
                         let outcome = self.activation_mut().settings.set_digits_str(&parsed);
@@ -368,7 +384,7 @@ impl Interp {
                     }
                 }
             }
-            NumericSetting::Fuzz => match self.numeric_operand(code, expression, "FUZZ")? {
+            NumericSetting::Fuzz => match self.numeric_operand(value, "FUZZ")? {
                 Some((operand, text)) => {
                     let parsed = String::from_utf8_lossy(&text);
                     let outcome = self.activation_mut().settings.set_fuzz_str(&parsed);
@@ -409,7 +425,7 @@ impl Interp {
                 // is already known to be there. Loud rather than a panic, on
                 // this crate's own rule against aborting on a shape the
                 // grammar rules out but the type does not.
-                let Some(expression) = expression else {
+                let Some(value) = value else {
                     return Err(Loud::numeric_form_without_expression().into());
                 };
                 // `set_form_str`'s own doc comment: the runtime `VALUE` path
@@ -417,7 +433,6 @@ impl Interp {
                 // the keyword spellings above -- measured, `numeric form
                 // value 'engineering'` is 25.11, not accepted
                 // case-insensitively.
-                let value = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(value);
                 let text = self.to_text(value).to_vec();
                 // `>K>   "FORM" => "engineering"` (F2, branch review): fires
@@ -447,18 +462,16 @@ impl Interp {
         Ok(())
     }
 
-    /// Evaluates `expression`, or answers `default` when there is none
-    /// (`NUMERIC DIGITS`/`FUZZ` alone).
+    /// The operand `value` of `NUMERIC DIGITS`/`FUZZ` with its `>K>` line
+    /// and its string request, or `None` when the instruction has none.
     fn numeric_operand(
         &mut self,
-        code: &Code<'_>,
-        expression: &Option<Expr>,
+        value: Option<ObjRef>,
         keyword: &str,
     ) -> Result<Option<(ObjRef, Vec<u8>)>, Failure> {
-        let Some(expression) = expression else {
+        let Some(value) = value else {
             return Ok(None);
         };
-        let value = self.eval(code, expression)?;
         self.roots.activity_mut().push_temp(value);
         let mut text = self.take_result_buffer();
         text.extend_from_slice(&self.to_text(value));

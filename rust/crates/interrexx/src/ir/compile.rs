@@ -1332,6 +1332,41 @@ fn compile_settled(
                     index: loop_of_end[index].expect("the guard just observed it"),
                 });
             }
+            // An instruction whose expression is its first act: the
+            // expression's ops, then `Op::ExecValue`, which does the rest.
+            InstructionKind::Numeric {
+                expression: Some(expression),
+                ..
+            } => {
+                let mark = registers.mark();
+                let at = op_index(&ops)?;
+                let echo = echoes(trace, instruction);
+                ops.push(Op::Clause {
+                    index: instruction_index(index)?,
+                    end: 0,
+                });
+                push_echo(&mut ops, echo, instruction_index(index)?);
+                let dst = registers.alloc()?;
+                push_value(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    expression,
+                    instruction_index(index)?,
+                    0,
+                    dst,
+                )?;
+                ops.push(Op::ExecValue {
+                    index: instruction_index(index)?,
+                    src: dst,
+                });
+                close_region(&mut ops, at)?;
+                registers.release(mark);
+            }
             // The kinds whose whole execution is one call into
             // `Interp::exec_instruction`. What the promotion decides is the
             // clause region around that call and nothing about the call: the

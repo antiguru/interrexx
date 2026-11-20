@@ -1,0 +1,89 @@
+# `NUMERIC DIGITS|FUZZ|FORM VALUE expr` evaluates its expression as native
+# ops, and `Op::ExecValue` does the rest. Each stanza answers what the walked
+# expression answered.
+
+# trace i: the expression's intermediates, then the `>K>` line
+program
+trace i
+d = 5
+numeric digits d + 1
+numeric fuzz f()
+numeric form value g()
+say digits() fuzz() form()
+exit
+f: return 2
+g: return 'ENGINEERING'
+----
+rc> 0
+out> 6 2 ENGINEERING
+err>      2 *-* d = 5
+err>        >L>   "5"
+err>        >>>   "5"
+err>        >=>   D <= "5"
+err>      3 *-* numeric digits d + 1
+err>        >V>   D => "5"
+err>        >L>   "1"
+err>        >O>   "+" => "6"
+err>        >K>   "DIGITS" => "6"
+err>      4 *-* numeric fuzz f()
+err>      8 *-*   f:
+err>      8 *-*   return 2
+err>        >L>     "2"
+err>        >>>     "2"
+err>        >F>   F => "2"
+err>        >K>   "FUZZ" => "2"
+err>      5 *-* numeric form value g()
+err>      9 *-*   g:
+err>      9 *-*   return 'ENGINEERING'
+err>        >L>     "ENGINEERING"
+err>        >>>     "ENGINEERING"
+err>        >F>   G => "ENGINEERING"
+err>        >K>   "FORM" => "ENGINEERING"
+err>      6 *-* say digits() fuzz() form()
+err>        >F>   DIGITS => "6"
+err>        >F>   FUZZ => "2"
+err>        >O>   " " => "6 2"
+err>        >F>   FORM => "ENGINEERING"
+err>        >O>   " " => "6 2 ENGINEERING"
+err>        >>>   "6 2 ENGINEERING"
+err>      7 *-* exit
+
+# a raise in the middle of the expression is the NUMERIC's
+program
+numeric digits 1 + 'x'
+----
+rc> 215
+err>      1 *-* numeric digits 1 + 'x'
+err> Error 41 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 41.1:
+
+# a value the setting refuses
+program
+trace r
+numeric fuzz 20
+----
+rc> 223
+err>      2 *-* numeric fuzz 20
+err>        >K>   "FUZZ" => "20"
+err>      2 *-* numeric fuzz 20
+err> Error 33 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 33.1:
+
+# FORM VALUE does not uppercase
+program
+numeric form value 'engineering'
+----
+rc> 231
+err>      1 *-* numeric form value 'engineering'
+err> Error 25 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 25.11:
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as NUMERIC's own slot
+program
+numeric digits rexx:length('abcdefghijkl')
+----
+rc> 213
+err>      1 *-* numeric digits rexx:length('abcdefghijkl')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:

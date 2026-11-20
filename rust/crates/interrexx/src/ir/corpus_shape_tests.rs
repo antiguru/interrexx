@@ -58,6 +58,7 @@ impl Root {
             | Op::LoopTest { .. }
             | Op::LoopTested { .. }
             | Op::SelectCase { .. }
+            | Op::ExecValue { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
@@ -118,6 +119,10 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         InstructionKind::Parse(_) => Some("PARSE"),
         InstructionKind::Arg(_) => Some("ARG"),
         InstructionKind::Pull(_) => Some("PULL"),
+        InstructionKind::Numeric {
+            expression: Some(_),
+            ..
+        } => Some("NUMERIC"),
         _ => None,
     }
 }
@@ -504,6 +509,11 @@ fn check_body(
             | InstructionKind::Push { expression }
             | InstructionKind::Queue { expression } => expression.as_ref().map(root_of),
             InstructionKind::If { condition, .. } => Some(root_of(condition)),
+            // An instruction `Op::ExecValue` runs from its expression's value.
+            InstructionKind::Numeric {
+                expression: Some(expression),
+                ..
+            } => Some(root_of(expression)),
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -701,6 +711,7 @@ fn sweep_every_corpus_body() {
         "NOP",
         "THEN",
         "label",
+        "NUMERIC",
     ] {
         assert!(
             seen.constructs.contains_key(construct),

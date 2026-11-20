@@ -404,6 +404,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Send { .. } => "Send",
         Op::SendWith { .. } => "SendWith",
         Op::SendScope { .. } => "SendScope",
+        Op::ExecValue { .. } => "ExecValue",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1794,6 +1795,18 @@ macro_rules! region_ops {
                 }
                 Op::LoopTest { .. } => {
                     break $cold Err(Loud::op_not_driven("LoopTest").into());
+                }
+                Op::ExecValue { $index, src } => {
+                    debug_assert_names_the_clause(
+                        $code, *$index, $clause, "ExecValue",
+                    );
+                    debug_assert!(
+                        $chunk.holds_register(*src),
+                        "op reads register {src} outside the region the chunk reserved"
+                    );
+                    if let Err(failure) = $self.exec_value($clause, $registers.get(*src)) {
+                        break $cold Err(failure);
+                    }
                 }
                 Op::SelectCase { $index, src } => {
                     debug_assert_names_the_clause(
