@@ -144,7 +144,8 @@ fn subset() -> Vec<String> {
 /// request is refused on Linux. macOS grants it (measured: a run passed 7 GB)
 /// and the program then touches the pages until the machine is out of memory,
 /// and no address-space limit can stop that there (`setrlimit(RLIMIT_AS)` is
-/// refused below what a process has reserved). They are left out on macOS.
+/// refused below what a process has reserved). They are left out on macOS
+/// until an interpreter heap limit refuses the request on every host (#840).
 const ALLOCATOR_REFUSAL_PROGRAMS: &[&str] = &["lang/collection_array_grow_refused.rex"];
 
 /// Every shard index below `SHARDS` has a test running it, so no program of
