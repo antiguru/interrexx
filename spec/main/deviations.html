@@ -637,6 +637,13 @@ its REMOVEALL and ALLAT go on comparing with an object that is no stored index.<
 <p>Each interpreter instance has its own <code>.environment</code>, and an object passed
 between instances through the native API is refused. ooRexx shares one
 <code>.environment</code> between every instance in a process.</p>
+<p>Each instance also has its own objects. A reference that native code got from
+one instance names no object in another: passed as an argument there it is
+omitted, a message sent to it answers <code>NULLOBJECT</code>, and any other call given
+it answers as for <code>NULLOBJECT</code>.
+ooRexx keeps the objects of every instance in a process in one space, so an
+extension that holds an object it got from one instance, as BSF4ooRexx does
+for the objects it hands to Java, can use it from any other.</p>
 <h2 id="86-the-api-daemon"><a class="header" href="#86-the-api-daemon">86. The API daemon</a></h2>
 <p>The rxapi daemon starts only when a program first needs it, and prints its
 own messages. ooRexx starts it with every interpreter.</p>
