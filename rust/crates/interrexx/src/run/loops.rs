@@ -2063,7 +2063,7 @@ impl Interp {
         // the header clause as it opens it, and the boundary continues there.
         // Asked afresh each pass, because a `TRACE` in the body can turn the
         // region off.
-        if flat.test.streamed() {
+        if flat.test.streamed() && !flat.test.until() {
             if self.streams_loop_tests() {
                 self.uncount_clause(counted);
                 flat.op_next = flat.op_test;
