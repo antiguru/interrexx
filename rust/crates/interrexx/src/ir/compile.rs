@@ -417,6 +417,7 @@ fn compile_settled(
                 if let Some(conditional) = &body_node.conditional
                     && !value_only(&conditional.condition)
                     && native_shape(&conditional.condition, Some(NodePath::ROOT))
+                    && plan.trace_events().get(index) == Some(&crate::trace::TraceEvent::Keeps)
                 {
                     // **A condition that calls or sends is a region of its own
                     // in the stream**, between the header's region and the
@@ -426,7 +427,10 @@ fn compile_settled(
                     // decides the pass. Its register is held to past the `END`
                     // as the header's are. No echo op is emitted; the boundary
                     // walks the expression instead whenever `TRACE` shows
-                    // intermediates.
+                    // intermediates. A loop whose clause can change the
+                    // `TRACE` setting (a `TRACE()` call in the condition) keeps
+                    // walking it: the region decides once, on entry, and the
+                    // rest of a test after the change would go unechoed.
                     let dst = registers.alloc()?;
                     let test = op_index(&ops)?;
                     ops.push(Op::LoopTest {
@@ -457,6 +461,7 @@ fn compile_settled(
                     }
                     loop_test_of[index] = Some(LoopTestOps { test, body });
                 } else if let Some(conditional) = &body_node.conditional
+                    && value_only(&conditional.condition)
                     && native_shape(&conditional.condition, Some(NodePath::ROOT))
                 {
                     let dst = registers.alloc()?;

@@ -401,3 +401,56 @@ err>        >>>     "3"
 err>      6 *-* say 'after' i c
 err>        >>>   "after 3 2"
 err>      7 *-* exit
+
+# a TRACE() call in the condition switches to TRACE I mid-test: the rest of
+# that test is echoed, so such a loop walks its condition
+program
+n = 0
+do while trace('I') \== 'x' & n < 1
+  n = n + 1
+end
+----
+rc> 0
+err>        >F>     TRACE => "N"
+err>        >L>     "x"
+err>        >O>     "\==" => "1"
+err>        >V>     N => "0"
+err>        >L>     "1"
+err>        >O>     "<" => "1"
+err>        >O>     "&" => "1"
+err>        >K>     "WHILE" => "1"
+err>      3 *-*   n = n + 1
+err>        >V>     N => "0"
+err>        >L>     "1"
+err>        >O>     "+" => "1"
+err>        >>>     "1"
+err>        >=>     N <= "1"
+err>      4 *-* end
+err>      2 *-* do while trace('I') \== 'x' & n < 1
+err>        >L>     "I"
+err>        >A>     "I"
+err>        >F>     TRACE => "I"
+err>        >L>     "x"
+err>        >O>     "\==" => "1"
+err>        >V>     N => "1"
+err>        >L>     "1"
+err>        >O>     "<" => "0"
+err>        >O>     "&" => "0"
+err>        >K>     "WHILE" => "0"
+
+# TRACE('?R') in an UNTIL: interactive debug starts after the next clause,
+# not at the end of the test
+program
+n = 0
+do until n > 0 & trace('?R') \== 'x'
+  n = n + 1
+end
+say 'after' n
+----
+rc> 0
+out> after 1
+err>        >K>     "UNTIL" => "1"
+err>        +++ "LINUX COMMAND /nonexistent/ir-dual-case.rex"
+err>      5 *-* say 'after' n
+err>        >>>   "after 1"
+err> +++
