@@ -428,6 +428,12 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                 | Op::CallNamed { .. }
                 | Op::Call { .. }
                 | Op::Send { .. }
+                | Op::SendWith { .. }
+                | Op::SendScope { .. }
+                | Op::Reference { .. }
+                | Op::ClassAt { .. }
+                | Op::SelectCase { .. }
+                | Op::ExecValue { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }

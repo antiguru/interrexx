@@ -215,3 +215,73 @@ say s
 ----
 50005000
 compiled: no
+
+# NUMERIC DIGITS with an expression runs its ExecValue on the host
+run
+x = 0
+do i = 1 to 10000
+  numeric digits 9 + i // 2
+  x = x + i
+  y = x * 2 - i
+end
+say x y digits()
+----
+50005000 100000000 9
+compiled: yes
+
+# a cascade in an expression runs its SendWith on the host
+run
+a = .array~new; x = 0
+do i = 1 to 10000
+  x = x + i
+  y = x * 2 - i
+  b = a~~append(i)
+end
+say x y a~items b~items
+----
+50005000 100000000 10000 10000
+compiled: yes
+
+# a scoped send runs its SendScope and SendWith on the host
+run
+o = .c~new; x = 0
+do i = 1 to 10000
+  x = x + i
+  y = x * 2 - i
+  p = y - x + i; q = p * 3 - y; r = q - p + 1
+  s = r + x - y; t = s * 2 - q; u = t - r + i
+  z = o~m:.c
+end
+say x y z
+::class c
+::method m
+  return 1
+----
+50005000 100000000 1
+compiled: yes
+
+# a namespace class lookup runs its ClassAt on the host
+run
+x = 0
+do i = 1 to 10000
+  x = x + i
+  y = x * 2 - i
+  c = rexx:String
+end
+say x y c
+----
+50005000 100000000 The String class
+compiled: yes
+
+# a variable reference runs its Reference on the host
+run
+x = 0; n = 7
+do i = 1 to 10000
+  x = x + i
+  y = x * 2 - i
+  r = >n
+end
+say x y r~value
+----
+50005000 100000000 7
+compiled: yes
