@@ -299,3 +299,105 @@ exit
 ----
 rc> 0
 out> novalue 6 ZQ
+
+# an UNTIL or WHILE that calls or sends, in a loop with a COUNTER, with and
+# without a control variable: every pass advances and counts
+program
+k = 0
+do counter c i = 1 to 3 until f(i)
+  k = k + 1; if k > 9 then leave
+  say i c
+end
+say 'after' i c
+do counter c 3 until f(0)
+  k = k + 1; if k > 19 then leave
+  say c
+end
+say 'after' c
+o = .c~new
+do counter c j = 1 to 2 until o~no
+  k = k + 1; if k > 29 then leave
+  say j c
+end
+say 'after' j c
+do counter c i = 1 to 3 while f(i) = 0
+  say i c
+end
+say 'after' i c
+do counter c 2 while o~no = 0
+  say c
+end
+say 'after' c
+exit
+f: return 0
+::class c
+::method no
+  return 0
+----
+rc> 0
+out> 1 1
+out> 2 2
+out> 3 3
+out> after 4 3
+out> 1
+out> 2
+out> 3
+out> after 3
+out> 1 1
+out> 2 2
+out> after 3 2
+out> 1 1
+out> 2 2
+out> 3 3
+out> after 4 3
+out> 1
+out> 2
+out> after 2
+
+# the same calling UNTIL with a COUNTER under trace r
+program
+trace r
+k = 0
+do counter c i = 1 to 2 until f(i)
+  k = k + 1; if k > 4 then leave
+end
+say 'after' i c
+exit
+f: return 0
+----
+rc> 0
+out> after 3 2
+err>      2 *-* k = 0
+err>        >>>   "0"
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>        >K>   "COUNTER" => "0"
+err>        >K>   "TO" => "2"
+err>        >K>     "COUNTER" => "1"
+err>      4 *-*   k = k + 1;
+err>        >>>     "1"
+err>      4 *-*   if k > 4 
+err>        >>>     "0"
+err>      5 *-* end
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>      8 *-*     f:
+err>      8 *-*     return 0
+err>        >>>       "0"
+err>        >K>     "UNTIL" => "0"
+err>        >>>     "1"
+err>        >>>     "2"
+err>        >K>     "COUNTER" => "2"
+err>      4 *-*   k = k + 1;
+err>        >>>     "2"
+err>      4 *-*   if k > 4 
+err>        >>>     "0"
+err>      5 *-* end
+err>      3 *-* do counter c i = 1 to 2 until f(i)
+err>      8 *-*     f:
+err>      8 *-*     return 0
+err>        >>>       "0"
+err>        >K>     "UNTIL" => "0"
+err>        >>>     "2"
+err>        >>>     "3"
+err>      6 *-* say 'after' i c
+err>        >>>   "after 3 2"
+err>      7 *-* exit
