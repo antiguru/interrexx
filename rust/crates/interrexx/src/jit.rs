@@ -194,39 +194,8 @@ impl Compiled {
     }
 }
 
-/// The block's fields generated code holds in variables between calls into
-/// the host: `(offset, written back before a call)`. A field that is not
-/// written back is one only the host sets.
-const FIELDS: [(i32, bool); 18] = [
-    (layout::COUNTDOWN, true),
-    (layout::CLAUSE_INDEX, true),
-    (layout::CLAUSE_LINE, true),
-    (layout::CLAUSE_INDENT, true),
-    (layout::CLAUSE_DIRTY, true),
-    (layout::LOOP_VALUE, true),
-    (layout::LOOP_DIRTY, true),
-    (layout::STEADY, false),
-    (layout::SLOTS, false),
-    (layout::SLOT_COUNT, false),
-    (layout::SMALL_INT_BOUND, false),
-    (layout::INDENT_BASE, false),
-    (layout::LOOP_READY, false),
-    (layout::LOOP_SLOT, false),
-    (layout::LOOP_STEP, false),
-    (layout::LOOP_TO, false),
-    (layout::LOOP_LINE, false),
-    (layout::LOOP_INDENT, false),
-];
-
 /// The code generator's own state while it emits one pass.
-///
-/// **Between two calls into the host, the block's fields and the registers
-/// live in variables.** Each call is preceded by writing the fields generated
-/// code changes back to the block, and followed by reading every field and
-/// register again, since the host may have changed any of them. A register
-/// write also goes to the frame at once, so the registers the collector and
-/// the host read are always current.
-struct Emit<'b> {
+struct Emit<'a, 'b> {
     b: FunctionBuilder<'b>,
     pointer: types::Type,
     ctx: Value,
@@ -234,94 +203,31 @@ struct Emit<'b> {
     exit: cranelift_codegen::ir::Block,
     bare: cranelift_codegen::ir::SigRef,
     with_pc: cranelift_codegen::ir::SigRef,
-    /// One variable per entry of [`FIELDS`].
-    fields: Vec<Variable>,
-    /// One variable per register.
-    regs: Vec<Variable>,
     /// Whether the open clause was opened by generated code and not yet
     /// adopted, which is what makes its close free.
     fast: Variable,
+    _module: std::marker::PhantomData<&'a ()>,
 }
 
-impl Emit<'_> {
+impl Emit<'_, '_> {
     fn flags() -> MemFlagsData {
         MemFlagsData::trusted()
     }
 
-    fn field(&self, offset: i32) -> Variable {
-        let at = FIELDS
-            .iter()
-            .position(|&(field, _)| field == offset)
-            .expect("every field generated code reads is in FIELDS");
-        self.fields[at]
+    fn load_native(&mut self, ty: types::Type, at: i32) -> Value {
+        self.b.ins().load(ty, Self::flags(), self.ctx, at)
     }
 
-    fn get(&mut self, offset: i32) -> Value {
-        let var = self.field(offset);
-        self.b.use_var(var)
+    fn store_native(&mut self, value: Value, at: i32) {
+        self.b.ins().store(Self::flags(), value, self.ctx, at);
     }
 
-    fn set(&mut self, offset: i32, value: Value) {
-        debug_assert!(
-            FIELDS.iter().any(|&(field, back)| field == offset && back),
-            "a field generated code sets is one it writes back"
-        );
-        let var = self.field(offset);
-        self.b.def_var(var, value);
-    }
-
-    fn set_const(&mut self, offset: i32, value: i64) {
-        let value = self.b.ins().iconst(types::I64, value);
-        self.set(offset, value);
-    }
-
-    fn reg(&mut self, register: u16) -> Value {
-        self.b.use_var(self.regs[usize::from(register)])
-    }
-
-    fn set_reg(&mut self, register: u16, value: Value) {
-        self.b.def_var(self.regs[usize::from(register)], value);
-        self.b.ins().store(
-            Self::flags(),
-            value,
-            self.registers,
-            i32::from(register) * 8,
-        );
-    }
-
-    /// Reads every field and register into its variable.
-    fn reload(&mut self) {
-        for (at, &(offset, _)) in FIELDS.iter().enumerate() {
-            let value = self
-                .b
-                .ins()
-                .load(types::I64, Self::flags(), self.ctx, offset);
-            self.b.def_var(self.fields[at], value);
-        }
-        for register in 0..self.regs.len() {
-            let value = self.b.ins().load(
-                types::I64,
-                Self::flags(),
-                self.registers,
-                register as i32 * 8,
-            );
-            self.b.def_var(self.regs[register], value);
-        }
-    }
-
-    /// Writes the fields generated code changes back to the block.
-    fn spill(&mut self) {
-        for (at, &(offset, back)) in FIELDS.iter().enumerate() {
-            if back {
-                let value = self.b.use_var(self.fields[at]);
-                self.b.ins().store(Self::flags(), value, self.ctx, offset);
-            }
-        }
+    fn register_at(register: u16) -> i32 {
+        i32::from(register) * 8
     }
 
     /// Calls `helper`, and leaves for `exit` unless it answers CONTINUE.
     fn call(&mut self, helper: *const (), pc: Option<u32>) {
-        self.spill();
         let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
         let answer = match pc {
             Some(pc) => {
@@ -342,7 +248,6 @@ impl Emit<'_> {
             .ins()
             .brif(answer, self.exit, &[answer.into()], on, &[]);
         self.b.switch_to_block(on);
-        self.reload();
     }
 
     /// The op at `pc` through the host, from a clause generated code may have
@@ -363,35 +268,20 @@ impl Emit<'_> {
 
     /// Branches to `slow` unless the window holds slot `slot`, answering the
     /// slot's address.
-    fn slot_address(&mut self, slot: Value, slow: cranelift_codegen::ir::Block) -> Value {
-        let base = self.get(layout::SLOTS);
-        let count = self.get(layout::SLOT_COUNT);
-        // A null window has a count of zero, so this covers it.
-        let held = self.b.ins().icmp(IntCC::UnsignedLessThan, slot, count);
+    fn slot_address(&mut self, slot: u32, slow: cranelift_codegen::ir::Block) -> Value {
+        let base = self.load_native(self.pointer, layout::SLOTS);
+        let count = self.load_native(types::I64, layout::SLOT_COUNT);
+        let held = self
+            .b
+            .ins()
+            .icmp_imm_u(IntCC::UnsignedGreaterThan, count, i64::from(slot));
+        // A null window answers a count of zero, so `held` covers it.
         let on = self.b.create_block();
         self.b.ins().brif(held, on, &[], slow, &[]);
         self.b.switch_to_block(on);
-        let offset = self.b.ins().imul_imm_u(slot, layout::SLOT_SIZE);
-        self.b.ins().iadd(base, offset)
-    }
-
-    /// Whether `v` is strictly inside `(-bound, bound)`.
-    fn within(&mut self, v: Value, bound: Value) -> Value {
-        let negative = self.b.ins().ineg(bound);
-        let below = self.b.ins().icmp(IntCC::SignedLessThan, v, bound);
-        let above = self.b.ins().icmp(IntCC::SignedGreaterThan, v, negative);
-        self.b.ins().band(below, above)
-    }
-
-    /// Whether `handle` carries the small-integer tag.
-    fn small(&mut self, handle: Value) -> Value {
-        let tag = self.b.ins().band_imm_u(handle, layout::TAG_MASK);
-        self.b.ins().icmp_imm_u(IntCC::Equal, tag, layout::TAG_INT)
-    }
-
-    fn tagged(&mut self, value: Value) -> Value {
-        let shifted = self.b.ins().ishl_imm_u(value, layout::TAG_BITS);
-        self.b.ins().bor_imm_u(shifted, layout::TAG_INT)
+        self.b
+            .ins()
+            .iadd_imm_u(base, i64::from(slot) * layout::SLOT_SIZE)
     }
 }
 
@@ -448,10 +338,6 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let bare = b.import_signature(helper_signature(false));
         let with_pc = b.import_signature(helper_signature(true));
         let fast = b.declare_var(types::I8);
-        let fields = FIELDS.iter().map(|_| b.declare_var(types::I64)).collect();
-        let regs = (0..pass.registers)
-            .map(|_| b.declare_var(types::I64))
-            .collect();
 
         let entry = b.create_block();
         let head = b.create_block();
@@ -464,6 +350,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let registers = b.ins().load(pointer, Emit::flags(), ctx, layout::REGISTERS);
         let no = b.ins().iconst(types::I8, 0);
         b.def_var(fast, no);
+        b.ins().jump(head, &[]);
 
         let mut e = Emit {
             b,
@@ -473,12 +360,9 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             exit,
             bare,
             with_pc,
-            fields,
-            regs,
             fast,
+            _module: std::marker::PhantomData,
         };
-        e.reload();
-        e.b.ins().jump(head, &[]);
         e.b.switch_to_block(head);
         pass_step(&mut e);
         let mut clause_pc = 0;
@@ -493,7 +377,16 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     register_top,
                 } => {
                     clause_pc = pc;
-                    open(&mut e, pc, index, tabled, line, indent, register_top);
+                    open(
+                        &mut e,
+                        pc,
+                        index,
+                        tabled,
+                        line,
+                        indent,
+                        register_top,
+                        pass.registers,
+                    );
                 }
                 Step::Close { next } => {
                     let fast = e.b.use_var(e.fast);
@@ -508,12 +401,12 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
                 Step::Const { dst, bits } => {
                     let value = e.b.ins().iconst(types::I64, bits as i64);
-                    e.set_reg(dst, value);
+                    e.b.ins()
+                        .store(Emit::flags(), value, e.registers, Emit::register_at(dst));
                 }
                 Step::Load { pc, slot, dst } => {
                     let slow = e.b.create_block();
                     let join = e.b.create_block();
-                    let slot = e.b.ins().iconst(types::I64, i64::from(slot));
                     let address = e.slot_address(slot, slow);
                     let set =
                         e.b.ins()
@@ -524,7 +417,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     let value =
                         e.b.ins()
                             .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
-                    e.set_reg(dst, value);
+                    e.b.ins()
+                        .store(Emit::flags(), value, e.registers, Emit::register_at(dst));
                     e.b.ins().jump(join, &[]);
                     e.b.switch_to_block(slow);
                     e.slow_op(clause_pc, pc);
@@ -534,9 +428,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 Step::Store { pc, slot, src } => {
                     let slow = e.b.create_block();
                     let join = e.b.create_block();
-                    let slot = e.b.ins().iconst(types::I64, i64::from(slot));
                     let address = e.slot_address(slot, slow);
-                    let value = e.reg(src);
+                    let value = e.b.ins().load(
+                        types::I64,
+                        Emit::flags(),
+                        e.registers,
+                        Emit::register_at(src),
+                    );
                     let one = e.b.ins().iconst(types::I64, 1);
                     e.b.ins()
                         .store(Emit::flags(), one, address, layout::SLOT_SET_AT);
@@ -582,20 +480,22 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
 /// A clause's opening: by generated code when the block is steady, the
 /// clause is tabled and the countdown has more than this clause left in it;
 /// otherwise by the host.
+#[expect(clippy::too_many_arguments, reason = "one Step::Open, unpacked")]
 fn open(
-    e: &mut Emit<'_>,
+    e: &mut Emit<'_, '_>,
     pc: u32,
     index: u32,
     tabled: bool,
     line: u32,
     indent: u32,
     register_top: u16,
+    registers: u16,
 ) {
     let slow = e.b.create_block();
     let opened = e.b.create_block();
     if tabled {
-        let steady = e.get(layout::STEADY);
-        let countdown = e.get(layout::COUNTDOWN);
+        let steady = e.load_native(types::I64, layout::STEADY);
+        let countdown = e.load_native(types::I64, layout::COUNTDOWN);
         let left =
             e.b.ins()
                 .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
@@ -606,18 +506,17 @@ fn open(
 
         e.b.switch_to_block(fast);
         let countdown = e.b.ins().iadd_imm_s(countdown, -1);
-        e.set(layout::COUNTDOWN, countdown);
-        e.set_const(layout::CLAUSE_INDEX, i64::from(index));
-        e.set_const(layout::CLAUSE_LINE, i64::from(line));
-        let base = e.get(layout::INDENT_BASE);
+        e.store_native(countdown, layout::COUNTDOWN);
+        let index = e.b.ins().iconst(types::I64, i64::from(index));
+        e.store_native(index, layout::CLAUSE_INDEX);
+        let line = e.b.ins().iconst(types::I64, i64::from(line));
+        e.store_native(line, layout::CLAUSE_LINE);
+        let base = e.load_native(types::I64, layout::INDENT_BASE);
         let indent = e.b.ins().iadd_imm_u(base, i64::from(indent));
-        e.set(layout::CLAUSE_INDENT, indent);
-        e.set_const(layout::CLAUSE_DIRTY, 1);
-        // `RegFrame::clear_from(register_top)`.
-        let nil = e.b.ins().iconst(types::I64, layout::NIL_BITS as i64);
-        for register in register_top..e.regs.len() as u16 {
-            e.set_reg(register, nil);
-        }
+        e.store_native(indent, layout::CLAUSE_INDENT);
+        let dirty = e.b.ins().iconst(types::I64, 1);
+        e.store_native(dirty, layout::CLAUSE_DIRTY);
+        clear_registers(e, register_top, registers);
         let yes = e.b.ins().iconst(types::I8, 1);
         e.b.def_var(e.fast, yes);
         e.b.ins().jump(opened, &[]);
@@ -635,15 +534,16 @@ fn open(
 /// The pass boundary: the loop's quick pass by generated code when the block
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
-fn pass_step(e: &mut Emit<'_>) {
+fn pass_step(e: &mut Emit<'_, '_>) {
     let slow = e.b.create_block();
     let body = e.b.create_block();
     let check = e.b.create_block();
     let read = e.b.create_block();
+    let decode = e.b.create_block();
     let take = e.b.create_block();
 
-    let ready = e.get(layout::LOOP_READY);
-    let countdown = e.get(layout::COUNTDOWN);
+    let ready = e.load_native(types::I64, layout::LOOP_READY);
+    let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let left =
         e.b.ins()
             .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
@@ -652,31 +552,43 @@ fn pass_step(e: &mut Emit<'_>) {
     e.b.ins().brif(ready, check, &[], slow, &[]);
 
     e.b.switch_to_block(check);
-    let slot = e.get(layout::LOOP_SLOT);
-    let address = e.slot_address(slot, slow);
+    let slot = e.load_native(types::I64, layout::LOOP_SLOT);
+    let count = e.load_native(types::I64, layout::SLOT_COUNT);
+    let held = e.b.ins().icmp(IntCC::UnsignedLessThan, slot, count);
+    e.b.ins().brif(held, read, &[], slow, &[]);
+
+    e.b.switch_to_block(read);
+    let base = e.load_native(e.pointer, layout::SLOTS);
+    let offset = e.b.ins().imul_imm_u(slot, layout::SLOT_SIZE);
+    let address = e.b.ins().iadd(base, offset);
     let set =
         e.b.ins()
             .load(types::I64, Emit::flags(), address, layout::SLOT_SET_AT);
-    e.b.ins().brif(set, read, &[], slow, &[]);
+    e.b.ins().brif(set, decode, &[], slow, &[]);
 
-    e.b.switch_to_block(read);
+    e.b.switch_to_block(decode);
     let value =
         e.b.ins()
             .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
-    let mut ok = e.small(value);
+    let tag = e.b.ins().band_imm_u(value, layout::TAG_MASK);
+    let tagged = e.b.ins().icmp_imm_u(IntCC::Equal, tag, layout::TAG_INT);
     let running = e.b.ins().sshr_imm_u(value, layout::TAG_BITS);
-    let step = e.get(layout::LOOP_STEP);
+    let step = e.load_native(types::I64, layout::LOOP_STEP);
     let (sum, overflow) = e.b.ins().sadd_overflow(running, step);
-    let bound = e.get(layout::SMALL_INT_BOUND);
+    let bound = e.load_native(types::I64, layout::SMALL_INT_BOUND);
+    let negative = e.b.ins().ineg(bound);
+    let mut ok = tagged;
     for v in [running, sum] {
-        let inside = e.within(v, bound);
-        ok = e.b.ins().band(ok, inside);
+        let below = e.b.ins().icmp(IntCC::SignedLessThan, v, bound);
+        let above = e.b.ins().icmp(IntCC::SignedGreaterThan, v, negative);
+        ok = e.b.ins().band(ok, below);
+        ok = e.b.ins().band(ok, above);
     }
     let fine = e.b.ins().icmp_imm_u(IntCC::Equal, overflow, 0);
     ok = e.b.ins().band(ok, fine);
     // `loop_advance_quick`'s own answer: a descending step carries on while
     // the value is at or above the bound, any other while it is at or below.
-    let to = e.get(layout::LOOP_TO);
+    let to = e.load_native(types::I64, layout::LOOP_TO);
     let descending = e.b.ins().icmp_imm_u(IntCC::SignedLessThan, step, 0);
     let at_or_above = e.b.ins().icmp(IntCC::SignedGreaterThanOrEqual, sum, to);
     let at_or_below = e.b.ins().icmp(IntCC::SignedLessThanOrEqual, sum, to);
@@ -686,20 +598,21 @@ fn pass_step(e: &mut Emit<'_>) {
 
     e.b.switch_to_block(take);
     let countdown = e.b.ins().iadd_imm_s(countdown, -1);
-    e.set(layout::COUNTDOWN, countdown);
+    e.store_native(countdown, layout::COUNTDOWN);
     let one = e.b.ins().iconst(types::I64, 1);
     e.b.ins()
         .store(Emit::flags(), one, address, layout::SLOT_SET_AT);
-    let handle = e.tagged(sum);
+    let shifted = e.b.ins().ishl_imm_u(sum, layout::TAG_BITS);
+    let handle = e.b.ins().bor_imm_u(shifted, layout::TAG_INT);
     e.b.ins()
         .store(Emit::flags(), handle, address, layout::SLOT_VALUE_AT);
-    e.set(layout::LOOP_VALUE, sum);
-    e.set_const(layout::LOOP_DIRTY, 1);
-    let line = e.get(layout::LOOP_LINE);
-    e.set(layout::CLAUSE_LINE, line);
-    let indent = e.get(layout::LOOP_INDENT);
-    e.set(layout::CLAUSE_INDENT, indent);
-    e.set_const(layout::CLAUSE_DIRTY, 1);
+    e.store_native(sum, layout::LOOP_VALUE);
+    e.store_native(one, layout::LOOP_DIRTY);
+    let line = e.load_native(types::I64, layout::LOOP_LINE);
+    e.store_native(line, layout::CLAUSE_LINE);
+    let indent = e.load_native(types::I64, layout::LOOP_INDENT);
+    e.store_native(indent, layout::CLAUSE_INDENT);
+    e.store_native(one, layout::CLAUSE_DIRTY);
     e.b.ins().jump(body, &[]);
 
     e.b.switch_to_block(slow);
@@ -709,49 +622,87 @@ fn pass_step(e: &mut Emit<'_>) {
     e.b.switch_to_block(body);
 }
 
-fn arith(e: &mut Emit<'_>, clause_pc: u32, pc: u32, op: Arith, lhs: u16, rhs: u16, dst: u16) {
-    let left = e.reg(lhs);
-    let right = e.reg(rhs);
-    let fast = e.b.create_block();
-    let store = e.b.create_block();
-    let slow = e.b.create_block();
-    let join = e.b.create_block();
-    e.b.append_block_param(store, types::I64);
-    let left_small = e.small(left);
-    let right_small = e.small(right);
-    let both = e.b.ins().band(left_small, right_small);
-    e.b.ins().brif(both, fast, &[], slow, &[]);
+/// `RegFrame::clear_from(top)`, for a frame of `registers`.
+fn clear_registers(e: &mut Emit<'_, '_>, top: u16, registers: u16) {
+    let nil = e.b.ins().iconst(types::I64, layout::NIL_BITS as i64);
+    for register in top..registers {
+        e.b.ins()
+            .store(Emit::flags(), nil, e.registers, Emit::register_at(register));
+    }
+}
 
-    e.b.switch_to_block(fast);
-    let bound = e.get(layout::SMALL_INT_BOUND);
-    let a = e.b.ins().sshr_imm_u(left, layout::TAG_BITS);
-    let c = e.b.ins().sshr_imm_u(right, layout::TAG_BITS);
+fn arith(e: &mut Emit<'_, '_>, clause_pc: u32, pc: u32, op: Arith, lhs: u16, rhs: u16, dst: u16) {
+    let b = &mut e.b;
+    let left = b.ins().load(
+        types::I64,
+        Emit::flags(),
+        e.registers,
+        Emit::register_at(lhs),
+    );
+    let right = b.ins().load(
+        types::I64,
+        Emit::flags(),
+        e.registers,
+        Emit::register_at(rhs),
+    );
+    let fast = b.create_block();
+    let store = b.create_block();
+    let slow = b.create_block();
+    let join = b.create_block();
+    b.append_block_param(store, types::I64);
+    // Both handles carry the small-integer tag: bit 0 set in both and bit
+    // 1 clear in both.
+    let tags = b.ins().band(left, right);
+    let tags = b.ins().band_imm_u(tags, layout::TAG_MASK);
+    let either = b.ins().bor(left, right);
+    let either = b
+        .ins()
+        .band_imm_u(either, layout::TAG_MASK & !layout::TAG_INT);
+    let tagged = b.ins().icmp_imm_u(IntCC::Equal, tags, layout::TAG_INT);
+    let clear = b.ins().icmp_imm_u(IntCC::Equal, either, 0);
+    let both = b.ins().band(tagged, clear);
+    b.ins().brif(both, fast, &[], slow, &[]);
+
+    b.switch_to_block(fast);
+    let bound = b
+        .ins()
+        .load(types::I64, Emit::flags(), e.ctx, layout::SMALL_INT_BOUND);
+    let a = b.ins().sshr_imm_u(left, layout::TAG_BITS);
+    let c = b.ins().sshr_imm_u(right, layout::TAG_BITS);
     let (result, overflow) = match op {
-        Arith::Add => (e.b.ins().iadd(a, c), None),
-        Arith::Subtract => (e.b.ins().isub(a, c), None),
+        Arith::Add => (b.ins().iadd(a, c), None),
+        Arith::Subtract => (b.ins().isub(a, c), None),
         Arith::Multiply => {
-            let (product, overflow) = e.b.ins().smul_overflow(a, c);
+            let (product, overflow) = b.ins().smul_overflow(a, c);
             (product, Some(overflow))
         }
     };
-    let mut ok = e.within(a, bound);
-    let c_ok = e.within(c, bound);
-    ok = e.b.ins().band(ok, c_ok);
-    let r_ok = e.within(result, bound);
-    ok = e.b.ins().band(ok, r_ok);
+    let negative = b.ins().ineg(bound);
+    let within = |b: &mut FunctionBuilder<'_>, v: Value| {
+        let below = b.ins().icmp(IntCC::SignedLessThan, v, bound);
+        let above = b.ins().icmp(IntCC::SignedGreaterThan, v, negative);
+        b.ins().band(below, above)
+    };
+    let mut ok = within(b, a);
+    let c_ok = within(b, c);
+    ok = b.ins().band(ok, c_ok);
+    let r_ok = within(b, result);
+    ok = b.ins().band(ok, r_ok);
     if let Some(overflow) = overflow {
-        let fine = e.b.ins().icmp_imm_u(IntCC::Equal, overflow, 0);
-        ok = e.b.ins().band(ok, fine);
+        let fine = b.ins().icmp_imm_u(IntCC::Equal, overflow, 0);
+        ok = b.ins().band(ok, fine);
     }
-    e.b.ins().brif(ok, store, &[result.into()], slow, &[]);
+    b.ins().brif(ok, store, &[result.into()], slow, &[]);
 
-    e.b.switch_to_block(store);
-    let result = e.b.block_params(store)[0];
-    let handle = e.tagged(result);
-    e.set_reg(dst, handle);
-    e.b.ins().jump(join, &[]);
+    b.switch_to_block(store);
+    let result = b.block_params(store)[0];
+    let shifted = b.ins().ishl_imm_u(result, layout::TAG_BITS);
+    let handle = b.ins().bor_imm_u(shifted, layout::TAG_INT);
+    b.ins()
+        .store(Emit::flags(), handle, e.registers, Emit::register_at(dst));
+    b.ins().jump(join, &[]);
 
-    e.b.switch_to_block(slow);
+    b.switch_to_block(slow);
     e.slow_op(clause_pc, pc);
     e.b.ins().jump(join, &[]);
 
