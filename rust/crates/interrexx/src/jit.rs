@@ -414,6 +414,11 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
     let mut flags = settings::builder();
     flags.set("opt_level", "speed").ok()?;
     flags.set("is_pic", "false").ok()?;
+    // The verifier checks this generator rather than the program, and costs
+    // more than the code it checks; debug builds keep it.
+    if !cfg!(debug_assertions) {
+        flags.set("enable_verifier", "false").ok()?;
+    }
     let isa = cranelift_native::builder()
         .ok()?
         .finish(settings::Flags::new(flags))

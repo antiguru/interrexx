@@ -53,6 +53,15 @@ pub(crate) struct Loops {
 }
 
 impl Loops {
+    /// Whether the loop at instruction `do_index` is not refused: asked
+    /// before the out-of-line call into [`Interp::jit_passes`].
+    #[inline(always)]
+    pub(super) fn may_compile(&self, do_index: u32) -> bool {
+        self.state
+            .get(do_index as usize)
+            .is_some_and(|state| state.get() != REFUSED)
+    }
+
     pub(crate) fn new(instructions: usize) -> Loops {
         Loops {
             state: (0..instructions).map(|_| Cell::new(0)).collect(),
@@ -127,6 +136,7 @@ impl Interp {
         clippy::too_many_arguments,
         reason = "the values the Op::LoopNext arm holds"
     )]
+    #[inline(never)]
     pub(super) fn jit_passes(
         &mut self,
         code: &Code<'_>,
@@ -253,6 +263,9 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                         bits: value.bits(),
                     },
                 },
+                // A site whose small-integer path has already declined
+                // (`Chunk::tries_small_int`) is one the host will run.
+                Op::Arith { hint, .. } if !chunk.tries_small_int(hint) => Step::Op { pc: at },
                 Op::Arith {
                     op, lhs, rhs, dst, ..
                 } => match op {

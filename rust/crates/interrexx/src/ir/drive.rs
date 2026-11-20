@@ -4284,6 +4284,7 @@ impl Interp {
                             // them needs the driver.
                             #[cfg(feature = "jit")]
                             if !GRANTING
+                                && chunk.jit.may_compile(*index)
                                 && stream.len() == full.len()
                                 && let Some(exit) =
                                     self.jit_passes(code, chunk, registers, source, pc, *index, TOP)
