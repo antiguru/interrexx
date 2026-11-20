@@ -1,0 +1,67 @@
+# The kernel's own handling of the options is the host's (`docs/design/decisions.md`): Linux keeps
+# a linger's seconds when it is switched off, doubles a buffer size it is given, and takes a send
+# buffer of 0; macOS does none of these. These answers are interrexx's on macOS, recorded on
+# a CI runner; the oracle has not been run there.
+# Socket options: booleans, the linger pair (16-bit halves, missing words
+# 0), the timeouts in milliseconds, buffer sizes doubled, SO_TYPE's names,
+# a leading decimal integer for the value, and failures' variable values.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockGetSockOpt(c,'sol_socket','so_keepalive','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_keepalive','1') SockGetSockOpt(c,'SOL_SOCKET','so_keepalive','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_reuseaddr','7') SockGetSockOpt(c,'SOL_SOCKET','so_reuseaddr','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_oobinline','1') SockGetSockOpt(c,'SOL_SOCKET','so_oobinline','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_dontroute','1') SockGetSockOpt(c,'SOL_SOCKET','so_dontroute','v') v"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','1 7 junk') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','0 3') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','65537') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_RCVTIMEO','2000') SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-2000') SockGetSockOpt(c,'sol_socket','SO_SNDTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-5') errno"
+call t "SockSetSockOpt(c,'sol_socket','SO_RCVBUF','5000x') SockGetSockOpt(c,'SOL_SOCKET','so_rcvbuf','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDBUF','abc') errno"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_type','v') v"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_error','v') v"
+call t "SockGetSockOpt(9999,'SOL_SOCKET','so_type','v') v errno"
+call t "SockGetSockOpt(9999,'SOL_SOCKET','so_rcvbuf','v') v errno"
+call t "SockGetSockOpt(c,'SOL_SOCKET','bogus','v') v errno"
+d = SockSocket('AF_INET', 'SOCK_DGRAM', '0')
+call t "SockGetSockOpt(d,'SOL_SOCKET','so_type','v') v"
+call t "SockSetSockOpt(d,'sol_socket','so_broadcast','1') SockGetSockOpt(d,'SOL_SOCKET','so_broadcast','v') v"
+exit
+t: procedure expose c d
+  drop errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 100) '=>' r
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockGetSockOpt(c,'sol_socket','so_keepalive','v') v                                                  => 0 0
+SockSetSockOpt(c,'sol_socket','so_keepalive','1') SockGetSockOpt(c,'SOL_SOCKET','so_keepalive','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_reuseaddr','7') SockGetSockOpt(c,'SOL_SOCKET','so_reuseaddr','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_oobinline','1') SockGetSockOpt(c,'SOL_SOCKET','so_oobinline','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_dontroute','1') SockGetSockOpt(c,'SOL_SOCKET','so_dontroute','v')  => 0 0 1
+SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v                                                     => 0 0 0
+SockSetSockOpt(c,'sol_socket','SO_LINGER','1 7 junk') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') => 0 0 1 7
+SockSetSockOpt(c,'sol_socket','SO_LINGER','0 3') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v    => 0 0 0 3
+SockSetSockOpt(c,'sol_socket','SO_LINGER','65537') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v  => 0 0 1 0
+SockSetSockOpt(c,'sol_socket','SO_LINGER','') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v       => 0 0 0 0
+SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v                                                   => 0 0
+SockSetSockOpt(c,'sol_socket','SO_RCVTIMEO','2000') SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') => 0 0 2000
+SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-2000') SockGetSockOpt(c,'sol_socket','SO_SNDTIMEO','v' => 0 0 0
+SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-5') errno                                              => -1 33
+SockSetSockOpt(c,'sol_socket','SO_RCVBUF','5000x') SockGetSockOpt(c,'SOL_SOCKET','so_rcvbuf','v') v  => 0 0 5000
+SockSetSockOpt(c,'sol_socket','SO_SNDBUF','abc') errno                                               => -1 22
+SockGetSockOpt(c,'SOL_SOCKET','so_type','v') v                                                       => 0 STREAM
+SockGetSockOpt(c,'SOL_SOCKET','so_error','v') v                                                      => 0 0
+SockGetSockOpt(9999,'SOL_SOCKET','so_type','v') v errno                                              => -1 UNKNOWN 9
+SockGetSockOpt(9999,'SOL_SOCKET','so_rcvbuf','v') v errno                                            => -1 0 9
+SockGetSockOpt(c,'SOL_SOCKET','bogus','v') v errno                                                   => -1 0 ENOPROTOOPT
+SockGetSockOpt(d,'SOL_SOCKET','so_type','v') v                                                       => 0 DGRAM
+SockSetSockOpt(d,'sol_socket','so_broadcast','1') SockGetSockOpt(d,'SOL_SOCKET','so_broadcast','v')  => 0 0 1
+[stderr]

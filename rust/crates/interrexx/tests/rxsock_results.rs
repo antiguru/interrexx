@@ -15,6 +15,8 @@
 //!   a ruling the case's comment names: the oracle crashes (Deviation 88), or
 //!   reports an `errno` of its own I/O (Rulings, errno).
 //!
+//! A file named `<name>.<host>` holds answers the host decides, and runs only on that host.
+//!
 //! The packages a program requires (`socket.cls` and the rest) are this
 //! crate's on both sides: the clean tree's oracle finds them through links in
 //! its `bin` directory.
@@ -27,6 +29,8 @@
 //! oracle's `rxapi` daemons it starts are left running and are the
 //! recorder's to stop.
 
+#[path = "support/host_cases.rs"]
+mod host_cases;
 mod support;
 
 use std::path::PathBuf;
@@ -115,31 +119,35 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
 fn rxsock_answers_as_the_oracle_does() {
     let record = std::env::var_os("RXSOCK_RECORD").is_some();
     let mut cases = 0;
-    datadriven::walk(CASES, |file| {
-        file.run(|case| {
-            cases += 1;
-            let lines: Vec<&str> = case.input.lines().collect();
-            match case.directive.as_str() {
-                "eval" | "eval-packages" => {
-                    let requires = match case.directive.as_str() {
-                        "eval" => "::requires 'rxsock' LIBRARY\n",
-                        _ => "::requires 'socket.cls'\n::requires 'streamsocket.cls'\n",
-                    };
-                    let program = eval_program(&lines, requires);
-                    let (rc, stdout, stderr) = run(cases, &program, record);
-                    assert_eq!(rc, 0, "{stderr}");
-                    stdout
+    datadriven::walk_exclusive(
+        CASES,
+        |file| {
+            file.run(|case| {
+                cases += 1;
+                let lines: Vec<&str> = case.input.lines().collect();
+                match case.directive.as_str() {
+                    "eval" | "eval-packages" => {
+                        let requires = match case.directive.as_str() {
+                            "eval" => "::requires 'rxsock' LIBRARY\n",
+                            _ => "::requires 'socket.cls'\n::requires 'streamsocket.cls'\n",
+                        };
+                        let program = eval_program(&lines, requires);
+                        let (rc, stdout, stderr) = run(cases, &program, record);
+                        assert_eq!(rc, 0, "{stderr}");
+                        stdout
+                    }
+                    "program" | "ruled" => {
+                        let oracle = record && case.directive == "program";
+                        let (rc, stdout, stderr) =
+                            run(cases, &format!("{}\n", case.input.trim_end()), oracle);
+                        format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
+                    }
+                    other => panic!("unknown directive {other}"),
                 }
-                "program" | "ruled" => {
-                    let oracle = record && case.directive == "program";
-                    let (rc, stdout, stderr) =
-                        run(cases, &format!("{}\n", case.input.trim_end()), oracle);
-                    format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
-                }
-                other => panic!("unknown directive {other}"),
-            }
-        });
-    });
+            });
+        },
+        host_cases::for_another_host,
+    );
     assert!(cases > 0, "no case ran");
     rexx_service::remove_scratch("rxsock");
 }

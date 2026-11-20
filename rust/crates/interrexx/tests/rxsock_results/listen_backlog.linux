@@ -1,0 +1,31 @@
+# A blocking accept or connect that times out, and what a full listen backlog does, are the host's (docs/design/decisions.md): the errno numbers and the backlog differ.
+# A blocking accept waits no longer than the socket's SO_RCVTIMEO and a
+# blocking connect no longer than its SO_SNDTIMEO (PR 4 review I2): -1 with
+# EAGAIN, and -1 with EINPROGRESS while the connection goes on (a listener
+# with backlog 0 holds one connection, so the second cannot complete).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 0
+call SockGetSockName s, 'a.'
+say SockSetSockOpt(s, 'SOL_SOCKET', 'SO_RCVTIMEO', 500)
+t = time('r')
+say SockAccept(s) SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+c0 = SockSocket('AF_INET', 'SOCK_STREAM', 0); say SockConnect(c0, 'a.')
+c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDTIMEO', 500)
+t = time('r')
+say SockConnect(c, 'a.') SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+say SockConnect(c, 'a.') SockSock_Errno()
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+0
+-1 11 1 1
+0
+0
+-1 115 1 1
+-1 114
+[stderr]

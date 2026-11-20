@@ -1019,7 +1019,7 @@ fn rexx_output_lands_before_the_native_code_that_follows() {
                 .arg(format!("-I{}", api.join("platform/unix").display()))
                 .arg(&source)
                 .arg("-o")
-                .arg(dir.join("libhooklib.so"))
+                .arg(dir.join(format!("libhooklib{}", std::env::consts::DLL_SUFFIX)))
                 .output()
                 .expect("c++ runs");
             assert!(

@@ -34,12 +34,18 @@ fn quarter_circles_are_exact() {
     assert!(trig(Trig::Sin, f64::INFINITY, Unit::Degrees).is_nan());
 }
 
-/// Arc results in degrees and grades divide by π in extended precision.
+/// Arc results in degrees and grades divide by π in extended precision. The
+/// radians are the correctly rounded values where the host's maths library
+/// may answer an arc function a unit in the last place off (Apple's
+/// `asin(0.5)` is), which is the host's (`docs/design/decisions.md`).
 #[test]
 fn arc_results_convert_exactly() {
     assert_eq!(from_radians(1f64.asin(), Unit::Degrees), 90.0);
     assert_eq!(from_radians(1f64.asin(), Unit::Grades), 100.0);
-    assert_eq!(from_radians(0.5f64.asin(), Unit::Degrees), 30.0);
+    assert_eq!(
+        from_radians(std::f64::consts::FRAC_PI_6, Unit::Degrees),
+        30.0
+    );
     assert_eq!(from_radians((-1f64).acos(), Unit::Degrees), 180.0);
     assert_eq!(from_radians(f64::INFINITY.atan(), Unit::Degrees), 90.0);
 }

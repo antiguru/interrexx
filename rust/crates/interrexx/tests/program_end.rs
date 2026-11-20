@@ -7,6 +7,9 @@
     reason = "this harness times or bounds real runs"
 )]
 
+#[path = "support/host_process.rs"]
+mod host_process;
+
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -69,11 +72,9 @@ fn stays_alive_after(name: &str, source: &str, main_output: &str) {
     }
 }
 
-/// The process's user and system time in clock ticks, where `/proc` has it.
+/// The process's user and system time, in hundredths of a second.
 fn cpu_ticks(child: &Child) -> Option<u64> {
-    let stat = std::fs::read_to_string(format!("/proc/{}/stat", child.id())).ok()?;
-    let fields: Vec<&str> = stat.rsplit_once(')')?.1.split_whitespace().collect();
-    Some(fields.get(11)?.parse::<u64>().ok()? + fields.get(12)?.parse::<u64>().ok()?)
+    host_process::cpu_centiseconds(child.id())
 }
 
 fn kill(child: &mut Child) {

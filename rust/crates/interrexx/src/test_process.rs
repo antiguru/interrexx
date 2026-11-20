@@ -1,6 +1,11 @@
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+/// A thread stack larger than any 64-bit host's address space, so a spawn
+/// asking for it fails whether or not an address cap is enforced: macOS
+/// enforces none, and has room for 64 TiB.
+pub(crate) const UNSPAWNABLE_STACK: usize = 1 << 62;
+
 /// Whether the test driver explicitly selected ThreadSanitizer resources.
 pub(crate) fn thread_sanitizer() -> bool {
     std::env::var("REXX_TEST_THREAD_SANITIZER").as_deref() == Ok("1")
@@ -20,7 +25,7 @@ pub(crate) fn isolated(name: &str) -> bool {
 pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     const CHILD: &str = "REXX_POOL_FAILURE_CHILD";
     if std::env::var(CHILD).as_deref() == Ok(name) {
-        let pool = crate::scheduler::Pool::new(1 << 46, 1);
+        let pool = crate::scheduler::Pool::new(UNSPAWNABLE_STACK, 1);
         match pool.reserve() {
             Err(_) => assert_eq!(pool.threads(), 0),
             Ok(Some(worker)) => {
@@ -37,7 +42,16 @@ pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     let launch = if thread_sanitizer() {
         "import os,sys; os.execv(sys.argv[1],sys.argv[1:])"
     } else {
-        "import os,resource,sys; resource.setrlimit(resource.RLIMIT_AS,(8<<30,8<<30)); os.execv(sys.argv[1],sys.argv[1:])"
+        // The cap is 8 GiB or the hard limit, where that is lower. A host that refuses an address
+        // cap (macOS, which does not enforce one either) runs without it; Linux must take it.
+        "import os,resource,sys\n\
+         c=8<<30\n\
+         h=resource.getrlimit(resource.RLIMIT_AS)[1]\n\
+         c=c if h==resource.RLIM_INFINITY else min(c,h)\n\
+         try:\n resource.setrlimit(resource.RLIMIT_AS,(c,c))\n\
+         except (ValueError,OSError):\n\
+         \x20if sys.platform.startswith('linux'): raise\n\
+         os.execv(sys.argv[1],sys.argv[1:])"
     };
     let mut child = Command::new("python3")
         .args(["-c", launch])

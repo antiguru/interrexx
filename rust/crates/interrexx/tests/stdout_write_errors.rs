@@ -77,7 +77,9 @@ fn a_closed_pipe_is_error_32() {
     );
 }
 
-/// A full device: `ENOSPC`, `ERROR:28`.
+/// A full device: `ENOSPC`, `ERROR:28`. `/dev/full` is Linux's; no other host has a device that
+/// is always full.
+#[cfg(target_os = "linux")]
 fn full_device() -> Stdio {
     let full = std::fs::OpenOptions::new()
         .write(true)
@@ -87,6 +89,7 @@ fn full_device() -> Stdio {
 }
 
 /// `/dev/full`: `ENOSPC`, `ERROR:28`.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_full_device_is_error_28() {
     let (stderr, status) = run_with_stdout("full", PROGRAM, full_device());
@@ -114,6 +117,7 @@ fn a_flush_into_a_closed_pipe_is_error_32() {
 }
 
 /// [`a_flush_into_a_closed_pipe_is_error_32`] on `/dev/full`.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_flush_into_a_full_device_is_error_28() {
     let (stderr, status) = run_with_stdout("flush-full", FLUSH_PROGRAM, full_device());

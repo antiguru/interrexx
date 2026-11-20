@@ -774,6 +774,8 @@ fn c_type(rust: &str) -> String {
         "f32" => "float".to_string(),
         "f64" => "double".to_string(),
         "c_void" => "void".to_string(),
+        // Apple's `pthread_t` is a pointer to it.
+        "_opaque_pthread_t" => "struct _opaque_pthread_t".to_string(),
         "RexxCondition" | "ValueDescriptor" | "RexxPackageEntry" | "RexxOption" | "RXSTRING"
         | "CONSTRXSTRING" | "RXSYSEXIT" | "SHVBLOCK" | "RexxQueueTime" | "REXXDATETIME" => {
             rust.to_string()

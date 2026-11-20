@@ -226,7 +226,8 @@ receiving or `2` for both, and answers `0`, or `-1` with the error `22` for
 another `how`. Stream sockets keep the order of the bytes and not the bounds of
 the calls, so that bytes that were sent by one call can be received by several.
 `SockRecv` on a stream socket that is not connected, which includes one that listens, answers `-1` with the error
-`ENOTCONN` at once and does not wait, and `SockSend` on one answers `-1` with the error `32`. The flags are the words `MSG_OOB`,
+`ENOTCONN` at once and does not wait, and `SockSend` on one answers `-1` with the error the host gives
+for it, `32` (`EPIPE`) on Linux and `ENOTCONN` on macOS. The flags are the words `MSG_OOB`,
 `MSG_PEEK` and `MSG_DONTROUTE`, in either case, with blanks between them.
 
 ```rexx

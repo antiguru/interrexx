@@ -126,15 +126,27 @@ pub fn run(
         .map_err(|error| format!("{} could not be launched: {error}", side.label))
 }
 
+/// The script `/bin/sh -c` runs: enter the working directory `$1`, apply the
+/// address-space cap `$2` where the platform can, drop both, and `exec` the
+/// rest.
+#[cfg(not(target_os = "macos"))]
+const SHELL_SCRIPT: &str = r#"cd "$1" || exit 111; ulimit -v "$2" || exit 112; shift 2; exec "$@""#;
+
+/// macOS refuses `setrlimit(RLIMIT_AS)` below the address space a process
+/// already reserves, so `ulimit -v` fails with EINVAL and the cap cannot be
+/// applied. The script still takes `$2` so the argument vector keeps one
+/// shape on every platform. On macOS the memory bound is the caller's.
+#[cfg(target_os = "macos")]
+const SHELL_SCRIPT: &str = r#"cd "$1" || exit 111; shift 2; exec "$@""#;
+
 /// The argument vector [`run`] hands `/bin/sh`.
 fn shell_args(binary: &Path, program: &Path, workdir: &Path, wrapper: &Wrapper) -> Vec<String> {
     // `cd` and `ulimit` are shell builtins and there is no rlimit hook on
     // `Command`; `"$@"` keeps the paths out of the shell string so nothing
     // needs quoting.
-    let script = r#"cd "$1" || exit 111; ulimit -v "$2" || exit 112; shift 2; exec "$@""#;
     let mut args = vec![
         "-c".to_string(),
-        script.to_string(),
+        SHELL_SCRIPT.to_string(),
         "interrexx-bench".to_string(),
         workdir.display().to_string(),
         ADDRESS_SPACE_LIMIT_KIB.to_string(),
@@ -302,7 +314,14 @@ mod tests {
             args,
             [
                 "-c",
-                r#"cd "$1" || exit 111; ulimit -v "$2" || exit 112; shift 2; exec "$@""#,
+                // Spelled out per platform rather than read from
+                // `SHELL_SCRIPT`, so a change to either script is a change
+                // to this pin.
+                if cfg!(target_os = "macos") {
+                    r#"cd "$1" || exit 111; shift 2; exec "$@""#
+                } else {
+                    r#"cd "$1" || exit 111; ulimit -v "$2" || exit 112; shift 2; exec "$@""#
+                },
                 "interrexx-bench",
                 "/work",
                 "8388608",
@@ -367,7 +386,15 @@ mod tests {
         let printed = String::from_utf8_lossy(&completed.stdout)
             .trim()
             .to_string();
-        assert_eq!(printed, dir.canonicalize().unwrap().display().to_string());
+        // Both sides canonicalized: the shell's `cd` sets `PWD` to the path
+        // it was given, and macOS's `/bin/pwd` prints that logical path
+        // (`/var/...`) where GNU's prints the physical one (`/private/var/...`),
+        // because `temp_dir()` there is a symlink.
+        assert_eq!(
+            Path::new(&printed).canonicalize().unwrap(),
+            dir.canonicalize().unwrap(),
+            "printed {printed:?}"
+        );
     }
 
     #[test]

@@ -15,6 +15,8 @@
 
 #[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
 mod cdylibs;
+#[path = "support/host_process.rs"]
+mod host_process;
 #[path = "suite/launch/mod.rs"]
 mod launch;
 pub use launch::{

@@ -269,10 +269,8 @@ RxCalcArcSin(1)
 RxCalcArcSin(1,,'g')
 RxCalcArcSin(1,,'r')
 RxCalcArcCos(-1)
-RxCalcArcSin(.5,16)
 RxCalcArcTan(.1526,,'g')
 RxCalcArcTan(1,16)
-RxCalcArcCos(0.5,16)
 RxCalcArcSin(-0.7071067811865476,16)
 RxCalcArcTan(-3,16,'G')
 ----
@@ -280,10 +278,8 @@ RxCalcArcTan(-3,16,'G')
 100
 1.57079633
 180
-30
 9.64044525
 45
-60
 -44.99999998488434
 -79.51672353008665
 

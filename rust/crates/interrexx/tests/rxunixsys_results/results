@@ -100,7 +100,7 @@ ERR 40.1
 ERR 40.1
 "crw-rw-rw-"
 ERR 40.1
-"Linux"
+"{sysname}"
 "Permission denied"
 
 # SysGeterrnomsg: 0 is Ok, and a literal -2147483647 is out of range once its sign is computed.
@@ -114,11 +114,11 @@ ERR 88.907
 # SysGeterrnomsg answers the platform's text for every number but 0, never
 # the null string (`r[rxunixsys.index.errno]`); the oracle answers from a table of its own, and
 # `Unknown` for a number outside it. The texts of the numbers below are those
-# every platform words alike.
+# every platform words alike; `{ENAME}` is the host's number for the error.
 ruled
 say SysGeterrnomsg(0)
-say SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13) '|' SysGeterrnomsg(17)
-say SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22) '|' SysGeterrnomsg(39)
+say SysGeterrnomsg({EPERM}) '|' SysGeterrnomsg({ENOENT}) '|' SysGeterrnomsg({EACCES}) '|' SysGeterrnomsg({EEXIST})
+say SysGeterrnomsg({ENOTDIR}) '|' SysGeterrnomsg({EISDIR}) '|' SysGeterrnomsg({EINVAL}) '|' SysGeterrnomsg({ENOTEMPTY})
 empty = ''
 do n = -1 to 140
   if SysGeterrnomsg(n) == '' then empty = empty n
@@ -160,9 +160,9 @@ SysSignal(999, 'd')
 SysSignal(999, 'Ignore')
 ----
 "64"
-"Linux"
-"Linux"
-"Linux"
+"{sysname}"
+"{sysname}"
+"{sysname}"
 ERR 40.1
 ERR 40.1
 "1"
@@ -181,7 +181,9 @@ ERR 40.1
 "0"
 "0"
 
-# SysStat: failures, a missing file, and /dev/null's fixed fields.
+# SysStat: failures, a missing file, and /dev/null's fixed fields. Its device numbers are the
+# host's: `{null_rdev}`, its own, is compared in the program, and its file system's may be too
+# long for a whole number at nine digits.
 eval
 SysStat('', 'x')
 SysStat('/nonexist', '')
@@ -190,12 +192,12 @@ SysStat('/nonexist', 'd')
 SysStat('/nonexist', 'p')
 SysStat('/dev/null', 'q')
 SysStat('/dev/null', 'xyzzy')
-SysStat('/dev/null', 'r')
-SysStat('/dev/null', 'RDEV')
+SysStat('/dev/null', 'r') == {null_rdev}
+SysStat('/dev/null', 'RDEV') == {null_rdev}
 SysStat('/dev/null', 'p')
 SysStat('/dev/null', 's')
 SysStat('/', 'p')~left(1)
-SysStat('/dev/null', 'd')~datatype('W')
+SysStat('/dev/null', 'd')~datatype('N')
 SysStat('/dev/null', 'i')~datatype('W')
 SysStat('/dev/null', 'n')~datatype('W')
 SysStat('/', 'm')~length SysStat('/', 'a')~words SysStat('/', 'c')~wordlength(1)
@@ -207,8 +209,8 @@ ERR 40.1
 ""
 ERR 40.1
 ERR 40.1
-"259"
-"259"
+"1"
+"1"
 "crw-rw-rw-"
 "0"
 "d"
@@ -241,80 +243,12 @@ ERR 40.1
 "-1"
 "-1"
 
-# Users and groups: root is uid 0 and gid 0 everywhere.
-eval
-SysGetpwnam('', 'n')
-SysGetpwnam('root', '')
-SysGetpwnam('root', 'x')
-SysGetpwnam('nosuchuserq', 'x')
-SysGetpwnam('nosuchuserq', 'n')
-SysGetpwnam('root', 'n')
-SysGetpwnam('root', 'Name')
-SysGetpwnam('root', 'u')
-SysGetpwnam('root', 'g')
-SysGetpwnam('root', 'd')
-SysGetpwnam('root', 'p')
-SysGetpwuid(0, 'n')
-SysGetpwuid(0, 'user')
-SysGetpwuid(0, 'group')
-SysGetpwuid(-5, 'n')
-SysGetpwuid(-1, 'q')
-SysGetpwuid(0, '')
-SysGetpwuid(0, 'q')
-SysGetgrnam('root', 'n')
-SysGetgrnam('root', 'g')
-SysGetgrnam('root', 'p')
-SysGetgrnam('root', 'm')~class
-SysGetgrnam('root', 'q')
-SysGetgrnam('nosuchgroupq', 'q')
-SysGetgrnam('', 'n')
-SysGetgrnam('root', '')
-SysGetgrgid(0, 'n')
-SysGetgrgid(0, 'GROUP')
-SysGetgrgid(0, 'pw')
-SysGetgrgid(0, '')
-SysGetgrgid(0, 'z')
-SysGetgrgid(2147483646, 'q')
-----
-ERR 40.1
-ERR 40.1
-ERR 40.1
-""
-""
-"root"
-"root"
-"0"
-"0"
-"/root"
-""
-"root"
-"0"
-"0"
-""
-""
-ERR 40.1
-ERR 40.1
-"root"
-"0"
-""
-"The Array class"
-ERR 40.1
-ERR 40.1
-ERR 40.1
-ERR 40.1
-"root"
-"0"
-""
-ERR 40.1
-ERR 40.1
-ERR 40.1
-
-# Services: http is 80/tcp with the alias www.
+# Services: http is 80/tcp with the alias www, among whatever others the host lists.
 eval
 SysGetservbyname('http', 'tcp', 'p')
 SysGetservbyname('http', 'tcp', 'n')
 SysGetservbyname('www', 'tcp', 'n')
-SysGetservbyname('www', 'tcp', 'a')
+SysGetservbyname('www', 'tcp', 'a')~hasItem('www')
 SysGetservbyname('http', 'tcp', '')
 SysGetservbyname('http', 'tcp', 'q')
 SysGetservbyname('nosuchsvc', 'tcp', 'q')
@@ -325,7 +259,7 @@ SysGetservbyname('http', 'TCP', 'n')
 SysGetservbyname('HTTP', 'tcp', 'n')
 SysGetservbyport(80, 'tcp', 'n')
 SysGetservbyport(80, 'tcp', 'Port')
-SysGetservbyport(80, 'tcp', 'a')
+SysGetservbyport(80, 'tcp', 'a')~hasItem('www')
 SysGetservbyport(0, 'tcp', 'n')
 SysGetservbyport(-1, 'tcp', 'n')
 SysGetservbyport(65535, 'tcp', 'n')
@@ -337,7 +271,7 @@ SysGetservbyport(80, 'tcp', 'q')
 "80"
 "http"
 "http"
-Array[1]: www
+"1"
 ERR 40.1
 ERR 40.1
 ""
@@ -348,7 +282,7 @@ ERR 40.1
 ""
 "http"
 "80"
-Array[1]: www
+"1"
 ERR 40.1
 ERR 40.1
 ERR 40.1
@@ -422,113 +356,6 @@ XYZ-a [XYZ][]
 :UTC [UTC][UTC]
 /usr/share/zoneinfo/UTC [UTC][UTC]
 Nowhere/X [Nowhere][]
-[stderr]
-
-# Files, in the case's own directory, which holds the file f and the
-# directory sub. Relative names are the program's directory's.
-program
-call directory '{dir}'
-call SysUmask 2
-say 'umask' SysUmask(18) SysUmask(18)
-say 'mkdir' SysMkdirUnix('m1', 511) SysStat('m1', 'p')
-say 'mkdir again' SysMkdirUnix('m1', 448) SysGeterrno()
-say 'rmdir' SysRmdirUnix('m1') '['SysStat('m1', 'p')']' SysGeterrno()
-say 'rmdir again' SysRmdirUnix('m1') SysGeterrno()
-say 'symlink' SysSymlink('f', 'ln') SysStat('ln', 'p') SysStat('ln', 's')
-say 'dangling' SysSymlink('nothere', 'dl') '['SysStat('dl', 'p')']' SysGeterrno()
-say 'link' SysLink('f', 'hl') SysStat('f', 'n') (SysStat('hl', 'i') = SysStat('f', 'i'))
-say 'link again' SysLink('f', 'hl') SysGeterrno()
-say 'unlink' SysUnlink('hl') SysUnlink('ln') SysUnlink('dl') SysStat('f', 'n')
-say 'unlink again' SysUnlink('hl') SysGeterrno()
-say 'chmod' SysChmod('f', 'rwsr-S--t') SysStat('f', 'p')
-say 'chmod' SysChmod('f', 'rw-r-----') SysStat('f', 'p')
-say 'chmod dir' SysChmod('sub', 'rwxr-x--T') SysStat('sub', 'p')
-say 'chmod none' SysChmod('nothere', 'rw-r-----') SysGeterrno()
-say 'access' SysAccess('f', 4) SysAccess('f', 1) SysGeterrno() SysAccess('nothere', 0) SysGeterrno()
-say 'access bad mode' SysAccess('f', 8) SysGeterrno()
-say 'euidaccess' SysEuidaccess('f', 2) SysEuidaccess('nothere', 0) SysGeterrno()
-say 'chown' SysChown('f', -1, -1) SysLchown('f', -1, -1) SysChown('nothere', -1, -1) SysGeterrno()
-say 'size' SysStat('f', 's') SysStat('f', 'Size') SysStat('sub', 'N') (SysStat('f', 'u') = SysGetuid()) (SysStat('f', 'g') = SysGetegid())
-say 'notdir' '['SysStat('f/x', 's')']' SysGeterrno() '['SysStat('f/x', 'q')']'
-d = SysGetdirlist('.')
-say 'dirlist' d~class d~items d~hasItem('.') d~hasItem('..') d~hasItem('f') d~hasItem('sub')
-say 'dirlist sub' SysGetdirlist('sub')~sort~toString('L', ',')
-say 'dirlist none' SysGetdirlist('nothere')~class SysGetdirlist('nothere')~items SysGeterrno()
-say 'dirlist file' SysGetdirlist('f')~items SysGeterrno()
-say 'close' SysClose(-1) SysGeterrno()
-say 'sticky' SysClose(-1) SysAccess('.', 0) SysMkdirUnix('m2', 448) SysRmdirUnix('m2') SysGeterrno()
-say 'kill self' SysKill(SysGetpid(), 0) SysKill(SysGetpid(), 999) SysGeterrno()
-say 'kill none' SysKill(2147483647, 0) SysGeterrno()
-say 'sid none' SysGetsid(2147483647) SysGeterrno() SysGetpgid(2147483647) SysGeterrno()
-say 'setpgid none' SysSetpgid(2147483647, 0) SysGeterrno() SysSetpgid(-1, 0) SysGeterrno()
-say 'own ids' SysSeteuid(SysGeteuid()) SysSetegid(SysGetegid()) SysSetgid(SysGetgid()) SysSetuid(SysGetuid())
-say 'chroot' SysChroot('sub') SysGeterrno() directory()
-::requires 'rxunixsys' LIBRARY
-----
-rc 0
-[stdout]
-umask 2 18
-mkdir 0 drwxr-xr-x
-mkdir again -1 17
-rmdir 0 [] 2
-rmdir again -1 2
-symlink 0 -rw-rw-r-- 6
-dangling 0 [] 2
-link 0 2 1
-link again -1 17
-unlink 0 0 0 1
-unlink again -1 2
-chmod 0 -rwsr-S--t
-chmod 0 -rw-r-----
-chmod dir 0 drwxr-x--T
-chmod none -1 2
-access 0 -1 13 -1 2
-access bad mode -1 22
-euidaccess 0 -1 2
-chown 0 0 -1 2
-size 6 6 2 1 1
-notdir [] 20 []
-dirlist The Array class 5 1 1 1 1
-dirlist sub .,..
-dirlist none The Array class 0 2
-dirlist file 0 20
-close -1 9
-sticky -1 0 0 0 9
-kill self 0 -1 22
-kill none -1 3
-sid none -1 3 -1 3
-setpgid none -1 3 -1 22
-own ids 0 0 0 0
-chroot -1 2 /
-[stderr]
-
-# Extended attributes on the case's file, which starts with none in the
-# user namespace.
-program
-call directory '{dir}'
-initial = SysListxattr('f')
-say 'list' initial~class SysListxattr('nothere')~class '['SysListxattr('nothere')']' SysGeterrno()
-say 'set' SysSetxattr('f', 'user.a', 'v1') SysGetxattr('f', 'user.a')
-say 'missing' '['SysGetxattr('f', 'user.zz')']' SysGeterrno()
-say 'bad namespace' SysSetxattr('f', 'bad.a', 'v1') SysGeterrno()
-say 'listed' SysListxattr('f')~difference(initial)~toString('L', ',')
-say 'remove' SysRemovexattr('f', 'user.a') SysRemovexattr('f', 'user.a') SysGeterrno()
-say 'nul' SysSetxattr('f', 'user.n', 'a'||'00'x||'b') length(SysGetxattr('f', 'user.n'))
-say 'empty' SysSetxattr('f', 'user.e', '') '['SysGetxattr('f', 'user.e')']'
-say 'long' SysSetxattr('f', 'user.l', copies('x', 1000)) length(SysGetxattr('f', 'user.l'))
-::requires 'rxunixsys' LIBRARY
-----
-rc 0
-[stdout]
-list The Array class The String class [] 2
-set 0 v1
-missing [] 61
-bad namespace -1 95
-listed user.a
-remove 0 -1 61
-nul 0 1
-empty 0 []
-long 0 1000
 [stderr]
 
 # Routine failures reach the caller as the oracle reports them.
@@ -644,49 +471,6 @@ rc -1
 signal 0
 [stderr]
 
-# Real-time signals by number: ignored, then sent; then their default
-# action, which ends the process.
-program
-say 'signal' SysSignal(40, 'I')
-say 'kill' SysKill(SysGetpid(), 40)
-say 'signal' SysSignal(40, 'D')
-say 'kill' SysKill(SysGetpid(), 40)
-say 'alive'
-::requires 'rxunixsys' LIBRARY
-----
-rc -1
-[stdout]
-signal 0
-kill 0
-signal 0
-[stderr]
-
-# signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
-# no signal has, answering 0 with EINVAL kept; kill() refuses a number no
-# signal has.
-program
-do sig over 9, 19, 32, 33, 0, 65, -1, 64, 1
-  call SysClose -1
-  say sig SysSignal(sig, 'i') SysGeterrno()
-end
-call SysClose -1
-say SysKill(SysGetpid(), 65) SysGeterrno() SysKill(SysGetpid(), -2) SysGeterrno()
-::requires 'rxunixsys' LIBRARY
-----
-rc 0
-[stdout]
-9 0 22
-19 0 22
-32 0 22
-33 0 22
-0 0 22
-65 0 22
--1 0 22
-64 0 9
-1 0 9
--1 22 -1 22
-[stderr]
-
 # errno: immediately after a failing call it is that call's, and a success
 # leaves it. Rulings, errno: before any call of this library it is 0, and
 # the interpreter's own I/O (the SAYs here) does not change it; the oracle
@@ -752,12 +536,12 @@ rc 216
 Error 40 running {dir}/probe.rex line 7:
 Error 40.1:
 
-# With SIGCHLD ignored every child is reaped before the interpreter waits for
-# it: a command's return code is negative, with no FAILURE trace (PR 4 review
+# With SIGCHLD ignored ({SIGCHLD} is the host's number for it) every child is reaped before the
+# interpreter waits for it: a command's return code is negative, with no FAILURE trace (PR 4 review
 # M2). The oracle's value is whatever its stack held (measured -35, -64, -100,
 # -112 across runs); this crate answers -ECHILD.
 program
-say SysSignal(17, 'I')
+say SysSignal({SIGCHLD}, 'I')
 'true'
 say rc < 0
 'exit 3'
@@ -776,7 +560,7 @@ rc 0
 
 # The value this crate answers for that return code.
 ruled
-say SysSignal(17, 'I')
+say SysSignal({SIGCHLD}, 'I')
 'true'
 say rc
 ::requires 'rxunixsys' LIBRARY

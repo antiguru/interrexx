@@ -1,0 +1,38 @@
+# The answers the host's kernel decides (`docs/design/decisions.md`): a datagram socket asked for
+# TCP, and a send, a shutdown and a receive on a stream socket that is not connected; the receive's
+# answer depends on the shutdown before it; and SO_DEBUG set, which Linux refuses a process
+# without the privilege for it (EACCES, 13) and macOS does not; SO_SNDLOWAT, which macOS sets and
+# Linux does not, and SO_USELOOPBACK, which macOS reads back as its flag bit (64).
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')"
+call t "SockSend(c, 'x')"
+call t "SockShutDown(c, 0)"
+call t "SockRecv(c, 'v', 0) '['v']'"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+exit
+t: procedure expose c
+  drop errno h_errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 60) '=>' r '|' errno '|' h_errno
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')           => -1 | EPROTONOSUPPORT | 0
+SockSend(c, 'x')                                             => -1 | 32 | 0
+SockShutDown(c, 0)                                           => -1 | ENOTCONN | 0
+SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)               => -1 | 13 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v        => 0 1 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)            => -1 | ENOPROTOOPT | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 0 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)         => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 1 | 0 | 0
+[stderr]

@@ -1,0 +1,17 @@
+# Real-time signals are the host's (`docs/design/decisions.md`): macOS has none, and no signal 40.
+# Real-time signals by number: ignored, then sent; then their default
+# action, which ends the process.
+program
+say 'signal' SysSignal(40, 'I')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'signal' SysSignal(40, 'D')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'alive'
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+kill 0
+signal 0
+[stderr]

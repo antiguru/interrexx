@@ -223,8 +223,10 @@ pub(crate) fn mk_dir(
             }
         }
     };
-    let code = match rustix::fs::mkdir(path.as_slice(), rustix::fs::Mode::from_bits_truncate(mode))
-    {
+    let code = match rustix::fs::mkdir(
+        path.as_slice(),
+        rustix::fs::Mode::from_bits_truncate(crate::host::raw_mode(mode)),
+    ) {
         Ok(()) => 0,
         Err(errno) => i64::from(errno.raw_os_error()),
     };

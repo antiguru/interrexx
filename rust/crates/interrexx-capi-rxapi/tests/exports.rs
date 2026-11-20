@@ -1,32 +1,40 @@
-//! `librexxapi.so`'s SONAME and exported names.
+//! `librexxapi`'s recorded name, dependency and exported names.
 
 #[path = "support/cdylibs.rs"]
 mod cdylibs;
 #[path = "support/names.rs"]
 mod names;
 
+use interrexx_api::library_names::host_api_libraries;
 use names::{
-    LIBREXX, LIBREXXAPI, NOT_EXPORTED, dynamic_entries, exported_rexx_functions, oracle_lib, set,
-    symbol_table,
+    LIBREXX, LIBREXXAPI, NOT_EXPORTED, exported_rexx_functions, needed, oracle_lib, own_name,
+    search_path, set, symbol_table,
 };
 
 #[test]
 fn the_library_names_itself_as_extensions_need_it() {
     let library = cdylibs::librexxapi();
-    assert_eq!(dynamic_entries(&library, "SONAME"), ["librexxapi.so.4"]);
+    assert_eq!(own_name(&library), [host_api_libraries().librexxapi_id]);
 }
 
-/// Every export forwards to `librexx.so.4`, which the library
-/// needs and finds beside itself.
+/// Every export forwards to `librexx`, which the library needs and finds beside itself: by
+/// SONAME and a `$ORIGIN` search path on ELF hosts, by an `@loader_path` load command on
+/// Apple's.
 #[test]
 fn the_library_needs_librexx_beside_it() {
     let library = cdylibs::librexxapi();
+    let names = host_api_libraries();
+    let needed = needed(&library);
     assert!(
-        dynamic_entries(&library, "NEEDED").contains(&"librexx.so.4".to_owned()),
-        "{:?}",
-        dynamic_entries(&library, "NEEDED")
+        needed.iter().any(|entry| entry == names.librexx_beside),
+        "{needed:?}"
     );
-    assert_eq!(dynamic_entries(&library, "RPATH"), ["$ORIGIN"]);
+    let expected_search: &[&str] = if cfg!(target_vendor = "apple") {
+        &[]
+    } else {
+        &["$ORIGIN"]
+    };
+    assert_eq!(search_path(&library), expected_search);
 }
 
 /// The library holds no state of its own: no code of the interpreter or of its API client is

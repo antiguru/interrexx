@@ -1,7 +1,10 @@
 //! The `rxunixsys` library run in Rust, against the oracle's
 //! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
-//! fresh directory, `{dir}` in a case's text.
+//! fresh directory, `{dir}` in a case's text. `{sysname}` in an answer is the host system's name
+//! (`uname -s`), which `SysUname` answers. `{null_rdev}` in a program is `/dev/null`'s device
+//! number, and `{ENAME}` or `{SIGNAME}` the host's number for that error or signal. A file named `<name>.<host>` holds answers the host decides, and runs only on
+//! that host.
 //!
 //! * `eval`: each input line is an expression, shown as `"value"`, as
 //!   `Array[n]: a|b` for an `Array`, or as `ERR code` for the SYNTAX
@@ -23,6 +26,8 @@
 //! cases on this crate. The oracle's `rxapi` daemons it starts are left
 //! running and are the recorder's to stop.
 
+#[path = "support/host_cases.rs"]
+mod host_cases;
 mod support;
 
 use std::os::unix::fs::PermissionsExt;
@@ -66,7 +71,31 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     // The recorded modes are the file's own, not the inherited umask's.
     std::fs::set_permissions(dir.join("f"), PermissionsExt::from_mode(0o664))
         .expect("the case file's mode");
-    let program = program.replace("{dir}", &dir.display().to_string());
+    let mut program = program.replace("{dir}", &dir.display().to_string());
+    // An error or a signal a case names, `{ENAME}` or `{SIGNAME}`, is the host's number for it
+    // (`docs/design/decisions.md`).
+    for (name, number) in [
+        ("EPERM", libc::EPERM),
+        ("ENOENT", libc::ENOENT),
+        ("EACCES", libc::EACCES),
+        ("EEXIST", libc::EEXIST),
+        ("ENOTDIR", libc::ENOTDIR),
+        ("EISDIR", libc::EISDIR),
+        ("EINVAL", libc::EINVAL),
+        ("ENOTEMPTY", libc::ENOTEMPTY),
+        ("SIGCHLD", libc::SIGCHLD),
+    ] {
+        program = program.replace(&format!("{{{name}}}"), &number.to_string());
+    }
+    // So is `/dev/null`'s device number, `{null_rdev}` in a program: a case compares an answer
+    // with it there, so no other answer that happens to be the same number is rewritten.
+    program = program.replace(
+        "{null_rdev}",
+        &rustix::fs::stat("/dev/null")
+            .expect("/dev/null")
+            .st_rdev
+            .to_string(),
+    );
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
     let api = rexx_service::service_dir(&root, name);
@@ -95,8 +124,17 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         String::from_utf8_lossy(&support::error_text::cut_error_texts(bytes))
             .replace(&dir.display().to_string(), "{dir}")
     };
-    let raw =
-        |bytes: &[u8]| String::from_utf8_lossy(bytes).replace(&dir.display().to_string(), "{dir}");
+    // The system's name is the host's (`docs/design/decisions.md`), so a recorded answer holds
+    // `{sysname}` where `SysUname` answered it.
+    let sysname = format!(
+        "\"{}\"",
+        rustix::system::uname().sysname().to_string_lossy()
+    );
+    let raw = |bytes: &[u8]| {
+        String::from_utf8_lossy(bytes)
+            .replace(&dir.display().to_string(), "{dir}")
+            .replace(&sysname, "\"{sysname}\"")
+    };
     (
         output.status.code().unwrap_or(-1),
         raw(&output.stdout),
@@ -108,26 +146,30 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
 fn rxunixsys_answers_as_the_oracle_does() {
     let record = std::env::var_os("RXUNIXSYS_RECORD").is_some();
     let mut cases = 0;
-    datadriven::walk(CASES, |file| {
-        file.run(|case| {
-            cases += 1;
-            let lines: Vec<&str> = case.input.lines().collect();
-            match case.directive.as_str() {
-                "eval" => {
-                    let (rc, stdout, stderr) = run(cases, &eval_program(&lines), record);
-                    assert_eq!(rc, 0, "{stderr}");
-                    stdout
+    datadriven::walk_exclusive(
+        CASES,
+        |file| {
+            file.run(|case| {
+                cases += 1;
+                let lines: Vec<&str> = case.input.lines().collect();
+                match case.directive.as_str() {
+                    "eval" => {
+                        let (rc, stdout, stderr) = run(cases, &eval_program(&lines), record);
+                        assert_eq!(rc, 0, "{stderr}");
+                        stdout
+                    }
+                    "program" | "ruled" => {
+                        let oracle = record && case.directive == "program";
+                        let (rc, stdout, stderr) =
+                            run(cases, &format!("{}\n", case.input.trim_end()), oracle);
+                        format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
+                    }
+                    other => panic!("unknown directive {other}"),
                 }
-                "program" | "ruled" => {
-                    let oracle = record && case.directive == "program";
-                    let (rc, stdout, stderr) =
-                        run(cases, &format!("{}\n", case.input.trim_end()), oracle);
-                    format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
-                }
-                other => panic!("unknown directive {other}"),
-            }
-        });
-    });
+            });
+        },
+        host_cases::for_another_host,
+    );
     assert!(cases > 0, "no case ran");
     rexx_service::remove_scratch("rxunixsys");
 }

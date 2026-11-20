@@ -50,7 +50,21 @@ pub type process_id_t = libc::pid_t;
 
 /// `thread_id_t`, the identifier of a thread. A platform type, in the header
 /// generator's per-platform table.
+#[cfg(not(target_vendor = "apple"))]
 pub type thread_id_t = libc::pthread_t;
+
+/// The opaque struct Apple's C headers declare `pthread_t` a pointer to.
+#[cfg(target_vendor = "apple")]
+#[repr(C)]
+pub struct _opaque_pthread_t {
+    _private: [u8; 0],
+}
+
+/// `thread_id_t`, the identifier of a thread. Apple's C headers declare
+/// `pthread_t` a pointer to an opaque struct, where the `libc` crate gives an
+/// integer of the same width, so it is that pointer here, as the header has it.
+#[cfg(target_vendor = "apple")]
+pub type thread_id_t = *mut _opaque_pthread_t;
 
 /// `PEXIT`, the parameter block an exit handler receives, whose layout the
 /// exit's function code names. The header declares it by hand.

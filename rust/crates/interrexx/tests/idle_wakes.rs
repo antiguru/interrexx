@@ -3,8 +3,10 @@
 //! and the process is switched in at most a handful of times (#591).
 //!
 //! The assertion is a wall-clock window, so it runs in the `wall-clock`
-//! group.
+//! group. It counts the process's context switches per thread, which only Linux's `/proc` gives
+//! for another process, so it is compiled on Linux only.
 
+#![cfg(target_os = "linux")]
 #![expect(clippy::disallowed_methods, reason = "this harness times a real run")]
 
 use std::io::{BufRead as _, BufReader};

@@ -186,6 +186,10 @@ mod require;
 // condition.
 mod command;
 
+// What differs from one host system to the next, behind one interface per
+// concern, with an implementation for each host.
+mod host;
+
 // The condition object `CONDITION('O')` answers: the Directory a
 // raise builds, whose indexes depend on the condition's own kind.
 mod condition;
@@ -3228,6 +3232,9 @@ impl Interp {
     /// What `SAY` writes: `line` and its newline.
     #[inline(always)]
     pub(crate) fn write_out_line(&mut self, line: &[u8]) {
+        // The line and its newline in one growth, so a long line is never
+        // moved to make room for the newline.
+        self.out.reserve(line.len() + 1);
         self.out.extend_from_slice(line);
         self.out.push(b'\n');
         if self.out.len() > self.say_bound {

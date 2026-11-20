@@ -16,7 +16,6 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use rustix::fs::{Access, access};
-use rustix::net::sockopt::socket_peercred;
 use rustix::net::{SendFlags, send};
 
 use super::{CancelToken, Transport, TransportError};
@@ -69,10 +68,35 @@ pub fn service_dir() -> PathBuf {
 /// check is the one `UnixListener::bind` and `UnixStream::connect` make, which leaves room for
 /// the terminating NUL in `sun_path`: a path that fills `sun_path` exactly is refused there, so
 /// it is refused here.
+///
+/// The path measured is the one [`prepare_dir`] answers, with symbolic links resolved: on macOS
+/// `/var`, under which the temp directory lies, is a link to `/private/var`, eight bytes longer.
 fn socket_fits(dir: &Path) -> bool {
-    let socket = socket_path(dir, PROTOCOL_VERSION);
-    let socket = std::path::absolute(&socket).unwrap_or(socket);
+    let socket = socket_path(&resolved(dir), PROTOCOL_VERSION);
     std::os::unix::net::SocketAddr::from_pathname(&socket).is_ok()
+}
+
+/// `dir` absolute, with the links of its deepest existing ancestor resolved, as
+/// `fs::canonicalize` will resolve them once the rest exists.
+fn resolved(dir: &Path) -> PathBuf {
+    let absolute = std::path::absolute(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let mut existing = absolute.as_path();
+    let mut rest = Vec::new();
+    loop {
+        if let Ok(canonical) = fs::canonicalize(existing) {
+            return rest
+                .iter()
+                .rev()
+                .fold(canonical, |path, part| path.join(part));
+        }
+        match (existing.parent(), existing.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                existing = parent;
+            }
+            _ => return absolute,
+        }
+    }
 }
 
 /// The directory, and `REXX_API_DIR`'s value where it was set and passed over.
@@ -118,8 +142,42 @@ fn own_uid() -> u32 {
 }
 
 /// The user whose process is at the other end of `stream`.
+#[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
-    Ok(socket_peercred(stream)?.uid.as_raw())
+    Ok(rustix::net::sockopt::socket_peercred(stream)?.uid.as_raw())
+}
+
+/// The user whose process is at the other end of `stream`.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
+    let (uid, _) = nix::unistd::getpeereid(stream).map_err(io::Error::from)?;
+    Ok(uid.as_raw())
+}
+
+/// The flags of every client write: no `SIGPIPE` where a flag can say so.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+const SEND_FLAGS: SendFlags = SendFlags::NOSIGNAL;
+
+/// The flags of every client write; [`no_sigpipe`] keeps `SIGPIPE` away instead.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+const SEND_FLAGS: SendFlags = SendFlags::empty();
+
+/// Makes writes to `stream` fail with `EPIPE` instead of raising `SIGPIPE`, where the socket and
+/// not the write carries that choice.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the socket option can fail on other hosts"
+)]
+fn no_sigpipe(_stream: &UnixStream) -> io::Result<()> {
+    Ok(())
+}
+
+/// Makes writes to `stream` fail with `EPIPE` instead of raising `SIGPIPE`, where the socket and
+/// not the write carries that choice.
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+fn no_sigpipe(stream: &UnixStream) -> io::Result<()> {
+    Ok(rustix::net::sockopt::set_socket_nosigpipe(stream, true)?)
 }
 
 /// The first `rxapi` that can run, beside this executable, else on `PATH`. The answer is absolute
@@ -143,14 +201,18 @@ fn find_daemon() -> Result<PathBuf, TransportError> {
 pub const DETACH_VARIABLE: &str = "REXX_API_DETACH";
 
 fn start_daemon(daemon: &Path, dir: &Path) -> Result<(), TransportError> {
-    let status = Command::new(daemon)
+    let mut command = Command::new(daemon);
+    command
         .env("REXX_API_DIR", dir)
         .env(DETACH_VARIABLE, "1")
         .current_dir("/")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .stderr(Stdio::null());
+    // Started under the lock and waited for outside it, so that a client
+    // thread does not hold up descriptor creation while the service starts.
+    let status = crate::inheritance::spawning(|| command.spawn())
+        .and_then(|mut child| child.wait())
         .map_err(|error| unavailable(&error))?;
     if status.success() {
         Ok(())
@@ -209,7 +271,7 @@ fn pause() {
 /// Writes all of `bytes` without raising `SIGPIPE` in the embedding process.
 fn send_all(stream: &UnixStream, mut bytes: &[u8]) -> io::Result<()> {
     while !bytes.is_empty() {
-        match send(stream, bytes, SendFlags::NOSIGNAL) {
+        match send(stream, bytes, SEND_FLAGS) {
             Ok(sent) => bytes = &bytes[sent..],
             Err(rustix::io::Errno::INTR) => {}
             Err(error) => return Err(error.into()),
@@ -332,9 +394,13 @@ impl Unix {
 
     /// Connects to the service in the private `dir`, which must run as `uid`.
     fn attempt(dir: &Path, version: u32, uid: u32) -> Result<Unix, ConnectFailure> {
+        // Made close-on-exec apart from the call where the host has no
+        // `SOCK_CLOEXEC`, so under the inheritance lock.
         let stream = reserve(
-            UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?,
+            crate::inheritance::creating(|| UnixStream::connect(socket_path(dir, version)))
+                .map_err(ConnectFailure::Absent)?,
         );
+        no_sigpipe(&stream).map_err(ConnectFailure::Absent)?;
         let peer = peer_uid(&stream).map_err(ConnectFailure::Absent)?;
         if peer != uid {
             return Err(ConnectFailure::Foreign { uid: peer });
@@ -390,15 +456,19 @@ impl Unix {
 
 fn handshake(stream: &UnixStream, version: u32) -> Result<(), ConnectFailure> {
     let absent = ConnectFailure::Absent;
-    send_all(stream, &wire::hello(version)).map_err(absent)?;
+    // The timeout is set before the `hello` goes out. A service of another version answers and
+    // closes at once, and macOS then fails `setsockopt` on the closed socket with `EINVAL`, which
+    // would turn a refusal into an absent service.
     stream
         .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
         .map_err(absent)?;
+    send_all(stream, &wire::hello(version)).map_err(absent)?;
     let mut welcome = [0; wire::WELCOME_LENGTH];
     (&*stream).read_exact(&mut welcome).map_err(absent)?;
-    stream.set_read_timeout(None).map_err(absent)?;
     match wire::read_welcome(&welcome) {
-        (true, _) => Ok(()),
+        // Only an accepting service keeps the connection open, so only here can the timeout still
+        // be cleared.
+        (true, _) => stream.set_read_timeout(None).map_err(absent),
         (false, theirs) => Err(ConnectFailure::Refused { theirs }),
     }
 }
@@ -493,7 +563,10 @@ mod tests {
     /// platform's limit, including a path that fills `sun_path` with no room for the NUL.
     #[test]
     fn a_directory_is_taken_exactly_when_its_socket_binds() {
-        let root = std::env::temp_dir().join(format!("rxapi-fit-{}", std::process::id()));
+        // Under the temp directory with its links resolved, so the path bound is the path
+        // measured: macOS's lies under `/var`, a link to `/private/var`.
+        let temp = fs::canonicalize(std::env::temp_dir()).expect("the temp directory");
+        let root = temp.join(format!("rxapi-fit-{}", std::process::id()));
         let (mut taken, mut passed) = (0, 0);
         for length in 96..=116 {
             let base = root.join(length.to_string());
@@ -512,6 +585,31 @@ mod tests {
             taken > 0 && passed > 0,
             "the lengths cross the limit: {taken} {passed}"
         );
+    }
+
+    /// A directory reached through a link is measured where the link leads, which is where
+    /// [`prepare_dir`] puts the socket: a short link to a long directory does not fit, and a
+    /// directory below it that does not exist yet is measured there too.
+    #[test]
+    fn a_directory_behind_a_link_is_measured_where_it_leads() {
+        let root = std::env::temp_dir().join(format!("rxapi-link-{}", std::process::id()));
+        let long = root.join("l".repeat(100));
+        fs::create_dir_all(&long).expect("a long directory");
+        let link = root.join("s");
+        let _ = fs::remove_file(&link);
+        std::os::unix::fs::symlink(&long, &link).expect("a link");
+        let through = link.join("api");
+        assert!(
+            std::os::unix::net::SocketAddr::from_pathname(socket_path(&through, PROTOCOL_VERSION))
+                .is_ok(),
+            "the path through the link is short enough"
+        );
+        assert!(!socket_fits(&through), "the path it leads to is not");
+        assert_eq!(
+            resolved(&through),
+            fs::canonicalize(&long).expect("the target").join("api")
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     /// A listener in a private directory, which `uid` here is never the owner of.

@@ -17,8 +17,9 @@
 //! a tool of the machine's. The limit is on reserved address space, not on
 //! memory in use: glibc reserves an arena of 64 MiB for each of up to eight
 //! threads per core, so a program with many threads reaches it sooner than
-//! its resident set suggests. macOS accepts the limit and does not enforce
-//! it, so there `-v` bounds nothing.
+//! its resident set suggests. macOS refuses any limit below the address space
+//! a process has already reserved, which is far above what a test asks for, so
+//! there `-v` is not set and bounds nothing.
 //!
 //! The command runs with this process's standard streams and environment.
 //! Arguments are taken as bytes, so any of them may be non-UTF-8. When the
@@ -195,7 +196,7 @@ fn main() -> ExitCode {
     // Set on this process and inherited by the command, which needs no `unsafe`
     // `pre_exec`; this process maps little. Only the soft limit is set, and never
     // above the hard one, so a run already under a lower limit keeps it.
-    if let Some(bytes) = address_space {
+    if let Some(bytes) = address_space.filter(|_| !cfg!(target_vendor = "apple")) {
         let maximum = getrlimit(Resource::As).maximum;
         let limit = Rlimit {
             current: Some(maximum.map_or(bytes, |hard| hard.min(bytes))),

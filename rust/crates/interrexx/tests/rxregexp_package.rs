@@ -13,6 +13,8 @@ use std::time::{Duration, Instant};
 
 use interrexx::Invocation;
 
+#[path = "support/host_process.rs"]
+mod host_process;
 mod watchdog;
 
 #[test]
@@ -42,12 +44,7 @@ fn a_programs_own_rxregexp_cls_wins() {
 
 /// The process's peak resident set, in KiB.
 fn peak_kib() -> u64 {
-    let status = std::fs::read_to_string("/proc/self/status").expect("/proc/self/status");
-    status
-        .lines()
-        .find_map(|line| line.strip_prefix("VmHWM:"))
-        .and_then(|rest| rest.trim().trim_end_matches("kB").trim().parse().ok())
-        .expect("a VmHWM line")
+    host_process::own_peak_kib()
 }
 
 fn run(source: String) -> String {

@@ -1,0 +1,8 @@
+# The inverse functions at 16 digits, where the host's maths library decides the last digit
+# (`docs/design/decisions.md`): one file per host, named for it.
+eval digits=9
+RxCalcArcSin(.5,16)
+RxCalcArcCos(0.5,16)
+----
+30
+60

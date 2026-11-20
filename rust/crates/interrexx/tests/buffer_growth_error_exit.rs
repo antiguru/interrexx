@@ -2,7 +2,13 @@
 //! holding what it grew to. The failure needs a reservation that succeeds for
 //! the buffer and fails for the mutator's result, so the run is capped by
 //! `ulimit -v`, which an in-process run cannot be.
+//!
+//! Linux only: macOS refuses `setrlimit(RLIMIT_AS)` below what a process has
+//! already reserved (4 GB refused, 1 TB accepted), and without a cap its
+//! allocator grants both reservations, so the failure this test needs cannot
+//! be made there.
 
+#![cfg(target_os = "linux")]
 #![expect(clippy::disallowed_methods, reason = "this harness bounds a real run")]
 
 use std::fs;

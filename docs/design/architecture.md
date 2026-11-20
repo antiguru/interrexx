@@ -19,8 +19,8 @@ All under `rust/crates/`.
 | `interrexx` | the interpreter: IR compiler and driver, dispatch, builtins, streams, commands, scheduler; the `rexx`, `rexxc` and `rexx-ir` binaries |
 | `interrexx-api` | the C ABI boundary: context interface tables, value conversion, library loading |
 | `interrexx-rxapi` | the API service: queues, registries, macrospace; the `rxapi`, `rxqueue` and `rxsubcom` binaries |
-| `interrexx-capi` | `librexx.so.4`: the C entry points, and owner of the API's client state |
-| `interrexx-capi-rxapi` | `librexxapi.so.4`: the classic API names, forwarding to `librexx.so.4` |
+| `interrexx-capi` | `librexx.so.4` (`librexx.4.dylib` on macOS): the C entry points, and owner of the API's client state |
+| `interrexx-capi-rxapi` | `librexxapi.so.4` (`librexxapi.4.dylib` on macOS): the classic API names, forwarding to `librexx` |
 | `interrexx-oracle` | runs a program under an interpreter and captures stdout, stderr and exit status separately |
 | `interrexx-extract` | lifts ooTest test methods into standalone programs |
 | `interrexx-bench` | the benchmark harness and suite tools |
@@ -217,6 +217,38 @@ under a seed are reported, never gating.
   environment lookups, protected methods, calls and requires.
 * OS access goes through `std`, then `rustix`, then a safe crate; raw `libc` only in granted
   modules.
+
+## Hosts
+
+interrexx builds for Linux and macOS; Linux is the reference host, and the specification states
+its behaviour. Windows is not supported yet (#215), and neither are the BSDs: `host.rs` refuses
+to compile for any other target.
+
+* Code that differs by host sits behind one function per concern, with an implementation per
+  host chosen by `cfg`, so a new host adds implementations and no caller changes. The
+  interpreter's are in `interrexx/src/host.rs`: watching a child's end, `SIGPIPE` on sends,
+  the mode of an accepted socket, which descriptors `select` looks at, whether a `FIONREAD`
+  count is trusted, close-on-exec descriptors and the start of child processes, `mode_t` and
+  `access` widths, and dropping supplementary groups. The raw calls some hosts need there sit in
+  the granted module `interrexx/src/host/sys.rs`. The C API's library names, which build
+  scripts and the libraries read alike, are in `interrexx-api/src/library_names.rs`, and the
+  build scripts' linker and loader differences in `scripts/api-flags.sh`. Smaller differences
+  stay at their one site as paired `cfg` items: the thread stack query in
+  `interrexx-api/src/ffi.rs`, peer credentials in the API service's transport, the descriptor
+  listing in `interrexx-rxapi/src/descriptors.rs`, `SysQueryProcess`'s usage figures.
+* Where Linux has a mechanism and another Unix has none, the other host takes the fallback the
+  code already had: socket waits without `epoll` poll on a pool thread, and the timer without
+  `timerfd` uses the poll's timeout.
+* Where a host cannot create a descriptor close-on-exec in one call, the process's own
+  descriptors are made under a shared lock that the start of a child process takes exclusively,
+  so no child inherits one half made. The lock is `interrexx-rxapi/src/inheritance.rs`, the
+  lowest crate the API client and the interpreter share, so both take the same one.
+* Tests that read `/proc`, set another process's limits or use GNU `env` are compiled on Linux
+  only, each with the reason beside its `cfg`.
+* On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and
+  is part of the required gate; the tests run on Linux. The `standalone` profile runs on macOS
+  nightly (`.github/workflows/macos-nightly.yml`), which fetches the ooTest and documentation
+  checkouts itself and needs nothing of `third_party/`.
 
 ## Standing decisions
 

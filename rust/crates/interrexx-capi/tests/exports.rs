@@ -1,26 +1,27 @@
-//! `librexx.so`'s SONAME, `NEEDED` entry, search path and exported names.
+//! `librexx`'s recorded name, dependencies and exported names.
 
 #[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
 mod cdylibs;
 #[path = "../../interrexx-capi-rxapi/tests/support/names.rs"]
 mod names;
 
+use interrexx_api::library_names::host_api_libraries;
 use names::{
-    LIBREXX, LIBREXXAPI, NOT_EXPORTED, dynamic_entries, exported_rexx_functions, oracle_lib, set,
+    LIBREXX, LIBREXXAPI, NOT_EXPORTED, exported_rexx_functions, needed, oracle_lib, own_name, set,
 };
 
 fn library() -> std::path::PathBuf {
     cdylibs::librexx()
 }
 
-/// `librexx.so.4` owns the API's state and needs no library of
-/// the API: `librexxapi.so.4` needs it, never the reverse.
+/// `librexx` owns the API's state and needs no library of the API: `librexxapi` needs it, never
+/// the reverse.
 #[test]
 fn the_library_names_itself_and_needs_no_other_api_library() {
-    assert_eq!(dynamic_entries(&library(), "SONAME"), ["librexx.so.4"]);
-    let needed = dynamic_entries(&library(), "NEEDED");
+    assert_eq!(own_name(&library()), [host_api_libraries().librexx_id]);
+    let needed = needed(&library());
     assert!(
-        !needed.iter().any(|entry| entry.starts_with("librexx")),
+        !needed.iter().any(|entry| entry.contains("librexx")),
         "{needed:?}"
     );
 }

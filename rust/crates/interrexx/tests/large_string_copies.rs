@@ -16,13 +16,7 @@ fn program(fill: char, case: &str) -> String {
     format!(
         "x = copies('{fill}', {LENGTH})\n\
          {case}\n\
-         f = '/proc/self/status'\n\
-         do forever\n\
-         \x20 l = linein(f)\n\
-         \x20 if stream(f) \\= 'READY' then leave\n\
-         \x20 if l~startsWith('VmHWM') then peak = l~word(2)\n\
-         end\n\
-         say peak\n"
+         say SysQueryProcess('PMEM')~word(2)\n"
     )
 }
 

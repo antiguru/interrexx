@@ -115,6 +115,8 @@ fn a_program_that_never_finishes_reddens_at_the_deadline_instead_of_hanging() {
 /// A program whose only "problem" is a background process holding its own
 /// end of the pipe open still returns promptly, rather than blocking for
 /// that process's own lifetime the way an unbounded `read_to_end` would.
+/// The program and the orphan's cleanup read `/proc`.
+#[cfg(target_os = "linux")]
 #[test]
 fn a_background_process_holding_the_pipe_open_does_not_hang_the_run() {
     if !gate_mode() {
@@ -182,5 +184,6 @@ fn a_background_process_holding_the_pipe_open_does_not_hang_the_run() {
 #[path = "oracle_deadline/pipe_io.rs"]
 mod pipe_io;
 
+#[cfg(target_os = "linux")]
 #[path = "oracle_deadline/orphan.rs"]
 mod orphan;
