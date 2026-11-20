@@ -80,31 +80,6 @@ misses than ooRexx on every axis measured except L1i.
 What an optimisation could win at best, measured before building it (step 5 above). Instruction
 counts at `9a290e1`, release builds, whole process; startup is 19M and is left in.
 
-**A JIT** (2026-11-20). Each bench program's main body was replaced by hand-written Rust: what a
-perfect speculative JIT would emit. Variables live in locals and are never written back, small
-integers are unboxed behind the `NUMERIC DIGITS` guard, and builtins are resolved once. It keeps
-what a real JIT must: one `count_clause_against_deadline` per clause, a temps frame per iteration
-for values in flight, and the interpreter's own routines for every value operation. Output was
-identical to the interpreter's.
-
-| program | interpreter, per iteration | kernel, per iteration | ceiling |
-|---|---:|---:|---:|
-| `emptyloop` | ~314 | ~9 | 34x |
-| `varlookup` | ~745 | ~14 | 53x |
-| `strings` | ~5,450 | ~3,010 | 1.8x |
-| `arith` | ~17,980 | ~14,220 | 1.3x |
-
-The value routines (`Number`, `find_forward`, `changestr`, allocation) cost the same in both. What
-the kernels remove is the driver loop, loop control and the builtin call path (`begin_call_args`
-and `push_call_arg`, about 2G of `strings`' 16.3G). So a JIT pays on integer loops and little on
-string and decimal work, where a real one would land well under the ceilings above: it must
-spill to the frame wherever `INTERPRET`, `VALUE`, `EXPOSE`, a trap or a `TRACE` can observe or
-change variables, and fall back to the driver. The register frame and stackless driver make that
-fallback cheap: JIT code that keeps the frame current can return an op index. Two
-interpreter-level targets come out of the same measurement and were not measured on their own: an
-integer-controlled loop fast path, and a cheaper builtin call path. `rexxcps`, the mixed case,
-was not measured.
-
 **Specialising PARSE templates** (2026-11-19). Skipping the template walk entirely, while keeping
 the source read, the piece strings and the stores, saved 8.3% on `parse` and 1.3% on `rexxcps`:
 `PARSE` costs its strings, allocations and collections, not its interpretation. Blanking every
