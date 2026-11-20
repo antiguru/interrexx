@@ -930,6 +930,7 @@ STREAM.instance.COMMAND replacement:stream.rex
 STREAM.instance.DESCRIPTION entry:stream_description
 STREAM.instance.FLUSH entry:stream_flush
 STREAM.instance.INIT replacement:stream.rex
+STREAM.instance.INTERREXX_OPTION replacement:stream.rex
 STREAM.instance.INTERREXX_VALUE replacement:stream.rex
 STREAM.instance.LINEIN entry:stream_linein
 STREAM.instance.LINEOUT entry:stream_lineout
