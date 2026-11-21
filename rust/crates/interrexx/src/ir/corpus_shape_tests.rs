@@ -60,7 +60,7 @@ impl Root {
             | Op::SelectCase { .. }
             | Op::ExecValue { .. }
             | Op::ExecWith { .. }
-            | Op::ExecCheck { .. }
+            | Op::ReplyCheck { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
@@ -542,7 +542,7 @@ fn check_body(
         }
 
         // **A `REPLY` with an expression** opens its region with
-        // `Op::ExecCheck`, so that its refusal outside a method comes before
+        // `Op::ReplyCheck`, so that its refusal outside a method comes before
         // the expression's ops, and ends it with `Op::ExecWith`; a bare one is
         // the one `Op::Exec`.
         if let InstructionKind::Reply { expression } = &instruction.kind {
@@ -552,10 +552,10 @@ fn check_body(
                 .collect();
             if expression.is_some() {
                 assert!(
-                    matches!(ops.first(), Some(Op::ExecCheck { index }) if *index == at)
+                    matches!(ops.first(), Some(Op::ReplyCheck { index }) if *index == at)
                         && matches!(ops.last(), Some(Op::ExecWith { index, .. }) if *index == at)
                         && !ops.iter().any(|op| matches!(op, Op::Exec { .. })),
-                    "{where_}: instruction {index} ({construct}) is not ExecCheck, its \
+                    "{where_}: instruction {index} ({construct}) is not ReplyCheck, its \
                      expression's ops, then ExecWith\n{}",
                     render(&chunk)
                 );

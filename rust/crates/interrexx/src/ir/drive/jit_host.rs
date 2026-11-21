@@ -537,7 +537,7 @@ fn pass_of(
                 | Op::SelectCase { .. }
                 | Op::ExecValue { .. }
                 | Op::ExecWith { .. }
-                | Op::ExecCheck { .. }
+                | Op::ReplyCheck { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }

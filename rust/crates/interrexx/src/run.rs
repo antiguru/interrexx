@@ -1882,9 +1882,17 @@ impl Interp {
     /// not run.
     fn reply_permitted(&self) -> Result<(), Failure> {
         if self.activation().method_identity.is_none() {
-            return Err(Raised::reply_outside_method().into());
+            return Err(Self::reply_refused());
         }
         Ok(())
+    }
+
+    /// `REPLY`'s refusal outside a method, which [`crate::ir::Op::ReplyCheck`]
+    /// raises too.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn reply_refused() -> Failure {
+        Raised::reply_outside_method().into()
     }
 
     /// `REPLY`'s work after its expression, from its value: the `>>>` line,
@@ -2695,24 +2703,6 @@ impl Interp {
         )
     }
 
-    /// Whether the instruction [`Interp::exec_value_expression`] names makes
-    /// a check before evaluating its expression, which
-    /// [`crate::ir::Op::ExecCheck`] makes ahead of the expression's ops.
-    pub(crate) fn exec_value_checks_first(kind: &InstructionKind) -> bool {
-        matches!(kind, InstructionKind::Reply { .. })
-    }
-
-    /// [`crate::ir::Op::ExecCheck`]: the checks `instruction` makes before
-    /// evaluating its expression.
-    #[cold]
-    #[inline(never)]
-    pub(crate) fn exec_check(&self, instruction: &Instruction) -> Result<(), Failure> {
-        match &instruction.kind {
-            InstructionKind::Reply { .. } => self.reply_permitted(),
-            kind => Err(Loud::instruction(kind).into()),
-        }
-    }
-
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
     /// `value`: the one arm both ops share in the driver. A `GUARD` whose
     /// `WHEN` the chunk compiled into its side table runs it from there.
@@ -2806,12 +2796,12 @@ impl Interp {
                 let indent = self.activity.clause_state.current_value_indent;
                 self.exec_command_value(code, index, instruction, source, value, indent, None, None)
             }
-            // `Op::ExecCheck` made the check that comes before the
+            // `Op::ReplyCheck` made the check that comes before the
             // expression.
             InstructionKind::Reply { .. } => {
                 debug_assert!(
                     self.activation().method_identity.is_some(),
-                    "Op::ExecWith replied outside a method, past an Op::ExecCheck that refuses it"
+                    "Op::ExecWith replied outside a method, past an Op::ReplyCheck that refuses it"
                 );
                 park_point!(self, crate::pinning::ParkKind::Reply);
                 self.exec_reply_value(Some(value))

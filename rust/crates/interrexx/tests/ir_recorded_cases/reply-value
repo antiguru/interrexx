@@ -1,4 +1,4 @@
-# `REPLY expr` evaluates its expression as native ops behind `Op::ExecCheck`,
+# `REPLY expr` evaluates its expression as native ops behind `Op::ReplyCheck`,
 # and `Op::ExecWith` replies from the value: the `>>>` line, the check for a
 # second `REPLY` and the split. Each stanza answers what the walked
 # expression answered.

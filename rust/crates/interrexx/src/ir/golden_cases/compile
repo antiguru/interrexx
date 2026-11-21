@@ -1566,14 +1566,14 @@ numeric digits zd + 1
 registers: 2
 consts:
 
-# `REPLY` with an expression: `ExecCheck`, so that the refusal outside a
+# `REPLY` with an expression: `ReplyCheck`, so that the refusal outside a
 # method comes before the expression's ops, then those ops, then `ExecWith`,
 # which replies from the value.
 compile
 reply zr + 1
 ----
 0: Clause index=0 end=6
-1: ExecCheck index=0
+1: ReplyCheck index=0
 2: Load read=Simple at=0 dst=0
 3: LoadConstant dst=1
 4: Arith op=+ hint=0 lhs=0 rhs=1 dst=0

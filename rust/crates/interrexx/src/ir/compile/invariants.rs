@@ -256,7 +256,7 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::SelectCase { index, .. }
                 | Op::ExecValue { index, .. }
                 | Op::ExecWith { index, .. }
-                | Op::ExecCheck { index }
+                | Op::ReplyCheck { index }
                 | Op::Signal { index, .. }
                 | Op::ParseBegin { index, .. }
                 | Op::ParseRun { index, .. } => Some(*index),
