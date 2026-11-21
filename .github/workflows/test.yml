@@ -600,7 +600,7 @@ jobs:
       - name: The host module's unit tests
         # The raw calls only Apple's arms of `host` make, tested on every pull request rather than
         # only by the nightly. The build above made the test binaries, so this links and runs them.
-        run: cargo test --locked --workspace --lib -- host::
+        run: cargo test --locked --workspace --lib -- 'host::'
 
   # The check branch protection requires; it passes when every job above did.
   test:
