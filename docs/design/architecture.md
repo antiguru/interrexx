@@ -246,7 +246,8 @@ to compile for any other target.
 * Tests that read `/proc`, set another process's limits or use GNU `env` are compiled on Linux
   only, each with the reason beside its `cfg`.
 * On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and
-  is part of the required gate; the tests run on Linux. The `standalone` profile runs on macOS
+  is part of the required gate; it runs the `host` module's unit tests, which reach the raw calls
+  only Apple's arms make, and the other tests run on Linux. The `standalone` profile runs on macOS
   nightly (`.github/workflows/macos-nightly.yml`), which fetches the ooTest and documentation
   checkouts itself and needs nothing of `third_party/`.
 

@@ -315,6 +315,8 @@ impl Interp {
     #[inline(never)]
     #[expect(clippy::disallowed_methods, reason = "the run's deadline")]
     fn countdown_reached(&mut self, yields: bool) -> Result<(), Failure> {
+        #[cfg(test)]
+        COUNTDOWN_VISITS.with(|visits| visits.set(visits.get() + 1));
         if let Some(deadline) = &mut self.deadline
             && (deadline.expired || Instant::now() >= deadline.at)
         {
@@ -514,4 +516,17 @@ impl Interp {
     pub(crate) fn restore_clause_state(&mut self, saved: SavedClauseState) {
         self.activity.clause_state = saved.0;
     }
+}
+
+// Test-only instrumentation: how many times the clause countdown has run out
+// on this thread, which is how many clauses were counted, in steps of
+// `Deadline::CLAUSES_PER_CHECK`.
+#[cfg(test)]
+thread_local! {
+    static COUNTDOWN_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(all(test, feature = "jit"))]
+pub(crate) fn countdown_visits() -> usize {
+    COUNTDOWN_VISITS.with(std::cell::Cell::get)
 }

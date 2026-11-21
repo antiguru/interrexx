@@ -8,7 +8,7 @@ end
 say x y i
 ----
 30000 50000 10001
-compiled: yes
+compiled: line 2
 
 # IF and ELSE, nested, with % and // of negative values
 run
@@ -22,7 +22,7 @@ end
 say a b c d
 ----
 3333 594643 -5001 5000
-compiled: yes
+compiled: line 2
 
 # a SELECT whose branches run between native work
 run
@@ -41,7 +41,7 @@ end
 say a b c t
 ----
 3333 3334 3333 0
-compiled: yes
+compiled: line 2
 
 # DO n, and DO FOREVER left by LEAVE
 run
@@ -57,7 +57,7 @@ end
 say k j
 ----
 20000 12000
-compiled: yes
+compiled: lines 2, 6
 
 # NOVALUE from a stem read in a compiled loop: SIGL and the description
 run
@@ -73,7 +73,7 @@ exit
 novalue: say 'novalue at' sigl 'i='i 't='t condition('D')
 ----
 novalue at 7 i=10000 t=10000 V.10000
-compiled: yes
+compiled: lines 2, 4
 quiet compound accesses: yes
 
 # a division by zero raised from the second clause of a compiled body
@@ -87,7 +87,7 @@ end
      4 *-*   r = q % (15000 - i)
 Error 42 running t.rex line 4:  Arithmetic overflow/underflow.
 Error 42.3:  Arithmetic overflow; divisor must not be zero.
-compiled: yes
+compiled: line 2
 
 # values that outgrow DIGITS after the loop is compiled (past pass 8,944), so
 # the native path declines from then on
@@ -99,7 +99,7 @@ end
 say x
 ----
 1.25012764E+9
-compiled: yes
+compiled: line 2
 
 # a method whose loop variable is EXPOSEd
 run
@@ -115,10 +115,11 @@ say c~run(10000)
   return total
 ----
 50005000
-compiled: yes
+compiled: line 7
 
-# a body holding a TRACE instruction keeps its clause echoes behind run-time
-# gates, which compiled code does not take, so it stays driven
+# a body holding a TRACE instruction keeps its value echoes behind run-time
+# gates, which compiled code asks too; once TRACE R echoes clauses, each clause
+# is the driver's
 run
 n = 0
 do i = 1 to 10000
@@ -157,7 +158,7 @@ say n m
        >>>     "10000"
        >>>     "10001"
      7 *-* trace o
-compiled: no
+compiled: line 2
 
 # a builtin call in a compiled body
 run
@@ -169,7 +170,7 @@ end
 say n m r
 ----
 10000 20041 20036
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # WHILE, UNTIL, a TO with WHILE, and FOR: the body compiled, each pass
@@ -195,7 +196,7 @@ end
 say a i b c j d
 ----
 29998 10000 30000 15000 9001 40504500
-compiled: yes
+compiled: lines 2, 7, 11, 15
 
 # an inner loop compiled during its second entry and entered compiled after
 run
@@ -208,7 +209,7 @@ end
 say s i j
 ----
 75015000 4 5001
-compiled: yes
+compiled: line 3
 
 # an INTERPRETed loop stays driven, however hot
 run
@@ -229,7 +230,7 @@ end
 say x y digits()
 ----
 50005000 100000000 9
-compiled: yes
+compiled: line 2
 
 # a cascade in an expression runs its SendWith on the host
 run
@@ -242,7 +243,7 @@ end
 say x y a~items b~items
 ----
 50005000 100000000 10000 10000
-compiled: yes
+compiled: line 2
 
 # a scoped send runs its SendScope and SendWith on the host
 run
@@ -260,7 +261,7 @@ say x y z
   return 1
 ----
 50005000 100000000 1
-compiled: yes
+compiled: line 2
 
 # a namespace class lookup runs its ClassAt on the host
 run
@@ -273,7 +274,7 @@ end
 say x y c
 ----
 50005000 100000000 The String class
-compiled: yes
+compiled: line 2
 
 # a variable reference runs its Reference on the host
 run
@@ -286,12 +287,12 @@ end
 say x y r~value
 ----
 50005000 100000000 7
-compiled: yes
+compiled: line 2
 
 # a TRACE VALUE in the body switches the setting in the last passes. A body
 # holding a TRACE compiles with its trace gates (TraceRead and the like), which
-# `pass_of` refuses (#850), so it stays driven; once those compile, the switch
-# runs from the hosted ExecValue and this case pins it
+# compiled code asks too (#850): the switch runs from the hosted ExecValue, and
+# each clause after it is the driver's
 run
 x = 0; t = 'n'
 do i = 1 to 10000
@@ -337,7 +338,7 @@ say x y
        >>>     "10001"
      8 *-* say x y
        >>>   "50005000 100000000"
-compiled: no
+compiled: line 2
 
 # quiet builtins in a compiled body: one call each, over argument registers,
 # with no refresh
@@ -354,7 +355,7 @@ end
 say t h v u
 ----
 739359 7468A10000 m  XYneht--a own
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a quiet builtin that fails in a compiled body is raised again by the full
@@ -371,7 +372,7 @@ syntax:
   say 'line' sigl 'error' rc'.'condition('E') 'at i =' i 'n =' n
 ----
 line 4 error 40.14 at i = 9001 n = 18000
-compiled: yes
+compiled: line 3
 quiet builtin calls: yes
 
 # an object argument's STRING method is Rexx code, so a call over one takes
@@ -399,7 +400,7 @@ string asked 2
      4 *-*       n = n + length(o)
 Error 93 running t.rex line 13:  Invalid call to method.
 Error 93.900:  refused.
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a call with more arguments than a step carries keeps its pushes
@@ -411,7 +412,7 @@ end
 say n
 ----
 90000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # every quiet builtin in one compiled body, each call checked in debug against
@@ -435,7 +436,7 @@ end
 say t
 ----
 7050000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # compound reads and writes in a compiled body, a shared read and write over a
@@ -451,7 +452,7 @@ end
 say n t.5 t.36 t.5.9997
 ----
 1536230 271 270 0
-compiled: yes
+compiled: line 2
 quiet compound accesses: yes
 
 # an unset compound read takes the full path, where the NOVALUE hook, the
@@ -485,7 +486,7 @@ hook asked for U.1
 10006
 hook asked for W.9999
 novalue at line 11 for W.9999 i = 9999 n = 20004
-compiled: yes
+compiled: lines 3, 10
 
 # a tail whose value is an object is a string request, Rexx code, so the
 # access takes the full path: MAKESTRING runs once per access, and the tail
@@ -513,7 +514,7 @@ makestring asked
 makestring asked
 makestring asked
 7 9999 10000 9999
-compiled: yes
+compiled: line 3
 quiet compound accesses: yes
 
 # writes that create a stem, and a DROP of it part way
@@ -525,7 +526,7 @@ end
 say v.9000 v.9001 v.10000 v.1
 ----
 V.9000 18002 20000 V.1
-compiled: yes
+compiled: line 1
 quiet compound accesses: yes
 
 # an EXPOSEd stem, read and written from a method's compiled loop
@@ -543,7 +544,7 @@ say o~run
   return c.0 c.4
 ----
 10005000 10003000
-compiled: yes
+compiled: line 7
 quiet compound accesses: yes
 
 # do-blocks in a compiled body: plain, and as an IF's branches
@@ -566,7 +567,7 @@ end
 say a b c
 ----
 50000000 20000 0
-compiled: yes
+compiled: line 2
 
 # a LEAVE from a do-block in a compiled body
 run
@@ -585,7 +586,7 @@ end
 say n m i
 ----
 9497 90259512 9500
-compiled: yes
+compiled: line 2
 
 # a do-block around a quiet builtin call
 run
@@ -599,11 +600,66 @@ end
 say t
 ----
 68896
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
-# a WHILE that calls a routine is a test region the driver runs, so the loop
-# stays driven rather than leaving compiled code on every pass
+# a labelled do-block in a compiled body: its frame opens on the host and
+# its END's op closes it, on every pass
+run
+a = 0; b = 0
+do i = 1 to 10000
+  do label blk
+    a = a + i; b = b + 1; c = a - b; d = c * 2; e = d // 7
+    f = e + c; g = f - d; h = g + 1; k = h * 3; m = k // 11
+  end blk
+  if i // 3 = 0 then do label odd
+    b = b - 1; c = c + 1; d = d - c; e = e + d; f = f - e
+  end odd
+end
+say a b m f
+----
+50005000 6667 -8 49998333
+compiled: line 2
+
+# a LEAVE naming a labelled block leaves the block, and the loop carries on
+run
+a = 0; b = 0
+do i = 1 to 10000
+  do label blk
+    a = a + 1; c = a * 2; d = c - i; e = d + c; f = e // 3; g = f - d
+    if i // 2 = 0 then leave blk
+    b = b + 1; c = b * 3; d = c - a; e = d + c; f = e // 7; g = g + f
+  end blk
+  b = b + 2
+end
+say a b
+----
+10000 25000
+compiled: line 2
+
+# an ITERATE from inside a labelled block ends the pass, and LEAVE ends the
+# loop
+run
+a = 0
+do i = 1 to 10000
+  do label blk
+    b = i * 2; c = b - i; d = c + b; e = d // 3; f = e - c; g = f + d
+    if i // 5 = 0 then iterate
+    a = a + i; h = a // 3; k = h + g; m = k - f
+  end blk
+  n = i * 3; o = n - i; p = o + n; q = p // 5; r = q - o; s = r + p
+  if i = 9999 then do label last
+    a = a * 2
+    leave
+  end last
+end
+say a i
+----
+80000000 9999
+compiled: line 2
+
+# a WHILE that calls a routine is a test region, whose boundaries are two host
+# calls a pass: against a body this small the loop stays driven
 run
 n = 0
 do i = 1 while f(i)
@@ -630,8 +686,8 @@ say n i
 50005000 10000
 compiled: no
 
-# a COUNTER with an UNTIL that calls a routine (#813's shape), hot: the test
-# region keeps it driven
+# a COUNTER with an UNTIL that calls a routine (#813's shape), hot, with a
+# body too small to compile
 run
 n = 0
 do counter c i = 1 to 10000 until f(i)
@@ -643,3 +699,683 @@ f: return arg(1) >= 9999
 ----
 49995000 9999 9999
 compiled: no
+
+# a WHILE that calls a routine, with a body that would compile: the call
+# parks the test region for the driver, which would finish each pass itself,
+# so the loop stays driven
+run
+n = 0; m = 0
+do i = 1 while f(i)
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+exit
+f: return arg(1) < 10000
+----
+49995000 -49914992 0 10000
+compiled: no
+
+# a WHILE that calls a builtin, with a body that compiles: the test region
+# is in the pass
+run
+n = 0; m = 0
+do i = 1 while length(i) < 5
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+49995000 -49914992 0 10000
+compiled: line 2
+quiet builtin calls: yes
+
+# an UNTIL that calls a builtin, with a body that compiles
+run
+n = 0; m = 0
+do i = 1 until abs(i) >= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: line 2
+quiet builtin calls: yes
+
+# a COUNTER with an UNTIL that calls a builtin
+run
+n = 0
+do counter c i = 1 to 20000 until max(i, 7) >= 15000
+  n = n + i; a = n // 7; b = a * 3; c2 = b - i; d = c2 + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c2; k = h // 5
+end
+say n c i k
+----
+112507500 15000 15000 -1
+compiled: line 2
+quiet builtin calls: yes
+
+# inner loops whose WHILE and UNTIL call a builtin: their test regions are
+# in the outer loop's pass, and each inner loop's end settles there
+run
+t = 0; s = 0
+do i = 1 to 10000
+  a = i * 3; b = a // 7; c = b + i; d = c - a; e = d * 2; g = e // 9
+  do j = 1 while min(j, 99) <= i // 3
+    t = t + j; s = s + g
+  end
+  do k = 1 until max(k, 0) >= 2
+    s = s - k
+  end
+  h = t // 13; m = h + g; n = m - b; p = n * 2; q = p // 3; r = q + s
+end
+say t s r i j k
+----
+13333 -70893 -70893 10001 2 2
+compiled: line 2
+quiet builtin calls: yes
+
+# a WHILE whose builtin answers a value that is not logical, in a compiled
+# test region: error 34.3, with the line the driver blames
+run
+signal on syntax
+n = 0
+do i = 1 while translate(i % 2000 + 1, '1111x', '12345')
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.3 line 6 8000 31996000
+compiled: line 3
+quiet builtin calls: yes
+
+# a failure raised by an op of a compiled WHILE test region: blamed on the
+# loop's clause, as the driver blames it
+run
+n = 0
+do i = 1 while translate(i % 2000 + 1, '1111x', '12345') + 0 < 2
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+----
+     5 *-*   end
+Error 41 running t.rex line 5:  Bad arithmetic conversion.
+Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
+compiled: line 2
+quiet builtin calls: yes
+
+# a failure raised by an op of a compiled UNTIL test region: blamed on the
+# loop's clause, as the driver blames it
+run
+n = 0
+do i = 1 until translate(i % 2000 + 1, '1111x', '12345') + 0 > 2
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+----
+     5 *-*   end
+Error 41 running t.rex line 5:  Bad arithmetic conversion.
+Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
+compiled: line 2
+quiet builtin calls: yes
+
+# a value-only WHILE after a controlled step with no TO, tested in generated
+# code; the pass where it fails puts the stepped value back for the host
+run
+n = 0; m = 0
+do i = 1 while i <= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10001
+compiled: line 2
+
+# a value-only UNTIL in front of the step, in its own clause
+run
+n = 0; m = 0
+do i = 1 until i >= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: line 2
+
+# DO n with a value-only WHILE
+run
+n = 0; m = 0; i = 0
+do 20000 while n < 30000000
+  i = i + 1
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+30004131 -29942143 -1 7746
+compiled: line 2
+
+# a WHILE of & and | over comparisons, with no control variable
+run
+n = 0; m = 0; i = 0
+do while i < 10000 & m > -99999999 | i = 3
+  i = i + 1
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: line 2
+
+# a WHILE whose bound changes in the body, and a BY
+run
+n = 0; m = 0; lim = 10000
+do i = 1 by 2 while i * 2 < lim * 3
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 12001 then lim = 999999999999
+  if i > 30001 then leave
+end
+say n m k i lim
+----
+15002 25719 0 30003 999999999999
+compiled: line 2
+
+# a NOVALUE raised in the body of a loop with a compiled WHILE
+run
+signal on novalue
+n = 0; m = 0
+do i = 1 while i < 12000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then drop q
+  if i = 9001 then x = q
+  q = 1
+  if i > 10000 then p = undefined_var
+end
+say n m k i
+exit
+novalue: say 'novalue' condition('d') sigl i; exit
+----
+novalue UNDEFINED_VAR 9 10001
+compiled: line 3
+
+# a WHILE whose variable stops being logical: the host's error 34
+run
+signal on syntax
+n = 0; m = 0; f = 1
+do i = 1 while f
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9500 then f = 'yes'
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code sigl i; exit
+----
+syntax 34 34.3 7 9501
+compiled: line 3
+
+# inner loops with value-only WHILE and UNTIL, their boundaries compiled
+run
+t = 0; s = 0
+do i = 1 to 10000
+  a = i * 3; b = a // 7; c = b + i; d = c - a; e = d * 2; g = e // 9
+  do j = 1 while j <= i // 3
+    t = t + j
+  end
+  do k = 1 until k >= 2
+    s = s - k
+  end
+  h = t // 13; m = h + g; n = m - b; p = n * 2; q = p // 3; r = q + s
+end
+say t s r i j k
+----
+13333 -30000 -30000 10001 2 2
+compiled: lines 2, 4, 7
+
+# NUMERIC DIGITS lowered in the body: the condition's product no longer fits
+# and the host tests it
+run
+n = 0; m = 0
+do i = 1 while i * 1000 <= 12000000
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then numeric digits 5
+end
+say n m k i
+----
+12000 20573 2 12001
+compiled: line 2
+
+# an UNTIL that calls a builtin is a test region, not a compiled condition
+run
+n = 0; m = 0; s = ''
+do i = 1 until length(s) > 9000 | i >= 20000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  s = s || 'x'
+end
+say n m k i
+----
+40513501 -40441485 -3 9001
+compiled: line 2
+quiet builtin calls: yes
+
+# a body that sets TRACE to what it was (rexxcps's `trace value trace()`):
+# its value echo ops are in the pass, each behind its own gate
+run
+n = 0; m = 0
+do i = 1 to 10000
+  trace value trace()
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k
+----
+50005000 -49924980 -1
+compiled: line 2
+
+# TRACE I set by a call in the middle of a compiled clause: the echoes after
+# it in that clause are the host's, and the clauses after it the driver's
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then x = length(trace('I')) + k * 2 - a
+  if i = 9001 then trace off
+end
+say n m k x
+----
+50005000 -49924980 -1 -8
+       >F>         TRACE => "N"
+       >A>         "N"
+       >F>         LENGTH => "1"
+       >V>         K => "-4"
+       >L>         "2"
+       >O>         "*" => "-8"
+       >O>         "+" => "-7"
+       >V>         A => "1"
+       >O>         "-" => "-8"
+       >=>         X <= "-8"
+     6 *-*   if i = 9001 
+       >V>     I => "9000"
+       >L>     "9001"
+       >O>     "=" => "0"
+       >>>     "0"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >V>     I => "9000"
+       >>>     "9000"
+       >>>     "9001"
+       >=>     I <= "9001"
+     3 *-*   n = n + i;
+       >V>     N => "40504500"
+       >V>     I => "9001"
+       >O>     "+" => "40513501"
+       >>>     "40513501"
+       >=>     N <= "40513501"
+     3 *-*   a = n // 7;
+       >V>     N => "40513501"
+       >L>     "7"
+       >O>     "//" => "0"
+       >>>     "0"
+       >=>     A <= "0"
+     3 *-*   b = a * 3;
+       >V>     A => "0"
+       >L>     "3"
+       >O>     "*" => "0"
+       >>>     "0"
+       >=>     B <= "0"
+     3 *-*   c = b - i;
+       >V>     B => "0"
+       >V>     I => "9001"
+       >O>     "-" => "-9001"
+       >>>     "-9001"
+       >=>     C <= "-9001"
+     3 *-*   d = c + a
+       >V>     C => "-9001"
+       >V>     A => "0"
+       >O>     "+" => "-9001"
+       >>>     "-9001"
+       >=>     D <= "-9001"
+     4 *-*   m = m + d;
+       >V>     M => "-40432484"
+       >V>     D => "-9001"
+       >O>     "+" => "-40441485"
+       >>>     "-40441485"
+       >=>     M <= "-40441485"
+     4 *-*   e = m // 11;
+       >V>     M => "-40441485"
+       >L>     "11"
+       >O>     "//" => "-7"
+       >>>     "-7"
+       >=>     E <= "-7"
+     4 *-*   g = e - b;
+       >V>     E => "-7"
+       >V>     B => "0"
+       >O>     "-" => "-7"
+       >>>     "-7"
+       >=>     G <= "-7"
+     4 *-*   h = g + c;
+       >V>     G => "-7"
+       >V>     C => "-9001"
+       >O>     "+" => "-9008"
+       >>>     "-9008"
+       >=>     H <= "-9008"
+     4 *-*   k = h // 5
+       >V>     H => "-9008"
+       >L>     "5"
+       >O>     "//" => "-3"
+       >>>     "-3"
+       >=>     K <= "-3"
+     5 *-*   if i = 9000 
+       >V>     I => "9001"
+       >L>     "9000"
+       >O>     "=" => "0"
+       >>>     "0"
+     6 *-*   if i = 9001 
+       >V>     I => "9001"
+       >L>     "9001"
+       >O>     "=" => "1"
+       >>>     "1"
+     6 *-*     then
+     6 *-*       trace off
+compiled: line 2
+
+# TRACE switched off by a call in the middle of a clause under TRACE I: the
+# echoes stop after the call. While TRACE echoes clauses each clause is the
+# driver's from its opening, so this clause never runs compiled
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then trace i
+  if i = 9001 then x = length(trace('O')) + k * 2 - a
+end
+say n m k x
+----
+50005000 -49924980 -1 -5
+     6 *-*   if i = 9001 
+       >V>     I => "9000"
+       >L>     "9001"
+       >O>     "=" => "0"
+       >>>     "0"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >V>     I => "9000"
+       >>>     "9000"
+       >>>     "9001"
+       >=>     I <= "9001"
+     3 *-*   n = n + i;
+       >V>     N => "40504500"
+       >V>     I => "9001"
+       >O>     "+" => "40513501"
+       >>>     "40513501"
+       >=>     N <= "40513501"
+     3 *-*   a = n // 7;
+       >V>     N => "40513501"
+       >L>     "7"
+       >O>     "//" => "0"
+       >>>     "0"
+       >=>     A <= "0"
+     3 *-*   b = a * 3;
+       >V>     A => "0"
+       >L>     "3"
+       >O>     "*" => "0"
+       >>>     "0"
+       >=>     B <= "0"
+     3 *-*   c = b - i;
+       >V>     B => "0"
+       >V>     I => "9001"
+       >O>     "-" => "-9001"
+       >>>     "-9001"
+       >=>     C <= "-9001"
+     3 *-*   d = c + a
+       >V>     C => "-9001"
+       >V>     A => "0"
+       >O>     "+" => "-9001"
+       >>>     "-9001"
+       >=>     D <= "-9001"
+     4 *-*   m = m + d;
+       >V>     M => "-40432484"
+       >V>     D => "-9001"
+       >O>     "+" => "-40441485"
+       >>>     "-40441485"
+       >=>     M <= "-40441485"
+     4 *-*   e = m // 11;
+       >V>     M => "-40441485"
+       >L>     "11"
+       >O>     "//" => "-7"
+       >>>     "-7"
+       >=>     E <= "-7"
+     4 *-*   g = e - b;
+       >V>     E => "-7"
+       >V>     B => "0"
+       >O>     "-" => "-7"
+       >>>     "-7"
+       >=>     G <= "-7"
+     4 *-*   h = g + c;
+       >V>     G => "-7"
+       >V>     C => "-9001"
+       >O>     "+" => "-9008"
+       >>>     "-9008"
+       >=>     H <= "-9008"
+     4 *-*   k = h // 5
+       >V>     H => "-9008"
+       >L>     "5"
+       >O>     "//" => "-3"
+       >>>     "-3"
+       >=>     K <= "-3"
+     5 *-*   if i = 9000 
+       >V>     I => "9001"
+       >L>     "9000"
+       >O>     "=" => "0"
+       >>>     "0"
+     6 *-*   if i = 9001 
+       >V>     I => "9001"
+       >L>     "9001"
+       >O>     "=" => "1"
+       >>>     "1"
+     6 *-*     then
+     6 *-*       x = length(trace('O')) + k * 2 - a
+       >L>         "O"
+       >A>         "O"
+compiled: line 2
+
+# a TRACE instruction run on some passes, and TRACE R at the end
+run
+n = 0; m = 0
+do i = 1 to 10000
+  if i // 1000 = 0 then trace value 'N'
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9999 then trace r
+end
+say n m k
+----
+50005000 -49924980 -1
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9999"
+       >>>     "10000"
+     3 *-*   if i // 1000 = 0 
+       >>>     "1"
+     3 *-*     then
+     3 *-*       trace value 'N'
+       >K>         "VALUE" => "N"
+compiled: line 2
+
+# a WHILE of `|` whose operand stops being logical: generated code checks both
+# operands, and hands the boundary to the host, which raises 34
+run
+signal on syntax
+x = 1; y = 0; n = 0; m = 0
+do i = 1 while x | y
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then y = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9001 9000
+compiled: line 3
+
+# an UNTIL of `&` whose operand stops being logical, likewise
+run
+signal on syntax
+p = 0; q = 1; n = 0; m = 0
+do i = 1 until p & q
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then q = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9000 9000
+compiled: line 3
+
+# an inner counted loop in a compiled body: its start and each pass boundary
+# through the host, its body compiled. The outer body's own work is what
+# passes the gate, so the outer loop compiles with the inner one in it
+run
+t = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  do j = 1 to 5
+    t = t + i * j
+    u = t // 7
+  end
+  t = t - u
+end
+say t i j p9
+----
+750045002 10001 6 -9991
+compiled: lines 2, 5
+
+# inner loops of the flat shapes DO n, a BY and none at all, in an outer body
+# the gate takes
+run
+t = 0; s = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
+  p20 = p19 + 21; p21 = p20 - i; p22 = p21 // 3 * 2; p23 = p22 // 7; p24 = p23 + 25
+  p25 = p24 - i; p26 = p25 // 3 * 2; p27 = p26 // 7; p28 = p27 + 29; p29 = p28 - i
+  p30 = p29 // 3 * 2; p31 = p30 // 7; p32 = p31 + 33; p33 = p32 - i; p34 = p33 // 3 * 2
+  do 3
+    t = t + 1
+  end
+  do k = i to i + 2 by 2
+    s = s + k
+  end
+  do j = 1 to 0
+    t = t + 1000
+  end
+end
+say t s i j k p34
+----
+30000 100030000 10001 1 10004 -2
+compiled: lines 2, 10, 13
+
+# inner loops ended by LEAVE and passed on by ITERATE, in an outer body the
+# gate takes
+run
+t = 0; s = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
+  p20 = p19 + 21; p21 = p20 - i; p22 = p21 // 3 * 2; p23 = p22 // 7; p24 = p23 + 25
+  p25 = p24 - i; p26 = p25 // 3 * 2; p27 = p26 // 7; p28 = p27 + 29; p29 = p28 - i
+  p30 = p29 // 3 * 2; p31 = p30 // 7; p32 = p31 + 33; p33 = p32 - i; p34 = p33 // 3 * 2
+  do j = 1 to 4
+    if j = 3 then leave
+    s = s + j
+  end
+  do j = 1 to 4
+    if j = 2 then iterate
+    s = s - j
+  end
+end
+say t s i j p34
+----
+0 -50000 10001 5 -2
+compiled: lines 2, 10, 14
+
+# inner loops with a decimal control, a WHILE and an UNTIL, in an outer body
+# the gate takes
+run
+t = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
+  do j = 1.5 to 3 by 0.5
+    t = t + 2
+  end
+  do j = 1 to 3 while j < 3
+    t = t + 1
+  end
+  do j = 1 to 3 until j > 1
+    t = t + 1
+  end
+end
+say t i j p19
+----
+120000 10001 2 0
+compiled: lines 2, 7, 10, 13
+
+# an inner DO n whose passes compiled code counts down: the host learns of
+# them when it is next called (`Host::enter`), so the count is not run again
+run
+t = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  do 3
+    t = t + 1
+  end
+  t = t + 5
+end
+say t i p9
+----
+80000 10001 -9991
+compiled: lines 2, 5
+
+# an inner loop inside a body with work of its own: the whole compiles, the
+# inner loop's pass boundary native
+run
+a = 0; b = 0; c = 0; t = 0
+do i = 1 to 10000
+  a = a + i; b = b + a // 7; c = c + b - a // 3
+  d = a * 2; e = d - c; f = e + 1; g = f // 5; h = g + a
+  do j = 1 to 3
+    t = t + j
+  end
+  a = a - h // 11
+end
+say a b c t
+----
+49955040 28959 145015284 60000
+compiled: lines 2, 5

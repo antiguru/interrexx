@@ -1,7 +1,8 @@
 //! The `REXXUTIL` message routines: the error-message lookups, the
 //! `SysGetMessage` pair and `SysGetErrorText`. A catalog other than
-//! the interpreter's own is read as glibc 2.43's `catopen` and `catgets` read
-//! it (`catgets/catgets.c`, `catgets/open_catalog.c`).
+//! the interpreter's own is a file in glibc 2.43's catalog format
+//! (`catgets/catgets.c`, `catgets/open_catalog.c`), checked whole before
+//! any message is read from it.
 
 use std::io::Read as _;
 
@@ -20,6 +21,8 @@ const REXX_CATALOG: &[u8] = b"rexx.cat";
 const MESSAGE_NOT_FOUND: &[u8] = b"Error: Message not found";
 
 const CATALOG_NOT_FOUND: &[u8] = b"Error: Message catalog not found";
+
+const CATALOG_INVALID: &[u8] = b"Error: Invalid message catalog";
 
 /// The most substitution values a message formats.
 const SUBSTITUTION_LIMIT: usize = 9;
@@ -263,17 +266,16 @@ const CATALOG_MAGIC: u32 = 0x9604_08de;
 /// `sizeof (struct catalog_obj)`: the magic and the table's two dimensions.
 const HEADER_BYTES: usize = 12;
 
-/// `catopen(name, 0)` and `catgets(set, number)`: the message, or the fixed
-/// text for a catalog that does not open or a message it does not hold. An
-/// empty message reads as one that is not there.
-///
-/// Where `catgets` answers its default, `errno` is read and the answer is
-/// "Error: Invalid message catalog" for `EBADF`. glibc's `catgets` sets
-/// `ENOMSG` or nothing, so that text answers only to a stale `errno`, and here
-/// it is never the answer.
+/// The message `number` of set `set` of the catalog `name`, or the fixed
+/// text for a catalog that does not open, for one that opens and is damaged
+/// (SF #2168), or for a message it does not hold. An empty message reads as
+/// one that is not there.
 fn catalog_message(interp: &Interp, name: &[u8], set: i32, number: i32) -> Vec<u8> {
-    let Some(catalog) = open_catalog(interp, name).and_then(Catalog::new) else {
+    let Some(image) = open_catalog(interp, name) else {
         return CATALOG_NOT_FOUND.to_vec();
+    };
+    let Some(catalog) = Catalog::new(image) else {
+        return CATALOG_INVALID.to_vec();
     };
     match catalog.message(set, number) {
         Some(text) if !text.is_empty() => text,
@@ -413,11 +415,9 @@ fn search_candidates(path: &[u8], name: &[u8], locale: &[u8]) -> Vec<Vec<u8>> {
     candidates
 }
 
-/// A catalog file as it is mapped: its bytes, then zeros to the end of its last
-/// page. Past that the mapping faults, and a read there answers `None`.
+/// A catalog file's bytes.
 struct CatalogImage {
     bytes: Vec<u8>,
-    mapped: usize,
 }
 
 impl CatalogImage {
@@ -440,16 +440,11 @@ impl CatalogImage {
         bytes.extend_from_slice(&magic.to_ne_bytes());
         file.read_to_end(&mut bytes).ok()?;
         bytes.truncate(size);
-        let page = rustix::param::page_size();
-        let mapped = size.div_ceil(page) * page;
-        Some(CatalogImage { bytes, mapped })
+        Some(CatalogImage { bytes })
     }
 
     fn byte(&self, at: usize) -> Option<u8> {
-        match self.bytes.get(at) {
-            Some(byte) => Some(*byte),
-            None => (at < self.mapped).then_some(0),
-        }
+        self.bytes.get(at).copied()
     }
 
     /// The host-order word at byte `at`.
@@ -488,11 +483,10 @@ struct Catalog {
 }
 
 impl Catalog {
-    /// `__open_catalog`'s checks after the magic, its arithmetic kept: the size
-    /// test counts the tables' words as bytes, and the scan for the last
-    /// message's NUL may run into the zeros past the file's end. `None` is a
-    /// file glibc rejects, and also a table whose bounds overflow or that
-    /// reaches past the mapping, where the mapping faults.
+    /// The catalog, or `None` where the file is damaged: a table of no
+    /// entries, tables that do not fit in the file, an entry of the host-order
+    /// table, empty or not, whose message would start at or past the file's
+    /// end, or a last byte that is not a NUL. The other table is not read.
     fn new(image: CatalogImage) -> Option<Catalog> {
         let swapped = image.word(0)? != CATALOG_MAGIC;
         let header = |at| {
@@ -503,6 +497,9 @@ impl Catalog {
         let plane_size = usize::try_from(header(4)?).ok()?;
         let plane_depth = usize::try_from(header(8)?).ok()?;
         let words = plane_size.checked_mul(plane_depth)?.checked_mul(3)?;
+        if words == 0 {
+            return None;
+        }
         let table_bytes = words.checked_mul(4)?;
         let table = if cfg!(target_endian = "little") {
             HEADER_BYTES
@@ -510,28 +507,16 @@ impl Catalog {
             HEADER_BYTES.checked_add(table_bytes)?
         };
         let strings = HEADER_BYTES.checked_add(table_bytes.checked_mul(2)?)?;
-        let mut max_offset = 0;
+        let size = image.bytes.len();
+        let room = size.checked_sub(strings)?;
         for entry in (2..words).step_by(3) {
             let offset = usize::try_from(image.word(table + entry * 4)?).ok()?;
-            max_offset = max_offset.max(offset);
-        }
-        let size = image.bytes.len();
-        let claimed = HEADER_BYTES
-            .checked_add(words.checked_mul(2)?)?
-            .checked_add(max_offset)?;
-        if size <= claimed {
-            return None;
-        }
-        let mut last = strings.checked_add(max_offset)?;
-        let mut remaining = (size - HEADER_BYTES)
-            .checked_add(words * 2)?
-            .checked_add(max_offset)?;
-        while image.byte(last)? != 0 {
-            remaining -= 1;
-            if remaining == 0 {
+            if offset >= room {
                 return None;
             }
-            last = last.checked_add(1)?;
+        }
+        if image.bytes.last() != Some(&0) {
+            return None;
         }
         Some(Catalog {
             image,
@@ -543,12 +528,10 @@ impl Catalog {
     }
 
     /// `catgets`: the message, or `None` where the catalog holds none for `set`
-    /// and `number`. `None` too where the mapping faults: a table of no buckets
-    /// (oracle defect, `corpus/oracle-crashes.txt` entry 42) or a read past the
-    /// mapping.
+    /// and `number`.
     fn message(&self, set: i32, number: i32) -> Option<Vec<u8>> {
         let set = set.wrapping_add(1);
-        if set <= 0 || number < 0 || self.plane_size == 0 {
+        if set <= 0 || number < 0 {
             return None;
         }
         let hash = isize::try_from(set.wrapping_mul(number))

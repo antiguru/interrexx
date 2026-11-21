@@ -121,6 +121,8 @@ pub(crate) trait Host {
     /// Pushes the arguments `args` carries for `Op::CallArgs` at `pc`, as the
     /// `Op::PushArg`s the pass dropped would have.
     fn stage_args(&mut self, pc: u32, args: u64);
+    /// The rest of the open clause from `pc` ([`Step::Region`]).
+    fn region(&mut self, pc: u32) -> u32;
     /// The compound read or write at `pc`, where it runs no Rexx code: under
     /// no trace that shows values, with a tail of plain values, and for a
     /// read, a tail that is set (`Interp::read_compound_quiet`). `true` once
@@ -166,6 +168,10 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// A value echo op at `pc`: through the host while the block says `TRACE`
+    /// shows intermediates (`Native::intermediates`), skipped otherwise, as
+    /// the op's own gate would.
+    Trace { pc: u32 },
     /// `Op::CallArgs` at `pc`, compiled where its site resolved to a quiet
     /// builtin: [`Host::quiet_builtin`] over the argument registers `args`
     /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
@@ -175,6 +181,17 @@ pub(crate) enum Step {
     /// compound, `Op::Store` to one): [`Host::quiet_compound`], else the op
     /// through the host.
     Compound { pc: u32 },
+    /// The rest of a clause from `pc`, through the host in one call: an inner
+    /// loop's header values and its `Op::LoopRun`, which share the values
+    /// they file. A flat start ends at the clause's end, where compiled code
+    /// carries on into the inner body.
+    Region { pc: u32 },
+    /// An inner loop's `Op::LoopNext` at `pc`, between clause regions, whose
+    /// quick pass is record `record` of the block and whose body starts at
+    /// `body`: taken here as the compiled loop's own boundary is, and
+    /// otherwise through the host, which answers [`JUMP`] to `body` for
+    /// another pass or where the loop settled.
+    InnerNext { pc: u32, record: u8, body: u32 },
     /// A step the pass took out, which is never compiled.
     Dropped,
     /// `Op::PushArg` of register `src`.
@@ -194,6 +211,15 @@ pub(crate) enum Step {
     /// An op between clause regions the host runs, which may answer
     /// [`JUMP`]: a `SELECT`'s own ops.
     Between { pc: u32 },
+    /// A loop's header test region's `Op::LoopTest` at `pc`: the region's
+    /// clause, which the host opens and keeps, the steps after it up to its
+    /// [`Step::Tested`] being the condition's. A loop that ends here instead
+    /// answers [`JUMP`] to where it settled, or leaves.
+    Test { pc: u32 },
+    /// The `Op::LoopTested` at `pc` that ends a header test region: the pass
+    /// decided by the host, which closes the clause and carries on into the
+    /// body, or answers [`JUMP`] to where a loop it ends settled, or leaves.
+    Tested { pc: u32 },
     /// A comparison of two registers: done here when both are small
     /// integers the driver's own quick comparison takes, else the op at `pc`
     /// through the host.
@@ -204,6 +230,58 @@ pub(crate) enum Step {
         rhs: u16,
         dst: u16,
     },
+}
+
+/// One op of a loop's `WHILE` or `UNTIL` from `Chunk::conditions`, which
+/// the pass boundary runs itself. A guard of one that fails hands the whole
+/// boundary to the host, which runs the condition again from its ops: they
+/// read variables and write the condition's own registers, nothing else.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum CondStep {
+    Const {
+        dst: u16,
+        bits: u64,
+    },
+    /// A simple variable's read from its slot, while the window holds it and
+    /// it is set.
+    Load {
+        slot: u32,
+        dst: u16,
+    },
+    Arith {
+        op: Arith,
+        lhs: u16,
+        rhs: u16,
+        dst: u16,
+    },
+    Compare {
+        op: Compare,
+        lhs: u16,
+        rhs: u16,
+        dst: u16,
+    },
+    /// `&` (`and`) or `|` of two values that are already `0` or `1`.
+    Logic {
+        and: bool,
+        lhs: u16,
+        rhs: u16,
+        dst: u16,
+    },
+}
+
+/// What a loop's pass boundary tests besides its step.
+#[derive(Debug)]
+pub(crate) enum LoopTest {
+    None,
+    /// A `WHILE` (after the step) or `UNTIL` (in front of it) that generated
+    /// code runs, whose value is in `dst` once `steps` ran.
+    Native {
+        steps: Vec<CondStep>,
+        dst: u16,
+        until: bool,
+    },
+    /// A condition only the host runs: the boundary is always its.
+    Host,
 }
 
 /// The comparisons [`Step::Compare`] does itself, as `small_int_compare`
@@ -238,6 +316,11 @@ pub(crate) struct Pass {
     pub(crate) registers: u16,
     /// The pass boundary's own op, which a branch to it reaches.
     pub(crate) end: u32,
+    /// The `DO` index of the loop each of the block's loop records is: this
+    /// loop's own first, then each inner loop's.
+    pub(crate) loops: Vec<u32>,
+    /// What each of those loops' boundary tests, in the same order.
+    pub(crate) tests: Vec<LoopTest>,
 }
 
 /// What a helper is handed: the block, the host it belongs to, and a panic
@@ -350,6 +433,31 @@ extern "C" fn compound_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
             return CONTINUE;
         }
         run_op(ctx, clause, pc)
+    })
+}
+
+/// [`Step::Region`]: the rest of the clause, adopted first where compiled
+/// code opened it, as [`op_helper`] runs one op.
+extern "C" fn region_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| {
+        let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
+        ctx.native.opened = 0;
+        ctx.host.enter(&mut ctx.native);
+        let host = &mut *ctx.host;
+        let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
+            CONTINUE => match host.region(pc) {
+                CONTINUE if adopt => host.release(),
+                answer => answer,
+            },
+            answer => answer,
+        };
+        ctx.host.leave(&mut ctx.native);
+        if answer == FAST {
+            ctx.native.opened = 1;
+            CONTINUE
+        } else {
+            answer
+        }
     })
 }
 
@@ -648,12 +756,17 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             Step::Open { .. }
             | Step::Close { .. }
             | Step::Op { .. }
+            | Step::Trace { .. }
             | Step::Jump { .. }
             | Step::Compound { .. }
             | Step::BlockStart { .. }
+            | Step::Region { .. }
+            | Step::InnerNext { .. }
             | Step::Dropped
             | Step::EndBranch { .. }
-            | Step::Between { .. } => None,
+            | Step::Between { .. }
+            | Step::Test { .. }
+            | Step::Tested { .. } => None,
             Step::PushArg { src } => (src != OMITTED).then_some(src),
             Step::Builtin { args, .. } => (0..CARRIED_ARGS)
                 .map(|k| carried_arg(args, k))
@@ -663,6 +776,22 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         // Property 2 of the module doc.
         if named.is_some_and(|register| register >= pass.registers) {
             return None;
+        }
+    }
+    for test in &pass.tests {
+        if let LoopTest::Native { steps, dst, .. } = test {
+            let highest = steps
+                .iter()
+                .map(|step| match *step {
+                    CondStep::Const { dst, .. } | CondStep::Load { dst, .. } => dst,
+                    CondStep::Arith { lhs, rhs, dst, .. }
+                    | CondStep::Compare { lhs, rhs, dst, .. }
+                    | CondStep::Logic { lhs, rhs, dst, .. } => lhs.max(rhs).max(dst),
+                })
+                .fold(*dst, u16::max);
+            if highest >= pass.registers {
+                return None;
+            }
         }
     }
     let mut flags = settings::builder();
@@ -750,30 +879,52 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             fast,
             _module: std::marker::PhantomData,
         };
-        // Every op a branch can land on: a clause's opening, an
-        // `EndBranch`, and the pass boundary.
+        // Every op a branch can land on: a clause's opening, a test
+        // region's, an `EndBranch`, and the pass boundary.
         let mut labels: HashMap<u32, Block> = HashMap::new();
         labels.insert(pass.end, head);
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
+            if let Step::Open { pc, .. }
+            | Step::EndBranch { pc }
+            | Step::Between { pc }
+            | Step::Test { pc }
+            | Step::InnerNext { pc, .. } = *step
+            {
                 labels.insert(pc, e.b.create_block());
             }
         }
         for step in &pass.steps {
-            if let Step::Branch { target, .. } | Step::Jump { target } = *step
+            if let Step::Branch { target, .. }
+            | Step::Jump { target }
+            | Step::InnerNext { body: target, .. } = *step
                 && !labels.contains_key(&target)
+            {
+                return None;
+            }
+            if let Step::InnerNext { record, .. } = *step
+                && usize::from(record) >= layout::MAX_LOOPS
             {
                 return None;
             }
         }
         let dispatch = e.b.create_block();
         e.b.switch_to_block(head);
-        pass_step(&mut e);
+        pass_step(
+            &mut e,
+            0,
+            None,
+            pass.tests.first().unwrap_or(&LoopTest::None),
+        );
         let mut clause_pc = 0;
         // Whether the block being emitted into can still fall through.
         let mut live = true;
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
+            if let Step::Open { pc, .. }
+            | Step::EndBranch { pc }
+            | Step::Between { pc }
+            | Step::Test { pc }
+            | Step::InnerNext { pc, .. } = *step
+            {
                 let block = labels[&pc];
                 if live {
                     e.b.ins().jump(block, &[]);
@@ -828,14 +979,31 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 Step::Between { pc } => {
                     e.call_op(None, pc, Some((JUMP, dispatch)));
                 }
+                Step::Test { pc } => {
+                    clause_pc = pc;
+                    e.call_op(None, pc, Some((JUMP, dispatch)));
+                }
+                Step::Tested { pc } => {
+                    e.call_op(Some(clause_pc), pc, Some((JUMP, dispatch)));
+                }
                 Step::Compare {
                     pc,
                     op,
                     lhs,
                     rhs,
                     dst,
-                } => compare(&mut e, clause_pc, pc, op, lhs, rhs, dst),
+                } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::Trace { pc } => {
+                    let tracing = e.load_native(types::I64, layout::INTERMEDIATES);
+                    let echo = e.b.create_block();
+                    let join = e.b.create_block();
+                    e.b.ins().brif(tracing, echo, &[], join, &[]);
+                    e.b.switch_to_block(echo);
+                    e.slow_op(clause_pc, pc);
+                    e.b.ins().jump(join, &[]);
+                    e.b.switch_to_block(join);
+                }
                 Step::Builtin { pc, args } => e.call_op_with(
                     builtin_helper as *const (),
                     Some(args),
@@ -850,6 +1018,22 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     pc,
                     None,
                 ),
+                Step::Region { pc } => {
+                    e.call_op_with(region_helper as *const (), None, Some(clause_pc), pc, None)
+                }
+                Step::InnerNext { pc, record, body } => {
+                    let first = labels[&body];
+                    let test = pass
+                        .tests
+                        .get(usize::from(record))
+                        .unwrap_or(&LoopTest::Host);
+                    pass_step(
+                        &mut e,
+                        usize::from(record),
+                        Some((pc, first, dispatch)),
+                        test,
+                    );
+                }
                 Step::Dropped => {}
                 Step::Const { dst, bits } => {
                     let value = e.b.ins().iconst(types::I64, bits as i64);
@@ -904,7 +1088,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     lhs,
                     rhs,
                     dst,
-                } => arith(&mut e, clause_pc, pc, op, lhs, rhs, dst),
+                } => arith(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
             }
         }
         if live {
@@ -992,7 +1176,9 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
 /// The pass boundary: the loop's quick pass by generated code when the block
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
-fn pass_step(e: &mut Emit<'_, '_>) {
+fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>, test: &LoopTest) {
+    // Every loop's passes count: the host counts its ops on each pass of an
+    // inner loop as on each of the compiled loop's, and weighs them per pass.
     let passes = e.load_native(types::I64, layout::PASSES);
     let passes = e.b.ins().iadd_imm_u(passes, 1);
     e.store_native(passes, layout::PASSES);
@@ -1003,14 +1189,35 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let decode = e.b.create_block();
     let take = e.b.create_block();
 
-    let ready = e.load_native(types::I64, layout::LOOP_READY);
+    // An `UNTIL` is a clause of its own in front of the header's, whose
+    // boundary is free only while the block is steady; a `WHILE`'s is the
+    // header's, kept to the same so the two read alike.
+    let (condition, until) = match test {
+        LoopTest::Native { steps, dst, until } => (Some((steps.as_slice(), *dst)), *until),
+        LoopTest::None | LoopTest::Host => (None, false),
+    };
+    let ready = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_READY));
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
-    let left =
-        e.b.ins()
-            .icmp_imm_u(IntCC::UnsignedGreaterThan, countdown, 1);
+    let left = e.b.ins().icmp_imm_u(
+        IntCC::UnsignedGreaterThan,
+        countdown,
+        if until { 2 } else { 1 },
+    );
     let ready = e.b.ins().icmp_imm_u(IntCC::NotEqual, ready, 0);
     let ready = e.b.ins().band(ready, left);
-    e.b.ins().brif(ready, check, &[], slow, &[]);
+    let ready = if condition.is_some() {
+        let steady = e.load_native(types::I64, layout::STEADY);
+        let steady = e.b.ins().icmp_imm_u(IntCC::NotEqual, steady, 0);
+        e.b.ins().band(ready, steady)
+    } else {
+        ready
+    };
+    // A condition only the host runs: every boundary is its.
+    if matches!(test, LoopTest::Host) {
+        e.b.ins().jump(slow, &[]);
+    } else {
+        e.b.ins().brif(ready, check, &[], slow, &[]);
+    }
 
     // `DO expr` and `DO FOREVER` share the header clause's tail with the
     // controlled step, which `take` is.
@@ -1019,7 +1226,18 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let forever = e.b.create_block();
     let tail = e.b.create_block();
     e.b.switch_to_block(check);
-    let kind = e.load_native(types::I64, layout::LOOP_KIND);
+    // An `UNTIL` that does not hold carries on into the step; one that does,
+    // or any other answer, is the host's, which nothing here has touched.
+    if until && let Some((steps, dst)) = condition {
+        let answer = run_condition(e, steps, dst, slow);
+        let no = holds(e, answer, false);
+        let on = e.b.create_block();
+        e.b.ins().brif(no, on, &[], slow, &[]);
+        e.b.switch_to_block(on);
+    }
+    // A `WHILE` after the step, which a guard that fails undoes.
+    let while_ = condition.filter(|_| !until);
+    let kind = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_KIND));
     let is_count =
         e.b.ins()
             .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_COUNT as i64);
@@ -1033,21 +1251,27 @@ fn pass_step(e: &mut Emit<'_, '_>) {
 
     // One fewer pass left; none left is the loop ending, the host's.
     e.b.switch_to_block(counted);
-    let left = e.load_native(types::I64, layout::LOOP_VALUE);
+    let left = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_VALUE));
     let more = e.b.create_block();
     e.b.ins().brif(left, more, &[], slow, &[]);
     e.b.switch_to_block(more);
+    if let Some((steps, dst)) = while_ {
+        tested_or(e, steps, dst, slow);
+    }
     let left = e.b.ins().iadd_imm_s(left, -1);
-    e.store_native(left, layout::LOOP_VALUE);
+    e.store_native(left, layout::loop_field(k, layout::LOOP_VALUE));
     let one = e.b.ins().iconst(types::I64, 1);
-    e.store_native(one, layout::LOOP_DIRTY);
+    e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
     e.b.ins().jump(tail, &[]);
 
     e.b.switch_to_block(forever);
+    if let Some((steps, dst)) = while_ {
+        tested_or(e, steps, dst, slow);
+    }
     e.b.ins().jump(tail, &[]);
 
     e.b.switch_to_block(controlled);
-    let slot = e.load_native(types::I64, layout::LOOP_SLOT);
+    let slot = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_SLOT));
     let count = e.load_native(types::I64, layout::SLOT_COUNT);
     let held = e.b.ins().icmp(IntCC::UnsignedLessThan, slot, count);
     e.b.ins().brif(held, read, &[], slow, &[]);
@@ -1068,7 +1292,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let tag = e.b.ins().band_imm_u(value, layout::TAG_MASK);
     let tagged = e.b.ins().icmp_imm_u(IntCC::Equal, tag, layout::TAG_INT);
     let running = e.b.ins().sshr_imm_u(value, layout::TAG_BITS);
-    let step = e.load_native(types::I64, layout::LOOP_STEP);
+    let step = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_STEP));
     let (sum, overflow) = e.b.ins().sadd_overflow(running, step);
     let bound = e.load_native(types::I64, layout::SMALL_INT_BOUND);
     let negative = e.b.ins().ineg(bound);
@@ -1083,7 +1307,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     ok = e.b.ins().band(ok, fine);
     // `loop_advance_quick`'s own answer: a descending step carries on while
     // the value is at or above the bound, any other while it is at or below.
-    let to = e.load_native(types::I64, layout::LOOP_TO);
+    let to = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_TO));
     let descending = e.b.ins().icmp_imm_u(IntCC::SignedLessThan, step, 0);
     let at_or_above = e.b.ins().icmp(IntCC::SignedGreaterThanOrEqual, sum, to);
     let at_or_below = e.b.ins().icmp(IntCC::SignedLessThanOrEqual, sum, to);
@@ -1099,25 +1323,128 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let handle = e.b.ins().bor_imm_u(shifted, layout::TAG_INT);
     e.b.ins()
         .store(Emit::flags(), handle, address, layout::SLOT_VALUE_AT);
-    e.store_native(sum, layout::LOOP_VALUE);
-    e.store_native(one, layout::LOOP_DIRTY);
+    // The condition reads the stepped variable; a guard that fails puts the
+    // value it had back, so the host steps it from there.
+    if let Some((steps, dst)) = while_ {
+        let undo = e.b.create_block();
+        tested_or(e, steps, dst, undo);
+        let carry = e.b.create_block();
+        e.b.ins().jump(carry, &[]);
+        e.b.switch_to_block(undo);
+        e.b.ins()
+            .store(Emit::flags(), value, address, layout::SLOT_VALUE_AT);
+        e.b.ins().jump(slow, &[]);
+        e.b.switch_to_block(carry);
+    }
+    e.store_native(sum, layout::loop_field(k, layout::LOOP_VALUE));
+    e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
     e.b.ins().jump(tail, &[]);
 
     // The header clause every quick pass runs in: a countdown tick, its line
     // and the indent it leaves.
     e.b.switch_to_block(tail);
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
-    let countdown = e.b.ins().iadd_imm_s(countdown, -1);
+    let countdown = e.b.ins().iadd_imm_s(countdown, if until { -2 } else { -1 });
     e.store_native(countdown, layout::COUNTDOWN);
-    let header = e.b.ins().iconst(types::I64, layout::CLAUSE_HEADER as i64);
+    let header =
+        e.b.ins()
+            .iconst(types::I64, layout::clause_header(k) as i64);
     e.store_native(header, layout::CLAUSE_AT);
-    e.b.ins().jump(body, &[]);
+    // Another pass: the compiled loop's falls into its body, an inner loop's
+    // goes back to the first clause of its own.
+    match inner {
+        Some((_, first, _)) => e.b.ins().jump(first, &[]),
+        None => e.b.ins().jump(body, &[]),
+    };
 
+    // The host's pass boundary, which also ends the loop: the compiled
+    // loop's own, or an inner loop's through `Host::op`, which answers
+    // JUMP for another pass or where the loop settled.
     e.b.switch_to_block(slow);
-    e.call(pass_helper as *const (), None);
+    match inner {
+        Some((pc, _, dispatch)) => e.call_op(None, pc, Some((JUMP, dispatch))),
+        None => e.call(pass_helper as *const (), None),
+    }
     e.b.ins().jump(body, &[]);
 
     e.b.switch_to_block(body);
+}
+
+/// Runs a loop condition's `steps`, any guard of which that fails goes to
+/// `bail`, and answers the value it leaves in `dst`.
+fn run_condition(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, bail: Block) -> Value {
+    for &step in steps {
+        match step {
+            CondStep::Const { dst, bits } => {
+                let value = e.b.ins().iconst(types::I64, bits as i64);
+                e.set_register(dst, value);
+            }
+            CondStep::Load { slot, dst } => {
+                let address = e.slot_address(slot, bail);
+                let set =
+                    e.b.ins()
+                        .load(types::I64, Emit::flags(), address, layout::SLOT_SET_AT);
+                let on = e.b.create_block();
+                e.b.ins().brif(set, on, &[], bail, &[]);
+                e.b.switch_to_block(on);
+                let value =
+                    e.b.ins()
+                        .load(types::I64, Emit::flags(), address, layout::SLOT_VALUE_AT);
+                e.set_register(dst, value);
+            }
+            CondStep::Arith { op, lhs, rhs, dst } => arith(e, Slow::Bail(bail), op, lhs, rhs, dst),
+            CondStep::Compare { op, lhs, rhs, dst } => {
+                compare(e, Slow::Bail(bail), op, lhs, rhs, dst);
+            }
+            CondStep::Logic { and, lhs, rhs, dst } => {
+                let left = e.register(lhs);
+                let right = e.register(rhs);
+                let left_true = holds(e, left, true);
+                let left_false = holds(e, left, false);
+                let right_true = holds(e, right, true);
+                let right_false = holds(e, right, false);
+                let left_ok = e.b.ins().bor(left_true, left_false);
+                let right_ok = e.b.ins().bor(right_true, right_false);
+                let ok = e.b.ins().band(left_ok, right_ok);
+                let on = e.b.create_block();
+                e.b.ins().brif(ok, on, &[], bail, &[]);
+                e.b.switch_to_block(on);
+                let both = if and {
+                    e.b.ins().band(left_true, right_true)
+                } else {
+                    e.b.ins().bor(left_true, right_true)
+                };
+                let yes = e.b.ins().iconst(types::I64, layout::TRUE_BITS);
+                let no = e.b.ins().iconst(types::I64, layout::FALSE_BITS);
+                let value = e.b.ins().select(both, yes, no);
+                e.set_register(dst, value);
+            }
+        }
+    }
+    e.register(dst)
+}
+
+/// Whether `value` is the logical `1` (`truth`) or `0`, as the condition's
+/// own test accepts it: the interned digit, or the small integer.
+fn holds(e: &mut Emit<'_, '_>, value: Value, truth: bool) -> Value {
+    let (logical, small) = if truth {
+        (layout::TRUE_BITS, layout::ONE_BITS)
+    } else {
+        (layout::FALSE_BITS, layout::ZERO_BITS)
+    };
+    let is_logical = e.b.ins().icmp_imm_u(IntCC::Equal, value, logical);
+    let is_small = e.b.ins().icmp_imm_u(IntCC::Equal, value, small);
+    e.b.ins().bor(is_logical, is_small)
+}
+
+/// A `WHILE`'s `steps`, carrying on only where its value is `1`; any other
+/// answer, or a guard that fails, goes to `otherwise`.
+fn tested_or(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, otherwise: Block) {
+    let answer = run_condition(e, steps, dst, otherwise);
+    let yes = holds(e, answer, true);
+    let on = e.b.create_block();
+    e.b.ins().brif(yes, on, &[], otherwise, &[]);
+    e.b.switch_to_block(on);
 }
 
 /// `RegFrame::clear_from(top)`, for a frame of `registers`.
@@ -1129,7 +1456,30 @@ fn clear_registers(e: &mut Emit<'_, '_>, top: u16, registers: u16) {
     }
 }
 
-fn arith(e: &mut Emit<'_, '_>, clause_pc: u32, pc: u32, op: Arith, lhs: u16, rhs: u16, dst: u16) {
+/// Where an op's guard that fails goes: the op through the host, or, for a
+/// loop condition's, a block that hands the whole boundary to it.
+#[derive(Clone, Copy)]
+enum Slow {
+    Host { clause_pc: u32, pc: u32 },
+    Bail(Block),
+}
+
+impl Slow {
+    /// Ends the slow block: the host's op, then `join`; or the bail.
+    fn take(self, e: &mut Emit<'_, '_>, join: Block) {
+        match self {
+            Slow::Host { clause_pc, pc } => {
+                e.slow_op(clause_pc, pc);
+                e.b.ins().jump(join, &[]);
+            }
+            Slow::Bail(bail) => {
+                e.b.ins().jump(bail, &[]);
+            }
+        }
+    }
+}
+
+fn arith(e: &mut Emit<'_, '_>, slow_path: Slow, op: Arith, lhs: u16, rhs: u16, dst: u16) {
     let left = e.register(lhs);
     let right = e.register(rhs);
     let fast = e.b.create_block();
@@ -1181,23 +1531,14 @@ fn arith(e: &mut Emit<'_, '_>, clause_pc: u32, pc: u32, op: Arith, lhs: u16, rhs
     e.b.ins().jump(join, &[]);
 
     e.b.switch_to_block(slow);
-    e.slow_op(clause_pc, pc);
-    e.b.ins().jump(join, &[]);
+    slow_path.take(e, join);
 
     e.b.switch_to_block(join);
 }
 
 /// `small_int_compare`'s answer for two small integers within `DIGITS`, under
 /// a `FUZZ` of 0 and no `TRACE` of results; the op through the host otherwise.
-fn compare(
-    e: &mut Emit<'_, '_>,
-    clause_pc: u32,
-    pc: u32,
-    op: Compare,
-    lhs: u16,
-    rhs: u16,
-    dst: u16,
-) {
+fn compare(e: &mut Emit<'_, '_>, slow_path: Slow, op: Compare, lhs: u16, rhs: u16, dst: u16) {
     let left = e.register(lhs);
     let right = e.register(rhs);
     let fast = e.b.create_block();
@@ -1236,8 +1577,7 @@ fn compare(
     e.b.ins().jump(join, &[]);
 
     e.b.switch_to_block(slow);
-    e.slow_op(clause_pc, pc);
-    e.b.ins().jump(join, &[]);
+    slow_path.take(e, join);
 
     e.b.switch_to_block(join);
 }

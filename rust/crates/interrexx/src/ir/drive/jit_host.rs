@@ -28,9 +28,11 @@ use interrexx_parse::Operator;
 
 use super::*;
 use crate::jit::layout::{self, Native};
-use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, FAST, Host, JUMP, Pass, STOP, Step};
+use crate::jit::{
+    self, Arith, BRANCH, CONTINUE, Compare, CondStep, FAST, Host, JUMP, Pass, STOP, Step,
+};
 use crate::run::FlatStep;
-use crate::run::QuickKind;
+use crate::run::{QuickKind, QuickTest};
 
 /// Passes a loop runs driven before it is compiled. Compiling a body and the
 /// saving on each pass of it both grow with its length, so the passes that
@@ -54,8 +56,13 @@ pub(crate) struct Loops {
     state: Box<[Cell<u32>]>,
     /// Each compiled loop with its budget: how many ops per pass the host
     /// may run before the loop is retired.
-    compiled: RefCell<Vec<(Rc<jit::Compiled>, u64)>>,
+    compiled: RefCell<Vec<Compiling>>,
 }
+
+/// A compiled loop: its code, its budget, its loop records' loops, and the
+/// test each record's quick pass must carry for generated code to take it
+/// ([`QuickTest`]), or `None` where generated code never takes it.
+type Compiling = (Rc<jit::Compiled>, u64, Rc<[u32]>, Rc<[Option<QuickTest>]>);
 
 impl Loops {
     /// Keeps every loop of this chunk from being compiled.
@@ -93,11 +100,13 @@ impl Loops {
 }
 
 /// What the `Op::LoopNext` arm does after compiled passes: carry on at an op,
-/// end the range with what `ops_loop` returns, or settle a `Flow` from an op.
+/// or end the range with what `ops_loop` returns. A `Flow` an op answered is
+/// settled before the arm sees it, as the driver's own `settle` after a step
+/// would: an edge into the driver's step from the arm makes the driver's loop
+/// compile worse for every program, compiled or not (#849).
 pub(super) enum JitAction {
     At(u32),
     Return(Result<Exit, Failure>),
-    Settle(Flow, u32),
 }
 
 /// How a run of compiled passes ended.
@@ -142,18 +151,22 @@ struct Driven<'a, 'c> {
     /// The `Op::LoopNext` this loop's passes end at.
     loop_pc: u32,
     do_index: usize,
-    body_start: u32,
+    /// Where each pass starts ([`pass_start`]).
+    first: u32,
     open: Option<Open>,
     /// The driver's frame base and the instruction range it drives, which a
     /// `SELECT`'s close settles against.
     range: (usize, usize, usize),
     /// Where the last [`JUMP`] answer goes on.
     jump_to: u32,
-    /// Whether [`Host::leave`] works out the loop's quick pass.
-    ask_loop: bool,
-    /// The settings the quick pass in the block was worked out under, while
-    /// it stands.
-    loop_key: Option<(u64, u64, crate::trace::TraceMode)>,
+    /// The loop each of the block's loop records is, by `DO` index: this
+    /// loop's own first, then the inner loops its body runs.
+    loops: Rc<[u32]>,
+    /// The test each loop record's quick pass carries in generated code.
+    tests: Rc<[Option<QuickTest>]>,
+    /// Per loop record, what [`Host::leave`] keeps of its quick pass.
+    loop_state: [LoopState; layout::MAX_LOOPS],
+
     /// Ops per pass the host may run, and the ops it has run: a loop whose
     /// values keep the compiled code's own paths from answering costs more
     /// compiled than driven, so past its budget it is retired.
@@ -191,14 +204,30 @@ impl Interp {
         top: bool,
         range: (usize, usize, usize),
     ) -> Option<JitAction> {
+        #[cfg(debug_assertions)]
+        let depth = self.activation_depth();
         let state = chunk.jit.state.get(do_index as usize)?;
         let compiled = match state.get() {
             REFUSED => return None,
             passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
                 let generation = self.routine_generation;
-                let Some((compiled, budget)) = pass_of(code, chunk, pc, do_index, generation)
-                    .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
+                let Some((compiled, budget, loops, tests)) =
+                    pass_of(code, chunk, pc, do_index, generation).and_then(|(pass, budget)| {
+                        let tests: Rc<[Option<QuickTest>]> = pass
+                            .tests
+                            .iter()
+                            .map(|test| match test {
+                                jit::LoopTest::None => Some(QuickTest::None),
+                                jit::LoopTest::Native { until: true, .. } => Some(QuickTest::Until),
+                                jit::LoopTest::Native { until: false, .. } => {
+                                    Some(QuickTest::While)
+                                }
+                                jit::LoopTest::Host => None,
+                            })
+                            .collect();
+                        Some((jit::compile(&pass)?, budget, pass.loops.into(), tests))
+                    })
                 else {
                     state.set(REFUSED);
                     return None;
@@ -206,17 +235,27 @@ impl Interp {
                 let compiled = Rc::new(compiled);
                 let mut all = chunk.jit.compiled.borrow_mut();
                 state.set(THRESHOLD + all.len() as u32);
-                all.push((Rc::clone(&compiled), budget));
-                (compiled, budget)
+                all.push((
+                    Rc::clone(&compiled),
+                    budget,
+                    Rc::clone(&loops),
+                    Rc::clone(&tests),
+                ));
+                (compiled, budget, loops, tests)
             }
             at => {
                 let all = chunk.jit.compiled.borrow();
-                let (compiled, budget) = all.get((at - THRESHOLD) as usize)?;
-                (Rc::clone(compiled), *budget)
+                let (compiled, budget, loops, tests) = all.get((at - THRESHOLD) as usize)?;
+                (
+                    Rc::clone(compiled),
+                    *budget,
+                    Rc::clone(loops),
+                    Rc::clone(tests),
+                )
             }
         };
-        let (compiled, budget) = compiled;
-        let body_start = chunk.op_at(do_index as usize + 1)?;
+        let (compiled, budget, loops, tests) = compiled;
+        let first = pass_start(chunk, do_index)?;
         let mut driven = Driven {
             interp: self,
             code,
@@ -226,12 +265,14 @@ impl Interp {
             top,
             loop_pc: pc,
             do_index: do_index as usize,
-            body_start,
+            first,
             open: None,
             range,
             jump_to: 0,
-            ask_loop: true,
-            loop_key: None,
+            loops,
+            tests,
+            loop_state: [LoopState::ASK; layout::MAX_LOOPS],
+
             budget,
             hosted: 0,
             retire: false,
@@ -240,6 +281,12 @@ impl Interp {
         };
         #[cfg(test)]
         COMPILED_RUNS.with(|runs| runs.set(runs.get() + 1));
+        #[cfg(test)]
+        COMPILED_LINES.with(|lines| {
+            lines
+                .borrow_mut()
+                .insert(chunk.opening_at(do_index as usize).position.line)
+        });
         let answer = compiled.run(registers, &mut driven);
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
         debug_assert!(
@@ -252,14 +299,30 @@ impl Interp {
         // Everything but where the driver goes on is settled here, out of
         // the driver's loop: the `Op::LoopNext` arm's own answers, and
         // `clause_region!`'s for a parked call.
+        let (base, start, end) = range;
+        let settle = |interp: &mut Interp, flow: Flow, next: u32| {
+            // The driver's own check after a step, which a `Flow` settled
+            // here no longer passes through.
+            #[cfg(debug_assertions)]
+            debug_assert_eq!(
+                interp.activation_depth(),
+                depth,
+                "compiled passes left the activation stack changed"
+            );
+            match interp.settle(code, chunk, registers, base, flow, next, start, end, source) {
+                Ok(Settled::At(target)) => JitAction::At(target),
+                Ok(Settled::Escaped(other)) => JitAction::Return(Ok(Exit::Flow(other))),
+                Err(failure) => JitAction::Return(Err(failure)),
+            }
+        };
         Some(match exit {
             JitExit::At(target) => JitAction::At(target),
             JitExit::Slice(at) => JitAction::Return(Ok(Exit::Slice(at))),
             JitExit::Done(flow) => {
                 self.activity.frames.pop();
-                JitAction::Settle(flow, pc)
+                settle(self, flow, pc)
             }
-            JitExit::Flow(flow, next) => JitAction::Settle(flow, next),
+            JitExit::Flow(flow, next) => settle(self, flow, next),
             JitExit::Fail(failure) => JitAction::Return(Err(failure)),
             JitExit::Escaped(flow) => JitAction::Return(Ok(Exit::Flow(flow))),
             JitExit::Parked {
@@ -286,25 +349,29 @@ fn pass_of(
     do_index: u32,
     generation: u32,
 ) -> Option<(Pass, u64)> {
-    let body_start = chunk.op_at(do_index as usize + 1)?;
-    if body_start >= loop_pc {
-        return None;
-    }
-    // A condition that calls or sends is a test region in the stream, before
-    // the body (`Chunk::loop_test_at`), which the pass boundary hands to the
-    // driver: compiled passes would leave for it on every pass, and enter
-    // again at the `LoopNext`.
-    if chunk.loop_test_at(do_index as usize).is_some() {
+    // A condition that calls or sends is a test region in the stream, in
+    // front of the body (`Chunk::loop_test_at`), where each pass boundary
+    // goes on: the pass starts there.
+    let first = pass_start(chunk, do_index)?;
+    if first >= loop_pc {
         return None;
     }
     let mut steps = Vec::new();
-    let mut pc = body_start;
+    // The loop each loop record is: this one, then each inner loop in the
+    // order its start appears.
+    let mut loops = vec![do_index];
+    let mut pc = first;
     // An `IF`'s branches stay inside the body, and its `EndBranch` and
     // `Jump` sit between clause regions.
-    let inside = |target: u32| (body_start..=loop_pc).contains(&target);
+    let inside = |target: u32| (first..=loop_pc).contains(&target);
     while pc < loop_pc {
         let (index, end) = match *chunk.ops_in(pc, pc + 1)?.first()? {
             Op::Clause { index, end } | Op::CallingClause { index, end } => (index, end),
+            // A loop's header test region, which the host opens as the
+            // driver's `Op::LoopTest` arm does, and whose `Op::LoopTested`
+            // the host runs: a clause of its own, whose ops are its
+            // condition's.
+            Op::LoopTest { index, end } => (index, end),
             Op::EndBranch => {
                 steps.push(Step::EndBranch { pc });
                 pc += 1;
@@ -321,22 +388,73 @@ fn pass_of(
                 pc += 1;
                 continue;
             }
+            // An inner loop's pass boundary; its start below is what let the
+            // loop into the pass.
+            Op::LoopNext { index } if index != do_index => {
+                let record = loops.iter().position(|&loop_index| loop_index == index)?;
+                steps.push(Step::InnerNext {
+                    pc,
+                    record: u8::try_from(record).ok()?,
+                    body: pass_start(chunk, index)?,
+                });
+                pc += 1;
+                continue;
+            }
             _ => return None,
         };
         if end <= pc || end > loop_pc {
             return None;
         }
-        let opening = chunk.opening_at(index as usize);
-        steps.push(Step::Open {
-            pc,
-            tabled: opening.tabled,
-            register_top: opening.register_top,
-        });
+        let test = matches!(chunk.ops_in(pc, pc + 1)?.first()?, Op::LoopTest { .. });
+        if test {
+            steps.push(Step::Test { pc });
+        } else {
+            let opening = chunk.opening_at(index as usize);
+            steps.push(Step::Open {
+                pc,
+                tabled: opening.tabled,
+                register_top: opening.register_top,
+            });
+        }
         // The `Step::PushArg`s whose arguments no op has taken yet, as indices
         // into `steps`. Every op that takes pushed arguments takes the
         // `argc` pushed last, so a call's own are the last `argc` here.
         let mut pending: Vec<usize> = Vec::new();
-        for (at, op) in (pc + 1..).zip(chunk.ops_in(pc + 1, end)?) {
+        // An inner loop's `DO` clause: from its first header value on, the
+        // clause runs on the host in one region (`Step::Region`), since the
+        // header values are filed for the `Op::LoopRun` that follows them.
+        // Only a loop the driver flattens.
+        let ops = chunk.ops_in(pc + 1, end)?;
+        let region = match ops.iter().find_map(|op| match *op {
+            Op::LoopRun { index } => Some(index),
+            _ => None,
+        }) {
+            Some(index)
+                if matches!(
+                    code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                    Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
+                        if !matches!(body.kind, interrexx_parse::LoopKind::Simple)
+                ) =>
+            {
+                if loops.len() >= layout::MAX_LOOPS {
+                    return None;
+                }
+                loops.push(index);
+                (pc + 1..).zip(ops).find_map(|(at, op)| {
+                    matches!(
+                        op,
+                        Op::LoopHeaderValue { .. } | Op::TraceKeyword { .. } | Op::LoopRun { .. }
+                    )
+                    .then_some(at)
+                })
+            }
+            _ => None,
+        };
+        for (at, op) in (pc + 1..).zip(ops) {
+            if region == Some(at) {
+                steps.push(Step::Region { pc: at });
+                break;
+            }
             match *op {
                 // A call its site has resolved to a quiet builtin, with few
                 // enough arguments to carry: its pushes are dropped, and the
@@ -362,19 +480,26 @@ fn pass_of(
                     steps.push(Step::Builtin { pc: at, args });
                     continue;
                 }
-                // A `do; ... end` block, unlabelled: its start runs on the
-                // host, whose region ends at the clause's own end, where
-                // compiled code carries on into the block's clauses.
+                // A `do; ... end` block: its start runs on the host, whose
+                // region ends at the clause's own end, where compiled code
+                // carries on into the block's clauses. An unlabelled block's
+                // start is a clause counted; a labelled one's also opens the
+                // frame its `END`'s `Op::EndWhen` closes, which the host's
+                // `region_ops!` does.
                 Op::LoopRun { index }
-                    if matches!(
-                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
-                        Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
-                            if matches!(body.kind, interrexx_parse::LoopKind::Simple)
-                                && body.label.is_none()
-                    ) =>
+                    if let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
+                        .body
+                        .instructions
+                        .get(index as usize)
+                        .map(|clause| &clause.kind)
+                        && matches!(body.kind, interrexx_parse::LoopKind::Simple) =>
                 {
                     pending.clear();
-                    steps.push(Step::BlockStart { pc: at });
+                    steps.push(if body.label.is_none() {
+                        Step::BlockStart { pc: at }
+                    } else {
+                        Step::Op { pc: at }
+                    });
                     continue;
                 }
                 // The `END` of such a block answers `Flow::Next` and does
@@ -404,6 +529,29 @@ fn pass_of(
                     pending.truncate(left);
                 }
                 _ => {}
+            }
+            // **A test region whose call can park is the driver's.** A call
+            // to a routine or a send to a method runs its callee stackless
+            // from the driver, which then finishes the pass itself: compiled
+            // code would be entered and left on every pass and its body never
+            // run. A call its site resolved to a builtin runs to completion.
+            if test
+                && match *op {
+                    Op::CallArgs { site, .. } => !matches!(
+                        chunk.resolved_call(site, generation),
+                        Some(Resolved::Builtin(_))
+                    ),
+                    Op::CallExpr { .. }
+                    | Op::CallNamed { .. }
+                    | Op::Call { .. }
+                    | Op::Send { .. }
+                    | Op::SendWith { .. }
+                    | Op::SendScope { .. }
+                    | Op::Message { .. } => true,
+                    _ => false,
+                }
+            {
+                return None;
             }
             let step = match *op {
                 Op::Const { dst, konst } => match chunk.interned_konst(konst) {
@@ -478,6 +626,18 @@ fn pass_of(
                     rhs,
                     dst,
                 },
+                // The test region's last op, which decides the pass.
+                Op::LoopTested { .. } if test && at + 1 == end => Step::Tested { pc: at },
+                // A value echo, whose own gate generated code asks: the op
+                // through the host while `TRACE` shows intermediates, and
+                // nothing otherwise. A body that sets `TRACE` keeps them
+                // (#850).
+                Op::TraceArgument { .. }
+                | Op::TraceFunction { .. }
+                | Op::TraceLiteral { .. }
+                | Op::TraceRead { .. }
+                | Op::TraceOperator { .. }
+                | Op::TracePrefix { .. } => Step::Trace { pc: at },
                 // The region's last op, so the clause's close follows it.
                 Op::ConditionJump { reg, target, .. } if at + 1 == end && inside(target) => {
                     Step::Branch {
@@ -575,36 +735,179 @@ fn pass_of(
     // block written back and read again, and the driver's own arm, which is
     // several times what the driver spends dispatching it; a body made mostly
     // of those runs slower compiled than driven.
-    let hosted = steps
-        .iter()
-        .filter(|step| matches!(step, Step::Op { .. } | Step::Between { .. }))
-        .count();
-    let native = steps
-        .iter()
-        .filter(|step| {
-            !matches!(
-                step,
-                Step::Op { .. }
-                    | Step::Between { .. }
-                    | Step::Builtin { .. }
-                    | Step::Compound { .. }
-                    | Step::Open { .. }
-                    | Step::Close { .. }
-            )
-        })
-        .count();
+    // An inner loop's own body is what compiling it alone would compile, so
+    // it is not this loop's to weigh. What its start and its end cost every
+    // pass of this loop, two calls to the host, is.
+    let mut hosted = 0;
+    let mut native = 0;
+    let mut inner = 0usize;
+    for step in &steps {
+        match step {
+            Step::Region { .. } => {
+                hosted += 2;
+                inner += 1;
+            }
+            Step::InnerNext { .. } => inner = inner.saturating_sub(1),
+            // The test region's opening and its end, one call each where the
+            // driver takes them in its own arms; an inner loop's are in its
+            // `Step::Region`'s weight.
+            Step::Test { .. } | Step::Tested { .. } if inner == 0 => hosted += 1,
+            Step::Test { .. } | Step::Tested { .. } => {}
+            Step::Op { .. } | Step::Between { .. } => hosted += 1,
+            Step::Builtin { .. }
+            | Step::Compound { .. }
+            | Step::Open { .. }
+            | Step::Close { .. }
+            | Step::Trace { .. } => {}
+            _ if inner == 0 => native += 1,
+            _ => {}
+        }
+    }
     if hosted * HOSTED_SHARE > native {
         return None;
     }
     let budget = (native / HOSTED_SHARE).max(1) as u64;
+    let tests = loops
+        .iter()
+        .map(|&index| loop_test(code, chunk, index))
+        .collect();
     Some((
         Pass {
             steps,
             registers: chunk.registers,
             end: loop_pc,
+            loops,
+            tests,
         },
         budget,
     ))
+}
+
+/// What the pass boundary of the loop whose `Op::DO` is instruction
+/// `do_index` tests: its `WHILE` or `UNTIL` from `Chunk::conditions`, as
+/// generated code runs it where each op has a quick form, and the host's
+/// otherwise.
+fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
+    let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
+        .body
+        .instructions
+        .get(do_index as usize)
+        .map(|clause| &clause.kind)
+    else {
+        return jit::LoopTest::Host;
+    };
+    let Some(conditional) = &body.conditional else {
+        return jit::LoopTest::None;
+    };
+    if body.counter.is_some() || chunk.loop_test_at(do_index as usize).is_some() {
+        return jit::LoopTest::Host;
+    }
+    let Some(condition) = chunk.condition_at(do_index as usize) else {
+        return jit::LoopTest::Host;
+    };
+    let Some(ops) = chunk.condition_ops(condition) else {
+        return jit::LoopTest::Host;
+    };
+    let mut steps = Vec::with_capacity(ops.len());
+    for op in ops {
+        let step = match *op {
+            Op::Const { dst, konst } => match chunk.interned_konst(konst) {
+                ObjRef::NIL => return jit::LoopTest::Host,
+                value => CondStep::Const {
+                    dst,
+                    bits: value.bits(),
+                },
+            },
+            Op::LoadConstant { symbol, dst } => match chunk.interned_symbol(symbol) {
+                ObjRef::NIL => return jit::LoopTest::Host,
+                value => CondStep::Const {
+                    dst,
+                    bits: value.bits(),
+                },
+            },
+            Op::Load {
+                read: SymbolRead::Simple,
+                at: slot,
+                dst,
+                ..
+            } if let Some(slot) = slot.resolved()
+                && let Ok(slot) = u32::try_from(slot) =>
+            {
+                CondStep::Load { slot, dst }
+            }
+            Op::Arith {
+                op,
+                hint,
+                lhs,
+                rhs,
+                dst,
+            } if chunk.tries_small_int(hint) => CondStep::Arith {
+                op: match op {
+                    Operator::Plus => Arith::Add,
+                    Operator::Subtract => Arith::Subtract,
+                    Operator::Multiply => Arith::Multiply,
+                    Operator::IntDiv => Arith::IntDiv,
+                    Operator::Remainder => Arith::Remainder,
+                    _ => return jit::LoopTest::Host,
+                },
+                lhs,
+                rhs,
+                dst,
+            },
+            Op::Binary {
+                op,
+                lhs,
+                rhs,
+                dst,
+                text: false,
+                ..
+            } if let Some(op) = quick_compare(op) => CondStep::Compare { op, lhs, rhs, dst },
+            Op::Binary {
+                op: op @ (Operator::And | Operator::Or),
+                lhs,
+                rhs,
+                dst,
+                ..
+            } => CondStep::Logic {
+                and: op == Operator::And,
+                lhs,
+                rhs,
+                dst,
+            },
+            _ => return jit::LoopTest::Host,
+        };
+        steps.push(step);
+    }
+    jit::LoopTest::Native {
+        steps,
+        dst: condition.dst,
+        until: conditional.until,
+    }
+}
+
+/// Where a pass of the loop whose `Op::DO` is instruction `do_index` starts:
+/// its header test region where it has one, its body's first op otherwise.
+fn pass_start(chunk: &Chunk, do_index: u32) -> Option<u32> {
+    match chunk.loop_test_at(do_index as usize) {
+        Some(test) => Some(test.test),
+        None => chunk.op_at(do_index as usize + 1),
+    }
+}
+
+/// What [`Host::leave`] keeps of one loop record's quick pass.
+#[derive(Clone, Copy)]
+struct LoopState {
+    /// Whether the quick pass is to be worked out afresh.
+    ask: bool,
+    /// The settings it was worked out under, while it stands.
+    key: Option<(u64, u64, crate::trace::TraceMode)>,
+}
+
+impl LoopState {
+    const ASK: LoopState = LoopState {
+        ask: true,
+        key: None,
+    };
 }
 
 /// The comparisons [`Step::Compare`] answers, by `compare_op`'s mapping: the
@@ -627,6 +930,8 @@ impl Driven<'_, '_> {
     /// Leaves for the driver at `pc`, a clause opening or the pass boundary,
     /// and keeps the loop from being compiled again.
     fn retired(&mut self, pc: u32) -> u32 {
+        #[cfg(test)]
+        RETIREMENTS.with(|retired| retired.set(retired.get() + 1));
         if let Some(state) = self.chunk.jit.state.get(self.do_index) {
             state.set(REFUSED);
         }
@@ -641,12 +946,17 @@ impl Driven<'_, '_> {
     /// Closes the open clause around `ran`: `clause_region!`'s path for a
     /// region that did not end plainly.
     fn leave(&mut self, ran: Result<RegionEnd, Failure>) -> u32 {
-        self.leave_from(ran, false)
+        self.leave_from(ran, false, false)
     }
 
     /// [`Driven::leave`], carrying on in compiled code where `in_place` and
     /// the clause closed with the `Flow::Next` its region answered.
-    fn leave_from(&mut self, ran: Result<RegionEnd, Failure>, in_place: bool) -> u32 {
+    fn leave_from(
+        &mut self,
+        ran: Result<RegionEnd, Failure>,
+        in_place: bool,
+        settles: bool,
+    ) -> u32 {
         let Some(open) = self.open.take() else {
             return self.stop(JitExit::Fail(
                 Loud::op_not_driven("a close with no clause").into(),
@@ -669,6 +979,10 @@ impl Driven<'_, '_> {
         } else {
             ran
         };
+        if ran.is_err() {
+            self.interp
+                .blame_failed_test(self.code, self.chunk, open.pc, self.source);
+        }
         let exit = match self.interp.leave_stepped_clause(
             open.entry,
             self.code,
@@ -688,6 +1002,9 @@ impl Driven<'_, '_> {
                 self.closed = true;
                 return CONTINUE;
             }
+            Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(flow)))) if settles => {
+                return self.settle_inner(flow, open.pc);
+            }
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(flow)))) => JitExit::Flow(flow, open.end),
             Ok(ClauseOutcome::Ran(Err(failure))) | Err(failure) => JitExit::Fail(failure),
             Ok(ClauseOutcome::Ended(exit)) => JitExit::Flow(Flow::Exit(exit.value()), open.pc),
@@ -698,10 +1015,12 @@ impl Driven<'_, '_> {
 
 impl Host for Driven<'_, '_> {
     fn pass(&mut self) -> u32 {
+        #[cfg(test)]
+        HOST_BOUNDARIES.with(|taken| taken.set(taken.get() + 1));
         if self.retire {
             return self.retired(self.loop_pc);
         }
-        self.ask_loop = true;
+        self.loop_state[0].ask = true;
         let counted = match self.interp.count_clause_against_deadline(self.top) {
             Ok(counted) => counted,
             Err(Failure::Slice) => return self.stop(JitExit::Slice(self.loop_pc)),
@@ -715,7 +1034,7 @@ impl Host for Driven<'_, '_> {
             Flow::Next,
             |_| Ok(counted),
         ) {
-            Ok(FlatStep::Body(at)) if at == self.body_start => CONTINUE,
+            Ok(FlatStep::Body(at)) if at == self.first => CONTINUE,
             Ok(FlatStep::Body(at)) => self.stop(JitExit::At(at)),
             Ok(FlatStep::Done(flow)) => self.stop(JitExit::Done(flow)),
             Err(failure) => self.stop(JitExit::Fail(failure)),
@@ -790,10 +1109,45 @@ impl Host for Driven<'_, '_> {
         self.leave(Ok(RegionEnd::At(next)))
     }
 
+    fn region(&mut self, pc: u32) -> u32 {
+        let Some(end) = self.open.as_ref().map(|open| open.end) else {
+            return self.stop(JitExit::Fail(
+                Loud::op_not_driven("a region with no clause").into(),
+            ));
+        };
+        // An inner loop that starts here has its record asked already: its
+        // first start is asked from the block's own start, and every run of it
+        // that ended in compiled code ended in `inner_next` or in its test
+        // region's `Op::LoopTested`, which ask it, or in its test region's
+        // opening, whose loop has no quick pass.
+        self.general_to(pc, end, false)
+    }
+
     fn op(&mut self, pc: u32) -> u32 {
         self.hosted += 1;
         // Between clauses: the driver's own arms for these ops.
         match self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
+            // An inner loop's pass boundary, as the driver's `Op::LoopNext` arm
+            // takes it: not an op the host runs in the driver's stead, so not
+            // weighed against the native steps.
+            Some(&Op::LoopNext { index }) if index as usize != self.do_index => {
+                self.hosted -= 1;
+                return self.inner_next(pc);
+            }
+            // A header test region's boundaries, which the gate weighed, as
+            // the driver's `Op::LoopTest` arm and `region_ops!` take them.
+            Some(&Op::LoopTest { index, .. }) => {
+                self.hosted -= 1;
+                return self.test_open(pc, index as usize != self.do_index);
+            }
+            Some(&Op::LoopTested { index, .. }) => {
+                self.hosted -= 1;
+                let inner = index as usize != self.do_index;
+                if inner && let Some(k) = self.loops.iter().position(|&at| at == index) {
+                    self.loop_state[k].ask = true;
+                }
+                return self.general_to(pc, pc + 1, inner);
+            }
             Some(Op::EndBranch) => {
                 return match self.interp.end_promoted_branch(Flow::Next) {
                     Ok(Flow::Next) => CONTINUE,
@@ -1073,37 +1427,54 @@ impl Host for Driven<'_, '_> {
     fn refresh_holds(&mut self, native: &Native) -> bool {
         let mut fresh = Native::new(native.registers);
         // `leave` with the counters it keeps put back as they were.
-        let (retire, ask_loop, loop_key) = (self.retire, self.ask_loop, self.loop_key);
+        let kept = (self.retire, self.loop_state);
         fresh.passes = native.passes;
-        fresh.loop_kind = native.loop_kind;
-        fresh.loop_slot = native.loop_slot;
-        self.ask_loop = false;
+        fresh.loops = native.loops;
+        for state in &mut self.loop_state {
+            state.ask = false;
+        }
         Host::leave(self, &mut fresh);
-        (self.retire, self.ask_loop, self.loop_key) = (retire, ask_loop, loop_key);
+        (self.retire, self.loop_state) = kept;
         fresh.slots == native.slots
             && fresh.slot_count == native.slot_count
             && fresh.steady == native.steady
             && fresh.small_int_bound == native.small_int_bound
             && fresh.quick_values == native.quick_values
+            && fresh.intermediates == native.intermediates
             && fresh.jump_to == native.jump_to
     }
 
     fn enter(&mut self, native: &mut Native) {
         self.interp.clause_countdown = u32::try_from(native.countdown).unwrap_or(u32::MAX);
-        if native.loop_dirty != 0 {
-            native.loop_dirty = 0;
-            self.interp.quick_passes_reached(native.loop_value);
+        // A record generated code stepped is the innermost loop's: its
+        // boundary is taken only while that loop runs innermost, and the host
+        // is called before any other loop is.
+        let own = &mut native.loops[0];
+        if own.dirty != 0 {
+            own.dirty = 0;
+            self.interp.quick_passes_reached(own.value);
+        }
+        if self.loops.len() > 1 {
+            for record in &mut native.loops[1..] {
+                if record.dirty != 0 {
+                    record.dirty = 0;
+                    self.interp.quick_passes_reached(record.value);
+                }
+            }
         }
         match std::mem::replace(&mut native.clause_at, layout::CLAUSE_NONE) {
             layout::CLAUSE_NONE => {}
             // A pass boundary's header clause is the loop's `END`, as the
             // driver's `flat_loop_step` makes it (`Interp::quick_pass` takes
             // only a header blamed on the `END`).
-            layout::CLAUSE_HEADER => {
+            at if at <= layout::clause_header(0)
+                && at >= layout::clause_header(layout::MAX_LOOPS - 1) =>
+            {
+                let record = &native.loops[(layout::clause_header(0) - at) as usize];
                 self.interp.enter_compiled_clause(
-                    native.loop_end as usize,
-                    native.loop_line as usize,
-                    native.loop_indent as usize,
+                    record.end as usize,
+                    record.line as usize,
+                    record.indent as usize,
                 );
             }
             // A clause compiled code opened, which `pass_of` took only from
@@ -1143,6 +1514,7 @@ impl Host for Driven<'_, '_> {
         let fuzz = settings.fuzz();
         native.small_int_bound = crate::value::small_int_bound(digits);
         native.quick_values = u64::from(fuzz == 0 && !mode.results);
+        native.intermediates = u64::from(interp.tracing_intermediates());
         // `Op::Load`'s and `Op::Store`'s fast paths reach the slot only for a
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
         // results; the window is offered only where both hold.
@@ -1174,50 +1546,34 @@ impl Host for Driven<'_, '_> {
             if self.retire {
                 native.steady = 0;
             }
-            native.loop_ready = 0;
-            self.loop_key = None;
+            for record in &mut native.loops {
+                record.ready = 0;
+            }
+            for state in &mut self.loop_state {
+                state.key = None;
+            }
             return;
         }
-        // **What the quick pass rests on that a call can change**: `DIGITS`
-        // and `FUZZ`, which only this activation's own instructions set, and
-        // the trace setting, which a `TRACE()` call also sets. The loop's own
-        // state changes only at a pass boundary the host takes, which asks
-        // again; the control variable is read from its slot on every pass.
+        // The record worked out is the innermost running loop's, the only one
+        // whose boundary generated code can reach before the host is called
+        // again. A loop that left for an inner one and is innermost again
+        // has the state it had: its record stands. A pass that holds no inner
+        // loop has only its own record, and its loop is the innermost
+        // whenever the host is called.
         let key = (digits, fuzz, mode);
-        if !std::mem::take(&mut self.ask_loop) && self.loop_key == Some(key) {
-            if native.loop_kind == layout::LOOP_CONTROLLED && native.loop_slot >= native.slot_count
+        if self.loops.len() == 1 {
+            self.refresh_loop(native, 0, key);
+        } else {
+            let top = self
+                .interp
+                .activity
+                .flat_top
+                .as_ref()
+                .map(|flat| flat.do_index);
+            if let Some(k) =
+                top.and_then(|top| self.loops.iter().position(|&index| index as usize == top))
             {
-                native.loop_ready = 0;
-            }
-            return;
-        }
-        native.loop_ready = 0;
-        self.loop_key = None;
-        if let Some(quick) = self.interp.quick_pass(self.do_index) {
-            match quick.kind {
-                QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
-                    native.loop_ready = 1;
-                    native.loop_kind = layout::LOOP_CONTROLLED;
-                    native.loop_slot = slot as u64;
-                    native.loop_step = step;
-                    native.loop_to = to;
-                }
-                QuickKind::Controlled { .. } => {}
-                QuickKind::Count { remaining } => {
-                    native.loop_ready = 1;
-                    native.loop_kind = layout::LOOP_COUNT;
-                    native.loop_value = i64::try_from(remaining).unwrap_or(i64::MAX);
-                }
-                QuickKind::Forever => {
-                    native.loop_ready = 1;
-                    native.loop_kind = layout::LOOP_FOREVER;
-                }
-            }
-            native.loop_line = quick.line as u64;
-            native.loop_indent = quick.open_indent as u64;
-            native.loop_end = quick.end_index as u64;
-            if native.loop_ready != 0 {
-                self.loop_key = Some(key);
+                self.refresh_loop(native, k, key);
             }
         }
     }
@@ -1295,9 +1651,205 @@ impl Driven<'_, '_> {
 }
 
 impl Driven<'_, '_> {
+    /// [`Host::leave`]'s quick pass for loop record `k`, under the settings
+    /// `key`: worked out afresh where it was asked for or `key` moved, else
+    /// left as it stands.
+    #[inline(always)]
+    fn refresh_loop(
+        &mut self,
+        native: &mut Native,
+        k: usize,
+        key: (u64, u64, crate::trace::TraceMode),
+    ) {
+        let record = &mut native.loops[k];
+        let state = &mut self.loop_state[k];
+        // **What the quick pass rests on that a call can change**: `DIGITS`
+        // and `FUZZ`, which only this activation's own instructions set, and
+        // the trace setting, which a `TRACE()` call also sets. The loop's own
+        // state changes only at a pass boundary the host takes, which asks
+        // again; the control variable is read from its slot on every pass.
+        if !std::mem::take(&mut state.ask) && state.key == Some(key) {
+            if record.kind == layout::LOOP_CONTROLLED && record.slot >= native.slot_count {
+                record.ready = 0;
+            }
+            return;
+        }
+        record.ready = 0;
+        state.key = None;
+        // A loop whose boundary generated code never takes needs no record.
+        let Some(compiled) = self.tests.get(k).copied().flatten() else {
+            return;
+        };
+        if let Some(quick) = self.interp.quick_pass(self.loops[k] as usize) {
+            // Both read off the loop's own instruction.
+            debug_assert_eq!(
+                compiled, quick.test,
+                "loop record {k}'s quick pass is not what its code was compiled for"
+            );
+            match quick.kind {
+                QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
+                    record.ready = 1;
+                    record.kind = layout::LOOP_CONTROLLED;
+                    record.slot = slot as u64;
+                    record.step = step;
+                    record.to = to;
+                }
+                QuickKind::Controlled { .. } => {}
+                QuickKind::Count { remaining } => {
+                    record.ready = 1;
+                    record.kind = layout::LOOP_COUNT;
+                    record.value = i64::try_from(remaining).unwrap_or(i64::MAX);
+                }
+                QuickKind::Forever => {
+                    record.ready = 1;
+                    record.kind = layout::LOOP_FOREVER;
+                }
+            }
+            record.line = quick.line as u64;
+            record.indent = quick.open_indent as u64;
+            record.end = quick.end_index as u64;
+            if record.ready != 0 {
+                state.key = Some(key);
+            }
+        }
+    }
+}
+
+impl Driven<'_, '_> {
+    /// An inner loop's `Op::LoopNext` at `pc`: the header clause counted, the
+    /// next pass stepped, and where it goes on, as the driver's arm.
+    fn inner_next(&mut self, pc: u32) -> u32 {
+        #[cfg(test)]
+        HOST_BOUNDARIES.with(|taken| taken.set(taken.get() + 1));
+        // The inner loop's own state moves here, so its record is asked again.
+        if let Some(&Op::LoopNext { index }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        {
+            // As the driver's arm asserts: every way out of an inner loop
+            // other than its own boundary leaves compiled code, so the loop
+            // innermost here is the one this op ends a pass of.
+            debug_assert_eq!(
+                self.interp
+                    .activity
+                    .flat_top
+                    .as_ref()
+                    .map(|flat| flat.do_index),
+                Some(index as usize),
+                "an inner LoopNext ended a pass of a loop other than the one it names"
+            );
+            if let Some(k) = self
+                .loops
+                .iter()
+                .position(|&loop_index| loop_index == index)
+            {
+                self.loop_state[k].ask = true;
+            }
+        }
+        let counted = match self.interp.count_clause_against_deadline(self.top) {
+            Ok(counted) => counted,
+            Err(Failure::Slice) => return self.stop(JitExit::Slice(pc)),
+            Err(failure) => return self.stop(JitExit::Fail(failure)),
+        };
+        let target = match self.interp.flat_loop_step_top(
+            self.code,
+            self.source,
+            self.chunk,
+            self.registers,
+            Flow::Next,
+            |_| Ok(counted),
+        ) {
+            Ok(FlatStep::Body(at)) => at,
+            Ok(FlatStep::Done(flow)) => {
+                self.interp.activity.frames.pop();
+                return self.settle_inner(flow, pc);
+            }
+            Err(failure) => return self.stop(JitExit::Fail(failure)),
+        };
+        self.go_on(target, pc)
+    }
+
+    /// Where an inner loop that answered `flow` at `pc`, its frame already
+    /// closed, goes on, as the driver settles it.
+    fn settle_inner(&mut self, flow: Flow, pc: u32) -> u32 {
+        let (base, start, end) = self.range;
+        match self.interp.settle(
+            self.code,
+            self.chunk,
+            self.registers,
+            base,
+            flow,
+            pc,
+            start,
+            end,
+            self.source,
+        ) {
+            Ok(Settled::At(target)) => self.go_on(target, pc),
+            Ok(Settled::Escaped(flow)) => self.stop(JitExit::Escaped(flow)),
+            Err(failure) => self.stop(JitExit::Fail(failure)),
+        }
+    }
+
+    /// Compiled code going on at `target` from the op at `pc`: the next op,
+    /// a label of the pass, or the driver at any other op.
+    fn go_on(&mut self, target: u32, pc: u32) -> u32 {
+        if target == pc + 1 {
+            return CONTINUE;
+        }
+        self.jump_to = target;
+        self.exit = Some(JitExit::At(target));
+        JUMP
+    }
+
+    /// A loop's header test region at `pc`, opened as the driver's
+    /// `Op::LoopTest` arm opens it: counted, its clause entered, and its
+    /// condition's ops left to run in it. A loop that ends here instead is
+    /// settled, an `inner` one's here, the compiled loop's by the driver.
+    fn test_open(&mut self, pc: u32, inner: bool) -> u32 {
+        if self.retire {
+            return self.retired(pc);
+        }
+        // As for `Host::open`: the driver's, before the clause is counted.
+        let sink = self.interp.chunk_trace();
+        if self.chunk.trace().clause_echoes() != sink.clause_echoes() || sink.debugging() {
+            return self.stop(JitExit::At(pc));
+        }
+        match self
+            .interp
+            .loop_test_entry(self.code, self.chunk, self.source, pc, self.top)
+        {
+            Ok(TestEntry::Region(parked)) => {
+                self.open = Some(Open {
+                    pc,
+                    index: parked.index,
+                    end: parked.end,
+                    entry: parked.entry,
+                });
+                CONTINUE
+            }
+            Ok(TestEntry::Done(flow)) => {
+                self.interp.activity.frames.pop();
+                if inner {
+                    self.settle_inner(flow, pc)
+                } else {
+                    self.stop(JitExit::Flow(flow, pc))
+                }
+            }
+            Ok(TestEntry::Slice) => self.stop(JitExit::Slice(pc)),
+            Err(failure) => self.stop(JitExit::Fail(failure)),
+        }
+    }
+
     /// The op at `pc`, run by `region_ops!` itself.
-    #[inline(never)]
+    #[inline(always)]
     fn general(&mut self, pc: u32) -> u32 {
+        self.general_to(pc, pc + 1, false)
+    }
+
+    /// The ops of `[pc, to)` of the open clause, run by `region_ops!` in one
+    /// region, as the driver runs a clause's. With `settles`, a `Flow` the
+    /// clause answers is settled here rather than by the driver: an inner
+    /// loop's test that ended it.
+    #[inline(never)]
+    fn general_to(&mut self, pc: u32, to: u32, settles: bool) -> u32 {
         let Some(open) = &self.open else {
             return self.stop(JitExit::Fail(
                 Loud::op_not_driven("an op with no clause").into(),
@@ -1314,7 +1866,7 @@ impl Driven<'_, '_> {
         let Some(clause) = code.body.instructions.get(index) else {
             return self.stop(JitExit::Fail(Loud::chunk_map_too_short().into()));
         };
-        let Some(ops) = chunk.ops_in(pc, pc + 1) else {
+        let Some(ops) = chunk.ops_in(pc, to) else {
             return self.stop(JitExit::Fail(Loud::chunk_map_too_short().into()));
         };
         let interp = &mut *self.interp;
@@ -1359,10 +1911,10 @@ impl Driven<'_, '_> {
         // code carries on.
         // So is a region that ended at the clause's own end, as a block's
         // start does.
-        let in_place = pc + 1 == end
+        let in_place = to == end
             && (matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)))
                 || matches!(ran, Ok(RegionEnd::At(next)) if next == end));
-        self.leave_from(ran, in_place)
+        self.leave_from(ran, in_place, settles)
     }
 }
 
@@ -1374,6 +1926,17 @@ thread_local! {
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
     static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
+    static HOST_BOUNDARIES: Cell<usize> = const { Cell::new(0) };
+    static RETIREMENTS: Cell<usize> = const { Cell::new(0) };
+    static COMPILED_LINES: RefCell<std::collections::BTreeSet<u32>> =
+        const { RefCell::new(std::collections::BTreeSet::new()) };
+}
+
+/// The source lines of the `DO`s whose compiled passes have run on this
+/// thread.
+#[cfg(test)]
+fn compiled_lines() -> Vec<u32> {
+    COMPILED_LINES.with(|lines| lines.borrow().iter().copied().collect())
 }
 
 #[cfg(test)]
@@ -1387,6 +1950,22 @@ fn reset_compiled_runs() {
     QUIET_CALLS.with(|calls| calls.set(0));
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
     HANDED_BACK.with(|handed| handed.set(0));
+    HOST_BOUNDARIES.with(|taken| taken.set(0));
+    RETIREMENTS.with(|retired| retired.set(0));
+    COMPILED_LINES.with(|lines| lines.borrow_mut().clear());
+}
+
+/// How many pass boundaries of compiled loops, theirs or an inner loop's,
+/// the host has taken on this thread.
+#[cfg(test)]
+fn host_boundaries() -> usize {
+    HOST_BOUNDARIES.with(Cell::get)
+}
+
+/// How many compiled loops have been retired on this thread.
+#[cfg(test)]
+fn retirements() -> usize {
+    RETIREMENTS.with(Cell::get)
 }
 
 /// How many regions that ended at their clause's end the host has closed in

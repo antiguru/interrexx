@@ -158,7 +158,12 @@ Raising and throwing differ, as in ooRexx:
   `@rpath`; `librexxapi` records `@loader_path/librexx.4.dylib` as a load command and opens it by
   that path. `interrexx-api/src/library_names.rs` holds the names of each host.
 * The `rexx` executable compiles the same export module, so an extension it loads reaches the
-  interpreter it is running in.
+  interpreter it is running in. That holds where an extension's imports resolve in the process's
+  global scope, as on Linux, where the executable's exports come first. On macOS an import binds
+  to the library the extension was linked against (two-level namespace), so an extension linked
+  against `librexxapi` reaches the interpreter of `librexx.4.dylib`, a second one, not the one
+  `rexx` runs. This follows from the binding rules; no test shows it yet. #761 proposes making
+  `rexx` a launcher over `librexx`, which would leave one interpreter on every host.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic
   run other threads can halt or trace. `RexxCreateInterpreter` makes an instance; several may
   exist in one process, each isolated. `AttachThread` joins a foreign thread to an instance (see
