@@ -4,8 +4,8 @@ mod assignment;
 mod use_args;
 
 use crate::activation::{
-    Activation, AutoExpose, CallType, Entry, Inherited, InstanceVar, ReplyState, TraceEntry, Trap,
-    TrappedCondition, body_of,
+    Activation, AutoExpose, CallType, Entry, ExtraNames, Inherited, InstanceVar, ReplyState,
+    TraceEntry, Trap, TrappedCondition, body_of,
 };
 use crate::builtin;
 use crate::clause::{ClauseEntry, ClauseOutcome, ClauseValue, HandlerExit};
@@ -1301,11 +1301,9 @@ impl Interp {
         }
 
         // Any name that needed a fresh slot just grew the caller's frame and
-        // was recorded in *this* activation's `extra` -- which is a clone of
-        // the caller's, taken at the call. The caller has to learn about it,
-        // because after the isolation below this map is replaced and the
-        // return path deliberately does not write it back.
-        let resolved = crate::activation::clone_extra(&self.activation().extra);
+        // was recorded in this activation's `extra`. Move those bindings
+        // to the caller before replacing the table with the isolated one.
+        let resolved = std::mem::take(&mut self.activation_mut().extra);
         if let Some(caller) = self.caller_activation_mut() {
             caller.extra = resolved;
         }
@@ -1330,7 +1328,7 @@ impl Interp {
         // isolation -- except for exposed names the plan never saw, which
         // must keep resolving to the index the alias was installed at.
         let plan = Rc::clone(&self.activation().plan);
-        let mut extra = interrexx_core::NameMap::default();
+        let mut extra = ExtraNames::default();
         for (name, slot, _) in bindings {
             if plan.slot_of(&name).is_none() {
                 extra.insert(name, slot);

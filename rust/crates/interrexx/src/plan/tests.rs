@@ -651,7 +651,7 @@ fn a_tail_piece_with_no_plan_slot_binds_in_extra() {
         .expect("the tail pieces are strings");
     assert_eq!(key, b"ZI");
     assert!(
-        interp.activation().extra.contains_key(b"ZI".as_slice()),
+        interp.activation().extra.get(b"ZI").is_some(),
         "the piece must be recorded in extra, which is the source a \
          precomputed slot would have skipped"
     );
@@ -712,7 +712,7 @@ fn a_stem_with_no_plan_slot_binds_in_extra() {
     assert_eq!(novalue, Novalue::Unset);
     assert_eq!(&*interp.to_text(value), b"ZA.ZI");
     assert!(
-        interp.activation().extra.contains_key(b"ZA.".as_slice()),
+        interp.activation().extra.get(b"ZA.").is_some(),
         "the stem must be recorded in extra, which is the source a \
          precomputed slot would have skipped"
     );
@@ -855,7 +855,7 @@ fn a_runtime_name_grows_the_frame() {
     let dynamic_slot = interp.slot_of(b"X");
     assert_eq!(dynamic_slot, x_slot);
     assert!(
-        interp.activation().extra.contains_key(b"X".as_slice()),
+        interp.activation().extra.get(b"X").is_some(),
         "a name the plan never saw must grow into extra, not silently \
          miss or panic"
     );
