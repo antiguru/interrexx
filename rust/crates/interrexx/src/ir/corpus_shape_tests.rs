@@ -60,6 +60,7 @@ impl Root {
             | Op::SelectCase { .. }
             | Op::ExecValue { .. }
             | Op::ExecWith { .. }
+            | Op::ExecCheck { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
@@ -138,6 +139,7 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
             expression: Some(_),
         } => Some("command"),
         InstructionKind::Guard(guard) if guard.condition.is_some() => Some("GUARD WHEN"),
+        InstructionKind::Reply { .. } => Some("REPLY"),
         _ => None,
     }
 }
@@ -359,6 +361,10 @@ struct Seen {
     side_conditions: usize,
     /// How many `GUARD ... WHEN` conditions compiled to [`Chunk::conditions`].
     guard_side_conditions: usize,
+    /// How many `REPLY`s with an expression compiled to `Op::ExecWith`, and
+    /// how many bare ones stayed `Op::Exec`.
+    reply_values: usize,
+    bare_replies: usize,
 }
 
 /// Checks one body's compiled stream against what its instructions call for,
@@ -535,6 +541,36 @@ fn check_body(
             }
         }
 
+        // **A `REPLY` with an expression** opens its region with
+        // `Op::ExecCheck`, so that its refusal outside a method comes before
+        // the expression's ops, and ends it with `Op::ExecWith`; a bare one is
+        // the one `Op::Exec`.
+        if let InstructionKind::Reply { expression } = &instruction.kind {
+            let ops: Vec<&Op> = region
+                .iter()
+                .filter(|op| !matches!(op, Op::TraceClause { .. }))
+                .collect();
+            if expression.is_some() {
+                assert!(
+                    matches!(ops.first(), Some(Op::ExecCheck { index }) if *index == at)
+                        && matches!(ops.last(), Some(Op::ExecWith { index, .. }) if *index == at)
+                        && !ops.iter().any(|op| matches!(op, Op::Exec { .. })),
+                    "{where_}: instruction {index} ({construct}) is not ExecCheck, its \
+                     expression's ops, then ExecWith\n{}",
+                    render(&chunk)
+                );
+                seen.reply_values += 1;
+            } else {
+                assert!(
+                    matches!(ops[..], [Op::Exec { index }] if *index == at),
+                    "{where_}: instruction {index} ({construct}) is a bare REPLY compiled to \
+                     something other than its one Exec\n{}",
+                    render(&chunk)
+                );
+                seen.bare_replies += 1;
+            }
+        }
+
         // The expression a promoted clause's region must end in, for the
         // constructs whose expression `compile` offers to `push_native` as a
         // whole slot. A `WHEN CASE`'s values are compared inside
@@ -568,7 +604,9 @@ fn check_body(
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
                 Some(root_of(expression))
             }
-            InstructionKind::Command { expression } => expression.as_ref().map(root_of),
+            InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
+                expression.as_ref().map(root_of)
+            }
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -773,6 +811,7 @@ fn sweep_every_corpus_body() {
         "INTERPRET",
         "command",
         "GUARD WHEN",
+        "REPLY",
     ] {
         assert!(
             seen.constructs.contains_key(construct),
@@ -801,6 +840,13 @@ fn sweep_every_corpus_body() {
         seen.guard_side_conditions > 0,
         "no corpus GUARD WHEN compiled its condition to the side table, so the GUARD row above \
          holds only over an empty set"
+    );
+    assert!(
+        seen.reply_values > 0 && seen.bare_replies > 0,
+        "no corpus REPLY with an expression ({}) or bare REPLY ({}) was seen, so the REPLY rows \
+         above hold only over an empty set",
+        seen.reply_values,
+        seen.bare_replies
     );
     assert!(
         seen.native_header_values > 0,

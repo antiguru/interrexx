@@ -1334,6 +1334,8 @@ fn compile_settled(
             }
             // An instruction whose expression is its first act: the
             // expression's ops, then `Op::ExecValue`, which does the rest.
+            // One that checks before evaluating has `Op::ExecCheck` ahead of
+            // them.
             kind if let Some(expression) = crate::Interp::exec_value_expression(kind) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
@@ -1343,6 +1345,11 @@ fn compile_settled(
                     end: 0,
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
+                if crate::Interp::exec_value_checks_first(kind) {
+                    ops.push(Op::ExecCheck {
+                        index: instruction_index(index)?,
+                    });
+                }
                 let dst = registers.alloc()?;
                 push_value(
                     &mut ops,

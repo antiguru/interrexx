@@ -406,6 +406,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::SendScope { .. } => "SendScope",
         Op::ExecValue { .. } => "ExecValue",
         Op::ExecWith { .. } => "ExecWith",
+        Op::ExecCheck { .. } => "ExecCheck",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1813,6 +1814,14 @@ macro_rules! region_ops {
                         "op reads register {src} outside the region the chunk reserved"
                     );
                     if let Err(failure) = $self.exec_value($code, $clause, $registers.get(*src)) {
+                        break $cold Err(failure);
+                    }
+                }
+                Op::ExecCheck { $index } => {
+                    debug_assert_names_the_clause(
+                        $code, *$index, $clause, "ExecCheck",
+                    );
+                    if let Err(failure) = $self.exec_check($clause) {
                         break $cold Err(failure);
                     }
                 }

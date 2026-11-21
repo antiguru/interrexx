@@ -776,6 +776,43 @@ fn a_reply_splits_once() {
     assert_eq!(splits, 1);
 }
 
+/// A `REPLY`'s expression runs as the method chunk's own ops: a call in it
+/// resolves at its call site once and answers from the site on every later
+/// invocation, which the walked expression never does. Outside a method the
+/// refusal comes before the expression, so a call in it does not run.
+#[test]
+fn a_reply_value_runs_from_its_compiled_ops() {
+    let before = call_site_hits();
+    let (outcome, splits) = scripted(
+        b"o = .k~new\ndo zi = 1 to 4\n  say o~m(zi)\nend\n::class k\n::method m unguarded\n  \
+          use arg zn\n  reply zf(zn) + 1\n::routine zf\n  use arg zv\n  return zv * 10\n",
+        &[],
+    );
+    let hits = call_site_hits() - before;
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(String::from_utf8_lossy(&outcome.stdout), "11\n21\n31\n41\n");
+    assert_eq!(splits, 4);
+    let expected = if CALL_SITE_CACHE { 3 } else { 0 };
+    assert_eq!(
+        hits, expected,
+        "the REPLY's call answered from its site {hits} times where {expected} was due, so its \
+         expression did not run from the chunk"
+    );
+
+    let (outcome, splits) = scripted(
+        b"say .k~new~m\n::class k\n::method m\n  call sub\n  return 'm'\nsub:\n  \
+          reply zf()\n  return\n::routine zf\n  say 'zf ran'\n  return 1\n",
+        &[],
+    );
+    assert_eq!(outcome.exit_code, 157, "stderr: {:?}", outcome.stderr);
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "",
+        "a REPLY outside a method evaluated its expression before refusing"
+    );
+    assert_eq!(splits, 0);
+}
+
 /// A loop's `WHILE` and `UNTIL` run from the chunk's compiled condition ops on
 /// every test, the `DO`'s own first one included; a condition holding a call
 /// does not compile there, and `TRACE I` walks the expression instead.
