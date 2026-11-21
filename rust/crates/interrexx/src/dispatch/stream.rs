@@ -739,13 +739,16 @@ fn open_failed(
     notready(interp, receiver, StreamStatus::Error(errno), answer)
 }
 
-/// Whether an open descriptor is a transient stream: a character device
-/// or a FIFO, which is what `QUERY STREAMTYPE` answers `TRANSIENT` for
-/// (`SysFile::getStreamTypeInfo`). A regular file is persistent.
+/// Whether an open descriptor is a transient stream: a character device, a
+/// FIFO or a socket, which is what `QUERY STREAMTYPE` answers `TRANSIENT` for
+/// (`SysFile::getStreamTypeInfo`, a socket since upstream bug #2173). A
+/// regular file is persistent.
 fn is_transient(file: &std::fs::File) -> bool {
     use std::os::unix::fs::FileTypeExt;
-    file.metadata()
-        .is_ok_and(|meta| meta.file_type().is_char_device() || meta.file_type().is_fifo())
+    file.metadata().is_ok_and(|meta| {
+        let kind = meta.file_type();
+        kind.is_char_device() || kind.is_fifo() || kind.is_socket()
+    })
 }
 
 /// Whether an open descriptor is a device, as `SysFile::getStreamTypeInfo`
@@ -1536,6 +1539,9 @@ pub(super) fn lineout(
     let line = optional_position(interp, args.get(1).copied().flatten(), 2)?;
     declared_only(args, 2)?;
     if data.is_none() && line.is_none() {
+        if let Some(errno) = complete_record(interp, receiver)? {
+            return notready(interp, receiver, StreamStatus::Error(errno), b"1".to_vec());
+        }
         return close_for_write(interp, _cleared, receiver, b"1");
     }
     if let Some(which) = standard_opened(interp, receiver)? {
@@ -1556,8 +1562,15 @@ pub(super) fn lineout(
     {
         return notready(interp, receiver, StreamStatus::NotReady, b"1".to_vec());
     }
-    // Only a LINEOUT with a string pads its record. Positioning writes nothing
-    // (Deviation 46: pads from the write position here).
+    // Positioning by line with no string first completes the record the
+    // write position is inside of; one with a string pads only its own
+    // (`r[bif.lineout.record]`).
+    if line.is_some()
+        && data.is_none()
+        && let Some(errno) = complete_record(interp, receiver)?
+    {
+        return notready(interp, receiver, StreamStatus::Error(errno), b"1".to_vec());
+    }
     let record = record_length(interp, receiver)?;
     let mode = require(interp, receiver)?.mode;
     let state = require_mut(interp, receiver)?;
@@ -1607,12 +1620,44 @@ pub(super) fn lineout(
     }
 }
 
+/// `LINEOUT` on a record stream that closes it or positions it by line: blanks
+/// from the write position to the end of the record it is inside of, over
+/// whatever the record held there, and nothing when it is at the start of a
+/// record (`r[bif.lineout.record]`). Answers the error of a write that fails.
+fn complete_record(interp: &mut Interp, receiver: ObjRef) -> Result<Option<i32>, Failure> {
+    if interp.stream(receiver).is_none() {
+        return Ok(None);
+    }
+    let Some(record_length) = record_length(interp, receiver)? else {
+        return Ok(None);
+    };
+    let state = require_mut(interp, receiver)?;
+    let append = state.mode.append;
+    if state.mode.read_only {
+        return Ok(None);
+    }
+    let Some(open) = state.open.as_mut() else {
+        return Ok(None);
+    };
+    let at = landing(open, append, open.write_position);
+    let room = record_remainder(at, record_length);
+    if room as u64 >= record_length {
+        return Ok(None);
+    }
+    match write_open(open, at, &vec![b' '; room]) {
+        Ok(()) => {
+            open.write_position = at + room as i64;
+            Ok(None)
+        }
+        Err(error) => Ok(Some(error.raw_os_error().unwrap_or(0))),
+    }
+}
+
 /// `LINEOUT` or `CHAROUT` with neither data nor a position: a stream opened
 /// read-only is closed first, then the write setup runs -- creating a missing
 /// file, or raising `NOTREADY` with `answer` where it cannot -- and the stream
-/// is closed (`StreamInfo::lineout`, `StreamInfo::charout`). A close writes
-/// nothing (Deviation 46: `LINEOUT` pads a record stream's current record from
-/// the write position first). A standard stream only closes.
+/// is closed (`StreamInfo::lineout`, `StreamInfo::charout`). A standard stream
+/// only closes.
 fn close_for_write(
     interp: &mut Interp,
     cleared: Cleared,
@@ -2248,6 +2293,15 @@ pub(super) fn close(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    // A stream `uninit` has dropped the state of closes as nothing and
+    // answers no value, as a second `uninit` does (`r[class.stream.uninit]`);
+    // one `init` never set up is refused as the other methods refuse it.
+    if interp.stream(receiver).is_none() {
+        return match no_state(interp, receiver) {
+            Failure::Raised(raised) if (raised.number, raised.sub) == (48, 1) => Ok(None),
+            refused => Err(refused),
+        };
+    }
     release_held(interp, receiver)?;
     let state = require_mut(interp, receiver)?;
     let was_open = if state.standard.is_some() {

@@ -4,7 +4,7 @@ kind: builtin
 syntax: "LINEOUT([name] [, [string] [, line]])"
 ansi: "9.7.5"
 rexxref: "Functions > Built-in Functions > LINEOUT (Line Output)"
-deviations: [46, 56, 60]
+deviations: [56, 60]
 ---
 
 # LINEOUT
@@ -312,31 +312,57 @@ c
 93.958
 ```
 
-## Deviations
-
-r[bif.lineout.deviation.46]
-On a stream opened `BINARY RECLENGTH n`, a LINEOUT that only positions, or
-that closes the stream, clears no record, and only a LINEOUT with a
-`string` pads its record. ooRexx clears or pads a record when LINEOUT
-positions or closes.
+r[bif.lineout.record]
+On a stream opened `BINARY RECLENGTH n`, a LINEOUT with no `string` that closes
+the stream, or that only positions it by `line`, first completes the record
+the write position is inside of: it writes blanks from the write position to
+the end of that record, over whatever the record held there. At the start of
+a record it writes nothing, and it writes nothing on a stream open only for
+reading. On a stream opened APPEND the record is the one an APPEND write would
+land in, at the end of the file. A LINEOUT with a `string` pads only the record
+it writes, and CHAROUT and `STREAM` CLOSE complete no record.
 
 ```rexx
-f = 'spec-lineout-dev46.tmp'
-call sysfiledelete f
-call charout f, 'abcdefgh'
+f = 'spec-lineout-record.tmp'
+do case = 1 to 5
+  call sysfiledelete f
+  call charout f, 'abcdefgh'
+  call charout f
+  call stream f, 'c', 'open both binary reclength 4'
+  select
+    when case = 1 then call charout f, 'X', 3
+    when case = 2 then call charout f, , 3
+    when case = 3 then do; call charout f, 'X', 3; call lineout f, , 2; end
+    when case = 4 then call charout f, 'X', 5
+    when case = 5 then do; call charout f, 'X', 3; call lineout f, 'Q', 2; end
+  end
+  call lineout f
+  say case '[' || charin(f, 1, chars(f)) || ']'
+  call lineout f
+end
+call stream f, 'c', 'open both binary reclength 4'
+call charout f, 'Y', 2
 call charout f
-say stream(f, 'c', 'open binary reclength 4')
-say lineout(f, , 1) lineout(f)
-say '[' || charin(f, 1, 8) || ']'
+say 'charout [' || charin(f, 1, chars(f)) || ']'
+call stream f, 'c', 'open both binary reclength 4'
+call charout f, 'Z', 1
+call stream f, 'c', 'close'
+say 'close [' || charin(f, 1, chars(f)) || ']'
 call lineout f
 call sysfiledelete f
 ```
 
 ```output
-READY:
-0 0
-[abcdefgh]
+1 [abX efgh]
+2 [ab  efgh]
+3 [abX efgh]
+4 [abcdX   ]
+5 [abXdQ   ]
+charout [aYXdQ   ]
+close [ZYXdQ   ]
 ```
+
+## Deviations
 
 r[bif.lineout.deviation.56]
 A `line` counts from the start of the data, as [the line

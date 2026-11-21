@@ -11,7 +11,7 @@
    "Line versus Character Positioning", "Implementation") and funct.xml
    (CHARIN, CHAROUT, CHARS, LINEIN, LINEOUT, LINES, STREAM), with the
    programming guide's record passages (rexxpg rexio.xml:562-565, 613-616)
-   and Deviations 46, 48 and 49 of spec/src/deviations.md.
+   and Deviations 48 and 49 of spec/src/deviations.md.
    ANSI X3.274 section 9.7's properties hold of it: a stream read from
    position 1 returns what was written there, and a repositioned write loses
    only what it overwrites. Where the documentation leaves a point open, the
@@ -48,10 +48,10 @@ operation: procedure expose m.
   select
     when code == 'O' then return open(subword(arg(1), 2))
     when code == 'X' then return close()
-    when code == 'CX' | code == 'LX' then return close_by_write()
+    when code == 'CX' then return close_by_write(0)
+    when code == 'LX' then return close_by_write(1)
     when code == 'CO' then return charout(1, a, b)
     when code == 'CE' then return charout(1, '', '')
-    when code == 'CB' then return pad_record()
     when code == 'CP' then return charout(0, '', a)
     when code == 'LO' then return lineout(1, a, b)
     when code == 'LE' then return lineout(1, '', '')
@@ -125,7 +125,7 @@ implicit: procedure expose m.
   return
 
 /* STREAM CLOSE (funct.xml:4377-4381): READY: for an open stream, the null
-   string for one that never was. A close writes nothing (Deviation 46). */
+   string for one that never was. A close writes nothing. */
 close: procedure expose m.
   was = m.0open
   m.0open = 0
@@ -134,9 +134,12 @@ close: procedure expose m.
   return ''
 
 /* CHAROUT or LINEOUT with neither string nor position closes the stream
-   and answers 0 (funct.xml:1416-1418, 3214-3217). It writes nothing, on a
-   record stream too (Deviation 46 as extended). */
+   and answers 0 (funct.xml:1416-1418, 3214-3217). A LINEOUT first completes
+   the record of a record stream its write position is inside of, with
+   blanks; a CHAROUT writes nothing (spec r[bif.lineout.record], ooRexx
+   r13532, SF #1742 and #2170). */
 close_by_write: procedure expose m.
+  if arg(1) then call pad_record
   call close
   return 0
 
@@ -249,7 +252,9 @@ charout: procedure expose m.
    string completes its record: it is padded with blanks to the record's
    end (rexxpg rexio.xml:562-565), and a string longer than what is left of
    the record is the bare 93 (this crate's `write_record`, :1637; the documentation
-   is silent). Only this pads (Deviation 46 as extended). A ctrl-Z is data
+   is silent). With no string, positioning by line first completes the
+   record the write position is inside of, with blanks; with a string, only
+   the string's record is padded. A ctrl-Z is data
    like any other character: Unix-like systems use no end-of-file character
    in text files (intro.xml:3322-3330). */
 lineout: procedure expose m.
@@ -268,6 +273,7 @@ lineout: procedure expose m.
   if line \== '' then do
     bad = position_arg(line)
     if bad \== '' then return bad
+    if \given then call pad_record
     if within_extent(line_start(line)) then do
       m.0state = 'NOTREADY'
       return 1
@@ -291,18 +297,18 @@ lineout: procedure expose m.
   m.0write = at + length(s) + 1
   return 0
 
-/* `CB`, which no Rexx operation is: blanks from the write position to the
-   end of its record, and nothing at a record boundary, where no write has
-   started a record (ooRexx r13532, SF #2170). It is the oracle's padding by
-   a LINEOUT that closes or only positions a binary stream, which Deviation
-   46 licenses, and the driver puts it before such a LINEOUT to build the
-   answer the oracle is licensed to give. */
+/* The blanks from the write position to the end of its record, which a
+   LINEOUT that closes or only positions a record stream writes first, and
+   nothing at a record boundary or on a stream that is not a record stream
+   open for writing (r[bif.lineout.record]). */
 pad_record: procedure expose m.
+  if \m.0open | m.0record = 0 | m.0transient then return 0
   if \writable() then return 0
-  k = room(m.0write)
+  at = landing(m.0write)
+  k = room(at)
   if k == m.0record then return 0
-  call put copies(' ', k), landing(m.0write)
-  m.0write = m.0write + k
+  call put copies(' ', k), at
+  m.0write = at + k
   return 0
 
 /* CHARIN (funct.xml:1305-1335): `start` sets the read position, and one

@@ -394,11 +394,11 @@ answers some integers unrounded, depending on how the number is held.
 `Bag~hasItem` with an index unequal to the item answers 0. ooRexx answers
 `.nil`.
 
-## 46. LINEOUT on a binary record stream
+## 46. Withdrawn
 
-On a stream opened `BINARY RECLENGTH n`, positioning with LINEOUT and closing
-pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
-a record that a write has started when LINEOUT positions or closes.
+LINEOUT on a binary record stream: a LINEOUT that closes or only positions
+completes the record the write position is inside of, as ooRexx does since
+upstream bugs #1742 and #2170, ruled by the owner on 2026-11-21 (#857).
 
 ## 47. A DO count wider than NUMERIC DIGITS
 

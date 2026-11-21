@@ -1066,8 +1066,10 @@ call sysfiledelete f
 r[bif.stream.query.type]
 `QUERY STREAMTYPE` answers `PERSISTENT` for an open file, a stream that can be
 positioned, `TRANSIENT` for an open stream that cannot, such as the standard
-input when it is a pipe, and `UNKNOWN` for a stream that is not open: a file
-that is closed, a name that is not a file, a directory.
+input when it is a pipe, a terminal or a socket, and `UNKNOWN` for a stream
+that is not open: a file that is closed, a name that is not a file, a
+directory. A transient standard input is read line by line, its `supplier`
+included.
 
 ```rexx
 f = 'spec-stream-type.tmp'
