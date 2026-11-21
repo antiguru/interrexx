@@ -121,6 +121,8 @@ pub(crate) trait Host {
     /// Pushes the arguments `args` carries for `Op::CallArgs` at `pc`, as the
     /// `Op::PushArg`s the pass dropped would have.
     fn stage_args(&mut self, pc: u32, args: u64);
+    /// The rest of the open clause from `pc` ([`Step::Region`]).
+    fn region(&mut self, pc: u32) -> u32;
     /// The compound read or write at `pc`, where it runs no Rexx code: under
     /// no trace that shows values, with a tail of plain values, and for a
     /// read, a tail that is set (`Interp::read_compound_quiet`). `true` once
@@ -175,6 +177,17 @@ pub(crate) enum Step {
     /// compound, `Op::Store` to one): [`Host::quiet_compound`], else the op
     /// through the host.
     Compound { pc: u32 },
+    /// The rest of a clause from `pc`, through the host in one call: an inner
+    /// loop's header values and its `Op::LoopRun`, which share the values
+    /// they file. A flat start ends at the clause's end, where compiled code
+    /// carries on into the inner body.
+    Region { pc: u32 },
+    /// An inner loop's `Op::LoopNext` at `pc`, between clause regions, whose
+    /// quick pass is record `record` of the block and whose body starts at
+    /// `body`: taken here as the compiled loop's own boundary is, and
+    /// otherwise through the host, which answers [`JUMP`] to `body` for
+    /// another pass or where the loop settled.
+    InnerNext { pc: u32, record: u8, body: u32 },
     /// A step the pass took out, which is never compiled.
     Dropped,
     /// `Op::PushArg` of register `src`.
@@ -238,6 +251,9 @@ pub(crate) struct Pass {
     pub(crate) registers: u16,
     /// The pass boundary's own op, which a branch to it reaches.
     pub(crate) end: u32,
+    /// The `DO` index of the loop each of the block's loop records is: this
+    /// loop's own first, then each inner loop's.
+    pub(crate) loops: Vec<u32>,
 }
 
 /// What a helper is handed: the block, the host it belongs to, and a panic
@@ -350,6 +366,31 @@ extern "C" fn compound_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
             return CONTINUE;
         }
         run_op(ctx, clause, pc)
+    })
+}
+
+/// [`Step::Region`]: the rest of the clause, adopted first where compiled
+/// code opened it, as [`op_helper`] runs one op.
+extern "C" fn region_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| {
+        let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
+        ctx.native.opened = 0;
+        ctx.host.enter(&mut ctx.native);
+        let host = &mut *ctx.host;
+        let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
+            CONTINUE => match host.region(pc) {
+                CONTINUE if adopt => host.release(),
+                answer => answer,
+            },
+            answer => answer,
+        };
+        ctx.host.leave(&mut ctx.native);
+        if answer == FAST {
+            ctx.native.opened = 1;
+            CONTINUE
+        } else {
+            answer
+        }
     })
 }
 
@@ -651,6 +692,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Jump { .. }
             | Step::Compound { .. }
             | Step::BlockStart { .. }
+            | Step::Region { .. }
+            | Step::InnerNext { .. }
             | Step::Dropped
             | Step::EndBranch { .. }
             | Step::Between { .. } => None,
@@ -755,25 +798,40 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let mut labels: HashMap<u32, Block> = HashMap::new();
         labels.insert(pass.end, head);
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
+            if let Step::Open { pc, .. }
+            | Step::EndBranch { pc }
+            | Step::Between { pc }
+            | Step::InnerNext { pc, .. } = *step
+            {
                 labels.insert(pc, e.b.create_block());
             }
         }
         for step in &pass.steps {
-            if let Step::Branch { target, .. } | Step::Jump { target } = *step
+            if let Step::Branch { target, .. }
+            | Step::Jump { target }
+            | Step::InnerNext { body: target, .. } = *step
                 && !labels.contains_key(&target)
+            {
+                return None;
+            }
+            if let Step::InnerNext { record, .. } = *step
+                && usize::from(record) >= layout::MAX_LOOPS
             {
                 return None;
             }
         }
         let dispatch = e.b.create_block();
         e.b.switch_to_block(head);
-        pass_step(&mut e);
+        pass_step(&mut e, 0, None);
         let mut clause_pc = 0;
         // Whether the block being emitted into can still fall through.
         let mut live = true;
         for step in &pass.steps {
-            if let Step::Open { pc, .. } | Step::EndBranch { pc } | Step::Between { pc } = *step {
+            if let Step::Open { pc, .. }
+            | Step::EndBranch { pc }
+            | Step::Between { pc }
+            | Step::InnerNext { pc, .. } = *step
+            {
                 let block = labels[&pc];
                 if live {
                     e.b.ins().jump(block, &[]);
@@ -850,6 +908,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     pc,
                     None,
                 ),
+                Step::Region { pc } => {
+                    e.call_op_with(region_helper as *const (), None, Some(clause_pc), pc, None)
+                }
+                Step::InnerNext { pc, record, body } => {
+                    let first = labels[&body];
+                    pass_step(&mut e, usize::from(record), Some((pc, first, dispatch)));
+                }
                 Step::Dropped => {}
                 Step::Const { dst, bits } => {
                     let value = e.b.ins().iconst(types::I64, bits as i64);
@@ -992,7 +1057,9 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
 /// The pass boundary: the loop's quick pass by generated code when the block
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
-fn pass_step(e: &mut Emit<'_, '_>) {
+fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>) {
+    // Every loop's passes count: the host counts its ops on each pass of an
+    // inner loop as on each of the compiled loop's, and weighs them per pass.
     let passes = e.load_native(types::I64, layout::PASSES);
     let passes = e.b.ins().iadd_imm_u(passes, 1);
     e.store_native(passes, layout::PASSES);
@@ -1003,7 +1070,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let decode = e.b.create_block();
     let take = e.b.create_block();
 
-    let ready = e.load_native(types::I64, layout::LOOP_READY);
+    let ready = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_READY));
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let left =
         e.b.ins()
@@ -1019,7 +1086,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let forever = e.b.create_block();
     let tail = e.b.create_block();
     e.b.switch_to_block(check);
-    let kind = e.load_native(types::I64, layout::LOOP_KIND);
+    let kind = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_KIND));
     let is_count =
         e.b.ins()
             .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_COUNT as i64);
@@ -1033,21 +1100,21 @@ fn pass_step(e: &mut Emit<'_, '_>) {
 
     // One fewer pass left; none left is the loop ending, the host's.
     e.b.switch_to_block(counted);
-    let left = e.load_native(types::I64, layout::LOOP_VALUE);
+    let left = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_VALUE));
     let more = e.b.create_block();
     e.b.ins().brif(left, more, &[], slow, &[]);
     e.b.switch_to_block(more);
     let left = e.b.ins().iadd_imm_s(left, -1);
-    e.store_native(left, layout::LOOP_VALUE);
+    e.store_native(left, layout::loop_field(k, layout::LOOP_VALUE));
     let one = e.b.ins().iconst(types::I64, 1);
-    e.store_native(one, layout::LOOP_DIRTY);
+    e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
     e.b.ins().jump(tail, &[]);
 
     e.b.switch_to_block(forever);
     e.b.ins().jump(tail, &[]);
 
     e.b.switch_to_block(controlled);
-    let slot = e.load_native(types::I64, layout::LOOP_SLOT);
+    let slot = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_SLOT));
     let count = e.load_native(types::I64, layout::SLOT_COUNT);
     let held = e.b.ins().icmp(IntCC::UnsignedLessThan, slot, count);
     e.b.ins().brif(held, read, &[], slow, &[]);
@@ -1068,7 +1135,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let tag = e.b.ins().band_imm_u(value, layout::TAG_MASK);
     let tagged = e.b.ins().icmp_imm_u(IntCC::Equal, tag, layout::TAG_INT);
     let running = e.b.ins().sshr_imm_u(value, layout::TAG_BITS);
-    let step = e.load_native(types::I64, layout::LOOP_STEP);
+    let step = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_STEP));
     let (sum, overflow) = e.b.ins().sadd_overflow(running, step);
     let bound = e.load_native(types::I64, layout::SMALL_INT_BOUND);
     let negative = e.b.ins().ineg(bound);
@@ -1083,7 +1150,7 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     ok = e.b.ins().band(ok, fine);
     // `loop_advance_quick`'s own answer: a descending step carries on while
     // the value is at or above the bound, any other while it is at or below.
-    let to = e.load_native(types::I64, layout::LOOP_TO);
+    let to = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_TO));
     let descending = e.b.ins().icmp_imm_u(IntCC::SignedLessThan, step, 0);
     let at_or_above = e.b.ins().icmp(IntCC::SignedGreaterThanOrEqual, sum, to);
     let at_or_below = e.b.ins().icmp(IntCC::SignedLessThanOrEqual, sum, to);
@@ -1099,8 +1166,8 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let handle = e.b.ins().bor_imm_u(shifted, layout::TAG_INT);
     e.b.ins()
         .store(Emit::flags(), handle, address, layout::SLOT_VALUE_AT);
-    e.store_native(sum, layout::LOOP_VALUE);
-    e.store_native(one, layout::LOOP_DIRTY);
+    e.store_native(sum, layout::loop_field(k, layout::LOOP_VALUE));
+    e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
     e.b.ins().jump(tail, &[]);
 
     // The header clause every quick pass runs in: a countdown tick, its line
@@ -1109,12 +1176,25 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let countdown = e.b.ins().iadd_imm_s(countdown, -1);
     e.store_native(countdown, layout::COUNTDOWN);
-    let header = e.b.ins().iconst(types::I64, layout::CLAUSE_HEADER as i64);
+    let header =
+        e.b.ins()
+            .iconst(types::I64, layout::clause_header(k) as i64);
     e.store_native(header, layout::CLAUSE_AT);
-    e.b.ins().jump(body, &[]);
+    // Another pass: the compiled loop's falls into its body, an inner loop's
+    // goes back to the first clause of its own.
+    match inner {
+        Some((_, first, _)) => e.b.ins().jump(first, &[]),
+        None => e.b.ins().jump(body, &[]),
+    };
 
+    // The host's pass boundary, which also ends the loop: the compiled
+    // loop's own, or an inner loop's through `Host::op`, which answers
+    // JUMP for another pass or where the loop settled.
     e.b.switch_to_block(slow);
-    e.call(pass_helper as *const (), None);
+    match inner {
+        Some((pc, _, dispatch)) => e.call_op(None, pc, Some((JUMP, dispatch))),
+        None => e.call(pass_helper as *const (), None),
+    }
     e.b.ins().jump(body, &[]);
 
     e.b.switch_to_block(body);
