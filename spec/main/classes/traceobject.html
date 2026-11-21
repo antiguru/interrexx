@@ -1213,15 +1213,13 @@ say '['n~makeString']'
 <h2 id="replacing-the-format"><a class="header" href="#replacing-the-format">Replacing the format</a></h2>
 <div class="rule" id="r-class.traceobject.setmakestring"><a href="#r-class.traceobject.setmakestring">[class.traceobject.setmakestring]</a></div>
 <p><code>setMakeString</code> replaces <code>makeStringImpl</code> with a method of the program: the
-argument is a <code>Method</code> object, a string that holds the source of a method or an
-array of strings that hold its lines. The method receives the <code>TraceObject</code> and
-answers the text. From then on it supplies <code>makeStringImpl</code>, and with it
+argument is a <code>Method</code> object or a source that <a href="method.html#r-class.method.new"><code>Method~new</code></a>
+accepts. The method receives the <code>TraceObject</code> and answers the text. From then on it supplies <code>makeStringImpl</code>, and with it
 <code>makeString</code>, whatever the <code>option</code> is, until <code>unsetMakeString</code> takes it away; a
 second <code>setMakeString</code> replaces the first. It answers no value. A source that
-does not translate raises the error that <code>Method~new</code> raises for it, an argument
-that is neither a string, a <code>Method</code> nor an array raises <code>SYNTAX 93.961</code>, <code>.nil</code>
-included, an array item that is not a string <code>93.952</code>, no argument <code>93.901</code> and
-a second one <code>93.902</code>. <code>unsetMakeString</code> takes no argument and answers no value.</p>
+does not translate raises the error that <code>Method~new</code> raises for it. An argument
+that cannot supply a source, such as <code>.nil</code>, raises <code>SYNTAX 93.961</code>. No argument
+raises <code>93.901</code> and a second one raises <code>93.902</code>. <code>unsetMakeString</code> takes no argument and answers no value.</p>
 <pre><code class="language-rexx">.traceoutput~destination(.output)
 t = .traceobject
 m = .method~new('mk', 'use arg o; return "&lt;&lt;" || o~traceline~strip || "&gt;&gt;"')
@@ -1286,6 +1284,19 @@ t~setMakeString("not rexx )(") =&gt; 37.2
 t~unsetMakeString(1) =&gt; 93.902
 x = t~setMakeString("return 1") =&gt; 91.999
 x = t~unsetMakeString =&gt; 91.999
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+n = t~new
+t~setMakeString(.formatSource~new)
+say n~makeString
+t~setMakeString(.list~of('return "from lines"'))
+say n~makeString
+::class formatSource
+::method makeString
+  return 'return "from source"'
+</code></pre>
+<pre><code class="language-output">from source
+from lines
 </code></pre>
 <h2 id="instance-methods"><a class="header" href="#instance-methods">Instance methods</a></h2>
 <div class="rule" id="r-class.traceobject.compareto"><a href="#r-class.traceobject.compareto">[class.traceobject.compareto]</a></div>
