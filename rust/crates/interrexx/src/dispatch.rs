@@ -1670,10 +1670,6 @@ enum Primitive {
     /// A `Body::Native` whose class is `.Routine` -- what a `.ROUTINES` entry
     /// holds. Measured, `.routines~r~class` is `The Routine class`.
     Routine,
-    /// A `Body::Native` whose class is `.Directory`.
-    Directory,
-    /// A `Body::Native` whose class is `.StringTable` or a subclass of it.
-    StringTable(ObjRef),
     /// A `Body::Native` whose class is `.RexxContext` -- what `.context`
     /// answers. Measured, `.context~class` is `The RexxContext class`.
     Context,
@@ -2154,23 +2150,6 @@ impl Interp {
                     {
                         Ok(Primitive::Routine)
                     }
-                    Body::Native(native)
-                        if self.object_model.as_ref().map(|model| model.directory)
-                            == Some(native.class()) =>
-                    {
-                        Ok(Primitive::Directory)
-                    }
-                    // Descent rather than identity: `::class "TraceObject"
-                    // subclass StringTable`'s class-side `NEW` forwards to
-                    // this one, and the object it builds carries
-                    // `TraceObject` as its class.
-                    Body::Native(native)
-                        if self.object_model.as_ref().is_some_and(|model| {
-                            model.classes.is_a(native.class(), model.string_table)
-                        }) =>
-                    {
-                        Ok(Primitive::StringTable(native.class()))
-                    }
                     // `.context`. Its class is in the registry, so there is
                     // a behaviour to resolve against, and `RexxContext`'s
                     // instance behaviour here is the native class's whole set --
@@ -2243,8 +2222,6 @@ impl Interp {
             Primitive::Package => model.package,
             Primitive::Method => model.method,
             Primitive::Routine => model.routine,
-            Primitive::Directory => model.directory,
-            Primitive::StringTable(class) => class,
             Primitive::Context => model.context,
             Primitive::StackFrame => model.stack_frame,
             Primitive::RexxInfo => model.rexx_info,

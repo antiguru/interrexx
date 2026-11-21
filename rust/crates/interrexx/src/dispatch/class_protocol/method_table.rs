@@ -36,34 +36,19 @@ pub(in crate::dispatch) fn native_define_methods(
     Ok(None)
 }
 
-/// Whether `value` is a table `~defineMethods`, `~enhanced` and `~setMethod`
-/// can walk: one of this crate's own `Body::Native` directories, or a
-/// `Directory` or `StringTable` a program made, a collection with a hash
-/// store.
-fn string_keyed_table(interp: &mut Interp, value: ObjRef) -> bool {
-    if matches!(
-        interp.receiver_kind(value),
-        Ok(Primitive::Directory | Primitive::StringTable(_))
-    ) {
-        return true;
-    }
-    hash::owns(interp, value) && hash::string_keyed(interp, value)
-}
-
 /// The (name, value) pairs `createMethodDictionary` obtains from `table`'s
 /// `SUPPLIER`, each index as its string value, in supplier order.
 pub(super) fn method_table_pairs(
     interp: &mut Interp,
     table: ObjRef,
 ) -> Result<Vec<(Box<[u8]>, ObjRef)>, Failure> {
-    if string_keyed_table(interp, table) {
-        // **Asked before the walk**, because the walk cannot see the
-        // difference: a collection whose entries this crate answers per name
-        // rather than storing looks empty to a walk of its store, and a mutation
-        // over an empty walk is a mutation that silently does nothing.
-        if interp.holds_unbuilt_entry(table) {
-            return Err(Loud::unreadable_collection().into());
-        }
+    // A walk cannot see entries the interpreter answers by name rather than
+    // storing. A mutation over that empty walk would silently do nothing.
+    if hash::owns(interp, table)
+        && hash::string_keyed(interp, table)
+        && interp.holds_unbuilt_entry(table)
+    {
+        return Err(Loud::unreadable_collection().into());
     }
     // A user SUPPLIER can send protected methods or install methods
     // recursively. Run that method under the normal dispatch context.
