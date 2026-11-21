@@ -168,6 +168,13 @@ impl Interp {
             match piece {
                 TailPiece::Constant(text) => out.extend_from_slice(text),
                 TailPiece::Variable { name, at } => {
+                    // `append_tails`'s tripwire for a piece resolved against
+                    // another plan, which would read some other variable.
+                    debug_assert!(
+                        at.is_none() || self.bound_slot_of(name) == *at,
+                        "a compound tail piece names a slot this activation's plan does not \
+                         give its name"
+                    );
                     let value = self.read_by_name_at(name, *at);
                     if !self.plain_string(value) {
                         return false;
@@ -181,9 +188,11 @@ impl Interp {
 
     /// `read_symbol`'s compound read where it runs no Rexx code: the tail is
     /// plain ([`Interp::quiet_tail_key_into`]) and the tail is set, so no
-    /// NOVALUE hook runs. `None`, having changed nothing, anywhere else. A
-    /// `shared` read holds its key for the write after it, as
-    /// `SymbolRead::CompoundShared` does untraced.
+    /// NOVALUE hook runs. `None` anywhere else, having changed nothing but,
+    /// on a stem never set, the stem the lookup creates in its slot, which
+    /// the full path that follows would create the same. A `shared` read
+    /// holds its key for the write after it, as `SymbolRead::CompoundShared`
+    /// does untraced.
     #[cfg(feature = "jit")]
     pub(crate) fn read_compound_quiet(
         &mut self,
