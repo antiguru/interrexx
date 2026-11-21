@@ -106,8 +106,6 @@ pub(super) fn native_class(
         Primitive::Package => model.package,
         Primitive::Method => model.method,
         Primitive::Routine => model.routine,
-        Primitive::Directory => model.directory,
-        Primitive::StringTable(class) => class,
         Primitive::Context => model.context,
         Primitive::StackFrame => model.stack_frame,
         Primitive::RexxInfo => model.rexx_info,
@@ -444,8 +442,6 @@ pub(super) fn native_object_name(
         | Primitive::Package
         | Primitive::Method
         | Primitive::Routine
-        | Primitive::Directory
-        | Primitive::StringTable(_)
         | Primitive::Context
         | Primitive::RexxInfo
         | Primitive::Message => interp.default_string_value_text(receiver),
@@ -488,8 +484,6 @@ pub(super) fn native_object_name_set(
         Primitive::Package
         | Primitive::Method
         | Primitive::Routine
-        | Primitive::Directory
-        | Primitive::StringTable(_)
         | Primitive::Context
         | Primitive::StackFrame
         | Primitive::RexxInfo
@@ -683,10 +677,6 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
         Ok(Primitive::Class(_) | Primitive::Context | Primitive::RexxInfo) => {
             let target = interp.string_value_text(receiver)?;
             return Err(Raised::copy_not_supported(&target).into());
-        }
-        Ok(Primitive::Directory) => return Err(Loud::interpreter_table_copy("Directory").into()),
-        Ok(Primitive::StringTable(_)) => {
-            return Err(Loud::interpreter_table_copy("StringTable").into());
         }
         Err(kind) => return Err(Loud::unknown_receiver(kind).into()),
     };
