@@ -603,6 +603,14 @@ impl Plan {
                 }
             }
             InstructionKind::Select { case, .. } => self.note_opt(case, symbols),
+            InstructionKind::Catch(handler) => {
+                self.note_opt(&handler.variable, symbols);
+                for condition in &handler.conditions {
+                    if let Some(interrexx_parse::CatchCode::Variable(name)) = condition.code {
+                        self.note_variable_ref(&VariableRef::Direct(name), symbols);
+                    }
+                }
+            }
             // No expression and no data variable: `Select`'s own `label`
             // and `Leave`/`Iterate`/`End`'s `name` are *block* labels
             // matched against `LEAVE`/`ITERATE`/`END`, never read through

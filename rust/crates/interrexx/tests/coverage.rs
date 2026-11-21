@@ -244,6 +244,7 @@ fn exprs_of_instruction<'a>(kind: &'a InstructionKind, f: &mut impl FnMut(&'a Ex
         | InstructionKind::Then
         | InstructionKind::Else { .. }
         | InstructionKind::Otherwise
+        | InstructionKind::Catch(_)
         | InstructionKind::Leave { .. }
         | InstructionKind::Iterate { .. }
         | InstructionKind::End { .. }

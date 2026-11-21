@@ -76,7 +76,7 @@ impl Keywords {
 // The six tables, kept in ASCII order, which is load-bearing since `index_of`
 // returns a position that the caller maps to its own enum.
 
-const INSTRUCTIONS: [&str; 35] = [
+const INSTRUCTIONS: [&str; 36] = [
     "ADDRESS",
     "ARG",
     "CALL",
@@ -112,6 +112,7 @@ const INSTRUCTIONS: [&str; 35] = [
     "TRACE",
     "USE",
     "WHEN",
+    "CATCH",
 ];
 
 const SUB_KEYWORDS: [&str; 50] = [

@@ -13,17 +13,17 @@ use crate::{ProgramSource, SourceKind, scan};
 use super::{
     COND_ANY, COND_ERROR, COND_FAILURE, COND_HALT, COND_LOSTDIGITS, COND_NOMETHOD, COND_NOSTRING,
     COND_NOTREADY, COND_NOVALUE, COND_PROPAGATE, COND_SYNTAX, COND_USER, KW_ADDRESS, KW_ARG,
-    KW_CALL, KW_DO, KW_DROP, KW_ELSE, KW_END, KW_EXIT, KW_EXPOSE, KW_FORWARD, KW_GUARD, KW_IF,
-    KW_INTERPRET, KW_ITERATE, KW_LEAVE, KW_LOOP, KW_NOP, KW_NUMERIC, KW_OPTIONS, KW_OTHERWISE,
-    KW_PARSE, KW_PROCEDURE, KW_PULL, KW_PUSH, KW_QUEUE, KW_RAISE, KW_REPLY, KW_RETURN, KW_SAY,
-    KW_SELECT, KW_SIGNAL, KW_THEN, KW_TRACE, KW_USE, KW_WHEN, POPT_ARG, POPT_CASELESS, POPT_LINEIN,
-    POPT_LOWER, POPT_PULL, POPT_SOURCE, POPT_UPPER, POPT_VALUE, POPT_VAR, POPT_VERSION,
-    SUB_ADDITIONAL, SUB_APPEND, SUB_ARG, SUB_ARGUMENTS, SUB_ARRAY, SUB_BY, SUB_CASE, SUB_CLASS,
-    SUB_CONTINUE, SUB_COUNTER, SUB_DESCRIPTION, SUB_DIGITS, SUB_ENGINEERING, SUB_ERROR, SUB_EXIT,
-    SUB_EXPOSE, SUB_FOR, SUB_FOREVER, SUB_FORM, SUB_FUZZ, SUB_INDEX, SUB_INPUT, SUB_ITEM,
-    SUB_LABEL, SUB_LOCAL, SUB_MESSAGE, SUB_NAME, SUB_NORMAL, SUB_OFF, SUB_ON, SUB_OUTPUT, SUB_OVER,
-    SUB_REPLACE, SUB_RETURN, SUB_SCIENTIFIC, SUB_STEM, SUB_STREAM, SUB_STRICT, SUB_TO, SUB_UNTIL,
-    SUB_USING, SUB_VALUE, SUB_WHEN, SUB_WHILE, SUB_WITH,
+    KW_CALL, KW_CATCH, KW_DO, KW_DROP, KW_ELSE, KW_END, KW_EXIT, KW_EXPOSE, KW_FORWARD, KW_GUARD,
+    KW_IF, KW_INTERPRET, KW_ITERATE, KW_LEAVE, KW_LOOP, KW_NOP, KW_NUMERIC, KW_OPTIONS,
+    KW_OTHERWISE, KW_PARSE, KW_PROCEDURE, KW_PULL, KW_PUSH, KW_QUEUE, KW_RAISE, KW_REPLY,
+    KW_RETURN, KW_SAY, KW_SELECT, KW_SIGNAL, KW_THEN, KW_TRACE, KW_USE, KW_WHEN, POPT_ARG,
+    POPT_CASELESS, POPT_LINEIN, POPT_LOWER, POPT_PULL, POPT_SOURCE, POPT_UPPER, POPT_VALUE,
+    POPT_VAR, POPT_VERSION, SUB_ADDITIONAL, SUB_APPEND, SUB_ARG, SUB_ARGUMENTS, SUB_ARRAY, SUB_BY,
+    SUB_CASE, SUB_CLASS, SUB_CONTINUE, SUB_COUNTER, SUB_DESCRIPTION, SUB_DIGITS, SUB_ENGINEERING,
+    SUB_ERROR, SUB_EXIT, SUB_EXPOSE, SUB_FOR, SUB_FOREVER, SUB_FORM, SUB_FUZZ, SUB_INDEX,
+    SUB_INPUT, SUB_ITEM, SUB_LABEL, SUB_LOCAL, SUB_MESSAGE, SUB_NAME, SUB_NORMAL, SUB_OFF, SUB_ON,
+    SUB_OUTPUT, SUB_OVER, SUB_REPLACE, SUB_RETURN, SUB_SCIENTIFIC, SUB_STEM, SUB_STREAM,
+    SUB_STRICT, SUB_TO, SUB_UNTIL, SUB_USING, SUB_VALUE, SUB_WHEN, SUB_WHILE, SUB_WITH,
 };
 
 /// Parses `text` as a whole program and returns every instruction, with the
@@ -109,8 +109,8 @@ fn keyword_indices_still_name_their_own_spellings() {
     let keywords = Keywords::new(&mut symbols);
     assert_eq!(
         keywords.instructions.len(),
-        35,
-        "the keyword instruction table is not 35 entries"
+        36,
+        "the keyword instruction table is not 36 entries"
     );
     for (index, spelling) in [
         (KW_ADDRESS, "ADDRESS"),
@@ -148,6 +148,7 @@ fn keyword_indices_still_name_their_own_spellings() {
         (KW_TRACE, "TRACE"),
         (KW_USE, "USE"),
         (KW_WHEN, "WHEN"),
+        (KW_CATCH, "CATCH"),
     ] {
         assert_eq!(
             keywords.instructions.index_of(symbols.intern(spelling)),
@@ -1733,6 +1734,7 @@ const KEYWORD_CLAUSES: &[(&str, &str)] = &[
     ("ADDRESS", "address system"),
     ("ARG", "arg a"),
     ("CALL", "call f"),
+    ("CATCH", "do; catch syntax; end"),
     ("DO", "do 1\nend"),
     ("DROP", "drop a"),
     ("ELSE", "if 1 then nop\nelse nop"),
@@ -1771,7 +1773,7 @@ const KEYWORD_CLAUSES: &[(&str, &str)] = &[
 fn every_keyword_reaches_its_instruction_node() {
     // The length assertion is the load-bearing half: it fails when a keyword is
     // added to the table and nobody wrote a clause for it.
-    assert_eq!(KEYWORD_CLAUSES.len(), 35, "a keyword lost its clause");
+    assert_eq!(KEYWORD_CLAUSES.len(), 36, "a keyword lost its clause");
     let mut symbols = SymbolTable::default();
     let keywords = Keywords::new(&mut symbols);
     assert_eq!(keywords.instructions.len(), KEYWORD_CLAUSES.len());
@@ -1787,7 +1789,7 @@ fn every_keyword_reaches_its_instruction_node() {
     let mut listed: Vec<&str> = KEYWORD_CLAUSES.iter().map(|(k, _)| *k).collect();
     listed.sort_unstable();
     listed.dedup();
-    assert_eq!(listed.len(), 35, "a keyword is named twice");
+    assert_eq!(listed.len(), 36, "a keyword is named twice");
     for keyword in &listed {
         assert!(
             keywords

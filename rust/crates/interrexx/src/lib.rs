@@ -456,6 +456,7 @@ impl Loud {
             InstructionKind::Address { .. }
             | InstructionKind::Arg { .. }
             | InstructionKind::Call { .. }
+            | InstructionKind::Catch(_)
             | InstructionKind::Do { .. }
             | InstructionKind::Drop { .. }
             | InstructionKind::Else { .. }
