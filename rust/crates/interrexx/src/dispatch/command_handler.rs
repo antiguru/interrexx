@@ -381,6 +381,18 @@ pub(super) fn forward(
     Ok(Some(rc))
 }
 
+/// The count's string value, including the STRING fallback. A STRING answer
+/// with no string value yields .nil so CHARIN can raise its own argument error.
+pub(super) fn count_value(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Answer {
+    let count = object_argument(args, 0)?;
+    Ok(Some(interp.required_string_or_nil(count)?))
+}
+
 /// `cmdcontext_lineIn`: the next line of the redirected input, `.nil` at its
 /// end.
 pub(super) fn line_in(

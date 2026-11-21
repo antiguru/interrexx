@@ -273,6 +273,8 @@
   if q~items = 0 then raise notready return ''
   return q~pull
 
+::method '!countvalue' private external 'LIBRARY REXX cmdinput_countValue'
+
 -- r[class.commandinput.charin]
 ::method charIn
   expose q buf
@@ -281,6 +283,7 @@
   if arg(1, 'E') then raise syntax 93.963 array('CHARIN', 1)
   if \arg(2, 'E') then count = 1
   else do
+    count = self~!countvalue(count)
     if \datatype(count, 'N') then raise syntax 40.11 array('CHARIN', 2, count)
     if \datatype(count, 'W') | count < 0 then raise syntax 93.923 array('CHARIN', 2, count)
   end

@@ -608,6 +608,12 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         super::command_handler::forward,
     ),
     implemented(
+        "cmdinput_countValue",
+        Family::Command,
+        Arity::Fixed(1),
+        super::command_handler::count_value,
+    ),
+    implemented(
         "cmdcontext_lineIn",
         Family::Command,
         Arity::Fixed(0),

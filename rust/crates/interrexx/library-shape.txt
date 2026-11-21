@@ -235,6 +235,7 @@ class COMMANDHANDLER public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJECT a
   class HANDLERS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdhandler_handlers
   class REGISTER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class COMMANDINPUT public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,INPUTSTREAM annotations=- identity=1 env=same
+  instance !COUNTVALUE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdinput_countValue
   instance !NEXTLINE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !READLINE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=cmdcontext_lineIn
   instance CHARIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
