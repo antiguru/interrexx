@@ -204,6 +204,8 @@ impl Interp {
         top: bool,
         range: (usize, usize, usize),
     ) -> Option<JitAction> {
+        #[cfg(debug_assertions)]
+        let depth = self.activation_depth();
         let state = chunk.jit.state.get(do_index as usize)?;
         let compiled = match state.get() {
             REFUSED => return None,
@@ -298,12 +300,20 @@ impl Interp {
         // the driver's loop: the `Op::LoopNext` arm's own answers, and
         // `clause_region!`'s for a parked call.
         let (base, start, end) = range;
-        let settle = |interp: &mut Interp, flow: Flow, next: u32| match interp
-            .settle(code, chunk, registers, base, flow, next, start, end, source)
-        {
-            Ok(Settled::At(target)) => JitAction::At(target),
-            Ok(Settled::Escaped(other)) => JitAction::Return(Ok(Exit::Flow(other))),
-            Err(failure) => JitAction::Return(Err(failure)),
+        let settle = |interp: &mut Interp, flow: Flow, next: u32| {
+            // The driver's own check after a step, which a `Flow` settled
+            // here no longer passes through.
+            #[cfg(debug_assertions)]
+            debug_assert_eq!(
+                interp.activation_depth(),
+                depth,
+                "compiled passes left the activation stack changed"
+            );
+            match interp.settle(code, chunk, registers, base, flow, next, start, end, source) {
+                Ok(Settled::At(target)) => JitAction::At(target),
+                Ok(Settled::Escaped(other)) => JitAction::Return(Ok(Exit::Flow(other))),
+                Err(failure) => JitAction::Return(Err(failure)),
+            }
         };
         Some(match exit {
             JitExit::At(target) => JitAction::At(target),
