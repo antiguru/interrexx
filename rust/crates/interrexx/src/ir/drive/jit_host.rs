@@ -942,6 +942,8 @@ impl Host for Driven<'_, '_> {
     fn quiet_compound(&mut self, pc: u32) -> bool {
         let interp = &mut *self.interp;
         // A setting that shows values is the full path's, as for a builtin.
+        // No test reaches this: a loop whose setting starts to show values
+        // leaves compiled code at its next clause, as for a builtin.
         let mode = interp.trace_mode();
         if mode.results || mode.intermediates {
             return false;
