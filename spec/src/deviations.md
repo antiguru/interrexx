@@ -243,7 +243,7 @@ were a string, running garbage or crashing.
 A `.ROUTINES` entry written to a package that is not a routine is refused when
 it is called, exit code 120. ooRexx casts the object unchecked and crashes.
 Not covered: a metaclass `NEW` that answers something other than a class
-raises `SYNTAX 98.900` ([Deviation 114](r:class.class.deviation.114)), and a
+raises `SYNTAX 99.927` ([its rule](r:class.class.metaclass-new)), and a
 native method run on a receiver of the wrong kind raises a trappable
 `SYNTAX 93.900`, as [the rule](r:class.object.borrowed-native) says.
 
@@ -823,18 +823,10 @@ it. The same storage shows where a string is read as text: an item of an
 `Array` whose `objectName` answers such a number is written by `makeString`
 and `toString` as the digits; ooRexx writes bytes of its stored form.
 
-## 108. A supplier that is not a Supplier
+## 108. Withdrawn
 
-When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
-of an object through its `supplier` method, the object that `supplier`
-answers is used through the messages `available`, `index`, `item` and `next`
-when it is not a `Supplier`; an object that does not answer one of them raises
-`SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass
-included, is read directly, as a String subclass instance is read by its
-characters
-([Deviation 109](#109-string-subclass-instances-are-their-characters)). ooRexx
-reads the answer as a Supplier without checking it and crashes when it is not
-one.
+A supplier that is not a Supplier: interrexx raises `SYNTAX 98.994` as ooRexx
+does since upstream bug #2152, ruled by the owner on 2026-11-20 (#855).
 
 ## 109. String subclass instances are their characters
 
@@ -902,17 +894,17 @@ take is copied and counted the same way. ooRexx keeps the caller's array
 itself and passes its size as the number of arguments, trailing empty
 positions included, in all four.
 
-## 114. A metaclass NEW that answers an object that is not a class
+## 114. Withdrawn
 
-When `subclass`, `mixinclass` or a `::CLASS` directive sends `new` to a
-metaclass and the answer is not a class, `SYNTAX 98.900` is raised in the
-program that made the request, and it can be trapped. ooRexx crashes.
+A metaclass NEW that answers an object that is not a class: interrexx raises
+`SYNTAX 99.927` as ooRexx does since upstream bug #2164, ruled by the owner on
+2026-11-20 (#855).
 
-## 115. A request('ARRAY') answer that is neither an array nor .nil
+## 115. Withdrawn
 
-When `Method~new`, `Routine~new` or `Package~new` sends its source `request`
-with the argument `ARRAY` and the answer is neither an array nor `.nil`,
-`SYNTAX 88.913` is raised. ooRexx crashes.
+A request('ARRAY') answer that is neither an array nor .nil: interrexx raises
+`SYNTAX 93.961` as ooRexx does since upstream bug #2150, ruled by the owner on
+2026-11-20 (#855).
 
 ## 116. A failing notification target is sent messageComplete once
 

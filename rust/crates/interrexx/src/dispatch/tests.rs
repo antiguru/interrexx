@@ -1875,8 +1875,8 @@ fn an_entry_method_send_with_no_value_is_loud() {
 }
 
 /// **A metaclass carrying its own `NEW` decides what `~subclass` builds**,
-/// and two answers are refused: one that is not a class raises 98.900
-/// (Deviation 114), and a class `Class~new` did not build or a subclass
+/// and two answers are refused: one that is not a class raises 99.927
+/// (`r[class.class.metaclass-new]`), and a class `Class~new` did not build or a subclass
 /// already took, which the oracle rewires in place (Deviation 32), is loud.
 #[test]
 fn a_metaclass_new_answering_no_new_class_is_refused() {
@@ -1890,8 +1890,8 @@ fn a_metaclass_new_answering_no_new_class_is_refused() {
         )
     };
     let (code, stdout, stderr) = run_source(&program("return 'x'"));
-    assert_eq!((code, stdout.as_str()), (158, ""));
-    assert!(stderr.contains("Error 98.900:"), "{stderr}");
+    assert_eq!((code, stdout.as_str()), (157, ""));
+    assert!(stderr.contains("Error 99.927:"), "{stderr}");
     for (answer, refusal) in [
         (
             "return .array",

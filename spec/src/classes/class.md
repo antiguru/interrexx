@@ -2,7 +2,7 @@
 element: "Class"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Class Class (Metaclass); Builtin Classes > Fundamental Classes > Class Class (Metaclass) > Comparison Methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > activate; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotation; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotations; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > baseClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defaultName; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > id; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isAbstract; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isMetaclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isSubclassOf; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > metaClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > method; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > mixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > new; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > package; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > queryMixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 33, 63, 108, 109, 110, 114]
+deviations: [32, 33, 63, 109, 110]
 ---
 
 # Class
@@ -1159,8 +1159,8 @@ that the class holds is replaced. The method sends the argument the message
 answers one after the other, so any object that answers a supplier will do, and
 the indexes of an array are the names `1`, `2` and so on. An object that has no
 `supplier` method raises `SYNTAX 97.1`, as `.nil` does. The object that
-`supplier` answers need not be a `Supplier` ([Deviation
-108](r:class.class.deviation.108)). The argument is required (`88.901`) and a
+`supplier` answers must be a `Supplier` ([the supplier
+rule](r:class.class.methods-supplier)). The argument is required (`88.901`) and a
 second raises `93.902`. The method answers no value, and the classes of the
 class library accept it as little as `define`: they raise `98.985`. A call that
 fails more than one check, the number of arguments among them, raises the error
@@ -1249,8 +1249,8 @@ once, and nothing else to the argument; it sends nothing to the class. The
 indexes and items it takes are those that the supplier answers in turn. A
 `Supplier` is read without sending it messages: overrides of `available`,
 `index`, `item` and `next` do not run. Any other object that `supplier`
-answers is used through those four messages, as
-[Deviation 108](r:class.class.deviation.108) states.
+answers raises `SYNTAX 98.994`, as [the supplier
+rule](r:class.class.methods-supplier) states.
 
 ```rexx
 .k~defineMethods(.sp~new)
@@ -1667,8 +1667,8 @@ sent. A `new` of the metaclass that answers a class that `subclass`,
 `mixinclass` or a `::CLASS` directive has already completed, or a class of the
 library, is treated as [Deviation 32](r:class.class.deviation.32) states. A
 `new` of the metaclass that answers an object that is not a class raises
-`SYNTAX 98.900` from `subclass` or `mixinclass`, in the program that sent it,
-where it can be trapped ([Deviation 114](r:class.class.deviation.114)).
+`SYNTAX 99.927` from `subclass` or `mixinclass`, in the program that sent it,
+where it can be trapped ([the metaclass rule](r:class.class.metaclass-new)).
 
 ```rexx
 x = .k~subclass('S1')
@@ -1843,8 +1843,8 @@ no argument, and then sends the receiver the message `new` with the remaining
 arguments, so that the class method `new` that the class declares runs and
 `init` gets those arguments. The answer of `supplier` is read as [the
 `defineMethods` sends rule](r:class.class.definemethods.sends) says: a
-`Supplier` directly, any other object through four messages ([Deviation
-108](r:class.class.deviation.108)). The object that `new` answers gets the
+`Supplier` directly, and any other object raises `SYNTAX 98.994` ([the
+supplier rule](r:class.class.methods-supplier)). The object that `new` answers gets the
 methods and is the answer. Its class is the receiver; the object follows the
 rules of [the enhanced rule](r:class.methods.enhanced) for the search, and its
 default name is that of [the default name rule](r:class.object.defaultname).
@@ -1959,6 +1959,86 @@ enhanced: K
 93.974
 ```
 
+r[class.class.methods-supplier]
+When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
+of an object through its `supplier` method, the object that `supplier` answers
+must be a `Supplier`, an instance of a subclass of `Supplier` included, which
+is read as [the sends rule](r:class.class.definemethods.sends) says. Any other
+answer, `.nil` and no answer at all among them, raises `SYNTAX 98.994`, and
+nothing is sent to it: an object that answers `available`, `index`, `item` and
+`next` is not used through them. The first substitution of the error is the
+default name of the object the methods were taken from. In the example the
+`supplier` method of `holder` answers its argument, and `duck` records whether
+it is sent `available`.
+
+```rexx
+call try '.k~defineMethods(.holder~new("x"))'
+call try '.k~defineMethods(.holder~new(.nil))'
+call try '.k~defineMethods(.holder~new(.duck~new))'
+call try 'x = .k~enhanced(.holder~new(.duck~new))'
+call try 'x = .k~subclass("S", , .holder~new("x"))'
+call try 'x = .k~mixinclass("M", , .holder~new("x"))'
+call try '.k~defineMethods(.holder~new(.supplier~new(.array~of("return 1"), .array~of("m1"))))'
+say .k~new~m1 (.local~duck == .nil)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> made'
+  return
+bad: say arg(1) '=>' condition('o')~code condition('o')~additional[1]
+  return
+::class k
+::class holder
+::method init
+  expose obj
+  use arg obj
+::method supplier
+  expose obj
+  return obj
+::class duck
+::method available
+  .local~duck = 'sent'
+  return 0
+```
+
+```output
+.k~defineMethods(.holder~new("x")) => 98.994 a HOLDER
+.k~defineMethods(.holder~new(.nil)) => 98.994 a HOLDER
+.k~defineMethods(.holder~new(.duck~new)) => 98.994 a HOLDER
+x = .k~enhanced(.holder~new(.duck~new)) => 98.994 a HOLDER
+x = .k~subclass("S", , .holder~new("x")) => 98.994 a HOLDER
+x = .k~mixinclass("M", , .holder~new("x")) => 98.994 a HOLDER
+.k~defineMethods(.holder~new(.supplier~new(.array~of("return 1"), .array~of("m1")))) => made
+1 1
+```
+
+r[class.class.metaclass-new]
+A metaclass whose `new` answers an object that is not a class makes `subclass`
+or `mixinclass` raise `SYNTAX 99.927`, whatever the object is, `.nil` and a
+string included, and the error can be trapped by the program that sent the
+message, as [the chapter rule](r:class.index.metaclass-new) says. The metaclass
+is the second argument in the example.
+
+```rexx
+signal on syntax name e1
+y = .object~subclass('Y', .meta)
+say 'not reached'
+e1: say 'subclass' condition('o')~code condition('o')~additional[1]
+signal on syntax name e2
+z = .object~mixinclass('Z', .meta)
+say 'not reached'
+e2: say 'mixinclass' condition('o')~code condition('o')~additional[1]
+::class meta subclass class
+::method new class
+  return .nil
+```
+
+```output
+subclass 99.927 The META class
+mixinclass 99.927 The META class
+```
+
 ## Deviations
 
 r[class.class.deviation.32]
@@ -2018,32 +2098,6 @@ say 'after' y~id
 before
 ```
 
-r[class.class.deviation.114]
-A metaclass whose `new` answers an object that is not a class makes `subclass`
-or `mixinclass` raise `SYNTAX 98.900`, whatever the object is, `.nil` and a
-string included, and the error can be trapped by the program that sent the
-message, as [the chapter rule](r:class.index.deviation.114) says. ooRexx
-crashes. The metaclass is the second argument in the example.
-
-```rexx
-signal on syntax name e1
-y = .object~subclass('Y', .meta)
-say 'not reached'
-e1: say 'subclass' condition('o')~code
-signal on syntax name e2
-z = .object~mixinclass('Z', .meta)
-say 'not reached'
-e2: say 'mixinclass' condition('o')~code
-::class meta subclass class
-::method new class
-  return .nil
-```
-
-```output
-subclass 98.900
-mixinclass 98.900
-```
-
 r[class.class.deviation.33]
 The order of the entries that `methods` yields is not specified and may differ
 from ooRexx's ([Deviation 33](../deviations.md#33-hash-iteration-order)); which
@@ -2094,106 +2148,6 @@ bad: say arg(1) '=>' condition('o')~code
 .a~copy:.class => 93.970
 .object~copy:.object => 93.970
 .a~send(.array~of("copy", .object)) => 93.970
-```
-
-r[class.class.deviation.108]
-When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
-of an object through its `supplier` method, the object that `supplier` answers
-is used through the messages `available`, `index`, `item` and `next` when it
-is not a `Supplier`; an object that does not answer one of them raises `SYNTAX
-97.1` as for any message ([Deviation 108](../deviations.md)). A `Supplier`, an
-instance of a subclass of `Supplier` included, is read directly, as [the sends
-rule](r:class.class.definemethods.sends) says. ooRexx reads the answer as a
-Supplier without checking it, and crashes when it is not one. In the first
-example the `supplier` method of `holder` answers its argument, `lister` is no
-`Supplier` and records the messages sent to it, and `broken` lacks `next`. The
-second example gives `enhanced` such a collection.
-
-```rexx
-.local~seen = .directory~new
-.k~defineMethods(.holder~new(.lister~new))
-say .k~new~m1 .k~new~m2 .local~seen~allIndexes~sort~makestring('l', ' ')
-x = .k~subclass('S', , .holder~new(.lister~new))
-y = .k~mixinclass('M', , .holder~new(.lister~new))
-say x~m1 y~m2
-signal on syntax name bad
-.k~defineMethods(.holder~new(.broken~new))
-exit
-bad: say condition('o')~code
-::class k
-::class holder
-::method init
-  expose obj
-  use arg obj
-::method supplier
-  expose obj
-  return obj
-::class lister
-::method init
-  expose i
-  i = 1
-::method available
-  expose i
-  .local~seen['available'] = 1
-  return i <= 2
-::method index
-  expose i
-  .local~seen['index'] = 1
-  return 'M'i
-::method item
-  expose i
-  .local~seen['item'] = 1
-  return 'return' i
-::method next
-  expose i
-  .local~seen['next'] = 1
-  i = i + 1
-::class broken
-::method available
-  return 1
-::method index
-  return 'M9'
-::method item
-  return 'return 9'
-```
-
-```output
-1 2 available index item next
-1 2
-97.1
-```
-
-```rexx
-e = .k~enhanced(.holder~new(.lister~new))
-say e~m1 e~m2 .k~new~hasMethod('m1')
-::class k
-::class holder
-::method init
-  expose obj
-  use arg obj
-::method supplier
-  expose obj
-  return obj
-::class lister
-::method init
-  expose i
-  i = 1
-::method available
-  expose i
-  return i <= 2
-::method index
-  expose i
-  return 'M'i
-::method item
-  expose i
-  return 'return' i
-::method next
-  expose i
-  i = i + 1
-```
-
-```output
-1 2 0
 ```
 
 r[class.class.deviation.109]

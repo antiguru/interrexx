@@ -70,9 +70,10 @@ pub(crate) const BRANCH: u32 = 2;
 /// on, `Native::jump_to`; an op with no label in the pass leaves for the
 /// driver there, which the host has already recorded.
 pub(crate) const JUMP: u32 = 3;
-/// The op ran in a clause generated code opened, and the host handed the
-/// clause back with nothing queued at its boundary: its close is generated
-/// code's again.
+/// [`Host::release`]'s answer: the op ran in a clause generated code opened,
+/// and the host handed the clause back with nothing queued at its boundary,
+/// so its close is generated code's again. The helper records it in
+/// `Native::opened` and answers [`CONTINUE`]; generated code never sees it.
 pub(crate) const FAST: u32 = 4;
 
 /// What the generated code calls back into. Each step is bracketed by
@@ -109,14 +110,12 @@ pub(crate) trait Host {
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Step {
     /// Opens the clause at `pc`. Generated code opens it itself when the
-    /// block says the interpreter is steady and the clause is `tabled`, with
-    /// the line and indent the chunk's table gives it.
+    /// block says the interpreter is steady and the clause is `tabled`, and
+    /// the host reads its instruction, line and indent from the chunk's
+    /// table.
     Open {
         pc: u32,
-        index: u32,
         tabled: bool,
-        line: u32,
-        indent: u32,
         register_top: u16,
     },
     /// Closes the open clause, whose region ends at `next`.
@@ -224,9 +223,11 @@ fn guarded(ctx: *mut Ctx<'_>, step: impl FnOnce(&mut Ctx<'_>) -> u32) -> u32 {
     }
 }
 
-/// Runs `step` on the host between [`Host::enter`] and [`Host::leave`].
+/// Runs `step` on the host between [`Host::enter`] and [`Host::leave`]. The
+/// clause is the host's from here: `step` opens, closes or steps past it.
 fn bracket(ctx: *mut Ctx<'_>, step: impl FnOnce(&mut dyn Host) -> u32) -> u32 {
     guarded(ctx, |ctx| {
+        ctx.native.opened = 0;
         ctx.host.enter(&mut ctx.native);
         let answer = step(&mut *ctx.host);
         ctx.host.leave(&mut ctx.native);
@@ -252,19 +253,29 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
     bracket(ctx, |host| host.close(next))
 }
 
-/// The op at `pc`, after the host takes over the clause at `adopt` that
-/// generated code opened, unless that is [`NO_ADOPT`]: one call for both.
-extern "C" fn op_helper(ctx: *mut Ctx<'_>, adopt: u32, pc: u32) -> u32 {
-    bracket(ctx, |host| {
-        if adopt != NO_ADOPT {
-            let answer = host.adopt(adopt);
-            if answer != CONTINUE {
-                return answer;
-            }
-        }
-        match host.op(pc) {
-            CONTINUE if adopt != NO_ADOPT => host.release(),
+/// The op at `pc`, after the host takes over the clause at `clause` where
+/// generated code opened it (`Native::opened`): one call for both. A clause
+/// the host hands back is generated code's again, and the call answers
+/// [`CONTINUE`] for it.
+extern "C" fn op_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| {
+        let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
+        ctx.native.opened = 0;
+        ctx.host.enter(&mut ctx.native);
+        let host = &mut *ctx.host;
+        let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
+            CONTINUE => match host.op(pc) {
+                CONTINUE if adopt => host.release(),
+                answer => answer,
+            },
             answer => answer,
+        };
+        ctx.host.leave(&mut ctx.native);
+        if answer == FAST {
+            ctx.native.opened = 1;
+            CONTINUE
+        } else {
+            answer
         }
     })
 }
@@ -339,7 +350,8 @@ struct Emit<'a, 'b> {
     with_pc: cranelift_codegen::ir::SigRef,
     with_two: cranelift_codegen::ir::SigRef,
     /// Whether the open clause was opened by generated code and not yet
-    /// adopted, which is what makes its close free.
+    /// adopted, which is what makes its close free. `Native::opened` carries
+    /// it into an op's call into the host and back out.
     fast: Variable,
     _module: std::marker::PhantomData<&'a ()>,
 }
@@ -385,48 +397,33 @@ impl Emit<'_, '_> {
         self.b.switch_to_block(on);
     }
 
-    /// Calls `op_helper` for the op at `pc`, adopting the clause at
+    /// Calls `op_helper` for the op at `pc`, which adopts the clause at
     /// `clause_pc` first where generated code opened it, and leaves for `exit`
     /// unless the answer is CONTINUE or, with `also`, that answer and block.
     fn call_op(&mut self, clause_pc: Option<u32>, pc: u32, also: Option<(u32, Block)>) {
-        let adopt = match clause_pc {
-            Some(clause_pc) => {
-                let fast = self.b.use_var(self.fast);
-                let clause = self.b.ins().iconst(types::I32, i64::from(clause_pc));
-                let none = self.b.ins().iconst(types::I32, i64::from(NO_ADOPT));
-                self.b.ins().select(fast, clause, none)
-            }
-            None => self.b.ins().iconst(types::I32, i64::from(NO_ADOPT)),
-        };
-        // Whatever the op answers, the clause is the host's from here.
-        let no = self.b.ins().iconst(types::I8, 0);
-        self.b.def_var(self.fast, no);
+        if clause_pc.is_some() {
+            let fast = self.b.use_var(self.fast);
+            self.store_native(fast, layout::OPENED);
+        }
+        let clause = clause_pc.unwrap_or(NO_ADOPT);
         let address = self
             .b
             .ins()
             .iconst(self.pointer, op_helper as *const () as usize as i64);
+        let clause = self.b.ins().iconst(types::I32, i64::from(clause));
         let pc = self.b.ins().iconst(types::I32, i64::from(pc));
         let call = self
             .b
             .ins()
-            .call_indirect(self.with_two, address, &[self.ctx, adopt, pc]);
+            .call_indirect(self.with_two, address, &[self.ctx, clause, pc]);
         let answer = self.b.inst_results(call)[0];
-        let on = self.b.create_block();
-        if clause_pc.is_some() {
-            // The clause handed back: generated code closes it again.
-            let handed = self.b.create_block();
-            let other = self.b.create_block();
-            let back = self
-                .b
-                .ins()
-                .icmp_imm_u(IntCC::Equal, answer, i64::from(FAST));
-            self.b.ins().brif(back, handed, &[], other, &[]);
-            self.b.switch_to_block(handed);
-            let yes = self.b.ins().iconst(types::I8, 1);
-            self.b.def_var(self.fast, yes);
-            self.b.ins().jump(on, &[]);
-            self.b.switch_to_block(other);
-        }
+        // The clause is the host's now, unless the op handed it back.
+        let fast = if clause_pc.is_some() {
+            self.load_native(types::I64, layout::OPENED)
+        } else {
+            self.b.ins().iconst(types::I64, 0)
+        };
+        self.b.def_var(self.fast, fast);
         if let Some((code, block)) = also {
             let matches = self
                 .b
@@ -436,10 +433,22 @@ impl Emit<'_, '_> {
             self.b.ins().brif(matches, block, &[], other, &[]);
             self.b.switch_to_block(other);
         }
+        let on = self.b.create_block();
         self.b
             .ins()
             .brif(answer, self.exit, &[answer.into()], on, &[]);
         self.b.switch_to_block(on);
+    }
+
+    /// Whether generated code opened the running clause.
+    fn opened(&mut self) -> Value {
+        self.b.use_var(self.fast)
+    }
+
+    /// Records that the running clause is closed.
+    fn clear_opened(&mut self) {
+        let no = self.b.ins().iconst(types::I64, 0);
+        self.b.def_var(self.fast, no);
     }
 
     fn register(&mut self, register: u16) -> Value {
@@ -508,7 +517,9 @@ impl Emit<'_, '_> {
 }
 
 /// Generates the code for `pass`, or `None` where Cranelift cannot target
-/// this host or refuses the function.
+/// this host or refuses the function. Never inlined: it runs once per loop,
+/// and kept apart it is one frame in a profile.
+#[inline(never)]
 pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
     for step in &pass.steps {
         let named = match *step {
@@ -582,7 +593,6 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             s.params.push(AbiParam::new(types::I32));
             b.import_signature(s)
         };
-        let fast = b.declare_var(types::I8);
 
         let entry = b.create_block();
         let head = b.create_block();
@@ -590,10 +600,11 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         b.append_block_params_for_function_params(entry);
         b.append_block_param(exit, types::I32);
 
+        let fast = b.declare_var(types::I64);
         b.switch_to_block(entry);
         let ctx = b.block_params(entry)[0];
         let registers = b.ins().load(pointer, Emit::flags(), ctx, layout::REGISTERS);
-        let no = b.ins().iconst(types::I8, 0);
+        let no = b.ins().iconst(types::I64, 0);
         b.def_var(fast, no);
         b.ins().jump(head, &[]);
 
@@ -647,35 +658,26 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             match *step {
                 Step::Open {
                     pc,
-                    index,
                     tabled,
-                    line,
-                    indent,
                     register_top,
                 } => {
                     clause_pc = pc;
-                    open(
-                        &mut e,
-                        pc,
-                        index,
-                        tabled,
-                        line,
-                        indent,
-                        register_top,
-                        pass.registers,
-                    );
+                    open(&mut e, pc, tabled, register_top, pass.registers);
                 }
                 Step::Close { next } => {
-                    let fast = e.b.use_var(e.fast);
+                    let opened = e.opened();
                     let slow = e.b.create_block();
                     let done = e.b.create_block();
-                    e.b.ins().brif(fast, done, &[], slow, &[]);
+                    let free = e.b.create_block();
+                    e.b.ins().brif(opened, free, &[], slow, &[]);
+                    e.b.switch_to_block(free);
+                    e.clear_opened();
+                    e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(slow);
                     e.call(close_helper as *const (), Some(next));
+                    e.clear_opened();
                     e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(done);
-                    let no = e.b.ins().iconst(types::I8, 0);
-                    e.b.def_var(e.fast, no);
                 }
                 Step::Branch { pc, reg, target } => {
                     branch(&mut e, clause_pc, pc, reg, labels[&target], target);
@@ -808,17 +810,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
 /// A clause's opening: by generated code when the block is steady, the
 /// clause is tabled and the countdown has more than this clause left in it;
 /// otherwise by the host.
-#[expect(clippy::too_many_arguments, reason = "one Step::Open, unpacked")]
-fn open(
-    e: &mut Emit<'_, '_>,
-    pc: u32,
-    index: u32,
-    tabled: bool,
-    line: u32,
-    indent: u32,
-    register_top: u16,
-    registers: u16,
-) {
+fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, registers: u16) {
     let slow = e.b.create_block();
     let opened = e.b.create_block();
     if tabled {
@@ -835,17 +827,10 @@ fn open(
         e.b.switch_to_block(fast);
         let countdown = e.b.ins().iadd_imm_s(countdown, -1);
         e.store_native(countdown, layout::COUNTDOWN);
-        let index = e.b.ins().iconst(types::I64, i64::from(index));
-        e.store_native(index, layout::CLAUSE_INDEX);
-        let line = e.b.ins().iconst(types::I64, i64::from(line));
-        e.store_native(line, layout::CLAUSE_LINE);
-        let base = e.load_native(types::I64, layout::INDENT_BASE);
-        let indent = e.b.ins().iadd_imm_u(base, i64::from(indent));
-        e.store_native(indent, layout::CLAUSE_INDENT);
-        let dirty = e.b.ins().iconst(types::I64, 1);
-        e.store_native(dirty, layout::CLAUSE_DIRTY);
+        let at = e.b.ins().iconst(types::I64, i64::from(pc));
+        e.store_native(at, layout::CLAUSE_AT);
         clear_registers(e, register_top, registers);
-        let yes = e.b.ins().iconst(types::I8, 1);
+        let yes = e.b.ins().iconst(types::I64, 1);
         e.b.def_var(e.fast, yes);
         e.b.ins().jump(opened, &[]);
     } else {
@@ -853,8 +838,7 @@ fn open(
     }
     e.b.switch_to_block(slow);
     e.call(open_helper as *const (), Some(pc));
-    let no = e.b.ins().iconst(types::I8, 0);
-    e.b.def_var(e.fast, no);
+    e.clear_opened();
     e.b.ins().jump(opened, &[]);
     e.b.switch_to_block(opened);
 }
@@ -979,12 +963,8 @@ fn pass_step(e: &mut Emit<'_, '_>) {
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let countdown = e.b.ins().iadd_imm_s(countdown, -1);
     e.store_native(countdown, layout::COUNTDOWN);
-    let one = e.b.ins().iconst(types::I64, 1);
-    let line = e.load_native(types::I64, layout::LOOP_LINE);
-    e.store_native(line, layout::CLAUSE_LINE);
-    let indent = e.load_native(types::I64, layout::LOOP_INDENT);
-    e.store_native(indent, layout::CLAUSE_INDENT);
-    e.store_native(one, layout::CLAUSE_DIRTY);
+    let header = e.b.ins().iconst(types::I64, layout::CLAUSE_HEADER as i64);
+    e.store_native(header, layout::CLAUSE_AT);
     e.b.ins().jump(body, &[]);
 
     e.b.switch_to_block(slow);
@@ -1153,16 +1133,16 @@ fn branch(
     // The clause closes before the jump: free when generated code opened it,
     // the host's close otherwise.
     e.b.switch_to_block(take);
-    let fast = e.b.use_var(e.fast);
+    let opened = e.opened();
     let closing = e.b.create_block();
-    let closed = e.b.create_block();
-    e.b.ins().brif(fast, closed, &[], closing, &[]);
+    let free = e.b.create_block();
+    e.b.ins().brif(opened, free, &[], closing, &[]);
+    e.b.switch_to_block(free);
+    e.clear_opened();
+    e.b.ins().jump(target_block, &[]);
     e.b.switch_to_block(closing);
     e.call(close_helper as *const (), Some(target));
-    e.b.ins().jump(closed, &[]);
-    e.b.switch_to_block(closed);
-    let no = e.b.ins().iconst(types::I8, 0);
-    e.b.def_var(e.fast, no);
+    e.clear_opened();
     e.b.ins().jump(target_block, &[]);
 
     e.b.switch_to_block(slow);

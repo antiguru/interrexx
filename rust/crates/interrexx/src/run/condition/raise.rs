@@ -129,6 +129,7 @@ impl Interp {
             // alone, so nothing else sees the split.
             let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
             let mut slots = self.array_slots_of(value);
+            let mut held_in = value;
             // The object on the line, the same split the two keywords above
             // take. Measured, `trace i` over `raise syntax 93.900 additional
             // (1,2)`: `>K>   "ADDITIONAL" => "an Array"`.
@@ -139,11 +140,14 @@ impl Interp {
             if converted && slots.is_none() {
                 // An array request, a string's lines included, and 98.939 for
                 // `.nil` or a multi-dimensional answer.
-                let Some(array) = self.single_dimension_request(value)? else {
+                let Some((array, store)) = self.single_dimension_request(value)? else {
                     return Err(Raised::syntax_additional().into());
                 };
+                // The answer itself is carried, an `Array` subclass instance
+                // as it is; its items are read from the array holding them.
                 value = array;
-                slots = self.array_slots_of(array);
+                held_in = store;
+                slots = self.array_slots_of(store);
             }
             // The object itself, for the condition object to carry. The
             // substitution list below is a different thing: it is what a
@@ -154,7 +158,7 @@ impl Interp {
                 match slots {
                     Some(_) => {
                         self.roots.activity_mut().push_temp(value);
-                        substitutions = Some(value);
+                        substitutions = Some((value, held_in));
                     }
                     None => additional.push(self.to_text(value).to_vec()),
                 }
@@ -205,7 +209,7 @@ impl Interp {
             self.activity.pending_additional = Some(array);
             if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
                 self.roots.activity_mut().push_temp(array);
-                substitutions = Some(array);
+                substitutions = Some((array, array));
             }
             // **`an Array`, verbatim and regardless of the elements** -- it is
             // the Array class's own default string form, which is what is
@@ -225,8 +229,8 @@ impl Interp {
         if raise.condition.as_ref() == b"SYNTAX" {
             // Catalogue substitution happens when the condition is raised,
             // after all operands and their trace lines have been evaluated.
-            if let Some(array) = substitutions {
-                self.activity.pending_additional = Some(array);
+            if let Some((carried, array)) = substitutions {
+                self.activity.pending_additional = Some(carried);
                 let count = self.array_slots(array).map_or(0, <[_]>::len);
                 for at in 0..count {
                     // Operand evaluation and earlier string conversions can

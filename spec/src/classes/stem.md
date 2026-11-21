@@ -292,7 +292,8 @@ r[class.stem.hasitem]
 `hasItem(item)` answers 1 when an item stored at some tail is equal to the
 argument, and `index(item)` answers the tail of such an item, as a string, and
 `.nil` when there is none. The default of the stem is not an item. Both take
-exactly one argument: a second raises `SYNTAX 93.902`. Which tail `index`
+exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
+second raises `SYNTAX 93.902`. Which tail `index`
 answers when several items qualify is the first in the order of assignment
 ([the order rule](r:class.stem.deviation.1)).
 
@@ -309,6 +310,9 @@ t['p'] = 'v'
 say t~hasItem('v') t~index('v')
 call try 't~hasItem("a", "b")'
 call try 't~index(1, 2)'
+call try 't~hasItem'
+call try 't~index'
+call try 't~hasItem()'
 exit
 try:
   signal on syntax name bad
@@ -326,6 +330,9 @@ k1 k2 1
 1 p
 t~hasItem("a", "b") => 93.902
 t~index(1, 2) => 93.902
+t~hasItem => 93.903
+t~index => 93.903
+t~hasItem() => 93.903
 ```
 
 r[class.stem.items]

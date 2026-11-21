@@ -2077,7 +2077,7 @@ r[class.object.deviation.28]
 A `.ROUTINES` entry that is not a routine is refused when it is called: the
 program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
 A metaclass `new` that answers something other than a class raises a
-condition instead ([Deviation 114](r:class.class.deviation.114)), and so does
+condition instead ([its rule](r:class.class.metaclass-new)), and so does
 a native method run on a receiver of the wrong kind ([its
 rule](r:class.object.borrowed-native)).
 

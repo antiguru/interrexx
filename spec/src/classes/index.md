@@ -2,7 +2,7 @@
 element: "Classes"
 kind: chapter
 rexxref: "Builtin Classes; Objects and Classes > Mixin Classes; Objects and Classes > Overview of Classes Provided by Rexx; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > string"
-deviations: [30, 32, 36, 109, 114]
+deviations: [30, 32, 36, 109]
 ---
 
 # Classes
@@ -958,6 +958,44 @@ alpha-default | beta-name
 2 2
 ```
 
+r[class.index.metaclass-new]
+When `subclass` or `mixinclass` sends `new` to a metaclass and the answer is not
+a class, `SYNTAX 99.927` is raised by the message, in the program that sent it,
+where it can be trapped, as for a metaclass that is not one; the first
+substitution of the error is the metaclass's default name. The object that
+`new` answered may be any object, a string and `.nil` included. The metaclass
+answers a string for the first class of the example, `.nil` for the second and
+an instance of `Object` for the third, and makes the class `K` of the directive
+as `Class` does. The directive case is [the METACLASS
+rule](r:dir.class.metaclass-new).
+
+```rexx
+call try '.k~subclass("S")'
+call try '.k~subclass("N")'
+call try '.k~mixinclass("O")'
+exit
+try:
+  signal on syntax name e
+  interpret 'z =' arg(1)
+  say arg(1) '=> made'
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+::class meta subclass class
+::method new class
+  if arg(1) = 'S' then return 'a string'
+  if arg(1) = 'N' then return .nil
+  if arg(1) = 'O' then return .object~new
+  forward class (super)
+::class k metaclass meta
+```
+
+```output
+.k~subclass("S") => 99.927
+.k~subclass("N") => 99.927
+.k~mixinclass("O") => 99.927
+```
+
 ## Deviations
 
 r[class.index.deviation.30]
@@ -1055,42 +1093,6 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 ```output
 String 0
 String 0
-```
-
-r[class.index.deviation.114]
-When `subclass` or `mixinclass` sends `new` to a metaclass and the answer is not
-a class, `SYNTAX 98.900` is raised by the message, in the program that sent it,
-where it can be trapped. The object that `new` answered may be any object, a
-string and `.nil` included. ooRexx crashes. The metaclass answers a string for
-the first class of the example, `.nil` for the second and an instance of
-`Object` for the third, and makes the class `K` of the directive as `Class`
-does. The directive case is [the METACLASS rule](r:dir.class.deviation.114).
-
-```rexx
-call try '.k~subclass("S")'
-call try '.k~subclass("N")'
-call try '.k~mixinclass("O")'
-exit
-try:
-  signal on syntax name e
-  interpret 'z =' arg(1)
-  say arg(1) '=> made'
-  return
-e: say arg(1) '=>' condition('o')~code
-  return
-::class meta subclass class
-::method new class
-  if arg(1) = 'S' then return 'a string'
-  if arg(1) = 'N' then return .nil
-  if arg(1) = 'O' then return .object~new
-  forward class (super)
-::class k metaclass meta
-```
-
-```output
-.k~subclass("S") => 98.900
-.k~subclass("N") => 98.900
-.k~mixinclass("O") => 98.900
 ```
 
 r[class.index.deviation.36]

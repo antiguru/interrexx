@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41, 109, 115, 118, 134]
+deviations: [41, 109, 118, 134]
 ---
 
 # Method
@@ -265,8 +265,9 @@ it makes. A source that is not a string and not an array, and an instance of a
 subclass of `String` or `Array`, is sent `request` with the argument `ARRAY`;
 when that answers an array its items are the lines, read as [the source
 rule](r:class.method.new.source) reads an array. When it answers an object that
-is neither an array nor `.nil`, `new` raises `SYNTAX 88.913` and sends no
-`request` with `STRING` ([Deviation 115](r:class.method.deviation.115)). An
+is neither an array nor `.nil`, `new` raises `SYNTAX 93.961` if the answer came
+from `makeArray`, and takes it as `.nil` if it came from a `request` method of
+the source's own ([the answer rule](r:class.method.new.request-answer)). An
 instance of a subclass of `List` is sent `request` as well ([Deviation
 118](r:class.method.deviation.118)). When it answers `.nil` the source is sent
 `request` with the argument `STRING`: an answer that is a string is the one-line
@@ -1318,6 +1319,69 @@ ran
 m~setSecurityManager(1, 2) => 93.902
 ```
 
+r[class.method.new.request-answer]
+When a source's `request` with `ARRAY` answers an object that is neither an
+array nor `.nil`, what follows depends on where the answer came from. When the
+`request` is the one of `Object`, so that the answer is what the source's
+`makeArray` answered, `new` raises `SYNTAX 93.961` and sends no `request` with
+`STRING`. When the source has a `request` method of its own, the answer is
+taken as `.nil`: `request` with `STRING` follows, and its answer gives the
+line. [The Routine page rule](r:class.routine.new.request-answer) has the
+examples for `Routine~new`; in the examples here `mk` answers by `makeArray`
+and `src` by a `request` of its own.
+
+```rexx
+call try '.method~new("n", .mk~new("return 1"))'
+call try '.method~new("n", .mk~new(.directory~new))'
+call try '.method~new("n", .src~new("return 1"))~source[1]'
+call try '.method~new("n", .src~new(.directory~new))~source[1]'
+call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
+call try '.method~new("n", .src~new(.nil))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+::class mk
+::method init
+  expose ans
+  use arg ans
+::method makeArray
+  expose ans
+  say 'makeArray'
+  return ans
+```
+
+```output
+makeArray
+.method~new("n", .mk~new("return 1")) => 93.961
+makeArray
+.method~new("n", .mk~new(.directory~new)) => 93.961
+request ARRAY
+request STRING
+.method~new("n", .src~new("return 1"))~source[1] => return 2
+request ARRAY
+request STRING
+.method~new("n", .src~new(.directory~new))~source[1] => return 2
+request ARRAY
+.method~new("n", .src~new(.array~of("return 1")))~source[1] => return 1
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil))~source[1] => return 2
+```
+
 ## Deviations
 
 r[class.method.deviation.41]
@@ -1360,50 +1424,6 @@ say m~package~name m~source[1]
 
 ```output
 Foo say "src"
-```
-
-r[class.method.deviation.115]
-A source that answers `request` with `ARRAY` by an object that is neither an
-array nor `.nil` makes `new` raise `SYNTAX 88.913`, whatever the object is: a
-string, a list or any other object, and no `request` with `STRING` is sent after
-it. ooRexx crashes. [The
-Routine page rule](r:class.routine.deviation.115) has the examples for
-`Routine~new`; the examples here have `request` answer a string and a directory.
-
-```rexx
-call try '.method~new("n", .src~new("return 1"))'
-call try '.method~new("n", .src~new(.directory~new))'
-call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
-call try '.method~new("n", .src~new(.nil))~source[1]'
-exit
-try:
-  signal on syntax name bad
-  interpret 'zres =' arg(1)
-  say arg(1) '=>' zres
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class src
-::method init
-  expose ans
-  use arg ans
-::method request
-  expose ans
-  say 'request' arg(1)
-  if arg(1) == 'ARRAY' then return ans
-  return 'return 2'
-```
-
-```output
-request ARRAY
-.method~new("n", .src~new("return 1")) => 88.913
-request ARRAY
-.method~new("n", .src~new(.directory~new)) => 88.913
-request ARRAY
-.method~new("n", .src~new(.array~of("return 1")))~source[1] => return 1
-request ARRAY
-request STRING
-.method~new("n", .src~new(.nil))~source[1] => return 2
 ```
 
 r[class.method.deviation.118]
