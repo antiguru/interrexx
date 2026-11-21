@@ -833,3 +833,113 @@ fn the_shapes_the_oracle_accepts_are_accepted() {
         ok(source);
     }
 }
+
+#[test]
+fn catch_clauses_keep_their_owning_block_and_matchers() {
+    use crate::ast::{CatchCode, ExprKind};
+
+    let program = ok("do label attempt
+  do
+  catch syntax
+  end
+catch failure -2
+catch errorInfo = syntax 42.3, error rcWanted, user failed
+end attempt
+select case 1
+  when 1 then nop
+  otherwise nop
+catch any
+end
+loop 1
+catch notready
+end
+");
+    let mut handlers =
+        program
+            .main
+            .instructions
+            .iter()
+            .filter_map(|instruction| match &instruction.kind {
+                InstructionKind::Catch(handler) => Some(handler),
+                _ => None,
+            });
+    assert_eq!(handlers.next().unwrap().block, Some(1));
+    let failure = handlers.next().unwrap();
+    assert_eq!(failure.block, Some(0));
+    assert_eq!(failure.conditions[0].name.as_ref(), b"FAILURE");
+    assert_eq!(
+        failure.conditions[0].code,
+        Some(CatchCode::Literal(b"-2".as_slice().into()))
+    );
+
+    let handler = handlers.next().unwrap();
+    assert_eq!(handler.block, Some(0));
+    assert!(
+        matches!(handler.variable.as_ref().unwrap().kind, ExprKind::Variable(name)
+        if program.symbols.name(name) == "ERRORINFO")
+    );
+    assert_eq!(handler.conditions[0].name.as_ref(), b"SYNTAX");
+    assert_eq!(
+        handler.conditions[0].code,
+        Some(CatchCode::Literal(b"42.3".as_slice().into()))
+    );
+    assert!(
+        matches!(handler.conditions[1].code, Some(CatchCode::Variable(name))
+        if program.symbols.name(name) == "RCWANTED")
+    );
+    assert_eq!(handler.conditions[2].name.as_ref(), b"USER FAILED");
+
+    for owner_keyword in ["SELECT", "LOOP"] {
+        let handler = handlers.next().unwrap();
+        assert_eq!(
+            program.main.instructions[handler.block.unwrap()]
+                .kind
+                .keyword(),
+            Some(owner_keyword)
+        );
+    }
+    assert!(handlers.next().is_none());
+
+    let image = crate::program_image(&program);
+    let restored = crate::program_from_image(&image, program.source.parts().0)
+        .expect("parsed image round-trips");
+    assert_eq!(restored.main, program.main);
+}
+
+#[test]
+fn catch_translation_errors_match_the_oracle() {
+    let cases = [
+        ("catch syntax", (10, 8)),
+        ("do; if 1 then catch syntax; end", (10, 9)),
+        ("do; if 1 then nop; else catch syntax; end", (10, 11)),
+        ("do; catch; end", (20, 936)),
+        ("do; catch any,; end", (21, 904)),
+        ("do; catch user; end", (20, 915)),
+        ("do; catch . = syntax; end", (31, 3)),
+        ("do; catch potato; end", (25, 939)),
+        ("do; catch syntax 42.1234; end", (35, 937)),
+        ("do; catch syntax +42; end", (35, 1)),
+        ("select; catch syntax; nop; end", (7, 1)),
+        (
+            "select; when 1 then nop; catch syntax; when 2 then nop; end",
+            (9, 1),
+        ),
+        (
+            "select; when 1 then nop; catch syntax; otherwise nop; end",
+            (9, 2),
+        ),
+        ("do; catch syntax; x: nop; end", (47, 2)),
+        ("do; catch syntax; nop", (14, 1)),
+    ];
+    for (source, expected) in cases {
+        assert_eq!(err(source), expected, "{source}");
+    }
+}
+
+#[test]
+fn catch_can_still_name_a_variable_or_label() {
+    assert_eq!(
+        names(&ok("catch = 3; catch: say catch")),
+        ["<other>", "<other>", "SAY"]
+    );
+}

@@ -21,14 +21,16 @@ mod token;
 
 pub use ast::{
     Access, Address, AddressIo, Annotate, Annotation, AnnotationTarget, AttributeDirective,
-    AttributeStyle, Body, Call, CallTarget, ClassDirective, ClassRef, CodeBody, ConditionOption,
-    ConditionTrap, ConstantDirective, ConstantValue, ControlExpr, Controlled, Directive,
-    DirectiveKind, EndStyle, EndTarget, Expr, ExprKind, ExternalSpec, Forward, Guard, GuardOption,
-    Instruction, InstructionKind, Loop, LoopConditional, LoopKind, MethodDirective, NumericSetting,
-    OptionsForm, OutputOption, PackageOption, Parse, ParseSource, ParseTrigger, PrefixOp,
-    Protection, Raise, RaiseResult, Redirection, Requires, Resource, RoutineDirective, Signal,
-    Tail, Trace, TriggerKind, Use, UseTarget, VariableRef, compound_parts,
+    AttributeStyle, Body, Call, CallTarget, Catch, CatchCode, CatchCondition, ClassDirective,
+    ClassRef, CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue,
+    ControlExpr, Controlled, Directive, DirectiveKind, EndStyle, EndTarget, Expr, ExprKind,
+    ExternalSpec, Forward, Guard, GuardOption, Instruction, InstructionKind, Loop, LoopConditional,
+    LoopKind, MethodDirective, NumericSetting, OptionsForm, OutputOption, PackageOption, Parse,
+    ParseSource, ParseTrigger, PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires,
+    Resource, RoutineDirective, Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef,
+    compound_parts,
 };
+pub use convert::syntax_code;
 /// The parser's own nesting limit, exported because a caller has to be able
 /// to reason about it: it decides which inputs come back as `11.1` rather than
 /// as an AST, and it is the number a test or an embedder checks its own depths

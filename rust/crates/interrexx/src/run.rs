@@ -900,6 +900,7 @@ impl Interp {
             // independently stepped for a decision of its own, only ever
             // run past inside a bounded sub-loop.
             InstructionKind::Otherwise => Ok(Flow::Next),
+            InstructionKind::Catch(_) => Err(Loud::instruction(&instruction.kind).into()),
 
             // `DO`/`LOOP`, `IF` and `SELECT` are **not** reachable here, and
             // neither is a `WHEN`/`WHEN CASE`: every one is a listed branch of

@@ -11,6 +11,8 @@ use interrexx_parse::{ExprKind, InstructionKind, LoopKind, Operator, PrefixOp, T
 pub(crate) enum Reach {
     /// Implemented: must be witnessed by at least one program in the corpus.
     Implemented,
+    /// The grammar constructs this node. Execution still refuses it.
+    ParsedOnly,
     /// Structurally impossible in this position for either implementation.
     /// `Operator::Backslash` only.
     Unreachable,
@@ -52,6 +54,7 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::When { .. } => ("When", Reach::Implemented),
     InstructionKind::WhenCase { .. } => ("WhenCase", Reach::Implemented),
     InstructionKind::Otherwise => ("Otherwise", Reach::Implemented),
+    InstructionKind::Catch(_) => ("Catch", Reach::ParsedOnly),
     InstructionKind::Leave { .. } => ("Leave", Reach::Implemented),
     InstructionKind::Iterate { .. } => ("Iterate", Reach::Implemented),
     InstructionKind::End { .. } => ("End", Reach::Implemented),

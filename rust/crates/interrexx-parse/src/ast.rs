@@ -624,6 +624,7 @@ pub enum InstructionKind {
         exit: Option<usize>,
     },
     Otherwise,
+    Catch(Box<Catch>),
     Leave {
         name: Option<SymbolId>,
     },
@@ -714,6 +715,7 @@ impl InstructionKind {
             // means something else in each, not because the keyword differs.
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. } => "WHEN",
             InstructionKind::Otherwise => "OTHERWISE",
+            InstructionKind::Catch(_) => "CATCH",
             InstructionKind::Leave { .. } => "LEAVE",
             InstructionKind::Iterate { .. } => "ITERATE",
             InstructionKind::End { .. } => "END",
@@ -743,6 +745,32 @@ impl InstructionKind {
             InstructionKind::Nop => "NOP",
         })
     }
+}
+
+/// A condition handler at the end of a DO, LOOP or SELECT block.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Catch {
+    /// Where to assign the condition object on entry, if specified.
+    pub variable: Option<Expr>,
+    /// The listed conditions, in the order they were written.
+    pub conditions: Vec<CatchCondition>,
+    /// The opening instruction. Set when the parser assembles the block.
+    pub block: Option<usize>,
+}
+
+/// A CATCH match, optionally restricted to an error or return code.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct CatchCondition {
+    /// An uppercase condition name, with the name after USER included.
+    pub name: Box<[u8]>,
+    pub code: Option<CatchCode>,
+}
+
+/// A CATCH code is a constant or a simple name read when matching.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum CatchCode {
+    Literal(Box<[u8]>),
+    Variable(SymbolId),
 }
 
 /// One name in a `DROP`, `EXPOSE`, `PROCEDURE EXPOSE` or `USE LOCAL` list.
