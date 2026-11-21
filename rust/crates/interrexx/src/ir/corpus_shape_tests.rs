@@ -134,6 +134,9 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         }
         InstructionKind::Options { .. } => Some("OPTIONS"),
         InstructionKind::Interpret { .. } => Some("INTERPRET"),
+        InstructionKind::Command {
+            expression: Some(_),
+        } => Some("command"),
         _ => None,
     }
 }
@@ -536,6 +539,7 @@ fn check_body(
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
                 Some(root_of(expression))
             }
+            InstructionKind::Command { expression } => expression.as_ref().map(root_of),
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -738,6 +742,7 @@ fn sweep_every_corpus_body() {
         "ADDRESS VALUE",
         "OPTIONS",
         "INTERPRET",
+        "command",
     ] {
         assert!(
             seen.constructs.contains_key(construct),

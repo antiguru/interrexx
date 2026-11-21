@@ -1173,6 +1173,37 @@ impl Interp {
             self.echo_address_command(source, instruction, indent);
         }
         let value = self.eval(code, expression)?;
+        self.exec_command_value(
+            code,
+            index,
+            instruction,
+            source,
+            value,
+            indent,
+            environment,
+            io,
+        )
+    }
+
+    /// A command's work after its expression, from its value: the string
+    /// request, the `>>>` line, the redirections and the command itself, at
+    /// the trace indent `indent` the clause read before evaluating. The
+    /// walked clause and `Op::ExecWith` both run it.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "exec_command's own, less the expression, plus its value and indent"
+    )]
+    pub(crate) fn exec_command_value(
+        &mut self,
+        code: &Code<'_>,
+        index: usize,
+        instruction: &Instruction,
+        source: Option<&ProgramSource>,
+        value: ObjRef,
+        indent: usize,
+        environment: Option<&[u8]>,
+        io: Option<&AddressIo>,
+    ) -> Result<ExecOutcome, Failure> {
         self.roots.activity_mut().push_temp(value);
         let value = self.required_string_or_nil(value)?;
         let command = self.to_text(value).into_owned();

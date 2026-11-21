@@ -2629,7 +2629,8 @@ impl Interp {
 
     /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
     /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s, the
-    /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s and `INTERPRET`'s. `None` for every other
+    /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s, `INTERPRET`'s and a
+    /// command clause's. `None` for every other
     /// instruction, which compiles as before.
     pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
         match kind {
@@ -2646,6 +2647,7 @@ impl Interp {
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
                 Some(expression)
             }
+            InstructionKind::Command { expression } => expression.as_ref(),
             _ => None,
         }
     }
@@ -2654,7 +2656,10 @@ impl Interp {
     /// from its value as [`crate::ir::Op::ExecWith`], whose rest answers an
     /// `ExecOutcome`, rather than as [`crate::ir::Op::ExecValue`].
     pub(crate) fn exec_value_transfers(kind: &InstructionKind) -> bool {
-        matches!(kind, InstructionKind::Interpret { .. })
+        matches!(
+            kind,
+            InstructionKind::Interpret { .. } | InstructionKind::Command { .. }
+        )
     }
 
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
@@ -2701,7 +2706,7 @@ impl Interp {
     #[inline(never)]
     pub(crate) fn exec_with(
         &mut self,
-        _code: &Code<'_>,
+        code: &Code<'_>,
         index: usize,
         instruction: &Instruction,
         source: Option<&ProgramSource>,
@@ -2720,6 +2725,20 @@ impl Interp {
             InstructionKind::Interpret { .. } => self
                 .exec_interpret_value(index, instruction, source, value)
                 .map(ExecOutcome::Done),
+            // A command that blocked re-runs this op when it is woken, as a
+            // blocked `Op::Exec` re-runs its instruction, and ends there.
+            InstructionKind::Command { .. } if self.blocked_command_woken(index) => {
+                self.end_blocked_command(index, instruction, source)
+            }
+            InstructionKind::Command { .. } => {
+                // The walked clause reads this before evaluating, and the
+                // expression's ops ran before this op. The two agree: a call
+                // in the expression that returns has put the indent back, and
+                // one that does not (a `SIGNAL` out of the callee, a raise)
+                // leaves the clause before this op runs.
+                let indent = self.activity.clause_state.current_value_indent;
+                self.exec_command_value(code, index, instruction, source, value, indent, None, None)
+            }
             kind => Err(Loud::instruction(kind).into()),
         }
     }
