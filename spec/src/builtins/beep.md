@@ -60,11 +60,11 @@ or more, the magnitude rounds up, otherwise down. This is not the rule of [the
 conventions](r:conv.whole.digits), which rounds to 18 digits and raises
 `SYNTAX 40.12`. The frequency must be from 37 to 32767 and the duration from 0
 to 60000. An argument that is not in that form, whose rounded value has a
-fractional part other than zero, that is out of its range, or that is the null
-string raises `SYNTAX 88.907`, and so does an object whose string value fails
-these checks, such as `.nil`. A rounded value whose magnitude is 10\*\*18 or
-more is not a whole number for this purpose, whichever sign it has: it fails
-the form check.
+fractional part other than zero, or that is the null string raises `SYNTAX 88.903`,
+as does an object whose string value fails these checks, such as `.nil`.
+A rounded value whose magnitude is 10\*\*18 or more also fails the whole-number
+check. A whole number outside the frequency or duration range raises
+`SYNTAX 88.907`.
 
 ```rexx
 call try 36, 0
@@ -217,6 +217,9 @@ g: say condition('o')~code
 signal on syntax name h
 call beep 36, 'x'
 h: say condition('o')~code
+signal on syntax name l
+call beep '*', 1
+l: say condition('o')~code
 signal on syntax name i
 call beep '37.000000000000000001', 0
 i: say condition('o')~code
@@ -244,13 +247,14 @@ say 'done'
 88.907
 88.907
 88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
 \a\a\a\a\a\a\a\adone
 ```
 
@@ -263,7 +267,7 @@ x = beep(36, 0, 1)
 e: say wordpos(condition('o')~code, '88.922 88.907') > 0
 signal on syntax name f
 x = beep('x', )
-f: say wordpos(condition('o')~code, '88.907 88.901') > 0
+f: say wordpos(condition('o')~code, '88.903 88.901') > 0
 ```
 
 ```output

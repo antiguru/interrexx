@@ -277,9 +277,8 @@ pub(crate) fn beep(
     Ok(interp.text(b""))
 }
 
-/// A required `wholenumber_t` argument as the routine's marshalling converts
-/// it: 88.901 where it is omitted,
-/// 88.907 over the whole-number range where it is not a whole number.
+/// A required BEEP argument is 88.901 when omitted and 88.903 when
+/// it cannot be read as a native whole number.
 fn whole_number(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -290,11 +289,10 @@ fn whole_number(
         return Ok(number);
     }
     let found = interp.string_value_text(value)?;
-    Err(rexxutil::marshalled(Raised::native_argument_out_of_range(
-        &position.to_string(),
-        -MAX_WHOLENUMBER,
-        MAX_WHOLENUMBER,
-        &found,
+    Err(rexxutil::marshalled(Raised::syntax(
+        88,
+        903,
+        vec![position.to_string().into_bytes(), found],
     )))
 }
 
