@@ -88,8 +88,7 @@
   if n > 1 then raise syntax 93.902 array (1)
   source = arg(1)
   if source~isInstanceOf(.method) then custom = source
-  else if source~isInstanceOf(.string) | source~isInstanceOf(.array) then custom = .method~new('MAKESTRINGIMPL', source)
-  else raise syntax 93.961 array (1)
+  else custom = .method~new('MAKESTRINGIMPL', source)
 
 ::method unsetMakeString class
   expose custom
