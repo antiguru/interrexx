@@ -664,6 +664,8 @@ impl Driven<'_, '_> {
             ran,
         ) {
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) if in_place && next == open.end => {
+                #[cfg(test)]
+                HANDED_BACK.with(|handed| handed.set(handed.get() + 1));
                 self.closed = true;
                 return CONTINUE;
             }
@@ -1357,6 +1359,7 @@ thread_local! {
     static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
+    static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
 }
 
 #[cfg(test)]
@@ -1369,6 +1372,14 @@ fn reset_compiled_runs() {
     COMPILED_RUNS.with(|runs| runs.set(0));
     QUIET_CALLS.with(|calls| calls.set(0));
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
+    HANDED_BACK.with(|handed| handed.set(0));
+}
+
+/// How many regions that ended at their clause's end the host has closed in
+/// place, for compiled code to carry on, on this thread.
+#[cfg(test)]
+fn handed_back() -> usize {
+    HANDED_BACK.with(Cell::get)
 }
 
 /// How many compound reads and writes `Host::quiet_compound` has made on
