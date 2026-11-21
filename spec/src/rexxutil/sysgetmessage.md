@@ -120,7 +120,8 @@ language part. Which other places the system searches when no pattern names a
 file is not specified. Any other name, `REXX.CAT`, `./rexx.cat` and the null
 string included, is looked for as the name of a Unix catalog. A catalog that
 is not found, and a message that the catalog does not have, are not errors:
-the call answers [a text for each](r:util.sysgetmessage.answer).
+the call answers [a text for each](r:util.sysgetmessage.answer), and so is
+[a damaged catalog](r:util.sysgetmessage.damaged).
 
 ```rexx
 say (SysGetMessage(100, 'rexx.cat', 'c6zqa', 'c6zqb', 'c6zqc') == SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc'))
@@ -138,6 +139,59 @@ say (SysGetMessage(100, 'REXX.CAT') == nc) (SysGetMessage(100, 'rexx.cat ') == n
 1 1 1 1
 1 1 1
 1 1 1 1 1
+```
+
+## A damaged catalog
+
+r[util.sysgetmessage.damaged]
+A Unix catalog file holds three 32-bit words (a magic number, the number of
+buckets of its table and the number of planes of buckets), then two copies of
+the table, one in each byte order, each entry of it three words (a set number,
+a message number and the offset of the message), then the messages, each ended
+by `'00'x`. A file that is shorter than the three words, or that does not start
+with the magic number in either byte order, is a catalog that is not found. A
+catalog is damaged when its table has no entries, when the two tables do not
+fit in the file, when an entry of the table in the machine's byte order, one
+that holds a message or not, gives an offset at or past the end of the file,
+or when the last byte of the file is not `'00'x`. The other table is not read.
+A call that names a damaged catalog answers a text that says so, for every set
+and number it asks for and with the inserts of the call ignored. That text is
+not null and differs from the two texts of [the answer
+rule](r:util.sysgetmessage.answer), and its wording is not specified.
+
+```rexx
+call lineout 'c6zqdmg.msg', '$set 1'
+call lineout 'c6zqdmg.msg', '1 first'
+call lineout 'c6zqdmg.msg'
+address system 'gencat c6zqdmg.cat c6zqdmg.msg'
+s = .stream~new('c6zqdmg.cat'); sound = s~charin(1, s~chars); s~close
+nm = SysGetMessage(2, './c6zqdmg.cat')
+nc = SysGetMessage(1, './c6zqnone.cat')
+call write sound || 'x'
+bad = SysGetMessage(1, './c6zqdmg.cat')
+say (bad \== '') (bad \== nm) (bad \== nc)
+say (SysGetMessage(2, './c6zqdmg.cat', 'A') == bad) (SysGetMessageX(3, 1, './c6zqdmg.cat') == bad)
+call write sound~left(sound~length - 1)
+say (SysGetMessage(1, './c6zqdmg.cat') == bad)
+call write sound || 'x' || '00'x
+say SysGetMessage(1, './c6zqdmg.cat')
+call write sound~left(8)
+say (SysGetMessage(1, './c6zqdmg.cat') == nc)
+call SysFileDelete 'c6zqdmg.msg'
+call SysFileDelete 'c6zqdmg.cat'
+exit
+write: call SysFileDelete 'c6zqdmg.cat'
+  call charout 'c6zqdmg.cat', arg(1)
+  call charout 'c6zqdmg.cat'
+  return
+```
+
+```output
+1 1 1
+1 1
+1
+first
+1
 ```
 
 ## The answer

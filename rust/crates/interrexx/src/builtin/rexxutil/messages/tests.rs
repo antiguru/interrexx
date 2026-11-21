@@ -42,8 +42,7 @@ fn catalog_bytes(plane_size: u32, entries: &[(u32, u32, &str)]) -> Vec<u8> {
 }
 
 fn image(bytes: Vec<u8>) -> CatalogImage {
-    let mapped = bytes.len().div_ceil(4096) * 4096;
-    CatalogImage { bytes, mapped }
+    CatalogImage { bytes }
 }
 
 fn message(catalog: &Catalog, set: i32, number: i32) -> Option<String> {
@@ -81,37 +80,75 @@ fn a_catalog_header_in_the_other_byte_order_still_opens() {
     assert_eq!(message(&catalog, 1, 1).as_deref(), Some("one"));
 }
 
+/// SF #2168: each damage the oracle answers "Invalid message catalog" for,
+/// measured on a gencat catalog.
 #[test]
-fn a_last_message_without_its_nul_ends_in_the_mapping_zeros() {
-    let mut bytes = catalog_bytes(1, &[(1, 1, "one")]);
+fn a_damaged_catalog_is_rejected() {
+    let sound = catalog_bytes(2, &[(1, 1, "one"), (1, 2, "two"), (2, 5, "five")]);
+    let word = |bytes: &mut Vec<u8>, at: usize, value: u32| {
+        bytes[at..at + 4].copy_from_slice(&value.to_ne_bytes());
+    };
+    let rejected = |bytes: Vec<u8>| Catalog::new(image(bytes)).is_none();
+    assert!(!rejected(sound.clone()));
+    let mut bytes = sound.clone();
     bytes.pop();
-    let catalog = Catalog::new(image(bytes)).expect("valid");
-    assert_eq!(message(&catalog, 1, 1).as_deref(), Some("one"));
+    assert!(rejected(bytes), "a last message without its NUL");
+    let mut bytes = sound.clone();
+    bytes.extend_from_slice(b"x");
+    assert!(rejected(bytes), "a byte after the last NUL");
+    let mut bytes = sound.clone();
+    bytes.extend_from_slice(b"x\0");
+    assert!(
+        !rejected(bytes),
+        "bytes after the last message, ending in a NUL"
+    );
+    let mut bytes = sound.clone();
+    word(&mut bytes, 4, 0);
+    assert!(rejected(bytes), "no buckets");
+    let mut bytes = sound.clone();
+    word(&mut bytes, 8, 0);
+    assert!(rejected(bytes), "no planes");
+    let mut bytes = sound.clone();
+    word(&mut bytes, 4, 100_000);
+    assert!(rejected(bytes), "tables longer than the file");
+    let mut bytes = sound.clone();
+    word(&mut bytes, 4, u32::MAX);
+    word(&mut bytes, 8, u32::MAX);
+    assert!(rejected(bytes), "a table size that overflows");
+    assert!(rejected(sound[..12].to_vec()), "a header alone");
 }
 
+/// The bound on an offset: the last one that is a byte of the file opens, the
+/// next does not; an empty slot's offset is checked too, and only the
+/// host-order table is read.
 #[test]
-fn a_truncated_table_fails_the_size_test() {
-    let bytes = catalog_bytes(4, &[(1, 1, "one"), (1, 2, "two")]);
-    assert!(Catalog::new(image(bytes[..20].to_vec())).is_none());
-}
-
-/// `corpus/oracle-crashes.txt` entry 42: the oracle divides by the bucket
-/// count and dies of `SIGFPE`.
-#[test]
-fn a_table_of_no_buckets_holds_no_message() {
-    let mut bytes = catalog_bytes(1, &[]);
-    bytes.truncate(12);
-    bytes[4..8].copy_from_slice(&0u32.to_ne_bytes());
-    bytes.push(0);
-    let catalog = Catalog::new(image(bytes)).expect("glibc opens it");
-    assert_eq!(message(&catalog, 1, 1), None);
-}
-
-#[test]
-fn a_table_reaching_past_the_mapping_is_rejected() {
-    let mut bytes = catalog_bytes(1, &[(1, 1, "one")]);
-    bytes[4..8].copy_from_slice(&100_000u32.to_ne_bytes());
-    assert!(Catalog::new(image(bytes)).is_none());
+fn every_host_order_offset_is_inside_the_file() {
+    let sound = catalog_bytes(2, &[(1, 1, "one"), (1, 2, "two"), (2, 5, "five")]);
+    let strings = 12 + 2 * 2 * 2 * 12;
+    let room = u32::try_from(sound.len() - strings).expect("small");
+    let host = if cfg!(target_endian = "little") {
+        12
+    } else {
+        12 + 2 * 2 * 12
+    };
+    let other = if cfg!(target_endian = "little") {
+        12 + 2 * 2 * 12
+    } else {
+        12
+    };
+    let with = |table: usize, entry: usize, field: usize, value: u32| {
+        let mut bytes = sound.clone();
+        let at = table + entry * 12 + field * 4;
+        bytes[at..at + 4].copy_from_slice(&value.to_ne_bytes());
+        Catalog::new(image(bytes))
+    };
+    assert!(with(host, 0, 2, room - 1).is_some(), "the last byte");
+    assert!(with(host, 0, 2, room).is_none());
+    let empty = (0..4)
+        .find(|entry| sound[host + entry * 12..host + entry * 12 + 4] == [0; 4])
+        .expect("an empty slot");
+    assert!(with(host, empty, 2, room).is_none(), "an empty slot");
+    assert!(with(other, 0, 2, u32::MAX).is_some(), "the other table");
 }
 
 #[test]
