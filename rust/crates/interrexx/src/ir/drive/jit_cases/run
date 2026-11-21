@@ -117,8 +117,9 @@ say c~run(10000)
 50005000
 compiled: line 7
 
-# a body holding a TRACE instruction keeps its clause echoes behind run-time
-# gates, which compiled code does not take, so it stays driven
+# a body holding a TRACE instruction keeps its value echoes behind run-time
+# gates, which compiled code asks too; once TRACE R echoes clauses, each clause
+# is the driver's
 run
 n = 0
 do i = 1 to 10000
@@ -157,7 +158,7 @@ say n m
        >>>     "10000"
        >>>     "10001"
      7 *-* trace o
-compiled: no
+compiled: line 2
 
 # a builtin call in a compiled body
 run
@@ -290,8 +291,8 @@ compiled: line 2
 
 # a TRACE VALUE in the body switches the setting in the last passes. A body
 # holding a TRACE compiles with its trace gates (TraceRead and the like), which
-# `pass_of` refuses (#850), so it stays driven; once those compile, the switch
-# runs from the hosted ExecValue and this case pins it
+# compiled code asks too (#850): the switch runs from the hosted ExecValue, and
+# each clause after it is the driver's
 run
 x = 0; t = 'n'
 do i = 1 to 10000
@@ -337,7 +338,7 @@ say x y
        >>>     "10001"
      8 *-* say x y
        >>>   "50005000 100000000"
-compiled: no
+compiled: line 2
 
 # quiet builtins in a compiled body: one call each, over argument registers,
 # with no refresh
@@ -969,6 +970,252 @@ say n m k i
 40513501 -40441485 -3 9001
 compiled: line 2
 quiet builtin calls: yes
+
+# a body that sets TRACE to what it was (rexxcps's `trace value trace()`):
+# its value echo ops are in the pass, each behind its own gate
+run
+n = 0; m = 0
+do i = 1 to 10000
+  trace value trace()
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k
+----
+50005000 -49924980 -1
+compiled: line 2
+
+# TRACE I set by a call in the middle of a compiled clause: the echoes after
+# it in that clause are the host's, and the clauses after it the driver's
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then x = length(trace('I')) + k * 2 - a
+  if i = 9001 then trace off
+end
+say n m k x
+----
+50005000 -49924980 -1 -8
+       >F>         TRACE => "N"
+       >A>         "N"
+       >F>         LENGTH => "1"
+       >V>         K => "-4"
+       >L>         "2"
+       >O>         "*" => "-8"
+       >O>         "+" => "-7"
+       >V>         A => "1"
+       >O>         "-" => "-8"
+       >=>         X <= "-8"
+     6 *-*   if i = 9001 
+       >V>     I => "9000"
+       >L>     "9001"
+       >O>     "=" => "0"
+       >>>     "0"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >V>     I => "9000"
+       >>>     "9000"
+       >>>     "9001"
+       >=>     I <= "9001"
+     3 *-*   n = n + i;
+       >V>     N => "40504500"
+       >V>     I => "9001"
+       >O>     "+" => "40513501"
+       >>>     "40513501"
+       >=>     N <= "40513501"
+     3 *-*   a = n // 7;
+       >V>     N => "40513501"
+       >L>     "7"
+       >O>     "//" => "0"
+       >>>     "0"
+       >=>     A <= "0"
+     3 *-*   b = a * 3;
+       >V>     A => "0"
+       >L>     "3"
+       >O>     "*" => "0"
+       >>>     "0"
+       >=>     B <= "0"
+     3 *-*   c = b - i;
+       >V>     B => "0"
+       >V>     I => "9001"
+       >O>     "-" => "-9001"
+       >>>     "-9001"
+       >=>     C <= "-9001"
+     3 *-*   d = c + a
+       >V>     C => "-9001"
+       >V>     A => "0"
+       >O>     "+" => "-9001"
+       >>>     "-9001"
+       >=>     D <= "-9001"
+     4 *-*   m = m + d;
+       >V>     M => "-40432484"
+       >V>     D => "-9001"
+       >O>     "+" => "-40441485"
+       >>>     "-40441485"
+       >=>     M <= "-40441485"
+     4 *-*   e = m // 11;
+       >V>     M => "-40441485"
+       >L>     "11"
+       >O>     "//" => "-7"
+       >>>     "-7"
+       >=>     E <= "-7"
+     4 *-*   g = e - b;
+       >V>     E => "-7"
+       >V>     B => "0"
+       >O>     "-" => "-7"
+       >>>     "-7"
+       >=>     G <= "-7"
+     4 *-*   h = g + c;
+       >V>     G => "-7"
+       >V>     C => "-9001"
+       >O>     "+" => "-9008"
+       >>>     "-9008"
+       >=>     H <= "-9008"
+     4 *-*   k = h // 5
+       >V>     H => "-9008"
+       >L>     "5"
+       >O>     "//" => "-3"
+       >>>     "-3"
+       >=>     K <= "-3"
+     5 *-*   if i = 9000 
+       >V>     I => "9001"
+       >L>     "9000"
+       >O>     "=" => "0"
+       >>>     "0"
+     6 *-*   if i = 9001 
+       >V>     I => "9001"
+       >L>     "9001"
+       >O>     "=" => "1"
+       >>>     "1"
+     6 *-*     then
+     6 *-*       trace off
+compiled: line 2
+
+# TRACE switched off by a call in the middle of a clause under TRACE I: the
+# echoes stop after the call. While TRACE echoes clauses each clause is the
+# driver's from its opening, so this clause never runs compiled
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then trace i
+  if i = 9001 then x = length(trace('O')) + k * 2 - a
+end
+say n m k x
+----
+50005000 -49924980 -1 -5
+     6 *-*   if i = 9001 
+       >V>     I => "9000"
+       >L>     "9001"
+       >O>     "=" => "0"
+       >>>     "0"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >V>     I => "9000"
+       >>>     "9000"
+       >>>     "9001"
+       >=>     I <= "9001"
+     3 *-*   n = n + i;
+       >V>     N => "40504500"
+       >V>     I => "9001"
+       >O>     "+" => "40513501"
+       >>>     "40513501"
+       >=>     N <= "40513501"
+     3 *-*   a = n // 7;
+       >V>     N => "40513501"
+       >L>     "7"
+       >O>     "//" => "0"
+       >>>     "0"
+       >=>     A <= "0"
+     3 *-*   b = a * 3;
+       >V>     A => "0"
+       >L>     "3"
+       >O>     "*" => "0"
+       >>>     "0"
+       >=>     B <= "0"
+     3 *-*   c = b - i;
+       >V>     B => "0"
+       >V>     I => "9001"
+       >O>     "-" => "-9001"
+       >>>     "-9001"
+       >=>     C <= "-9001"
+     3 *-*   d = c + a
+       >V>     C => "-9001"
+       >V>     A => "0"
+       >O>     "+" => "-9001"
+       >>>     "-9001"
+       >=>     D <= "-9001"
+     4 *-*   m = m + d;
+       >V>     M => "-40432484"
+       >V>     D => "-9001"
+       >O>     "+" => "-40441485"
+       >>>     "-40441485"
+       >=>     M <= "-40441485"
+     4 *-*   e = m // 11;
+       >V>     M => "-40441485"
+       >L>     "11"
+       >O>     "//" => "-7"
+       >>>     "-7"
+       >=>     E <= "-7"
+     4 *-*   g = e - b;
+       >V>     E => "-7"
+       >V>     B => "0"
+       >O>     "-" => "-7"
+       >>>     "-7"
+       >=>     G <= "-7"
+     4 *-*   h = g + c;
+       >V>     G => "-7"
+       >V>     C => "-9001"
+       >O>     "+" => "-9008"
+       >>>     "-9008"
+       >=>     H <= "-9008"
+     4 *-*   k = h // 5
+       >V>     H => "-9008"
+       >L>     "5"
+       >O>     "//" => "-3"
+       >>>     "-3"
+       >=>     K <= "-3"
+     5 *-*   if i = 9000 
+       >V>     I => "9001"
+       >L>     "9000"
+       >O>     "=" => "0"
+       >>>     "0"
+     6 *-*   if i = 9001 
+       >V>     I => "9001"
+       >L>     "9001"
+       >O>     "=" => "1"
+       >>>     "1"
+     6 *-*     then
+     6 *-*       x = length(trace('O')) + k * 2 - a
+       >L>         "O"
+       >A>         "O"
+compiled: line 2
+
+# a TRACE instruction run on some passes, and TRACE R at the end
+run
+n = 0; m = 0
+do i = 1 to 10000
+  if i // 1000 = 0 then trace value 'N'
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9999 then trace r
+end
+say n m k
+----
+50005000 -49924980 -1
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9999"
+       >>>     "10000"
+     3 *-*   if i // 1000 = 0 
+       >>>     "1"
+     3 *-*     then
+     3 *-*       trace value 'N'
+       >K>         "VALUE" => "N"
+compiled: line 2
 
 # a WHILE of `|` whose operand stops being logical: generated code checks both
 # operands, and hands the boundary to the host, which raises 34

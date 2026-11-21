@@ -628,6 +628,16 @@ fn pass_of(
                 },
                 // The test region's last op, which decides the pass.
                 Op::LoopTested { .. } if test && at + 1 == end => Step::Tested { pc: at },
+                // A value echo, whose own gate generated code asks: the op
+                // through the host while `TRACE` shows intermediates, and
+                // nothing otherwise. A body that sets `TRACE` keeps them
+                // (#850).
+                Op::TraceArgument { .. }
+                | Op::TraceFunction { .. }
+                | Op::TraceLiteral { .. }
+                | Op::TraceRead { .. }
+                | Op::TraceOperator { .. }
+                | Op::TracePrefix { .. } => Step::Trace { pc: at },
                 // The region's last op, so the clause's close follows it.
                 Op::ConditionJump { reg, target, .. } if at + 1 == end && inside(target) => {
                     Step::Branch {
@@ -745,7 +755,8 @@ fn pass_of(
             Step::Builtin { .. }
             | Step::Compound { .. }
             | Step::Open { .. }
-            | Step::Close { .. } => {}
+            | Step::Close { .. }
+            | Step::Trace { .. } => {}
             _ if inner == 0 => native += 1,
             _ => {}
         }
@@ -1427,6 +1438,7 @@ impl Host for Driven<'_, '_> {
             && fresh.steady == native.steady
             && fresh.small_int_bound == native.small_int_bound
             && fresh.quick_values == native.quick_values
+            && fresh.intermediates == native.intermediates
             && fresh.jump_to == native.jump_to
     }
 
@@ -1500,6 +1512,7 @@ impl Host for Driven<'_, '_> {
         let fuzz = settings.fuzz();
         native.small_int_bound = crate::value::small_int_bound(digits);
         native.quick_values = u64::from(fuzz == 0 && !mode.results);
+        native.intermediates = u64::from(interp.tracing_intermediates());
         // `Op::Load`'s and `Op::Store`'s fast paths reach the slot only for a
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
         // results; the window is offered only where both hold.
