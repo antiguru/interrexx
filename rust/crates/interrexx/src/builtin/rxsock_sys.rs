@@ -66,7 +66,9 @@ pub(crate) fn with_socket<T>(
 /// A duplicate of descriptor `fd`, close-on-exec, which shares its file offset
 /// and status flags and closes alone: what a `HANDLE:n` stream reads and
 /// writes. `EBADF` where `fd` names no open descriptor or one of the
-/// interpreter's own. Safe: the borrow is [`with_socket`]'s, and the duplicate
+/// interpreter's reserved ones (`interrexx_rxapi::reserved`); a descriptor the
+/// interpreter holds that is not reserved, such as a command's capture pipe,
+/// is duplicated as any other. Safe: the borrow is [`with_socket`]'s, and the duplicate
 /// is a new descriptor the returned `OwnedFd` owns.
 pub(crate) fn duplicate(fd: RawFd) -> Os<std::os::fd::OwnedFd> {
     with_socket(fd, |borrowed| {

@@ -212,3 +212,32 @@ fn an_append_stream_refuses_positions_within_a_file_over_four_gib() {
          5368709122\n"
     );
 }
+
+/// spec: bif.lineout.record
+///
+/// A LINEOUT that closes a transient record stream completes no record: what
+/// was written reaches the pipe as it is. The stream is a `HANDLE:` stream on
+/// the write end of a pipe this process holds.
+#[test]
+fn a_transient_record_stream_is_not_padded_on_close() {
+    use std::io::Read;
+    use std::os::fd::AsRawFd;
+    let (mut reader, writer) = std::io::pipe().expect("a pipe");
+    let program = format!(
+        "s = .Stream~new('HANDLE:{}')\n\
+         say s~open('write binary reclength 4') s~charout('ab') s~lineout\n",
+        writer.as_raw_fd()
+    );
+    let outcome = run(&program, Invocation::none());
+    drop(writer);
+    let mut got = Vec::new();
+    reader.read_to_end(&mut got).expect("the pipe is read");
+    assert_eq!(
+        outcome.exit_code,
+        0,
+        "stderr: {}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(stdout(&outcome), "READY: 0 0\n");
+    assert_eq!(String::from_utf8_lossy(&got), "ab");
+}

@@ -255,10 +255,7 @@ pub(super) fn handle_set(
         1 => StandardStream::Out,
         2 => StandardStream::Err,
         _ => {
-            let state = require_mut(interp, receiver)?;
-            state.descriptor = true;
-            // Named by its name as written, which `qualify` answers.
-            state.qualified = state.name.as_slice().into();
+            require_mut(interp, receiver)?.descriptor = true;
             return Ok(None);
         }
     };
@@ -598,7 +595,7 @@ pub(super) fn open(
     // as written from here on.
     if state.handle.is_some() {
         state.qualified = state.name.as_slice().into();
-        if parse_open_options(&options).is_err() {
+        if !parse_open_options(&options).is_ok_and(|parsed| handle_options(&parsed)) {
             return Err(Raised::syntax(93, 0, Vec::new()).into());
         }
         state.status = StreamStatus::Ready;
@@ -646,6 +643,15 @@ pub(super) fn open(
     // number given to LINEOUT can be found; the reads refuse by the mode.
 
     let descriptor = stream_descriptor(interp, receiver)?;
+    if descriptor.is_some() {
+        if !handle_options(&parsed) {
+            return Err(Raised::syntax(93, 0, Vec::new()).into());
+        }
+        // Named by its name as written once it is open, which `qualify`
+        // answers.
+        let state = require_mut(interp, receiver)?;
+        state.qualified = state.name.as_slice().into();
+    }
     if descriptor.is_none()
         && parsed.read_only
         && !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file())
@@ -716,7 +722,12 @@ pub(super) fn open(
     }
     // A persistent writeable stream writes at the end; a read-only one has no
     // write position at all, which is the `0` `QUERY POSITION WRITE` answers.
-    let write_position: i64 = if parsed.read_only { 0 } else { size as i64 + 1 };
+    // A `HANDLE:n` stream's read-only write position is character 1.
+    let write_position: i64 = match (parsed.read_only, descriptor) {
+        (true, None) => 0,
+        (true, Some(_)) => 1,
+        (false, _) => size as i64 + 1,
+    };
 
     let state = require_mut(interp, receiver)?;
     state.mode = interrexx_core::OpenMode {
@@ -788,6 +799,8 @@ fn ensure_open(
         return Ok(true);
     }
     if let Some(descriptor) = stream_descriptor(interp, receiver)? {
+        let state = require_mut(interp, receiver)?;
+        state.qualified = state.name.as_slice().into();
         let (opened, mode) = match descriptor_file(descriptor) {
             Ok(file) => {
                 let mode = descriptor_mode(&file);
@@ -876,6 +889,13 @@ fn settle_implicit_open(
     ));
     state.append_extent = 0;
     Ok(true)
+}
+
+/// Whether the open options suit a `HANDLE:` stream: APPEND, REPLACE and the
+/// SHARE options name things a descriptor that is already open cannot have,
+/// and are refused with the bare 93 (`r[bif.stream.handle]`).
+fn handle_options(parsed: &Parsed) -> bool {
+    !(parsed.append || parsed.truncate || parsed.shared_set)
 }
 
 /// The descriptor a `HANDLE:n` stream for some `n` other than 0, 1 and 2
@@ -1615,7 +1635,10 @@ pub(super) fn lineout(
     let line = optional_position(interp, args.get(1).copied().flatten(), 2)?;
     declared_only(args, 2)?;
     if data.is_none() && line.is_none() {
+        // A record the close could not complete is reported, and the stream
+        // is closed all the same, so a later LINEOUT does not meet it again.
         if let Some(errno) = complete_record(interp, receiver)? {
+            close(interp, _cleared, receiver, &[])?;
             return notready(interp, receiver, StreamStatus::Error(errno), b"1".to_vec());
         }
         return close_for_write(interp, _cleared, receiver, b"1");
@@ -1639,8 +1662,10 @@ pub(super) fn lineout(
         return notready(interp, receiver, StreamStatus::NotReady, b"1".to_vec());
     }
     // Positioning by line with no string first completes the record the
-    // write position is inside of; one with a string pads only its own
-    // (`r[bif.lineout.record]`).
+    // write position is inside of, and only then is a line that is not a
+    // positive whole number refused, as ooRexx's method does; one with a
+    // string pads only its own record (`r[bif.lineout.record]`). A transient
+    // stream has no record to complete.
     if line.is_some()
         && data.is_none()
         && let Some(errno) = complete_record(interp, receiver)?
@@ -1715,6 +1740,11 @@ fn complete_record(interp: &mut Interp, receiver: ObjRef) -> Result<Option<i32>,
     let Some(open) = state.open.as_mut() else {
         return Ok(None);
     };
+    // A transient stream has no records to complete: it is written as it
+    // comes.
+    if open.transient {
+        return Ok(None);
+    }
     let at = landing(open, append, open.write_position);
     let room = record_remainder(at, record_length);
     if room as u64 >= record_length {

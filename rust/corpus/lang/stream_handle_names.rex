@@ -1,6 +1,6 @@
 /* A HANDLE:n stream: the answers that do not read or write the descriptor,
    which agree with the oracle. Reads, writes, QUERY HANDLE after an open and
-   a second open are Deviation 35, and nothing here touches them. */
+   a second open are tests/stream_handle.rs's, which nothing here touches. */
 do name over .array~of('HANDLE:0', 'handle:1', 'HANDLE:2')
   s = .Stream~new(name)
   say name 'init' s~state s~description s~string

@@ -271,9 +271,9 @@ lineout: procedure expose m.
     return 1
   end
   if line \== '' then do
+    if \given then call pad_record
     bad = position_arg(line)
     if bad \== '' then return bad
-    if \given then call pad_record
     if within_extent(line_start(line)) then do
       m.0state = 'NOTREADY'
       return 1

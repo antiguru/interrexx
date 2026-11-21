@@ -1245,11 +1245,14 @@ A stream named `HANDLE:n`, in any case, reads and writes the open descriptor
 `n` of the process: `HANDLE:0`, `HANDLE:1` and `HANDLE:2` the standard input,
 output and error streams, and any other number a descriptor that some other
 stream or other code holds, such as the one `QUERY HANDLE` answers for a file.
-Closing the stream leaves descriptor `n` open. Nothing exists by such a name:
-`QUERY EXISTS` answers the null string, and `qualify` answers the name as
-written. Where reads and writes through a `HANDLE:` stream land relative to
-those through another stream on the same descriptor, and what a `HANDLE:`
-stream does with a number that names no open descriptor, are not specified.
+Closing the stream leaves descriptor `n` open. An open with `APPEND`,
+`REPLACE` or a `SHARE` option raises `SYNTAX 93.0`: the descriptor is already
+open as it is. Nothing exists by such a name: `QUERY EXISTS` answers the null
+string, and once the stream is open `qualify` answers the name as written.
+Where reads and writes through a `HANDLE:` stream land relative to those
+through another stream on the same descriptor, what a `HANDLE:` stream does
+with a number that names no open descriptor, and which of the descriptors the
+interpreter holds for itself it reaches, are not specified.
 
 ```rexx
 f = 'spec-stream-handle.tmp'
@@ -1258,6 +1261,9 @@ file = .stream~new(f)
 file~open('write replace')
 h = file~query('handle')
 hs = .stream~new('HANDLE:' || h)
+signal on syntax name refused
+x = .stream~new('HANDLE:' || h)~open('write append')
+refused: say 'append' condition('o')~code
 say hs~lineout('first') '[' || hs~query('exists') || ']' hs~close -
   hs~qualify~changestr(h, 'H')
 say file~close
@@ -1266,6 +1272,7 @@ call sysfiledelete f
 ```
 
 ```output
+append 93.0
 0 [] READY: HANDLE:H
 READY:
 first

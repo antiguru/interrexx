@@ -318,8 +318,13 @@ the stream, or that only positions it by `line`, first completes the record
 the write position is inside of: it writes blanks from the write position to
 the end of that record, over whatever the record held there. At the start of
 a record it writes nothing, and it writes nothing on a stream open only for
-reading. On a stream opened APPEND the record is the one an APPEND write would
-land in, at the end of the file. A LINEOUT with a `string` pads only the record
+reading or on a transient stream, which has no records to complete. The
+`lineOut` method completes the record before it checks `line`, so a `line`
+that is not a positive whole number raises `SYNTAX 93.907` after the record
+is complete; the LINEOUT function checks its arguments first, as [its
+argument rule](r:bif.lineout.args) says. On a stream opened
+APPEND the record is the one an APPEND write would land in, at the end of the
+file. A LINEOUT with a `string` pads only the record
 it writes, and CHAROUT and `STREAM` CLOSE complete no record.
 
 ```rexx
@@ -350,6 +355,20 @@ call stream f, 'c', 'close'
 say 'close [' || charin(f, 1, chars(f)) || ']'
 call lineout f
 call sysfiledelete f
+call charout f, 'abcdefgh'
+call charout f
+s = .stream~new(f)
+x = s~open('both binary reclength 4')
+x = s~charout('X', 3)
+say 'refused' refused() s~flush '[' || .stream~new(f)~charin(1, 8) || ']'
+x = s~close
+call sysfiledelete f
+exit
+refused:
+  signal on syntax name bad
+  x = s~lineout(, 0)
+  return 'no error'
+bad: return condition('o')~code
 ```
 
 ```output
@@ -360,6 +379,7 @@ call sysfiledelete f
 5 [abXdQ   ]
 charout [aYXdQ   ]
 close [ZYXdQ   ]
+refused 93.907 READY: [abX efgh]
 ```
 
 ## Deviations
