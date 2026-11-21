@@ -874,6 +874,44 @@ fn a_raise_runs_its_expressions_from_its_compiled_ops() {
     }
 }
 
+/// A `CALL (expr)`'s target and arguments run as the chunk's own ops: a call
+/// in either resolves at its call site once and answers from the site on
+/// every later pass, which the walked instruction never does. The name is
+/// taken from the target, a `MAKESTRING` method included, before the
+/// arguments are evaluated, and a callee that returns nothing drops `RESULT`.
+#[test]
+fn a_dynamic_call_runs_its_target_and_arguments_from_its_compiled_ops() {
+    let before = call_site_hits();
+    let outcome = execute(
+        TEST_PATH,
+        b"do zi = 1 to 4\n  call (zg(zi)) zf(zi)\n  say result\nend\n\
+          result = 'kept'\ncall (.k~new) zf(5)\nsay result\nexit\n\
+          ::class k\n::method makestring\n  say 'name'\n  return 'ZN'\n\
+          ::routine zg\n  use arg zv\n  say 'g' zv\n  return 'ZR'\n\
+          ::routine zf\n  use arg zv\n  say 'f' zv\n  return zv * 10\n\
+          ::routine zr\n  use arg zv\n  return zv + 1\n::routine zn\n  return\n"
+            .to_vec(),
+        false,
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let hits = call_site_hits() - before;
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "g 1\nf 1\n11\ng 2\nf 2\n21\ng 3\nf 3\n31\ng 4\nf 4\n41\nname\nf 5\nRESULT\n",
+        "a CALL (expr) evaluated its arguments before its name, or kept RESULT"
+    );
+    // Two sites, the target's call and the argument's, each resolving on the
+    // first pass and answering from the site on the three after it. Walked,
+    // neither answers from a site.
+    let expected = if CALL_SITE_CACHE { 6 } else { 0 };
+    assert_eq!(
+        hits, expected,
+        "the CALL (expr)'s calls answered from their sites {hits} times where {expected} was \
+         due, so its target and arguments did not run from the chunk"
+    );
+}
+
 /// A loop's `WHILE` and `UNTIL` run from the chunk's compiled condition ops on
 /// every test, the `DO`'s own first one included; a condition holding a call
 /// does not compile there, and `TRACE I` walks the expression instead.

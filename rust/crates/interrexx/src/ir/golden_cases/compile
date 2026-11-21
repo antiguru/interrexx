@@ -1063,17 +1063,23 @@ registers: 1
 consts:
 
 # a trap call and a dynamic call keep no resolved site
-# **`CALL ON`/`CALL OFF` and `CALL (expr)` carry no resolved call site**,
-# and each carries none for a reason of its own rather than by oversight.
+# **`CALL ON`/`CALL OFF` and `CALL (expr)` keep no resolved call site**, and
+# each keeps none for a reason of its own rather than by oversight: a trap
+# names no callee, and a `CALL (expr)`'s `CallNamed` has a site it never
+# keeps a resolution in, since its next call may name something else.
 compile
 call on error name zh
 call (zn)
 ----
 0: Clause index=0 end=2
 1: Exec index=0
-2: Clause index=1 end=4
-3: Exec index=1
-registers: 0
+2: Clause index=1 end=8
+3: Load read=Simple at=0 dst=0
+4: TraceRead read=Simple src=0
+5: ExecValue index=1 src=0
+6: PushArg src=0
+7: CallNamed index=1 site=0 argc=1
+registers: 1
 consts:
 
 # a compiled write names a slot only for a simple target
@@ -1646,5 +1652,99 @@ raise user zu array () exit
 ----
 0: Clause index=0 end=2
 1: Exec index=0
+registers: 0
+consts:
+
+# `CALL (expr)`: the target's ops, `ExecValue`, which converts the value to
+# the name and traces it, the name pushed first, each argument's ops and push
+# (an omitted one pushes nothing of its own), then `CallNamed` over the name
+# and the arguments.
+compile
+call (zn) 1, zf(2), , zv
+----
+0: CallingClause index=0 end=24
+1: Load read=Simple at=0 dst=0
+2: TraceRead read=Simple src=0
+3: ExecValue index=0 src=0
+4: PushArg src=0
+5: LoadConstant dst=1
+6: TraceLiteral src=1
+7: PushArg src=1
+8: TraceArgument src=1
+9: LoadConstant dst=3
+10: TraceLiteral src=3
+11: PushArg src=3
+12: TraceArgument src=3
+13: CallArgs slot=2 path=root site=0 argc=1 dst=2
+14: TraceFunction index=0 slot=2 path=root src=2
+15: PushArg src=2
+16: TraceArgument src=2
+17: PushArg src=omitted
+18: TraceArgument src=omitted
+19: Load read=Simple at=1 dst=3
+20: TraceRead read=Simple src=3
+21: PushArg src=3
+22: TraceArgument src=3
+23: CallNamed index=0 site=1 argc=5
+registers: 4
+consts:
+
+# A `CALL (expr)` whose target is an operation, under `TRACE I`, which traces
+# each argument behind its push and no line for the name's push.
+compile trace=i
+call ('S' || zp) zv
+----
+0: Clause index=0 end=15
+1: TraceClause index=0
+2: Const dst=0 konst=0
+3: TraceLiteral src=0
+4: Load read=Simple at=0 dst=1
+5: TraceRead read=Simple src=1
+6: Binary op=|| lhs=0 rhs=1 dst=0
+7: TraceOperator op=|| src=0
+8: ExecValue index=0 src=0
+9: PushArg src=0
+10: Load read=Simple at=1 dst=1
+11: TraceRead read=Simple src=1
+12: PushArg src=1
+13: TraceArgument src=1
+14: CallNamed index=0 site=0 argc=2
+registers: 2
+consts: 'S'
+
+# A `CALL (expr)` whose target does not compile is evaluated by `EvalExpr`
+# at slot 0, and the rest is as before.
+compile
+call (zn:zf()) 1
+----
+0: Clause index=0 end=9
+1: EvalExpr index=0 slot=0 dst=0
+2: ExecValue index=0 src=0
+3: PushArg src=0
+4: LoadConstant dst=1
+5: TraceLiteral src=1
+6: PushArg src=1
+7: TraceArgument src=1
+8: CallNamed index=0 site=0 argc=2
+registers: 2
+consts:
+
+# A `CALL (expr)` with an argument that does not compile, a call past the
+# width of an address, stays the one `Exec`, and so do `CALL ON`, `CALL OFF`
+# and a namespace-qualified `CALL`.
+compile
+call (zn) 1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(zf()))))))))))))))))))))))))))))))))
+call on error name zh
+call off error
+call zns:zr 1
+----
+0: Clause index=0 end=2
+1: Exec index=0
+2: Clause index=1 end=4
+3: Exec index=1
+4: Clause index=2 end=6
+5: Exec index=2
+6: Clause index=3 end=8
+7: Exec index=3
 registers: 0
 consts:

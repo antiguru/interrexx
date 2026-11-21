@@ -72,7 +72,7 @@ pub(crate) use condition::{RaiseLayout, RaisePart, raise_slot};
 mod call;
 pub(crate) use call::{
     Begun, CallResolution, CallTail, InternalName, MAX_ACTIVATION_DEPTH, SiteCall, SiteKeep,
-    Started, function_started, subroutine_started,
+    Started, dynamic_call_slot, function_started, subroutine_started,
 };
 #[cfg(test)]
 use call::{Entered, entered_receiver};
@@ -970,19 +970,8 @@ impl Interp {
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
-                    self.roots.activity_mut().push_temp(value);
-                    // The target is converted to a string
-                    // before the
-                    // `>>>` below: measured, `trace r` over `call (.K)` with a
-                    // class-side `makeString` returning `'MS'` traces
-                    // `>>>   "MS"` and runs `MS:`.
-                    let value = self.required_string_value(value)?;
+                    let value = self.call_target_name(value)?;
                     let name = self.to_text(value).to_vec();
-                    // Its own `>>>`, at the `CALL` clause's own indent, which
-                    // `Call::Named` has no equivalent of -- measured, `call
-                    // sub 1+1, 'q'` under `trace r` traces no value line at
-                    // all while `call (nm)` traces one for the target.
-                    self.trace_result(self.activity.clause_state.current_value_indent, &name);
                     self.exec_call(code, &name, true, args)
                 }
                 // `CALL ON cond NAME label` / `CALL OFF cond`. Shares every
@@ -2667,6 +2656,25 @@ impl Interp {
         Ok(())
     }
 
+    /// `CALL (expr)`'s work on its target's `value`, before the arguments
+    /// are evaluated: the string the name is read from, and its `>>>` line.
+    /// The walked instruction and `Op::ExecValue` both run it.
+    pub(crate) fn call_target_name(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
+        self.roots.activity_mut().push_temp(value);
+        // The target is converted to a string before the `>>>` below:
+        // measured, `trace r` over `call (.K)` with a class-side `makeString`
+        // returning `'MS'` traces `>>>   "MS"` and runs `MS:`.
+        let value = self.required_string_value(value)?;
+        self.roots.activity_mut().push_temp(value);
+        let name = self.to_text(value).to_vec();
+        // Its own `>>>`, at the `CALL` clause's own indent, which
+        // `Call::Named` has no equivalent of -- measured, `call sub 1+1, 'q'`
+        // under `trace r` traces no value line at all while `call (nm)`
+        // traces one for the target.
+        self.trace_result(self.activity.clause_state.current_value_indent, &name);
+        Ok(value)
+    }
+
     /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
     /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s, the
     /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s, `INTERPRET`'s, a
@@ -2760,6 +2768,12 @@ impl Interp {
         }
     }
 
+    /// Whether `kind` is a `CALL (expr)`.
+    pub(crate) fn is_dynamic_call(kind: &InstructionKind) -> bool {
+        matches!(kind, InstructionKind::Call(call)
+            if matches!(**call, interrexx_parse::Call::Dynamic { .. }))
+    }
+
     /// [`crate::ir::Op::ExecWith`]: the instruction `instruction` from the
     /// value its expression left in register `src`, with what `Op::Exec`
     /// hands `exec_instruction`. A `RAISE` runs from the registers its parts
@@ -2848,12 +2862,21 @@ impl Interp {
         };
         let value = registers.get(src);
         debug_assert!(
-            Self::exec_value_expression(&instruction.kind).is_some()
-                && !Self::exec_value_transfers(&instruction.kind),
+            (Self::exec_value_expression(&instruction.kind).is_some()
+                && !Self::exec_value_transfers(&instruction.kind))
+                || Self::is_dynamic_call(&instruction.kind),
             "Op::ExecValue on an instruction exec_value_expression does not name, or one \
              that runs as Op::ExecWith"
         );
         match &instruction.kind {
+            // A `CALL (expr)`'s name, left in the register for the
+            // `Op::PushArg` behind this op to put under the arguments, where
+            // `Op::CallNamed` takes it from.
+            kind if Self::is_dynamic_call(kind) => {
+                let name = self.call_target_name(value)?;
+                registers.set(src, name);
+                Ok(())
+            }
             InstructionKind::Numeric { setting, .. } => {
                 self.exec_numeric_value(setting, Some(value))
             }
@@ -3817,6 +3840,9 @@ impl Interp {
                 interrexx_parse::Call::Named { args, .. } => {
                     args.get(usize::from(slot))?.as_ref()?
                 }
+                interrexx_parse::Call::Dynamic { target, args } => {
+                    dynamic_call_slot(target, args, u32::from(slot))?
+                }
                 _ => return None,
             },
             // A message instruction's term, and the assignment form's value.
@@ -3865,6 +3891,16 @@ impl Interp {
         match (&instruction.kind, slot) {
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
                 self.eval(code, expression)
+            }
+            // A `CALL (expr)`'s target, evaluated and nothing else: the
+            // `Op::ExecValue` behind it does the rest.
+            (InstructionKind::Call(call), slot)
+                if let interrexx_parse::Call::Dynamic { target, args } = &**call =>
+            {
+                let Some(expr) = dynamic_call_slot(target, args, slot) else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.

@@ -111,7 +111,12 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         InstructionKind::Exit { .. } => Some("EXIT"),
         InstructionKind::Push { .. } => Some("PUSH"),
         InstructionKind::Queue { .. } => Some("QUEUE"),
-        InstructionKind::Call(call) if matches!(&**call, Call::Named { .. }) => Some("CALL name"),
+        InstructionKind::Call(call) => Some(match &**call {
+            Call::Named { .. } => "CALL name",
+            Call::Dynamic { .. } => "CALL (expr)",
+            Call::Qualified { .. } => "CALL ns:name",
+            Call::Trap(_) => "CALL ON/OFF",
+        }),
         InstructionKind::Message { .. } => Some("message send"),
         InstructionKind::Leave { .. } => Some("LEAVE"),
         InstructionKind::Iterate { .. } => Some("ITERATE"),
@@ -373,6 +378,12 @@ struct Seen {
     raise_values: usize,
     bare_raises: usize,
     raise_parts: BTreeMap<&'static str, usize>,
+    /// How many `CALL (expr)`s compiled to their target, their name's
+    /// `Op::ExecValue`, their arguments and `Op::CallNamed`, and how many
+    /// `CALL ON`/`OFF` stayed `Op::Exec`. No corpus `CALL (expr)` has an
+    /// argument, so the argument half of that row is the golden cases'.
+    dynamic_calls: usize,
+    call_traps: usize,
 }
 
 /// Checks one body's compiled stream against what its instructions call for,
@@ -577,6 +588,43 @@ fn check_body(
                 );
                 seen.bare_replies += 1;
             }
+        }
+
+        // **A `CALL (expr)` whose arguments are native** is its target's ops
+        // into one register, `Op::ExecValue` from that register, the register
+        // pushed, each argument's ops and push (and its `Op::TraceArgument`
+        // where the clause echoes values), and `Op::CallNamed` over the name
+        // and the arguments; nothing else, and no `Op::Exec`. One whose
+        // arguments are not, a `CALL ON`/`OFF` and a `CALL ns:name` are the
+        // one `Op::Exec`.
+        if let InstructionKind::Call(call) = &instruction.kind {
+            let ops: Vec<&Op> = region
+                .iter()
+                .filter(|op| !matches!(op, Op::TraceClause { .. }))
+                .collect();
+            let native_args = |args: &[Option<Expr>]| {
+                args.iter()
+                    .all(|arg| arg.as_ref().is_none_or(|expr| native(expr, Some(0))))
+            };
+            match &**call {
+                Call::Dynamic { target, args } if native_args(args) => {
+                    check_dynamic_call(&ops, target, args, at, where_, construct, &chunk, seen);
+                    seen.dynamic_calls += 1;
+                }
+                Call::Named { .. } => {}
+                Call::Dynamic { .. } | Call::Qualified { .. } | Call::Trap(_) => {
+                    assert!(
+                        matches!(ops[..], [Op::Exec { index }] if *index == at),
+                        "{where_}: instruction {index} ({construct}) compiled to something other \
+                         than its one Exec\n{}",
+                        render(&chunk)
+                    );
+                    if matches!(&**call, Call::Trap(_)) {
+                        seen.call_traps += 1;
+                    }
+                }
+            }
+            continue;
         }
 
         // **A `RAISE` with an expression** is, for each expression in the
@@ -846,6 +894,123 @@ fn check_body(
     }
 }
 
+/// [`check_body`]'s row for a `CALL (expr)` whose arguments are native, over
+/// its region's `ops`.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the clause, where it is and what it is, the chunk to render, and the counts"
+)]
+fn check_dynamic_call(
+    ops: &[&Op],
+    target: &Expr,
+    args: &[Option<Expr>],
+    at: u32,
+    where_: &str,
+    construct: &str,
+    chunk: &Chunk,
+    seen: &mut Seen,
+) {
+    let fail = |what: &str| -> ! {
+        panic!(
+            "{where_}: instruction {at} ({construct}) {what}\n{}",
+            render(chunk)
+        )
+    };
+    let Some(value_at) = ops.iter().position(|op| matches!(op, Op::ExecValue { .. })) else {
+        fail("has no ExecValue for its name");
+    };
+    let Op::ExecValue { index, src: name } = *ops[value_at] else {
+        unreachable!("the position above found an ExecValue")
+    };
+    if index != at {
+        fail("has an ExecValue naming another instruction");
+    }
+    let root = root_of(target);
+    if ops[..value_at]
+        .iter()
+        .copied()
+        .filter_map(Root::of)
+        .next_back()
+        != Some(root)
+    {
+        fail(&format!(
+            "has a target calling for {root:?} and a group ending otherwise"
+        ));
+    }
+    *seen.roots.entry(root).or_default() += 1;
+    if !matches!(ops.get(value_at + 1), Some(Op::PushArg { src }) if *src == name) {
+        fail("does not push its name right behind its ExecValue");
+    }
+    let argc = u16::try_from(args.len() + 1).expect("the compiler admits only these");
+    if !matches!(ops.last(), Some(Op::CallNamed { index, argc: n, .. }) if *index == at && *n == argc)
+    {
+        fail(&format!("does not end in its CallNamed over {argc} values"));
+    }
+    // The pushes the arguments' own calls, sends and lists take, paired off
+    // as they are taken; the ones left are the arguments'.
+    let body = &ops[value_at + 2..ops.len() - 1];
+    let mut pending: Vec<usize> = Vec::new();
+    for (op_at, op) in body.iter().enumerate() {
+        match op {
+            Op::Exec { .. } | Op::ExecValue { .. } | Op::ExecWith { .. } | Op::CallNamed { .. } => {
+                fail("holds a second Exec, ExecValue, ExecWith or CallNamed");
+            }
+            Op::PushArg { .. } => pending.push(op_at),
+            Op::CallArgs { argc, .. }
+            | Op::Send { argc, .. }
+            | Op::SendWith { argc, .. }
+            | Op::List { argc, .. } => {
+                let left = pending.len().checked_sub(usize::from(*argc));
+                pending.truncate(left.unwrap_or_else(|| fail("takes more pushes than it has")));
+            }
+            _ => {}
+        }
+    }
+    if pending.len() != args.len() {
+        fail(&format!(
+            "pushes {} arguments where it has {}",
+            pending.len(),
+            args.len()
+        ));
+    }
+    let mut group = 0;
+    for (push, arg) in pending.iter().zip(args) {
+        let Op::PushArg { src } = *body[*push] else {
+            unreachable!("only a PushArg is pending")
+        };
+        match arg {
+            None if src == Op::ARG_OMITTED && *push == group => {}
+            None => fail("has ops or a register for an omitted argument"),
+            Some(expr) => {
+                let root = root_of(expr);
+                if src == Op::ARG_OMITTED
+                    || body[group..*push]
+                        .iter()
+                        .copied()
+                        .filter_map(Root::of)
+                        .next_back()
+                        != Some(root)
+                {
+                    fail(&format!(
+                        "has an argument calling for {root:?} and a group ending otherwise"
+                    ));
+                }
+                *seen.roots.entry(root).or_default() += 1;
+            }
+        }
+        group = push + 1;
+        if let Some(Op::TraceArgument { src: traced }) = body.get(group) {
+            if *traced != src {
+                fail("traces an argument other than the one it pushed");
+            }
+            group += 1;
+        }
+    }
+    if group != body.len() {
+        fail("has ops between its last argument and its CallNamed");
+    }
+}
+
 /// Every body of `program`: the main one and each directive's.
 fn bodies(program: &interrexx_parse::Program) -> Vec<(&CodeBody, String)> {
     let mut out = vec![(&program.main, "main".to_string())];
@@ -917,6 +1082,45 @@ fn every_corpus_body_compiles_the_minimum_promotion_set_to_its_own_ops() {
     if let Err(panic) = sweep.join() {
         std::panic::resume_unwind(panic);
     }
+}
+
+/// **The `CALL (expr)` row over arguments**, which no corpus `CALL (expr)`
+/// has: the sweep's own check, run over a body with every kind of argument.
+/// A `CALL (expr)` can name `TRACE`, so its body echoes values, and the row
+/// meets each argument's `Op::TraceArgument` too.
+#[test]
+fn the_dynamic_call_row_holds_over_arguments() {
+    let program = parse_program(
+        b"call (zn) 1, zf(2), , zv, 'a' || zw~x(zq, 3), (1, 2)\ncall ('S' || zp)\n\
+          call (zn:zf()) zv\n"
+            .to_vec(),
+    )
+    .expect("parses");
+    let mut seen = Seen::default();
+    check_body(
+        &program.main,
+        &program.symbols,
+        &program.source,
+        "test",
+        &mut seen,
+    );
+    assert_eq!(seen.dynamic_calls, 3);
+    let plan = Plan::build(
+        &program.main,
+        &program.symbols,
+        Some(&program.source),
+        BodyKind::Plain,
+    );
+    let chunk =
+        super::compile(&program.main, &plan, ChunkTrace::of(TraceMode::NORMAL)).expect("compiles");
+    assert!(
+        chunk
+            .ops
+            .iter()
+            .any(|op| matches!(op, Op::TraceArgument { .. })),
+        "the body echoed no argument, so the row met no TraceArgument\n{}",
+        render(&chunk)
+    );
 }
 
 /// The translation errors that the directives declared so far decide.
@@ -991,6 +1195,9 @@ fn sweep_every_corpus_body() {
         "PUSH",
         "QUEUE",
         "CALL name",
+        "CALL (expr)",
+        "CALL ON/OFF",
+        "CALL ns:name",
         "message send",
         "LEAVE",
         "ITERATE",
@@ -1056,6 +1263,13 @@ fn sweep_every_corpus_body() {
             seen.raise_parts
         );
     }
+    assert!(
+        seen.dynamic_calls > 0 && seen.call_traps > 0,
+        "no corpus CALL (expr) compiled to its ops ({}) or CALL ON/OFF stayed Exec ({}), so the \
+         CALL rows above hold only over an empty set",
+        seen.dynamic_calls,
+        seen.call_traps
+    );
     assert!(
         seen.native_header_values > 0,
         "no corpus DO/LOOP header slot compiled to native ops, so the header rows above hold \

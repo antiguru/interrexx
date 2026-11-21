@@ -1,0 +1,280 @@
+# `CALL (expr)` evaluates its target as native ops, then `Op::ExecValue`
+# takes the name from the value and traces it, the arguments run as ops of
+# their own, and `Op::CallNamed` resolves the name and calls it. Each stanza
+# answers what the walked instruction answered.
+
+# an internal label, a builtin and a package routine, each by a computed name
+program
+zn = 'ZSUB'
+do zi = 1 to 3
+  call (zn) zi, zi * 2
+  say 'label' result
+end
+call ('LEN' || 'GTH') 'abcd'
+say 'builtin' result
+call (zr()) 7
+say 'routine' result
+exit
+zsub: use arg za, zb; return za + zb
+zr: return 'ZROUT'
+::routine zrout
+  use arg zv
+  return zv * 3
+----
+rc> 0
+out> label 3
+out> label 6
+out> label 9
+out> builtin 4
+out> routine 21
+
+# the name is not upcased: a mixed-case label name misses the label, and the
+# routine search after it finds nothing
+program
+signal on syntax name zs
+call ('Zsub') zf(1)
+say 'not reached'
+exit
+zsub: return 'sub'
+zf: say 'f' arg(1); return arg(1)
+zs: say 'syntax' condition('o')~code
+----
+rc> 0
+out> f 1
+out> syntax 43.1
+
+# nor is a builtin's name
+program
+signal on syntax name zs
+call ('length') 'abc'
+say 'not reached'
+exit
+zs: say 'syntax' condition('o')~code
+----
+rc> 0
+out> syntax 43.1
+
+# the target is evaluated before the arguments, and its string conversion
+# (a MAKESTRING method) comes between the two
+program
+call (zf('ZSUB')) zf(1), zf(2)
+say 'result' result
+call (.k~new) zf(3)
+say 'result' result
+exit
+zf: say 'f' arg(1); return arg(1)
+zsub: return arg(1) arg(2) arg()
+::class k
+::method makestring
+  say 'makestring'
+  return 'ZSUB'
+----
+rc> 0
+out> f ZSUB
+out> f 1
+out> f 2
+out> result 1 2 2
+out> makestring
+out> f 3
+out> result 3  1
+
+# RESULT dropped when the callee returns nothing, kept when it returns a value
+program
+result = 'before'
+call (zn) 1
+say 'after a bare return' result symbol('RESULT')
+call (zn) 2
+say 'after a value' result
+exit
+zn: if arg(1) = 1 then return; return 'v'
+----
+rc> 0
+out> after a bare return RESULT LIT
+out> after a value v
+
+# an external name: its arguments run, then the external search finds
+# nothing and raises 43.1
+program
+signal on syntax name zs
+call ('ZNOSUCHROUTINE' || 9) zf(1), zf(2)
+exit
+zf: say 'f' arg(1); return arg(1)
+zs: say 'syntax' condition('o')~code
+----
+rc> 0
+out> f 1
+out> f 2
+out> syntax 43.1
+
+# NOVALUE in the name, trapped, and untrapped, where the name is the symbol
+program
+call (zundef1) 
+exit
+ZUNDEF1: say 'ran ZUNDEF1'; signal on novalue name zh; call (zundef2) zf(1); return
+zf: say 'f' arg(1); return arg(1)
+zh: say 'novalue' condition('d')
+----
+rc> 0
+out> ran ZUNDEF1
+out> novalue ZUNDEF2
+
+# a target that raises, trapped and untrapped: no argument runs
+program
+signal on syntax name zs
+call (1 / 0) zf(1)
+exit
+zf: say 'f' arg(1); return arg(1)
+zs: say 'syntax' condition('o')~code
+  call (zg()) zf(2)
+zg: return 'ZSUB' || 1/0
+ZSUB: say 'not reached'
+----
+rc> 214
+out> syntax 42.3
+err>      7 *-*   return 'ZSUB' || 1/0
+err>      6 *-* call (zg()) zf(2)
+err> Error 42 running /nonexistent/ir-dual-case.rex line 7:
+err> Error 42.3:
+
+# a target whose callee raises a condition the caller traps with CALL ON
+program
+call on user u name zh
+call (zg()) zf(1)
+say 'back' result
+exit
+zg: raise user u return 'ZSUB'
+zh: say 'zh' condition('c'); return
+zf: say 'f' arg(1); return arg(1)
+ZSUB: say 'ZSUB' arg(1); return 'r'
+----
+rc> 0
+out> f 1
+out> ZSUB 1
+out> zh USER U
+out> back r
+
+# trace r: the >>> line of the name, after the target's own call
+program
+call zsub2
+exit
+zsub2:
+  trace r
+  zn = 'ZT'
+  call (zn) 1 + 1, 'q'
+  call ('Z' || zg()) zg()
+  say result
+  return
+zg: return 'T'
+ZT: return arg(1)
+----
+rc> 0
+out> T
+err>      5 *-*   zn = 'ZT'
+err>        >>>     "ZT"
+err>      6 *-*   call (zn) 1 + 1, 'q'
+err>        >>>     "ZT"
+err>     11 *-*     ZT:
+err>     11 *-*     return arg(1)
+err>        >>>       "2"
+err>        >>>     "2"
+err>      7 *-*   call ('Z' || zg()) zg()
+err>     10 *-*     zg:
+err>     10 *-*     return 'T'
+err>        >>>       "T"
+err>        >>>     "ZT"
+err>     10 *-*     zg:
+err>     10 *-*     return 'T'
+err>        >>>       "T"
+err>     11 *-*     ZT:
+err>     11 *-*     return arg(1)
+err>        >>>       "T"
+err>        >>>     "T"
+err>      8 *-*   say result
+err>        >>>     "T"
+err>      9 *-*   return
+
+# trace i: the target's intermediates, then the name, then each argument
+program
+call zsub2
+exit
+zsub2:
+  trace i
+  zn = 'ZT'
+  call (zn || '') zn, , 3 * 2
+  say result
+  call (.k~new) 1
+  return
+ZT: return arg(1) arg(3)
+::class k
+::method makestring
+  return 'ZT'
+----
+rc> 0
+out> ZT 6
+err>      5 *-*   zn = 'ZT'
+err>        >L>     "ZT"
+err>        >>>     "ZT"
+err>        >=>     ZN <= "ZT"
+err>      6 *-*   call (zn || '') zn, , 3 * 2
+err>        >V>     ZN => "ZT"
+err>        >L>     ""
+err>        >O>     "||" => "ZT"
+err>        >>>     "ZT"
+err>        >V>     ZN => "ZT"
+err>        >A>     "ZT"
+err>        >A>     ""
+err>        >L>     "3"
+err>        >L>     "2"
+err>        >O>     "*" => "6"
+err>        >A>     "6"
+err>     10 *-*     ZT:
+err>     10 *-*     return arg(1) arg(3)
+err>        >L>       "1"
+err>        >A>       "1"
+err>        >F>       ARG => "ZT"
+err>        >L>       "3"
+err>        >A>       "3"
+err>        >F>       ARG => "6"
+err>        >O>       " " => "ZT 6"
+err>        >>>       "ZT 6"
+err>        >>>     "ZT 6"
+err>      7 *-*   say result
+err>        >V>     RESULT => "ZT 6"
+err>        >>>     "ZT 6"
+err>      8 *-*   call (.k~new) 1
+err>        >E>     .K => "The K class"
+err>        >M>     "NEW" => "a K"
+err>        >>>     "ZT"
+err>        >L>     "1"
+err>        >A>     "1"
+err>     10 *-*     ZT:
+err>     10 *-*     return arg(1) arg(3)
+err>        >L>       "1"
+err>        >A>       "1"
+err>        >F>       ARG => "1"
+err>        >L>       "3"
+err>        >A>       "3"
+err>        >F>       ARG => ""
+err>        >O>       " " => "1 "
+err>        >>>       "1 "
+err>        >>>     "1 "
+err>      9 *-*   return
+
+# a CALL (expr) in a loop, under a CALL ON trap that the callee raises
+program
+call on user u name zh
+do zi = 1 to 3
+  call ('Z' || zi) zi
+  say 'back' zi result
+end
+exit
+zh: say 'zh' condition('c'); return
+Z1: return 'one'
+Z2: raise user u return 'two'
+Z3: return
+----
+rc> 0
+out> back 1 one
+out> zh USER U
+out> back 2 two
+out> back 3 RESULT

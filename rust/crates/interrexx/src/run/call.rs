@@ -20,6 +20,22 @@ pub(crate) enum InternalName<'a> {
     Called(&'a [u8]),
 }
 
+/// Expression `slot` of a `CALL (expr)`, as a compiled one addresses them:
+/// `0` the target and `1 + k` argument `k`. Out of line, so that the lookup
+/// of every other instruction's slots does not carry it.
+#[cold]
+#[inline(never)]
+pub(crate) fn dynamic_call_slot<'e>(
+    target: &'e Expr,
+    args: &'e [Option<Expr>],
+    slot: u32,
+) -> Option<&'e Expr> {
+    match slot.checked_sub(1) {
+        None => Some(target),
+        Some(k) => args.get(usize::try_from(k).ok()?)?.as_ref(),
+    }
+}
+
 /// Swaps `args` with the buffer `slot` holds, which nothing else shares
 /// between calls.
 #[inline(always)]

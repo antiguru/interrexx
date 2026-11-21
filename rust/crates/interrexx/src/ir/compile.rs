@@ -1132,6 +1132,70 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
+            // A `CALL (expr)` whose arguments all compile: the target's ops,
+            // `Op::ExecValue`, which converts the value to the name and
+            // traces it, the name pushed under the arguments, the arguments'
+            // ops, and `Op::CallNamed`, which takes the name off the run. The
+            // target is slot `0` and argument `k` slot `1 + k`. One with an
+            // argument that does not compile stays the delegating `Op::Exec`
+            // region below.
+            InstructionKind::Call(call)
+                if let Call::Dynamic { target, args } = &**call
+                    && args.len() < usize::from(u16::MAX)
+                    && args.iter().all(|arg| {
+                        arg.as_ref()
+                            .is_none_or(|expr| native_shape(expr, Some(NodePath::ROOT)))
+                    }) =>
+            {
+                let mark = registers.mark();
+                let at = op_index(&ops)?;
+                let echo = echoes(trace, instruction);
+                let clause = instruction_index(index)?;
+                ops.push(Op::Clause {
+                    index: clause,
+                    end: 0,
+                });
+                push_echo(&mut ops, echo, clause);
+                let name = registers.alloc()?;
+                push_value(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    target,
+                    clause,
+                    0,
+                    name,
+                )?;
+                ops.push(Op::ExecValue {
+                    index: clause,
+                    src: name,
+                });
+                ops.push(Op::PushArg { src: name });
+                let argc = push_arguments(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    args,
+                    clause,
+                    |k| (k as u32 + 1, Some(NodePath::ROOT)),
+                    true,
+                )?;
+                ops.push(Op::CallNamed {
+                    index: clause,
+                    site: calls.reserve()?,
+                    argc: argc + 1,
+                });
+                close_region(&mut ops, at)?;
+                registers.release(mark);
+            }
             // A message send as a whole clause whose term compiles: the
             // receiver, the assigned value of the message-assignment form, the
             // arguments, and the send. The term is slot 0 and the assigned
