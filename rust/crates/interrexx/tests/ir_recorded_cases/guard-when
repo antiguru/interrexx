@@ -1,0 +1,138 @@
+# A `GUARD ... WHEN` of reads and operators runs its condition from the
+# side table on every test, the first and each one after a wake. Each
+# stanza answers what the walked condition answered.
+
+# a condition true at once, under trace r
+program
+say .g~new~m
+::class g
+::method init
+  expose n
+  n = 2
+::method m
+  expose n
+  trace r
+  guard on when n * 2 = 4 & n > 1
+  return n
+----
+rc> 0
+out> 2
+err>        >I>
+err>      9 *-* guard on when n * 2 = 4 & n > 1
+err>        >K>   "WHEN" => "1"
+err>     10 *-* return n
+err>        >>>   "2"
+err>        <I<
+
+# trace i: the condition's intermediates
+program
+say .g~new~m
+::class g
+::method init
+  expose n s.
+  n = 2; s.2 = 'x'
+::method m
+  expose n s.
+  trace i
+  guard off when s.n == 'x'
+  return n
+----
+rc> 0
+out> 2
+err>        >I>
+err>      9 *-* guard off when s.n == 'x'
+err>        >C>   S.N => "S.2"
+err>        >V>   S.N => "x"
+err>        >L>   "x"
+err>        >O>   "==" => "1"
+err>        >K>   "WHEN" => "1"
+err>     10 *-* return n
+err>        >V>   N => "2"
+err>        >>>   "2"
+err>        <I<
+
+# a condition that is not 0 or 1
+program
+say .g~new~m
+::class g
+::method m
+  expose x
+  x = 'abc'
+  guard on when x
+  return 'no'
+----
+rc> 222
+err>      6 *-* guard on when x
+err>      1 *-* say .g~new~m
+err> Error 34 running /nonexistent/ir-dual-case.rex line 6:
+err> Error 34.902:
+
+# NOVALUE raised in the condition, trapped and not
+program
+o = .g~new
+say o~m
+say o~k
+::class g
+::method m
+  expose v
+  signal on novalue
+  drop v
+  guard on when v = 1
+  return 'no'
+novalue: return 'novalue' condition('d') sigl
+::method k
+  expose v
+  drop v
+  guard on when v = 'V'
+  return 'k' v
+----
+rc> 0
+out> novalue V 9
+out> k V
+
+# a syntax error in the condition, trapped by the caller
+program
+signal on syntax
+say .g~new~m
+exit
+syntax: say 'syntax' rc condition('o')~code sigl; exit
+::class g
+::method m
+  expose z
+  z = 0
+  guard on when 1 / z > 0
+  return 'no'
+----
+rc> 0
+out> syntax 42 42.3 2
+
+# a condition false at first, retested after each store until it holds
+program
+o = .pp~new
+o~start('pong')
+do i = 1 to 5
+  o~ping(i)
+end
+say o~last
+::class pp
+::method init
+  expose turn last
+  turn = 0; last = 0
+::method ping
+  expose turn last
+  use arg i
+  guard on when turn = 0
+  last = i; turn = 1
+::method pong
+  expose turn last
+  do 5
+    guard on when turn = 1 & last > 0
+    turn = 0
+  end
+::method last
+  expose turn last
+  guard on when turn = 0
+  return last
+----
+rc> 0
+out> 5

@@ -1373,6 +1373,52 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
+            // A `GUARD ... WHEN` whose condition only reads and compares: the
+            // condition's ops go to the side table `Chunk::conditions`, where
+            // `exec_guard` runs them on every test (the first and each one
+            // after a wake), as a loop's `WHILE` runs there; the clause itself
+            // stays the delegating `Op::Exec` region below. The registers are
+            // the clause's own while it runs, which nothing else holds.
+            InstructionKind::Guard(guard)
+                if let Some(condition) = &guard.condition
+                    && value_only(condition)
+                    && native_shape(condition, Some(NodePath::ROOT)) =>
+            {
+                let mark = registers.mark();
+                let dst = registers.alloc()?;
+                let start = op_index(&conditions)?;
+                push_native(
+                    &mut conditions,
+                    false,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    condition,
+                    instruction_index(index)?,
+                    0,
+                    Some(NodePath::ROOT),
+                    dst,
+                )?;
+                condition_of[index] = Some(ConditionOps {
+                    start,
+                    end: op_index(&conditions)?,
+                    dst,
+                });
+                registers.release(mark);
+                let at = op_index(&ops)?;
+                let echo = echoes(trace, instruction);
+                ops.push(Op::Clause {
+                    index: instruction_index(index)?,
+                    end: 0,
+                });
+                push_echo(&mut ops, echo, instruction_index(index)?);
+                ops.push(Op::Exec {
+                    index: instruction_index(index)?,
+                });
+                close_region(&mut ops, at)?;
+            }
             // The kinds whose whole execution is one call into
             // `Interp::exec_instruction`. What the promotion decides is the
             // clause region around that call and nothing about the call: the

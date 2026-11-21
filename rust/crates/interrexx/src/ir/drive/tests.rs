@@ -839,6 +839,41 @@ fn loop_conditions_run_from_their_compiled_ops() {
     );
 }
 
+/// A `GUARD ... WHEN` of reads and operators runs its condition from the side
+/// table, as a loop's `WHILE` does; one that calls a function, and any under
+/// `TRACE I`, is walked.
+#[test]
+fn guard_conditions_run_from_their_compiled_ops() {
+    let runs = |method: &str, expected_stdout: &str| {
+        let program = format!(
+            "say .g~new~m\n::class g\n::method init\n  expose n\n  n = 2\n::method m\n  expose n\n{method}\n  return n\n"
+        );
+        let before = condition_runs();
+        let outcome = execute(
+            TEST_PATH,
+            program.into_bytes(),
+            false,
+            Invocation::none().with_deadline(RUN_DEADLINE),
+        );
+        let ran = condition_runs() - before;
+        assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+        assert_eq!(String::from_utf8_lossy(&outcome.stdout), expected_stdout);
+        ran
+    };
+    assert_eq!(runs("  guard on when n * 2 = 4", "2\n"), 1);
+    assert_eq!(runs("  guard off when n > 1", "2\n"), 1);
+    assert_eq!(
+        runs("  guard on when length(n) = 1", "2\n"),
+        0,
+        "a condition that calls a function ran from the side table, which cannot park"
+    );
+    assert_eq!(
+        runs("  trace i\n  guard on when n = 2\n  trace o", "2\n"),
+        0,
+        "a condition run from ops under TRACE I would drop its intermediate lines"
+    );
+}
+
 /// A loop's `WHILE` or `UNTIL` that calls or sends runs from the loop's test
 /// region on every test -- the `DO`'s, after a pass that fell through, and
 /// after an `ITERATE` -- and a Rexx method it sends to runs on the driver's

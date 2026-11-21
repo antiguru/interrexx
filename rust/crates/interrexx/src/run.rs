@@ -703,7 +703,7 @@ impl Interp {
             return Ok(parked);
         }
         match &instruction.kind {
-            InstructionKind::Guard(guard) => self.exec_guard(code, index, guard),
+            InstructionKind::Guard(guard) => self.exec_guard(code, index, guard, None),
             InstructionKind::Reply { expression } => self.exec_reply(code, expression.as_ref()),
             // `FORWARD` and its options. See `exec_forward`.
             InstructionKind::Forward(forward) => self.exec_forward(code, forward),
@@ -1731,6 +1731,7 @@ impl Interp {
         code: &Code<'_>,
         index: usize,
         guard: &Guard,
+        compiled: Option<(&crate::ir::Chunk, RegFrame<'_>)>,
     ) -> Result<ExecOutcome, Failure> {
         use crate::guards::{GuardExec, GuardExecWait};
         let Some(key) = crate::guards::GuardKey::of(self.activation()) else {
@@ -1805,15 +1806,26 @@ impl Interp {
                     self.activity.guard_posted = false;
                     let halted = std::mem::take(&mut self.activity.woken_by_halt);
                     let frame = self.roots.activity_mut().push_frame();
-                    let holds = self.eval_condition(
-                        code,
-                        condition,
-                        ConditionTrace::Keyword(
-                            self.activity.clause_state.current_value_indent,
-                            "WHEN",
-                        ),
-                        raised_guard_not_logical,
+                    let trace = ConditionTrace::Keyword(
+                        self.activity.clause_state.current_value_indent,
+                        "WHEN",
                     );
+                    // The chunk's side-table ops where it compiled them and
+                    // `TRACE` shows no intermediates, as a loop condition's.
+                    let holds = match compiled {
+                        Some((chunk, registers)) => self.loop_condition(
+                            code,
+                            chunk,
+                            registers,
+                            index,
+                            condition,
+                            trace,
+                            raised_guard_not_logical,
+                        ),
+                        None => {
+                            self.eval_condition(code, condition, trace, raised_guard_not_logical)
+                        }
+                    };
                     self.roots.activity_mut().pop_frame(frame);
                     match holds {
                         Ok(true) => Step::Done,
@@ -2665,17 +2677,33 @@ impl Interp {
     }
 
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
-    /// `value`: the one arm both ops share in the driver.
+    /// `value`: the one arm both ops share in the driver. A `GUARD` whose
+    /// `WHEN` the chunk compiled into its side table runs it from there.
     #[inline]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "what the driver's shared arm holds, which the guard's compiled condition reads"
+    )]
     pub(crate) fn exec_op(
         &mut self,
         code: &Code<'_>,
+        chunk: &crate::ir::Chunk,
+        registers: RegFrame<'_>,
         index: usize,
         instruction: &Instruction,
         source: Option<&ProgramSource>,
         value: Option<ObjRef>,
     ) -> Result<ExecOutcome, Failure> {
         match value {
+            None if let InstructionKind::Guard(guard) = &instruction.kind
+                && chunk.condition_at(index).is_some() =>
+            {
+                #[cfg(test)]
+                if let Some(parked) = self.scripted_park() {
+                    return Ok(parked);
+                }
+                self.exec_guard(code, index, guard, Some((chunk, registers)))
+            }
             None => self.exec_instruction(
                 code,
                 index,

@@ -137,6 +137,7 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         InstructionKind::Command {
             expression: Some(_),
         } => Some("command"),
+        InstructionKind::Guard(guard) if guard.condition.is_some() => Some("GUARD WHEN"),
         _ => None,
     }
 }
@@ -356,6 +357,8 @@ struct Seen {
     /// stream, and how many to [`Chunk::conditions`].
     loop_tests: usize,
     side_conditions: usize,
+    /// How many `GUARD ... WHEN` conditions compiled to [`Chunk::conditions`].
+    guard_side_conditions: usize,
 }
 
 /// Checks one body's compiled stream against what its instructions call for,
@@ -504,6 +507,32 @@ fn check_body(
                 }
             }
             continue;
+        }
+
+        // **A `GUARD ... WHEN` condition** of reads and operators is in the
+        // side table, and any other is not: one that calls or sends, or that
+        // is not native, is walked on every test.
+        if let InstructionKind::Guard(guard) = &instruction.kind {
+            let side = chunk.condition_at(index);
+            match &guard.condition {
+                Some(condition)
+                    if root_of(condition) != Root::EvalExpr && !outside_side_table(condition) =>
+                {
+                    assert!(
+                        side.is_some(),
+                        "{where_}: instruction {index} ({construct}) has a value-only WHEN \
+                         outside the side table\n{}",
+                        render(&chunk)
+                    );
+                    seen.guard_side_conditions += 1;
+                }
+                _ => assert!(
+                    side.is_none(),
+                    "{where_}: instruction {index} ({construct}) put a WHEN that calls, sends \
+                     or is not native in the side table\n{}",
+                    render(&chunk)
+                ),
+            }
         }
 
         // The expression a promoted clause's region must end in, for the
@@ -743,6 +772,7 @@ fn sweep_every_corpus_body() {
         "OPTIONS",
         "INTERPRET",
         "command",
+        "GUARD WHEN",
     ] {
         assert!(
             seen.constructs.contains_key(construct),
@@ -766,6 +796,11 @@ fn sweep_every_corpus_body() {
          the condition rows above hold only over an empty set",
         seen.loop_tests,
         seen.side_conditions
+    );
+    assert!(
+        seen.guard_side_conditions > 0,
+        "no corpus GUARD WHEN compiled its condition to the side table, so the GUARD row above \
+         holds only over an empty set"
     );
     assert!(
         seen.native_header_values > 0,
