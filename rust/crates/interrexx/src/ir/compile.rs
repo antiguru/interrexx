@@ -1134,14 +1134,13 @@ fn compile_settled(
             }
             // A `CALL (expr)` whose arguments all compile: the target's ops,
             // `Op::ExecValue`, which converts the value to the name and
-            // traces it, the name pushed under the arguments, the arguments'
-            // ops, and `Op::CallNamed`, which takes the name off the run. The
-            // target is slot `0` and argument `k` slot `1 + k`. One with an
-            // argument that does not compile stays the delegating `Op::Exec`
-            // region below.
+            // traces it, the arguments' ops and pushes, and `Op::ExecWith`,
+            // which resolves the name and makes the call. The target is slot
+            // `0` and argument `k` slot `1 + k`. One with an argument that
+            // does not compile stays the delegating `Op::Exec` region below.
             InstructionKind::Call(call)
                 if let Call::Dynamic { target, args } = &**call
-                    && args.len() < usize::from(u16::MAX)
+                    && u16::try_from(args.len()).is_ok()
                     && args.iter().all(|arg| {
                         arg.as_ref()
                             .is_none_or(|expr| native_shape(expr, Some(NodePath::ROOT)))
@@ -1174,8 +1173,7 @@ fn compile_settled(
                     index: clause,
                     src: name,
                 });
-                ops.push(Op::PushArg { src: name });
-                let argc = push_arguments(
+                push_arguments(
                     &mut ops,
                     echoes_values,
                     &mut consts,
@@ -1188,10 +1186,9 @@ fn compile_settled(
                     |k| (k as u32 + 1, Some(NodePath::ROOT)),
                     true,
                 )?;
-                ops.push(Op::CallNamed {
+                ops.push(Op::ExecWith {
                     index: clause,
-                    site: calls.reserve()?,
-                    argc: argc + 1,
+                    src: name,
                 });
                 close_region(&mut ops, at)?;
                 registers.release(mark);

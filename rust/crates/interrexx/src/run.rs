@@ -2777,7 +2777,7 @@ impl Interp {
     /// [`crate::ir::Op::ExecWith`]: the instruction `instruction` from the
     /// value its expression left in register `src`, with what `Op::Exec`
     /// hands `exec_instruction`. A `RAISE` runs from the registers its parts
-    /// filled from `src` on.
+    /// filled from `src` on, and a `CALL (expr)` calls the name in `src`.
     #[inline(never)]
     pub(crate) fn exec_with(
         &mut self,
@@ -2792,7 +2792,8 @@ impl Interp {
             (Self::exec_value_expression(&instruction.kind).is_some()
                 && Self::exec_value_transfers(&instruction.kind))
                 || matches!(&instruction.kind, InstructionKind::Raise(raise)
-                    if RaiseLayout::of(raise).is_some()),
+                    if RaiseLayout::of(raise).is_some())
+                || Self::is_dynamic_call(&instruction.kind),
             "Op::ExecWith on an instruction exec_value_transfers does not name"
         );
         #[cfg(test)]
@@ -2823,6 +2824,12 @@ impl Interp {
                 let indent = self.activity.clause_state.current_value_indent;
                 self.exec_command_value(code, index, instruction, source, value, indent, None, None)
             }
+            InstructionKind::Call(call) => match &**call {
+                interrexx_parse::Call::Dynamic { args, .. } => self
+                    .exec_dynamic_call(registers, src, args.len())
+                    .map(ExecOutcome::Done),
+                _ => Err(Loud::instruction(&instruction.kind).into()),
+            },
             // `Op::ReplyCheck` made the check that comes before the
             // expression.
             InstructionKind::Reply { .. } => {
@@ -2840,6 +2847,35 @@ impl Interp {
             }
             kind => Err(Loud::instruction(kind).into()),
         }
+    }
+
+    /// [`crate::ir::Op::ExecWith`] for a `CALL (expr)`: the name
+    /// `Op::ExecValue` left in register `src`, resolved afresh, since the
+    /// next call may name something else, and the call over the `argc`
+    /// arguments the region's ops pushed. The callee's body runs on this Rust
+    /// stack through `complete_call`, as the walked instruction runs it, and
+    /// not as the driver's own call ops run theirs (stackless, or refusing a
+    /// native park). The label and builtin half of the resolution comes after
+    /// the arguments here, where the walked instruction makes it before them;
+    /// neither half reads anything an argument can change.
+    #[inline(never)]
+    fn exec_dynamic_call(
+        &mut self,
+        registers: RegFrame<'_>,
+        src: u16,
+        argc: usize,
+    ) -> Result<Flow, Failure> {
+        let Some(mark) = self.activity.value_buffer.len().checked_sub(argc) else {
+            return Err(Loud::call_op_off_its_node().into());
+        };
+        let name = self.to_text(registers.get(src)).to_vec();
+        let resolved = self.resolve_call(&name, true)?;
+        let base_indent = self.activity.clause_state.current_value_indent;
+        let ended = match self.begin_subroutine_over_pushed_args(resolved, &name, mark)? {
+            Started::Ran(ended) => ended,
+            Started::Entered => self.complete_call(Begun::Entered)?,
+        };
+        self.settle_call_result(ended, base_indent)
     }
 
     /// [`crate::ir::Op::ExecValue`] `op`: the instruction `instruction` from
@@ -2869,14 +2905,6 @@ impl Interp {
              that runs as Op::ExecWith"
         );
         match &instruction.kind {
-            // A `CALL (expr)`'s name, left in the register for the
-            // `Op::PushArg` behind this op to put under the arguments, where
-            // `Op::CallNamed` takes it from.
-            kind if Self::is_dynamic_call(kind) => {
-                let name = self.dynamic_call_name(value)?;
-                registers.set(src, name);
-                Ok(())
-            }
             InstructionKind::Numeric { setting, .. } => {
                 self.exec_numeric_value(setting, Some(value))
             }
@@ -2885,8 +2913,27 @@ impl Interp {
             }
             InstructionKind::Address(address) => self.exec_address_value(code, address, value),
             InstructionKind::Options { .. } => self.exec_options_value(value),
-            kind => Err(Loud::instruction(kind).into()),
+            kind => self.exec_value_name(kind, registers, src),
         }
+    }
+
+    /// [`Interp::exec_value`] for a `CALL (expr)`: the name, left in register
+    /// `src` for `Op::ExecWith` to call. Out of line, so that the arms above
+    /// dispatch as they did before it.
+    #[cold]
+    #[inline(never)]
+    fn exec_value_name(
+        &mut self,
+        kind: &InstructionKind,
+        registers: RegFrame<'_>,
+        src: u16,
+    ) -> Result<(), Failure> {
+        if !Self::is_dynamic_call(kind) {
+            return Err(Loud::instruction(kind).into());
+        }
+        let name = self.dynamic_call_name(registers.get(src))?;
+        registers.set(src, name);
+        Ok(())
     }
 
     /// The stepped clause a loop's test region runs in, around the header

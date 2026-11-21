@@ -379,7 +379,7 @@ struct Seen {
     bare_raises: usize,
     raise_parts: BTreeMap<&'static str, usize>,
     /// How many `CALL (expr)`s compiled to their target, their name's
-    /// `Op::ExecValue`, their arguments and `Op::CallNamed`, and how many
+    /// `Op::ExecValue`, their arguments and `Op::ExecWith`, and how many
     /// `CALL ON`/`OFF` stayed `Op::Exec`. No corpus `CALL (expr)` has an
     /// argument, so the argument half of that row is the golden cases'.
     dynamic_calls: usize,
@@ -591,10 +591,10 @@ fn check_body(
         }
 
         // **A `CALL (expr)` whose arguments are native** is its target's ops
-        // into one register, `Op::ExecValue` from that register, the register
-        // pushed, each argument's ops and push (and its `Op::TraceArgument`
-        // where the clause echoes values), and `Op::CallNamed` over the name
-        // and the arguments; nothing else, and no `Op::Exec`. One whose
+        // into one register, `Op::ExecValue` from that register, each
+        // argument's ops and push (and its `Op::TraceArgument` where the
+        // clause echoes values), and `Op::ExecWith` from the target's
+        // register; nothing else, and no `Op::Exec`. One whose
         // arguments are not, a `CALL ON`/`OFF` and a `CALL ns:name` are the
         // one `Op::Exec`.
         if let InstructionKind::Call(call) = &instruction.kind {
@@ -938,22 +938,17 @@ fn check_dynamic_call(
         ));
     }
     *seen.roots.entry(root).or_default() += 1;
-    if !matches!(ops.get(value_at + 1), Some(Op::PushArg { src }) if *src == name) {
-        fail("does not push its name right behind its ExecValue");
-    }
-    let argc = u16::try_from(args.len() + 1).expect("the compiler admits only these");
-    if !matches!(ops.last(), Some(Op::CallNamed { index, argc: n, .. }) if *index == at && *n == argc)
-    {
-        fail(&format!("does not end in its CallNamed over {argc} values"));
+    if !matches!(ops.last(), Some(Op::ExecWith { index, src }) if *index == at && *src == name) {
+        fail("does not end in its ExecWith from its target's register");
     }
     // The pushes the arguments' own calls, sends and lists take, paired off
     // as they are taken; the ones left are the arguments'.
-    let body = &ops[value_at + 2..ops.len() - 1];
+    let body = &ops[value_at + 1..ops.len() - 1];
     let mut pending: Vec<usize> = Vec::new();
     for (op_at, op) in body.iter().enumerate() {
         match op {
             Op::Exec { .. } | Op::ExecValue { .. } | Op::ExecWith { .. } | Op::CallNamed { .. } => {
-                fail("holds a second Exec, ExecValue, ExecWith or CallNamed");
+                fail("holds an Exec, CallNamed, or a second ExecValue or ExecWith");
             }
             Op::PushArg { .. } => pending.push(op_at),
             Op::CallArgs { argc, .. }
@@ -1007,7 +1002,7 @@ fn check_dynamic_call(
         }
     }
     if group != body.len() {
-        fail("has ops between its last argument and its CallNamed");
+        fail("has ops between its last argument and its ExecWith");
     }
 }
 

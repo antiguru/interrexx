@@ -2450,7 +2450,7 @@ impl Interp {
             return Err(Loud::call_op_off_its_node().into());
         };
         let Call::Named { name, literal, .. } = &**call else {
-            return self.begin_call_dynamic(call, argc);
+            return Err(Loud::call_op_off_its_node().into());
         };
         let Some(mark) = self.activity.value_buffer.len().checked_sub(argc as usize) else {
             return Err(Loud::call_op_off_its_node().into());
@@ -2483,40 +2483,6 @@ impl Interp {
             return Ok((started, base_indent));
         }
         let started = self.begin_subroutine_over_pushed_args(resolved, name, mark)?;
-        Ok((started, base_indent))
-    }
-
-    /// [`Interp::begin_call_named`] for a `CALL (expr)`, whose run of `argc`
-    /// values is the name `Op::ExecValue` left and then the arguments. The
-    /// name is taken off the run and resolved afresh on every call: its site
-    /// keeps nothing, since the next call may name something else. The label
-    /// and builtin half of the resolution comes after the arguments here,
-    /// where the walked instruction makes it before them; neither half reads
-    /// anything an argument can change.
-    #[cold]
-    #[inline(never)]
-    fn begin_call_dynamic(
-        &mut self,
-        call: &Call,
-        argc: u16,
-    ) -> Result<(Started<Ended>, usize), Failure> {
-        let (Call::Dynamic { .. }, Some(mark)) = (
-            call,
-            self.activity
-                .value_buffer
-                .len()
-                .checked_sub(usize::from(argc)),
-        ) else {
-            return Err(Loud::call_op_off_its_node().into());
-        };
-        let Some(Some(name)) = self.activity.value_buffer.get(mark).copied() else {
-            return Err(Loud::call_op_off_its_node().into());
-        };
-        self.activity.value_buffer.remove(mark);
-        let name = self.to_text(name).to_vec();
-        let resolved = self.resolve_call(&name, true)?;
-        let base_indent = self.activity.clause_state.current_value_indent;
-        let started = self.begin_subroutine_over_pushed_args(resolved, &name, mark)?;
         Ok((started, base_indent))
     }
 

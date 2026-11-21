@@ -100,6 +100,8 @@ pub(crate) enum Op {
     SelectCase { index: u32, src: u16 },
     /// Runs the instruction at `index` from the value its expression left in
     /// register `src`: everything the instruction does past evaluating it.
+    /// For a `CALL (expr)`, the part before its arguments are evaluated: the
+    /// name, which it leaves in `src` for the [`Op::ExecWith`] that calls it.
     ExecValue { index: u32, src: u16 },
     /// Runs the instruction at `index` from the value its expression left in
     /// register `src`, as [`Op::Exec`] runs a whole instruction: pinned, and
@@ -107,7 +109,8 @@ pub(crate) enum Op {
     /// instructions whose work past the evaluation can transfer control or
     /// run Rexx code of its own, which [`Op::ExecValue`]'s cannot. A `RAISE`
     /// raises from the registers its [`Op::RaisePart`]s filled, the first of
-    /// which is `src`.
+    /// which is `src`, and a `CALL (expr)` calls the name in `src` over the
+    /// arguments the region pushed.
     ExecWith { index: u32, src: u16 },
     /// The check the `REPLY` at `index` makes before it evaluates its
     /// expression, ahead of that expression's ops: its refusal outside a
