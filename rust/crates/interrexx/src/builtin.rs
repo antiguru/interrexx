@@ -697,6 +697,83 @@ pub(crate) enum BuiltinTarget {
     Gap,
 }
 
+/// **The builtins that change nothing but the heap**, which compiled code may
+/// call without reading the interpreter's state again afterwards
+/// (`crate::ir::drive::jit_host`). Given arguments that are each a plain
+/// string or number (`Interp::plain_string`), each of these reads only its
+/// arguments and the `NUMERIC` settings, allocates its answer, and answers it
+/// or a failure: it sets no variable, setting, trace state, clock, stream,
+/// queue or condition, runs no Rexx code, and so pushes no frame. A
+/// `LOSTDIGITS` it raises is its failure, never a pending trap. Pinned by
+/// `quiet_builtins_leave_the_interpreter_as_they_found_it`, and in debug
+/// builds by compiled code checking the state after each such call.
+#[cfg(feature = "jit")]
+const QUIET: &[&[u8]] = &[
+    b"ABBREV",
+    b"ABS",
+    b"BITAND",
+    b"BITOR",
+    b"BITXOR",
+    b"B2X",
+    b"CENTER",
+    b"CENTRE",
+    b"CHANGESTR",
+    b"COMPARE",
+    b"COPIES",
+    b"COUNTSTR",
+    b"C2D",
+    b"C2X",
+    b"DELSTR",
+    b"DELWORD",
+    b"D2C",
+    b"D2X",
+    b"FORMAT",
+    b"INSERT",
+    b"LASTPOS",
+    b"LEFT",
+    b"LENGTH",
+    b"LOWER",
+    b"MAX",
+    b"MIN",
+    b"OVERLAY",
+    b"POS",
+    b"REVERSE",
+    b"RIGHT",
+    b"SIGN",
+    b"SPACE",
+    b"STRIP",
+    b"SUBSTR",
+    b"SUBWORD",
+    b"TRANSLATE",
+    b"TRUNC",
+    b"UPPER",
+    b"VERIFY",
+    b"WORD",
+    b"WORDINDEX",
+    b"WORDLENGTH",
+    b"WORDPOS",
+    b"WORDS",
+    b"XRANGE",
+    b"X2B",
+    b"X2C",
+    b"X2D",
+];
+
+/// Whether `target` is one of [`QUIET`].
+#[cfg(feature = "jit")]
+pub(crate) fn quiet(target: BuiltinTarget) -> bool {
+    static BY_ROW: OnceLock<Vec<bool>> = OnceLock::new();
+    let BuiltinTarget::Row(row) = target else {
+        return false;
+    };
+    BY_ROW.get_or_init(|| {
+        IMPLEMENTED
+            .iter()
+            .map(|builtin| QUIET.contains(&builtin.name))
+            .collect()
+    })[usize::from(row)]
+}
+
 /// Every implemented builtin's row, keyed by the bytes a call site spells.
 fn rows() -> &'static FxHashMap<&'static [u8], u16> {
     static ROWS: OnceLock<FxHashMap<&'static [u8], u16>> = OnceLock::new();

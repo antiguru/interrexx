@@ -1740,7 +1740,7 @@ impl Interp {
     /// Whether `value` is a string or number in its own right, which is its
     /// own string value and no operator's receiver.
     #[inline]
-    fn plain_string(&self, value: ObjRef) -> bool {
+    pub(crate) fn plain_string(&self, value: ObjRef) -> bool {
         match value.decode() {
             Decoded::SmallInt(_) | Decoded::Text(_) => true,
             Decoded::Heap { .. } => matches!(
