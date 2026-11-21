@@ -1334,11 +1334,7 @@ fn compile_settled(
             }
             // An instruction whose expression is its first act: the
             // expression's ops, then `Op::ExecValue`, which does the rest.
-            InstructionKind::Numeric {
-                expression: Some(expression),
-                ..
-            }
-            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
+            kind if let Some(expression) = crate::Interp::exec_value_expression(kind) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);

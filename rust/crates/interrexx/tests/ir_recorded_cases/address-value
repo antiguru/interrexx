@@ -1,0 +1,112 @@
+# `ADDRESS VALUE expr`, and `ADDRESS (expr)`, evaluate their expression as
+# native ops, and `Op::ExecValue` does the rest. Each stanza answers what the
+# walked expression answered.
+
+# the environment from a variable, a call and the implicit form, then the
+# toggle back and forth
+program
+nm = 'mIxEd'
+address value nm
+say address()
+address (g('xyz'))
+say address()
+address
+say address()
+exit
+g: return translate(arg(1))
+----
+rc> 0
+out> mIxEd
+out> XYZ
+out> mIxEd
+
+# trace r and trace i: the `>>>` line after the string request
+program
+trace r
+address value 'A' || 'B'
+trace i
+address value address() || 'C'
+say address()
+----
+rc> 0
+out> ABC
+err>      2 *-* address value 'A' || 'B'
+err>        >>>   "AB"
+err>      3 *-* trace i
+err>      4 *-* address value address() || 'C'
+err>        >F>   ADDRESS => "AB"
+err>        >L>   "C"
+err>        >O>   "||" => "ABC"
+err>        >>>   "ABC"
+err>      5 *-* say address()
+err>        >F>   ADDRESS => "ABC"
+err>        >>>   "ABC"
+
+# an object operand answers through MAKESTRING, and one with no string
+# method through its default string
+program
+o = .k~new
+address value o
+say address()
+address value .nokw~new
+say address()
+::class k
+::method makestring
+  return 'CMD'
+::class nokw
+----
+rc> 0
+out> CMD
+out> a NOKW
+
+# a name over the length limit, and a raise in the middle of the expression
+program
+signal on syntax name long
+address value copies('a', 300)
+exit
+long:
+say 'long' rc sigl
+signal on syntax name mid
+address value 'X' || f()
+exit
+f: raise syntax 40.1 array('F')
+mid:
+say 'mid' rc sigl
+----
+rc> 0
+out> long 29 2
+out> mid 40 7
+
+# a NOVALUE in the expression
+program
+signal on novalue
+address value zq
+exit
+novalue: say 'novalue' sigl condition('D')
+----
+rc> 0
+out> novalue 2 ZQ
+
+# the setting is the activation's: a procedure's is its own
+program
+call r
+say address()
+exit
+r: procedure
+  address value 'INNER'
+  say address()
+  return
+----
+rc> 0
+out> INNER
+out> sh
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as ADDRESS's own slot
+program
+address value rexx:length('abc')
+----
+rc> 213
+err>      1 *-* address value rexx:length('abc')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:

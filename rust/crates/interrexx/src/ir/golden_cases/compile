@@ -1484,6 +1484,18 @@ zc = rexx:string
 registers: 1
 consts:
 
+# `ADDRESS VALUE`: the expression's ops, then `ExecValue`, as for `NUMERIC`.
+compile
+address value za || 'X'
+----
+0: Clause index=0 end=5
+1: Load read=Simple at=0 dst=0
+2: Const dst=1 konst=0
+3: Binary op=|| lhs=0 rhs=1 dst=0
+4: ExecValue index=0 src=0
+registers: 2
+consts: 'X'
+
 # `TRACE VALUE`: the expression's ops, then `ExecValue`, as for `NUMERIC`.
 compile
 trace value zt || 'r'

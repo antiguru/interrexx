@@ -124,6 +124,13 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
             ..
         } => Some("NUMERIC"),
         InstructionKind::Trace(interrexx_parse::Trace::Value(_)) => Some("TRACE VALUE"),
+        InstructionKind::Address(address)
+            if address.command.is_none()
+                && address.environment.is_none()
+                && address.dynamic.is_some() =>
+        {
+            Some("ADDRESS VALUE")
+        }
         _ => None,
     }
 }
@@ -518,6 +525,11 @@ fn check_body(
             | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
                 Some(root_of(expression))
             }
+            InstructionKind::Address(address)
+                if address.command.is_none() && address.environment.is_none() =>
+            {
+                address.dynamic.as_ref().map(root_of)
+            }
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -717,6 +729,7 @@ fn sweep_every_corpus_body() {
         "label",
         "NUMERIC",
         "TRACE VALUE",
+        "ADDRESS VALUE",
     ] {
         assert!(
             seen.constructs.contains_key(construct),
