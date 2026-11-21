@@ -24,7 +24,6 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use interrexx_core::{Body, Decoded};
 use interrexx_parse::Operator;
 
 use super::*;
@@ -544,19 +543,6 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
     ))
 }
 
-/// Whether `value` is a string or number in its own right, and so an
-/// argument whose string value runs no Rexx code: `Interp::plain_string`.
-fn plain(interp: &Interp, value: ObjRef) -> bool {
-    match value.decode() {
-        Decoded::SmallInt(_) | Decoded::Text(_) => true,
-        Decoded::Heap { .. } => matches!(
-            interp.heap.get(value).map(|object| &object.body),
-            Some(Body::Text { .. } | Body::Num { .. })
-        ),
-        _ => false,
-    }
-}
-
 /// The comparisons [`Step::Compare`] answers, by `compare_op`'s mapping: the
 /// non-strict ones, which `small_int_compare` settles for two small integers.
 fn quick_compare(op: Operator) -> Option<Compare> {
@@ -883,7 +869,13 @@ impl Host for Driven<'_, '_> {
         else {
             return false;
         };
-        if !crate::builtin::quiet(target) {
+        // A setting that shows values is the full path's, which has the
+        // trace ops. Compiled code does not reach here under one: a clause
+        // opened after `TRACE` changes hands the loop to the driver, and the
+        // chunk compiled for the clause it changed in has no trace ops. The
+        // check keeps that from being what this rests on.
+        let mode = interp.trace_mode();
+        if !crate::builtin::quiet(target) || mode.results || mode.intermediates {
             return false;
         }
         let argc = usize::from(argc);
@@ -892,7 +884,7 @@ impl Host for Driven<'_, '_> {
             let src = jit::carried_arg(args, k);
             if src != jit::OMITTED {
                 let arg = self.registers.get(src);
-                if !plain(interp, arg) {
+                if !interp.plain_string(arg) {
                     return false;
                 }
                 *value = Some(arg);
