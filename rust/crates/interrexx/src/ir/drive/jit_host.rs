@@ -422,19 +422,26 @@ fn pass_of(
                     steps.push(Step::Builtin { pc: at, args });
                     continue;
                 }
-                // A `do; ... end` block, unlabelled: its start runs on the
-                // host, whose region ends at the clause's own end, where
-                // compiled code carries on into the block's clauses.
+                // A `do; ... end` block: its start runs on the host, whose
+                // region ends at the clause's own end, where compiled code
+                // carries on into the block's clauses. An unlabelled block's
+                // start is a clause counted; a labelled one's also opens the
+                // frame its `END`'s `Op::EndWhen` closes, which the host's
+                // `region_ops!` does.
                 Op::LoopRun { index }
-                    if matches!(
-                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
-                        Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
-                            if matches!(body.kind, interrexx_parse::LoopKind::Simple)
-                                && body.label.is_none()
-                    ) =>
+                    if let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
+                        .body
+                        .instructions
+                        .get(index as usize)
+                        .map(|clause| &clause.kind)
+                        && matches!(body.kind, interrexx_parse::LoopKind::Simple) =>
                 {
                     pending.clear();
-                    steps.push(Step::BlockStart { pc: at });
+                    steps.push(if body.label.is_none() {
+                        Step::BlockStart { pc: at }
+                    } else {
+                        Step::Op { pc: at }
+                    });
                     continue;
                 }
                 // The `END` of such a block answers `Flow::Next` and does
