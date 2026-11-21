@@ -8,7 +8,7 @@ end
 say x y i
 ----
 30000 50000 10001
-compiled: yes
+compiled: line 2
 
 # IF and ELSE, nested, with % and // of negative values
 run
@@ -22,7 +22,7 @@ end
 say a b c d
 ----
 3333 594643 -5001 5000
-compiled: yes
+compiled: line 2
 
 # a SELECT whose branches run between native work
 run
@@ -41,7 +41,7 @@ end
 say a b c t
 ----
 3333 3334 3333 0
-compiled: yes
+compiled: line 2
 
 # DO n, and DO FOREVER left by LEAVE
 run
@@ -57,7 +57,7 @@ end
 say k j
 ----
 20000 12000
-compiled: yes
+compiled: lines 2, 6
 
 # NOVALUE from a stem read in a compiled loop: SIGL and the description
 run
@@ -73,7 +73,7 @@ exit
 novalue: say 'novalue at' sigl 'i='i 't='t condition('D')
 ----
 novalue at 7 i=10000 t=10000 V.10000
-compiled: yes
+compiled: lines 2, 4
 quiet compound accesses: yes
 
 # a division by zero raised from the second clause of a compiled body
@@ -87,7 +87,7 @@ end
      4 *-*   r = q % (15000 - i)
 Error 42 running t.rex line 4:  Arithmetic overflow/underflow.
 Error 42.3:  Arithmetic overflow; divisor must not be zero.
-compiled: yes
+compiled: line 2
 
 # values that outgrow DIGITS after the loop is compiled (past pass 8,944), so
 # the native path declines from then on
@@ -99,7 +99,7 @@ end
 say x
 ----
 1.25012764E+9
-compiled: yes
+compiled: line 2
 
 # a method whose loop variable is EXPOSEd
 run
@@ -115,7 +115,7 @@ say c~run(10000)
   return total
 ----
 50005000
-compiled: yes
+compiled: line 7
 
 # a body holding a TRACE instruction keeps its clause echoes behind run-time
 # gates, which compiled code does not take, so it stays driven
@@ -169,7 +169,7 @@ end
 say n m r
 ----
 10000 20041 20036
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # WHILE, UNTIL, a TO with WHILE, and FOR: the body compiled, each pass
@@ -195,7 +195,7 @@ end
 say a i b c j d
 ----
 29998 10000 30000 15000 9001 40504500
-compiled: yes
+compiled: lines 2, 7, 11, 15
 
 # an inner loop compiled during its second entry and entered compiled after
 run
@@ -208,7 +208,7 @@ end
 say s i j
 ----
 75015000 4 5001
-compiled: yes
+compiled: line 3
 
 # an INTERPRETed loop stays driven, however hot
 run
@@ -229,7 +229,7 @@ end
 say x y digits()
 ----
 50005000 100000000 9
-compiled: yes
+compiled: line 2
 
 # a cascade in an expression runs its SendWith on the host
 run
@@ -242,7 +242,7 @@ end
 say x y a~items b~items
 ----
 50005000 100000000 10000 10000
-compiled: yes
+compiled: line 2
 
 # a scoped send runs its SendScope and SendWith on the host
 run
@@ -260,7 +260,7 @@ say x y z
   return 1
 ----
 50005000 100000000 1
-compiled: yes
+compiled: line 2
 
 # a namespace class lookup runs its ClassAt on the host
 run
@@ -273,7 +273,7 @@ end
 say x y c
 ----
 50005000 100000000 The String class
-compiled: yes
+compiled: line 2
 
 # a variable reference runs its Reference on the host
 run
@@ -286,7 +286,7 @@ end
 say x y r~value
 ----
 50005000 100000000 7
-compiled: yes
+compiled: line 2
 
 # a TRACE VALUE in the body switches the setting in the last passes. A body
 # holding a TRACE compiles with its trace gates (TraceRead and the like), which
@@ -354,7 +354,7 @@ end
 say t h v u
 ----
 739359 7468A10000 m  XYneht--a own
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a quiet builtin that fails in a compiled body is raised again by the full
@@ -371,7 +371,7 @@ syntax:
   say 'line' sigl 'error' rc'.'condition('E') 'at i =' i 'n =' n
 ----
 line 4 error 40.14 at i = 9001 n = 18000
-compiled: yes
+compiled: line 3
 quiet builtin calls: yes
 
 # an object argument's STRING method is Rexx code, so a call over one takes
@@ -399,7 +399,7 @@ string asked 2
      4 *-*       n = n + length(o)
 Error 93 running t.rex line 13:  Invalid call to method.
 Error 93.900:  refused.
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a call with more arguments than a step carries keeps its pushes
@@ -411,7 +411,7 @@ end
 say n
 ----
 90000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # every quiet builtin in one compiled body, each call checked in debug against
@@ -435,7 +435,7 @@ end
 say t
 ----
 7050000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # compound reads and writes in a compiled body, a shared read and write over a
@@ -451,7 +451,7 @@ end
 say n t.5 t.36 t.5.9997
 ----
 1536230 271 270 0
-compiled: yes
+compiled: line 2
 quiet compound accesses: yes
 
 # an unset compound read takes the full path, where the NOVALUE hook, the
@@ -485,7 +485,7 @@ hook asked for U.1
 10006
 hook asked for W.9999
 novalue at line 11 for W.9999 i = 9999 n = 20004
-compiled: yes
+compiled: lines 3, 10
 
 # a tail whose value is an object is a string request, Rexx code, so the
 # access takes the full path: MAKESTRING runs once per access, and the tail
@@ -513,7 +513,7 @@ makestring asked
 makestring asked
 makestring asked
 7 9999 10000 9999
-compiled: yes
+compiled: line 3
 quiet compound accesses: yes
 
 # writes that create a stem, and a DROP of it part way
@@ -525,7 +525,7 @@ end
 say v.9000 v.9001 v.10000 v.1
 ----
 V.9000 18002 20000 V.1
-compiled: yes
+compiled: line 1
 quiet compound accesses: yes
 
 # an EXPOSEd stem, read and written from a method's compiled loop
@@ -543,7 +543,7 @@ say o~run
   return c.0 c.4
 ----
 10005000 10003000
-compiled: yes
+compiled: line 7
 quiet compound accesses: yes
 
 # do-blocks in a compiled body: plain, and as an IF's branches
@@ -566,7 +566,7 @@ end
 say a b c
 ----
 50000000 20000 0
-compiled: yes
+compiled: line 2
 
 # a LEAVE from a do-block in a compiled body
 run
@@ -585,7 +585,7 @@ end
 say n m i
 ----
 9497 90259512 9500
-compiled: yes
+compiled: line 2
 
 # a do-block around a quiet builtin call
 run
@@ -599,7 +599,7 @@ end
 say t
 ----
 68896
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a labelled do-block in a compiled body: its frame opens on the host and
@@ -618,7 +618,7 @@ end
 say a b m f
 ----
 50005000 6667 -8 49998333
-compiled: yes
+compiled: line 2
 
 # a LEAVE naming a labelled block leaves the block, and the loop carries on
 run
@@ -634,7 +634,7 @@ end
 say a b
 ----
 10000 25000
-compiled: yes
+compiled: line 2
 
 # an ITERATE from inside a labelled block ends the pass, and LEAVE ends the
 # loop
@@ -655,7 +655,7 @@ end
 say a i
 ----
 80000000 9999
-compiled: yes
+compiled: line 2
 
 # a WHILE that calls a routine is a test region, whose boundaries are two host
 # calls a pass: against a body this small the loop stays driven
@@ -726,7 +726,7 @@ end
 say n m k i
 ----
 49995000 -49914992 0 10000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # an UNTIL that calls a builtin, with a body that compiles
@@ -739,7 +739,7 @@ end
 say n m k i
 ----
 50005000 -49924980 -1 10000
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a COUNTER with an UNTIL that calls a builtin
@@ -752,7 +752,7 @@ end
 say n c i k
 ----
 112507500 15000 15000 -1
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # inner loops whose WHILE and UNTIL call a builtin: their test regions are
@@ -772,7 +772,7 @@ end
 say t s r i j k
 ----
 13333 -70893 -70893 10001 2 2
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a WHILE whose builtin answers a value that is not logical, in a compiled
@@ -789,7 +789,7 @@ exit
 syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
 ----
 syntax 34 34.3 line 6 8000 31996000
-compiled: yes
+compiled: line 3
 quiet builtin calls: yes
 
 # a failure raised by an op of a compiled WHILE test region: blamed on the
@@ -805,7 +805,7 @@ say n
      5 *-*   end
 Error 41 running t.rex line 5:  Bad arithmetic conversion.
 Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # a failure raised by an op of a compiled UNTIL test region: blamed on the
@@ -821,30 +821,40 @@ say n
      5 *-*   end
 Error 41 running t.rex line 5:  Bad arithmetic conversion.
 Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
-compiled: yes
+compiled: line 2
 quiet builtin calls: yes
 
 # an inner counted loop in a compiled body: its start and each pass boundary
-# through the host, its body compiled
+# through the host, its body compiled. The outer body's own work is what
+# passes the gate, so the outer loop compiles with the inner one in it
 run
 t = 0
 do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
   do j = 1 to 5
     t = t + i * j
     u = t // 7
   end
   t = t - u
 end
-say t i j
+say t i j p9
 ----
-750045002 10001 6
-compiled: yes
+750045002 10001 6 -9991
+compiled: lines 2, 5
 
-# inner loops of every flat shape the pass takes: DO n, a BY, none at all,
-# LEAVE and ITERATE
+# inner loops of the flat shapes DO n, a BY and none at all, in an outer body
+# the gate takes
 run
 t = 0; s = 0
 do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
+  p20 = p19 + 21; p21 = p20 - i; p22 = p21 // 3 * 2; p23 = p22 // 7; p24 = p23 + 25
+  p25 = p24 - i; p26 = p25 // 3 * 2; p27 = p26 // 7; p28 = p27 + 29; p29 = p28 - i
+  p30 = p29 // 3 * 2; p31 = p30 // 7; p32 = p31 + 33; p33 = p32 - i; p34 = p33 // 3 * 2
   do 3
     t = t + 1
   end
@@ -854,6 +864,24 @@ do i = 1 to 10000
   do j = 1 to 0
     t = t + 1000
   end
+end
+say t s i j k p34
+----
+30000 100030000 10001 1 10004 -2
+compiled: lines 2, 10, 13
+
+# inner loops ended by LEAVE and passed on by ITERATE, in an outer body the
+# gate takes
+run
+t = 0; s = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
+  p20 = p19 + 21; p21 = p20 - i; p22 = p21 // 3 * 2; p23 = p22 // 7; p24 = p23 + 25
+  p25 = p24 - i; p26 = p25 // 3 * 2; p27 = p26 // 7; p28 = p27 + 29; p29 = p28 - i
+  p30 = p29 // 3 * 2; p31 = p30 // 7; p32 = p31 + 33; p33 = p32 - i; p34 = p33 // 3 * 2
   do j = 1 to 4
     if j = 3 then leave
     s = s + j
@@ -863,15 +891,20 @@ do i = 1 to 10000
     s = s - j
   end
 end
-say t s i j k
+say t s i j p34
 ----
-30000 99980000 10001 5 10004
-compiled: yes
+0 -50000 10001 5 -2
+compiled: lines 2, 10, 14
 
-# inner loops with a decimal control, a WHILE and an UNTIL
+# inner loops with a decimal control, a WHILE and an UNTIL, in an outer body
+# the gate takes
 run
 t = 0
 do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  p10 = p9 // 3 * 2; p11 = p10 // 7; p12 = p11 + 13; p13 = p12 - i; p14 = p13 // 3 * 2
+  p15 = p14 // 7; p16 = p15 + 17; p17 = p16 - i; p18 = p17 // 3 * 2; p19 = p18 // 7
   do j = 1.5 to 3 by 0.5
     t = t + 2
   end
@@ -882,10 +915,27 @@ do i = 1 to 10000
     t = t + 1
   end
 end
-say t i j
+say t i j p19
 ----
-120000 10001 2
-compiled: yes
+120000 10001 2 0
+compiled: lines 2, 7, 10, 13
+
+# an inner DO n whose passes compiled code counts down: the host learns of
+# them when it is next called (`Host::enter`), so the count is not run again
+run
+t = 0
+do i = 1 to 10000
+  p0 = i + 1; p1 = p0 - i; p2 = p1 // 3 * 2; p3 = p2 // 7; p4 = p3 + 5
+  p5 = p4 - i; p6 = p5 // 3 * 2; p7 = p6 // 7; p8 = p7 + 9; p9 = p8 - i
+  do 3
+    t = t + 1
+  end
+  t = t + 5
+end
+say t i p9
+----
+80000 10001 -9991
+compiled: lines 2, 5
 
 # an inner loop inside a body with work of its own: the whole compiles, the
 # inner loop's pass boundary native
@@ -902,4 +952,4 @@ end
 say a b c t
 ----
 49955040 28959 145015284 60000
-compiled: yes
+compiled: lines 2, 5
