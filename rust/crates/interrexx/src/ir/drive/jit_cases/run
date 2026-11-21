@@ -74,6 +74,7 @@ novalue: say 'novalue at' sigl 'i='i 't='t condition('D')
 ----
 novalue at 7 i=10000 t=10000 V.10000
 compiled: yes
+quiet compound accesses: yes
 
 # a division by zero raised from the second clause of a compiled body
 run
@@ -436,3 +437,111 @@ say t
 7050000
 compiled: yes
 quiet builtin calls: yes
+
+# compound reads and writes in a compiled body, a shared read and write over a
+# stem default among them: one call each, with no refresh
+run
+t. = 0; n = 0
+do i = 1 to 10000
+  k = i // 37
+  t.k = t.k + 1
+  t.k.i = k
+  n = n + t.k + t.k.i
+end
+say n t.5 t.36 t.5.9997
+----
+1536230 271 270 0
+compiled: yes
+quiet compound accesses: yes
+
+# an unset compound read takes the full path, where the NOVALUE hook, the
+# derived name and SIGNAL ON NOVALUE are
+run
+.local['NOVALUE'] = .hook~new
+n = 0
+do i = 1 to 10000
+  k = i // 3
+  if i > 9997 then n = n + length(u.k)
+  else n = n + 1
+end
+say n
+signal on novalue
+do i = 1 to 10000
+  if i = 9999 then n = n + w.i
+  n = n + 1
+end
+exit
+novalue:
+  say 'novalue at line' sigl 'for' condition('D') 'i =' i 'n =' n
+::class hook
+::method novalue
+  use arg name
+  say 'hook asked for' name
+  return .nil
+----
+hook asked for U.2
+hook asked for U.0
+hook asked for U.1
+10006
+hook asked for W.9999
+novalue at line 11 for W.9999 i = 9999 n = 20004
+compiled: yes
+
+# a tail whose value is an object is a string request, Rexx code, so the
+# access takes the full path: MAKESTRING runs once per access, and the tail
+# the object's rendering names is never the one read
+run
+a.ms = 'hit'; n = 0; o = .key~new
+w = o~objectName; a.w = 'the rendering, not the string request'
+do i = 1 to 10000
+  j = i // 2
+  a.j = i
+  if i > 9997 then if i < 10000 then n = n + length(a.o)
+  if i > 9997 then if i < 10000 then a.o = i
+end
+say n a.ms a.0 a.1
+::class key
+::method makestring
+  say 'makestring asked'
+  return 'MS'
+::method string
+  say 'string asked'
+  return 'MS'
+----
+makestring asked
+makestring asked
+makestring asked
+makestring asked
+7 9999 10000 9999
+compiled: yes
+quiet compound accesses: yes
+
+# writes that create a stem, and a DROP of it part way
+run
+do i = 1 to 10000
+  v.i = i * 2
+  if i = 9000 then drop v.
+end
+say v.9000 v.9001 v.10000 v.1
+----
+V.9000 18002 20000 V.1
+compiled: yes
+quiet compound accesses: yes
+
+# an EXPOSEd stem, read and written from a method's compiled loop
+run
+o = .counter~new
+say o~run
+::class counter
+::method run
+  expose c.
+  c. = 0
+  do i = 1 to 10000
+    k = i // 5
+    c.k = c.k + i
+  end
+  return c.0 c.4
+----
+10005000 10003000
+compiled: yes
+quiet compound accesses: yes

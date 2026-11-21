@@ -193,7 +193,7 @@ impl Interp {
             passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
                 let generation = self.routine_generation;
-                let Some((compiled, budget)) = pass_of(chunk, pc, do_index, generation)
+                let Some((compiled, budget)) = pass_of(code, chunk, pc, do_index, generation)
                     .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
                 else {
                     state.set(REFUSED);
@@ -275,7 +275,13 @@ impl Interp {
 /// The body of the loop whose `Op::DO` is instruction `do_index` and whose
 /// `Op::LoopNext` is at `loop_pc`, as a [`Pass`], or `None` where it holds
 /// anything but plain clause regions of value ops and stores.
-fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Option<(Pass, u64)> {
+fn pass_of(
+    code: &Code<'_>,
+    chunk: &Chunk,
+    loop_pc: u32,
+    do_index: u32,
+    generation: u32,
+) -> Option<(Pass, u64)> {
     let body_start = chunk.op_at(do_index as usize + 1)?;
     if body_start >= loop_pc {
         return None;
@@ -457,6 +463,21 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 {
                     Step::Store { pc: at, slot, src }
                 }
+                // A compound's read and its write: one call with no bracket
+                // where that holds (`Host::quiet_compound`).
+                Op::Load {
+                    read: SymbolRead::Compound | SymbolRead::CompoundShared,
+                    ..
+                } => Step::Compound { pc: at },
+                Op::Store { index, .. }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::Assignment { target, .. })
+                            if matches!(target.kind, ExprKind::Compound(_))
+                    ) =>
+                {
+                    Step::Compound { pc: at }
+                }
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
                 Op::PushArg { src } => Step::PushArg { src },
@@ -524,6 +545,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 Step::Op { .. }
                     | Step::Between { .. }
                     | Step::Builtin { .. }
+                    | Step::Compound { .. }
                     | Step::Open { .. }
                     | Step::Close { .. }
             )
@@ -917,6 +939,78 @@ impl Host for Driven<'_, '_> {
         }
     }
 
+    fn quiet_compound(&mut self, pc: u32) -> bool {
+        let interp = &mut *self.interp;
+        // A setting that shows values is the full path's, as for a builtin.
+        // No test reaches this: a loop whose setting starts to show values
+        // leaves compiled code at its next clause, as for a builtin.
+        let mode = interp.trace_mode();
+        if mode.results || mode.intermediates {
+            return false;
+        }
+        match self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
+            Some(&Op::Load {
+                symbol, read, dst, ..
+            }) => {
+                let shared = match read {
+                    SymbolRead::Compound => false,
+                    SymbolRead::CompoundShared => true,
+                    _ => return false,
+                };
+                match interp.read_compound_quiet(self.code, symbol, shared) {
+                    Some(value) => {
+                        self.registers.set(dst, value);
+                        #[cfg(test)]
+                        QUIET_COMPOUNDS.with(|accesses| accesses.set(accesses.get() + 1));
+                        true
+                    }
+                    None => false,
+                }
+            }
+            Some(&Op::Store {
+                index, src, shared, ..
+            }) => {
+                let Some(InstructionKind::Assignment { target, .. }) = self
+                    .code
+                    .body
+                    .instructions
+                    .get(index as usize)
+                    .map(|clause| &clause.kind)
+                else {
+                    return false;
+                };
+                let ExprKind::Compound(id) = target.kind else {
+                    return false;
+                };
+                // The key the write takes: the one the read before it holds,
+                // or a tail whose pieces are plain.
+                if !(shared && interp.shared_key_for == Some(id)) {
+                    let mut key = interp.take_key_buffer();
+                    let plain = interp.quiet_tail_key_into(self.code, id, &mut key);
+                    interp.give_key_buffer(key);
+                    if !plain {
+                        return false;
+                    }
+                }
+                let value = self.registers.get(src);
+                // The value rooted for the write is released with it, as for
+                // a builtin's temporaries.
+                let frame = interp.roots.activity_mut().push_frame();
+                let wrote = interp.assign_evaluated(self.code, target, value, None, shared);
+                interp.roots.activity_mut().pop_frame(frame);
+                // A write that failed is made again by the full path, which
+                // raises its failure; a second write of the same value to the
+                // same tail is the first.
+                #[cfg(test)]
+                if wrote.is_ok() {
+                    QUIET_COMPOUNDS.with(|accesses| accesses.set(accesses.get() + 1));
+                }
+                wrote.is_ok()
+            }
+            _ => false,
+        }
+    }
+
     fn stage_args(&mut self, pc: u32, args: u64) {
         let Some(&Op::CallArgs { argc, .. }) =
             self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
@@ -1226,6 +1320,7 @@ impl Driven<'_, '_> {
 thread_local! {
     static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
+    static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
 }
 
 #[cfg(test)]
@@ -1237,6 +1332,14 @@ fn compiled_runs() -> usize {
 fn reset_compiled_runs() {
     COMPILED_RUNS.with(|runs| runs.set(0));
     QUIET_CALLS.with(|calls| calls.set(0));
+    QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
+}
+
+/// How many compound reads and writes `Host::quiet_compound` has made on
+/// this thread.
+#[cfg(test)]
+fn quiet_compounds() -> usize {
+    QUIET_COMPOUNDS.with(Cell::get)
 }
 
 /// How many builtin calls `Host::quiet_builtin` has run on this thread.
