@@ -898,7 +898,13 @@ impl Host for Driven<'_, '_> {
         // A failure is raised again by the full path, from a clause the
         // interpreter holds: a quiet builtin answers the same failure for the
         // same arguments.
+        // The temporaries the builtin roots are its own: released here, as
+        // the clause around a call would release them, since a clause
+        // compiled code opened has no temporaries frame of its own to close.
+        // The answer is rooted in its register from here.
+        let frame = interp.roots.activity_mut().push_frame();
         let ran = crate::builtin::run(interp, b"", target, &values[..argc]);
+        interp.roots.activity_mut().pop_frame(frame);
         interp.activity.depth -= 1;
         match ran {
             Ok(value) => {

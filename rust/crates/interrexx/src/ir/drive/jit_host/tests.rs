@@ -54,3 +54,61 @@ fn compiled_loops_print_what_the_interpreter_prints() {
         });
     });
 }
+
+/// Runs `source` as a program on this thread, as `run::tests::run_source`
+/// does, and answers the interpreter after it.
+fn ran(source: &[u8]) -> crate::Interp {
+    use crate::plan::BodyKey;
+    use std::rc::Rc;
+    let mut interp = crate::Interp::new();
+    let program =
+        Rc::new(interrexx_parse::parse_program(source.to_vec()).expect("test program parses"));
+    let program_id = interp.programs.insert(Rc::clone(&program));
+    let plan = interp.plan_for(
+        BodyKey {
+            program: program_id,
+            directive: None,
+        },
+        &program.main,
+        &program.symbols,
+        &program.source,
+    );
+    let frame = interp.roots.push_slots(plan.len());
+    let id = interp.next_activation_id();
+    interp.push_activation(crate::Activation::new(
+        id,
+        Rc::clone(&program),
+        program_id,
+        plan,
+        frame,
+    ));
+    interp.run_activation().expect("test program runs");
+    interp
+}
+
+/// A quiet builtin that roots temporaries (`MAX` does) leaves none behind it
+/// in a clause compiled code opened: the most live at once is the same for a
+/// long compiled loop as for a short one.
+#[test]
+fn quiet_builtin_calls_do_not_accumulate_temps() {
+    let high_water = |n: usize| {
+        reset_compiled_runs();
+        let interp =
+            ran(format!("x = 0\ndo i = 1 to {n}\n  x = x + max(i // 7, 3)\nend\nsay x").as_bytes());
+        assert!(
+            compiled_runs() > 0 && quiet_calls() > 0,
+            "{n} passes compiled, quietly"
+        );
+        interp.roots.activity().temps_capacity()
+    };
+    let long = high_water(40000);
+    assert!(
+        long < 1000,
+        "{long} temporaries live at once after 40000 passes"
+    );
+    assert_eq!(
+        high_water(10000),
+        long,
+        "the high-water mark grows with the pass count"
+    );
+}
