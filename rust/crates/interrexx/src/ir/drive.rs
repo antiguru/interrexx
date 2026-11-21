@@ -405,6 +405,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::SendWith { .. } => "SendWith",
         Op::SendScope { .. } => "SendScope",
         Op::ExecValue { .. } => "ExecValue",
+        Op::ExecWith { .. } => "ExecWith",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1516,6 +1517,36 @@ macro_rules! region_ops {
                             $source,
                             $self.activity.region_procedure_permitted,
                         )
+                    ) {
+                        Ok(ExecOutcome::Done(flow)) => {
+                            break $cold Ok(RegionEnd::Flowed(flow));
+                        }
+                        Ok(outcome) => match $self.exec_suspends(
+                            outcome, $top, $code, $index, $clause, $source,
+                        ) {
+                            Suspended::Region(region) => break $cold region,
+                            Suspended::Parked => break 'entered Deliver::Exec,
+                            Suspended::ForwardReturn => {
+                                break 'entered Deliver::ForwardReturn
+                            }
+                            Suspended::ForwardContinue => {
+                                break 'entered Deliver::ForwardContinue
+                            }
+                        },
+                        Err(failure) => break $cold Err(failure),
+                    }
+                }
+                Op::ExecWith { $index: at, src } => {
+                    debug_assert_names_the_clause($code, *at, $clause, "ExecWith");
+                    debug_assert!(
+                        $chunk.holds_register(*src),
+                        "op reads register {src} outside the region the chunk reserved"
+                    );
+                    let value = $registers.get(*src);
+                    match pinned!(
+                        $self,
+                        crate::pinning::PinKind::OpExec,
+                        $self.exec_with($code, $index, $clause, $source, value)
                     ) {
                         Ok(ExecOutcome::Done(flow)) => {
                             break $cold Ok(RegionEnd::Flowed(flow));

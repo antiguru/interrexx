@@ -476,6 +476,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 | Op::ClassAt { .. }
                 | Op::SelectCase { .. }
                 | Op::ExecValue { .. }
+                | Op::ExecWith { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }

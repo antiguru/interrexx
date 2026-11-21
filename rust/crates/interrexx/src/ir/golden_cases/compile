@@ -1484,6 +1484,22 @@ zc = rexx:string
 registers: 1
 consts:
 
+# `INTERPRET`: the expression's ops, then `ExecWith`, which runs the fragment
+# from the value as `Exec` runs a whole instruction.
+compile
+interpret zi || ' = 1'
+----
+0: Clause index=0 end=8
+1: Load read=Simple at=0 dst=0
+2: TraceRead read=Simple src=0
+3: Const dst=1 konst=0
+4: TraceLiteral src=1
+5: Binary op=|| lhs=0 rhs=1 dst=0
+6: TraceOperator op=|| src=0
+7: ExecWith index=0 src=0
+registers: 2
+consts: ' = 1'
+
 # `OPTIONS`: the expression's ops, then `ExecValue`, as for `NUMERIC`.
 compile
 options zo || 'x'

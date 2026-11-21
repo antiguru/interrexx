@@ -697,10 +697,8 @@ impl Interp {
         first_instruction: bool,
     ) -> Result<ExecOutcome, Failure> {
         #[cfg(test)]
-        if let Some(crate::scheduler::Scripted::Park) = crate::scheduler::take_scripted() {
-            return Ok(ExecOutcome::Park(crate::scheduler::ParkReason::Sleep {
-                deadline: self.now(),
-            }));
+        if let Some(parked) = self.scripted_park() {
+            return Ok(parked);
         }
         match &instruction.kind {
             InstructionKind::Guard(guard) => self.exec_guard(code, index, guard),
@@ -865,103 +863,7 @@ impl Interp {
             // arm is thin because `run_fragment` is where the work is.
             InstructionKind::Interpret { expression } => {
                 let value = self.eval(code, expression)?;
-                self.roots.activity_mut().push_temp(value);
-                // The string request every instruction that evaluates a
-                // single string expression shares -- so the `>>>` below traces the
-                // conversion, measured: `trace r` over `interpret .K` with a
-                // class-side `makeString` returning `'nop'` prints
-                // `>>>   "nop"` and then the fragment's own `*-* nop`.
-                let value = self.required_string_or_nil(value)?;
-                let text = self.to_text(value).to_vec();
-                // `>>>` on the interpreted text itself, before the fragment
-                // runs -- the same `trace_result` every other value-producing
-                // arm calls (`Say`, `Assignment`), at the same
-                // `current_value_indent`. Review finding I1(a): the arm shipped
-                // without this and was the only value-producing arm in the
-                // crate that traced nothing. With `trace r`, `zz = 'nop'` and
-                // `interpret zz`, the trace shows
-                // ```text
-                //      3 *-* interpret zz
-                //        >>>   "nop"
-                //      3 *-* nop
-                // ```
-                self.trace_result(self.activity.clause_state.current_value_indent, &text);
-                match self.debug_pause_instruction()? {
-                    interpret::Pause::Go => {}
-                    interpret::Pause::Again => return Ok(Flow::Goto(index)),
-                    interpret::Pause::Transfer(flow) => return Ok(flow),
-                }
-                // **The fragment's level, with delta 0.** Measured: a
-                // fragment's clauses print at the enclosing `INTERPRET`
-                // clause's own absolute indent plus whatever nests them
-                // *inside* the fragment -- `interpret "do jj = 1 to 1; say 2
-                // & 1; end"` at top level echoes the inner clause at 2 and
-                // the `INTERPRET` at 0, and the identical fragment two `DO`s
-                // deep echoes them at 6 and 4. So the base is the enclosing
-                // clause's printed indent exactly, with no bump of its own --
-                // unlike a called routine's, which the same measurements put
-                // two spaces further in (`call sub1` at printed indent 4 into
-                // a flat routine echoes the callee's clause at 6).
-                let base_indent = self.activity.clause_state.current_value_indent;
-                let base_line = self.clause_site(source, instruction).map(|(line, _)| line);
-                let saved_base =
-                    std::mem::replace(&mut self.activity.activation_indent, base_indent);
-                let saved_line =
-                    std::mem::replace(&mut self.activity.clause_line_override, base_line);
-                // **The fragment's own condition queue**, which the depth is the
-                // key to rather than a second collection --
-                // `Activity::fragment_depth` has why a fragment has one.
-                // Incremented rather than replaced the way the values saved
-                // above are, because a nested fragment inherits each of those
-                // and needs a level of its own here.
-                self.activity.fragment_depth += 1;
-                let line = base_line.unwrap_or_else(|| self.activity.clause_state.line());
-                self.enter_fragment_level(line, base_indent);
-                // `saved_line` read before the replace above is also the
-                // answer to "is a fragment already running", which is the one
-                // extra thing `enter_fragment` needs and the only place it is
-                // in hand. Nothing new is tracked for it.
-                let saved_entry = self.enter_fragment(saved_line.is_some());
-                let flow = pinned!(
-                    self,
-                    crate::pinning::PinKind::Interpret,
-                    self.run_fragment(text)
-                );
-                // **A condition still queued at this depth dies with the
-                // fragment**, on the failing path as well as this one, because
-                // the activation whose queue it was in is what ends. With
-                // `interpret 'zq = raiser()'` and a handler that requeues, the
-                // first handler runs and the second never does, and the
-                // enclosing clause's own boundary does not pick it up. Dropping
-                // the entries also keeps a program that runs `INTERPRET` in a
-                // loop from accumulating undeliverable ones.
-                let depth = self.activity.fragment_depth;
-                self.activity
-                    .pending_traps
-                    .retain(|pending| pending.fragment_depth != depth);
-                // **Nothing deeper than the fragment just left may survive
-                // it**, which is the invariant that lets the delivery key be
-                // an equality rather than a comparison: a deeper entry would
-                // belong to a fragment that already ran this same discard on
-                // its own way out, and a boundary out here would then have to
-                // decide whether it inherits one. Asserted rather than
-                // reasoned about, because the discard runs inside a
-                // `deliver_pending_traps` that a handler can have re-entered.
-                debug_assert!(
-                    self.activity
-                        .pending_traps
-                        .iter()
-                        .all(|pending| pending.fragment_depth < depth),
-                    "a condition queued inside a fragment outlived that fragment's own exit"
-                );
-                self.activity.fragment_depth -= 1;
-                self.leave_fragment_level();
-                self.leave_fragment(saved_entry);
-                // The `INTERPRET` clause is the one stopped on again.
-                self.activity.clause_state.current_value_indent = base_indent;
-                self.activity.activation_indent = saved_base;
-                self.activity.clause_line_override = saved_line;
-                flow
+                self.exec_interpret_value(index, instruction, source, value)
             }
 
             // `IF`/`THEN`/`ELSE`. This arm resolves the whole construct
@@ -2607,6 +2509,113 @@ impl Interp {
         }
     }
 
+    /// `INTERPRET`'s work after its expression, from its value: the string
+    /// request, the `>>>` line, the debug pause and the fragment's run. The
+    /// walked instruction and `Op::ExecWith` both run it.
+    pub(crate) fn exec_interpret_value(
+        &mut self,
+        index: usize,
+        instruction: &Instruction,
+        source: Option<&ProgramSource>,
+        value: ObjRef,
+    ) -> Result<Flow, Failure> {
+        self.roots.activity_mut().push_temp(value);
+        // The string request every instruction that evaluates a
+        // single string expression shares -- so the `>>>` below traces the
+        // conversion, measured: `trace r` over `interpret .K` with a
+        // class-side `makeString` returning `'nop'` prints
+        // `>>>   "nop"` and then the fragment's own `*-* nop`.
+        let value = self.required_string_or_nil(value)?;
+        let text = self.to_text(value).to_vec();
+        // `>>>` on the interpreted text itself, before the fragment
+        // runs -- the same `trace_result` every other value-producing
+        // arm calls (`Say`, `Assignment`), at the same
+        // `current_value_indent`. Review finding I1(a): the arm shipped
+        // without this and was the only value-producing arm in the
+        // crate that traced nothing. With `trace r`, `zz = 'nop'` and
+        // `interpret zz`, the trace shows
+        // ```text
+        //      3 *-* interpret zz
+        //        >>>   "nop"
+        //      3 *-* nop
+        // ```
+        self.trace_result(self.activity.clause_state.current_value_indent, &text);
+        match self.debug_pause_instruction()? {
+            interpret::Pause::Go => {}
+            interpret::Pause::Again => return Ok(Flow::Goto(index)),
+            interpret::Pause::Transfer(flow) => return Ok(flow),
+        }
+        // **The fragment's level, with delta 0.** Measured: a
+        // fragment's clauses print at the enclosing `INTERPRET`
+        // clause's own absolute indent plus whatever nests them
+        // *inside* the fragment -- `interpret "do jj = 1 to 1; say 2
+        // & 1; end"` at top level echoes the inner clause at 2 and
+        // the `INTERPRET` at 0, and the identical fragment two `DO`s
+        // deep echoes them at 6 and 4. So the base is the enclosing
+        // clause's printed indent exactly, with no bump of its own --
+        // unlike a called routine's, which the same measurements put
+        // two spaces further in (`call sub1` at printed indent 4 into
+        // a flat routine echoes the callee's clause at 6).
+        let base_indent = self.activity.clause_state.current_value_indent;
+        let base_line = self.clause_site(source, instruction).map(|(line, _)| line);
+        let saved_base = std::mem::replace(&mut self.activity.activation_indent, base_indent);
+        let saved_line = std::mem::replace(&mut self.activity.clause_line_override, base_line);
+        // **The fragment's own condition queue**, which the depth is the
+        // key to rather than a second collection --
+        // `Activity::fragment_depth` has why a fragment has one.
+        // Incremented rather than replaced the way the values saved
+        // above are, because a nested fragment inherits each of those
+        // and needs a level of its own here.
+        self.activity.fragment_depth += 1;
+        let line = base_line.unwrap_or_else(|| self.activity.clause_state.line());
+        self.enter_fragment_level(line, base_indent);
+        // `saved_line` read before the replace above is also the
+        // answer to "is a fragment already running", which is the one
+        // extra thing `enter_fragment` needs and the only place it is
+        // in hand. Nothing new is tracked for it.
+        let saved_entry = self.enter_fragment(saved_line.is_some());
+        let flow = pinned!(
+            self,
+            crate::pinning::PinKind::Interpret,
+            self.run_fragment(text)
+        );
+        // **A condition still queued at this depth dies with the
+        // fragment**, on the failing path as well as this one, because
+        // the activation whose queue it was in is what ends. With
+        // `interpret 'zq = raiser()'` and a handler that requeues, the
+        // first handler runs and the second never does, and the
+        // enclosing clause's own boundary does not pick it up. Dropping
+        // the entries also keeps a program that runs `INTERPRET` in a
+        // loop from accumulating undeliverable ones.
+        let depth = self.activity.fragment_depth;
+        self.activity
+            .pending_traps
+            .retain(|pending| pending.fragment_depth != depth);
+        // **Nothing deeper than the fragment just left may survive
+        // it**, which is the invariant that lets the delivery key be
+        // an equality rather than a comparison: a deeper entry would
+        // belong to a fragment that already ran this same discard on
+        // its own way out, and a boundary out here would then have to
+        // decide whether it inherits one. Asserted rather than
+        // reasoned about, because the discard runs inside a
+        // `deliver_pending_traps` that a handler can have re-entered.
+        debug_assert!(
+            self.activity
+                .pending_traps
+                .iter()
+                .all(|pending| pending.fragment_depth < depth),
+            "a condition queued inside a fragment outlived that fragment's own exit"
+        );
+        self.activity.fragment_depth -= 1;
+        self.leave_fragment_level();
+        self.leave_fragment(saved_entry);
+        // The `INTERPRET` clause is the one stopped on again.
+        self.activity.clause_state.current_value_indent = base_indent;
+        self.activity.activation_indent = saved_base;
+        self.activity.clause_line_override = saved_line;
+        flow
+    }
+
     /// `OPTIONS`'s work after its expression, from its value: the string
     /// request and the `>>>` line, and nothing else. The walked instruction
     /// and `Op::ExecValue` both run it.
@@ -2620,7 +2629,7 @@ impl Interp {
 
     /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
     /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s, the
-    /// environment-naming `ADDRESS VALUE`'s and `OPTIONS`'s. `None` for every other
+    /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s and `INTERPRET`'s. `None` for every other
     /// instruction, which compiles as before.
     pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
         match kind {
@@ -2634,8 +2643,61 @@ impl Interp {
             {
                 address.dynamic.as_ref()
             }
-            InstructionKind::Options { expression } => Some(expression),
+            InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
+                Some(expression)
+            }
             _ => None,
+        }
+    }
+
+    /// Whether the instruction [`Interp::exec_value_expression`] names runs
+    /// from its value as [`crate::ir::Op::ExecWith`], whose rest answers an
+    /// `ExecOutcome`, rather than as [`crate::ir::Op::ExecValue`].
+    pub(crate) fn exec_value_transfers(kind: &InstructionKind) -> bool {
+        matches!(kind, InstructionKind::Interpret { .. })
+    }
+
+    /// The outcome a test scripted for the next [`crate::ir::Op::Exec`] or
+    /// [`crate::ir::Op::ExecWith`] to answer in place of running its
+    /// instruction (`crate::scheduler::script`).
+    #[cfg(test)]
+    fn scripted_park(&self) -> Option<ExecOutcome> {
+        match crate::scheduler::take_scripted() {
+            Some(crate::scheduler::Scripted::Park) => {
+                Some(ExecOutcome::Park(crate::scheduler::ParkReason::Sleep {
+                    deadline: self.now(),
+                }))
+            }
+            _ => None,
+        }
+    }
+
+    /// [`crate::ir::Op::ExecWith`]: the instruction `instruction` from the
+    /// value `value` its expression answered, with what `Op::Exec` hands
+    /// `exec_instruction`.
+    #[inline(never)]
+    pub(crate) fn exec_with(
+        &mut self,
+        _code: &Code<'_>,
+        index: usize,
+        instruction: &Instruction,
+        source: Option<&ProgramSource>,
+        value: ObjRef,
+    ) -> Result<ExecOutcome, Failure> {
+        debug_assert!(
+            Self::exec_value_expression(&instruction.kind).is_some()
+                && Self::exec_value_transfers(&instruction.kind),
+            "Op::ExecWith on an instruction exec_value_transfers does not name"
+        );
+        #[cfg(test)]
+        if let Some(parked) = self.scripted_park() {
+            return Ok(parked);
+        }
+        match &instruction.kind {
+            InstructionKind::Interpret { .. } => self
+                .exec_interpret_value(index, instruction, source, value)
+                .map(ExecOutcome::Done),
+            kind => Err(Loud::instruction(kind).into()),
         }
     }
 
@@ -2649,8 +2711,10 @@ impl Interp {
         value: ObjRef,
     ) -> Result<(), Failure> {
         debug_assert!(
-            Self::exec_value_expression(&instruction.kind).is_some(),
-            "Op::ExecValue on an instruction exec_value_expression does not name"
+            Self::exec_value_expression(&instruction.kind).is_some()
+                && !Self::exec_value_transfers(&instruction.kind),
+            "Op::ExecValue on an instruction exec_value_expression does not name, or one \
+             that runs as Op::ExecWith"
         );
         match &instruction.kind {
             InstructionKind::Numeric { setting, .. } => {

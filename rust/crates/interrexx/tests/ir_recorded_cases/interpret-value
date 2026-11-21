@@ -1,0 +1,120 @@
+# `INTERPRET expr` evaluates its expression as native ops, and
+# `Op::ExecWith` runs the rest: the string request, the `>>>` line and the
+# fragment. Each stanza answers what the walked expression answered.
+
+# a literal, a variable and a call, under trace r
+program
+trace r
+n = 0
+interpret 'n = n + 1'
+c = 'n = n * 10'
+interpret c
+interpret g()
+say n
+exit
+g: return 'n = n + 5'
+----
+rc> 0
+out> 15
+err>      2 *-* n = 0
+err>        >>>   "0"
+err>      3 *-* interpret 'n = n + 1'
+err>        >>>   "n = n + 1"
+err>      3 *-* n = n + 1
+err>        >>>   "1"
+err>      4 *-* c = 'n = n * 10'
+err>        >>>   "n = n * 10"
+err>      5 *-* interpret c
+err>        >>>   "n = n * 10"
+err>      5 *-* n = n * 10
+err>        >>>   "10"
+err>      6 *-* interpret g()
+err>      9 *-*   g:
+err>      9 *-*   return 'n = n + 5'
+err>        >>>     "n = n + 5"
+err>        >>>   "n = n + 5"
+err>      6 *-* n = n + 5
+err>        >>>   "15"
+err>      7 *-* say n
+err>        >>>   "15"
+err>      8 *-* exit
+
+# trace i: the expression's intermediates, then `>>>` and the fragment
+program
+trace i
+interpret 'x' || ' = 2'
+say x
+----
+rc> 0
+out> 2
+err>      2 *-* interpret 'x' || ' = 2'
+err>        >L>   "x"
+err>        >L>   " = 2"
+err>        >O>   "||" => "x = 2"
+err>        >>>   "x = 2"
+err>      2 *-* x = 2
+err>        >L>   "2"
+err>        >>>   "2"
+err>        >=>   X <= "2"
+err>      3 *-* say x
+err>        >V>   X => "2"
+err>        >>>   "2"
+
+# control leaving the fragment: SIGNAL, RETURN and EXIT
+program
+interpret 'signal there'
+say 'not here'
+there:
+call r
+say 'r gave' result
+interpret 'exit 4'
+exit
+r: interpret 'return 7'
+----
+rc> 4
+out> r gave 7
+
+# a syntax error in the fragment, a raise in the middle of the expression,
+# and a NOVALUE
+program
+signal on syntax name bad
+interpret 'x = = 2'
+exit
+bad:
+say 'bad' rc sigl
+signal on syntax name mid
+interpret 'say' f()
+exit
+f: raise syntax 40.1 array('F')
+mid:
+say 'mid' rc sigl
+signal on novalue
+interpret zq
+exit
+novalue: say 'novalue' sigl condition('D')
+----
+rc> 0
+out> bad 35 2
+out> mid 40 7
+out> novalue 13 ZQ
+
+# an object operand answers through MAKESTRING
+program
+o = .k~new
+interpret o
+::class k
+::method makestring
+  return 'say "from makestring"'
+----
+rc> 0
+out> from makestring
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as INTERPRET's own slot
+program
+interpret rexx:length('abc')
+----
+rc> 213
+err>      1 *-* interpret rexx:length('abc')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:

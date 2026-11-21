@@ -101,6 +101,12 @@ pub(crate) enum Op {
     /// Runs the instruction at `index` from the value its expression left in
     /// register `src`: everything the instruction does past evaluating it.
     ExecValue { index: u32, src: u16 },
+    /// Runs the instruction at `index` from the value its expression left in
+    /// register `src`, as [`Op::Exec`] runs a whole instruction: pinned, and
+    /// answering an `ExecOutcome` whose `Flow` ends the region. For the
+    /// instructions whose work past the evaluation can transfer control or
+    /// run Rexx code of its own, which [`Op::ExecValue`]'s cannot.
+    ExecWith { index: u32, src: u16 },
     /// Echoes the `*-*` line of the clause of the instruction at `index`.
     TraceClause { index: u32 },
     /// Evaluates expression `slot` of the instruction at `index` into
