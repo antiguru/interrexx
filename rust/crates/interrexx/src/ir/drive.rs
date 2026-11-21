@@ -1804,7 +1804,7 @@ macro_rules! region_ops {
                         $chunk.holds_register(*src),
                         "op reads register {src} outside the region the chunk reserved"
                     );
-                    if let Err(failure) = $self.exec_value($clause, $registers.get(*src)) {
+                    if let Err(failure) = $self.exec_value($code, $clause, $registers.get(*src)) {
                         break $cold Err(failure);
                     }
                 }

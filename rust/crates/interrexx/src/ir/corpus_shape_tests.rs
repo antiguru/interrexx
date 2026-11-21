@@ -123,6 +123,7 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
             expression: Some(_),
             ..
         } => Some("NUMERIC"),
+        InstructionKind::Trace(interrexx_parse::Trace::Value(_)) => Some("TRACE VALUE"),
         _ => None,
     }
 }
@@ -513,7 +514,10 @@ fn check_body(
             InstructionKind::Numeric {
                 expression: Some(expression),
                 ..
-            } => Some(root_of(expression)),
+            }
+            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
+                Some(root_of(expression))
+            }
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -712,6 +716,7 @@ fn sweep_every_corpus_body() {
         "THEN",
         "label",
         "NUMERIC",
+        "TRACE VALUE",
     ] {
         assert!(
             seen.constructs.contains_key(construct),

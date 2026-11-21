@@ -1,0 +1,148 @@
+# `TRACE VALUE expr` evaluates its expression as native ops, and
+# `Op::ExecValue` does the rest. Each stanza answers what the walked
+# expression answered.
+
+# the setting from a call, a variable and a concatenation, each followed by
+# the clauses it traces
+program
+m = 'r'
+trace value m
+x = 1 + 2
+trace value g('i')
+y = x * 2
+trace value 'n' || ''
+say x y trace()
+exit
+g: return arg(1)
+----
+rc> 0
+out> 3 6 N
+err>      3 *-* x = 1 + 2
+err>        >>>   "3"
+err>      4 *-* trace value g('i')
+err>      9 *-*   g:
+err>      9 *-*   return arg(1)
+err>        >>>     "i"
+err>        >K>   "VALUE" => "i"
+err>      5 *-* y = x * 2
+err>        >V>   X => "3"
+err>        >L>   "2"
+err>        >O>   "*" => "6"
+err>        >>>   "6"
+err>        >=>   Y <= "6"
+err>      6 *-* trace value 'n' || ''
+err>        >L>   "n"
+err>        >L>   ""
+err>        >O>   "||" => "n"
+err>        >K>   "VALUE" => "n"
+
+# trace i over trace value: the expression's intermediates, then `>K>`
+program
+trace i
+trace value 'r' || ''
+z = 4
+trace value 'n'
+say z
+----
+rc> 0
+out> 4
+err>      2 *-* trace value 'r' || ''
+err>        >L>   "r"
+err>        >L>   ""
+err>        >O>   "||" => "r"
+err>        >K>   "VALUE" => "r"
+err>      3 *-* z = 4
+err>        >>>   "4"
+err>      4 *-* trace value 'n'
+err>        >K>   "VALUE" => "n"
+
+# a loop that re-installs the setting it is under, and one that changes it
+program
+s = 'r'
+do i = 1 to 3
+  if i = 3 then s = 'n'
+  trace value s
+  k = i
+end
+say k trace()
+----
+rc> 0
+out> 3 N
+err>      5 *-*   k = i
+err>        >>>     "1"
+err>      6 *-* end
+err>      2 *-* do i = 1 to 3
+err>        >>>     "1"
+err>        >>>     "2"
+err>      3 *-*   if i = 3 
+err>        >>>     "0"
+err>      4 *-*   trace value s
+err>        >K>     "VALUE" => "r"
+err>      5 *-*   k = i
+err>        >>>     "2"
+err>      6 *-* end
+err>      2 *-* do i = 1 to 3
+err>        >>>     "2"
+err>        >>>     "3"
+err>      3 *-*   if i = 3 
+err>        >>>     "1"
+err>      3 *-*     then
+err>      3 *-*       s = 'n'
+err>        >>>         "n"
+err>      4 *-*   trace value s
+err>        >K>     "VALUE" => "n"
+
+# an object operand answers through MAKESTRING
+program
+o = .k~new
+trace value o
+say 'after' trace()
+::class k
+::method makestring
+  return 'R'
+----
+rc> 0
+out> after R
+err>      3 *-* say 'after' trace()
+err>        >>>   "after R"
+
+# an invalid letter, a skip count outside a pause, and a raise in the
+# middle of the expression
+program
+signal on syntax name bad
+trace value 'Z'
+exit
+bad:
+signal on syntax name bad2
+trace value 5
+exit
+bad2:
+signal on syntax name bad3
+trace value 'r' || f()
+exit
+f: raise syntax 40.1 array('F')
+bad3:
+say 'third' rc sigl
+----
+rc> 0
+out> third 40 10
+
+# a NOVALUE in the expression
+program
+signal on novalue
+trace value zq
+exit
+novalue: say 'novalue' sigl condition('D')
+----
+rc> 0
+out> novalue 2 ZQ
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as TRACE's own slot
+program
+trace value rexx:length('abc')
+----
+rc> 213
+err>      1 *-* trace value rexx:length('abc')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:
