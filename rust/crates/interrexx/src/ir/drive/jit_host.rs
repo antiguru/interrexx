@@ -28,9 +28,11 @@ use interrexx_parse::Operator;
 
 use super::*;
 use crate::jit::layout::{self, Native};
-use crate::jit::{self, Arith, BRANCH, CONTINUE, Compare, FAST, Host, JUMP, Pass, STOP, Step};
+use crate::jit::{
+    self, Arith, BRANCH, CONTINUE, Compare, CondStep, FAST, Host, JUMP, Pass, STOP, Step,
+};
 use crate::run::FlatStep;
-use crate::run::QuickKind;
+use crate::run::{QuickKind, QuickTest};
 
 /// Passes a loop runs driven before it is compiled. Compiling a body and the
 /// saving on each pass of it both grow with its length, so the passes that
@@ -54,8 +56,13 @@ pub(crate) struct Loops {
     state: Box<[Cell<u32>]>,
     /// Each compiled loop with its budget: how many ops per pass the host
     /// may run before the loop is retired.
-    compiled: RefCell<Vec<(Rc<jit::Compiled>, u64, Rc<[u32]>)>>,
+    compiled: RefCell<Vec<Compiling>>,
 }
+
+/// A compiled loop: its code, its budget, its loop records' loops, and the
+/// test each record's quick pass must carry for generated code to take it
+/// ([`QuickTest`]), or `None` where generated code never takes it.
+type Compiling = (Rc<jit::Compiled>, u64, Rc<[u32]>, Rc<[Option<QuickTest>]>);
 
 impl Loops {
     /// Keeps every loop of this chunk from being compiled.
@@ -153,6 +160,8 @@ struct Driven<'a, 'c> {
     /// The loop each of the block's loop records is, by `DO` index: this
     /// loop's own first, then the inner loops its body runs.
     loops: Rc<[u32]>,
+    /// The test each loop record's quick pass carries in generated code.
+    tests: Rc<[Option<QuickTest>]>,
     /// Per loop record, what [`Host::leave`] keeps of its quick pass.
     loop_state: [LoopState; layout::MAX_LOOPS],
 
@@ -199,9 +208,21 @@ impl Interp {
             passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
                 let generation = self.routine_generation;
-                let Some((compiled, budget, loops)) =
+                let Some((compiled, budget, loops, tests)) =
                     pass_of(code, chunk, pc, do_index, generation).and_then(|(pass, budget)| {
-                        Some((jit::compile(&pass)?, budget, pass.loops.into()))
+                        let tests: Rc<[Option<QuickTest>]> = pass
+                            .tests
+                            .iter()
+                            .map(|test| match test {
+                                jit::LoopTest::None => Some(QuickTest::None),
+                                jit::LoopTest::Native { until: true, .. } => Some(QuickTest::Until),
+                                jit::LoopTest::Native { until: false, .. } => {
+                                    Some(QuickTest::While)
+                                }
+                                jit::LoopTest::Host => None,
+                            })
+                            .collect();
+                        Some((jit::compile(&pass)?, budget, pass.loops.into(), tests))
                     })
                 else {
                     state.set(REFUSED);
@@ -210,16 +231,26 @@ impl Interp {
                 let compiled = Rc::new(compiled);
                 let mut all = chunk.jit.compiled.borrow_mut();
                 state.set(THRESHOLD + all.len() as u32);
-                all.push((Rc::clone(&compiled), budget, Rc::clone(&loops)));
-                (compiled, budget, loops)
+                all.push((
+                    Rc::clone(&compiled),
+                    budget,
+                    Rc::clone(&loops),
+                    Rc::clone(&tests),
+                ));
+                (compiled, budget, loops, tests)
             }
             at => {
                 let all = chunk.jit.compiled.borrow();
-                let (compiled, budget, loops) = all.get((at - THRESHOLD) as usize)?;
-                (Rc::clone(compiled), *budget, Rc::clone(loops))
+                let (compiled, budget, loops, tests) = all.get((at - THRESHOLD) as usize)?;
+                (
+                    Rc::clone(compiled),
+                    *budget,
+                    Rc::clone(loops),
+                    Rc::clone(tests),
+                )
             }
         };
-        let (compiled, budget, loops) = compiled;
+        let (compiled, budget, loops, tests) = compiled;
         let first = pass_start(chunk, do_index)?;
         let mut driven = Driven {
             interp: self,
@@ -235,6 +266,7 @@ impl Interp {
             range,
             jump_to: 0,
             loops,
+            tests,
             loop_state: [LoopState::ASK; layout::MAX_LOOPS],
 
             budget,
@@ -694,15 +726,122 @@ fn pass_of(
         return None;
     }
     let budget = (native / HOSTED_SHARE).max(1) as u64;
+    let tests = loops
+        .iter()
+        .map(|&index| loop_test(code, chunk, index))
+        .collect();
     Some((
         Pass {
             steps,
             registers: chunk.registers,
             end: loop_pc,
             loops,
+            tests,
         },
         budget,
     ))
+}
+
+/// What the pass boundary of the loop whose `Op::DO` is instruction
+/// `do_index` tests: its `WHILE` or `UNTIL` from `Chunk::conditions`, as
+/// generated code runs it where each op has a quick form, and the host's
+/// otherwise.
+fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
+    let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
+        .body
+        .instructions
+        .get(do_index as usize)
+        .map(|clause| &clause.kind)
+    else {
+        return jit::LoopTest::Host;
+    };
+    let Some(conditional) = &body.conditional else {
+        return jit::LoopTest::None;
+    };
+    if body.counter.is_some() || chunk.loop_test_at(do_index as usize).is_some() {
+        return jit::LoopTest::Host;
+    }
+    let Some(condition) = chunk.condition_at(do_index as usize) else {
+        return jit::LoopTest::Host;
+    };
+    let Some(ops) = chunk.condition_ops(condition) else {
+        return jit::LoopTest::Host;
+    };
+    let mut steps = Vec::with_capacity(ops.len());
+    for op in ops {
+        let step = match *op {
+            Op::Const { dst, konst } => match chunk.interned_konst(konst) {
+                ObjRef::NIL => return jit::LoopTest::Host,
+                value => CondStep::Const {
+                    dst,
+                    bits: value.bits(),
+                },
+            },
+            Op::LoadConstant { symbol, dst } => match chunk.interned_symbol(symbol) {
+                ObjRef::NIL => return jit::LoopTest::Host,
+                value => CondStep::Const {
+                    dst,
+                    bits: value.bits(),
+                },
+            },
+            Op::Load {
+                read: SymbolRead::Simple,
+                at: slot,
+                dst,
+                ..
+            } if let Some(slot) = slot.resolved()
+                && let Ok(slot) = u32::try_from(slot) =>
+            {
+                CondStep::Load { slot, dst }
+            }
+            Op::Arith {
+                op,
+                hint,
+                lhs,
+                rhs,
+                dst,
+            } if chunk.tries_small_int(hint) => CondStep::Arith {
+                op: match op {
+                    Operator::Plus => Arith::Add,
+                    Operator::Subtract => Arith::Subtract,
+                    Operator::Multiply => Arith::Multiply,
+                    Operator::IntDiv => Arith::IntDiv,
+                    Operator::Remainder => Arith::Remainder,
+                    _ => return jit::LoopTest::Host,
+                },
+                lhs,
+                rhs,
+                dst,
+            },
+            Op::Binary {
+                op,
+                lhs,
+                rhs,
+                dst,
+                text: false,
+                ..
+            } if let Some(op) = quick_compare(op) => CondStep::Compare { op, lhs, rhs, dst },
+            Op::Binary {
+                op: op @ (Operator::And | Operator::Or),
+                lhs,
+                rhs,
+                dst,
+                ..
+            } => CondStep::Logic {
+                and: op == Operator::And,
+                lhs,
+                rhs,
+                dst,
+            },
+            _ => return jit::LoopTest::Host,
+        };
+        steps.push(step);
+    }
+    jit::LoopTest::Native {
+        steps,
+        dst: condition.dst,
+        until: conditional.until,
+    }
 }
 
 /// Where a pass of the loop whose `Op::DO` is instruction `do_index` starts:
@@ -833,6 +972,8 @@ impl Driven<'_, '_> {
 
 impl Host for Driven<'_, '_> {
     fn pass(&mut self) -> u32 {
+        #[cfg(test)]
+        HOST_BOUNDARIES.with(|taken| taken.set(taken.get() + 1));
         if self.retire {
             return self.retired(self.loop_pc);
         }
@@ -1498,7 +1639,16 @@ impl Driven<'_, '_> {
         }
         record.ready = 0;
         state.key = None;
+        // A loop whose boundary generated code never takes needs no record.
+        let Some(compiled) = self.tests.get(k).copied().flatten() else {
+            return;
+        };
         if let Some(quick) = self.interp.quick_pass(self.loops[k] as usize) {
+            // Both read off the loop's own instruction.
+            debug_assert_eq!(
+                compiled, quick.test,
+                "loop record {k}'s quick pass is not what its code was compiled for"
+            );
             match quick.kind {
                 QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
                     record.ready = 1;
@@ -1532,6 +1682,8 @@ impl Driven<'_, '_> {
     /// An inner loop's `Op::LoopNext` at `pc`: the header clause counted, the
     /// next pass stepped, and where it goes on, as the driver's arm.
     fn inner_next(&mut self, pc: u32) -> u32 {
+        #[cfg(test)]
+        HOST_BOUNDARIES.with(|taken| taken.set(taken.get() + 1));
         // The inner loop's own state moves here, so its record is asked again.
         if let Some(&Op::LoopNext { index }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
             && let Some(k) = self
@@ -1723,6 +1875,7 @@ thread_local! {
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
     static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
+    static HOST_BOUNDARIES: Cell<usize> = const { Cell::new(0) };
 }
 
 #[cfg(test)]
@@ -1736,6 +1889,14 @@ fn reset_compiled_runs() {
     QUIET_CALLS.with(|calls| calls.set(0));
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
     HANDED_BACK.with(|handed| handed.set(0));
+    HOST_BOUNDARIES.with(|taken| taken.set(0));
+}
+
+/// How many pass boundaries of compiled loops, theirs or an inner loop's,
+/// the host has taken on this thread.
+#[cfg(test)]
+fn host_boundaries() -> usize {
+    HOST_BOUNDARIES.with(Cell::get)
 }
 
 /// How many regions that ended at their clause's end the host has closed in

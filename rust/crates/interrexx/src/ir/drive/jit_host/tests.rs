@@ -7,7 +7,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs};
+use super::{
+    compiled_runs, handed_back, host_boundaries, quiet_calls, quiet_compounds, reset_compiled_runs,
+};
 
 #[test]
 fn compiled_loops_print_what_the_interpreter_prints() {
@@ -237,4 +239,42 @@ fn an_inner_loop_ending_in_its_test_settles_in_compiled_code() {
         short,
         "compiled code was left where an inner loop's test ended it"
     );
+}
+
+/// A loop whose `WHILE` or `UNTIL` runs from `Chunk::conditions` has its pass
+/// boundary taken by generated code, condition and all. The host takes the
+/// ones where the record is worked out, the last, where the condition no
+/// longer holds, and those the clause countdown runs out at, about one in a
+/// thousand clauses: far fewer than one a pass.
+#[test]
+fn a_value_only_condition_is_tested_in_generated_code() {
+    for header in [
+        "do i = 1 while i <= LIMIT",
+        "do i = 1 until i >= LIMIT",
+        "do LIMIT while n >= 0 & p < LIMIT",
+        "do while p < LIMIT | n < 0",
+    ] {
+        let boundaries = |limit: u32| {
+            reset_compiled_runs();
+            let header = header.replace("LIMIT", &limit.to_string());
+            ran(format!(
+                "n = 0; m = 0; p = 0\n\
+                 {header}\n\
+                 \x20 n = n + 1; p = p + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a\n\
+                 \x20 m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+                 end\n\
+                 say n m k p"
+            )
+            .as_bytes());
+            host_boundaries()
+        };
+        let more = 18000;
+        let short = boundaries(super::THRESHOLD + 2000);
+        let long = boundaries(super::THRESHOLD + 2000 + more);
+        assert!(
+            long - short < more as usize / 100,
+            "{header}: the host took {} of {more} more pass boundaries",
+            long - short
+        );
+    }
 }
