@@ -222,7 +222,8 @@ pub(super) fn std_set(
 
 /// `handle_set`: marks a `HANDLE:n` stream, `n` an `int`. `HANDLE:0`,
 /// `HANDLE:1` and `HANDLE:2` read and write through the standard stream of
-/// that number (Deviation 35), and any other descriptor is refused.
+/// that number, and any other `n` through a duplicate of descriptor `n`
+/// that an open makes (`r[bif.stream.handle]`).
 pub(super) fn handle_set(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -253,7 +254,13 @@ pub(super) fn handle_set(
         0 => StandardStream::In,
         1 => StandardStream::Out,
         2 => StandardStream::Err,
-        _ => return Err(crate::Loud::handle_descriptor(descriptor).into()),
+        _ => {
+            let state = require_mut(interp, receiver)?;
+            state.descriptor = true;
+            // Named by its name as written, which `qualify` answers.
+            state.qualified = state.name.as_slice().into();
+            return Ok(None);
+        }
     };
     let state = require_mut(interp, receiver)?;
     state.handle = Some(which);
@@ -638,7 +645,11 @@ pub(super) fn open(
     // descriptor is still opened for reading where it can be, so a line
     // number given to LINEOUT can be found; the reads refuse by the mode.
 
-    if parsed.read_only && !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file()) {
+    let descriptor = stream_descriptor(interp, receiver)?;
+    if descriptor.is_none()
+        && parsed.read_only
+        && !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file())
+    {
         let answer = format!("ERROR:{ENOENT}").into_bytes();
         return notready(interp, receiver, StreamStatus::Error(ENOENT), answer);
     }
@@ -659,24 +670,28 @@ pub(super) fn open(
             opening.truncate(true);
         }
     }
-    let opened = match opening.open(&path) {
-        Ok(file) => file,
-        // An explicit WRITE retries write-only, so a file that grants write and
-        // not read opens. The retry is a create-for-write open, which does not
-        // truncate even under REPLACE.
-        Err(_) if parsed.write_only => {
-            match std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(false)
-                .append(parsed.append)
-                .open(&path)
-            {
-                Ok(file) => file,
-                Err(error) => return open_failed(interp, receiver, &error),
+    let opened = match descriptor.map(descriptor_file) {
+        Some(Ok(file)) => file,
+        Some(Err(error)) => return open_failed(interp, receiver, &error),
+        None => match opening.open(&path) {
+            Ok(file) => file,
+            // An explicit WRITE retries write-only, so a file that grants write and
+            // not read opens. The retry is a create-for-write open, which does not
+            // truncate even under REPLACE.
+            Err(_) if parsed.write_only => {
+                match std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(false)
+                    .append(parsed.append)
+                    .open(&path)
+                {
+                    Ok(file) => file,
+                    Err(error) => return open_failed(interp, receiver, &error),
+                }
             }
-        }
-        Err(error) => return open_failed(interp, receiver, &error),
+            Err(error) => return open_failed(interp, receiver, &error),
+        },
     };
     // A directory opens on unix and is then rejected as if it had not, which
     // is why a directory answers `ERROR:2` and not `ERROR:21`.
@@ -772,6 +787,16 @@ fn ensure_open(
     if require(interp, receiver)?.open.is_some() {
         return Ok(true);
     }
+    if let Some(descriptor) = stream_descriptor(interp, receiver)? {
+        let (opened, mode) = match descriptor_file(descriptor) {
+            Ok(file) => {
+                let mode = descriptor_mode(&file);
+                (file, mode)
+            }
+            Err(error) => return fail_open(interp, receiver, &error, answer),
+        };
+        return settle_implicit_open(interp, receiver, opened, mode);
+    }
     let path = qualified_path(interp, receiver)?;
     let mut opening = std::fs::OpenOptions::new();
     // **Never truncates.** An implicit open creates a missing file but keeps
@@ -820,6 +845,16 @@ fn ensure_open(
         let error = std::io::Error::from_raw_os_error(ENOENT);
         return fail_open(interp, receiver, &error, answer);
     }
+    settle_implicit_open(interp, receiver, opened, mode)
+}
+
+/// The end of an implicit open, once `opened` is the stream's file in `mode`.
+fn settle_implicit_open(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    opened: std::fs::File,
+    mode: interrexx_core::OpenMode,
+) -> Result<bool, Failure> {
     let size = size_of(&opened);
     let transient = is_transient(&opened);
     // A stream that can write writes at the end, whichever operation opened
@@ -841,6 +876,47 @@ fn ensure_open(
     ));
     state.append_extent = 0;
     Ok(true)
+}
+
+/// The descriptor a `HANDLE:n` stream for some `n` other than 0, 1 and 2
+/// reads and writes, from its name, and `None` for any other stream. A number
+/// no descriptor can have is answered as -1, which an open refuses as
+/// `EBADF`.
+fn stream_descriptor(interp: &Interp, receiver: ObjRef) -> Result<Option<i32>, Failure> {
+    let state = require(interp, receiver)?;
+    if !state.descriptor {
+        return Ok(None);
+    }
+    let digits = state.name.get(b"HANDLE:".len()..).unwrap_or_default();
+    let number = Number::parse_bytes(digits).and_then(|number| number.int64_value(DIGITS64));
+    Ok(Some(
+        number.and_then(|n| i32::try_from(n).ok()).unwrap_or(-1),
+    ))
+}
+
+/// The file a `HANDLE:n` stream opens: a duplicate of descriptor `n`
+/// (`r[bif.stream.handle]`).
+fn descriptor_file(descriptor: i32) -> std::io::Result<std::fs::File> {
+    crate::builtin::rxsock_sys::duplicate(descriptor)
+        .map(std::fs::File::from)
+        .map_err(std::io::Error::from_raw_os_error)
+}
+
+/// The mode an implicit open of a `HANDLE:n` stream takes: the access mode the
+/// descriptor itself was opened with.
+fn descriptor_mode(file: &std::fs::File) -> interrexx_core::OpenMode {
+    use rustix::fs::OFlags;
+    // `O_RDONLY` is no bit at all, on Linux and macOS alike: the access mode is
+    // whichever of `O_WRONLY` and `O_RDWR` is set, or neither.
+    let access = rustix::fs::fcntl_getfl(file).map_or(OFlags::RDWR, |flags| {
+        flags & (OFlags::WRONLY | OFlags::RDWR)
+    });
+    interrexx_core::OpenMode {
+        read_only: access.is_empty(),
+        write_only: access == OFlags::WRONLY,
+        read_write: access == OFlags::RDWR,
+        ..interrexx_core::OpenMode::default()
+    }
 }
 
 /// Records an implicit open's failure on the state and answers "not open".

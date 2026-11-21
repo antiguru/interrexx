@@ -28,3 +28,4 @@ class.method.deviation.115
 class.routine.deviation.115
 class.package.deviation.115
 bif.lineout.deviation.46
+bif.stream.deviation.35

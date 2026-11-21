@@ -494,7 +494,6 @@ raises](r:class.stream.notready), and what the methods send. The answers are
 strings. A method with no counterpart among the functions, or whose messages
 another rule states, has a rule of its own. The Deviations that the rules of
 the functions state hold for the methods that do the same:
-[35](r:bif.stream.deviation.35),
 [49](r:bif.stream.deviation.49), [54](r:bif.lines.deviation.54),
 [56](r:bif.lineout.deviation.56), [57](r:bif.stream.deviation.57),
 [60](r:bif.lineout.deviation.60), [74](r:bif.stream.deviation.74),

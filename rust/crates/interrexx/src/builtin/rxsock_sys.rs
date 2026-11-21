@@ -1,6 +1,7 @@
-//! The `unsafe` the Rust `rxsock` needs and
-//! nothing else: borrowing a socket's descriptor number for one call
-//! ([`with_socket`], [`with_sockets`]) and reading or setting a socket option
+//! The `unsafe` the Rust `rxsock` and `HANDLE:` streams need and
+//! nothing else: borrowing a descriptor number for one call ([`with_socket`],
+//! [`with_sockets`]), which a `HANDLE:n` stream duplicates through
+//! ([`duplicate`]), and reading or setting a socket option
 //! by its raw level and number ([`get_int_option`], [`set_int_option`]), for
 //! the options neither `rustix` nor `nix` names (`SO_DEBUG`, `SO_RCVLOWAT`,
 //! `SO_SNDLOWAT` and the number 64 `SO_USELOOPBACK` passes on Linux). Every
@@ -60,6 +61,19 @@ pub(crate) fn with_socket<T>(
     // behaviour.
     let socket = unsafe { BorrowedFd::borrow_raw(fd) };
     call(socket)
+}
+
+/// A duplicate of descriptor `fd`, close-on-exec, which shares its file offset
+/// and status flags and closes alone: what a `HANDLE:n` stream reads and
+/// writes. `EBADF` where `fd` names no open descriptor or one of the
+/// interpreter's own. Safe: the borrow is [`with_socket`]'s, and the duplicate
+/// is a new descriptor the returned `OwnedFd` owns.
+pub(crate) fn duplicate(fd: RawFd) -> Os<std::os::fd::OwnedFd> {
+    with_socket(fd, |borrowed| {
+        borrowed
+            .try_clone_to_owned()
+            .map_err(|error| error.raw_os_error().unwrap_or(libc::EBADF))
+    })
 }
 
 /// [`with_socket`] for several descriptors at once: `call` gets them borrowed

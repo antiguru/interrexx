@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168, 171]
+deviations: [34, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168, 171]
 ---
 
 # STREAM
@@ -1240,6 +1240,37 @@ READY READY READY READY:
 93.958
 ```
 
+r[bif.stream.handle]
+A stream named `HANDLE:n`, in any case, reads and writes the open descriptor
+`n` of the process: `HANDLE:0`, `HANDLE:1` and `HANDLE:2` the standard input,
+output and error streams, and any other number a descriptor that some other
+stream or other code holds, such as the one `QUERY HANDLE` answers for a file.
+Closing the stream leaves descriptor `n` open. Nothing exists by such a name:
+`QUERY EXISTS` answers the null string, and `qualify` answers the name as
+written. Where reads and writes through a `HANDLE:` stream land relative to
+those through another stream on the same descriptor, and what a `HANDLE:`
+stream does with a number that names no open descriptor, are not specified.
+
+```rexx
+f = 'spec-stream-handle.tmp'
+call sysfiledelete f
+file = .stream~new(f)
+file~open('write replace')
+h = file~query('handle')
+hs = .stream~new('HANDLE:' || h)
+say hs~lineout('first') '[' || hs~query('exists') || ']' hs~close -
+  hs~qualify~changestr(h, 'H')
+say file~close
+say .stream~new(f)~arrayIn~toString(, ' ')
+call sysfiledelete f
+```
+
+```output
+0 [] READY: HANDLE:H
+READY:
+first
+```
+
 ## Deviations
 
 r[bif.stream.deviation.34]
@@ -1266,24 +1297,6 @@ call sysrmdir base
 
 ```output
 1 3 abc
-```
-
-r[bif.stream.deviation.35]
-The names `HANDLE:0`, `HANDLE:1` and `HANDLE:2` denote the standard input,
-output and error streams, and read and write them; a `HANDLE:` stream with any
-other descriptor is refused when it is created. In ooRexx a `HANDLE:` stream
-never reaches its descriptor: reads see end of file, and writes crash.
-
-```rexx
-call charout 'HANDLE:1', 'hello '
-call charout 'handle:1', 'again'
-say
-say stream('HANDLE:1') '['charin('HANDLE:0')']'
-```
-
-```output
-hello again
-READY []
 ```
 
 r[bif.stream.deviation.49]
