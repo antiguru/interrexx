@@ -98,8 +98,9 @@ value as [the string-value rule](r:conv.string.object) says, which sends it
 `request` with `STRING`, so a number is stored as its digits, an object whose
 `makeString` answers a string is stored as that answer, and an array as the
 text that its `makeString` gives; `.nil` and an object with no `makeString`
-raise `SYNTAX 93.938`. An instance of a subclass of `String` is stored as its
-own characters ([the deviation rule](r:class.properties.deviation.109)). The
+raise `SYNTAX 93.938`, naming the value's argument position, 2 for
+`setProperty` and 1 for `put` and `[]=`. An instance of a subclass of
+`String` is stored as its own characters ([the deviation rule](r:class.properties.deviation.109)). The
 name is read as a string as for a directory ([the index
 rule](r:class.directory.indexes)), and `.nil` as the name raises `SYNTAX
 88.909`. The three answer nothing, and none of them sends `put`, `[]=` or
@@ -158,6 +159,29 @@ p~put(, "x") => 93.903
 p~setProperty("x") => 93.901
 p~setProperty(, "x") => 93.903
 p~put("x", "y", "z") => 93.902
+```
+
+```rexx
+p = .properties~new
+call try 'p~setProperty("", .nil)'
+call try 'p~put(.nil, "k")'
+call try 'p["k"] = .nil'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'accepted'
+  return
+bad:
+  fault = condition('o')
+  say fault~code fault~additional[1]
+  return
+```
+
+```output
+93.938 2
+93.938 1
+93.938 1
 ```
 
 r[class.properties.unchecked]

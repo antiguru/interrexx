@@ -30,21 +30,15 @@
   if n < 2 then raise syntax 93.901 array (2)
   if n > 2 then raise syntax 93.902 array (2)
   if \arg(1, 'E') then raise syntax 93.903 array (1)
-  value = arg(1)
-  if value~isInstanceOf(.string) then text = value~makeString:.string
-  else do
-    text = value~request('STRING')
-    if \text~isInstanceOf(.string) then raise syntax 93.938 array (1)
-    text = text~makeString:.string
-  end
+  text = propertyText(arg(1))
+  if .nil == text then raise syntax 93.938 array (1)
   self~put:super(text, arg(2))
 
 /* r[class.properties.put]: `[name] = value` is `put(value, name)`. */
 ::method '[]='
   forward message 'PUT' class (.properties)
 
-/* r[class.properties.put]: `setProperty(name, value)` is `put(value, name)`
-   with the arguments counted as `put` counts them. */
+/* r[class.properties.put]: the value is the second argument of setProperty. */
 ::method setProperty
   n = arg()
   do while n > 0
@@ -54,7 +48,9 @@
   if n < 2 then raise syntax 93.901 array (2)
   if n > 2 then raise syntax 93.902 array (2)
   if \arg(1, 'E') then raise syntax 93.903 array (1)
-  forward message 'PUT' class (.properties) arguments (.array~of(arg(2), arg(1)))
+  text = propertyText(arg(2))
+  if .nil == text then raise syntax 93.938 array (2)
+  self~put:super(text, arg(1))
 
 /* r[class.properties.getproperty] */
 ::method getProperty
@@ -374,3 +370,10 @@ finished:
   text = object~string
   if text~isInstanceOf(.string) then return text~makeString:.string
   return .nil
+
+::routine propertyText
+  use arg value
+  if value~isInstanceOf(.string) then return value~makeString:.string
+  text = value~request('STRING')
+  if \text~isInstanceOf(.string) then return .nil
+  return text~makeString:.string
