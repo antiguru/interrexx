@@ -277,6 +277,12 @@ impl Interp {
         };
         #[cfg(test)]
         COMPILED_RUNS.with(|runs| runs.set(runs.get() + 1));
+        #[cfg(test)]
+        COMPILED_LINES.with(|lines| {
+            lines
+                .borrow_mut()
+                .insert(chunk.opening_at(do_index as usize).position.line)
+        });
         let answer = compiled.run(registers, &mut driven);
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
         debug_assert!(
@@ -709,9 +715,10 @@ fn pass_of(
                 inner += 1;
             }
             Step::InnerNext { .. } => inner = inner.saturating_sub(1),
-            // Two calls where the driver's arms take the test region's
-            // boundaries; an inner loop's are in its `Step::Region`'s weight.
-            Step::Tested { .. } if inner == 0 => hosted += 1,
+            // The test region's opening and its end, one call each where the
+            // driver takes them in its own arms; an inner loop's are in its
+            // `Step::Region`'s weight.
+            Step::Test { .. } | Step::Tested { .. } if inner == 0 => hosted += 1,
             Step::Test { .. } | Step::Tested { .. } => {}
             Step::Op { .. } | Step::Between { .. } => hosted += 1,
             Step::Builtin { .. }
@@ -889,6 +896,8 @@ impl Driven<'_, '_> {
     /// Leaves for the driver at `pc`, a clause opening or the pass boundary,
     /// and keeps the loop from being compiled again.
     fn retired(&mut self, pc: u32) -> u32 {
+        #[cfg(test)]
+        RETIREMENTS.with(|retired| retired.set(retired.get() + 1));
         if let Some(state) = self.chunk.jit.state.get(self.do_index) {
             state.set(REFUSED);
         }
@@ -1072,20 +1081,12 @@ impl Host for Driven<'_, '_> {
                 Loud::op_not_driven("a region with no clause").into(),
             ));
         };
-        let answer = self.general_to(pc, end, false);
-        // An inner loop just started is a new loop: its record is asked
-        // afresh.
-        if let Some(top) = self
-            .interp
-            .activity
-            .flat_top
-            .as_ref()
-            .map(|flat| flat.do_index)
-            && let Some(k) = self.loops.iter().position(|&index| index as usize == top)
-        {
-            self.loop_state[k].ask = true;
-        }
-        answer
+        // An inner loop that starts here has its record asked already: its
+        // first start is asked from the block's own start, and every run of it
+        // that ended in compiled code ended in `inner_next` or in its test
+        // region's `Op::LoopTested`, which ask it, or in its test region's
+        // opening, whose loop has no quick pass.
+        self.general_to(pc, end, false)
     }
 
     fn op(&mut self, pc: u32) -> u32 {
@@ -1686,12 +1687,26 @@ impl Driven<'_, '_> {
         HOST_BOUNDARIES.with(|taken| taken.set(taken.get() + 1));
         // The inner loop's own state moves here, so its record is asked again.
         if let Some(&Op::LoopNext { index }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
-            && let Some(k) = self
+        {
+            // As the driver's arm asserts: every way out of an inner loop
+            // other than its own boundary leaves compiled code, so the loop
+            // innermost here is the one this op ends a pass of.
+            debug_assert_eq!(
+                self.interp
+                    .activity
+                    .flat_top
+                    .as_ref()
+                    .map(|flat| flat.do_index),
+                Some(index as usize),
+                "an inner LoopNext ended a pass of a loop other than the one it names"
+            );
+            if let Some(k) = self
                 .loops
                 .iter()
                 .position(|&loop_index| loop_index == index)
-        {
-            self.loop_state[k].ask = true;
+            {
+                self.loop_state[k].ask = true;
+            }
         }
         let counted = match self.interp.count_clause_against_deadline(self.top) {
             Ok(counted) => counted,
@@ -1876,6 +1891,16 @@ thread_local! {
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
     static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
     static HOST_BOUNDARIES: Cell<usize> = const { Cell::new(0) };
+    static RETIREMENTS: Cell<usize> = const { Cell::new(0) };
+    static COMPILED_LINES: RefCell<std::collections::BTreeSet<u32>> =
+        const { RefCell::new(std::collections::BTreeSet::new()) };
+}
+
+/// The source lines of the `DO`s whose compiled passes have run on this
+/// thread.
+#[cfg(test)]
+fn compiled_lines() -> Vec<u32> {
+    COMPILED_LINES.with(|lines| lines.borrow().iter().copied().collect())
 }
 
 #[cfg(test)]
@@ -1890,6 +1915,8 @@ fn reset_compiled_runs() {
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
     HANDED_BACK.with(|handed| handed.set(0));
     HOST_BOUNDARIES.with(|taken| taken.set(0));
+    RETIREMENTS.with(|retired| retired.set(0));
+    COMPILED_LINES.with(|lines| lines.borrow_mut().clear());
 }
 
 /// How many pass boundaries of compiled loops, theirs or an inner loop's,
@@ -1897,6 +1924,12 @@ fn reset_compiled_runs() {
 #[cfg(test)]
 fn host_boundaries() -> usize {
     HOST_BOUNDARIES.with(Cell::get)
+}
+
+/// How many compiled loops have been retired on this thread.
+#[cfg(test)]
+fn retirements() -> usize {
+    RETIREMENTS.with(Cell::get)
 }
 
 /// How many regions that ended at their clause's end the host has closed in
