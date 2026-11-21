@@ -2826,7 +2826,7 @@ impl Interp {
             }
             InstructionKind::Call(call) => match &**call {
                 interrexx_parse::Call::Dynamic { args, .. } => self
-                    .exec_dynamic_call(registers, src, args.len())
+                    .exec_dynamic_call(instruction, registers, src, args.len())
                     .map(ExecOutcome::Done),
                 _ => Err(Loud::instruction(&instruction.kind).into()),
             },
@@ -2852,7 +2852,7 @@ impl Interp {
     /// [`crate::ir::Op::ExecWith`] for a `CALL (expr)`: the name
     /// `Op::ExecValue` left in register `src`, resolved afresh, since the
     /// next call may name something else, and the call over the `argc`
-    /// arguments the region's ops pushed. The callee's body runs on this Rust
+    /// arguments the region's ops pushed for `instruction`. The callee's body runs on this Rust
     /// stack through `complete_call`, as the walked instruction runs it, and
     /// not as the driver's own call ops run theirs (stackless, or refusing a
     /// native park). The label and builtin half of the resolution comes after
@@ -2861,12 +2861,13 @@ impl Interp {
     #[inline(never)]
     fn exec_dynamic_call(
         &mut self,
+        instruction: &Instruction,
         registers: RegFrame<'_>,
         src: u16,
         argc: usize,
     ) -> Result<Flow, Failure> {
         let Some(mark) = self.activity.value_buffer.len().checked_sub(argc) else {
-            return Err(Loud::call_op_off_its_node().into());
+            return Err(Loud::instruction(&instruction.kind).into());
         };
         let name = self.to_text(registers.get(src)).to_vec();
         let resolved = self.resolve_call(&name, true)?;
