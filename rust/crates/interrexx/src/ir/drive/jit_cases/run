@@ -657,8 +657,8 @@ say a i
 80000000 9999
 compiled: yes
 
-# a WHILE that calls a routine is a test region the driver runs, so the loop
-# stays driven rather than leaving compiled code on every pass
+# a WHILE that calls a routine is a test region, whose boundaries are two host
+# calls a pass: against a body this small the loop stays driven
 run
 n = 0
 do i = 1 while f(i)
@@ -685,8 +685,8 @@ say n i
 50005000 10000
 compiled: no
 
-# a COUNTER with an UNTIL that calls a routine (#813's shape), hot: the test
-# region keeps it driven
+# a COUNTER with an UNTIL that calls a routine (#813's shape), hot, with a
+# body too small to compile
 run
 n = 0
 do counter c i = 1 to 10000 until f(i)
@@ -698,6 +698,131 @@ f: return arg(1) >= 9999
 ----
 49995000 9999 9999
 compiled: no
+
+# a WHILE that calls a routine, with a body that would compile: the call
+# parks the test region for the driver, which would finish each pass itself,
+# so the loop stays driven
+run
+n = 0; m = 0
+do i = 1 while f(i)
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+exit
+f: return arg(1) < 10000
+----
+49995000 -49914992 0 10000
+compiled: no
+
+# a WHILE that calls a builtin, with a body that compiles: the test region
+# is in the pass
+run
+n = 0; m = 0
+do i = 1 while length(i) < 5
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+49995000 -49914992 0 10000
+compiled: yes
+quiet builtin calls: yes
+
+# an UNTIL that calls a builtin, with a body that compiles
+run
+n = 0; m = 0
+do i = 1 until abs(i) >= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: yes
+quiet builtin calls: yes
+
+# a COUNTER with an UNTIL that calls a builtin
+run
+n = 0
+do counter c i = 1 to 20000 until max(i, 7) >= 15000
+  n = n + i; a = n // 7; b = a * 3; c2 = b - i; d = c2 + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c2; k = h // 5
+end
+say n c i k
+----
+112507500 15000 15000 -1
+compiled: yes
+quiet builtin calls: yes
+
+# inner loops whose WHILE and UNTIL call a builtin: their test regions are
+# in the outer loop's pass, and each inner loop's end settles there
+run
+t = 0; s = 0
+do i = 1 to 10000
+  a = i * 3; b = a // 7; c = b + i; d = c - a; e = d * 2; g = e // 9
+  do j = 1 while min(j, 99) <= i // 3
+    t = t + j; s = s + g
+  end
+  do k = 1 until max(k, 0) >= 2
+    s = s - k
+  end
+  h = t // 13; m = h + g; n = m - b; p = n * 2; q = p // 3; r = q + s
+end
+say t s r i j k
+----
+13333 -70893 -70893 10001 2 2
+compiled: yes
+quiet builtin calls: yes
+
+# a WHILE whose builtin answers a value that is not logical, in a compiled
+# test region: error 34.3, with the line the driver blames
+run
+signal on syntax
+n = 0
+do i = 1 while translate(i % 2000 + 1, '1111x', '12345')
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.3 line 6 8000 31996000
+compiled: yes
+quiet builtin calls: yes
+
+# a failure raised by an op of a compiled WHILE test region: blamed on the
+# loop's clause, as the driver blames it
+run
+n = 0
+do i = 1 while translate(i % 2000 + 1, '1111x', '12345') + 0 < 2
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+----
+     5 *-*   end
+Error 41 running t.rex line 5:  Bad arithmetic conversion.
+Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
+compiled: yes
+quiet builtin calls: yes
+
+# a failure raised by an op of a compiled UNTIL test region: blamed on the
+# loop's clause, as the driver blames it
+run
+n = 0
+do i = 1 until translate(i % 2000 + 1, '1111x', '12345') + 0 > 2
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = d + 1; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n
+----
+     5 *-*   end
+Error 41 running t.rex line 5:  Bad arithmetic conversion.
+Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
+compiled: yes
+quiet builtin calls: yes
 
 # an inner counted loop in a compiled body: its start and each pass boundary
 # through the host, its body compiled
