@@ -1730,9 +1730,10 @@ registers: 2
 consts:
 
 # A `CALL (expr)` with an argument that does not compile, a call past the
-# width of an address, stays the one `Exec`, and so do `CALL ON`, `CALL OFF`
-# and a namespace-qualified `CALL`.
+# width of an address or a namespace-qualified call, stays the one `Exec`,
+# and so do `CALL ON`, `CALL OFF` and a namespace-qualified `CALL`.
 compile
+call (zn) zns:zf()
 call (zn) 1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(zf()))))))))))))))))))))))))))))))))
 call on error name zh
 call off error
@@ -1746,5 +1747,7 @@ call zns:zr 1
 5: Exec index=2
 6: Clause index=3 end=8
 7: Exec index=3
+8: Clause index=4 end=10
+9: Exec index=4
 registers: 0
 consts:

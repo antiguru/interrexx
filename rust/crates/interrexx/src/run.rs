@@ -970,7 +970,7 @@ impl Interp {
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
-                    let value = self.call_target_name(value)?;
+                    let value = self.dynamic_call_name(value)?;
                     let name = self.to_text(value).to_vec();
                     self.exec_call(code, &name, true, args)
                 }
@@ -2659,7 +2659,7 @@ impl Interp {
     /// `CALL (expr)`'s work on its target's `value`, before the arguments
     /// are evaluated: the string the name is read from, and its `>>>` line.
     /// The walked instruction and `Op::ExecValue` both run it.
-    pub(crate) fn call_target_name(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
+    pub(crate) fn dynamic_call_name(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
         self.roots.activity_mut().push_temp(value);
         // The target is converted to a string before the `>>>` below:
         // measured, `trace r` over `call (.K)` with a class-side `makeString`
@@ -2873,7 +2873,7 @@ impl Interp {
             // `Op::PushArg` behind this op to put under the arguments, where
             // `Op::CallNamed` takes it from.
             kind if Self::is_dynamic_call(kind) => {
-                let name = self.call_target_name(value)?;
+                let name = self.dynamic_call_name(value)?;
                 registers.set(src, name);
                 Ok(())
             }
