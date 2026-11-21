@@ -38,8 +38,9 @@
 //!    heap, given arguments that run no Rexx code (`crate::builtin::quiet`),
 //!    and [`Host::quiet_compound`] reads or writes a compound variable whose
 //!    tail runs no Rexx code, which changes a stem, the heap and, for a stem
-//!    not yet set, the stem's own slot, never the window. Debug builds
-//!    check the window after the first and the whole block after the others.
+//!    not yet set, read or written, the stem's own slot, never the window.
+//!    Debug builds check the window after the first and the whole block
+//!    after the others.
 //! 4. The helpers are the only code that turns the `Ctx` pointer back into a
 //!    reference, and only while generated code is suspended in that call.
 //! 5. The machine code lives in the [`JITModule`] that [`Compiled`] owns,
