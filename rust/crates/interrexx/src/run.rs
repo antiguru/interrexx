@@ -66,6 +66,7 @@ mod settings;
 
 // Condition traps and their delivery, `RAISE`, and `SIGNAL`.
 mod condition;
+pub(crate) use condition::{RaiseLayout, RaisePart, raise_slot};
 
 // `CALL` and function calls: resolving the name, running the arguments, entering the callee.
 mod call;
@@ -2704,7 +2705,7 @@ impl Interp {
     }
 
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
-    /// `value`: the one arm both ops share in the driver. A `GUARD` whose
+    /// register `src`: the one arm both ops share in the driver. A `GUARD` whose
     /// `WHEN` the chunk compiled into its side table runs it from there.
     #[inline]
     #[expect(
@@ -2719,9 +2720,9 @@ impl Interp {
         index: usize,
         instruction: &Instruction,
         source: Option<&ProgramSource>,
-        value: Option<ObjRef>,
+        src: Option<u16>,
     ) -> Result<ExecOutcome, Failure> {
-        match value {
+        match src {
             None if let InstructionKind::Guard(guard) = &instruction.kind
                 && chunk.condition_at(index).is_some() =>
             {
@@ -2738,7 +2739,7 @@ impl Interp {
                 source,
                 self.activity.region_procedure_permitted,
             ),
-            Some(value) => self.exec_with(code, index, instruction, source, value),
+            Some(src) => self.exec_with(code, registers, index, instruction, source, src),
         }
     }
 
@@ -2758,26 +2759,36 @@ impl Interp {
     }
 
     /// [`crate::ir::Op::ExecWith`]: the instruction `instruction` from the
-    /// value `value` its expression answered, with what `Op::Exec` hands
-    /// `exec_instruction`.
+    /// value its expression left in register `src`, with what `Op::Exec`
+    /// hands `exec_instruction`. A `RAISE` runs from the registers its parts
+    /// filled from `src` on.
     #[inline(never)]
     pub(crate) fn exec_with(
         &mut self,
         code: &Code<'_>,
+        registers: RegFrame<'_>,
         index: usize,
         instruction: &Instruction,
         source: Option<&ProgramSource>,
-        value: ObjRef,
+        src: u16,
     ) -> Result<ExecOutcome, Failure> {
         debug_assert!(
-            Self::exec_value_expression(&instruction.kind).is_some()
-                && Self::exec_value_transfers(&instruction.kind),
+            (Self::exec_value_expression(&instruction.kind).is_some()
+                && Self::exec_value_transfers(&instruction.kind))
+                || matches!(&instruction.kind, InstructionKind::Raise(raise)
+                    if RaiseLayout::of(raise).is_some()),
             "Op::ExecWith on an instruction exec_value_transfers does not name"
         );
         #[cfg(test)]
         if let Some(parked) = self.scripted_park() {
             return Ok(parked);
         }
+        if let InstructionKind::Raise(_) = &instruction.kind {
+            return self
+                .raise_from_registers(instruction, registers, src)
+                .map(ExecOutcome::Done);
+        }
+        let value = registers.get(src);
         match &instruction.kind {
             InstructionKind::Interpret { .. } => self
                 .exec_interpret_value(index, instruction, source, value)
@@ -2803,6 +2814,11 @@ impl Interp {
                     self.activation().method_identity.is_some(),
                     "Op::ExecWith replied outside a method, past an Op::ReplyCheck that refuses it"
                 );
+                // Recorded after the expression's ops, where the walked
+                // `exec_reply` records it before evaluating. Once the ops have
+                // finished the pins in force are the same at both points, but
+                // a pinning report for a `REPLY` whose expression parks, which
+                // only the walked path can do, differs between the two.
                 park_point!(self, crate::pinning::ParkKind::Reply);
                 self.exec_reply_value(Some(value))
             }
@@ -2810,15 +2826,25 @@ impl Interp {
         }
     }
 
-    /// [`crate::ir::Op::ExecValue`]: the instruction `instruction` from the
-    /// value `value` its expression answered.
+    /// [`crate::ir::Op::ExecValue`] `op`: the instruction `instruction` from
+    /// the value its expression left in the op's register; or
+    /// [`crate::ir::Op::RaisePart`], which shares the driver's arm.
     #[inline(never)]
     pub(crate) fn exec_value(
         &mut self,
         code: &Code<'_>,
         instruction: &Instruction,
-        value: ObjRef,
+        registers: RegFrame<'_>,
+        op: &crate::ir::Op,
     ) -> Result<(), Failure> {
+        let src = match *op {
+            crate::ir::Op::RaisePart { part, src, .. } => {
+                return self.raise_part(instruction, registers, part, src);
+            }
+            crate::ir::Op::ExecValue { src, .. } => src,
+            _ => return Err(Loud::instruction(&instruction.kind).into()),
+        };
+        let value = registers.get(src);
         debug_assert!(
             Self::exec_value_expression(&instruction.kind).is_some()
                 && !Self::exec_value_transfers(&instruction.kind),
@@ -3799,6 +3825,8 @@ impl Interp {
                 },
                 1,
             ) => value,
+            // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
+            (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
             _ => return None,
         };
         let mut steps = path.steps();
@@ -3835,6 +3863,17 @@ impl Interp {
         match (&instruction.kind, slot) {
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
                 self.eval(code, expression)
+            }
+            // A `RAISE`'s expression `slot`, evaluated and nothing else: each
+            // part's work is its own `Op::RaisePart`.
+            (InstructionKind::Raise(raise), slot) => {
+                let Some(expr) = u16::try_from(slot)
+                    .ok()
+                    .and_then(|slot| raise_slot(raise, slot))
+                else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
             }
             (InstructionKind::If { condition, .. }, 0) => {
                 let holds = self.eval_if_condition(code, condition)?;

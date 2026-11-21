@@ -64,6 +64,19 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             Op::ExecWith { index: at, src } => {
                 out.push_str(&format!("{index}: ExecWith index={at} src={src}\n"));
             }
+            Op::RaisePart {
+                index: at,
+                part,
+                src,
+            } => {
+                let src = match *src {
+                    Op::ARG_OMITTED => "omitted".to_string(),
+                    src => src.to_string(),
+                };
+                out.push_str(&format!(
+                    "{index}: RaisePart index={at} part={part:?} src={src}\n"
+                ));
+            }
             Op::ReplyCheck { index: at } => {
                 out.push_str(&format!("{index}: ReplyCheck index={at}\n"));
             }

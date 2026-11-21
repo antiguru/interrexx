@@ -1,4 +1,113 @@
 use super::*;
+use crate::Loud;
+use interrexx_core::RegFrame;
+use interrexx_parse::{Expr, Instruction, InstructionKind};
+
+/// One step of a compiled `RAISE` ([`crate::ir::Op::RaisePart`]): what the
+/// instruction does with one of its expressions once it is evaluated and
+/// before it evaluates the next, as the walked instruction does between its
+/// evaluations (`r[instr.raise.order]`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum RaisePart {
+    /// The code of `ERROR` or `FAILURE`, or the number of `SYNTAX`, which is
+    /// checked here.
+    Code,
+    Description,
+    /// `ADDITIONAL`'s value, which `SYNTAX` converts to an array here.
+    Additional,
+    /// One item of the `ARRAY` list: its trace lines.
+    Item,
+    /// The `ARRAY` list's array, from its items.
+    Array,
+    /// The `RETURN` or `EXIT` value.
+    Result,
+}
+
+/// Where a compiled `RAISE` keeps what each of its parts leaves, as offsets
+/// from its first register. `Code`, `Description` and `Additional` take two
+/// registers each, `Array` one and one more per item, `Result` one; an
+/// absent part takes none.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) struct RaiseLayout {
+    pub(crate) code: Option<u16>,
+    pub(crate) description: Option<u16>,
+    pub(crate) additional: Option<u16>,
+    /// The array's register. Item `k`'s value is in register `k + 1` past it.
+    pub(crate) array: Option<u16>,
+    pub(crate) result: Option<u16>,
+    /// How many registers the parts take together.
+    pub(crate) len: u16,
+}
+
+impl RaiseLayout {
+    /// The layout of `raise`, or `None` for a `RAISE` with no expression,
+    /// which has nothing to evaluate and runs as one `Op::Exec`.
+    pub(crate) fn of(raise: &Raise) -> Option<RaiseLayout> {
+        let items = raise.array.as_deref().unwrap_or_default();
+        let any = raise.rc.is_some()
+            || raise.description.is_some()
+            || raise.additional.is_some()
+            || items.iter().any(Option::is_some)
+            || raise_result_expr(raise).is_some();
+        if !any {
+            return None;
+        }
+        let mut len: u16 = 0;
+        let mut take = |present: bool, width: usize| -> Option<Option<u16>> {
+            if !present {
+                return Some(None);
+            }
+            let at = len;
+            len = len.checked_add(u16::try_from(width).ok()?)?;
+            Some(Some(at))
+        };
+        Some(RaiseLayout {
+            code: take(raise.rc.is_some(), 2)?,
+            description: take(raise.description.is_some(), 2)?,
+            additional: take(raise.additional.is_some(), 2)?,
+            array: take(raise.array.is_some(), items.len().checked_add(1)?)?,
+            result: take(raise_result_expr(raise).is_some(), 1)?,
+            len,
+        })
+    }
+}
+
+/// The `RETURN` or `EXIT` expression of `raise`, if it has one.
+fn raise_result_expr(raise: &Raise) -> Option<&Expr> {
+    raise.result.as_ref()?.value.as_ref()
+}
+
+/// Expression `slot` of `raise`, as a compiled `RAISE` addresses them: `0`
+/// the code or number, `1` `DESCRIPTION`, `2` `ADDITIONAL`, `3` the
+/// `RETURN` or `EXIT` value, and `4 + k` item `k` of `ARRAY`. Out of line,
+/// so that the lookup of every other instruction's slots does not carry it.
+#[cold]
+#[inline(never)]
+pub(crate) fn raise_slot(raise: &Raise, slot: u16) -> Option<&Expr> {
+    match slot {
+        0 => raise.rc.as_ref(),
+        1 => raise.description.as_ref(),
+        2 => raise.additional.as_ref(),
+        3 => raise_result_expr(raise),
+        item => raise.array.as_deref()?.get(usize::from(item - 4))?.as_ref(),
+    }
+}
+
+/// What a `RAISE` keeps of each expression once its part has run: the
+/// registers of [`RaiseLayout`] for a compiled one, this for a walked one.
+/// Each pair is the value and an object the part derived from it.
+#[derive(Clone, Copy, Default)]
+struct RaiseHeld {
+    /// The value, and the string whose text is the code.
+    code: Option<[ObjRef; 2]>,
+    /// The value, and for `NOMETHOD` or `PROPAGATE` the string of its text.
+    description: Option<[ObjRef; 2]>,
+    /// The value the condition carries, and for `SYNTAX` the array its
+    /// substitutions are read from or the string of the one substitution.
+    additional: Option<[ObjRef; 2]>,
+    array: Option<ObjRef>,
+    result: Option<ObjRef>,
+}
 
 impl Interp {
     /// `RAISE`, in all of its forms.
@@ -10,220 +119,387 @@ impl Interp {
     /// RAISE other ...              \  the nearest activation not an internal
     /// RAISE other ... EXIT [e]     /  call, then its CALLER, as RETURN does
     /// ```
+    /// Each expression is evaluated and its part run before the next is
+    /// evaluated, in the order of `r[instr.raise.order]`; a compiled `RAISE`
+    /// runs the same parts from its registers.
     pub(in crate::run) fn exec_raise(
         &mut self,
         code: &Code<'_>,
         raise: &Raise,
     ) -> Result<Flow, Failure> {
-        if raise.propagate {
-            return self.exec_raise_propagate(code, raise);
+        let mut held = RaiseHeld::default();
+        if let Some(expr) = &raise.rc {
+            let value = self.eval(code, expr)?;
+            held.code = Some(self.raise_code(raise, value)?);
         }
-        // Each option traces a `>K>` line as it is evaluated, in source
-        // order, at this clause's own indent. Measured, all five spellings:
-        // ```text
-        // raise syntax 40.4 description 'zdesc' additional 'zadd'
-        //   >K>   "SYNTAX" => "40.4"
-        //   >K>   "DESCRIPTION" => "zdesc"
-        //   >K>   "ADDITIONAL" => "zadd"
-        // raise syntax 40.4 array ('ZORKROUTINE', 7)
-        //   >K>   "SYNTAX" => "40.4"
-        //   >K>   "ARRAY" => "an Array"
-        // raise user marker description 'zdesc' return 'zret'
-        //   >K>   "DESCRIPTION" => "zdesc"
-        //   >K>   "RESULT" => "zret"
-        // ```
-        let indent = self.activity.clause_state.current_value_indent;
-        // The object the clause named for `ERROR` or `FAILURE`, which the
-        // condition object and the variable `RC` hold as it is.
-        let mut rc_object = None;
-        let rc_text = match &raise.rc {
-            Some(expr) => {
-                let value = self.eval(code, expr)?;
-                self.roots.activity_mut().push_temp(value);
-                // **The line renders the object and the code is its string
-                // value**, which `Interp::string_value_text`'s own doc has the
-                // split for: the `>K>` trace is handed the
-                // object and its string request is what becomes the
-                // code. Measured, `trace i` over `raise syntax (1,2)`:
-                // `>K>   "SYNTAX" => "an Array"`.
-                if self.traced_mode().results {
-                    let traced = self.traced_string_value_text(value)?;
-                    let keyword = String::from_utf8_lossy(&raise.condition).into_owned();
-                    self.trace_keyword(indent, &keyword, &traced);
-                }
-                // A SYNTAX code is the string request of the value.
-                let code = match raise.condition.as_ref() == b"SYNTAX" {
-                    true => self.required_string_value(value)?,
-                    false => value,
+        if let Some(expr) = &raise.description {
+            let value = self.eval(code, expr)?;
+            held.description = Some(self.raise_description(raise, value)?);
+        }
+        if let Some(expr) = &raise.additional {
+            let value = self.eval(code, expr)?;
+            held.additional = Some(self.raise_additional(raise, value)?);
+        }
+        if let Some(items) = &raise.array {
+            let mut values = Vec::with_capacity(items.len());
+            for item in items {
+                let value = match item {
+                    Some(expr) => Some(self.eval(code, expr)?),
+                    None => None,
                 };
-                if matches!(raise.condition.as_ref(), b"ERROR" | b"FAILURE") {
-                    rc_object = Some(value);
-                }
-                Some(self.to_text(code).to_vec())
+                self.raise_item(value)?;
+                values.push(value);
             }
-            None => None,
+            held.array = Some(self.raise_array(raise, &values));
+        }
+        if let Some(expr) = raise_result_expr(raise) {
+            let value = self.eval(code, expr)?;
+            self.raise_result(value)?;
+            held.result = Some(value);
+        }
+        self.raise_held(raise, held)
+    }
+
+    /// [`crate::ir::Op::RaisePart`]: `part` of the `RAISE` `instruction`,
+    /// from the value its expression left in register `src`, into the
+    /// registers [`RaiseLayout`] gives the part. An `Item` with `src`
+    /// [`crate::ir::Op::ARG_OMITTED`] is an omitted position, and `Array`'s
+    /// `src` is the array's own register.
+    #[inline(never)]
+    pub(crate) fn raise_part(
+        &mut self,
+        instruction: &Instruction,
+        registers: RegFrame<'_>,
+        part: RaisePart,
+        src: u16,
+    ) -> Result<(), Failure> {
+        let InstructionKind::Raise(raise) = &instruction.kind else {
+            return Err(Loud::instruction(&instruction.kind).into());
         };
+        let pair = |[value, derived]: [ObjRef; 2]| {
+            registers.set(src, value);
+            registers.set(src + 1, derived);
+        };
+        match part {
+            RaisePart::Code => pair(self.raise_code(raise, registers.get(src))?),
+            RaisePart::Description => pair(self.raise_description(raise, registers.get(src))?),
+            RaisePart::Additional => pair(self.raise_additional(raise, registers.get(src))?),
+            RaisePart::Item => {
+                let value = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
+                self.raise_item(value)?;
+            }
+            RaisePart::Array => {
+                let items = raise.array.as_deref().unwrap_or_default();
+                let values: Vec<Option<ObjRef>> = (1..)
+                    .zip(items)
+                    .map(|(at, item)| item.as_ref().map(|_| registers.get(src + at)))
+                    .collect();
+                let array = self.raise_array(raise, &values);
+                registers.set(src, array);
+            }
+            RaisePart::Result => self.raise_result(registers.get(src))?,
+        }
+        Ok(())
+    }
+
+    /// [`crate::ir::Op::ExecWith`] for a `RAISE`: the condition raised from
+    /// what its parts left in the registers from `base`.
+    pub(crate) fn raise_from_registers(
+        &mut self,
+        instruction: &Instruction,
+        registers: RegFrame<'_>,
+        base: u16,
+    ) -> Result<Flow, Failure> {
+        let InstructionKind::Raise(raise) = &instruction.kind else {
+            return Err(Loud::instruction(&instruction.kind).into());
+        };
+        let Some(layout) = RaiseLayout::of(raise) else {
+            return Err(Loud::instruction(&instruction.kind).into());
+        };
+        let pair = |at: u16| [registers.get(base + at), registers.get(base + at + 1)];
+        let held = RaiseHeld {
+            code: layout.code.map(pair),
+            description: layout.description.map(pair),
+            additional: layout.additional.map(pair),
+            array: layout.array.map(|at| registers.get(base + at)),
+            result: layout.result.map(|at| registers.get(base + at)),
+        };
+        self.raise_held(raise, held)
+    }
+
+    /// The code part. Each option traces a `>K>` line as it is evaluated, at
+    /// this clause's own indent. Measured, all five spellings:
+    /// ```text
+    /// raise syntax 40.4 description 'zdesc' additional 'zadd'
+    ///   >K>   "SYNTAX" => "40.4"
+    ///   >K>   "DESCRIPTION" => "zdesc"
+    ///   >K>   "ADDITIONAL" => "zadd"
+    /// raise syntax 40.4 array ('ZORKROUTINE', 7)
+    ///   >K>   "SYNTAX" => "40.4"
+    ///   >K>   "ARRAY" => "an Array"
+    /// raise user marker description 'zdesc' return 'zret'
+    ///   >K>   "DESCRIPTION" => "zdesc"
+    ///   >K>   "RESULT" => "zret"
+    /// ```
+    /// Answers the value, which the condition object and the variable `RC`
+    /// hold as it is for `ERROR` or `FAILURE`, and the string of the code.
+    fn raise_code(&mut self, raise: &Raise, value: ObjRef) -> Result<[ObjRef; 2], Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        self.roots.activity_mut().push_temp(value);
+        // **The line renders the object and the code is its string
+        // value**, which `Interp::string_value_text`'s own doc has the
+        // split for: the `>K>` trace is handed the
+        // object and its string request is what becomes the
+        // code. Measured, `trace i` over `raise syntax (1,2)`:
+        // `>K>   "SYNTAX" => "an Array"`.
+        if self.traced_mode().results {
+            let traced = self.traced_string_value_text(value)?;
+            let keyword = String::from_utf8_lossy(&raise.condition).into_owned();
+            self.trace_keyword(indent, &keyword, &traced);
+        }
+        // A SYNTAX code is the string request of the value. Any other code is
+        // the value's text as it is now, kept as a string so that a later
+        // expression that changes the object does not change the code.
+        let syntax = raise.condition.as_ref() == b"SYNTAX";
+        let code = match syntax {
+            true => self.required_string_value(value)?,
+            false => {
+                let text = self.to_text(value).to_vec();
+                self.text(&text)
+            }
+        };
+        self.roots.activity_mut().push_temp(code);
         // An argument that is not an error number fails the clause as soon as
         // it is evaluated, before DESCRIPTION and ADDITIONAL are.
-        if raise.condition.as_ref() == b"SYNTAX"
-            && syntax_code(rc_text.as_deref().unwrap_or(b"")).is_none()
-        {
-            let mut raised = raise_syntax_condition(rc_text.as_deref().unwrap_or(b""), Vec::new());
-            raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
-            raised.delivery.search = Search::Here;
-            return Err(raised.into());
+        if syntax {
+            let text = self.to_text(code).to_vec();
+            if syntax_code(&text).is_none() {
+                let mut raised = raise_syntax_condition(&text, Vec::new());
+                raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
+                raised.delivery.search = Search::Here;
+                return Err(raised.into());
+            }
         }
+        Ok([value, code])
+    }
+
+    /// The `DESCRIPTION` part: the value, and for `NOMETHOD` or `PROPAGATE`
+    /// the string of its text, or `.nil`.
+    fn raise_description(&mut self, raise: &Raise, value: ObjRef) -> Result<[ObjRef; 2], Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
         // Kept, not only traced: a trapping handler reads it back through
         // `CONDITION('D')` -- measured, `raise syntax 40.4 description 'zd'`
         // trapped gives `zd` where the same raise without the clause gives
         // the null string.
-        let mut description: Option<Vec<u8>> = None;
-        let mut description_object = None;
-        if let Some(expr) = &raise.description {
-            let value = self.eval(code, expr)?;
-            description_object = Some(value);
-            self.roots.activity_mut().push_temp(value);
-            // The object on the line and its string value in the condition,
-            // the same split the `rc` keyword above takes. Measured,
-            // `trace i` over `raise syntax 93.900 description (1,2)
-            // additional 'x'`: `>K>   "DESCRIPTION" => "an Array"`.
-            if self.traced_mode().results {
-                let traced = self.traced_string_value_text(value)?;
-                self.trace_keyword(indent, "DESCRIPTION", &traced);
-            }
-            // The text is needed only where an untrapped `NOMETHOD` report
-            // names it, and it is the object's rendering -- its default name
-            // for an instance, not what its `MAKESTRING` answers. Every other
-            // condition keeps the object, and each read of `CONDITION('D')`
-            // converts it anew.
-            if raise.condition.as_ref() == b"NOMETHOD" {
-                description = Some(self.string_value_text(value)?);
-            }
+        self.roots.activity_mut().push_temp(value);
+        // The object on the line and its string value in the condition,
+        // the same split the `rc` keyword above takes. Measured,
+        // `trace i` over `raise syntax 93.900 description (1,2)
+        // additional 'x'`: `>K>   "DESCRIPTION" => "an Array"`.
+        if self.traced_mode().results {
+            let traced = self.traced_string_value_text(value)?;
+            self.trace_keyword(indent, "DESCRIPTION", &traced);
         }
-        // `ADDITIONAL expr` and `ARRAY (a, b)` produce the identical
-        // substitution list -- measured, `additional ('MYROUTINE', 3)` and
-        // `array ('MYROUTINE', 3)` give byte-identical reports -- so they
-        // share one `Vec` here rather than being kept apart to no end. A
-        // single non-array `ADDITIONAL` value is one substitution, also
-        // measured: `additional 'JUSTONE'` fills `&1` and leaves `&2` as the
-        // literal `&2`.
-        let mut additional: Vec<Vec<u8>> = Vec::new();
-        let mut substitutions = None;
-        if let Some(expr) = &raise.additional {
-            let mut value = self.eval(code, expr)?;
-            self.roots.activity_mut().push_temp(value);
-            // **A surface that is neither `stringValue()` nor an operator, and only under one
-            // condition.** The additional information is converted to an array exactly once, and
-            // only for `SYNTAX` -- so under `USER` or any other condition the value is never
-            // array-converted. For example `raise syntax 40.1 additional (.array)` is a 98
-            // execution error at rc 158, `additional (.environment)` substitutes
-            // `INPUTOUTPUTSTREAM` -- the first entry of the array the directory converts to -- and
-            // `raise user zork additional (.array)` under a trap is rc 0. The array is retained for
-            // every condition, but only `SYNTAX` splits it into substitutions and refuses a value
-            // that is not one. The conversion is inside the `SYNTAX` branch alone, and that governs
-            // the *substitution list* a catalogue message renders from -- which only a `SYNTAX`
-            // condition has. The condition object's `ADDITIONAL` carries the raise's own array
-            // whatever the condition is: `raise user mycond additional (.array~of('x','y'))` gives
-            // a directory holding two items, and pushing the rendered whole value gave one holding
-            // `x\ny`. `Raised::message` is the only other reader and runs for a catalogue entry
-            // alone, so nothing else sees the split.
-            let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
-            let mut slots = self.array_slots_of(value);
-            let mut held_in = value;
-            // The object on the line, the same split the two keywords above
-            // take. Measured, `trace i` over `raise syntax 93.900 additional
-            // (1,2)`: `>K>   "ADDITIONAL" => "an Array"`.
+        // `PROPAGATE` replaces the passed-on condition's description with the
+        // value's string request.
+        if raise.propagate {
+            let text = self.required_string_value(value)?;
+            self.roots.activity_mut().push_temp(text);
+            return Ok([value, text]);
+        }
+        // The text is needed only where an untrapped `NOMETHOD` report
+        // names it, and it is the object's rendering -- its default name
+        // for an instance, not what its `MAKESTRING` answers. Every other
+        // condition keeps the object, and each read of `CONDITION('D')`
+        // converts it anew.
+        if raise.condition.as_ref() == b"NOMETHOD" {
+            let text = self.string_value_text(value)?;
+            let text = self.text(&text);
+            self.roots.activity_mut().push_temp(text);
+            return Ok([value, text]);
+        }
+        Ok([value, ObjRef::NIL])
+    }
+
+    /// The `ADDITIONAL` part: the value the condition carries, and for
+    /// `SYNTAX` the array its substitutions are read from, or the string of
+    /// its one substitution.
+    fn raise_additional(&mut self, raise: &Raise, value: ObjRef) -> Result<[ObjRef; 2], Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        let mut value = value;
+        self.roots.activity_mut().push_temp(value);
+        if raise.propagate {
             if self.traced_mode().results {
                 let traced = self.traced_string_value_text(value)?;
                 self.trace_keyword(indent, "ADDITIONAL", &traced);
             }
-            if converted && slots.is_none() {
-                // An array request, a string's lines included, and 98.939 for
-                // `.nil` or a multi-dimensional answer.
-                let Some((array, store)) = self.single_dimension_request(value)? else {
-                    return Err(Raised::syntax_additional().into());
-                };
-                // The answer itself is carried, an `Array` subclass instance
-                // as it is; its items are read from the array holding them.
-                value = array;
-                held_in = store;
-                slots = self.array_slots_of(store);
-            }
-            // The object itself, for the condition object to carry. The
-            // substitution list below is a different thing: it is what a
-            // catalogue message renders from, and only a `SYNTAX` condition
-            // has one.
-            self.activity.pending_additional = Some(value);
-            if converted {
-                match slots {
-                    Some(_) => {
-                        self.roots.activity_mut().push_temp(value);
-                        substitutions = Some((value, held_in));
-                    }
-                    None => additional.push(self.to_text(value).to_vec()),
-                }
+            return Ok([value, ObjRef::NIL]);
+        }
+        // **A surface that is neither `stringValue()` nor an operator, and only under one
+        // condition.** The additional information is converted to an array exactly once, and
+        // only for `SYNTAX` -- so under `USER` or any other condition the value is never
+        // array-converted. For example `raise syntax 40.1 additional (.array)` is a 98
+        // execution error at rc 158, `additional (.environment)` substitutes
+        // `INPUTOUTPUTSTREAM` -- the first entry of the array the directory converts to -- and
+        // `raise user zork additional (.array)` under a trap is rc 0. The array is retained for
+        // every condition, but only `SYNTAX` splits it into substitutions and refuses a value
+        // that is not one. The conversion is inside the `SYNTAX` branch alone, and that governs
+        // the *substitution list* a catalogue message renders from -- which only a `SYNTAX`
+        // condition has. The condition object's `ADDITIONAL` carries the raise's own array
+        // whatever the condition is: `raise user mycond additional (.array~of('x','y'))` gives
+        // a directory holding two items, and pushing the rendered whole value gave one holding
+        // `x\ny`. `Raised::message` is the only other reader and runs for a catalogue entry
+        // alone, so nothing else sees the split.
+        //
+        // `ADDITIONAL expr` and `ARRAY (a, b)` produce the identical
+        // substitution list -- measured, `additional ('MYROUTINE', 3)` and
+        // `array ('MYROUTINE', 3)` give byte-identical reports. A single
+        // non-array `ADDITIONAL` value is one substitution, also measured:
+        // `additional 'JUSTONE'` fills `&1` and leaves `&2` as the literal
+        // `&2`.
+        let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
+        let mut slots = self.array_slots_of(value);
+        let mut held_in = value;
+        // The object on the line, the same split the two keywords above
+        // take. Measured, `trace i` over `raise syntax 93.900 additional
+        // (1,2)`: `>K>   "ADDITIONAL" => "an Array"`.
+        if self.traced_mode().results {
+            let traced = self.traced_string_value_text(value)?;
+            self.trace_keyword(indent, "ADDITIONAL", &traced);
+        }
+        if converted && slots.is_none() {
+            // An array request, a string's lines included, and 98.939 for
+            // `.nil` or a multi-dimensional answer.
+            let Some((array, store)) = self.single_dimension_request(value)? else {
+                return Err(Raised::syntax_additional().into());
+            };
+            // The answer itself is carried, an `Array` subclass instance
+            // as it is; its items are read from the array holding them.
+            value = array;
+            held_in = store;
+            slots = self.array_slots_of(store);
+        }
+        // The object itself, for the condition object to carry. The
+        // substitution list is a different thing: it is what a catalogue
+        // message renders from, and only a `SYNTAX` condition has one.
+        self.activity.pending_additional = Some(value);
+        if !converted {
+            return Ok([value, ObjRef::NIL]);
+        }
+        self.roots.activity_mut().push_temp(value);
+        match slots {
+            Some(_) => Ok([value, held_in]),
+            None => {
+                let text = self.to_text(value).to_vec();
+                let text = self.text(&text);
+                self.roots.activity_mut().push_temp(text);
+                Ok([value, text])
             }
         }
-        if let Some(items) = &raise.array {
-            // **The elements first, then the `>K>` line.** Measured, `trace i` / `raise syntax 40.4 array('R',,'X')`:
-            // ```text
-            //   >L>   "R"
-            //   >A>   "R"
-            //   >A>   "R"
-            //   >A>   ""
-            //   >L>   "X"
-            //   >A>   "X"
-            //   >A>   "X"
-            //   >K>   "ARRAY" => "an Array"
-            // ```
-            let mut held = Vec::with_capacity(items.len());
-            for item in items {
-                let Some(expr) = item else {
-                    // An omitted position (`array (1,,3)`) **holds its place**
-                    // in the substitution list rather than closing up, and
-                    // substitutes as empty. `raise syntax 40.4 array('R',,'X')`
-                    // reports "maximum expected is ." (`&2` is the hole), where
-                    // closing up would report "maximum expected is X.".
-                    self.trace_argument(indent, b"");
-                    held.push(None);
-                    continue;
-                };
-                let value = self.eval(code, expr)?;
-                self.roots.activity_mut().push_temp(value);
-                held.push(Some(value));
-                // **No gap check here, and the absence is the decision.** A
-                // real array is built from these elements and the conversion
-                // below it therefore gets an array already and returns it
-                // unchanged -- the elements are never array-converted, only
-                // rendered by the substitution machinery. So `array (.array)`,
-                // `array (.environment)` and `array (.array, 'b')` are all rc
-                // 216, and a check on this arm would refuse all three.
-                if let Some(rendered) = self.intermediate_text(value)? {
-                    self.trace_argument(indent, &rendered);
-                    self.trace_argument(indent, &rendered);
+    }
+
+    /// The trace lines of one `ARRAY` item, `None` for an omitted position.
+    /// **The elements first, then the `>K>` line.** Measured, `trace i` /
+    /// `raise syntax 40.4 array('R',,'X')`:
+    /// ```text
+    ///   >L>   "R"
+    ///   >A>   "R"
+    ///   >A>   "R"
+    ///   >A>   ""
+    ///   >L>   "X"
+    ///   >A>   "X"
+    ///   >A>   "X"
+    ///   >K>   "ARRAY" => "an Array"
+    /// ```
+    fn raise_item(&mut self, value: Option<ObjRef>) -> Result<(), Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        let Some(value) = value else {
+            // An omitted position (`array (1,,3)`) **holds its place**
+            // in the substitution list rather than closing up, and
+            // substitutes as empty. `raise syntax 40.4 array('R',,'X')`
+            // reports "maximum expected is ." (`&2` is the hole), where
+            // closing up would report "maximum expected is X.".
+            self.trace_argument(indent, b"");
+            return Ok(());
+        };
+        self.roots.activity_mut().push_temp(value);
+        // **No gap check here, and the absence is the decision.** A
+        // real array is built from these elements and the conversion
+        // `ADDITIONAL` makes therefore gets an array already and returns it
+        // unchanged -- the elements are never array-converted, only
+        // rendered by the substitution machinery. So `array (.array)`,
+        // `array (.environment)` and `array (.array, 'b')` are all rc
+        // 216, and a check on this arm would refuse all three.
+        if let Some(rendered) = self.intermediate_text(value)? {
+            self.trace_argument(indent, &rendered);
+            self.trace_argument(indent, &rendered);
+        }
+        Ok(())
+    }
+
+    /// The `ARRAY` part: the array of the items themselves, which the
+    /// condition object's `ADDITIONAL` is, as `ADDITIONAL`'s own value is.
+    fn raise_array(&mut self, raise: &Raise, items: &[Option<ObjRef>]) -> ObjRef {
+        let indent = self.activity.clause_state.current_value_indent;
+        let array = self.security_arguments_array(items);
+        if !raise.propagate {
+            self.activity.pending_additional = Some(array);
+        }
+        if raise.propagate || raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
+            self.roots.activity_mut().push_temp(array);
+        }
+        // **`an Array`, verbatim and regardless of the elements** -- it is
+        // the Array class's own default string form, which is what is
+        // traced here (for `array ('ZORKROUTINE', 7)`).
+        self.trace_keyword(indent, "ARRAY", b"an Array");
+        array
+    }
+
+    /// The `RETURN`/`EXIT` part: the value's own `>K>` line -- measured for
+    /// both tails: `raise user foo return 'ONEVAL'` under `trace r` traces
+    /// `>K>     "RESULT" => "ONEVAL"`, and the same with `exit` traces the
+    /// identical line. `RETURN`'s own instruction arm traces `>>>` instead,
+    /// so this is not that path with a different indent.
+    fn raise_result(&mut self, value: ObjRef) -> Result<(), Failure> {
+        self.roots.activity_mut().push_temp(value);
+        if let Some(rendered) = self.result_text(value)? {
+            let indent = self.activity.clause_state.current_value_indent;
+            self.trace_keyword(indent, "RESULT", &rendered);
+        }
+        Ok(())
+    }
+
+    /// The condition `raise` raises, from what its parts left.
+    fn raise_held(&mut self, raise: &Raise, held: RaiseHeld) -> Result<Flow, Failure> {
+        if raise.propagate {
+            return self.raise_propagate(raise, held);
+        }
+        let rc_object = match raise.condition.as_ref() {
+            b"ERROR" | b"FAILURE" => held.code.map(|[value, _]| value),
+            _ => None,
+        };
+        let rc_text = held.code.map(|[_, code]| self.to_text(code).to_vec());
+        let description_object = held.description.map(|[value, _]| value);
+        let description = match held.description {
+            Some([_, text]) if raise.condition.as_ref() == b"NOMETHOD" => {
+                Some(self.to_text(text).to_vec())
+            }
+            _ => None,
+        };
+        let mut additional: Vec<Vec<u8>> = Vec::new();
+        let mut substitutions = None;
+        if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
+            if let Some([carried, held_in]) = held.additional {
+                match self.array_slots_of(held_in) {
+                    Some(_) => substitutions = Some((carried, held_in)),
+                    None => additional.push(self.to_text(held_in).to_vec()),
                 }
             }
-            // The condition object's `ADDITIONAL` is the array of the items
-            // themselves, as `ADDITIONAL`'s own value is.
-            let array = self.security_arguments_array(&held);
-            self.activity.pending_additional = Some(array);
-            if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
-                self.roots.activity_mut().push_temp(array);
+            if let Some(array) = held.array {
                 substitutions = Some((array, array));
             }
-            // **`an Array`, verbatim and regardless of the elements** -- it is
-            // the Array class's own default string form, which is what is
-            // traced here (for `array ('ZORKROUTINE', 7)`). This crate has no
-            // array object to render, and building one purely to print a
-            // constant would be the longer way to the same two words.
-            self.trace_keyword(indent, "ARRAY", b"an Array");
         }
-        // The `RETURN`/`EXIT` value, and its own `>K>` line -- measured for
-        // both tails: `raise user foo return 'ONEVAL'` under `trace r`
-        // traces `>K>     "RESULT" => "ONEVAL"`, and the same with `exit`
-        // traces the identical line. `RETURN`'s own instruction arm traces
-        // `>>>` instead, so this is not that path with a different indent.
-        let result = self.raise_result(code, raise)?;
+        let result = held.result;
         let returns = raise.result.as_ref().is_some_and(|result| !result.exit);
 
         if raise.condition.as_ref() == b"SYNTAX" {
@@ -452,74 +728,17 @@ impl Interp {
         }
     }
 
-    /// The value of a `RAISE`'s `RETURN` or `EXIT` expression, traced.
-    fn raise_result(&mut self, code: &Code<'_>, raise: &Raise) -> Result<Option<ObjRef>, Failure> {
-        let Some(expr) = raise
-            .result
-            .as_ref()
-            .and_then(|result| result.value.as_ref())
-        else {
-            return Ok(None);
-        };
-        let value = self.eval(code, expr)?;
-        self.roots.activity_mut().push_temp(value);
-        if let Some(rendered) = self.result_text(value)? {
-            let indent = self.activity.clause_state.current_value_indent;
-            self.trace_keyword(indent, "RESULT", &rendered);
-        }
-        Ok(Some(value))
-    }
-
-    /// `RAISE PROPAGATE`: re-raise the condition whose handler is running. A
-    /// `RETURN` or `EXIT` value replaces the condition object's `RESULT`.
-    fn exec_raise_propagate(&mut self, code: &Code<'_>, raise: &Raise) -> Result<Flow, Failure> {
-        let indent = self.activity.clause_state.current_value_indent;
-        // DESCRIPTION, then ADDITIONAL or ARRAY, then the tail, as `RAISE`
-        // evaluates them; they replace what the passed-on condition carries.
-        let mut description = None;
-        if let Some(expr) = &raise.description {
-            let value = self.eval(code, expr)?;
-            self.roots.activity_mut().push_temp(value);
-            if self.traced_mode().results {
-                let traced = self.traced_string_value_text(value)?;
-                self.trace_keyword(indent, "DESCRIPTION", &traced);
-            }
-            let text = self.required_string_value(value)?;
-            self.roots.activity_mut().push_temp(text);
-            description = Some((value, self.to_text(text).to_vec()));
-        }
-        let mut additional = None;
-        if let Some(expr) = &raise.additional {
-            let value = self.eval(code, expr)?;
-            self.roots.activity_mut().push_temp(value);
-            if self.traced_mode().results {
-                let traced = self.traced_string_value_text(value)?;
-                self.trace_keyword(indent, "ADDITIONAL", &traced);
-            }
-            additional = Some(value);
-        }
-        if let Some(items) = &raise.array {
-            let mut held = Vec::with_capacity(items.len());
-            for item in items {
-                let Some(expr) = item else {
-                    self.trace_argument(indent, b"");
-                    held.push(None);
-                    continue;
-                };
-                let value = self.eval(code, expr)?;
-                self.roots.activity_mut().push_temp(value);
-                held.push(Some(value));
-                if let Some(rendered) = self.intermediate_text(value)? {
-                    self.trace_argument(indent, &rendered);
-                    self.trace_argument(indent, &rendered);
-                }
-            }
-            let array = self.security_arguments_array(&held);
-            self.roots.activity_mut().push_temp(array);
-            self.trace_keyword(indent, "ARRAY", b"an Array");
-            additional = Some(array);
-        }
-        let result = self.raise_result(code, raise)?;
+    /// `RAISE PROPAGATE`: re-raise the condition whose handler is running,
+    /// with what its parts left. DESCRIPTION, then ADDITIONAL or ARRAY, then
+    /// the tail, as `RAISE` evaluates them; they replace what the passed-on
+    /// condition carries, and a `RETURN` or `EXIT` value replaces the
+    /// condition object's `RESULT`.
+    fn raise_propagate(&mut self, raise: &Raise, held: RaiseHeld) -> Result<Flow, Failure> {
+        let description = held
+            .description
+            .map(|[value, text]| (value, self.to_text(text).to_vec()));
+        let additional = held.additional.map(|[value, _]| value).or(held.array);
+        let result = held.result;
         let Some(active) = self
             .activation()
             .cold

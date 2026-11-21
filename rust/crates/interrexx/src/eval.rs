@@ -834,7 +834,9 @@ impl Interp {
     }
 
     /// `left op right` on the small-integer path, or `None` when the general
-    /// path must run instead.
+    /// path must run instead. Inlined into the driver's arithmetic arm, which
+    /// is what keeps that arm's common case free of a call.
+    #[inline(always)]
     pub(crate) fn arith_small_int(
         &self,
         op: Operator,

@@ -9,7 +9,7 @@ use interrexx_parse::{Operator, PrefixOp, SymbolId};
 use crate::error::Raised;
 use crate::eval::SymbolRead;
 use crate::run::{
-    HeaderRole, ProgramRepin, QueueKeyword, Repin, Resolved, ReturnKeyword, SiteHold,
+    HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword, SiteHold,
     raised_if_not_logical, raised_when_not_logical,
 };
 use crate::trace::ChunkTrace;
@@ -105,13 +105,24 @@ pub(crate) enum Op {
     /// register `src`, as [`Op::Exec`] runs a whole instruction: pinned, and
     /// answering an `ExecOutcome` whose `Flow` ends the region. For the
     /// instructions whose work past the evaluation can transfer control or
-    /// run Rexx code of its own, which [`Op::ExecValue`]'s cannot.
+    /// run Rexx code of its own, which [`Op::ExecValue`]'s cannot. A `RAISE`
+    /// raises from the registers its [`Op::RaisePart`]s filled, the first of
+    /// which is `src`.
     ExecWith { index: u32, src: u16 },
     /// The check the `REPLY` at `index` makes before it evaluates its
     /// expression, ahead of that expression's ops: its refusal outside a
     /// method, so that the expression does not run where the instruction may
     /// not.
     ReplyCheck { index: u32 },
+    /// One part of the `RAISE` at `index`: what the instruction does with the
+    /// value its expression left in register `src` before it evaluates the
+    /// next, its results kept in the registers [`crate::run::RaiseLayout`]
+    /// gives the part. [`Op::ExecWith`] then raises from them.
+    RaisePart {
+        index: u32,
+        part: RaisePart,
+        src: u16,
+    },
     /// Echoes the `*-*` line of the clause of the instruction at `index`.
     TraceClause { index: u32 },
     /// Evaluates expression `slot` of the instruction at `index` into

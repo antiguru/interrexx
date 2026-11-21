@@ -813,6 +813,67 @@ fn a_reply_value_runs_from_its_compiled_ops() {
     assert_eq!(splits, 0);
 }
 
+/// A `RAISE`'s expressions run as the chunk's own ops: a call in one resolves
+/// at its call site once and answers from the site on every later
+/// invocation, which the walked expression never does. The check each part
+/// makes comes before the next expression is evaluated: an invalid `SYNTAX`
+/// number before `DESCRIPTION`, and `ADDITIONAL`'s conversion before
+/// `RETURN`, so a call in the later expression does not run.
+#[test]
+fn a_raise_runs_its_expressions_from_its_compiled_ops() {
+    let before = call_site_hits();
+    let outcome = execute(
+        TEST_PATH,
+        b"call on user zu name zh\ndo zi = 1 to 4\n  call zr zi\n  say result\nend\nexit\n\
+          zh: return\n::routine zr\n  use arg zn\n  \
+          raise user zu description (zf(zn)) return (zf(zn) + 1)\n\
+          ::routine zf\n  use arg zv\n  return zv * 10\n"
+            .to_vec(),
+        false,
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let hits = call_site_hits() - before;
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(String::from_utf8_lossy(&outcome.stdout), "11\n21\n31\n41\n");
+    // Three sites, the `CALL` and the RAISE's two, each resolving on the
+    // first pass and answering from the site on the three after it. Walked,
+    // the RAISE's two never answer from a site.
+    let expected = if CALL_SITE_CACHE { 9 } else { 0 };
+    assert_eq!(
+        hits, expected,
+        "the RAISE's calls answered from their sites {hits} times where {expected} was due, so \
+         its expressions did not run from the chunk"
+    );
+
+    for (program, stdout) in [
+        (
+            &b"signal on syntax name zs\nraise syntax ('abc') description (zf('d')) \
+               return (zf('r'))\nzs: say condition('o')~code\nexit\n\
+               ::routine zf\n  say 'zf ran' arg(1)\n  return 1\n"[..],
+            "33.904\n",
+        ),
+        (
+            &b"signal on syntax name zs\nraise syntax 40.1 additional (.nil) \
+               return (zf('r'))\nzs: say condition('o')~code\nexit\n\
+               ::routine zf\n  say 'zf ran' arg(1)\n  return 1\n"[..],
+            "98.939\n",
+        ),
+    ] {
+        let outcome = execute(
+            TEST_PATH,
+            program.to_vec(),
+            false,
+            Invocation::none().with_deadline(RUN_DEADLINE),
+        );
+        assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+        assert_eq!(
+            String::from_utf8_lossy(&outcome.stdout),
+            stdout,
+            "a RAISE evaluated an expression past the check that fails it"
+        );
+    }
+}
+
 /// A loop's `WHILE` and `UNTIL` run from the chunk's compiled condition ops on
 /// every test, the `DO`'s own first one included; a condition holding a call
 /// does not compile there, and `TRACE I` walks the expression instead.

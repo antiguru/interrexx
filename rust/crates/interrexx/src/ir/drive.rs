@@ -407,6 +407,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::ExecValue { .. } => "ExecValue",
         Op::ExecWith { .. } => "ExecWith",
         Op::ReplyCheck { .. } => "ReplyCheck",
+        Op::RaisePart { .. } => "RaisePart",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1511,20 +1512,20 @@ macro_rules! region_ops {
                 // costs every op of every clause in the driver's codegen.
                 Op::Exec { $index: at } | Op::ExecWith { $index: at, .. } => {
                     debug_assert_names_the_clause($code, *at, $clause, "Exec");
-                    let value = match region_op {
+                    let src = match region_op {
                         Op::ExecWith { src, .. } => {
                             debug_assert!(
                                 $chunk.holds_register(*src),
                                 "op reads register {src} outside the region the chunk reserved"
                             );
-                            Some($registers.get(*src))
+                            Some(*src)
                         }
                         _ => None,
                     };
                     match pinned!(
                         $self,
                         crate::pinning::PinKind::OpExec,
-                        $self.exec_op($code, $chunk, $registers, $index, $clause, $source, value)
+                        $self.exec_op($code, $chunk, $registers, $index, $clause, $source, src)
                     ) {
                         Ok(ExecOutcome::Done(flow)) => {
                             break $cold Ok(RegionEnd::Flowed(flow));
@@ -1805,15 +1806,14 @@ macro_rules! region_ops {
                 Op::LoopTest { .. } => {
                     break $cold Err(Loud::op_not_driven("LoopTest").into());
                 }
-                Op::ExecValue { $index, src } => {
+                // `Op::RaisePart` shares the arm, for the reason `Exec`'s arm
+                // gives for sharing its own: a second call here costs every op
+                // of every clause in the driver's codegen.
+                Op::ExecValue { $index, .. } | Op::RaisePart { $index, .. } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ExecValue",
                     );
-                    debug_assert!(
-                        $chunk.holds_register(*src),
-                        "op reads register {src} outside the region the chunk reserved"
-                    );
-                    if let Err(failure) = $self.exec_value($code, $clause, $registers.get(*src)) {
+                    if let Err(failure) = $self.exec_value($code, $clause, $registers, region_op) {
                         break $cold Err(failure);
                     }
                 }
