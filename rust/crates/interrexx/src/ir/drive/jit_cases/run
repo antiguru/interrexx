@@ -1115,6 +1115,38 @@ say n m k
      3 *-*       trace value 'N'
        >K>         "VALUE" => "N"
 compiled: line 2
+# a WHILE of `|` whose operand stops being logical: generated code checks both
+# operands, and hands the boundary to the host, which raises 34
+run
+signal on syntax
+x = 1; y = 0; n = 0; m = 0
+do i = 1 while x | y
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then y = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9001 9000
+compiled: line 3
+
+# an UNTIL of `&` whose operand stops being logical, likewise
+run
+signal on syntax
+p = 0; q = 1; n = 0; m = 0
+do i = 1 until p & q
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then q = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9000 9000
+compiled: line 3
 
 # an inner counted loop in a compiled body: its start and each pass boundary
 # through the host, its body compiled. The outer body's own work is what

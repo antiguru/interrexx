@@ -317,3 +317,31 @@ fn hosted_ops_in_an_inner_body_do_not_retire_the_outer_loop() {
     assert!(compiled_runs() > 0, "nothing compiled");
     assert_eq!(retirements(), 0, "the outer loop was retired");
 }
+
+/// Compiled passes count the clauses the driver counts: an `UNTIL` is a clause
+/// of its own in front of the header's, so a loop run compiled runs the
+/// countdown out as often as the same loop run under `INTERPRET`, whose
+/// chunks never compile.
+#[test]
+fn compiled_passes_count_the_clauses_the_driver_counts() {
+    for header in ["do i = 1 until i >= 40000", "do i = 1 while i <= 40000"] {
+        let body = format!(
+            "n = 0; m = 0; {header}; n = n + 1; a = n // 7; b = a * 3; c = b - 1; \
+             d = c + a; m = m + d // 5; e = m // 11; g = e - b; end"
+        );
+        let visits = |source: String| {
+            reset_compiled_runs();
+            let before = crate::clause::countdown_visits();
+            ran(source.as_bytes());
+            (crate::clause::countdown_visits() - before, compiled_runs())
+        };
+        let (compiled, runs) = visits(format!("{body}\nsay n m"));
+        assert!(runs > 0, "{header}: the loop did not compile");
+        let (driven, runs) = visits(format!("interpret '{body}'\nsay n m"));
+        assert_eq!(runs, 0, "{header}: the interpreted loop compiled");
+        assert!(
+            compiled.abs_diff(driven) <= 1,
+            "{header}: the countdown ran out {compiled} times compiled and {driven} times driven"
+        );
+    }
+}
