@@ -618,7 +618,7 @@ end
 say a b m f
 ----
 50005000 6667 -8 49998333
-compiled: yes
+compiled: line 2
 
 # a LEAVE naming a labelled block leaves the block, and the loop carries on
 run
@@ -634,7 +634,7 @@ end
 say a b
 ----
 10000 25000
-compiled: yes
+compiled: line 2
 
 # an ITERATE from inside a labelled block ends the pass, and LEAVE ends the
 # loop
@@ -655,7 +655,7 @@ end
 say a i
 ----
 80000000 9999
-compiled: yes
+compiled: line 2
 
 # a WHILE that calls a routine is a test region the driver runs, so the loop
 # stays driven rather than leaving compiled code on every pass
