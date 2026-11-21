@@ -601,3 +601,45 @@ say t
 68896
 compiled: yes
 quiet builtin calls: yes
+
+# a WHILE that calls a routine is a test region the driver runs, so the loop
+# stays driven rather than leaving compiled code on every pass
+run
+n = 0
+do i = 1 while f(i)
+  n = n + i
+end
+say n i
+exit
+f: return arg(1) < 10000
+----
+49995000 10000
+compiled: no
+
+# an UNTIL that sends a message, likewise
+run
+o = .s~new; n = 0
+do i = 1 until o~stop(i)
+  n = n + i
+end
+say n i
+::class s
+::method stop
+  return arg(1) >= 10000
+----
+50005000 10000
+compiled: no
+
+# a COUNTER with an UNTIL that calls a routine (#813's shape), hot: the test
+# region keeps it driven
+run
+n = 0
+do counter c i = 1 to 10000 until f(i)
+  n = n + i
+end
+say n c i
+exit
+f: return arg(1) >= 9999
+----
+49995000 9999 9999
+compiled: no
