@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{compiled_runs, quiet_calls, quiet_compounds, reset_compiled_runs};
+use super::{compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs};
 
 #[test]
 fn compiled_loops_print_what_the_interpreter_prints() {
@@ -137,5 +137,21 @@ fn quiet_compound_writes_do_not_accumulate_temps() {
         temps_high_water(body, 10000, quiet_compounds),
         long,
         "the mark grows with the passes"
+    );
+}
+
+/// A block whose start the host runs, as it does where the countdown has
+/// one clause left in it, hands back to compiled code at the start's own
+/// clause end: the loop is entered compiled once, however many slices its
+/// passes cross.
+#[test]
+fn a_block_started_on_the_host_carries_on_compiled() {
+    reset_compiled_runs();
+    ran(b"a = 0\ndo i = 1 to 40000\n  do\n    a = a + i\n  end\nend\nsay a");
+    assert!(handed_back() > 0, "no block start ran on the host");
+    assert_eq!(
+        compiled_runs(),
+        1,
+        "the loop left compiled code at a block start"
     );
 }
