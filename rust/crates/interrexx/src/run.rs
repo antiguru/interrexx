@@ -2637,6 +2637,10 @@ impl Interp {
         instruction: &Instruction,
         value: ObjRef,
     ) -> Result<(), Failure> {
+        debug_assert!(
+            Self::exec_value_expression(&instruction.kind).is_some(),
+            "Op::ExecValue on an instruction exec_value_expression does not name"
+        );
         match &instruction.kind {
             InstructionKind::Numeric { setting, .. } => {
                 self.exec_numeric_value(setting, Some(value))
