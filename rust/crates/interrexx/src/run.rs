@@ -2816,6 +2816,11 @@ impl Interp {
                     self.activation().method_identity.is_some(),
                     "Op::ExecWith replied outside a method, past an Op::ReplyCheck that refuses it"
                 );
+                // Recorded after the expression's ops, where the walked
+                // `exec_reply` records it before evaluating. Once the ops have
+                // finished the pins in force are the same at both points, but
+                // a pinning report for a `REPLY` whose expression parks, which
+                // only the walked path can do, differs between the two.
                 park_point!(self, crate::pinning::ParkKind::Reply);
                 self.exec_reply_value(Some(value))
             }
