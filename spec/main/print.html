@@ -55309,8 +55309,9 @@ value as <a href="classes/../conventions.html#r-conv.string.object">the string-v
 <code>request</code> with <code>STRING</code>, so a number is stored as its digits, an object whose
 <code>makeString</code> answers a string is stored as that answer, and an array as the
 text that its <code>makeString</code> gives; <code>.nil</code> and an object with no <code>makeString</code>
-raise <code>SYNTAX 93.938</code>. An instance of a subclass of <code>String</code> is stored as its
-own characters (<a href="classes/properties.html#r-class.properties.deviation.109">the deviation rule</a>). The
+raise <code>SYNTAX 93.938</code>, naming the value's argument position, 2 for
+<code>setProperty</code> and 1 for <code>put</code> and <code>[]=</code>. An instance of a subclass of
+<code>String</code> is stored as its own characters (<a href="classes/properties.html#r-class.properties.deviation.109">the deviation rule</a>). The
 name is read as a string as for a directory (<a href="classes/directory.html#r-class.directory.indexes">the index
 rule</a>), and <code>.nil</code> as the name raises <code>SYNTAX 88.909</code>. The three answer nothing, and none of them sends <code>put</code>, <code>[]=</code> or
 <code>setProperty</code> to the receiver. <code>put</code> and <code>setProperty</code> take exactly two
@@ -55362,6 +55363,25 @@ p~put(, "x") =&gt; 93.903
 p~setProperty("x") =&gt; 93.901
 p~setProperty(, "x") =&gt; 93.903
 p~put("x", "y", "z") =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">p = .properties~new
+call try 'p~setProperty("", .nil)'
+call try 'p~put(.nil, "k")'
+call try 'p["k"] = .nil'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'accepted'
+  return
+bad:
+  fault = condition('o')
+  say fault~code fault~additional[1]
+  return
+</code></pre>
+<pre><code class="language-output">93.938 2
+93.938 1
+93.938 1
 </code></pre>
 <div class="rule" id="r-class.properties.unchecked"><a href="classes/properties.html#r-class.properties.unchecked">[class.properties.unchecked]</a></div>
 <p><code>setEntry</code>, the assignment through <code>unknown</code> (<code>p~name = x</code>) and the methods
@@ -115071,11 +115091,11 @@ or more, the magnitude rounds up, otherwise down. This is not the rule of <a hre
 conventions</a>, which rounds to 18 digits and raises
 <code>SYNTAX 40.12</code>. The frequency must be from 37 to 32767 and the duration from 0
 to 60000. An argument that is not in that form, whose rounded value has a
-fractional part other than zero, that is out of its range, or that is the null
-string raises <code>SYNTAX 88.907</code>, and so does an object whose string value fails
-these checks, such as <code>.nil</code>. A rounded value whose magnitude is 10**18 or
-more is not a whole number for this purpose, whichever sign it has: it fails
-the form check.</p>
+fractional part other than zero, or that is the null string raises <code>SYNTAX 88.903</code>,
+as does an object whose string value fails these checks, such as <code>.nil</code>.
+A rounded value whose magnitude is 10**18 or more also fails the whole-number
+check. A whole number outside the frequency or duration range raises
+<code>SYNTAX 88.907</code>.</p>
 <pre><code class="language-rexx">call try 36, 0
 call try 32768, 0
 call try 100, 60001
@@ -115203,6 +115223,9 @@ g: say condition('o')~code
 signal on syntax name h
 call beep 36, 'x'
 h: say condition('o')~code
+signal on syntax name l
+call beep '*', 1
+l: say condition('o')~code
 signal on syntax name i
 call beep '37.000000000000000001', 0
 i: say condition('o')~code
@@ -115228,13 +115251,14 @@ say 'done'
 88.907
 88.907
 88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
+88.903
 \a\a\a\a\a\a\a\adone
 </code></pre>
 <pre><code class="language-rexx">signal on syntax name d
@@ -115245,7 +115269,7 @@ x = beep(36, 0, 1)
 e: say wordpos(condition('o')~code, '88.922 88.907') &gt; 0
 signal on syntax name f
 x = beep('x', )
-f: say wordpos(condition('o')~code, '88.907 88.901') &gt; 0
+f: say wordpos(condition('o')~code, '88.903 88.901') &gt; 0
 </code></pre>
 <pre><code class="language-output">88.922
 1

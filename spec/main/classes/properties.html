@@ -252,8 +252,9 @@ value as <a href="../conventions.html#r-conv.string.object">the string-value rul
 <code>request</code> with <code>STRING</code>, so a number is stored as its digits, an object whose
 <code>makeString</code> answers a string is stored as that answer, and an array as the
 text that its <code>makeString</code> gives; <code>.nil</code> and an object with no <code>makeString</code>
-raise <code>SYNTAX 93.938</code>. An instance of a subclass of <code>String</code> is stored as its
-own characters (<a href="#r-class.properties.deviation.109">the deviation rule</a>). The
+raise <code>SYNTAX 93.938</code>, naming the value's argument position, 2 for
+<code>setProperty</code> and 1 for <code>put</code> and <code>[]=</code>. An instance of a subclass of
+<code>String</code> is stored as its own characters (<a href="#r-class.properties.deviation.109">the deviation rule</a>). The
 name is read as a string as for a directory (<a href="directory.html#r-class.directory.indexes">the index
 rule</a>), and <code>.nil</code> as the name raises <code>SYNTAX 88.909</code>. The three answer nothing, and none of them sends <code>put</code>, <code>[]=</code> or
 <code>setProperty</code> to the receiver. <code>put</code> and <code>setProperty</code> take exactly two
@@ -305,6 +306,25 @@ p~put(, "x") =&gt; 93.903
 p~setProperty("x") =&gt; 93.901
 p~setProperty(, "x") =&gt; 93.903
 p~put("x", "y", "z") =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">p = .properties~new
+call try 'p~setProperty("", .nil)'
+call try 'p~put(.nil, "k")'
+call try 'p["k"] = .nil'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'accepted'
+  return
+bad:
+  fault = condition('o')
+  say fault~code fault~additional[1]
+  return
+</code></pre>
+<pre><code class="language-output">93.938 2
+93.938 1
+93.938 1
 </code></pre>
 <div class="rule" id="r-class.properties.unchecked"><a href="#r-class.properties.unchecked">[class.properties.unchecked]</a></div>
 <p><code>setEntry</code>, the assignment through <code>unknown</code> (<code>p~name = x</code>) and the methods
