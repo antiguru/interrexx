@@ -597,6 +597,10 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Cargo build
         run: cargo build --locked --workspace --all-targets
+      - name: The host module's unit tests
+        # The raw calls only Apple's arms of `host` make, tested on every pull request rather than
+        # only by the nightly. The build above made the test binaries, so this links and runs them.
+        run: cargo test --locked --workspace --lib -- host::
 
   # The check branch protection requires; it passes when every job above did.
   test:

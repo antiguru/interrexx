@@ -424,9 +424,16 @@ fn a_service_directory_too_long_for_a_socket_is_passed_over() {
         .env("REXX_API_DIR", runtime.join("interrexx"))
         .output();
     assert_eq!(stdout(&output), "1\n", "{}", stderr(&output));
+    let socket = interrexx_rxapi::transport::unix::socket_path(
+        &std::fs::canonicalize(&service.root)
+            .expect("the service root")
+            .join("d".repeat(120)),
+        interrexx_rxapi::message::wire::PROTOCOL_VERSION,
+    );
     let warning = format!(
-        "rxapi: REXX_API_DIR {} is not used: its socket path is too long\n",
-        long.display()
+        "rxapi: REXX_API_DIR {} is not used: its socket path {} is too long\n",
+        long.display(),
+        socket.display()
     );
     assert_eq!(stderr(&output), warning.repeat(2));
 }

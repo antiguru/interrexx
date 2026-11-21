@@ -10,7 +10,7 @@
 #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple")))]
 compile_error!(
     "interrexx builds for Linux and Apple's systems only; a new host adds its implementations to \
-     host.rs (#215)"
+     host.rs"
 );
 
 use std::os::fd::{BorrowedFd, OwnedFd};
@@ -267,7 +267,11 @@ pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
 /// A descriptor that becomes readable once `child` has ended, and stays
 /// readable; it reaps nothing. A `kqueue` holding the child's exit event,
 /// which stays pending since nothing collects it. A child that has already
-/// ended cannot be registered, and is answered by a pipe that holds a byte.
+/// ended cannot be registered, and is answered by a pipe that holds a byte;
+/// so is one that the kernel registered while it was ending, which may never
+/// post the event, and which `waitid` without reaping finds ended once the
+/// registration is in place. Where `waitid` cannot say (a process that lets
+/// its children be reaped unasked), the registration stands.
 #[cfg(target_vendor = "apple")]
 pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
     use nix::errno::Errno;
@@ -285,9 +289,20 @@ pub(crate) fn exit_watch(child: &Child) -> Option<OwnedFd> {
         0,
         0,
     );
+    let ended = || {
+        let pid = rustix::process::Pid::from_raw(i32::try_from(child.id()).ok()?)?;
+        let options = rustix::process::WaitIdOptions::EXITED
+            | rustix::process::WaitIdOptions::NOHANG
+            | rustix::process::WaitIdOptions::NOWAIT;
+        Some(
+            rustix::process::waitid(rustix::process::WaitId::Pid(pid), options)
+                .ok()?
+                .is_some(),
+        )
+    };
     match queue.kevent(&[exit], &mut [], None) {
-        Ok(_) => Some(queue.into()),
-        Err(Errno::ESRCH) => {
+        Ok(_) if ended() != Some(true) => Some(queue.into()),
+        Ok(_) | Err(Errno::ESRCH) => {
             let (read, write) = pipe().ok()?;
             rustix::io::write(&write, &[1]).ok()?;
             Some(read.into())
@@ -320,6 +335,30 @@ mod tests {
                 "SO_NOSIGPIPE"
             );
         }
+    }
+
+    /// A child that has ended but is not reaped is watched by a descriptor
+    /// that is readable at once, and the watch leaves it to be reaped.
+    #[test]
+    fn an_ended_child_is_watched_as_ended() {
+        use rustix::process::{Pid, WaitId, WaitIdOptions};
+        let mut child = std::process::Command::new("true")
+            .spawn()
+            .expect("true runs");
+        let pid = Pid::from_raw(i32::try_from(child.id()).expect("a pid")).expect("a pid");
+        let not_reaping = WaitIdOptions::EXITED | WaitIdOptions::NOWAIT;
+        rustix::process::waitid(WaitId::Pid(pid), not_reaping).expect("the child ends");
+        let watch = super::exit_watch(&child).expect("a watch");
+        let mut fds = [rustix::event::PollFd::new(
+            &watch,
+            rustix::event::PollFlags::IN,
+        )];
+        let zero = rustix::event::Timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        assert_eq!(rustix::event::poll(&mut fds, Some(&zero)), Ok(1));
+        assert!(child.wait().expect("the child is reaped").success());
     }
 
     /// A descriptor just closed lies inside the table, which grew to hold it,

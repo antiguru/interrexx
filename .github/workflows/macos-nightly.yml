@@ -40,7 +40,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache-workspaces: rust
-          # Shared with `macos-build`, which saves it from a checkout without the submodule too.
+          # This job's own: `cache-key` is added to the job's key, so `macos-build`'s cache, under
+          # the same name, is a different one. Both are saved from a checkout without the submodule.
           cache-key: macos-no-submodule
       - name: Assert the upstream tier is absent
         # See the build job of `test.yml`.
