@@ -859,9 +859,12 @@ pub(crate) struct Chunk {
     /// condition calls or sends, which [`Chunk::conditions`] cannot hold
     /// because a call op parks the region it is in.
     loop_test_of: Box<[Option<LoopTestOps>]>,
-    /// Which of this chunk's loops run compiled (`crate::jit`).
+    /// Which of this chunk's loops run compiled (`crate::jit`). Boxed: held
+    /// in place it makes the chunk two words wider than the build without
+    /// the feature, and the driver's loop compiles worse around a chunk of
+    /// that shape (#849).
     #[cfg(feature = "jit")]
-    pub(crate) jit: drive::jit_host::Loops,
+    pub(crate) jit: Box<drive::jit_host::Loops>,
 }
 
 impl Chunk {

@@ -4658,9 +4658,6 @@ impl Interp {
                                         pc = target;
                                         continue 'ops;
                                     }
-                                    jit_host::JitAction::Settle(flow, next) => {
-                                        break 'step (flow, next);
-                                    }
                                     jit_host::JitAction::Return(exit) => return exit,
                                 }
                             }
