@@ -1093,6 +1093,107 @@ say n m k x
      6 *-*       trace off
 compiled: line 2
 
+# TRACE switched off by a call in the middle of a clause under TRACE I: the
+# echoes stop after the call. While TRACE echoes clauses each clause is the
+# driver's from its opening, so this clause never runs compiled
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then trace i
+  if i = 9001 then x = length(trace('O')) + k * 2 - a
+end
+say n m k x
+----
+50005000 -49924980 -1 -5
+     6 *-*   if i = 9001 
+       >V>     I => "9000"
+       >L>     "9001"
+       >O>     "=" => "0"
+       >>>     "0"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >V>     I => "9000"
+       >>>     "9000"
+       >>>     "9001"
+       >=>     I <= "9001"
+     3 *-*   n = n + i;
+       >V>     N => "40504500"
+       >V>     I => "9001"
+       >O>     "+" => "40513501"
+       >>>     "40513501"
+       >=>     N <= "40513501"
+     3 *-*   a = n // 7;
+       >V>     N => "40513501"
+       >L>     "7"
+       >O>     "//" => "0"
+       >>>     "0"
+       >=>     A <= "0"
+     3 *-*   b = a * 3;
+       >V>     A => "0"
+       >L>     "3"
+       >O>     "*" => "0"
+       >>>     "0"
+       >=>     B <= "0"
+     3 *-*   c = b - i;
+       >V>     B => "0"
+       >V>     I => "9001"
+       >O>     "-" => "-9001"
+       >>>     "-9001"
+       >=>     C <= "-9001"
+     3 *-*   d = c + a
+       >V>     C => "-9001"
+       >V>     A => "0"
+       >O>     "+" => "-9001"
+       >>>     "-9001"
+       >=>     D <= "-9001"
+     4 *-*   m = m + d;
+       >V>     M => "-40432484"
+       >V>     D => "-9001"
+       >O>     "+" => "-40441485"
+       >>>     "-40441485"
+       >=>     M <= "-40441485"
+     4 *-*   e = m // 11;
+       >V>     M => "-40441485"
+       >L>     "11"
+       >O>     "//" => "-7"
+       >>>     "-7"
+       >=>     E <= "-7"
+     4 *-*   g = e - b;
+       >V>     E => "-7"
+       >V>     B => "0"
+       >O>     "-" => "-7"
+       >>>     "-7"
+       >=>     G <= "-7"
+     4 *-*   h = g + c;
+       >V>     G => "-7"
+       >V>     C => "-9001"
+       >O>     "+" => "-9008"
+       >>>     "-9008"
+       >=>     H <= "-9008"
+     4 *-*   k = h // 5
+       >V>     H => "-9008"
+       >L>     "5"
+       >O>     "//" => "-3"
+       >>>     "-3"
+       >=>     K <= "-3"
+     5 *-*   if i = 9000 
+       >V>     I => "9001"
+       >L>     "9000"
+       >O>     "=" => "0"
+       >>>     "0"
+     6 *-*   if i = 9001 
+       >V>     I => "9001"
+       >L>     "9001"
+       >O>     "=" => "1"
+       >>>     "1"
+     6 *-*     then
+     6 *-*       x = length(trace('O')) + k * 2 - a
+       >L>         "O"
+       >A>         "O"
+compiled: line 2
+
 # a TRACE instruction run on some passes, and TRACE R at the end
 run
 n = 0; m = 0
