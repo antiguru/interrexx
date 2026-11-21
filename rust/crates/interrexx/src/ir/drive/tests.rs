@@ -745,14 +745,17 @@ fn scripted(program: &[u8], outcomes: &[Scripted]) -> (Outcome, usize) {
     (outcome, exec_splits() - splits)
 }
 
-/// An `Op::Exec` that answers `Park` waits, whether the driver runs its
-/// region or a nested Rust frame does, and its instruction runs once the
-/// activity wakes, and only then.
+/// An `Op::Exec` or `Op::ExecWith` that answers `Park` waits, whether the
+/// driver runs its region or a nested Rust frame does, and its instruction
+/// runs once the activity wakes, and only then. `INTERPRET` is an
+/// `Op::ExecWith`, which re-runs from its value without evaluating the
+/// expression again; `DROP` is an `Op::Exec`.
 #[test]
 fn a_parked_exec_runs_its_instruction_once_woken() {
     for program in [
         &b"n = 0\nsay 'before'\ninterpret 'n = n + 1'\nsay 'after' n\n"[..],
         b"n = 0\nsay 'before'\ndo label l\n  interpret 'n = n + 1'\nend\nsay 'after' n\n",
+        b"n = 1\nsay 'before'\ndrop m\nsay 'after' n\n",
     ] {
         let (parked, splits) = scripted(program, &[Scripted::Park]);
         assert_eq!(parked.exit_code, 0, "stderr: {:?}", parked.stderr);

@@ -536,6 +536,7 @@ fn pass_of(
                 | Op::ClassAt { .. }
                 | Op::SelectCase { .. }
                 | Op::ExecValue { .. }
+                | Op::ExecWith { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }

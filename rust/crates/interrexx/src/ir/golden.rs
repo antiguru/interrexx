@@ -61,6 +61,9 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             Op::ExecValue { index: at, src } => {
                 out.push_str(&format!("{index}: ExecValue index={at} src={src}\n"));
             }
+            Op::ExecWith { index: at, src } => {
+                out.push_str(&format!("{index}: ExecWith index={at} src={src}\n"));
+            }
             Op::SelectCase { index: at, src } => {
                 out.push_str(&format!("{index}: SelectCase index={at} src={src}\n"));
             }
