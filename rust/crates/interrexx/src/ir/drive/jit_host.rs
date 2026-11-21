@@ -176,8 +176,8 @@ impl Interp {
         reason = "the values the Op::LoopNext arm holds"
     )]
     // Cold as well as out of line: the `Op::LoopNext` arm is in the driver's
-    // own loop, and a call it makes once per loop entry is not one the loop
-    // should be laid out around.
+    // own loop, and a call it makes once per entry into compiled passes is
+    // not one the loop should be laid out around.
     #[cold]
     #[inline(never)]
     pub(super) fn jit_passes(
