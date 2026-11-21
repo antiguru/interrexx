@@ -824,6 +824,185 @@ Error 41.1:  Non-numeric value ("x") used in arithmetic operation.
 compiled: line 2
 quiet builtin calls: yes
 
+# a value-only WHILE after a controlled step with no TO, tested in generated
+# code; the pass where it fails puts the stepped value back for the host
+run
+n = 0; m = 0
+do i = 1 while i <= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10001
+compiled: line 2
+
+# a value-only UNTIL in front of the step, in its own clause
+run
+n = 0; m = 0
+do i = 1 until i >= 10000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: line 2
+
+# DO n with a value-only WHILE
+run
+n = 0; m = 0; i = 0
+do 20000 while n < 30000000
+  i = i + 1
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+30004131 -29942143 -1 7746
+compiled: line 2
+
+# a WHILE of & and | over comparisons, with no control variable
+run
+n = 0; m = 0; i = 0
+do while i < 10000 & m > -99999999 | i = 3
+  i = i + 1
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+end
+say n m k i
+----
+50005000 -49924980 -1 10000
+compiled: line 2
+
+# a WHILE whose bound changes in the body, and a BY
+run
+n = 0; m = 0; lim = 10000
+do i = 1 by 2 while i * 2 < lim * 3
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 12001 then lim = 999999999999
+  if i > 30001 then leave
+end
+say n m k i lim
+----
+15002 25719 0 30003 999999999999
+compiled: line 2
+
+# a NOVALUE raised in the body of a loop with a compiled WHILE
+run
+signal on novalue
+n = 0; m = 0
+do i = 1 while i < 12000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then drop q
+  if i = 9001 then x = q
+  q = 1
+  if i > 10000 then p = undefined_var
+end
+say n m k i
+exit
+novalue: say 'novalue' condition('d') sigl i; exit
+----
+novalue UNDEFINED_VAR 9 10001
+compiled: line 3
+
+# a WHILE whose variable stops being logical: the host's error 34
+run
+signal on syntax
+n = 0; m = 0; f = 1
+do i = 1 while f
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9500 then f = 'yes'
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code sigl i; exit
+----
+syntax 34 34.3 7 9501
+compiled: line 3
+
+# inner loops with value-only WHILE and UNTIL, their boundaries compiled
+run
+t = 0; s = 0
+do i = 1 to 10000
+  a = i * 3; b = a // 7; c = b + i; d = c - a; e = d * 2; g = e // 9
+  do j = 1 while j <= i // 3
+    t = t + j
+  end
+  do k = 1 until k >= 2
+    s = s - k
+  end
+  h = t // 13; m = h + g; n = m - b; p = n * 2; q = p // 3; r = q + s
+end
+say t s r i j k
+----
+13333 -30000 -30000 10001 2 2
+compiled: lines 2, 4, 7
+
+# NUMERIC DIGITS lowered in the body: the condition's product no longer fits
+# and the host tests it
+run
+n = 0; m = 0
+do i = 1 while i * 1000 <= 12000000
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then numeric digits 5
+end
+say n m k i
+----
+12000 20573 2 12001
+compiled: line 2
+
+# an UNTIL that calls a builtin is a test region, not a compiled condition
+run
+n = 0; m = 0; s = ''
+do i = 1 until length(s) > 9000 | i >= 20000
+  n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a
+  m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5
+  s = s || 'x'
+end
+say n m k i
+----
+40513501 -40441485 -3 9001
+compiled: line 2
+quiet builtin calls: yes
+
+# a WHILE of `|` whose operand stops being logical: generated code checks both
+# operands, and hands the boundary to the host, which raises 34
+run
+signal on syntax
+x = 1; y = 0; n = 0; m = 0
+do i = 1 while x | y
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then y = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9001 9000
+compiled: line 3
+
+# an UNTIL of `&` whose operand stops being logical, likewise
+run
+signal on syntax
+p = 0; q = 1; n = 0; m = 0
+do i = 1 until p & q
+  n = n + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a
+  m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5
+  if i = 9000 then q = 2
+end
+say n
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 7 9000 9000
+compiled: line 3
+
 # an inner counted loop in a compiled body: its start and each pass boundary
 # through the host, its body compiled. The outer body's own work is what
 # passes the gate, so the outer loop compiles with the inner one in it

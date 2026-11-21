@@ -9,8 +9,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::{
-    compiled_lines, compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs,
-    retirements,
+    compiled_lines, compiled_runs, handed_back, host_boundaries, quiet_calls, quiet_compounds,
+    reset_compiled_runs, retirements,
 };
 
 #[test]
@@ -256,6 +256,44 @@ fn an_inner_loop_ending_in_its_test_settles_in_compiled_code() {
     );
 }
 
+/// A loop whose `WHILE` or `UNTIL` runs from `Chunk::conditions` has its pass
+/// boundary taken by generated code, condition and all. The host takes the
+/// ones where the record is worked out, the last, where the condition no
+/// longer holds, and those the clause countdown runs out at, about one in a
+/// thousand clauses: far fewer than one a pass.
+#[test]
+fn a_value_only_condition_is_tested_in_generated_code() {
+    for header in [
+        "do i = 1 while i <= LIMIT",
+        "do i = 1 until i >= LIMIT",
+        "do LIMIT while n >= 0 & p < LIMIT",
+        "do while p < LIMIT | n < 0",
+    ] {
+        let boundaries = |limit: u32| {
+            reset_compiled_runs();
+            let header = header.replace("LIMIT", &limit.to_string());
+            ran(format!(
+                "n = 0; m = 0; p = 0\n\
+                 {header}\n\
+                 \x20 n = n + 1; p = p + 1; a = n // 7; b = a * 3; c = b - 1; d = c + a\n\
+                 \x20 m = m + d // 5; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+                 end\n\
+                 say n m k p"
+            )
+            .as_bytes());
+            host_boundaries()
+        };
+        let more = 18000;
+        let short = boundaries(super::THRESHOLD + 2000);
+        let long = boundaries(super::THRESHOLD + 2000 + more);
+        assert!(
+            long - short < more as usize / 100,
+            "{header}: the host took {} of {more} more pass boundaries",
+            long - short
+        );
+    }
+}
+
 /// The budget a compiled loop is retired against is per pass of any loop it
 /// holds, as the host's ops are counted: an inner loop whose body runs an op
 /// on the host on every one of its passes does not retire the outer loop.
@@ -278,4 +316,32 @@ fn hosted_ops_in_an_inner_body_do_not_retire_the_outer_loop() {
     .as_bytes());
     assert!(compiled_runs() > 0, "nothing compiled");
     assert_eq!(retirements(), 0, "the outer loop was retired");
+}
+
+/// Compiled passes count the clauses the driver counts: an `UNTIL` is a clause
+/// of its own in front of the header's, so a loop run compiled runs the
+/// countdown out as often as the same loop run under `INTERPRET`, whose
+/// chunks never compile.
+#[test]
+fn compiled_passes_count_the_clauses_the_driver_counts() {
+    for header in ["do i = 1 until i >= 40000", "do i = 1 while i <= 40000"] {
+        let body = format!(
+            "n = 0; m = 0; {header}; n = n + 1; a = n // 7; b = a * 3; c = b - 1; \
+             d = c + a; m = m + d // 5; e = m // 11; g = e - b; end"
+        );
+        let visits = |source: String| {
+            reset_compiled_runs();
+            let before = crate::clause::countdown_visits();
+            ran(source.as_bytes());
+            (crate::clause::countdown_visits() - before, compiled_runs())
+        };
+        let (compiled, runs) = visits(format!("{body}\nsay n m"));
+        assert!(runs > 0, "{header}: the loop did not compile");
+        let (driven, runs) = visits(format!("interpret '{body}'\nsay n m"));
+        assert_eq!(runs, 0, "{header}: the interpreted loop compiled");
+        assert!(
+            compiled.abs_diff(driven) <= 1,
+            "{header}: the countdown ran out {compiled} times compiled and {driven} times driven"
+        );
+    }
 }

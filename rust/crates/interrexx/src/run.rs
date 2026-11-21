@@ -80,6 +80,8 @@ use call::{Entered, entered_receiver};
 mod loops;
 #[cfg(feature = "jit")]
 pub(crate) use loops::QuickKind;
+#[cfg(feature = "jit")]
+pub(crate) use loops::QuickTest;
 #[cfg(test)]
 use loops::numeric_less;
 pub(crate) use loops::{

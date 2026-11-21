@@ -257,6 +257,20 @@ pub(crate) struct QuickPass {
     pub(crate) end_index: usize,
     /// The value indent a pass that carries on leaves.
     pub(crate) open_indent: usize,
+    /// The loop's `WHILE` or `UNTIL`, run from its ops in
+    /// `Chunk::conditions`, which compiled code tests as the pass boundary
+    /// would: an `UNTIL` in its own clause in front of the step, a `WHILE`
+    /// after it in the header's.
+    pub(crate) test: QuickTest,
+}
+
+/// Which condition a [`QuickPass`] tests.
+#[cfg(feature = "jit")]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum QuickTest {
+    None,
+    While,
+    Until,
 }
 
 /// What a quick pass steps.
@@ -1446,18 +1460,27 @@ impl Interp {
     /// code needs to take that pass itself (`crate::ir::drive::jit_host`).
     /// Such a pass is a countdown tick, the clause line and indent, and the
     /// control variable's read, add, write and compare, and nothing else.
+    /// A loop whose `WHILE` or `UNTIL` runs from `Chunk::conditions` and
+    /// echoes nothing has one too, with the test besides (`QuickPass::test`).
     #[cfg(feature = "jit")]
     pub(crate) fn quick_pass(&self, do_index: usize) -> Option<QuickPass> {
         let flat = self.activity.flat_top.as_deref()?;
-        if flat.do_index != do_index
-            || flat.test != PassTest::Plain
-            || !matches!(flat.header_clause, HeaderClause::End)
-        {
+        if flat.do_index != do_index || !matches!(flat.header_clause, HeaderClause::End) {
             return None;
         }
+        // A `COUNTER` is the general header's to count, and a condition in a
+        // test region is the region's to run.
+        let test = match flat.test {
+            PassTest::Plain => QuickTest::None,
+            PassTest::Until if flat.counter.is_none() => QuickTest::Until,
+            PassTest::General if flat.counter.is_none() => QuickTest::While,
+            _ => return None,
+        };
         let mode = self.trace_mode();
-        // `flat_loop_step` echoes the `END` and the header under this.
-        if mode.all {
+        // `flat_loop_step` echoes the `END` and the header under this, and a
+        // condition run from its ops echoes its result under `TRACE R` and
+        // walks under `TRACE I`.
+        if mode.all || (test != QuickTest::None && (mode.results || mode.intermediates)) {
             return None;
         }
         let kind = match &flat.state {
@@ -1466,12 +1489,21 @@ impl Interp {
                 current: ControlValue::Small(_),
                 for_remaining: None,
                 cached_digits,
-                to_int: Some(to),
+                to,
+                to_int,
                 by_int: Some(step),
                 shape: NameShape::Simple,
                 stepped: true,
                 ..
             } => {
+                // No `TO` at all is a bound the value never passes: the
+                // `DIGITS` test on the stepped value is what stops it.
+                let to = match (to_int, to) {
+                    (Some(to), _) => *to,
+                    (None, None) if *step < 0 => i64::MIN,
+                    (None, None) => i64::MAX,
+                    (None, Some(_)) => return None,
+                };
                 let settings = &self.activation().settings;
                 if *cached_digits != settings.digits()
                     || settings.fuzz() != 0
@@ -1483,7 +1515,7 @@ impl Interp {
                 QuickKind::Controlled {
                     slot: *slot,
                     step: *step,
-                    to: *to,
+                    to,
                 }
             }
             LoopState::Count { remaining } => QuickKind::Count {
@@ -1497,6 +1529,7 @@ impl Interp {
             line: flat.end_line,
             end_index: flat.end_index,
             open_indent: flat.do_indent + 2,
+            test,
         })
     }
 
