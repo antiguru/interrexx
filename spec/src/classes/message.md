@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [105, 107, 109, 113, 116, 118, 124]
+deviations: [105, 107, 109, 113, 116, 118, 124, 173]
 ---
 
 # Message
@@ -1207,7 +1207,8 @@ which Rexx code may have changed, as RAISE SYNTAX with them would make it: the
 `RC`, `ERRORTEXT` and `MESSAGE` of the object are set again from them, and an
 `ADDITIONAL` that was removed is an empty array again; `DESCRIPTION` stays.
 `result` raises `SYNTAX 93.900` instead when the `CODE` is not a string that
-names an error number of RAISE SYNTAX, or is missing, and when the
+names an error number of RAISE SYNTAX, an instance of a subclass of String
+included, or is missing, and when the
 `ADDITIONAL` is not an instance of `Array`; the `CODE` is checked first. A
 `CODE` that names no error that has a message raises `SYNTAX 98.941`, as RAISE
 SYNTAX does. The text of the 93.900 is not specified.
@@ -1221,6 +1222,7 @@ call test 'notarray', "e['ADDITIONAL'] = 'x'"
 call test 'list', "e['ADDITIONAL'] = .list~of('x')"
 call test 'badcode', "e['CODE'] = 'x'; e['ADDITIONAL'] = 'y'"
 call test 'mutable', "e['CODE'] = .mutableBuffer~new('40.1')"
+call test 'subclass', "e['CODE'] = .mystr~new('40.1')"
 call test 'nocode', "e~remove('CODE')"
 call test 'unknown', "e['CODE'] = '42.999'"
 call test 'removed', "e~remove('ADDITIONAL')"
@@ -1245,6 +1247,7 @@ caught:
 ::class t
 ::method boom
   return 1/0
+::class mystr subclass string
 ```
 
 ```output
@@ -1256,6 +1259,7 @@ notarray 93.900 93 1 0 1 []
 list 93.900 93 1 0 1 []
 badcode 93.900 93 1 0 1 []
 mutable 93.900 93 1 0 1 []
+subclass 93.900 93 1 0 1 []
 nocode 93.900 93 1 0 1 []
 unknown 98.941 98 1 0 1 []
 removed 42.3 42 1 1 0 []
@@ -1984,6 +1988,31 @@ messageComplete override
 ```
 
 ## Deviations
+
+r[class.message.deviation.173]
+The `CODE` that [the changed condition rule](r:class.message.result.changed)
+reads may be any instance of String that names an error number, a number an
+operator made included: `40.1 + 0` is the code `40.1` here. ooRexx raises
+`SYNTAX 93.900` for such a number, whose internal form is a number object
+rather than a string ([Deviation 173](../deviations.md)).
+
+```rexx
+m = .message~new(.t~new, 'boom')
+m~start
+m~wait
+e = m~errorCondition
+e['CODE'] = 40.1 + 0
+signal on syntax name caught
+m~result
+caught: say condition('o')~code condition('o')~rc
+::class t
+::method boom
+  return 1/0
+```
+
+```output
+40.1 40
+```
 
 r[class.message.deviation.105]
 A message that `start`, `startWith`, `reply` or `replyWith` runs is checked

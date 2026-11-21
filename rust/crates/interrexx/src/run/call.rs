@@ -115,16 +115,6 @@ pub(super) enum Entered {
     Routine(InstalledRoutine),
 }
 
-/// How the callee was reached: written in the program, or delivered to it.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub(crate) enum CallEntry {
-    /// A `CALL`, an internal function call, or either form reaching a
-    /// `::ROUTINE` -- a call the program's own text asked for.
-    Written,
-    /// A `CALL ON` handler, run because a condition was delivered.
-    Trap,
-}
-
 /// What [`Interp::begin_call`] left for its caller to do.
 pub(crate) enum Begun {
     /// The callee ran no activation, and this is what it answered.
@@ -197,11 +187,7 @@ pub(crate) enum Started<T> {
 /// caller's own: an internal routine has its caller's, whether a `CALL` or a
 /// `CALL ON` trap entered it, so that it can send private messages to `SELF`
 /// (`r[instr.call.on.receiver]`, upstream bug #2133); a `::ROUTINE` has none.
-pub(super) fn entered_receiver(
-    entered: Entered,
-    _entry: CallEntry,
-    caller: Option<ObjRef>,
-) -> Option<ObjRef> {
+pub(super) fn entered_receiver(entered: Entered, caller: Option<ObjRef>) -> Option<ObjRef> {
     match entered {
         Entered::Label(_) => caller,
         Entered::Routine(_) => None,
@@ -420,9 +406,8 @@ impl Interp {
         name: &[u8],
         args: &[Option<Expr>],
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Ended, Failure> {
-        let begun = self.begin_invoke_call(code, resolution, name, args, call_type, entry)?;
+        let begun = self.begin_invoke_call(code, resolution, name, args, call_type)?;
         self.complete_call(begun)
     }
 
@@ -434,7 +419,6 @@ impl Interp {
         name: &[u8],
         args: &[Option<Expr>],
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Begun, Failure> {
         // **Evaluated in the caller, before anything is pushed**, which is
         // where the argument expressions' own variables live. Observable
@@ -471,7 +455,7 @@ impl Interp {
             }
         }
         let (resolved, keep) = self.settle_after_arguments(resolution, name)?;
-        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type, entry);
+        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type);
         if let Some((slot, keep)) = keep {
             self.site_call(slot, keep, SiteCall::of_begun(&begun));
         }
@@ -486,7 +470,6 @@ impl Interp {
         name: &[u8],
         mut arguments: Vec<Option<ObjRef>>,
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Begun, Failure> {
         // An internal-package routine runs no activation, and neither does a
         // library routine, so they take the builtin discipline over the values.
@@ -504,7 +487,7 @@ impl Interp {
                 _ => unreachable!("only the two arms above reach here"),
             };
         }
-        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type, entry)?;
+        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type)?;
         // An enclosing builtin's run stands on the stack while this call's
         // callee clears it at its first clause.
         if let Begun::Entered = begun {
@@ -874,14 +857,7 @@ impl Interp {
         }
         // Kept before the callee's value is checked: a routine that returned
         // nothing to a function call is kept.
-        let begun = self.begin_call(
-            resolved,
-            name,
-            values,
-            mark,
-            CallType::Function,
-            CallEntry::Written,
-        );
+        let begun = self.begin_call(resolved, name, values, mark, CallType::Function);
         self.site_call(slot, keep, SiteCall::of_begun(&begun));
         function_started(begun?, name)
     }
@@ -915,14 +891,7 @@ impl Interp {
                 Started::Entered => Ok(Started::Entered),
             };
         }
-        let begun = self.begin_call(
-            resolved,
-            name,
-            values,
-            mark,
-            CallType::Function,
-            CallEntry::Written,
-        )?;
+        let begun = self.begin_call(resolved, name, values, mark, CallType::Function)?;
         function_started(begun, name)
     }
 
@@ -981,7 +950,6 @@ impl Interp {
             &mut arguments,
             0,
             CallType::Command,
-            CallEntry::Written,
         )?;
         // An embedding instance's initial environment, which its programs
         // start with as a top-level program starts with the platform's.
@@ -1005,9 +973,8 @@ impl Interp {
         name: &[u8],
         mut arguments: Vec<Option<ObjRef>>,
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Ended, Failure> {
-        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type, entry)?;
+        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type)?;
         self.complete_call(begun)
     }
 
@@ -1033,7 +1000,6 @@ impl Interp {
         arguments: &mut Vec<Option<ObjRef>>,
         from: usize,
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Begun, Failure> {
         // **The builtin outcome ends here**, before `SIGL`, before the depth
         // guard and before any activation is pushed -- each of those three is
@@ -1343,7 +1309,7 @@ impl Interp {
         };
         let saved_base = std::mem::replace(&mut self.activity.activation_indent, callee_indent);
         let saved_line = std::mem::take(&mut self.activity.clause_line_override);
-        let inherited = entered_receiver(entered, entry, self.activity.call_context.receiver);
+        let inherited = entered_receiver(entered, self.activity.call_context.receiver);
         let arguments = self.shared_arguments(&arguments[from..]);
         let name = self.activity.invocation_name(name);
         let saved_context = std::mem::replace(
@@ -1548,7 +1514,6 @@ impl Interp {
         search_labels: bool,
         arguments: Vec<Option<ObjRef>>,
         call_type: CallType,
-        entry: CallEntry,
     ) -> Result<Ended, Failure> {
         let resolved = match self.resolve_fixed_call(name, search_labels)? {
             Some(resolved) => resolved,
@@ -1562,7 +1527,7 @@ impl Interp {
             });
             return Ok(Ended::Returned(builtin::answered_nothing(self, answer)?));
         }
-        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type, entry)?;
+        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type)?;
         self.complete_call(begun)
     }
 
@@ -1733,14 +1698,7 @@ impl Interp {
         // clause's own printed indent, needed below for the caller-side
         // `RESULT` trace.
         let base_indent = self.activity.clause_state.current_value_indent;
-        let ended = self.invoke_call(
-            code,
-            resolution,
-            name,
-            args,
-            CallType::Subroutine,
-            CallEntry::Written,
-        )?;
+        let ended = self.invoke_call(code, resolution, name, args, CallType::Subroutine)?;
         self.settle_call_result(ended, base_indent)
     }
 
@@ -1849,14 +1807,7 @@ impl Interp {
                 Err(failure) => Err(failure),
             },
             _ => self
-                .begin_call(
-                    resolved,
-                    name,
-                    &mut values,
-                    mark,
-                    CallType::Subroutine,
-                    CallEntry::Written,
-                )
+                .begin_call(resolved, name, &mut values, mark, CallType::Subroutine)
                 .map(subroutine_started),
         };
         values.truncate(mark);
