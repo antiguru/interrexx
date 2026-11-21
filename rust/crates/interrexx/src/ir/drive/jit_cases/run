@@ -602,6 +602,61 @@ say t
 compiled: yes
 quiet builtin calls: yes
 
+# a labelled do-block in a compiled body: its frame opens on the host and
+# its END's op closes it, on every pass
+run
+a = 0; b = 0
+do i = 1 to 10000
+  do label blk
+    a = a + i; b = b + 1; c = a - b; d = c * 2; e = d // 7
+    f = e + c; g = f - d; h = g + 1; k = h * 3; m = k // 11
+  end blk
+  if i // 3 = 0 then do label odd
+    b = b - 1; c = c + 1; d = d - c; e = e + d; f = f - e
+  end odd
+end
+say a b m f
+----
+50005000 6667 -8 49998333
+compiled: yes
+
+# a LEAVE naming a labelled block leaves the block, and the loop carries on
+run
+a = 0; b = 0
+do i = 1 to 10000
+  do label blk
+    a = a + 1; c = a * 2; d = c - i; e = d + c; f = e // 3; g = f - d
+    if i // 2 = 0 then leave blk
+    b = b + 1; c = b * 3; d = c - a; e = d + c; f = e // 7; g = g + f
+  end blk
+  b = b + 2
+end
+say a b
+----
+10000 25000
+compiled: yes
+
+# an ITERATE from inside a labelled block ends the pass, and LEAVE ends the
+# loop
+run
+a = 0
+do i = 1 to 10000
+  do label blk
+    b = i * 2; c = b - i; d = c + b; e = d // 3; f = e - c; g = f + d
+    if i // 5 = 0 then iterate
+    a = a + i; h = a // 3; k = h + g; m = k - f
+  end blk
+  n = i * 3; o = n - i; p = o + n; q = p // 5; r = q - o; s = r + p
+  if i = 9999 then do label last
+    a = a * 2
+    leave
+  end last
+end
+say a i
+----
+80000000 9999
+compiled: yes
+
 # a WHILE that calls a routine is a test region the driver runs, so the loop
 # stays driven rather than leaving compiled code on every pass
 run
