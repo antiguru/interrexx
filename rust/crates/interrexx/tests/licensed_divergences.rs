@@ -109,29 +109,6 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
                        11.1111111E+9\n",
     },
     LicensedDivergence {
-        name: "lineout-without-string-pads-nothing",
-        // A CHAROUT leaves record 2 partly written, then a LINEOUT with no
-        // string closes: on a RECLENGTH stream, after positioning at a record
-        // boundary, and with BINARY and no RECLENGTH. The files sit beside
-        // the program, which `materialise` writes into a fresh directory.
-        program: "parse source . . me\nd = me~left(me~lastPos('/'))\n\
-              call v 'r', 'both binary reclength 4', 'call lineout f'\n\
-              call v 'p', 'both binary reclength 4', 'call lineout f, , 4; call lineout f'\n\
-              call v 'n', 'both binary', 'call lineout f'\n\
-              exit\n\
-              v:\n  f = d || arg(1) || '.dat'\n\
-              \x20 call stream f, 'c', 'open write replace'\n\
-              \x20 call charout f, 'AAAABBBBCCCCDDDD'\n  call charout f\n\
-              \x20 call stream f, 'c', 'open' arg(2)\n  call charout f, 'x', 5\n\
-              \x20 interpret arg(3)\n\
-              \x20 say arg(1) translate(charin(f, 1, chars(f)), '_', ' ')\n\
-              \x20 call stream f, 'c', 'close'\n  return\n",
-        exit_code: 0,
-        stderr: "",
-        oracle_stdout: "r AAAAx___CCCCDDDD\np AAAAx___CCCCDDDD\nn AAAAx___________\n",
-        crate_stdout: "r AAAAxBBBCCCCDDDD\np AAAAxBBBCCCCDDDD\nn AAAAxBBBCCCCDDDD\n",
-    },
-    LicensedDivergence {
         name: "write-position-after-buffered-read",
         // A line-numbered LINEOUT on a buffered stream, then an unplaced
         // LINEOUT, and after a read another: on a three-line file, and on a

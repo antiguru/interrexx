@@ -194,15 +194,17 @@ Q write
 ----
 model: O_both_append_nobuffer=READY: READY 19 1;CO_x_19=0 READY 20 1;LO_y_4=0 READY 22 1;S_=20_write=20 READY 20 1;CO_z=0 READY 23 1;Q_write=23 READY 23 1; [line1|line2|line3|xy|z]
 
-# Positioning and closing write nothing on a record stream (Deviation 46).
-case name=record-close-pads-nothing initial=rec16
+# A LINEOUT that closes a record stream completes the record the write
+# position is inside of with blanks, and one that only positions at a record
+# boundary writes nothing (r[bif.lineout.record]).
+case name=record-close-pads-the-record initial=rec16
 O both binary reclength 4 nobuffer
 CO x 5
 LX
 O both binary reclength 4 nobuffer
 LP 3
 ----
-model: O_both_binary_reclength_4_nobuffer=READY: READY 17 1;CO_x_5=0 READY 6 1;LX=0 UNKNOWN  ;O_both_binary_reclength_4_nobuffer=READY: READY 17 1;LP_3=0 READY 9 1; [AAAAxBBBCCCCDDDD]
+model: O_both_binary_reclength_4_nobuffer=READY: READY 17 1;CO_x_5=0 READY 6 1;LX=0 UNKNOWN  ;O_both_binary_reclength_4_nobuffer=READY: READY 17 1;LP_3=0 READY 9 1; [AAAAx___CCCCDDDD]
 
 # CHAROUT and STREAM CLOSE close a record stream with nothing written.
 case name=record-other-closes initial=rec16

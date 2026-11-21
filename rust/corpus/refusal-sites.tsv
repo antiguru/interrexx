@@ -143,7 +143,6 @@ Loud	frame_without_executable	send	crates/interrexx/src/lib.rs	agrees	no	no rout
 Raised	from	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	guard_outside_method	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	halt	body+send	crates/interrexx/src/error.rs	agrees	yes	4.1	t~rc('HALT', 'stop') untrapped, over ::method rc external "LIBRARY orxmethod TestRaiseCondition": rc 252, the native level a routine's and the major line naming the package with no line (corpus/lang/library_condition_reported_on_return.rex)
-Loud	handle_descriptor	send	crates/interrexx/src/lib.rs	recorded	yes	a HANDLE: stream on descriptor	.Stream~new('HANDLE:7'), recorded as Deviation 35: the oracle makes an inert stream (stream_handle.rs pins this side; HANDLE:2 beside it is made on both)
 Loud	hash_collection_without_store	send	crates/interrexx/src/lib.rs	not-run	no	oracle-crashes.txt entry 50: never run	-
 Loud	immovable_reply	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	incorrect_list_index	send	crates/interrexx/src/error.rs	agrees	yes	93.918	q=.Queue~new;q~queue('a');q~put('Y',99)

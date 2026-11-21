@@ -1,8 +1,6 @@
-//! The `HANDLE:n` shapes Deviation 35 licenses, run on this crate alone: the
-//! oracle reads nothing through such a stream and crashes on a write
-//! (`corpus/oracle-crashes.txt` entry 12a), so none of these programs may be
-//! run on it. `corpus/lang/stream_handle_names.rex` holds the shapes that
-//! agree.
+//! `HANDLE:n` streams (`r[bif.stream.handle]`), run on this crate alone with
+//! the standard streams an `Invocation` gives, which no specification example
+//! can arrange. `corpus/lang/stream_handle_names.rex` holds more shapes.
 
 use interrexx::{Invocation, Outcome, ProgramInput, run_program};
 
@@ -14,8 +12,9 @@ fn stdout(outcome: &Outcome) -> String {
     String::from_utf8_lossy(&outcome.stdout).into_owned()
 }
 
-/// Deviation 35: `HANDLE:0` reads standard input, where the oracle's read
-/// answers the null string at `NOTREADY:EOF`.
+/// spec: bif.stream.handle
+///
+/// `HANDLE:0` reads standard input.
 #[test]
 fn handle_zero_reads_standard_input() {
     let program = "say linein('HANDLE:0')\n\
@@ -34,8 +33,9 @@ fn handle_zero_reads_standard_input() {
     assert_eq!(stdout(&outcome), "first\nREADY: second READY\n");
 }
 
-/// Deviation 35 and `oracle-crashes.txt` entry 12a: `HANDLE:1` and
-/// `HANDLE:2` write to standard output and standard error.
+/// spec: bif.stream.handle
+///
+/// `HANDLE:1` and `HANDLE:2` write to standard output and standard error.
 #[test]
 fn handle_one_and_two_write_standard_output_and_error() {
     let program = "call lineout 'HANDLE:1', 'to out'\n\
@@ -53,9 +53,8 @@ fn handle_one_and_two_write_standard_output_and_error() {
     assert_eq!(String::from_utf8_lossy(&outcome.stderr), "to err\n");
 }
 
-/// Deviation 35: an opened `HANDLE:n` answers its descriptor for `QUERY
-/// HANDLE`, where the oracle answers `18446744073709551615`. Unopened, both
-/// answer the null string.
+/// An opened `HANDLE:n` answers its descriptor for `QUERY HANDLE`, and an
+/// unopened one the null string.
 #[test]
 fn query_handle_after_open_answers_the_descriptor() {
     let program = "do n = 0 to 2\n\
@@ -74,8 +73,7 @@ fn query_handle_after_open_answers_the_descriptor() {
     assert_eq!(stdout(&outcome), "[] 0\n[] 1\n[] 2\n");
 }
 
-/// Deviation 35: a second open of a `HANDLE:n` stream opens the descriptor
-/// again, where the oracle's opens a file of that name.
+/// A second open of a `HANDLE:n` stream opens the descriptor again.
 #[test]
 fn a_second_open_opens_the_descriptor_again() {
     let program = "s = .Stream~new('HANDLE:0')\n\
@@ -116,27 +114,41 @@ fn the_stream_type_follows_the_invocation_once_opened() {
     );
 }
 
-/// Deviation 35: a descriptor other than `0`, `1` or `2` is refused loudly
-/// when the stream is made, where the oracle makes an inert stream. The
-/// adjacent `HANDLE:2` is made.
+/// spec: bif.stream.handle
+///
+/// `HANDLE:n` for a descriptor another stream holds writes through it, and
+/// closing the `HANDLE:` stream leaves the descriptor open: a second one on the
+/// same number opens and writes. Nothing exists by such a name.
 #[test]
-fn another_descriptor_is_refused_loudly() {
-    let made = run(
-        "s = .Stream~new('HANDLE:2'); say s~state\n",
-        Invocation::none(),
+fn another_descriptor_is_written_and_stays_open_after_a_close() {
+    let dir = std::env::temp_dir().join(format!("interrexx-handle-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let file = dir.join("data.txt");
+    let program = format!(
+        "file = .Stream~new('{}')\n\
+         say file~open('write replace')\n\
+         h = file~query('handle')\n\
+         first = .Stream~new('HANDLE:' || h)\n\
+         say first~lineout('first') '[' || first~query('exists') || ']' first~close\n\
+         second = .Stream~new('HANDLE:' || h)\n\
+         say second~open('write') second~close\n\
+         say file~close\n",
+        file.display()
     );
-    assert_eq!(made.exit_code, 0);
-    assert_eq!(stdout(&made), "UNKNOWN\n");
-    let refused = run(
-        "s = .Stream~new('HANDLE:7'); say 'made'\n",
-        Invocation::none(),
-    );
-    assert_eq!(refused.exit_code, 120);
-    assert_eq!(stdout(&refused), "");
+    let outcome = run(&program, Invocation::none());
+    let written = std::fs::read_to_string(&file).unwrap_or_default();
+    let _ = std::fs::remove_dir_all(&dir);
     assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "interrexx: a HANDLE: stream on descriptor 7 is not implemented\n"
+        outcome.exit_code,
+        0,
+        "stderr: {}",
+        String::from_utf8_lossy(&outcome.stderr)
     );
+    assert_eq!(
+        stdout(&outcome),
+        "READY:\n0 [] READY:\nREADY: READY:\nREADY:\n"
+    );
+    assert_eq!(written, "first\n");
 }
 
 /// An `APPEND` stream opened on a write-only file still writes at the end of
@@ -199,4 +211,33 @@ fn an_append_stream_refuses_positions_within_a_file_over_four_gib() {
         "READY:\n0 NOTREADY\n0 NOTREADY\n0 NOTREADY\n1 NOTREADY\n0 READY\n5368709122 READY\n\
          5368709122\n"
     );
+}
+
+/// spec: bif.lineout.record
+///
+/// A LINEOUT that closes a transient record stream completes no record: what
+/// was written reaches the pipe as it is. The stream is a `HANDLE:` stream on
+/// the write end of a pipe this process holds.
+#[test]
+fn a_transient_record_stream_is_not_padded_on_close() {
+    use std::io::Read;
+    use std::os::fd::AsRawFd;
+    let (mut reader, writer) = std::io::pipe().expect("a pipe");
+    let program = format!(
+        "s = .Stream~new('HANDLE:{}')\n\
+         say s~open('write binary reclength 4') s~charout('ab') s~lineout\n",
+        writer.as_raw_fd()
+    );
+    let outcome = run(&program, Invocation::none());
+    drop(writer);
+    let mut got = Vec::new();
+    reader.read_to_end(&mut got).expect("the pipe is read");
+    assert_eq!(
+        outcome.exit_code,
+        0,
+        "stderr: {}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(stdout(&outcome), "READY: 0 0\n");
+    assert_eq!(String::from_utf8_lossy(&got), "ab");
 }

@@ -222,7 +222,8 @@ pub(super) fn std_set(
 
 /// `handle_set`: marks a `HANDLE:n` stream, `n` an `int`. `HANDLE:0`,
 /// `HANDLE:1` and `HANDLE:2` read and write through the standard stream of
-/// that number (Deviation 35), and any other descriptor is refused.
+/// that number, and any other `n` through a duplicate of descriptor `n`
+/// that an open makes (`r[bif.stream.handle]`).
 pub(super) fn handle_set(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -253,7 +254,10 @@ pub(super) fn handle_set(
         0 => StandardStream::In,
         1 => StandardStream::Out,
         2 => StandardStream::Err,
-        _ => return Err(crate::Loud::handle_descriptor(descriptor).into()),
+        _ => {
+            require_mut(interp, receiver)?.descriptor = true;
+            return Ok(None);
+        }
     };
     let state = require_mut(interp, receiver)?;
     state.handle = Some(which);
@@ -591,7 +595,7 @@ pub(super) fn open(
     // as written from here on.
     if state.handle.is_some() {
         state.qualified = state.name.as_slice().into();
-        if parse_open_options(&options).is_err() {
+        if !parse_open_options(&options).is_ok_and(|parsed| handle_options(&parsed)) {
             return Err(Raised::syntax(93, 0, Vec::new()).into());
         }
         state.status = StreamStatus::Ready;
@@ -638,7 +642,20 @@ pub(super) fn open(
     // descriptor is still opened for reading where it can be, so a line
     // number given to LINEOUT can be found; the reads refuse by the mode.
 
-    if parsed.read_only && !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file()) {
+    let descriptor = stream_descriptor(interp, receiver)?;
+    if descriptor.is_some() {
+        if !handle_options(&parsed) {
+            return Err(Raised::syntax(93, 0, Vec::new()).into());
+        }
+        // Named by its name as written once it is open, which `qualify`
+        // answers.
+        let state = require_mut(interp, receiver)?;
+        state.qualified = state.name.as_slice().into();
+    }
+    if descriptor.is_none()
+        && parsed.read_only
+        && !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file())
+    {
         let answer = format!("ERROR:{ENOENT}").into_bytes();
         return notready(interp, receiver, StreamStatus::Error(ENOENT), answer);
     }
@@ -659,24 +676,28 @@ pub(super) fn open(
             opening.truncate(true);
         }
     }
-    let opened = match opening.open(&path) {
-        Ok(file) => file,
-        // An explicit WRITE retries write-only, so a file that grants write and
-        // not read opens. The retry is a create-for-write open, which does not
-        // truncate even under REPLACE.
-        Err(_) if parsed.write_only => {
-            match std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(false)
-                .append(parsed.append)
-                .open(&path)
-            {
-                Ok(file) => file,
-                Err(error) => return open_failed(interp, receiver, &error),
+    let opened = match descriptor.map(descriptor_file) {
+        Some(Ok(file)) => file,
+        Some(Err(error)) => return open_failed(interp, receiver, &error),
+        None => match opening.open(&path) {
+            Ok(file) => file,
+            // An explicit WRITE retries write-only, so a file that grants write and
+            // not read opens. The retry is a create-for-write open, which does not
+            // truncate even under REPLACE.
+            Err(_) if parsed.write_only => {
+                match std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(false)
+                    .append(parsed.append)
+                    .open(&path)
+                {
+                    Ok(file) => file,
+                    Err(error) => return open_failed(interp, receiver, &error),
+                }
             }
-        }
-        Err(error) => return open_failed(interp, receiver, &error),
+            Err(error) => return open_failed(interp, receiver, &error),
+        },
     };
     // A directory opens on unix and is then rejected as if it had not, which
     // is why a directory answers `ERROR:2` and not `ERROR:21`.
@@ -701,7 +722,12 @@ pub(super) fn open(
     }
     // A persistent writeable stream writes at the end; a read-only one has no
     // write position at all, which is the `0` `QUERY POSITION WRITE` answers.
-    let write_position: i64 = if parsed.read_only { 0 } else { size as i64 + 1 };
+    // A `HANDLE:n` stream's read-only write position is character 1.
+    let write_position: i64 = match (parsed.read_only, descriptor) {
+        (true, None) => 0,
+        (true, Some(_)) => 1,
+        (false, _) => size as i64 + 1,
+    };
 
     let state = require_mut(interp, receiver)?;
     state.mode = interrexx_core::OpenMode {
@@ -739,13 +765,16 @@ fn open_failed(
     notready(interp, receiver, StreamStatus::Error(errno), answer)
 }
 
-/// Whether an open descriptor is a transient stream: a character device
-/// or a FIFO, which is what `QUERY STREAMTYPE` answers `TRANSIENT` for
-/// (`SysFile::getStreamTypeInfo`). A regular file is persistent.
+/// Whether an open descriptor is a transient stream: a character device, a
+/// FIFO or a socket, which is what `QUERY STREAMTYPE` answers `TRANSIENT` for
+/// (`SysFile::getStreamTypeInfo`, a socket since upstream bug #2173). A
+/// regular file is persistent.
 fn is_transient(file: &std::fs::File) -> bool {
     use std::os::unix::fs::FileTypeExt;
-    file.metadata()
-        .is_ok_and(|meta| meta.file_type().is_char_device() || meta.file_type().is_fifo())
+    file.metadata().is_ok_and(|meta| {
+        let kind = meta.file_type();
+        kind.is_char_device() || kind.is_fifo() || kind.is_socket()
+    })
 }
 
 /// Whether an open descriptor is a device, as `SysFile::getStreamTypeInfo`
@@ -768,6 +797,18 @@ fn ensure_open(
 ) -> Result<bool, Failure> {
     if require(interp, receiver)?.open.is_some() {
         return Ok(true);
+    }
+    if let Some(descriptor) = stream_descriptor(interp, receiver)? {
+        let state = require_mut(interp, receiver)?;
+        state.qualified = state.name.as_slice().into();
+        let (opened, mode) = match descriptor_file(descriptor) {
+            Ok(file) => {
+                let mode = descriptor_mode(&file);
+                (file, mode)
+            }
+            Err(error) => return fail_open(interp, receiver, &error, answer),
+        };
+        return settle_implicit_open(interp, receiver, opened, mode);
     }
     let path = qualified_path(interp, receiver)?;
     let mut opening = std::fs::OpenOptions::new();
@@ -817,6 +858,16 @@ fn ensure_open(
         let error = std::io::Error::from_raw_os_error(ENOENT);
         return fail_open(interp, receiver, &error, answer);
     }
+    settle_implicit_open(interp, receiver, opened, mode)
+}
+
+/// The end of an implicit open, once `opened` is the stream's file in `mode`.
+fn settle_implicit_open(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    opened: std::fs::File,
+    mode: interrexx_core::OpenMode,
+) -> Result<bool, Failure> {
     let size = size_of(&opened);
     let transient = is_transient(&opened);
     // A stream that can write writes at the end, whichever operation opened
@@ -838,6 +889,54 @@ fn ensure_open(
     ));
     state.append_extent = 0;
     Ok(true)
+}
+
+/// Whether the open options suit a `HANDLE:` stream: APPEND, REPLACE and the
+/// SHARE options name things a descriptor that is already open cannot have,
+/// and are refused with the bare 93 (`r[bif.stream.handle]`).
+fn handle_options(parsed: &Parsed) -> bool {
+    !(parsed.append || parsed.truncate || parsed.shared_set)
+}
+
+/// The descriptor a `HANDLE:n` stream for some `n` other than 0, 1 and 2
+/// reads and writes, from its name, and `None` for any other stream. A number
+/// no descriptor can have is answered as -1, which an open refuses as
+/// `EBADF`.
+fn stream_descriptor(interp: &Interp, receiver: ObjRef) -> Result<Option<i32>, Failure> {
+    let state = require(interp, receiver)?;
+    if !state.descriptor {
+        return Ok(None);
+    }
+    let digits = state.name.get(b"HANDLE:".len()..).unwrap_or_default();
+    let number = Number::parse_bytes(digits).and_then(|number| number.int64_value(DIGITS64));
+    Ok(Some(
+        number.and_then(|n| i32::try_from(n).ok()).unwrap_or(-1),
+    ))
+}
+
+/// The file a `HANDLE:n` stream opens: a duplicate of descriptor `n`
+/// (`r[bif.stream.handle]`).
+fn descriptor_file(descriptor: i32) -> std::io::Result<std::fs::File> {
+    crate::builtin::rxsock_sys::duplicate(descriptor)
+        .map(std::fs::File::from)
+        .map_err(std::io::Error::from_raw_os_error)
+}
+
+/// The mode an implicit open of a `HANDLE:n` stream takes: the access mode the
+/// descriptor itself was opened with.
+fn descriptor_mode(file: &std::fs::File) -> interrexx_core::OpenMode {
+    use rustix::fs::OFlags;
+    // `O_RDONLY` is no bit at all, on Linux and macOS alike: the access mode is
+    // whichever of `O_WRONLY` and `O_RDWR` is set, or neither.
+    let access = rustix::fs::fcntl_getfl(file).map_or(OFlags::RDWR, |flags| {
+        flags & (OFlags::WRONLY | OFlags::RDWR)
+    });
+    interrexx_core::OpenMode {
+        read_only: access.is_empty(),
+        write_only: access == OFlags::WRONLY,
+        read_write: access == OFlags::RDWR,
+        ..interrexx_core::OpenMode::default()
+    }
 }
 
 /// Records an implicit open's failure on the state and answers "not open".
@@ -1536,6 +1635,12 @@ pub(super) fn lineout(
     let line = optional_position(interp, args.get(1).copied().flatten(), 2)?;
     declared_only(args, 2)?;
     if data.is_none() && line.is_none() {
+        // A record the close could not complete is reported, and the stream
+        // is closed all the same, so a later LINEOUT does not meet it again.
+        if let Some(errno) = complete_record(interp, receiver)? {
+            close(interp, _cleared, receiver, &[])?;
+            return notready(interp, receiver, StreamStatus::Error(errno), b"1".to_vec());
+        }
         return close_for_write(interp, _cleared, receiver, b"1");
     }
     if let Some(which) = standard_opened(interp, receiver)? {
@@ -1556,8 +1661,17 @@ pub(super) fn lineout(
     {
         return notready(interp, receiver, StreamStatus::NotReady, b"1".to_vec());
     }
-    // Only a LINEOUT with a string pads its record. Positioning writes nothing
-    // (Deviation 46: pads from the write position here).
+    // Positioning by line with no string first completes the record the
+    // write position is inside of, and only then is a line that is not a
+    // positive whole number refused, as ooRexx's method does; one with a
+    // string pads only its own record (`r[bif.lineout.record]`). A transient
+    // stream has no record to complete.
+    if line.is_some()
+        && data.is_none()
+        && let Some(errno) = complete_record(interp, receiver)?
+    {
+        return notready(interp, receiver, StreamStatus::Error(errno), b"1".to_vec());
+    }
     let record = record_length(interp, receiver)?;
     let mode = require(interp, receiver)?.mode;
     let state = require_mut(interp, receiver)?;
@@ -1607,12 +1721,49 @@ pub(super) fn lineout(
     }
 }
 
+/// `LINEOUT` on a record stream that closes it or positions it by line: blanks
+/// from the write position to the end of the record it is inside of, over
+/// whatever the record held there, and nothing when it is at the start of a
+/// record (`r[bif.lineout.record]`). Answers the error of a write that fails.
+fn complete_record(interp: &mut Interp, receiver: ObjRef) -> Result<Option<i32>, Failure> {
+    if interp.stream(receiver).is_none() {
+        return Ok(None);
+    }
+    let Some(record_length) = record_length(interp, receiver)? else {
+        return Ok(None);
+    };
+    let state = require_mut(interp, receiver)?;
+    let append = state.mode.append;
+    if state.mode.read_only {
+        return Ok(None);
+    }
+    let Some(open) = state.open.as_mut() else {
+        return Ok(None);
+    };
+    // A transient stream has no records to complete: it is written as it
+    // comes.
+    if open.transient {
+        return Ok(None);
+    }
+    let at = landing(open, append, open.write_position);
+    let room = record_remainder(at, record_length);
+    if room as u64 >= record_length {
+        return Ok(None);
+    }
+    match write_open(open, at, &vec![b' '; room]) {
+        Ok(()) => {
+            open.write_position = at + room as i64;
+            Ok(None)
+        }
+        Err(error) => Ok(Some(error.raw_os_error().unwrap_or(0))),
+    }
+}
+
 /// `LINEOUT` or `CHAROUT` with neither data nor a position: a stream opened
 /// read-only is closed first, then the write setup runs -- creating a missing
 /// file, or raising `NOTREADY` with `answer` where it cannot -- and the stream
-/// is closed (`StreamInfo::lineout`, `StreamInfo::charout`). A close writes
-/// nothing (Deviation 46: `LINEOUT` pads a record stream's current record from
-/// the write position first). A standard stream only closes.
+/// is closed (`StreamInfo::lineout`, `StreamInfo::charout`). A standard stream
+/// only closes.
 fn close_for_write(
     interp: &mut Interp,
     cleared: Cleared,
@@ -2248,6 +2399,15 @@ pub(super) fn close(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    // A stream `uninit` has dropped the state of closes as nothing and
+    // answers no value, as a second `uninit` does (`r[class.stream.uninit]`);
+    // one `init` never set up is refused as the other methods refuse it.
+    if interp.stream(receiver).is_none() {
+        return match no_state(interp, receiver) {
+            Failure::Raised(raised) if (raised.number, raised.sub) == (48, 1) => Ok(None),
+            refused => Err(refused),
+        };
+    }
     release_held(interp, receiver)?;
     let state = require_mut(interp, receiver)?;
     let was_open = if state.standard.is_some() {

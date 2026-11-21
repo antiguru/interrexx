@@ -536,6 +536,13 @@ program exit normally.
 
 ## 12. Two stream shapes: a `HANDLE:` write, and a reader after `~uninit`
 
+Dropped at r13532 (SF #2166, r13478): both shapes answer at rc 0. They were run,
+by mistake, in the session of #857, from fresh directories under `ulimit -v
+9000000` rather than the wrapper's cap: `charout('HANDLE:1', ...)` and a
+`HANDLE:n` stream on a file's descriptor write what they are given, and after
+`~uninit` `state`, `description`, `qualify`, `query` and `command` raise 48.1
+while `close` and `uninit` answer no value. The measurements at r13346 follow.
+
 **12a, writing to a `HANDLE:n` stream:**
 
     say lineout('HANDLE:1','via handle 1')
@@ -562,10 +569,9 @@ Read, not measured. The guarded ones are safe and measured:
 `Stream not initialized`. `~description`, `~qualify` and the five `query_*`
 entries share `stream_state`'s shape and were not run.
 
-**No upstream ticket.** This crate writes `HANDLE:1` and
-`HANDLE:2` to standard output and standard error and refuses any other
-descriptor (Deviation 35), and answers 48.1 from every entry point after
-`uninit`, so both are licensed divergences.
+This crate reads and writes the descriptor of every `HANDLE:n` stream
+(`r[bif.stream.handle]`), and after `uninit` answers as `r[class.stream.uninit]`
+says, as ooRexx now does.
 
 **Related, not a new entry**: entry 5's shape also reproduces with a
 different condition -- two NOTREADY-raising reads in one clause under

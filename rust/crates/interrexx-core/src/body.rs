@@ -565,9 +565,13 @@ pub struct StreamState {
     /// trailing colon.
     pub standard: Option<StandardStream>,
     /// Set by `!handle_set` for `HANDLE:0`, `HANDLE:1` and `HANDLE:2`, which
-    /// read and write through the standard stream of that number
-    /// (Deviation 35). `standard` is set with it.
+    /// read and write through the standard stream of that number. `standard`
+    /// is set with it.
     pub handle: Option<StandardStream>,
+    /// Set by `!handle_set` for `HANDLE:n` with any other `n`, which the name
+    /// holds: an open reads and writes a duplicate of descriptor `n`, which
+    /// shares its file offset and which a close closes alone.
+    pub descriptor: bool,
     pub status: StreamStatus,
     /// `None` until something opens the stream, and again after a close for
     /// named files. An owned persistent standard output keeps its duplicate
@@ -604,6 +608,7 @@ impl Clone for StreamState {
             qualified: self.qualified.clone(),
             standard: self.standard,
             handle: self.handle,
+            descriptor: self.descriptor,
             status: StreamStatus::Unknown,
             open: None,
             mode: OpenMode::default(),
@@ -622,6 +627,7 @@ impl StreamState {
             qualified,
             standard: None,
             handle: None,
+            descriptor: false,
             status: StreamStatus::Unknown,
             open: None,
             mode: OpenMode::default(),
