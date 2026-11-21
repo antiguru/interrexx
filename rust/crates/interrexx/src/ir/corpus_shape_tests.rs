@@ -131,6 +131,7 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         {
             Some("ADDRESS VALUE")
         }
+        InstructionKind::Options { .. } => Some("OPTIONS"),
         _ => None,
     }
 }
@@ -530,6 +531,7 @@ fn check_body(
             {
                 address.dynamic.as_ref().map(root_of)
             }
+            InstructionKind::Options { expression } => Some(root_of(expression)),
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -730,6 +732,7 @@ fn sweep_every_corpus_body() {
         "NUMERIC",
         "TRACE VALUE",
         "ADDRESS VALUE",
+        "OPTIONS",
     ] {
         assert!(
             seen.constructs.contains_key(construct),
