@@ -1115,6 +1115,7 @@ say n m k
      3 *-*       trace value 'N'
        >K>         "VALUE" => "N"
 compiled: line 2
+
 # a WHILE of `|` whose operand stops being logical: generated code checks both
 # operands, and hands the boundary to the host, which raises 34
 run
