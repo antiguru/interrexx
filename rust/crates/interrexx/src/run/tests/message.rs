@@ -214,7 +214,7 @@ fn a_condition_inside_a_method_body_echoes_the_body_and_then_the_send() {
 /// **The receiver a callee's calling convention carries**, for each
 /// route into a callee that this crate has.
 #[test]
-fn a_trap_handler_and_an_internal_call_do_not_carry_the_same_receiver() {
+fn a_trap_handler_and_an_internal_call_carry_the_same_receiver() {
     let caller = ObjRef::small_int(7).expect("7 fits the tag");
     let label = Entered::Label(0);
     let routine = Entered::Routine(crate::InstalledRoutine {
@@ -229,8 +229,8 @@ fn a_trap_handler_and_an_internal_call_do_not_carry_the_same_receiver() {
     );
     assert_eq!(
         entered_receiver(label, CallEntry::Trap, Some(caller)),
-        None,
-        "a CALL ON handler was given the receiver internalCallTrap withholds"
+        Some(caller),
+        "a CALL ON handler did not inherit its caller's receiver"
     );
     assert_eq!(
         entered_receiver(routine, CallEntry::Written, Some(caller)),

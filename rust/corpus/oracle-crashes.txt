@@ -1565,13 +1565,14 @@ stdout and stderr at rc 0: `crates/interrexx/tests/delayed_trap_cases/crate`. No
       say 'hn' n condition('c') condition('d')
       return
 
-Effect: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` to `hn 1 NOTREADY
-no_such_file_zz4.txt`, stderr empty. Measured once under the
-standard wrapper from a fresh directory; not narrowed to one half. The
-second half is the shape of the probes rule against queueing one `CALL ON` condition twice at one
-boundary. This crate ignores both NOTREADY conditions raised again while the trap is delayed (rexxref,
-`condtra.xml`, NOTREADY; `iostrms.xml`, the DELAY state): `crates/interrexx/tests/delayed_trap_cases/crate`.
-No upstream ticket.
+Dropped at r13532: rc 0, stdout ending `hn 1 NOTREADY no_such_file_zz3.txt`, `hn 2 NOTREADY
+no_such_file_zz4.txt`, `after two, n = 2`, stderr empty (SF #2084, r13366). It was run once, by
+mistake, from a fresh directory without the memory cap of the wrapper above, in the session of
+#856; this crate answers the same: `crates/interrexx/tests/delayed_trap_cases/crate`.
+
+The measurement at r13346 was: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` to
+`hn 1 NOTREADY no_such_file_zz4.txt`, stderr empty. Measured once under the standard wrapper from a
+fresh directory; not narrowed to one half.
 
 ## 67. Two differently named conditions raised in one clause, both trapped by one CALL ON ANY
 
@@ -1591,8 +1592,9 @@ No upstream ticket.
 Effect: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` only, stderr empty. Measured
 once under the standard wrapper from a fresh directory; not narrowed.
 The first clause raises USER (a `RAISE ... RETURN` in a function call) and NOTREADY. This crate runs
-the handler for the USER condition and ignores the NOTREADY raised while the `ANY` trap is delayed:
-`crates/interrexx/tests/delayed_trap_cases/crate`. No upstream ticket.
+the handler for the USER condition and then for the NOTREADY, held as every condition but ERROR and
+FAILURE is (`r[cond.traps.delay]`): `crates/interrexx/tests/delayed_trap_cases/crate`. Not measured
+at r13532: SF #2084, fixed in r13366, may have fixed this shape as well. No upstream ticket.
 
 ## 68. A mutex semaphore main takes between the worker's last two steps
 

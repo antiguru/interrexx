@@ -194,15 +194,17 @@ pub(crate) enum Started<T> {
 }
 
 /// The receiver the callee's calling convention carries, given the
-/// caller's own.
+/// caller's own: an internal routine has its caller's, whether a `CALL` or a
+/// `CALL ON` trap entered it, so that it can send private messages to `SELF`
+/// (`r[instr.call.on.receiver]`, upstream bug #2133); a `::ROUTINE` has none.
 pub(super) fn entered_receiver(
     entered: Entered,
-    entry: CallEntry,
+    _entry: CallEntry,
     caller: Option<ObjRef>,
 ) -> Option<ObjRef> {
-    match (entered, entry) {
-        (Entered::Label(_), CallEntry::Written) => caller,
-        (Entered::Label(_), CallEntry::Trap) | (Entered::Routine(_), _) => None,
+    match entered {
+        Entered::Label(_) => caller,
+        Entered::Routine(_) => None,
     }
 }
 

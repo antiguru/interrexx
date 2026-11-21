@@ -1200,6 +1200,68 @@ raised 97.1
 m~result(1) => 93.902
 ```
 
+r[class.message.result.changed]
+The SYNTAX error that `result` raises again is made from the `CODE` and the
+`ADDITIONAL` that the object `errorCondition` answers holds at that time,
+which Rexx code may have changed, as RAISE SYNTAX with them would make it: the
+`RC`, `ERRORTEXT` and `MESSAGE` of the object are set again from them, and an
+`ADDITIONAL` that was removed is an empty array again; `DESCRIPTION` stays.
+`result` raises `SYNTAX 93.900` instead when the `CODE` is not a string that
+names an error number of RAISE SYNTAX, or is missing, and when the
+`ADDITIONAL` is not an instance of `Array`; the `CODE` is checked first. A
+`CODE` that names no error that has a message raises `SYNTAX 98.941`, as RAISE
+SYNTAX does. The text of the 93.900 is not specified.
+
+```rexx
+call test 'rc', "e~remove('RC'); e~remove('ERRORTEXT')"
+call test 'message', "e['MESSAGE'] = 'mine'"
+call test 'code', "e['CODE'] = '40.1'"
+call test 'additional', "e['CODE'] = '40.1'; e['ADDITIONAL'] = .array~of('ZROUT')"
+call test 'notarray', "e['ADDITIONAL'] = 'x'"
+call test 'list', "e['ADDITIONAL'] = .list~of('x')"
+call test 'badcode', "e['CODE'] = 'x'; e['ADDITIONAL'] = 'y'"
+call test 'mutable', "e['CODE'] = .mutableBuffer~new('40.1')"
+call test 'nocode', "e~remove('CODE')"
+call test 'unknown', "e['CODE'] = '42.999'"
+call test 'removed', "e~remove('ADDITIONAL')"
+call test 'described', "e['DESCRIPTION'] = 'why'"
+exit
+test: procedure
+  use arg label, change
+  m = .message~new(.t~new, 'boom')
+  m~start
+  m~wait
+  e = m~errorCondition
+  message = e~message
+  interpret change
+  signal on syntax name caught
+  m~result
+  return
+caught:
+  co = condition('o')
+  say label co~code co~rc (co~errortext == errortext(co~rc)) -
+    (co~message == message) co~additional~items '['co~description']'
+  return
+::class t
+::method boom
+  return 1/0
+```
+
+```output
+rc 42.3 42 1 1 0 []
+message 42.3 42 1 1 0 []
+code 40.1 40 1 0 0 []
+additional 40.1 40 1 0 1 []
+notarray 93.900 93 1 0 1 []
+list 93.900 93 1 0 1 []
+badcode 93.900 93 1 0 1 []
+mutable 93.900 93 1 0 1 []
+nocode 93.900 93 1 0 1 []
+unknown 98.941 98 1 0 1 []
+removed 42.3 42 1 1 0 []
+described 42.3 42 1 1 0 [why]
+```
+
 r[class.message.wait]
 `wait` waits until the message has ended, answers nothing and raises no error,
 also when the message ended with one: the error is asked for with `hasError`
