@@ -263,7 +263,7 @@ pub(crate) struct Activation {
     /// interpret "zork = 42"      /* ZORK is in no instruction of this body */
     /// interpret "say zork"       /* prints 42 */
     /// ```
-    pub(crate) extra: NameMap<Box<[u8]>, usize>,
+    pub(crate) extra: ExtraNames,
     pub(crate) frame: SlotFrame,
     /// Whether this activation is the one that must `pop_slots` [`frame`],
     /// and equivalently whether the pool in it is its own.
@@ -483,7 +483,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
-const _: () = assert!(size_of::<Activation>() == 440);
+const _: () = assert!(size_of::<Activation>() == 416);
 
 impl ActivationFlags {
     const FORWARDED: u8 = 1;
@@ -563,15 +563,23 @@ impl ActivationFlags {
     }
 }
 
-/// A copy of an activation's [`Activation::extra`], which is empty on every
-/// call that does not grow a frame: an empty map is made rather than cloned,
-/// which costs a hash table's clone on every internal call.
-#[inline]
-pub(crate) fn clone_extra(extra: &NameMap<Box<[u8]>, usize>) -> NameMap<Box<[u8]>, usize> {
-    if extra.is_empty() {
-        NameMap::default()
-    } else {
-        extra.clone()
+/// Run-time name bindings. An internal call shares the caller's table until
+/// it binds a new name. Empty tables need no allocation.
+#[derive(Clone, Default)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+pub(crate) struct ExtraNames(Option<Rc<NameMap<Box<[u8]>, usize>>>);
+
+impl ExtraNames {
+    pub(crate) fn get(&self, name: &[u8]) -> Option<usize> {
+        self.0.as_deref()?.get(name).copied()
+    }
+
+    pub(crate) fn insert(&mut self, name: Box<[u8]>, slot: usize) {
+        Rc::make_mut(self.0.get_or_insert_with(Rc::default)).insert(name, slot);
+    }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&Box<[u8]>, &usize)> {
+        self.0.iter().flat_map(|names| names.iter())
     }
 }
 
@@ -758,7 +766,7 @@ impl Activation {
             body: None,
             plan,
             rs: None,
-            extra: NameMap::default(),
+            extra: ExtraNames::default(),
             frame,
             owns_frame: true,
             entry: Entry::TopLevel,
@@ -831,7 +839,7 @@ impl Activation {
             program_id,
             body,
             plan,
-            extra: NameMap::default(),
+            extra: ExtraNames::default(),
             frame,
             owns_frame: false,
             entry: Entry::InternalCall,
@@ -892,7 +900,7 @@ impl Activation {
             program_id,
             body: Some(body),
             plan,
-            extra: NameMap::default(),
+            extra: ExtraNames::default(),
             frame,
             owns_frame: true,
             entry: Entry::Routine,
@@ -950,7 +958,7 @@ impl Activation {
             program_id,
             body: Some(body),
             plan,
-            extra: NameMap::default(),
+            extra: ExtraNames::default(),
             frame,
             owns_frame: true,
             entry: Entry::Method,
@@ -1052,7 +1060,7 @@ impl Activation {
         *program_id_field = program_id;
         *body_field = Some(body);
         *plan_field = plan;
-        *extra = NameMap::default();
+        *extra = ExtraNames::default();
         *frame_field = frame;
         *owns_frame = true;
         *entry = Entry::Method;

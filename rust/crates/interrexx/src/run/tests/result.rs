@@ -123,8 +123,8 @@ fn a_called_label_runs_its_own_clauses_not_the_main_body() {
 
 /// A name bound at run time inside the callee is part of the same shared
 /// pool, which needs the *name* to cross the return as well as the slot
-/// -- `Activation::extra`, cloned in and moved back out. Measured on the
-/// oracle both ways round; this is the direction that fails if `extra`
+/// -- `Activation::extra`, shared on entry and moved back out. Measured on
+/// the oracle both ways round. This direction fails if `extra`
 /// is left behind with the callee.
 #[test]
 fn a_name_bound_by_interpret_inside_a_callee_survives_the_return() {

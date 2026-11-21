@@ -1084,7 +1084,7 @@ impl Interp {
         activation
             .plan
             .slot_of(name)
-            .or_else(|| activation.extra.get(name).copied())
+            .or_else(|| activation.extra.get(name))
     }
 
     pub(crate) fn slot_of(&mut self, name: &[u8]) -> usize {
@@ -1093,7 +1093,7 @@ impl Interp {
             return slot;
         }
         if let Some(slot) = activation.extra.get(name) {
-            return *slot;
+            return slot;
         }
         let frame = activation.frame;
         let slot = self.roots.activity_mut().grow_slots_of(frame, 1);
