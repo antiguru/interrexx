@@ -286,6 +286,13 @@ fn pass_of(
     if body_start >= loop_pc {
         return None;
     }
+    // A condition that calls or sends is a test region in the stream, before
+    // the body (`Chunk::loop_test_at`), which the pass boundary hands to the
+    // driver: compiled passes would leave for it on every pass, and enter
+    // again at the `LoopNext`.
+    if chunk.loop_test_at(do_index as usize).is_some() {
+        return None;
+    }
     let mut steps = Vec::new();
     let mut pc = body_start;
     // An `IF`'s branches stay inside the body, and its `EndBranch` and
