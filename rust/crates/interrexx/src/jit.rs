@@ -186,6 +186,10 @@ pub(crate) enum Step {
     Jump { target: u32 },
     /// `Op::EndBranch` at `pc`.
     EndBranch { pc: u32 },
+    /// The `Op::LoopRun` of an unlabelled `do; ... end` block at `pc`: one
+    /// clause counted at the line in force, as for [`Step::EndBranch`],
+    /// while the block is steady; the op through the host otherwise.
+    BlockStart { pc: u32 },
     /// An op between clause regions the host runs, which may answer
     /// [`JUMP`]: a `SELECT`'s own ops.
     Between { pc: u32 },
@@ -645,6 +649,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Op { .. }
             | Step::Jump { .. }
             | Step::Compound { .. }
+            | Step::BlockStart { .. }
             | Step::Dropped
             | Step::EndBranch { .. }
             | Step::Between { .. } => None,
@@ -810,7 +815,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.b.ins().jump(labels[&target], &[]);
                     live = false;
                 }
-                Step::EndBranch { pc } => end_branch(&mut e, pc),
+                Step::EndBranch { pc } => end_branch(&mut e, None, pc),
+                Step::BlockStart { pc } => end_branch(&mut e, Some(clause_pc), pc),
                 Step::PushArg { src } => {
                     let address =
                         e.b.ins()
@@ -1296,8 +1302,10 @@ fn branch(
 
 /// `Op::EndBranch`: a clause counted at the line in force, which while the
 /// block is steady and the countdown has more than this in it is the count
-/// alone; the host's `end_promoted_branch` otherwise.
-fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
+/// alone; the host's `end_promoted_branch` otherwise. A block's start
+/// ([`Step::BlockStart`]) is the same clause, counted inside the clause at
+/// `clause_pc`, and its host path is `flat_block_start`'s.
+fn end_branch(e: &mut Emit<'_, '_>, clause_pc: Option<u32>, pc: u32) {
     let steady = e.load_native(types::I64, layout::STEADY);
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let left =
@@ -1314,7 +1322,7 @@ fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
     e.store_native(countdown, layout::COUNTDOWN);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(slow);
-    e.call_op(None, pc, None);
+    e.call_op(clause_pc, pc, None);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(join);
 }

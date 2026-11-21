@@ -494,3 +494,59 @@ say o~run
 10005000 10003000
 compiled: yes
 quiet compound accesses: yes
+
+# do-blocks in a compiled body: plain, and as an IF's branches
+run
+a = 0; b = 0; c = 0
+do i = 1 to 10000
+  do
+    a = a + i
+    b = b + 1
+  end
+  if i // 2 = 0 then do
+    c = c + 1
+    a = a - 1
+  end
+  else do
+    c = c - 1
+    b = b + 2
+  end
+end
+say a b c
+----
+50000000 20000 0
+compiled: yes
+
+# a LEAVE from a do-block in a compiled body
+run
+n = 0; m = 0
+do i = 1 to 10000
+  n = n + 1; m = m + i; k = m // 7
+  if k = 3 then do
+    n = n - 1
+    m = m + 2
+  end
+  if i = 9500 then do
+    m = m * 2
+    leave
+  end
+end
+say n m i
+----
+9497 90259512 9500
+compiled: yes
+
+# a do-block around a quiet builtin call
+run
+t = 0
+do i = 1 to 10000
+  x = i * 2; y = x + 1; z = y - i
+  do
+    t = t + length(i) + z // 7
+  end
+end
+say t
+----
+68896
+compiled: yes
+quiet builtin calls: yes

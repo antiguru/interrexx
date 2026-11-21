@@ -351,6 +351,34 @@ fn pass_of(
                     steps.push(Step::Builtin { pc: at, args });
                     continue;
                 }
+                // A `do; ... end` block, unlabelled: its start runs on the
+                // host, whose region ends at the clause's own end, where
+                // compiled code carries on into the block's clauses.
+                Op::LoopRun { index }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
+                            if matches!(body.kind, interrexx_parse::LoopKind::Simple)
+                                && body.label.is_none()
+                    ) =>
+                {
+                    pending.clear();
+                    steps.push(Step::BlockStart { pc: at });
+                    continue;
+                }
+                // The `END` of such a block answers `Flow::Next` and does
+                // nothing else; its clause, which counts it, stays.
+                Op::Exec { index }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::End {
+                            closes: Some(closes),
+                            ..
+                        }) if matches!(closes.style, interrexx_parse::EndStyle::Do)
+                    ) =>
+                {
+                    continue;
+                }
                 Op::PushArg { src } => {
                     pending.push(steps.len());
                     steps.push(Step::PushArg { src });
@@ -635,6 +663,10 @@ impl Driven<'_, '_> {
             self.source,
             ran,
         ) {
+            Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) if in_place && next == open.end => {
+                self.closed = true;
+                return CONTINUE;
+            }
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) => JitExit::At(next),
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(Flow::Next)))) if in_place => {
                 self.closed = true;
@@ -1307,7 +1339,11 @@ impl Driven<'_, '_> {
         // The region's last op answering `Flow::Next` is the clause done, which
         // the driver settles at `end`: the op after this one, where compiled
         // code carries on.
-        let in_place = pc + 1 == end && matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)));
+        // So is a region that ended at the clause's own end, as a block's
+        // start does.
+        let in_place = pc + 1 == end
+            && (matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)))
+                || matches!(ran, Ok(RegionEnd::At(next)) if next == end));
         self.leave_from(ran, in_place)
     }
 }
