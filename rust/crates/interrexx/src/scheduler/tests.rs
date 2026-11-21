@@ -1739,13 +1739,13 @@ fn every_refusal_of_the_uninits_at_an_activitys_end_is_reported() {
     let outcome = crate::run_program_collect_every_alloc(
         "/tmp/scheduler.rex",
         b"m = .w~new~start('run')\nm~wait\nsay 'main end'\n\
-          ::class k\n::method uninit\n  say 'uninit'\n  x = .stream~new('HANDLE:7')\n\
+          ::class k\n::method uninit\n  say 'uninit'\n  'abc'~objectName = 'x'\n\
           ::class w\n::method run\n  a = .k~new\n  b = .k~new\n  drop a b\n  \
           s = 'a' || random()\n  say 'activity end'\n"
             .to_vec(),
         Invocation::none().with_deadline(RUN_DEADLINE),
     );
-    let refusal = "interrexx: a HANDLE: stream on descriptor 7 is not implemented\n";
+    let refusal = "interrexx: OBJECTNAME= on a String is refused because a String is value-based (Deviation 36)\n";
     assert_eq!(
         stderr(&outcome).matches(refusal).count(),
         2,
@@ -1762,13 +1762,13 @@ fn a_refusal_in_main_does_not_wait_for_the_other_activities() {
     let began = std::time::Instant::now();
     let outcome = run(".w~new~start('nap')\nsay 'main'\nsay .k~new~m\n\
                        ::class w\n::method nap\n  call SysSleep 99999\n\
-                       ::class k\n::method m\n  x = .stream~new('HANDLE:7')\n  return 1\n");
+                       ::class k\n::method m\n  'abc'~objectName = 'x'\n  return 1\n");
     assert!(began.elapsed() < std::time::Duration::from_secs(10));
     assert_eq!(outcome.exit_code, 120);
     assert_eq!(stdout(&outcome), "main\n");
     assert_eq!(
         stderr(&outcome),
-        "interrexx: a HANDLE: stream on descriptor 7 is not implemented\n"
+        "interrexx: OBJECTNAME= on a String is refused because a String is value-based (Deviation 36)\n"
     );
 }
 

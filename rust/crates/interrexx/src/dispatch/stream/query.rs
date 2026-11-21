@@ -13,12 +13,10 @@ pub(in crate::dispatch) fn query_exists(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let state = require(interp, receiver)?;
-    if state.handle.is_some() {
-        let answer = match state.status {
-            StreamStatus::Unknown => Vec::new(),
-            _ => state.name.clone(),
-        };
-        return Ok(Some(interp.text_built(answer)));
+    // A `HANDLE:` stream names a descriptor, not a file: nothing exists by
+    // its name, open or not (`r[bif.stream.handle]`).
+    if state.handle.is_some() || state.descriptor {
+        return Ok(Some(interp.text(b"")));
     }
     // An open standard stream's qualified name is its name as written
     // (`StreamInfo::openStd`), which it answers without a lookup.
@@ -137,7 +135,14 @@ pub(in crate::dispatch) fn query_time(
 ) -> Result<Option<ObjRef>, Failure> {
     let metadata = match standard_input_file(interp, receiver)? {
         true => interp.input_file().map(|open| open.file().metadata()),
-        false => None,
+        // An open `HANDLE:n` stream has the times of its descriptor.
+        false => {
+            let state = require(interp, receiver)?;
+            match (&state.open, state.descriptor) {
+                (Some(open), true) => Some(open.file().metadata()),
+                _ => None,
+            }
+        }
     };
     let metadata = match metadata {
         Some(metadata) => metadata,

@@ -494,7 +494,6 @@ raises](r:class.stream.notready), and what the methods send. The answers are
 strings. A method with no counterpart among the functions, or whose messages
 another rule states, has a rule of its own. The Deviations that the rules of
 the functions state hold for the methods that do the same:
-[35](r:bif.stream.deviation.35), [46](r:bif.lineout.deviation.46),
 [49](r:bif.stream.deviation.49), [54](r:bif.lines.deviation.54),
 [56](r:bif.lineout.deviation.56), [57](r:bif.stream.deviation.57),
 [60](r:bif.lineout.deviation.60), [74](r:bif.stream.deviation.74),
@@ -2545,8 +2544,12 @@ program can no longer reach, as [the rule of
 `UNINIT`](r:env.invocation.uninit) says; whether and when it does is not
 specified. A program may send it too, and it answers no value: its answer as a
 term raises `SYNTAX 91.999`. It takes no argument: one raises `SYNTAX 88.922`.
-It sends no message. An instance that has been sent `uninit` is not to be used
-again: what a method does then is not specified.
+It sends no message. After it, the instance raises `SYNTAX 48.1` from `open`
+and from the methods that read, write, position or describe it: `lineIn`,
+`lineOut`, `charIn`, `charOut`, `lines`, `chars`, `arrayIn`, `supplier`,
+`flush`, `position`, `seek`, `state`, `description`, `qualify`, `query` and
+`command`. `close` and `uninit` then close nothing and answer no value, and
+`string` answers the name. What `init` does then is not specified.
 
 ```rexx
 f = 'spec-stream-uninit-zq.tmp'
@@ -2575,6 +2578,54 @@ bad2: say arg(1) '=>' condition('o')~code
 s~uninit(1) => 88.922
 kept
 91.999
+```
+
+```rexx
+s = .stream~new('spec-stream-uninit2-zq.tmp')
+s~uninit
+do m over 'open', 'lineIn', 'lineOut', 'charIn', 'charOut', 'chars', 'lines', -
+    'flush', 'state', 'description', 'qualify', 'arrayIn', 'supplier', 'close', -
+    'uninit'
+  call try m
+end
+call try 'position', 1
+call try 'seek', 1
+call try 'query', 'exists'
+call try 'command', 'query exists'
+say s~string
+exit
+try:
+  signal on syntax name bad
+  r = 'no value'
+  if arg(1) == 'close' | arg(1) == 'uninit' then s~send(arg(1))
+  else r = s~sendWith(arg(1), arg(1, 'a')~section(2))
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+open => 48.1
+lineIn => 48.1
+lineOut => 48.1
+charIn => 48.1
+charOut => 48.1
+chars => 48.1
+lines => 48.1
+flush => 48.1
+state => 48.1
+description => 48.1
+qualify => 48.1
+arrayIn => 48.1
+supplier => 48.1
+close => no value
+uninit => no value
+position => 48.1
+seek => 48.1
+query => 48.1
+command => 48.1
+spec-stream-uninit2-zq.tmp
 ```
 
 ## Deviations

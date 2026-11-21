@@ -184,7 +184,9 @@ fn transient_standard_streams() -> [bool; 3] {
         rustix::fs::fstat(fd).is_ok_and(|status| {
             matches!(
                 rustix::fs::FileType::from_raw_mode(status.st_mode),
-                rustix::fs::FileType::CharacterDevice | rustix::fs::FileType::Fifo
+                rustix::fs::FileType::CharacterDevice
+                    | rustix::fs::FileType::Fifo
+                    | rustix::fs::FileType::Socket
             )
         })
     };

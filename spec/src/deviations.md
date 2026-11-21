@@ -313,12 +313,11 @@ RexxUtil path arguments), each `..` removes exactly the one component before
 it. ooRexx removes none after a doubled slash and two after a component that
 starts with a period, so its answer can name a different file.
 
-## 35. HANDLE: streams
+## 35. Withdrawn
 
-`HANDLE:0`, `HANDLE:1` and `HANDLE:2` read and write standard input, output
-and error; any other descriptor is refused when the stream is created. In
-ooRexx a `HANDLE:` stream never reaches its descriptor: reads see end of
-file, and writes crash.
+HANDLE: streams: a `HANDLE:n` stream reads and writes descriptor `n` for every
+`n`, as ooRexx does since upstream bug #2166, ruled by the owner on 2026-11-21
+(#857).
 
 ## 36. Strings and numbers are value-based
 
@@ -394,11 +393,11 @@ answers some integers unrounded, depending on how the number is held.
 `Bag~hasItem` with an index unequal to the item answers 0. ooRexx answers
 `.nil`.
 
-## 46. LINEOUT on a binary record stream
+## 46. Withdrawn
 
-On a stream opened `BINARY RECLENGTH n`, positioning with LINEOUT and closing
-pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
-a record that a write has started when LINEOUT positions or closes.
+LINEOUT on a binary record stream: a LINEOUT that closes or only positions
+completes the record the write position is inside of, as ooRexx does since
+upstream bugs #1742 and #2170, ruled by the owner on 2026-11-21 (#857).
 
 ## 47. A DO count wider than NUMERIC DIGITS
 

@@ -26,7 +26,7 @@ g10s4	79 append-extent
 g10s40	60 ctrlz-is-data
 g10s41	55 write-only
 g10s42	55 write-only
-g10s43	46 pads-on-close + 62 charin-eof-notready
+g10s43	62 charin-eof-notready
 g10s44	55 write-only
 g10s48	55 write-only
 g10s49	60 ctrlz-is-data
@@ -76,14 +76,14 @@ g11s36	62 charin-eof-notready
 g11s37	79 append-extent
 g11s38	62 charin-eof-notready
 g11s39	55 write-only
-g11s41	46 pads-on-close + 55 write-only
+g11s41	55 write-only
 g11s42	55 write-only
 g11s44	55 write-only
 g11s45	62 charin-eof-notready
 g11s46	55 write-only
 g11s47	59 invalid-seek
 g11s48	59 invalid-seek
-g11s49	46 pads-on-close + 59 invalid-seek
+g11s49	59 invalid-seek
 g11s5	60 ctrlz-is-data
 g11s50	55 write-only
 g11s52	55 write-only
@@ -102,7 +102,7 @@ g11s67	55 write-only
 g11s68	79 append-extent
 g11s69	55 write-only
 g11s7	49 seek-from-end
-g11s74	46 pads-on-close + 55 write-only
+g11s74	55 write-only
 g11s78	55 write-only
 g11s79	79 append-extent
 g12s0	60 ctrlz-is-data
@@ -132,14 +132,13 @@ g12s38	62 charin-eof-notready
 g12s41	55 write-only
 g12s42	55 write-only
 g12s44	79 append-extent
-g12s45	46 pads-on-close + 62 charin-eof-notready
+g12s45	62 charin-eof-notready
 g12s46	62 charin-eof-notready
 g12s47	59 invalid-seek
 g12s49	59 invalid-seek
 g12s5	49 seek-from-end
 g12s50	62 charin-eof-notready
 g12s51	56 line-position
-g12s52	46 pads-on-close
 g12s54	60 ctrlz-is-data
 g12s58	55 write-only
 g12s59	57 line-query
@@ -190,7 +189,7 @@ g13s51	60 ctrlz-is-data
 g13s55	62 charin-eof-notready
 g13s56	55 write-only
 g13s59	62 charin-eof-notready
-g13s60	46 pads-on-close + 62 charin-eof-notready
+g13s60	62 charin-eof-notready
 g13s62	55 write-only
 g13s64	60 ctrlz-is-data
 g13s65	55 write-only
@@ -231,7 +230,7 @@ g14s47	55 write-only
 g14s49	79 append-extent
 g14s50	62 charin-eof-notready
 g14s51	55 write-only
-g14s54	46 pads-on-close + 49 relative-seek
+g14s54	49 relative-seek
 g14s56	55 write-only
 g14s58	62 charin-eof-notready
 g14s6	62 charin-eof-notready
@@ -247,7 +246,6 @@ g14s76	49 relative-seek
 g14s77	60 ctrlz-is-data
 g15s10	79 append-extent
 g15s11	62 charin-eof-notready
-g15s12	46 pads-on-close
 g15s13	55 write-only
 g15s14	79 append-extent
 g15s15	60 ctrlz-is-data
@@ -259,7 +257,7 @@ g15s27	62 charin-eof-notready
 g15s3	55 write-only
 g15s31	62 charin-eof-notready
 g15s33	62 charin-eof-notready
-g15s34	46 pads-on-close + 49 relative-seek
+g15s34	49 relative-seek
 g15s35	55 write-only
 g15s36	59 invalid-seek
 g15s37	55 write-only
@@ -334,7 +332,7 @@ g16s61	60 ctrlz-is-data
 g16s62	49 seek-from-end
 g16s63	55 write-only
 g16s65	49 seek-from-end
-g16s67	46 pads-on-close + 49 seek-from-end
+g16s67	49 seek-from-end
 g16s7	56 line-position
 g16s71	55 write-only
 g16s72	79 append-extent
@@ -345,7 +343,7 @@ g16s77	55 write-only
 g16s78	62 charin-eof-notready
 g16s9	55 write-only
 g1s11	59 invalid-seek
-g1s13	46 pads-on-close + 79 append-extent
+g1s13	79 append-extent
 g1s14	59 invalid-seek
 g1s15	60 ctrlz-is-data
 g1s16	49 seek-from-end
@@ -364,7 +362,6 @@ g1s30	55 write-only
 g1s31	59 invalid-seek
 g1s32	49 seek-from-end
 g1s33	55 write-only
-g1s34	46 pads-on-close
 g1s35	55 write-only
 g1s37	59 invalid-seek
 g1s39	62 charin-eof-notready
@@ -380,7 +377,7 @@ g1s50	79 append-extent
 g1s52	49 seek-from-end
 g1s53	55 write-only
 g1s54	79 append-extent
-g1s55	46 pads-on-close + 62 charin-eof-notready
+g1s55	62 charin-eof-notready
 g1s56	62 charin-eof-notready
 g1s59	55 write-only
 g1s60	55 write-only
@@ -403,7 +400,7 @@ g1s9	49 relative-seek
 g2s0	62 charin-eof-notready
 g2s1	55 write-only
 g2s17	55 write-only
-g2s18	46 pads-on-close + 49 relative-seek
+g2s18	49 relative-seek
 g2s2	55 write-only
 g2s20	55 write-only
 g2s21	56 line-position
@@ -421,7 +418,7 @@ g2s36	55 write-only
 g2s38	55 write-only
 g2s39	62 charin-eof-notready
 g2s40	79 append-extent
-g2s45	46 pads-on-close + 55 write-only
+g2s45	55 write-only
 g2s46	55 write-only
 g2s47	62 charin-eof-notready
 g2s48	55 write-only
@@ -464,19 +461,18 @@ g3s34	55 write-only
 g3s37	59 invalid-seek
 g3s38	62 charin-eof-notready
 g3s39	55 write-only
-g3s4	46 pads-on-close + 55 write-only
+g3s4	55 write-only
 g3s40	59 invalid-seek
 g3s42	55 write-only
 g3s43	55 write-only
 g3s44	55 write-only
-g3s45	46 pads-on-close + 49 seek-from-end
+g3s45	49 seek-from-end
 g3s46	55 write-only
 g3s48	49 seek-from-end
 g3s49	55 write-only
 g3s5	60 ctrlz-is-data
 g3s50	62 charin-eof-notready
 g3s51	55 write-only
-g3s52	46 pads-on-close
 g3s53	59 invalid-seek
 g3s54	55 write-only
 g3s55	59 invalid-seek
@@ -523,7 +519,7 @@ g4s41	79 append-extent
 g4s43	49 relative-seek
 g4s45	60 ctrlz-is-data
 g4s46	62 charin-eof-notready
-g4s47	46 pads-on-close + 55 write-only
+g4s47	55 write-only
 g4s49	59 invalid-seek
 g4s5	60 ctrlz-is-data
 g4s50	60 ctrlz-is-data
@@ -552,7 +548,7 @@ g4s8	55 write-only
 g5s0	55 write-only
 g5s1	55 write-only
 g5s10	55 write-only
-g5s12	46 pads-on-close + 62 charin-eof-notready
+g5s12	62 charin-eof-notready
 g5s13	55 write-only
 g5s14	62 charin-eof-notready
 g5s15	79 append-extent
@@ -583,7 +579,7 @@ g5s50	79 append-extent
 g5s51	55 write-only
 g5s52	55 write-only
 g5s53	55 write-only
-g5s54	46 pads-on-close + 62 charin-eof-notready
+g5s54	62 charin-eof-notready
 g5s57	55 write-only
 g5s59	79 append-extent
 g5s6	55 write-only
@@ -604,7 +600,7 @@ g5s78	49 seek-from-end
 g5s79	62 charin-eof-notready
 g5s9	55 write-only
 g6s0	55 write-only
-g6s1	46 pads-on-close + 55 write-only
+g6s1	55 write-only
 g6s10	55 write-only
 g6s11	59 invalid-seek
 g6s12	59 invalid-seek
@@ -640,19 +636,17 @@ g6s56	59 invalid-seek
 g6s57	62 charin-eof-notready
 g6s59	55 write-only
 g6s6	55 write-only
-g6s61	46 pads-on-close
 g6s62	55 write-only
 g6s64	55 write-only
 g6s66	79 append-extent
 g6s67	55 write-only
-g6s69	46 pads-on-close
 g6s7	49 relative-seek
 g6s70	55 write-only
 g6s71	59 invalid-seek
 g6s73	55 write-only
 g6s77	59 invalid-seek
 g6s78	79 append-extent
-g6s8	46 pads-on-close + 59 invalid-seek
+g6s8	59 invalid-seek
 g6s9	79 append-extent
 g7s0	49 relative-seek
 g7s1	55 write-only
@@ -690,7 +684,6 @@ g7s51	62 charin-eof-notready
 g7s53	55 write-only
 g7s54	55 write-only
 g7s55	79 append-extent
-g7s56	46 pads-on-close
 g7s57	59 invalid-seek
 g7s58	79 append-extent
 g7s6	55 write-only
@@ -701,7 +694,7 @@ g7s64	79 append-extent
 g7s66	79 append-extent
 g7s67	57 line-query
 g7s7	59 invalid-seek
-g7s71	46 pads-on-close + 79 append-extent
+g7s71	79 append-extent
 g7s72	55 write-only
 g7s75	55 write-only
 g7s8	56 line-position
@@ -715,13 +708,11 @@ g8s18	62 charin-eof-notready
 g8s19	60 ctrlz-is-data
 g8s22	79 append-extent
 g8s23	59 invalid-seek
-g8s24	46 pads-on-close
 g8s25	55 write-only
 g8s26	56 line-position
 g8s27	55 write-only
 g8s29	56 line-position
-g8s3	46 pads-on-close
-g8s30	46 pads-on-close + 79 append-extent
+g8s30	79 append-extent
 g8s35	56 line-position
 g8s36	55 write-only
 g8s37	55 write-only
@@ -730,7 +721,7 @@ g8s39	49 seek-from-end
 g8s4	59 invalid-seek
 g8s41	79 append-extent
 g8s42	79 append-extent
-g8s44	46 pads-on-close + 62 charin-eof-notready
+g8s44	62 charin-eof-notready
 g8s46	79 append-extent
 g8s47	60 ctrlz-is-data
 g8s48	59 invalid-seek
@@ -752,20 +743,18 @@ g8s78	55 write-only
 g8s79	79 append-extent
 g8s8	49 seek-from-end
 g9s0	60 ctrlz-is-data
-g9s10	46 pads-on-close
 g9s12	59 invalid-seek
 g9s15	55 write-only
 g9s16	55 write-only
 g9s17	49 relative-seek
 g9s18	55 write-only
-g9s21	46 pads-on-close + 62 charin-eof-notready
-g9s22	46 pads-on-close
+g9s21	62 charin-eof-notready
 g9s24	55 write-only
 g9s25	55 write-only
 g9s26	56 line-position
-g9s3	46 pads-on-close + 56 line-position
+g9s3	56 line-position
 g9s32	55 write-only
-g9s33	46 pads-on-close + 49 seek-from-end
+g9s33	49 seek-from-end
 g9s36	55 write-only
 g9s38	55 write-only
 g9s40	55 write-only

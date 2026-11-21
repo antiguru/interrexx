@@ -25,8 +25,6 @@
 //! * `S spec` `stream(f,'c','seek' spec)`, `P spec`
 //!   `stream(f,'c','position' spec)`, `Q spec`
 //!   `stream(f,'c','query position' spec)`;
-//! * `CB`, in the model only: the blanks from the write position to the end
-//!   of its record, the oracle's padding Deviation 46 licenses.
 
 #![expect(
     clippy::disallowed_methods,
@@ -110,12 +108,6 @@ const ORACLE_DEPARTURES: &[(&str, u32, &str, &str)] = &[
         57,
         "line-query",
         "Q_read_line=3 READY 19 19",
-    ),
-    (
-        "record-close-pads-nothing",
-        46,
-        "pads-on-close",
-        "[AAAAx___CCCCDDDD]",
     ),
     (
         "seek-char-from-end",
@@ -378,15 +370,13 @@ fn array(ops: &[String]) -> String {
 }
 
 /// The program that runs `scenarios` in `dir`, printing `NAME native: ...`
-/// and `NAME model: ...` for each, and `NAME variant: ...`, the model with
-/// the oracle's Deviation 46 padding, where [`padding_variant`] makes one.
+/// and `NAME model: ...` for each.
 fn program(dir: &Path, scenarios: &[Scenario]) -> String {
     let dir = dir.to_str().expect("the run directory is UTF-8");
     let mut text = String::new();
     for scenario in scenarios {
-        let variant = padding_variant(scenario).map_or(".nil".to_string(), |ops| array(&ops));
         text.push_str(&format!(
-            "call run '{}', {}, {}, {}, {variant}\n",
+            "call run '{}', {}, {}, {}\n",
             scenario.name,
             literal(initial(&scenario.initial)),
             u8::from(scenario.transient),
@@ -395,11 +385,10 @@ fn program(dir: &Path, scenarios: &[Scenario]) -> String {
     }
     text.push_str("exit\n");
     text.push_str(&format!(
-        "run: procedure\n  use arg name, initial, transient, ops, variant\n  \
+        "run: procedure\n  use arg name, initial, transient, ops\n  \
          f = '{dir}/' || name || '.dat'\n  \
          say name 'native:' native(f, initial, transient, ops)\n  \
          say name 'model:' stream_model(initial, transient, ops)\n  \
-         if variant \\== .nil then say name 'variant:' stream_model(initial, transient, variant)\n  \
          return\n"
     ));
     text.push_str(NATIVE);
@@ -438,13 +427,11 @@ fn fresh_dir(label: &str, scenarios: &[Scenario]) -> PathBuf {
     fs::canonicalize(&dir).unwrap_or_else(|e| panic!("cannot resolve {}: {e}", dir.display()))
 }
 
-/// One scenario's answers: native, through the model, and through the
-/// padding variant where there is one.
+/// One scenario's answers: native, and through the model.
 #[derive(Clone)]
 struct Answers {
     native: String,
     model: String,
-    variant: Option<String>,
 }
 
 /// The answers of each scenario in one run's stdout.
@@ -462,7 +449,7 @@ fn answers(
     let text = String::from_utf8_lossy(stdout);
     let mut lines: BTreeMap<(String, &str), String> = BTreeMap::new();
     for line in text.lines() {
-        for which in ["native", "model", "variant"] {
+        for which in ["native", "model"] {
             if let Some((name, rest)) = line.split_once(&format!(" {which}: ")) {
                 lines.insert((name.to_string(), which), rest.to_string());
             }
@@ -481,7 +468,6 @@ fn answers(
             let answer = Answers {
                 native: get("native"),
                 model: get("model"),
-                variant: lines.get(&(name.clone(), "variant")).cloned(),
             };
             (name.clone(), answer)
         })
@@ -630,6 +616,7 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
     let mut covered = vec![false; before.len()];
     let mut record = 0usize;
     let mut append = false;
+    let mut writable = true;
     let mut previous_write: Option<i64> = None;
     for (op, item) in scenario.ops.iter().zip(&results) {
         let (_, after) = item.split_once('=').expect("an item names its operation");
@@ -642,6 +629,32 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
             "LE" => Some(Vec::new()),
             _ => None,
         };
+        // A LINEOUT that closes or only positions a record stream writes the
+        // blanks that complete the record its write position was inside of
+        // (`r[bif.lineout.record]`).
+        let completes = record > 0
+            && writable
+            && match words[0] {
+                "LX" => result == "0",
+                // A position inside an APPEND open's extent is NOTREADY after
+                // the record is completed.
+                "LP" => words.len() == 2 && (result == "0" || result == "1"),
+                _ => false,
+            };
+        if completes && let Some(p) = previous_write {
+            let at = if append { overlay.len() as i64 + 1 } else { p };
+            let used = (at - 1).rem_euclid(record as i64);
+            if at >= 1 && used != 0 {
+                let landed = usize::try_from(at - 1).expect("landed");
+                let end = landed + (record - used as usize);
+                if overlay.len() < end {
+                    overlay.resize(end, 0);
+                    covered.resize(end, false);
+                }
+                overlay[landed..end].fill(b' ');
+                covered[landed..end].fill(true);
+            }
+        }
         if words[0] == "O" {
             let lower = op.to_lowercase();
             if lower.contains("replace") {
@@ -650,6 +663,7 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
                 covered.clear();
             }
             append = lower.contains("append");
+            writable = !lower.split(' ').any(|word| word == "read");
             record = lower.split_once("reclength ").map_or(0, |(_, rest)| {
                 rest.split(' ').next().unwrap_or("0").parse().unwrap_or(0)
             });
@@ -805,17 +819,6 @@ fn fields(item: &str) -> Fields<'_> {
     }
 }
 
-/// The variant answer's items with the `CB` padding items taken out, so they
-/// line up with the scenario's own operations.
-fn without_padding(answer: &str) -> String {
-    let (ops, content) = items(answer);
-    let kept: Vec<&str> = ops
-        .into_iter()
-        .filter(|item| !item.starts_with("CB="))
-        .collect();
-    format!("{}; [{content}]", kept.join(";"))
-}
-
 /// The rule an oracle departure at item `at` falls under, judged from the
 /// observed fields of the oracle's item and the model's there: the
 /// Deviation, or 0 for a rule proposed as a new one, and the rule's name.
@@ -948,40 +951,10 @@ fn oracle_rule(
 }
 
 /// The label of an oracle answer that differs from the model's, or why it
-/// is unlicensed. With a variant, the model run with the oracle's padding by
-/// a LINEOUT that closes or only positions a binary stream (Deviation 46),
-/// the oracle must match the variant up to a difference another rule
-/// licenses.
-fn oracle_label(
-    scenario: &Scenario,
-    oracle: &str,
-    model: &str,
-    variant: Option<&str>,
-) -> Result<String, String> {
+/// is unlicensed.
+fn oracle_label(scenario: &Scenario, oracle: &str, model: &str) -> Result<String, String> {
     let at = first_difference_at(oracle, model).expect("the answers part");
-    // The padding can only explain a difference after the first LINEOUT
-    // that would pad, and there the variant is asked first.
-    let padded_before = scenario.ops[..at.min(scenario.ops.len())]
-        .iter()
-        .any(|op| op == "LX" || op.starts_with("LP "));
-    let model_rule = || oracle_rule(scenario, at, &item_at(oracle, at), &item_at(model, at));
-    if !padded_before && let Some(rule) = model_rule() {
-        return Ok(format!("{} {}", label_of(rule.0), rule.1));
-    }
-    if let Some(variant) = variant.map(without_padding).filter(|_| padded_before) {
-        let Some(at) = first_difference_at(oracle, &variant) else {
-            return Ok("46 pads-on-close".to_string());
-        };
-        if let Some(rule) = oracle_rule(scenario, at, &item_at(oracle, at), &item_at(&variant, at))
-        {
-            return Ok(format!(
-                "46 pads-on-close + {} {}",
-                label_of(rule.0),
-                rule.1
-            ));
-        }
-    }
-    if let Some(rule) = model_rule() {
+    if let Some(rule) = oracle_rule(scenario, at, &item_at(oracle, at), &item_at(model, at)) {
         return Ok(format!("{} {}", label_of(rule.0), rule.1));
     }
     Err(format!(
@@ -997,30 +970,6 @@ fn label_of(deviation: u32) -> String {
     } else {
         deviation.to_string()
     }
-}
-
-/// Whether a scenario's oracle answer can carry Deviation 46: a LINEOUT
-/// that closes or only positions a binary stream. The variant puts the
-/// oracle's padding, `CB`, before each.
-fn padding_variant(scenario: &Scenario) -> Option<Vec<String>> {
-    if !scenario.ops[0].contains("binary") {
-        return None;
-    }
-    if !scenario
-        .ops
-        .iter()
-        .any(|op| op == "LX" || op.starts_with("LP "))
-    {
-        return None;
-    }
-    let mut ops = Vec::new();
-    for op in &scenario.ops {
-        if op == "LX" || op.starts_with("LP ") {
-            ops.push("CB".to_string());
-        }
-        ops.push(op.clone());
-    }
-    Some(ops)
 }
 
 /// Every named case on this crate.
@@ -1105,17 +1054,8 @@ fn on_the_oracle_the_named_cases_part_only_where_listed() {
                         item_at(&oracle.native, at)
                     ));
                 }
-                let label = oracle_label(
-                    scenario,
-                    &oracle.native,
-                    &oracle.model,
-                    oracle.variant.as_deref(),
-                );
-                let expected = if *rule == "pads-on-close" {
-                    "46 pads-on-close".to_string()
-                } else {
-                    format!("{} {rule}", label_of(*deviation))
-                };
+                let label = oracle_label(scenario, &oracle.native, &oracle.model);
+                let expected = format!("{} {rule}", label_of(*deviation));
                 if label.as_deref() != Ok(expected.as_str()) {
                     wrong.push(format!("{name}: listed as {expected}, judged {label:?}"));
                 }
@@ -1158,7 +1098,6 @@ fn the_model_answers_generated_scenarios_as_this_crate_does() {
 fn on_the_oracle_the_generated_scenarios_part_only_where_the_deviations_say() {
     let mut wrong = Vec::new();
     let mut departures = BTreeMap::new();
-    let mut padding_seen = 0;
     for (index, scenarios) in generated().iter().enumerate() {
         let answers = run_oracle(&format!("batch{index}"), scenarios);
         for scenario in scenarios {
@@ -1167,18 +1106,8 @@ fn on_the_oracle_the_generated_scenarios_part_only_where_the_deviations_say() {
             if first_difference_at(&oracle.native, &oracle.model).is_none() {
                 continue;
             }
-            match oracle_label(
-                scenario,
-                &oracle.native,
-                &oracle.model,
-                oracle.variant.as_deref(),
-            ) {
+            match oracle_label(scenario, &oracle.native, &oracle.model) {
                 Ok(label) => {
-                    if label.starts_with("46")
-                        && check_reflective(scenario, &oracle.native).is_err()
-                    {
-                        padding_seen += 1;
-                    }
                     departures.insert(name.clone(), label);
                 }
                 Err(e) => wrong.push(format!("{name} {:?}: {e}", scenario.ops)),
@@ -1186,10 +1115,6 @@ fn on_the_oracle_the_generated_scenarios_part_only_where_the_deviations_say() {
         }
     }
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
-    assert!(
-        padding_seen > 0,
-        "the 9.7 check sees none of the oracle's Deviation 46 padding"
-    );
     compare_recorded(
         "oracle",
         "# Generated scenarios where the oracle departs from the model, with the\n\
