@@ -14,7 +14,9 @@ of that page holds for the arguments after `set`: [the catalog
 rule](r:util.sysgetmessage.catalog) says which catalog a `filename` names,
 [the inserts rule](r:util.sysgetmessage.inserts) says how the inserts are put
 in, and [the answer rule](r:util.sysgetmessage.answer) gives the two texts for
-a message and a catalog that are not found.
+a message and a catalog that are not found, and [the damaged catalog
+rule](r:util.sysgetmessage.damaged) the text for a catalog whose contents do
+not hold together.
 
 ## Arguments
 

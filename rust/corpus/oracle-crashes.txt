@@ -1100,17 +1100,10 @@ upstream ticket.
 
 ## 42. A message catalog the oracle opens and then cannot read
 
-    call charout 'zero.cat', 'de080496'x || '00000000'x || '01000000'x || '00'x
-    call stream 'zero.cat', 'c', 'close'
-    say SysGetMessage(1, './zero.cat')
-
-SIGFPE, rc 136, 3 runs of 3 under the standard wrapper and `memcap 4G`: a catalog of no buckets passes glibc 2.43's `__open_catalog` checks and
-`catgets` divides by the bucket count. A header claiming more table than the file holds
-(`'a0860100'x` buckets, one deep, 20 bytes after the header) dies of SIGBUS, rc 135, 3 runs of 3:
-`__open_catalog` scans the table for its largest offset before it tests the file's size. This
-crate answers "Error: Message not found" for the first and "Error: Message catalog not found" for
-the second, pinned by `builtin::rexxutil::messages::tests::a_table_of_no_buckets_holds_no_message`
-and `a_table_reaching_past_the_mapping_is_rejected`. No upstream ticket.
+Dropped at r13532: both catalogs answer "Error: Invalid message catalog" (SF #2168), as ooTest's
+`base/rexxutil/platform/unix/SysGetMessage` group (`test_catalog_no_buckets`,
+`test_catalog_no_table`) shows under the oracle; the programs were not run again here. This crate
+answers the same, pinned by `builtin::rexxutil::messages::tests::a_damaged_catalog_is_rejected`.
 
 ## 43. A `RexxArrayObject` argument whose `MAKEARRAY` answers a string other than a short one
 
