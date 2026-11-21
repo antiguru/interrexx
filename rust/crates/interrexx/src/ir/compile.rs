@@ -1357,9 +1357,18 @@ fn compile_settled(
                     0,
                     dst,
                 )?;
-                ops.push(Op::ExecValue {
-                    index: instruction_index(index)?,
-                    src: dst,
+                // An instruction whose rest can transfer control or run Rexx
+                // code of its own runs as `Op::Exec` does, from the value.
+                ops.push(if crate::Interp::exec_value_transfers(&instruction.kind) {
+                    Op::ExecWith {
+                        index: instruction_index(index)?,
+                        src: dst,
+                    }
+                } else {
+                    Op::ExecValue {
+                        index: instruction_index(index)?,
+                        src: dst,
+                    }
                 });
                 close_region(&mut ops, at)?;
                 registers.release(mark);

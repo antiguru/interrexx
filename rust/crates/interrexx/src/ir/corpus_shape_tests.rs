@@ -59,6 +59,7 @@ impl Root {
             | Op::LoopTested { .. }
             | Op::SelectCase { .. }
             | Op::ExecValue { .. }
+            | Op::ExecWith { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
@@ -132,6 +133,10 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
             Some("ADDRESS VALUE")
         }
         InstructionKind::Options { .. } => Some("OPTIONS"),
+        InstructionKind::Interpret { .. } => Some("INTERPRET"),
+        InstructionKind::Command {
+            expression: Some(_),
+        } => Some("command"),
         _ => None,
     }
 }
@@ -531,7 +536,10 @@ fn check_body(
             {
                 address.dynamic.as_ref().map(root_of)
             }
-            InstructionKind::Options { expression } => Some(root_of(expression)),
+            InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
+                Some(root_of(expression))
+            }
+            InstructionKind::Command { expression } => expression.as_ref().map(root_of),
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
@@ -733,6 +741,8 @@ fn sweep_every_corpus_body() {
         "TRACE VALUE",
         "ADDRESS VALUE",
         "OPTIONS",
+        "INTERPRET",
+        "command",
     ] {
         assert!(
             seen.constructs.contains_key(construct),

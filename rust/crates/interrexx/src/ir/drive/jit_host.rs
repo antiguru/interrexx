@@ -175,6 +175,10 @@ impl Interp {
         clippy::too_many_arguments,
         reason = "the values the Op::LoopNext arm holds"
     )]
+    // Cold as well as out of line: the `Op::LoopNext` arm is in the driver's
+    // own loop, and a call it makes once per entry into compiled passes is
+    // not one the loop should be laid out around.
+    #[cold]
     #[inline(never)]
     pub(super) fn jit_passes(
         &mut self,
@@ -193,7 +197,7 @@ impl Interp {
             passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
                 let generation = self.routine_generation;
-                let Some((compiled, budget)) = pass_of(chunk, pc, do_index, generation)
+                let Some((compiled, budget)) = pass_of(code, chunk, pc, do_index, generation)
                     .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
                 else {
                     state.set(REFUSED);
@@ -275,9 +279,22 @@ impl Interp {
 /// The body of the loop whose `Op::DO` is instruction `do_index` and whose
 /// `Op::LoopNext` is at `loop_pc`, as a [`Pass`], or `None` where it holds
 /// anything but plain clause regions of value ops and stores.
-fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Option<(Pass, u64)> {
+fn pass_of(
+    code: &Code<'_>,
+    chunk: &Chunk,
+    loop_pc: u32,
+    do_index: u32,
+    generation: u32,
+) -> Option<(Pass, u64)> {
     let body_start = chunk.op_at(do_index as usize + 1)?;
     if body_start >= loop_pc {
+        return None;
+    }
+    // A condition that calls or sends is a test region in the stream, before
+    // the body (`Chunk::loop_test_at`), which the pass boundary hands to the
+    // driver: compiled passes would leave for it on every pass, and enter
+    // again at the `LoopNext`.
+    if chunk.loop_test_at(do_index as usize).is_some() {
         return None;
     }
     let mut steps = Vec::new();
@@ -343,6 +360,34 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                         args = jit::carry_arg(args, k, src);
                     }
                     steps.push(Step::Builtin { pc: at, args });
+                    continue;
+                }
+                // A `do; ... end` block, unlabelled: its start runs on the
+                // host, whose region ends at the clause's own end, where
+                // compiled code carries on into the block's clauses.
+                Op::LoopRun { index }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
+                            if matches!(body.kind, interrexx_parse::LoopKind::Simple)
+                                && body.label.is_none()
+                    ) =>
+                {
+                    pending.clear();
+                    steps.push(Step::BlockStart { pc: at });
+                    continue;
+                }
+                // The `END` of such a block answers `Flow::Next` and does
+                // nothing else; its clause, which counts it, stays.
+                Op::Exec { index }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::End {
+                            closes: Some(closes),
+                            ..
+                        }) if matches!(closes.style, interrexx_parse::EndStyle::Do)
+                    ) =>
+                {
                     continue;
                 }
                 Op::PushArg { src } => {
@@ -457,6 +502,21 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 {
                     Step::Store { pc: at, slot, src }
                 }
+                // A compound's read and its write: one call with no bracket
+                // where that holds (`Host::quiet_compound`).
+                Op::Load {
+                    read: SymbolRead::Compound | SymbolRead::CompoundShared,
+                    ..
+                } => Step::Compound { pc: at },
+                Op::Store { index, .. }
+                    if matches!(
+                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        Some(InstructionKind::Assignment { target, .. })
+                            if matches!(target.kind, ExprKind::Compound(_))
+                    ) =>
+                {
+                    Step::Compound { pc: at }
+                }
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
                 Op::PushArg { src } => Step::PushArg { src },
@@ -476,6 +536,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 | Op::ClassAt { .. }
                 | Op::SelectCase { .. }
                 | Op::ExecValue { .. }
+                | Op::ExecWith { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }
@@ -524,6 +585,7 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Optio
                 Step::Op { .. }
                     | Step::Between { .. }
                     | Step::Builtin { .. }
+                    | Step::Compound { .. }
                     | Step::Open { .. }
                     | Step::Close { .. }
             )
@@ -613,6 +675,12 @@ impl Driven<'_, '_> {
             self.source,
             ran,
         ) {
+            Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) if in_place && next == open.end => {
+                #[cfg(test)]
+                HANDED_BACK.with(|handed| handed.set(handed.get() + 1));
+                self.closed = true;
+                return CONTINUE;
+            }
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::At(next)))) => JitExit::At(next),
             Ok(ClauseOutcome::Ran(Ok(RegionEnd::Flowed(Flow::Next)))) if in_place => {
                 self.closed = true;
@@ -898,7 +966,13 @@ impl Host for Driven<'_, '_> {
         // A failure is raised again by the full path, from a clause the
         // interpreter holds: a quiet builtin answers the same failure for the
         // same arguments.
+        // The temporaries the builtin roots are its own: released here, as
+        // the clause around a call would release them, since a clause
+        // compiled code opened has no temporaries frame of its own to close.
+        // The answer is rooted in its register from here.
+        let frame = interp.roots.activity_mut().push_frame();
         let ran = crate::builtin::run(interp, b"", target, &values[..argc]);
+        interp.roots.activity_mut().pop_frame(frame);
         interp.activity.depth -= 1;
         match ran {
             Ok(value) => {
@@ -908,6 +982,78 @@ impl Host for Driven<'_, '_> {
                 true
             }
             Err(_) => false,
+        }
+    }
+
+    fn quiet_compound(&mut self, pc: u32) -> bool {
+        let interp = &mut *self.interp;
+        // A setting that shows values is the full path's, as for a builtin.
+        // No test reaches this: a loop whose setting starts to show values
+        // leaves compiled code at its next clause, as for a builtin.
+        let mode = interp.trace_mode();
+        if mode.results || mode.intermediates {
+            return false;
+        }
+        match self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
+            Some(&Op::Load {
+                symbol, read, dst, ..
+            }) => {
+                let shared = match read {
+                    SymbolRead::Compound => false,
+                    SymbolRead::CompoundShared => true,
+                    _ => return false,
+                };
+                match interp.read_compound_quiet(self.code, symbol, shared) {
+                    Some(value) => {
+                        self.registers.set(dst, value);
+                        #[cfg(test)]
+                        QUIET_COMPOUNDS.with(|accesses| accesses.set(accesses.get() + 1));
+                        true
+                    }
+                    None => false,
+                }
+            }
+            Some(&Op::Store {
+                index, src, shared, ..
+            }) => {
+                let Some(InstructionKind::Assignment { target, .. }) = self
+                    .code
+                    .body
+                    .instructions
+                    .get(index as usize)
+                    .map(|clause| &clause.kind)
+                else {
+                    return false;
+                };
+                let ExprKind::Compound(id) = target.kind else {
+                    return false;
+                };
+                // The key the write takes: the one the read before it holds,
+                // or a tail whose pieces are plain.
+                if !(shared && interp.shared_key_for == Some(id)) {
+                    let mut key = interp.take_key_buffer();
+                    let plain = interp.quiet_tail_key_into(self.code, id, &mut key);
+                    interp.give_key_buffer(key);
+                    if !plain {
+                        return false;
+                    }
+                }
+                let value = self.registers.get(src);
+                // The value rooted for the write is released with it, as for
+                // a builtin's temporaries.
+                let frame = interp.roots.activity_mut().push_frame();
+                let wrote = interp.assign_evaluated(self.code, target, value, None, shared);
+                interp.roots.activity_mut().pop_frame(frame);
+                // A write that failed is made again by the full path, which
+                // raises its failure; a second write of the same value to the
+                // same tail is the first.
+                #[cfg(test)]
+                if wrote.is_ok() {
+                    QUIET_COMPOUNDS.with(|accesses| accesses.set(accesses.get() + 1));
+                }
+                wrote.is_ok()
+            }
+            _ => false,
         }
     }
 
@@ -1209,7 +1355,11 @@ impl Driven<'_, '_> {
         // The region's last op answering `Flow::Next` is the clause done, which
         // the driver settles at `end`: the op after this one, where compiled
         // code carries on.
-        let in_place = pc + 1 == end && matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)));
+        // So is a region that ended at the clause's own end, as a block's
+        // start does.
+        let in_place = pc + 1 == end
+            && (matches!(ran, Ok(RegionEnd::Flowed(Flow::Next)))
+                || matches!(ran, Ok(RegionEnd::At(next)) if next == end));
         self.leave_from(ran, in_place)
     }
 }
@@ -1220,6 +1370,8 @@ impl Driven<'_, '_> {
 thread_local! {
     static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
+    static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
+    static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
 }
 
 #[cfg(test)]
@@ -1231,6 +1383,22 @@ fn compiled_runs() -> usize {
 fn reset_compiled_runs() {
     COMPILED_RUNS.with(|runs| runs.set(0));
     QUIET_CALLS.with(|calls| calls.set(0));
+    QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
+    HANDED_BACK.with(|handed| handed.set(0));
+}
+
+/// How many regions that ended at their clause's end the host has closed in
+/// place, for compiled code to carry on, on this thread.
+#[cfg(test)]
+fn handed_back() -> usize {
+    HANDED_BACK.with(Cell::get)
+}
+
+/// How many compound reads and writes `Host::quiet_compound` has made on
+/// this thread.
+#[cfg(test)]
+fn quiet_compounds() -> usize {
+    QUIET_COMPOUNDS.with(Cell::get)
 }
 
 /// How many builtin calls `Host::quiet_builtin` has run on this thread.

@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{compiled_runs, quiet_calls, reset_compiled_runs};
+use super::{compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs};
 
 #[test]
 fn compiled_loops_print_what_the_interpreter_prints() {
@@ -20,6 +20,8 @@ fn compiled_loops_print_what_the_interpreter_prints() {
             let seen = Arc::clone(&runs);
             let quiet = Arc::new(AtomicUsize::new(0));
             let quiet_seen = Arc::clone(&quiet);
+            let compounds = Arc::new(AtomicUsize::new(0));
+            let compounds_seen = Arc::clone(&compounds);
             let text = case.input.as_bytes().to_vec();
             let outcome = crate::on_thread_of(crate::INTERPRETER_STACK_BYTES, move || {
                 reset_compiled_runs();
@@ -32,6 +34,7 @@ fn compiled_loops_print_what_the_interpreter_prints() {
                 );
                 seen.store(compiled_runs(), Ordering::Relaxed);
                 quiet_seen.store(quiet_calls(), Ordering::Relaxed);
+                compounds_seen.store(quiet_compounds(), Ordering::Relaxed);
                 ran
             });
             let compiled = if runs.load(Ordering::Relaxed) > 0 {
@@ -46,11 +49,109 @@ fn compiled_loops_print_what_the_interpreter_prints() {
             } else {
                 ""
             };
+            let compounds = if compounds.load(Ordering::Relaxed) > 0 {
+                "quiet compound accesses: yes\n"
+            } else {
+                ""
+            };
             format!(
-                "{}{}compiled: {compiled}\n{quiet}",
+                "{}{}compiled: {compiled}\n{quiet}{compounds}",
                 String::from_utf8_lossy(&outcome.stdout),
                 String::from_utf8_lossy(&outcome.stderr)
             )
         });
     });
+}
+
+/// Runs `source` as a program on this thread, as `run::tests::run_source`
+/// does, and answers the interpreter after it.
+fn ran(source: &[u8]) -> crate::Interp {
+    use crate::plan::BodyKey;
+    use std::rc::Rc;
+    let mut interp = crate::Interp::new();
+    let program =
+        Rc::new(interrexx_parse::parse_program(source.to_vec()).expect("test program parses"));
+    let program_id = interp.programs.insert(Rc::clone(&program));
+    let plan = interp.plan_for(
+        BodyKey {
+            program: program_id,
+            directive: None,
+        },
+        &program.main,
+        &program.symbols,
+        &program.source,
+    );
+    let frame = interp.roots.push_slots(plan.len());
+    let id = interp.next_activation_id();
+    interp.push_activation(crate::Activation::new(
+        id,
+        Rc::clone(&program),
+        program_id,
+        plan,
+        frame,
+    ));
+    interp.run_activation().expect("test program runs");
+    interp
+}
+
+/// The most temporaries live at once in a run of `body` in a compiled loop
+/// of `n` passes, which also ran `counted` quietly.
+fn temps_high_water(body: &str, n: usize, counted: fn() -> usize) -> usize {
+    reset_compiled_runs();
+    let interp = ran(format!("x = 0; t. = 0\ndo i = 1 to {n}\n  {body}\nend\nsay x").as_bytes());
+    assert!(
+        compiled_runs() > 0 && counted() > 0,
+        "{n} passes compiled, quietly"
+    );
+    interp.roots.activity().temps_capacity()
+}
+
+/// A quiet builtin that roots temporaries (`MAX` does) leaves none behind it
+/// in a clause compiled code opened: the most live at once is the same for a
+/// long compiled loop as for a short one.
+#[test]
+fn quiet_builtin_calls_do_not_accumulate_temps() {
+    let body = "x = x + max(i // 7, 3)";
+    let long = temps_high_water(body, 40000, quiet_calls);
+    assert!(
+        long < 1000,
+        "{long} temporaries live at once after 40000 passes"
+    );
+    assert_eq!(
+        temps_high_water(body, 10000, quiet_calls),
+        long,
+        "the mark grows with the passes"
+    );
+}
+
+/// A quiet compound write roots its value, and releases it with the write.
+#[test]
+fn quiet_compound_writes_do_not_accumulate_temps() {
+    let body = "k = i // 7; t.k = i";
+    let long = temps_high_water(body, 40000, quiet_compounds);
+    assert!(
+        long < 1000,
+        "{long} temporaries live at once after 40000 passes"
+    );
+    assert_eq!(
+        temps_high_water(body, 10000, quiet_compounds),
+        long,
+        "the mark grows with the passes"
+    );
+}
+
+/// A block whose start the host runs, as it does where the countdown has
+/// one clause left in it, hands back to compiled code at the start's own
+/// clause end: the loop is entered compiled once, however many slices its
+/// passes cross.
+#[test]
+fn a_block_started_on_the_host_carries_on_compiled() {
+    reset_compiled_runs();
+    ran(b"a = 0\ndo i = 1 to 40000\n  do\n    a = a + i\n  end\nend\nsay a");
+    assert!(handed_back() > 0, "no block start ran on the host");
+    assert_eq!(
+        compiled_runs(),
+        1,
+        "the loop left compiled code at a block start"
+    );
 }

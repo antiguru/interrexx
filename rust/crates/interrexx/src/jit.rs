@@ -32,12 +32,15 @@
 //!    sets from `RootSet::top_window` after every bracketed call into the host
 //!    and which nothing but a call into the host can invalidate; a null window
 //!    is never dereferenced. It writes a slot only as `VarSlot::of` would. The
-//!    two unbracketed calls change nothing [`Host::leave`] reads:
+//!    unbracketed calls change nothing [`Host::leave`] reads:
 //!    [`Host::push_arg`] appends to the argument stack and touches no frame,
-//!    and [`Host::quiet_builtin`] runs a builtin that changes nothing but the
-//!    heap, given arguments that run no Rexx code (`crate::builtin::quiet`).
-//!    Debug builds check the window after the first and the whole block after
-//!    the second.
+//!    [`Host::quiet_builtin`] runs a builtin that changes nothing but the
+//!    heap, given arguments that run no Rexx code (`crate::builtin::quiet`),
+//!    and [`Host::quiet_compound`] reads or writes a compound variable whose
+//!    tail runs no Rexx code, which changes a stem, the heap and, for a stem
+//!    not yet set, read or written, the stem's own slot, never the window.
+//!    Debug builds check the window after the first and the whole block
+//!    after the others.
 //! 4. The helpers are the only code that turns the `Ctx` pointer back into a
 //!    reference, and only while generated code is suspended in that call.
 //! 5. The machine code lives in the [`JITModule`] that [`Compiled`] owns,
@@ -118,6 +121,13 @@ pub(crate) trait Host {
     /// Pushes the arguments `args` carries for `Op::CallArgs` at `pc`, as the
     /// `Op::PushArg`s the pass dropped would have.
     fn stage_args(&mut self, pc: u32, args: u64);
+    /// The compound read or write at `pc`, where it runs no Rexx code: under
+    /// no trace that shows values, with a tail of plain values, and for a
+    /// read, a tail that is set (`Interp::read_compound_quiet`). `true` once
+    /// it has run. Called with no bracket, under the same terms as
+    /// [`Host::quiet_builtin`]; anywhere else it changes nothing and answers
+    /// `false`.
+    fn quiet_compound(&mut self, pc: u32) -> bool;
     /// Whether [`Host::leave`] would leave unchanged every field of `native`
     /// it does not take from the interpreter's clause state.
     fn refresh_holds(&mut self, native: &Native) -> bool;
@@ -161,6 +171,10 @@ pub(crate) enum Step {
     /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
     /// arguments pushed and the op through the host.
     Builtin { pc: u32, args: u64 },
+    /// A compound variable's read or write at `pc` (`Op::Load` of a
+    /// compound, `Op::Store` to one): [`Host::quiet_compound`], else the op
+    /// through the host.
+    Compound { pc: u32 },
     /// A step the pass took out, which is never compiled.
     Dropped,
     /// `Op::PushArg` of register `src`.
@@ -173,6 +187,10 @@ pub(crate) enum Step {
     Jump { target: u32 },
     /// `Op::EndBranch` at `pc`.
     EndBranch { pc: u32 },
+    /// The `Op::LoopRun` of an unlabelled `do; ... end` block at `pc`: one
+    /// clause counted at the line in force, as for [`Step::EndBranch`],
+    /// while the block is steady; the op through the host otherwise.
+    BlockStart { pc: u32 },
     /// An op between clause regions the host runs, which may answer
     /// [`JUMP`]: a `SELECT`'s own ops.
     Between { pc: u32 },
@@ -316,6 +334,21 @@ extern "C" fn builtin_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32, args: u64)
             return CONTINUE;
         }
         ctx.host.stage_args(pc, args);
+        run_op(ctx, clause, pc)
+    })
+}
+
+/// [`Step::Compound`]: the quiet path with no bracket (property 3 of the
+/// module doc), and otherwise the op's own path.
+extern "C" fn compound_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| {
+        if ctx.host.quiet_compound(pc) {
+            debug_assert!(
+                ctx.host.refresh_holds(&ctx.native),
+                "a quiet compound access changed what the block holds"
+            );
+            return CONTINUE;
+        }
         run_op(ctx, clause, pc)
     })
 }
@@ -616,6 +649,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Close { .. }
             | Step::Op { .. }
             | Step::Jump { .. }
+            | Step::Compound { .. }
+            | Step::BlockStart { .. }
             | Step::Dropped
             | Step::EndBranch { .. }
             | Step::Between { .. } => None,
@@ -781,7 +816,8 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.b.ins().jump(labels[&target], &[]);
                     live = false;
                 }
-                Step::EndBranch { pc } => end_branch(&mut e, pc),
+                Step::EndBranch { pc } => end_branch(&mut e, None, pc),
+                Step::BlockStart { pc } => end_branch(&mut e, Some(clause_pc), pc),
                 Step::PushArg { src } => {
                     let address =
                         e.b.ins()
@@ -803,6 +839,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 Step::Builtin { pc, args } => e.call_op_with(
                     builtin_helper as *const (),
                     Some(args),
+                    Some(clause_pc),
+                    pc,
+                    None,
+                ),
+                Step::Compound { pc } => e.call_op_with(
+                    compound_helper as *const (),
+                    None,
                     Some(clause_pc),
                     pc,
                     None,
@@ -1260,8 +1303,10 @@ fn branch(
 
 /// `Op::EndBranch`: a clause counted at the line in force, which while the
 /// block is steady and the countdown has more than this in it is the count
-/// alone; the host's `end_promoted_branch` otherwise.
-fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
+/// alone; the host's `end_promoted_branch` otherwise. A block's start
+/// ([`Step::BlockStart`]) is the same clause, counted inside the clause at
+/// `clause_pc`, and its host path is `flat_block_start`'s.
+fn end_branch(e: &mut Emit<'_, '_>, clause_pc: Option<u32>, pc: u32) {
     let steady = e.load_native(types::I64, layout::STEADY);
     let countdown = e.load_native(types::I64, layout::COUNTDOWN);
     let left =
@@ -1278,7 +1323,7 @@ fn end_branch(e: &mut Emit<'_, '_>, pc: u32) {
     e.store_native(countdown, layout::COUNTDOWN);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(slow);
-    e.call_op(None, pc, None);
+    e.call_op(clause_pc, pc, None);
     e.b.ins().jump(join, &[]);
     e.b.switch_to_block(join);
 }

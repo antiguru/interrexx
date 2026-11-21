@@ -1,0 +1,110 @@
+# A command clause evaluates its expression as native ops, and
+# `Op::ExecWith` runs the rest: the string request, the `>>>` line and the
+# command. Each stanza answers what the walked expression answered.
+
+# a literal, a concatenation and a call, with their return codes
+program
+'exit 0'
+say 'rc' rc
+x = 3
+'exit' x
+say 'rc' rc
+'exit' g(5)
+say 'rc' rc
+exit
+g: return arg(1)
+----
+rc> 0
+out> rc 0
+out> rc 3
+out> rc 5
+
+# trace r and trace i over a command with a call in its expression
+program
+trace r
+'exit' g(0)
+trace i
+'exit' 1 - 1
+exit
+g: return arg(1)
+----
+rc> 0
+err>      2 *-* 'exit' g(0)
+err>      6 *-*   g:
+err>      6 *-*   return arg(1)
+err>        >>>     "0"
+err>        >>>   "exit 0"
+err>      3 *-* trace i
+err>      4 *-* 'exit' 1 - 1
+err>        >L>   "exit"
+err>        >L>   "1"
+err>        >L>   "1"
+err>        >O>   "-" => "0"
+err>        >O>   " " => "exit 0"
+err>        >>>   "exit 0"
+err>      5 *-* exit
+
+# ERROR and FAILURE trapped with CALL ON, and SIGNAL ON ERROR
+program
+call on error
+call on failure
+'exit 2'
+say 'after' rc
+'nosuchcommand_zz 2>/dev/null'
+say 'after2' rc
+signal on error name sig
+'exit 5'
+exit
+error: say 'ERROR' rc; return
+failure: say 'FAILURE' rc; return
+sig: say 'signalled' rc sigl
+----
+rc> 0
+out> ERROR 2
+out> after 2
+out> FAILURE 127
+out> after2 127
+out> signalled 5 8
+err>      5 *-* 'nosuchcommand_zz 2>/dev/null'
+err>        >>>   "nosuchcommand_zz 2>/dev/null"
+err>        +++   "RC(127)"
+
+# a command that leaves the baton while another activity waits, and is
+# woken to finish
+program
+t = .t~new~start('run')
+'sleep 0.2; exit 4'
+say 'rc' rc
+::class t
+::method run
+  call syssleep 0.4
+----
+rc> 0
+out> rc 4
+
+# a raise in the middle of the expression, and a NOVALUE
+program
+signal on syntax name mid
+'exit' f()
+exit
+f: raise syntax 40.1 array('F')
+mid:
+say 'mid' rc sigl
+signal on novalue
+'exit' zq
+exit
+novalue: say 'novalue' sigl condition('D')
+----
+rc> 0
+out> mid 40 2
+out> novalue 8 ZQ
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as the command's own slot
+program
+'exit' rexx:length('abc')
+----
+rc> 213
+err>      1 *-* 'exit' rexx:length('abc')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:
