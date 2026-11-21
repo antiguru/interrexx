@@ -155,3 +155,35 @@ fn a_block_started_on_the_host_carries_on_compiled() {
         "the loop left compiled code at a block start"
     );
 }
+
+/// A loop whose body does work of its own around an inner loop compiles
+/// whole once it is hot. Its inner loop, three times as hot, compiles first
+/// and is entered on every outer pass until then; from the outer loop's
+/// compile on, compiled code is not left, so the entries do not grow with the
+/// passes after it.
+#[test]
+fn an_outer_loop_compiles_with_its_inner_loop() {
+    let entries = |n: u32| {
+        reset_compiled_runs();
+        ran(format!(
+            "a = 0; b = 0; c = 0; t = 0\n\
+             do i = 1 to {n}\n\
+             \x20 a = a + i; b = b + a // 7; c = c + b - a // 3\n\
+             \x20 d = a * 2; e = d - c; f = e + 1; g = f // 5; h = g + a\n\
+             \x20 do j = 1 to 3\n\
+             \x20   t = t + j\n\
+             \x20 end\n\
+             \x20 a = a - h // 11\n\
+             end\n\
+             say a b c t"
+        )
+        .as_bytes());
+        compiled_runs()
+    };
+    let short = entries(super::THRESHOLD + 2000);
+    assert_eq!(
+        entries(super::THRESHOLD + 20000),
+        short,
+        "compiled code was left on outer passes after the outer loop compiled"
+    );
+}

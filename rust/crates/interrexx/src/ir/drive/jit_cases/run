@@ -643,3 +643,83 @@ f: return arg(1) >= 9999
 ----
 49995000 9999 9999
 compiled: no
+
+# an inner counted loop in a compiled body: its start and each pass boundary
+# through the host, its body compiled
+run
+t = 0
+do i = 1 to 10000
+  do j = 1 to 5
+    t = t + i * j
+    u = t // 7
+  end
+  t = t - u
+end
+say t i j
+----
+750045002 10001 6
+compiled: yes
+
+# inner loops of every flat shape the pass takes: DO n, a BY, none at all,
+# LEAVE and ITERATE
+run
+t = 0; s = 0
+do i = 1 to 10000
+  do 3
+    t = t + 1
+  end
+  do k = i to i + 2 by 2
+    s = s + k
+  end
+  do j = 1 to 0
+    t = t + 1000
+  end
+  do j = 1 to 4
+    if j = 3 then leave
+    s = s + j
+  end
+  do j = 1 to 4
+    if j = 2 then iterate
+    s = s - j
+  end
+end
+say t s i j k
+----
+30000 99980000 10001 5 10004
+compiled: yes
+
+# inner loops with a decimal control, a WHILE and an UNTIL
+run
+t = 0
+do i = 1 to 10000
+  do j = 1.5 to 3 by 0.5
+    t = t + 2
+  end
+  do j = 1 to 3 while j < 3
+    t = t + 1
+  end
+  do j = 1 to 3 until j > 1
+    t = t + 1
+  end
+end
+say t i j
+----
+120000 10001 2
+compiled: yes
+
+# an inner loop inside a body with work of its own: the whole compiles, the
+# inner loop's pass boundary native
+run
+a = 0; b = 0; c = 0; t = 0
+do i = 1 to 10000
+  a = a + i; b = b + a // 7; c = c + b - a // 3
+  d = a * 2; e = d - c; f = e + 1; g = f // 5; h = g + a
+  do j = 1 to 3
+    t = t + j
+  end
+  a = a - h // 11
+end
+say a b c t
+----
+49955040 28959 145015284 60000
+compiled: yes

@@ -37,29 +37,13 @@ pub(crate) struct Native {
     /// The clause generated code entered last and the interpreter has not
     /// been told of: the pc of its `Op::Clause`, from which the host reads its
     /// instruction, line and indent; [`CLAUSE_HEADER`] for the loop's header
-    /// clause at a pass boundary, whose line and indent are `loop_line` and
-    /// `loop_indent` and whose instruction is `loop_end`; or [`CLAUSE_NONE`].
+    /// clause at a pass boundary of the loop whose record is `k`, as
+    /// [`clause_header`] encodes it, whose line, indent and instruction that
+    /// record holds; or [`CLAUSE_NONE`].
     pub(crate) clause_at: u64,
-    /// Non-zero when generated code may take the loop's next pass itself,
-    /// which is `run::QuickPass`'s: the control variable in slot `loop_slot`
-    /// stepped by `loop_step` and compared with `loop_to`, in a header clause
-    /// at `loop_line` that leaves the value indent at `loop_indent`.
-    pub(crate) loop_ready: u64,
-    /// Which step: [`LOOP_CONTROLLED`], [`LOOP_COUNT`] (with the passes left in
-    /// `loop_value`) or [`LOOP_FOREVER`].
-    pub(crate) loop_kind: u64,
-    pub(crate) loop_slot: u64,
-    pub(crate) loop_step: i64,
-    pub(crate) loop_to: i64,
-    pub(crate) loop_line: u64,
-    pub(crate) loop_indent: u64,
-    /// The header clause's instruction, the loop's `END`, which the host
-    /// alone reads.
-    pub(crate) loop_end: u64,
-    /// The control value generated code last wrote, which
-    /// [`Native::loop_dirty`] says the loop's own state has not been given.
-    pub(crate) loop_value: i64,
-    pub(crate) loop_dirty: u64,
+    /// Each loop the pass holds, the compiled loop's own first and the inner
+    /// loops its body runs after it.
+    pub(crate) loops: [LoopRecord; MAX_LOOPS],
     /// Non-zero when `NUMERIC FUZZ` is 0 and `TRACE` shows no results: what
     /// the driver's own quick comparison and quick condition test ask.
     pub(crate) quick_values: u64,
@@ -85,22 +69,55 @@ impl Native {
             steady: 0,
             countdown: 0,
             clause_at: CLAUSE_NONE,
-            loop_ready: 0,
-            loop_kind: 0,
-            loop_slot: 0,
-            loop_step: 0,
-            loop_to: 0,
-            loop_line: 0,
-            loop_indent: 0,
-            loop_end: 0,
-            loop_value: 0,
-            loop_dirty: 0,
+            loops: [LoopRecord::default(); MAX_LOOPS],
             quick_values: 0,
             passes: 0,
             jump_to: 0,
             opened: 0,
         }
     }
+}
+
+/// One loop's quick pass, for generated code to take its pass boundary
+/// itself.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub(crate) struct LoopRecord {
+    /// Non-zero when generated code may take the loop's next pass itself,
+    /// which is `run::QuickPass`'s: the control variable in slot `slot`
+    /// stepped by `step` and compared with `to`, in a header clause at
+    /// `line` that leaves the value indent at `indent`.
+    pub(crate) ready: u64,
+    /// Which step: [`LOOP_CONTROLLED`], [`LOOP_COUNT`] (with the passes left in
+    /// `value`) or [`LOOP_FOREVER`].
+    pub(crate) kind: u64,
+    pub(crate) slot: u64,
+    pub(crate) step: i64,
+    pub(crate) to: i64,
+    pub(crate) line: u64,
+    pub(crate) indent: u64,
+    /// The header clause's instruction, the loop's `END`, which the host
+    /// alone reads.
+    pub(crate) end: u64,
+    /// The control value generated code last wrote, which `dirty` says the
+    /// loop's own state has not been given.
+    pub(crate) value: i64,
+    pub(crate) dirty: u64,
+}
+
+/// How many loops a compiled pass holds at most: its own and the inner ones.
+pub(crate) const MAX_LOOPS: usize = 4;
+
+/// [`Native::clause_at`] for the header clause of the loop whose record is
+/// `k`.
+pub(crate) const fn clause_header(k: usize) -> u64 {
+    u64::MAX - 1 - k as u64
+}
+
+/// The offset of `field` of record `k` in [`Native`].
+pub(crate) const fn loop_field(k: usize, field: usize) -> i32 {
+    assert!(k < MAX_LOOPS);
+    at(offset_of!(Native, loops) + k * size_of::<LoopRecord>() + field)
 }
 
 /// An offset into [`Native`], as the code generator takes it.
@@ -118,18 +135,16 @@ pub(crate) const COUNTDOWN: i32 = at(offset_of!(Native, countdown));
 pub(crate) const CLAUSE_AT: i32 = at(offset_of!(Native, clause_at));
 /// [`Native::clause_at`] with no clause to tell the interpreter of.
 pub(crate) const CLAUSE_NONE: u64 = u64::MAX;
-/// [`Native::clause_at`] for the loop's header clause.
-pub(crate) const CLAUSE_HEADER: u64 = u64::MAX - 1;
-pub(crate) const LOOP_READY: i32 = at(offset_of!(Native, loop_ready));
-pub(crate) const LOOP_KIND: i32 = at(offset_of!(Native, loop_kind));
+pub(crate) const LOOP_READY: usize = offset_of!(LoopRecord, ready);
+pub(crate) const LOOP_KIND: usize = offset_of!(LoopRecord, kind);
 pub(crate) const LOOP_CONTROLLED: u64 = 0;
 pub(crate) const LOOP_COUNT: u64 = 1;
 pub(crate) const LOOP_FOREVER: u64 = 2;
-pub(crate) const LOOP_SLOT: i32 = at(offset_of!(Native, loop_slot));
-pub(crate) const LOOP_STEP: i32 = at(offset_of!(Native, loop_step));
-pub(crate) const LOOP_TO: i32 = at(offset_of!(Native, loop_to));
-pub(crate) const LOOP_VALUE: i32 = at(offset_of!(Native, loop_value));
-pub(crate) const LOOP_DIRTY: i32 = at(offset_of!(Native, loop_dirty));
+pub(crate) const LOOP_SLOT: usize = offset_of!(LoopRecord, slot);
+pub(crate) const LOOP_STEP: usize = offset_of!(LoopRecord, step);
+pub(crate) const LOOP_TO: usize = offset_of!(LoopRecord, to);
+pub(crate) const LOOP_VALUE: usize = offset_of!(LoopRecord, value);
+pub(crate) const LOOP_DIRTY: usize = offset_of!(LoopRecord, dirty);
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
 pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
