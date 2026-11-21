@@ -1247,8 +1247,14 @@ output and error streams, and any other number a descriptor that some other
 stream or other code holds, such as the one `QUERY HANDLE` answers for a file.
 Closing the stream leaves descriptor `n` open. An open with `APPEND`,
 `REPLACE` or a `SHARE` option raises `SYNTAX 93.0`: the descriptor is already
-open as it is. Nothing exists by such a name: `QUERY EXISTS` answers the null
-string, and once the stream is open `qualify` answers the name as written.
+open as it is. An explicit open takes the mode its options name, whatever the
+descriptor was opened with, so `open('read')` on a descriptor open only for
+writing answers `READY:` and its reads then fail; an implicit open takes the
+descriptor's own mode. Nothing exists by such a name: `QUERY EXISTS` answers
+the null string, open or not. Once the stream is open, `qualify` answers the
+name as written; before, it answers the name resolved as a file's, and `QUERY
+SIZE` and `QUERY DATETIME` answer for a file of that name, as for any other
+stream.
 Where reads and writes through a `HANDLE:` stream land relative to those
 through another stream on the same descriptor, what a `HANDLE:` stream does
 with a number that names no open descriptor, and which of the descriptors the
