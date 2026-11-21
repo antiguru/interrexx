@@ -32,9 +32,12 @@
 //!    sets from `RootSet::top_window` after every bracketed call into the host
 //!    and which nothing but a call into the host can invalidate; a null window
 //!    is never dereferenced. It writes a slot only as `VarSlot::of` would. The
-//!    one unbracketed call, [`Host::push_arg`], appends to the argument stack
-//!    and touches no frame, which a debug check of the window after it
-//!    asserts.
+//!    two unbracketed calls change nothing [`Host::leave`] reads:
+//!    [`Host::push_arg`] appends to the argument stack and touches no frame,
+//!    and [`Host::quiet_builtin`] runs a builtin that changes nothing but the
+//!    heap, given arguments that run no Rexx code (`crate::builtin::quiet`).
+//!    Debug builds check the window after the first and the whole block after
+//!    the second.
 //! 4. The helpers are the only code that turns the `Ctx` pointer back into a
 //!    reference, and only while generated code is suspended in that call.
 //! 5. The machine code lives in the [`JITModule`] that [`Compiled`] owns,
@@ -104,6 +107,20 @@ pub(crate) trait Host {
     /// Whether the block's slot window is still the running frame's: what
     /// [`Host::leave`] would set it to.
     fn window_holds(&mut self, native: &Native) -> bool;
+    /// `Op::CallArgs` at `pc` over the registers `args` carries
+    /// ([`carry_arg`]), where it still resolves to a quiet builtin
+    /// (`crate::builtin::quiet`), the arguments are plain and the call
+    /// succeeds: its answer written to the op's register, and `true`. Called
+    /// with no bracket, and so it reads nothing the block holds (the clause is
+    /// whoever's it was) and changes nothing [`Host::leave`] reads. Anywhere
+    /// else it changes nothing at all and answers `false`.
+    fn quiet_builtin(&mut self, pc: u32, args: u64) -> bool;
+    /// Pushes the arguments `args` carries for `Op::CallArgs` at `pc`, as the
+    /// `Op::PushArg`s the pass dropped would have.
+    fn stage_args(&mut self, pc: u32, args: u64);
+    /// Whether [`Host::leave`] would leave unchanged every field of `native`
+    /// it does not take from the interpreter's clause state.
+    fn refresh_holds(&mut self, native: &Native) -> bool;
 }
 
 /// One step of a pass.
@@ -139,6 +156,13 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// `Op::CallArgs` at `pc`, compiled where its site resolved to a quiet
+    /// builtin: [`Host::quiet_builtin`] over the argument registers `args`
+    /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
+    /// arguments pushed and the op through the host.
+    Builtin { pc: u32, args: u64 },
+    /// A step the pass took out, which is never compiled.
+    Dropped,
     /// `Op::PushArg` of register `src`.
     PushArg { src: u16 },
     /// An `IF`'s `Op::ConditionJump` at `pc` on register `reg`, the last op
@@ -258,29 +282,67 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// the host hands back is generated code's again, and the call answers
 /// [`CONTINUE`] for it.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| run_op(ctx, clause, pc))
+}
+
+/// How many arguments a [`Step::Builtin`] carries at most: one register
+/// each, in 16 bits of a `u64`.
+pub(crate) const CARRIED_ARGS: usize = 4;
+
+/// A [`Step::Builtin`]'s `args` before any is carried.
+pub(crate) const NO_ARGS: u64 = u64::MAX;
+
+/// `args` with argument `k`, below [`CARRIED_ARGS`], in register `src`, or
+/// omitted where `src` is [`OMITTED`].
+pub(crate) const fn carry_arg(args: u64, k: usize, src: u16) -> u64 {
+    let shift = 16 * k as u32;
+    (args & !(0xffff << shift)) | ((src as u64) << shift)
+}
+
+/// The register [`carry_arg`] put at `k` in `args`.
+pub(crate) const fn carried_arg(args: u64, k: usize) -> u16 {
+    (args >> (16 * k as u32)) as u16
+}
+
+/// [`Step::Builtin`]: the quiet path with no bracket (property 3 of the module
+/// doc), and otherwise the arguments pushed and the op's own path.
+extern "C" fn builtin_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32, args: u64) -> u32 {
     guarded(ctx, |ctx| {
-        let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
-        ctx.native.opened = 0;
-        ctx.host.enter(&mut ctx.native);
-        let host = &mut *ctx.host;
-        let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
-            CONTINUE => match host.op(pc) {
-                CONTINUE if adopt => host.release(),
-                answer => answer,
-            },
-            answer => answer,
-        };
-        ctx.host.leave(&mut ctx.native);
-        if answer == FAST {
-            ctx.native.opened = 1;
-            CONTINUE
-        } else {
-            answer
+        if ctx.host.quiet_builtin(pc, args) {
+            debug_assert!(
+                ctx.host.refresh_holds(&ctx.native),
+                "a quiet builtin changed what the block holds"
+            );
+            return CONTINUE;
         }
+        ctx.host.stage_args(pc, args);
+        run_op(ctx, clause, pc)
     })
 }
 
-/// The one helper that is not bracketed (property 3 of the module doc).
+/// [`op_helper`]'s body.
+fn run_op(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
+    ctx.native.opened = 0;
+    ctx.host.enter(&mut ctx.native);
+    let host = &mut *ctx.host;
+    let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
+        CONTINUE => match host.op(pc) {
+            CONTINUE if adopt => host.release(),
+            answer => answer,
+        },
+        answer => answer,
+    };
+    ctx.host.leave(&mut ctx.native);
+    if answer == FAST {
+        ctx.native.opened = 1;
+        CONTINUE
+    } else {
+        answer
+    }
+}
+
+/// A helper that is not bracketed (property 3 of the module doc).
 extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
     guarded(ctx, |ctx| {
         ctx.host.push_arg(src as u16);
@@ -349,6 +411,8 @@ struct Emit<'a, 'b> {
     bare: cranelift_codegen::ir::SigRef,
     with_pc: cranelift_codegen::ir::SigRef,
     with_two: cranelift_codegen::ir::SigRef,
+    /// `with_two`'s, and a `u64` after.
+    with_args: cranelift_codegen::ir::SigRef,
     /// Whether the open clause was opened by generated code and not yet
     /// adopted, which is what makes its close free. `Native::opened` carries
     /// it into an op's call into the host and back out.
@@ -401,21 +465,40 @@ impl Emit<'_, '_> {
     /// `clause_pc` first where generated code opened it, and leaves for `exit`
     /// unless the answer is CONTINUE or, with `also`, that answer and block.
     fn call_op(&mut self, clause_pc: Option<u32>, pc: u32, also: Option<(u32, Block)>) {
+        let helper = op_helper as *const ();
+        self.call_op_with(helper, None, clause_pc, pc, also);
+    }
+
+    /// [`Emit::call_op`] through `helper`, which takes the same arguments
+    /// and, with `args`, that `u64` after them.
+    fn call_op_with(
+        &mut self,
+        helper: *const (),
+        args: Option<u64>,
+        clause_pc: Option<u32>,
+        pc: u32,
+        also: Option<(u32, Block)>,
+    ) {
         if clause_pc.is_some() {
             let fast = self.b.use_var(self.fast);
             self.store_native(fast, layout::OPENED);
         }
         let clause = clause_pc.unwrap_or(NO_ADOPT);
-        let address = self
-            .b
-            .ins()
-            .iconst(self.pointer, op_helper as *const () as usize as i64);
+        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
         let clause = self.b.ins().iconst(types::I32, i64::from(clause));
         let pc = self.b.ins().iconst(types::I32, i64::from(pc));
-        let call = self
-            .b
-            .ins()
-            .call_indirect(self.with_two, address, &[self.ctx, clause, pc]);
+        let call = match args {
+            Some(args) => {
+                let args = self.b.ins().iconst(types::I64, args as i64);
+                self.b
+                    .ins()
+                    .call_indirect(self.with_args, address, &[self.ctx, clause, pc, args])
+            }
+            None => self
+                .b
+                .ins()
+                .call_indirect(self.with_two, address, &[self.ctx, clause, pc]),
+        };
         let answer = self.b.inst_results(call)[0];
         // The clause is the host's now, unless the op handed it back.
         let fast = if clause_pc.is_some() {
@@ -533,9 +616,14 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Close { .. }
             | Step::Op { .. }
             | Step::Jump { .. }
+            | Step::Dropped
             | Step::EndBranch { .. }
             | Step::Between { .. } => None,
             Step::PushArg { src } => (src != OMITTED).then_some(src),
+            Step::Builtin { args, .. } => (0..CARRIED_ARGS)
+                .map(|k| carried_arg(args, k))
+                .filter(|&src| src != OMITTED)
+                .max(),
         };
         // Property 2 of the module doc.
         if named.is_some_and(|register| register >= pass.registers) {
@@ -593,6 +681,12 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             s.params.push(AbiParam::new(types::I32));
             b.import_signature(s)
         };
+        let with_args = {
+            let mut s = helper_signature(true);
+            s.params.push(AbiParam::new(types::I32));
+            s.params.push(AbiParam::new(types::I64));
+            b.import_signature(s)
+        };
 
         let entry = b.create_block();
         let head = b.create_block();
@@ -617,6 +711,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             bare,
             with_pc,
             with_two,
+            with_args,
             fast,
             _module: std::marker::PhantomData,
         };
@@ -705,6 +800,14 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     dst,
                 } => compare(&mut e, clause_pc, pc, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::Builtin { pc, args } => e.call_op_with(
+                    builtin_helper as *const (),
+                    Some(args),
+                    Some(clause_pc),
+                    pc,
+                    None,
+                ),
+                Step::Dropped => {}
                 Step::Const { dst, bits } => {
                     let value = e.b.ins().iconst(types::I64, bits as i64);
                     e.b.ins()

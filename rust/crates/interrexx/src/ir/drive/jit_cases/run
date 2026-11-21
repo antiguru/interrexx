@@ -169,6 +169,7 @@ say n m r
 ----
 10000 20041 20036
 compiled: yes
+quiet builtin calls: yes
 
 # WHILE, UNTIL, a TO with WHILE, and FOR: the body compiled, each pass
 # boundary the host's
@@ -336,3 +337,102 @@ say x y
      8 *-* say x y
        >>>   "50005000 100000000"
 compiled: no
+
+# quiet builtins in a compiled body: one call each, over argument registers,
+# with no refresh
+run
+t = 0; s = 'the quick brown fox'
+do i = 1 to 10000
+  p = pos('o', s, i // 5 + 1); w = word(s, i // 4 + 1); u = substr(s, p, 3)
+  t = t + length(w) + p + words(s) + wordpos('fox', s) + lastpos('o', s)
+  v = translate(u, 'XY', 'ow') || reverse(w) || copies('-', 2) || strip('  a  ')
+  t = t + length(v) + abs(-i // 3) + max(i // 7, 3) + min(i // 7, 3) + sign(-i)
+  h = c2x(left(w, 2)) || x2c('41') || d2x(i // 256) || right(i, 3, 0) || center('m', 3)
+  t = t + length(h) + verify(w, 'abcdefghijklmnopqrstuvwxyz') + countstr('o', s)
+end
+say t h v u
+----
+739359 7468A10000 m  XYneht--a own
+compiled: yes
+quiet builtin calls: yes
+
+# a quiet builtin that fails in a compiled body is raised again by the full
+# path, from a clause the interpreter holds
+run
+s = 'abcdef'; n = 0
+signal on syntax
+do i = 1 to 10000
+  n = n + length(substr(s, 9001 - i, 2))
+end
+say n
+exit
+syntax:
+  say 'line' sigl 'error' rc'.'condition('E') 'at i =' i 'n =' n
+----
+line 4 error 40.14 at i = 9001 n = 18000
+compiled: yes
+quiet builtin calls: yes
+
+# an object argument's STRING method is Rexx code, so a call over one takes
+# the full path, at a site resolved before the compile: the method runs once
+# per call, and its second call raises
+run
+o = .loud~new; n = 0
+do i = 1 to 10000
+  n = n + length(i)
+  if i = 1 | i = 9500 then n = n + length(o)
+end
+say n
+::class loud
+::method string
+  expose count
+  if var('count') = 0 then count = 0
+  count = count + 1
+  say 'string asked' count
+  if count = 2 then raise syntax 93.900 array('refused')
+  return 'abc'
+----
+string asked 1
+string asked 2
+    13 *-*     raise syntax 93.900 array('refused')
+     4 *-*       n = n + length(o)
+Error 93 running t.rex line 13:  Invalid call to method.
+Error 93.900:  refused.
+compiled: yes
+quiet builtin calls: yes
+
+# a call with more arguments than a step carries keeps its pushes
+run
+n = 0
+do i = 1 to 10000
+  n = n + length(translate('abc', 'xyz', 'abc', ' ')) + length(overlay('x', 'abcdef', 2, 3, '.'))
+end
+say n
+----
+90000
+compiled: yes
+quiet builtin calls: yes
+
+# every quiet builtin in one compiled body, each call checked in debug against
+# a full refresh of the block
+run
+t = 0; s = 'the quick brown fox'
+do i = 1 to 10000
+  t = t + abbrev('quick', 'qu') + abs(-3) + length(bitand('ab', 'cd')) + length(bitor('a', 'b'))
+  t = t + length(bitxor('a', 'b')) + length(b2x('1010')) + length(center(s, 25))
+  t = t + length(centre('x', 3)) + length(changestr('o', s, '0')) + compare(s, 'the')
+  t = t + length(copies('ab', 3)) + countstr('o', s) + c2d('a') + length(c2x('ab'))
+  t = t + length(delstr(s, 2, 3)) + length(delword(s, 2)) + length(d2c(65)) + length(d2x(255))
+  t = t + length(format(1.5, 3, 2)) + length(insert('x', s, 3)) + lastpos('o', s)
+  t = t + length(left(s, 5)) + length(lower(s)) + max(1, 7, 3) + min(4, 2) + length(overlay('x', s, 2))
+  t = t + pos('fox', s) + length(reverse(s)) + length(right(s, 4)) + sign(-5) + length(space(s, 2))
+  t = t + length(strip('  a  ')) + length(substr(s, 3, 4)) + length(subword(s, 2, 2))
+  t = t + length(translate(s)) + length(trunc(3.75, 1)) + length(upper(s)) + verify(s, 'the ')
+  t = t + length(word(s, 2)) + wordindex(s, 3) + wordlength(s, 4) + wordpos('fox', s) + words(s)
+  t = t + length(xrange('a', 'f')) + length(x2b('a')) + length(x2c('41')) + x2d('ff')
+end
+say t
+----
+7050000
+compiled: yes
+quiet builtin calls: yes

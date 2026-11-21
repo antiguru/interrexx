@@ -356,3 +356,116 @@ fn every_raw_argument_row_names_a_builtin_and_a_position_it_can_take() {
         }
     }
 }
+
+/// An interpreter with a live top-level activation over a `NOP`, as the
+/// numeric tests build one: where builtins read the `NUMERIC` settings.
+#[cfg(feature = "jit")]
+fn interp_with_activation() -> Interp {
+    use crate::plan::BodyKey;
+    let mut interp = Interp::new();
+    let program = std::rc::Rc::new(
+        interrexx_parse::parse_program(b"nop".to_vec()).expect("a NOP program parses"),
+    );
+    let program_id = interp.programs.insert(std::rc::Rc::clone(&program));
+    let plan = interp.plan_for(
+        BodyKey {
+            program: program_id,
+            directive: None,
+        },
+        &program.main,
+        &program.symbols,
+        &program.source,
+    );
+    let frame = interp.roots.push_slots(plan.len());
+    let activation = interp.next_activation_id();
+    interp.push_activation(crate::Activation::new(
+        activation, program, program_id, plan, frame,
+    ));
+    interp
+}
+
+/// What a call to a [`QUIET`] builtin may not change: what the JIT host
+/// mirrors (`NUMERIC` and `TRACE` settings, the running frame's slot window,
+/// whether a clause boundary is steady) and anything a pending trap, a frame,
+/// a clause or a resolution would leave behind.
+#[cfg(feature = "jit")]
+fn quiet_state(interp: &mut Interp) -> String {
+    let activation = interp.activation();
+    let settings = (
+        activation.settings.digits(),
+        activation.settings.fuzz(),
+        activation.clock_stale,
+        activation.exposed.is_some(),
+    );
+    let mode = interp.trace_mode();
+    let trace = (mode.results, mode.all);
+    let frame = interp.activation().frame;
+    let window = interp
+        .roots
+        .top_window(frame)
+        .map(|window| (window.as_ptr() as usize, window.len()));
+    let activity = &interp.activity;
+    format!(
+        "{settings:?} {trace:?} {window:?} {:?}",
+        (
+            activity.pending_traps.len(),
+            interp.clause_exits,
+            activity.rerun_pending(),
+            activity.clause_line_override.is_some(),
+            activity.procedure_permitted,
+            activity.region_procedure_permitted,
+            activity.value_buffer.len(),
+            activity.depth,
+            interp.routine_generation,
+            interp.clause_countdown,
+        )
+    )
+}
+
+/// Every [`QUIET`] name is a row, and a call to each, over a spread of plain
+/// arguments that succeed and fail, leaves [`quiet_state`] as it was: so a
+/// quiet call that fails can be made again by the full path.
+#[cfg(feature = "jit")]
+#[test]
+fn quiet_builtins_leave_the_interpreter_as_they_found_it() {
+    let values: [&[u8]; 7] = [b"", b"abc", b"3", b"-2", b"1.5", b"ff", b"1E+400"];
+    let mut calls = 0;
+    for name in QUIET {
+        let target = resolve(name).expect("a quiet builtin is a builtin");
+        assert!(quiet(target), "{}", String::from_utf8_lossy(name));
+        let row = &IMPLEMENTED[match target {
+            BuiltinTarget::Row(row) => usize::from(row),
+            BuiltinTarget::Gap => panic!("a quiet builtin has a row"),
+        }];
+        let most = row.max.unwrap_or(4).min(3);
+        for argc in row.min.min(most)..=most {
+            let mut picks = vec![0usize; argc];
+            loop {
+                let mut interp = interp_with_activation();
+                let args: Vec<_> = picks
+                    .iter()
+                    .map(|&pick| Some(interp.text(values[pick])))
+                    .collect();
+                let before = quiet_state(&mut interp);
+                let _ = run(&mut interp, b"", target, &args);
+                assert_eq!(
+                    before,
+                    quiet_state(&mut interp),
+                    "{} over {:?}",
+                    String::from_utf8_lossy(name),
+                    picks
+                );
+                calls += 1;
+                // The next combination, or done.
+                let Some(k) = picks.iter().position(|&pick| pick + 1 < values.len()) else {
+                    break;
+                };
+                picks[k] += 1;
+                for pick in &mut picks[..k] {
+                    *pick = 0;
+                }
+            }
+        }
+    }
+    assert!(calls > 1000, "{calls}");
+}
