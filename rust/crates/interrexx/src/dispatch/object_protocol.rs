@@ -1669,6 +1669,82 @@ impl Interp {
     }
 }
 
+impl Interp {
+    /// The SYNTAX condition a kept condition object stands for once Rexx code
+    /// may have changed it, made again from its `CODE` and `ADDITIONAL` as
+    /// `RAISE SYNTAX` makes one: `RC`, `ERRORTEXT` and `MESSAGE` are written
+    /// back from them, and a `CODE` that is not a string naming a valid error
+    /// number, or an `ADDITIONAL` that is not an `Array`, is 93.900 here
+    /// instead (`r[class.message.result.changed]`). A code with no message is
+    /// raised as `RAISE SYNTAX` raises it, 98.941.
+    pub(crate) fn rebuilt_kept_syntax(
+        &mut self,
+        raised: Raised,
+        object: ObjRef,
+    ) -> Result<Raised, Failure> {
+        let code = self
+            .condition_entry_held(object, b"CODE")
+            .filter(|code| {
+                matches!(
+                    self.receiver_kind(*code),
+                    Ok(Primitive::String | Primitive::SmallInt)
+                )
+            })
+            .and_then(|code| crate::run::raised::syntax_code(&self.to_text(code)));
+        let Some(code) = code else {
+            return Err(Raised::method_user_defined(
+                "the CODE of a SYNTAX condition object must be a valid error number",
+            )
+            .into());
+        };
+        let items = match self.condition_entry_held(object, b"ADDITIONAL") {
+            // A SYNTAX condition always has the entry: one Rexx code removed
+            // is an empty `Array` again.
+            None => {
+                let empty = self.additional_array(&[]);
+                self.condition_put(object, b"ADDITIONAL", empty)?;
+                Vec::new()
+            }
+            Some(additional) => match self.array_slots_of(additional) {
+                Some(items) => items,
+                None => {
+                    return Err(Raised::method_user_defined(
+                        "the ADDITIONAL of a SYNTAX condition object must be an array",
+                    )
+                    .into());
+                }
+            },
+        };
+        let mut substitutions = Vec::with_capacity(items.len());
+        for item in items {
+            substitutions.push(match item {
+                Some(item) => self.string_value_text(item)?,
+                None => Vec::new(),
+            });
+        }
+        let made = crate::run::raised::raised_for_code(code, substitutions);
+        if (made.number, made.sub) == (98, 941) {
+            return Err(made.into());
+        }
+        let rc = self.text(made.number.to_string().as_bytes());
+        self.condition_put(object, b"RC", rc)?;
+        let errortext = self.text_built(made.message(made.number, 0));
+        self.condition_put(object, b"ERRORTEXT", errortext)?;
+        let message = match made.sub {
+            0 => ObjRef::NIL,
+            sub => self.text_built(made.message(made.number, sub)),
+        };
+        self.condition_put(object, b"MESSAGE", message)?;
+        Ok(Raised {
+            number: made.number,
+            sub: made.sub,
+            additional: made.additional,
+            rc: made.rc,
+            ..raised
+        })
+    }
+}
+
 /// [`native_message_result`] once the send has completed. A send made again
 /// between the wake and this read has cleared the outcome, which answers
 /// `.nil`.
@@ -1679,8 +1755,13 @@ fn message_result(interp: &mut Interp, message: ObjRef) -> Result<Option<ObjRef>
             let Some(object) = interp.native_entry(message, MESSAGE_CONDITION) else {
                 return Err(Failure::Raised(raised));
             };
+            let raised = if raised.condition == "SYNTAX" {
+                interp.rebuilt_kept_syntax(*raised, object)?
+            } else {
+                *raised
+            };
             let lines = interp.traceback_lines(object)?;
-            interp.reraise_kept_condition(*raised, object, lines)
+            interp.reraise_kept_condition(raised, object, lines)
         }
         Some(None) => {
             let held = interp.native_entry(message, MESSAGE_RESULT);

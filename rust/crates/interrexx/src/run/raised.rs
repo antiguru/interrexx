@@ -80,7 +80,7 @@ pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> R
 
 /// The error code, `major * 1000 + sub`, that the argument of `RAISE SYNTAX`
 /// names, or `None` where the argument is not a valid error number.
-pub(super) fn syntax_code(text: &[u8]) -> Option<u64> {
+pub(crate) fn syntax_code(text: &[u8]) -> Option<u64> {
     /// One half of the argument as a Rexx number, then a
     /// whole-number check. `None` for anything that is not a whole number.
     fn whole(text: &str) -> Option<i64> {

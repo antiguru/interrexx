@@ -3,9 +3,9 @@
 mod raise;
 
 use super::{
-    ActiveCondition, CallEntry, CallType, Code, ConditionTrap, Cow, Ended, Entry, Failure, Flow,
-    HandlerExit, Interp, Loud, Novalue, Number, ObjRef, PendingTrap, Raise, Raised, Rc, ReplyState,
-    Search, Trap, TrappedCondition, body_of, raise_syntax_condition, syntax_code,
+    ActiveCondition, CallType, Code, ConditionTrap, Cow, Ended, Entry, Failure, Flow, HandlerExit,
+    Interp, Loud, Novalue, Number, ObjRef, PendingTrap, Raise, Raised, Rc, ReplyState, Search,
+    Trap, TrappedCondition, body_of, raise_syntax_condition, syntax_code,
 };
 use crate::error::FailureSite;
 
@@ -252,13 +252,11 @@ impl Interp {
             .trap_frame()
             .map_or(self.activation().id, |activation| activation.id);
         match self.trap_for(b"NOTREADY") {
-            // Raised again while the trap is delayed, by a handler running or
-            // by a raise this clause queued.
-            Some(trap)
-                if trap.call && (trap.delayed || self.notready_trap_delayed_at(trapping)) =>
-            {
-                Ok(())
-            }
+            // Raised again while its handler runs, the trap being delayed. One
+            // raised while an earlier one is only queued is held as well, and
+            // calls the handler again (`r[cond.traps.delay]`, upstream bug
+            // #2084).
+            Some(trap) if trap.call && trap.delayed => Ok(()),
             Some(trap) if trap.call => {
                 self.activity.pending_additional = Some(stream);
                 self.activity.pending_result = Some(result);
@@ -1007,24 +1005,15 @@ impl Interp {
         // `::ROUTINE` rather than to a label. A trapped `USER` condition whose
         // handler is a `::routine` running `parse source` answers `SUBROUTINE`,
         // where the same handler written as a label answers whatever the
-        // trapping activation answers. **`CallEntry::Trap`, which is the one
-        // thing about a handler's own activation that differs from an internal
-        // `CALL`'s**: a trap call passes no receiver where an internal call
-        // passes the caller's, so the handler's calling convention carries none
-        // -- `entered_receiver` has both. The condition object is the handler's
-        // one argument, whether it is a label, a builtin or an external
-        // routine.
+        // trapping activation answers. A label handler has the trapping
+        // activation's receiver, as an internal `CALL` has
+        // (`entered_receiver`). The condition object is the handler's one
+        // argument, whether it is a label, a builtin or an external routine.
         let arguments = pending.object.map(Some).into_iter().collect();
         let ended = pinned!(
             self,
             crate::pinning::PinKind::TrapHandler,
-            self.resolve_and_run_call_over(
-                &trap.label,
-                true,
-                arguments,
-                CallType::Subroutine,
-                CallEntry::Trap,
-            )
+            self.resolve_and_run_call_over(&trap.label, true, arguments, CallType::Subroutine,)
         );
         // A trap queued by the handler that just ran is not one the
         // interrupted clause owes, and `in_clause`'s tripwire has to be able
@@ -1083,44 +1072,6 @@ impl Interp {
             !pending.request
                 && pending.activation == activation
                 && pending.condition.eq_ignore_ascii_case(condition)
-        })
-    }
-
-    /// Whether a condition already queued at `activation` put the `CALL ON`
-    /// trap taking `NOTREADY` there into the delayed state: a `NOTREADY`, or,
-    /// where `CALL ON ANY` takes it, any condition that trap took. An internal
-    /// routine inherits its caller's DELAY state (rexxref condtra.xml, Notes:
-    /// the state of each trap is saved on entry to a subroutine), so one
-    /// queued at a caller its internal calls reach counts too, while the
-    /// routine's trap is still the one it inherited: a trap it set itself is
-    /// not delayed by its caller's.
-    fn notready_trap_delayed_at(&self, activation: crate::activation::ActivationId) -> bool {
-        if self.activity.pending_traps.is_empty() {
-            return false;
-        }
-        let frames: Vec<&crate::activation::Activation> = self
-            .frames()
-            .skip_while(|frame| frame.id != activation)
-            .collect();
-        let mut chain = Vec::new();
-        for (at, frame) in frames.iter().enumerate() {
-            chain.push(frame.id);
-            let inherited = frame.entry == crate::activation::Entry::InternalCall
-                && frames
-                    .get(at + 1)
-                    .is_some_and(|caller| same_notready_trap(frame, caller));
-            if !inherited {
-                break;
-            }
-        }
-        let traps = self.trap_frame().map(|frame| &frame.traps);
-        let by_any = traps.is_some_and(|traps| traps.get(b"NOTREADY".as_slice()).is_none());
-        self.activity.pending_traps.iter().any(|pending| {
-            !pending.request
-                && chain.contains(&pending.activation)
-                && (pending.condition.eq_ignore_ascii_case(b"NOTREADY")
-                    || (by_any
-                        && traps.is_some_and(|traps| traps.get(&pending.condition).is_none())))
         })
     }
 
@@ -1257,23 +1208,4 @@ fn call_on_any_takes(condition: &[u8]) -> bool {
 /// condition but `SYNTAX` goes untrapped.
 fn ignored_in_debug_pause(frame: &crate::activation::Activation, condition: &[u8]) -> bool {
     frame.flags.debug_pause() && condition != b"SYNTAX"
-}
-
-/// Whether `frame` takes `NOTREADY` by the very trap `caller` does, the one
-/// it inherited on entry: each `CALL ON` or `SIGNAL ON` makes a new label.
-fn same_notready_trap(
-    frame: &crate::activation::Activation,
-    caller: &crate::activation::Activation,
-) -> bool {
-    fn in_force(activation: &crate::activation::Activation) -> Option<&std::rc::Rc<[u8]>> {
-        let traps = &activation.traps;
-        traps
-            .get(b"NOTREADY".as_slice())
-            .or_else(|| traps.get(b"ANY".as_slice()))
-            .map(|trap| &trap.label)
-    }
-    match (in_force(frame), in_force(caller)) {
-        (Some(own), Some(inherited)) => std::rc::Rc::ptr_eq(own, inherited),
-        _ => false,
-    }
 }

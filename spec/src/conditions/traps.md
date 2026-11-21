@@ -456,8 +456,11 @@ address system 'exit 3'
 
 r[cond.traps.delay]
 While the state of a CALL trap is `DELAY`, a condition that is raised for it
-again does not call the routine. ERROR, FAILURE and NOTREADY raised again are
-ignored. Every other condition that is raised is held, and the held ones are
+again does not call the routine. ERROR and FAILURE raised again are ignored
+from the moment the first is raised, so of two in one clause only the first
+calls the routine. NOTREADY raised again is ignored while the routine runs,
+and one raised in the same clause as an earlier one, before the routine has
+been called, is held like any other. Every other condition that is raised is held, and the held ones are
 answered in the order raised when the state of the trap changes. A CALL OFF
 or SIGNAL OFF for the condition drops them. A CALL ON or SIGNAL ON for the
 condition answers them at the end of that instruction, with the trap that the
@@ -504,6 +507,23 @@ leave h 1
 main after 1
 enter h 2 DELAY
 leave h 2
+main after 2
+```
+
+```rexx
+call on notready name h
+n = 0
+z = linein('/nonexistent-dir/a') || linein('/nonexistent-dir/b')
+say 'main after' n
+exit
+h: n = n + 1
+  say 'h' n condition('d')
+  return
+```
+
+```output
+h 1 /nonexistent-dir/a
+h 2 /nonexistent-dir/b
 main after 2
 ```
 

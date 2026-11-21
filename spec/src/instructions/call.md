@@ -408,6 +408,41 @@ any on and off
 done
 ```
 
+r[instr.call.on.receiver]
+A label that a CALL trap calls in a method is an internal routine of the
+method, as a label CALL calls is: it runs with the method's receiver, so it can
+send a private method to `SELF`. The example sends one from the handler of a
+NOTREADY and from that of an ANY trap enabled in an internal routine of the
+method.
+
+```rexx
+.t~new~go
+::class t
+::method go
+  state = ''
+  call on notready name priv
+  call charin '/'
+  say 'notready' state
+  call inner
+  say 'any' state
+  return
+inner:
+  state = ''
+  call on any name priv
+  call charin '/'
+  return
+priv:
+  state = self~secret
+  return
+::method secret private
+  return 'private ran'
+```
+
+```output
+notready private ran
+any private ran
+```
+
 r[instr.call.on.error]
 The errors of the ON and OFF forms are found when the program is read. A CALL
 ON with no condition raises `SYNTAX 20.911` and an OFF `20.912`, and a USER

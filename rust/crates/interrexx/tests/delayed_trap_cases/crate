@@ -196,8 +196,8 @@ out> ha 1 USER ANYC first
 out> ha 2 USER ANYC again
 out> after any, m = 2
 
-# NOTREADY is ignored under a delayed CALL ON ANY trap, and when raised
-# twice in one clause
+# NOTREADY is ignored under a CALL ON ANY trap whose handler runs, and
+# raised twice in one clause calls the handler twice (r[cond.traps.delay])
 program
 call on any name ha
 m = 0
@@ -224,10 +224,11 @@ out> ha 1 NOTREADY no_such_file_zz.txt
 out> ha 1 returns
 out> after any, m = 1
 out> hn 1 NOTREADY no_such_file_zz3.txt
-out> after two, n = 1
+out> hn 2 NOTREADY no_such_file_zz4.txt
+out> after two, n = 2
 
-# NOTREADY is ignored under a CALL ON ANY trap a USER condition queued
-# at the same clause delayed
+# NOTREADY raised after a USER condition the same clause queued under a
+# CALL ON ANY trap is held, and calls the handler again
 program
 call on any name ha
 m = 0
@@ -242,10 +243,11 @@ ha:
 ----
 rc> 0
 out> ha 1 USER U one
-out> after a, m = 1
+out> ha 2 NOTREADY no_such_file_zz.txt
+out> after a, m = 2
 
 # a NOTREADY inside an internal routine the clause calls after queueing
-# one is ignored: the routine inherits the trap's DELAY state
+# one is held: the routine's is answered at its own clause, first
 program
 call on notready name hn
 m = 0
@@ -259,10 +261,11 @@ hn:
   return
 ----
 rc> 0
-out> hn 1 NOTREADY no_such_file_zz.txt
-out> after a, m = 1
+out> hn 1 NOTREADY no_such_file_zz2.txt
+out> hn 2 NOTREADY no_such_file_zz.txt
+out> after a, m = 2
 
-# and under a CALL ON ANY a USER condition queued at the clause delayed
+# and under a CALL ON ANY after a USER condition the clause queued
 program
 call on any name ha
 m = 0
@@ -277,8 +280,9 @@ ha:
   return
 ----
 rc> 0
-out> ha 1 USER U one
-out> after a, m = 1
+out> ha 1 NOTREADY no_such_file_zz.txt
+out> ha 2 USER U one
+out> after a, m = 2
 
 # an internal routine's own CALL ON NOTREADY is not delayed by the NOTREADY
 # its caller's clause queued: a trap the routine sets is its own

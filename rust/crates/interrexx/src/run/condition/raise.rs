@@ -563,6 +563,10 @@ impl Interp {
         self.clear_failure_levels();
         self.activity.failure_site = site;
         self.activity.failure_sites = sites;
+        // The report of the condition, should it reach the top untrapped, is
+        // the object's `TRACEBACK` as it stands then, lines Rexx code added
+        // or changed included (`r[instr.raise.propagate.traceback]`).
+        self.activity.traceback_object = self.activation().condition().and_then(|c| c.object);
         let trapper = self.trapping_depth(&active);
         self.activity.propagate_absorb = trapper + self.fragments_within(trapper);
         // A `REPLY` since the trap left the levels above the trapping one on

@@ -4666,6 +4666,20 @@ fn execute_kept(
     // are separate fields, and `Raised::report` for what the order means.
     let mut failure_sites = std::mem::take(&mut interp.activity.failure_sites);
     failure_sites.extend(interp.activity.failure_site.take());
+    // A propagated SYNTAX condition shows its object's `TRACEBACK`, every line
+    // by its string value (`r[instr.raise.propagate.traceback]`).
+    // Read while the activity still holds the object, which roots it: the
+    // read allocates.
+    if let Some(object) = interp.activity.traceback_object
+        && matches!(&result, Err(Failure::Raised(raised)) if raised.condition == "SYNTAX")
+        && let Ok(lines) = interp.traceback_lines(object)
+    {
+        failure_sites = lines
+            .into_iter()
+            .map(|text| FailureSite::Rendered { text })
+            .collect();
+    }
+    interp.activity.traceback_object = None;
     // `exit_code_for` needs `&mut interp` (`to_number` fills a lazy cache),
     // so this has to run before `interp.trace`/`interp.out` move out of
     // `interp` below -- a partial move of one field ends `interp`'s usability

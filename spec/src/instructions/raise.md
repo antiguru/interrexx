@@ -1462,6 +1462,30 @@ start
 h SYNTAX
 ```
 
+r[instr.raise.propagate.traceback]
+The `TRACEBACK` of a condition object is one list, which every object
+CONDITION('O') answers for the condition shares, and a SYNTAX condition that
+RAISE PROPAGATE raises again and that no trap takes is reported with that
+list as it stands then: a line Rexx code added is shown, and one that is not a
+string is shown by its string value, as a list holding an Array shows `an
+Array`.
+
+```rexx
+call sub
+exit
+sub:
+  signal on syntax
+  x = 1/0
+syntax:
+  t = condition('o')~traceback
+  t~insert('added')
+  say (condition('o')~traceback == t) condition('o')~traceback~lastItem
+```
+
+```output
+1 added
+```
+
 r[instr.raise.propagate.replace]
 DESCRIPTION, ADDITIONAL and ARRAY on a RAISE PROPAGATE replace the values that
 the condition passed on holds: the description becomes the value of the

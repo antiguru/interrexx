@@ -3,7 +3,6 @@
 
 use crate::activation::CallType;
 use crate::error::Raised;
-use crate::run::CallEntry;
 use crate::run::{CallResolution, Resolved, Started, function_started};
 use crate::value::{
     PieceSlot, QuickOperand, Referent, TEXT_SCRATCH, canonical_small_int, exact_small_int,
@@ -709,14 +708,7 @@ impl Interp {
         // `::ROUTINE` reached this way answers `FUNCTION` as `PARSE SOURCE`'s
         // second word where the same body reached by `CALL` answers
         // `SUBROUTINE`. Measured in one program, the same routine both ways.
-        let begun = self.begin_invoke_call(
-            code,
-            resolution,
-            name,
-            args,
-            CallType::Function,
-            CallEntry::Written,
-        )?;
+        let begun = self.begin_invoke_call(code, resolution, name, args, CallType::Function)?;
         function_started(begun, name)
     }
 

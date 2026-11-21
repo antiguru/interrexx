@@ -2772,7 +2772,6 @@ impl Interp {
                 arguments,
                 0,
                 crate::activation::CallType::Subroutine,
-                crate::run::CallEntry::Written,
             )? {
                 crate::run::Begun::Done(crate::run::Ended::Exited(value)) => {
                     return Err(Failure::Exited(value));

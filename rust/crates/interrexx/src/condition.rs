@@ -757,7 +757,7 @@ impl Interp {
     /// `ADDITIONAL`: an Array of the raise's substitutions, empty for a
     /// `SYNTAX` condition that carried none -- measured, `1/0` answers an
     /// Array with no items rather than `.NIL`.
-    fn additional_array(&mut self, values: &[Vec<u8>]) -> ObjRef {
+    pub(crate) fn additional_array(&mut self, values: &[Vec<u8>]) -> ObjRef {
         let frame = self.roots.activity_mut().push_frame();
         let mut slots = Vec::with_capacity(values.len());
         for value in values {
