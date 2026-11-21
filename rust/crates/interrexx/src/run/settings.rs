@@ -111,44 +111,61 @@ impl Interp {
             // fallback).
             Trace::Value(expression) => {
                 let value = self.eval(code, expression)?;
-                self.roots.activity_mut().push_temp(value);
-                // `>K>   "VALUE" => text`, naming the object before the
-                // required-string conversion below, like `SIGNAL VALUE`.
-                let shown = self.to_text(value).to_vec();
-                self.trace_keyword(
-                    self.activity.clause_state.current_value_indent,
-                    "VALUE",
-                    &shown,
-                );
-                // The string request, and 24.1 names the conversion: `trace value .K`
-                // with a class-side `makeString` returning `'ZZ'` reports `found
-                // "Z"`.
-                let value = self.required_string_value(value)?;
-                let text = self.to_text(value).to_vec();
-                if is_whole_number(&text) {
-                    let count = String::from_utf8_lossy(&text)
-                        .trim()
-                        .parse::<i64>()
-                        .unwrap_or(0);
-                    self.set_debug_skip(count)?;
-                    return Ok(());
-                }
-                // Ignored before it is read as a setting, so an invalid one
-                // raises nothing there.
-                if self.ignores_trace_instruction() {
-                    return Ok(());
-                }
-                let request = crate::trace::parse_trace_request(&text)
-                    .map_err(raised_invalid_trace_letter)?;
-                self.apply_trace_request(&request);
+                return self.exec_trace_value(code, value);
             }
         }
-        // The entry is announced right after the new flags are installed, which
-        // is the route every `>I>` takes. `Trace::Skip` never gets here -- it
-        // returned above -- and sets no flags and calls nothing.
+        self.announce_entry_after_trace(code);
+        Ok(())
+    }
+
+    /// `TRACE VALUE`'s work after its expression, from its value: what the
+    /// walked instruction does once it has evaluated it, and what
+    /// `Op::ExecValue` does for a compiled one.
+    pub(crate) fn exec_trace_value(
+        &mut self,
+        code: &Code<'_>,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        self.roots.activity_mut().push_temp(value);
+        // `>K>   "VALUE" => text`, naming the object before the
+        // required-string conversion below, like `SIGNAL VALUE`.
+        let shown = self.to_text(value).to_vec();
+        self.trace_keyword(
+            self.activity.clause_state.current_value_indent,
+            "VALUE",
+            &shown,
+        );
+        // The string request, and 24.1 names the conversion: `trace value .K`
+        // with a class-side `makeString` returning `'ZZ'` reports `found
+        // "Z"`.
+        let value = self.required_string_value(value)?;
+        let text = self.to_text(value).to_vec();
+        if is_whole_number(&text) {
+            let count = String::from_utf8_lossy(&text)
+                .trim()
+                .parse::<i64>()
+                .unwrap_or(0);
+            self.set_debug_skip(count)?;
+            return Ok(());
+        }
+        // Ignored before it is read as a setting, so an invalid one
+        // raises nothing there.
+        if self.ignores_trace_instruction() {
+            return Ok(());
+        }
+        let request =
+            crate::trace::parse_trace_request(&text).map_err(raised_invalid_trace_letter)?;
+        self.apply_trace_request(&request);
+        self.announce_entry_after_trace(code);
+        Ok(())
+    }
+
+    /// The entry is announced right after the new flags are installed, which
+    /// is the route every `>I>` takes. `Trace::Skip` never gets here -- it
+    /// returns before -- and sets no flags and calls nothing.
+    fn announce_entry_after_trace(&mut self, code: &Code<'_>) {
         self.allow_entry_after_exposes(code);
         self.trace_invocation_entry();
-        Ok(())
     }
 
     /// The entry announcement stays allowed past an `EXPOSE`, so a `TRACE` that

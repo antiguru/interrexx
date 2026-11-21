@@ -1337,7 +1337,8 @@ fn compile_settled(
             InstructionKind::Numeric {
                 expression: Some(expression),
                 ..
-            } => {
+            }
+            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);

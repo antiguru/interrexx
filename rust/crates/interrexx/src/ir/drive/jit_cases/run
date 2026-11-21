@@ -287,6 +287,57 @@ say x y r~value
 50005000 100000000 7
 compiled: yes
 
+# a TRACE VALUE in the body switches the setting in the last passes. A body
+# holding a TRACE compiles with its trace gates (TraceRead and the like), which
+# `pass_of` refuses (#850), so it stays driven; once those compile, the switch
+# runs from the hosted ExecValue and this case pins it
+run
+x = 0; t = 'n'
+do i = 1 to 10000
+  if i = 9998 then t = 'r'
+  trace value t
+  x = x + i
+  y = x * 2 - i
+end
+say x y
+----
+50005000 100000000
+     5 *-*   x = x + i
+       >>>     "49985001"
+     6 *-*   y = x * 2 - i
+       >>>     "99960004"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9998"
+       >>>     "9999"
+     3 *-*   if i = 9998 
+       >>>     "0"
+     4 *-*   trace value t
+       >K>     "VALUE" => "r"
+     5 *-*   x = x + i
+       >>>     "49995000"
+     6 *-*   y = x * 2 - i
+       >>>     "99980001"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "9999"
+       >>>     "10000"
+     3 *-*   if i = 9998 
+       >>>     "0"
+     4 *-*   trace value t
+       >K>     "VALUE" => "r"
+     5 *-*   x = x + i
+       >>>     "50005000"
+     6 *-*   y = x * 2 - i
+       >>>     "100000000"
+     7 *-* end
+     2 *-* do i = 1 to 10000
+       >>>     "10000"
+       >>>     "10001"
+     8 *-* say x y
+       >>>   "50005000 100000000"
+compiled: no
+
 # quiet builtins in a compiled body: one call each, over argument registers,
 # with no refresh
 run

@@ -2613,12 +2613,16 @@ impl Interp {
     #[inline(never)]
     pub(crate) fn exec_value(
         &mut self,
+        code: &Code<'_>,
         instruction: &Instruction,
         value: ObjRef,
     ) -> Result<(), Failure> {
         match &instruction.kind {
             InstructionKind::Numeric { setting, .. } => {
                 self.exec_numeric_value(setting, Some(value))
+            }
+            InstructionKind::Trace(interrexx_parse::Trace::Value(_)) => {
+                self.exec_trace_value(code, value)
             }
             kind => Err(Loud::instruction(kind).into()),
         }
@@ -3541,7 +3545,8 @@ impl Interp {
                 InstructionKind::Numeric {
                     expression: Some(expression),
                     ..
-                },
+                }
+                | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)),
                 0,
             ) => expression,
             // A `SELECT CASE`'s expression.
@@ -3623,7 +3628,8 @@ impl Interp {
                 InstructionKind::Numeric {
                     expression: Some(expression),
                     ..
-                },
+                }
+                | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)),
                 0,
             ) => self.eval(code, expression),
             (InstructionKind::If { condition, .. }, 0) => {
