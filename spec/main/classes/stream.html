@@ -611,7 +611,6 @@ raises</a>, and what the methods send. The answers are
 strings. A method with no counterpart among the functions, or whose messages
 another rule states, has a rule of its own. The Deviations that the rules of
 the functions state hold for the methods that do the same:
-<a href="../builtins/stream.html#r-bif.stream.deviation.35">35</a>, <a href="../builtins/lineout.html#r-bif.lineout.deviation.46">46</a>,
 <a href="../builtins/stream.html#r-bif.stream.deviation.49">49</a>, <a href="../builtins/lines.html#r-bif.lines.deviation.54">54</a>,
 <a href="../builtins/lineout.html#r-bif.lineout.deviation.56">56</a>, <a href="../builtins/stream.html#r-bif.stream.deviation.57">57</a>,
 <a href="../builtins/lineout.html#r-bif.lineout.deviation.60">60</a>, <a href="../builtins/stream.html#r-bif.stream.deviation.74">74</a>,
@@ -2490,8 +2489,12 @@ program can no longer reach, as <a href="../environment/invocation.html#r-env.in
 <code>UNINIT</code></a> says; whether and when it does is not
 specified. A program may send it too, and it answers no value: its answer as a
 term raises <code>SYNTAX 91.999</code>. It takes no argument: one raises <code>SYNTAX 88.922</code>.
-It sends no message. An instance that has been sent <code>uninit</code> is not to be used
-again: what a method does then is not specified.</p>
+It sends no message. After it, the instance raises <code>SYNTAX 48.1</code> from <code>open</code>
+and from the methods that read, write, position or describe it: <code>lineIn</code>,
+<code>lineOut</code>, <code>charIn</code>, <code>charOut</code>, <code>lines</code>, <code>chars</code>, <code>arrayIn</code>, <code>supplier</code>,
+<code>flush</code>, <code>position</code>, <code>seek</code>, <code>state</code>, <code>description</code>, <code>qualify</code>, <code>query</code> and
+<code>command</code>. <code>close</code> and <code>uninit</code> then close nothing and answer no value, and
+<code>string</code> answers the name. What <code>init</code> does then is not specified.</p>
 <pre><code class="language-rexx">f = 'spec-stream-uninit-zq.tmp'
 s = .stream~new(f)
 x = s~lineout('kept')
@@ -2516,6 +2519,50 @@ bad2: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">s~uninit(1) =&gt; 88.922
 kept
 91.999
+</code></pre>
+<pre><code class="language-rexx">s = .stream~new('spec-stream-uninit2-zq.tmp')
+s~uninit
+do m over 'open', 'lineIn', 'lineOut', 'charIn', 'charOut', 'chars', 'lines', -
+    'flush', 'state', 'description', 'qualify', 'arrayIn', 'supplier', 'close', -
+    'uninit'
+  call try m
+end
+call try 'position', 1
+call try 'seek', 1
+call try 'query', 'exists'
+call try 'command', 'query exists'
+say s~string
+exit
+try:
+  signal on syntax name bad
+  r = 'no value'
+  if arg(1) == 'close' | arg(1) == 'uninit' then s~send(arg(1))
+  else r = s~sendWith(arg(1), arg(1, 'a')~section(2))
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">open =&gt; 48.1
+lineIn =&gt; 48.1
+lineOut =&gt; 48.1
+charIn =&gt; 48.1
+charOut =&gt; 48.1
+chars =&gt; 48.1
+lines =&gt; 48.1
+flush =&gt; 48.1
+state =&gt; 48.1
+description =&gt; 48.1
+qualify =&gt; 48.1
+arrayIn =&gt; 48.1
+supplier =&gt; 48.1
+close =&gt; no value
+uninit =&gt; no value
+position =&gt; 48.1
+seek =&gt; 48.1
+query =&gt; 48.1
+command =&gt; 48.1
+spec-stream-uninit2-zq.tmp
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.stream.deviation.34"><a href="#r-class.stream.deviation.34">[class.stream.deviation.34]</a></div>

@@ -409,11 +409,10 @@ the order above.</p>
 RexxUtil path arguments), each <code>..</code> removes exactly the one component before
 it. ooRexx removes none after a doubled slash and two after a component that
 starts with a period, so its answer can name a different file.</p>
-<h2 id="35-handle-streams"><a class="header" href="#35-handle-streams">35. HANDLE: streams</a></h2>
-<p><code>HANDLE:0</code>, <code>HANDLE:1</code> and <code>HANDLE:2</code> read and write standard input, output
-and error; any other descriptor is refused when the stream is created. In
-ooRexx a <code>HANDLE:</code> stream never reaches its descriptor: reads see end of
-file, and writes crash.</p>
+<h2 id="35-withdrawn"><a class="header" href="#35-withdrawn">35. Withdrawn</a></h2>
+<p>HANDLE: streams: a <code>HANDLE:n</code> stream reads and writes descriptor <code>n</code> for every
+<code>n</code>, as ooRexx does since upstream bug #2166, ruled by the owner on 2026-11-21
+(#857).</p>
 <h2 id="36-strings-and-numbers-are-value-based"><a class="header" href="#36-strings-and-numbers-are-value-based">36. Strings and numbers are value-based</a></h2>
 <p>A String with no subclass and no enhancement, every number included, is
 value-based: whether equal values are one object, whether <code>~copy</code> answers a
@@ -468,10 +467,10 @@ answers some integers unrounded, depending on how the number is held.</p>
 <h2 id="45-bag-hasitem-with-an-unequal-index"><a class="header" href="#45-bag-hasitem-with-an-unequal-index">45. Bag hasItem with an unequal index</a></h2>
 <p><code>Bag~hasItem</code> with an index unequal to the item answers 0. ooRexx answers
 <code>.nil</code>.</p>
-<h2 id="46-lineout-on-a-binary-record-stream"><a class="header" href="#46-lineout-on-a-binary-record-stream">46. LINEOUT on a binary record stream</a></h2>
-<p>On a stream opened <code>BINARY RECLENGTH n</code>, positioning with LINEOUT and closing
-pad no record, and only a LINEOUT with a string pads its record. ooRexx pads
-a record that a write has started when LINEOUT positions or closes.</p>
+<h2 id="46-withdrawn"><a class="header" href="#46-withdrawn">46. Withdrawn</a></h2>
+<p>LINEOUT on a binary record stream: a LINEOUT that closes or only positions
+completes the record the write position is inside of, as ooRexx does since
+upstream bugs #1742 and #2170, ruled by the owner on 2026-11-21 (#857).</p>
 <h2 id="47-a-do-count-wider-than-numeric-digits"><a class="header" href="#47-a-do-count-wider-than-numeric-digits">47. A DO count wider than NUMERIC DIGITS</a></h2>
 <p>A DO repetitor or FOR count wider than NUMERIC DIGITS raises <code>26.2</code> or
 <code>26.3</code>, or LOSTDIGITS first when that is trapped. ooRexx refuses such a count

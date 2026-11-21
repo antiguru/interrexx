@@ -177,7 +177,7 @@
 <pre><code>STREAM(name [, operation [, command]])
 </code></pre>
 <p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
-<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D98, D100, D145, D167, D168, D171</p>
+<p class="deviations">Deviations: D34, D49, D55, D57, D59, D62, D74, D79, D98, D100, D145, D167, D168, D171</p>
 <p>STREAM asks a <a href="index.html#r-bif.index.stream.name">stream</a> for its state, describes the
 state, or carries out a command on the stream: opening and closing it,
 moving its positions, and asking about the file behind it. The other stream
@@ -1109,8 +1109,10 @@ call sysfiledelete f
 <div class="rule" id="r-bif.stream.query.type"><a href="#r-bif.stream.query.type">[bif.stream.query.type]</a></div>
 <p><code>QUERY STREAMTYPE</code> answers <code>PERSISTENT</code> for an open file, a stream that can be
 positioned, <code>TRANSIENT</code> for an open stream that cannot, such as the standard
-input when it is a pipe, and <code>UNKNOWN</code> for a stream that is not open: a file
-that is closed, a name that is not a file, a directory.</p>
+input when it is a pipe, a terminal or a socket, and <code>UNKNOWN</code> for a stream
+that is not open: a file that is closed, a name that is not a file, a
+directory. A transient standard input is read line by line, its <code>supplier</code>
+included.</p>
 <pre><code class="language-rexx">f = 'spec-stream-type.tmp'
 call sysfiledelete f
 say stream(f, 'c', 'query streamtype') stream('.', 'c', 'query streamtype')
@@ -1247,6 +1249,44 @@ a: say condition('o')~code
 <pre><code class="language-output">READY READY READY READY:
 93.958
 </code></pre>
+<div class="rule" id="r-bif.stream.handle"><a href="#r-bif.stream.handle">[bif.stream.handle]</a></div>
+<p>A stream named <code>HANDLE:n</code>, in any case, reads and writes the open descriptor
+<code>n</code> of the process: <code>HANDLE:0</code>, <code>HANDLE:1</code> and <code>HANDLE:2</code> the standard input,
+output and error streams, and any other number a descriptor that some other
+stream or other code holds, such as the one <code>QUERY HANDLE</code> answers for a file.
+Closing the stream leaves descriptor <code>n</code> open. An open with <code>APPEND</code>,
+<code>REPLACE</code> or a <code>SHARE</code> option raises <code>SYNTAX 93.0</code>: the descriptor is already
+open as it is. An explicit open takes the mode its options name, whatever the
+descriptor was opened with, so <code>open('read')</code> on a descriptor open only for
+writing answers <code>READY:</code> and its reads then fail; an implicit open takes the
+descriptor's own mode. Nothing exists by such a name: <code>QUERY EXISTS</code> answers
+the null string, open or not. Once the stream is open, <code>qualify</code> answers the
+name as written; before, it answers the name resolved as a file's, and <code>QUERY SIZE</code> and <code>QUERY DATETIME</code> answer for a file of that name, as for any other
+stream.
+Where reads and writes through a <code>HANDLE:</code> stream land relative to those
+through another stream on the same descriptor, what a <code>HANDLE:</code> stream does
+with a number that names no open descriptor, and which of the descriptors the
+interpreter holds for itself it reaches, are not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-handle.tmp'
+call sysfiledelete f
+file = .stream~new(f)
+file~open('write replace')
+h = file~query('handle')
+hs = .stream~new('HANDLE:' || h)
+signal on syntax name refused
+x = .stream~new('HANDLE:' || h)~open('write append')
+refused: say 'append' condition('o')~code
+say hs~lineout('first') '[' || hs~query('exists') || ']' hs~close -
+  hs~qualify~changestr(h, 'H')
+say file~close
+say .stream~new(f)~arrayIn~toString(, ' ')
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">append 93.0
+0 [] READY: HANDLE:H
+READY:
+first
+</code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-bif.stream.deviation.34"><a href="#r-bif.stream.deviation.34">[bif.stream.deviation.34]</a></div>
 <p>In a stream's name, as in every name interrexx qualifies, each <code>..</code> removes
@@ -1268,19 +1308,6 @@ call sysrmdir base || '/.b'
 call sysrmdir base
 </code></pre>
 <pre><code class="language-output">1 3 abc
-</code></pre>
-<div class="rule" id="r-bif.stream.deviation.35"><a href="#r-bif.stream.deviation.35">[bif.stream.deviation.35]</a></div>
-<p>The names <code>HANDLE:0</code>, <code>HANDLE:1</code> and <code>HANDLE:2</code> denote the standard input,
-output and error streams, and read and write them; a <code>HANDLE:</code> stream with any
-other descriptor is refused when it is created. In ooRexx a <code>HANDLE:</code> stream
-never reaches its descriptor: reads see end of file, and writes crash.</p>
-<pre><code class="language-rexx">call charout 'HANDLE:1', 'hello '
-call charout 'handle:1', 'again'
-say
-say stream('HANDLE:1') '['charin('HANDLE:0')']'
-</code></pre>
-<pre><code class="language-output">hello again
-READY []
 </code></pre>
 <div class="rule" id="r-bif.stream.deviation.49"><a href="#r-bif.stream.deviation.49">[bif.stream.deviation.49]</a></div>
 <p>On a stream open for reading and writing, a relative <code>SEEK</code> with <code>READ</code> moves

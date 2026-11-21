@@ -177,7 +177,7 @@
 <pre><code>LINEOUT([name] [, [string] [, line]])
 </code></pre>
 <p class="references">ANSI: 9.7.5; rexxref: Functions &gt; Built-in Functions &gt; LINEOUT (Line Output)</p>
-<p class="deviations">Deviations: D46, D56, D60</p>
+<p class="deviations">Deviations: D56, D60</p>
 <p>LINEOUT writes a string and a line end to a <a href="index.html#r-bif.index.stream.name">stream</a>
 and answers 0 when it did, or 1 when it could not. Given a line number it
 writes there; given neither a string nor a line number it closes the
@@ -432,26 +432,72 @@ c
 0
 93.958
 </code></pre>
-<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
-<div class="rule" id="r-bif.lineout.deviation.46"><a href="#r-bif.lineout.deviation.46">[bif.lineout.deviation.46]</a></div>
-<p>On a stream opened <code>BINARY RECLENGTH n</code>, a LINEOUT that only positions, or
-that closes the stream, clears no record, and only a LINEOUT with a
-<code>string</code> pads its record. ooRexx clears or pads a record when LINEOUT
-positions or closes.</p>
-<pre><code class="language-rexx">f = 'spec-lineout-dev46.tmp'
+<div class="rule" id="r-bif.lineout.record"><a href="#r-bif.lineout.record">[bif.lineout.record]</a></div>
+<p>On a stream opened <code>BINARY RECLENGTH n</code>, a LINEOUT with no <code>string</code> that closes
+the stream, or that only positions it by <code>line</code>, first completes the record
+the write position is inside of: it writes blanks from the write position to
+the end of that record, over whatever the record held there. At the start of
+a record it writes nothing, and it writes nothing on a stream open only for
+reading or on a transient stream, which has no records to complete. The
+<code>lineOut</code> method completes the record before it checks <code>line</code>, so a <code>line</code>
+that is not a positive whole number raises <code>SYNTAX 93.907</code> after the record
+is complete; the LINEOUT function checks its arguments first, as <a href="#r-bif.lineout.args">its
+argument rule</a> says. On a stream opened
+APPEND the record is the one an APPEND write would land in, at the end of the
+file. A LINEOUT with a <code>string</code> pads only the record
+it writes, and CHAROUT and <code>STREAM</code> CLOSE complete no record.</p>
+<pre><code class="language-rexx">f = 'spec-lineout-record.tmp'
+do case = 1 to 5
+  call sysfiledelete f
+  call charout f, 'abcdefgh'
+  call charout f
+  call stream f, 'c', 'open both binary reclength 4'
+  select
+    when case = 1 then call charout f, 'X', 3
+    when case = 2 then call charout f, , 3
+    when case = 3 then do; call charout f, 'X', 3; call lineout f, , 2; end
+    when case = 4 then call charout f, 'X', 5
+    when case = 5 then do; call charout f, 'X', 3; call lineout f, 'Q', 2; end
+  end
+  call lineout f
+  say case '[' || charin(f, 1, chars(f)) || ']'
+  call lineout f
+end
+call stream f, 'c', 'open both binary reclength 4'
+call charout f, 'Y', 2
+call charout f
+say 'charout [' || charin(f, 1, chars(f)) || ']'
+call stream f, 'c', 'open both binary reclength 4'
+call charout f, 'Z', 1
+call stream f, 'c', 'close'
+say 'close [' || charin(f, 1, chars(f)) || ']'
+call lineout f
 call sysfiledelete f
 call charout f, 'abcdefgh'
 call charout f
-say stream(f, 'c', 'open binary reclength 4')
-say lineout(f, , 1) lineout(f)
-say '[' || charin(f, 1, 8) || ']'
-call lineout f
+s = .stream~new(f)
+x = s~open('both binary reclength 4')
+x = s~charout('X', 3)
+say 'refused' refused() s~flush '[' || .stream~new(f)~charin(1, 8) || ']'
+x = s~close
 call sysfiledelete f
+exit
+refused:
+  signal on syntax name bad
+  x = s~lineout(, 0)
+  return 'no error'
+bad: return condition('o')~code
 </code></pre>
-<pre><code class="language-output">READY:
-0 0
-[abcdefgh]
+<pre><code class="language-output">1 [abX efgh]
+2 [ab  efgh]
+3 [abX efgh]
+4 [abcdX   ]
+5 [abXdQ   ]
+charout [aYXdQ   ]
+close [ZYXdQ   ]
+refused 93.907 READY: [abX efgh]
 </code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-bif.lineout.deviation.56"><a href="#r-bif.lineout.deviation.56">[bif.lineout.deviation.56]</a></div>
 <p>A <code>line</code> counts from the start of the data, as <a href="#r-bif.lineout.line">the line
 rule</a> says, by the line ends that are there, whichever
