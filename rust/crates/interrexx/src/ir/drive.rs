@@ -1523,7 +1523,7 @@ macro_rules! region_ops {
                     match pinned!(
                         $self,
                         crate::pinning::PinKind::OpExec,
-                        $self.exec_op($code, $index, $clause, $source, value)
+                        $self.exec_op($code, $chunk, $registers, $index, $clause, $source, value)
                     ) {
                         Ok(ExecOutcome::Done(flow)) => {
                             break $cold Ok(RegionEnd::Flowed(flow));
