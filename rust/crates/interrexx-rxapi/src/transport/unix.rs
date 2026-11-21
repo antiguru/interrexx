@@ -56,8 +56,9 @@ pub fn service_dir() -> PathBuf {
             use std::io::Write;
             let _ = writeln!(
                 io::stderr(),
-                "rxapi: REXX_API_DIR {} is not used: its socket path is too long",
-                skipped.display()
+                "rxapi: REXX_API_DIR {} is not used: its socket path {} is too long",
+                skipped.display(),
+                socket_path(&resolved(&skipped), PROTOCOL_VERSION).display()
             );
         });
     }
@@ -76,27 +77,29 @@ fn socket_fits(dir: &Path) -> bool {
     std::os::unix::net::SocketAddr::from_pathname(&socket).is_ok()
 }
 
-/// `dir` absolute, with the links of its deepest existing ancestor resolved, as
-/// `fs::canonicalize` will resolve them once the rest exists.
+/// `dir` absolute, as `fs::canonicalize` will answer it once the rest exists: each component
+/// that exists with its links resolved, and a `..` after one that does not yet taken as its
+/// parent, as creating the directories makes it.
 fn resolved(dir: &Path) -> PathBuf {
     let absolute = std::path::absolute(dir).unwrap_or_else(|_| dir.to_path_buf());
-    let mut existing = absolute.as_path();
-    let mut rest = Vec::new();
-    loop {
-        if let Ok(canonical) = fs::canonicalize(existing) {
-            return rest
-                .iter()
-                .rev()
-                .fold(canonical, |path, part| path.join(part));
-        }
-        match (existing.parent(), existing.file_name()) {
-            (Some(parent), Some(name)) => {
-                rest.push(name.to_os_string());
-                existing = parent;
+    let mut path = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            // Every component so far is resolved or does not exist, so none is a link, and `..`
+            // is its parent.
+            std::path::Component::ParentDir => {
+                path.pop();
             }
-            _ => return absolute,
+            other => {
+                path.push(other);
+                if let Ok(canonical) = fs::canonicalize(&path) {
+                    path = canonical;
+                }
+            }
         }
     }
+    path
 }
 
 /// The directory, and `REXX_API_DIR`'s value where it was set and passed over.
@@ -609,6 +612,25 @@ mod tests {
             resolved(&through),
             fs::canonicalize(&long).expect("the target").join("api")
         );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    /// A `..` after a directory that does not exist yet steps back to where creating the
+    /// directories puts it, and a link after it is resolved: a path through a missing directory
+    /// and back to a short link to a long directory does not fit either.
+    #[test]
+    fn a_parent_step_after_a_missing_directory_is_resolved() {
+        let root = std::env::temp_dir().join(format!("rxapi-up-{}", std::process::id()));
+        let long = root.join("l".repeat(100));
+        fs::create_dir_all(&long).expect("a long directory");
+        let link = root.join("s");
+        let _ = fs::remove_file(&link);
+        std::os::unix::fs::symlink(&long, &link).expect("a link");
+        let through = root.join("missing").join("..").join("s").join("api");
+        assert!(!socket_fits(&through), "the path it leads to does not fit");
+        let target = fs::canonicalize(&long).expect("the target").join("api");
+        assert_eq!(resolved(&through), target);
+        assert_eq!(prepare_dir(&through).expect("the directory"), target);
         let _ = fs::remove_dir_all(&root);
     }
 
