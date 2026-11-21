@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{compiled_runs, quiet_calls, reset_compiled_runs};
+use super::{compiled_runs, quiet_calls, quiet_compounds, reset_compiled_runs};
 
 #[test]
 fn compiled_loops_print_what_the_interpreter_prints() {
@@ -20,6 +20,8 @@ fn compiled_loops_print_what_the_interpreter_prints() {
             let seen = Arc::clone(&runs);
             let quiet = Arc::new(AtomicUsize::new(0));
             let quiet_seen = Arc::clone(&quiet);
+            let compounds = Arc::new(AtomicUsize::new(0));
+            let compounds_seen = Arc::clone(&compounds);
             let text = case.input.as_bytes().to_vec();
             let outcome = crate::on_thread_of(crate::INTERPRETER_STACK_BYTES, move || {
                 reset_compiled_runs();
@@ -32,6 +34,7 @@ fn compiled_loops_print_what_the_interpreter_prints() {
                 );
                 seen.store(compiled_runs(), Ordering::Relaxed);
                 quiet_seen.store(quiet_calls(), Ordering::Relaxed);
+                compounds_seen.store(quiet_compounds(), Ordering::Relaxed);
                 ran
             });
             let compiled = if runs.load(Ordering::Relaxed) > 0 {
@@ -46,8 +49,13 @@ fn compiled_loops_print_what_the_interpreter_prints() {
             } else {
                 ""
             };
+            let compounds = if compounds.load(Ordering::Relaxed) > 0 {
+                "quiet compound accesses: yes\n"
+            } else {
+                ""
+            };
             format!(
-                "{}{}compiled: {compiled}\n{quiet}",
+                "{}{}compiled: {compiled}\n{quiet}{compounds}",
                 String::from_utf8_lossy(&outcome.stdout),
                 String::from_utf8_lossy(&outcome.stderr)
             )
@@ -86,29 +94,48 @@ fn ran(source: &[u8]) -> crate::Interp {
     interp
 }
 
+/// The most temporaries live at once in a run of `body` in a compiled loop
+/// of `n` passes, which also ran `counted` quietly.
+fn temps_high_water(body: &str, n: usize, counted: fn() -> usize) -> usize {
+    reset_compiled_runs();
+    let interp = ran(format!("x = 0; t. = 0\ndo i = 1 to {n}\n  {body}\nend\nsay x").as_bytes());
+    assert!(
+        compiled_runs() > 0 && counted() > 0,
+        "{n} passes compiled, quietly"
+    );
+    interp.roots.activity().temps_capacity()
+}
+
 /// A quiet builtin that roots temporaries (`MAX` does) leaves none behind it
 /// in a clause compiled code opened: the most live at once is the same for a
 /// long compiled loop as for a short one.
 #[test]
 fn quiet_builtin_calls_do_not_accumulate_temps() {
-    let high_water = |n: usize| {
-        reset_compiled_runs();
-        let interp =
-            ran(format!("x = 0\ndo i = 1 to {n}\n  x = x + max(i // 7, 3)\nend\nsay x").as_bytes());
-        assert!(
-            compiled_runs() > 0 && quiet_calls() > 0,
-            "{n} passes compiled, quietly"
-        );
-        interp.roots.activity().temps_capacity()
-    };
-    let long = high_water(40000);
+    let body = "x = x + max(i // 7, 3)";
+    let long = temps_high_water(body, 40000, quiet_calls);
     assert!(
         long < 1000,
         "{long} temporaries live at once after 40000 passes"
     );
     assert_eq!(
-        high_water(10000),
+        temps_high_water(body, 10000, quiet_calls),
         long,
-        "the high-water mark grows with the pass count"
+        "the mark grows with the passes"
+    );
+}
+
+/// A quiet compound write roots its value, and releases it with the write.
+#[test]
+fn quiet_compound_writes_do_not_accumulate_temps() {
+    let body = "k = i // 7; t.k = i";
+    let long = temps_high_water(body, 40000, quiet_compounds);
+    assert!(
+        long < 1000,
+        "{long} temporaries live at once after 40000 passes"
+    );
+    assert_eq!(
+        temps_high_water(body, 10000, quiet_compounds),
+        long,
+        "the mark grows with the passes"
     );
 }

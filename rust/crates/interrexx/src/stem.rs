@@ -145,6 +145,73 @@ impl Interp {
         Ok(())
     }
 
+    /// [`Interp::tail_key_into`] where no piece's value needs a string request
+    /// to make it a key, and so where building the key runs no Rexx code:
+    /// `false`, with `out` to be thrown away, where a piece's value is not a
+    /// plain string or number (`Interp::plain_string`). An unset piece is its
+    /// own name, as in [`Interp::append_tails`].
+    #[cfg(feature = "jit")]
+    pub(crate) fn quiet_tail_key_into(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        out: &mut Vec<u8>,
+    ) -> bool {
+        out.clear();
+        let Some(entry) = code.compound(id) else {
+            return false;
+        };
+        for (index, piece) in entry.tails.iter().enumerate() {
+            if index > 0 {
+                out.push(b'.');
+            }
+            match piece {
+                TailPiece::Constant(text) => out.extend_from_slice(text),
+                TailPiece::Variable { name, at } => {
+                    let value = self.read_by_name_at(name, *at);
+                    if !self.plain_string(value) {
+                        return false;
+                    }
+                    self.write_text(value, out);
+                }
+            }
+        }
+        true
+    }
+
+    /// `read_symbol`'s compound read where it runs no Rexx code: the tail is
+    /// plain ([`Interp::quiet_tail_key_into`]) and the tail is set, so no
+    /// NOVALUE hook runs. `None`, having changed nothing, anywhere else. A
+    /// `shared` read holds its key for the write after it, as
+    /// `SymbolRead::CompoundShared` does untraced.
+    #[cfg(feature = "jit")]
+    pub(crate) fn read_compound_quiet(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        shared: bool,
+    ) -> Option<ObjRef> {
+        let (stem_name, stem_at) = code.stem(id);
+        let mut key = self.take_key_buffer();
+        if !self.quiet_tail_key_into(code, id, &mut key) {
+            self.give_key_buffer(key);
+            return None;
+        }
+        let (value, novalue, held) = self.stem_lookup::<false>(stem_name, stem_at, &key);
+        if !matches!(novalue, Novalue::Set) {
+            self.give_key_buffer(key);
+            return None;
+        }
+        if shared {
+            self.shared_key_for = Some(id);
+            self.shared_key.clear();
+            self.shared_key.extend_from_slice(&key);
+            self.shared_tail = held;
+        }
+        self.give_key_buffer(key);
+        Some(value)
+    }
+
     /// Reads a variable by name alone, the same slot machinery `read` uses
     /// but with no `SymbolId` to try first: a tail piece from
     /// `compound_parts` is a borrowed `&str`, not a token, so there is no id
