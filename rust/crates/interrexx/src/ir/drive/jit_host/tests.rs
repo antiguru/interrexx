@@ -1,13 +1,17 @@
 //! Programs whose loops run past [`super::THRESHOLD`], run with the `jit`
 //! feature, against what the interpreter prints for them
-//! (`src/ir/drive/jit_cases`). Each case also says whether compiled code ran
-//! at all, so a case whose loop stopped compiling fails rather than passing
-//! on the driver alone.
+//! (`src/ir/drive/jit_cases`). Each case also says which loops ran compiled,
+//! by the line of their `DO`, so a case whose loop stopped compiling fails
+//! rather than passing on the driver alone, and one whose outer loop the gate
+//! refuses does not pass on its inner loop's compile.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs};
+use super::{
+    compiled_lines, compiled_runs, handed_back, quiet_calls, quiet_compounds, reset_compiled_runs,
+    retirements,
+};
 
 #[test]
 fn compiled_loops_print_what_the_interpreter_prints() {
@@ -16,7 +20,7 @@ fn compiled_loops_print_what_the_interpreter_prints() {
             assert_eq!(case.directive, "run", "the one directive");
             // Counted on the interpreter's own thread, which is where the
             // counter lives, and handed back.
-            let runs = Arc::new(AtomicUsize::new(0));
+            let runs = Arc::new(std::sync::Mutex::new(Vec::new()));
             let seen = Arc::clone(&runs);
             let quiet = Arc::new(AtomicUsize::new(0));
             let quiet_seen = Arc::clone(&quiet);
@@ -32,15 +36,28 @@ fn compiled_loops_print_what_the_interpreter_prints() {
                     crate::Invocation::none(),
                     Some(crate::INTERPRETER_STACK_BYTES),
                 );
-                seen.store(compiled_runs(), Ordering::Relaxed);
+                if compiled_runs() > 0 {
+                    *seen.lock().expect("one writer") = compiled_lines();
+                }
                 quiet_seen.store(quiet_calls(), Ordering::Relaxed);
                 compounds_seen.store(quiet_compounds(), Ordering::Relaxed);
                 ran
             });
-            let compiled = if runs.load(Ordering::Relaxed) > 0 {
-                "yes"
-            } else {
-                "no"
+            // Which loops ran compiled, by the line of their `DO`: an outer
+            // loop the gate refuses while its inner loop compiles alone
+            // names the inner loop's line, not the outer's.
+            let lines = runs.lock().expect("one writer").clone();
+            let compiled = match lines.as_slice() {
+                [] => "no".to_string(),
+                [line] => format!("line {line}"),
+                lines => format!(
+                    "lines {}",
+                    lines
+                        .iter()
+                        .map(u32::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
             };
             // Whether a builtin call took the quiet path, printed only where
             // one did, so the cases with no builtin call read as before.
@@ -186,4 +203,28 @@ fn an_outer_loop_compiles_with_its_inner_loop() {
         short,
         "compiled code was left on outer passes after the outer loop compiled"
     );
+}
+
+/// The budget a compiled loop is retired against is per pass of any loop it
+/// holds, as the host's ops are counted: an inner loop whose body runs an op
+/// on the host on every one of its passes does not retire the outer loop.
+#[test]
+fn hosted_ops_in_an_inner_body_do_not_retire_the_outer_loop() {
+    reset_compiled_runs();
+    ran(format!(
+        "a = 0; b = 0; c = 0; t = ''\n\
+         do i = 1 to {}\n\
+         \x20 a = a + i; b = b + a // 7; c = c + b - a // 3\n\
+         \x20 d = a * 2; e = d - c; f = e + 1; g = f // 5; h = g + a\n\
+         \x20 do j = 1 to 20\n\
+         \x20   t = j || ''\n\
+         \x20 end\n\
+         \x20 a = a - h // 11\n\
+         end\n\
+         say a b c t",
+        super::THRESHOLD + 5000
+    )
+    .as_bytes());
+    assert!(compiled_runs() > 0, "nothing compiled");
+    assert_eq!(retirements(), 0, "the outer loop was retired");
 }
