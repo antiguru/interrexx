@@ -1,0 +1,73 @@
+# `OPTIONS expr` evaluates its expression as native ops, and `Op::ExecValue`
+# does the rest: the string request and the `>>>` line. Each stanza answers
+# what the walked expression answered.
+
+# a literal, a call and an object operand, under trace r
+program
+trace r
+options 'NOVALUE'
+options g()
+o = .k~new
+options o
+say 'ok'
+exit
+g: return 'ABC'
+::class k
+::method makestring
+  return 'X'
+----
+rc> 0
+out> ok
+err>      2 *-* options 'NOVALUE'
+err>        >>>   "NOVALUE"
+err>      3 *-* options g()
+err>      8 *-*   g:
+err>      8 *-*   return 'ABC'
+err>        >>>     "ABC"
+err>        >>>   "ABC"
+err>      4 *-* o = .k~new
+err>        >>>   "a K"
+err>      5 *-* options o
+err>        >>>   "X"
+err>      6 *-* say 'ok'
+err>        >>>   "ok"
+err>      7 *-* exit
+
+# trace i: the expression's intermediates, then `>>>`
+program
+trace i
+options 'a' || 'b'
+----
+rc> 0
+err>      2 *-* options 'a' || 'b'
+err>        >L>   "a"
+err>        >L>   "b"
+err>        >O>   "||" => "ab"
+err>        >>>   "ab"
+
+# a raise in the middle of the expression, and a NOVALUE
+program
+signal on syntax name mid
+options 'a' || f()
+exit
+f: raise syntax 40.1 array('F')
+mid:
+say 'mid' rc sigl
+signal on novalue
+options zq
+exit
+novalue: say 'novalue' sigl condition('D')
+----
+rc> 0
+out> mid 40 2
+out> novalue 8 ZQ
+
+# an expression outside the native set: the clause evaluates it through
+# `Op::EvalExpr`, addressed as OPTIONS's own slot
+program
+options rexx:length('abc')
+----
+rc> 213
+err>      1 *-* options rexx:length('abc')
+err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
+err> Error 43.902:

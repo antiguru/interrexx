@@ -1234,10 +1234,7 @@ impl Interp {
             // nothing else.
             InstructionKind::Options { expression } => {
                 let value = self.eval(code, expression)?;
-                self.roots.activity_mut().push_temp(value);
-                let value = self.required_string_value(value)?;
-                let text = self.to_text(value).to_vec();
-                self.trace_result(self.activity.clause_state.current_value_indent, &text);
+                self.exec_options_value(value)?;
                 Ok(Flow::Next)
             }
 
@@ -2610,9 +2607,20 @@ impl Interp {
         }
     }
 
+    /// `OPTIONS`'s work after its expression, from its value: the string
+    /// request and the `>>>` line, and nothing else. The walked instruction
+    /// and `Op::ExecValue` both run it.
+    pub(crate) fn exec_options_value(&mut self, value: ObjRef) -> Result<(), Failure> {
+        self.roots.activity_mut().push_temp(value);
+        let value = self.required_string_value(value)?;
+        let text = self.to_text(value).to_vec();
+        self.trace_result(self.activity.clause_state.current_value_indent, &text);
+        Ok(())
+    }
+
     /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
-    /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s and
-    /// the environment-naming `ADDRESS VALUE`'s. `None` for every other
+    /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s, the
+    /// environment-naming `ADDRESS VALUE`'s and `OPTIONS`'s. `None` for every other
     /// instruction, which compiles as before.
     pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
         match kind {
@@ -2626,6 +2634,7 @@ impl Interp {
             {
                 address.dynamic.as_ref()
             }
+            InstructionKind::Options { expression } => Some(expression),
             _ => None,
         }
     }
@@ -2651,6 +2660,7 @@ impl Interp {
                 self.exec_trace_value(code, value)
             }
             InstructionKind::Address(address) => self.exec_address_value(code, address, value),
+            InstructionKind::Options { .. } => self.exec_options_value(value),
             kind => Err(Loud::instruction(kind).into()),
         }
     }
