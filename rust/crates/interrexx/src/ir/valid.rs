@@ -53,6 +53,19 @@ impl ValidOps {
                 | Op::SelectCase { src, .. }
                 | Op::ExecValue { src, .. }
                 | Op::ExecWith { src, .. } => inside(src),
+                // An item's register, or an omitted position; every other
+                // part's pair of registers.
+                Op::RaisePart {
+                    part: crate::run::RaisePart::Item,
+                    src,
+                    ..
+                } => arg(src),
+                Op::RaisePart {
+                    part: crate::run::RaisePart::Array | crate::run::RaisePart::Result,
+                    src,
+                    ..
+                } => inside(src),
+                Op::RaisePart { src, .. } => src.checked_add(1).is_some_and(inside),
                 Op::ParseBegin { src, base, .. } => {
                     arg(src)
                         && (base == Op::ARG_OMITTED

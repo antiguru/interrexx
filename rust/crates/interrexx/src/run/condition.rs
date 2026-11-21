@@ -1,6 +1,7 @@
 //! Condition traps and their delivery, `RAISE`, and `SIGNAL`.
 
 mod raise;
+pub(crate) use raise::{RaiseLayout, RaisePart, raise_slot};
 
 use super::{
     ActiveCondition, CallType, Code, ConditionTrap, Cow, Ended, Entry, Failure, Flow, HandlerExit,

@@ -1380,6 +1380,120 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
+            // A `RAISE` with an expression: each expression's ops into its
+            // part's registers, each followed by the `Op::RaisePart` that does
+            // what the instruction does with that value before it evaluates
+            // the next (its trace line, its conversion, its checks), then
+            // `Op::ExecWith`, which raises from what the parts left. A `RAISE`
+            // with none stays the delegating `Op::Exec` region below.
+            InstructionKind::Raise(raise)
+                if let Some(layout) = crate::run::RaiseLayout::of(raise) =>
+            {
+                let mark = registers.mark();
+                let at_op = op_index(&ops)?;
+                let echo = echoes(trace, instruction);
+                let clause = instruction_index(index)?;
+                ops.push(Op::Clause {
+                    index: clause,
+                    end: 0,
+                });
+                push_echo(&mut ops, echo, clause);
+                let base = registers.alloc()?;
+                for _ in 1..layout.len {
+                    registers.alloc()?;
+                }
+                use crate::run::RaisePart;
+                // In the order `r[instr.raise.order]` evaluates them: each
+                // expression into its register and the part that follows it,
+                // or a part with no expression of its own.
+                let at = |offset: Option<u16>| offset.map(|offset| base + offset);
+                let mut steps: Vec<(Option<(&Expr, u32)>, RaisePart, u16)> = Vec::new();
+                fn value(
+                    expr: Option<&Expr>,
+                    slot: u32,
+                    dst: Option<u16>,
+                    part: RaisePart,
+                ) -> Option<(Option<(&Expr, u32)>, RaisePart, u16)> {
+                    expr.zip(dst)
+                        .map(|(expr, dst)| (Some((expr, slot)), part, dst))
+                }
+                steps.extend(value(
+                    raise.rc.as_ref(),
+                    0,
+                    at(layout.code),
+                    RaisePart::Code,
+                ));
+                steps.extend(value(
+                    raise.description.as_ref(),
+                    1,
+                    at(layout.description),
+                    RaisePart::Description,
+                ));
+                steps.extend(value(
+                    raise.additional.as_ref(),
+                    2,
+                    at(layout.additional),
+                    RaisePart::Additional,
+                ));
+                if let (Some(items), Some(array)) = (&raise.array, at(layout.array)) {
+                    for (k, item) in items.iter().enumerate() {
+                        let slot = u32::try_from(k).ok().and_then(|k| k.checked_add(4)).ok_or(
+                            ChunkTooLarge {
+                                what: "RAISE ARRAY items past u32",
+                            },
+                        )?;
+                        let dst = u16::try_from(k + 1)
+                            .ok()
+                            .and_then(|k| array.checked_add(k))
+                            .ok_or(ChunkTooLarge { what: "registers" })?;
+                        match item {
+                            Some(expr) => steps.push((Some((expr, slot)), RaisePart::Item, dst)),
+                            None => steps.push((None, RaisePart::Item, Op::ARG_OMITTED)),
+                        }
+                    }
+                    steps.push((None, RaisePart::Array, array));
+                }
+                if let Some(result) = &raise.result {
+                    steps.extend(value(
+                        result.value.as_ref(),
+                        3,
+                        at(layout.result),
+                        RaisePart::Result,
+                    ));
+                }
+                for (expr, part, src) in steps {
+                    if let Some((expr, slot)) = expr {
+                        push_value(
+                            &mut ops,
+                            echoes_values,
+                            &mut consts,
+                            &mut registers,
+                            &mut hints,
+                            &mut calls,
+                            plan,
+                            expr,
+                            clause,
+                            slot,
+                            src,
+                        )?;
+                    }
+                    // An item's part is its trace lines and nothing else.
+                    if part == RaisePart::Item && !echoes_values {
+                        continue;
+                    }
+                    ops.push(Op::RaisePart {
+                        index: clause,
+                        part,
+                        src,
+                    });
+                }
+                ops.push(Op::ExecWith {
+                    index: clause,
+                    src: base,
+                });
+                close_region(&mut ops, at_op)?;
+                registers.release(mark);
+            }
             // A `GUARD ... WHEN` whose condition only reads and compares: the
             // condition's ops go to the side table `Chunk::conditions`, where
             // `exec_guard` runs them on every test (the first and each one
