@@ -1177,11 +1177,11 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
 fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>, test: &LoopTest) {
-    if inner.is_none() {
-        let passes = e.load_native(types::I64, layout::PASSES);
-        let passes = e.b.ins().iadd_imm_u(passes, 1);
-        e.store_native(passes, layout::PASSES);
-    }
+    // Every loop's passes count: the host counts its ops on each pass of an
+    // inner loop as on each of the compiled loop's, and weighs them per pass.
+    let passes = e.load_native(types::I64, layout::PASSES);
+    let passes = e.b.ins().iadd_imm_u(passes, 1);
+    e.store_native(passes, layout::PASSES);
     let slow = e.b.create_block();
     let body = e.b.create_block();
     let check = e.b.create_block();

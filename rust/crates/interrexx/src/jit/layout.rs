@@ -50,8 +50,8 @@ pub(crate) struct Native {
     /// Non-zero when `TRACE` shows intermediates, which every value echo op's
     /// own gate asks (`Interp::tracing_intermediates`).
     pub(crate) intermediates: u64,
-    /// Pass boundaries generated code has reached, which the host weighs the
-    /// ops it ran against.
+    /// Pass boundaries generated code has reached, the compiled loop's and
+    /// its inner loops', which the host weighs the ops it ran against.
     pub(crate) passes: u64,
     /// The op a [`super::JUMP`] answer goes on at.
     pub(crate) jump_to: u64,
