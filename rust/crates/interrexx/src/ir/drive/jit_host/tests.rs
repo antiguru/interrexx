@@ -205,6 +205,57 @@ fn an_outer_loop_compiles_with_its_inner_loop() {
     );
 }
 
+/// A loop whose `WHILE` calls a builtin runs its test region in its compiled
+/// passes: once hot it is entered once, not once a pass.
+#[test]
+fn a_loop_with_a_test_region_is_entered_once() {
+    reset_compiled_runs();
+    ran(format!(
+        "n = 0; m = 0\n\
+         do i = 1 while length(i) < 6 & i <= {}\n\
+         \x20 n = n + i; a = n // 7; b = a * 3; c = b - i; d = c + a\n\
+         \x20 m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+         end\n\
+         say n m k i",
+        super::THRESHOLD + 5000
+    )
+    .as_bytes());
+    assert_eq!(
+        compiled_runs(),
+        1,
+        "the loop left compiled code at its test"
+    );
+}
+
+/// An inner loop whose `WHILE` calls a builtin ends in its test region, which
+/// settles in compiled code: from the outer loop's compile on, the entries do
+/// not grow with the passes.
+#[test]
+fn an_inner_loop_ending_in_its_test_settles_in_compiled_code() {
+    let entries = |n: u32| {
+        reset_compiled_runs();
+        ran(format!(
+            "t = 0; s = 0\n\
+             do i = 1 to {n}\n\
+             \x20 a = i * 3; b = a // 7; c = b + i; d = c - a; e = d * 2; g = e // 9\n\
+             \x20 do j = 1 while min(j, 99) <= 2\n\
+             \x20   t = t + j\n\
+             \x20 end\n\
+             \x20 h = t // 13; m = h + g; n = m - b; p = n * 2; q = p // 3; r = q + s\n\
+             end\n\
+             say t r"
+        )
+        .as_bytes());
+        compiled_runs()
+    };
+    let short = entries(super::THRESHOLD + 2000);
+    assert_eq!(
+        entries(super::THRESHOLD + 20000),
+        short,
+        "compiled code was left where an inner loop's test ended it"
+    );
+}
+
 /// The budget a compiled loop is retired against is per pass of any loop it
 /// holds, as the host's ops are counted: an inner loop whose body runs an op
 /// on the host on every one of its passes does not retire the outer loop.

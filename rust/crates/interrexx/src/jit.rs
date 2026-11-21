@@ -207,6 +207,15 @@ pub(crate) enum Step {
     /// An op between clause regions the host runs, which may answer
     /// [`JUMP`]: a `SELECT`'s own ops.
     Between { pc: u32 },
+    /// A loop's header test region's `Op::LoopTest` at `pc`: the region's
+    /// clause, which the host opens and keeps, the steps after it up to its
+    /// [`Step::Tested`] being the condition's. A loop that ends here instead
+    /// answers [`JUMP`] to where it settled, or leaves.
+    Test { pc: u32 },
+    /// The `Op::LoopTested` at `pc` that ends a header test region: the pass
+    /// decided by the host, which closes the clause and carries on into the
+    /// body, or answers [`JUMP`] to where a loop it ends settled, or leaves.
+    Tested { pc: u32 },
     /// A comparison of two registers: done here when both are small
     /// integers the driver's own quick comparison takes, else the op at `pc`
     /// through the host.
@@ -696,7 +705,9 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::InnerNext { .. }
             | Step::Dropped
             | Step::EndBranch { .. }
-            | Step::Between { .. } => None,
+            | Step::Between { .. }
+            | Step::Test { .. }
+            | Step::Tested { .. } => None,
             Step::PushArg { src } => (src != OMITTED).then_some(src),
             Step::Builtin { args, .. } => (0..CARRIED_ARGS)
                 .map(|k| carried_arg(args, k))
@@ -793,14 +804,15 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             fast,
             _module: std::marker::PhantomData,
         };
-        // Every op a branch can land on: a clause's opening, an
-        // `EndBranch`, and the pass boundary.
+        // Every op a branch can land on: a clause's opening, a test
+        // region's, an `EndBranch`, and the pass boundary.
         let mut labels: HashMap<u32, Block> = HashMap::new();
         labels.insert(pass.end, head);
         for step in &pass.steps {
             if let Step::Open { pc, .. }
             | Step::EndBranch { pc }
             | Step::Between { pc }
+            | Step::Test { pc }
             | Step::InnerNext { pc, .. } = *step
             {
                 labels.insert(pc, e.b.create_block());
@@ -830,6 +842,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             if let Step::Open { pc, .. }
             | Step::EndBranch { pc }
             | Step::Between { pc }
+            | Step::Test { pc }
             | Step::InnerNext { pc, .. } = *step
             {
                 let block = labels[&pc];
@@ -885,6 +898,13 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 }
                 Step::Between { pc } => {
                     e.call_op(None, pc, Some((JUMP, dispatch)));
+                }
+                Step::Test { pc } => {
+                    clause_pc = pc;
+                    e.call_op(None, pc, Some((JUMP, dispatch)));
+                }
+                Step::Tested { pc } => {
+                    e.call_op(Some(clause_pc), pc, Some((JUMP, dispatch)));
                 }
                 Step::Compare {
                     pc,
