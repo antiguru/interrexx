@@ -47,6 +47,9 @@ pub(crate) struct Native {
     /// Non-zero when `NUMERIC FUZZ` is 0 and `TRACE` shows no results: what
     /// the driver's own quick comparison and quick condition test ask.
     pub(crate) quick_values: u64,
+    /// Non-zero when `TRACE` shows intermediates, which every value echo op's
+    /// own gate asks (`Interp::tracing_intermediates`).
+    pub(crate) intermediates: u64,
     /// Pass boundaries generated code has reached, which the host weighs the
     /// ops it ran against.
     pub(crate) passes: u64,
@@ -71,6 +74,7 @@ impl Native {
             clause_at: CLAUSE_NONE,
             loops: [LoopRecord::default(); MAX_LOOPS],
             quick_values: 0,
+            intermediates: 0,
             passes: 0,
             jump_to: 0,
             opened: 0,
@@ -146,6 +150,7 @@ pub(crate) const LOOP_TO: usize = offset_of!(LoopRecord, to);
 pub(crate) const LOOP_VALUE: usize = offset_of!(LoopRecord, value);
 pub(crate) const LOOP_DIRTY: usize = offset_of!(LoopRecord, dirty);
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
+pub(crate) const INTERMEDIATES: i32 = at(offset_of!(Native, intermediates));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
 pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
 pub(crate) const OPENED: i32 = at(offset_of!(Native, opened));

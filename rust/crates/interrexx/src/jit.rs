@@ -168,6 +168,10 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// A value echo op at `pc`: through the host while the block says `TRACE`
+    /// shows intermediates (`Native::intermediates`), skipped otherwise, as
+    /// the op's own gate would.
+    Trace { pc: u32 },
     /// `Op::CallArgs` at `pc`, compiled where its site resolved to a quiet
     /// builtin: [`Host::quiet_builtin`] over the argument registers `args`
     /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
@@ -752,6 +756,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             Step::Open { .. }
             | Step::Close { .. }
             | Step::Op { .. }
+            | Step::Trace { .. }
             | Step::Jump { .. }
             | Step::Compound { .. }
             | Step::BlockStart { .. }
@@ -989,6 +994,16 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     dst,
                 } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::Trace { pc } => {
+                    let tracing = e.load_native(types::I64, layout::INTERMEDIATES);
+                    let echo = e.b.create_block();
+                    let join = e.b.create_block();
+                    e.b.ins().brif(tracing, echo, &[], join, &[]);
+                    e.b.switch_to_block(echo);
+                    e.slow_op(clause_pc, pc);
+                    e.b.ins().jump(join, &[]);
+                    e.b.switch_to_block(join);
+                }
                 Step::Builtin { pc, args } => e.call_op_with(
                     builtin_helper as *const (),
                     Some(args),
