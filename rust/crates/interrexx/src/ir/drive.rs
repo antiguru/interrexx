@@ -15,8 +15,8 @@ use crate::eval::{SymbolRead, call_target_name};
 use crate::plan::Plan;
 use crate::run::interpret::Pause;
 use crate::run::{
-    Absorbed, CallEntry, CallResolution, ConditionTrace, Echo, Ended, Flow, LoopHeaderValues,
-    QueueKeyword, Resolved, ReturnKeyword, SelectEscape, SelectResume, SiteCall, SiteKeep, Started,
+    Absorbed, CallResolution, ConditionTrace, Echo, Ended, Flow, LoopHeaderValues, QueueKeyword,
+    Resolved, ReturnKeyword, SelectEscape, SelectResume, SiteCall, SiteKeep, Started,
     SteppedClause, absorb, otherwise_range, otherwise_resume, select_escape, select_parts,
     subroutine_started, when_resume, when_targets,
 };
@@ -2522,14 +2522,7 @@ impl Interp {
         let resolution = self.site_resolution_before_arguments(chunk, site, name, !*literal);
         let resolution = self.resolved_after_arguments(code, resolution, args)?;
         let base_indent = self.activity.clause_state.current_value_indent;
-        let begun = self.begin_invoke_call(
-            code,
-            resolution,
-            name,
-            args,
-            CallType::Subroutine,
-            CallEntry::Written,
-        )?;
+        let begun = self.begin_invoke_call(code, resolution, name, args, CallType::Subroutine)?;
         Ok((subroutine_started(begun), base_indent))
     }
 

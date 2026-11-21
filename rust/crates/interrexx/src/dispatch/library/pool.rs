@@ -9,7 +9,7 @@ use interrexx_core::{Body, ObjRef};
 use super::condition_of;
 use crate::activation::CallType;
 use crate::builtin::datatype::{SymbolKind, classify};
-use crate::run::{CallEntry, Ended, Resolved};
+use crate::run::{Ended, Resolved};
 use crate::{Failure, Interp, Loud};
 
 /// The longest name the variable pool accepts, a symbol's limit.
@@ -461,13 +461,8 @@ impl Interp {
                 object
             }));
         }
-        let ended = self.invoke_call_over(
-            Resolved::Label(target),
-            &upper,
-            values,
-            CallType::Function,
-            CallEntry::Written,
-        );
+        let ended =
+            self.invoke_call_over(Resolved::Label(target), &upper, values, CallType::Function);
         let failure = match ended {
             Ok(Ended::Returned(value)) => {
                 let Some(value) = value else {

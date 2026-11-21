@@ -211,10 +211,12 @@ fn a_condition_inside_a_method_body_echoes_the_body_and_then_the_send() {
     );
 }
 
-/// **The receiver a callee's calling convention carries**, for each
-/// route into a callee that this crate has.
+/// **The receiver a callee's calling convention carries**: an internal
+/// routine has its caller's, however it was entered, a `CALL ON` trap included
+/// (whose effect `r[instr.call.on.receiver]`'s example shows), and a `::ROUTINE`
+/// has none.
 #[test]
-fn a_trap_handler_and_an_internal_call_do_not_carry_the_same_receiver() {
+fn an_internal_routine_carries_its_callers_receiver_and_a_routine_none() {
     let caller = ObjRef::small_int(7).expect("7 fits the tag");
     let label = Entered::Label(0);
     let routine = Entered::Routine(crate::InstalledRoutine {
@@ -223,31 +225,19 @@ fn a_trap_handler_and_an_internal_call_do_not_carry_the_same_receiver() {
     });
 
     assert_eq!(
-        entered_receiver(label, CallEntry::Written, Some(caller)),
+        entered_receiver(label, Some(caller)),
         Some(caller),
-        "an internal CALL did not inherit its caller's receiver"
+        "an internal routine did not inherit its caller's receiver"
     );
     assert_eq!(
-        entered_receiver(label, CallEntry::Trap, Some(caller)),
-        None,
-        "a CALL ON handler was given the receiver internalCallTrap withholds"
-    );
-    assert_eq!(
-        entered_receiver(routine, CallEntry::Written, Some(caller)),
+        entered_receiver(routine, Some(caller)),
         None,
         "a ::ROUTINE inherited a receiver"
     );
-    assert_eq!(
-        entered_receiver(routine, CallEntry::Trap, Some(caller)),
-        None
-    );
-
     // A caller with no receiver of its own has none to pass on, whichever
     // route is taken: the top-level control's own state.
     for entered in [label, routine] {
-        for entry in [CallEntry::Written, CallEntry::Trap] {
-            assert_eq!(entered_receiver(entered, entry, None), None);
-        }
+        assert_eq!(entered_receiver(entered, None), None);
     }
 }
 

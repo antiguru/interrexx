@@ -30,6 +30,7 @@ base/class/Class	TEST_DELETE	Deviation 110	after DEFINE hides TESTMETHOD, the te
 base/class/IdentityTable	TEST_AT01	Deviation 4	line 78 asserts that coll~at("2"||"2") misses the index "2"||"2" built in init; the other assertions pass
 base/class/IdentityTable	TEST_HASINDEX	Deviation 4	line 163 asserts that hasIndex("1223"~substr(2,2)) misses the indexes "22" and "2"||"2"; the other assertions pass
 base/class/IdentityTable	TEST_[]	Deviation 4	line 89 asserts that coll["2"||"2"] misses the index "2"||"2" built in init; the other assertions pass
+base/class/Message	TEST_RESULT_CHANGED_CONDITION	Deviation 40	a child rexx's OUTPUT and ERROR merged into one array interleave by hand-over, so the last line is stdout's rather than the error report's; what the test checks of the conditions is r[class.message.result.changed]'s example
 base/class/Object	TEST_COPY_IMAGE_OBJECT_VARIABLES	Deviation 36	the program sets OBJECTNAME of .true, a String, which is refused
 base/class/Relation	TEST_OF_13	Deviation 33	line 868 expects d[x] to answer z, the newest of the three entries at x, where at answers the oldest; the other assertions pass
 base/class/RexxInteger	TEST_INTEGER_ADDITION	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min

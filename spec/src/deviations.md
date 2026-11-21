@@ -1424,7 +1424,10 @@ internal form is a number object rather than a string, and true for others,
 such as `3.5` and `'0'`. The same test decides whether its
 `DecodeConditionInfo` reports a condition's description: interrexx reports a
 description that is any instance of String, where ooRexx reports none for a
-description such as `2 + 3`.
+description such as `2 + 3`. So does whether `Message~result` takes the `CODE`
+of a changed SYNTAX condition object: interrexx takes any instance of String
+that names an error number, where ooRexx raises `SYNTAX 93.900` for a number an
+operator made, such as `40.1 + 0`. Ruled by the owner on 2026-11-21 (#891).
 
 ## 174. An operand made by an operation takes part with the digits it shows
 

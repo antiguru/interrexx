@@ -70,8 +70,8 @@ mod condition;
 // `CALL` and function calls: resolving the name, running the arguments, entering the callee.
 mod call;
 pub(crate) use call::{
-    Begun, CallEntry, CallResolution, CallTail, InternalName, MAX_ACTIVATION_DEPTH, SiteCall,
-    SiteKeep, Started, function_started, subroutine_started,
+    Begun, CallResolution, CallTail, InternalName, MAX_ACTIVATION_DEPTH, SiteCall, SiteKeep,
+    Started, function_started, subroutine_started,
 };
 #[cfg(test)]
 use call::{Entered, entered_receiver};
@@ -419,6 +419,7 @@ pub(crate) struct FailureLevels {
     propagated: bool,
     reraised: bool,
     reraised_object: Option<ObjRef>,
+    traceback_object: Option<ObjRef>,
     reraise_leaving: usize,
     propagate_absorb: usize,
     failed_sends: Vec<ObjRef>,
@@ -449,6 +450,7 @@ impl FailureLevels {
         out.extend(self.frame);
         out.extend(self.frames.iter().copied());
         out.extend(self.reraised_object);
+        out.extend(self.traceback_object);
         out.extend(self.failed_sends.iter().copied());
     }
 }
@@ -3365,6 +3367,7 @@ impl Interp {
             propagated: std::mem::take(&mut activity.failure_propagated),
             reraised: std::mem::take(&mut activity.failure_reraised),
             reraised_object: activity.reraised_object.take(),
+            traceback_object: activity.traceback_object.take(),
             reraise_leaving: std::mem::take(&mut activity.reraise_leaving),
             propagate_absorb: std::mem::take(&mut activity.propagate_absorb),
             failed_sends: std::mem::take(&mut activity.failed_sends),
@@ -3386,6 +3389,7 @@ impl Interp {
             propagated: activity.failure_propagated,
             reraised: activity.failure_reraised,
             reraised_object: activity.reraised_object,
+            traceback_object: activity.traceback_object,
             reraise_leaving: activity.reraise_leaving,
             propagate_absorb: activity.propagate_absorb,
             failed_sends: activity.failed_sends.clone(),
@@ -3401,6 +3405,7 @@ impl Interp {
             .iter()
             .chain(&kept.frames)
             .chain(&kept.reraised_object)
+            .chain(&kept.traceback_object)
             .chain(&kept.failed_sends)
         {
             temps.push_temp(object);
@@ -3410,6 +3415,7 @@ impl Interp {
             self.failure_level_roots += kept.frames.len()
                 + usize::from(kept.frame.is_some())
                 + usize::from(kept.reraised_object.is_some())
+                + usize::from(kept.traceback_object.is_some())
                 + kept.failed_sends.len();
         }
     }
@@ -3424,6 +3430,7 @@ impl Interp {
         activity.failure_propagated = kept.propagated;
         activity.failure_reraised = kept.reraised;
         activity.reraised_object = kept.reraised_object;
+        activity.traceback_object = kept.traceback_object;
         activity.reraise_leaving = kept.reraise_leaving;
         activity.propagate_absorb = kept.propagate_absorb;
         activity.failed_sends = kept.failed_sends;
@@ -3440,6 +3447,7 @@ impl Interp {
         self.activity.failure_propagated = false;
         self.activity.failure_reraised = false;
         self.activity.reraised_object = None;
+        self.activity.traceback_object = None;
         self.activity.reraise_leaving = 0;
         self.activity.propagate_absorb = 0;
         self.activity.failed_sends.clear();

@@ -177,6 +177,10 @@ pub(crate) struct Activity {
     /// The condition object a `RAISE PROPAGATE` re-raises in its caller, from
     /// the propagate until a trap takes it.
     pub(crate) reraised_object: Option<ObjRef>,
+    /// The condition object a `RAISE PROPAGATE` of a SYNTAX condition passed
+    /// on, whose `TRACEBACK` the report shows as it stands when the condition
+    /// reaches the top untrapped (`r[instr.raise.propagate.traceback]`).
+    pub(crate) traceback_object: Option<ObjRef>,
     /// How many of the levels that `RAISE PROPAGATE` leaves are still to be
     /// left, which add no frame and no origin: the object has its frames.
     pub(crate) reraise_leaving: usize,
@@ -580,6 +584,7 @@ impl Activity {
             pending_additional: None,
             native_frames_owed: Vec::new(),
             reraised_object: None,
+            traceback_object: None,
             reraise_leaving: 0,
             rxunixsys_errno: 0,
             rxsock_errno: 0,
@@ -763,6 +768,7 @@ impl Activity {
             pending_additional,
             native_frames_owed,
             reraised_object,
+            traceback_object,
             reraise_leaving: _,
             rxunixsys_errno: _,
             rxsock_errno: _,
@@ -866,6 +872,7 @@ impl Activity {
         out.extend(*pending_description);
         out.extend(*pending_rc);
         out.extend(*reraised_object);
+        out.extend(*traceback_object);
         out.extend(*failure_frame);
         out.extend(failure_frames.iter().copied());
         out.extend(failed_sends.iter().copied());
