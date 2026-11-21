@@ -100,11 +100,13 @@ impl Loops {
 }
 
 /// What the `Op::LoopNext` arm does after compiled passes: carry on at an op,
-/// end the range with what `ops_loop` returns, or settle a `Flow` from an op.
+/// or end the range with what `ops_loop` returns. A `Flow` an op answered is
+/// settled before the arm sees it, as the driver's own `settle` after a step
+/// would: an edge into the driver's step from the arm makes the driver's loop
+/// compile worse for every program, compiled or not (#849).
 pub(super) enum JitAction {
     At(u32),
     Return(Result<Exit, Failure>),
-    Settle(Flow, u32),
 }
 
 /// How a run of compiled passes ended.
@@ -289,14 +291,22 @@ impl Interp {
         // Everything but where the driver goes on is settled here, out of
         // the driver's loop: the `Op::LoopNext` arm's own answers, and
         // `clause_region!`'s for a parked call.
+        let (base, start, end) = range;
+        let settle = |interp: &mut Interp, flow: Flow, next: u32| match interp
+            .settle(code, chunk, registers, base, flow, next, start, end, source)
+        {
+            Ok(Settled::At(target)) => JitAction::At(target),
+            Ok(Settled::Escaped(other)) => JitAction::Return(Ok(Exit::Flow(other))),
+            Err(failure) => JitAction::Return(Err(failure)),
+        };
         Some(match exit {
             JitExit::At(target) => JitAction::At(target),
             JitExit::Slice(at) => JitAction::Return(Ok(Exit::Slice(at))),
             JitExit::Done(flow) => {
                 self.activity.frames.pop();
-                JitAction::Settle(flow, pc)
+                settle(self, flow, pc)
             }
-            JitExit::Flow(flow, next) => JitAction::Settle(flow, next),
+            JitExit::Flow(flow, next) => settle(self, flow, next),
             JitExit::Fail(failure) => JitAction::Return(Err(failure)),
             JitExit::Escaped(flow) => JitAction::Return(Ok(Exit::Flow(flow))),
             JitExit::Parked {
