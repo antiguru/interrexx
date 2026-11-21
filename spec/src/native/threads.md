@@ -236,7 +236,7 @@ hangs. A call of a library built into the interpreter that does not wait for
 time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
 too for its whole run, and the callback waits until that call returns, while
 `SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
-as they wait. ooRexx can abort the process for a foreign callback.
+as they wait. ooRexx aborts the process.
 A callback through the context of an attached thread, made after that thread
 detached from it, does not wait: it is refused at once and answers the failure
 value of the member, without running anything. ooRexx aborts the process in

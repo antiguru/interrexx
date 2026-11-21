@@ -151,7 +151,7 @@ interrexx refuses callbacks through a call context from a thread that is
 running no native call of the interpreter. It also refuses callbacks through
 an attached context after its thread detaches. [The foreign-thread callback
 rule](r:native.threads.context.deviation.19) specifies the result and when
-the thread must wait. ooRexx can abort the process in these cases.
+the thread must wait. ooRexx aborts the process in these cases.
 
 ## 20. A wait nothing can end
 
