@@ -79,7 +79,10 @@ fn raise_result_expr(raise: &Raise) -> Option<&Expr> {
 
 /// Expression `slot` of `raise`, as a compiled `RAISE` addresses them: `0`
 /// the code or number, `1` `DESCRIPTION`, `2` `ADDITIONAL`, `3` the
-/// `RETURN` or `EXIT` value, and `4 + k` item `k` of `ARRAY`.
+/// `RETURN` or `EXIT` value, and `4 + k` item `k` of `ARRAY`. Out of line,
+/// so that the lookup of every other instruction's slots does not carry it.
+#[cold]
+#[inline(never)]
 pub(crate) fn raise_slot(raise: &Raise, slot: u16) -> Option<&Expr> {
     match slot {
         0 => raise.rc.as_ref(),

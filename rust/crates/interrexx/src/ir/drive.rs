@@ -1806,15 +1806,14 @@ macro_rules! region_ops {
                 Op::LoopTest { .. } => {
                     break $cold Err(Loud::op_not_driven("LoopTest").into());
                 }
-                Op::ExecValue { $index, src } => {
+                // `Op::RaisePart` shares the arm, for the reason `Exec`'s arm
+                // gives for sharing its own: a second call here costs every op
+                // of every clause in the driver's codegen.
+                Op::ExecValue { $index, .. } | Op::RaisePart { $index, .. } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ExecValue",
                     );
-                    debug_assert!(
-                        $chunk.holds_register(*src),
-                        "op reads register {src} outside the region the chunk reserved"
-                    );
-                    if let Err(failure) = $self.exec_value($code, $clause, $registers.get(*src)) {
+                    if let Err(failure) = $self.exec_value($code, $clause, $registers, region_op) {
                         break $cold Err(failure);
                     }
                 }
@@ -1828,14 +1827,6 @@ macro_rules! region_ops {
                     // did.
                     if $self.activation().method_identity.is_none() {
                         break $cold Err(crate::Interp::reply_refused());
-                    }
-                }
-                Op::RaisePart { $index, part, src } => {
-                    debug_assert_names_the_clause(
-                        $code, *$index, $clause, "RaisePart",
-                    );
-                    if let Err(failure) = $self.raise_part($clause, $registers, *part, *src) {
-                        break $cold Err(failure);
                     }
                 }
                 Op::SelectCase { $index, src } => {

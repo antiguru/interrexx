@@ -2828,15 +2828,25 @@ impl Interp {
         }
     }
 
-    /// [`crate::ir::Op::ExecValue`]: the instruction `instruction` from the
-    /// value `value` its expression answered.
+    /// [`crate::ir::Op::ExecValue`] `op`: the instruction `instruction` from
+    /// the value its expression left in the op's register; or
+    /// [`crate::ir::Op::RaisePart`], which shares the driver's arm.
     #[inline(never)]
     pub(crate) fn exec_value(
         &mut self,
         code: &Code<'_>,
         instruction: &Instruction,
-        value: ObjRef,
+        registers: RegFrame<'_>,
+        op: &crate::ir::Op,
     ) -> Result<(), Failure> {
+        let src = match *op {
+            crate::ir::Op::RaisePart { part, src, .. } => {
+                return self.raise_part(instruction, registers, part, src);
+            }
+            crate::ir::Op::ExecValue { src, .. } => src,
+            _ => return Err(Loud::instruction(&instruction.kind).into()),
+        };
+        let value = registers.get(src);
         debug_assert!(
             Self::exec_value_expression(&instruction.kind).is_some()
                 && !Self::exec_value_transfers(&instruction.kind),
@@ -3776,8 +3786,6 @@ impl Interp {
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => expression,
-            // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
-            (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
             // A `SELECT CASE`'s expression.
             (
                 InstructionKind::Select {
@@ -3819,6 +3827,8 @@ impl Interp {
                 },
                 1,
             ) => value,
+            // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
+            (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
             _ => return None,
         };
         let mut steps = path.steps();
