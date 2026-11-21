@@ -327,30 +327,43 @@ impl Interp {
             }
             (None, Some(expression)) => {
                 let value = self.eval(code, expression)?;
-                self.roots.activity_mut().push_temp(value);
-                // The string request comes before the `>>>`,
-                // so the trace
-                // names the conversion: measured, `trace r` over
-                // `address (.K)` with a class-side `makeString` returning
-                // `'CMD'` prints `>>>   "CMD"` and `ADDRESS()` answers `CMD`.
-                let value = self.required_string_value(value)?;
-                // Built in the lent buffer: the rendering exists only to be
-                // traced and then copied into the `Rc`, so an owned `Vec` of
-                // its own would be an allocation and a free per `ADDRESS
-                // VALUE` clause.
-                let mut text = self.take_result_buffer();
-                text.extend_from_slice(&self.to_text(value));
-                self.trace_result(self.activity.clause_state.current_value_indent, &text);
-                if text.len() > MAX_ADDRESS_NAME_LENGTH {
-                    let raised = Raised::environment_name_too_long(MAX_ADDRESS_NAME_LENGTH, &text);
-                    self.give_result_buffer(text);
-                    return Err(raised.into());
-                }
-                self.activation_mut().address.set_bytes(&text);
-                self.store_io_config(code, &text, address);
-                self.give_result_buffer(text);
+                return self.exec_address_value(code, address, value);
             }
         }
+        Ok(())
+    }
+
+    /// `ADDRESS VALUE expr`'s work after its expression, from its value: what
+    /// the walked instruction does once it has evaluated it, and what
+    /// `Op::ExecValue` does for a compiled one.
+    pub(crate) fn exec_address_value(
+        &mut self,
+        code: &Code<'_>,
+        address: &interrexx_parse::Address,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        self.roots.activity_mut().push_temp(value);
+        // The string request comes before the `>>>`,
+        // so the trace
+        // names the conversion: measured, `trace r` over
+        // `address (.K)` with a class-side `makeString` returning
+        // `'CMD'` prints `>>>   "CMD"` and `ADDRESS()` answers `CMD`.
+        let value = self.required_string_value(value)?;
+        // Built in the lent buffer: the rendering exists only to be
+        // traced and then copied into the `Rc`, so an owned `Vec` of
+        // its own would be an allocation and a free per `ADDRESS
+        // VALUE` clause.
+        let mut text = self.take_result_buffer();
+        text.extend_from_slice(&self.to_text(value));
+        self.trace_result(self.activity.clause_state.current_value_indent, &text);
+        if text.len() > MAX_ADDRESS_NAME_LENGTH {
+            let raised = Raised::environment_name_too_long(MAX_ADDRESS_NAME_LENGTH, &text);
+            self.give_result_buffer(text);
+            return Err(raised.into());
+        }
+        self.activation_mut().address.set_bytes(&text);
+        self.store_io_config(code, &text, address);
+        self.give_result_buffer(text);
         Ok(())
     }
 

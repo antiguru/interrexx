@@ -2608,6 +2608,26 @@ impl Interp {
         }
     }
 
+    /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
+    /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s and
+    /// the environment-naming `ADDRESS VALUE`'s. `None` for every other
+    /// instruction, which compiles as before.
+    pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
+        match kind {
+            InstructionKind::Numeric {
+                expression: Some(expression),
+                ..
+            }
+            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => Some(expression),
+            InstructionKind::Address(address)
+                if address.command.is_none() && address.environment.is_none() =>
+            {
+                address.dynamic.as_ref()
+            }
+            _ => None,
+        }
+    }
+
     /// [`crate::ir::Op::ExecValue`]: the instruction `instruction` from the
     /// value `value` its expression answered.
     #[inline(never)]
@@ -2624,6 +2644,7 @@ impl Interp {
             InstructionKind::Trace(interrexx_parse::Trace::Value(_)) => {
                 self.exec_trace_value(code, value)
             }
+            InstructionKind::Address(address) => self.exec_address_value(code, address, value),
             kind => Err(Loud::instruction(kind).into()),
         }
     }
@@ -3541,14 +3562,7 @@ impl Interp {
             (InstructionKind::If { condition, .. }, 0) => condition,
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
-            (
-                InstructionKind::Numeric {
-                    expression: Some(expression),
-                    ..
-                }
-                | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)),
-                0,
-            ) => expression,
+            (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => expression,
             // A `SELECT CASE`'s expression.
             (
                 InstructionKind::Select {
@@ -3624,14 +3638,9 @@ impl Interp {
         slot: u32,
     ) -> Result<ObjRef, Failure> {
         match (&instruction.kind, slot) {
-            (
-                InstructionKind::Numeric {
-                    expression: Some(expression),
-                    ..
-                }
-                | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)),
-                0,
-            ) => self.eval(code, expression),
+            (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
+                self.eval(code, expression)
+            }
             (InstructionKind::If { condition, .. }, 0) => {
                 let holds = self.eval_if_condition(code, condition)?;
                 // In range unconditionally: `SMALL_INT_MAX` is far above one.
