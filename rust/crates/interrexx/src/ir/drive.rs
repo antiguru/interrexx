@@ -406,6 +406,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::SendScope { .. } => "SendScope",
         Op::ExecValue { .. } => "ExecValue",
         Op::ExecWith { .. } => "ExecWith",
+        Op::ReplyCheck { .. } => "ReplyCheck",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1814,6 +1815,18 @@ macro_rules! region_ops {
                     );
                     if let Err(failure) = $self.exec_value($code, $clause, $registers.get(*src)) {
                         break $cold Err(failure);
+                    }
+                }
+                Op::ReplyCheck { $index } => {
+                    debug_assert_names_the_clause(
+                        $code, *$index, $clause, "ReplyCheck",
+                    );
+                    // The test is inline and only the refusal is out of line:
+                    // a call from this arm costs every op of every clause in
+                    // the driver's codegen, as a second copy of `Exec`'s arm
+                    // did.
+                    if $self.activation().method_identity.is_none() {
+                        break $cold Err(crate::Interp::reply_refused());
                     }
                 }
                 Op::SelectCase { $index, src } => {

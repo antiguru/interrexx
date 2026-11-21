@@ -1870,14 +1870,38 @@ impl Interp {
         code: &Code<'_>,
         expression: Option<&Expr>,
     ) -> Result<ExecOutcome, Failure> {
-        if self.activation().method_identity.is_none() {
-            return Err(Raised::reply_outside_method().into());
-        }
+        self.reply_permitted()?;
         park_point!(self, crate::pinning::ParkKind::Reply);
         let value = match expression {
             Some(expression) => Some(self.eval(code, expression)?),
             None => None,
         };
+        self.exec_reply_value(value)
+    }
+
+    /// `REPLY`'s check before its expression: 99.919 outside a method, which
+    /// is raised before the expression is evaluated, so a call in it does
+    /// not run.
+    fn reply_permitted(&self) -> Result<(), Failure> {
+        if self.activation().method_identity.is_none() {
+            return Err(Self::reply_refused());
+        }
+        Ok(())
+    }
+
+    /// `REPLY`'s refusal outside a method, which [`crate::ir::Op::ReplyCheck`]
+    /// raises too.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn reply_refused() -> Failure {
+        Raised::reply_outside_method().into()
+    }
+
+    /// `REPLY`'s work after its expression, from its value: the `>>>` line,
+    /// then the checks made after the evaluation (98.935 for a second
+    /// `REPLY`), then the split. The walked instruction and `Op::ExecWith`
+    /// both run it.
+    fn exec_reply_value(&mut self, value: Option<ObjRef>) -> Result<ExecOutcome, Failure> {
         // The rooting and the `>>>` line are `RETURN`'s, for the same reason
         // and at the same indent: the expression evaluation is shared.
         if let Some(value) = value {
@@ -1889,7 +1913,8 @@ impl Interp {
         if self.activation().reply != ReplyState::None {
             return Err(Raised::reply_twice().into());
         }
-        // Past its driver's level the only pin is this `Op::Exec`'s own.
+        // Past its driver's level the only pin is this `Op::Exec`'s or
+        // `Op::ExecWith`'s own.
         if self.activity.pin_depth != self.activity.driver_pins + 1 {
             immovable_reply!(self);
             return Err(Loud::immovable_reply().into());
@@ -2643,8 +2668,8 @@ impl Interp {
 
     /// The expression an instruction [`crate::ir::Op::ExecValue`] runs is
     /// evaluated from, at slot `0`: `NUMERIC`'s operand, `TRACE VALUE`'s, the
-    /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s, `INTERPRET`'s and a
-    /// command clause's. `None` for every other
+    /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s, `INTERPRET`'s, a
+    /// command clause's and `REPLY`'s. `None` for every other
     /// instruction, which compiles as before.
     pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
         match kind {
@@ -2661,7 +2686,9 @@ impl Interp {
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
                 Some(expression)
             }
-            InstructionKind::Command { expression } => expression.as_ref(),
+            InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
+                expression.as_ref()
+            }
             _ => None,
         }
     }
@@ -2672,7 +2699,9 @@ impl Interp {
     pub(crate) fn exec_value_transfers(kind: &InstructionKind) -> bool {
         matches!(
             kind,
-            InstructionKind::Interpret { .. } | InstructionKind::Command { .. }
+            InstructionKind::Interpret { .. }
+                | InstructionKind::Command { .. }
+                | InstructionKind::Reply { .. }
         )
     }
 
@@ -2768,6 +2797,16 @@ impl Interp {
                 // leaves the clause before this op runs.
                 let indent = self.activity.clause_state.current_value_indent;
                 self.exec_command_value(code, index, instruction, source, value, indent, None, None)
+            }
+            // `Op::ReplyCheck` made the check that comes before the
+            // expression.
+            InstructionKind::Reply { .. } => {
+                debug_assert!(
+                    self.activation().method_identity.is_some(),
+                    "Op::ExecWith replied outside a method, past an Op::ReplyCheck that refuses it"
+                );
+                park_point!(self, crate::pinning::ParkKind::Reply);
+                self.exec_reply_value(Some(value))
             }
             kind => Err(Loud::instruction(kind).into()),
         }

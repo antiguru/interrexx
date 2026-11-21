@@ -1565,3 +1565,27 @@ numeric digits zd + 1
 4: ExecValue index=0 src=0
 registers: 2
 consts:
+
+# `REPLY` with an expression: `ReplyCheck`, so that the refusal outside a
+# method comes before the expression's ops, then those ops, then `ExecWith`,
+# which replies from the value.
+compile
+reply zr + 1
+----
+0: Clause index=0 end=6
+1: ReplyCheck index=0
+2: Load read=Simple at=0 dst=0
+3: LoadConstant dst=1
+4: Arith op=+ hint=0 lhs=0 rhs=1 dst=0
+5: ExecWith index=0 src=0
+registers: 2
+consts:
+
+# A bare `REPLY` has no expression and stays the one `Exec`.
+compile
+reply
+----
+0: Clause index=0 end=2
+1: Exec index=0
+registers: 0
+consts:

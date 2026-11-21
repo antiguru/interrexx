@@ -107,6 +107,11 @@ pub(crate) enum Op {
     /// instructions whose work past the evaluation can transfer control or
     /// run Rexx code of its own, which [`Op::ExecValue`]'s cannot.
     ExecWith { index: u32, src: u16 },
+    /// The check the `REPLY` at `index` makes before it evaluates its
+    /// expression, ahead of that expression's ops: its refusal outside a
+    /// method, so that the expression does not run where the instruction may
+    /// not.
+    ReplyCheck { index: u32 },
     /// Echoes the `*-*` line of the clause of the instruction at `index`.
     TraceClause { index: u32 },
     /// Evaluates expression `slot` of the instruction at `index` into

@@ -81,6 +81,7 @@ impl ValidOps {
                 | Op::Message { .. }
                 | Op::Expose { .. }
                 | Op::Exec { .. }
+                | Op::ReplyCheck { .. }
                 | Op::Escape { .. }
                 | Op::Jump { .. } => true,
             };

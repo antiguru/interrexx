@@ -1,0 +1,291 @@
+# `REPLY expr` evaluates its expression as native ops behind `Op::ReplyCheck`,
+# and `Op::ExecWith` replies from the value: the `>>>` line, the check for a
+# second `REPLY` and the split. Each stanza answers what the walked
+# expression answered.
+
+# a literal, a variable and a call, under trace r; the caller uses each
+# value while the method goes on
+program
+o = .c~new
+say o~m(4)
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  trace r
+  use arg n
+  reply n * 2 || '/' || f(n) || '/' || 'lit'
+  say 'tail' n
+  return
+::routine f
+  return arg(1) + 1
+----
+rc> 0
+out> 8/5/lit
+out> tail 4
+out> done
+err>        >I>
+err>      9 *-* use arg n
+err>        >>>   "4"
+err>     10 *-* reply n * 2 || '/' || f(n) || '/' || 'lit'
+err>        >>>   "8/5/lit"
+err>        <I<
+err>        >I>
+err>     11 *-* say 'tail' n
+err>        >>>   "tail 4"
+err>     12 *-* return
+err>        <I<
+
+# trace i: the expression's intermediates
+program
+o = .c~new
+say o~m(3)
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  trace i
+  use arg n
+  s.3 = 'x'
+  reply s.n || (n + 1) f(n)
+  say 'tail'
+::routine f
+  return 'f' || arg(1)
+----
+rc> 0
+out> x4 f3
+out> tail
+out> done
+err>        >I>
+err>      9 *-* use arg n
+err>        >>>   "3"
+err>        >=>   N <= "3"
+err>     10 *-* s.3 = 'x'
+err>        >L>   "x"
+err>        >>>   "x"
+err>        >C>   S.3 => "S.3"
+err>        >=>   S.3 <= "x"
+err>     11 *-* reply s.n || (n + 1) f(n)
+err>        >C>   S.N => "S.3"
+err>        >V>   S.N => "x"
+err>        >V>   N => "3"
+err>        >L>   "1"
+err>        >O>   "+" => "4"
+err>        >O>   "||" => "x4"
+err>        >V>   N => "3"
+err>        >A>   "3"
+err>        >F>   F => "f3"
+err>        >O>   " " => "x4 f3"
+err>        >>>   "x4 f3"
+err>        <I<
+err>        >I>
+err>     12 *-* say 'tail'
+err>        >L>   "tail"
+err>        >>>   "tail"
+err>        <I<
+
+# NOVALUE in the expression, trapped by SIGNAL ON and not
+program
+o = .c~new
+say o~m
+say o~k
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  signal on novalue
+  reply undefined_var + 1
+  say 'tail'
+  return
+novalue:
+  say 'trapped' condition('d')
+  return 'from handler'
+::method k
+  trace r
+  reply undefined_var
+  say 'tail k'
+----
+rc> 0
+out> trapped UNDEFINED_VAR
+out> from handler
+out> UNDEFINED_VAR
+out> tail k
+out> done
+err>        >I>
+err>     18 *-* reply undefined_var
+err>        >>>   "UNDEFINED_VAR"
+err>        <I<
+err>        >I>
+err>     19 *-* say 'tail k'
+err>        >>>   "tail k"
+err>        <I<
+
+# an expression that raises before the reply, trapped by the caller
+program
+o = .c~new
+signal on syntax
+say o~m
+exit
+syntax: say 'caller trapped' condition('c') rc; exit 0
+::class c
+::method m
+  trace r
+  reply 1 + 'abc'
+  say 'tail'
+----
+rc> 0
+out> caller trapped SYNTAX 41
+err>        >I>
+err>      9 *-* reply 1 + 'abc'
+err>        <I<
+
+# a second REPLY evaluates its expression before it is refused
+program
+o = .c~new
+say o~m
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  trace r
+  reply 'first'
+  reply g()
+  say 'not reached'
+::routine g
+  say 'g ran'
+  return 2
+----
+rc> 0
+out> first
+out> g ran
+out> done
+err>        >I>
+err>      9 *-* reply 'first'
+err>        >>>   "first"
+err>        <I<
+err>        >I>
+err>     10 *-* reply g()
+err>        >>>   "2"
+err>        <I<
+err>     10 *-* reply g()
+err> Error 98 running /nonexistent/ir-dual-case.rex line 10:
+err> Error 98.935:
+
+# outside a method the refusal comes before the expression, whose call does
+# not run
+program
+say .c~new~n
+::class c
+::method n
+  call sub
+  return 'n end'
+sub:
+  reply f()
+  return
+::routine f
+  say 'f ran'
+  return 1
+----
+rc> 157
+err>      7 *-*   reply f()
+err>      4 *-* call sub
+err>      1 *-* say .c~new~n
+err> Error 99 running /nonexistent/ir-dual-case.rex line 7:
+err> Error 99.919:
+
+# the replied object is the one the method goes on changing
+program
+o = .c~new
+r = o~m
+say r~string
+say o~done
+say r~v
+::class c
+::method done
+  return 'done'
+::method m
+  t = .t~new
+  reply t
+  t~v = 'changed after reply'
+::class t
+::attribute v
+::method init
+  expose v
+  v = 'init'
+::method string
+  return 'a T'
+----
+rc> 0
+out> a T
+out> done
+out> changed after reply
+
+# a NOTREADY the expression raises runs its CALL ON handler at the clause's
+# end, before the method goes on
+program
+o = .c~new
+say o~m
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  trace r
+  call on notready name nr
+  reply 'v:' linein('/nonexistent/dir/file')
+  say 'tail'
+  return
+nr:
+  say 'handler' condition('c')
+  return
+----
+rc> 0
+out> handler NOTREADY
+out> v: 
+out> tail
+out> done
+err>        >I>
+err>      9 *-* call on notready name nr
+err>     10 *-* reply 'v:' linein('/nonexistent/dir/file')
+err>        >>>   "v: "
+err>     13 *-*   nr:
+err>     14 *-*   say 'handler' condition('c')
+err>        >>>     "handler NOTREADY"
+err>     15 *-*   return
+err>        <I<
+err>        >I>
+err>     11 *-* say 'tail'
+err>        >>>   "tail"
+err>     12 *-* return
+err>        <I<
+
+# a bare REPLY stays one Op::Exec
+program
+o = .c~new
+r = o~m
+say var('r')
+say o~done
+::class c
+::method done
+  return 'done'
+::method m
+  trace r
+  reply
+  say 'tail bare'
+----
+rc> 165
+out> tail bare
+err>        >I>
+err>     10 *-* reply
+err>        <I<
+err>      2 *-* r = o~m
+err> Error 91 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 91.999:
+err>        >I>
+err>     11 *-* say 'tail bare'
+err>        >>>   "tail bare"
+err>        <I<
