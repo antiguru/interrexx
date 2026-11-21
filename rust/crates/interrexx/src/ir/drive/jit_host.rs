@@ -192,7 +192,8 @@ impl Interp {
             REFUSED => return None,
             passes if passes < THRESHOLD - 1 => return None,
             passes if passes == THRESHOLD - 1 => {
-                let Some((compiled, budget)) = pass_of(chunk, pc, do_index)
+                let generation = self.routine_generation;
+                let Some((compiled, budget)) = pass_of(chunk, pc, do_index, generation)
                     .and_then(|(pass, budget)| Some((jit::compile(&pass)?, budget)))
                 else {
                     state.set(REFUSED);
@@ -274,7 +275,7 @@ impl Interp {
 /// The body of the loop whose `Op::DO` is instruction `do_index` and whose
 /// `Op::LoopNext` is at `loop_pc`, as a [`Pass`], or `None` where it holds
 /// anything but plain clause regions of value ops and stores.
-fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
+fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32, generation: u32) -> Option<(Pass, u64)> {
     let body_start = chunk.op_at(do_index as usize + 1)?;
     if body_start >= loop_pc {
         return None;
@@ -314,8 +315,52 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
             tabled: opening.tabled,
             register_top: opening.register_top,
         });
+        // The `Step::PushArg`s whose arguments no op has taken yet, as indices
+        // into `steps`. Every op that takes pushed arguments takes the
+        // `argc` pushed last, so a call's own are the last `argc` here.
+        let mut pending: Vec<usize> = Vec::new();
         for (at, op) in (pc + 1..).zip(chunk.ops_in(pc + 1, end)?) {
-            steps.push(match *op {
+            match *op {
+                // A call its site has resolved to a quiet builtin, with few
+                // enough arguments to carry: its pushes are dropped, and the
+                // call reads their registers itself (`Host::quiet_builtin`),
+                // which nothing writes before the call, since the compiler
+                // releases them only after it.
+                Op::CallArgs { site, argc, .. }
+                    if let Some(Resolved::Builtin(target)) =
+                        chunk.resolved_call(site, generation)
+                        && crate::builtin::quiet(target)
+                        && usize::from(argc) <= jit::CARRIED_ARGS
+                        && usize::from(argc) <= pending.len() =>
+                {
+                    let mut args = jit::NO_ARGS;
+                    let from = pending.len() - usize::from(argc);
+                    for (k, index) in pending.drain(from..).enumerate() {
+                        let Step::PushArg { src } = steps[index] else {
+                            return None;
+                        };
+                        steps[index] = Step::Dropped;
+                        args = jit::carry_arg(args, k, src);
+                    }
+                    steps.push(Step::Builtin { pc: at, args });
+                    continue;
+                }
+                Op::PushArg { src } => {
+                    pending.push(steps.len());
+                    steps.push(Step::PushArg { src });
+                    continue;
+                }
+                Op::CallArgs { argc, .. }
+                | Op::CallNamed { argc, .. }
+                | Op::Send { argc, .. }
+                | Op::SendWith { argc, .. }
+                | Op::List { argc, .. } => {
+                    let left = pending.len().saturating_sub(usize::from(argc));
+                    pending.truncate(left);
+                }
+                _ => {}
+            }
+            let step = match *op {
                 Op::Const { dst, konst } => match chunk.interned_konst(konst) {
                     ObjRef::NIL => Step::Op { pc: at },
                     value => Step::Const {
@@ -442,11 +487,27 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
                 | Op::Return { .. }
                 | Op::Signal { .. } => Step::Op { pc: at },
                 _ => return None,
-            });
+            };
+            // Any other op the host runs might take pushed arguments the
+            // pairing does not see: the pushes before it stay pushes.
+            if matches!(step, Step::Op { .. })
+                && !matches!(
+                    op,
+                    Op::CallArgs { .. }
+                        | Op::CallNamed { .. }
+                        | Op::Send { .. }
+                        | Op::SendWith { .. }
+                        | Op::List { .. }
+                )
+            {
+                pending.clear();
+            }
+            steps.push(step);
         }
         steps.push(Step::Close { next: end });
         pc = end;
     }
+    steps.retain(|step| !matches!(step, Step::Dropped));
     // **Compiled only where it pays.** An op the host runs costs a call, the
     // block written back and read again, and the driver's own arm, which is
     // several times what the driver spends dispatching it; a body made mostly
@@ -460,7 +521,11 @@ fn pass_of(chunk: &Chunk, loop_pc: u32, do_index: u32) -> Option<(Pass, u64)> {
         .filter(|step| {
             !matches!(
                 step,
-                Step::Op { .. } | Step::Between { .. } | Step::Open { .. } | Step::Close { .. }
+                Step::Op { .. }
+                    | Step::Between { .. }
+                    | Step::Builtin { .. }
+                    | Step::Open { .. }
+                    | Step::Close { .. }
             )
         })
         .count();
@@ -785,6 +850,96 @@ impl Host for Driven<'_, '_> {
         }
     }
 
+    fn quiet_builtin(&mut self, pc: u32, args: u64) -> bool {
+        // The checks `begin_call_args` makes for a resolved builtin, and the
+        // two the quiet path adds: the builtin is quiet, and no argument is
+        // an object whose string value runs Rexx code.
+        let Some(&Op::CallArgs {
+            site, argc, dst, ..
+        }) = self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        else {
+            return false;
+        };
+        if !self.top {
+            return false;
+        }
+        let interp = &mut *self.interp;
+        let Some(Resolved::Builtin(target)) =
+            self.chunk.resolved_call(site, interp.routine_generation)
+        else {
+            return false;
+        };
+        // A setting that shows values is the full path's, which has the
+        // trace ops. Compiled code does not reach here under one: a clause
+        // opened after `TRACE` changes hands the loop to the driver, and the
+        // chunk compiled for the clause it changed in has no trace ops. The
+        // check keeps that from being what this rests on.
+        let mode = interp.trace_mode();
+        if !crate::builtin::quiet(target) || mode.results || mode.intermediates {
+            return false;
+        }
+        let argc = usize::from(argc);
+        let mut values = [None; jit::CARRIED_ARGS];
+        for (k, value) in values.iter_mut().enumerate().take(argc) {
+            let src = jit::carried_arg(args, k);
+            if src != jit::OMITTED {
+                let arg = self.registers.get(src);
+                if !interp.plain_string(arg) {
+                    return false;
+                }
+                *value = Some(arg);
+            }
+        }
+        let probe = 0u8;
+        // A probe that trips is the full path's to raise.
+        if interp.enter_eval_node(&raw const probe).is_err() {
+            return false;
+        }
+        // A failure is raised again by the full path, from a clause the
+        // interpreter holds: a quiet builtin answers the same failure for the
+        // same arguments.
+        let ran = crate::builtin::run(interp, b"", target, &values[..argc]);
+        interp.activity.depth -= 1;
+        match ran {
+            Ok(value) => {
+                self.registers.set(dst, value);
+                #[cfg(test)]
+                QUIET_CALLS.with(|calls| calls.set(calls.get() + 1));
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
+    fn stage_args(&mut self, pc: u32, args: u64) {
+        let Some(&Op::CallArgs { argc, .. }) =
+            self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first)
+        else {
+            return;
+        };
+        for k in 0..usize::from(argc) {
+            self.push_arg(jit::carried_arg(args, k));
+        }
+    }
+
+    fn refresh_holds(&mut self, native: &Native) -> bool {
+        let mut fresh = Native::new(native.registers);
+        // `leave` with the counters it keeps put back as they were.
+        let (retire, ask_loop, loop_key) = (self.retire, self.ask_loop, self.loop_key);
+        fresh.passes = native.passes;
+        fresh.loop_kind = native.loop_kind;
+        fresh.loop_slot = native.loop_slot;
+        self.ask_loop = false;
+        Host::leave(self, &mut fresh);
+        (self.retire, self.ask_loop, self.loop_key) = (retire, ask_loop, loop_key);
+        fresh.slots == native.slots
+            && fresh.slot_count == native.slot_count
+            && fresh.steady == native.steady
+            && fresh.small_int_bound == native.small_int_bound
+            && fresh.quick_values == native.quick_values
+            && fresh.jump_to == native.jump_to
+    }
+
     fn enter(&mut self, native: &mut Native) {
         self.interp.clause_countdown = u32::try_from(native.countdown).unwrap_or(u32::MAX);
         if native.loop_dirty != 0 {
@@ -1064,6 +1219,7 @@ impl Driven<'_, '_> {
 #[cfg(test)]
 thread_local! {
     static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
+    static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
 }
 
 #[cfg(test)]
@@ -1074,6 +1230,13 @@ fn compiled_runs() -> usize {
 #[cfg(test)]
 fn reset_compiled_runs() {
     COMPILED_RUNS.with(|runs| runs.set(0));
+    QUIET_CALLS.with(|calls| calls.set(0));
+}
+
+/// How many builtin calls `Host::quiet_builtin` has run on this thread.
+#[cfg(test)]
+fn quiet_calls() -> usize {
+    QUIET_CALLS.with(Cell::get)
 }
 
 #[cfg(test)]
