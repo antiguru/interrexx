@@ -2657,6 +2657,29 @@ impl Interp {
         matches!(kind, InstructionKind::Interpret { .. })
     }
 
+    /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
+    /// `value`: the one arm both ops share in the driver.
+    #[inline]
+    pub(crate) fn exec_op(
+        &mut self,
+        code: &Code<'_>,
+        index: usize,
+        instruction: &Instruction,
+        source: Option<&ProgramSource>,
+        value: Option<ObjRef>,
+    ) -> Result<ExecOutcome, Failure> {
+        match value {
+            None => self.exec_instruction(
+                code,
+                index,
+                instruction,
+                source,
+                self.activity.region_procedure_permitted,
+            ),
+            Some(value) => self.exec_with(code, index, instruction, source, value),
+        }
+    }
+
     /// The outcome a test scripted for the next [`crate::ir::Op::Exec`] or
     /// [`crate::ir::Op::ExecWith`] to answer in place of running its
     /// instruction (`crate::scheduler::script`).

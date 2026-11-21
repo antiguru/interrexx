@@ -1505,48 +1505,25 @@ macro_rules! region_ops {
                 }
                 // The instruction's own work, from
                 // `Interp::exec_instruction`.
-                Op::Exec { $index: at } => {
+                // `Op::ExecWith` shares the arm: its value is the one
+                // difference, and a second copy of the outcome handling here
+                // costs every op of every clause in the driver's codegen.
+                Op::Exec { $index: at } | Op::ExecWith { $index: at, .. } => {
                     debug_assert_names_the_clause($code, *at, $clause, "Exec");
-                    match pinned!(
-                        $self,
-                        crate::pinning::PinKind::OpExec,
-                        $self.exec_instruction(
-                            $code,
-                            $index,
-                            $clause,
-                            $source,
-                            $self.activity.region_procedure_permitted,
-                        )
-                    ) {
-                        Ok(ExecOutcome::Done(flow)) => {
-                            break $cold Ok(RegionEnd::Flowed(flow));
+                    let value = match region_op {
+                        Op::ExecWith { src, .. } => {
+                            debug_assert!(
+                                $chunk.holds_register(*src),
+                                "op reads register {src} outside the region the chunk reserved"
+                            );
+                            Some($registers.get(*src))
                         }
-                        Ok(outcome) => match $self.exec_suspends(
-                            outcome, $top, $code, $index, $clause, $source,
-                        ) {
-                            Suspended::Region(region) => break $cold region,
-                            Suspended::Parked => break 'entered Deliver::Exec,
-                            Suspended::ForwardReturn => {
-                                break 'entered Deliver::ForwardReturn
-                            }
-                            Suspended::ForwardContinue => {
-                                break 'entered Deliver::ForwardContinue
-                            }
-                        },
-                        Err(failure) => break $cold Err(failure),
-                    }
-                }
-                Op::ExecWith { $index: at, src } => {
-                    debug_assert_names_the_clause($code, *at, $clause, "ExecWith");
-                    debug_assert!(
-                        $chunk.holds_register(*src),
-                        "op reads register {src} outside the region the chunk reserved"
-                    );
-                    let value = $registers.get(*src);
+                        _ => None,
+                    };
                     match pinned!(
                         $self,
                         crate::pinning::PinKind::OpExec,
-                        $self.exec_with($code, $index, $clause, $source, value)
+                        $self.exec_op($code, $index, $clause, $source, value)
                     ) {
                         Ok(ExecOutcome::Done(flow)) => {
                             break $cold Ok(RegionEnd::Flowed(flow));
