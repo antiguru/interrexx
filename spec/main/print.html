@@ -109885,7 +109885,8 @@ language part. Which other places the system searches when no pattern names a
 file is not specified. Any other name, <code>REXX.CAT</code>, <code>./rexx.cat</code> and the null
 string included, is looked for as the name of a Unix catalog. A catalog that
 is not found, and a message that the catalog does not have, are not errors:
-the call answers <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">a text for each</a>.</p>
+the call answers <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">a text for each</a>, and so is
+<a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.damaged">a damaged catalog</a>.</p>
 <pre><code class="language-rexx">say (SysGetMessage(100, 'rexx.cat', 'c6zqa', 'c6zqb', 'c6zqc') == SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc'))
 m = SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc')
 say (pos('c6zqa', m) &gt; 0) (pos('c6zqb', m) &gt; 0) (pos('c6zqc', m) &gt; 0) (pos('&amp;', m) = 0)
@@ -109899,6 +109900,53 @@ say (SysGetMessage(100, 'REXX.CAT') == nc) (SysGetMessage(100, 'rexx.cat ') == n
 1 1 1 1
 1 1 1
 1 1 1 1 1
+</code></pre>
+<h2 id="a-damaged-catalog"><a class="header" href="#a-damaged-catalog">A damaged catalog</a></h2>
+<div class="rule" id="r-util.sysgetmessage.damaged"><a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.damaged">[util.sysgetmessage.damaged]</a></div>
+<p>A Unix catalog file holds three 32-bit words (a magic number, the number of
+buckets of its table and the number of planes of buckets), then two copies of
+the table, one in each byte order, each entry of it three words (a set number,
+a message number and the offset of the message), then the messages, each ended
+by <code>'00'x</code>. A file that is shorter than the three words, or that does not start
+with the magic number in either byte order, is a catalog that is not found. A
+catalog is damaged when its table has no entries, when the two tables do not
+fit in the file, when an entry of the table in the machine's byte order, one
+that holds a message or not, gives an offset at or past the end of the file,
+or when the last byte of the file is not <code>'00'x</code>. The other table is not read.
+A call that names a damaged catalog answers a text that says so, for every set
+and number it asks for and with the inserts of the call ignored. That text is
+not null and differs from the two texts of <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">the answer
+rule</a>, and its wording is not specified.</p>
+<pre><code class="language-rexx">call lineout 'c6zqdmg.msg', '$set 1'
+call lineout 'c6zqdmg.msg', '1 first'
+call lineout 'c6zqdmg.msg'
+address system 'gencat c6zqdmg.cat c6zqdmg.msg'
+s = .stream~new('c6zqdmg.cat'); sound = s~charin(1, s~chars); s~close
+nm = SysGetMessage(2, './c6zqdmg.cat')
+nc = SysGetMessage(1, './c6zqnone.cat')
+call write sound || 'x'
+bad = SysGetMessage(1, './c6zqdmg.cat')
+say (bad \== '') (bad \== nm) (bad \== nc)
+say (SysGetMessage(2, './c6zqdmg.cat', 'A') == bad) (SysGetMessageX(3, 1, './c6zqdmg.cat') == bad)
+call write sound~left(sound~length - 1)
+say (SysGetMessage(1, './c6zqdmg.cat') == bad)
+call write sound || 'x' || '00'x
+say SysGetMessage(1, './c6zqdmg.cat')
+call write sound~left(8)
+say (SysGetMessage(1, './c6zqdmg.cat') == nc)
+call SysFileDelete 'c6zqdmg.msg'
+call SysFileDelete 'c6zqdmg.cat'
+exit
+write: call SysFileDelete 'c6zqdmg.cat'
+  call charout 'c6zqdmg.cat', arg(1)
+  call charout 'c6zqdmg.cat'
+  return
+</code></pre>
+<pre><code class="language-output">1 1 1
+1 1
+1
+first
+1
 </code></pre>
 <h2 id="the-answer-9"><a class="header" href="#the-answer-9">The answer</a></h2>
 <div class="rule" id="r-util.sysgetmessage.answer"><a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">[util.sysgetmessage.answer]</a></div>
@@ -110001,7 +110049,9 @@ of that page holds for the arguments after <code>set</code>: <a href="rexxutil/s
 rule</a> says which catalog a <code>filename</code> names,
 <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.inserts">the inserts rule</a> says how the inserts are put
 in, and <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">the answer rule</a> gives the two texts for
-a message and a catalog that are not found.</p>
+a message and a catalog that are not found, and <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.damaged">the damaged catalog
+rule</a> the text for a catalog whose contents do
+not hold together.</p>
 <h2 id="arguments-41"><a class="header" href="#arguments-41">Arguments</a></h2>
 <div class="rule" id="r-util.sysgetmessagex.args"><a href="rexxutil/sysgetmessagex.html#r-util.sysgetmessagex.args">[util.sysgetmessagex.args]</a></div>
 <p><code>set</code> and <code>num</code> are required arguments, read as numbers like the <code>num</code> of
