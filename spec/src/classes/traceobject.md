@@ -1149,15 +1149,13 @@ say '['n~makeString']'
 
 r[class.traceobject.setmakestring]
 `setMakeString` replaces `makeStringImpl` with a method of the program: the
-argument is a `Method` object, a string that holds the source of a method or an
-array of strings that hold its lines. The method receives the `TraceObject` and
-answers the text. From then on it supplies `makeStringImpl`, and with it
+argument is a `Method` object or a source that [`Method~new`](r:class.method.new)
+accepts. The method receives the `TraceObject` and answers the text. From then on it supplies `makeStringImpl`, and with it
 `makeString`, whatever the `option` is, until `unsetMakeString` takes it away; a
 second `setMakeString` replaces the first. It answers no value. A source that
-does not translate raises the error that `Method~new` raises for it, an argument
-that is neither a string, a `Method` nor an array raises `SYNTAX 93.961`, `.nil`
-included, an array item that is not a string `93.952`, no argument `93.901` and
-a second one `93.902`. `unsetMakeString` takes no argument and answers no value.
+does not translate raises the error that `Method~new` raises for it. An argument
+that cannot supply a source, such as `.nil`, raises `SYNTAX 93.961`. No argument
+raises `93.901` and a second one raises `93.902`. `unsetMakeString` takes no argument and answers no value.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -1226,6 +1224,23 @@ t~setMakeString("not rexx )(") => 37.2
 t~unsetMakeString(1) => 93.902
 x = t~setMakeString("return 1") => 91.999
 x = t~unsetMakeString => 91.999
+```
+
+```rexx
+t = .traceobject
+n = t~new
+t~setMakeString(.formatSource~new)
+say n~makeString
+t~setMakeString(.list~of('return "from lines"'))
+say n~makeString
+::class formatSource
+::method makeString
+  return 'return "from source"'
+```
+
+```output
+from source
+from lines
 ```
 
 ## Instance methods
