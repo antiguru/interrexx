@@ -2731,6 +2731,11 @@ impl Interp {
                 self.end_blocked_command(index, instruction, source)
             }
             InstructionKind::Command { .. } => {
+                // The walked clause reads this before evaluating, and the
+                // expression's ops ran before this op. The two agree: a call
+                // in the expression that returns has put the indent back, and
+                // one that does not (a `SIGNAL` out of the callee, a raise)
+                // leaves the clause before this op runs.
                 let indent = self.activity.clause_state.current_value_indent;
                 self.exec_command_value(code, index, instruction, source, value, indent, None, None)
             }
