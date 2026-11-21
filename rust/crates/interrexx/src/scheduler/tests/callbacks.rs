@@ -122,6 +122,7 @@ fn a_callback_from_the_calls_own_thread_runs() {
 /// nothing, and leaves the oracle's 98.983 on the call whose context it used.
 /// The holder serves it while it runs another activity, which it switches out
 /// for the call's own; the baton is held once, for the whole member.
+// spec: native.threads.context.deviation.19
 #[test]
 fn a_callback_from_another_thread_takes_the_baton_and_raises_98_983() {
     let ran = run("m = .t~new~start('spin')\nsignal on syntax\n\

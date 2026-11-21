@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166, 176, 177, 178]
+deviations: [19, 166, 176, 177, 178]
 ---
 
 # Threads and halting
@@ -89,7 +89,7 @@ Native code on another thread halts or traces the interpreter through the
 instance's `Halt` and `SetTrace` instead, as [the halt
 rule](r:native.threads.halt) and [the trace rule](r:native.threads.trace) say.
 A message sent after the thread did detach is not covered here but by
-[Deviation 19](../deviations.md#19-callback-from-a-foreign-thread), which
+[Deviation 19](r:native.threads.context.deviation.19), which
 refuses it. ooRexx aborts the process or hangs on each of these misuses, so
 there is no example.
 
@@ -218,11 +218,29 @@ start 1
 > **Note.** A thread may use only the contexts it was given: the one that its attachment
 > gave it, and, while a native call runs on it, that call's. A callback made
 > through a call's context from another thread is [Deviation
-> 19](../deviations.md), and a context kept from one call and used in another is
+> 19](r:native.threads.context.deviation.19), and a context kept from one call and used in another is
 > [Deviation 24](../deviations.md); neither has an example, because ooRexx ends
 > the process or hangs on both. Ending the interpreter belongs to the program
 > that created it, which for a program run by `rexx` is `rexx` itself, so what
 > native code that asks for the end achieves is not specified.
+
+r[native.threads.context.deviation.19]
+A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
+too for its whole run, and the callback waits until that call returns, while
+`SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx can abort the process for a foreign callback.
+A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.
 
 r[native.threads.members]
 The members of the thread interface that store into or fetch from an array, a
