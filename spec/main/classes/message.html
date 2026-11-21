@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="message"><a class="header" href="#message">Message</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Message Class; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; arguments; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; completed; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; errorCondition; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; halt; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; hasError; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; hasResult; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; messageComplete; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; messageName; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; notify; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; reply; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; replyWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; result; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; send; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; sendWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; start; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; startWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; target; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; triggered; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; wait; Builtin Classes &gt; Utility Classes &gt; AlarmNotification Class &gt; cancel</p>
-<p class="deviations">Deviations: D105, D107, D109, D113, D116, D118, D124</p>
+<p class="deviations">Deviations: D105, D107, D109, D113, D116, D118, D124, D173</p>
 <p>A <code>Message</code> object is a message that has been written down as an object: a
 target, the name of a message and its arguments. A program makes one with
 <code>new</code>, or gets one from the <code>start</code> and <code>startWith</code> methods of
@@ -1245,6 +1245,67 @@ again 42.3
 raised 97.1
 m~result(1) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.message.result.changed"><a href="#r-class.message.result.changed">[class.message.result.changed]</a></div>
+<p>The SYNTAX error that <code>result</code> raises again is made from the <code>CODE</code> and the
+<code>ADDITIONAL</code> that the object <code>errorCondition</code> answers holds at that time,
+which Rexx code may have changed, as RAISE SYNTAX with them would make it: the
+<code>RC</code>, <code>ERRORTEXT</code> and <code>MESSAGE</code> of the object are set again from them, and an
+<code>ADDITIONAL</code> that was removed is an empty array again; <code>DESCRIPTION</code> stays.
+<code>result</code> raises <code>SYNTAX 93.900</code> instead when the <code>CODE</code> is not a string that
+names an error number of RAISE SYNTAX, an instance of a subclass of String
+included, or is missing, and when the
+<code>ADDITIONAL</code> is not an instance of <code>Array</code>; the <code>CODE</code> is checked first. A
+<code>CODE</code> that names no error that has a message raises <code>SYNTAX 98.941</code>, as RAISE
+SYNTAX does. The text of the 93.900 is not specified.</p>
+<pre><code class="language-rexx">call test 'rc', "e~remove('RC'); e~remove('ERRORTEXT')"
+call test 'message', "e['MESSAGE'] = 'mine'"
+call test 'code', "e['CODE'] = '40.1'"
+call test 'additional', "e['CODE'] = '40.1'; e['ADDITIONAL'] = .array~of('ZROUT')"
+call test 'notarray', "e['ADDITIONAL'] = 'x'"
+call test 'list', "e['ADDITIONAL'] = .list~of('x')"
+call test 'badcode', "e['CODE'] = 'x'; e['ADDITIONAL'] = 'y'"
+call test 'mutable', "e['CODE'] = .mutableBuffer~new('40.1')"
+call test 'subclass', "e['CODE'] = .mystr~new('40.1')"
+call test 'nocode', "e~remove('CODE')"
+call test 'unknown', "e['CODE'] = '42.999'"
+call test 'removed', "e~remove('ADDITIONAL')"
+call test 'described', "e['DESCRIPTION'] = 'why'"
+exit
+test: procedure
+  use arg label, change
+  m = .message~new(.t~new, 'boom')
+  m~start
+  m~wait
+  e = m~errorCondition
+  message = e~message
+  interpret change
+  signal on syntax name caught
+  m~result
+  return
+caught:
+  co = condition('o')
+  say label co~code co~rc (co~errortext == errortext(co~rc)) -
+    (co~message == message) co~additional~items '['co~description']'
+  return
+::class t
+::method boom
+  return 1/0
+::class mystr subclass string
+</code></pre>
+<pre><code class="language-output">rc 42.3 42 1 1 0 []
+message 42.3 42 1 1 0 []
+code 40.1 40 1 0 0 []
+additional 40.1 40 1 0 1 []
+notarray 93.900 93 1 0 1 []
+list 93.900 93 1 0 1 []
+badcode 93.900 93 1 0 1 []
+mutable 93.900 93 1 0 1 []
+subclass 93.900 93 1 0 1 []
+nocode 93.900 93 1 0 1 []
+unknown 98.941 98 1 0 1 []
+removed 42.3 42 1 1 0 []
+described 42.3 42 1 1 0 [why]
+</code></pre>
 <div class="rule" id="r-class.message.wait"><a href="#r-class.message.wait">[class.message.wait]</a></div>
 <p><code>wait</code> waits until the message has ended, answers nothing and raises no error,
 also when the message ended with one: the error is asked for with <code>hasError</code>
@@ -1908,6 +1969,26 @@ send override
 messageComplete override
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.message.deviation.173"><a href="#r-class.message.deviation.173">[class.message.deviation.173]</a></div>
+<p>The <code>CODE</code> that <a href="#r-class.message.result.changed">the changed condition rule</a>
+reads may be any instance of String that names an error number, a number an
+operator made included: <code>40.1 + 0</code> is the code <code>40.1</code> here. ooRexx raises
+<code>SYNTAX 93.900</code> for such a number, whose internal form is a number object
+rather than a string (<a href="../deviations.html">Deviation 173</a>).</p>
+<pre><code class="language-rexx">m = .message~new(.t~new, 'boom')
+m~start
+m~wait
+e = m~errorCondition
+e['CODE'] = 40.1 + 0
+signal on syntax name caught
+m~result
+caught: say condition('o')~code condition('o')~rc
+::class t
+::method boom
+  return 1/0
+</code></pre>
+<pre><code class="language-output">40.1 40
+</code></pre>
 <div class="rule" id="r-class.message.deviation.105"><a href="#r-class.message.deviation.105">[class.message.deviation.105]</a></div>
 <p>A message that <code>start</code>, <code>startWith</code>, <code>reply</code> or <code>replyWith</code> runs is checked
 for <code>PRIVATE</code> and <code>PACKAGE</code> access as the same message sent by <code>send</code> from the

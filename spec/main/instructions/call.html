@@ -518,6 +518,36 @@ notready on and off
 any on and off
 done
 </code></pre>
+<div class="rule" id="r-instr.call.on.receiver"><a href="#r-instr.call.on.receiver">[instr.call.on.receiver]</a></div>
+<p>A label that a CALL trap calls in a method is an internal routine of the
+method, as a label CALL calls is: it runs with the method's receiver, so it can
+send a private method to <code>SELF</code>. The example sends one from the handler of a
+NOTREADY and from that of an ANY trap enabled in an internal routine of the
+method.</p>
+<pre><code class="language-rexx">.t~new~go
+::class t
+::method go
+  state = ''
+  call on notready name priv
+  call charin '/'
+  say 'notready' state
+  call inner
+  say 'any' state
+  return
+inner:
+  state = ''
+  call on any name priv
+  call charin '/'
+  return
+priv:
+  state = self~secret
+  return
+::method secret private
+  return 'private ran'
+</code></pre>
+<pre><code class="language-output">notready private ran
+any private ran
+</code></pre>
 <div class="rule" id="r-instr.call.on.error"><a href="#r-instr.call.on.error">[instr.call.on.error]</a></div>
 <p>The errors of the ON and OFF forms are found when the program is read. A CALL
 ON with no condition raises <code>SYNTAX 20.911</code> and an OFF <code>20.912</code>, and a USER

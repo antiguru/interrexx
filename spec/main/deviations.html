@@ -1238,7 +1238,10 @@ internal form is a number object rather than a string, and true for others,
 such as <code>3.5</code> and <code>'0'</code>. The same test decides whether its
 <code>DecodeConditionInfo</code> reports a condition's description: interrexx reports a
 description that is any instance of String, where ooRexx reports none for a
-description such as <code>2 + 3</code>.</p>
+description such as <code>2 + 3</code>. So does whether <code>Message~result</code> takes the <code>CODE</code>
+of a changed SYNTAX condition object: interrexx takes any instance of String
+that names an error number, where ooRexx raises <code>SYNTAX 93.900</code> for a number an
+operator made, such as <code>40.1 + 0</code>. Ruled by the owner on 2026-11-21 (#891).</p>
 <h2 id="174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows"><a class="header" href="#174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows">174. An operand made by an operation takes part with the digits it shows</a></h2>
 <p>An operand that an earlier arithmetic operation produced takes part in the next
 one with the digits of the number it is written as, trailing zeros included, as
