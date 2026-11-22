@@ -32,7 +32,7 @@ pub(crate) fn posting_panics(
         #[cfg(test)]
         #[expect(
             clippy::disallowed_methods,
-            reason = "a pool thread, which sim does not run"
+            reason = "widens the real pool thread panic window for the test"
         )]
         std::thread::sleep(std::time::Duration::from_millis(100));
         inbox.post(super::Posted::Panicked(payload));
@@ -51,11 +51,19 @@ struct Shared {
     state: Mutex<State>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Normal,
+    SimInline,
+    SimNative,
+}
+
 struct State {
     idle: Vec<Worker>,
     threads: Vec<(ThreadId, JoinHandle<()>)>,
     closed: bool,
     bound: usize,
+    mode: Mode,
     /// Whether no thread is spawned beyond the bound.
     #[cfg(test)]
     fixed: bool,
@@ -92,6 +100,7 @@ impl Pool {
                     threads: Vec::new(),
                     closed: false,
                     bound,
+                    mode: Mode::Normal,
                     #[cfg(test)]
                     fixed: false,
                 }),
@@ -108,10 +117,13 @@ impl Pool {
         self.stack
     }
 
-    /// Bounds the pool at `bound` threads kept from now on; at 0 no thread,
-    /// idle or new, is reserved.
-    pub(crate) fn set_bound(&self, bound: usize) {
-        lock(&self.shared.state).bound = bound;
+    /// In simulation, only opted-in native calls may reserve a worker.
+    pub(crate) fn simulate(&self, native: bool) {
+        lock(&self.shared.state).mode = if native {
+            Mode::SimNative
+        } else {
+            Mode::SimInline
+        };
     }
 
     /// How many threads the pool holds, idle or running a job.
@@ -131,8 +143,20 @@ impl Pool {
     /// every thread is busy. `Ok(None)` selects configured inline execution.
     /// An OS thread creation failure is returned without running the job.
     pub(crate) fn reserve(&self) -> Result<Option<Worker>, crate::Failure> {
+        self.reserve_for(false)
+    }
+
+    /// Reserves a native-call worker where simulation permits it.
+    pub(crate) fn reserve_native(&self) -> Result<Option<Worker>, crate::Failure> {
+        self.reserve_for(true)
+    }
+
+    fn reserve_for(&self, native: bool) -> Result<Option<Worker>, crate::Failure> {
         let mut state = lock(&self.shared.state);
-        if state.bound == 0 {
+        if state.bound == 0
+            || state.mode == Mode::SimInline
+            || (state.mode == Mode::SimNative && !native)
+        {
             return Ok(None);
         }
         if let Some(worker) = state.idle.pop() {

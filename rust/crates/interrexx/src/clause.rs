@@ -381,6 +381,14 @@ impl Interp {
     /// completions it files, or fails where the run's deadline comes first.
     pub(crate) fn idle_for_posts(&mut self) -> Result<(), Failure> {
         if self.sim.is_some() {
+            if self.sim_native_pool() {
+                if self.deadline_passed() {
+                    return Err(self.expire_deadline());
+                }
+                if self.sim_deliver_native(None) {
+                    return self.sim_breached();
+                }
+            }
             return Err(self.sim_unpostable_wait());
         }
         if let Some(deadline) = &self.deadline {

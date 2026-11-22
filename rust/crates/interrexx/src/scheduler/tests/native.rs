@@ -362,6 +362,72 @@ fn a_native_call_in_the_simulation_mode_spawns_no_pool_thread() {
     assert_eq!(sim_run.spawned, 0);
 }
 
+/// A native answer becomes ready at the seed's clause boundary even though
+/// its worker has already returned. The trace header carries the setting
+/// so replay runs the same worker and delivers its completion at that boundary.
+#[test]
+fn simulated_pool_delivers_native_completions_at_seeded_clauses() {
+    let source = "m = .worker~new~start('work')\nsay 'main' TestGetArguments(5)[1]\nsay m~result\n\
+                  ::requires 'orxfunction' library\n::class worker\n::method work\n  \
+                  do i = 1 to 8\n    say 'tick' i\n  end\n  return TestIntArg(7)\n";
+    let run = |setting: &str| {
+        let config = crate::SimConfig::parse(setting).expect("simulation configuration");
+        counted(
+            source,
+            false,
+            bounded().with_switch_mode(SwitchMode::Sim(config)),
+        )
+    };
+    let trace = std::env::temp_dir().join(format!("rexx-sim-pool-{}.txt", std::process::id()));
+    let first = run("sim:1,uniform:1,pool=8,block=10");
+    let second = run(&format!(
+        "sim:5,uniform:1,pool=8,block=10,trace={}",
+        trace.display()
+    ));
+    let replay = run(&format!("sim:replay={}", trace.display()));
+    std::fs::remove_file(&trace).expect("the trace was written");
+    for attempt in [&first, &second, &replay] {
+        assert_eq!(attempt.outcome.exit_code, 0, "{}", attempt.stderr());
+        assert!(attempt.spawned > 0, "a native call uses a real worker");
+    }
+    assert_eq!(
+        first.stdout(),
+        "main 5\ntick 1\ntick 2\ntick 3\ntick 4\ntick 5\ntick 6\ntick 7\ntick 8\n7\n"
+    );
+    assert_eq!(
+        second.stdout(),
+        "tick 1\ntick 2\ntick 3\nmain 5\ntick 4\ntick 5\ntick 6\ntick 7\ntick 8\n7\n"
+    );
+    assert_eq!(replay.outcome.stdout, second.outcome.stdout);
+    assert_eq!(replay.outcome.stderr, second.outcome.stderr);
+    assert_eq!(replay.outcome.sim, second.outcome.sim);
+}
+
+/// A worker recalls the baton to call Rexx, which can call native code again.
+/// Once all activities wait, both staged answers are delivered without waiting
+/// for a clause that cannot be reached. Collecting across the waits keeps both
+/// answers rooted through their native frames.
+#[test]
+fn simulated_pool_delivers_while_idle_after_nested_native_calls() {
+    let source = "m = .worker~new~start('work')\n\
+                  say .native~new~scoped(.target~new, 'who', .target, .array~new)\nsay m~result\n\
+                  ::requires 'orxfunction' library\n::class worker\n::method work\n  \
+                  return TestGetArguments(7)[1]\n\
+                  ::class target\n::method who\n  return TestGetArguments(5)[1]\n\
+                  ::class 'native'\n::method scoped external 'library orxmethod TestSendMessageScoped'\n";
+    let setting = format!("sim:1,pool={},block=10", u64::MAX);
+    let config = crate::SimConfig::parse(&setting).expect("simulation configuration");
+    let run = counted(
+        source,
+        true,
+        bounded().with_switch_mode(SwitchMode::Sim(config)),
+    );
+    assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
+    assert_eq!(run.stdout(), "5\n7\n");
+    assert_eq!(run.exits, 2);
+    assert!(run.spawned > 0);
+}
+
 /// A server activity blocks in the C `SockAccept` (`rxsockc`, the build's
 /// `librxsock.so`), which main's later connect ends. In the simulation mode
 /// the accept runs on the baton, main never connects, and the call is

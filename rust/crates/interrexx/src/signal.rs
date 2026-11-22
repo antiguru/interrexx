@@ -208,8 +208,8 @@ pub(crate) fn blocked<R>(start: impl FnOnce() -> R) -> R {
     start()
 }
 
-/// The signal that interrupts the interpreter's thread inside an inline
-/// native call in the simulation mode: its handler does nothing, so a system
+/// The signal that interrupts the thread running a native call under
+/// simulation: its handler does nothing, so a system
 /// call it interrupts returns `EINTR`, and it halts nothing.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 fn interrupting() -> libc::c_int {
