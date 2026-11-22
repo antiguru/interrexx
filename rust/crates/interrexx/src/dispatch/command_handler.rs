@@ -382,7 +382,7 @@ pub(super) fn forward(
 }
 
 /// The count's string value, including the STRING fallback. A STRING answer
-/// with no string value yields .nil so CHARIN can raise its own argument error.
+/// with no string value yields .nil so the input method can raise its own error.
 pub(super) fn count_value(
     interp: &mut Interp,
     _cleared: Cleared,
