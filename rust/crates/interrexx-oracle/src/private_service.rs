@@ -41,6 +41,19 @@ pub struct PrivateService {
 }
 
 impl PrivateService {
+    /// Keeps the inherited runtime on hosts where the benchmark cannot stop
+    /// an on-demand daemon. A known interrexx stop binary also works outside Linux.
+    pub fn for_benchmark(
+        side: Side,
+        crate_rxapi: Option<PathBuf>,
+    ) -> std::io::Result<Option<Self>> {
+        if cfg!(target_os = "linux") || crate_rxapi.is_some() {
+            Self::new(side, crate_rxapi).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
     /// A new, empty directory in the system temporary directory, short enough
     /// to hold the service's socket. The optional binary is interrexx's rxapi.
     pub fn new(side: Side, crate_rxapi: Option<PathBuf>) -> std::io::Result<Self> {

@@ -33,10 +33,9 @@ impl Side {
         Side {
             label: "oracle",
             binary: PathBuf::from(ORACLE_ROOT).join("bin/rexx"),
-            service: Some(Arc::new(
-                PrivateService::new(RuntimeSide::Oracle, None)
-                    .expect("private benchmark oracle API service"),
-            )),
+            service: PrivateService::for_benchmark(RuntimeSide::Oracle, None)
+                .expect("private benchmark oracle API service")
+                .map(Arc::new),
             env: vec![(
                 "LD_LIBRARY_PATH".to_string(),
                 PathBuf::from(ORACLE_ROOT).join("lib").display().to_string(),
@@ -65,9 +64,9 @@ impl Side {
         let rxapi = binary.with_file_name("rxapi");
         let rxapi = rxapi.is_file().then_some(rxapi);
         let mut side = Self::rust(binary, arm);
-        let service = PrivateService::new(RuntimeSide::Crate, rxapi)
-            .expect("private benchmark interrexx API service");
-        side.service = Some(Arc::new(service));
+        side.service = PrivateService::for_benchmark(RuntimeSide::Crate, rxapi)
+            .expect("private benchmark interrexx API service")
+            .map(Arc::new);
         side
     }
 
@@ -402,6 +401,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn sides_receive_private_runtime_paths_and_a_failed_child_does_not_keep_them() {
         let work = PrivateService::new(RuntimeSide::Crate, None).unwrap();
@@ -444,6 +444,17 @@ mod tests {
                 Side::rust_with_private_service(PathBuf::from("/bin/sh"), Arm::Ir),
                 "REXX_API_DIR"
             )
+        );
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    #[test]
+    fn a_benchmark_without_a_stop_binary_keeps_the_inherited_runtime() {
+        assert!(Side::oracle().service.is_none());
+        assert!(
+            Side::rust_with_private_service(PathBuf::from("/bin/sh"), Arm::Ir)
+                .service
+                .is_none()
         );
     }
 
