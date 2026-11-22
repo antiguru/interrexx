@@ -358,7 +358,7 @@ impl Interp {
         // `additional 'JUSTONE'` fills `&1` and leaves `&2` as the literal
         // `&2`.
         let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
-        let mut slots = self.array_slots_of(value);
+        let mut has_slots = self.array_slots(value).is_some();
         let mut held_in = value;
         // The object on the line, the same split the two keywords above
         // take. Measured, `trace i` over `raise syntax 93.900 additional
@@ -367,7 +367,7 @@ impl Interp {
             let traced = self.traced_string_value_text(value)?;
             self.trace_keyword(indent, "ADDITIONAL", &traced);
         }
-        if converted && slots.is_none() {
+        if converted && !has_slots {
             // An array request, a string's lines included, and 98.939 for
             // `.nil` or a multi-dimensional answer.
             let Some((array, store)) = self.single_dimension_request(value)? else {
@@ -377,7 +377,7 @@ impl Interp {
             // as it is; its items are read from the array holding them.
             value = array;
             held_in = store;
-            slots = self.array_slots_of(store);
+            has_slots = self.array_slots(store).is_some();
         }
         // The object itself, for the condition object to carry. The
         // substitution list is a different thing: it is what a catalogue
@@ -387,14 +387,13 @@ impl Interp {
             return Ok([value, ObjRef::NIL]);
         }
         self.roots.activity_mut().push_temp(value);
-        match slots {
-            Some(_) => Ok([value, held_in]),
-            None => {
-                let text = self.to_text(value).to_vec();
-                let text = self.text(&text);
-                self.roots.activity_mut().push_temp(text);
-                Ok([value, text])
-            }
+        if has_slots {
+            Ok([value, held_in])
+        } else {
+            let text = self.to_text(value).to_vec();
+            let text = self.text(&text);
+            self.roots.activity_mut().push_temp(text);
+            Ok([value, text])
         }
     }
 
@@ -490,9 +489,10 @@ impl Interp {
         let mut substitutions = None;
         if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
             if let Some([carried, held_in]) = held.additional {
-                match self.array_slots_of(held_in) {
-                    Some(_) => substitutions = Some((carried, held_in)),
-                    None => additional.push(self.to_text(held_in).to_vec()),
+                if self.array_slots(held_in).is_some() {
+                    substitutions = Some((carried, held_in));
+                } else {
+                    additional.push(self.to_text(held_in).to_vec());
                 }
             }
             if let Some(array) = held.array {
