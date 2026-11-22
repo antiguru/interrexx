@@ -63370,7 +63370,10 @@ read an offset, which are all but <code>fromWeekNumberDate</code> (it <a href="c
 offset</a>) and <code>fromUtcIsoDate</code> (it has none); a value
 that is no number at all gets the same code from <code>new</code>, <code>today</code> and those <code>from</code>
 methods, and what <code>toTimezone</code> raises for it is in <a href="classes/datetime.html#r-class.datetime.zone">the zone
-rule</a>.</p>
+rule</a>. For <code>today</code> and the <code>from</code> methods that read an
+offset, a syntax condition from construction raises <code>88.918</code> using the
+factory's date, time, or ticks input as the error substitution. For <code>today</code>,
+that input is today's date in standard format.</p>
 <pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
 say d~offset d~addDays(1)~offset d~toTimezone(-90)~offset
 say .datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromHours(2))~offset
@@ -63385,6 +63388,14 @@ call try '.datetime~today(901)'
 call try '.datetime~fromBaseDate(5, 901)'
 call try '.datetime~fromTicks(5, 1.5)'
 call try '.datetime~fromTicks(5, "x")'
+call try '.datetime~today(.offsetObject~new)'
+call try '.datetime~fromBaseDate(5, .offsetObject~new)'
+call try '.rejectingDate~today(60)'
+call substitutions '.datetime~fromBaseDate(5, .badOffset~new)'
+call substitutions '.datetime~fromNormalTime("12:00:00", .badOffset~new)'
+call substitutions '.datetime~fromTicks(5, .badOffset~new)'
+call substitutions '.datetime~today(.badOffset~new)'
+say .acceptingDate~today(.offsetObject~new)~offset
 exit
 try:
   signal on syntax name bad
@@ -63393,6 +63404,31 @@ try:
   return
 bad: say arg(1) '=&gt;' condition('o')~code
   return
+substitutions:
+  signal on syntax name payload
+  interpret 'r =' arg(1)
+  return
+payload:
+  info = condition('o')
+  values = info~additional
+  if arg(1)~pos('~today') &gt; 0 then
+    say info~code values[1] (values[2] == date('S'))
+  else
+    say info~code values[1] values[2]
+  return
+::class badOffset
+::method objectName
+  raise syntax 40.1
+::class offsetObject
+::method makeString
+  return '60'
+::class rejectingDate subclass DateTime
+::method new class
+  raise syntax 40.1
+::class acceptingDate subclass DateTime
+::method new class
+  use arg days, given
+  return .datetime~new(days, given~makeString)
 </code></pre>
 <pre><code class="language-output">05:30:00.000000 05:30:00.000000 -01:30:00.000000
 02:00:00.000000
@@ -63406,6 +63442,14 @@ d~toTimezone(.timespan~fromSeconds(90)) =&gt; 88.907
 .datetime~fromBaseDate(5, 901) =&gt; 88.918
 .datetime~fromTicks(5, 1.5) =&gt; 88.918
 .datetime~fromTicks(5, "x") =&gt; 88.918
+.datetime~today(.offsetObject~new) =&gt; 88.918
+.datetime~fromBaseDate(5, .offsetObject~new) =&gt; 88.918
+.rejectingDate~today(60) =&gt; 88.918
+88.918 date 5
+88.918 time 12:00:00
+88.918 ticks 5
+88.918 date 1
+01:00:00.000000
 </code></pre>
 <div class="rule" id="r-class.datetime.offset.default"><a href="classes/datetime.html#r-class.datetime.offset.default">[class.datetime.offset.default]</a></div>
 <p>An instance made without an offset gets the offset of the host's zone as it is
@@ -64819,12 +64863,15 @@ say d~fullDate + 1
 </code></pre>
 <h2 id="messages-that-a-program-can-override"><a class="header" href="#messages-that-a-program-can-override">Messages that a program can override</a></h2>
 <div class="rule" id="r-class.datetime.sends.new"><a href="classes/datetime.html#r-class.datetime.sends.new">[class.datetime.sends.new]</a></div>
-<p>The class methods send <code>new</code> to the receiver, so a class that overrides its
-<code>new</code> sees them, and <code>new</code> sends <code>init</code> to the new instance with the arguments
-it got (<a href="classes/index.html#r-class.index.new">the new rule</a>); the <code>init</code> of <code>DateTime</code> sends
-nothing. <code>minDate</code> sends <code>new</code> with the four arguments 1, 1, 1 and 0, and
+<p>Most class factories send <code>new</code> to the receiver. The <code>new</code> method sends
+<code>init</code> to the new instance with the arguments it got
+(<a href="classes/index.html#r-class.index.new">the new rule</a>). The <code>init</code> of <code>DateTime</code> sends nothing.
+<code>minDate</code> sends <code>new</code> with the four arguments 1, 1, 1 and 0, and
 <code>maxDate</code> with the eight arguments 9999, 12, 31, 23, 59, 59, 999999 and 0.
-<code>today</code> and every <code>from</code> method other than <code>fromOrdinalDate</code> and
+<code>today</code> sends <code>fromStandardDate</code> to the receiver and returns its answer. It
+passes today's date in standard format, an omitted separator, and the supplied
+offset or the default offset in minutes. A subclass can override that send.
+Every <code>from</code> method other than <code>fromOrdinalDate</code> and
 <code>fromWeekNumberDate</code> send <code>new</code> with two arguments: the number of microseconds
 from the start of 0001 to the moment, and the offset argument exactly as the
 caller gave it (a <a href="classes/timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> is not converted), or,
@@ -64835,8 +64882,8 @@ receiver is. <code>fromWeekNumberDate</code> sends <code>new</code> with the thr
 and 4, then sends that instance <code>weeksInYear</code> (which sends <code>year</code>), <code>weekDay</code>
 and <code>addDays</code>, and the answer of <code>addDays</code> is the result. The first example
 prints, for each call, the messages sent in order, with the number of
-arguments after <code>NEW</code> and <code>INIT</code>. The second example prints the second
-argument that <code>init</code> gets: a <code>TimeSpan</code> or a string that the caller gave
+arguments after <code>FROMSTANDARDDATE</code>, <code>NEW</code>, and <code>INIT</code>. The second example
+prints the second argument that <code>init</code> gets: a <code>TimeSpan</code> or a string that the caller gave
 arrives as it is, the offset of the string of <code>fromUtcIsoDate</code> as a number of
 minutes (150 for <code>+02:30</code>), and, without an offset argument, the default
 offset in minutes. An argument that is read as a number is sent more messages
@@ -64896,11 +64943,14 @@ probe:
 ::method new class
   .local~log = .local~log 'NEW'arg()
   forward class (super)
+::method fromStandardDate class
+  .local~log = .local~log 'FROMSTANDARDDATE'arg()
+  forward class (super)
 </code></pre>
 <pre><code class="language-output">new: NEW3 INIT3 =&gt; SPY
 minDate: NEW4 INIT4 =&gt; SPY
 maxDate: NEW8 INIT8 =&gt; SPY
-today: NEW2 INIT2 =&gt; SPY
+today: FROMSTANDARDDATE3 NEW2 INIT2 =&gt; SPY
 fromTicks: NEW2 INIT2 =&gt; SPY
 fromBaseDate: NEW2 INIT2 =&gt; SPY
 fromIsoDate: NEW2 INIT2 =&gt; SPY
