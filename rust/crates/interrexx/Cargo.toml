@@ -187,6 +187,7 @@ sharing = ["interrexx-core/sharing"]
 jit = ["interrexx-core/jit", "dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
 
 [dev-dependencies]
+interrexx-oracle = { path = "../interrexx-oracle" }
 # Path-only dev-dependencies on workspace crates carry no version: cargo drops them
 # when packaging, which keeps the interrexx-capi cycle and unpublished crates out.
 # `librexx.so` and `librexxapi.so`, which `tests/classic_api.rs` compiles the ooTest native

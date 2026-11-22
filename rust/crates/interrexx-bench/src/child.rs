@@ -1,10 +1,13 @@
 //! The two interpreters this repository compares, and the single capped,
 //! directory-pinned way of launching either of them.
 
+use interrexx_oracle::private_service::{PrivateService, Side as RuntimeSide};
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::Arc;
 
 use crate::arms::Arm;
-use crate::timing::{Capture, Completed, time_once};
+use crate::timing::{Capture, Completed, time_command};
 
 /// Address-space ceiling applied to **both** sides on **every** axis, in KiB.
 pub const ADDRESS_SPACE_LIMIT_KIB: u64 = 8 * 1024 * 1024;
@@ -20,6 +23,7 @@ pub struct Side {
     pub label: &'static str,
     pub binary: PathBuf,
     pub env: Vec<(String, String)>,
+    service: Option<Arc<PrivateService>>,
 }
 
 impl Side {
@@ -29,6 +33,10 @@ impl Side {
         Side {
             label: "oracle",
             binary: PathBuf::from(ORACLE_ROOT).join("bin/rexx"),
+            service: Some(Arc::new(
+                PrivateService::new(RuntimeSide::Oracle, None)
+                    .expect("private benchmark oracle API service"),
+            )),
             env: vec![(
                 "LD_LIBRARY_PATH".to_string(),
                 PathBuf::from(ORACLE_ROOT).join("lib").display().to_string(),
@@ -43,12 +51,24 @@ impl Side {
                 Arm::Ir => "rust-ir",
             },
             binary,
+            service: None,
             // **No environment.** The arm used to be selected per child
             // through `REXX_ENGINE`; `rexx` reads no such variable now,
             // so setting one would be a row labelled with an arm nobody
             // chose.
             env: Vec::new(),
         }
+    }
+
+    /// The interrexx side of an oracle comparison, with its own API service.
+    pub fn rust_with_private_service(binary: PathBuf, arm: Arm) -> Self {
+        let rxapi = binary.with_file_name("rxapi");
+        let rxapi = rxapi.is_file().then_some(rxapi);
+        let mut side = Self::rust(binary, arm);
+        let service = PrivateService::new(RuntimeSide::Crate, rxapi)
+            .expect("private benchmark interrexx API service");
+        side.service = Some(Arc::new(service));
+        side
     }
 
     /// This side with `LD_LIBRARY_PATH` added for an axis that loads a
@@ -62,6 +82,7 @@ impl Side {
             label: self.label,
             binary: self.binary.clone(),
             env,
+            service: self.service.clone(),
         }
     }
 }
@@ -122,7 +143,20 @@ pub fn run(
     wrapper: &Wrapper,
 ) -> Result<Completed, String> {
     let args = shell_args(&side.binary, program, workdir, wrapper);
-    time_once("/bin/sh", &args, &side.env, Capture::Collect)
+    let mut command = Command::new("/bin/sh");
+    command
+        .args(args)
+        .envs(side.env.iter().map(|(name, value)| (name, value)));
+    if let Some(service) = &side.service {
+        service.configure(&mut command);
+        // An axis can load an extension from the oracle's build. Keep either
+        // API client away from the caller's service.
+        let (_, runtime) = service.variable();
+        command
+            .env(RuntimeSide::Crate.variable(), runtime)
+            .env(RuntimeSide::Oracle.variable(), runtime);
+    }
+    time_command(&mut command, Capture::Collect)
         .map_err(|error| format!("{} could not be launched: {error}", side.label))
 }
 
@@ -330,8 +364,7 @@ mod tests {
             ]
         );
     }
-    /// A rust side sets **no** environment, and says which arm it is in its
-    /// label.
+    /// The side label names the engine without setting an engine selector.
     #[test]
     fn a_rust_side_sets_no_engine_environment_and_names_its_arm() {
         for arm in Arm::BOTH {
@@ -367,6 +400,51 @@ mod tests {
                 assert!(rust.for_axis(name).env.is_empty(), "{name}");
             }
         }
+    }
+
+    #[test]
+    fn sides_receive_private_runtime_paths_and_a_failed_child_does_not_keep_them() {
+        let work = PrivateService::new(RuntimeSide::Crate, None).unwrap();
+        let (_, workdir) = work.variable();
+        let program = workdir.join("show-runtime");
+        std::fs::write(
+            &program,
+            r#"case "$WHICH" in
+                XDG_RUNTIME_DIR) printf '%s' "$XDG_RUNTIME_DIR";;
+                REXX_API_DIR) printf '%s' "$REXX_API_DIR";;
+            esac
+            exit 7"#,
+        )
+        .unwrap();
+
+        let check = |mut side: Side, variable: &str| {
+            side.binary = PathBuf::from("/bin/sh");
+            side.env.push(("WHICH".into(), variable.into()));
+            let (_, path) = side.service.as_ref().unwrap().variable();
+            let path = path.to_path_buf();
+            let completed = run(
+                &side.for_axis("startup"),
+                &program,
+                workdir,
+                &Wrapper::default(),
+            )
+            .expect("shell program runs");
+            assert_eq!(completed.exit_code, Some(7));
+            assert_eq!(completed.stdout, path.as_os_str().as_encoded_bytes());
+            assert!(path.is_dir());
+            drop(side);
+            assert!(!path.exists());
+            path
+        };
+        let oracle_run = check(Side::oracle(), "XDG_RUNTIME_DIR");
+        assert_ne!(oracle_run, check(Side::oracle(), "XDG_RUNTIME_DIR"));
+        assert_ne!(
+            oracle_run,
+            check(
+                Side::rust_with_private_service(PathBuf::from("/bin/sh"), Arm::Ir),
+                "REXX_API_DIR"
+            )
+        );
     }
 
     /// The shell really does apply the cap and the directory, and the

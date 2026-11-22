@@ -56,7 +56,8 @@ use group_runner::{
     groups_root, interpreter_bin, mark_starts_in_file, place, read_bytes, refusal, renamed,
     run_process, set_environment, skip, source_test_names_in, started_in_file, worktree,
 };
-use private_service::{PrivateService, Side, service_binaries};
+use interrexx_oracle::private_service::{PrivateService, Side};
+use private_service::service_binaries;
 use suite_rows::{Context, Owner, Row, check_rows, group_path, read_rows, table_path};
 use support::oracle::{ORACLE_MEMORY_LIMIT_KIB, oracle_root};
 

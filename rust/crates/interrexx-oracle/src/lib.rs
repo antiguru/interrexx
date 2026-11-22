@@ -1,6 +1,7 @@
 //! Runs a Rexx program under an interpreter and captures its observable output.
 
 mod normalize;
+pub mod private_service;
 pub use normalize::{Divergence, diff, normalize};
 
 use std::path::{Path, PathBuf};

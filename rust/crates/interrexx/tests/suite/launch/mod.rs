@@ -37,7 +37,7 @@ pub fn run_group_on_oracle_from(
     let run = work.join("run");
     let group_file = prepare(root, &run, dir, group, &left_out(group, renamed_out));
     let temporary = prepare_temporary_directory(&run, &group_path(dir, group));
-    let service = PrivateService::new(Side::Oracle);
+    let service = PrivateService::new(Side::Oracle, None).expect("private oracle API service");
     let (variable, service_dir) = service.variable();
     let path = std::env::join_paths(
         std::iter::once(oracle_root().join("bin")).chain(
@@ -174,7 +174,9 @@ pub fn crate_run_once(
     if let Some(temporary) = temporary {
         command.env("TMPDIR", temporary);
     }
-    let service = PrivateService::new(Side::Crate);
+    let [rxapi, _, _] = service_binaries();
+    let service =
+        PrivateService::new(Side::Crate, Some(rxapi)).expect("private interrexx API service");
     let (variable, service_dir) = service.variable();
     command
         .env(variable, service_dir)
