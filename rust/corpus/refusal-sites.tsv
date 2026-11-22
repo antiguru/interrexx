@@ -156,7 +156,6 @@ Raised	inherit_needs_a_mixinclass	body+send	crates/interrexx/src/error.rs	agrees
 Loud	instruction	body+ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	insufficient_stack	body+send	crates/interrexx/src/error.rs	recorded	no	the self-forward family is in oracle-crashes.txt: never run	-
 Loud	internal_routine	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
-Loud	interpreter_table_copy	send	crates/interrexx/src/lib.rs	agrees	no	no route: every native_instance caller builds another class, and .environment, .local and a package's .methods and .routines are instance stores	.Message~new(o, .array~of('COPY', .Object))~send over .environment, .local, .context~package~routines and .methods answers a Directory or StringTable that is not o, identical on both
 Raised	invalid_base64	send	crates/interrexx/src/error.rs	agrees	yes	93.962	'YW==YWJj'~decodeBase64
 Raised	invalid_conversion	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	invalid_digit	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-

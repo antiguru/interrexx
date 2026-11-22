@@ -674,18 +674,6 @@ impl Loud {
         }
     }
 
-    /// `Object~copy` through a scope override on a `Directory` or
-    /// `StringTable` the interpreter built for itself. No program reaches it:
-    /// by `refusals.tsv`'s `object_protocol.rs` rows, the interpreter builds
-    /// neither for a program, and `.environment`, `.local` and a package's
-    /// tables are instance stores.
-    #[cold]
-    fn interpreter_table_copy(class: &str) -> Loud {
-        Loud {
-            message: owned_message(&format!("Object~copy of the interpreter's own {class}")),
-        }
-    }
-
     /// A `receiver~NAME=` entry-method send that carried no value argument,
     /// which is stored as whatever the evaluation stack holds (Deviation 29).
     fn entry_method_without_a_value(index: &[u8]) -> Loud {
