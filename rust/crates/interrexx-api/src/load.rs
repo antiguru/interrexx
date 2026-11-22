@@ -10,12 +10,13 @@ use crate::ffi::{
     CallContext, Contexts, ExitContext, MethodContext, RedirectorContext, ThreadContext,
 };
 use crate::invoke::MAX_NATIVE_ARGUMENTS;
+#[cfg(unix)]
+use crate::layout::RexxThreadContext_;
 use crate::layout::{
     CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFFSUB_BIT, RXFMLIFO_BIT, RXFNCCAL_PARM,
     RXMSQPSH_PARM, RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM,
     RexxCallContext_, RexxExitContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr,
-    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor,
-    ValueUnion,
+    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, ValueDescriptor, ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
 #[cfg(unix)]
@@ -414,6 +415,7 @@ pub fn names_only(package: &str, routines: &[&str], methods: &[&str]) -> Library
 }
 
 /// What an embedding instance's root activity waits in, set once per process.
+#[cfg(unix)]
 static EMBEDDING_WAIT: std::sync::OnceLock<fn(usize)> = std::sync::OnceLock::new();
 
 /// The library whose routine `WAIT` an embedding instance's root activity
@@ -432,6 +434,7 @@ pub fn embedding_library(wait: fn(usize)) -> Library {
 /// # Safety
 /// As every typed routine stub's: `context` is a live call context, and a
 /// non-null `arguments` is the call's descriptor array.
+#[cfg(unix)]
 unsafe extern "C-unwind" fn embedding_wait(
     context: *mut RexxCallContext_,
     arguments: *mut ValueDescriptor,
