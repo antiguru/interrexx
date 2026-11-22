@@ -218,6 +218,7 @@ COMMANDHANDLER.class.ENVIRONMENTS entry:cmdhandler_environments
 COMMANDHANDLER.class.HANDLER entry:cmdhandler_handler
 COMMANDHANDLER.class.HANDLERS entry:cmdhandler_handlers
 COMMANDHANDLER.class.REGISTER replacement:command.rex
+COMMANDINPUT.instance.!COUNTVALUE entry:cmdinput_countValue
 COMMANDINPUT.instance.!NEXTLINE replacement:command.rex
 COMMANDINPUT.instance.!READLINE entry:cmdcontext_lineIn
 COMMANDINPUT.instance.CHARIN replacement:command.rex

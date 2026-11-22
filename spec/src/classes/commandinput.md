@@ -186,8 +186,9 @@ in~linein(.nil) 93.963
 r[class.commandinput.charin]
 `charIn(start, count)` answers the next `count` characters of the text that
 [the text rule](r:class.commandinput.text) describes, the line ends among
-them, and moves the reading past them. `count` is a whole number of at least 0
-and defaults to `1`; with `0` it answers the null string and reads nothing;
+them, and moves the reading past them. `count` is read as a whole number of at
+least 0 through the [required-string protocol](r:conv.string.object). It
+defaults to `1`. With `0` it answers the null string and reads nothing;
 when fewer than `count` characters are left, it answers those that are. A line
 that was partly read goes on from where it stopped. At the end of the input it
 answers the null string and raises NOTREADY. `start`, the position, must be
@@ -238,6 +239,41 @@ in~charin(, 1, 1) 93.902
 640A 0
 at the end <> 0
    NOTREADY NOTREADY
+```
+
+```rexx
+x = .commandhandler~register('spec_ci_charin_count', .reader~new)
+address spec_ci_charin_count 'go' with input using (.array~of('abcdef'))
+x = .commandhandler~deregister('spec_ci_charin_count')
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  in = caller~input
+  say in~charIn(, .makeCount~new)
+  say in~charIn(, .stringCount~new)
+  signal on syntax name bad
+  say in~charIn(, .invalidCount~new)
+  return 0
+bad:
+  say condition('o')~code
+  say in~lineIn
+  return 0
+::class makeCount
+::method makeString
+  return '2'
+::class stringCount
+::method string
+  return '3'
+::class invalidCount
+::method string
+  return .object~new
+```
+
+```output
+ab
+cde
+40.11
+f
 ```
 
 r[class.commandinput.lines]
