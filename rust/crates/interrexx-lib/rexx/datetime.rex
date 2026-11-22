@@ -32,8 +32,8 @@
   use strict arg
   return self~new(9999, 12, 31, 23, 59, 59, 999999, 0)
 
--- r[class.datetime.today]. The offset is read by init, whose 88.907 is this
--- method's 88.918 (r[class.datetime.offset]).
+-- r[class.datetime.today]. A syntax error from NEW becomes 88.918
+-- (r[class.datetime.offset]).
 ::method today class
   use strict arg offset = 0
   numeric digits 18
@@ -43,9 +43,7 @@
   signal on syntax name refused
   return self~new(days * 86400000000, given)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the B form.
 ::method fromBaseDate class
@@ -59,9 +57,7 @@ refused:
   signal on syntax name refused
   return self~new(n * 86400000000, given)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 whole: procedure
   parse arg s
   if \datatype(s, 'N') then return ''
@@ -86,9 +82,7 @@ whole: procedure
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the N form.
 ::method fromNormalDate class
@@ -105,9 +99,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the O form.
 ::method fromOrderedDate class
@@ -124,9 +116,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the S form.
 ::method fromStandardDate class
@@ -143,9 +133,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the U form.
 ::method fromUsaDate class
@@ -162,9 +150,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromordinal]. The answer is a plain DateTime: nothing is
 -- sent to the receiver (r[class.datetime.sends.new]).
@@ -193,9 +179,7 @@ refused:
   signal on syntax name refused
   return .DateTime~new((first + day - 1) * 86400000000, given)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromweek]. The offset argument is ignored; the messages
 -- are those of r[class.datetime.sends.new].
@@ -242,9 +226,7 @@ outside:
 unreadable:
   raise syntax 88.918 array('time', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromtime]: the C form.
 ::method fromCivilTime class
@@ -260,9 +242,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('time', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromtime]: the L form.
 ::method fromLongTime class
@@ -278,9 +258,7 @@ refused:
 unreadable:
   raise syntax 88.918 array('time', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromticks]
 ::method fromTicks class
@@ -296,9 +274,7 @@ refused:
   signal on syntax name refused
   return self~new(count, given)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 whole: procedure
   parse arg s
   if \datatype(s, 'N') then return ''
@@ -323,9 +299,7 @@ whole: procedure
 unreadable:
   raise syntax 88.918 array('date', text)
 refused:
-  if condition('O')~code == '88.907' then
-    raise syntax 88.918 array('offset', given)
-  raise propagate
+  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromutciso], r[class.datetime.deviation.132]: the string
 -- is the date and time of fromIsoDate, the fraction optional, then `Z` or a

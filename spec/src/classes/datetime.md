@@ -147,7 +147,8 @@ read an offset, which are all but `fromWeekNumberDate` (it [ignores the
 offset](r:class.datetime.fromweek)) and `fromUtcIsoDate` (it has none); a value
 that is no number at all gets the same code from `new`, `today` and those `from`
 methods, and what `toTimezone` raises for it is in [the zone
-rule](r:class.datetime.zone).
+rule](r:class.datetime.zone). For `today` and the `from` methods that read an
+offset, a syntax condition from the construction raises `88.918`.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
@@ -164,6 +165,10 @@ call try '.datetime~today(901)'
 call try '.datetime~fromBaseDate(5, 901)'
 call try '.datetime~fromTicks(5, 1.5)'
 call try '.datetime~fromTicks(5, "x")'
+call try '.datetime~today(.offsetObject~new)'
+call try '.datetime~fromBaseDate(5, .offsetObject~new)'
+call try '.rejectingDate~today(60)'
+say .acceptingDate~today(.offsetObject~new)~offset
 exit
 try:
   signal on syntax name bad
@@ -172,6 +177,16 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class offsetObject
+::method makeString
+  return '60'
+::class rejectingDate subclass DateTime
+::method new class
+  raise syntax 40.1
+::class acceptingDate subclass DateTime
+::method new class
+  use arg days, given
+  return .datetime~new(days, given~makeString)
 ```
 
 ```output
@@ -187,6 +202,10 @@ d~toTimezone(.timespan~fromSeconds(90)) => 88.907
 .datetime~fromBaseDate(5, 901) => 88.918
 .datetime~fromTicks(5, 1.5) => 88.918
 .datetime~fromTicks(5, "x") => 88.918
+.datetime~today(.offsetObject~new) => 88.918
+.datetime~fromBaseDate(5, .offsetObject~new) => 88.918
+.rejectingDate~today(60) => 88.918
+01:00:00.000000
 ```
 
 r[class.datetime.offset.default]
