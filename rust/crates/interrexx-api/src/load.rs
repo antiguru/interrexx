@@ -3395,28 +3395,8 @@ mod tests {
         assert_eq!(found(&library, b"Foo"), Some(3));
     }
 
-    /// Two loads of one file have one identity while it stays loaded, and another file has
-    /// another.
     #[test]
-    fn one_file_has_one_identity() {
-        let mapping = |file: &str| {
-            // SAFETY: both are system libraries this process already links, so their
-            // initialisers have run.
-            let handle = unsafe { libloading::Library::new(file) }.expect("the library opens");
-            super::Mapping::new(Some(handle))
-        };
-        // Two system libraries that are distinct files: on Apple's hosts `libm` and `libc` are
-        // both `libSystem`.
-        let (one, other) = if cfg!(target_vendor = "apple") {
-            ("/usr/lib/libz.1.dylib", "/usr/lib/libSystem.B.dylib")
-        } else {
-            ("libm.so.6", "libc.so.6")
-        };
-        let first = mapping(one);
-        let second = mapping(one);
-        assert_ne!(first.identity, 0);
-        assert_eq!(first.identity, second.identity);
-        assert_ne!(first.identity, mapping(other).identity);
+    fn a_mapping_without_a_library_has_no_identity() {
         assert_eq!(super::Mapping::new(None).identity, 0);
     }
 

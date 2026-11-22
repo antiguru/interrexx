@@ -191,7 +191,11 @@ fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
     // The host's suffix, as `classic_procedure` spells the file it searches for.
     let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
     let built = std::process::Command::new("cc")
-        .args(["-shared", "-fPIC", "-o"])
+        .args(["-shared", "-fPIC", "-I"])
+        .arg(repository_root().join("include"))
+        .arg("-I")
+        .arg(repository_root().join("include/platform/unix"))
+        .arg("-o")
         .arg(dir.join(&file))
         .arg(&file_source)
         .status()
@@ -203,6 +207,50 @@ fn plain_library(name: &str, source: &str) -> (PathBuf, impl Fn() -> bool) {
 
 /// A C file that defines one function and no package exporter.
 const NO_EXPORTER: &str = "int plain(void) { return 1; }\n";
+
+#[test]
+fn one_file_keeps_its_identity_through_close_and_reopen() {
+    const PACKAGE: &str = r#"
+#include "oorexxapi.h"
+static RexxPackageEntry test_package_entry = {
+    STANDARD_PACKAGE_HEADER
+    REXX_INTERPRETER_4_0_0, "identity-test", NO_VERSION_YET,
+    NULL, NULL, NULL, NULL
+};
+OOREXX_GET_PACKAGE(test);
+"#;
+    let name = "identity-test";
+    let (dir, mapped) = plain_library(name, PACKAGE);
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let open = |dir: &Path, file: &str| {
+        load::open_path(&dir.join(file), name)
+            .expect("the package is compatible")
+            .expect("the package opens")
+    };
+
+    assert!(!mapped());
+    let first = open(&dir, &file);
+    let second = open(&dir, &file);
+    let identity = first.identity();
+    assert_ne!(identity, 0);
+    assert_eq!(second.identity(), identity);
+
+    let other = "identity-other";
+    let (other_dir, other_mapped) = plain_library(other, PACKAGE);
+    assert!(!other_mapped());
+    let other_file = format!("lib{other}{}", std::env::consts::DLL_SUFFIX);
+    assert_ne!(open(&other_dir, &other_file).identity(), identity);
+
+    assert!(first.close());
+    assert!(second.is_open());
+    assert!(second.close());
+    drop(first);
+    drop(second);
+    assert!(mapped());
+    assert_eq!(open(&dir, &file).identity(), identity);
+    std::fs::remove_dir_all(dir).expect("the directory is removable");
+    std::fs::remove_dir_all(other_dir).expect("the directory is removable");
+}
 
 /// A library whose exporter answers no package entry stays mapped, as one whose exporter answers
 /// one does (`r[native.loading.static]`).
