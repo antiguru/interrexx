@@ -220,6 +220,24 @@ impl Interp {
         self.trace_result_line(indent, value);
     }
 
+    /// Writes a result line before a clause applies the effect it describes.
+    #[inline(always)]
+    pub(crate) fn trace_result_before_effect(
+        &mut self,
+        indent: usize,
+        value: &[u8],
+    ) -> Result<(), Failure> {
+        if self.traced_mode().results {
+            self.trace_result_line(indent, value);
+            if !self.activity.pending_traps.is_empty()
+                && let Some(failure) = self.take_trace_failure()
+            {
+                return Err(failure);
+            }
+        }
+        Ok(())
+    }
+
     /// The line itself, out of line: the gate above is what every call site
     /// pays when tracing is off, and it is one load and a branch.
     #[inline(never)]

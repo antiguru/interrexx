@@ -418,8 +418,10 @@ when there has been none since the stream was opened.
 ## 50. A trace line that cannot be delivered
 
 When the trace destination refuses a line, the same condition as ooRexx's is
-raised, but some clauses may do their own work first. ooRexx raises it
-before the clause does anything.
+raised. Some clauses still apply the effect described by a refused line
+before raising the condition. For example, `NUMERIC DIGITS` changes the
+setting if the destination refuses its keyword line, while ooRexx leaves
+the setting unchanged.
 
 ## 51. `.context~rs` inside INTERPRET
 

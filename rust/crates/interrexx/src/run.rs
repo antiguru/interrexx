@@ -1669,7 +1669,7 @@ impl Interp {
             }
             None => Vec::new(),
         };
-        self.trace_result(self.activity.clause_state.current_value_indent, &line);
+        self.trace_result_before_effect(self.activity.clause_state.current_value_indent, &line)?;
         // The I/O exit's first pass.
         if self.exits.is_some() && self.say_exit(&line)? {
             return Ok(());
@@ -2330,7 +2330,7 @@ impl Interp {
             }
             None => Vec::new(),
         };
-        self.trace_result(self.activity.clause_state.current_value_indent, &line);
+        self.trace_result_before_effect(self.activity.clause_state.current_value_indent, &line)?;
         // The queue exit's first pass (`Activity::queue`).
         if self.exits.is_some() && self.push_exit(&line, keyword == QueueKeyword::Push)? {
             return Ok(());

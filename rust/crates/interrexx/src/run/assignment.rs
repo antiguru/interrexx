@@ -28,7 +28,7 @@ impl Interp {
         if self.activity.clause_state.instructions_traced_at_entry
             && let Some(rendered) = self.result_text(value)?
         {
-            self.trace_result(indent, &rendered);
+            self.trace_result_before_effect(indent, &rendered)?;
         }
         if shared_key && let ExprKind::Compound(id) = &target.kind {
             return self.assign_compound(code, *id, value, indent, true);
