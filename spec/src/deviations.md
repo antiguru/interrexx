@@ -1279,10 +1279,12 @@ handle of an open semaphore of the other kind, answers `6` and changes no
 semaphore. A handle carries the kind of its semaphore and a generation, so
 that a stale handle never names a semaphore that reuses its place, and a
 number whose text is not exactly a live handle, a handle that is spelled again
-included, names no semaphore. ooRexx uses the number as an address and crashes for a closed handle, in every
-function but a second SysCloseEventSem or SysCloseMutexSem, which answers `6`,
-for a rounded one, as SysPostEventSem shows, and for a number that no call
-answered; SysRequestMutexSem with an event semaphore's handle hangs.
+included, names no semaphore. ooRexx uses the number as an address. A closed
+handle can end the program with a signal. A repeated SysCloseEventSem answers
+`6`, and a repeated SysCloseMutexSem can answer `6` or end with a signal.
+A rounded handle, as SysPostEventSem shows, or a number that no call answered
+can also end the program with a signal. SysRequestMutexSem with an event
+semaphore's handle hangs.
 
 ## 159. A save onto a file that may not be written
 

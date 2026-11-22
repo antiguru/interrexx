@@ -296,20 +296,17 @@ e: say condition('o')~code
 ```
 
 r[util.sysmutexsem.close]
-SysCloseMutexSem ends the use of a semaphore and answers `0`. It answers `6`
-when the semaphore is closed already, and so a second call with the same
-handle answers `6`. The other functions answer a closed handle as [Deviation
-158](r:util.sysmutexsem.deviation.158) says.
+SysCloseMutexSem ends the use of an open mutex semaphore and answers `0`.
+A call with a closed handle is covered by [Deviation
+158](r:util.sysmutexsem.deviation.158).
 
 ```rexx
 h = SysCreateMutexSem('')
 say SysCloseMutexSem(h)
-say SysCloseMutexSem(h) SysCloseMutexSem(h)
 ```
 
 ```output
 0
-6 6
 ```
 
 ## Opening by name
@@ -415,14 +412,16 @@ call answered. ooRexx uses the number as the address of the semaphore and
 crashes, with a signal that ends the program, for a closed handle
 (SysRequestMutexSem and SysReleaseMutexSem), for a rounded one, as it does for
 SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
-with an event semaphore's handle hangs. The handle of an open event semaphore
+with an event semaphore's handle hangs. SysCloseMutexSem can answer `6` for
+a closed handle or terminate with a signal. The handle of an open event semaphore
 is such a number too: these calls answer `6` for it and change neither
 semaphore ([the event semaphore rule](r:util.syseventsem.deviation.158) has
 the example and says what a handle is). The first
-example is a rounded handle and a closed one, the second a number that no call
-answered. A handle that is spelled again, with blanks, a sign or a fraction of
-zeros, names no semaphore; a string value that is exactly the handle does, as
-the third example shows.
+example uses a rounded handle and a closed one. The second closes the same
+handle repeatedly, and the third uses a number that no call answered. A
+handle that is spelled again, with blanks, a sign or a fraction of zeros,
+names no semaphore. A string value that is exactly the handle does, as the
+last example shows.
 
 ```rexx
 m = SysCreateMutexSem('')
@@ -434,6 +433,17 @@ say SysRequestMutexSem(m, 10) SysReleaseMutexSem(m)
 
 ```output
 1 6 6 6
+6 6
+```
+
+```rexx
+h = SysCreateMutexSem('')
+say SysCloseMutexSem(h)
+say SysCloseMutexSem(h) SysCloseMutexSem(h)
+```
+
+```output
+0
 6 6
 ```
 
