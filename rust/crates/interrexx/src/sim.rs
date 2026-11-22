@@ -99,7 +99,7 @@ pub struct Replay {
     pub path: PathBuf,
     pub decisions: Arc<[Decision]>,
     /// A shrink trial's input file and the zero-based indices it omits.
-    pub omitted: Option<(PathBuf, Arc<[usize]>)>,
+    pub omitted: Option<Arc<(PathBuf, Arc<[usize]>)>>,
 }
 
 /// The simulation's knobs, each off by default.
@@ -230,7 +230,7 @@ impl SimConfig {
                 }
                 let replay = config.replay.as_mut().expect("a replay");
                 let indices = read_omissions(&path, replay.decisions.len())?;
-                replay.omitted = Some((path, indices));
+                replay.omitted = Some(Arc::new((path, indices)));
             }
             config.trace = trace;
             return Ok(config);
@@ -475,7 +475,7 @@ impl std::fmt::Display for SimConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(replay) = &self.replay {
             write!(f, "sim:replay={}", replay.path.display())?;
-            if let Some((path, _)) = &replay.omitted {
+            if let Some((path, _)) = replay.omitted.as_deref() {
                 write!(f, ",omit={}", path.display())?;
             }
             if let Some(path) = &self.trace {
@@ -808,7 +808,7 @@ impl Replaying {
             refusal: None,
             sparse: replay
                 .omitted
-                .as_ref()
+                .as_deref()
                 .map(|(_, omitted)| SparseReplay::new(&replay.decisions, omitted)),
         }
     }
