@@ -698,6 +698,7 @@ fn pass_of(
                 | Op::ExecValue { .. }
                 | Op::ExecWith { .. }
                 | Op::ReplyCheck { .. }
+                | Op::RaisePart { .. }
                 | Op::List { .. }
                 | Op::Say { .. }
                 | Op::Queue { .. }

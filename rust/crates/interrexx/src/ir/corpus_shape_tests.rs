@@ -61,6 +61,7 @@ impl Root {
             | Op::ExecValue { .. }
             | Op::ExecWith { .. }
             | Op::ReplyCheck { .. }
+            | Op::RaisePart { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::ParseBegin { .. }
@@ -140,6 +141,7 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
         } => Some("command"),
         InstructionKind::Guard(guard) if guard.condition.is_some() => Some("GUARD WHEN"),
         InstructionKind::Reply { .. } => Some("REPLY"),
+        InstructionKind::Raise(_) => Some("RAISE"),
         _ => None,
     }
 }
@@ -365,6 +367,12 @@ struct Seen {
     /// how many bare ones stayed `Op::Exec`.
     reply_values: usize,
     bare_replies: usize,
+    /// How many `RAISE`s with an expression compiled to their parts and
+    /// `Op::ExecWith`, how many with none stayed `Op::Exec`, and how many of
+    /// each part the first kind compiled.
+    raise_values: usize,
+    bare_raises: usize,
+    raise_parts: BTreeMap<&'static str, usize>,
 }
 
 /// Checks one body's compiled stream against what its instructions call for,
@@ -569,6 +577,191 @@ fn check_body(
                 );
                 seen.bare_replies += 1;
             }
+        }
+
+        // **A `RAISE` with an expression** is, for each expression in the
+        // order `r[instr.raise.order]` gives, its ops into the register its
+        // part's layout names and the `Op::RaisePart` behind them, and then
+        // `Op::ExecWith` from the first of those registers; nothing else, and
+        // no `Op::Exec`. One with none is the one `Op::Exec`.
+        if let InstructionKind::Raise(raise) = &instruction.kind {
+            let ops: Vec<&Op> = region
+                .iter()
+                .filter(|op| !matches!(op, Op::TraceClause { .. }))
+                .collect();
+            match crate::run::RaiseLayout::of(raise) {
+                Some(layout) => {
+                    let Some(Op::ExecWith {
+                        index: last,
+                        src: base,
+                    }) = ops.last()
+                    else {
+                        panic!(
+                            "{where_}: instruction {index} ({construct}) does not end in \
+                             ExecWith\n{}",
+                            render(&chunk)
+                        );
+                    };
+                    assert_eq!(*last, at);
+                    let base = *base;
+                    let slot = |offset: Option<u16>| base + offset.expect("the part is present");
+                    let mut expected: Vec<(crate::run::RaisePart, u16, Option<&Expr>)> = Vec::new();
+                    use crate::run::RaisePart;
+                    if let Some(expr) = &raise.rc {
+                        expected.push((RaisePart::Code, slot(layout.code), Some(expr)));
+                    }
+                    if let Some(expr) = &raise.description {
+                        expected.push((
+                            RaisePart::Description,
+                            slot(layout.description),
+                            Some(expr),
+                        ));
+                    }
+                    if let Some(expr) = &raise.additional {
+                        expected.push((RaisePart::Additional, slot(layout.additional), Some(expr)));
+                    }
+                    // An item has a part of its own, its trace lines, only
+                    // in a clause that echoes values, and then every item
+                    // has one. Without it the items' ops are the `Array`
+                    // part's group.
+                    let echoed = ops.iter().any(|op| {
+                        matches!(
+                            op,
+                            Op::RaisePart {
+                                part: RaisePart::Item,
+                                ..
+                            }
+                        )
+                    });
+                    if let Some(items) = &raise.array {
+                        let array = slot(layout.array);
+                        for (k, item) in (1..).zip(items) {
+                            if echoed {
+                                let src = match item {
+                                    Some(_) => array + k,
+                                    None => Op::ARG_OMITTED,
+                                };
+                                expected.push((RaisePart::Item, src, item.as_ref()));
+                            }
+                        }
+                        expected.push((RaisePart::Array, array, None));
+                    }
+                    if let Some(expr) = raise.result.as_ref().and_then(|r| r.value.as_ref()) {
+                        expected.push((RaisePart::Result, slot(layout.result), Some(expr)));
+                    }
+                    let mut group = 0;
+                    let mut parts = expected.iter();
+                    for (op_at, op) in ops[..ops.len() - 1].iter().enumerate() {
+                        assert!(
+                            !matches!(op, Op::Exec { .. } | Op::ExecWith { .. }),
+                            "{where_}: instruction {index} ({construct}) holds a second \
+                             Exec or ExecWith\n{}",
+                            render(&chunk)
+                        );
+                        let Op::RaisePart {
+                            index: owner,
+                            part,
+                            src,
+                        } = op
+                        else {
+                            continue;
+                        };
+                        let Some((want, want_src, expr)) = parts.next() else {
+                            panic!(
+                                "{where_}: instruction {index} ({construct}) has a {part:?} \
+                                 past its last part\n{}",
+                                render(&chunk)
+                            );
+                        };
+                        assert!(
+                            *owner == at && part == want && src == want_src,
+                            "{where_}: instruction {index} ({construct}) has {part:?} src={src} \
+                             where {want:?} src={want_src} was due\n{}",
+                            render(&chunk)
+                        );
+                        match expr {
+                            None if *part == RaisePart::Item => {
+                                assert!(
+                                    op_at == group,
+                                    "{where_}: instruction {index} ({construct}) has ops for an \
+                                     omitted item\n{}",
+                                    render(&chunk)
+                                );
+                            }
+                            None if echoed => {
+                                assert!(
+                                    op_at == group,
+                                    "{where_}: instruction {index} ({construct}) has ops between \
+                                     its last item and its Array part\n{}",
+                                    render(&chunk)
+                                );
+                            }
+                            Some(expr) => {
+                                let root = root_of(expr);
+                                let actual = ops[group..op_at]
+                                    .iter()
+                                    .copied()
+                                    .filter_map(Root::of)
+                                    .next_back();
+                                assert_eq!(
+                                    actual,
+                                    Some(root),
+                                    "{where_}: instruction {index} ({construct}) has a {part:?} \
+                                     calling for {root:?} and a group ending in {actual:?}\n{}",
+                                    render(&chunk)
+                                );
+                                *seen.roots.entry(root).or_default() += 1;
+                            }
+                            // The items: one value per written item, in order.
+                            None => {
+                                let written = raise
+                                    .array
+                                    .iter()
+                                    .flatten()
+                                    .filter(|item| item.is_some())
+                                    .count();
+                                assert!(
+                                    ops[group..op_at]
+                                        .iter()
+                                        .all(|op| !matches!(op, Op::RaisePart { .. }))
+                                        && written <= op_at - group,
+                                    "{where_}: instruction {index} ({construct}) has an ARRAY \
+                                     whose items did not compile ahead of its part\n{}",
+                                    render(&chunk)
+                                );
+                            }
+                        }
+                        *seen
+                            .raise_parts
+                            .entry(match part {
+                                RaisePart::Code => "Code",
+                                RaisePart::Description => "Description",
+                                RaisePart::Additional => "Additional",
+                                RaisePart::Item => "Item",
+                                RaisePart::Array => "Array",
+                                RaisePart::Result => "Result",
+                            })
+                            .or_default() += 1;
+                        group = op_at + 1;
+                    }
+                    assert!(
+                        parts.next().is_none(),
+                        "{where_}: instruction {index} ({construct}) is missing a part\n{}",
+                        render(&chunk)
+                    );
+                    seen.raise_values += 1;
+                }
+                None => {
+                    assert!(
+                        matches!(ops[..], [Op::Exec { index }] if *index == at),
+                        "{where_}: instruction {index} ({construct}) is a RAISE with no \
+                         expression compiled to something other than its one Exec\n{}",
+                        render(&chunk)
+                    );
+                    seen.bare_raises += 1;
+                }
+            }
+            continue;
         }
 
         // The expression a promoted clause's region must end in, for the
@@ -812,6 +1005,7 @@ fn sweep_every_corpus_body() {
         "command",
         "GUARD WHEN",
         "REPLY",
+        "RAISE",
     ] {
         assert!(
             seen.constructs.contains_key(construct),
@@ -848,6 +1042,20 @@ fn sweep_every_corpus_body() {
         seen.reply_values,
         seen.bare_replies
     );
+    assert!(
+        seen.raise_values > 0 && seen.bare_raises > 0,
+        "no corpus RAISE with an expression ({}) or with none ({}) was seen, so the RAISE rows \
+         above hold only over an empty set",
+        seen.raise_values,
+        seen.bare_raises
+    );
+    for part in ["Code", "Description", "Additional", "Array", "Result"] {
+        assert!(
+            seen.raise_parts.contains_key(part),
+            "no corpus RAISE compiled a {part} part, so the RAISE row says nothing about it: {:?}",
+            seen.raise_parts
+        );
+    }
     assert!(
         seen.native_header_values > 0,
         "no corpus DO/LOOP header slot compiled to native ops, so the header rows above hold \

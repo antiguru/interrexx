@@ -1589,3 +1589,62 @@ reply
 1: Exec index=0
 registers: 0
 consts:
+
+# `RAISE` with every kind of expression: each expression's ops into the
+# registers of its part, the `RaisePart` that does what the instruction does
+# with that value before the next is evaluated, in the order the instruction
+# evaluates them whatever the order written, then `ExecWith` from the first
+# part's registers, which raises. The `ARRAY` items each have a register of
+# their own past the array's, and an omitted one has none.
+compile
+raise syntax (zn) return (zr) description ('d' zd) array (zf(1), , 'x')
+----
+0: CallingClause index=0 end=15
+1: Load read=Simple at=0 dst=0
+2: RaisePart index=0 part=Code src=0
+3: Const dst=2 konst=0
+4: Load read=Simple at=1 dst=9
+5: Binary op=blank lhs=2 rhs=9 dst=2
+6: RaisePart index=0 part=Description src=2
+7: LoadConstant dst=9
+8: PushArg src=9
+9: CallArgs slot=4 path=root site=0 argc=1 dst=5
+10: Const dst=7 konst=1
+11: RaisePart index=0 part=Array src=4
+12: Load read=Simple at=2 dst=8
+13: RaisePart index=0 part=Result src=8
+14: ExecWith index=0 src=0
+registers: 10
+consts: 'd' 'x'
+
+# A `RAISE` whose one expression is its code.
+compile
+raise error 5
+----
+0: Clause index=0 end=4
+1: LoadConstant dst=0
+2: RaisePart index=0 part=Code src=0
+3: ExecWith index=0 src=0
+registers: 2
+consts:
+
+# A `RAISE PROPAGATE` with an `ADDITIONAL` value and an empty `RETURN`.
+compile
+raise propagate additional (zv) return
+----
+0: Clause index=0 end=4
+1: Load read=Simple at=0 dst=0
+2: RaisePart index=0 part=Additional src=0
+3: ExecWith index=0 src=0
+registers: 2
+consts:
+
+# A `RAISE` with no expression stays the one `Exec`, an empty `ARRAY` list
+# included.
+compile
+raise user zu array () exit
+----
+0: Clause index=0 end=2
+1: Exec index=0
+registers: 0
+consts:

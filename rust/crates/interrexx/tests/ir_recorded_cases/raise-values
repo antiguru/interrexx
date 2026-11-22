@@ -1,0 +1,351 @@
+# `RAISE` evaluates its expressions as native ops, each followed by the
+# `Op::RaisePart` that does what the instruction does with that value before
+# it evaluates the next, and `Op::ExecWith` raises from what the parts left.
+# Each stanza answers what the walked expressions answered.
+
+# DESCRIPTION, ADDITIONAL and RETURN, trapped by the caller's CALL ON
+program
+call on user u name h
+call sub
+say 'back' result
+exit
+h: say 'h' condition('C') condition('D') condition('A') condition('O')~result
+  return
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise user u description (f('D')) additional (f('A')) return (f('R'))
+----
+rc> 0
+out> f D
+out> f A
+out> f R
+out> h USER U D A R
+out> back R
+
+# ARRAY with an omitted item, and EXIT from an internal call of a routine,
+# which leaves the routine too
+program
+call on user u name h
+call r
+say 'main after' result
+exit
+h: say 'h' condition('A')~items condition('A')[1] condition('A')~hasindex(2),
+     condition('A')[3] condition('O')~result
+  return
+::routine r
+  call inner
+  say 'r after'
+  return 'r'
+inner:
+  raise user u array ((f(1)), , (f(3))) exit (f('E'))
+f: say 'f' arg(1); return arg(1)
+----
+rc> 0
+out> f 1
+out> f 3
+out> f E
+out> h 2 1 0 3 E
+out> main after E
+
+# the fixed order whatever the order written: the code, DESCRIPTION,
+# ADDITIONAL, then RETURN
+program
+call on error name h
+call sub
+say 'back' result
+exit
+h: say 'h' rc condition('D') condition('A') condition('O')~rc; return
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise error (f(7)) return (f('R')) additional (f('A')) description (f('D'))
+----
+rc> 0
+out> f 7
+out> f D
+out> f A
+out> f R
+out> h 7 D A 7
+out> back R
+
+# a SYNTAX number from a call, with ARRAY substitutions, trapped
+program
+signal on syntax
+call sub
+exit
+syntax: say 'trapped' condition('O')~code condition('D') condition('O')~additional~items,
+          condition('O')~result
+  exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise syntax (f('40.21')) description (f('D')) array ((f('A1')), 'two') return (f('R'))
+----
+rc> 0
+out> f 40.21
+out> f D
+out> f A1
+out> f R
+out> trapped 40.21 D 2 R
+
+# a SYNTAX number that is not a valid error number is checked as soon as it
+# is evaluated, so nothing after it is evaluated
+program
+signal on syntax
+call sub
+exit
+syntax: say 'trapped' condition('O')~code; exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise syntax (f('abc')) description (f('D')) additional (f('A')) return (f('R'))
+----
+rc> 0
+out> f abc
+out> trapped 33.904
+
+# the same check untrapped, from the main program
+program
+say 'start'
+raise syntax ('5.x') description (g()) exit (g())
+g: say 'g ran'; return 1
+----
+rc> 223
+out> start
+err>      2 *-* raise syntax ('5.x') description (g()) exit (g())
+err> Error 33 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 33.904:
+
+# ADDITIONAL's conversion under SYNTAX comes before RETURN is evaluated: a
+# value with no array is 98.939, and an object's MAKEARRAY runs first
+program
+signal on syntax
+o = .noisy~new
+call sub
+exit
+syntax: say 'trapped' condition('O')~code condition('O')~additional~items; call two; exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise syntax 40.1 additional (.nil) return (f('R'))
+two:
+  signal on syntax name t2
+  raise syntax (o) description (f('D')) additional (o) return (f('R2'))
+t2: say 't2' condition('O')~code condition('O')~additional[1]; return
+::class noisy
+::method string; say 'string sent'; return '40.1'
+::method makearray; say 'makearray sent'; return .array~of('item')
+----
+rc> 0
+out> trapped 98.939 0
+out> string sent
+out> f D
+out> makearray sent
+out> f R2
+out> t2 40.1 item
+
+# RAISE PROPAGATE replaces DESCRIPTION, ADDITIONAL and RESULT
+program
+signal on syntax name top
+call sub
+exit
+top: say 'top' condition('O')~code condition('D') condition('O')~additional,
+       condition('O')~result
+  exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  signal on syntax name local
+  zero = 0
+  say 1 / zero
+  return
+local:
+  raise propagate description (f('newdesc')) additional (f('newadd')) return (f('R'))
+----
+rc> 0
+out> f newdesc
+out> f newadd
+out> f R
+out> top 42.3 newdesc newadd R
+
+# RAISE PROPAGATE with no condition to propagate is 98.918, after every
+# expression is evaluated
+program
+signal on syntax
+call sub
+exit
+syntax: say 'trapped' condition('O')~code; exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise propagate description (f('D')) array ((f('A'))) return (f('R'))
+----
+rc> 0
+out> f D
+out> f A
+out> f R
+out> trapped 98.918
+
+# NOVALUE in an operand, trapped: nothing after it is evaluated
+program
+signal on novalue
+call sub
+exit
+novalue: say 'novalue' condition('D'); exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  raise user u description (f('D')) additional (zzunset) return (f('R'))
+----
+rc> 0
+out> f D
+out> novalue ZZUNSET
+
+# NOVALUE in an operand, untrapped: the name is the value
+program
+call on user u name h
+call sub
+say result
+exit
+h: say 'h' condition('D') condition('A') condition('O')~result; return
+sub:
+  raise user u description (zzunset) additional (yy.unset) return (xx || '!')
+----
+rc> 0
+out> h ZZUNSET YY.UNSET XX!
+out> XX!
+
+# an operand that raises: the condition is its own, and nothing after it is
+# evaluated
+program
+signal on syntax
+call sub
+exit
+syntax: say 'trapped' condition('O')~code; exit
+f: say 'f' arg(1); return arg(1)
+sub:
+  zero = 0
+  raise user u description (f('D')) additional (1 / zero) return (f('R'))
+----
+rc> 0
+out> f D
+out> trapped 42.3
+
+# the code of ERROR is its text when it is evaluated, and RC is the object
+program
+call on error name h
+call sub
+say 'back' result
+exit
+h: say 'h' condition('O')~rc~class condition('D'); return
+sub:
+  mb = .mutablebuffer~new('5')
+  raise error (mb) description (mb~append('x')~string) return (mb~string)
+----
+rc> 0
+out> h The MutableBuffer class 5x
+out> back 5x
+
+# an untrapped NOMETHOD is reported with its DESCRIPTION and ADDITIONAL
+program
+o = .noisy~new
+call sub
+say 'not here'
+exit
+sub:
+  raise nomethod description (o) additional ('rcv') return (1)
+::class noisy
+::method string; say 'string sent'; return 'DESC'
+----
+rc> 159
+err>      6 *-*   raise nomethod description (o) additional ('rcv') return (1)
+err>      2 *-* call sub
+err> Error 97 running /nonexistent/ir-dual-case.rex line 6:
+err> Error 97.1:
+
+# trace r: each part's >K> line after its expression
+program
+call on user u name h
+call sub
+exit
+h: return
+f: return arg(1)
+sub:
+  trace r
+  raise user u description (f('D') || 1) additional (f('A')) return (f('R'))
+----
+rc> 0
+err>      8 *-*   raise user u description (f('D') || 1) additional (f('A')) return (f('R'))
+err>      5 *-*     f:
+err>      5 *-*     return arg(1)
+err>        >>>       "D"
+err>        >K>     "DESCRIPTION" => "D1"
+err>      5 *-*     f:
+err>      5 *-*     return arg(1)
+err>        >>>       "A"
+err>        >K>     "ADDITIONAL" => "A"
+err>      5 *-*     f:
+err>      5 *-*     return arg(1)
+err>        >>>       "R"
+err>        >K>     "RESULT" => "R"
+
+# trace i: the intermediates of each expression, an item's >A> lines, and a
+# STRING method rendered once for each line that shows it
+program
+signal on syntax
+o = .noisy~new
+call sub
+exit
+syntax: say 'trapped' condition('O')~code; exit
+sub:
+  trace i
+  raise syntax (40 || '.4') description ('d' || 1) array ((o), , 'b' || 'c') return (o)
+::class noisy
+::method string; say 'string sent'; return 'NOISY'
+----
+rc> 0
+out> trapped 40.4
+err>      8 *-*   raise syntax (40 || '.4') description ('d' || 1) array ((o), , 'b' || 'c') return (o)
+err>        >L>     "40"
+err>        >L>     ".4"
+err>        >O>     "||" => "40.4"
+err>        >K>     "SYNTAX" => "40.4"
+err>        >L>     "d"
+err>        >L>     "1"
+err>        >O>     "||" => "d1"
+err>        >K>     "DESCRIPTION" => "d1"
+err>        >V>     O => "a NOISY"
+err>        >A>     "a NOISY"
+err>        >A>     "a NOISY"
+err>        >A>     ""
+err>        >L>     "b"
+err>        >L>     "c"
+err>        >O>     "||" => "bc"
+err>        >A>     "bc"
+err>        >A>     "bc"
+err>        >K>     "ARRAY" => "an Array"
+err>        >V>     O => "a NOISY"
+err>        >K>     "RESULT" => "a NOISY"
+err>      5 *-* syntax:
+err>      5 *-* say 'trapped' condition('O')~code;
+err>        >L>   "trapped"
+err>        >L>   "O"
+err>        >A>   "O"
+err>        >F>   CONDITION => "a Directory"
+err>        >M>   "CODE" => "40.4"
+err>        >O>   " " => "trapped 40.4"
+err>        >>>   "trapped 40.4"
+err>      5 *-* exit
+
+# a RAISE in a loop, its CALL ON handler run after each call
+program
+call on user u name h
+n = 0
+do i = 1 to 3
+  call sub i
+  n = n + result
+end
+say n
+exit
+h: say 'h' condition('D'); return
+sub:
+  raise user u description ('d' || arg(1)) return (arg(1) * 2)
+----
+rc> 0
+out> h d1
+out> h d2
+out> h d3
+out> 12
