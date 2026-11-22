@@ -475,7 +475,8 @@ destination with the message <code>DESTINATION</code> to <code>.TRACEOUTPUT</cod
 understands <code>LINEOUT</code> will do, and <code>.OUTPUT</code> sends the lines to standard
 output. A destination that raises a condition for a line refuses it: the line
 is written to standard output, and the condition is raised in the program, as
-it would be by the clause the line traces.</p>
+it would be by the clause the line traces. If the destination refuses the
+clause's opening line, the clause does not run.</p>
 <pre><code class="language-rexx">trace r
 x = 1
 say 'done'
@@ -499,8 +500,9 @@ got &lt;     4 *-* trace n&gt;
 </code></pre>
 <pre><code class="language-rexx">.traceoutput~destination(.sink~new)
 signal on syntax name e
+trace o
 trace r
-nop
+say 'a'
 exit
 e: trace o
 .traceoutput~destination(.output)
@@ -515,7 +517,7 @@ say 'caught' condition('o')~code
   if n = 1 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">     4 *-* nop
+<pre><code class="language-output">     5 *-* say 'a'
 caught 93.900
 </code></pre>
 <h2 id="the-format-of-a-line"><a class="header" href="#the-format-of-a-line">The format of a line</a></h2>
