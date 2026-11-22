@@ -15,7 +15,7 @@ use crate::eval::{SymbolRead, call_target_name};
 use crate::plan::Plan;
 use crate::run::interpret::Pause;
 use crate::run::{
-    Absorbed, CallResolution, ConditionTrace, Echo, Ended, Flow, LoopHeaderValues, QueueKeyword,
+    Absorbed, CallResolution, ConditionTrace, Ended, Flow, LoopHeaderValues, QueueKeyword,
     Resolved, ReturnKeyword, SelectEscape, SelectResume, SiteCall, SiteKeep, Started,
     SteppedClause, absorb, otherwise_range, otherwise_resume, select_escape, select_parts,
     subroutine_started, when_resume, when_targets,
@@ -1989,15 +1989,14 @@ macro_rules! open_clause {
         // **`stale` moves the clause echo from the stream back to
         // the run-time gate, in both directions at once.** The
         // region's own [`Op::TraceClause`] is skipped and
-        // [`Echo::Gated`] is passed instead, so a chunk compiled to
-        // echo under a setting that no longer does prints nothing,
+        // the clause opening asks the current setting, so a chunk compiled
+        // to echo under a setting that no longer does prints nothing,
         // and one compiled silent under a setting that now echoes
         // prints the line the setting now asks for. The two have
         // to be one decision: doing only the first would leave a
         // `TRACE R` inside a body invisible to every promoted
         // clause after it, and only the second would leave `TRACE
         // N` unable to switch one off.
-        let echo = if $stale { Echo::Gated } else { Echo::Compiled };
         let opening = $chunk.opening_at($index);
         // Every register at or above the clause's top is dead as it opens.
         $registers.clear_from(opening.register_top);
@@ -2011,7 +2010,6 @@ macro_rules! open_clause {
         // terms of -- so a promoted clause and an unpromoted one
         // discharge the same list from the same code.
         $entry = $self.enter_stepped_clause(
-            echo,
             $code,
             $index,
             $clause,
@@ -2019,6 +2017,12 @@ macro_rules! open_clause {
             (opening.tabled, opening.position),
             counted,
         );
+        $from = if $stale && $self.open_with_runtime_trace($source, $clause) {
+            // Route the refusal through the region's existing cold exit.
+            u32::MAX
+        } else {
+            $pc + 1
+        };
         // Taken on entry exactly as `step` takes it, because a
         // promoted clause is a clause and the permission is spent
         // by whichever clause the activation granted it to.
@@ -2033,7 +2037,6 @@ macro_rules! open_clause {
             );
             false
         };
-        $from = $pc + 1;
     };
 }
 
@@ -2083,6 +2086,11 @@ macro_rules! clause_region {
                         // a budget is a count.
                         let mut header: Option<LoopHeaderValues> = $header;
                         let Some(ops) = $chunk.ops_in($from, $end) else {
+                            if $from == u32::MAX
+                                && let Some(failure) = $self.take_trace_failure()
+                            {
+                                break 'cold Err(failure);
+                            }
                             break 'cold Err(Loud::chunk_map_too_short().into());
                         };
                         region_ops!(

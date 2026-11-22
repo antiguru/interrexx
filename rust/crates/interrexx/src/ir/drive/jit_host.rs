@@ -1071,7 +1071,6 @@ impl Host for Driven<'_, '_> {
         let opening = self.chunk.opening_at(index);
         self.registers.clear_from(opening.register_top);
         let entry = self.interp.enter_stepped_clause(
-            Echo::Compiled,
             self.code,
             index,
             clause,

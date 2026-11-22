@@ -372,7 +372,8 @@ destination with the message `DESTINATION` to `.TRACEOUTPUT`: any object that
 understands `LINEOUT` will do, and `.OUTPUT` sends the lines to standard
 output. A destination that raises a condition for a line refuses it: the line
 is written to standard output, and the condition is raised in the program, as
-it would be by the clause the line traces.
+it would be by the clause the line traces. If the destination refuses the
+clause's opening line, the clause does not run.
 
 ```rexx
 trace r
@@ -406,8 +407,9 @@ got <     4 *-* trace n>
 ```rexx
 .traceoutput~destination(.sink~new)
 signal on syntax name e
+trace o
 trace r
-nop
+say 'a'
 exit
 e: trace o
 .traceoutput~destination(.output)
@@ -424,7 +426,7 @@ say 'caught' condition('o')~code
 ```
 
 ```output
-     4 *-* nop
+     5 *-* say 'a'
 caught 93.900
 ```
 
