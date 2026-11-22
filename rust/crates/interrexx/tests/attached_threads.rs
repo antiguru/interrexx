@@ -1438,7 +1438,7 @@ fn detach_from_the_wrong_thread_or_twice_does_nothing() {
 /// A message sent through a thread context after its thread detached from it answers nothing
 /// and does not run, where it aborted the process before. The oracle aborts the process
 /// (rc 134), so it is not asked.
-// spec: native.threads.attach
+// spec: native.threads.context.deviation.19
 #[test]
 fn a_callback_after_detach_is_refused() {
     assert_eq!(

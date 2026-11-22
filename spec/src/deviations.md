@@ -147,23 +147,11 @@ end. ooRexx preempts both and they complete.
 
 ## 19. Callback from a foreign thread
 
-A callback through the context of a native call, made from a thread that runs
-no native call of the interpreter, runs nothing: it answers the failure value
-of the member, and the call whose context it used raises error 98.983 once it
-returns. It first waits for the interpreter while another thread holds it. A
-call into a native library that is not built into the interpreter leaves it
-free while it runs, so such a call may wait for that thread, but a handler of
-a system exit holds it, and if the handler waits for the thread, the program
-hangs. A call of a library built into the interpreter that does not wait for
-time, a semaphore or a socket, such as `SysFileTree` or `SysStemSort`, holds it
-too for its whole run, and the callback waits until that call returns, while
-`SysSleep`, a semaphore's wait and an RxSock wait for a socket leave it free
-as they wait. ooRexx aborts the process.
-
-A callback through the context of an attached thread, made after that thread
-detached from it, does not wait: it is refused at once and answers the failure
-value of the member, without running anything. ooRexx aborts the process in
-that case too.
+interrexx refuses callbacks through a call context from a thread that is
+running no native call of the interpreter. It also refuses callbacks through
+an attached context after its thread detaches. [The foreign-thread callback
+rule](r:native.threads.context.deviation.19) specifies the result and when
+the thread must wait. ooRexx aborts the process in these cases.
 
 ## 20. A wait nothing can end
 
