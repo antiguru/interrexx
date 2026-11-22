@@ -195,7 +195,9 @@ schedule. Every native call, command and stdin read runs on the baton. Policies:
 preemptions among the first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness
 floor. Knobs include `gc=q`, `halt@K`, `fail=wait:K` and `hash=SEED`, which a `REXX_HASH_SEED`
 override records so that a trace replays under the same hash seed. The scheduler checks its own
-invariants at every switch, and a run records a decision trace that `sim:trace=FILE` replays.
+invariants at every switch. Record decisions with `sim:SEED,trace=FILE` and replay them with
+`sim:replay=FILE`. The [trace shrinker](testing.md#shrinking-a-failing-simulation-trace) removes
+decisions while preserving a reproducible failure.
 Anything that cannot be simulated (named semaphores, rxapi) is refused in sim. ooRexx differences
 under a seed are reported, never gating.
 
