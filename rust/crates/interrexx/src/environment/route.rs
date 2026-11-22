@@ -173,6 +173,7 @@ impl Interp {
     fn deliver_trace_line_as(&mut self, start: usize, entry: bool) {
         let variable = self.traced_variable.take();
         if self.activity.routing_trace {
+            self.trace.truncate(start);
             return;
         }
         if self.trace_failure_queued() {

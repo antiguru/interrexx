@@ -358,13 +358,16 @@ say 'done'
     );
     assert_eq!(outcome.exit_code, 0);
     assert_eq!(outcome.stdout, b"done\n");
-    let trace = String::from_utf8(outcome.stderr).expect("the trace is text");
-    assert!(
-        trace
-            .lines()
-            .any(|line| line.starts_with('*') && line.ends_with("x = 1"))
+    assert_eq!(
+        String::from_utf8(outcome.stderr).expect("the trace is text"),
+        concat!(
+            "     1 *-* .traceObject~setMakeString(.methods['FORMAT'])\n",
+            "*      2 *-* x = 1\n",
+            "*        >>>   \"1\"\n",
+            "*      3 *-* say 'done'\n",
+            "*        >>>   \"done\"\n",
+        )
     );
-    assert!(!trace.contains("return '*'"), "{trace}");
 }
 
 /// Runs `source` with [`refusing_destination`] appended, and asserts the
