@@ -161,19 +161,6 @@ impl Ended {
     }
 }
 
-/// Who emits a stepped clause's own `*-*` line
-/// ([`crate::ir::Op::Clause`]).
-pub(crate) enum Echo {
-    /// The clause unit asks [`Interp::tracing_clause`] and echoes if the
-    /// answer is yes: a clause whose chunk was compiled under a setting that
-    /// is no longer in force.
-    Gated,
-    /// The clause unit emits nothing: this clause's chunk already decided,
-    /// and carries the decision as [`crate::ir::Op::TraceClause`] or as the
-    /// absence of it.
-    Compiled,
-}
-
 /// A stepped clause that is open: [`Interp::enter_stepped_clause`] makes one
 /// and [`Interp::leave_stepped_clause`] spends it.
 #[must_use]
@@ -2413,13 +2400,8 @@ impl Interp {
     /// [`crate::ir::Op::Clause`] owes before the clause's own work
     /// runs.
     #[inline(always)]
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "the added parameter is a zero-sized proof rather than data, and the alternative -- letting this half take the deadline itself -- is the shape whose cost the Deadline doc's table rejects"
-    )]
     pub(crate) fn enter_stepped_clause(
         &mut self,
-        echo: Echo,
         code: &Code<'_>,
         index: usize,
         instruction: &Instruction,
@@ -2524,16 +2506,6 @@ impl Interp {
         // beneath the `FRAME_INTERPRET` one.
         self.enter_clause_index(index);
         let entry = self.enter_clause(line, counted);
-        // **`Echo::Gated` asks whether the setting in force echoes this
-        // clause; `Echo::Compiled` is a clause whose chunk already answered
-        // that**, and emits the echo as an op of its own
-        // (`crate::ir::Op::TraceClause`) rather than here. The whole point of
-        // the second arm is that a chunk compiled under a setting that does
-        // not echo pays nothing at all for the decision -- no gate, no
-        // `clause_site`, no op.
-        if matches!(echo, Echo::Gated) {
-            self.echo_stepped_clause(source, instruction, indent);
-        }
         // The debug tripwire I22 asks for, alongside `ActivityRoots::temps_len`, its
         // one prerequisite. `SteppedClause` carries the watermark and the
         // frame across to the matching half, which is where the check reads
@@ -2997,15 +2969,16 @@ impl Interp {
         self.spend_clause_entry(entry.entry);
     }
 
-    /// One stepped clause's `*-*` echo, **if the setting in force echoes a
-    /// clause of that kind**, at `indent`.
-    #[inline(always)]
-    pub(crate) fn echo_stepped_clause(
+    /// Emits the runtime-gated opening line and reports a refusal, which the
+    /// driver raises before running any operation of the clause.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn open_with_runtime_trace(
         &mut self,
         source: Option<&ProgramSource>,
         instruction: &Instruction,
-        indent: usize,
-    ) {
+    ) -> bool {
+        let indent = self.activity.clause_state.current_value_indent;
         let is_label = matches!(instruction.kind, InstructionKind::Label { .. });
         let is_command = matches!(instruction.kind, InstructionKind::Command { .. });
         if self.tracing_clause(is_label, is_command)
@@ -3013,6 +2986,7 @@ impl Interp {
         {
             self.trace_stepped_clause(is_label, is_command, line, indent, &text);
         }
+        !self.activity.pending_traps.is_empty() && self.trace_failure_queued()
     }
 
     /// The same echo with **no gate at all**, for a caller that has already
