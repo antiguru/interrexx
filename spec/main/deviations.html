@@ -1336,7 +1336,7 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).</p>
-<h2 id="183-stream-options-and-the-commandinput-line-count-are-read-as-strings"><a class="header" href="#183-stream-options-and-the-commandinput-line-count-are-read-as-strings">183. Stream options and the CommandInput line count are read as strings</a></h2>
+<h2 id="183-built-in-method-arguments-are-read-as-strings"><a class="header" href="#183-built-in-method-arguments-are-read-as-strings">183. Built-in method arguments are read as strings</a></h2>
 <p>The option of <code>Stream</code>'s <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a
 string argument, as the option of <code>open</code> is: through its <code>makeString</code> method,
 so an object whose <code>makeString</code> answers <code>L</code> or <code>C</code> is that option, and an
@@ -1346,6 +1346,11 @@ that is no string and for <code>.nil</code>, whatever its <code>makeString</code
 <p><code>CommandInput~lineIn</code> reads its count through the required-string protocol
 before comparing it with <code>0</code> and <code>1</code>. ooRexx refuses an object with
 <code>SYNTAX 93.963</code> even when its conversion gives one of those values.</p>
+<p><code>CommandContext~raise('SYNTAX', code)</code> sends a non-string code object
+<code>REQUEST('String')</code> and uses the returned string as the code. ooRexx sends
+<code>DATATYPE('N')</code> and <code>POS('.')</code> directly to the code object. An object that
+can supply valid code as text can still raise <code>SYNTAX 97.1</code> in the handler
+if it lacks a method ooRexx sends.</p>
 
                     </main>
 

@@ -80516,7 +80516,7 @@ rc 2
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="commandcontext"><a class="header" href="#commandcontext">CommandContext</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandContext Class; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]=; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; dropVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; environment; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; error; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; getVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; hasVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; input; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isRedirected; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isValid; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; output; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raise; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseError; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseFailure; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; setVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; variables</p>
-<p class="deviations">Deviations: D109</p>
+<p class="deviations">Deviations: D109, D183</p>
 <p>When a command reaches a handler written in Rexx, the interpreter makes a
 <code>CommandContext</code> for that one command and passes it to the method <code>command</code> of
 the <a href="classes/commandhandler.html"><code>CommandHandler</code></a> as the second argument. The context
@@ -81661,7 +81661,11 @@ no error has a message raises <code>SYNTAX 98.941</code> at the clause. <code>ad
 the message of the error: an <code>Array</code> gives the values for its places in order,
 and any other object is the one value, so that the <code>ADDITIONAL</code> entry of the
 condition is always an <code>Array</code>, empty when <code>additional</code> is omitted or <code>.nil</code>.
-The text of the message is not specified. <code>code</code> is required (<code>SYNTAX 93.901</code>).</p>
+The text of the message is not specified. <code>code</code> is required (<code>SYNTAX 93.901</code>).
+The method reads a string by its own characters and sends other code objects
+<code>REQUEST('String')</code>. If the request gives no string, it raises <code>93.900</code> in
+the handler. The object's <code>STRING</code> method does not provide a fallback
+(<a href="classes/commandcontext.html#r-class.commandcontext.deviation.183">Deviation 183</a>).</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_syntax', .failer~new)
 do code over ('40.3 40.003 040.03 99.999 5.5 98.900 98 40.0 40.1000',
     '100.1 x')~makeArray(' ')
@@ -81934,6 +81938,41 @@ copy-twice: rc 0 0
 copy-later: rc 1 1
 </code></pre>
 <h2 id="deviations-69"><a class="header" href="#deviations-69">Deviations</a></h2>
+<div class="rule" id="r-class.commandcontext.deviation.183"><a href="classes/commandcontext.html#r-class.commandcontext.deviation.183">[class.commandcontext.deviation.183]</a></div>
+<p>An object whose <code>REQUEST('String')</code> answers an error number as text supplies
+that code to <code>CommandContext~raise('SYNTAX', code)</code>. The handler receives
+the original code object back, and the command's caller gets the condition
+when the handler returns. ooRexx raises <code>SYNTAX 97.1</code> in the handler for
+the object in this example.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_code_object', .handler~new)
+call try
+x = .commandhandler~deregister('spec_cc_code_object')
+exit
+try:
+  signal on syntax name raised
+  address spec_cc_code_object 'go'
+  say 'returned'
+  return
+raised:
+  say 'caller' condition('o')~code
+  return
+::class handler inherit CommandHandler
+::method command
+  use arg command, context
+  signal on syntax name refused
+  code = .codeText~new
+  say 'returned code object' (context~raise('SYNTAX', code) == code)
+  return 0
+refused:
+  say 'handler' condition('o')~code
+  return 0
+::class codeText
+::method makeString
+  return '40.1'
+</code></pre>
+<pre><code class="language-output">returned code object 1
+caller 40.1
+</code></pre>
 <div class="rule" id="r-class.commandcontext.deviation.109"><a href="classes/commandcontext.html#r-class.commandcontext.deviation.109">[class.commandcontext.deviation.109]</a></div>
 <p>A <code>name</code> of <code>[]</code>, <code>getVar</code>, <code>[]=</code>, <code>setVar</code>, <code>hasVar</code> or <code>dropVar</code>, the <code>which</code>
 of <code>isRedirected</code> and the <code>description</code> of <code>raise</code>, that is an instance of a
@@ -131024,7 +131063,7 @@ that the line starts runs on an activity of its own and is traced as it would
 be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).</p>
-<h2 id="183-stream-options-and-the-commandinput-line-count-are-read-as-strings"><a class="header" href="#183-stream-options-and-the-commandinput-line-count-are-read-as-strings">183. Stream options and the CommandInput line count are read as strings</a></h2>
+<h2 id="183-built-in-method-arguments-are-read-as-strings"><a class="header" href="#183-built-in-method-arguments-are-read-as-strings">183. Built-in method arguments are read as strings</a></h2>
 <p>The option of <code>Stream</code>'s <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a
 string argument, as the option of <code>open</code> is: through its <code>makeString</code> method,
 so an object whose <code>makeString</code> answers <code>L</code> or <code>C</code> is that option, and an
@@ -131034,6 +131073,11 @@ that is no string and for <code>.nil</code>, whatever its <code>makeString</code
 <p><code>CommandInput~lineIn</code> reads its count through the required-string protocol
 before comparing it with <code>0</code> and <code>1</code>. ooRexx refuses an object with
 <code>SYNTAX 93.963</code> even when its conversion gives one of those values.</p>
+<p><code>CommandContext~raise('SYNTAX', code)</code> sends a non-string code object
+<code>REQUEST('String')</code> and uses the returned string as the code. ooRexx sends
+<code>DATATYPE('N')</code> and <code>POS('.')</code> directly to the code object. An object that
+can supply valid code as text can still raise <code>SYNTAX 97.1</code> in the handler
+if it lacks a method ooRexx sends.</p>
 
                     </main>
 
