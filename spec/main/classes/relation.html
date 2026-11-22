@@ -966,14 +966,33 @@ r~uniqueIndexes(1) =&gt; 93.902
 <p><code>supplier</code> answers a <code>Supplier</code> over the entries, the index and the item of
 each, and <code>supplier(index)</code> a <code>Supplier</code> over the entries whose index is equal
 to the argument, oldest first (<a href="#r-class.relation.oldest.deviation.33">the oldest
-rule</a>). It is a snapshot: later changes do
-not reach it. Its order is that of <code>allIndexes</code> (<a href="#r-class.relation.makearray">the order
+rule</a>). Its index is the argument
+for every item. It is a snapshot: later changes do not reach it. Its order is that of <code>allIndexes</code> (<a href="#r-class.relation.makearray">the order
 rule</a>). A relation with no entry, or none at the
 index, gives a supplier that is not available. It takes at most one argument,
 and an omitted argument is no argument: a second raises <code>SYNTAX 93.902</code>. With an
 index it sends <code>hashCode</code> to it once, and <code>==</code> to it with every stored index of
 the same hash code as the argument; further sends, and how often each is sent,
 are not specified (<a href="#r-class.relation.deviation.33">the hash order rule</a>).</p>
+<pre><code class="language-rexx">r = .relation~new
+r~put('value', .key~new('stored'))
+filtered = r~supplier(.key~new('probe'))
+full = r~supplier
+say filtered~index~tag filtered~item
+say full~index~tag full~item
+::class key
+::attribute tag
+::method init
+  expose tag
+  use arg tag
+::method hashCode
+  return 1
+::method '=='
+  return .true
+</code></pre>
+<pre><code class="language-output">probe value
+stored value
+</code></pre>
 <pre><code class="language-rexx">.local~log = .array~new
 r = .relation~new
 r~put('a', 'k')
