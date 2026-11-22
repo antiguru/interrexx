@@ -1353,3 +1353,4 @@ lang/hash_store_deferred.rex
 lang/hash_string_chain_mixed.rex
 lang/uninit_after_report_stackframes.rex
 lang/raise_nomethod_additional_objects.rex
+lang/inherited_condition_trap.rex
