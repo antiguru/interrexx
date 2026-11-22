@@ -403,6 +403,25 @@ fn simulated_pool_delivers_native_completions_at_seeded_clauses() {
     assert_eq!(replay.outcome.sim, second.outcome.sim);
 }
 
+#[test]
+fn simulated_sequential_calls_reuse_the_worker() {
+    let source = "do i = 1 to 400\n  value = TestGetArguments(i)[1]\nend\nsay value\n\
+                  ::requires 'orxfunction' library\n";
+    let config = crate::SimConfig::parse("sim:7,pool=2,uniform:1,block=10").unwrap();
+    let run = counted(
+        source,
+        false,
+        bounded().with_switch_mode(SwitchMode::Sim(config)),
+    );
+    assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
+    assert_eq!(run.stdout(), "400\n");
+    assert_eq!(run.exits, 400);
+    assert_eq!(
+        run.spawned, 1,
+        "every completed worker is idle before reuse"
+    );
+}
+
 /// A worker recalls the baton to call Rexx, which can call native code again.
 /// Once all activities wait, both staged answers are delivered without waiting
 /// for a clause that cannot be reached. Collecting across the waits keeps both

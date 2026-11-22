@@ -49,6 +49,7 @@ pub(crate) struct Pool {
 
 struct Shared {
     state: Mutex<State>,
+    returned: Condvar,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -95,6 +96,7 @@ impl Pool {
     pub(crate) fn new(stack: usize, bound: usize) -> Pool {
         let pool = Pool {
             shared: Arc::new(Shared {
+                returned: Condvar::new(),
                 state: Mutex::new(State {
                     idle: Vec::new(),
                     threads: Vec::new(),
@@ -149,6 +151,22 @@ impl Pool {
     /// Reserves a native-call worker where simulation permits it.
     pub(crate) fn reserve_native(&self) -> Result<Option<Worker>, crate::Failure> {
         self.reserve_for(true)
+    }
+
+    /// Waits for a completed simulation worker to become idle or retire.
+    /// Its answer can arrive before the pool has finished returning it.
+    pub(crate) fn wait_for_return(&self, worker: ThreadId) {
+        let state = lock(&self.shared.state);
+        drop(
+            self.shared
+                .returned
+                .wait_while(state, |state| {
+                    !state.closed
+                        && state.threads.iter().any(|(id, _)| *id == worker)
+                        && !state.idle.iter().any(|idle| idle.thread == worker)
+                })
+                .unwrap_or_else(PoisonError::into_inner),
+        );
     }
 
     fn reserve_for(&self, native: bool) -> Result<Option<Worker>, crate::Failure> {
@@ -301,12 +319,18 @@ fn work(shared: &Arc<Shared>, mailbox: &Arc<Mailbox>) {
                 // Dropping the handle detaches this thread, which ends here.
                 state.threads.swap_remove(at);
             }
+            if state.mode == Mode::SimNative {
+                shared.returned.notify_all();
+            }
             return;
         }
         state.idle.push(Worker {
             thread: std::thread::current().id(),
             mailbox: Arc::clone(mailbox),
         });
+        if state.mode == Mode::SimNative {
+            shared.returned.notify_all();
+        }
     }
 }
 

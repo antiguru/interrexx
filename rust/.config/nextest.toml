@@ -246,6 +246,7 @@ not (
   | (binary_id(=interrexx) & test(=scheduler::tests::native::collect_stress_across_a_native_calls_driver_exit))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::completed_native_calls_repeat_independently_of_host_descheduling))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::simulated_pool_delivers_native_completions_at_seeded_clauses))
+  | (binary_id(=interrexx) & test(=scheduler::tests::native::simulated_sequential_calls_reuse_the_worker))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::simulated_pool_delivers_while_idle_after_nested_native_calls))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::only_a_timed_out_native_watch_refuses_a_completed_call))
   | (binary_id(=interrexx) & test(=scheduler::tests::native::the_rust_rxsock_accept_waits_without_holding_up_main_in_the_simulation_mode))

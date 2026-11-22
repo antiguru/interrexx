@@ -921,6 +921,7 @@ impl Scheduler for Interp {
             baton.lend(to, crate::island::Island::of(self));
             if let Some(inbox) = simulation {
                 self.await_simulated_native(&inbox);
+                self.pool.wait_for_return(to);
             }
             return;
         }
