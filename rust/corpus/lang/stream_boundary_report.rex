@@ -1,6 +1,6 @@
-/* A condition the Stream class's native boundary raises -- a write argument
- * with no string value, or an argument too many -- names the REXX package
- * with no line, inside a method of that package too. */
+/* A refusal at the Stream class's native boundary reports the caller's line.
+ * A refusal raised inside the class library names REXX, whose line numbers
+ * are unspecified (r[cond.information.library]). */
 call try '.stdout~lineout(.nil)'
 call try '.stdout~charout(.object~new)'
 call try '.stdout~lineout("x", 1, 2)'
@@ -16,6 +16,7 @@ try:
 syntax:
   o = condition('O')
   where = o~program
-  if where \== 'REXX' then where = filespec('name', where)
-  say o~code where o~position
+  packageMatches = (where == o~package~name)
+  if where == 'REXX' then say o~code where packageMatches
+  else say o~code filespec('name', where) o~position packageMatches
   return
