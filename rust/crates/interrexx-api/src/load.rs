@@ -18,6 +18,10 @@ use crate::layout::{
     ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
+#[cfg(unix)]
+use libloading::os::unix::Library as PlatformLibrary;
+#[cfg(windows)]
+use libloading::os::windows::Library as PlatformLibrary;
 use std::ffi::{CStr, c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -67,7 +71,8 @@ const GET_PACKAGE_SYMBOL: &[u8] = b"RexxGetPackage\0";
 /// A longer name is refused before `dlopen` is reached.
 const MAX_LIBRARY_NAME_LENGTH: usize = 250;
 
-/// Where the name search looks after the undecorated attempt.
+/// Where Unix name searches look after the current directory.
+#[cfg(unix)]
 const SECOND_ATTEMPT_DIRECTORY: &str = "/usr/lib";
 
 /// A condition the load path raises, for the caller to render.
@@ -106,8 +111,9 @@ struct Mapping {
     /// `None` for this image's own stubs, which nothing closes, and once
     /// closed.
     handle: Mutex<Option<libloading::Library>>,
-    /// The `dlopen` handle's address, the same for every load of one file
-    /// while it stays loaded, or `0` for no handle.
+    /// The native library handle's value, the same for every load of one file
+    /// while it stays loaded. Statically registered packages use their entry
+    /// address, and other mappings without a handle use zero.
     identity: usize,
     open: AtomicBool,
     /// Calls into the mapping in flight, which a close waits out by refusing.
@@ -124,10 +130,10 @@ impl Mapping {
     fn keyed(handle: Option<libloading::Library>, key: Option<usize>) -> Arc<Mapping> {
         let (handle, identity) = match handle {
             Some(handle) => {
-                let raw = libloading::os::unix::Library::from(handle).into_raw();
+                let raw = PlatformLibrary::from(handle).into_raw();
                 // SAFETY: `raw` came from `into_raw` just above and is turned back into the one
-                // owner it was, so the reference `dlopen` counted is still held once.
-                let handle = unsafe { libloading::os::unix::Library::from_raw(raw) };
+                // owner it was, so the loader reference is still held once.
+                let handle = unsafe { PlatformLibrary::from_raw(raw) };
                 (Some(handle.into()), raw as usize)
             }
             None => (None, 0),
@@ -1342,6 +1348,7 @@ pub fn registering_library() -> Library {
 /// # Safety
 /// `thread` is a thread context a live `ThreadContext` handed out, with a
 /// native call in flight.
+#[cfg(unix)]
 unsafe extern "C-unwind" fn register_tested_handler(thread: *mut RexxThreadContext_) {
     /// Answers its command.
     unsafe extern "C-unwind" fn answering(
@@ -2266,7 +2273,11 @@ pub fn classic_procedure(
     if name.len() > MAX_LIBRARY_NAME_LENGTH {
         return None;
     }
-    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let file = format!(
+        "{}{name}{}",
+        std::env::consts::DLL_PREFIX,
+        std::env::consts::DLL_SUFFIX
+    );
     let handle = dlopen_by_name(&file, search, cwd)?;
     let lookup = |symbol: &[u8]| {
         let symbol = terminated(symbol);
@@ -2953,7 +2964,11 @@ pub fn open(name: &str, search: &[PathBuf], cwd: &Path) -> Result<Option<Library
     if name.len() > MAX_LIBRARY_NAME_LENGTH {
         return Ok(None);
     }
-    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let file = format!(
+        "{}{name}{}",
+        std::env::consts::DLL_PREFIX,
+        std::env::consts::DLL_SUFFIX
+    );
     let handle = dlopen_by_name(&file, search, cwd);
     let Some(handle) = handle else {
         return Ok(None);
@@ -2998,14 +3013,16 @@ pub fn check_version(entry: &RexxPackageEntry, name: &str) -> Result<(), Failure
 }
 
 /// The file `file` names, tried in `search`, then as the loader finds it, then in `cwd`, the
-/// interpreter's current directory, then in [`SECOND_ATTEMPT_DIRECTORY`].
+/// interpreter's current directory. Unix also tries `/usr/lib` last.
 fn dlopen_by_name(file: &str, search: &[PathBuf], cwd: &Path) -> Option<libloading::Library> {
-    search
+    let handle = search
         .iter()
         .find_map(|directory| dlopen(&directory.join(file)))
         .or_else(|| dlopen(Path::new(file)))
-        .or_else(|| dlopen(&cwd.join(file)))
-        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(file)))
+        .or_else(|| dlopen(&cwd.join(file)));
+    #[cfg(unix)]
+    let handle = handle.or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(file)));
+    handle
 }
 
 fn dlopen(path: &Path) -> Option<libloading::Library> {
@@ -3080,18 +3097,16 @@ pub unsafe fn registered(
     if entry.is_null() {
         return Ok(None);
     }
-    // Every package of the running image shares its one handle, so the
-    // entry's address tells two of them apart as two files' handles do.
-    // SAFETY: the caller guarantees the entry, its tables and its strings,
-    // and the running image's handle keeps them mapped.
-    unsafe {
-        library_keyed(
-            &*entry,
-            libloading::os::unix::Library::this().into(),
-            name,
-            Some(entry as usize),
-        )
-    }
+    // Use the entry address to distinguish statically registered packages.
+    #[cfg(unix)]
+    let handle = Some(PlatformLibrary::this().into());
+    // The caller already guarantees the registered package stays mapped.
+    // A Windows handle to the executable would not cover an entry in a DLL.
+    #[cfg(windows)]
+    let handle = None;
+    // SAFETY: the caller guarantees the entry, its tables and its strings
+    // are valid and stay mapped for the lifetime of the process.
+    unsafe { library_keyed(&*entry, handle, name, Some(entry as usize)) }
 }
 
 /// The library `entry` describes, refused where its version check refuses.
@@ -3106,22 +3121,23 @@ unsafe fn library_of(
     name: &str,
 ) -> Result<Option<Library>, Refused> {
     // SAFETY: the caller's guarantee.
-    unsafe { library_keyed(entry, handle, name, None) }
+    unsafe { library_keyed(entry, Some(handle), name, None) }
 }
 
 /// [`library_of`], whose identity ([`Library::identity`]) is `key` where it
 /// is given, and the handle's otherwise.
 ///
 /// # Safety
-/// As [`library_of`].
+/// As [`library_of`]. Without a handle, all addresses must stay mapped for
+/// the lifetime of the process.
 unsafe fn library_keyed(
     entry: &RexxPackageEntry,
-    handle: libloading::Library,
+    handle: Option<libloading::Library>,
     name: &str,
     key: Option<usize>,
 ) -> Result<Option<Library>, Refused> {
     let refused = check_version(entry, name).err();
-    let mapping = Mapping::keyed(Some(handle), key);
+    let mapping = Mapping::keyed(handle, key);
 
     // SAFETY: the caller guarantees the tables and strings.
     let (package_name, version, methods) = unsafe {

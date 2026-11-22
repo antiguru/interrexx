@@ -46,12 +46,21 @@ pub type REXXPFN = *mut c_void;
 
 /// `process_id_t`, the identifier of a process. A platform type, in the header
 /// generator's per-platform table.
+#[cfg(unix)]
 pub type process_id_t = libc::pid_t;
+
+/// `process_id_t` is `DWORD` in ooRexx's Windows API.
+#[cfg(windows)]
+pub type process_id_t = u32;
 
 /// `thread_id_t`, the identifier of a thread. A platform type, in the header
 /// generator's per-platform table.
-#[cfg(not(target_vendor = "apple"))]
+#[cfg(all(unix, not(target_vendor = "apple")))]
 pub type thread_id_t = libc::pthread_t;
+
+/// `thread_id_t` is `DWORD` in ooRexx's Windows API.
+#[cfg(windows)]
+pub type thread_id_t = u32;
 
 /// The opaque struct Apple's C headers declare `pthread_t` a pointer to.
 #[cfg(target_vendor = "apple")]
