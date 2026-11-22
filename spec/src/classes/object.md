@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118, 124]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118, 124, 183]
 ---
 
 # Object
@@ -1149,9 +1149,12 @@ says. An object that is not a string is sent `request` with the argument
 `ARRAY`, and the answer is used as the two-item form, whatever the class of
 the first argument is ([the sends rule](r:class.object.send.sends); an
 instance of a subclass of `String` is read as
-[Deviation 109](r:class.object.deviation.109) states). `.nil`, and an object
-that answers `.nil` or anything else that is not an `Array`, raise `SYNTAX
-93.972`, an array of another size `93.946`, an array whose first item is missing `88.901`
+[Deviation 109](r:class.object.deviation.109) states). When the first argument
+is neither a string nor an array and the array conversion gives no array, it
+is read as [a string argument](r:class.index.string)
+([Deviation 183](r:class.object.deviation.183)). `.nil` and objects that supply
+neither form raise `SYNTAX 93.972`. An array of another size raises `93.946`,
+an array whose first item is missing `88.901`
 and one whose first item has no string value `88.909`, and no argument
 `88.901`. The null string is a name
 like any other: it names the abuttal method
@@ -1234,9 +1237,10 @@ r[class.object.send.sends]
 `send` sends a first argument that is not a string the message `request` with
 the argument `ARRAY`; the same holds for `sendWith`, `startWith` and `start`,
 at the call, and for the message name of [`Message~new`](r:class.message.new),
-at `new`. The answer of `request` is read as the previous rule says. The order
-differs by method. `send` and `start` send `request` first. `sendWith` checks
-the number of its arguments, then sends `request` to the name, then sends
+at `new`. The answer of `request` is read as the previous rule says, and any
+string conversion follows before the method reads another argument. The
+conversion order differs by method. `send` and `start` send `request` first.
+`sendWith` checks the number of its arguments, then sends `request` to the name, then sends
 `request` to the second argument. `startWith` checks the number of its
 arguments and that the second is there, sends `request` to the second
 argument, and then to the name, so an error in the array leaves the name
@@ -1273,7 +1277,8 @@ bad: say arg(1) '=>' condition('o')~code
   return .array~of('count', .w)
 ::class wrong
 ::method request
-  return 'count'
+  if arg(1) == 'ARRAY' then return 'count'
+  return .nil
 ::class none
 ::class larr subclass array
 ::method request
@@ -2233,6 +2238,52 @@ ran 12 a ran 12 b
 ran 12 c
 Array Array
 Array Array
+```
+
+r[class.object.deviation.183]
+A message name supplied by an object through `REQUEST('STRING')` is used
+when that object supplies no array through `REQUEST('ARRAY')`. ooRexx raises
+`SYNTAX 93.972` for that object. An array returned by the first request has
+priority, and an object with only a `STRING` method still supplies neither form.
+
+```rexx
+o = .target~new
+n = .named~new
+say o~send(n)
+say o~sendWith(n, .array~new)
+say o~start(n)~result
+say o~startWith(n, .array~new)~result
+say .message~new(o, n)~send
+say o~send(.both~new)
+signal on syntax name bad
+say o~send(.displayed~new)
+exit
+bad: say condition('o')~code
+exit
+::class target
+::method found
+  return 'found'
+::method scoped
+  return 'scoped'
+::class named
+::method makeString
+  return 'found'
+::class both subclass named
+::method makeArray
+  return .array~of('scoped', .target)
+::class displayed
+::method string
+  return 'found'
+```
+
+```output
+found
+found
+found
+found
+found
+scoped
+93.972
 ```
 
 r[class.object.deviation.109]

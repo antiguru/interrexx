@@ -1882,9 +1882,7 @@ pub(super) fn decode_message_name(
     let Some(message) = message else {
         return Err(Raised::missing_named_argument("message name").into());
     };
-    // A string check first, so a value that merely has a string value --
-    // `.nil` is the reachable one -- takes the array path and its own 93.972
-    // rather than being converted.
+    // A string names the message directly and gets no conversion messages.
     if matches!(
         interp.receiver_kind(message),
         Ok(Primitive::String | Primitive::SmallInt)
@@ -1899,8 +1897,7 @@ pub(super) fn decode_message_name(
     }
     // A plain `Array` is read as it stands, holes and all. Any other object
     // is sent `request('ARRAY')`, so an `Array` subclass and an object that
-    // answers an array name a message too. An answer that is not an Array,
-    // `.nil` included, is the 93.972 (`r[class.object.send]`).
+    // answers an array name a message too.
     let plain_array = interp.object_model().array;
     let answered = if interp.array_body(message).is_some()
         && interp.class_of_value(message) == Some(plain_array)
@@ -1914,6 +1911,14 @@ pub(super) fn decode_message_name(
         interp.array_slots_of(answered)
     });
     let Some(slots) = slots else {
+        // Preserve array precedence, including for objects with both
+        // conversions. A non-array can still supply an unscoped name.
+        let is_array = interp
+            .class_of_value(message)
+            .is_some_and(|class| interp.classes().is_a(class, plain_array));
+        if !is_array && let Some(text) = interp.blamed_string_conversion(message)? {
+            return Ok((interp.to_text(text).to_ascii_uppercase(), None));
+        }
         let rendered = interp.string_value_text(message)?;
         return Err(Raised::message_name_shape(&rendered).into());
     };
