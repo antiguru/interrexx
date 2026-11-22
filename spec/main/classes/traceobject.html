@@ -1415,21 +1415,21 @@ made and given to the <code>collector</code> before the destination receives it,
 lines rule</a> says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as <a href="../instructions/trace.html#r-instr.trace.deviation.50">Deviation 50</a> states; ooRexx raises
-the condition before the clause does anything. In the example the destination
-refuses the second line, the value line of <code>say 'a'</code>: interrexx has written <code>a</code>
-by then and ooRexx has not, and on both the collector holds that line.</p>
+the condition before applying that effect. In the example the destination
+refuses the keyword line of <code>NUMERIC DIGITS</code>. Interrexx has changed the
+setting by then and ooRexx keeps its old value. Both collect the refused line.</p>
 <pre><code class="language-rexx">c = .array~new
 .traceobject~collector = c
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-say 'a'
+numeric digits 7
 exit
 e: trace o
 .traceoutput~destination(.output)
 .traceobject~collector = .nil
-say 'caught' condition('o')~code '['c[2]~traceline']'
+say 'caught' condition('o')~code digits() '['c[2]~traceline']'
 ::class sink
 ::method init
   expose n
@@ -1440,9 +1440,8 @@ say 'caught' condition('o')~code '['c[2]~traceline']'
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;&gt;&gt;   "a"
-a
-caught 93.900 [       &gt;&gt;&gt;   "a"]
+<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
+caught 93.900 7 [       &gt;K&gt;   "DIGITS" =&gt; "7"]
 </code></pre>
 <div class="rule" id="r-class.traceobject.deviation.109"><a href="#r-class.traceobject.deviation.109">[class.traceobject.deviation.109]</a></div>
 <p>The argument of <code>option=</code> is read by its own characters when it is an instance

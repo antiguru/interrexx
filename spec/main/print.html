@@ -16666,6 +16666,76 @@ exit
 </code></pre>
 <pre><code class="language-output">22613F62093F637FFF22
 </code></pre>
+<div class="rule" id="r-instr.trace.result.refused"><a href="instructions/trace.html#r-instr.trace.result.refused">[instr.trace.result.refused]</a></div>
+<p>A destination that refuses the result line of a <code>SAY</code>, assignment, <code>PUSH</code>
+or <code>QUEUE</code> raises the condition before the output, write or queue insertion.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+say 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">       &gt;&gt;&gt;   "a"
+caught 93.900
+</code></pre>
+<pre><code class="language-rexx">x = 'old'
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+x = 'new'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code x
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">       &gt;&gt;&gt;   "new"
+caught 93.900 old
+</code></pre>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+push 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code queued()
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">       &gt;&gt;&gt;   "a"
+caught 93.900 0
+</code></pre>
 <h2 id="what-a-setting-lists"><a class="header" href="#what-a-setting-lists">What a setting lists</a></h2>
 <div class="rule" id="r-instr.trace.setting.clauses"><a href="instructions/trace.html#r-instr.trace.setting.clauses">[instr.trace.setting.clauses]</a></div>
 <p>Under <code>A</code> every clause is shown, before it runs, and nothing else about it.
@@ -17397,21 +17467,19 @@ say n 'clause lines'
 <pre><code class="language-output">4 clause lines
 </code></pre>
 <div class="rule" id="r-instr.trace.deviation.50"><a href="instructions/trace.html#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
-<p>When the destination refuses a line by raising a condition, the condition is
-the same as in ooRexx, but a clause may do its own work before the line that
-refuses is written. In ooRexx the condition is raised before the clause does
-anything. In the example the destination refuses the second line, the value
-line of <code>say 'a'</code>; interrexx has written <code>a</code> by then, and ooRexx has not.</p>
+<p>Some trace lines still raise the destination's condition after the clause has
+applied the effect the line describes. For example, interrexx changes
+<code>NUMERIC DIGITS</code> even if the destination refuses the keyword line for the
+new setting. ooRexx keeps the previous setting.</p>
 <pre><code class="language-rexx">.traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-say 'a'
-x = 1
+numeric digits 7
 exit
 e: trace o
 .traceoutput~destination(.output)
-say 'caught' condition('o')~code symbol('x')
+say 'caught' condition('o')~code digits()
 ::class sink
 ::method init
   expose n
@@ -17422,9 +17490,8 @@ say 'caught' condition('o')~code symbol('x')
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;&gt;&gt;   "a"
-a
-caught 93.900 LIT
+<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
+caught 93.900 7
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="use"><a class="header" href="#use">USE</a></h1>
 <pre><code>USE [STRICT] ARG [target [= default]] [, ...] | USE LOCAL [name]...
@@ -75813,21 +75880,21 @@ made and given to the <code>collector</code> before the destination receives it,
 lines rule</a> says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as <a href="classes/../instructions/trace.html#r-instr.trace.deviation.50">Deviation 50</a> states; ooRexx raises
-the condition before the clause does anything. In the example the destination
-refuses the second line, the value line of <code>say 'a'</code>: interrexx has written <code>a</code>
-by then and ooRexx has not, and on both the collector holds that line.</p>
+the condition before applying that effect. In the example the destination
+refuses the keyword line of <code>NUMERIC DIGITS</code>. Interrexx has changed the
+setting by then and ooRexx keeps its old value. Both collect the refused line.</p>
 <pre><code class="language-rexx">c = .array~new
 .traceobject~collector = c
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-say 'a'
+numeric digits 7
 exit
 e: trace o
 .traceoutput~destination(.output)
 .traceobject~collector = .nil
-say 'caught' condition('o')~code '['c[2]~traceline']'
+say 'caught' condition('o')~code digits() '['c[2]~traceline']'
 ::class sink
 ::method init
   expose n
@@ -75838,9 +75905,8 @@ say 'caught' condition('o')~code '['c[2]~traceline']'
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;&gt;&gt;   "a"
-a
-caught 93.900 [       &gt;&gt;&gt;   "a"]
+<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
+caught 93.900 7 [       &gt;K&gt;   "DIGITS" =&gt; "7"]
 </code></pre>
 <div class="rule" id="r-class.traceobject.deviation.109"><a href="classes/traceobject.html#r-class.traceobject.deviation.109">[class.traceobject.deviation.109]</a></div>
 <p>The argument of <code>option=</code> is read by its own characters when it is an instance
@@ -130213,8 +130279,10 @@ position that the last read, write or SEEK used, and from the write position
 when there has been none since the stream was opened.</p>
 <h2 id="50-a-trace-line-that-cannot-be-delivered"><a class="header" href="#50-a-trace-line-that-cannot-be-delivered">50. A trace line that cannot be delivered</a></h2>
 <p>When the trace destination refuses a line, the same condition as ooRexx's is
-raised, but some clauses may do their own work first. ooRexx raises it
-before the clause does anything.</p>
+raised. Some clauses still apply the effect described by a refused line
+before raising the condition. For example, <code>NUMERIC DIGITS</code> changes the
+setting if the destination refuses its keyword line, while ooRexx leaves
+the setting unchanged.</p>
 <h2 id="51-contextrs-inside-interpret"><a class="header" href="#51-contextrs-inside-interpret">51. <code>.context~rs</code> inside INTERPRET</a></h2>
 <p>Inside an INTERPRET, <code>.context~rs</code> answers the same value as <code>.rs</code>. In ooRexx
 it answers the caller's earlier value until the INTERPRET ends.</p>
