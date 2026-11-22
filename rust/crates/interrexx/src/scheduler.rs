@@ -3844,7 +3844,12 @@ impl Interp {
                 None => true,
             };
         }
-        let runs = |activity: &Activity| matches!(activity.root_then, Some(Then::Started(started)) if started == message);
+        let runs = |activity: &Activity| {
+            matches!(
+                activity.root_then,
+                Some(Then::Started(started)) if started == message
+            )
+        };
         let target = if runs(&self.activity) {
             Some(&mut self.activity)
         } else {
