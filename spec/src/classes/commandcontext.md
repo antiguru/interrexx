@@ -1,7 +1,7 @@
 ---
 element: "CommandContext"
 kind: class
-deviations: [109]
+deviations: [109, 183]
 rexxref: "Builtin Classes > Utility Classes > CommandContext Class; Builtin Classes > Utility Classes > CommandContext Class > [ ]; Builtin Classes > Utility Classes > CommandContext Class > [ ]=; Builtin Classes > Utility Classes > CommandContext Class > dropVar; Builtin Classes > Utility Classes > CommandContext Class > environment; Builtin Classes > Utility Classes > CommandContext Class > error; Builtin Classes > Utility Classes > CommandContext Class > getVar; Builtin Classes > Utility Classes > CommandContext Class > hasVar; Builtin Classes > Utility Classes > CommandContext Class > input; Builtin Classes > Utility Classes > CommandContext Class > isRedirected; Builtin Classes > Utility Classes > CommandContext Class > isValid; Builtin Classes > Utility Classes > CommandContext Class > output; Builtin Classes > Utility Classes > CommandContext Class > raise; Builtin Classes > Utility Classes > CommandContext Class > raiseError; Builtin Classes > Utility Classes > CommandContext Class > raiseFailure; Builtin Classes > Utility Classes > CommandContext Class > setVar; Builtin Classes > Utility Classes > CommandContext Class > variables"
 ---
 
@@ -1268,6 +1268,10 @@ the message of the error: an `Array` gives the values for its places in order,
 and any other object is the one value, so that the `ADDITIONAL` entry of the
 condition is always an `Array`, empty when `additional` is omitted or `.nil`.
 The text of the message is not specified. `code` is required (`SYNTAX 93.901`).
+The method reads a string by its own characters and sends other code objects
+`REQUEST('String')`. If the request gives no string, it raises `93.900` in
+the handler. The object's `STRING` method does not provide a fallback
+([Deviation 183](r:class.commandcontext.deviation.183)).
 
 ```rexx
 x = .commandhandler~register('spec_cc_syntax', .failer~new)
@@ -1574,6 +1578,46 @@ copy-later: rc 1 1
 ```
 
 ## Deviations
+
+r[class.commandcontext.deviation.183]
+An object whose `REQUEST('String')` answers an error number as text supplies
+that code to `CommandContext~raise('SYNTAX', code)`. The handler receives
+the original code object back, and the command's caller gets the condition
+when the handler returns. ooRexx raises `SYNTAX 97.1` in the handler for
+the object in this example.
+
+```rexx
+x = .commandhandler~register('spec_cc_code_object', .handler~new)
+call try
+x = .commandhandler~deregister('spec_cc_code_object')
+exit
+try:
+  signal on syntax name raised
+  address spec_cc_code_object 'go'
+  say 'returned'
+  return
+raised:
+  say 'caller' condition('o')~code
+  return
+::class handler inherit CommandHandler
+::method command
+  use arg command, context
+  signal on syntax name refused
+  code = .codeText~new
+  say 'returned code object' (context~raise('SYNTAX', code) == code)
+  return 0
+refused:
+  say 'handler' condition('o')~code
+  return 0
+::class codeText
+::method makeString
+  return '40.1'
+```
+
+```output
+returned code object 1
+caller 40.1
+```
 
 r[class.commandcontext.deviation.109]
 A `name` of `[]`, `getVar`, `[]=`, `setVar`, `hasVar` or `dropVar`, the `which`
