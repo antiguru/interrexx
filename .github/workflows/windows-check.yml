@@ -1,0 +1,29 @@
+name: Windows cargo check
+on:
+  pull_request:
+    paths:
+      - .github/workflows/windows-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-cargo-check
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  cargo-check:
+    name: cargo check (Windows)
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
+      - run: cargo check --locked --workspace
