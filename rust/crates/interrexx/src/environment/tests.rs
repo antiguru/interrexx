@@ -341,6 +341,32 @@ fn refusing_destination(n: u32) -> String {
     )
 }
 
+#[test]
+fn a_traced_formatter_formats_standard_error_without_tracing_itself() {
+    let source = r#".traceObject~setMakeString(.methods['FORMAT'])
+x = 1
+say 'done'
+::options trace r
+::method format
+  use arg traceObject
+  return '*' traceObject['TRACELINE']
+"#;
+    let outcome = crate::run_program(
+        "/t.rex",
+        source.as_bytes().to_vec(),
+        crate::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(outcome.stdout, b"done\n");
+    let trace = String::from_utf8(outcome.stderr).expect("the trace is text");
+    assert!(
+        trace
+            .lines()
+            .any(|line| line.starts_with('*') && line.ends_with("x = 1"))
+    );
+    assert!(!trace.contains("return '*'"), "{trace}");
+}
+
 /// Runs `source` with [`refusing_destination`] appended, and asserts the
 /// refusal ends the run: its exit status, its stderr line, and no `after`.
 fn assert_delivery_refusal_ends_the_run(source: &str, n: u32) {

@@ -1151,8 +1151,10 @@ r[class.traceobject.setmakestring]
 `setMakeString` replaces `makeStringImpl` with a method of the program: the
 argument is a `Method` object or a source that [`Method~new`](r:class.method.new)
 accepts. The method receives the `TraceObject` and answers the text. From then on it supplies `makeStringImpl`, and with it
-`makeString`, whatever the `option` is, until `unsetMakeString` takes it away; a
-second `setMakeString` replaces the first. It answers no value. A source that
+`makeString`, whatever the `option` is, until `unsetMakeString` takes it away.
+When the interpreter calls the method to render a trace line, it runs
+without producing trace lines of its own. A second `setMakeString` replaces the
+first. It answers no value. A source that
 does not translate raises the error that `Method~new` raises for it. An argument
 that cannot supply a source, such as `.nil`, raises `SYNTAX 93.961`. No argument
 raises `93.901` and a second one raises `93.902`. `unsetMakeString` takes no argument and answers no value.
