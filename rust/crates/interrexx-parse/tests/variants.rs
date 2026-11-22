@@ -44,6 +44,7 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::When { .. } => "When",
     InstructionKind::WhenCase { .. } => "WhenCase",
     InstructionKind::Otherwise => "Otherwise",
+    InstructionKind::Catch(_) => "Catch",
     InstructionKind::Leave { .. } => "Leave",
     InstructionKind::Iterate { .. } => "Iterate",
     InstructionKind::End { .. } => "End",
@@ -229,6 +230,12 @@ fn every_variant_is_constructed_by_the_corpus_and_samples() {
             exprs.seen.insert(expr_tag(&e.kind));
         });
     }
+
+    // The parser accepts CATCH before the execution corpus can run it.
+    let catch = parse_program(b"do; catch syntax; end".to_vec()).expect("CATCH parses");
+    each_instruction(&catch, &mut |i| {
+        instructions.seen.insert(instruction_tag(&i.kind));
+    });
 
     let mut report = String::new();
     for cov in [

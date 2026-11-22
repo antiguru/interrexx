@@ -1548,6 +1548,7 @@ fn compile_settled(
             // [`Op::Exec`] owes the work.
             InstructionKind::Command { .. }
             | InstructionKind::End { .. }
+            | InstructionKind::Catch(_)
             | InstructionKind::Drop { .. }
             | InstructionKind::Call(..)
             | InstructionKind::Procedure { .. }

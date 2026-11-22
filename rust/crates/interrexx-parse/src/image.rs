@@ -22,7 +22,7 @@ const MAGIC: &[u8; 8] = b"RXPARSED";
 
 /// The layout this module writes and reads. A change to what any type below
 /// writes changes it.
-const FORMAT: u32 = 2;
+const FORMAT: u32 = 3;
 
 /// `program`, which was parsed from its own source text, as an image.
 pub fn program_image(program: &Program) -> Vec<u8> {
@@ -598,6 +598,18 @@ image_enum!(InstructionKind {
     37 => Trace(trace),
     38 => Options { expression },
     39 => Nop,
+    40 => Catch(handler),
+});
+
+image_struct!(Catch {
+    variable,
+    conditions,
+    block
+});
+image_struct!(CatchCondition { name, code });
+image_enum!(CatchCode {
+    0 => Literal(value),
+    1 => Variable(id),
 });
 
 image_enum!(VariableRef {

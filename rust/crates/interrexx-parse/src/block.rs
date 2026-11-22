@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use interrexx_inventory::errors::{
-    E7_1, E7_2, E8_2, E9_1, E9_2, E10_1, E10_2, E10_3, E10_4, E10_5, E10_6, E10_7, E14_1, E14_2,
-    E14_3, E14_4, E14_5, E14_901, E47_2, E47_3, E47_4, Msg,
+    E7_1, E7_2, E8_2, E9_1, E9_2, E10_1, E10_2, E10_3, E10_4, E10_5, E10_6, E10_7, E10_8, E10_9,
+    E10_11, E14_1, E14_2, E14_3, E14_4, E14_5, E14_901, E47_2, E47_3, E47_4, Msg,
 };
 
 use crate::ProgramSource;
@@ -28,6 +28,7 @@ enum Control {
     Select,
     SelectCase,
     Otherwise,
+    Catch,
     /// The `THEN` of an `IF`.
     IfThen,
     /// The `THEN` of a `WHEN`.
@@ -49,6 +50,7 @@ impl Control {
                 | Control::Select
                 | Control::SelectCase
                 | Control::Otherwise
+                | Control::Catch
         )
     }
 
@@ -67,8 +69,8 @@ struct Frame {
     /// two branch-end markers, neither of which is an instruction here.
     index: Option<usize>,
     /// For `IfThen` and `WhenThen`, the `IF` or `WHEN` the `THEN` belongs to,
-    /// whose `false_target` is written when the frame is popped. `None`
-    /// otherwise.
+    /// whose `false_target` is written when the frame is popped. For
+    /// Otherwise and Catch, this is the block the clause belongs to.
     parent: Option<usize>,
 }
 
@@ -375,6 +377,15 @@ impl<'a> Block<'a> {
             // Whose sub-number is 901 and not
             // 6. Measured, not derived from the position in the table.
             Control::Otherwise => (E14_901, frame.index()),
+            Control::Catch => {
+                let block = frame.parent.expect("a CATCH belongs to a block");
+                let msg = match &self.instructions[block].kind {
+                    InstructionKind::Select { .. } => E14_2,
+                    InstructionKind::Do(loop_) if loop_.kind == LoopKind::Simple => E14_1,
+                    _ => E14_5,
+                };
+                (msg, block)
+            }
             Control::First | Control::EndThen | Control::EndWhen => {
                 unreachable!("neither First nor a branch end is an unclosed block")
             }
@@ -401,6 +412,17 @@ impl<'a> Block<'a> {
             | Control::EndWhen
             | Control::Otherwise => E47_4,
             Control::Do | Control::Loop => E47_2,
+            Control::Catch => {
+                let block = self.top().parent.expect("a CATCH belongs to a block");
+                if matches!(
+                    self.instructions[block].kind,
+                    InstructionKind::Select { .. }
+                ) {
+                    E47_4
+                } else {
+                    E47_2
+                }
+            }
             Control::First | Control::EndThen => return None,
         })
     }
@@ -545,9 +567,30 @@ impl<'a> Block<'a> {
         })
     }
 
+    fn add_catch(&mut self, index: usize, byte: usize) -> Result<(), ParseError> {
+        if self.top().kind == Control::Catch {
+            self.pop();
+        }
+        let frame = self.top();
+        let owner = match frame.kind {
+            Control::Do | Control::Loop | Control::Select | Control::SelectCase => frame.index(),
+            Control::Otherwise => frame.parent.expect("an OTHERWISE belongs to a SELECT"),
+            _ => return Err(ParseError::raise(E10_8, byte, [])),
+        };
+        let InstructionKind::Catch(handler) = &mut self.instructions[index].kind else {
+            unreachable!("only a CATCH opens a handler");
+        };
+        handler.block = Some(owner);
+        self.push(Control::Catch, Some(index), Some(owner));
+        Ok(())
+    }
+
     /// The `END` arm of the block translation's switch.
     fn match_end(&mut self, end: usize, end_byte: usize) -> Result<(), ParseError> {
-        let frame = self.pop();
+        let mut frame = self.pop();
+        if frame.kind == Control::Catch {
+            frame = self.pop();
+        }
         if !frame.kind.is_block() {
             // An END right after a THEN or an ELSE was refused before the
             // flush, so what is on top here is no pending branch.
@@ -608,6 +651,7 @@ impl<'a> Block<'a> {
                 InstructionKind::Do(body) | InstructionKind::Loop(body) => body.end.is_some(),
                 InstructionKind::Select { end, .. } => end.is_some(),
                 InstructionKind::End { closes, .. } => closes.is_some(),
+                InstructionKind::Catch(handler) => handler.block.is_some(),
                 _ => true,
             }),
             "every block and every END is matched in a body that assembled"
@@ -734,6 +778,7 @@ pub(crate) fn translate_block(
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. }
         );
         let is_end = matches!(instruction.kind, InstructionKind::End { .. });
+        let is_catch = matches!(instruction.kind, InstructionKind::Catch(_));
         let is_otherwise = matches!(instruction.kind, InstructionKind::Otherwise);
         let is_if = matches!(instruction.kind, InstructionKind::If { .. });
         let control = is_control(&instruction.kind);
@@ -754,12 +799,16 @@ pub(crate) fn translate_block(
         // An END cannot be the instruction of a pending THEN or ELSE
         // (`r[instr.if.syntax]`). The flush below would take it as that
         // instruction, so this is checked first.
-        if is_end {
+        if is_end || is_catch {
             match block.top().kind {
                 Control::IfThen | Control::WhenThen => {
-                    return Err(ParseError::raise(E10_5, byte, []));
+                    let msg = if is_catch { E10_9 } else { E10_5 };
+                    return Err(ParseError::raise(msg, byte, []));
                 }
-                Control::Else => return Err(ParseError::raise(E10_6, byte, [])),
+                Control::Else => {
+                    let msg = if is_catch { E10_11 } else { E10_6 };
+                    return Err(ParseError::raise(msg, byte, []));
+                }
                 _ => {}
             }
         }
@@ -774,6 +823,11 @@ pub(crate) fn translate_block(
         } else {
             block.flush_control(held.take())
         };
+
+        if is_catch {
+            block.add_catch(index.expect("the CATCH was just added"), byte)?;
+            continue;
+        }
 
         // Only WHEN, OTHERWISE and END may appear directly inside a SELECT. This
         // runs for an ELSE too, and gets there first: measured, `select` /
@@ -840,7 +894,7 @@ pub(crate) fn translate_block(
                 } => *slot = Some(otherwise),
                 other => panic!("a SELECT frame stands for a SELECT, not {other:?}"),
             }
-            block.push(Control::Otherwise, Some(otherwise), None);
+            block.push(Control::Otherwise, Some(otherwise), Some(frame.index()));
             continue;
         }
 

@@ -5,19 +5,20 @@ use std::ops::Range;
 use interrexx_inventory::errors::{
     E8_1, E9_1, E18_1, E18_2, E19_2, E19_3, E19_4, E20_901, E20_902, E20_905, E20_906, E20_907,
     E20_908, E20_909, E20_911, E20_912, E20_914, E20_915, E20_918, E20_922, E20_927, E20_931,
-    E21_901, E21_903, E21_904, E21_905, E21_906, E21_907, E21_908, E21_909, E21_911, E24_1, E25_1,
-    E25_2, E25_3, E25_4, E25_11, E25_15, E25_17, E25_905, E25_906, E25_907, E25_908, E25_909,
-    E25_911, E25_912, E25_913, E25_914, E25_915, E25_916, E25_917, E25_918, E25_919, E25_921,
-    E25_922, E25_923, E25_929, E26_7, E31_2, E31_3, E35_1, E35_912, E35_913, E35_915, E35_916,
-    E35_917, E35_918, E35_922, E35_923, E35_924, E35_925, E35_926, E35_927, E35_928, E35_929,
-    E35_930, E35_932, E35_933, E46_1, E46_901, E46_902, E46_903, E47_1, E49_2, E89_1, E99_907,
-    E99_908, E99_910, E99_912, E99_913, E99_915, E99_923, E99_924, E99_930, E99_948, E99_950, Msg,
+    E20_936, E21_901, E21_903, E21_904, E21_905, E21_906, E21_907, E21_908, E21_909, E21_911,
+    E24_1, E25_1, E25_2, E25_3, E25_4, E25_11, E25_15, E25_17, E25_905, E25_906, E25_907, E25_908,
+    E25_909, E25_911, E25_912, E25_913, E25_914, E25_915, E25_916, E25_917, E25_918, E25_919,
+    E25_921, E25_922, E25_923, E25_929, E25_939, E26_7, E31_2, E31_3, E35_1, E35_912, E35_913,
+    E35_915, E35_916, E35_917, E35_918, E35_922, E35_923, E35_924, E35_925, E35_926, E35_927,
+    E35_928, E35_929, E35_930, E35_932, E35_933, E35_937, E46_1, E46_901, E46_902, E46_903, E47_1,
+    E49_2, E89_1, E99_907, E99_908, E99_910, E99_912, E99_913, E99_915, E99_923, E99_924, E99_930,
+    E99_948, E99_950, Msg,
 };
 
 use crate::ast::{
-    Call, ConditionTrap, Expr, ExprKind, Forward, Guard, Instruction, InstructionKind,
-    NumericSetting, ParseSource, Raise, RaiseResult, Signal, Tail, Trace, Use, UseTarget,
-    VariableRef, compound_parts,
+    Call, Catch, CatchCode, CatchCondition, ConditionTrap, Expr, ExprKind, Forward, Guard,
+    Instruction, InstructionKind, NumericSetting, ParseSource, Raise, RaiseResult, Signal, Tail,
+    Trace, Use, UseTarget, VariableRef, compound_parts,
 };
 use crate::block::{Block, EnclosingSelect};
 use crate::clause::{Clause, ClauseCursor, PendingThen, Remainder};
@@ -75,6 +76,7 @@ const KW_THEN: usize = 31;
 const KW_TRACE: usize = 32;
 const KW_USE: usize = 33;
 const KW_WHEN: usize = 34;
+const KW_CATCH: usize = 35;
 
 // Positions in the `CONDITIONS` table. `CALL ON` accepts a strict subset of
 // what `SIGNAL ON` does, so both lists are spelled out at their use sites.
@@ -598,6 +600,11 @@ impl<'a> Inst<'a> {
                     keyword_end,
                     Remainder::Instruction,
                 ))
+            }
+            KW_CATCH => {
+                self.next_real();
+                let catch = self.catch()?;
+                Ok(self.finish(cursor, InstructionKind::Catch(Box::new(catch))))
             }
             KW_END => {
                 self.next_real();
@@ -1428,6 +1435,121 @@ impl<'a> Inst<'a> {
     fn dynamic_signal(&mut self) -> Result<Signal, ParseError> {
         let target = self.expr(Terminators::EOC, E35_915)?;
         Ok(Signal::Value(target))
+    }
+
+    fn catch(&mut self) -> Result<Catch, ParseError> {
+        let variable = match (self.peek_real(), self.nth_real(1)) {
+            (Some(token), Some(equal))
+                if matches!(equal.kind, TokenKind::Operator(Operator::Equal)) =>
+            {
+                let TokenKind::Symbol { id, class } = token.kind else {
+                    return Err(self.error(E20_936, []));
+                };
+                need_variable(self.ctx, id, class, self.clause_byte)?;
+                self.next_real();
+                self.next_real();
+                Some(Expr::new(symbol_kind(id, class), token.span.clone()))
+            }
+            _ => None,
+        };
+
+        let mut conditions = Vec::new();
+        loop {
+            let Some(token) = self.next_real() else {
+                return Err(self.error(E20_936, []));
+            };
+            let TokenKind::Symbol { id, .. } = token.kind else {
+                return Err(self.error(E20_936, []));
+            };
+            let Some(condition) = self.ctx.keywords.conditions.index_of(id) else {
+                return Err(self.found(E25_939, Some(token)));
+            };
+            if condition == COND_PROPAGATE {
+                return Err(self.found(E25_939, Some(token)));
+            }
+            let mut name = self.value_of(token);
+            if condition == COND_USER {
+                let Some(user) = self.next_real() else {
+                    return Err(self.error(E20_915, []));
+                };
+                if user.kind.tag() != Tag::Symbol {
+                    return Err(self.error(E20_915, []));
+                }
+                let mut qualified = b"USER ".to_vec();
+                qualified.extend_from_slice(&self.value_of(user));
+                name = qualified.into_boxed_slice();
+            }
+            let code = if matches!(condition, COND_SYNTAX | COND_ERROR | COND_FAILURE)
+                && self
+                    .peek_real()
+                    .is_some_and(|token| token.kind.tag() != Tag::Comma)
+            {
+                Some(self.catch_code(condition == COND_SYNTAX)?)
+            } else {
+                None
+            };
+            conditions.push(CatchCondition { name, code });
+            match self.next_real() {
+                None => break,
+                Some(separator) if separator.kind.tag() == Tag::Comma => {}
+                token => return Err(self.found(E21_904, token)),
+            }
+        }
+        Ok(Catch {
+            variable,
+            conditions,
+            block: None,
+        })
+    }
+
+    fn catch_code(&mut self, syntax: bool) -> Result<CatchCode, ParseError> {
+        let token = self.next_real().expect("the caller saw a code");
+        let value = match token.kind {
+            TokenKind::Symbol {
+                id,
+                class: SymbolClass::Variable,
+            } => {
+                return Ok(CatchCode::Variable(id));
+            }
+            TokenKind::Symbol {
+                class: SymbolClass::Constant,
+                ..
+            }
+            | TokenKind::Literal { .. } => self.value_of(token).into_vec(),
+            TokenKind::Operator(op @ (Operator::Plus | Operator::Subtract)) if !syntax => {
+                let next = self.next_real();
+                let Some(next) = next.filter(|t| {
+                    matches!(
+                        t.kind,
+                        TokenKind::Symbol {
+                            class: SymbolClass::Constant,
+                            ..
+                        }
+                    )
+                }) else {
+                    return Err(self.found(E35_1, next));
+                };
+                let mut value = self.value_of(next).into_vec();
+                if interrexx_num::Number::parse_bytes(&value).is_none() {
+                    return Err(self.found(E35_1, Some(next)));
+                }
+                if op == Operator::Subtract {
+                    value.insert(0, b'-');
+                }
+                return Ok(CatchCode::Literal(value.into_boxed_slice()));
+            }
+            _ => return Err(self.found(E35_1, Some(token))),
+        };
+        if syntax && !crate::convert::valid_catch_syntax_number(&value) {
+            return Err(self.error(E35_937, [value]));
+        }
+        if !syntax
+            && token.kind.tag() == Tag::Symbol
+            && interrexx_num::Number::parse_bytes(&value).is_none()
+        {
+            return Err(self.found(E35_1, Some(token)));
+        }
+        Ok(CatchCode::Literal(value.into_boxed_slice()))
     }
 
     /// `CALL ON` and `SIGNAL ON`, which differ only in which conditions they
