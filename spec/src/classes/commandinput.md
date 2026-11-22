@@ -2,6 +2,7 @@
 element: "CommandInput"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > CommandInput Class"
+deviations: [183]
 ---
 
 # CommandInput
@@ -127,7 +128,9 @@ when only the line end is left. When all the input has been read it answers the
 null string and raises NOTREADY ([the NOTREADY rule](r:cond.notready.call)).
 `lineIn` takes the arguments `line` and `count`: `line` is the position and must
 be omitted (`SYNTAX 93.963`), and `count` is `1`, the default, or `0`, which
-reads nothing and answers the null string, and it is compared by its characters:
+reads nothing and answers the null string. The count is read through the
+[required-string protocol](r:conv.string.object) and compared by its characters
+([Deviation 183](r:class.commandinput.deviation.183)):
 any other value, `2`, `-1`, `1.0`, `01` and `x` among them, raises
 `SYNTAX 93.963`. A third argument raises `SYNTAX 93.902`. A line that is the
 null string and the end of the input look alike in the answer, and `lines` tells
@@ -181,6 +184,47 @@ in~linein(, -1) 93.963
 in~linein(1, 1) 93.963
 in~linein(, 1, 1) 93.902
 in~linein(.nil) 93.963
+```
+
+r[class.commandinput.deviation.183]
+An object whose string conversion gives exactly `0` or `1` supplies that count
+to `lineIn`. ooRexx raises `SYNTAX 93.963` for such an object. A converted
+count with any other spelling, or a `STRING` answer with no string value,
+raises the same argument error as an invalid string.
+
+```rexx
+x = .commandhandler~register('spec_ci_linein_count', .reader~new)
+address spec_ci_linein_count 'go' with input using (.array~of('one', 'two'))
+x = .commandhandler~deregister('spec_ci_linein_count')
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  in = caller~input
+  say '<'in~lineIn(, .zeroCount~new)'>'
+  say in~lineIn(, .oneCount~new)
+  signal on syntax name bad
+  say in~lineIn(, .invalidCount~new)
+  return 0
+bad:
+  say condition('o')~code
+  say in~lineIn
+  return 0
+::class zeroCount
+::method makeString
+  return '0'
+::class oneCount
+::method string
+  return '1'
+::class invalidCount
+::method string
+  return .object~new
+```
+
+```output
+<>
+one
+93.963
+two
 ```
 
 r[class.commandinput.charin]

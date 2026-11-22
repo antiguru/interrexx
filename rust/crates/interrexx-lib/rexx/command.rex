@@ -262,6 +262,7 @@
   if arg() > 2 then raise syntax 93.902 array('LINEIN', 2)
   if arg(1, 'E') then raise syntax 93.963 array('LINEIN', 1)
   if \arg(2, 'E') then count = 1
+  else count = self~!countvalue(count)
   if count \== '1' & count \== '0' then raise syntax 93.963 array('LINEIN', 2)
   if count == '0' then return ''
   if buf == '' & q~items = 0 then self~!nextline
