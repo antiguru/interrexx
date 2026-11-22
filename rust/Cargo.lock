@@ -727,6 +727,7 @@ version = "0.1.0"
 dependencies = [
  "interrexx-api",
  "libc",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

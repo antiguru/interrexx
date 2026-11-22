@@ -1,4 +1,4 @@
-name: Windows API check
+name: Windows classic API check
 on:
   pull_request:
     paths:
@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   cargo-check:
-    name: cargo check interrexx-api (Windows)
+    name: cargo check interrexx-capi-rxapi (Windows)
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -26,4 +26,4 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
-      - run: cargo check --locked -p interrexx-api
+      - run: cargo check --locked -p interrexx-capi-rxapi

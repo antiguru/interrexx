@@ -1,7 +1,7 @@
 //! The name extensions built against the oracle's headers record for this library, and the
 //! dependency on `librexx` it records itself, found beside it: on ELF hosts a SONAME, a `NEEDED`
 //! entry and a `DT_RPATH` of the library's own directory; on Apple's an install name and a load
-//! command for `@loader_path`.
+//! command for `@loader_path`. On Windows the forwarding code loads the sibling DLL.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -23,7 +23,7 @@ fn main() {
     );
     if std::env::var("CARGO_CFG_TARGET_VENDOR").as_deref() == Ok("apple") {
         apple(&names, &out);
-    } else {
+    } else if target_os != "windows" {
         elf(&names, &out);
     }
     println!("cargo:rerun-if-changed=build.rs");
