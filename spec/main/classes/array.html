@@ -1100,17 +1100,20 @@ are the receiver's own objects, and the receiver is not changed. A <code>start</
 beyond the size of the receiver, or a <code>count</code> of 0, gives an array with no
 entries and no dimension. The index is read as <a href="#r-class.array.indexes">the index
 rule</a> says, so an array of one index is accepted, and
-<code>SYNTAX 93.907</code> is raised for a <code>start</code> that is not a whole number of at least</p>
-<ol>
-<li>The <code>count</code> is read as <a href="#r-class.array.indexes">the index rule</a> reads an
-index and must be a whole number of 0 or more, or <code>SYNTAX 93.923</code> is raised. No
+<code>SYNTAX 93.907</code> is raised for a single index that is not a whole number of at
+least 1. An index list with several subscripts gives an empty result when the
+receiver has no dimension and raises <code>SYNTAX 93.926</code> when the receiver has one
+dimension. In the dimensionless case, the receiver stays dimensionless and
+the subscripts are not converted, but the list must still have no omitted
+items and the optional count is checked. The <code>count</code> is read as <a href="#r-class.array.indexes">the index
+rule</a> reads an index and must be a whole number of 0 or
+more, or <code>SYNTAX 93.923</code> is raised. No
 <code>start</code>, or an omitted one, raises <code>SYNTAX 93.903</code>, and a third argument
 <code>SYNTAX 93.902</code>; for an array of more than one dimension <code>SYNTAX 93.954</code> is
 raised, whatever the arguments are when they are not too many; a call with too
 many raises one of the two errors, as <a href="../conventions.html#r-conv.error.precedence">the precedence
 rule</a> says. The answer is an instance of the class of
-the receiver.</li>
-</ol>
+the receiver.</p>
 <pre><code class="language-rexx">a = .array~of('a', 'b', , 'd', 'e')
 s = a~section(2)
 say s~size s~items s~allItems~makeString('L', ',')
@@ -1127,6 +1130,15 @@ call try 'a~section(1, "x")'
 call try 'a~section(1, 2, 3)'
 call try '.array~new(2, 2)~section(1)'
 call try '.array~new(2, 2)~section'
+empty = .array~new
+s = empty~section(.array~of(2, 2))
+say s~class~id s~dimension s~items s~size empty~dimension
+s = empty~section(.array~of('x', 2), 1)
+say s~class~id s~items s~size
+call try 'empty~section(.array~of(2, 2), -1)'
+call try 'empty~section(.array~of(2, , 3))'
+call try '.array~new(0)~section(.array~of(2, 2))'
+call try 'a~section(.array~of(2, 2))'
 exit
 try:
   signal on syntax name bad
@@ -1149,6 +1161,12 @@ a~section(1, "x") =&gt; 93.923
 a~section(1, 2, 3) =&gt; 93.902
 .array~new(2, 2)~section(1) =&gt; 93.954
 .array~new(2, 2)~section =&gt; 93.954
+Array 0 0 0 0
+Array 0 0
+empty~section(.array~of(2, 2), -1) =&gt; 93.923
+empty~section(.array~of(2, , 3)) =&gt; 98.975
+.array~new(0)~section(.array~of(2, 2)) =&gt; 93.926
+a~section(.array~of(2, 2)) =&gt; 93.926
 </code></pre>
 <div class="rule" id="r-class.array.section.sends"><a href="#r-class.array.section.sends">[class.array.section.sends]</a></div>
 <p><code>section</code> makes its answer by sending <code>new</code> to the class of the receiver with
