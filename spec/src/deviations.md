@@ -1555,6 +1555,7 @@ before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
 
 `CommandContext~raise('SYNTAX', code)` sends a non-string code object
-`REQUEST('String')` and uses the returned string as the code. ooRexx refuses
-an object with `SYNTAX 97.1` in the handler even when the object can supply a
-valid code as text.
+`REQUEST('String')` and uses the returned string as the code. ooRexx sends
+`DATATYPE('N')` and `POS('.')` directly to the code object. An object that
+can supply valid code as text can still raise `SYNTAX 97.1` in the handler
+if it lacks a method ooRexx sends.
