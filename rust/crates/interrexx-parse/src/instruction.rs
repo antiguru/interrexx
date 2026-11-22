@@ -1491,7 +1491,7 @@ impl<'a> Inst<'a> {
             conditions.push(CatchCondition { name, code });
             match self.next_real() {
                 None => break,
-                Some(separator) if separator.kind.tag() == Tag::Comma && !self.at_end() => {}
+                Some(separator) if separator.kind.tag() == Tag::Comma => {}
                 token => return Err(self.found(E21_904, token)),
             }
         }
@@ -1538,7 +1538,7 @@ impl<'a> Inst<'a> {
             }
             _ => return Err(self.found(E35_1, Some(token))),
         };
-        if syntax && crate::convert::syntax_code(&value).is_none() {
+        if syntax && !crate::convert::valid_catch_syntax_number(&value) {
             return Err(self.error(E35_937, [value]));
         }
         if !syntax

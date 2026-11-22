@@ -1221,3 +1221,27 @@ translation	99.932	2	::constant k 1\n::constant k (1+2)\n
 translation	99.906	1	::constant k (1+2)\n::routine r\n::routine r\n
 translation	99.902	3	::class c\n::constant k\n::method k class\n
 translation	99.932	3	::class c\n::method k class\n::constant k\n
+translation	10.8	1	catch syntax
+translation	10.9	1	do; if 1 then catch syntax; end
+translation	10.11	1	do; if 1 then nop; else catch syntax; end
+translation	20.936	1	do; catch any,; end
+translation	25.939	1	do; catch potato; end
+translation	35.937	1	do; catch syntax '1E1'; end
+translation	35.937	1	do; catch syntax 42.0; end
+translation	35.937	1	do; catch syntax ' 42 '; end
+translation	35.937	1	do; catch syntax '0042'; end
+translation	35.937	1	do; catch syntax '42.0000'; end
+-	ok	-	do; catch syntax '42.0001'; end
+-	ok	-	do; catch syntax '099.0999'; end
+translation	35.937	1	do; catch syntax '100'; end
+translation	35.937	1	do; catch syntax '42.'; end
+translation	35.937	1	do; catch syntax '42.1.1'; end
+translation	35.937	1	do; catch syntax '0'; end
+translation	35.937	1	do; catch syntax '99.1000'; end
+-	ok	-	do; catch syntax '001'; end
+-	ok	-	do; catch syntax '99.999'; end
+translation	35.937	1	do; catch syntax 42.1234; end
+translation	21.904	1	do; catch any notready; end
+translation	21.904	1	do; catch error 5 notready; end
+-	ok	-	do; catch syntax notready; end
+-	ok	-	do; catch error notready; end

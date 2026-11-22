@@ -913,7 +913,7 @@ fn catch_translation_errors_match_the_oracle() {
         ("do; if 1 then catch syntax; end", (10, 9)),
         ("do; if 1 then nop; else catch syntax; end", (10, 11)),
         ("do; catch; end", (20, 936)),
-        ("do; catch any,; end", (21, 904)),
+        ("do; catch any,; end", (20, 936)),
         ("do; catch user; end", (20, 915)),
         ("do; catch . = syntax; end", (31, 3)),
         ("do; catch potato; end", (25, 939)),

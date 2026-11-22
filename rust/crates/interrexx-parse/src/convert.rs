@@ -66,3 +66,20 @@ pub fn syntax_code(text: &[u8]) -> Option<u64> {
     // Both bounds are checked above, so neither narrowing can lose anything.
     Some(major as u64 * 1000 + sub as u64)
 }
+
+/// A CATCH SYNTAX matcher is a decimal major with an optional nonzero minor.
+pub(crate) fn valid_catch_syntax_number(text: &[u8]) -> bool {
+    fn component(text: &[u8], max_digits: usize, max_value: u16) -> bool {
+        if text.is_empty() || text.len() > max_digits || !text.iter().all(u8::is_ascii_digit) {
+            return false;
+        }
+        let value = text
+            .iter()
+            .fold(0, |value, digit| value * 10 + u16::from(digit - b'0'));
+        (1..=max_value).contains(&value)
+    }
+
+    let mut parts = text.splitn(2, |&byte| byte == b'.');
+    let major = parts.next().expect("split always yields a first part");
+    component(major, 3, 99) && parts.next().is_none_or(|minor| component(minor, 4, 999))
+}
