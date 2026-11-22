@@ -486,7 +486,7 @@ fn a_shrink_trial_defaults_omissions_and_replays_its_recorded_choices() {
             Decision::Pick(0),
         ]
         .into(),
-        omitted: Some(("omit.txt".into(), [0, 2].into())),
+        omitted: Some(("omit.txt".into(), [0, 2].into()).into()),
     });
     assert!(!trial.point(Point::Collect, 1, false));
     assert!(trial.point(Point::Preempt, 2, false));
