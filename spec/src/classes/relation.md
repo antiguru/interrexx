@@ -899,14 +899,37 @@ r[class.relation.supplier]
 `supplier` answers a `Supplier` over the entries, the index and the item of
 each, and `supplier(index)` a `Supplier` over the entries whose index is equal
 to the argument, oldest first ([the oldest
-rule](r:class.relation.oldest.deviation.33)). It is a snapshot: later changes do
-not reach it. Its order is that of `allIndexes` ([the order
+rule](r:class.relation.oldest.deviation.33)). Its index is the argument
+for every item. It is a snapshot: later changes do not reach it. Its order is that of `allIndexes` ([the order
 rule](r:class.relation.makearray)). A relation with no entry, or none at the
 index, gives a supplier that is not available. It takes at most one argument,
 and an omitted argument is no argument: a second raises `SYNTAX 93.902`. With an
 index it sends `hashCode` to it once, and `==` to it with every stored index of
 the same hash code as the argument; further sends, and how often each is sent,
 are not specified ([the hash order rule](r:class.relation.deviation.33)).
+
+```rexx
+r = .relation~new
+r~put('value', .key~new('stored'))
+filtered = r~supplier(.key~new('probe'))
+full = r~supplier
+say filtered~index~tag filtered~item
+say full~index~tag full~item
+::class key
+::attribute tag
+::method init
+  expose tag
+  use arg tag
+::method hashCode
+  return 1
+::method '=='
+  return .true
+```
+
+```output
+probe value
+stored value
+```
 
 ```rexx
 .local~log = .array~new

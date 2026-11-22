@@ -268,12 +268,11 @@ fn native_relation_supplier(
         return native_hash_supplier(interp, cleared, receiver, &[]);
     };
     let (store, slots) = slots_for(interp, receiver, index)?;
-    let mut items = Vec::new();
-    let mut indexes = Vec::new();
+    let mut items = Vec::with_capacity(slots.len());
     for slot in slots {
         items.push(slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL));
-        indexes.push(slot_at(interp, store.indexes, slot)?.unwrap_or(ObjRef::NIL));
     }
+    let indexes = vec![index; items.len()];
     let items = super::collection::array_of(interp, items);
     let indexes = super::collection::array_of(interp, indexes);
     super::collection::new_supplier(interp, items, indexes).map(Some)
