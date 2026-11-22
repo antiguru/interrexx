@@ -898,7 +898,9 @@ stream open for reading and writing answers its read position, and one open
 for one thing the position that it has. The option `CHAR` counts characters
 and is the default; `LINE` counts lines, and the answer is the number of the
 line that the position is in: one more than the number of line ends before the
-position, for the read position and the write position alike, so that the
+position, for the read position and the write position alike. When counting
+lines requires a read and that read fails, the query raises `NOTREADY` in
+the caller and gives the stream's error description as the result. The
 position after the last character of a last line that has no line end is in
 that line, not in a line after it ([Deviation
 167](r:bif.stream.deviation.167)). Each option may be shortened to its first
