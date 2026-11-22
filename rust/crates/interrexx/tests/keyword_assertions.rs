@@ -117,6 +117,11 @@ impl RunOutcome {
     fn attribution(&self) -> Option<String> {
         match self {
             RunOutcome::Pass { .. } => None,
+            // The parser accepts CATCH, but its runtime is still tracked by #804.
+            RunOutcome::Blocked {
+                construct,
+                owner: None,
+            } if construct == "CATCH" => Some("defect:catch-runtime".to_string()),
             RunOutcome::Blocked { owner, construct } => Some(
                 owner
                     .clone()

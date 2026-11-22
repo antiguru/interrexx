@@ -8,9 +8,8 @@
 # than being quietly absorbed.
 #
 # For a body that fails loudly the `unblocked_by` column is not hand-written: it
-# is the owner the refusal's own message names, re-derived on every run, so this
-# file cannot drift from `interrexx`'s refusals. A derived owner says what a
-# body hits first, not what would make it pass.
+# is derived from the refusal on every run, using its owner or the known defect
+# it names. The attribution describes what the body hits first.
 #
 #   RAISED  Not an attribution: the harness's own word for "exited non-zero and
 #       named no construct". Each row carrying it needs its cause written here:
@@ -50,7 +49,7 @@ NUMERIC::test_42	RAISED
 CATCH::test_catch_after_complete_else	RAISED
 CATCH::test_code_error	RAISED
 CATCH::test_code_error_call_on	RAISED
-CATCH::test_code_error_missing_comma	UNATTRIBUTED:CATCH
+CATCH::test_code_error_missing_comma	defect:catch-runtime
 CATCH::test_code_error_negative	RAISED
 CATCH::test_code_error_not_caught	RAISED
 CATCH::test_code_error_numeric	RAISED
@@ -67,7 +66,7 @@ CATCH::test_code_syntax_other_clause	RAISED
 CATCH::test_code_syntax_outer_block	RAISED
 CATCH::test_code_syntax_variable	RAISED
 CATCH::test_code_syntax_variable_major	RAISED
-CATCH::test_missing_comma	UNATTRIBUTED:CATCH
+CATCH::test_missing_comma	defect:catch-runtime
 CATCH::test_variable_none	RAISED
 FINALLY::test_catch_code_error_ignored	RAISED
 FINALLY::test_catch_code_matched	RAISED
