@@ -336,7 +336,12 @@ pub(crate) enum Then {
 impl Then {
     /// Whether this records an outcome on `message`.
     fn records(&self, message: ObjRef) -> bool {
-        matches!(self, Then::Started(object) | Then::Held(object) | Then::Triggered(object) if *object == message)
+        match self {
+            Then::Started(object) | Then::Held(object) | Then::Triggered(object) => {
+                *object == message
+            }
+            _ => false,
+        }
     }
 }
 

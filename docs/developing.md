@@ -152,7 +152,8 @@ deep worktree set `CARGO_TARGET_DIR` to a shorter path.
 
 From `rust/`, under the memory cap:
 
-* `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`.
+* `cargo fmt --all -- --check --config error_on_line_overflow=true` and
+  `cargo clippy --workspace --all-targets -- -D warnings`.
 * `cargo nextest run --workspace --profile standalone` runs the regular tier, the tests that need
   nothing of `third_party/`. The profile's `default-filter` in `rust/.config/nextest.toml` holds
   the upstream tier out, and the comments above the profile give each entry's tier and the path it

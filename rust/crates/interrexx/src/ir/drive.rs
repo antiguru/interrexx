@@ -1226,7 +1226,8 @@ macro_rules! region_ops {
                         (interrexx_parse::Signal::Value(_), Some(register)) => {
                             debug_assert!(
                                 $chunk.holds_register(*register),
-                                "op reads register {register} outside the region                                                  the chunk reserved"
+                                "op reads register {register} outside the region the chunk \
+                                 reserved"
                             );
                             let value = $registers.get(*register);
                             match $self.signal_to_value(value) {
@@ -4087,8 +4088,9 @@ impl Interp {
             .checked_sub(1)
             .and_then(|call| chunk.ops_in(call, parked.at))
             .and_then(<[Op]>::first);
-        let (Some(Op::CallArgs { slot, path, .. } | Op::CallExpr { slot, path, .. }), Some(clause)) =
-            (op, code.body.instructions.get(parked.index))
+        let clause = code.body.instructions.get(parked.index);
+        let Some((Op::CallArgs { slot, path, .. } | Op::CallExpr { slot, path, .. }, clause)) =
+            op.zip(clause)
         else {
             return Loud::call_op_off_its_node().into();
         };
