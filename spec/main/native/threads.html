@@ -174,7 +174,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="threads-and-halting"><a class="header" href="#threads-and-halting">Threads and halting</a></h1>
-<p class="deviations">Deviations: D166, D176, D177, D178</p>
+<p class="deviations">Deviations: D19, D166, D176, D177, D178</p>
 <p>Native code may start threads of its own, and may ask the interpreter to halt
 activities. This page states what a program sees of both. The examples use
 <a href="index.html#the-fixture-libraries">the fixture library <code>specfixture</code></a>. The ones
@@ -250,7 +250,7 @@ Native code on another thread halts or traces the interpreter through the
 instance's <code>Halt</code> and <code>SetTrace</code> instead, as <a href="#r-native.threads.halt">the halt
 rule</a> and <a href="#r-native.threads.trace">the trace rule</a> say.
 A message sent after the thread did detach is not covered here but by
-<a href="../deviations.html#19-callback-from-a-foreign-thread">Deviation 19</a>, which
+<a href="#r-native.threads.context.deviation.19">Deviation 19</a>, which
 refuses it. ooRexx aborts the process or hangs on each of these misuses, so
 there is no example.</p>
 <div class="rule" id="r-native.threads.end"><a href="#r-native.threads.end">[native.threads.end]</a></div>
@@ -363,13 +363,30 @@ start 1
 <blockquote>
 <p><strong>Note.</strong> A thread may use only the contexts it was given: the one that its attachment
 gave it, and, while a native call runs on it, that call's. A callback made
-through a call's context from another thread is <a href="../deviations.html">Deviation
+through a call's context from another thread is <a href="#r-native.threads.context.deviation.19">Deviation
 19</a>, and a context kept from one call and used in another is
 <a href="../deviations.html">Deviation 24</a>; neither has an example, because ooRexx ends
 the process or hangs on both. Ending the interpreter belongs to the program
 that created it, which for a program run by <code>rexx</code> is <code>rexx</code> itself, so what
 native code that asks for the end achieves is not specified.</p>
 </blockquote>
+<div class="rule" id="r-native.threads.context.deviation.19"><a href="#r-native.threads.context.deviation.19">[native.threads.context.deviation.19]</a></div>
+<p>A callback through the context of a native call, made from a thread that runs
+no native call of the interpreter, runs nothing: it answers the failure value
+of the member, and the call whose context it used raises error 98.983 once it
+returns. It first waits for the interpreter while another thread holds it. A
+call into a native library that is not built into the interpreter leaves it
+free while it runs, so such a call may wait for that thread, but a handler of
+a system exit holds it, and if the handler waits for the thread, the program
+hangs. A call of a library built into the interpreter that does not wait for
+time, a semaphore or a socket, such as <code>SysFileTree</code> or <code>SysStemSort</code>, holds it
+too for its whole run, and the callback waits until that call returns, while
+<code>SysSleep</code>, a semaphore's wait and an RxSock wait for a socket leave it free
+as they wait. ooRexx aborts the process.
+A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.</p>
 <div class="rule" id="r-native.threads.members"><a href="#r-native.threads.members">[native.threads.members]</a></div>
 <p>The members of the thread interface that store into or fetch from an array, a
 stem, a supplier, a directory or a string table, that ask an object whether it
