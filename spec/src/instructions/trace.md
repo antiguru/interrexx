@@ -583,6 +583,7 @@ exit
 22613F62093F637FFF22
 ```
 
+r[instr.trace.result.refused]
 A destination that refuses the result line of a `SAY`, assignment, `PUSH`
 or `QUEUE` raises the condition before the output, write or queue insertion.
 
