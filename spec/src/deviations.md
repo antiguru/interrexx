@@ -1541,7 +1541,7 @@ be in the program. ooRexx traces the routine and stops after its clauses,
 reading a line at each. The ANSI standard (8.2.4) has no tracing while the line
 runs. Ruled by the owner on 2026-11-16 (#758).
 
-## 183. Stream options and the CommandInput line count are read as strings
+## 183. Built-in method arguments are read as strings
 
 The option of `Stream`'s `arrayIn`, `makeArray` and `arrayOut` is read as a
 string argument, as the option of `open` is: through its `makeString` method,
@@ -1553,3 +1553,8 @@ that is no string and for `.nil`, whatever its `makeString` answers.
 `CommandInput~lineIn` reads its count through the required-string protocol
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
+
+`CommandContext~raise('SYNTAX', code)` sends a non-string code object
+`REQUEST('String')` and uses the returned string as the code. ooRexx refuses
+an object with `SYNTAX 97.1` in the handler even when the object can supply a
+valid code as text.
