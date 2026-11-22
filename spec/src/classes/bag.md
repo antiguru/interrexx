@@ -882,7 +882,8 @@ r[class.bag.supplier]
 `supplier` answers a `Supplier` over the members, the index and the item of each
 being the same object, once for each time the member occurs. `supplier(index)`
 answers one over the members equal to the argument only, oldest first ([the
-oldest rule](r:class.bag.oldest.deviation.33)). It is a snapshot: later changes
+oldest rule](r:class.bag.oldest.deviation.33)). Its index is the argument
+for every item. It is a snapshot: later changes
 do not reach it. The order of `supplier` is that of `allIndexes` ([the order
 rule](r:class.bag.makearray)). A supplier over no member is not available. It
 takes at most one argument: a second raises `SYNTAX 93.902`.
@@ -918,6 +919,30 @@ bad: say arg(1) '=>' condition('o')~code
 [a=a a=a b=b] [a=a] []
 1 0
 b~supplier("a", "b") => 93.902
+```
+
+```rexx
+member = .key~new('stored')
+probe = .key~new('probe')
+b = .bag~of(member)
+filtered = b~supplier(probe)
+full = b~supplier
+say filtered~index~tag filtered~item~tag
+say full~index~tag full~item~tag
+::class key
+::attribute tag
+::method init
+  expose tag
+  use arg tag
+::method hashCode
+  return 1
+::method '=='
+  return .true
+```
+
+```output
+probe stored
+stored stored
 ```
 
 ## Copies and the string value
