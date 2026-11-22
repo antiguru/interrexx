@@ -1803,12 +1803,15 @@ say d~fullDate + 1
 ## Messages that a program can override
 
 r[class.datetime.sends.new]
-The class methods send `new` to the receiver, so a class that overrides its
-`new` sees them, and `new` sends `init` to the new instance with the arguments
-it got ([the new rule](r:class.index.new)); the `init` of `DateTime` sends
-nothing. `minDate` sends `new` with the four arguments 1, 1, 1 and 0, and
+Most class factories send `new` to the receiver. The `new` method sends
+`init` to the new instance with the arguments it got
+([the new rule](r:class.index.new)). The `init` of `DateTime` sends nothing.
+`minDate` sends `new` with the four arguments 1, 1, 1 and 0, and
 `maxDate` with the eight arguments 9999, 12, 31, 23, 59, 59, 999999 and 0.
-`today` and every `from` method other than `fromOrdinalDate` and
+`today` sends `fromStandardDate` to the receiver and returns its answer. It
+passes today's date in standard format, an omitted separator, and the supplied
+offset or the default offset in minutes. A subclass can override that send.
+Every `from` method other than `fromOrdinalDate` and
 `fromWeekNumberDate` send `new` with two arguments: the number of microseconds
 from the start of 0001 to the moment, and the offset argument exactly as the
 caller gave it (a [`TimeSpan`](r:class.timespan.value) is not converted), or,
@@ -1819,8 +1822,8 @@ receiver is. `fromWeekNumberDate` sends `new` with the three arguments year, 1
 and 4, then sends that instance `weeksInYear` (which sends `year`), `weekDay`
 and `addDays`, and the answer of `addDays` is the result. The first example
 prints, for each call, the messages sent in order, with the number of
-arguments after `NEW` and `INIT`. The second example prints the second
-argument that `init` gets: a `TimeSpan` or a string that the caller gave
+arguments after `FROMSTANDARDDATE`, `NEW`, and `INIT`. The second example
+prints the second argument that `init` gets: a `TimeSpan` or a string that the caller gave
 arrives as it is, the offset of the string of `fromUtcIsoDate` as a number of
 minutes (150 for `+02:30`), and, without an offset argument, the default
 offset in minutes. An argument that is read as a number is sent more messages
@@ -1882,13 +1885,16 @@ probe:
 ::method new class
   .local~log = .local~log 'NEW'arg()
   forward class (super)
+::method fromStandardDate class
+  .local~log = .local~log 'FROMSTANDARDDATE'arg()
+  forward class (super)
 ```
 
 ```output
 new: NEW3 INIT3 => SPY
 minDate: NEW4 INIT4 => SPY
 maxDate: NEW8 INIT8 => SPY
-today: NEW2 INIT2 => SPY
+today: FROMSTANDARDDATE3 NEW2 INIT2 => SPY
 fromTicks: NEW2 INIT2 => SPY
 fromBaseDate: NEW2 INIT2 => SPY
 fromIsoDate: NEW2 INIT2 => SPY
