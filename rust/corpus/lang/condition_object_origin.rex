@@ -1,9 +1,9 @@
 /* Condition object entries: NOMETHOD and NOSTRING name the receiver as
-   ADDITIONAL; a condition a LIBRARY REXX method raises names the REXX
-   package with no POSITION and leads with that method's frame under CALL ON
-   too; the interpreter's own library is the REXX package; RAISE PROPAGATE of
-   a condition other than SYNTAX keeps the object's position; a SYNTAX code
-   with no sub has MESSAGE .nil. */
+   ADDITIONAL; conditions from the interpreter's own library name the REXX
+   package; a SYNTAX code with no sub has MESSAGE .nil. Compare the program's
+   frames and positions. Library positions, library and built-in frame counts,
+   and message wording are unspecified (r[cond.information.library],
+   r[class.stackframe.builtin], r[conv.error.text]). */
 signal on nomethod name n1
 'object'~no_method
 n1: call dump 'nomethod string'
@@ -23,7 +23,9 @@ x = charin('/nonexistent-t69/zz')
 s1: call dump 'notready signal'
 signal on notready name s2
 x = stream('/', 'c', 'open read')
-s2: call dump 'notready propagated'
+/* stream_command_open_failure.rex compares PROPAGATED on failed COMMAND
+   opens, including the internal routine case below (issue #801). */
+s2: call dump 'notready propagated', .false
 signal on syntax name s4
 say .Validate~number('LENGTH', 'abc')
 s4: call dump 'library syntax'
@@ -40,19 +42,27 @@ s7: call dump 'linein code'
    that call. */
 signal on notready name s3
 x = open_in_routine()
-s3: call dump 'notready propagated twice'
+s3: call dump 'notready propagated twice', .false
 call propagate_nomethod
 exit
 
 notready_call: call dump 'notready call'; return
 
 dump:
+  use arg heading, showPropagated = .true
   o = condition('O')
   idx = o~allIndexes~sortWith(.caselessComparator~new)
-  line = arg(1)':'
+  line = heading':'
   do i over idx
+    if i = 'POSITION' & o~program == 'REXX' then iterate
+    if i = 'PROPAGATED' & \showPropagated then iterate
     v = o[i]
-    if i = 'STACKFRAMES' | i = 'TRACEBACK' then v = v~items
+    if i = 'STACKFRAMES' | i = 'TRACEBACK' then v = v~class~id
+    else if i = 'ERRORTEXT' then v = (v == errortext(o~rc))
+    else if i = 'MESSAGE' then do
+      if v == .nil then v = '.nil'
+      else v = v~class~id
+    end
     else if i = 'PACKAGE' then v = v~name~right(5)
     else if i = 'PROGRAM' then v = filespec('N', v)
     else if \v~isA(.string) then v = v~class~id':'v~string
@@ -60,10 +70,8 @@ dump:
   end
   say line
   do f over o~stackframes
-    say '   frame' f~type filespec('N', f~name) f~line f~target~class~id
-  end
-  do t over o~traceback
-    if t~pos('*-*') > 0 then say '   tb' t
+    if f~type == 'PROGRAM' | f~type == 'INTERNALCALL' then
+      say '   frame' f~type filespec('N', f~name) f~line f~target~class~id
   end
   return
 

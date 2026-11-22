@@ -1,4 +1,4 @@
-name: Windows classic API check
+name: Windows API libraries
 on:
   pull_request:
     paths:
@@ -17,8 +17,8 @@ defaults:
     working-directory: rust
 
 jobs:
-  cargo-check:
-    name: cargo check interrexx-capi-rxapi (Windows)
+  api-libraries:
+    name: RXAPI library tests (Windows)
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -26,4 +26,4 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
-      - run: cargo check --locked -p interrexx-capi-rxapi
+      - run: cargo test --locked --lib -p interrexx-rxapi -p interrexx-capi-rxapi

@@ -489,7 +489,10 @@ impl Heap {
             let Decoded::Heap { slot, generation } = r.decode() else {
                 return false;
             };
-            matches!(slots.get(slot as usize), Some(Slot::Live { generation: live, .. }) if *live == generation)
+            matches!(
+                slots.get(slot as usize),
+                Some(Slot::Live { generation: live, .. }) if *live == generation
+            )
         });
     }
 

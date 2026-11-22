@@ -786,7 +786,10 @@ pub const VALUE_CONVERSIONS: &[(&str, &str)] = &[
 /// tokens of its result's Rust type (`None` for none) and of each parameter's,
 /// from which the header generator spells the C declaration.
 macro_rules! c_handlers {
-    ($table:ident, $types:ident: $($(#[$meta:meta])* $name:ident = fn($($arg:ty),* $(,)?) $(-> $ret:ty)?;)*) => {
+    (
+        $table:ident, $types:ident:
+        $($(#[$meta:meta])* $name:ident = fn($($arg:ty),* $(,)?) $(-> $ret:ty)?;)*
+    ) => {
         $( $(#[$meta])* pub type $name = unsafe extern "C-unwind" fn($($arg),*) $(-> $ret)?; )*
 
         /// Each handler type, as the header names it, and its C declaration's
@@ -837,7 +840,9 @@ c_handlers! {
     /// `RexxContextCommandHandler`: a command environment's handler. It
     /// receives the exit context, the environment's name and the command, and
     /// answers the command's return code object.
-    RexxContextCommandHandler = fn(*mut RexxExitContext_, RexxStringObject, RexxStringObject) -> RexxObjectPtr;
+    RexxContextCommandHandler = fn(
+        *mut RexxExitContext_, RexxStringObject, RexxStringObject
+    ) -> RexxObjectPtr;
     /// `RexxRedirectingCommandHandler`: as [`RexxContextCommandHandler`], with
     /// the redirector context through which the command's input and output
     /// pass.
@@ -1298,7 +1303,9 @@ interface! {
         Halt: { call(*mut RexxInstance_) },
         SetTrace: { call(*mut RexxInstance_, logical_t) },
         AddCommandEnvironment: { call(*mut RexxInstance_, *const c_char, REXXPFN, c_int) },
-        StackCommandEnvironment: { call(*mut RexxInstance_, *const c_char, REXXPFN, c_int) -> logical_t },
+        StackCommandEnvironment: {
+            call(*mut RexxInstance_, *const c_char, REXXPFN, c_int) -> logical_t
+        },
     }
 }
 
@@ -1312,62 +1319,116 @@ interface! {
         RequestGlobalReference: { call(*mut RexxThreadContext_, RexxObjectPtr) -> RexxObjectPtr },
         ReleaseGlobalReference: { call(*mut RexxThreadContext_, RexxObjectPtr) },
         ReleaseLocalReference: { call(*mut RexxThreadContext_, RexxObjectPtr) },
-        SendMessage: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxArrayObject) -> RexxObjectPtr },
+        SendMessage: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxArrayObject) -> RexxObjectPtr
+        },
         SendMessage0: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING) -> RexxObjectPtr },
-        SendMessage1: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxObjectPtr) -> RexxObjectPtr },
-        SendMessage2: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxObjectPtr, RexxObjectPtr) -> RexxObjectPtr },
+        SendMessage1: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxObjectPtr) -> RexxObjectPtr
+        },
+        SendMessage2: {
+            call(
+                *mut RexxThreadContext_,
+                RexxObjectPtr,
+                CSTRING,
+                RexxObjectPtr,
+                RexxObjectPtr
+            ) -> RexxObjectPtr
+        },
         GetLocalEnvironment: { call(*mut RexxThreadContext_) -> RexxDirectoryObject },
         GetGlobalEnvironment: { call(*mut RexxThreadContext_) -> RexxDirectoryObject },
-        IsInstanceOf: { call(*mut RexxThreadContext_, RexxObjectPtr, RexxClassObject) -> logical_t },
+        IsInstanceOf: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, RexxClassObject) -> logical_t
+        },
         IsOfType: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING) -> logical_t },
         HasMethod: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING) -> logical_t },
         LoadPackage: { call(*mut RexxThreadContext_, CSTRING) -> RexxPackageObject },
-        LoadPackageFromData: { call(*mut RexxThreadContext_, CSTRING, CSTRING, usize) -> RexxPackageObject },
+        LoadPackageFromData: {
+            call(*mut RexxThreadContext_, CSTRING, CSTRING, usize) -> RexxPackageObject
+        },
         LoadLibrary: { unwinds call(*mut RexxThreadContext_, CSTRING) -> logical_t },
-        RegisterLibrary: { unwinds call(*mut RexxThreadContext_, CSTRING, *mut RexxPackageEntry) -> logical_t },
+        RegisterLibrary: {
+            unwinds call(*mut RexxThreadContext_, CSTRING, *mut RexxPackageEntry) -> logical_t
+        },
         FindClass: { call(*mut RexxThreadContext_, CSTRING) -> RexxClassObject },
-        FindPackageClass: { call(*mut RexxThreadContext_, RexxPackageObject, CSTRING) -> RexxClassObject },
-        GetPackageRoutines: { call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject },
-        GetPackagePublicRoutines: { call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject },
-        GetPackageClasses: { call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject },
-        GetPackagePublicClasses: { call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject },
-        GetPackageMethods: { call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject },
-        CallRoutine: { call(*mut RexxThreadContext_, RexxRoutineObject, RexxArrayObject) -> RexxObjectPtr },
+        FindPackageClass: {
+            call(*mut RexxThreadContext_, RexxPackageObject, CSTRING) -> RexxClassObject
+        },
+        GetPackageRoutines: {
+            call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject
+        },
+        GetPackagePublicRoutines: {
+            call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject
+        },
+        GetPackageClasses: {
+            call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject
+        },
+        GetPackagePublicClasses: {
+            call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject
+        },
+        GetPackageMethods: {
+            call(*mut RexxThreadContext_, RexxPackageObject) -> RexxDirectoryObject
+        },
+        CallRoutine: {
+            call(*mut RexxThreadContext_, RexxRoutineObject, RexxArrayObject) -> RexxObjectPtr
+        },
         CallProgram: { call(*mut RexxThreadContext_, CSTRING, RexxArrayObject) -> RexxObjectPtr },
         NewMethod: { call(*mut RexxThreadContext_, CSTRING, CSTRING, usize) -> RexxMethodObject },
         NewRoutine: { call(*mut RexxThreadContext_, CSTRING, CSTRING, usize) -> RexxRoutineObject },
         IsRoutine: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         IsMethod: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
-        GetRoutinePackage: { call(*mut RexxThreadContext_, RexxRoutineObject) -> RexxPackageObject },
+        GetRoutinePackage: {
+            call(*mut RexxThreadContext_, RexxRoutineObject) -> RexxPackageObject
+        },
         GetMethodPackage: { call(*mut RexxThreadContext_, RexxMethodObject) -> RexxPackageObject },
         ObjectToCSelf: { aborts call(*mut RexxThreadContext_, RexxObjectPtr) -> POINTER },
         WholeNumberToObject: { call(*mut RexxThreadContext_, wholenumber_t) -> RexxObjectPtr },
         UintptrToObject: { call(*mut RexxThreadContext_, uintptr_t) -> RexxObjectPtr },
         IntptrToObject: { call(*mut RexxThreadContext_, intptr_t) -> RexxObjectPtr },
         ValueToObject: { call(*mut RexxThreadContext_, *mut ValueDescriptor) -> RexxObjectPtr },
-        ValuesToObject: { call(*mut RexxThreadContext_, *mut ValueDescriptor, usize) -> RexxArrayObject },
-        ObjectToValue: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut ValueDescriptor) -> logical_t },
+        ValuesToObject: {
+            call(*mut RexxThreadContext_, *mut ValueDescriptor, usize) -> RexxArrayObject
+        },
+        ObjectToValue: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut ValueDescriptor) -> logical_t
+        },
         StringSizeToObject: { call(*mut RexxThreadContext_, stringsize_t) -> RexxObjectPtr },
-        ObjectToWholeNumber: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut wholenumber_t) -> logical_t },
-        ObjectToStringSize: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut stringsize_t) -> logical_t },
+        ObjectToWholeNumber: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut wholenumber_t) -> logical_t
+        },
+        ObjectToStringSize: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut stringsize_t) -> logical_t
+        },
         Int64ToObject: { call(*mut RexxThreadContext_, i64) -> RexxObjectPtr },
         UnsignedInt64ToObject: { call(*mut RexxThreadContext_, u64) -> RexxObjectPtr },
         ObjectToInt64: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut i64) -> logical_t },
-        ObjectToUnsignedInt64: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut u64) -> logical_t },
+        ObjectToUnsignedInt64: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut u64) -> logical_t
+        },
         Int32ToObject: { call(*mut RexxThreadContext_, i32) -> RexxObjectPtr },
         UnsignedInt32ToObject: { call(*mut RexxThreadContext_, u32) -> RexxObjectPtr },
         ObjectToInt32: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut i32) -> logical_t },
-        ObjectToUnsignedInt32: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut u32) -> logical_t },
-        ObjectToUintptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut uintptr_t) -> logical_t },
-        ObjectToIntptr: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut intptr_t) -> logical_t },
-        ObjectToLogical: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut logical_t) -> logical_t },
+        ObjectToUnsignedInt32: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut u32) -> logical_t
+        },
+        ObjectToUintptr: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut uintptr_t) -> logical_t
+        },
+        ObjectToIntptr: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut intptr_t) -> logical_t
+        },
+        ObjectToLogical: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, *mut logical_t) -> logical_t
+        },
         LogicalToObject: { call(*mut RexxThreadContext_, logical_t) -> RexxObjectPtr },
         DoubleToObject: { call(*mut RexxThreadContext_, f64) -> RexxObjectPtr },
         DoubleToObjectWithPrecision: { call(*mut RexxThreadContext_, f64, usize) -> RexxObjectPtr },
         ObjectToDouble: { call(*mut RexxThreadContext_, RexxObjectPtr, *mut f64) -> logical_t },
         ObjectToString: { call(*mut RexxThreadContext_, RexxObjectPtr) -> RexxStringObject },
         ObjectToStringValue: { aborts call(*mut RexxThreadContext_, RexxObjectPtr) -> CSTRING },
-        StringGet: { call(*mut RexxThreadContext_, RexxStringObject, usize, POINTER, usize) -> usize },
+        StringGet: {
+            call(*mut RexxThreadContext_, RexxStringObject, usize, POINTER, usize) -> usize
+        },
         StringLength: { call(*mut RexxThreadContext_, RexxStringObject) -> usize },
         StringData: { aborts call(*mut RexxThreadContext_, RexxStringObject) -> CSTRING },
         NewString: { call(*mut RexxThreadContext_, CSTRING, usize) -> RexxStringObject },
@@ -1377,25 +1438,54 @@ interface! {
         IsString: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         NewBufferString: { call(*mut RexxThreadContext_, usize) -> RexxBufferStringObject },
         BufferStringLength: { call(*mut RexxThreadContext_, RexxBufferStringObject) -> usize },
-        BufferStringData: { aborts call(*mut RexxThreadContext_, RexxBufferStringObject) -> POINTER },
-        FinishBufferString: { call(*mut RexxThreadContext_, RexxBufferStringObject, usize) -> RexxStringObject },
-        DirectoryPut: { call(*mut RexxThreadContext_, RexxDirectoryObject, RexxObjectPtr, CSTRING) },
-        DirectoryAt: { call(*mut RexxThreadContext_, RexxDirectoryObject, CSTRING) -> RexxObjectPtr },
-        DirectoryRemove: { call(*mut RexxThreadContext_, RexxDirectoryObject, CSTRING) -> RexxObjectPtr },
+        BufferStringData: {
+            aborts call(*mut RexxThreadContext_, RexxBufferStringObject) -> POINTER
+        },
+        FinishBufferString: {
+            call(*mut RexxThreadContext_, RexxBufferStringObject, usize) -> RexxStringObject
+        },
+        DirectoryPut: {
+            call(*mut RexxThreadContext_, RexxDirectoryObject, RexxObjectPtr, CSTRING)
+        },
+        DirectoryAt: {
+            call(*mut RexxThreadContext_, RexxDirectoryObject, CSTRING) -> RexxObjectPtr
+        },
+        DirectoryRemove: {
+            call(*mut RexxThreadContext_, RexxDirectoryObject, CSTRING) -> RexxObjectPtr
+        },
         NewDirectory: { call(*mut RexxThreadContext_) -> RexxDirectoryObject },
         IsDirectory: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         ArrayAt: { call(*mut RexxThreadContext_, RexxArrayObject, usize) -> RexxObjectPtr },
         ArrayPut: { call(*mut RexxThreadContext_, RexxArrayObject, RexxObjectPtr, usize) },
         ArrayAppend: { call(*mut RexxThreadContext_, RexxArrayObject, RexxObjectPtr) -> usize },
-        ArrayAppendString: { call(*mut RexxThreadContext_, RexxArrayObject, CSTRING, usize) -> usize },
+        ArrayAppendString: {
+            call(*mut RexxThreadContext_, RexxArrayObject, CSTRING, usize) -> usize
+        },
         ArraySize: { call(*mut RexxThreadContext_, RexxArrayObject) -> usize },
         ArrayItems: { call(*mut RexxThreadContext_, RexxArrayObject) -> usize },
         ArrayDimension: { call(*mut RexxThreadContext_, RexxArrayObject) -> usize },
         NewArray: { call(*mut RexxThreadContext_, usize) -> RexxArrayObject },
         ArrayOfOne: { call(*mut RexxThreadContext_, RexxObjectPtr) -> RexxArrayObject },
-        ArrayOfTwo: { call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr) -> RexxArrayObject },
-        ArrayOfThree: { call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr, RexxObjectPtr) -> RexxArrayObject },
-        ArrayOfFour: { call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr, RexxObjectPtr, RexxObjectPtr) -> RexxArrayObject },
+        ArrayOfTwo: {
+            call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr) -> RexxArrayObject
+        },
+        ArrayOfThree: {
+            call(
+                *mut RexxThreadContext_,
+                RexxObjectPtr,
+                RexxObjectPtr,
+                RexxObjectPtr
+            ) -> RexxArrayObject
+        },
+        ArrayOfFour: {
+            call(
+                *mut RexxThreadContext_,
+                RexxObjectPtr,
+                RexxObjectPtr,
+                RexxObjectPtr,
+                RexxObjectPtr
+            ) -> RexxArrayObject
+        },
         IsArray: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         BufferData: { aborts call(*mut RexxThreadContext_, RexxBufferObject) -> POINTER },
         BufferLength: { call(*mut RexxThreadContext_, RexxBufferObject) -> usize },
@@ -1408,51 +1498,91 @@ interface! {
         SupplierIndex: { call(*mut RexxThreadContext_, RexxSupplierObject) -> RexxObjectPtr },
         SupplierAvailable: { call(*mut RexxThreadContext_, RexxSupplierObject) -> logical_t },
         SupplierNext: { call(*mut RexxThreadContext_, RexxSupplierObject) },
-        NewSupplier: { call(*mut RexxThreadContext_, RexxArrayObject, RexxArrayObject) -> RexxSupplierObject },
+        NewSupplier: {
+            call(*mut RexxThreadContext_, RexxArrayObject, RexxArrayObject) -> RexxSupplierObject
+        },
         NewStem: { call(*mut RexxThreadContext_, CSTRING) -> RexxStemObject },
         SetStemElement: { call(*mut RexxThreadContext_, RexxStemObject, CSTRING, RexxObjectPtr) },
         GetStemElement: { call(*mut RexxThreadContext_, RexxStemObject, CSTRING) -> RexxObjectPtr },
         DropStemElement: { call(*mut RexxThreadContext_, RexxStemObject, CSTRING) },
-        SetStemArrayElement: { call(*mut RexxThreadContext_, RexxStemObject, usize, RexxObjectPtr) },
-        GetStemArrayElement: { call(*mut RexxThreadContext_, RexxStemObject, usize) -> RexxObjectPtr },
+        SetStemArrayElement: {
+            call(*mut RexxThreadContext_, RexxStemObject, usize, RexxObjectPtr)
+        },
+        GetStemArrayElement: {
+            call(*mut RexxThreadContext_, RexxStemObject, usize) -> RexxObjectPtr
+        },
         DropStemArrayElement: { call(*mut RexxThreadContext_, RexxStemObject, usize) },
-        GetAllStemElements: { call(*mut RexxThreadContext_, RexxStemObject) -> RexxDirectoryObject },
+        GetAllStemElements: {
+            call(*mut RexxThreadContext_, RexxStemObject) -> RexxDirectoryObject
+        },
         GetStemValue: { call(*mut RexxThreadContext_, RexxStemObject) -> RexxObjectPtr },
         IsStem: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         RaiseException0: { call(*mut RexxThreadContext_, usize) },
         RaiseException1: { call(*mut RexxThreadContext_, usize, RexxObjectPtr) },
         RaiseException2: { call(*mut RexxThreadContext_, usize, RexxObjectPtr, RexxObjectPtr) },
         RaiseException: { call(*mut RexxThreadContext_, usize, RexxArrayObject) },
-        RaiseCondition: { call(*mut RexxThreadContext_, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr) },
+        RaiseCondition: {
+            call(*mut RexxThreadContext_, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr)
+        },
         CheckCondition: { call(*mut RexxThreadContext_) -> logical_t },
         GetConditionInfo: { call(*mut RexxThreadContext_) -> RexxDirectoryObject },
-        DecodeConditionInfo: { call(*mut RexxThreadContext_, RexxDirectoryObject, *mut RexxCondition) },
+        DecodeConditionInfo: {
+            call(*mut RexxThreadContext_, RexxDirectoryObject, *mut RexxCondition)
+        },
         ClearCondition: { call(*mut RexxThreadContext_) },
         RexxNil: { value RexxObjectPtr = std::ptr::null_mut() },
         RexxTrue: { value RexxObjectPtr = std::ptr::null_mut() },
         RexxFalse: { value RexxObjectPtr = std::ptr::null_mut() },
         RexxNullString: { value RexxStringObject = std::ptr::null_mut() },
-        ObjectToCSelfScoped: { aborts call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr) -> POINTER },
+        ObjectToCSelfScoped: {
+            aborts call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr) -> POINTER
+        },
         // `Error_Interpretation/1000`, where
         // `Error_Interpretation` is 49000.
         DisplayCondition: { call(*mut RexxThreadContext_) -> wholenumber_t, failing 49 },
-        MutableBufferData: { aborts call(*mut RexxThreadContext_, RexxMutableBufferObject) -> POINTER },
+        MutableBufferData: {
+            aborts call(*mut RexxThreadContext_, RexxMutableBufferObject) -> POINTER
+        },
         MutableBufferLength: { call(*mut RexxThreadContext_, RexxMutableBufferObject) -> usize },
-        SetMutableBufferLength: { call(*mut RexxThreadContext_, RexxMutableBufferObject, usize) -> usize },
+        SetMutableBufferLength: {
+            call(*mut RexxThreadContext_, RexxMutableBufferObject, usize) -> usize
+        },
         NewMutableBuffer: { call(*mut RexxThreadContext_, usize) -> RexxMutableBufferObject },
         IsMutableBuffer: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         MutableBufferCapacity: { call(*mut RexxThreadContext_, RexxMutableBufferObject) -> usize },
-        SetMutableBufferCapacity: { aborts call(*mut RexxThreadContext_, RexxMutableBufferObject, usize) -> POINTER },
-        VariableReferenceName: { call(*mut RexxThreadContext_, RexxVariableReferenceObject) -> RexxStringObject },
-        VariableReferenceValue: { call(*mut RexxThreadContext_, RexxVariableReferenceObject) -> RexxObjectPtr },
-        SetVariableReferenceValue: { call(*mut RexxThreadContext_, RexxVariableReferenceObject, RexxObjectPtr) },
+        SetMutableBufferCapacity: {
+            aborts call(*mut RexxThreadContext_, RexxMutableBufferObject, usize) -> POINTER
+        },
+        VariableReferenceName: {
+            call(*mut RexxThreadContext_, RexxVariableReferenceObject) -> RexxStringObject
+        },
+        VariableReferenceValue: {
+            call(*mut RexxThreadContext_, RexxVariableReferenceObject) -> RexxObjectPtr
+        },
+        SetVariableReferenceValue: {
+            call(*mut RexxThreadContext_, RexxVariableReferenceObject, RexxObjectPtr)
+        },
         IsVariableReference: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
-        StringTablePut: { call(*mut RexxThreadContext_, RexxStringTableObject, RexxObjectPtr, CSTRING) },
-        StringTableAt: { call(*mut RexxThreadContext_, RexxStringTableObject, CSTRING) -> RexxObjectPtr },
-        StringTableRemove: { call(*mut RexxThreadContext_, RexxStringTableObject, CSTRING) -> RexxObjectPtr },
+        StringTablePut: {
+            call(*mut RexxThreadContext_, RexxStringTableObject, RexxObjectPtr, CSTRING)
+        },
+        StringTableAt: {
+            call(*mut RexxThreadContext_, RexxStringTableObject, CSTRING) -> RexxObjectPtr
+        },
+        StringTableRemove: {
+            call(*mut RexxThreadContext_, RexxStringTableObject, CSTRING) -> RexxObjectPtr
+        },
         NewStringTable: { call(*mut RexxThreadContext_) -> RexxStringTableObject },
         IsStringTable: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
-        SendMessageScoped: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxClassObject, RexxArrayObject) -> RexxObjectPtr },
+        SendMessageScoped: {
+            call(
+                *mut RexxThreadContext_,
+                RexxObjectPtr,
+                CSTRING,
+                RexxClassObject,
+                RexxArrayObject
+            ) -> RexxObjectPtr
+        },
         GetInterpreterInstance: { aborts call(*mut RexxThreadContext_) -> *mut RexxInstance_ },
         RaiseConditionObject: { call(*mut RexxThreadContext_, RexxDirectoryObject) },
     }
@@ -1472,7 +1602,15 @@ interface! {
         SetObjectVariable: { call(*mut RexxMethodContext_, CSTRING, RexxObjectPtr) },
         GetObjectVariable: { call(*mut RexxMethodContext_, CSTRING) -> RexxObjectPtr },
         DropObjectVariable: { call(*mut RexxMethodContext_, CSTRING) },
-        ForwardMessage: { call(*mut RexxMethodContext_, RexxObjectPtr, CSTRING, RexxClassObject, RexxArrayObject) -> RexxObjectPtr },
+        ForwardMessage: {
+            call(
+                *mut RexxMethodContext_,
+                RexxObjectPtr,
+                CSTRING,
+                RexxClassObject,
+                RexxArrayObject
+            ) -> RexxObjectPtr
+        },
         SetGuardOn: { call(*mut RexxMethodContext_) },
         SetGuardOff: { call(*mut RexxMethodContext_) },
         FindContextClass: { call(*mut RexxMethodContext_, CSTRING) -> RexxClassObject },
@@ -1480,14 +1618,26 @@ interface! {
         AllocateObjectMemory: { aborts call(*mut RexxMethodContext_, usize) -> POINTER },
         FreeObjectMemory: { call(*mut RexxMethodContext_, POINTER) },
         ReallocateObjectMemory: { aborts call(*mut RexxMethodContext_, POINTER, usize) -> POINTER },
-        GetObjectVariableReference: { call(*mut RexxMethodContext_, CSTRING) -> RexxVariableReferenceObject },
+        GetObjectVariableReference: {
+            call(*mut RexxMethodContext_, CSTRING) -> RexxVariableReferenceObject
+        },
         SetGuardOnWhenUpdated: { call(*mut RexxMethodContext_, CSTRING) -> RexxObjectPtr },
         SetGuardOffWhenUpdated: { call(*mut RexxMethodContext_, CSTRING) -> RexxObjectPtr },
         ThrowException0: { unwinds call(*mut RexxMethodContext_, usize) },
         ThrowException1: { unwinds call(*mut RexxMethodContext_, usize, RexxObjectPtr) },
-        ThrowException2: { unwinds call(*mut RexxMethodContext_, usize, RexxObjectPtr, RexxObjectPtr) },
+        ThrowException2: {
+            unwinds call(*mut RexxMethodContext_, usize, RexxObjectPtr, RexxObjectPtr)
+        },
         ThrowException: { unwinds call(*mut RexxMethodContext_, usize, RexxArrayObject) },
-        ThrowCondition: { unwinds call(*mut RexxMethodContext_, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr) },
+        ThrowCondition: {
+            unwinds call(
+                *mut RexxMethodContext_,
+                CSTRING,
+                RexxStringObject,
+                RexxObjectPtr,
+                RexxObjectPtr
+            )
+        },
     }
 }
 
@@ -1510,12 +1660,24 @@ interface! {
         GetContextForm: { call(*mut RexxCallContext_) -> logical_t },
         GetCallerContext: { call(*mut RexxCallContext_) -> RexxObjectPtr },
         FindContextClass: { call(*mut RexxCallContext_, CSTRING) -> RexxClassObject },
-        GetContextVariableReference: { call(*mut RexxCallContext_, CSTRING) -> RexxVariableReferenceObject },
+        GetContextVariableReference: {
+            call(*mut RexxCallContext_, CSTRING) -> RexxVariableReferenceObject
+        },
         ThrowException0: { unwinds call(*mut RexxCallContext_, usize) },
         ThrowException1: { unwinds call(*mut RexxCallContext_, usize, RexxObjectPtr) },
-        ThrowException2: { unwinds call(*mut RexxCallContext_, usize, RexxObjectPtr, RexxObjectPtr) },
+        ThrowException2: {
+            unwinds call(*mut RexxCallContext_, usize, RexxObjectPtr, RexxObjectPtr)
+        },
         ThrowException: { unwinds call(*mut RexxCallContext_, usize, RexxArrayObject) },
-        ThrowCondition: { unwinds call(*mut RexxCallContext_, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr) },
+        ThrowCondition: {
+            unwinds call(
+                *mut RexxCallContext_,
+                CSTRING,
+                RexxStringObject,
+                RexxObjectPtr,
+                RexxObjectPtr
+            )
+        },
     }
 }
 
@@ -1528,12 +1690,24 @@ interface! {
         DropContextVariable: { call(*mut RexxExitContext_, CSTRING) },
         GetAllContextVariables: { call(*mut RexxExitContext_) -> RexxDirectoryObject },
         GetCallerContext: { call(*mut RexxExitContext_) -> RexxObjectPtr },
-        GetContextVariableReference: { call(*mut RexxExitContext_, CSTRING) -> RexxVariableReferenceObject },
+        GetContextVariableReference: {
+            call(*mut RexxExitContext_, CSTRING) -> RexxVariableReferenceObject
+        },
         ThrowException0: { unwinds call(*mut RexxExitContext_, usize) },
         ThrowException1: { unwinds call(*mut RexxExitContext_, usize, RexxObjectPtr) },
-        ThrowException2: { unwinds call(*mut RexxExitContext_, usize, RexxObjectPtr, RexxObjectPtr) },
+        ThrowException2: {
+            unwinds call(*mut RexxExitContext_, usize, RexxObjectPtr, RexxObjectPtr)
+        },
         ThrowException: { unwinds call(*mut RexxExitContext_, usize, RexxArrayObject) },
-        ThrowCondition: { unwinds call(*mut RexxExitContext_, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr) },
+        ThrowCondition: {
+            unwinds call(
+                *mut RexxExitContext_,
+                CSTRING,
+                RexxStringObject,
+                RexxObjectPtr,
+                RexxObjectPtr
+            )
+        },
     }
 }
 

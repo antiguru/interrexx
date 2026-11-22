@@ -2,6 +2,7 @@
 
 #[cfg(any(test, feature = "test-direct"))]
 pub mod direct;
+#[cfg(unix)]
 pub mod unix;
 
 use std::fmt;

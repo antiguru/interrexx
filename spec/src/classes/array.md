@@ -1075,9 +1075,14 @@ are the receiver's own objects, and the receiver is not changed. A `start`
 beyond the size of the receiver, or a `count` of 0, gives an array with no
 entries and no dimension. The index is read as [the index
 rule](r:class.array.indexes) says, so an array of one index is accepted, and
-`SYNTAX 93.907` is raised for a `start` that is not a whole number of at least
-1. The `count` is read as [the index rule](r:class.array.indexes) reads an
-index and must be a whole number of 0 or more, or `SYNTAX 93.923` is raised. No
+`SYNTAX 93.907` is raised for a single index that is not a whole number of at
+least 1. An index list with several subscripts gives an empty result when the
+receiver has no dimension and raises `SYNTAX 93.926` when the receiver has one
+dimension. In the dimensionless case, the receiver stays dimensionless and
+the subscripts are not converted, but the list must still have no omitted
+items and the optional count is checked. The `count` is read as [the index
+rule](r:class.array.indexes) reads an index and must be a whole number of 0 or
+more, or `SYNTAX 93.923` is raised. No
 `start`, or an omitted one, raises `SYNTAX 93.903`, and a third argument
 `SYNTAX 93.902`; for an array of more than one dimension `SYNTAX 93.954` is
 raised, whatever the arguments are when they are not too many; a call with too
@@ -1102,6 +1107,15 @@ call try 'a~section(1, "x")'
 call try 'a~section(1, 2, 3)'
 call try '.array~new(2, 2)~section(1)'
 call try '.array~new(2, 2)~section'
+empty = .array~new
+s = empty~section(.array~of(2, 2))
+say s~class~id s~dimension s~items s~size empty~dimension
+s = empty~section(.array~of('x', 2), 1)
+say s~class~id s~items s~size
+call try 'empty~section(.array~of(2, 2), -1)'
+call try 'empty~section(.array~of(2, , 3))'
+call try '.array~new(0)~section(.array~of(2, 2))'
+call try 'a~section(.array~of(2, 2))'
 exit
 try:
   signal on syntax name bad
@@ -1126,6 +1140,12 @@ a~section(1, "x") => 93.923
 a~section(1, 2, 3) => 93.902
 .array~new(2, 2)~section(1) => 93.954
 .array~new(2, 2)~section => 93.954
+Array 0 0 0 0
+Array 0 0
+empty~section(.array~of(2, 2), -1) => 93.923
+empty~section(.array~of(2, , 3)) => 98.975
+.array~new(0)~section(.array~of(2, 2)) => 93.926
+a~section(.array~of(2, 2)) => 93.926
 ```
 
 r[class.array.section.sends]

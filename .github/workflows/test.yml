@@ -665,7 +665,7 @@ jobs:
         with:
           components: rustfmt
       - name: Cargo fmt
-        run: cargo fmt --all -- --check
+        run: cargo fmt --all -- --check --config error_on_line_overflow=true
 
   clippy:
     name: Cargo clippy

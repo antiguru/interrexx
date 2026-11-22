@@ -12,16 +12,18 @@ description = "The API service of interrexx: external queues, registrations and 
 test-direct = []
 
 [dependencies]
-# `sigwait`, the one wait for a stopping signal that no safe crate offers (`src/signals.rs`).
-libc = "0.2.186"
-chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
-rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
 # `classic_procedure`: `rxsubcom LOAD` loads a registration's library and finds its handler.
 interrexx-api.workspace = true
 interrexx-inventory.workspace = true
 
+[target.'cfg(unix)'.dependencies]
+# The Unix daemon stamps replies with the local time and uses Unix signals and descriptors.
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+libc = "0.2.186"
+rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
+
 # `getpeereid`, the peer's user where the kernel has no `SO_PEERCRED`.
-[target.'cfg(not(any(target_os = "linux", target_os = "android")))'.dependencies]
+[target.'cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))'.dependencies]
 nix = { version = "0.31.3", default-features = false, features = ["socket", "user"] }
 
 [lints]

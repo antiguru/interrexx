@@ -423,8 +423,8 @@ fn native_array_insert(
             if held > 1 && is_queue(interp, receiver) {
                 return Err(Raised::too_many_subscripts(1).into());
             }
-            one_subscript_list(interp, receiver, index, 2)?;
-            let position = single_subscript(interp, receiver, index, 2)?;
+            let position = single_subscript(interp, receiver, index, 2)?
+                .ok_or_else(|| Raised::too_many_subscripts(1))?;
             // "the position must be location of an existing item within the
             // bounds of the queue, unlike an array which can insert at empty
             // slots or beyond the existing bounds". `insert` validates the
@@ -509,8 +509,9 @@ fn one_subscript_list(
 
 /// The one subscript `insert` and `section` take, as a single-dimensional
 /// receiver reads it: an `Array` argument stands for the subscripts it holds,
-/// and exactly one of them is a position. `position` is the argument's place
-/// in the method's argument list.
+/// and exactly one of them is a position. Multiple subscripts on a
+/// dimensionless array yield no position. `position` is the argument's
+/// place in the method's argument list.
 ///
 /// A queue reads an `Array` index by [`queue_index`] instead.
 fn single_subscript(
@@ -518,26 +519,23 @@ fn single_subscript(
     receiver: ObjRef,
     value: ObjRef,
     position: usize,
-) -> Result<usize, Failure> {
+) -> Result<Option<usize>, Failure> {
     if interp.array_slots(value).is_none() {
-        return super::positive_index(interp, value, position);
+        return super::positive_index(interp, value, position).map(Some);
     }
     if is_queue(interp, receiver) {
         let index = queue_index(interp, receiver, value, position)?;
-        return super::positive_index(interp, index, position);
+        return super::positive_index(interp, index, position).map(Some);
     }
     let spread = super::index_list(interp, value, position)?.unwrap_or_default();
     match spread[..] {
         [] => Err(Raised::not_enough_method_arguments(position).into()),
-        [Some(only)] => super::positive_index(interp, only, position),
+        [Some(only)] => super::positive_index(interp, only, position).map(Some),
         [None] => Err(Raised::missing_array_element(1).into()),
         _ if super::array_is_fixed_dimension(interp, receiver)? => {
             Err(Raised::too_many_subscripts(1).into())
         }
-        // An array with no extent yet keeps the plain refusal: index resolution
-        // would make it multi-dimensional under `insert`, a method that refuses
-        // one, and would leave `section`'s start unset.
-        _ => super::positive_index(interp, value, position),
+        _ => Ok(None),
     }
 }
 
@@ -568,6 +566,9 @@ fn native_array_section(
             }
         }
         _ => super::super::optional_length_argument(interp, args, 1)?,
+    };
+    let Some(start) = start else {
+        return Ok(Some(same_class_array(interp, receiver, Vec::new())?));
     };
     let slots = slots_of(interp, receiver)?;
     let available = slots.len().saturating_sub(start.saturating_sub(1));

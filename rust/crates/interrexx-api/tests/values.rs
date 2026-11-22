@@ -582,6 +582,26 @@ fn clearing_the_pool_drops_the_copies() {
     assert_eq!(strings.bytes_at(pointer), None);
 }
 
+#[test]
+fn forgetting_an_object_drops_only_its_keyed_copy() {
+    let mut pool = CStringPool::new();
+    let object = ObjRef::heap(0, 0);
+    let other = ObjRef::heap(1, 0);
+    let released = pool.intern_for(object, b"same");
+    let unkeyed = pool.intern(b"same");
+    let retained = pool.intern_for(other, b"same");
+
+    pool.forget(object);
+    assert_eq!(pool.len(), 2);
+    assert_eq!(pool.bytes_at(released), None);
+    assert_eq!(pool.bytes_at(retained), Some(&b"same"[..]));
+    assert_eq!(pool.intern_for(other, b"ignored"), retained);
+    assert_eq!(pool.bytes_at(unkeyed), Some(&b"same"[..]));
+
+    let replacement = pool.intern_for(object, b"replacement");
+    assert_eq!(pool.bytes_at(replacement), Some(&b"replacement"[..]));
+}
+
 /// Bytes are copied verbatim, so a Rexx string with an embedded zero is
 /// truncated from the extension's side rather than rejected.
 #[test]
