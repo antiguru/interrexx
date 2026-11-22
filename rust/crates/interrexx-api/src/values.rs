@@ -5,6 +5,7 @@
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell, RefMut};
+use std::collections::HashMap;
 use std::ffi::{c_char, c_int};
 
 use interrexx_core::ObjRef;
@@ -352,13 +353,14 @@ pub fn descriptor(declared: u16, converted: Converted) -> ValueDescriptor {
 /// of the call.
 #[derive(Default)]
 pub struct CStringPool {
-    /// Each copy with the object it was made for, `None` for a copy
-    /// [`CStringPool::intern`] made, which is keyed by nothing.
+    /// Each terminated copy with its object key, if it has one.
     entries: Vec<(Option<ObjRef>, Box<[u8]>)>,
+    /// Positions of object-keyed copies in the dense reverse lookup list.
+    keyed: HashMap<ObjRef, usize>,
     /// The bytes an extension writes a buffer string's value into, by string.
     /// A vector's elements are addressed through its own pointer, so moving
     /// the vector as this list grows does not move them.
-    writable: std::collections::HashMap<ObjRef, Vec<u8>>,
+    writable: HashMap<ObjRef, Vec<u8>>,
 }
 
 impl CStringPool {
@@ -384,27 +386,23 @@ impl CStringPool {
     /// asked. `object` is what makes that hold here; the bytes are read again
     /// only when the pool has no copy for it yet.
     pub fn intern_for(&mut self, object: ObjRef, bytes: &[u8]) -> CSTRING {
-        if let Some(found) = self.pointer_for(object) {
-            return found;
+        if let Some(&index) = self.keyed.get(&object) {
+            return self.entries[index].1.as_ptr().cast::<c_char>();
         }
-        self.push(Some(object), bytes)
-    }
-
-    /// The address this pool already answers for `object`, or `None`.
-    fn pointer_for(&self, object: ObjRef) -> Option<CSTRING> {
-        self.entries
-            .iter()
-            .find(|(key, _)| *key == Some(object))
-            .map(|(_, entry)| entry.as_ptr().cast::<c_char>())
+        let index = self.entries.len();
+        let pointer = self.push(Some(object), bytes);
+        self.keyed.insert(object, index);
+        pointer
     }
 
     fn push(&mut self, key: Option<ObjRef>, bytes: &[u8]) -> CSTRING {
         let mut owned = Vec::with_capacity(bytes.len() + 1);
         owned.extend_from_slice(bytes);
         owned.push(0);
-        self.entries.push((key, owned.into_boxed_slice()));
-        let (_, entry) = self.entries.last().expect("just pushed");
-        entry.as_ptr().cast::<c_char>()
+        let entry = owned.into_boxed_slice();
+        let pointer = entry.as_ptr().cast::<c_char>();
+        self.entries.push((key, entry));
+        pointer
     }
 
     /// The bytes behind a pointer this pool minted, without the terminator,
@@ -419,6 +417,7 @@ impl CStringPool {
     /// Drops every copy, which is what the end of a call does.
     pub fn clear(&mut self) {
         self.entries.clear();
+        self.keyed.clear();
         self.writable.clear();
     }
 
@@ -436,7 +435,13 @@ impl CStringPool {
     /// is no longer valid, and a later object at the same reference gets
     /// areas of its own.
     pub fn forget(&mut self, object: ObjRef) {
-        self.entries.retain(|(key, _)| *key != Some(object));
+        if let Some(index) = self.keyed.remove(&object) {
+            // The box keeps its address when the last entry moves into this slot.
+            self.entries.swap_remove(index);
+            if let Some((Some(moved), _)) = self.entries.get(index) {
+                self.keyed.insert(*moved, index);
+            }
+        }
         self.writable.remove(&object);
     }
 
