@@ -148,7 +148,9 @@ offset](r:class.datetime.fromweek)) and `fromUtcIsoDate` (it has none); a value
 that is no number at all gets the same code from `new`, `today` and those `from`
 methods, and what `toTimezone` raises for it is in [the zone
 rule](r:class.datetime.zone). For `today` and the `from` methods that read an
-offset, a syntax condition from the construction raises `88.918`.
+offset, a syntax condition from construction raises `88.918` using the
+factory's date, time, or ticks input as the error substitution. For `today`,
+that input is today's date in standard format.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
@@ -168,6 +170,10 @@ call try '.datetime~fromTicks(5, "x")'
 call try '.datetime~today(.offsetObject~new)'
 call try '.datetime~fromBaseDate(5, .offsetObject~new)'
 call try '.rejectingDate~today(60)'
+call substitutions '.datetime~fromBaseDate(5, .badOffset~new)'
+call substitutions '.datetime~fromNormalTime("12:00:00", .badOffset~new)'
+call substitutions '.datetime~fromTicks(5, .badOffset~new)'
+call substitutions '.datetime~today(.badOffset~new)'
 say .acceptingDate~today(.offsetObject~new)~offset
 exit
 try:
@@ -177,6 +183,21 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+substitutions:
+  signal on syntax name payload
+  interpret 'r =' arg(1)
+  return
+payload:
+  info = condition('o')
+  values = info~additional
+  if arg(1)~pos('~today') > 0 then
+    say info~code values[1] (values[2] == date('S'))
+  else
+    say info~code values[1] values[2]
+  return
+::class badOffset
+::method objectName
+  raise syntax 40.1
 ::class offsetObject
 ::method makeString
   return '60'
@@ -205,6 +226,10 @@ d~toTimezone(.timespan~fromSeconds(90)) => 88.907
 .datetime~today(.offsetObject~new) => 88.918
 .datetime~fromBaseDate(5, .offsetObject~new) => 88.918
 .rejectingDate~today(60) => 88.918
+88.918 date 5
+88.918 time 12:00:00
+88.918 ticks 5
+88.918 date 1
 01:00:00.000000
 ```
 

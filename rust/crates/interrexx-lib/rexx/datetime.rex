@@ -32,18 +32,10 @@
   use strict arg
   return self~new(9999, 12, 31, 23, 59, 59, 999999, 0)
 
--- r[class.datetime.today]. A syntax error from NEW becomes 88.918
--- (r[class.datetime.offset]).
+-- r[class.datetime.today]
 ::method today class
-  use strict arg offset = 0
-  numeric digits 18
-  parse value date('B') time('O') with days host
-  if arg(1, 'E') then given = offset
-  else given = host / 60000000
-  signal on syntax name refused
-  return self~new(days * 86400000000, given)
-refused:
-  raise syntax 88.918 array('offset', given)
+  use strict arg offset = (time('O') / 60000000)
+  return self~fromStandardDate(date('S'), , offset)
 
 -- r[class.datetime.fromdate]: the B form.
 ::method fromBaseDate class
@@ -57,7 +49,7 @@ refused:
   signal on syntax name refused
   return self~new(n * 86400000000, given)
 refused:
-  raise syntax 88.918 array('offset', given)
+  raise syntax 88.918 array('date', days)
 whole: procedure
   parse arg s
   if \datatype(s, 'N') then return ''
@@ -77,12 +69,10 @@ whole: procedure
   signal off syntax
   if arg(3, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(days * 86400000000, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the N form.
 ::method fromNormalDate class
@@ -94,12 +84,10 @@ refused:
   signal off syntax
   if arg(3, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(days * 86400000000, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the O form.
 ::method fromOrderedDate class
@@ -111,12 +99,10 @@ refused:
   signal off syntax
   if arg(3, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(days * 86400000000, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the S form.
 ::method fromStandardDate class
@@ -128,12 +114,10 @@ refused:
   signal off syntax
   if arg(3, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(days * 86400000000, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromdate]: the U form.
 ::method fromUsaDate class
@@ -145,12 +129,10 @@ refused:
   signal off syntax
   if arg(3, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(days * 86400000000, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromordinal]. The answer is a plain DateTime: nothing is
 -- sent to the receiver (r[class.datetime.sends.new]).
@@ -179,7 +161,7 @@ refused:
   signal on syntax name refused
   return .DateTime~new((first + day - 1) * 86400000000, given)
 refused:
-  raise syntax 88.918 array('offset', given)
+  raise syntax 88.918 array('date', text)
 
 -- r[class.datetime.fromweek]. The offset argument is ignored; the messages
 -- are those of r[class.datetime.sends.new].
@@ -221,12 +203,10 @@ outside:
   signal off syntax
   if arg(2, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(count, given)
 unreadable:
   raise syntax 88.918 array('time', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromtime]: the C form.
 ::method fromCivilTime class
@@ -237,12 +217,10 @@ refused:
   signal off syntax
   if arg(2, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(count, given)
 unreadable:
   raise syntax 88.918 array('time', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromtime]: the L form.
 ::method fromLongTime class
@@ -253,12 +231,10 @@ refused:
   signal off syntax
   if arg(2, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(count, given)
 unreadable:
   raise syntax 88.918 array('time', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromticks]
 ::method fromTicks class
@@ -274,7 +250,7 @@ refused:
   signal on syntax name refused
   return self~new(count, given)
 refused:
-  raise syntax 88.918 array('offset', given)
+  raise syntax 88.918 array('ticks', ticks)
 whole: procedure
   parse arg s
   if \datatype(s, 'N') then return ''
@@ -294,12 +270,10 @@ whole: procedure
   signal off syntax
   if arg(2, 'E') then given = offset
   else given = time('O') / 60000000
-  signal on syntax name refused
+  signal on syntax name unreadable
   return self~new(count, given)
 unreadable:
   raise syntax 88.918 array('date', text)
-refused:
-  raise syntax 88.918 array('offset', given)
 
 -- r[class.datetime.fromutciso], r[class.datetime.deviation.132]: the string
 -- is the date and time of fromIsoDate, the fraction optional, then `Z` or a
