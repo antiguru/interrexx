@@ -24,7 +24,7 @@ pub(super) fn take_in(
     let Some(position) = found.found() else {
         return Ok(None);
     };
-    remove_entry(interp, &store, position)
+    take_one(interp, receiver, half, store, position)
 }
 
 /// Removes an already compared entry if it is still live in its original
@@ -49,7 +49,45 @@ pub(super) fn take_at(
         return Ok(None);
     }
     interp.bump_route_generation();
-    remove_entry(interp, &current, position)
+    take_one(interp, receiver, CONTENTS, current, position)
+}
+
+fn take_one(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    half: Half,
+    mut store: Store,
+    position: usize,
+) -> Result<Option<ObjRef>, Failure> {
+    let item = remove_entry(interp, receiver, half, &mut store, position)?;
+    compact_after_removal(interp, receiver, half, &store, item)?;
+    Ok(item)
+}
+
+/// Removes the positions a search selected without compacting between them.
+pub(super) fn take_positions(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    store: &Store,
+    positions: Vec<usize>,
+) -> Result<Vec<ObjRef>, Failure> {
+    let mut current = store_of(interp, receiver)?;
+    if !current.same_arrays(store) {
+        return Ok(Vec::new());
+    }
+    let mut removed = Vec::new();
+    for position in positions {
+        if slot_at(interp, current.indexes, position)?.is_none() {
+            continue;
+        }
+        interp.bump_route_generation();
+        if let Some(item) = remove_entry(interp, receiver, CONTENTS, &mut current, position)? {
+            interp.roots.activity_mut().push_temp(item);
+            removed.push(item);
+        }
+    }
+    compact_after_removal(interp, receiver, CONTENTS, &current, None)?;
+    Ok(removed)
 }
 
 /// Whether a removal refuses an owed entry before taking it: `Answered` for
@@ -81,7 +119,7 @@ pub(super) fn take_merged(
         if removal == Removal::Answered {
             item_at(interp, &store, position)?;
         }
-        return remove_entry(interp, &store, position);
+        return take_one(interp, receiver, CONTENTS, store, position);
     }
     // `get` runs a method only where the contents miss, so a contents entry
     // that is discarded needs no read.
