@@ -1092,8 +1092,8 @@ r[bif.stream.query.time]
 `QUERY TIMESTAMP` answers the date and time that the file was last changed
 as `yyyy-mm-dd hh:mm:ss`, and `QUERY DATETIME` the same moment as
 `mm-dd-yy hh:mm:ss`; the null string for a name that is not a file. For a
-directory they answer its time. They hold the host's time zone, which
-is not specified.
+directory they answer its time. Both queries use the program's time zone
+from `TZ`, as [the TIME rule](r:bif.time.zone) says.
 
 ```rexx
 f = 'spec-stream-time.tmp'
@@ -1115,6 +1115,26 @@ call sysfiledelete f
 9999-99-99 99:99:99 99-99-99 99:99:99
 1 1 1 1
 19 17
+```
+
+```rexx
+f = 'spec-stream-time-zone.tmp'
+call value 'TZ', 'UTC0', 'ENVIRONMENT'
+call charout f, 'a'
+call charout f
+say SysSetFileDateTime(f, '2020-12-31', '23:30:00')
+say stream(f, 'c', 'query timestamp')
+call value 'TZ', 'EET-2', 'ENVIRONMENT'
+say stream(f, 'c', 'query timestamp')
+say .stream~new(f)~query('datetime')
+call SysFileDelete f
+```
+
+```output
+0
+2020-12-31 23:30:00
+2021-01-01 01:30:00
+01-01-21 01:30:00
 ```
 
 r[bif.stream.query.handle]
