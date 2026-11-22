@@ -109212,16 +109212,13 @@ e: say condition('o')~code
 0
 </code></pre>
 <div class="rule" id="r-util.sysmutexsem.close"><a href="rexxutil/sysmutexsem.html#r-util.sysmutexsem.close">[util.sysmutexsem.close]</a></div>
-<p>SysCloseMutexSem ends the use of a semaphore and answers <code>0</code>. It answers <code>6</code>
-when the semaphore is closed already, and so a second call with the same
-handle answers <code>6</code>. The other functions answer a closed handle as <a href="rexxutil/sysmutexsem.html#r-util.sysmutexsem.deviation.158">Deviation
-158</a> says.</p>
+<p>SysCloseMutexSem ends the use of an open mutex semaphore and answers <code>0</code>.
+A call with a closed handle is covered by <a href="rexxutil/sysmutexsem.html#r-util.sysmutexsem.deviation.158">Deviation
+158</a>.</p>
 <pre><code class="language-rexx">h = SysCreateMutexSem('')
 say SysCloseMutexSem(h)
-say SysCloseMutexSem(h) SysCloseMutexSem(h)
 </code></pre>
 <pre><code class="language-output">0
-6 6
 </code></pre>
 <h2 id="opening-by-name"><a class="header" href="#opening-by-name">Opening by name</a></h2>
 <div class="rule" id="r-util.sysmutexsem.open"><a href="rexxutil/sysmutexsem.html#r-util.sysmutexsem.open">[util.sysmutexsem.open]</a></div>
@@ -109305,14 +109302,16 @@ call answered. ooRexx uses the number as the address of the semaphore and
 crashes, with a signal that ends the program, for a closed handle
 (SysRequestMutexSem and SysReleaseMutexSem), for a rounded one, as it does for
 SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
-with an event semaphore's handle hangs. The handle of an open event semaphore
+with an event semaphore's handle hangs. SysCloseMutexSem can answer <code>6</code> for
+a closed handle or terminate with a signal. The handle of an open event semaphore
 is such a number too: these calls answer <code>6</code> for it and change neither
 semaphore (<a href="rexxutil/syseventsem.html#r-util.syseventsem.deviation.158">the event semaphore rule</a> has
 the example and says what a handle is). The first
-example is a rounded handle and a closed one, the second a number that no call
-answered. A handle that is spelled again, with blanks, a sign or a fraction of
-zeros, names no semaphore; a string value that is exactly the handle does, as
-the third example shows.</p>
+example uses a rounded handle and a closed one. The second closes the same
+handle repeatedly, and the third uses a number that no call answered. A
+handle that is spelled again, with blanks, a sign or a fraction of zeros,
+names no semaphore. A string value that is exactly the handle does, as the
+last example shows.</p>
 <pre><code class="language-rexx">m = SysCreateMutexSem('')
 r = m + 0
 say (r \== m) SysRequestMutexSem(r, 10) SysReleaseMutexSem(r) SysCloseMutexSem(r)
@@ -109320,6 +109319,13 @@ call SysCloseMutexSem m
 say SysRequestMutexSem(m, 10) SysReleaseMutexSem(m)
 </code></pre>
 <pre><code class="language-output">1 6 6 6
+6 6
+</code></pre>
+<pre><code class="language-rexx">h = SysCreateMutexSem('')
+say SysCloseMutexSem(h)
+say SysCloseMutexSem(h) SysCloseMutexSem(h)
+</code></pre>
+<pre><code class="language-output">0
 6 6
 </code></pre>
 <pre><code class="language-rexx">say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(12345)
@@ -130688,10 +130694,12 @@ handle of an open semaphore of the other kind, answers <code>6</code> and change
 semaphore. A handle carries the kind of its semaphore and a generation, so
 that a stale handle never names a semaphore that reuses its place, and a
 number whose text is not exactly a live handle, a handle that is spelled again
-included, names no semaphore. ooRexx uses the number as an address and crashes for a closed handle, in every
-function but a second SysCloseEventSem or SysCloseMutexSem, which answers <code>6</code>,
-for a rounded one, as SysPostEventSem shows, and for a number that no call
-answered; SysRequestMutexSem with an event semaphore's handle hangs.</p>
+included, names no semaphore. ooRexx uses the number as an address. A closed
+handle can end the program with a signal. A repeated SysCloseEventSem answers
+<code>6</code>, and a repeated SysCloseMutexSem can answer <code>6</code> or end with a signal.
+A rounded handle, as SysPostEventSem shows, or a number that no call answered
+can also end the program with a signal. SysRequestMutexSem with an event
+semaphore's handle hangs.</p>
 <h2 id="159-a-save-onto-a-file-that-may-not-be-written"><a class="header" href="#159-a-save-onto-a-file-that-may-not-be-written">159. A save onto a file that may not be written</a></h2>
 <p>A save of the macrospace onto a file that is there and may not be written
 answers <code>5</code> and leaves the file as it was. ooRexx answers <code>5</code> too, and keeps
