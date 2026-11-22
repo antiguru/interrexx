@@ -1529,10 +1529,12 @@ impl<'a> Inst<'a> {
                 }) else {
                     return Err(self.found(E35_1, next));
                 };
-                let mut value = op.spelling().as_bytes().to_vec();
-                value.extend_from_slice(&self.value_of(next));
+                let mut value = self.value_of(next).into_vec();
                 if interrexx_num::Number::parse_bytes(&value).is_none() {
                     return Err(self.found(E35_1, Some(next)));
+                }
+                if op == Operator::Subtract {
+                    value.insert(0, b'-');
                 }
                 return Ok(CatchCode::Literal(value.into_boxed_slice()));
             }

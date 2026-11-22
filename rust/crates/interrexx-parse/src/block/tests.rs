@@ -907,6 +907,25 @@ end
 }
 
 #[test]
+fn catch_only_keeps_an_explicit_plus_in_quoted_codes() {
+    use crate::ast::CatchCode;
+
+    let program = ok("do; catch error +2, error '+2', failure +2, failure '+2'; end");
+    let InstructionKind::Catch(handler) = &program.main.instructions[1].kind else {
+        panic!("expected a CATCH instruction");
+    };
+    let codes: Vec<_> = handler
+        .conditions
+        .iter()
+        .map(|condition| match &condition.code {
+            Some(CatchCode::Literal(code)) => code.as_ref(),
+            other => panic!("expected a literal code, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(codes, [b"2".as_slice(), b"+2", b"2", b"+2"]);
+}
+
+#[test]
 fn catch_translation_errors_match_the_oracle() {
     let cases = [
         ("catch syntax", (10, 8)),
