@@ -118,3 +118,5 @@ if size == '0 0' then do
   if SysTextScreenSize('BUFFERSIZE', 25, 80) <= 0 then exit 69
   if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 79) <= 0 then exit 70
 end
+if SysTextScreenSize('BUFFERSIZE', 32768, 80) <> 87 then exit 71
+if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 32768) <> 87 then exit 72
