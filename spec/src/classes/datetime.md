@@ -2,7 +2,7 @@
 element: "DateTime"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > DateTime Class; Builtin Classes > Utility Classes > DateTime Class > init; Builtin Classes > Utility Classes > DateTime Class > fromBaseDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromEuropeanDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrderedDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrdinalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromStandardDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromTicks (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUsaDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUtcIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromWeekNumberDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > maxDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > minDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > today (Class Method); Builtin Classes > Utility Classes > DateTime Class > Arithmetic Methods; Builtin Classes > Utility Classes > DateTime Class > addDays; Builtin Classes > Utility Classes > DateTime Class > addHours; Builtin Classes > Utility Classes > DateTime Class > addMicroseconds; Builtin Classes > Utility Classes > DateTime Class > addMinutes; Builtin Classes > Utility Classes > DateTime Class > addSeconds; Builtin Classes > Utility Classes > DateTime Class > addWeeks; Builtin Classes > Utility Classes > DateTime Class > addYears; Builtin Classes > Utility Classes > DateTime Class > baseDate; Builtin Classes > Utility Classes > DateTime Class > civilTime; Builtin Classes > Utility Classes > DateTime Class > compareTo; Builtin Classes > Utility Classes > DateTime Class > date; Builtin Classes > Utility Classes > DateTime Class > day; Builtin Classes > Utility Classes > DateTime Class > dayMicroseconds; Builtin Classes > Utility Classes > DateTime Class > dayMinutes; Builtin Classes > Utility Classes > DateTime Class > dayName; Builtin Classes > Utility Classes > DateTime Class > daySeconds; Builtin Classes > Utility Classes > DateTime Class > daysInMonth; Builtin Classes > Utility Classes > DateTime Class > daysInYear; Builtin Classes > Utility Classes > DateTime Class > elapsed; Builtin Classes > Utility Classes > DateTime Class > europeanDate; Builtin Classes > Utility Classes > DateTime Class > fullDate; Builtin Classes > Utility Classes > DateTime Class > hashCode; Builtin Classes > Utility Classes > DateTime Class > hours; Builtin Classes > Utility Classes > DateTime Class > isLeapYear; Builtin Classes > Utility Classes > DateTime Class > isoDate; Builtin Classes > Utility Classes > DateTime Class > languageDate; Builtin Classes > Utility Classes > DateTime Class > longTime; Builtin Classes > Utility Classes > DateTime Class > makeString; Builtin Classes > Utility Classes > DateTime Class > microseconds; Builtin Classes > Utility Classes > DateTime Class > minutes; Builtin Classes > Utility Classes > DateTime Class > month; Builtin Classes > Utility Classes > DateTime Class > monthName; Builtin Classes > Utility Classes > DateTime Class > normalDate; Builtin Classes > Utility Classes > DateTime Class > normalTime; Builtin Classes > Utility Classes > DateTime Class > offset; Builtin Classes > Utility Classes > DateTime Class > orderedDate; Builtin Classes > Utility Classes > DateTime Class > ordinalDate; Builtin Classes > Utility Classes > DateTime Class > seconds; Builtin Classes > Utility Classes > DateTime Class > standardDate; Builtin Classes > Utility Classes > DateTime Class > string; Builtin Classes > Utility Classes > DateTime Class > ticks; Builtin Classes > Utility Classes > DateTime Class > timeOfDay; Builtin Classes > Utility Classes > DateTime Class > toLocalTime; Builtin Classes > Utility Classes > DateTime Class > toTimezone; Builtin Classes > Utility Classes > DateTime Class > toUtcTime; Builtin Classes > Utility Classes > DateTime Class > usaDate; Builtin Classes > Utility Classes > DateTime Class > utcDate; Builtin Classes > Utility Classes > DateTime Class > utcIsoDate; Builtin Classes > Utility Classes > DateTime Class > weekDay; Builtin Classes > Utility Classes > DateTime Class > weekNumber; Builtin Classes > Utility Classes > DateTime Class > weekNumberDate; Builtin Classes > Utility Classes > DateTime Class > weekNumberYear; Builtin Classes > Utility Classes > DateTime Class > weeksInYear; Builtin Classes > Utility Classes > DateTime Class > year; Builtin Classes > Utility Classes > DateTime Class > yearDay"
-deviations: [109, 126, 127, 128, 129, 130, 131, 132, 163]
+deviations: [109, 126, 127, 128, 129, 130, 131, 132, 163, 183]
 ---
 
 # DateTime
@@ -167,8 +167,6 @@ call try '.datetime~today(901)'
 call try '.datetime~fromBaseDate(5, 901)'
 call try '.datetime~fromTicks(5, 1.5)'
 call try '.datetime~fromTicks(5, "x")'
-call try '.datetime~today(.offsetObject~new)'
-call try '.datetime~fromBaseDate(5, .offsetObject~new)'
 call try '.rejectingDate~today(60)'
 call substitutions '.datetime~fromBaseDate(5, .badOffset~new)'
 call substitutions '.datetime~fromNormalTime("12:00:00", .badOffset~new)'
@@ -223,8 +221,6 @@ d~toTimezone(.timespan~fromSeconds(90)) => 88.907
 .datetime~fromBaseDate(5, 901) => 88.918
 .datetime~fromTicks(5, 1.5) => 88.918
 .datetime~fromTicks(5, "x") => 88.918
-.datetime~today(.offsetObject~new) => 88.918
-.datetime~fromBaseDate(5, .offsetObject~new) => 88.918
 .rejectingDate~today(60) => 88.918
 88.918 date 5
 88.918 time 12:00:00
@@ -734,77 +730,20 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.datetime.fromdate.argument]
-`fromOrdinalDate` and `fromWeekNumberDate` do not read their first argument as
-a string at once. After the argument count is checked, each sends the argument
-`contains` with the one argument `-`, once and before anything else, and uses
-the answer to pick the form: true for the form with hyphens, false for the one
-without. The answer must be exactly `0` or `1`; any other answer, `.nil`
-included, raises `SYNTAX 34.1`, and an argument that does not understand
-`contains` raises `SYNTAX 97.1` (an `Array`, a `List`, a `Set` or `.nil`; a
-`Directory` answers `.nil` and so raises 34.1). Then the string value of the
-argument is read, and a form that the answer did not pick, or a string that is
-not a date, raises `SYNTAX 88.918`. A string that is a number or a `String`
-subclass instance is sent `contains` like any other value, so a subclass that
-overrides it decides the form: an instance of the string `2020041` whose
-`contains` answers true raises 88.918, though the string is a date.
+`fromOrdinalDate` and `fromWeekNumberDate` read their first argument as a
+[string argument](r:class.index.string). Without a string value they raise
+`SYNTAX 88.909`. They choose the hyphenated form when the converted text
+contains a hyphen. Text that is no date raises `SYNTAX 88.918` ([Deviation
+183](r:class.datetime.deviation.183)).
 
 ```rexx
-say .datetime~fromOrdinalDate(.cs~new('2020-041'))
-say .datetime~fromOrdinalDate(.cs~new('2020041'))
-call try '.datetime~fromOrdinalDate(.array~of("2020-041"))'
-call try '.datetime~fromWeekNumberDate(.nil)'
-call try '.datetime~fromOrdinalDate(.directory~new)'
-call try '.datetime~fromOrdinalDate(.spy~new(1))'
-call try '.datetime~fromWeekNumberDate(.spy~new("maybe"))'
-call try '.datetime~fromOrdinalDate(.no~new("2020-041"))'
-call try '.datetime~fromWeekNumberDate(.yes~new("2020W071"))'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class spy
-::method init
-  expose answer
-  use arg answer
-::method unknown
-  expose answer
-  use arg name, args
-  say name args~toString
-  return answer
-::class cs subclass string
-::method contains
-  say 'contains' arg(1)
-  return self~string~contains(arg(1))
-::class no subclass string
-::method contains
-  say 'contains' arg(1)
-  return 0
-::class yes subclass string
-::method contains
-  say 'contains' arg(1)
-  return 1
+say .datetime~fromOrdinalDate('2020-041', 0)
+say .datetime~fromWeekNumberDate('2020W071')
 ```
 
 ```output
-contains -
 2020-02-10T00:00:00.000000
-contains -
 2020-02-10T00:00:00.000000
-.datetime~fromOrdinalDate(.array~of("2020-041")) => 97.1
-.datetime~fromWeekNumberDate(.nil) => 97.1
-.datetime~fromOrdinalDate(.directory~new) => 34.1
-CONTAINS -
-.datetime~fromOrdinalDate(.spy~new(1)) => 88.918
-CONTAINS -
-.datetime~fromWeekNumberDate(.spy~new("maybe")) => 34.1
-contains -
-.datetime~fromOrdinalDate(.no~new("2020-041")) => 88.918
-contains -
-.datetime~fromWeekNumberDate(.yes~new("2020W071")) => 88.918
 ```
 
 r[class.datetime.fromtime]
@@ -1658,9 +1597,9 @@ fields fall outside the range of the class the methods raise `SYNTAX 40.19`.
 `toLocalTime` and `toUtcTime` take no argument, and `toTimezone` at most one.
 The argument of `toTimezone` that is not a
 [`TimeSpan`](r:class.timespan.value) is read as a number of minutes by
-multiplying it with 60000000 with `*`, so a string that is no number raises
-`SYNTAX 41.1` and `.nil`, which has no `*`, `SYNTAX 97.1`; a number that is
-not a whole number of minutes in the range raises `SYNTAX 88.907`.
+converting its string value. Text that is no number raises `SYNTAX 41.1`; a
+number that is not a whole number of minutes in the range raises
+`SYNTAX 88.907` ([Deviation 183](r:class.datetime.deviation.183)).
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1680,7 +1619,6 @@ call try 'd~toTimezone(901)'
 call try 'd~toTimezone(1.5)'
 call try 'd~toTimezone(.timespan~fromSeconds(90))'
 call try 'd~toTimezone("x")'
-call try 'd~toTimezone(.nil)'
 call try '.datetime~minDate~toTimezone(-60)'
 call try '.datetime~maxDate~toTimezone(60)'
 call try '.datetime~minDate~toUtcTime'
@@ -1710,7 +1648,6 @@ d~toTimezone(901) => 88.907
 d~toTimezone(1.5) => 88.907
 d~toTimezone(.timespan~fromSeconds(90)) => 88.907
 d~toTimezone("x") => 41.1
-d~toTimezone(.nil) => 97.1
 .datetime~minDate~toTimezone(-60) => 40.19
 .datetime~maxDate~toTimezone(60) => 40.19
 .datetime~minDate~toUtcTime => 0001-01-01T00:00:00.000000
@@ -1826,24 +1763,13 @@ arguments after `FROMSTANDARDDATE`, `NEW`, and `INIT`. The second example
 prints the second argument that `init` gets: a `TimeSpan` or a string that the caller gave
 arrives as it is, the offset of the string of `fromUtcIsoDate` as a number of
 minutes (150 for `+02:30`), and, without an offset argument, the default
-offset in minutes. An argument that is read as a number is sent more messages
-than the one that reads its string value ([the argument
-rule](r:class.index.string)). A year, month, day, hours, minutes, seconds or
-microseconds argument of `new` is sent `>=` and `<=` with the limits of its
-range and then `right` with the width of its field, 4 for the year, 6 for the
-microseconds and 2 for the others. An offset that is not a `TimeSpan`, the
-argument of `new`, `today` or a `from` method other than `fromWeekNumberDate`,
-is sent `isA`, read for its string value, and sent `>=` with -900, `<=` with
-900 and `*` with 60000000. An amount of `addDays`, `addHours`, `addMinutes`,
-`addSeconds` and `addWeeks` is sent `*`, and `addYears` and `addMicroseconds`
-read the string value of their amount twice. A number argument of `toTimezone`
-is sent `isA` and `*`, then read for its string value and sent `>=` and `<=`;
-the `new` that `toTimezone` sends gets the argument itself, which is then
-handled as the offset of `new` is. A count of `new` and the argument of
-`fromTicks` and `fromBaseDate` are read for their string value only. The third
-example passes an object whose `makeString` answers a number and whose
-`unknown` sends every other message to that number, and prints the messages
-the object got.
+offset in minutes. Calendar and time fields of `new` and numeric offsets
+and amounts are read through the [string conversion
+protocol](r:conv.string.object). An offset is first sent `isA` with
+`TimeSpan`. A `TimeSpan` is then sent `totalMicroseconds`. The
+arguments of `addYears` and `addMicroseconds` are read twice. A count of
+`new` and the argument of `fromTicks` and `fromBaseDate` are read for
+their string value only. See also [Deviation 183](r:class.datetime.deviation.183).
 
 ```rexx
 names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
@@ -1940,14 +1866,10 @@ default 1
 
 ```rexx
 n = .num~new(3)
-call probe 'year', '.datetime~new(n, 1, 1)'
-call probe 'offset', '.datetime~new(2017, 1, 1, 0, 0, 0, 0, n)'
 call probe 'count', '.datetime~new(n)'
 call probe 'fromTicks', '.datetime~fromTicks(n)'
-call probe 'addDays', '.datetime~minDate~addDays(n)'
 call probe 'addMicroseconds', '.datetime~minDate~addMicroseconds(n)'
 call probe 'addYears', '.datetime~minDate~addYears(n)'
-call probe 'toTimezone', '.datetime~minDate~toTimezone(n)'
 exit
 probe:
   .local~log = ''
@@ -1959,9 +1881,6 @@ probe:
 ::method init
   expose v
   use arg v
-::method isA
-  .local~log = .local~log 'ISA'
-  forward class (super)
 ::method makeString
   expose v
   .local~log = .local~log 'MAKESTRING'
@@ -1969,30 +1888,17 @@ probe:
 ::method request
   .local~log = .local~log 'REQUEST:'arg(1)
   forward class (super)
-::method unknown
-  expose v
-  use arg name, args
-  .local~log = .local~log name
-  forward to (v) message (name) arguments (args)
 ```
 
 ```output
-year:
-  REQUEST:STRING MAKESTRING >= <= RIGHT
-offset:
-  ISA REQUEST:STRING MAKESTRING >= <= *
 count:
   REQUEST:STRING MAKESTRING
 fromTicks:
   REQUEST:STRING MAKESTRING
-addDays:
-  REQUEST:STRING MAKESTRING *
 addMicroseconds:
   REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
 addYears:
   REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
-toTimezone:
-  ISA * REQUEST:STRING MAKESTRING >= <= ISA REQUEST:STRING MAKESTRING >= <= *
 ```
 
 r[class.datetime.sends.add]
@@ -2063,8 +1969,9 @@ sends the new instance `+` with the answer of `timeOfDay`, and `+` sends what
 it sends. `date` sends the receiver `standardDate` and `offset`, then `new`
 with two arguments, and `timeOfDay` sends `longTime`. `toTimezone` sends `new`
 with two arguments, the microseconds and the offset: a
-[`TimeSpan`](r:class.timespan.value) argument converted to minutes, any other
-argument as given; `toUtcTime` and `toLocalTime` send the receiver
+[`TimeSpan`](r:class.timespan.value) argument converted to minutes, or the
+string read from another argument with its spelling preserved. `toUtcTime`
+and `toLocalTime` send the receiver
 `toTimezone`, with 0 and with the default offset in minutes, and so `new` once
 more. `copy` sends nothing. The second example prints the argument of
 `toTimezone` and the offset that `init` gets.
@@ -2753,4 +2660,88 @@ say condition('O')~code (d~isoDate d~offset == before) d~isoDate
 
 ```output
 88.907 1 2020-01-01T00:00:00.000000
+```
+
+r[class.datetime.deviation.183]
+Calendar and time fields of `new`, numeric offsets and amounts, and the
+texts of `fromOrdinalDate` and `fromWeekNumberDate` are converted before
+their values are used. ooRexx sends comparisons, `right`, `*` or
+`contains` directly to the argument. It can raise `SYNTAX 97.1` even
+when the conversion would provide a valid value. In the example, the
+conversion methods supply the values and the argument objects receive no
+comparison, multiplication or date parsing messages.
+
+```rexx
+n = .provided~new(3)
+offset = .spoken~new(60)
+d = .datetime~new(.provided~new(2020), n, n, n, n, n, n, offset)
+say d~utcIsoDate
+say .datetime~new(3600000000, offset)~utcIsoDate
+say .datetime~today(offset)~offset .datetime~fromBaseDate(5, offset)~offset
+say .datetime~fromOrdinalDate(.provided~new('2020-041'), 0)
+say .datetime~fromWeekNumberDate(.provided~new('2020-W07-1'))
+say .datetime~fromWeekNumberDate(.provided~new('2020W071'))
+say .datetime~fromOrdinalDate(.undashed~new('2020-041'), 0)
+say d~addWeeks(n)
+say d~addDays(.spoken~new('1.5'))
+say d~addHours(n)
+say d~addMinutes(n)
+say d~addSeconds(n)
+say d~toTimezone(.spoken~new(-30))~utcIsoDate
+call bad '.datetime~fromOrdinalDate(.nil)'
+call bad '.datetime~fromWeekNumberDate(.spoken~new("2020W071"))'
+call bad '.datetime~fromOrdinalDate(.provided~new("not a date"))'
+call bad '.datetime~new(2020, .provided~new(13), 1)'
+call bad 'd~addSeconds(.provided~new("abc"))'
+call bad 'd~toTimezone(.nil)'
+call bad 'd~toTimezone(.provided~new(1.5))'
+exit
+bad:
+  signal on syntax name refused
+  interpret 'result =' arg(1)
+  say 'accepted'
+  return
+refused:
+  say condition('o')~code
+  return
+::class provided
+::method init
+  expose value
+  use arg value
+::method makeString
+  expose value
+  return value
+::class spoken
+::method init
+  expose value
+  use arg value
+::method string
+  expose value
+  return value
+::class undashed subclass string
+::method contains
+  return 0
+```
+
+```output
+2020-03-03T03:03:03.000003+01:00
+0001-01-01T01:00:00.000000+01:00
+01:00:00.000000 01:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-03-24T03:03:03.000003
+2020-03-04T15:03:03.000003
+2020-03-03T06:03:03.000003
+2020-03-03T03:06:03.000003
+2020-03-03T03:03:06.000003
+2020-03-03T01:33:03.000003-00:30
+88.909
+88.909
+88.918
+88.907
+88.902
+41.1
+88.907
 ```
