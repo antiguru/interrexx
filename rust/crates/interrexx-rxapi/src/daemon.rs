@@ -603,20 +603,23 @@ mod tests {
         let (_, ended) = own_core(incoming, Duration::from_secs(60));
         assert!(ended.is_err(), "before any client");
 
-        let (events, incoming) = mpsc::channel();
-        let (stream, _peer) = ServiceStream::pair().expect("a pair");
-        let (outgoing, _to_write) = mpsc::channel();
-        let connected = Event::Connected {
-            connection: 0,
-            stream,
-            outgoing,
-            backlog: Arc::default(),
-        };
-        events.send(connected).expect("the owner is listening");
-        drop(events);
-        let (streams, ended) = own_core(incoming, Duration::from_secs(60));
-        assert!(ended.is_err(), "with a client connected");
-        assert_eq!(streams.len(), 1, "its stream is handed back to be shut");
+        #[cfg(unix)]
+        {
+            let (events, incoming) = mpsc::channel();
+            let (stream, _peer) = ServiceStream::pair().expect("a pair");
+            let (outgoing, _to_write) = mpsc::channel();
+            let connected = Event::Connected {
+                connection: 0,
+                stream,
+                outgoing,
+                backlog: Arc::default(),
+            };
+            events.send(connected).expect("the owner is listening");
+            drop(events);
+            let (streams, ended) = own_core(incoming, Duration::from_secs(60));
+            assert!(ended.is_err(), "with a client connected");
+            assert_eq!(streams.len(), 1, "its stream is handed back to be shut");
+        }
     }
 
     #[test]
