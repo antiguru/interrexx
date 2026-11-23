@@ -1449,18 +1449,19 @@ say n 'clause lines'
 </code></pre>
 <div class="rule" id="r-instr.trace.deviation.50"><a href="#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
 <p>Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx changes
-<code>NUMERIC DIGITS</code> even if the destination refuses the keyword line for the
-new setting. ooRexx keeps the previous setting.</p>
-<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+applied the effect the line describes. For example, interrexx assigns the
+target of <code>PARSE VALUE</code> even if the destination refuses its <code>VALUE</code> line.
+ooRexx leaves the target unchanged.</p>
+<pre><code class="language-rexx">x = 'old'
+.traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-numeric digits 7
+parse value 'new' with x
 exit
 e: trace o
 .traceoutput~destination(.output)
-say 'caught' condition('o')~code digits()
+say 'caught' condition('o')~code x
 ::class sink
 ::method init
   expose n
@@ -1471,8 +1472,8 @@ say 'caught' condition('o')~code digits()
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
-caught 93.900 7
+<pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
+caught 93.900 new
 </code></pre>
 
                     </main>

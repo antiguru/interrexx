@@ -233,6 +233,52 @@ say digits() fuzz()
 </code></pre>
 <pre><code class="language-output">9 0
 </code></pre>
+<div class="rule" id="r-instr.numeric.trace-refusal"><a href="#r-instr.numeric.trace-refusal">[instr.numeric.trace-refusal]</a></div>
+<p>If the trace destination refuses the keyword line for a NUMERIC operand,
+the condition is raised before the clause requests its operand's string
+value or changes the setting.</p>
+<pre><code class="language-rexx">call probe 'numeric digits 7'
+call probe 'numeric fuzz 2'
+call probe "numeric form value 'ENGINEERING'"
+call probe 'numeric digits 0'
+call probe 'numeric digits .sink'
+exit
+
+probe: procedure
+  .local~converted = 0
+  .traceoutput~destination(.sink~new)
+  signal on syntax name rejected
+  trace r
+  interpret arg(1)
+  trace o
+  return
+rejected:
+  trace o
+  .traceoutput~destination(.output)
+  say condition('o')~code digits() fuzz() form() .local~converted
+  return
+
+::class sink
+::method lineout
+  use arg line
+  text = '' || line
+  if word(text, 1) = '&gt;K&gt;' then raise syntax 93.900
+  return 0
+::method makestring class
+  .local~converted = 1
+  return '7'
+</code></pre>
+<pre><code class="language-output">       &gt;K&gt;     "DIGITS" =&gt; "7"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "FUZZ" =&gt; "2"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "FORM" =&gt; "ENGINEERING"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "DIGITS" =&gt; "0"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "DIGITS" =&gt; "The SINK class"
+93.900 9 0 SCIENTIFIC 0
+</code></pre>
 <h2 id="form"><a class="header" href="#form">FORM</a></h2>
 <div class="rule" id="r-instr.numeric.form"><a href="#r-instr.numeric.form">[instr.numeric.form]</a></div>
 <p>NUMERIC FORM has four shapes. The symbol SCIENTIFIC or ENGINEERING, in any

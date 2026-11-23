@@ -12073,6 +12073,52 @@ say digits() fuzz()
 </code></pre>
 <pre><code class="language-output">9 0
 </code></pre>
+<div class="rule" id="r-instr.numeric.trace-refusal"><a href="instructions/numeric.html#r-instr.numeric.trace-refusal">[instr.numeric.trace-refusal]</a></div>
+<p>If the trace destination refuses the keyword line for a NUMERIC operand,
+the condition is raised before the clause requests its operand's string
+value or changes the setting.</p>
+<pre><code class="language-rexx">call probe 'numeric digits 7'
+call probe 'numeric fuzz 2'
+call probe "numeric form value 'ENGINEERING'"
+call probe 'numeric digits 0'
+call probe 'numeric digits .sink'
+exit
+
+probe: procedure
+  .local~converted = 0
+  .traceoutput~destination(.sink~new)
+  signal on syntax name rejected
+  trace r
+  interpret arg(1)
+  trace o
+  return
+rejected:
+  trace o
+  .traceoutput~destination(.output)
+  say condition('o')~code digits() fuzz() form() .local~converted
+  return
+
+::class sink
+::method lineout
+  use arg line
+  text = '' || line
+  if word(text, 1) = '&gt;K&gt;' then raise syntax 93.900
+  return 0
+::method makestring class
+  .local~converted = 1
+  return '7'
+</code></pre>
+<pre><code class="language-output">       &gt;K&gt;     "DIGITS" =&gt; "7"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "FUZZ" =&gt; "2"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "FORM" =&gt; "ENGINEERING"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "DIGITS" =&gt; "0"
+93.900 9 0 SCIENTIFIC 0
+       &gt;K&gt;     "DIGITS" =&gt; "The SINK class"
+93.900 9 0 SCIENTIFIC 0
+</code></pre>
 <h2 id="form"><a class="header" href="#form">FORM</a></h2>
 <div class="rule" id="r-instr.numeric.form"><a href="instructions/numeric.html#r-instr.numeric.form">[instr.numeric.form]</a></div>
 <p>NUMERIC FORM has four shapes. The symbol SCIENTIFIC or ENGINEERING, in any
@@ -17468,18 +17514,19 @@ say n 'clause lines'
 </code></pre>
 <div class="rule" id="r-instr.trace.deviation.50"><a href="instructions/trace.html#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
 <p>Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx changes
-<code>NUMERIC DIGITS</code> even if the destination refuses the keyword line for the
-new setting. ooRexx keeps the previous setting.</p>
-<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+applied the effect the line describes. For example, interrexx assigns the
+target of <code>PARSE VALUE</code> even if the destination refuses its <code>VALUE</code> line.
+ooRexx leaves the target unchanged.</p>
+<pre><code class="language-rexx">x = 'old'
+.traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-numeric digits 7
+parse value 'new' with x
 exit
 e: trace o
 .traceoutput~destination(.output)
-say 'caught' condition('o')~code digits()
+say 'caught' condition('o')~code x
 ::class sink
 ::method init
   expose n
@@ -17490,8 +17537,8 @@ say 'caught' condition('o')~code digits()
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
-caught 93.900 7
+<pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
+caught 93.900 new
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="use"><a class="header" href="#use">USE</a></h1>
 <pre><code>USE [STRICT] ARG [target [= default]] [, ...] | USE LOCAL [name]...
@@ -75923,20 +75970,21 @@ lines rule</a> says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as <a href="classes/../instructions/trace.html#r-instr.trace.deviation.50">Deviation 50</a> states; ooRexx raises
 the condition before applying that effect. In the example the destination
-refuses the keyword line of <code>NUMERIC DIGITS</code>. Interrexx has changed the
-setting by then and ooRexx keeps its old value. Both collect the refused line.</p>
+refuses the <code>VALUE</code> line of <code>PARSE VALUE</code>. Interrexx has assigned the target
+by then and ooRexx keeps its old value. Both collect the refused line.</p>
 <pre><code class="language-rexx">c = .array~new
 .traceobject~collector = c
+x = 'old'
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-numeric digits 7
+parse value 'new' with x
 exit
 e: trace o
 .traceoutput~destination(.output)
 .traceobject~collector = .nil
-say 'caught' condition('o')~code digits() '['c[2]~traceline']'
+say 'caught' condition('o')~code x '['c[2]~traceline']'
 ::class sink
 ::method init
   expose n
@@ -75947,8 +75995,8 @@ say 'caught' condition('o')~code digits() '['c[2]~traceline']'
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;K&gt;   "DIGITS" =&gt; "7"
-caught 93.900 7 [       &gt;K&gt;   "DIGITS" =&gt; "7"]
+<pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
+caught 93.900 new [       &gt;K&gt;   "VALUE" =&gt; "new"]
 </code></pre>
 <div class="rule" id="r-class.traceobject.deviation.109"><a href="classes/traceobject.html#r-class.traceobject.deviation.109">[class.traceobject.deviation.109]</a></div>
 <p>The argument of <code>option=</code> is read by its own characters when it is an instance
@@ -130423,9 +130471,9 @@ when there has been none since the stream was opened.</p>
 <h2 id="50-a-trace-line-that-cannot-be-delivered"><a class="header" href="#50-a-trace-line-that-cannot-be-delivered">50. A trace line that cannot be delivered</a></h2>
 <p>When the trace destination refuses a line, the same condition as ooRexx's is
 raised. Some clauses still apply the effect described by a refused line
-before raising the condition. For example, <code>NUMERIC DIGITS</code> changes the
-setting if the destination refuses its keyword line, while ooRexx leaves
-the setting unchanged.</p>
+before raising the condition. For example, interrexx assigns the target
+of <code>PARSE VALUE</code> if the destination refuses its <code>VALUE</code> line. ooRexx leaves
+the target unchanged.</p>
 <h2 id="51-contextrs-inside-interpret"><a class="header" href="#51-contextrs-inside-interpret">51. <code>.context~rs</code> inside INTERPRET</a></h2>
 <p>Inside an INTERPRET, <code>.context~rs</code> answers the same value as <code>.rs</code>. In ooRexx
 it answers the caller's earlier value until the INTERPRET ends.</p>

@@ -485,9 +485,9 @@ when there has been none since the stream was opened.</p>
 <h2 id="50-a-trace-line-that-cannot-be-delivered"><a class="header" href="#50-a-trace-line-that-cannot-be-delivered">50. A trace line that cannot be delivered</a></h2>
 <p>When the trace destination refuses a line, the same condition as ooRexx's is
 raised. Some clauses still apply the effect described by a refused line
-before raising the condition. For example, <code>NUMERIC DIGITS</code> changes the
-setting if the destination refuses its keyword line, while ooRexx leaves
-the setting unchanged.</p>
+before raising the condition. For example, interrexx assigns the target
+of <code>PARSE VALUE</code> if the destination refuses its <code>VALUE</code> line. ooRexx leaves
+the target unchanged.</p>
 <h2 id="51-contextrs-inside-interpret"><a class="header" href="#51-contextrs-inside-interpret">51. <code>.context~rs</code> inside INTERPRET</a></h2>
 <p>Inside an INTERPRET, <code>.context~rs</code> answers the same value as <code>.rs</code>. In ooRexx
 it answers the caller's earlier value until the INTERPRET ends.</p>
