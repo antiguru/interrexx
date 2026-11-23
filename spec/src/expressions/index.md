@@ -272,10 +272,12 @@ term 1
 r[expr.index.nesting]
 Nesting has a limit that this book does not fix, and a program that goes past
 it raises `SYNTAX 11.1`. The limit applies to parentheses nested inside one
-another, which raise the error when the text is read, and to routine calls
-nested inside one another, which raise it when the call that goes too deep is
-made. Many terms side by side at one level are not nesting and have no such
-limit. Parentheses nested 100,000 deep and calls nested 1,000,000 deep both
+another and to prefix operators applied to one another (`- - - 1`), which raise
+the error when the text is read, and to routine calls nested inside one
+another, which raise it when the call that goes too deep is made. Parentheses
+and prefix operators count toward one limit together. Many terms side by side
+at one level are not nesting and have no such limit. Parentheses nested 100,000
+deep, 2,000,000 prefix operators in a row and calls nested 1,000,000 deep all
 raise the error.
 
 ```rexx
@@ -283,8 +285,11 @@ signal on syntax name a
 interpret 'x =' copies('(', 100000) 1 copies(')', 100000)
 a: say condition('o')~code
 signal on syntax name b
-say deep(1000000)
+interpret 'x =' copies('- ', 2000000) 1
 b: say condition('o')~code
+signal on syntax name c
+say deep(1000000)
+c: say condition('o')~code
 exit
 deep: procedure
   arg n
@@ -293,6 +298,7 @@ deep: procedure
 ```
 
 ```output
+11.1
 11.1
 11.1
 ```

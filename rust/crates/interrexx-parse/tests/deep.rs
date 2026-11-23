@@ -130,3 +130,53 @@ fn recursive_expression_traits_run_on_the_parser_stack() {
     })
     .expect("spawns");
 }
+
+/// Builds `say - - ... - 1` with `depth` prefix operators (blank-separated,
+/// because `--` starts a comment).
+fn deep_prefix_program(depth: usize) -> Vec<u8> {
+    let mut src = String::from("say ");
+    src.push_str(&"- ".repeat(depth));
+    src.push_str("1\n");
+    src.into_bytes()
+}
+
+/// A prefix chain exactly `MAX_EXPR_DEPTH` long parses on the sized thread,
+/// and one more operator raises `11.1` (`r[expr.index.nesting]`).
+#[test]
+fn a_prefix_chain_parses_at_the_limit_and_raises_11_1_one_past_it() {
+    let limit = usize::try_from(MAX_EXPR_DEPTH).expect("fits");
+    let program = with_parser_stack(|| parse_program(deep_prefix_program(limit)))
+        .expect("spawns")
+        .expect("a chain at the limit parses");
+    with_parser_stack(move || drop(program)).expect("spawns");
+    let err = with_parser_stack(|| parse_program(deep_prefix_program(limit + 1)))
+        .expect("spawns")
+        .expect_err("one operator past the limit");
+    assert_eq!((err.code(), err.sub()), (11, 1));
+}
+
+/// A chain far past where the parser used to overflow the native stack raises
+/// `11.1` instead of aborting.
+#[test]
+fn a_prefix_chain_past_the_native_cliff_raises_11_1_instead_of_aborting() {
+    let err = with_parser_stack(|| parse_program(deep_prefix_program(2_000_000)))
+        .expect("spawns")
+        .expect_err("2,000,000 prefix operators is past MAX_EXPR_DEPTH");
+    assert_eq!((err.code(), err.sub()), (11, 1));
+}
+
+/// Prefix operators and parentheses share the one budget: neither half alone
+/// reaches the limit.
+#[test]
+fn prefix_operators_and_parens_share_one_budget() {
+    let half = usize::try_from(MAX_EXPR_DEPTH).expect("fits") / 2 + 100;
+    let mut src = String::from("say ");
+    src.push_str(&"- ( ".repeat(half));
+    src.push('1');
+    src.push_str(&")".repeat(half));
+    src.push('\n');
+    let err = with_parser_stack(|| parse_program(src.into_bytes()))
+        .expect("spawns")
+        .expect_err("half the budget in each construct must still exceed the shared one");
+    assert_eq!((err.code(), err.sub()), (11, 1));
+}

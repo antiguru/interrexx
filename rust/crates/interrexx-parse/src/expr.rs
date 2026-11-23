@@ -300,8 +300,9 @@ struct Parser<'a, 'c> {
     /// The byte offset every error is reported against.
     clause_byte: usize,
     /// How many levels of nested expression are currently open: a grouping
-    /// `(...)` through `subterm`'s `TokenKind::LeftParen` arm, plus an
-    /// argument list through `arg_list`, counted together against
+    /// `(...)` through `subterm`'s `TokenKind::LeftParen` arm, an argument
+    /// list through `arg_list`, plus a prefix operator through
+    /// `message_subterm`, counted together against
     /// `MAX_EXPR_DEPTH` before descending one level further, so either raises
     /// `11.1` instead of exhausting the native stack.
     expr_depth: u32,
@@ -624,7 +625,17 @@ impl<'a, 'c> Parser<'a, 'c> {
             // puts prefix operators above `**`: `-2 ** 2` is `(-2) ** 2`,
             // which is 4. It also means a chain works, though `--` is a line
             // comment so `- -2` needs the blank.
-            let Some(operand) = self.message_subterm(term)? else {
+            //
+            // Each prefix operator is one more level of recursion, so it is
+            // counted against the same budget as a grouping or an argument
+            // list (r[expr.index.nesting]).
+            if self.expr_depth >= MAX_EXPR_DEPTH {
+                return Err(self.raise(E11_1, []));
+            }
+            self.expr_depth += 1;
+            let operand = self.message_subterm(term);
+            self.expr_depth -= 1;
+            let Some(operand) = operand? else {
                 return Err(self.operator_without_term(E35_901, op));
             };
             return Ok(Some(Expr::new(
