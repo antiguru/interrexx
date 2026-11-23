@@ -36,9 +36,9 @@ use interrexx_num::{DIGITS64, Number};
 use rustix::event::{PollFd, PollFlags};
 use rustix::net::{RecvFlags, SendFlags};
 
+use super::native_args::{c_string, failed, int, number};
 use super::rxmath::{check_arity, double_argument, required};
 use super::rxsock_sys::{self, Os, with_socket, with_sockets};
-use super::rxunixsys::{c_string, failed, int, number};
 use crate::scheduler::ParkReason;
 use crate::{Failure, Interp};
 

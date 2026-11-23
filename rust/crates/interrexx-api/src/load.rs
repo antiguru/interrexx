@@ -353,10 +353,13 @@ pub type TypedRoutine = NativeRoutine;
 /// A library whose routine table is `routines`, typed routines this image
 /// defines, for a test that drives native calls without a shared object.
 #[doc(hidden)]
-#[cfg(unix)]
 #[must_use]
 pub fn routines_only(routines: &[(&str, TypedRoutine)]) -> Library {
-    let mapping = Mapping::new(Some(libloading::os::unix::Library::this().into()));
+    #[cfg(unix)]
+    let mapping = Mapping::new(Some(PlatformLibrary::this().into()));
+    // These stubs are linked into the running image.
+    #[cfg(windows)]
+    let mapping = Mapping::new(None);
     Library {
         name: None,
         version: None,
@@ -415,14 +418,12 @@ pub fn names_only(package: &str, routines: &[&str], methods: &[&str]) -> Library
 }
 
 /// What an embedding instance's root activity waits in, set once per process.
-#[cfg(unix)]
 static EMBEDDING_WAIT: std::sync::OnceLock<fn(usize)> = std::sync::OnceLock::new();
 
 /// The library whose routine `WAIT` an embedding instance's root activity
 /// calls: the routine runs `wait` with the address of the call's thread
 /// context, and returns once it returns. While it runs, a thread attached to
 /// that context reaches its call ([`crate::ffi::attach_current_thread`]).
-#[cfg(unix)]
 #[must_use]
 pub fn embedding_library(wait: fn(usize)) -> Library {
     let _ = EMBEDDING_WAIT.set(wait);
@@ -434,7 +435,6 @@ pub fn embedding_library(wait: fn(usize)) -> Library {
 /// # Safety
 /// As every typed routine stub's: `context` is a live call context, and a
 /// non-null `arguments` is the call's descriptor array.
-#[cfg(unix)]
 unsafe extern "C-unwind" fn embedding_wait(
     context: *mut RexxCallContext_,
     arguments: *mut ValueDescriptor,

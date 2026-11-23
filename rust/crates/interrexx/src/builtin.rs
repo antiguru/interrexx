@@ -30,6 +30,7 @@ pub(crate) mod numeric;
 pub(crate) mod queues;
 pub(crate) mod registrations;
 
+mod native_args;
 /// The builtins that read or move the interpreter's own platform state, and
 /// the bodies of the `REXX` package's three internal routines, which are the
 /// same kind of code reached through a different table.
@@ -46,6 +47,7 @@ pub(crate) mod rxsock_sys;
 /// socket reactor, behind a platform-neutral face.
 pub(crate) mod rxsock_wait;
 /// The `rxunixsys` extension library's routines, run in Rust.
+#[cfg(unix)]
 pub(crate) mod rxunixsys;
 pub(crate) mod state;
 /// Crate-visible because the builtins are not the only place this

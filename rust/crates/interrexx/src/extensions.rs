@@ -127,6 +127,8 @@ static LIBRARIES: &[RustLibrary] = &[
         ],
         methods: &[],
     },
+    // The upstream Windows build does not ship this Unix extension.
+    #[cfg(unix)]
     RustLibrary {
         name: "rxunixsys",
         opened: || {},
