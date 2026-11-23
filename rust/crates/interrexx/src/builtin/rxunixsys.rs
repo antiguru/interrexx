@@ -16,7 +16,7 @@ mod wordexp;
 use interrexx_core::{BehaviourId, Body, ObjRef};
 
 use super::native_args::{c_string, failed, int, number};
-use super::rxmath::check_arity;
+use super::rxmath::{check_arity, required};
 use crate::error::Raised;
 use crate::{Failure, Interp};
 

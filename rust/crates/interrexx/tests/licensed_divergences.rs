@@ -181,15 +181,17 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
                        both nobuffer: <1 write 18, read 1, +3 read 4, =5 write 5, -2 write 3\n",
     },
     LicensedDivergence {
-        name: "undelivered-parse-value-assigns-first",
-        // The destination refuses the VALUE keyword line. The oracle keeps
-        // the old target value, and this crate has already assigned the new one.
+        name: "undelivered-do-to-binds-first",
+        // The destination refuses the TO keyword line. The oracle leaves the
+        // control variable untouched, and this crate has already bound it.
         program: "x = 'old'\n\
               .traceoutput~destination(.sink~new)\n\
               signal on syntax name e\n\
               trace o\n\
               trace r\n\
-              parse value 'new' with x\n\
+              do x = 1 to 2\n\
+              \x20 nop\n\
+              end\n\
               exit\n\
               e: trace o\n\
               .traceoutput~destination(.output)\n\
@@ -205,8 +207,8 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
               \x20 return 0\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "       >K>   \"VALUE\" => \"new\"\ncaught 93.900 old\n",
-        crate_stdout: "       >K>   \"VALUE\" => \"new\"\ncaught 93.900 new\n",
+        oracle_stdout: "       >K>   \"TO\" => \"2\"\ncaught 93.900 old\n",
+        crate_stdout: "       >K>   \"TO\" => \"2\"\ncaught 93.900 1\n",
     },
     LicensedDivergence {
         name: "context-rs-in-interpret",

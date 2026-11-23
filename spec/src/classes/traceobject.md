@@ -1432,7 +1432,7 @@ lines rule](r:class.traceobject.lines) says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as [Deviation 50](r:instr.trace.deviation.50) states; ooRexx raises
 the condition before applying that effect. In the example the destination
-refuses the `VALUE` line of `PARSE VALUE`. Interrexx has assigned the target
+refuses the `TO` line of a controlled `DO`. Interrexx has bound the variable
 by then and ooRexx keeps its old value. Both collect the refused line.
 
 ```rexx
@@ -1443,7 +1443,9 @@ x = 'old'
 signal on syntax name e
 trace o
 trace r
-parse value 'new' with x
+do x = 1 to 2
+  nop
+end
 exit
 e: trace o
 .traceoutput~destination(.output)
@@ -1461,8 +1463,8 @@ say 'caught' condition('o')~code x '['c[2]~traceline']'
 ```
 
 ```output
-       >K>   "VALUE" => "new"
-caught 93.900 new [       >K>   "VALUE" => "new"]
+       >K>   "TO" => "2"
+caught 93.900 1 [       >K>   "TO" => "2"]
 ```
 
 r[class.traceobject.deviation.109]
