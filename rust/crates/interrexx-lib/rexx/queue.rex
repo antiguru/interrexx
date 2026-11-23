@@ -14,7 +14,7 @@
     self~class~open(name)
   end
   else do
-    name = arg(1)~upper
+    name = self~interrexx_queue_name(arg(1))
     self~class~open(name)
   end
   named_queue = name
@@ -33,11 +33,13 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if arg(1, 'O') then raise syntax 93.901 array (1)
   if \var('NAMED_QUEUE') then raise syntax 98.901 array (self~string)
-  name = arg(1)~upper
+  name = self~interrexx_queue_name(arg(1))
   old = named_queue
   named_queue = name
   self~objectName = name
   return old
+
+::method interrexx_queue_name private external 'LIBRARY REXX interrexx_queue_name'
 
 /* r[class.rexxqueue.delete] and r[class.rexxqueue.delete.sends] */
 ::method delete

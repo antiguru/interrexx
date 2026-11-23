@@ -64,6 +64,18 @@ fn read_text(interp: &mut Interp, value: ObjRef, position: usize) -> Result<Vec<
     }
 }
 
+/// The name read by RexxQueue's INIT and SET, with the case normalised.
+pub(super) fn upper_name(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    let mut name = name_argument(interp, args, 0)?;
+    name.make_ascii_uppercase();
+    Ok(Some(interp.text(&name)))
+}
+
 /// 88.922 where more than the one argument these methods take was passed.
 fn check_count(args: &[Option<ObjRef>]) -> Result<(), Failure> {
     if args.len() > 1 {

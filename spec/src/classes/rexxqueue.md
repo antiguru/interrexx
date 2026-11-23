@@ -1,7 +1,7 @@
 ---
 element: "RexxQueue"
 kind: class
-deviations: [109, 135]
+deviations: [109, 135, 183]
 rexxref: "Builtin Classes > Utility Classes > RexxQueue Class; Builtin Classes > Utility Classes > RexxQueue Class > new (Inherited Class Method); Builtin Classes > Utility Classes > RexxQueue Class > create (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > delete (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > exists (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > open (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > delete; Builtin Classes > Utility Classes > RexxQueue Class > empty; Builtin Classes > Utility Classes > RexxQueue Class > get; Builtin Classes > Utility Classes > RexxQueue Class > init; Builtin Classes > Utility Classes > RexxQueue Class > lineIn; Builtin Classes > Utility Classes > RexxQueue Class > lineOut; Builtin Classes > Utility Classes > RexxQueue Class > makeArray; Builtin Classes > Utility Classes > RexxQueue Class > pull; Builtin Classes > Utility Classes > RexxQueue Class > push; Builtin Classes > Utility Classes > RexxQueue Class > queue; Builtin Classes > Utility Classes > RexxQueue Class > queued; Builtin Classes > Utility Classes > RexxQueue Class > say; Builtin Classes > Utility Classes > RexxQueue Class > set"
 ---
 
@@ -144,17 +144,16 @@ r[class.rexxqueue.init]
 (`SYNTAX 93.902`). It decides the name in one of three ways. With no argument
 the name is `SESSION`. With `.nil` it makes a queue whose name the service
 picks, as the class method `create` does with no argument, and uses that name;
-no program can know the name beforehand. With any other argument it sends the
-argument the message `upper`, and the answer is the name: a string in upper
-case, a number such as `12` or a `MutableBuffer` gives its upper-case string,
-and an object that does not understand `upper`, an `Object` or an `Array` for
-one, raises `SYNTAX 97.1`. For a name that was given, `init` then sends the
-class of the receiver the message `open` with the name, as [the class
-method](r:class.rexxqueue.open.class-side) says: a queue of that name is kept
-as it is with its lines, or made when there is none. An `init` does not look
-at the answer of `open`, so a name that no queue can have raises no error
-here: the object is made, and the methods that need the queue fail later, as
-[the missing queue rule](r:class.rexxqueue.missing) says. At last `init` sets
+no program can know the name beforehand. With any other argument it reads
+the name as a string, as [the name rule](r:class.rexxqueue.name) says, and
+converts its characters to upper case
+([Deviation 183](r:class.rexxqueue.deviation.183)). For a name that was
+given, `init` then sends the class of the receiver the message `open` with
+the name, as [the class method](r:class.rexxqueue.open.class-side) says.
+An existing queue keeps its lines, and a missing queue is created.
+An `init` does not check the answer of `open`. A name that no queue can
+have still produces an object, and the methods that need the queue fail
+later, as [the missing queue rule](r:class.rexxqueue.missing) says. At last `init` sets
 the `objectName` of the object to the name, as [the string
 rule](r:class.rexxqueue.string) says. The messages that `init` sends are
 stated in [the next rule](r:class.rexxqueue.init.sends).
@@ -174,16 +173,6 @@ say .rexxqueue~exists(12) .rexxqueue~exists('MB') .rexxqueue~delete(12),
 say c~delete
 e = .rexxqueue~new('not a valid name')
 say e~get '|' .rexxqueue~exists(e~get)
-call try .object~new
-call try .array~new
-exit
-try:
-  signal on syntax name bad
-  x = .rexxqueue~new(arg(1))
-  say 'no error'
-  return
-bad: say condition('o')~code
-  return
 ```
 
 ```output
@@ -194,18 +183,17 @@ SPEC_RQ_INIT_KEPT 1 kept line
 1 1 0 0
 0
 NOT A VALID NAME | 0
-97.1
-97.1
 ```
 
 r[class.rexxqueue.init.sends]
-`init` sends messages in this order. With a name given, `upper` goes to the
-argument, once and before anything else. With `.nil`, `create` goes to the
-class of the receiver with no argument, and then `open` with the name that
-`create` answered. With a name given, `open` goes to the class of the
-receiver, with the upper-case name. With no argument, nothing is sent to the
-class. Then `objectName=` goes to the receiver itself with the name. A
-subclass of `RexxQueue` therefore sees its own class-side `create` and `open`
+`init` sends messages in this order. A name given as an argument is
+converted before any messages to the class or receiver. With `.nil`,
+`create` goes to the class of the receiver with no argument, then `open`
+with the name that `create` answered. With a name given, `open` goes to
+the class of the receiver with the upper-case name. With no argument,
+nothing is sent to the class. Then `objectName=` goes to the receiver
+itself with the name. A subclass of `RexxQueue` therefore sees its own
+class-side `create` and `open`
 and its own `objectName=`. In the example the subclass overrides them and
 writes what they receive.
 
@@ -217,9 +205,7 @@ say '-- nil'
 r = .spy~new(.nil)
 say '-- none'
 s = .spy~new
-say '-- upper'
-t = .spy~new(.shout~new)
-say q~delete r~delete t~delete
+say q~delete r~delete
 ::class spy subclass rexxqueue
 ::method create class
   say 'create' arg()
@@ -235,10 +221,6 @@ say q~delete r~delete t~delete
     say 'objectName= the name that create answered'
   else say 'objectName=' arg(1)
   forward class (super)
-::class shout
-::method upper
-  say 'upper'
-  return 'SPEC_RQ_SENDS_UPPER'
 ```
 
 ```output
@@ -251,11 +233,7 @@ open the name that create answered
 objectName= the name that create answered
 -- none
 objectName= SESSION
--- upper
-upper
-open SPEC_RQ_SENDS_UPPER
-objectName= SPEC_RQ_SENDS_UPPER
-0 0 0
+0 0
 ```
 
 ## Class methods
@@ -899,8 +877,9 @@ one of these faults and another raises the error of one of them, as [the
 precedence rule](r:conv.error.precedence) says. `set` does not look for the
 queue: a name of a queue that does not exist is taken, and [the missing queue
 rule](r:class.rexxqueue.missing) says what the object then does. The name is
-decided as `init` does: the argument is sent `upper`, and an object without
-that method raises `SYNTAX 97.1`, `.nil` and an `Object` among them. Then
+read as a string and converted to upper case as `init` does for a supplied
+name. An argument with no string value, including `.nil`, raises
+`SYNTAX 88.909` ([Deviation 183](r:class.rexxqueue.deviation.183)). Then
 `objectName=` is sent to the receiver with the upper-case name ([the sends
 rule](r:class.rexxqueue.set.sends)). Only the object changes: the queue that
 the program uses with its instructions is not switched, and another object that
@@ -918,8 +897,6 @@ say q~set('spec_rq_set_a') b~get
 say q~delete b~delete
 call try 'set'
 call try 'set("x", "y")'
-call try 'set(.nil)'
-call try 'set(.object~new)'
 exit
 try:
   signal on syntax name bad
@@ -938,34 +915,25 @@ SPEC_RQ_SET_NONE SPEC_RQ_SET_B
 0 0
 set 93.901
 set("x", "y") 93.902
-set(.nil) 97.1
-set(.object~new) 97.1
 ```
 
 r[class.rexxqueue.set.sends]
-`set` sends the argument the message `upper`, once, and then sends the
+`set` converts the argument to a name and then sends the
 receiver `objectName=` with the upper-case name, whether or not the name
 changes, and answers the name that `get` answered before; it sends nothing
-else. `get` is not sent. The example overrides `objectName=` and gives an
-argument that has its own `upper`.
+else. The example overrides `objectName=`.
 
 ```rexx
 q = .spy~new('spec_rq_set_sends')
 say '-- string'
 say q~set('spec_rq_set_sends_b')
-say '-- object'
-say q~set(.shout~new)
 say '-- same name'
-say q~set('SPEC_RQ_SET_SENDS_Z')
+say q~set('SPEC_RQ_SET_SENDS_B')
 say .rexxqueue~delete('spec_rq_set_sends')
 ::class spy subclass rexxqueue
 ::method 'objectName='
   say 'objectName=' arg(1)
   forward class (super)
-::class shout
-::method upper
-  say 'upper'
-  return 'SPEC_RQ_SET_SENDS_Z'
 ```
 
 ```output
@@ -973,14 +941,74 @@ objectName= SPEC_RQ_SET_SENDS
 -- string
 objectName= SPEC_RQ_SET_SENDS_B
 SPEC_RQ_SET_SENDS
--- object
-upper
-objectName= SPEC_RQ_SET_SENDS_Z
-SPEC_RQ_SET_SENDS_B
 -- same name
-objectName= SPEC_RQ_SET_SENDS_Z
-SPEC_RQ_SET_SENDS_Z
+objectName= SPEC_RQ_SET_SENDS_B
+SPEC_RQ_SET_SENDS_B
 0
+```
+
+r[class.rexxqueue.deviation.183]
+The name given to `init` or `set` follows the
+[`request('STRING')` conversion](r:class.rexxqueue.name). The methods
+convert the characters to upper case before `init` opens the queue or
+`set` switches to it. ooRexx sends `upper` to the argument itself, so an
+object with `makeString` alone raises `SYNTAX 97.1` there. A failure to
+supply a string raises `SYNTAX 88.909` in interrexx. The explicit `.nil`
+accepted by `init` requests a service-generated name.
+
+```rexx
+q = .spy~new
+call try '.spy~new(.named~new("spec_rq_converted_init"))~get'
+call try 'q~set(.competing~new("spec_rq_converted_set"))'
+call try '.rexxqueue~new(.object~new)'
+call try 'q~set(.invalid~new)'
+call try 'q~set(.nil)'
+say q~get
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say r
+  return
+bad: say condition('o')~code
+  return
+::class spy subclass RexxQueue
+::method open class
+  say 'open' arg(1)
+  return 0
+::method 'objectName='
+  say 'objectName=' arg(1)
+  forward class (super)
+::class named
+::method init
+  expose name
+  use arg name
+::method makeString
+  expose name
+  say 'makeString' name
+  return name
+::class competing subclass named
+::method upper
+  say 'upper'
+  return 'UPPER_PATH'
+::class invalid
+::method request
+  return .object~new
+```
+
+```output
+objectName= SESSION
+makeString spec_rq_converted_init
+open SPEC_RQ_CONVERTED_INIT
+objectName= SPEC_RQ_CONVERTED_INIT
+SPEC_RQ_CONVERTED_INIT
+makeString spec_rq_converted_set
+objectName= SPEC_RQ_CONVERTED_SET
+SESSION
+88.909
+88.909
+88.909
+SPEC_RQ_CONVERTED_SET
 ```
 
 ## Deleting

@@ -813,6 +813,7 @@ REXXQUEUE.instance.DELETE replacement:queue.rex
 REXXQUEUE.instance.EMPTY entry:rexx_clear_queue
 REXXQUEUE.instance.GET replacement:queue.rex
 REXXQUEUE.instance.INIT replacement:queue.rex
+REXXQUEUE.instance.INTERREXX_QUEUE_NAME entry:interrexx_queue_name
 REXXQUEUE.instance.LINEIN entry:rexx_linein_queue
 REXXQUEUE.instance.LINEOUT replacement:queue.rex
 REXXQUEUE.instance.MAKEARRAY replacement:queue.rex
