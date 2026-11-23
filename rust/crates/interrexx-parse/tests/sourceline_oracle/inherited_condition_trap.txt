@@ -1,0 +1,26 @@
+count 25
+/* The inherited SIGNAL trap sees the callee's private variable pool and its
+   failing clause's SIGL. Disabling the inherited trap in a second call
+   leaves the caller's trap armed. */
+owner = 'caller'
+signal on syntax name caught
+call kept
+say 'resumed' owner
+call disabled
+say 'unexpected return'
+exit 1
+
+kept: procedure
+  owner = 'callee'
+  say 1 / 0
+  return
+
+disabled: procedure
+  owner = 'callee without trap'
+  signal off syntax
+  say 1 / 0
+  return
+
+caught:
+  say condition('C') owner sigl
+  return
