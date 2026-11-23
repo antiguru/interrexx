@@ -175,6 +175,10 @@ pub(crate) enum TraceEntry {
     /// The clause being stepped is this activation's first, so a `TRACE`
     /// executing right now may announce.
     Allowed,
+    /// External trace was switched on during the first clause of a routine.
+    /// Its running activity emits the announcement before the next traced
+    /// clause or before leaving the routine.
+    External,
     /// A second clause has begun, or a fragment was entered from a state that
     /// could not announce. Nothing more will be announced and no `<I<` is
     /// owed.
@@ -189,6 +193,7 @@ impl TraceEntry {
         match self {
             TraceEntry::Pending => TraceEntry::Allowed,
             TraceEntry::Allowed | TraceEntry::Spent => TraceEntry::Spent,
+            TraceEntry::External => TraceEntry::External,
             TraceEntry::Done => TraceEntry::Done,
         }
     }
