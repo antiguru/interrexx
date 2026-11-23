@@ -7,6 +7,7 @@ pub(crate) mod macros;
 pub(crate) mod messages;
 #[cfg(unix)]
 pub(crate) mod process;
+pub(crate) mod search;
 pub(crate) mod stems;
 pub(crate) mod timezone;
 #[cfg(unix)]

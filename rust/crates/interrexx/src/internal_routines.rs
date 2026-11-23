@@ -142,10 +142,9 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(unix)]
     util_run("SysFileMove", crate::builtin::rexxutil::files::file_move),
-    #[cfg(unix)]
     util_run(
         "SysFileSearch",
-        crate::builtin::rexxutil::files::file_search,
+        crate::builtin::rexxutil::search::file_search,
     ),
     #[cfg(windows)]
     util_run(
@@ -287,10 +286,9 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSaveRexxMacroSpace",
         crate::builtin::rexxutil::macros::save,
     ),
-    #[cfg(unix)]
     util_run(
         "SysSearchPath",
-        crate::builtin::rexxutil::files::search_path,
+        crate::builtin::rexxutil::search::search_path,
     ),
     #[cfg(windows)]
     util_run(

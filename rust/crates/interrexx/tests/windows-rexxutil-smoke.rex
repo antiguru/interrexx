@@ -29,6 +29,20 @@ if SysMkDir(dir) <> 0 then exit 1
 if \SysIsFileDirectory(dir) | SysIsFileLink(dir) then exit 2
 call lineout source, 'content'
 call stream source, 'c', 'close'
+if SysFileSearch('CONTENT', source, 'hits.', 'n') <> 0 then exit 38
+if hits.0 <> 1 | hits.1 \== '1 content' then exit 39
+hits = .array~of('discard me')
+if SysFileSearch('CONTENT', source, hits, 'C') <> 0 | hits~items <> 0 then exit 40
+if SysFileSearch('content', dir, hits) <> 3 then exit 41
+call value 'REXX_TEST_SEARCH_PATH', dir || '\missing;' || '"' || dir || '"', 'ENVIRONMENT'
+if SysSearchPath('REXX_TEST_SEARCH_PATH', 'source', 'N') \== source then exit 42
+if SysSearchPath('REXX_TEST_SEARCH_PATH', source) \== source then exit 43
+if SysSearchPath('REXX_TEST_SEARCH_PATH', 'sourc*') \== '' then exit 44
+savedDirectory = directory()
+call directory dir
+if SysSearchPath('REXX_TEST_MISSING_SEARCH_PATH', 'source') \== source then exit 45
+if SysSearchPath('REXX_TEST_MISSING_SEARCH_PATH', 'source', 'N') \== '' then exit 46
+call directory savedDirectory
 if length(SysGetFileDateTime(source, 'Creation')) <> 19 then exit 13
 if SysGetFileDateTime(source) <> SysGetFileDateTime(source, 'Write') then exit 14
 /* spec: util.syssetfiledatetime.windows */
