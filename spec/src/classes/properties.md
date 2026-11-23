@@ -585,8 +585,9 @@ call sysfiledelete f
 r[class.properties.load.class]
 The class method `load(source)` answers a new `Properties` that holds what the
 source gives, an instance of `Properties` whatever class received the message,
-and `new` is not sent. A `File` supplies its path through `string`. A
-`Stream` is used directly, and any other object is first read as a
+and `new` is not sent. A `File` supplies its path through `string`, and a
+`String` supplies a filename directly. A `Stream` or an object with a
+`linein` method is used directly. Other objects are read as a
 [string argument](r:class.index.string) to obtain a filename
 ([Deviation 183](r:class.properties.deviation.183)). A filename is read
 through a `Stream` made for it. An object used directly, including one that
@@ -757,9 +758,10 @@ rule](r:class.properties.deviation.33)); the name and the value are written as
 they are, a value that is not a string through [the string-value
 rule](r:conv.string.object), with no escaping, so a name that holds `=` or a
 value that holds a line feed does not load back as it was. The target follows
-the same filename conversion as [load](r:class.properties.load.class). The
-contents of a file selected by name are replaced. A `Stream` or an object
-with no string value receives `lineout` directly and stays open. When the
+the same filename conversion as [load](r:class.properties.load.class), using
+`lineout` as the stream adapter method. The contents of a file selected by
+name are replaced. A stream adapter or an object with no string value
+receives `lineout` directly and stays open. When the
 target gives a filename or is a `File`,
 `save` first sends `save` to the receiver with a `Stream` made for it, and that
 message does the writing. The writing sends `supplier` to the receiver, and
@@ -978,13 +980,13 @@ ooRexx sends `DATATYPE` to the setter arguments themselves, checks whether
 the value of `getLogical` is an instance of `String` before comparing it,
 and can answer the original default object from `getWhole`.
 `load` and `save` try to obtain a filename by the string argument rule
-for an object that is neither a `File` nor a `Stream`.
+for an object that is neither a `File` nor a stream or line adapter.
 ooRexx treats such objects as line sources or targets.
 
 ```rexx
 p = .properties~new
 p~setLogical('flag', .supplied~new('1'))
-p~setWhole('number', .fallback~new(' +007 '))
+p~setWhole('number', .emptyRequest~new(' +007 '))
 say p['flag'] '['p['number']']'
 say p~getLogical('absent', .supplied~new('false'))
 say p~getLogical('absent', .fallback~new('true'))
@@ -1001,6 +1003,10 @@ call check "p~setWhole('number', .fallback~new(.object~new))"
 call check "p~setLogical('flag', .supplied~new('true'))"
 call check "r = p~getLogical('absent', .fallback~new(.object~new))"
 call check "r = p~getWhole('absent', .supplied~new('1.5'))"
+call check "p~setLogical('flag', .emptyText~new)"
+call check "p~setWhole('number', .emptyText~new)"
+call check "r = p~getLogical('absent', .emptyText~new)"
+call check "r = p~getWhole('absent', .emptyText~new)"
 say p['flag'] '['p['number']']'
 exit
 check:
@@ -1030,6 +1036,14 @@ bad: say condition('o')~code
 ::method request
   say 'unexpected conversion'
   return 'false'
+::class emptyRequest subclass fallback
+::method request
+  return
+::class emptyText
+::method request
+  return
+::method string
+  return
 ```
 
 ```output
@@ -1044,6 +1058,10 @@ String [ 2.0 ]
 34.901
 93.905
 34.901
+34.904
+26.901
+34.901
+93.905
 34.904
 26.901
 true [ +007 ]
@@ -1075,6 +1093,12 @@ say s~lineIn
 p = .properties~load(s)
 say p['other'] s~reads
 s~close
+adapter = .lineAdapter~new(f)
+p = .properties~load(adapter)
+say p['k']
+p~save(adapter)
+say adapter~written
+say .properties~load(path)['k']
 call sysfiledelete f
 exit
 ::class path
@@ -1085,11 +1109,23 @@ exit
   expose filename
   if arg(1) == 'STRING' then return filename
   return .nil
-::method lineOut
-  say 'unexpected lineout'
+::class lineAdapter subclass path
+::attribute written
+::method makeString
+  return self~request:path('STRING')
+::method request
+  say 'unexpected adapter request'
+  forward class (super)
 ::method lineIn
-  say 'unexpected linein'
+  expose read
+  if \var('READ') then do
+    read = 1
+    return 'k=adapter'
+  end
   raise notready
+::method lineOut
+  expose written
+  use strict arg written
 ::class countedStream subclass Stream
 ::attribute reads
 ::attribute writes
@@ -1117,6 +1153,9 @@ two
 READY 2
 k=two
 three 4
+adapter
+k=adapter
+two
 ```
 
 r[class.properties.deviation.29]

@@ -1597,8 +1597,9 @@ that method raises `SYNTAX 97.1` even if it can supply valid mode text.
 `Properties` reads the string value of logical and whole-number arguments.
 ooRexx sends datatype or comparison messages to the objects themselves,
 and `getWhole` can return the original default object. When loading or
-saving, interrexx also accepts a filename through a non-stream object's
-string request, where ooRexx uses that object as a line source or target
+saving, interrexx also accepts a filename through the string request of an
+object without the corresponding line method, where ooRexx sends the line
+message
 ([examples](r:class.properties.deviation.183)).
 
 `CircularQueue` converts size, count, order and option arguments before

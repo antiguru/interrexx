@@ -147,7 +147,7 @@
   if n < 1 then raise syntax 93.901 array (1)
   if n > 1 then raise syntax 93.902 array (1)
   source = arg(1)
-  path = propertyPath(source)
+  path = propertyPath(source, 'LINEIN')
   if .nil \== path then do
     stream = .stream~new(path)
     self~load(stream)
@@ -191,7 +191,7 @@ finished:
   if n < 1 then raise syntax 93.901 array (1)
   if n > 1 then raise syntax 93.902 array (1)
   target = arg(1)
-  path = propertyPath(target)
+  path = propertyPath(target, 'LINEOUT')
   if .nil \== path then do
     stream = .stream~new(path)
     stream~open('write replace')
@@ -372,19 +372,23 @@ finished:
   use arg value, typed = 0
   if .nil == value then return .nil
   if value~isInstanceOf:.object(.string) then return value~makeString:.string
-  text = value~request('STRING')
-  if text~isInstanceOf:.object(.string) then return text~makeString:.string
+  value~request('STRING')
+  if var('RESULT') then
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
   if typed then do
-    text = value~string
-    if text~isInstanceOf:.object(.string) then return text~makeString:.string
+    value~string
+    if var('RESULT') then
+      if result~isInstanceOf:.object(.string) then return result~makeString:.string
   end
   return .nil
 
-/* File uses its path method, and Stream has a string value but must be used
-   at its current position. For other objects, try a filename before the
-   line protocol (r[class.properties.deviation.183]). */
+/* File and String supply filenames. Other objects with the requested line
+   method are used directly, at their current position when they are streams
+   (r[class.properties.deviation.183]). */
 ::routine propertyPath
-  use arg object
+  use arg object, lineMethod
   if object~isInstanceOf:.object(.file) then return object~string
+  if object~isInstanceOf:.object(.string) then return object~makeString:.string
   if object~isInstanceOf:.object(.stream) then return .nil
+  if object~hasMethod:.object(lineMethod) then return .nil
   return propertyText(object)
