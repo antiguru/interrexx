@@ -308,7 +308,8 @@ A name that is `~` alone, or that starts with `~/`, has the `~` replaced by
 the value of the environment variable `HOME` as it is. When `HOME` is the null
 string, `~` alone names nothing and `~/` is replaced by `/`. When it is any
 other value that does not start with a slash, no name that starts with `~/`,
-or is `~` alone, names an entry. A name that starts with `~` and a user's
+or is `~` alone, names an entry. When `HOME` has no value, the `~` is read as
+it is for a user that does not exist, as below. A name that starts with `~` and a user's
 name, up to the first slash or the end, stands for the home directory of that
 user, as [it does for DIRECTORY](r:bif.directory.user); when there is no such
 user, no file has that name, and the name is never read as the name of a file

@@ -1138,8 +1138,8 @@ the standard wrapper and `memcap 4G`, nothing on stdout.
 The command handler's `cd` processing hands a bare `cd` and `cd ~/x` to the
 shell where `getenv("HOME")` is null, but for `cd ~` and `cd ~ x` it runs `strlen` on it. This
 crate hands those to the shell too, and the shell's answer is the command's, the directory
-unchanged, pinned by `command::tests::cd_home_with_home_unset_goes_to_the_shell`. No upstream
-ticket.
+unchanged, pinned by `command::tests::cd_home_with_home_unset_goes_to_the_shell`. Fixed upstream
+as SF #2182 (r13616), which hands `cd ~` to the shell too; not yet run at that revision.
 
 ## 45. `SysWait` with no child to wait for
 
@@ -1234,9 +1234,10 @@ file-name buffer, whose assignment runs `strlen` on it:
 `strlen(NULL)` where `HOME` is unset, as in entry 44's `cd ~`, which was measured.
 Name canonicalisation calls it for a name starting `~`, and stream-name
 qualification calls canonicalisation. In this crate the same names go through `qualify_name`: `QUALIFY`, stream names,
-`DIRECTORY` and the RexxUtil file routines. This crate reads the missing `HOME` as empty: `~`
-qualifies to the null string and `~/x` to `/x`, pinned by
-`builtin::platform::tests::a_tilde_with_home_unset_qualifies_without_a_home`. No upstream ticket.
+`DIRECTORY` and the RexxUtil file routines. This crate leaves the `~` unresolved, as for an
+unknown account's `~user`: `~` and `~/x` qualify to the null string, pinned by
+`builtin::platform::tests::a_tilde_with_home_unset_qualifies_without_a_home`. Fixed upstream as
+SF #2182 (r13616) with the same rule; not yet run at that revision.
 
 ## 49. A reference to a returned procedure's variable, assigned, then a collection
 

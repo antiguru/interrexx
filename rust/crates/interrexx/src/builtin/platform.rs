@@ -28,7 +28,7 @@ pub(crate) fn qualify(
 /// a leading `~` or `~user` resolved, made absolute against the interpreter's
 /// current directory and reduced by [`crate::paths::normalize_bytes`]. The null
 /// string where qualification fails: an empty name, a `~user` naming no account,
-/// or a home directory that is not absolute.
+/// a `~` with `HOME` unset, or a home directory that is not absolute.
 pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
     let name = match name.iter().position(|byte| *byte == 0) {
         Some(end) => &name[..end],
@@ -50,7 +50,8 @@ pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
 
 /// A leading `~` replaced by the environment's
 /// `HOME`, a leading `~user` by that account's home directory, and `None`
-/// where no account has that name.
+/// where no account has that name or `HOME` is unset: an unset home is
+/// unresolved, as an unknown account's is.
 pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
     let rest = &name[1..];
     if rest.is_empty() || rest[0] == b'/' {
@@ -59,8 +60,7 @@ pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
                 b"USERPROFILE"
             } else {
                 b"HOME"
-            })
-            .unwrap_or_default()
+            })?
             .to_vec();
         out.extend_from_slice(rest);
         return Some(out);
@@ -456,20 +456,19 @@ mod tests {
         }
     }
 
-    /// **A `~` with `HOME` unset qualifies to the null string, and `~/x` to
-    /// `/x`**, the empty home read as no directory at all. The reference run
-    /// applies `strlen` to the null `getenv("HOME")` there (oracle defect,
-    /// `corpus/oracle-crashes.txt` entry 48), so this is the crate's own
-    /// answer. The adjacent success is the same names with `HOME` set.
+    /// **A `~` or `~/x` with `HOME` unset qualifies to the null string**: the
+    /// home is unresolved, as an unknown account's is (SF #2182, r13616; the
+    /// oracle before it crashes, `corpus/oracle-crashes.txt` entry 48). The
+    /// adjacent success is the same names with `HOME` set.
     #[test]
     fn a_tilde_with_home_unset_qualifies_without_a_home() {
         let source = b"call value 'HOME', '/h', 'ENVIRONMENT'\n\
             say qualify('~') qualify('~/x')\n\
             'unset HOME'\n\
-            say '['qualify('~')']' qualify('~/x')\n";
+            say '['qualify('~')']['qualify('~/x')']'\n";
         let outcome = crate::run_program("/t.rex", source.to_vec(), crate::Invocation::none());
         assert_eq!(outcome.exit_code, 0);
-        assert_eq!(String::from_utf8_lossy(&outcome.stdout), "/h /h/x\n[] /x\n");
+        assert_eq!(String::from_utf8_lossy(&outcome.stdout), "/h /h/x\n[][]\n");
     }
 }
 
