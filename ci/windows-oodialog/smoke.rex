@@ -18,6 +18,9 @@ exit 0
      return
   end
 
+::method initDialog unguarded
+  say 'HWND' self~dlgHandle
+
 ::method ok unguarded
   self~handledCommand = .true
   forward class (super)
