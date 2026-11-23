@@ -874,7 +874,8 @@ impl Scheduler for Interp {
         if self.activity.native_call.is_none() {
             return;
         }
-        let worker = match self.pool.reserve() {
+        let simulated = self.sim_native_pool();
+        let worker = match self.pool.reserve_native() {
             Ok(worker) => worker,
             Err(failure) => {
                 self.activity
@@ -911,10 +912,17 @@ impl Scheduler for Interp {
                 crate::sync::Arc::clone(&inbox),
             );
             let lent = crate::sync::Arc::clone(&baton);
+            let simulation = simulated.then(|| crate::sync::Arc::new(crate::timer::Inbox::new()));
+            let posts = simulation.clone().unwrap_or(inbox);
+            let bound = self.sim_block_bound();
             worker.run(Box::new(move || {
-                pool::posting_panics(&inbox, &lent, || pooled.run());
+                pool::posting_panics(&posts, &lent, || pooled.run(&posts, bound));
             }));
             baton.lend(to, crate::island::Island::of(self));
+            if let Some(inbox) = simulation {
+                self.await_simulated_native(&inbox);
+                self.pool.wait_for_return(to);
+            }
             return;
         }
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -1942,6 +1950,24 @@ impl Interp {
         }
     }
 
+    /// Handles this worker's recalls at its launch point, independent of
+    /// when the host runs it. Its answer alone is delivered later.
+    fn await_simulated_native(&mut self, inbox: &crate::timer::Inbox<Posted>) {
+        loop {
+            for post in inbox.idle() {
+                match post {
+                    Posted::Recall(recall) => self.serve_recall(recall, DrainAt::Stopped),
+                    Posted::Completed(completion) => {
+                        self.sim_stage_native(completion);
+                        return;
+                    }
+                    Posted::Panicked(payload) => std::panic::resume_unwind(payload),
+                    _ => unreachable!("a simulated worker only recalls, completes or panics"),
+                }
+            }
+        }
+    }
+
     /// Serves what the calls still in flight post once the run has ended --
     /// a pool thread's recall to end its call, a completion, a command's
     /// end -- until none is in flight, then drops the interpreter.
@@ -1952,6 +1978,7 @@ impl Interp {
         for idle in self.activities.idle.iter().flatten() {
             crate::builtin::rxsock::cancel_helper(&idle.activity);
         }
+        self.sim_deliver_native(Some(u64::MAX));
         while self.activities.in_flight() {
             let posted = self.timer.idle();
             self.file_completions(posted, DrainAt::Stopped);
@@ -2241,23 +2268,7 @@ impl Interp {
         }
         while let Some(next) = posted.pop_front() {
             match next {
-                Posted::Completed(Completed {
-                    activity,
-                    frame,
-                    completion,
-                }) => {
-                    self.activities.in_flight -= 1;
-                    if let Some(call) = self
-                        .record_of(activity)
-                        .and_then(|record| record.native_call.as_mut())
-                        .filter(|call| call.frame() == frame)
-                    {
-                        call.complete(completion);
-                        self.unpark(activity);
-                    } else {
-                        self.end_abandoned_call(frame);
-                    }
-                }
+                Posted::Completed(completion) => self.file_native_completion(completion),
                 Posted::Recall(recall) => {
                     let context = match recall.by {
                         Recaller::Context(address) => Some(address),
@@ -2345,6 +2356,27 @@ impl Interp {
                     }
                 }
             }
+        }
+    }
+
+    /// Records a call's completion and readies its activity, or drops the
+    /// call's frame if its activity no longer waits for it.
+    pub(crate) fn file_native_completion(&mut self, completed: Completed) {
+        let Completed {
+            activity,
+            frame,
+            completion,
+        } = completed;
+        self.activities.in_flight -= 1;
+        if let Some(call) = self
+            .record_of(activity)
+            .and_then(|record| record.native_call.as_mut())
+            .filter(|call| call.frame() == frame)
+        {
+            call.complete(completion);
+            self.unpark(activity);
+        } else {
+            self.end_abandoned_call(frame);
         }
     }
 

@@ -191,7 +191,12 @@ table, not guessed.
 seam serves every clock read; virtual time starts at a seeded epoch, advances per clause and jumps
 to the next deadline when every activity waits. Each kind of decision (schedule, order, clock,
 collection, children, the hash seed) draws from its own stream, so a knob does not re-roll the
-schedule. Every native call, command and stdin read runs on the baton. Policies: `pre:d` (d
+schedule. By default native calls, commands and stdin reads run on the baton. The opt-in
+`pool=K` runs native calls that leave their driver on real pool workers. The interpreter
+serves each worker's own recalls and waits for its answer at launch. A separate seed stream
+then delays delivery to the calling activity by 1 to K clause boundaries. When all activities
+are waiting, the earliest pending delivery runs immediately. Use this mode with native
+fixtures that can finish at launch without progress from another Rexx activity. Policies: `pre:d` (d
 preemptions among the first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness
 floor. Knobs include `gc=q`, `halt@K`, `fail=wait:K` and `hash=SEED`, which a `REXX_HASH_SEED`
 override records so that a trace replays under the same hash seed. The scheduler checks its own
