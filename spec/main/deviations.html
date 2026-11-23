@@ -1373,6 +1373,11 @@ in the logical check, depending on the comparisons the object answers.</p>
 <p><code>CommandInput~lineIn</code> reads its count through the required-string protocol
 before comparing it with <code>0</code> and <code>1</code>. ooRexx refuses an object with
 <code>SYNTAX 93.963</code> even when its conversion gives one of those values.</p>
+<p><code>TimeSpan</code> checks and computes with the converted number in multi-part
+constructors, conversions from days through seconds and additions from weeks
+through seconds. ooRexx sends comparisons and multiplication to the argument
+itself, which can raise <code>SYNTAX 97.1</code> even when it supplies a valid number
+(<a href="classes/timespan.html#r-class.timespan.deviation.183">example</a>).</p>
 <p><code>RexxQueue~init</code> and <code>set</code> read a supplied name through <code>REQUEST('STRING')</code>
 before uppercasing it. ooRexx sends <code>UPPER</code> to the name object, which raises
 <code>SYNTAX 97.1</code> for an object with <code>makeString</code> alone.</p>
