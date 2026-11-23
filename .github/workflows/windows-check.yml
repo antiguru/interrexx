@@ -146,7 +146,7 @@ jobs:
             dumpbin /imports sdk\bin\%%p | findstr /i /c:"rexx.dll" || exit /b 1
           )
 
-      - name: Generate the class libraries and exercise an ooDialog callback
+      - name: Generate the ooDialog class libraries
         shell: pwsh
         timeout-minutes: 2
         run: |
@@ -163,14 +163,25 @@ jobs:
           foreach ($class in 'ooDialog.cls', 'oodPlain.cls', 'oodWin32.cls') {
             if (!(Test-Path "$bin/$class")) { throw "Missing $class" }
           }
-          Push-Location $bin
+      - uses: actions/upload-artifact@v7
+        with:
+          name: interrexx-oodialog-windows-x64
+          path: rust/sdk/bin/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Run the ooDialog launcher and exercise a dialog callback
+        shell: pwsh
+        timeout-minutes: 2
+        run: |
+          Push-Location sdk/bin
           try {
-            $output = @(& ./rexx.exe smoke.rex)
-            if ($LASTEXITCODE -ne 0 -or $output -cnotcontains 'ooDialog button event passed') {
-              throw "ooDialog callback failed ($LASTEXITCODE): $($output -join '|')"
-            }
             $version = @(& ./ooDialog.com --version)
             if ($LASTEXITCODE -ne 0 -or ($version -join ' ') -notmatch 'ooDialog') {
               throw "ooDialog launcher failed ($LASTEXITCODE): $($version -join '|')"
+            }
+            & ./rexx.exe smoke.rex | Tee-Object -Variable output | Write-Host
+            if ($LASTEXITCODE -ne 0 -or $output -cnotcontains 'ooDialog button event passed') {
+              throw "ooDialog callback failed ($LASTEXITCODE): $($output -join '|')"
             }
           } finally { Pop-Location }
