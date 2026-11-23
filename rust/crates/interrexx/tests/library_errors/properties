@@ -161,10 +161,15 @@ error
 ----
 34.901
 
-error
-.properties~new~setLogical('k', .nil)
+# Deviation 183 gives each setter its own validation error for .nil.
+ours
+signal on syntax name h
+v = .properties~new~setLogical('k', .nil)
+say 'no error'
+exit
+h: say condition('o')~code
 ----
-97.1
+34.901
 
 error
 .properties~new~setLogical(.nil, 1)
@@ -191,10 +196,14 @@ error
 ----
 93.905
 
-error
-.properties~new~setWhole('k', .nil)
+ours
+signal on syntax name h
+v = .properties~new~setWhole('k', .nil)
+say 'no error'
+exit
+h: say condition('o')~code
 ----
-97.1
+93.905
 
 error
 .properties~new~setWhole(.nil, 1)
