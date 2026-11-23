@@ -9,7 +9,7 @@ mod cursor;
 mod keywords;
 mod symbols;
 
-pub(crate) use cursor::{ParseCtx, TokenCursor};
+pub(crate) use cursor::{ParseCtx, RequiredLanguage, TokenCursor};
 pub use keywords::{KeywordSet, Keywords};
 pub use symbols::{SymbolId, SymbolTable};
 

@@ -40,6 +40,7 @@ fn parse_kind(text: &str, kind: SourceKind) -> Result<(Vec<Instruction>, SymbolT
             selectors: &selectors,
             keywords: scanned.keywords,
             resources: &scanned.resources,
+            required_level: None,
         };
         // A fresh split over the full token vector, then one code body. Going
         // through `translate_block` rather than a bare loop means these tests

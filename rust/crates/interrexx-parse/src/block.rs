@@ -747,7 +747,11 @@ pub(crate) fn translate_block(
                 return Err(block.block_error(top, cursor.peek().is_none()));
             }
             block.pop();
-            return Ok(block.finish());
+            let body = block.finish();
+            if let Some(required_level) = ctx.required_level {
+                required_level.finish_body(body.labels.contains_key(b"GC".as_slice()));
+            }
+            return Ok(body);
         };
 
         // A THEN is not dispatched at all: the block translation builds it

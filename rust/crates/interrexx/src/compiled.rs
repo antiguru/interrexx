@@ -9,7 +9,7 @@
 //! versions of this crate.
 
 use interrexx_inventory::errors::{E3_903, E3_905};
-use interrexx_parse::{ProgramSource, SourceKind};
+use interrexx_parse::{ProgramSource, RequiredLanguageLevel, SourceKind};
 use sha2::{Digest, Sha256};
 
 use crate::builtin::convert::{base64_digit, encode_base64_bytes};
@@ -34,6 +34,9 @@ const HEADER_BYTES: usize = 48;
 
 /// Where the source length sits in the header.
 const LENGTH_AT: usize = 40;
+
+/// Where the required language level sits in the header.
+const REQUIRED_LEVEL_AT: usize = 24;
 
 /// The reference implementation's differs, so its validation refuses every
 /// image this crate writes with 3.903 rather than reading the source as its own
@@ -67,15 +70,14 @@ pub enum Restore {
 }
 
 /// The header this build writes, up to its source length field.
-fn header_prefix() -> [u8; LENGTH_AT] {
+fn header_prefix(level: RequiredLanguageLevel) -> [u8; LENGTH_AT] {
     let mut header = [0u8; LENGTH_AT];
     header[..TAG.len()].copy_from_slice(TAG);
     header[16..18].copy_from_slice(&MAGIC.to_le_bytes());
     header[18..20].copy_from_slice(&FORMAT_VERSION.to_le_bytes());
     // `wordSize`, then `bigEndian` left 0.
     header[20..22].copy_from_slice(&64u16.to_le_bytes());
-    // `requiredLevel`, the language level 6.06.
-    header[24..28].copy_from_slice(&60600u32.to_le_bytes());
+    header[REQUIRED_LEVEL_AT..REQUIRED_LEVEL_AT + 4].copy_from_slice(&(level as u32).to_le_bytes());
     header
 }
 
@@ -85,13 +87,35 @@ fn header_prefix() -> [u8; LENGTH_AT] {
 /// image in lines of [`CHUNK`] digits. # Panics If `name` is longer than a
 /// `u32` counts.
 pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
+    let required_level = interrexx_parse::with_parser_stack(|| {
+        interrexx_parse::program_from_with_language_level(ProgramSource::new(
+            source.to_vec(),
+            SourceKind::Program,
+        ))
+        .ok()
+        .map(|(_, level)| level)
+    });
+    let level = match required_level {
+        Ok(Some(level)) => level,
+        // Direct callers have always been able to package arbitrary bytes.
+        _ => RequiredLanguageLevel::V6_06,
+    };
+    write_image_for_level(source, name, encode, level)
+}
+
+pub(crate) fn write_image_for_level(
+    source: &[u8],
+    name: &[u8],
+    encode: bool,
+    level: RequiredLanguageLevel,
+) -> Vec<u8> {
     let mut body = Vec::with_capacity(NAME_LENGTH_BYTES + name.len() + source.len());
     let name_length = u32::try_from(name.len()).expect("a program name fits a u32");
     body.extend_from_slice(&name_length.to_le_bytes());
     body.extend_from_slice(name);
     body.extend_from_slice(source);
     let mut image = Vec::with_capacity(HEADER_BYTES + DIGEST_BYTES + body.len());
-    image.extend_from_slice(&header_prefix());
+    image.extend_from_slice(&header_prefix(level));
     let length = u64::try_from(source.len()).expect("a source length fits a u64");
     image.extend_from_slice(&length.to_le_bytes());
     image.extend_from_slice(&Sha256::digest(&body));
@@ -185,7 +209,11 @@ fn image_source(image: &[u8]) -> Restore {
     };
     let (prefix, length) = header.split_at(LENGTH_AT);
     let length = u64::from_le_bytes(length.try_into().expect("an 8-byte length field"));
-    if prefix != header_prefix() {
+    // The old writer always stored 6.06, including for programs using only
+    // 6.05 features. Both headers have the same layout and integrity checks.
+    if prefix != header_prefix(RequiredLanguageLevel::V6_05)
+        && prefix != header_prefix(RequiredLanguageLevel::V6_06)
+    {
         return Restore::Rejected;
     }
     let Some((digest, rest)) = rest.split_at_checked(DIGEST_BYTES) else {
@@ -273,6 +301,7 @@ fn decode(text: &[u8]) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use RequiredLanguageLevel::{V6_05, V6_06};
 
     const SOURCE: &[u8] = b"say 'hello'\n::routine r\nreturn 1\n";
 
@@ -288,16 +317,24 @@ mod tests {
     #[test]
     fn both_forms_round_trip() {
         for encode in [false, true] {
-            let image = write_image(SOURCE, NAME, encode);
-            assert!(image.starts_with(b"#!/usr/bin/env rexx\n/**/@REXX"));
-            assert_eq!(restore(&image), compiled(SOURCE, NAME));
+            // Images made before the level was inferred all stored 6.06.
+            for level in [V6_05, V6_06] {
+                let image = write_image_for_level(SOURCE, NAME, encode, level);
+                assert!(image.starts_with(b"#!/usr/bin/env rexx\n/**/@REXX"));
+                assert_eq!(restore(&image), compiled(SOURCE, NAME));
+            }
         }
-        assert_eq!(restore(&write_image(b"", b"", true)), compiled(b"", b""));
+        assert_eq!(
+            restore(&write_image_for_level(b"", b"", true, V6_05)),
+            compiled(b"", b"")
+        );
     }
 
     #[test]
     fn the_binary_form_is_the_oracle_layout() {
         let image = write_image(SOURCE, NAME, false);
+        let level_at = SHEBANG.len() + REQUIRED_LEVEL_AT;
+        assert_eq!(&image[level_at..level_at + 4], &60500u32.to_le_bytes());
         let digest_at = SHEBANG.len() + HEADER_BYTES;
         let name_at = digest_at + DIGEST_BYTES + NAME_LENGTH_BYTES;
         assert_eq!(image.len(), name_at + NAME.len() + SOURCE.len());
@@ -314,7 +351,7 @@ mod tests {
 
     #[test]
     fn the_encoded_form_has_full_lines_and_ends_in_a_line_end() {
-        let image = write_image(&[b'x'; 500], NAME, true);
+        let image = write_image_for_level(&[b'x'; 500], NAME, true, V6_05);
         let body = &image[SHEBANG.len() + ENCODED_TAG.len()..];
         let lines: Vec<&[u8]> = body.split(|&byte| byte == b'\n').collect();
         assert_eq!(lines.last(), Some(&&b""[..]));
@@ -329,11 +366,14 @@ mod tests {
 
     #[test]
     fn a_foreign_or_damaged_header_is_rejected() {
-        let image = write_image(SOURCE, NAME, false);
+        let image = write_image_for_level(SOURCE, NAME, false, V6_05);
         let mut oracle = image.clone();
         oracle[36..38].copy_from_slice(&11111u16.to_le_bytes());
         let mut version = image.clone();
         version[38] = version[38].wrapping_add(1);
+        let mut language_level = image.clone();
+        let level_at = SHEBANG.len() + REQUIRED_LEVEL_AT;
+        language_level[level_at..level_at + 4].copy_from_slice(&60700u32.to_le_bytes());
         let mut past = image.clone();
         past[SHEBANG.len() + LENGTH_AT] += 1;
         let mut short = image.clone();
@@ -346,7 +386,14 @@ mod tests {
         let mut huge_name = image.clone();
         huge_name[name_length + 3] = 0xff;
         for damaged in [
-            oracle, version, past, short, long_name, short_name, huge_name,
+            oracle,
+            version,
+            language_level,
+            past,
+            short,
+            long_name,
+            short_name,
+            huge_name,
         ] {
             assert_eq!(restore(&damaged), Restore::Rejected);
         }
@@ -360,7 +407,7 @@ mod tests {
         ] {
             assert_eq!(restore(&image[..cut]), Restore::Rejected, "cut at {cut}");
         }
-        let encoded = write_image(SOURCE, NAME, true);
+        let encoded = write_image_for_level(SOURCE, NAME, true, V6_05);
         let mut foreign = b"#!/usr/bin/env rexx\n/**/@REXX@\n".to_vec();
         foreign.extend_from_slice(b"QUJD\n");
         assert_eq!(restore(&foreign), Restore::Rejected);
@@ -372,7 +419,7 @@ mod tests {
     /// source, is refused, in either form.
     #[test]
     fn a_changed_byte_after_the_header_is_rejected() {
-        let image = write_image(SOURCE, NAME, false);
+        let image = write_image_for_level(SOURCE, NAME, false, V6_05);
         for at in SHEBANG.len() + HEADER_BYTES..image.len() {
             for flip in [0x01, 0x80] {
                 let mut changed = image.clone();
@@ -398,7 +445,7 @@ mod tests {
 
     #[test]
     fn broken_base64_is_undecodable() {
-        let encoded = write_image(SOURCE, NAME, true);
+        let encoded = write_image_for_level(SOURCE, NAME, true, V6_05);
         let at = SHEBANG.len() + ENCODED_TAG.len() + 5;
         let mut broken = encoded.clone();
         broken[at] = b'!';
@@ -431,7 +478,7 @@ mod tests {
         // bytes before the final group was required to be whole.
         let mut source = SOURCE.to_vec();
         let encoded = loop {
-            let encoded = write_image(&source, NAME, true);
+            let encoded = write_image_for_level(&source, NAME, true, V6_05);
             if encoded.ends_with(b"=\n") {
                 break encoded;
             }
@@ -469,7 +516,8 @@ mod tests {
 
     #[test]
     fn a_restored_source_is_not_traceable() {
-        let source = program_source(write_image(SOURCE, NAME, false), b"p").expect("restored");
+        let source = program_source(write_image_for_level(SOURCE, NAME, false, V6_05), b"p")
+            .expect("restored");
         assert!(!source.is_traceable());
         assert_eq!(source.image_name(), Some(NAME));
         assert_eq!(source.line(1), Some(&b"say 'hello'"[..]));
@@ -485,7 +533,7 @@ mod tests {
 
     #[test]
     fn only_lines_whose_second_is_the_encoded_tag_are_restored() {
-        let image = write_image(SOURCE, NAME, true);
+        let image = write_image_for_level(SOURCE, NAME, true, V6_05);
         let lines: Vec<&[u8]> = image.split(|&byte| byte == b'\n').collect();
         let restored = lines_source(&lines, b"p")
             .expect("an image")

@@ -61,10 +61,15 @@ pub(crate) fn translate(path: &[u8], name: &[u8]) -> Option<Vec<u8>> {
         return None;
     }
     let source = crate::compiled::program_source(text.clone(), path).ok()?;
-    interrexx_parse::program_from(source).ok()?;
     Some(match crate::compiled::restore(&text) {
-        crate::compiled::Restore::Source => crate::compiled::write_image(&text, name, false),
-        _ => text,
+        crate::compiled::Restore::Source => {
+            let (_, level) = interrexx_parse::program_from_with_language_level(source).ok()?;
+            crate::compiled::write_image_for_level(&text, name, false, level)
+        }
+        _ => {
+            interrexx_parse::program_from(source).ok()?;
+            text
+        }
     })
 }
 

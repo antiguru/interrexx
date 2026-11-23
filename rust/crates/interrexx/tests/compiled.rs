@@ -503,6 +503,68 @@ fn both_interpreters_write_an_image_with_the_same_opening() {
     }
 }
 
+// spec: env.invocation.rexxc.required-level
+#[test]
+fn the_header_records_the_required_language_level() {
+    let ours = Side::ours("required-level");
+    let oracle = Side::oracle();
+    for (source, expected) in [
+        ("say 'hello'", 60500),
+        ("do i = 1 to 2; nop; end", 60500),
+        ("finally = 1; say finally; say errortext(40)", 60500),
+        ("/* call gc */ interpret 'call gc'", 60500),
+        ("call ('GC'); say .nil~gc", 60500),
+        ("say ns:gc(); call ns:gc", 60500),
+        ("say 'gc'(); call 'gc'", 60500),
+        ("say gc(); call gc; exit; gc: return 1", 60500),
+        ("say gc()", 60600),
+        ("call gc", 60600),
+        ("say 'GC'(); exit; gc: return 1", 60600),
+        ("call 'GC'; exit; gc: return 1", 60600),
+        ("call gc\n::routine gc\nreturn 1", 60600),
+        ("gc: return 1\n::routine r\ncall gc", 60600),
+        ("::class c\n::constant count (gc())", 60600),
+        ("::options numeric inherit", 60600),
+        ("::options numeric noinherit", 60600),
+    ] {
+        for side in [&ours, &oracle] {
+            std::fs::write(side.dir.join("level.rex"), source).expect("the source");
+            let result = side
+                .command(&side.rexxc)
+                .args(["level.rex", "level.rxo", "-s"])
+                .output()
+                .expect("rexxc starts");
+            assert!(result.status.success(), "{source:?}: {result:?}");
+            let image = std::fs::read(side.dir.join("level.rxo")).expect("the image");
+            // ProgramMetaData::requiredLevel, 24 bytes from the header's tag.
+            assert_eq!(
+                u32::from_le_bytes(image[44..48].try_into().unwrap()),
+                expected,
+                "{source:?} on {}",
+                side.rexxc.display()
+            );
+        }
+    }
+    for side in [&ours, &oracle] {
+        std::fs::write(side.dir.join("level.rex"), "say gc()").expect("the source");
+        let result = side
+            .command(&side.rexxc)
+            .args(["level.rex", "level.rxo", "-s", "-e"])
+            .output()
+            .expect("rexxc starts");
+        assert!(result.status.success(), "{result:?}");
+        let image = std::fs::read(side.dir.join("level.rxo")).expect("the image");
+        let encoded = image
+            .strip_prefix(b"#!/usr/bin/env rexx\n/**/@REXX@\n")
+            .expect("the encoded image's opening");
+        assert_eq!(
+            u32::from_le_bytes(decode(&encoded[..72])[24..28].try_into().unwrap()),
+            60600
+        );
+        std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+    }
+}
+
 /// An image runs by its bytes alone: without its first line, with another
 /// first line that starts `#!`, under any name; and the search adds no `.rxo`.
 // spec: env.invocation.rexxc.run

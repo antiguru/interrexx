@@ -148,7 +148,7 @@ pub fn parse_program(text: Vec<u8>) -> Result<Program, ParseError> {
 /// ones declared before them.
 pub fn parse_known_program(text: Vec<u8>) -> Result<Program, ParseError> {
     let source = ProgramSource::new(text, SourceKind::Program);
-    match parse(&source, false) {
+    match parse(&source, false, None) {
         Ok(parsed) => Ok(Program {
             source,
             main: parsed.main,
@@ -173,7 +173,32 @@ pub fn parse_interpret(text: Vec<u8>) -> Result<Fragment, ParseError> {
 /// Parses `source` as a whole program, answering it back with the error when
 /// it does not parse.
 pub fn program_from(source: ProgramSource) -> Result<Program, Rejected> {
-    match parse(&source, true) {
+    program_from_tracking(source, None)
+}
+
+/// The minimum language level of a compiled program using 6.05 or 6.06 features.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[repr(u32)]
+pub enum RequiredLanguageLevel {
+    #[default]
+    V6_05 = 60500,
+    V6_06 = 60600,
+}
+
+/// Parses a whole program and records which language level its translation requires.
+pub fn program_from_with_language_level(
+    source: ProgramSource,
+) -> Result<(Program, RequiredLanguageLevel), Rejected> {
+    let required_level = token::RequiredLanguage::default();
+    let program = program_from_tracking(source, Some(&required_level))?;
+    Ok((program, required_level.level.get()))
+}
+
+fn program_from_tracking(
+    source: ProgramSource,
+    required_level: Option<&token::RequiredLanguage>,
+) -> Result<Program, Rejected> {
+    match parse(&source, true, required_level) {
         Ok(parsed) => Ok(Program {
             source,
             main: parsed.main,
@@ -192,7 +217,7 @@ pub fn program_from(source: ProgramSource) -> Result<Program, Rejected> {
 /// error when it does not parse.
 pub fn fragment_from(source: ProgramSource) -> Result<Fragment, Rejected> {
     // `INTERPRET` text carries no directive, so it declares nothing to check.
-    let parsed = match parse(&source, false) {
+    let parsed = match parse(&source, false, None) {
         Ok(parsed) => parsed,
         Err((error, binds)) => {
             return Err(Rejected {
@@ -230,7 +255,11 @@ struct Parsed {
 
 /// The composition shared by both entry points. A failure carries
 /// [`Rejected::binds`].
-fn parse(source: &ProgramSource, checked: bool) -> Result<Parsed, (ParseError, Vec<Directive>)> {
+fn parse(
+    source: &ProgramSource,
+    checked: bool,
+    required_level: Option<&token::RequiredLanguage>,
+) -> Result<Parsed, (ParseError, Vec<Directive>)> {
     let (scanned, scan_error) = scan_to_error(source);
     // Declared ahead of `ctx`, which borrows it, and dropped with the parse.
     // A `Selector` in the tree holds the name's bytes itself, so what the
@@ -244,6 +273,7 @@ fn parse(source: &ProgramSource, checked: bool) -> Result<Parsed, (ParseError, V
         selectors: &selectors,
         keywords: scanned.keywords,
         resources: &scanned.resources,
+        required_level,
     };
 
     let clauses = split_clauses(ctx.tokens).map_err(|error| (error, Vec::new()))?;
@@ -304,6 +334,17 @@ fn translate<'a>(
     };
     while cursor.peek().is_some() {
         let mut directive = parse_directive(ctx, cursor, &mut declared)?;
+        if let Some(required_level) = ctx.required_level {
+            // A directive's constant expression has no body-local labels.
+            required_level.finish_body(false);
+            if let DirectiveKind::Options(options) = &directive.kind
+                && options
+                    .iter()
+                    .any(|option| matches!(option, PackageOption::NumericInherit(_)))
+            {
+                required_level.level.set(RequiredLanguageLevel::V6_06);
+            }
+        }
         if declared.bound {
             binds.push(directives.len());
         }
