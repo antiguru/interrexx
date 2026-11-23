@@ -862,6 +862,7 @@ class REXXQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annota
   instance EMPTY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_clear_queue
   instance GET private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_QUEUE_NAME private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_queue_name
   instance LINEIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=rexx_linein_queue
   instance LINEOUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance MAKEARRAY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-

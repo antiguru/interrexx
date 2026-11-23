@@ -1561,6 +1561,10 @@ conversion fails.
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
 
+`RexxQueue~init` and `set` read a supplied name through `REQUEST('STRING')`
+before uppercasing it. ooRexx sends `UPPER` to the name object, which raises
+`SYNTAX 97.1` for an object with `makeString` alone.
+
 `CommandContext~raise('SYNTAX', code)` sends a non-string code object
 `REQUEST('String')` and uses the returned string as the code. ooRexx sends
 `DATATYPE('N')` and `POS('.')` directly to the code object. An object that

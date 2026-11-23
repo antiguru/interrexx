@@ -301,6 +301,12 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         Arity::Fixed(0),
         super::stream::uninit,
     ),
+    implemented(
+        "interrexx_queue_name",
+        Family::Queue,
+        Arity::Fixed(1),
+        super::queue_methods::upper_name,
+    ),
     scoped(
         "rexx_create_queue",
         Family::Queue,
