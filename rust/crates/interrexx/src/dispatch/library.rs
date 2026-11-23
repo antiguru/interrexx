@@ -2469,6 +2469,7 @@ impl Host for Interp {
             .locals
             .resolve_live(handle, |object| lives(heap, object))
             .or_else(|| self.global_references.resolve(handle))
+            .or_else(|| self.native_environment_directory(handle))
     }
 
     fn register_local(&mut self, object: ObjRef) -> interrexx_api::layout::RexxObjectPtr {

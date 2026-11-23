@@ -104,20 +104,6 @@ jobs:
       - name: Check out the pinned ooRexx sources
         working-directory: .
         run: git submodule update --init --depth 1 -- third_party/ooRexx
-      - name: Trace the native dialog initialization
-        shell: pwsh
-        run: |
-          $source = (Resolve-Path ../third_party/ooRexx/extensions/platform/windows/oodialog).Path
-          $p = Join-Path $source 'oodUser.cpp'
-          $s = [IO.File]::ReadAllText($p)
-          $s = $s.Replace('    RexxObjectPtr result = context->ForwardMessage(NULL, NULL, super, newArgs);', '    RexxObjectPtr result = context->ForwardMessage(NULL, NULL, super, newArgs);' + "`n" + '    fprintf(stderr, "oodUser forward: result %p zero %p condition %d\n", (void *)result, (void *)TheZeroObj, int(context->CheckCondition()));')
-          $s = $s.Replace('        baseClassInitializationException(context, "UserDialog", "DynamicDialog initialization has been skipped");', '        if (context->CheckCondition()) context->DisplayCondition();' + "`n" + '        baseClassInitializationException(context, "UserDialog", "DynamicDialog initialization has been skipped");')
-          [IO.File]::WriteAllText($p, $s)
-          $p = Join-Path $source 'ooDialog.cpp'
-          $s = [IO.File]::ReadAllText($p)
-          $s = $s.Replace('    // Before processing the arguments, do everything that might raise an error', '    fprintf(stderr, "pbdlg init entry\n");' + "`n" + '    // Before processing the arguments, do everything that might raise an error')
-          $s = $s.Replace('    pWB->initCode = (result == TheZeroObj ? 0 : 1);', '    fprintf(stderr, "pbdlg init done result %p zero %p condition %d\n", (void *)result, (void *)TheZeroObj, context->CheckCondition());' + "`n" + '    pWB->initCode = (result == TheZeroObj ? 0 : 1);')
-          [IO.File]::WriteAllText($p, $s)
       - name: Build the pinned ooDialog packages and launchers
         shell: cmd
         run: |
