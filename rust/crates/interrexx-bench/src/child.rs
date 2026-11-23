@@ -148,12 +148,14 @@ pub fn run(
         .envs(side.env.iter().map(|(name, value)| (name, value)));
     if let Some(service) = &side.service {
         service.configure(&mut command);
-        // An axis can load an extension from the oracle's build. Keep either
-        // API client away from the caller's service.
-        let (_, runtime) = service.variable();
-        command
-            .env(RuntimeSide::Crate.variable(), runtime)
-            .env(RuntimeSide::Oracle.variable(), runtime);
+        if cfg!(target_os = "linux") {
+            // An axis can load an extension from the oracle's build. Linux
+            // cleanup can stop either daemon, so give both clients this runtime.
+            let (_, runtime) = service.variable();
+            command
+                .env(RuntimeSide::Crate.variable(), runtime)
+                .env(RuntimeSide::Oracle.variable(), runtime);
+        }
     }
     time_command(&mut command, Capture::Collect)
         .map_err(|error| format!("{} could not be launched: {error}", side.label))
@@ -456,6 +458,39 @@ mod tests {
                 .service
                 .is_none()
         );
+    }
+
+    #[test]
+    fn a_crate_service_redirects_the_oracle_client_only_on_linux() {
+        let service =
+            PrivateService::for_benchmark(RuntimeSide::Crate, Some(PathBuf::from("/bin/true")))
+                .unwrap()
+                .expect("the crate has an explicit stop binary");
+        let mut side = Side::rust(PathBuf::from("/bin/sh"), Arm::Ir);
+        side.env
+            .push(("XDG_RUNTIME_DIR".into(), "inherited-runtime".into()));
+        side.service = Some(Arc::new(service));
+        let (_, runtime) = side.service.as_ref().unwrap().variable();
+        let program = runtime.join("show-runtime");
+        std::fs::write(
+            &program,
+            r#"printf '%s\n%s' "$REXX_API_DIR" "$XDG_RUNTIME_DIR""#,
+        )
+        .unwrap();
+        let completed = run(&side, &program, runtime, &Wrapper::default()).unwrap();
+        assert!(completed.succeeded());
+        let oracle_runtime = if cfg!(target_os = "linux") {
+            runtime.as_os_str().as_encoded_bytes()
+        } else {
+            b"inherited-runtime"
+        };
+        let expected = [
+            runtime.as_os_str().as_encoded_bytes(),
+            b"\n",
+            oracle_runtime,
+        ]
+        .concat();
+        assert_eq!(completed.stdout, expected);
     }
 
     /// The shell really does apply the cap and the directory, and the
