@@ -49,8 +49,9 @@ if SysSearchPath('REXX_TEST_SEARCH_PATH', 'source', 'N') \== source then exit 42
 if SysSearchPath('REXX_TEST_SEARCH_PATH', source) \== source then exit 43
 if SysSearchPath('REXX_TEST_SEARCH_PATH', 'sourc*') \== '' then exit 44
 savedDirectory = directory()
-call directory dir
-if SysSearchPath('REXX_TEST_MISSING_SEARCH_PATH', 'source') \== source then exit 45
+selected = directory(dir)
+if selected == '' then exit 52
+if SysSearchPath('REXX_TEST_MISSING_SEARCH_PATH', 'source') \== selected || '\source' then exit 45
 if SysSearchPath('REXX_TEST_MISSING_SEARCH_PATH', 'source', 'N') \== '' then exit 46
 call directory savedDirectory
 if length(SysGetFileDateTime(source, 'Creation')) <> 19 then exit 13
