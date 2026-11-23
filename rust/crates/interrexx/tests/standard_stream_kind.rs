@@ -97,5 +97,8 @@ fn open_standard_handles_report_the_sizes_of_redirected_regular_files() {
     let error = std::fs::read_to_string(dir.join("err")).expect("redirected error");
     std::fs::remove_dir_all(&dir).expect("the probe directory is removed");
     assert!(status.success(), "{status}: {error}");
-    assert_eq!(sizes.expect("the probe wrote its answer").trim_end(), "7 5 3");
+    assert_eq!(
+        sizes.expect("the probe wrote its answer").trim_end(),
+        "7 5 3"
+    );
 }
