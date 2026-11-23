@@ -139,11 +139,8 @@ unreadable:
 ::method fromOrdinalDate class
   use strict arg text, offset = 0
   numeric digits 18
-  -- r[class.datetime.fromdate.argument]: the argument is sent `contains`
-  -- first, and its answer picks the form.
-  if text~contains('-') then dashed = 1
-  else dashed = 0
-  s = '' || text
+  s = dateTimeDateText(text)
+  dashed = pos('-', s) > 0
   select
     when \dashed & length(s) == 7 then parse var s year 5 day
     when dashed & length(s) == 8 & substr(s, 5, 1) == '-' then
@@ -168,10 +165,8 @@ refused:
 ::method fromWeekNumberDate class
   use strict arg text, offset = 0
   numeric digits 18
-  -- r[class.datetime.fromdate.argument]: as for fromOrdinalDate.
-  if text~contains('-') then dashed = 1
-  else dashed = 0
-  s = '' || text
+  s = dateTimeDateText(text)
+  dashed = pos('-', s) > 0
   select
     when \dashed & length(s) == 8 then parse var s year 5 w 6 week 8 day
     when dashed & length(s) == 10 then do
@@ -309,7 +304,7 @@ unreadable:
 
 -- r[class.datetime.new], r[class.datetime.new.checks],
 -- r[class.datetime.new.init-again]. The count of the arguments picks the form;
--- each argument gets the messages of r[class.datetime.sends.new].
+-- the argument types and conversions follow r[class.datetime.sends.new].
 ::method init
   expose stamp zone
   numeric digits 18
@@ -341,9 +336,9 @@ unreadable:
       place = 2
     end
     otherwise do
-      year = field(arg(1), 'year', 1, 9999, 4)
-      month = field(arg(2), 'month', 1, 12, 2)
-      day = field(arg(3), 'day', 1, 31, 2)
+      year = field(arg(1), 'year', 1, 9999)
+      month = field(arg(2), 'month', 1, 12)
+      day = field(arg(3), 'day', 1, 31)
       days = date('B', right(year, 4, 0) || right(month, 2, 0) || right(day, 2, 0), 'S')
       hours = 0
       minutes = 0
@@ -351,10 +346,10 @@ unreadable:
       micro = 0
       place = 4
       if count >= 5 then do
-        hours = field(arg(4), 'hours', 0, 23, 2)
-        minutes = field(arg(5), 'minutes', 0, 59, 2)
-        if arg(6, 'E') then seconds = field(arg(6), 'seconds', 0, 59, 2)
-        if arg(7, 'E') then micro = field(arg(7), 'microseconds', 0, 999999, 6)
+        hours = field(arg(4), 'hours', 0, 23)
+        minutes = field(arg(5), 'minutes', 0, 59)
+        if arg(6, 'E') then seconds = field(arg(6), 'seconds', 0, 59)
+        if arg(7, 'E') then micro = field(arg(7), 'microseconds', 0, 999999)
         place = 8
       end
       micro = days * 86400000000 + ((hours * 60 + minutes) * 60 + seconds) * 1000000 + micro
@@ -370,15 +365,11 @@ unreadable:
   stamp = micro
   zone = offset
   return
--- One field: its value read once, then the argument compared with the limits
--- and sent `right` with the width of its field, as the sends rule says.
+-- One calendar or time field, read as a whole number and checked in range.
 field: procedure
-  use arg v, name, low, high, width
-  n = whole('' || v)
-  if n == '' then raise syntax 88.907 array(name, low, high, v)
-  if \(v >= low) then raise syntax 88.907 array(name, low, high, v)
-  if \(v <= high) then raise syntax 88.907 array(name, low, high, v)
-  padded = v~right(width, 0)
+  use arg v, name, low, high
+  n = whole(dateTimeNumberText(v))
+  if n == '' | n < low | n > high then raise syntax 88.907 array(name, low, high, v)
   return n
 -- r[class.datetime.offset]: a TimeSpan of whole minutes, or a number of
 -- minutes, from -900 to 900; answers microseconds.
@@ -390,12 +381,9 @@ offsetOf: procedure
       raise syntax 88.907 array('offset', -900, 900, span / 60000000)
     return span % 1
   end
-  n = whole('' || v)
-  if n == '' then raise syntax 88.907 array('offset', -900, 900, v)
-  if \(v >= -900) then raise syntax 88.907 array('offset', -900, 900, v)
-  if \(v <= 900) then raise syntax 88.907 array('offset', -900, 900, v)
-  span = v * 60000000
-  return span % 1
+  n = whole(dateTimeNumberText(v))
+  if n == '' | n < -900 | n > 900 then raise syntax 88.907 array('offset', -900, 900, v)
+  return n * 60000000
 whole: procedure
   parse arg s
   if \datatype(s, 'N') then return ''
@@ -710,8 +698,9 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('weeks', amount)
-  moved = stamp + amount * 604800000000
+  text = dateTimeNumberText(amount)
+  if \datatype(text, 'N') then raise syntax 88.902 array('weeks', amount)
+  moved = stamp + text * 604800000000
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -726,8 +715,9 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('days', amount)
-  moved = stamp + amount * 86400000000
+  text = dateTimeNumberText(amount)
+  if \datatype(text, 'N') then raise syntax 88.902 array('days', amount)
+  moved = stamp + text * 86400000000
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -742,8 +732,9 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('hours', amount)
-  moved = stamp + amount * 3600000000
+  text = dateTimeNumberText(amount)
+  if \datatype(text, 'N') then raise syntax 88.902 array('hours', amount)
+  moved = stamp + text * 3600000000
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -758,8 +749,9 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('minutes', amount)
-  moved = stamp + amount * 60000000
+  text = dateTimeNumberText(amount)
+  if \datatype(text, 'N') then raise syntax 88.902 array('minutes', amount)
+  moved = stamp + text * 60000000
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -774,8 +766,9 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('seconds', amount)
-  moved = stamp + amount * 1000000
+  text = dateTimeNumberText(amount)
+  if \datatype(text, 'N') then raise syntax 88.902 array('seconds', amount)
+  moved = stamp + text * 1000000
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -894,12 +887,10 @@ weeks: procedure
     span = span % 1
   end
   else do
-    span = offset * 60000000
-    n = whole('' || offset)
-    if n == '' then raise syntax 88.907 array('offset', -900, 900, offset)
-    if \(offset >= -900) then raise syntax 88.907 array('offset', -900, 900, offset)
-    if \(offset <= 900) then raise syntax 88.907 array('offset', -900, 900, offset)
-    given = offset
+    given = dateTimeNumberText(offset)
+    span = given * 60000000
+    n = whole(given)
+    if n == '' | n < -900 | n > 900 then raise syntax 88.907 array('offset', -900, 900, offset)
     span = span % 1
   end
   answer = self~class~new(stamp - zone + span, given)
@@ -950,3 +941,27 @@ whole: procedure
   if \var('STAMP') then parse value 0 0 with stamp zone
   parse value time('F') time('O') with now host
   return .TimeSpan~new(now - host - (stamp - zone))
+
+-- r[class.datetime.fromdate.argument]: a date arrives through REQUEST.
+::routine dateTimeDateText
+  use arg value
+  if value~isInstanceOf:.object(.string) then return value~makeString:.string
+  value~request('STRING')
+  if var('RESULT') then do
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  raise syntax 88.909 array(1)
+
+-- r[class.datetime.deviation.183]: numeric arguments also fall back to STRING.
+::routine dateTimeNumberText
+  use arg value
+  if value~isInstanceOf:.object(.string) then return value~makeString:.string
+  value~request('STRING')
+  if var('RESULT') then do
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  value~string
+  if var('RESULT') then do
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  return ''
