@@ -139,7 +139,7 @@ fn collect(arguments: &[String]) -> ExitCode {
         );
         return ExitCode::FAILURE;
     }
-    let rust = Side::rust(rust_binary, arm);
+    let rust = Side::rust_with_private_service(rust_binary, arm);
 
     // Every child runs here rather than in the repository or in the
     // scratchpad root: the oracle resolves an unresolved call name against the

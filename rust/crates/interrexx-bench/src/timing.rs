@@ -40,10 +40,15 @@ pub fn time_once(
     capture: Capture,
 ) -> io::Result<Completed> {
     let mut command = Command::new(program);
-    command.args(args).stdin(Stdio::null());
-    for (name, value) in env {
-        command.env(name, value);
-    }
+    command
+        .args(args)
+        .envs(env.iter().map(|(name, value)| (name, value)));
+    time_command(&mut command, capture)
+}
+
+/// Times a command whose arguments and environment have already been set.
+pub fn time_command(command: &mut Command, capture: Capture) -> io::Result<Completed> {
+    command.stdin(Stdio::null());
     match capture {
         Capture::Discard => {
             command.stdout(Stdio::null()).stderr(Stdio::null());
