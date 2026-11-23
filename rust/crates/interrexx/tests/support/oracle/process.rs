@@ -63,7 +63,7 @@ pub(super) fn wait_with_deadline(
                     );
                 }
                 break (status.code(), false);
-            },
+            }
             Ok(None) => {
                 if start.elapsed() >= deadline {
                     // The process is still running past its deadline: kill
