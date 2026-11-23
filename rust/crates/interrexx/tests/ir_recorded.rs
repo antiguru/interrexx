@@ -925,29 +925,33 @@ fn keyword_cases(suite: &str) -> Vec<Case> {
     cases
 }
 
-/// Runs one case and describes what went wrong with it, if anything.
-fn compare(case: &Case) -> Option<String> {
+fn run_case(case: &Case, sidecar: &support::sidecar::Sidecar) -> Outcome {
     // A directory of the case's own: a corpus program that writes files would
     // otherwise write them beside this crate's sources.
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("ir-recorded-run")
         .join(case.name.replace(['/', ':', ' '], "__"));
-    // A corpus program runs with the fixtures, environment and input the
-    // corpus differential gives it, so a library witness reaches its library
-    // rather than the load failure.
+    let overrides = support::sidecar::resolved_environment(sidecar, &dir);
+    let cwd = support::sidecar::prepare_run_directory(&dir, sidecar);
+    watchdog::run_bounded(
+        &case.path,
+        case.text.clone(),
+        support::sidecar::invocation(&cwd, &overrides, sidecar.stdin.as_deref()),
+    )
+}
+
+/// Runs one case with the same fixtures, environment and input as the corpus differential.
+fn compare(case: &Case) -> Option<String> {
     let sidecar = case
         .corpus
         .as_deref()
         .map(|rel_path| support::sidecar::sidecar_for(&corpus_dir(), rel_path))
         .unwrap_or_default();
-    let overrides = support::sidecar::resolved_environment(&sidecar, &dir);
-    let cwd = support::sidecar::prepare_run_directory(&dir, &sidecar);
-    let outcome = watchdog::run_bounded(
-        &case.path,
-        case.text.clone(),
-        support::sidecar::invocation(&cwd, &overrides, sidecar.stdin.as_deref()),
-    );
-    if watchdog::did_not_finish(&outcome) {
+    compare_outcome(case, &run_case(case, &sidecar))
+}
+
+fn compare_outcome(case: &Case, outcome: &Outcome) -> Option<String> {
+    if watchdog::did_not_finish(outcome) {
         return Some(
             String::from_utf8_lossy(&outcome.stderr)
                 .trim_end()
@@ -965,6 +969,22 @@ fn compare(case: &Case) -> Option<String> {
             outcome.chunks_refused
         ));
     }
+    // These witnesses must reach the native routine and report what it did.
+    // A trapped condition or an unexpected .nil can end the program normally
+    // and leave no error report. The expected output also pins deliberate
+    // failures, such as the pre-load call in the Package case.
+    if let Some(expected) = case.corpus.as_deref().and_then(library_witness_stdout)
+        && (outcome.exit_code != 0 || outcome.stdout != expected || !outcome.stderr.is_empty())
+    {
+        return Some(format!(
+            "library witness did not reach its expected outcome (exit {}):\n\
+             expected stdout: {:?}\nactual stdout: {:?}\nstderr: {:?}",
+            outcome.exit_code,
+            String::from_utf8_lossy(expected),
+            String::from_utf8_lossy(&outcome.stdout),
+            String::from_utf8_lossy(&outcome.stderr),
+        ));
+    }
     // A corpus program that failed to load a library the oracle's own build
     // directory holds stopped where its sidecar should have taken it further;
     // a witness of a missing library names one that directory does not hold.
@@ -980,6 +1000,77 @@ fn compare(case: &Case) -> Option<String> {
         ));
     }
     None
+}
+
+/// Outcomes shared by each library witness and its Rust-builtin counterpart.
+/// The native cases need the oracle libraries, so their outputs are required
+/// in gate mode. The Rust cases assert their outputs in the standalone sweep too.
+fn library_witness_stdout(path: &str) -> Option<&'static [u8]> {
+    let stem = path.strip_prefix("lang/")?.strip_suffix(".rex")?;
+    let rust = stem.strip_suffix("_rust");
+    let expected: &[u8] = match rust.unwrap_or(stem) {
+        "library_routine_load_library" => {
+            b"before miss 43.1\nload 1\nafter 4\nmain 8\nfindRoutine The NIL object\nlate late.rex 9\n"
+        }
+        "library_routine_load_external" => {
+            b"load Routine\nmain 4\ncall 4\ncallWith 1.414\nbracket 3\npackage 1\n"
+        }
+        "library_loads_once" => b"requires ran\nload 1\nagain 1\nabsent 0\nmethod Method\n\
+              nomethod The NIL object\nnolib The NIL object\nnoroutine The NIL object\n",
+        _ => return None,
+    };
+    (rust.is_some()
+        || std::env::var("REXX_CORPUS_GATE").is_ok_and(|value| !value.is_empty() && value != "0"))
+    .then_some(expected)
+}
+
+#[test]
+fn library_witness_rejects_missing_fixtures_and_quiet_load_failures() {
+    use support::sidecar::{Half, sidecar_for};
+
+    let mut cases = corpus_cases();
+    for case in &mut cases {
+        if case
+            .corpus
+            .as_deref()
+            .and_then(library_witness_stdout)
+            .is_some()
+        {
+            case.name.push_str(" library witness check");
+            assert_eq!(compare(case), None, "{}", case.name);
+        }
+    }
+    let path = "lang/library_routine_load_library_rust.rex";
+    let mut case = cases
+        .into_iter()
+        .find(|case| case.corpus.as_deref() == Some(path))
+        .expect("the library witness is in the corpus sweep");
+
+    let sidecar = sidecar_for(&corpus_dir(), path).without(&Half::Fixtures);
+    let missing = run_case(&case, &sidecar);
+    let problem = compare_outcome(&case, &missing).expect("a missing fixture must fail");
+    assert!(problem.contains("43.901"), "{problem}");
+
+    for (program, reported) in [
+        (
+            b"signal on syntax name failed\n\
+              package = .Package~new('probe', .array~of(\"::requires 'interrexx_issue_71_absent' LIBRARY\"))\n\
+              exit\nfailed: say condition('O')~code\n".as_slice(),
+            "98.903",
+        ),
+        (
+            b"say .Routine~loadExternalRoutine('probe', 'LIBRARY rxmath NoSuchRoutine')\n",
+            "The NIL object",
+        ),
+    ] {
+        case.text = program.to_vec();
+        let quiet = run_case(&case, &sidecar);
+        assert_eq!(quiet.exit_code, 0);
+        assert!(quiet.stderr.is_empty());
+        assert_eq!(quiet.stdout, format!("{reported}\n").as_bytes());
+        let problem = compare_outcome(&case, &quiet).expect("a quiet failure must fail");
+        assert!(problem.contains(&format!("actual stdout: \"{reported}")), "{problem}");
+    }
 }
 
 /// The library a 98.903 report in `stderr` names, if there is one.

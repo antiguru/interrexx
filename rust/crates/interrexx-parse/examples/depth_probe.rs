@@ -60,19 +60,19 @@ fn main() {
         "debug" | "eq" | "clone" => {
             let handle = std::thread::Builder::new()
                 .spawn(move || {
-                    let mut e = Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-                    for _ in 0..n {
-                        let rhs = Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-                        e = Expr::binary(Operator::Plus, e, rhs);
-                    }
+                    let build = || {
+                        let leaf = || Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
+                        (0..n).fold(leaf(), |left, _| Expr::binary(Operator::Plus, left, leaf()))
+                    };
+                    let e = build();
                     match mode.as_str() {
                         "debug" => {
                             let text = format!("{e:?}");
                             println!("ok: depth {n} debug, {} chars", text.len());
                         }
                         "eq" => {
-                            let clone_for_eq = e.clone();
-                            println!("ok: depth {n} eq, equal={}", e == clone_for_eq);
+                            let other = build();
+                            println!("ok: depth {n} eq, equal={}", e == other);
                         }
                         "clone" => {
                             let cloned = e.clone();

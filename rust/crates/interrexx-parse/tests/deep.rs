@@ -1,7 +1,7 @@
 //! A deep `1 + 1 + ... + 1` chain must parse and drop on a normal,
 //! default-stack test thread, not just on the wide thread `rexx` uses.
 
-use interrexx_parse::{MAX_EXPR_DEPTH, parse_program};
+use interrexx_parse::{Expr, ExprKind, MAX_EXPR_DEPTH, Operator, parse_program, with_parser_stack};
 
 /// Builds `say (((...('a')...)))` with `depth` levels of parenthesis
 /// nesting.
@@ -24,18 +24,6 @@ fn deep_call_program(depth: usize) -> Vec<u8> {
     src.into_bytes()
 }
 
-/// Runs `parse_program` on a 512 MiB thread, as `interrexx`'s public entry
-/// point runs, which is the stack every depth limit here is calibrated
-/// against.
-fn parse_on_a_sized_thread(bytes: Vec<u8>) -> Result<(), interrexx_parse::ParseError> {
-    std::thread::Builder::new()
-        .stack_size(512 * 1024 * 1024)
-        .spawn(move || parse_program(bytes).map(drop))
-        .expect("spawns")
-        .join()
-        .expect("the thread itself must not panic")
-}
-
 /// Parenthesis nesting past `MAX_EXPR_DEPTH` raises `11.1`
 /// (`r[expr.index.nesting]`) instead of aborting with a native stack
 /// overflow. The parser recurses to `MAX_EXPR_DEPTH` before it raises, so
@@ -43,12 +31,9 @@ fn parse_on_a_sized_thread(bytes: Vec<u8>) -> Result<(), interrexx_parse::ParseE
 #[test]
 fn a_paren_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
     let bytes = deep_paren_program(100_000);
-    let handle = std::thread::Builder::new()
-        .stack_size(512 * 1024 * 1024)
-        .spawn(move || parse_program(bytes))
-        .expect("spawns");
-    let err = handle.join().expect("the thread itself must not panic");
-    let err = err.expect_err("100,000 parens is past MAX_EXPR_DEPTH");
+    let err = with_parser_stack(|| parse_program(bytes))
+        .expect("spawns")
+        .expect_err("100,000 parens is past MAX_EXPR_DEPTH");
     assert_eq!((err.code(), err.sub()), (11, 1));
 }
 
@@ -60,6 +45,18 @@ fn a_paren_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
 fn a_shallow_paren_nesting_still_parses_on_a_default_stack_thread() {
     let program = parse_program(deep_paren_program(300)).expect("parses");
     drop(program);
+}
+
+/// Inputs accepted by the grammar can need more stack than the caller's
+/// thread. This exercises the same entry point a standalone embedder uses.
+#[test]
+fn a_deeply_nested_program_parses_on_the_parser_stack() {
+    let source = deep_call_program(5_000);
+    let line = source.strip_suffix(b"\n").expect("a physical line");
+    let program = with_parser_stack(|| interrexx_parse::parse_lines(&[line]))
+        .expect("spawns")
+        .expect("5,000 nested calls are within the grammar limit");
+    assert_eq!(program.main.instructions.len(), 1);
 }
 
 /// Builds `total = 1 + 1 + ... + 1` (`terms` copies of `1`) then `say total`,
@@ -95,7 +92,8 @@ fn the_depth_the_oracle_still_answers_also_parses_and_drops() {
 /// aborting the process.
 #[test]
 fn a_call_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
-    let err = parse_on_a_sized_thread(deep_call_program(100_000))
+    let err = with_parser_stack(|| parse_program(deep_call_program(100_000)))
+        .expect("spawns")
         .expect_err("100,000 nested calls is past MAX_EXPR_DEPTH");
     assert_eq!((err.code(), err.sub()), (11, 1));
 }
@@ -113,7 +111,22 @@ fn parens_and_calls_share_one_budget_rather_than_one_each() {
     src.push_str(&")".repeat(half));
     src.push('\n');
 
-    let err = parse_on_a_sized_thread(src.into_bytes())
+    let err = with_parser_stack(|| parse_program(src.into_bytes()))
+        .expect("spawns")
         .expect_err("half the budget in each construct must still exceed the shared one");
     assert_eq!((err.code(), err.sub()), (11, 1));
+}
+
+/// These traits exhaust the default stack on a chain of this length.
+#[test]
+fn recursive_expression_traits_run_on_the_parser_stack() {
+    let leaf = || Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
+    let expr = (0..5_000).fold(leaf(), |left, _| Expr::binary(Operator::Plus, left, leaf()));
+
+    with_parser_stack(|| {
+        let clone = expr.clone();
+        assert!(expr == clone);
+        assert!(format!("{expr:?}").starts_with("Expr { kind: Binary"));
+    })
+    .expect("spawns");
 }
