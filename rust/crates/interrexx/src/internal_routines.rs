@@ -72,7 +72,7 @@ const fn util_run(name: &'static str, body: InternalBody) -> InternalRoutine {
     }
 }
 
-/// Every name the two packages register on Linux.
+/// Names the two packages register on this platform.
 pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Directory", crate::builtin::platform::directory),
     rexx_run("Filespec", crate::builtin::platform::filespec),
@@ -99,11 +99,7 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysCreatePipe",
         crate::builtin::rexxutil::process::create_pipe,
     ),
-    #[cfg(unix)]
-    util_run(
-        "SysDropFuncs",
-        crate::builtin::rexxutil::process::load_funcs,
-    ),
+    util_run("SysDropFuncs", crate::builtin::rexxutil::load_funcs),
     util_run(
         "SysDropRexxMacro",
         crate::builtin::rexxutil::macros::drop_macro,
@@ -169,6 +165,13 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
     #[cfg(windows)]
     util_run(
+        "SysIsFileCompressed",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_COMPRESSED },
+        >,
+    ),
+    #[cfg(windows)]
+    util_run(
         "SysIsFileDirectory",
         crate::builtin::rexxutil::windows_files::is_directory,
     ),
@@ -176,6 +179,13 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysIsFileDirectory",
         crate::builtin::rexxutil::files::is_file_directory,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileEncrypted",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_ENCRYPTED },
+        >,
     ),
     #[cfg(windows)]
     util_run(
@@ -187,12 +197,36 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysIsFileLink",
         crate::builtin::rexxutil::files::is_file_link,
     ),
-    util_run("SysLinVer", crate::builtin::rexxutil::version),
-    #[cfg(unix)]
+    #[cfg(windows)]
     util_run(
-        "SysLoadFuncs",
-        crate::builtin::rexxutil::process::load_funcs,
+        "SysIsFileNotContentIndexed",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_NOT_CONTENT_INDEXED },
+        >,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileOffline",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_OFFLINE },
+        >,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileSparse",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_SPARSE_FILE },
+        >,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileTemporary",
+        crate::builtin::rexxutil::windows_files::has_attribute::<
+            { windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_TEMPORARY },
+        >,
+    ),
+    util_run("SysLinVer", crate::builtin::rexxutil::version),
+    util_run("SysLoadFuncs", crate::builtin::rexxutil::load_funcs),
     util_run(
         "SysLoadRexxMacroSpace",
         crate::builtin::rexxutil::macros::load,
@@ -256,11 +290,7 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysTempFileName",
         crate::builtin::rexxutil::files::temp_file_name,
     ),
-    #[cfg(unix)]
-    util_run(
-        "SysUtilVersion",
-        crate::builtin::rexxutil::process::util_version,
-    ),
+    util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),

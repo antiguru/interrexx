@@ -115,6 +115,26 @@ fn path_argument(
     Ok(crate::builtin::platform::qualify_name(interp, &text))
 }
 
+/// `SysUtilVersion()`: `ORX_VER.ORX_REL.ORX_MOD`.
+pub(crate) fn util_version(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(interp.text_built(crate::version::VERSION_NUMBER.to_vec()))
+}
+
+/// `SysLoadFuncs()` and `SysDropFuncs()`, one body: nothing to do, `0`.
+pub(crate) fn load_funcs(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(answer(interp, 0))
+}
+
 /// The answer these routines give: a whole number, as text.
 fn answer(interp: &mut Interp, value: i64) -> ObjRef {
     ObjRef::small_int(value).unwrap_or_else(|| interp.text_built(value.to_string().into_bytes()))

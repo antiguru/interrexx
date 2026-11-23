@@ -10,26 +10,6 @@ use super::{answer, c_string, check_arity, int_argument, optional_text, required
 use crate::error::Raised;
 use crate::{Failure, Interp, Loud};
 
-/// `SysUtilVersion()`: `ORX_VER.ORX_REL.ORX_MOD`.
-pub(crate) fn util_version(
-    interp: &mut Interp,
-    _name: &'static [u8],
-    args: &[Option<ObjRef>],
-) -> Result<ObjRef, Failure> {
-    check_arity(args, 0)?;
-    Ok(interp.text_built(crate::version::VERSION_NUMBER.to_vec()))
-}
-
-/// `SysLoadFuncs()` and `SysDropFuncs()`, one body: nothing to do, `0`.
-pub(crate) fn load_funcs(
-    interp: &mut Interp,
-    _name: &'static [u8],
-    args: &[Option<ObjRef>],
-) -> Result<ObjRef, Failure> {
-    check_arity(args, 0)?;
-    Ok(answer(interp, 0))
-}
-
 /// `SysCls()`: `system("clear")`, answering its raw wait status.
 /// The child's output reaches this interpreter's own sinks.
 pub(crate) fn cls(

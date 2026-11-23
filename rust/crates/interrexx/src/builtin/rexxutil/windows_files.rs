@@ -82,30 +82,30 @@ pub(crate) fn file_move(
     two_paths(interp, args, crate::host::move_file)
 }
 
-fn has_attribute(
+pub(crate) fn has_attribute<const ATTRIBUTE: u32>(
     interp: &mut Interp,
+    _: &'static [u8],
     args: &[Option<ObjRef>],
-    attribute: u32,
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 1)?;
     let path = path_argument(interp, args, 1)?;
     let has = std::fs::symlink_metadata(crate::paths::os_path(&path))
-        .is_ok_and(|metadata| metadata.file_attributes() & attribute != 0);
+        .is_ok_and(|metadata| metadata.file_attributes() & ATTRIBUTE != 0);
     Ok(answer(interp, i64::from(has)))
 }
 
 pub(crate) fn is_directory(
     interp: &mut Interp,
-    _: &'static [u8],
+    name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    has_attribute(interp, args, FILE_ATTRIBUTE_DIRECTORY)
+    has_attribute::<FILE_ATTRIBUTE_DIRECTORY>(interp, name, args)
 }
 
 pub(crate) fn is_link(
     interp: &mut Interp,
-    _: &'static [u8],
+    name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    has_attribute(interp, args, FILE_ATTRIBUTE_REPARSE_POINT)
+    has_attribute::<FILE_ATTRIBUTE_REPARSE_POINT>(interp, name, args)
 }
