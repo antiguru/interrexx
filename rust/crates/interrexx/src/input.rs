@@ -100,12 +100,18 @@ struct FileConsole {
 
 impl FileConsole {
     /// Standard input, when it is a regular file.
+    #[cfg(unix)]
     fn open() -> Option<FileConsole> {
         use std::os::fd::AsFd;
         let stdin = std::io::stdin();
         FileConsole::over(std::fs::File::from(
             stdin.as_fd().try_clone_to_owned().ok()?,
         ))
+    }
+
+    #[cfg(windows)]
+    fn open() -> Option<FileConsole> {
+        Self::over(crate::host::standard_file(0).ok()?)
     }
 
     /// `file` as a console, positioned at its descriptor's offset; `None`
@@ -493,6 +499,7 @@ impl Input {
     /// the buffer (rexxref iostrms.xml:189-193). `None` while a read is
     /// already in flight, when the state cannot be learned.
     fn stdin_waiting(&mut self) -> Option<bool> {
+        #[cfg(unix)]
         use rustix::event::{PollFd, PollFlags, Timespec, poll};
         let Source::Stdin(stdin) = &self.source else {
             return None;
@@ -506,16 +513,26 @@ impl Input {
         if stdin.reading {
             return None;
         }
-        let zero = Timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        };
-        let descriptor = std::io::stdin();
-        let mut polled = [PollFd::new(&descriptor, PollFlags::IN)];
-        match poll(&mut polled, Some(&zero)) {
-            Ok(_) if polled[0].revents().is_empty() => return Some(false),
-            Ok(_) => {}
-            Err(_) => return None,
+        #[cfg(unix)]
+        {
+            let zero = Timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            };
+            let descriptor = std::io::stdin();
+            let mut polled = [PollFd::new(&descriptor, PollFlags::IN)];
+            match poll(&mut polled, Some(&zero)) {
+                Ok(_) if polled[0].revents().is_empty() => return Some(false),
+                Ok(_) => {}
+                Err(_) => return None,
+            }
+        }
+        #[cfg(windows)]
+        {
+            let file = crate::host::standard_file(0).ok()?;
+            if crate::host::bytes_waiting(&file)? == 0 {
+                return Some(false);
+            }
         }
         let chunk = read_stdin_chunk();
         self.receive(chunk);
@@ -637,6 +654,7 @@ impl Interp {
     }
 
     /// Whether `.input` is the process's own standard input.
+    #[cfg(unix)]
     pub(crate) fn input_is_process_stdin(&self) -> bool {
         self.input.is_live()
     }

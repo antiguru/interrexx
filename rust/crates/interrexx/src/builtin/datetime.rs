@@ -817,7 +817,7 @@ fn program_zone_offset(interp: &mut Interp, utc_micros: i64) -> i32 {
         None => false,
     };
     if !fresh {
-        let zone = super::rexxutil::files::program_zone(interp);
+        let zone = super::rexxutil::timezone::program_zone(interp);
         let held = interp.env_get(b"TZ").map(<[u8]>::to_vec);
         interp.zone_cache = Some((held, zone));
     }

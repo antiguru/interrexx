@@ -15,7 +15,7 @@ const CURRENT_DIRECTORY: &str = ".";
 /// The path entries a `::REQUIRES` inside a package at `program_dir` is
 /// searched over, in order: the requiring program's own directory, the current
 /// directory, `REXX_PATH`, then `PATH`.
-#[cfg(test)]
+#[cfg(all(test, unix))]
 pub(crate) fn search_entries(
     program_dir: Option<&str>,
     rexx_path: Option<&str>,
@@ -43,18 +43,30 @@ pub(crate) fn search_entries_with(
     }
     push(CURRENT_DIRECTORY);
     for path in [call_path, rexx_path, sys_path].into_iter().flatten() {
-        for entry in path.split(PATH_SEPARATOR) {
+        #[cfg(unix)]
+        for entry in path.split(':') {
             push(entry);
+        }
+        #[cfg(windows)]
+        {
+            let bytes = narrow(path);
+            if let Some(path) = crate::paths::os_str(&bytes) {
+                for entry in std::env::split_paths(path) {
+                    push(&widen(entry.as_os_str().as_encoded_bytes()));
+                }
+            }
         }
     }
     entries
 }
 
-/// The byte separating the entries of `REXX_PATH` and `PATH`.
-const PATH_SEPARATOR: char = ':';
+#[cfg(unix)]
+const SEPARATORS: &[char] = &['/'];
+#[cfg(windows)]
+const SEPARATORS: &[char] = &['/', '\\'];
 
 /// Every path a `::REQUIRES` of `name` tries, in the order it tries them.
-#[cfg(test)]
+#[cfg(all(test, unix))]
 pub(crate) fn candidates(
     name: &str,
     entries: &[String],
@@ -118,7 +130,13 @@ pub(crate) fn candidates_with(
             out.push(
                 entries
                     .iter()
-                    .map(|entry| format!("{}/{candidate}", entry.trim_end_matches('/')))
+                    .map(|entry| {
+                        format!(
+                            "{}{}{candidate}",
+                            entry.trim_end_matches(SEPARATORS),
+                            std::path::MAIN_SEPARATOR
+                        )
+                    })
                     .collect(),
             );
         }
@@ -166,14 +184,16 @@ pub(crate) fn first_regular(
 /// name with no directory part.
 pub(crate) fn program_directory(path: &str) -> Option<&str> {
     let first = first_char_len(path)?;
-    path[first..].rfind('/').map(|at| &path[..=first + at])
+    path[first..]
+        .rfind(SEPARATORS)
+        .map(|at| &path[..=first + at])
 }
 
 /// The extension `path` ends with, leading dot included, or `None` for a name
 /// whose last component carries none.
 pub(crate) fn program_extension(path: &str) -> Option<&str> {
     let first = first_char_len(path)?;
-    let at = first + path[first..].rfind(['/', '.'])?;
+    let at = first + path[first..].rfind(|ch| ch == '.' || SEPARATORS.contains(&ch))?;
     path[at..].starts_with('.').then(|| &path[at..])
 }
 
@@ -193,7 +213,9 @@ fn has_extension(name: &str) -> bool {
 /// `../name` are searched for like any other relative name
 /// (`r[env.search.names]`).
 fn has_directory(name: &str) -> bool {
-    name.starts_with('~') || name.starts_with('/')
+    name.starts_with('~')
+        || name.starts_with(SEPARATORS)
+        || (cfg!(windows) && name.as_bytes().get(1) == Some(&b':'))
 }
 
 /// The file a search for `name` finds, normalised against `cwd`, or `None`
@@ -241,7 +263,6 @@ pub(crate) fn search_with(
     cwd: &[u8],
     requires: bool,
 ) -> Option<Vec<u8>> {
-    use std::os::unix::ffi::OsStrExt as _;
     let program = program.map(widen);
     let program = program.as_deref();
     let entries = search_entries_with(
@@ -255,7 +276,7 @@ pub(crate) fn search_with(
     let groups = candidates_with(&widen(name), &entries, extension, requires, &extensions);
     let located = |candidate: &str| crate::paths::normalize_bytes(&narrow(candidate), cwd);
     let hit = first_regular(&groups, |candidate| {
-        match std::fs::metadata(std::ffi::OsStr::from_bytes(&located(candidate))) {
+        match std::fs::metadata(crate::paths::os_path(&located(candidate))) {
             Ok(meta) if meta.is_file() => Found::Regular,
             Ok(_) => Found::Other,
             Err(_) => Found::Missing,
@@ -278,7 +299,7 @@ fn narrow(text: &str) -> Vec<u8> {
         .collect()
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
@@ -514,5 +535,36 @@ mod tests {
         assert_eq!(program_directory("//x"), Some("//"));
         assert_eq!(program_directory("a/x"), Some("a/"));
         assert_eq!(program_directory("\u{e9}/x"), Some("\u{e9}/"));
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn searches_a_quoted_path_entry_and_accepts_a_qualified_name() {
+        let cwd = std::env::temp_dir();
+        let folder = cwd.join(format!("interrexx-{};search", std::process::id()));
+        std::fs::create_dir_all(&folder).expect("create search directory");
+        let script = folder.join("échantillon.rex");
+        std::fs::write(&script, b"say 2 + 2").expect("write Rexx fixture");
+        let path = std::env::join_paths([cwd.join("missing"), folder.clone()]).expect("PATH");
+        let cwd = cwd.as_os_str().as_encoded_bytes();
+        let qualified = script.as_os_str().as_encoded_bytes();
+        let found = search(
+            None,
+            "échantillon".as_bytes(),
+            Some(path.as_encoded_bytes()),
+            None,
+            cwd,
+            false,
+        );
+        let direct = search(None, qualified, None, None, cwd, false);
+        let found = found.and_then(|name| std::fs::canonicalize(crate::paths::os_path(&name)).ok());
+        let expected = std::fs::canonicalize(&script).expect("canonicalize fixture");
+        std::fs::remove_dir_all(&folder).expect("remove search directory");
+        assert_eq!(found, Some(expected));
+        assert_eq!(direct.as_deref(), Some(qualified));
     }
 }

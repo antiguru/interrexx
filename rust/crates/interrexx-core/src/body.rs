@@ -594,7 +594,12 @@ pub struct StreamState {
 
 /// Measured by callgrind, a state eight bytes larger cost `intcall` +5.8%
 /// whole process, all of it in libc's allocator.
+#[cfg(not(windows))]
 const _: () = assert!(size_of::<StreamState>() <= 232);
+
+// `OpenFile` stores a Windows HANDLE in place of a Unix file descriptor.
+#[cfg(windows)]
+const _: () = assert!(size_of::<StreamState>() <= 240);
 
 /// A copy is an **unopened** stream carrying the same name: a descriptor cannot
 /// be cloned without either sharing a file position or a `dup(2)` that can fail

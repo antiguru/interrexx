@@ -1,11 +1,15 @@
 //! The `REXXUTIL` package's file-system, message, process, sleep, semaphore, stem and version
 //! routines.
 
+#[cfg(unix)]
 pub(crate) mod files;
 pub(crate) mod macros;
 pub(crate) mod messages;
+#[cfg(unix)]
 pub(crate) mod process;
 pub(crate) mod stems;
+pub(crate) mod timezone;
+#[cfg(unix)]
 pub(crate) mod tree;
 
 use interrexx_core::{Body, Decoded, ObjRef};
@@ -124,7 +128,7 @@ pub(crate) fn file_exists(
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 1)?;
     let path = path_argument(interp, args, 1)?;
-    let found = rustix::fs::stat(path.as_slice()).is_ok();
+    let found = std::fs::metadata(crate::paths::os_path(&path)).is_ok();
     Ok(answer(interp, i64::from(found)))
 }
 
@@ -146,6 +150,7 @@ pub(crate) fn is_file(
 /// name that is not there answers `13` and not the `ENOENT` the delete itself
 /// would give -- measured, and a port calling `std::fs::remove_file` and
 /// mapping its error would answer `2`.
+#[cfg(unix)]
 pub(crate) fn file_delete(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -170,6 +175,7 @@ pub(crate) fn file_delete(
 /// where that says the name is a directory is the same order glibc's own
 /// `remove` takes, and it reproduces every measured code: `2` for a missing
 /// name and `39` for a directory with entries.
+#[cfg(unix)]
 pub(crate) fn rm_dir(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -194,6 +200,7 @@ pub(crate) fn rm_dir(
 /// defaulting to `0777` before the umask. The mode is a whole number of 32
 /// bits, 88.907 outside that range or where it is no whole number; its
 /// remainder modulo `1024` is the mode `mkdir` is given.
+#[cfg(unix)]
 pub(crate) fn mk_dir(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -627,9 +634,15 @@ pub(crate) fn version(
     if !args.is_empty() {
         return Err(Raised::too_many_internal_arguments(0).into());
     }
-    let info = rustix::system::uname();
-    let mut text = info.sysname().to_bytes().to_vec();
-    text.push(b' ');
-    text.extend_from_slice(info.release().to_bytes());
+    #[cfg(unix)]
+    let text = {
+        let info = rustix::system::uname();
+        let mut text = info.sysname().to_bytes().to_vec();
+        text.push(b' ');
+        text.extend_from_slice(info.release().to_bytes());
+        text
+    };
+    #[cfg(windows)]
+    let text = b"Windows".to_vec();
     Ok(interp.text_built(text))
 }

@@ -1,7 +1,7 @@
 //! Stream metadata and logical or descriptor position queries.
 
 use super::*;
-use crate::builtin::rexxutil::files::program_zone;
+use crate::builtin::rexxutil::timezone::program_zone;
 
 /// `query_exists`: the qualified name when it names a file, and the null string
 /// otherwise -- a directory answers nothing, because the check is for a regular
@@ -86,11 +86,18 @@ pub(in crate::dispatch) fn query_size(
                 return open_failed(interp, receiver, &error);
             }
         } else {
+            #[cfg(unix)]
             let size = rustix::fs::fstat(std::io::stdout()).ok().and_then(|stat| {
                 (rustix::fs::FileType::from_raw_mode(stat.st_mode)
                     == rustix::fs::FileType::RegularFile)
                     .then_some(stat.st_size)
             });
+            #[cfg(windows)]
+            let size = crate::host::standard_file(1)
+                .ok()
+                .and_then(|file| file.metadata().ok())
+                .filter(std::fs::Metadata::is_file)
+                .map(|meta| meta.len());
             return Ok(Some(match size {
                 Some(size) => interp.text_built(size.to_string().into_bytes()),
                 None => interp.text(b""),
@@ -209,6 +216,7 @@ pub(in crate::dispatch) fn query_handle(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    #[cfg(unix)]
     use std::os::fd::AsRawFd;
     if unopened_standard(interp, receiver)? {
         return Ok(Some(interp.text(b"")));
@@ -218,10 +226,20 @@ pub(in crate::dispatch) fn query_handle(
         Some(StandardStream::Out) => b"1",
         Some(StandardStream::Err) => b"2",
         None => {
+            #[cfg(unix)]
             let handle = require(interp, receiver)?
                 .open
                 .as_ref()
                 .map(|open| open.file().as_raw_fd().to_string().into_bytes());
+            #[cfg(windows)]
+            let handle = {
+                use std::os::windows::io::AsRawHandle;
+                require(interp, receiver)?.open.as_ref().map(|open| {
+                    (open.file().as_raw_handle() as usize)
+                        .to_string()
+                        .into_bytes()
+                })
+            };
             return Ok(Some(interp.text_built(handle.unwrap_or_default())));
         }
     };
@@ -326,7 +344,13 @@ pub(in crate::dispatch) fn query_position(
         if sys {
             interp.hand_over_stdout();
         }
+        #[cfg(unix)]
         let at = rustix::fs::seek(std::io::stdout(), rustix::fs::SeekFrom::Current(0)).ok();
+        #[cfg(windows)]
+        let at = crate::host::standard_file(1).ok().and_then(|mut file| {
+            use std::io::Seek as _;
+            file.stream_position().ok()
+        });
         let answer = if sys {
             at
         } else if !write {

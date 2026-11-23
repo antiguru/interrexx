@@ -1,6 +1,8 @@
 //! What every client process shares: its session queue's handle and its connection.
 
+#[cfg(unix)]
 use crate::transport::TransportError;
+#[cfg(unix)]
 use crate::transport::unix::{Unix, service_dir};
 
 /// The environment variable a session queue's handle travels in.
@@ -36,8 +38,9 @@ pub struct Session {
 impl Session {
     /// The handle this process inherited in [`SESSION_VARIABLE`], else its own process id.
     pub fn of_process() -> Session {
-        use std::os::unix::ffi::OsStrExt;
-        match std::env::var_os(SESSION_VARIABLE).and_then(|value| parse_session(value.as_bytes())) {
+        match std::env::var_os(SESSION_VARIABLE)
+            .and_then(|value| parse_session(value.as_encoded_bytes()))
+        {
             Some(handle) => Session {
                 handle,
                 inherited: true,
@@ -61,6 +64,7 @@ impl Session {
 
 /// Connects to this user's service, starting it if nothing answers, or the API code for the
 /// failure.
+#[cfg(unix)]
 pub fn connect() -> Result<Unix, u64> {
     Unix::connect_or_start(&service_dir()).map_err(|error| {
         report_refusal(&error);
@@ -71,6 +75,7 @@ pub fn connect() -> Result<Unix, u64> {
 /// Says on standard error why a service directory is refused, which the API code alone
 /// (`NO_SERVICE`) cannot: the refusal is deliberate, and a user who sees only the code cannot
 /// tell why the service does not work.
+#[cfg(unix)]
 pub fn report_refusal(error: &TransportError) {
     use std::io::Write as _;
     if matches!(error, TransportError::NotPrivate { .. }) {

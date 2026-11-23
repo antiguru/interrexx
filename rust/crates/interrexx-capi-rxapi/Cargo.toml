@@ -15,8 +15,14 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # The `#[repr(C)]` structs of `api/rexx.h` the forwarded signatures name.
 interrexx-api.workspace = true
-# `dlopen` and `dlsym`, which find each forwarded name in `librexx.so.4`.
+
+[target.'cfg(unix)'.dependencies]
+# `dlopen` and `dlsym` find each forwarded name in the interpreter library.
 libc = "0.2.186"
+
+[target.'cfg(windows)'.dependencies]
+# Find and load the interpreter DLL installed beside the forwarding DLL.
+windows-sys = { version = "0.61.2", features = ["Win32_System_LibraryLoader"] }
 
 [lints]
 workspace = true
