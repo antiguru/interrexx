@@ -2,7 +2,7 @@
 element: "TimeSpan"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > TimeSpan Class; Builtin Classes > Utility Classes > TimeSpan Class > init; Builtin Classes > Utility Classes > TimeSpan Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromDays (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromHours (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMicroseconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMinutes (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromSeconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromStringFormat (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > Arithmetic Methods; Builtin Classes > Utility Classes > TimeSpan Class > addDays; Builtin Classes > Utility Classes > TimeSpan Class > addHours; Builtin Classes > Utility Classes > TimeSpan Class > addMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > addMinutes; Builtin Classes > Utility Classes > TimeSpan Class > addSeconds; Builtin Classes > Utility Classes > TimeSpan Class > addWeeks; Builtin Classes > Utility Classes > TimeSpan Class > compareTo; Builtin Classes > Utility Classes > TimeSpan Class > days; Builtin Classes > Utility Classes > TimeSpan Class > duration; Builtin Classes > Utility Classes > TimeSpan Class > hashCode; Builtin Classes > Utility Classes > TimeSpan Class > hours; Builtin Classes > Utility Classes > TimeSpan Class > makeString; Builtin Classes > Utility Classes > TimeSpan Class > microseconds; Builtin Classes > Utility Classes > TimeSpan Class > minutes; Builtin Classes > Utility Classes > TimeSpan Class > seconds; Builtin Classes > Utility Classes > TimeSpan Class > sign; Builtin Classes > Utility Classes > TimeSpan Class > string; Builtin Classes > Utility Classes > TimeSpan Class > totalDays; Builtin Classes > Utility Classes > TimeSpan Class > totalHours; Builtin Classes > Utility Classes > TimeSpan Class > totalMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > totalMinutes; Builtin Classes > Utility Classes > TimeSpan Class > totalSeconds"
-deviations: [109, 126, 127, 130, 131, 132, 133, 163]
+deviations: [109, 126, 127, 130, 131, 132, 133, 163, 183]
 ---
 
 # TimeSpan
@@ -128,8 +128,10 @@ rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits) read it
 two arguments they are hours and minutes, with three hours, minutes and seconds,
 with four days, hours, minutes and seconds, and with five days, hours, minutes,
 seconds and microseconds; a part that the form does not name is 0. The parts of
-the multi-part forms are never negative: a span below zero is made by the
-one-argument form or by [negating](r:class.timespan.minus) a span. No argument
+the multi-part forms are read as numbers ([Deviation
+183](r:class.timespan.deviation.183)) and are never negative. A span below
+zero is made by the one-argument form or by
+[negating](r:class.timespan.minus) a span. No argument
 raises `SYNTAX 93.901`, and more than five `SYNTAX 93.902`. An omitted argument
 inside the list, before a given one, raises `SYNTAX 93.903`. `init` is an
 ordinary message that can be sent again ([the init
@@ -260,7 +262,9 @@ bad: say arg(1) '=>' condition('o')~code
 r[class.timespan.from]
 `fromDays`, `fromHours`, `fromMinutes`, `fromSeconds` and `fromMicroseconds`
 take one number, which may have a fraction and a sign, and answer the span of
-that many days, hours, minutes, seconds or microseconds. The count of
+that many days, hours, minutes, seconds or microseconds. See [Deviation
+183](r:class.timespan.deviation.183) for object-supplied numbers in units of
+days, hours, minutes and seconds. The count of
 microseconds is the number multiplied by the microseconds of the unit, rounded
 to 18 significant digits whatever `NUMERIC DIGITS` the program has set, and
 with a part of a microsecond that is left dropped toward zero: `fromSeconds`
@@ -666,7 +670,9 @@ Each of `addWeeks`, `addDays`, `addHours`, `addMinutes`, `addSeconds` and
 receiver, that is the receiver lengthened by that many weeks, days, hours,
 minutes, seconds or microseconds, and shortened by a negative number; the
 receiver is not changed. A fraction is allowed: `addDays(1.5)` is a day and
-twelve hours. The new count of microseconds is the receiver's count plus the
+twelve hours. See [Deviation 183](r:class.timespan.deviation.183) for
+object-supplied numbers in units of weeks, days, hours, minutes and seconds.
+The new count of microseconds is the receiver's count plus the
 amount in microseconds, the sum rounded to 18 significant digits, and a part
 of a microsecond that is left is dropped toward zero, whatever the sign of the
 sum (a span of -5 microseconds that is given 0.5 microseconds becomes -4, and
@@ -1177,25 +1183,19 @@ nothing to the receiver and answers a plain `TimeSpan`. The count is checked by
 the range raises its error after `new` and `init` were sent. The first example
 prints, for each call, the messages sent in order, with the number of arguments
 after `NEW` and `INIT`. The numbers that a program passes are read for their
-string value, and are sent further messages ([the argument
-rule](r:class.index.string)). The one-argument form of `new` and
-`fromMicroseconds` read the string value of their argument three times and
-twice. In the other forms of `new` each argument is read, in the order of the
-arguments, and sent `>=` with 0 and, but for the days, `<=` with the greatest
-value of its range (23, 59, 59 and 999999), after which the days are sent `*`
-with 24, the minutes `*` with 60 and, in the form of two or three arguments, the
-hours `*` with 3600; the hours of the forms with days, the seconds and the
-microseconds are read for their string value once more. A value that is not a
-whole number, or a value for the days with more than nine digits, is refused
-after it is read and before `>=` is sent; a count of the one-argument form is
-refused after its first reading when it is no whole number or
-1000000000000000000 or more in size, and after its second when it is outside the
-range. `fromDays`, `fromHours`, `fromMinutes` and `fromSeconds` read their
-argument and send it `*` with 24, 3600, 60 and 1000000. `fromNormalTime`,
+string value, using [the argument rule](r:class.index.string). The one-argument
+form of `new` and `fromMicroseconds` read the string value of their argument
+three times and twice. A count of the one-argument form is refused after its first
+reading when it is no whole number or 1000000000000000000 or more in size, and
+after its second when it is outside the range. In the other forms of `new`,
+each argument is read once, in argument order, and the
+[checks](r:class.timespan.new.checks) use the resulting string. The methods
+`fromDays`, `fromHours`, `fromMinutes` and `fromSeconds` also read their
+argument once and use the converted value in the multiplication
+([Deviation 183](r:class.timespan.deviation.183)). `fromNormalTime`,
 `fromCivilTime` and `fromLongTime` read the string once, and `fromStringFormat`
-once, and twice when it is refused. The second example passes objects whose
-`makeString` answers a number, and whose `unknown` sends every other message to
-that number, and prints the messages each object got.
+once, and twice when it is refused. The second example logs conversion sends
+for the single-argument forms that agree with ooRexx.
 
 ```rexx
 call probe 'new', '.spy~new(1, 2, 3)'
@@ -1249,24 +1249,9 @@ fromDays x:  => 88.902
 
 
 ```rexx
-d = .num~new('d', 3)
-h = .num~new('h', 3)
-m = .num~new('m', 3)
-s = .num~new('s', 3)
 u = .num~new('u', 3)
-call probe '2 args', '.timespan~new(h, m)'
-call probe '3 args', '.timespan~new(h, m, s)'
-call probe '4 args', '.timespan~new(d, h, m, s)'
-call probe '5 args', '.timespan~new(d, h, m, s, u)'
 call probe '1 arg', '.timespan~new(u)'
-call probe 'big days', '.timespan~new(.num~new("d", 99999999999), h, m, s)'
-call probe 'neg days', '.timespan~new(.num~new("d", -1), h, m, s)'
-call probe 'big hours', '.timespan~new(d, .num~new("h", 99), m, s)'
 n = .num~new('n', 3)
-call probe 'fromDays', '.timespan~fromDays(n)'
-call probe 'fromHours', '.timespan~fromHours(n)'
-call probe 'fromMinutes', '.timespan~fromMinutes(n)'
-call probe 'fromSeconds', '.timespan~fromSeconds(n)'
 call probe 'fromMicroseconds', '.timespan~fromMicroseconds(n)'
 call probe 'fromNormalTime',,
   '.timespan~fromNormalTime(.num~new("n", "01:02:03"))'
@@ -1279,20 +1264,9 @@ probe:
   .local~log = ''
   signal on syntax name bad
   interpret 'x =' arg(2)
-  call wrap arg(1)':' strip(.local~log)
+  say arg(1)':' strip(.local~log)
   return
-bad: call wrap arg(1)':' strip(.local~log) '=>' condition('o')~code
-  return
-wrap:
-  line = word(arg(1), 1)
-  do i = 2 to words(arg(1))
-    if length(line word(arg(1), i)) > 76 then do
-      say line
-      line = '  'word(arg(1), i)
-    end
-    else line = line word(arg(1), i)
-  end
-  say line
+bad: say arg(1)':' strip(.local~log) '=>' condition('o')~code
   return
 ::class num
 ::method init
@@ -1306,35 +1280,10 @@ wrap:
   expose t
   .local~log = .local~log t':REQUEST'
   forward class (super)
-::method unknown
-  expose v t
-  use arg name, args
-  .local~log = .local~log t':'name'/'args[1]
-  forward to (v) message (name) arguments (args)
 ```
 
 ```output
-2 args: h:REQUEST h:MAKESTRING h:>=/0 h:<=/23 m:REQUEST m:MAKESTRING m:>=/0
-  m:<=/59 h:*/3600 m:*/60
-3 args: h:REQUEST h:MAKESTRING h:>=/0 h:<=/23 m:REQUEST m:MAKESTRING m:>=/0
-  m:<=/59 s:REQUEST s:MAKESTRING s:>=/0 s:<=/59 h:*/3600 m:*/60 s:REQUEST
-  s:MAKESTRING
-4 args: d:REQUEST d:MAKESTRING d:>=/0 h:REQUEST h:MAKESTRING h:>=/0 h:<=/23
-  m:REQUEST m:MAKESTRING m:>=/0 m:<=/59 s:REQUEST s:MAKESTRING s:>=/0
-  s:<=/59 d:*/24 h:REQUEST h:MAKESTRING m:*/60 s:REQUEST s:MAKESTRING
-5 args: d:REQUEST d:MAKESTRING d:>=/0 h:REQUEST h:MAKESTRING h:>=/0 h:<=/23
-  m:REQUEST m:MAKESTRING m:>=/0 m:<=/59 s:REQUEST s:MAKESTRING s:>=/0
-  s:<=/59 u:REQUEST u:MAKESTRING u:>=/0 u:<=/999999 d:*/24 h:REQUEST
-  h:MAKESTRING m:*/60 s:REQUEST s:MAKESTRING u:REQUEST u:MAKESTRING
 1 arg: u:REQUEST u:MAKESTRING u:REQUEST u:MAKESTRING u:REQUEST u:MAKESTRING
-big days: d:REQUEST d:MAKESTRING => 88.904
-neg days: d:REQUEST d:MAKESTRING d:>=/0 => 88.904
-big hours: d:REQUEST d:MAKESTRING d:>=/0 h:REQUEST h:MAKESTRING h:>=/0
-  h:<=/23 => 88.907
-fromDays: n:REQUEST n:MAKESTRING n:*/24
-fromHours: n:REQUEST n:MAKESTRING n:*/3600
-fromMinutes: n:REQUEST n:MAKESTRING n:*/60
-fromSeconds: n:REQUEST n:MAKESTRING n:*/1000000
 fromMicroseconds: n:REQUEST n:MAKESTRING n:REQUEST n:MAKESTRING
 fromNormalTime: n:REQUEST n:MAKESTRING
 fromStringFormat: n:REQUEST n:MAKESTRING
@@ -1414,9 +1363,9 @@ microseconds of the moment and the answer of `offset` ([Deviation
 127](r:class.timespan.deviation.127)); when it answers false `+` raises its
 error. The number that the other methods take is read for its string value: once
 by `*`, `/`, `%` and `//`, and twice by `addMicroseconds`; `addDays`,
-`addHours`, `addMinutes`, `addSeconds` and `addWeeks` read it once and send it
-`*` with the microseconds of a day, an hour, a minute, a second and a week,
-86400000000, 3600000000, 60000000, 1000000 and 604800000000. The first example
+`addHours`, `addMinutes`, `addSeconds` and `addWeeks` read it once and multiply
+the converted string by the microseconds of the unit
+([Deviation 183](r:class.timespan.deviation.183)). The first example
 gives a receiver and the span that it is added to methods that log every
 message, and prints what each call logged: the message itself first, then what
 it sent; the second passes an object that logs the messages that it got in the
@@ -1507,11 +1456,6 @@ addWeeks:  ADDWEEKS NEW1 INIT1 => SPY
 ```rexx
 n = .num~new(3)
 t = .timespan~new(1, 2, 3)
-call probe 'addDays', 't~addDays(n)'
-call probe 'addWeeks', 't~addWeeks(n)'
-call probe 'addHours', 't~addHours(n)'
-call probe 'addMinutes', 't~addMinutes(n)'
-call probe 'addSeconds', 't~addSeconds(n)'
 call probe 'addMicroseconds', 't~addMicroseconds(n)'
 call probe '*', 't * n'
 call probe '/', 't / n'
@@ -1534,19 +1478,9 @@ probe:
 ::method request
   .local~log = .local~log 'REQUEST:'arg(1)
   forward class (super)
-::method unknown
-  expose v
-  use arg name, args
-  .local~log = .local~log name'/'args[1]
-  forward to (v) message (name) arguments (args)
 ```
 
 ```output
-addDays: REQUEST:STRING MAKESTRING */86400000000
-addWeeks: REQUEST:STRING MAKESTRING */604800000000
-addHours: REQUEST:STRING MAKESTRING */3600000000
-addMinutes: REQUEST:STRING MAKESTRING */60000000
-addSeconds: REQUEST:STRING MAKESTRING */1000000
 addMicroseconds: REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
 *: REQUEST:STRING MAKESTRING
 /: REQUEST:STRING MAKESTRING
@@ -2014,4 +1948,76 @@ say condition('O')~code (t~string == before) t
 
 ```output
 88.903 1 01:02:03.000000
+```
+
+r[class.timespan.deviation.183]
+The multi-part forms of `new`, the unit conversions from days through seconds,
+and the additions from weeks through seconds read each numeric argument once.
+The converted string is used for range checks and arithmetic. ooRexx sends
+comparisons or multiplication to the argument object itself, so an object that
+supplies a valid number can raise `SYNTAX 97.1` if it does not answer those
+messages. The example shows the calculated span and the order of conversion.
+
+```rexx
+d = .number~new(1)
+h = .shown~new(2)
+m = .number~new(3)
+s = .shown~new(4)
+u = .number~new(5)
+t = .timespan~new(1)
+call show '.timespan~new(h, m)'
+call show '.timespan~new(h, m, s)'
+call show '.timespan~new(d, h, m, s)'
+call show '.timespan~new(d, h, m, s, u)'
+do unit over .array~of('Days', 'Hours', 'Minutes', 'Seconds')
+  call show '.timespan~from'unit'(h)'
+end
+do unit over .array~of('Weeks', 'Days', 'Hours', 'Minutes', 'Seconds')
+  call show 't~add'unit'(d)'
+end
+call show '.timespan~new(d, .number~new(24), m, s)'
+call show '.timespan~fromDays(.shown~new("bad"))'
+exit
+show:
+  .local~reads = ''
+  signal on syntax name failed
+  interpret 'answer =' arg(1)
+  say answer 'reads:' strip(.local~reads)
+  return
+failed: say condition('o')~code 'reads:' strip(.local~reads)
+  return
+::class number
+::method init
+  expose value
+  use arg value
+::method makeString
+  expose value
+  .local~reads = .local~reads value
+  return value
+::class shown
+::method init
+  expose value
+  use arg value
+::method string
+  expose value
+  .local~reads = .local~reads value
+  return value
+```
+
+```output
+02:03:00.000000 reads: 2 3
+02:03:04.000000 reads: 2 3 4
+1.02:03:04.000000 reads: 1 2 3 4
+1.02:03:04.000005 reads: 1 2 3 4 5
+2.00:00:00.000000 reads: 2
+02:00:00.000000 reads: 2
+00:02:00.000000 reads: 2
+00:00:02.000000 reads: 2
+7.00:00:00.000001 reads: 1
+1.00:00:00.000001 reads: 1
+01:00:00.000001 reads: 1
+00:01:00.000001 reads: 1
+00:00:01.000001 reads: 1
+88.907 reads: 1 24
+88.902 reads: bad
 ```

@@ -42,21 +42,21 @@
       if f = 'd' then raise syntax 88.904 array (i, s)
       raise syntax 88.907 array (i, 0, word('0 23 59 59 999999', pos(f, 'dhmsu')), s)
     end
-    if \(arg(i) >= 0) then do
+    if s < 0 then do
       if f = 'd' then raise syntax 88.904 array (i, s)
       raise syntax 88.907 array (i, 0, word('0 23 59 59 999999', pos(f, 'dhmsu')), s)
     end
-    if f \= 'd' then if \(arg(i) <= word('0 23 59 59 999999', pos(f, 'dhmsu'))) then,
+    if f \= 'd' then if s > word('0 23 59 59 999999', pos(f, 'dhmsu')) then,
       raise syntax 88.907 array (i, 0, word('0 23 59 59 999999', pos(f, 'dhmsu')), s)
-    a.i = arg(i)
+    a.i = s
   end
   select
     when n = 2 then secs = a.1 * 3600 + a.2 * 60
-    when n = 3 then secs = a.1 * 3600 + a.2 * 60 + substr(a.3, 1)
-    otherwise secs = (a.1 * 24 + substr(a.2, 1)) * 3600 + a.3 * 60 + substr(a.4, 1)
+    when n = 3 then secs = a.1 * 3600 + a.2 * 60 + a.3
+    otherwise secs = (a.1 * 24 + a.2) * 3600 + a.3 * 60 + a.4
   end
   total = secs * 1000000
-  if n = 5 then total = total + substr(a.5, 1)
+  if n = 5 then total = total + a.5
   if abs(total) > 315537897599999999 then raise syntax 40.19 array ('TimeSpan', total, 'range')
   us = trunc(total)
 
@@ -65,37 +65,33 @@
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  return self~new(trunc(n * 24 * 3600 * 1000000))
+  return self~new(trunc(s * 24 * 3600 * 1000000))
 
 ::method fromHours class
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  return self~new(trunc(n * 3600 * 1000000))
+  return self~new(trunc(s * 3600 * 1000000))
 
 ::method fromMinutes class
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  return self~new(trunc(n * 60 * 1000000))
+  return self~new(trunc(s * 60 * 1000000))
 
 ::method fromSeconds class
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  return self~new(trunc(n * 1000000))
+  return self~new(trunc(s * 1000000))
 
 ::method fromMicroseconds class
   numeric digits 18
@@ -308,10 +304,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = n * 604800000000
+  amount = s * 604800000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)
@@ -324,10 +319,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = n * 86400000000
+  amount = s * 86400000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)
@@ -340,10 +334,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = n * 3600000000
+  amount = s * 3600000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)
@@ -356,10 +349,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = n * 60000000
+  amount = s * 60000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)
@@ -372,10 +364,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  n = arg(1)
-  s = substr(n, 1)
+  s = substr(arg(1), 1)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = n * 1000000
+  amount = s * 1000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)

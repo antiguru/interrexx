@@ -1580,6 +1580,12 @@ in the logical check, depending on the comparisons the object answers.
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
 
+`TimeSpan` checks and computes with the converted number in multi-part
+constructors, conversions from days through seconds and additions from weeks
+through seconds. ooRexx sends comparisons and multiplication to the argument
+itself, which can raise `SYNTAX 97.1` even when it supplies a valid number
+([example](r:class.timespan.deviation.183)).
+
 `RexxQueue~init` and `set` read a supplied name through `REQUEST('STRING')`
 before uppercasing it. ooRexx sends `UPPER` to the name object, which raises
 `SYNTAX 97.1` for an object with `makeString` alone.
