@@ -1105,14 +1105,11 @@ exit
 ::method init
   expose filename
   use arg filename
-::method request
+::method makeString
   expose filename
-  if arg(1) == 'STRING' then return filename
-  return .nil
+  return filename
 ::class lineAdapter subclass path
 ::attribute written
-::method makeString
-  return self~request:path('STRING')
 ::method request
   say 'unexpected adapter request'
   forward class (super)
