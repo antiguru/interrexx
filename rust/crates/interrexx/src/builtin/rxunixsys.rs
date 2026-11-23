@@ -893,7 +893,8 @@ pub(crate) fn wordexp(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
         return Err(Raised::native_argument_needs_a_string_value(1).into());
     };
     let bytes = interp.to_text(text).into_owned();
-    let words = wordexp::words(&bytes, |name| interp.env_get(name)).ok_or_else(|| failed(interp))?;
+    let words =
+        wordexp::words(&bytes, |name| interp.env_get(name)).ok_or_else(|| failed(interp))?;
     Ok(array(interp, words))
 }
 
