@@ -318,7 +318,13 @@ impl Surface for Interp {
         scope: Option<ObjRef>,
         arguments: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, ()> {
-        let caller = self.caller();
+        let mut caller = self.caller();
+        // The API send is issued by the top native frame. In particular, a
+        // native method can call a private method of its own receiver even
+        // when its Rexx caller has no receiver or a different one.
+        if let Some(frame) = self.activity.native_handles.last() {
+            caller.receiver = frame.method.then_some(frame.receiver);
+        }
         let answered = self.send_message(receiver, name, scope, arguments, caller);
         self.sent(answered)
     }

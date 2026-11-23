@@ -367,6 +367,13 @@ impl Interp {
             self.interpreter_directory(ENVIRONMENT_ROOT, b"The Environment Directory");
         let local = self.interpreter_directory(LOCAL_ROOT, b"The Local Directory");
 
+        // Native extensions can retain these handles across callbacks. The
+        // interpreter already roots both directories for its lifetime.
+        for object in [local, environment] {
+            let handle = interrexx_api::handles::handle_of(object);
+            self.borrowed_native_handles.insert(handle.addr(), object);
+        }
+
         // `completeSystemClass` puts every native class into the environment
         // under its uppercased id, and that is the whole of what this crate
         // has to put there beyond the entries `addToEnvironment` adds by

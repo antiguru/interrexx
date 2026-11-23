@@ -558,3 +558,12 @@ const _: () = {
     let _: declared::RexxCreateInterpreter = RexxCreateInterpreter;
     let _: declared::RexxStemSort = RexxStemSort;
 };
+
+/// Legacy Windows entry point used by ooDialog on its attached GUI threads.
+/// InterRexx's scheduler waits do not dispatch Win32 messages, so the
+/// upstream request to suppress dispatch is already in effect.
+#[cfg(windows)]
+#[unsafe(no_mangle)]
+pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
+    1
+}

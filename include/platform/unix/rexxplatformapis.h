@@ -20,6 +20,8 @@ extern "C" {
 
 /* BEGIN GENERATED platform-exports */
 RexxReturnCode REXXENTRY RexxPullQueue(CSTRING, RXSTRING *, REXXDATETIME *, size_t);
+
+typedef RexxReturnCode (REXXENTRY *PFNREXXPULLQUEUE)(CSTRING, RXSTRING *, REXXDATETIME *, size_t);
 /* END GENERATED platform-exports */
 
 #ifdef __cplusplus

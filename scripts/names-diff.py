@@ -113,13 +113,6 @@ EXCEPTIONS = [
         "interrexx implements level 6.06; 6.07 adds CATCH and FINALLY, which it does not have "
         "(decisions.md, the language level)",
     ),
-    (
-        "upstream",
-        "header platform/windows/rexxapitypes.h",
-        "interrexx has Unix platform headers only (decisions.md, per-platform layout)",
-    ),
-    ("upstream", "header platform/windows/rexxplatformapis.h", "Windows platform header"),
-    ("upstream", "header platform/windows/rexxplatformdefs.h", "Windows platform header"),
 ]
 
 # The headers of a tree, relative to its root, that are listed but not compiled: the platform

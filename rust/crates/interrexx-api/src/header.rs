@@ -59,35 +59,55 @@ pub struct Platform {
     pub structs: &'static [Struct],
     /// Each calling-convention and export macro: its name and its expansion.
     pub defines: &'static [(&'static str, &'static str)],
+    /// The C spelling of the legacy queue timestamp.
+    pub queue_time: &'static str,
 }
 
 /// The platforms the header set is written for.
-pub const PLATFORMS: &[Platform] = &[Platform {
-    name: "unix",
-    system_headers: &[
-        "stdlib.h",
-        "stddef.h",
-        "stdint.h",
-        "limits.h",
-        "unistd.h",
-        "sys/types.h",
-        "pthread.h",
-    ],
-    typedefs: &[
-        ("REXXPFN", "void *"),
-        ("process_id_t", "pid_t"),
-        ("thread_id_t", "pthread_t"),
-    ],
-    structs: &[Struct {
-        name: "REXXDATETIME",
-        tag: Tag::Named("_REXXDATETIME"),
-        fields: REXXDATETIME::C_FIELDS,
-        retype: &[],
-        assignments: &[],
-        conversions: &[],
-    }],
-    defines: &[("REXXENTRY", ""), ("REXXEXPORT", "")],
-}];
+pub const PLATFORMS: &[Platform] = &[
+    Platform {
+        name: "unix",
+        system_headers: &[
+            "stdlib.h",
+            "stddef.h",
+            "stdint.h",
+            "limits.h",
+            "unistd.h",
+            "sys/types.h",
+            "pthread.h",
+        ],
+        typedefs: &[
+            ("REXXPFN", "void *"),
+            ("process_id_t", "pid_t"),
+            ("thread_id_t", "pthread_t"),
+        ],
+        structs: &[Struct {
+            name: "REXXDATETIME",
+            tag: Tag::Named("_REXXDATETIME"),
+            fields: REXXDATETIME::C_FIELDS,
+            retype: &[],
+            assignments: &[],
+            conversions: &[],
+        }],
+        defines: &[("REXXENTRY", ""), ("REXXEXPORT", "")],
+        queue_time: "REXXDATETIME",
+    },
+    Platform {
+        name: "windows",
+        system_headers: &["stddef.h", "stdint.h", "limits.h", "windows.h"],
+        typedefs: &[
+            ("ssize_t", "SSIZE_T"),
+            ("process_id_t", "DWORD"),
+            ("thread_id_t", "DWORD"),
+        ],
+        structs: &[],
+        defines: &[
+            ("REXXENTRY", "APIENTRY"),
+            ("REXXEXPORT", "__declspec(dllexport)"),
+        ],
+        queue_time: "SYSTEMTIME",
+    },
+];
 
 /// How a struct is introduced.
 #[derive(Clone, Copy)]
@@ -336,7 +356,7 @@ pub fn sections(errors: &[ErrorRow<'_>]) -> Vec<Section> {
         out.push(section(
             &format!("{dir}/rexxplatformapis.h"),
             "platform-exports",
-            exports(Declared::Platform),
+            exports(Declared::Platform).replace(legacy_queue_time(), platform.queue_time),
         ));
     }
     out
@@ -529,6 +549,14 @@ fn argument_types() -> String {
     out
 }
 
+fn legacy_queue_time() -> &'static str {
+    if cfg!(windows) {
+        "SYSTEMTIME"
+    } else {
+        "REXXDATETIME"
+    }
+}
+
 /// The declaration of `export`.
 #[must_use]
 pub fn prototype(export: &Export) -> String {
@@ -540,6 +568,7 @@ pub fn prototype(export: &Export) -> String {
             &format!("REXXENTRY {}({parameters})", export.name)
         )
     )
+    .replace("RexxLegacyQueueTime", legacy_queue_time())
 }
 
 /// The exports declared where `declared` says: each prototype, then the
@@ -551,12 +580,15 @@ fn exports(declared: Declared) -> String {
     for export in &mine {
         writeln!(out, "{}", prototype(export)).unwrap();
     }
-    // A pointer typedef is declared beside the classic exports, so that every
-    // one is in `rexx.h`, its function's platform declaration included.
-    if declared == Declared::In("rexx.h") {
+    if matches!(declared, Declared::In("rexx.h") | Declared::Platform) {
         out.push('\n');
         for (name, declaration, _) in pointer_types() {
+            let on_platform = mine.iter().any(|export| export.pointer == Some(name));
+            if !on_platform {
+                continue;
+            }
             let (returns, parameters) = signature(&declaration);
+            let parameters = parameters.replace("RexxLegacyQueueTime", legacy_queue_time());
             writeln!(
                 out,
                 "typedef {};",

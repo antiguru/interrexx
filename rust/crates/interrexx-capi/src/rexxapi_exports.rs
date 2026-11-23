@@ -9,7 +9,7 @@ use std::ffi::{CStr, c_char, c_void};
 
 use interrexx::capi::{self, Registry, Timestamp};
 use interrexx_api::layout::{
-    CONSTRXSTRING, REXXDATETIME, REXXPFN, RXSTRING, RexxQueueTime, RexxReturnCode,
+    CONSTRXSTRING, REXXPFN, RXSTRING, RexxLegacyQueueTime, RexxQueueTime, RexxReturnCode,
 };
 use interrexx_api::load::ClassicEntry;
 
@@ -645,7 +645,7 @@ pub unsafe extern "C" fn RexxPullFromQueue(
 pub unsafe extern "C" fn RexxPullQueue(
     name: *const c_char,
     data: *mut RXSTRING,
-    time: *mut REXXDATETIME,
+    time: *mut RexxLegacyQueueTime,
     wait: usize,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee.
@@ -654,7 +654,8 @@ pub unsafe extern "C" fn RexxPullQueue(
         && !time.is_null()
     {
         let stamp = queue_time(stamp);
-        let older = REXXDATETIME {
+        #[cfg(unix)]
+        let older = RexxLegacyQueueTime {
             hours: stamp.hours,
             minutes: stamp.minutes,
             seconds: stamp.seconds,
@@ -666,6 +667,17 @@ pub unsafe extern "C" fn RexxPullQueue(
             microseconds: 0,
             yearday: stamp.yearday as usize,
             valid: 1,
+        };
+        #[cfg(windows)]
+        let older = RexxLegacyQueueTime {
+            year: stamp.year,
+            month: stamp.month,
+            weekday: stamp.weekday,
+            day: stamp.day,
+            hours: stamp.hours,
+            minutes: stamp.minutes,
+            seconds: stamp.seconds,
+            milliseconds: (stamp.microseconds / 1000) as u16,
         };
         // SAFETY: the caller's guarantee.
         unsafe { time.write(older) };
