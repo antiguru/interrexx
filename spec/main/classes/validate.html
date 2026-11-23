@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="validate"><a class="header" href="#validate">Validate</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Validate Class; Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; classType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; length (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; logical (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; number (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; numberRange (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; position (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; requestClassType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumberRange (Class Method)</p>
-<p class="deviations">Deviations: D109</p>
+<p class="deviations">Deviations: D109, D183</p>
 <p><code>Validate</code> is a set of class methods that check the arguments of a method
 written in Rexx: that an argument is a number, a whole number in a range, a
 position, a logical value or an instance of a class. A check that fails raises
@@ -246,11 +246,11 @@ omitted arguments at the end count as not given. The <code>ADDITIONAL</code> ite
 these three errors are <a href="../conventions.html#r-conv.error.additional">unspecified</a>. A call with more
 than one fault, among the argument count, <code>digits</code> and the value, raises the
 error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says.
-Every value and bound is read as a string as <a href="../conventions.html#r-conv.string.object">the conversion
-rule</a> says. A check that fails raises the <code>SYNTAX</code> error
-of its method, which the rules below give. The second example asks every check,
-with no argument, for one fewer than it needs, for the first one left out and
-for one more than it takes.</p>
+The number checks read their values and bounds as strings. <code>logical</code> reads its
+value as a string too. Both follow <a href="../conventions.html#r-conv.string.object">the conversion rule</a>.
+A check that fails raises the <code>SYNTAX</code> error of its method, which the rules
+below give. The second example asks every check, with no argument, for one
+fewer than it needs, for the first one left out and for one more than it takes.</p>
 <pre><code class="language-rexx">call t 'number', 'N', 'x'
 call t 'number', 'my arg', 'x'
 call t 'number', 'N'
@@ -502,38 +502,6 @@ abc   88.902  88.926  88.925
 ok 88.902 88.902 88.902
 88.926 my argument ; -3
 </code></pre>
-<pre><code class="language-rexx">call t .withstr~new
-call t .withms~new
-call t .withreq~new
-exit
-t: procedure
-  use arg o
-  signal on syntax name bad
-  .validate~number('N', o)
-  say o~class~id 'ok'
-  return
-bad: say o~class~id condition('o')~code
-  return
-::class withstr
-::method string
-  say '  string'
-  return '5'
-::class withms
-::method makestring
-  say '  makestring'
-  return '5'
-::class withreq
-::method request
-  say '  request' arg(1)
-  return '5'
-</code></pre>
-<pre><code class="language-output">  string
-WITHSTR ok
-  makestring
-WITHMS ok
-  request STRING
-WITHREQ ok
-</code></pre>
 <div class="rule" id="r-class.validate.wholenumber"><a href="#r-class.validate.wholenumber">[class.validate.wholenumber]</a></div>
 <p><code>wholeNumber</code> accepts a number whose value, under <code>digits</code>, is a whole number
 and raises <code>SYNTAX 88.903</code> for any other value: one with a fraction, one with
@@ -658,172 +626,55 @@ wholeNumberRange 5 1.5 9.5 - =&gt; ok
 <div class="rule" id="r-class.validate.sends"><a href="#r-class.validate.sends">[class.validate.sends]</a></div>
 <p>The number checks convert the value to a string once, as <a href="../conventions.html#r-conv.string.object">the conversion
 rule</a> says (apart from <a href="#r-class.validate.deviation.109">the
-deviation</a>); for an object without a <code>request</code>
-of its own that is one <code>makeString</code>. The string is checked first as a number,
-and as a whole number for the whole-number checks, and a value that passes that
-check is asked, as the object that was given and not the string, to compare.
-<code>positiveNumber</code>, <code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code> with <code>0</code>;
-<code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it <code>&gt;=</code> with
-<code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code> and, only
-when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers <code>0</code> raises
-the error of the check, one that answers neither <code>0</code> nor <code>1</code> raises <code>SYNTAX 34.6</code>, and a value whose class has no such comparison method raises <code>SYNTAX 97.1</code>, so that an object with only a <code>makeString</code> is refused by
-<code>positiveNumber</code>, <code>nonNegativeNumber</code> and <code>numberRange</code>, which a number check
-alone would have passed. A value that fails the number check raises that error,
-and whether it is sent a comparison as well is unspecified, as <a href="../conventions.html#r-conv.error.precedence">the precedence
-rule</a> says. <code>number</code> and <code>wholeNumber</code> send nothing
-more, and the bounds and <code>digits</code> are read as strings and are sent no
-comparison. The example has an object whose <code>makeString</code> and <code>unknown</code> write a
-line, and whose comparisons answer <code>1</code> and then <code>0</code>.</p>
-<pre><code class="language-rexx">checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
-  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
-do answer over 1, 0
-  say 'comparisons answer' answer
-  do m over checks~makeArray(' ')
-    say m':' try(m, .probe~new(answer))
-  end
-end
-exit
-try: procedure
-  use arg m, o
-  signal on syntax name bad
-  if m~pos('Range') &gt; 0 then .validate~send(m, 'N', o, 1, 9)
-  else .validate~send(m, 'N', o)
-  return 'ok'
-bad: return '=&gt;' condition('o')~code
-::class probe
-::method init
-  expose answer
-  use arg answer
-::method makeString
-  say '  makeString'
-  return 5
-::method unknown
-  expose answer
-  use arg name, args
-  say ' ' name args[1]
-  return answer
-</code></pre>
-<pre><code class="language-output">comparisons answer 1
-  makeString
-number: ok
-  makeString
-  &gt; 0
-positiveNumber: ok
-  makeString
-  &gt;= 0
-nonNegativeNumber: ok
-  makeString
-wholeNumber: ok
-  makeString
-  &gt; 0
-positiveWholeNumber: ok
-  makeString
-  &gt;= 0
-nonNegativeWholeNumber: ok
-  makeString
-  &gt; 0
-position: ok
-  makeString
-  &gt;= 0
-length: ok
-  makeString
-  &gt;= 1
-  &lt;= 9
-numberRange: ok
-  makeString
-  &gt;= 1
-  &lt;= 9
-wholeNumberRange: ok
-comparisons answer 0
-  makeString
-number: ok
-  makeString
-  &gt; 0
-positiveNumber: =&gt; 88.926
-  makeString
-  &gt;= 0
-nonNegativeNumber: =&gt; 88.925
-  makeString
-wholeNumber: ok
-  makeString
-  &gt; 0
-positiveWholeNumber: =&gt; 88.905
-  makeString
-  &gt;= 0
-nonNegativeWholeNumber: =&gt; 88.904
-  makeString
-  &gt; 0
-position: =&gt; 88.912
-  makeString
-  &gt;= 0
-length: =&gt; 88.911
-  makeString
-  &gt;= 1
-numberRange: =&gt; 88.907
-  makeString
-  &gt;= 1
-wholeNumberRange: =&gt; 88.907
-</code></pre>
-<pre><code class="language-rexx">call t 'positiveNumber', .ms~new(5)
-call t 'nonNegativeNumber', .ms~new(5)
-call t 'numberRange', .ms~new(5), 1, 9
-call t 'positiveNumber', .cmp~new('x', 'x')
-call t 'positiveNumber', .cmp~new('5.5', 0)
-call t 'positiveWholeNumber', .cmp~new('5.5', 1)
-call t 'wholeNumberRange', .cmp~new('5.5', 1), 1, 9
-call t 'numberRange', .cmp~new('abc', 1), 1, 9
-call t 'numberRange', .cmp~new(5, 'x'), 1, 9
-call t 'positiveNumber', .cmp~new(5, .true)
+deviation</a>). They check that string as a
+number, and as a whole number for the whole-number checks.
+<code>positiveNumber</code>, <code>positiveWholeNumber</code> and <code>position</code> then compare the string
+with zero using <code>&gt;</code>. <code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and
+<code>length</code> compare it with zero using <code>&gt;=</code>. The range checks compare it with the
+converted lower bound using <code>&gt;=</code> and, if the result is true, with the converted
+upper bound using <code>&lt;=</code>. The check raises its own error code if a comparison
+answers false. <a href="#r-class.validate.deviation.183">Deviation 183</a> describes these
+comparisons and the difference from ooRexx.</p>
+<pre><code class="language-rexx">call t .withstr~new
+call t .withms~new
+call t .withreq~new
 exit
 t: procedure
+  use arg o
   signal on syntax name bad
-  if arg() == 2 then .validate~send(arg(1), 'N', arg(2))
-  else .validate~send(arg(1), 'N', arg(2), arg(3), arg(4))
-  say arg(1) 'ok'
+  .validate~number('N', o)
+  say o~class~id 'ok'
   return
-bad: say arg(1) '=&gt;' condition('o')~code
+bad: say o~class~id condition('o')~code
   return
-::class ms
-::method init
-  expose v
-  use arg v
-::method makeString
-  expose v
-  return v
-::class cmp
-::method init
-  expose v a
-  use arg v, a
-::method makeString
-  expose v
-  return v
-::method unknown
-  expose a
-  use arg name
-  say '  sent' name
-  return a
+::class withstr
+::method string
+  say '  string'
+  return '5'
+::class withms
+::method makestring
+  say '  makestring'
+  return '5'
+::class withreq
+::method request
+  say '  request' arg(1)
+  return '5'
 </code></pre>
-<pre><code class="language-output">positiveNumber =&gt; 97.1
-nonNegativeNumber =&gt; 97.1
-numberRange =&gt; 97.1
-positiveNumber =&gt; 88.926
-  sent &gt;
-positiveNumber =&gt; 88.926
-positiveWholeNumber =&gt; 88.905
-wholeNumberRange =&gt; 88.907
-numberRange =&gt; 88.907
-  sent &gt;=
-numberRange =&gt; 34.6
-  sent &gt;
-positiveNumber ok
+<pre><code class="language-output">  string
+WITHSTR ok
+  makestring
+WITHMS ok
+  request STRING
+WITHREQ ok
 </code></pre>
 <h2 id="logical-values-and-classes"><a class="header" href="#logical-values-and-classes">Logical values and classes</a></h2>
 <div class="rule" id="r-class.validate.logical"><a href="#r-class.validate.logical">[class.validate.logical]</a></div>
-<p><code>logical</code> accepts exactly the strings <code>0</code> and <code>1</code>, or the objects <code>.true</code> and
-<code>.false</code>, and raises <code>SYNTAX 88.927</code> for any other value, such as <code>2</code>, a
-number written otherwise such as <code>1.0</code> or <code>01</code>, a string with blanks and the
-null string; the <code>ADDITIONAL</code> array has two items, the name and then the value,
-which tell a program which argument failed and what it held.</p>
+<p><code>logical</code> accepts the strings <code>0</code> and <code>1</code>, the objects <code>.true</code> and <code>.false</code>,
+and an object that supplies exactly <code>0</code> or <code>1</code> through <a href="../conventions.html#r-conv.string.object">string
+conversion</a>, as <a href="#r-class.validate.deviation.183">Deviation 183</a>
+says. Other values, including <code>2</code>, <code>1.0</code>, <code>01</code>, strings with blanks and the
+null string, raise <code>SYNTAX 88.927</code>. The <code>ADDITIONAL</code> array has two items, the
+name and then the original value.</p>
 <pre><code class="language-rexx">call show .array~of('0', '1', .true, .false, '2')
 call show .array~of('1.0', '01', ' 1', 'yes', '', .nil)
 exit
@@ -1010,6 +861,75 @@ bad: say condition('o')~code
 <pre><code class="language-output">accepted
 in range
 88.902
+</code></pre>
+<div class="rule" id="r-class.validate.deviation.183"><a href="#r-class.validate.deviation.183">[class.validate.deviation.183]</a></div>
+<p>The numeric and logical checks compare the converted text. ooRexx compares
+the original object, so an object with only <code>makeString</code> can raise
+<code>SYNTAX 97.1</code> in a numeric comparison and <code>SYNTAX 88.927</code> in the logical check.
+The probe in this example supplies text and prints a line for each conversion
+or comparison sent to it.</p>
+<pre><code class="language-rexx">methods = 'positiveNumber nonNegativeNumber positiveWholeNumber',
+          'nonNegativeWholeNumber position length'
+do name over methods~makeArray(' ')
+  call check name, .probe~new(name, '5')
+end
+call check 'numberRange', .probe~new('value', '5.5'), .probe~new('min', '1'), .probe~new('max', '9')
+call check 'wholeNumberRange', .probe~new('value', '11'), 1, 9
+call check 'logical', .probe~new('flag', '1')
+call check 'logical', .probe~new('flag', '01')
+call check 'logical', .displayed~new
+exit
+check: procedure
+  use arg name
+  signal on syntax name refused
+  if arg() == 2 then .validate~send(name, 'N', arg(2))
+  else .validate~send(name, 'N', arg(2), arg(3), arg(4))
+  say name 'ok'
+  return
+refused:
+  say name condition('o')~code
+  return
+::class probe
+::method init
+  expose label text
+  use strict arg label, text
+::method makeString
+  expose label text
+  say 'convert' label
+  return text
+::method '=='
+  say 'strict comparison'
+  return 0
+::method unknown
+  say 'comparison' arg(1)
+  return 0
+::class displayed
+::method string
+  return '0'
+</code></pre>
+<pre><code class="language-output">convert positiveNumber
+positiveNumber ok
+convert nonNegativeNumber
+nonNegativeNumber ok
+convert positiveWholeNumber
+positiveWholeNumber ok
+convert nonNegativeWholeNumber
+nonNegativeWholeNumber ok
+convert position
+position ok
+convert length
+length ok
+convert value
+convert min
+convert max
+numberRange ok
+convert value
+wholeNumberRange 88.907
+convert flag
+logical ok
+convert flag
+logical 88.927
+logical ok
 </code></pre>
 
                     </main>

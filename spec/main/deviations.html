@@ -1349,6 +1349,10 @@ that is no string and for <code>.nil</code>, whatever its <code>makeString</code
 take a message name from an object that supplies a string when its array
 conversion gives no array. ooRexx ends with <code>SYNTAX 93.972</code> when the array
 conversion fails.</p>
+<p><code>Validate</code> compares the converted string in its numeric and logical checks.
+ooRexx compares the argument object itself. An object that supplies valid
+text can therefore raise <code>SYNTAX 97.1</code> in a numeric check or <code>SYNTAX 88.927</code>
+in the logical check, depending on the comparisons the object answers.</p>
 <p><code>CommandInput~lineIn</code> reads its count through the required-string protocol
 before comparing it with <code>0</code> and <code>1</code>. ooRexx refuses an object with
 <code>SYNTAX 93.963</code> even when its conversion gives one of those values.</p>

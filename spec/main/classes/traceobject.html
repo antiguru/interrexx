@@ -646,10 +646,13 @@ say t~counter
 <div class="rule" id="r-class.traceobject.option"><a href="#r-class.traceobject.option">[class.traceobject.option]</a></div>
 <p><code>option</code> answers the setting that chooses the format of the trace lines, one
 of <code>N</code>, <code>T</code>, <code>S</code>, <code>F</code> and <code>P</code>, and <code>N</code> at the start. <code>option=</code> reads its
-argument as a string and keeps the first character in upper case if it is one
-of <code>n</code>, <code>t</code>, <code>s</code>, <code>f</code> or <code>p</code>, so that <code>Normal</code>, <code>Thread</code>, <code>Standard</code>, <code>Full</code>
-and <code>Profiling</code> or <code>Probing</code> can be written as words; the rest of the string
-is not examined. A string that does not begin with one of the five letters,
+argument by its <a href="../conventions.html#r-conv.string.object">full string value</a> and keeps the first
+character in upper case if it is one of <code>n</code>, <code>t</code>, <code>s</code>, <code>f</code> or <code>p</code>, so that
+<code>Normal</code>, <code>Thread</code>, <code>Standard</code>, <code>Full</code> and <code>Profiling</code> or <code>Probing</code> can be
+written as words; the rest of the string is not examined. An object can
+provide the option through <code>REQUEST('STRING')</code> or, if that produces no
+string, through <code>STRING</code>. <code>.nil</code> reads as <code>The NIL object</code> and sets the
+option to <code>T</code>. A string that does not begin with one of the five letters,
 the null string included, raises <code>SYNTAX 93.914</code>. <code>option=</code> takes no more
 than its first argument into account.</p>
 <pre><code class="language-rexx">t = .traceobject
@@ -687,6 +690,52 @@ tx =&gt; T
 5 =&gt; 93.914
 " s" =&gt; 93.914
 T
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+t~option = .both~new
+say t~option
+t~option = .stringOnly~new
+say t~option
+t~option = .badRequest~new
+say t~option
+t~option = .nil
+say t~option
+signal on syntax name bad
+t~option = .badOption~new
+exit
+bad:
+say condition('o')~code t~option
+::class both
+::method makeString
+  say 'makeString'
+  return 'Full'
+::method string
+  say 'unused STRING'
+  return 'Normal'
+::class stringOnly
+::method string
+  say 'STRING'
+  return 'Standard'
+::class badRequest
+::method request
+  say 'REQUEST' arg(1)
+  return .object~new
+::method string
+  say 'fallback STRING'
+  return 'Profiling'
+::class badOption
+::method string
+  return 'Invalid'
+</code></pre>
+<pre><code class="language-output">makeString
+F
+STRING
+S
+REQUEST STRING
+fallback STRING
+P
+T
+93.914 T
 </code></pre>
 <div class="rule" id="r-class.traceobject.sends"><a href="#r-class.traceobject.sends">[class.traceobject.sends]</a></div>
 <p>These are the messages that the methods of <code>TraceObject</code> send to objects that a
