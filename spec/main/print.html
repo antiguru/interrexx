@@ -63355,7 +63355,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="datetime"><a class="header" href="#datetime">DateTime</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; DateTime Class; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; init; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromBaseDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromEuropeanDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromIsoDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromNormalDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromOrderedDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromOrdinalDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromStandardDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromTicks (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromUsaDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromUtcIsoDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromWeekNumberDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; maxDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; minDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; today (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addYears; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; baseDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; civilTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; date; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; day; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayMicroseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayMinutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayName; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daySeconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daysInMonth; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daysInYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; elapsed; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; europeanDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fullDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; isLeapYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; isoDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; languageDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; longTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; month; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; monthName; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; normalDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; normalTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; offset; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; orderedDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; ordinalDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; standardDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; string; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; ticks; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; timeOfDay; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toLocalTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toTimezone; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toUtcTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; usaDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; utcDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; utcIsoDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekDay; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumber; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumberDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumberYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weeksInYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; year; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; yearDay</p>
-<p class="deviations">Deviations: D109, D126, D127, D128, D129, D130, D131, D132, D163</p>
+<p class="deviations">Deviations: D109, D126, D127, D128, D129, D130, D131, D132, D163, D183</p>
 <p>A <code>DateTime</code> is one moment of the Gregorian calendar, from the first
 microsecond of 1 January 0001 to the last of 31 December 9999, that carries
 the offset of the time zone it is read in. Its methods answer the parts of the
@@ -63501,8 +63501,6 @@ call try '.datetime~today(901)'
 call try '.datetime~fromBaseDate(5, 901)'
 call try '.datetime~fromTicks(5, 1.5)'
 call try '.datetime~fromTicks(5, "x")'
-call try '.datetime~today(.offsetObject~new)'
-call try '.datetime~fromBaseDate(5, .offsetObject~new)'
 call try '.rejectingDate~today(60)'
 call substitutions '.datetime~fromBaseDate(5, .badOffset~new)'
 call substitutions '.datetime~fromNormalTime("12:00:00", .badOffset~new)'
@@ -63555,8 +63553,6 @@ d~toTimezone(.timespan~fromSeconds(90)) =&gt; 88.907
 .datetime~fromBaseDate(5, 901) =&gt; 88.918
 .datetime~fromTicks(5, 1.5) =&gt; 88.918
 .datetime~fromTicks(5, "x") =&gt; 88.918
-.datetime~today(.offsetObject~new) =&gt; 88.918
-.datetime~fromBaseDate(5, .offsetObject~new) =&gt; 88.918
 .rejectingDate~today(60) =&gt; 88.918
 88.918 date 5
 88.918 time 12:00:00
@@ -64018,73 +64014,16 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .datetime~fromWeekNumberDate("2020-W07-1", 0, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.datetime.fromdate.argument"><a href="classes/datetime.html#r-class.datetime.fromdate.argument">[class.datetime.fromdate.argument]</a></div>
-<p><code>fromOrdinalDate</code> and <code>fromWeekNumberDate</code> do not read their first argument as
-a string at once. After the argument count is checked, each sends the argument
-<code>contains</code> with the one argument <code>-</code>, once and before anything else, and uses
-the answer to pick the form: true for the form with hyphens, false for the one
-without. The answer must be exactly <code>0</code> or <code>1</code>; any other answer, <code>.nil</code>
-included, raises <code>SYNTAX 34.1</code>, and an argument that does not understand
-<code>contains</code> raises <code>SYNTAX 97.1</code> (an <code>Array</code>, a <code>List</code>, a <code>Set</code> or <code>.nil</code>; a
-<code>Directory</code> answers <code>.nil</code> and so raises 34.1). Then the string value of the
-argument is read, and a form that the answer did not pick, or a string that is
-not a date, raises <code>SYNTAX 88.918</code>. A string that is a number or a <code>String</code>
-subclass instance is sent <code>contains</code> like any other value, so a subclass that
-overrides it decides the form: an instance of the string <code>2020041</code> whose
-<code>contains</code> answers true raises 88.918, though the string is a date.</p>
-<pre><code class="language-rexx">say .datetime~fromOrdinalDate(.cs~new('2020-041'))
-say .datetime~fromOrdinalDate(.cs~new('2020041'))
-call try '.datetime~fromOrdinalDate(.array~of("2020-041"))'
-call try '.datetime~fromWeekNumberDate(.nil)'
-call try '.datetime~fromOrdinalDate(.directory~new)'
-call try '.datetime~fromOrdinalDate(.spy~new(1))'
-call try '.datetime~fromWeekNumberDate(.spy~new("maybe"))'
-call try '.datetime~fromOrdinalDate(.no~new("2020-041"))'
-call try '.datetime~fromWeekNumberDate(.yes~new("2020W071"))'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt;' r
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class spy
-::method init
-  expose answer
-  use arg answer
-::method unknown
-  expose answer
-  use arg name, args
-  say name args~toString
-  return answer
-::class cs subclass string
-::method contains
-  say 'contains' arg(1)
-  return self~string~contains(arg(1))
-::class no subclass string
-::method contains
-  say 'contains' arg(1)
-  return 0
-::class yes subclass string
-::method contains
-  say 'contains' arg(1)
-  return 1
+<p><code>fromOrdinalDate</code> and <code>fromWeekNumberDate</code> read their first argument as a
+<a href="classes/index.html#r-class.index.string">string argument</a>. Without a string value they raise
+<code>SYNTAX 88.909</code>. They choose the hyphenated form when the converted text
+contains a hyphen. Text that is no date raises <code>SYNTAX 88.918</code> (<a href="classes/datetime.html#r-class.datetime.deviation.183">Deviation
+183</a>).</p>
+<pre><code class="language-rexx">say .datetime~fromOrdinalDate('2020-041', 0)
+say .datetime~fromWeekNumberDate('2020W071')
 </code></pre>
-<pre><code class="language-output">contains -
+<pre><code class="language-output">2020-02-10T00:00:00.000000
 2020-02-10T00:00:00.000000
-contains -
-2020-02-10T00:00:00.000000
-.datetime~fromOrdinalDate(.array~of("2020-041")) =&gt; 97.1
-.datetime~fromWeekNumberDate(.nil) =&gt; 97.1
-.datetime~fromOrdinalDate(.directory~new) =&gt; 34.1
-CONTAINS -
-.datetime~fromOrdinalDate(.spy~new(1)) =&gt; 88.918
-CONTAINS -
-.datetime~fromWeekNumberDate(.spy~new("maybe")) =&gt; 34.1
-contains -
-.datetime~fromOrdinalDate(.no~new("2020-041")) =&gt; 88.918
-contains -
-.datetime~fromWeekNumberDate(.yes~new("2020W071")) =&gt; 88.918
 </code></pre>
 <div class="rule" id="r-class.datetime.fromtime"><a href="classes/datetime.html#r-class.datetime.fromtime">[class.datetime.fromtime]</a></div>
 <p><code>fromNormalTime</code>, <code>fromCivilTime</code> and <code>fromLongTime</code> read a time of day that
@@ -64852,9 +64791,9 @@ fields fall outside the range of the class the methods raise <code>SYNTAX 40.19<
 <code>toLocalTime</code> and <code>toUtcTime</code> take no argument, and <code>toTimezone</code> at most one.
 The argument of <code>toTimezone</code> that is not a
 <a href="classes/timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> is read as a number of minutes by
-multiplying it with 60000000 with <code>*</code>, so a string that is no number raises
-<code>SYNTAX 41.1</code> and <code>.nil</code>, which has no <code>*</code>, <code>SYNTAX 97.1</code>; a number that is
-not a whole number of minutes in the range raises <code>SYNTAX 88.907</code>.</p>
+converting its string value. Text that is no number raises <code>SYNTAX 41.1</code>; a
+number that is not a whole number of minutes in the range raises
+<code>SYNTAX 88.907</code> (<a href="classes/datetime.html#r-class.datetime.deviation.183">Deviation 183</a>).</p>
 <pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
 say d~toTimezone(0) d~toUtcTime
 say d~toTimezone
@@ -64872,7 +64811,6 @@ call try 'd~toTimezone(901)'
 call try 'd~toTimezone(1.5)'
 call try 'd~toTimezone(.timespan~fromSeconds(90))'
 call try 'd~toTimezone("x")'
-call try 'd~toTimezone(.nil)'
 call try '.datetime~minDate~toTimezone(-60)'
 call try '.datetime~maxDate~toTimezone(60)'
 call try '.datetime~minDate~toUtcTime'
@@ -64900,7 +64838,6 @@ d~toTimezone(901) =&gt; 88.907
 d~toTimezone(1.5) =&gt; 88.907
 d~toTimezone(.timespan~fromSeconds(90)) =&gt; 88.907
 d~toTimezone("x") =&gt; 41.1
-d~toTimezone(.nil) =&gt; 97.1
 .datetime~minDate~toTimezone(-60) =&gt; 40.19
 .datetime~maxDate~toTimezone(60) =&gt; 40.19
 .datetime~minDate~toUtcTime =&gt; 0001-01-01T00:00:00.000000
@@ -64999,24 +64936,13 @@ arguments after <code>FROMSTANDARDDATE</code>, <code>NEW</code>, and <code>INIT<
 prints the second argument that <code>init</code> gets: a <code>TimeSpan</code> or a string that the caller gave
 arrives as it is, the offset of the string of <code>fromUtcIsoDate</code> as a number of
 minutes (150 for <code>+02:30</code>), and, without an offset argument, the default
-offset in minutes. An argument that is read as a number is sent more messages
-than the one that reads its string value (<a href="classes/index.html#r-class.index.string">the argument
-rule</a>). A year, month, day, hours, minutes, seconds or
-microseconds argument of <code>new</code> is sent <code>&gt;=</code> and <code>&lt;=</code> with the limits of its
-range and then <code>right</code> with the width of its field, 4 for the year, 6 for the
-microseconds and 2 for the others. An offset that is not a <code>TimeSpan</code>, the
-argument of <code>new</code>, <code>today</code> or a <code>from</code> method other than <code>fromWeekNumberDate</code>,
-is sent <code>isA</code>, read for its string value, and sent <code>&gt;=</code> with -900, <code>&lt;=</code> with
-900 and <code>*</code> with 60000000. An amount of <code>addDays</code>, <code>addHours</code>, <code>addMinutes</code>,
-<code>addSeconds</code> and <code>addWeeks</code> is sent <code>*</code>, and <code>addYears</code> and <code>addMicroseconds</code>
-read the string value of their amount twice. A number argument of <code>toTimezone</code>
-is sent <code>isA</code> and <code>*</code>, then read for its string value and sent <code>&gt;=</code> and <code>&lt;=</code>;
-the <code>new</code> that <code>toTimezone</code> sends gets the argument itself, which is then
-handled as the offset of <code>new</code> is. A count of <code>new</code> and the argument of
-<code>fromTicks</code> and <code>fromBaseDate</code> are read for their string value only. The third
-example passes an object whose <code>makeString</code> answers a number and whose
-<code>unknown</code> sends every other message to that number, and prints the messages
-the object got.</p>
+offset in minutes. Calendar and time fields of <code>new</code> and numeric offsets
+and amounts are read through the <a href="classes/../conventions.html#r-conv.string.object">string conversion
+protocol</a>. An offset is first sent <code>isA</code> with
+<code>TimeSpan</code>. A <code>TimeSpan</code> is then sent <code>totalMicroseconds</code>. The
+arguments of <code>addYears</code> and <code>addMicroseconds</code> are read twice. A count of
+<code>new</code> and the argument of <code>fromTicks</code> and <code>fromBaseDate</code> are read for
+their string value only. See also <a href="classes/datetime.html#r-class.datetime.deviation.183">Deviation 183</a>.</p>
 <pre><code class="language-rexx">names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
 do n over names~makearray(' ')
   body = .array~of(".local~log = .local~log '" || n || "'",,
@@ -65103,14 +65029,10 @@ fromUtcIsoDate:  NEW2 INIT2 [150]
 default 1
 </code></pre>
 <pre><code class="language-rexx">n = .num~new(3)
-call probe 'year', '.datetime~new(n, 1, 1)'
-call probe 'offset', '.datetime~new(2017, 1, 1, 0, 0, 0, 0, n)'
 call probe 'count', '.datetime~new(n)'
 call probe 'fromTicks', '.datetime~fromTicks(n)'
-call probe 'addDays', '.datetime~minDate~addDays(n)'
 call probe 'addMicroseconds', '.datetime~minDate~addMicroseconds(n)'
 call probe 'addYears', '.datetime~minDate~addYears(n)'
-call probe 'toTimezone', '.datetime~minDate~toTimezone(n)'
 exit
 probe:
   .local~log = ''
@@ -65122,9 +65044,6 @@ probe:
 ::method init
   expose v
   use arg v
-::method isA
-  .local~log = .local~log 'ISA'
-  forward class (super)
 ::method makeString
   expose v
   .local~log = .local~log 'MAKESTRING'
@@ -65132,28 +65051,15 @@ probe:
 ::method request
   .local~log = .local~log 'REQUEST:'arg(1)
   forward class (super)
-::method unknown
-  expose v
-  use arg name, args
-  .local~log = .local~log name
-  forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output">year:
-  REQUEST:STRING MAKESTRING &gt;= &lt;= RIGHT
-offset:
-  ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
-count:
+<pre><code class="language-output">count:
   REQUEST:STRING MAKESTRING
 fromTicks:
   REQUEST:STRING MAKESTRING
-addDays:
-  REQUEST:STRING MAKESTRING *
 addMicroseconds:
   REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
 addYears:
   REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
-toTimezone:
-  ISA * REQUEST:STRING MAKESTRING &gt;= &lt;= ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
 </code></pre>
 <div class="rule" id="r-class.datetime.sends.add"><a href="classes/datetime.html#r-class.datetime.sends.add">[class.datetime.sends.add]</a></div>
 <p><code>addDays</code>, <code>addHours</code>, <code>addMicroseconds</code>, <code>addMinutes</code>, <code>addSeconds</code>, <code>addWeeks</code>
@@ -65218,8 +65124,9 @@ sends the new instance <code>+</code> with the answer of <code>timeOfDay</code>,
 it sends. <code>date</code> sends the receiver <code>standardDate</code> and <code>offset</code>, then <code>new</code>
 with two arguments, and <code>timeOfDay</code> sends <code>longTime</code>. <code>toTimezone</code> sends <code>new</code>
 with two arguments, the microseconds and the offset: a
-<a href="classes/timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> argument converted to minutes, any other
-argument as given; <code>toUtcTime</code> and <code>toLocalTime</code> send the receiver
+<a href="classes/timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> argument converted to minutes, or the
+string read from another argument with its spelling preserved. <code>toUtcTime</code>
+and <code>toLocalTime</code> send the receiver
 <code>toTimezone</code>, with 0 and with the default offset in minutes, and so <code>new</code> once
 more. <code>copy</code> sends nothing. The second example prints the argument of
 <code>toTimezone</code> and the offset that <code>init</code> gets.</p>
@@ -65844,6 +65751,85 @@ syntax:
 say condition('O')~code (d~isoDate d~offset == before) d~isoDate
 </code></pre>
 <pre><code class="language-output">88.907 1 2020-01-01T00:00:00.000000
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.183"><a href="classes/datetime.html#r-class.datetime.deviation.183">[class.datetime.deviation.183]</a></div>
+<p>Calendar and time fields of <code>new</code>, numeric offsets and amounts, and the
+texts of <code>fromOrdinalDate</code> and <code>fromWeekNumberDate</code> are converted before
+their values are used. ooRexx sends comparisons, <code>right</code>, <code>*</code> or
+<code>contains</code> directly to the argument. It can raise <code>SYNTAX 97.1</code> even
+when the conversion would provide a valid value. In the example, the
+conversion methods supply the values and the argument objects receive no
+comparison, multiplication or date parsing messages.</p>
+<pre><code class="language-rexx">n = .provided~new(3)
+offset = .spoken~new(60)
+d = .datetime~new(.provided~new(2020), n, n, n, n, n, n, offset)
+say d~utcIsoDate
+say .datetime~new(3600000000, offset)~utcIsoDate
+say .datetime~today(offset)~offset .datetime~fromBaseDate(5, offset)~offset
+say .datetime~fromOrdinalDate(.provided~new('2020-041'), 0)
+say .datetime~fromWeekNumberDate(.provided~new('2020-W07-1'))
+say .datetime~fromWeekNumberDate(.provided~new('2020W071'))
+say .datetime~fromOrdinalDate(.undashed~new('2020-041'), 0)
+say d~addWeeks(n)
+say d~addDays(.spoken~new('1.5'))
+say d~addHours(n)
+say d~addMinutes(n)
+say d~addSeconds(n)
+say d~toTimezone(.spoken~new(-30))~utcIsoDate
+call bad '.datetime~fromOrdinalDate(.nil)'
+call bad '.datetime~fromWeekNumberDate(.spoken~new("2020W071"))'
+call bad '.datetime~fromOrdinalDate(.provided~new("not a date"))'
+call bad '.datetime~new(2020, .provided~new(13), 1)'
+call bad 'd~addSeconds(.provided~new("abc"))'
+call bad 'd~toTimezone(.nil)'
+call bad 'd~toTimezone(.provided~new(1.5))'
+exit
+bad:
+  signal on syntax name refused
+  interpret 'result =' arg(1)
+  say 'accepted'
+  return
+refused:
+  say condition('o')~code
+  return
+::class provided
+::method init
+  expose value
+  use arg value
+::method makeString
+  expose value
+  return value
+::class spoken
+::method init
+  expose value
+  use arg value
+::method string
+  expose value
+  return value
+::class undashed subclass string
+::method contains
+  return 0
+</code></pre>
+<pre><code class="language-output">2020-03-03T03:03:03.000003+01:00
+0001-01-01T01:00:00.000000+01:00
+01:00:00.000000 01:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-02-10T00:00:00.000000
+2020-03-24T03:03:03.000003
+2020-03-04T15:03:03.000003
+2020-03-03T06:03:03.000003
+2020-03-03T03:06:03.000003
+2020-03-03T03:03:06.000003
+2020-03-03T01:33:03.000003-00:30
+88.909
+88.909
+88.918
+88.907
+88.902
+41.1
+88.907
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="timespan"><a class="header" href="#timespan">TimeSpan</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TimeSpan Class; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; init; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromDays (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromHours (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMicroseconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMinutes (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromSeconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromStringFormat (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; days; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; duration; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; sign; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; string; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalSeconds</p>
@@ -131370,6 +131356,11 @@ so an object whose <code>makeString</code> answers <code>L</code> or <code>C</co
 object with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>. ooRexx
 sends the option <code>caselessStartsWith</code> and raises <code>SYNTAX 97.1</code> for any object
 that is no string and for <code>.nil</code>, whatever its <code>makeString</code> answers.</p>
+<p><code>DateTime</code> converts calendar and time fields, numeric offsets and amounts,
+and the text for ordinal and week-number dates before using them. ooRexx
+sends comparisons, <code>RIGHT</code>, <code>*</code> or <code>CONTAINS</code> to the original arguments,
+which can raise <code>SYNTAX 97.1</code> even for objects that supply valid text
+(<a href="classes/datetime.html#r-class.datetime.deviation.183">example</a>).</p>
 <p><code>Alarm</code> and <code>Ticker</code> use a time object's string value as the number of
 seconds. ooRexx sends the original object a message for this form and can
 raise <code>SYNTAX 97.1</code> even when the conversion gives a valid number.</p>

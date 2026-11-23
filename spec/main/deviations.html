@@ -1354,6 +1354,11 @@ so an object whose <code>makeString</code> answers <code>L</code> or <code>C</co
 object with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>. ooRexx
 sends the option <code>caselessStartsWith</code> and raises <code>SYNTAX 97.1</code> for any object
 that is no string and for <code>.nil</code>, whatever its <code>makeString</code> answers.</p>
+<p><code>DateTime</code> converts calendar and time fields, numeric offsets and amounts,
+and the text for ordinal and week-number dates before using them. ooRexx
+sends comparisons, <code>RIGHT</code>, <code>*</code> or <code>CONTAINS</code> to the original arguments,
+which can raise <code>SYNTAX 97.1</code> even for objects that supply valid text
+(<a href="classes/datetime.html#r-class.datetime.deviation.183">example</a>).</p>
 <p><code>Alarm</code> and <code>Ticker</code> use a time object's string value as the number of
 seconds. ooRexx sends the original object a message for this form and can
 raise <code>SYNTAX 97.1</code> even when the conversion gives a valid number.</p>
