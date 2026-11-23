@@ -130643,10 +130643,19 @@ are written for interrexx, so a traceback through them names interrexx's
 lines of them, their numbers and text, and an error the package raises may be
 reported from another clause of it or from the caller. Codes and results match
 ooRexx.</p>
-<h2 id="90-syswordexp-is-refused"><a class="header" href="#90-syswordexp-is-refused">90. SysWordexp is refused</a></h2>
-<p>SysWordexp stays registered, but every call raises <code>40.1</code> and expands
-nothing. ooRexx expands the words with a shell, command substitution
-included.</p>
+<h2 id="90-syswordexp-supports-quoted-word-lists"><a class="header" href="#90-syswordexp-supports-quoted-word-lists">90. SysWordexp supports quoted word lists</a></h2>
+<p>SysWordexp separates words at unquoted spaces and tabs, removes single
+and double quotes and backslash escapes, and keeps empty quoted words.
+Inside double quotes it expands simple variable names, with or without
+braces, from the interpreter's environment. An undefined name contributes
+an empty string. A value inserted there stays part of the same word.</p>
+<p>Command substitution, unquoted parameter expansion, parameter operators,
+arithmetic, unquoted tildes, pathname patterns, comments and line
+continuations raise <code>40.1</code>, as do malformed lists and embedded null
+characters. The whole call fails if any word uses unsupported syntax.
+Like ooRexx, the routine raises <code>40.1</code> for an empty argument and answers
+an empty array for text that contains only spaces or tabs.
+ooRexx also performs shell expansions, including command substitution.</p>
 <h2 id="91-a-command-whose-child-was-already-reaped"><a class="header" href="#91-a-command-whose-child-was-already-reaped">91. A command whose child was already reaped</a></h2>
 <p>A command whose process was reaped before the wait answers RC -10 as an
 ERROR. ooRexx answers an unpredictable negative value.</p>
