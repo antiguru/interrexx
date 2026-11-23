@@ -1,6 +1,6 @@
-/* Class~define while instances made under each definition stay live: every
-   define retires the class's instance behaviour, and every collection that
-   frees objects looks for the behaviours no live instance holds. */
+/* Class~define repeatedly replaces one method while some instances stay
+   live. Existing instances see the replacement. Allocating between defines
+   exercises collection of methods that are no longer named or running. */
 n = 3000
 keep = .array~new(50)
 do i = 1 to n
