@@ -1602,6 +1602,10 @@ before uppercasing it. ooRexx sends `UPPER` to the name object, which raises
 can supply valid code as text can still raise `SYNTAX 97.1` in the handler
 if it lacks a method ooRexx sends.
 
+`File~searchPath` can read a directory list through a string request when
+an object outside the array class hierarchy supplies no array. ooRexx raises
+`SYNTAX 98.913` when the array conversion fails.
+
 `File~writeChars` and `File~writeLines` convert their mode as a string
 argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
 that method raises `SYNTAX 97.1` even if it can supply valid mode text.

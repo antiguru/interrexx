@@ -1728,10 +1728,13 @@ r[class.file.searchpath]
 `File`, or `.nil` when nothing is found. The `path` lists directories. A string
 `path` is cut at every `:`, the class is sent `pathSeparator`, whose answer
 plays no part, and the empty pieces are dropped. Any other `path` is sent
-`request` with the argument `ARRAY`, and the items of the array it answers are
+`request` with the argument `ARRAY`. When it answers an array, its items are
 the directories, each read as [a string argument](r:class.index.string), so a
-`.nil` item raises `SYNTAX 88.909`; an answer that is not an array raises
-`SYNTAX 98.913`. An omitted `path` stands for the directories of the environment
+`.nil` item raises `SYNTAX 88.909`. A path object outside the `Array` class and
+its subclasses can supply a string through `request('STRING')` when the
+array request gives no array. A path that supplies neither valid form raises
+`SYNTAX 98.913` ([Deviation 183](r:class.file.deviation.183)). An omitted
+`path` stands for the directories of the environment
 variable `PATH`. The directories are tried in order, and the answer is the first
 one that holds a file of that name, as `new` of `File` with `name` as `path` and
 the directory as `dir` would make it: the class of the answer is `File`,
@@ -1883,8 +1886,8 @@ show:
 
 r[class.file.searchpath.order]
 `searchPath` reads its `path` before its `name`. A `path` that is no string is
-sent `request` with `ARRAY` first, and an answer that is no array raises
-`SYNTAX 98.913`. A call whose `path` and `name` are both wrong raises the error
+sent `request` with `ARRAY` before any string request. A call whose `path` and
+`name` are both wrong raises the error
 of one of them, as [the precedence rule](r:conv.error.precedence) says. All the
 items of an array `path` are read as strings before any directory is searched,
 so a `.nil` item raises `SYNTAX 88.909` even when a directory before it holds
@@ -2454,7 +2457,9 @@ r[class.file.deviation.183]
 `writeChars` and `writeLines` read the mode through the [string argument
 rule](r:class.index.string). ooRexx sends `STRIP` to the mode itself, so an
 object without that method raises `SYNTAX 97.1` even if `MAKESTRING` supplies
-a valid mode.
+a valid mode. `searchPath` also accepts a directory list from an object's
+`request('STRING')` when its array conversion gives no array. ooRexx
+raises `SYNTAX 98.913` in that case.
 
 ```rexx
 f = 'spec-file-write-mode.tmp'
@@ -2495,4 +2500,73 @@ bad: say condition('o')~code
 88.909
 88.916
 6F6E6574776F0A
+```
+
+```rexx
+root = 'spec-file-search-convert.tmp'
+first = root'/first'
+second = root'/second'
+junk = .file~new(first)~makeDirs
+junk = .file~new(second)~makeDirs
+.file~writeChars(first'/a.txt', 'first', 'Replace')
+.file~writeChars(second'/a.txt', 'second', 'Replace')
+call show .textPath~new(first':'second)
+call show .bothPaths~new(second':'first, .array~of(first))
+call show .list~of(second, first)
+call show .stringOnlyPath~new
+call show .invalidArray~new
+call show .emptyArrayReply~new(first)
+call show .emptyReply~new
+do dir over .array~of(first, second)
+  junk = .file~new(dir'/a.txt')~delete
+  junk = .file~new(dir)~delete
+end
+junk = .file~new(root)~delete
+exit
+show:
+  signal on syntax name bad
+  found = .file~searchPath('a.txt', arg(1))
+  say .file~readChars(found)
+  return
+bad: say condition('o')~code
+  return
+::class textPath
+::method init
+  expose path
+  use arg path
+::method makeString
+  expose path
+  return path
+::class bothPaths subclass textPath
+::method init
+  expose dirs
+  use arg path, dirs
+  self~init:super(path)
+::method makeArray
+  expose dirs
+  return dirs
+::class stringOnlyPath
+::method string
+  return 'spec-file-search-convert.tmp/first'
+::class invalidArray subclass array
+::method request
+  if arg(1) == 'ARRAY' then return .nil
+  return 'spec-file-search-convert.tmp/first'
+::class emptyArrayReply subclass textPath
+::method request
+  if arg(1) == 'ARRAY' then return
+  forward class (super)
+::class emptyReply
+::method request
+  return
+```
+
+```output
+first
+first
+second
+98.913
+98.913
+first
+98.913
 ```
