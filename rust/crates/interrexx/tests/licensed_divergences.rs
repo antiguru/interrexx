@@ -181,18 +181,19 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
                        both nobuffer: <1 write 18, read 1, +3 read 4, =5 write 5, -2 write 3\n",
     },
     LicensedDivergence {
-        name: "undelivered-trace-keyword-applies-first",
-        // The destination refuses the keyword line for the new DIGITS setting.
-        // The oracle keeps the old setting, and this crate has applied the new one.
-        program: ".traceoutput~destination(.sink~new)\n\
+        name: "undelivered-parse-value-assigns-first",
+        // The destination refuses the VALUE keyword line. The oracle keeps
+        // the old target value, and this crate has already assigned the new one.
+        program: "x = 'old'\n\
+              .traceoutput~destination(.sink~new)\n\
               signal on syntax name e\n\
               trace o\n\
               trace r\n\
-              numeric digits 7\n\
+              parse value 'new' with x\n\
               exit\n\
               e: trace o\n\
               .traceoutput~destination(.output)\n\
-              say 'caught' condition('o')~code digits()\n\
+              say 'caught' condition('o')~code x\n\
               ::class sink\n\
               ::method init\n\
               \x20 expose n\n\
@@ -204,8 +205,8 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
               \x20 return 0\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "       >K>   \"DIGITS\" => \"7\"\ncaught 93.900 9\n",
-        crate_stdout: "       >K>   \"DIGITS\" => \"7\"\ncaught 93.900 7\n",
+        oracle_stdout: "       >K>   \"VALUE\" => \"new\"\ncaught 93.900 old\n",
+        crate_stdout: "       >K>   \"VALUE\" => \"new\"\ncaught 93.900 new\n",
     },
     LicensedDivergence {
         name: "context-rs-in-interpret",
