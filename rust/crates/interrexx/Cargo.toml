@@ -186,6 +186,9 @@ sharing = ["interrexx-core/sharing"]
 # Compiles hot flat loops to native code (`src/jit.rs`).
 jit = ["interrexx-core/jit", "dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_IO", "Win32_System_Pipes", "Win32_System_Threading"] }
+
 [dev-dependencies]
 # Path-only dev-dependencies on workspace crates carry no version: cargo drops them
 # when packaging, which keeps the interrexx-capi cycle and unpublished crates out.

@@ -48,6 +48,7 @@ mod queue;
 use queue::Queue;
 
 // The process's connection to the API service.
+#[cfg_attr(windows, path = "rxapi_client_windows.rs")]
 mod rxapi_client;
 pub use rxapi_client::use_api_service;
 pub mod capi;
@@ -121,6 +122,7 @@ mod timer;
 mod sim;
 
 // The signal handlers (D-U3).
+#[cfg_attr(windows, path = "signal_windows.rs")]
 mod signal;
 
 // The baton, and the synchronisation shim it, the inbox and the timer use.
@@ -188,6 +190,7 @@ mod command;
 
 // What differs from one host system to the next, behind one interface per
 // concern, with an implementation for each host.
+#[cfg_attr(windows, path = "host_windows.rs")]
 mod host;
 
 // The condition object `CONDITION('O')` answers: the Directory a
@@ -555,6 +558,7 @@ impl Loud {
     /// cannot continue the program.
     /// Not supported (Deviation 42).
     #[cold]
+    #[cfg(unix)]
     fn fork_child(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name).to_ascii_uppercase();
         Loud {
@@ -2071,7 +2075,6 @@ fn external_trace_of(environment: &[(Vec<u8>, Vec<u8>)]) -> bool {
 /// back to the process is forbidden here and would reach every other
 /// interpreter in the process besides.
 fn library_search_of(environment: &[(Vec<u8>, Vec<u8>)]) -> Vec<std::path::PathBuf> {
-    use std::os::unix::ffi::OsStrExt;
     let Some((_, value)) = environment
         .iter()
         .find(|(name, _)| name.as_slice() == b"LD_LIBRARY_PATH")
@@ -2081,7 +2084,8 @@ fn library_search_of(environment: &[(Vec<u8>, Vec<u8>)]) -> Vec<std::path::PathB
     value
         .split(|byte| *byte == b':')
         .filter(|part| !part.is_empty())
-        .map(|part| std::path::PathBuf::from(std::ffi::OsStr::from_bytes(part)))
+        .filter_map(crate::paths::os_str)
+        .map(std::path::PathBuf::from)
         .collect()
 }
 
@@ -2293,6 +2297,7 @@ impl CallContext {
 
 /// Puts the session handle into `env` as the program's start state: a value that names a
 /// handle stays, any other is replaced.
+#[cfg(unix)]
 pub(crate) fn with_session_variable(env: &mut Vec<(Vec<u8>, Vec<u8>)>) {
     let name = crate::rxapi_client::SESSION_VARIABLE.as_bytes();
     let held = env.iter().position(|(held, _)| held == name);
@@ -2305,6 +2310,9 @@ pub(crate) fn with_session_variable(env: &mut Vec<(Vec<u8>, Vec<u8>)>) {
         None => env.push((name.to_vec(), value)),
     }
 }
+
+#[cfg(windows)]
+pub(crate) fn with_session_variable(_env: &mut Vec<(Vec<u8>, Vec<u8>)>) {}
 
 impl Interp {
     /// **Every field a caller might want to vary starts at a fixed value
@@ -2496,7 +2504,7 @@ impl Interp {
             output_route: None,
             collect_at: COLLECT_FLOOR,
             bytes_due: COLLECT_BYTES_FLOOR,
-            queue: Queue::new(rxapi_client::session().inherited()),
+            queue: Queue::new(rxapi_client::has_shared_session()),
             // Nothing to read, which is what makes it impossible for a unit
             // test to reach the harness's own standard input: only `execute`
             // ever replaces this, and only from an `Invocation` that named a

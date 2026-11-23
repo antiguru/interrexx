@@ -181,6 +181,7 @@ fn report((text, status): (Vec<u8>, i32)) -> ExitCode {
 
 /// Whether standard input, output and error are each a terminal or a pipe, from
 /// each descriptor's own status, which every Unix answers. A closed one is not.
+#[cfg(unix)]
 fn transient_standard_streams() -> [bool; 3] {
     use std::os::fd::{AsFd, BorrowedFd};
     let transient = |fd: BorrowedFd<'_>| {
@@ -198,4 +199,9 @@ fn transient_standard_streams() -> [bool; 3] {
         transient(std::io::stdout().as_fd()),
         transient(std::io::stderr().as_fd()),
     ]
+}
+
+#[cfg(windows)]
+fn transient_standard_streams() -> [bool; 3] {
+    launcher::transient_standard_streams()
 }

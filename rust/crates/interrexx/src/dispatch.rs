@@ -3543,6 +3543,7 @@ impl Interp {
     /// root driver and the routine's call answers `Entered` once the body
     /// returns (`run_rust_routine`), so that the other activities run while
     /// this one waits; otherwise the wait is pinned.
+    #[cfg(unix)]
     pub(crate) fn park_rust_routine(
         &mut self,
         reason: crate::scheduler::ParkReason,

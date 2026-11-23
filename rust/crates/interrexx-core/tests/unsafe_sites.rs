@@ -76,9 +76,11 @@ fn only_the_granted_module_may_say_unsafe() {
         vec![
             "crates/interrexx/src/builtin/rxsock_sys.rs".to_string(),
             "crates/interrexx/src/host/sys.rs".to_string(),
+            "crates/interrexx/src/host_windows.rs".to_string(),
             "crates/interrexx/src/island.rs".to_string(),
             "crates/interrexx/src/jit.rs".to_string(),
             "crates/interrexx/src/signal.rs".to_string(),
+            "crates/interrexx/src/signal_windows.rs".to_string(),
             "crates/interrexx-api/src/ffi.rs".to_string(),
             "crates/interrexx-api/src/load.rs".to_string(),
             "crates/interrexx-capi/src/exports.rs".to_string(),
@@ -105,9 +107,11 @@ fn only_the_granted_module_may_say_unsafe() {
         vec![
             "crates/interrexx/src/builtin/rxsock_sys.rs".to_string(),
             "crates/interrexx/src/host/sys.rs".to_string(),
+            "crates/interrexx/src/host_windows.rs".to_string(),
             "crates/interrexx/src/island.rs".to_string(),
             "crates/interrexx/src/jit.rs".to_string(),
             "crates/interrexx/src/signal.rs".to_string(),
+            "crates/interrexx/src/signal_windows.rs".to_string(),
             "crates/interrexx-api/src/ffi.rs".to_string(),
             "crates/interrexx-api/src/load.rs".to_string(),
             "crates/interrexx-capi/src/exports.rs".to_string(),

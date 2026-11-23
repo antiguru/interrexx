@@ -1,5 +1,6 @@
 use super::{Piece, UNKNOWN_COMMAND, Waited, exit_code};
 use std::io::Read;
+#[cfg(unix)]
 use std::os::fd::AsFd;
 
 /// A child's pieces' destination: the sink and where standard output and
@@ -16,6 +17,7 @@ type Routes<'a> = (&'a (dyn Fn(Piece, Vec<u8>) + Sync), Piece, Option<Piece>);
 /// fail. A command completes when its process does (rexxref intro.xml,
 /// "Commands to External Environments": the environment "returns control to
 /// the language processor after setting a return code").
+#[cfg(unix)]
 fn read_all<R: Read + AsFd + Send + 'static>(
     mut reader: R,
     ended: Option<&std::os::fd::OwnedFd>,
@@ -67,6 +69,28 @@ fn read_all<R: Read + AsFd + Send + 'static>(
     }
 }
 
+#[cfg(windows)]
+fn read_all<R: Read>(
+    mut reader: R,
+    _ended: Option<&()>,
+    kept: &mut Vec<u8>,
+    written: Option<(&(dyn Fn(Piece, Vec<u8>) + Sync), Piece)>,
+) {
+    if let Some((written, kind)) = written {
+        let mut block = [0; 4096];
+        loop {
+            match reader.read(&mut block) {
+                Ok(0) => break,
+                Ok(size) => written(kind, block[..size].to_vec()),
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(_) => break,
+            }
+        }
+    } else {
+        let _ = reader.read_to_end(kept);
+    }
+}
+
 /// Collects what `running` writes and its return code, writing `input` to
 /// it first where there is one.
 ///
@@ -90,8 +114,12 @@ pub(super) fn collect(
     let err_route = routes.and_then(|(written, _, err)| Some((written, err?)));
     // The readers poll it for the child's end, which reaps nothing; the reap
     // comes after them. Without one, every pipe is read to its end.
+    #[cfg(unix)]
     let ended = crate::host::exit_watch(&running).map(interrexx_rxapi::reserved::reserve);
+    #[cfg(unix)]
     let ended_reader = ended.as_deref();
+    #[cfg(windows)]
+    let ended_reader: Option<&()> = None;
     let mut out = Vec::new();
     let mut err = Vec::new();
     std::thread::scope(|scope| {

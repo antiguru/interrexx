@@ -30,6 +30,7 @@ pub(crate) mod numeric;
 pub(crate) mod queues;
 pub(crate) mod registrations;
 
+#[cfg(unix)]
 mod native_args;
 /// The builtins that read or move the interpreter's own platform state, and
 /// the bodies of the `REXX` package's three internal routines, which are the
@@ -39,12 +40,15 @@ pub(crate) mod rexxutil;
 /// The `rxmath` extension library's routines, run in Rust.
 pub(crate) mod rxmath;
 /// The `rxsock` extension library's routines, run in Rust.
+#[cfg(unix)]
 pub(crate) mod rxsock;
 /// The `unsafe` `rxsock` is granted: descriptor borrows and raw socket
 /// options.
+#[cfg(unix)]
 pub(crate) mod rxsock_sys;
 /// Where an `rxsock` wait runs while its activity is parked: the process's
 /// socket reactor, behind a platform-neutral face.
+#[cfg(unix)]
 pub(crate) mod rxsock_wait;
 /// The `rxunixsys` extension library's routines, run in Rust.
 #[cfg(unix)]

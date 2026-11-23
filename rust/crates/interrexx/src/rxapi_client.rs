@@ -49,6 +49,10 @@ pub(crate) fn session() -> Session {
     *SESSION.get_or_init(Session::of_process)
 }
 
+pub(crate) fn has_shared_session() -> bool {
+    session().inherited()
+}
+
 /// This process's session handle.
 pub(crate) fn session_handle() -> u64 {
     session().handle()

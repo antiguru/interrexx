@@ -84,6 +84,7 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     util_run("SysCloseEventSem", crate::builtin::rexxutil::close_sem),
     util_run("SysCloseMutexSem", crate::builtin::rexxutil::close_sem),
+    #[cfg(unix)]
     util_run("SysCls", crate::builtin::rexxutil::process::cls),
     util_run(
         "SysCreateEventSem",
@@ -93,10 +94,12 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysCreateMutexSem",
         crate::builtin::rexxutil::create_mutex_sem,
     ),
+    #[cfg(unix)]
     util_run(
         "SysCreatePipe",
         crate::builtin::rexxutil::process::create_pipe,
     ),
+    #[cfg(unix)]
     util_run(
         "SysDropFuncs",
         crate::builtin::rexxutil::process::load_funcs,
@@ -109,15 +112,21 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysDumpVariables",
         crate::builtin::rexxutil::stems::dump_variables,
     ),
+    #[cfg(unix)]
     util_run("SysFileCopy", crate::builtin::rexxutil::files::file_copy),
+    #[cfg(unix)]
     util_run("SysFileDelete", crate::builtin::rexxutil::file_delete),
     util_run("SysFileExists", crate::builtin::rexxutil::file_exists),
+    #[cfg(unix)]
     util_run("SysFileMove", crate::builtin::rexxutil::files::file_move),
+    #[cfg(unix)]
     util_run(
         "SysFileSearch",
         crate::builtin::rexxutil::files::file_search,
     ),
+    #[cfg(unix)]
     util_run("SysFileTree", crate::builtin::rexxutil::tree::file_tree),
+    #[cfg(unix)]
     util_run("SysFork", crate::builtin::rexxutil::process::fork),
     util_run(
         "SysFormatMessage",
@@ -127,10 +136,12 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysGetErrorText",
         crate::builtin::rexxutil::messages::error_text,
     ),
+    #[cfg(unix)]
     util_run(
         "SysGetFileDateTime",
         crate::builtin::rexxutil::files::get_file_date_time,
     ),
+    #[cfg(unix)]
     util_run("SysGetKey", crate::builtin::rexxutil::process::get_key),
     util_run(
         "SysGetMessage",
@@ -141,15 +152,18 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         crate::builtin::rexxutil::messages::get_message_x,
     ),
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
+    #[cfg(unix)]
     util_run(
         "SysIsFileDirectory",
         crate::builtin::rexxutil::files::is_file_directory,
     ),
+    #[cfg(unix)]
     util_run(
         "SysIsFileLink",
         crate::builtin::rexxutil::files::is_file_link,
     ),
     util_run("SysLinVer", crate::builtin::rexxutil::version),
+    #[cfg(unix)]
     util_run(
         "SysLoadFuncs",
         crate::builtin::rexxutil::process::load_funcs,
@@ -158,10 +172,12 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysLoadRexxMacroSpace",
         crate::builtin::rexxutil::macros::load,
     ),
+    #[cfg(unix)]
     util_run("SysMkDir", crate::builtin::rexxutil::mk_dir),
     util_run("SysOpenEventSem", crate::builtin::rexxutil::open_sem),
     util_run("SysOpenMutexSem", crate::builtin::rexxutil::open_sem),
     util_run("SysPostEventSem", crate::builtin::rexxutil::post_event_sem),
+    #[cfg(unix)]
     util_run(
         "SysQueryProcess",
         crate::builtin::rexxutil::process::query_process,
@@ -180,19 +196,23 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysResetEventSem",
         crate::builtin::rexxutil::reset_event_sem,
     ),
+    #[cfg(unix)]
     util_run("SysRmDir", crate::builtin::rexxutil::rm_dir),
     util_run(
         "SysSaveRexxMacroSpace",
         crate::builtin::rexxutil::macros::save,
     ),
+    #[cfg(unix)]
     util_run(
         "SysSearchPath",
         crate::builtin::rexxutil::files::search_path,
     ),
+    #[cfg(unix)]
     util_run(
         "SysSetFileDateTime",
         crate::builtin::rexxutil::files::set_file_date_time,
     ),
+    #[cfg(unix)]
     util_run(
         "SysSetPriority",
         crate::builtin::rexxutil::process::set_priority,
@@ -202,15 +222,18 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysStemDelete", crate::builtin::rexxutil::stems::delete),
     util_run("SysStemInsert", crate::builtin::rexxutil::stems::insert),
     util_run("SysStemSort", crate::builtin::rexxutil::stems::sort),
+    #[cfg(unix)]
     util_run(
         "SysTempFileName",
         crate::builtin::rexxutil::files::temp_file_name,
     ),
+    #[cfg(unix)]
     util_run(
         "SysUtilVersion",
         crate::builtin::rexxutil::process::util_version,
     ),
     util_run("SysVersion", crate::builtin::rexxutil::version),
+    #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
 ];

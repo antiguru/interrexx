@@ -193,8 +193,10 @@ pub(crate) struct Activity {
     /// What `SockSock_Errno` answers: the `errno` the last OS call of the
     /// `rxsock` library made on this activity, 0 for a success or before any
     /// (`extensions-behaviour.md`, Rulings, errno).
+    #[cfg(unix)]
     pub(crate) rxsock_errno: i32,
     /// An `rxsock` call waiting for its sockets, which its park polls.
+    #[cfg(unix)]
     pub(crate) socket_wait: Option<Box<crate::builtin::rxsock::SocketWait>>,
     /// How many level boundaries a `RAISE PROPAGATE` still crosses below the
     /// level whose trap took the condition, which seal no site: the trapping
@@ -589,7 +591,9 @@ impl Activity {
             reraise_leaving: 0,
             #[cfg(unix)]
             rxunixsys_errno: 0,
+            #[cfg(unix)]
             rxsock_errno: 0,
+            #[cfg(unix)]
             socket_wait: None,
             propagate_absorb: 0,
             pending_result: None,
@@ -774,8 +778,10 @@ impl Activity {
             reraise_leaving: _,
             #[cfg(unix)]
                 rxunixsys_errno: _,
-            rxsock_errno: _,
-            socket_wait: _,
+            #[cfg(unix)]
+                rxsock_errno: _,
+            #[cfg(unix)]
+                socket_wait: _,
             propagate_absorb: _,
             pending_result,
             pending_description,

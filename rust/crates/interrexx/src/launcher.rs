@@ -531,3 +531,11 @@ mod tests {
         assert_eq!(instore_status(32767), 32767);
     }
 }
+
+/// Identifies the Windows console devices and pipes used as standard streams.
+#[cfg(windows)]
+#[doc(hidden)]
+pub fn transient_standard_streams() -> [bool; 3] {
+    [0, 1, 2]
+        .map(|fd| crate::host::standard_file(fd).is_ok_and(|file| crate::host::transient(&file)))
+}
