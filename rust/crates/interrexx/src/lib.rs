@@ -2315,9 +2315,13 @@ impl Interp {
     /// all of them -- gets the value below.
     fn new() -> Interp {
         let mut env: Vec<(Vec<u8>, Vec<u8>)> = {
-            use std::os::unix::ffi::OsStrExt;
             std::env::vars_os()
-                .map(|(name, value)| (name.as_bytes().to_vec(), value.as_bytes().to_vec()))
+                .map(|(name, value)| {
+                    (
+                        name.as_encoded_bytes().to_vec(),
+                        value.as_encoded_bytes().to_vec(),
+                    )
+                })
                 .collect()
         };
         with_session_variable(&mut env);
@@ -2638,9 +2642,7 @@ impl Interp {
         };
         // Resolved and then unreadable is 3.1 naming the file, not the 43.1
         // of a name that resolved to nothing -- measured on a mode-000 file.
-        let Ok(text) =
-            std::fs::read(<std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(&resolved))
-        else {
+        let Ok(text) = std::fs::read(crate::paths::os_path(&resolved)) else {
             return Err(Raised::executable_file_unreadable(&resolved).into());
         };
         self.enter_program_text(name, &resolved, text, arguments, call_type)
@@ -3176,8 +3178,7 @@ impl Interp {
     /// The directory this interpreter resolves relative paths against, as
     /// the bytes the file system holds.
     pub(crate) fn cwd_bytes(&self) -> &[u8] {
-        use std::os::unix::ffi::OsStrExt as _;
-        self.cwd.as_os_str().as_bytes()
+        self.cwd.as_os_str().as_encoded_bytes()
     }
 
     /// Moves it.

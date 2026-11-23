@@ -15,12 +15,11 @@ impl Shipped {
     /// directory, where its copy is installed, or the bare name where that
     /// directory is unknown.
     pub(crate) fn path(&self) -> Vec<u8> {
-        use std::os::unix::ffi::OsStrExt as _;
         match std::env::current_exe()
             .ok()
             .and_then(|exe| exe.parent().map(|dir| dir.join(self.name)))
         {
-            Some(path) => path.as_os_str().as_bytes().to_vec(),
+            Some(path) => path.as_os_str().as_encoded_bytes().to_vec(),
             None => self.name.as_bytes().to_vec(),
         }
     }

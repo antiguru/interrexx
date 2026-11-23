@@ -1,8 +1,7 @@
 //! The `rexx` and `rexxc` command lines' library half: option scanning, the
 //! program search, and the texts the launchers print themselves.
 
-use std::ffi::{OsStr, OsString};
-use std::os::unix::ffi::{OsStrExt, OsStringExt};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use interrexx_core::ObjRef;
@@ -162,13 +161,13 @@ pub fn resolve_program(
 ) -> Option<PathBuf> {
     require::search(
         None,
-        name.as_bytes(),
-        rexx_path.map(OsStr::as_bytes),
-        path.map(OsStr::as_bytes),
-        cwd.as_os_str().as_bytes(),
+        name.as_encoded_bytes(),
+        rexx_path.map(OsStr::as_encoded_bytes),
+        path.map(OsStr::as_encoded_bytes),
+        cwd.as_os_str().as_encoded_bytes(),
         false,
     )
-    .map(|found| PathBuf::from(OsString::from_vec(found)))
+    .and_then(|found| crate::paths::os_str(&found).map(PathBuf::from))
 }
 
 /// The program `name` names and its text, or the report and status for one
@@ -176,7 +175,7 @@ pub fn resolve_program(
 pub fn load(name: &[u8]) -> Result<(PathBuf, Vec<u8>), (Vec<u8>, i32)> {
     let found = std::env::current_dir().ok().and_then(|cwd| {
         resolve_program(
-            OsStr::from_bytes(name),
+            crate::paths::os_str(name)?,
             &cwd,
             std::env::var_os("REXX_PATH").as_deref(),
             std::env::var_os("PATH").as_deref(),
@@ -187,14 +186,14 @@ pub fn load(name: &[u8]) -> Result<(PathBuf, Vec<u8>), (Vec<u8>, i32)> {
     };
     match std::fs::read(&found) {
         Ok(text) => Ok((found, text)),
-        Err(_) => Err(program_unreadable(found.as_os_str().as_bytes())),
+        Err(_) => Err(program_unreadable(found.as_os_str().as_encoded_bytes())),
     }
 }
 
 /// Translates the program at `path` without running it, reporting a refusal
 /// exactly as `rexx` would.
 pub fn translate(path: &Path, text: Vec<u8>) -> Outcome {
-    crate::translate_program(path.as_os_str().as_bytes(), text)
+    crate::translate_program(path.as_os_str().as_encoded_bytes(), text)
 }
 
 /// What a `rexxc` command line asks for.
@@ -263,6 +262,20 @@ pub fn parse_compile(args: &[Vec<u8>]) -> Result<Compile, Vec<u8>> {
 /// `rexxc`'s refusal when the output and input names are the same bytes.
 pub fn same_file_message() -> Vec<u8> {
     rexxc_message(13)
+}
+
+/// Writes the compiled image to the named file, removing a partial write.
+#[doc(hidden)]
+pub fn write_compiled_file(name: &[u8], image: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+
+    let path = crate::paths::os_path(name);
+    let mut file = std::fs::File::create(path)?;
+    file.write_all(image).inspect_err(|_| {
+        // Windows cannot delete the file while this handle is open.
+        drop(file);
+        let _ = std::fs::remove_file(path);
+    })
 }
 
 /// The report and status for an image that cannot be written to `name`:

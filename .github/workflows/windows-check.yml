@@ -1,4 +1,4 @@
-name: Windows API libraries
+name: Windows port checks
 on:
   pull_request:
     paths:
@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   api-libraries:
-    name: RXAPI library tests (Windows)
+    name: Windows library and path tests
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -27,3 +27,15 @@ jobs:
         with:
           cache: false
       - run: cargo test --locked --lib -p interrexx-rxapi -p interrexx-capi-rxapi
+      - name: Test interpreter paths and search on Windows
+        shell: pwsh
+        run: |
+          @'
+          #[path = "crates/interrexx/src/paths.rs"]
+          mod paths;
+          #[path = "crates/interrexx/src/require.rs"]
+          mod require;
+          '@ | Set-Content -Encoding utf8 windows-path-tests.rs
+          rustc --edition=2024 --test windows-path-tests.rs -o windows-path-tests.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./windows-path-tests.exe

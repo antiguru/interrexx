@@ -26,8 +26,6 @@ use interrexx_parse::{
 };
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
-use std::ffi::OsStr;
-use std::os::unix::ffi::OsStrExt;
 use std::rc::Rc;
 
 mod constant_expression;
@@ -683,7 +681,7 @@ impl Interp {
         // replacement included, and an unreadable one is 3.1 naming it.
         let text = match shipped {
             Some(package) if located.as_deref() == Some(&resolved[..]) => package.source.to_vec(),
-            _ => match std::fs::read(OsStr::from_bytes(&resolved)) {
+            _ => match std::fs::read(crate::paths::os_path(&resolved)) {
                 Ok(text) => text,
                 Err(_) => return Err(Raised::executable_file_unreadable(&resolved).into()),
             },
