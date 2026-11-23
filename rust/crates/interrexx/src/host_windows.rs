@@ -106,24 +106,23 @@ pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io
 pub(crate) fn local_file_time(ticks: u64) -> Option<windows_sys::Win32::Foundation::SYSTEMTIME> {
     use windows_sys::Win32::{
         Foundation::{FILETIME, SYSTEMTIME},
-        Storage::FileSystem::FileTimeToLocalFileTime,
-        System::Time::FileTimeToSystemTime,
+        System::Time::{FileTimeToSystemTime, SystemTimeToTzSpecificLocalTimeEx},
     };
 
     let ticks = ticks.to_le_bytes();
-    let utc = FILETIME {
+    let raw = FILETIME {
         dwLowDateTime: u32::from_le_bytes(ticks[..4].try_into().unwrap()),
         dwHighDateTime: u32::from_le_bytes(ticks[4..].try_into().unwrap()),
     };
-    let mut local = FILETIME::default();
+    let mut utc = SYSTEMTIME::default();
     let mut civil = SYSTEMTIME::default();
-    // SAFETY: all pointers refer to live structures of the required type.
-    if unsafe { FileTimeToLocalFileTime(&utc, &mut local) } == 0
-        || unsafe { FileTimeToSystemTime(&local, &mut civil) } == 0
-    {
-        return None;
-    }
-    Some(civil)
+    // SAFETY: all non-null pointers refer to distinct live structures.
+    // The null zone uses the active Windows zone and its date-specific rules.
+    let ok = unsafe {
+        FileTimeToSystemTime(&raw, &mut utc) != 0
+            && SystemTimeToTzSpecificLocalTimeEx(std::ptr::null(), &utc, &mut civil) != 0
+    };
+    ok.then_some(civil)
 }
 
 /// Writes the modification time, interpreting `civil` in Windows local time.
@@ -133,23 +132,23 @@ pub(crate) fn set_local_file_time(
 ) -> Option<()> {
     use std::os::windows::io::AsRawHandle as _;
     use windows_sys::Win32::{
-        Foundation::FILETIME,
-        Storage::FileSystem::{LocalFileTimeToFileTime, SetFileTime},
-        System::Time::SystemTimeToFileTime,
+        Foundation::{FILETIME, SYSTEMTIME},
+        Storage::FileSystem::SetFileTime,
+        System::Time::{SystemTimeToFileTime, TzSpecificLocalTimeToSystemTimeEx},
     };
 
-    let mut local = FILETIME::default();
-    let mut utc = FILETIME::default();
-    // SAFETY: both conversions use distinct initialized structures. The
-    // file handle stays open and null leaves creation and access unchanged.
+    let mut utc = SYSTEMTIME::default();
+    let mut raw = FILETIME::default();
+    // SAFETY: both conversions use distinct live structures. The file
+    // handle stays open and null leaves creation and access unchanged.
     let ok = unsafe {
-        SystemTimeToFileTime(civil, &mut local) != 0
-            && LocalFileTimeToFileTime(&local, &mut utc) != 0
+        TzSpecificLocalTimeToSystemTimeEx(std::ptr::null(), civil, &mut utc) != 0
+            && SystemTimeToFileTime(&utc, &mut raw) != 0
             && SetFileTime(
                 file.as_raw_handle(),
                 std::ptr::null(),
                 std::ptr::null(),
-                &utc,
+                &raw,
             ) != 0
     };
     ok.then_some(())

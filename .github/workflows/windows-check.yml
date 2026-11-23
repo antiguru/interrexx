@@ -155,6 +155,39 @@ jobs:
           & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
           if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
 
+      - name: Verify Windows file timestamps across daylight saving time
+        shell: pwsh
+        run: |
+          $originalZone = (tzutil /g).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read the Windows time zone' }
+          $dir = Join-Path $env:RUNNER_TEMP 'rexxutil-timezone'
+          New-Item -ItemType Directory -Path $dir | Out-Null
+          try {
+            tzutil /s 'Eastern Standard Time'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not set the Windows time zone' }
+            foreach ($name in 'winter', 'summer', 'partial') {
+              [IO.File]::WriteAllText((Join-Path $dir $name), '')
+            }
+            $expected = @{
+              winter = '2024-01-15T17:00:00Z'
+              summer = '2024-07-15T16:00:00Z'
+              partial = '2024-01-15T17:00:00Z'
+            }
+            [IO.File]::SetLastWriteTimeUtc((Join-Path $dir 'partial'), [DateTimeOffset]::Parse($expected.summer).UtcDateTime)
+            & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-timezone-smoke.rex $dir
+            if ($LASTEXITCODE -ne 0) { throw "RexxUtil timezone smoke failed at check $LASTEXITCODE" }
+            foreach ($name in $expected.Keys) {
+              $actual = [IO.File]::GetLastWriteTimeUtc((Join-Path $dir $name))
+              if ($actual -ne [DateTimeOffset]::Parse($expected[$name]).UtcDateTime) {
+                throw "Unexpected UTC timestamp for ${name}: $($actual.ToString('o'))"
+              }
+            }
+          } finally {
+            tzutil /s $originalZone
+            if ($LASTEXITCODE -ne 0) { throw 'Could not restore the Windows time zone' }
+            Remove-Item -LiteralPath $dir -Recurse
+          }
+
       - name: Check out the pinned ooRexx sources
         working-directory: .
         run: git submodule update --init --depth 1 -- third_party/ooRexx
