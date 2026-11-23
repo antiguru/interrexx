@@ -21,7 +21,7 @@
 
 use std::time::Instant;
 
-use rustix::event::PollFlags;
+use super::rxsock_sys::PollRequest;
 
 /// How a wait's end reaches the interpreter that registered it. Called once,
 /// on the reactor's thread, so it must not block.
@@ -44,7 +44,7 @@ pub(crate) fn prepare() {
 /// `on_end` once it is over. Answers `on_end` back where there is no reactor
 /// to take it, or it cannot be started, so the caller can wait another way.
 pub(crate) fn register(
-    polls: &[(i32, PollFlags)],
+    polls: &[PollRequest],
     deadline: Option<Instant>,
     on_end: OnEnd,
 ) -> Result<Wait, OnEnd> {
@@ -132,7 +132,7 @@ use none as imp;
 /// No reactor: every registration is answered back.
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 mod none {
-    use super::{OnEnd, PollFlags};
+    use super::{OnEnd, PollRequest};
     use std::time::Instant;
 
     pub(super) enum Wait {}
@@ -148,7 +148,7 @@ mod none {
     }
 
     pub(super) fn register(
-        _polls: &[(i32, PollFlags)],
+        _polls: &[PollRequest],
         _deadline: Option<Instant>,
         on_end: OnEnd,
     ) -> Result<Wait, OnEnd> {
@@ -181,8 +181,9 @@ mod none {
 /// earliest deadline or muted descriptor's recheck.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 mod epoll {
-    use super::{OnEnd, PollFlags};
+    use super::{OnEnd, PollRequest};
     use crate::builtin::rxsock::answers;
+    use crate::builtin::rxsock_sys::PollFlags;
     use crate::builtin::rxsock_sys::with_socket;
     use interrexx_rxapi::reserved::{Reserved, reserve};
     use rustc_hash::FxHashMap;
@@ -227,7 +228,7 @@ mod epoll {
     enum Command {
         Register {
             id: u64,
-            polls: Vec<(i32, PollFlags)>,
+            polls: Vec<PollRequest>,
             deadline: Option<Instant>,
             on_end: OnEnd,
         },
@@ -257,7 +258,7 @@ mod epoll {
     }
 
     pub(super) fn register(
-        polls: &[(i32, PollFlags)],
+        polls: &[PollRequest],
         deadline: Option<Instant>,
         on_end: OnEnd,
     ) -> Result<Wait, OnEnd> {
@@ -314,7 +315,7 @@ mod epoll {
     /// One registered wait, as the thread holds it.
     struct Waiter {
         /// Each descriptor once, with everything waited for on it.
-        fds: Vec<(i32, PollFlags)>,
+        fds: Vec<PollRequest>,
         deadline: Option<Instant>,
         on_end: OnEnd,
     }
@@ -463,11 +464,11 @@ mod epoll {
             &mut self,
             epoll: &OwnedFd,
             id: u64,
-            polls: &[(i32, PollFlags)],
+            polls: &[PollRequest],
             deadline: Option<Instant>,
             on_end: OnEnd,
         ) {
-            let mut fds: Vec<(i32, PollFlags)> = Vec::with_capacity(polls.len());
+            let mut fds: Vec<PollRequest> = Vec::with_capacity(polls.len());
             for &(fd, flags) in polls {
                 match fds.iter_mut().find(|(seen, _)| *seen == fd) {
                     Some((_, union)) => *union |= flags,
