@@ -101,18 +101,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - uses: actions/checkout@v7
-        with:
-          repository: ooRexx/ooRexx
-          ref: b12f5f5b41c81a71a872a0fd5a6638ff87c08e97
-          path: upstream-oodialog
-          persist-credentials: false
+      - name: Check out the pinned ooRexx sources
+        working-directory: .
+        run: git submodule update --init --depth 1 -- third_party/ooRexx
       - name: Build the pinned ooDialog packages and launchers
         shell: cmd
         run: |
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
           call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
-          cmake -S ..\ci\windows-oodialog -B oodialog-build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DINTERREXX_SDK=%CD%\sdk" "-DOOREXX_SOURCE=%CD%\..\upstream-oodialog" || exit /b 1
+          cmake -S ..\ci\windows-oodialog -B oodialog-build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DINTERREXX_SDK=%CD%\sdk" "-DOOREXX_SOURCE=%CD%\..\third_party\ooRexx" || exit /b 1
           cmake --build oodialog-build --parallel 2 || exit /b 1
           for %%p in (oodialog ooshapes) do (
             dumpbin /exports sdk\bin\%%p.dll | findstr /r /c:" RexxGetPackage$" || exit /b 1
@@ -126,7 +123,7 @@ jobs:
         timeout-minutes: 2
         run: |
           $bin = (Resolve-Path sdk/bin).Path
-          $source = (Resolve-Path ../upstream-oodialog/extensions/platform/windows/oodialog).Path
+          $source = (Resolve-Path ../third_party/ooRexx/extensions/platform/windows/oodialog).Path
           Copy-Item target/debug/rexx.exe $bin
           Copy-Item "$source/ooShapes.cls" $bin
           Copy-Item ../ci/windows-oodialog/smoke.rex $bin

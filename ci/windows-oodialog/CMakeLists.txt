@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
 cmake_minimum_required(VERSION 3.21)
 project(InterRexxOoDialog LANGUAGES CXX RC)
 
@@ -23,8 +24,10 @@ endforeach()
 include_directories("${INTERREXX_SDK}/include"
                     "${INTERREXX_SDK}/include/platform/windows"
                     "${source}")
+string(TIMESTAMP copyright_year "%Y")
 add_compile_definitions(_WIN32_WINNT=0x0600 NOMINMAX WIN32 _WINDOWS
-                        _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+                        _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE
+                        "OOREXX_COPY_YEAR=\"2005-${copyright_year}\"")
 set(shapes_version OOSHAPES_VER_MAJOR=4 OOSHAPES_VER_MINOR=2 OOSHAPES_VER_LEVEL=5
                    OOSHAPES_VER_BUILD=12940 OOSHAPES_COPYRIGHT_YEAR=2005-2025)
 
@@ -41,6 +44,8 @@ list(FILTER dialog_sources EXCLUDE REGEX "/ooDialog[.]cpp$")
 add_library(oodialog SHARED ${dialog_sources} "${source}/APICommon.cpp"
                             "${source}/ooDialog.cpp" "${source}/oodialog.rc")
 target_compile_definitions(oodialog PRIVATE ${shapes_version})
+target_include_directories(oodialog PRIVATE "${OOREXX_SOURCE}/common"
+                       "${OOREXX_SOURCE}/interpreter/platform/windows")
 target_link_libraries(oodialog PRIVATE ooshapes rexx rexxapi
                       winmm comdlg32 comctl32 shlwapi oleacc uxtheme rpcrt4 propsys delayimp)
 
@@ -58,5 +63,9 @@ foreach(target IN ITEMS oodialog oodialog_gui oodialog_console)
         "OOD_BIN_NAME=\"$<TARGET_FILE_NAME:${target}>\"")
 endforeach()
 foreach(target IN ITEMS oodialog_gui oodialog_console)
-    target_link_options(${target} PRIVATE "/MANIFESTINPUT:${manifest}")
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "${CMAKE_MT}" -nologo -manifest "${manifest}"
+                "-inputresource:$<TARGET_FILE:${target}>;#1"
+                "-outputresource:$<TARGET_FILE:${target}>;#1"
+        VERBATIM)
 endforeach()

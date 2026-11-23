@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT OR Apache-2.0 */
 dialog = .SmokeDialog~new
 if dialog~initCode <> 0 then exit 1
 dialog~execute
@@ -22,6 +23,7 @@ exit 0
   self~createPushButton(101, 10, 10, 70, 15, 'DEFAULT', 'Close')
 
 ::method initDialog
+  self~show("NORMAL")
   self~newPushButton(101)~click
 
 ::method onClick
