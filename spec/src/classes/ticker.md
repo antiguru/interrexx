@@ -569,16 +569,25 @@ a valid number.
 t = .ticker~new(.seconds~new, .note~new)
 say t~interval~totalSeconds
 t~cancel
+t = .ticker~new(.fallback~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
 ::class note inherit AlarmNotification
 ::method triggered
   nop
 ::class seconds
 ::method makeString
   return '600'
+::class fallback
+::method request
+  return
+::method string
+  return '601'
 ```
 
 ```output
 600
+601
 ```
 
 r[class.ticker.deviation.109]

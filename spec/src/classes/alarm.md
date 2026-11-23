@@ -847,6 +847,8 @@ a~cancel
 ::method triggered
   nop
 ::class seconds
+::method request
+  return
 ::method string
   return '600'
 ```

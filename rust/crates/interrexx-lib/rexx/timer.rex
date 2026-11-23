@@ -285,7 +285,12 @@
 ::routine timerText
   use arg value
   if value~isInstanceOf(.String) then return value~makeString:.String
-  text = value~request('STRING')
-  if \text~isInstanceOf(.String) then text = value~string
+  value~request('STRING')
+  text = .nil
+  if var('RESULT') then text = result
+  if \text~isInstanceOf(.String) then do
+    value~string
+    if var('RESULT') then text = result
+  end
   if \text~isInstanceOf(.String) then raise syntax 93.951 array(value)
   return text~makeString:.String
