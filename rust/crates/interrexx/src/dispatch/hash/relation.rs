@@ -102,7 +102,7 @@ fn first_slot_for(
             // decide: unchanged, the walk goes on as if nothing was written.
             let current = store_of(interp, receiver)?;
             let held_still = slot_at(interp, current.indexes, position)? == Some(held);
-            if current != store || !held_still {
+            if !current.same_layout(&store) || !held_still {
                 let stands = matches && current.same_arrays(&store) && held_still;
                 return Ok((store, stands.then_some(position)));
             }
@@ -243,13 +243,7 @@ fn native_relation_remove_all(
     // One lookup, one `hashCode`. Taking an entry moves no other, so the
     // saved positions stay valid while nothing is sent between the takes.
     let (store, slots) = slots_for(interp, receiver, index)?;
-    let mut removed = Vec::new();
-    for position in slots {
-        if let Some(item) = super::take_at(interp, receiver, &store, position)? {
-            interp.roots.activity_mut().push_temp(item);
-            removed.push(item);
-        }
-    }
+    let removed = super::take_positions(interp, receiver, &store, slots)?;
     Ok(Some(super::collection::array_of(interp, removed)))
 }
 

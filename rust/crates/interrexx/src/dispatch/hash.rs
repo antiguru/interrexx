@@ -11,6 +11,7 @@ use store::*;
 mod removal;
 use removal::{
     Removal, native_hash_empty, native_hash_remove_item, take, take_at, take_in, take_merged,
+    take_positions,
 };
 
 use std::rc::Rc;
@@ -579,13 +580,13 @@ fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure>
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(0);
     };
-    count_in(interp, &store)
+    Ok(count_in(&store))
 }
 
 /// How many entries the contents hold: [`entries_of`]'s length.
 fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     match store_if_built(interp, receiver)? {
-        Some(store) => count_in(interp, &store),
+        Some(store) => Ok(count_in(&store)),
         None => Ok(0),
     }
 }
@@ -599,7 +600,7 @@ fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> 
     // is left without one until something is put in it, with the size that
     // store would have had kept.
     let count = match parts.contents.store() {
-        Some(store) => count_in(interp, &store)?,
+        Some(store) => count_in(&store),
         None => {
             refuse_storeless(interp, receiver)?;
             if parts.contents.slots.is_none() {
@@ -609,7 +610,7 @@ fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> 
         }
     };
     match parts.methods.store() {
-        Some(methods) => Ok(count + count_in(interp, &methods)?),
+        Some(methods) => Ok(count + count_in(&methods)),
         None => Ok(count),
     }
 }

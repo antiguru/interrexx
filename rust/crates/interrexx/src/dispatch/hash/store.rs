@@ -4,11 +4,11 @@
 //! A store is a compact table. Its entries sit in dense arrays in the order
 //! they were added, and a sparse slot index, open-addressed, maps a hash to
 //! the entries filed under it. A new entry goes at the end of the entry
-//! arrays; a removed one leaves a hole there. When the entry arrays fill, the
-//! store is rebuilt into fresh arrays that keep the live entries in their
-//! order and re-slot them from each entry's cached hash, so a rebuild sends
-//! nothing. Iteration walks the entry arrays, which is what makes every
-//! enumeration answer insertion order.
+//! arrays; a removed one leaves a hole there. When the entry arrays fill or
+//! holes dominate them, the store is rebuilt into fresh arrays that keep the
+//! live entries in their order and re-slot them from each entry's cached hash,
+//! so a rebuild sends nothing. Iteration walks the entry arrays, which is what
+//! makes every enumeration answer insertion order.
 //!
 //! **The live entries of one code are one chain**, filed at one slot: the
 //! slot names the oldest of them, each links to the next, oldest first, and
@@ -34,8 +34,7 @@ use super::*;
 /// under the `MapCollection` class as scope: the entries' indexes, their
 /// items and their [`FIELDS`] (cached hash and chain links), all in
 /// insertion order; the slot index ([`EMPTY`], [`DELETED`], or the position
-/// of a chain's oldest entry plus one); and how many entry positions are
-/// used, holes included.
+/// of a chain's oldest entry plus one); and the used and live entry counts.
 pub(super) const HASH_INDEXES: &[u8] = b"HASHINDEXES";
 pub(super) const HASH_ITEMS: &[u8] = b"HASHITEMS";
 pub(super) const HASH_NEXT: &[u8] = b"HASHNEXT";
@@ -131,6 +130,40 @@ const MINIMUM_SLOTS: usize = 8;
 
 /// The most slots a store is sized at.
 const MAXIMUM_SLOTS: usize = 1 << 31;
+
+/// The smallest used span worth rebuilding on removal.
+const MINIMUM_COMPACT_SPAN: usize = 128;
+
+/// Used and live both fit in 31 bits, since an entry array holds fewer than
+/// MAXIMUM_SLOTS entries. Use the entire signed SmallInt range to keep the
+/// counts together in one pool entry.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct Counts {
+    used: usize,
+    live: usize,
+}
+
+impl Counts {
+    const BITS: u32 = 31;
+    const MASK: i64 = (1 << Self::BITS) - 1;
+    const BIAS: i64 = 1 << (2 * Self::BITS - 1);
+
+    fn encode(self) -> ObjRef {
+        debug_assert!(self.live <= self.used && self.used < MAXIMUM_SLOTS);
+        small(((self.used as i64) << Self::BITS | self.live as i64) - Self::BIAS)
+    }
+
+    fn decode(value: ObjRef) -> Option<Self> {
+        let Decoded::SmallInt(value) = value.decode() else {
+            return None;
+        };
+        let packed = value + Self::BIAS;
+        Some(Self {
+            used: (packed >> Self::BITS) as usize,
+            live: (packed & Self::MASK) as usize,
+        })
+    }
+}
 
 /// The entry capacity of a store of `slots` slots: two thirds, so that the
 /// slots, which hold at most one mark per used entry position, never fill
@@ -381,6 +414,7 @@ pub(super) struct Store {
     pub(super) slots: ObjRef,
     /// Entry positions used, holes included: where the next entry goes.
     pub(super) used: usize,
+    live: usize,
 }
 
 impl Store {
@@ -395,6 +429,12 @@ impl Store {
     /// since [`relink`] replaces it alone and moves no entry.
     pub(super) fn same_arrays(&self, other: &Store) -> bool {
         self.indexes == other.indexes && self.items == other.items && self.slots == other.slots
+    }
+
+    /// Whether an in-flight probe can continue at the same position. Removing
+    /// another entry changes the count and links, but keeps the positions.
+    pub(super) fn same_layout(&self, other: &Store) -> bool {
+        self.same_arrays(other) && self.codes == other.codes && self.used == other.used
     }
 }
 
@@ -506,7 +546,7 @@ fn build(
     let slots = interp.alloc_charged(BehaviourId::ARRAY, Body::array(marks));
     interp.roots.activity_mut().push_temp(slots);
     let used = entries.len();
-    let used_value = small(used as i64);
+    let counts = Counts { used, live: used }.encode();
     let [n_indexes, n_items, n_codes, n_slots, n_used] = pool_names(interp, half).clone();
     // A capacity [`initialize_store`] left pending goes, so that the half's
     // entries are bound together in their order, as [`shared_run`] reads them.
@@ -523,7 +563,7 @@ fn build(
             (&n_items, items),
             (&n_codes, codes),
             (&n_slots, slots),
-            (&n_used, used_value),
+            (&n_used, counts),
         ],
     );
     bump_store_generation(interp);
@@ -533,6 +573,7 @@ fn build(
         codes,
         slots,
         used,
+        live: used,
     }
 }
 
@@ -561,15 +602,19 @@ pub(super) struct Found {
     /// The slot array, or before the store is built the capacity
     /// [`keep_capacity`] left for it.
     pub(super) slots: Option<ObjRef>,
-    pub(super) used: Option<usize>,
+    counts: Option<Counts>,
 }
 
 impl Found {
     /// The store these entries make, or `None` when any is missing.
     pub(super) fn store(self) -> Option<Store> {
-        let (Some(indexes), Some(items), Some(codes), Some(slots), Some(used)) =
-            (self.indexes, self.items, self.codes, self.slots, self.used)
-        else {
+        let (Some(indexes), Some(items), Some(codes), Some(slots), Some(counts)) = (
+            self.indexes,
+            self.items,
+            self.codes,
+            self.slots,
+            self.counts,
+        ) else {
             return None;
         };
         Some(Store {
@@ -577,7 +622,8 @@ impl Found {
             items,
             codes,
             slots,
-            used,
+            used: counts.used,
+            live: counts.live,
         })
     }
 
@@ -630,12 +676,12 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
             HASH_ITEMS => parts.contents.items = Some(value),
             HASH_NEXT => parts.contents.codes = Some(value),
             HASH_BUCKETS => parts.contents.slots = Some(value),
-            HASH_FREE => parts.contents.used = counted(value),
+            HASH_FREE => parts.contents.counts = Counts::decode(value),
             METHOD_INDEXES => parts.methods.indexes = Some(value),
             METHOD_ITEMS => parts.methods.items = Some(value),
             METHOD_NEXT => parts.methods.codes = Some(value),
             METHOD_BUCKETS => parts.methods.slots = Some(value),
-            METHOD_FREE => parts.methods.used = counted(value),
+            METHOD_FREE => parts.methods.counts = Counts::decode(value),
             UNKNOWN_METHOD => parts.unknown = Some(value).filter(|held| *held != ObjRef::NIL),
             _ => {}
         }
@@ -683,7 +729,7 @@ pub(super) fn shared_run(entries: &[(Rc<[u8]>, ObjRef)], names: &[Rc<[u8]>; 5]) 
         items: Some(*items),
         codes: Some(*codes),
         slots: Some(*slots),
-        used: counted(*used),
+        counts: Counts::decode(*used),
     })
 }
 
@@ -774,12 +820,12 @@ pub(super) fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<
     Ok(())
 }
 
-fn set_used(interp: &mut Interp, receiver: ObjRef, half: Half, used: usize) {
+fn set_counts(interp: &mut Interp, receiver: ObjRef, half: Half, counts: Counts) {
     let scope = hash_scope(interp);
     // The copy of the name [`build`] bound, whose entry is found by identity.
     let [_, _, _, _, name] = pool_names(interp, half);
     let name = Rc::clone(name);
-    interp.set_pool_variable_shared(receiver, scope, &name, small(used as i64));
+    interp.set_pool_variable_shared(receiver, scope, &name, counts.encode());
     bump_store_generation(interp);
 }
 
@@ -858,29 +904,25 @@ pub(super) fn entries(interp: &Interp, store: &Store) -> Result<Vec<usize>, Fail
 }
 
 /// How many entries [`entries`] would answer, without collecting them.
-pub(super) fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure> {
-    let indexes = array_slots(interp, store.indexes)?;
-    Ok(indexes
-        .iter()
-        .take(store.used)
-        .filter(|index| index.is_some())
-        .count())
+pub(super) fn count_in(store: &Store) -> usize {
+    store.live
 }
 
 /// Compacts the live entries of `store`, the receiver's, in their order, into
-/// fresh arrays sized by [`regrown`], and files them again from their
+/// fresh arrays of the requested capacity, and files them again from their
 /// cached codes. Sends nothing. The store stays linked or unlinked as it was.
 fn rebuild(
     interp: &mut Interp,
     receiver: ObjRef,
     half: Half,
     store: &Store,
+    capacity: usize,
 ) -> Result<Store, Failure> {
     let indexes = array_slots(interp, store.indexes)?;
     let items = array_slots(interp, store.items)?;
     let (_, codes) = codes_of(interp, store)?;
     let linked = codes.linked();
-    let mut live = Vec::with_capacity(store.used);
+    let mut live = Vec::with_capacity(store.live);
     for (position, index) in indexes.iter().enumerate().take(store.used) {
         if let Some(index) = *index
             && let Some(code) = codes.code(position)
@@ -888,7 +930,7 @@ fn rebuild(
             live.push((index, items.get(position).copied().flatten(), code));
         }
     }
-    let capacity = regrown(live.len(), store.used);
+    debug_assert_eq!(live.len(), store.live);
     Ok(build(interp, receiver, half, &live, capacity, linked))
 }
 
@@ -919,7 +961,13 @@ pub(super) fn append(
         None => (store_in(interp, receiver, half)?, None),
     };
     if store.used >= store.capacity(interp)? {
-        store = rebuild(interp, receiver, half, &store)?;
+        store = rebuild(
+            interp,
+            receiver,
+            half,
+            &store,
+            regrown(store.live, store.used),
+        )?;
         known = None;
     }
     let (mut chain, mut stride) = chain_for_append(interp, &store, code, known)?;
@@ -940,7 +988,15 @@ pub(super) fn append(
         }
         Err(slot) => write_slot(interp, store.slots, slot, Some(small(position as i64 + 1))),
     }
-    set_used(interp, receiver, half, position + 1);
+    set_counts(
+        interp,
+        receiver,
+        half,
+        Counts {
+            used: position + 1,
+            live: store.live + 1,
+        },
+    );
     Ok(())
 }
 
@@ -1043,7 +1099,9 @@ enum Unlink {
 /// chain relinked past it. Answers the item it held.
 pub(super) fn remove_entry(
     interp: &mut Interp,
-    store: &Store,
+    receiver: ObjRef,
+    half: Half,
+    store: &mut Store,
     position: usize,
 ) -> Result<Option<ObjRef>, Failure> {
     let item = slot_at(interp, store.items, position)?;
@@ -1105,7 +1163,36 @@ pub(super) fn remove_entry(
     for field in 0..stride {
         write_field(interp, store, stride, position, field, None);
     }
+    store.live -= 1;
+    set_counts(
+        interp,
+        receiver,
+        half,
+        Counts {
+            used: store.used,
+            live: store.live,
+        },
+    );
     Ok(item)
+}
+
+/// Rebuild a sparse span after its caller has finished using positions in
+/// these arrays. Shrink without removing the room for appends that amortizes
+/// the next rebuild.
+pub(super) fn compact_after_removal(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    half: Half,
+    store: &Store,
+    removed: Option<ObjRef>,
+) -> Result<(), Failure> {
+    if store.used >= MINIMUM_COMPACT_SPAN && store.used - store.live > store.live {
+        if let Some(item) = removed {
+            interp.roots.activity_mut().push_temp(item);
+        }
+        rebuild(interp, receiver, half, store, store.live * 2)?;
+    }
+    Ok(())
 }
 
 /// Empties `half` in place, and then gives it fresh arrays.

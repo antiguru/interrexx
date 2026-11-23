@@ -88,7 +88,7 @@ fn churn_stays_bounded() {
     );
     let slots = array_slots(&interp, store.slots).expect("slots").len();
     assert_eq!(slots, MINIMUM_SLOTS);
-    assert_eq!(count_in(&interp, &store).expect("count"), 1);
+    assert_eq!(count_in(&store), 1);
 }
 
 /// A key whose `==` puts a hundred entries into the table it is being looked
@@ -387,15 +387,86 @@ fn a_rebuild_of_a_store_of_mostly_holes_leaves_four_times_the_room() {
          return t\n",
     );
     let store = store_of(&mut interp, table).expect("the table has a store");
-    let live = count_in(&interp, &store).expect("count");
+    let live = count_in(&store);
     assert_eq!(live, 10);
     assert!(store.used - live > live, "the store is mostly holes");
-    let rebuilt = rebuild(&mut interp, table, CONTENTS, &store).expect("rebuild");
+    let rebuilt = rebuild(
+        &mut interp,
+        table,
+        CONTENTS,
+        &store,
+        regrown(live, store.used),
+    )
+    .expect("rebuild");
     let capacity = rebuilt.capacity(&interp).expect("capacity");
     assert!(
         capacity >= 4 * live,
         "capacity {capacity} for {live} live entries"
     );
+}
+
+/// Both individual and batched removal reclaim holes while retaining the
+/// remaining entries and the order of a multi-value chain.
+#[test]
+fn mass_removal_compacts_without_losing_entries() {
+    let remove_one = r"do i = 1 to 299
+        if r~remove('drop') \== ('removed payload number 'i) then raise syntax 40.1
+    end";
+    let remove_all = r"removed = r~removeAll('drop')
+    if removed~items \== 299 then raise syntax 40.1
+    if removed[1] \== 'removed payload number 1' then raise syntax 40.1
+    if removed[299] \== 'removed payload number 299' then raise syntax 40.1";
+    for remove in [remove_one, remove_all] {
+        let mut interp = Interp::new();
+        interp.enable_stress_collect();
+        let relation = run_returning(
+            &mut interp,
+            &format!(
+                "r = .relation~new\n\
+                 do i = 1 to 299\n  r~put('removed payload number 'i, 'drop')\nend\n\
+                 r~put(17, 'keep')\nr~put(18, 'keep')\n\
+                 {remove}\n\
+                 r~put(19, 'keep')\n\
+                 return r\n"
+            ),
+        );
+        let store = store_of(&mut interp, relation).expect("the relation has a store");
+        let positions = entries(&interp, &store).expect("live positions");
+        assert_eq!(count_in(&store), 3, "{remove}");
+        let values: Vec<_> = positions
+            .iter()
+            .map(|&position| slot_at(&interp, store.items, position).expect("item"))
+            .collect();
+        assert_eq!(values, [Some(small(17)), Some(small(18)), Some(small(19))]);
+        assert!(store.used < MINIMUM_COMPACT_SPAN, "{remove}: {store:?}");
+    }
+}
+
+#[test]
+fn packed_counts_round_trip_at_their_limits() {
+    for (used, live) in [
+        (0, 0),
+        (MAXIMUM_SLOTS - 1, 0),
+        (MAXIMUM_SLOTS - 1, MAXIMUM_SLOTS - 1),
+    ] {
+        let counts = Counts { used, live };
+        assert_eq!(Counts::decode(counts.encode()), Some(counts));
+    }
+}
+
+#[test]
+fn an_insertion_counts_entries_removed_by_its_hashcode() {
+    let out = output_of(
+        "t = .table~new\n\
+         t['victim'] = 1\n\
+         k = .key~new(t)\n\
+         t[k] = 2\n\
+         say t~items t[k] t~hasIndex('victim')\n\
+         ::class key\n\
+         ::method init\n  expose t\n  use arg t\n\
+         ::method hashCode\n  expose t\n  t~remove('victim')\n  return 'same'\n",
+    );
+    assert_eq!(out, "1 2 0\n");
 }
 
 /// Removing the oldest entry of a chain hands the chain's tail to the next

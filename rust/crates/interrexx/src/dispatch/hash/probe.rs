@@ -259,10 +259,10 @@ fn probe_by_protocol(
                         if guard.is_none() {
                             guard = Some(Guard::began(interp, &current, code, held, matches)?);
                         }
-                        if current != store
-                            || slot_at(interp, current.indexes, position)? != Some(held)
-                        {
-                            store = current;
+                        let restart = !current.same_layout(&store)
+                            || slot_at(interp, current.indexes, position)? != Some(held);
+                        store = current;
+                        if restart {
                             continue 'search;
                         }
                     }
