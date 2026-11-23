@@ -401,6 +401,7 @@ FILE.class.FILE_TEMPORARY_PATH entry:file_temporary_path
 FILE.class.GETPATHSEPARATOR entry:file_path_separator
 FILE.class.GETSEPARATOR entry:file_separator
 FILE.class.INTERREXX_STRING entry:interrexx_file_string
+FILE.class.INTERREXX_WRITE_MODE replacement:file.rex
 FILE.class.ISCASESENSITIVE entry:file_case_sensitive
 FILE.class.LISTROOTS entry:file_list_roots
 FILE.class.PATHSEPARATOR replacement:file.rex

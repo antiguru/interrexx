@@ -7,7 +7,8 @@
 //! sim:7,fifo,gc=0.01     a collection at each allocation with probability 0.01
 //! sim:7,halt@500         every activity halted at clause boundary 500
 //! sim:7,fail=wait:2      the second pinned wait fails with 11.1
-//! sim:7,block=5          a command or native call on the baton is refused after 5 s
+//! sim:7,block=5          a command or native call is refused after 5 s
+//! sim:7,pool=8           native driver exits use a worker; deliver after 1 to 8 clauses
 //! sim:7,clock=midnight   virtual time starts seconds before a local midnight
 //! sim:7,clock=real       virtual time starts at the wall clock
 //! sim:7,pre:2,k=40       two preemptions among the first 40 contended steps
@@ -19,13 +20,13 @@
 //! sim:replay=FILE        the decisions FILE holds taken in place of drawn
 //! ```
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use crate::error::Failure;
-use crate::scheduler::Posted;
+use crate::scheduler::{Completed, Posted};
 use crate::{Interp, Loud};
 
 /// The per-clause quantum's range: half and twice a measured 58 ns per clause
@@ -98,6 +99,8 @@ pub enum Decision {
 pub struct Replay {
     pub path: PathBuf,
     pub decisions: Arc<[Decision]>,
+    /// A shrink trial's input file and the zero-based indices it omits.
+    pub omitted: Option<Arc<(PathBuf, Arc<[usize]>)>>,
 }
 
 /// The simulation's knobs, each off by default.
@@ -115,6 +118,8 @@ pub struct Knobs {
     /// The seconds of real time a command or a native call may take on the
     /// baton, from [`BLOCK_FLOOR`] to [`BLOCK_LIMIT`].
     pub block: f64,
+    /// The maximum delay in clauses of a native pool completion, if enabled.
+    pub native_pool: Option<u64>,
     /// The contended steps an activity runs before a preemption is forced.
     pub floor: u64,
     /// The seed of the keyed string hash where `REXX_HASH_SEED` fixed it, in
@@ -183,6 +188,7 @@ impl SimConfig {
                 fail_wait: None,
                 clock: ClockOrigin::Seeded,
                 block: BLOCK_SECONDS,
+                native_pool: None,
                 floor: FAIRNESS_FLOOR,
                 hash: None,
             },
@@ -201,21 +207,35 @@ impl SimConfig {
         if let Some(path) = first.strip_prefix("replay=") {
             let replay = nonempty_path(first, path)?;
             let mut trace = None;
+            let mut omit = None;
             let mut previous = first;
             for item in items {
                 if item.starts_with("replay=") {
                     return Err(format!("`{item}`: a second `replay=`"));
                 }
-                let Some(path) = item.strip_prefix("trace=") else {
+                let slot = if item.starts_with("trace=") {
+                    &mut trace
+                } else if item.starts_with("omit=") {
+                    &mut omit
+                } else {
                     return Err(comma_in_path(previous, item));
                 };
-                if trace.is_some() {
-                    return Err(format!("`{item}`: a second `trace=`"));
+                let (key, path) = item.split_once('=').expect("a path item");
+                if slot.is_some() {
+                    return Err(format!("`{item}`: a second `{key}=`"));
                 }
-                trace = Some(nonempty_path(item, path)?);
+                *slot = Some(nonempty_path(item, path)?);
                 previous = item;
             }
             config = read_replay(&replay)?;
+            if let Some(path) = omit {
+                if trace.is_none() {
+                    return Err("`omit=` requires `trace=` to record the trial".into());
+                }
+                let replay = config.replay.as_mut().expect("a replay");
+                let indices = read_omissions(&path, replay.decisions.len())?;
+                replay.omitted = Some(Arc::new((path, indices)));
+            }
             config.trace = trace;
             return Ok(config);
         }
@@ -248,6 +268,8 @@ impl SimConfig {
                 knobs.fail_wait = Some(count(item, k)?);
             } else if let Some(f) = item.strip_prefix("floor=") {
                 knobs.floor = count(item, f)?;
+            } else if let Some(clauses) = item.strip_prefix("pool=") {
+                knobs.native_pool = Some(count(item, clauses)?);
             } else if let Some(seconds) = item.strip_prefix("block=") {
                 knobs.block = seconds
                     .parse()
@@ -283,7 +305,7 @@ impl SimConfig {
                 return Err(format!(
                     "`{item}` is not a policy (`fifo`, `pre:D,k=N`, `uniform:P`, `pct:D,k=N`) \
                      or a knob (`order=fifo`, `gc=Q`, `halt@K`, `fail=wait:K`, `block=S`, \
-                     `floor=F`, `clock=midnight`, `clock=real`, `hash=SEED`, `trace=FILE`)"
+                     `floor=F`, `pool=K`, `clock=midnight`, `clock=real`, `hash=SEED`, `trace=FILE`)"
                 ));
             }
             previous = item;
@@ -354,7 +376,7 @@ fn probability(item: &str, p: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("`{item}`: a probability from 0 to 1"))
 }
 
-/// `K` of `halt@K`, `fail=wait:K`, `floor=F` or `k=N`, counting from 1.
+/// A count in a simulation setting, counting from 1.
 fn count(item: &str, k: &str) -> Result<u64, String> {
     k.parse()
         .ok()
@@ -410,8 +432,27 @@ fn read_replay(path: &Path) -> Result<SimConfig, String> {
     config.replay = Some(Replay {
         path: path.to_path_buf(),
         decisions,
+        omitted: None,
     });
     Ok(config)
+}
+
+fn read_omissions(path: &Path, len: usize) -> Result<Arc<[usize]>, String> {
+    let text =
+        std::fs::read_to_string(path).map_err(|error| format!("`{}`: {error}", path.display()))?;
+    text.lines()
+        .map(|line| {
+            line.parse::<usize>()
+                .ok()
+                .filter(|index| *index < len)
+                .ok_or_else(|| {
+                    format!(
+                        "`{}`: `{line}` is not a decision index below {len}",
+                        path.display()
+                    )
+                })
+        })
+        .collect()
 }
 
 impl std::fmt::Display for Policy {
@@ -440,6 +481,9 @@ impl std::fmt::Display for SimConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(replay) = &self.replay {
             write!(f, "sim:replay={}", replay.path.display())?;
+            if let Some((path, _)) = replay.omitted.as_deref() {
+                write!(f, ",omit={}", path.display())?;
+            }
             if let Some(path) = &self.trace {
                 write!(f, ",trace={}", path.display())?;
             }
@@ -461,6 +505,9 @@ impl std::fmt::Display for SimConfig {
         }
         if knobs.block != BLOCK_SECONDS {
             write!(f, ",block={}", knobs.block)?;
+        }
+        if let Some(k) = knobs.native_pool {
+            write!(f, ",pool={k}")?;
         }
         if knobs.floor != FAIRNESS_FLOOR {
             write!(f, ",floor={}", knobs.floor)?;
@@ -560,6 +607,8 @@ pub(crate) struct Streams {
     pub(crate) random: Rng,
     /// The seed of the keyed string hash.
     hash: Rng,
+    /// Clause delays for native completions.
+    native_pool: Rng,
 }
 
 impl Streams {
@@ -573,6 +622,7 @@ impl Streams {
             children: Rng::split(&mut state),
             random: Rng::split(&mut state),
             hash: Rng::split(&mut state),
+            native_pool: Rng::split(&mut state),
         }
     }
 }
@@ -703,6 +753,43 @@ struct Replaying {
     diverged: bool,
     /// That divergence's refusal, until a boundary raises it.
     refusal: Option<Loud>,
+    sparse: Option<SparseReplay>,
+}
+
+/// A shrink trial keeps point decisions at their original counters and
+/// keeps picks at their original ordinals. Decisions the trial actually
+/// takes are recorded normally for a subsequent strict replay.
+struct SparseReplay {
+    preempts: BTreeSet<u64>,
+    collects: BTreeSet<u64>,
+    picks: std::vec::IntoIter<Option<u64>>,
+}
+
+impl SparseReplay {
+    fn new(decisions: &[Decision], omitted: &[usize]) -> Self {
+        let omitted: BTreeSet<_> = omitted.iter().copied().collect();
+        let mut preempts = BTreeSet::new();
+        let mut collects = BTreeSet::new();
+        let mut picks = Vec::new();
+        for (index, decision) in decisions.iter().enumerate() {
+            let kept = !omitted.contains(&index);
+            match *decision {
+                Decision::Preempt(step) if kept => {
+                    preempts.insert(step);
+                }
+                Decision::Collect(at) if kept => {
+                    collects.insert(at);
+                }
+                Decision::Pick(index) => picks.push(kept.then_some(index)),
+                _ => {}
+            }
+        }
+        Self {
+            preempts,
+            collects,
+            picks: picks.into_iter(),
+        }
+    }
 }
 
 /// A decision keyed to a position the run counts: a contended step or an
@@ -731,6 +818,10 @@ impl Replaying {
             next_collect: 0,
             diverged: false,
             refusal: None,
+            sparse: replay
+                .omitted
+                .as_deref()
+                .map(|(_, omitted)| SparseReplay::new(&replay.decisions, omitted)),
         }
     }
 
@@ -738,6 +829,13 @@ impl Replaying {
     /// come in increasing order, one at a time. `forced` is a preemption the
     /// floor takes whatever the trace holds.
     fn point(&mut self, kind: Point, at: u64, forced: bool) -> bool {
+        if let Some(sparse) = &self.sparse {
+            return forced
+                || match kind {
+                    Point::Preempt => sparse.preempts.contains(&at),
+                    Point::Collect => sparse.collects.contains(&at),
+                };
+        }
         if self.diverged {
             return forced;
         }
@@ -782,7 +880,15 @@ impl Replaying {
     }
 
     /// The next pick, from 0 to `last`.
-    fn pick(&mut self, last: u64) -> u64 {
+    fn pick(&mut self, last: u64, default: u64) -> u64 {
+        if let Some(sparse) = &mut self.sparse {
+            return sparse
+                .picks
+                .next()
+                .flatten()
+                .filter(|index| *index <= last)
+                .unwrap_or(default);
+        }
         if self.diverged {
             return 0;
         }
@@ -800,7 +906,7 @@ impl Replaying {
 
     /// Refuses the decisions left where the run has ended.
     fn finish(&mut self) {
-        if !self.diverged && self.next < self.decisions.len() {
+        if self.sparse.is_none() && !self.diverged && self.next < self.decisions.len() {
             self.diverge(self.next, "ends".into());
         }
     }
@@ -895,7 +1001,9 @@ pub(crate) struct Sim {
     /// What another thread posted, where it posted something other than a
     /// signal's halt.
     breach: Option<&'static str>,
-    /// Whether an inline native call outlasted `block=`.
+    /// Worker completions waiting for their clause boundary, in call order within each one.
+    native_completions: std::collections::BTreeMap<u64, Vec<Completed>>,
+    /// Whether a native call outlasted `block=`.
     blocked_native: bool,
     /// The first invariant a switch found broken, until a boundary refuses
     /// it.
@@ -961,6 +1069,7 @@ impl Interp {
             pinned_waits: 0,
             stuck: false,
             breach: None,
+            native_completions: Default::default(),
             blocked_native: false,
             inconsistent: None,
             invariant_broken: false,
@@ -968,7 +1077,7 @@ impl Interp {
         for handle in 0..self.activities.handles() {
             self.sim_spawned(handle);
         }
-        self.pool.set_bound(0);
+        self.pool.simulate(self.sim_native_pool());
         self.timer.requests().set(crate::timer::SIM);
         self.activity.random_source = None;
         if collecting {
@@ -1005,6 +1114,7 @@ impl Interp {
         sim.clock.elapsed += sim.clock.quantum;
         let halt = sim.config.knobs.halt_at == Some(clauses);
         self.sim_breached()?;
+        self.sim_deliver_native(Some(clauses));
         if halt {
             self.halt_all();
         }
@@ -1080,7 +1190,7 @@ impl Interp {
         }
         let last = ready.len() as u64 - 1;
         let index = match &mut sim.replaying {
-            Some(replaying) => replaying.pick(last),
+            Some(replaying) => replaying.pick(last, 0),
             None => {
                 let priorities = &sim.schedule.priorities;
                 let priority =
@@ -1113,7 +1223,7 @@ impl Interp {
         let readied = ready.len().saturating_sub(mark);
         for i in (1..readied).rev() {
             let j = match &mut sim.replaying {
-                Some(replaying) => replaying.pick(i as u64),
+                Some(replaying) => replaying.pick(i as u64, i as u64),
                 None => sim.streams.order.within(0..=i as u64),
             };
             sim.trace.record(Decision::Pick(j));
@@ -1160,6 +1270,9 @@ impl Interp {
         if self.deadline_passed() {
             return Err(self.expire_deadline());
         }
+        if self.sim_deliver_native(None) {
+            return self.sim_breached();
+        }
         if let Some(sim) = self.sim.as_deref_mut() {
             sim.clock.advance_to(due);
         }
@@ -1167,14 +1280,59 @@ impl Interp {
         self.sim_breached()
     }
 
+    /// Whether simulation uses the pool for native calls which leave their driver.
+    pub(crate) fn sim_native_pool(&self) -> bool {
+        self.sim
+            .as_ref()
+            .is_some_and(|sim| sim.config.knobs.native_pool.is_some())
+    }
+
+    /// Holds a worker's completion until its seeded clause boundary.
+    pub(crate) fn sim_stage_native(&mut self, completion: Completed) {
+        let clauses = self.switch_clauses();
+        let sim = self.sim.as_deref_mut().expect("a simulation run");
+        let delay = sim
+            .streams
+            .native_pool
+            .within(1..=sim.config.knobs.native_pool.expect("pool enabled"));
+        sim.native_completions
+            .entry(clauses.saturating_add(delay))
+            .or_default()
+            .push(completion);
+    }
+
+    /// Delivers completions through a clause. If idle, delivers the earliest
+    /// set immediately so a wait can progress without another clause.
+    pub(crate) fn sim_deliver_native(&mut self, through: Option<u64>) -> bool {
+        let Some(sim) = self.sim.as_deref_mut() else {
+            return false;
+        };
+        let Some((&earliest, _)) = sim.native_completions.first_key_value() else {
+            return false;
+        };
+        let through = through.unwrap_or(earliest);
+        let mut ready = Vec::new();
+        while sim
+            .native_completions
+            .first_key_value()
+            .is_some_and(|(&due, _)| due <= through)
+        {
+            ready.extend(sim.native_completions.pop_first().expect("a due entry").1);
+        }
+        let delivered = !ready.is_empty();
+        for completion in ready {
+            self.file_native_completion(completion);
+        }
+        delivered
+    }
+
     /// The refusal for a wait that only a signal can end.
     pub(crate) fn sim_endless_wait(&mut self) -> Failure {
         self.sim_stuck(Loud::sim_endless_wait())
     }
 
-    /// The refusal for a wait for another thread's post, which a pool of
-    /// bound 0 leaves none to make: every completion is posted by this
-    /// thread before it is waited for.
+    /// The refusal for a wait for a post once simulated work and completions
+    /// are exhausted: nothing can deliver a post at this point.
     pub(crate) fn sim_unpostable_wait(&mut self) -> Failure {
         self.sim_stuck(Loud::scheduler_inconsistency(
             "a wait for another thread's post in the simulation mode",
@@ -1243,9 +1401,8 @@ impl Interp {
             .is_some_and(|sim| sim.config.knobs.gc.is_some())
     }
 
-    /// Notes a post in `posted` that another thread made. Under a pool of
-    /// bound 0 the one post this thread makes is an inline native call's
-    /// completion, and the one another thread may make is a signal's halt.
+    /// Notes an unexpected post in the general inbox. A simulated worker's
+    /// recalls and completion travel through its private inbox.
     pub(crate) fn sim_screen_posts(&mut self, posted: &VecDeque<Posted>) {
         let Some(sim) = self.sim.as_deref_mut() else {
             return;
@@ -1390,7 +1547,7 @@ impl Loud {
         }
     }
 
-    /// A native call on the baton in the simulation mode that outlasted
+    /// A native call in the simulation mode that outlasted
     /// `block=`'s real time.
     pub(crate) fn sim_blocked_native() -> Loud {
         Loud {

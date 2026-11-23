@@ -372,7 +372,8 @@ destination with the message `DESTINATION` to `.TRACEOUTPUT`: any object that
 understands `LINEOUT` will do, and `.OUTPUT` sends the lines to standard
 output. A destination that raises a condition for a line refuses it: the line
 is written to standard output, and the condition is raised in the program, as
-it would be by the clause the line traces.
+it would be by the clause the line traces. If the destination refuses the
+clause's opening line, the clause does not run.
 
 ```rexx
 trace r
@@ -406,8 +407,9 @@ got <     4 *-* trace n>
 ```rexx
 .traceoutput~destination(.sink~new)
 signal on syntax name e
+trace o
 trace r
-nop
+say 'a'
 exit
 e: trace o
 .traceoutput~destination(.output)
@@ -424,7 +426,7 @@ say 'caught' condition('o')~code
 ```
 
 ```output
-     4 *-* nop
+     5 *-* say 'a'
 caught 93.900
 ```
 
@@ -581,6 +583,89 @@ exit
 
 ```output
 22613F62093F637FFF22
+```
+
+r[instr.trace.result.refused]
+A destination that refuses the result line of a `SAY`, assignment, `PUSH`
+or `QUEUE` raises the condition before the output, write or queue insertion.
+
+```rexx
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+say 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+```
+
+```output
+       >>>   "a"
+caught 93.900
+```
+
+```rexx
+x = 'old'
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+x = 'new'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code x
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+```
+
+```output
+       >>>   "new"
+caught 93.900 old
+```
+
+```rexx
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+push 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code queued()
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+```
+
+```output
+       >>>   "a"
+caught 93.900 0
 ```
 
 ## What a setting lists
@@ -1417,23 +1502,21 @@ say n 'clause lines'
 ```
 
 r[instr.trace.deviation.50]
-When the destination refuses a line by raising a condition, the condition is
-the same as in ooRexx, but a clause may do its own work before the line that
-refuses is written. In ooRexx the condition is raised before the clause does
-anything. In the example the destination refuses the second line, the value
-line of `say 'a'`; interrexx has written `a` by then, and ooRexx has not.
+Some trace lines still raise the destination's condition after the clause has
+applied the effect the line describes. For example, interrexx changes
+`NUMERIC DIGITS` even if the destination refuses the keyword line for the
+new setting. ooRexx keeps the previous setting.
 
 ```rexx
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-say 'a'
-x = 1
+numeric digits 7
 exit
 e: trace o
 .traceoutput~destination(.output)
-say 'caught' condition('o')~code symbol('x')
+say 'caught' condition('o')~code digits()
 ::class sink
 ::method init
   expose n
@@ -1446,7 +1529,6 @@ say 'caught' condition('o')~code symbol('x')
 ```
 
 ```output
-       >>>   "a"
-a
-caught 93.900 LIT
+       >K>   "DIGITS" => "7"
+caught 93.900 7
 ```

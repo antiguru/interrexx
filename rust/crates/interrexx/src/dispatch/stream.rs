@@ -310,26 +310,26 @@ pub(super) fn description(
     out.push(b':');
     match state.status {
         StreamStatus::NotReady => out.extend_from_slice(b"EOF"),
-        // A zero errno carries no text: `strerror` is appended only when there
-        // is an errno to render.
-        StreamStatus::Error(0) => out.extend_from_slice(b"0"),
-        StreamStatus::Error(errno) => {
-            out.extend_from_slice(errno.to_string().as_bytes());
-            let text = std::io::Error::from_raw_os_error(errno).to_string();
-            // `io::Error`'s rendering appends " (os error N)", which `strerror`
-            // does not.
-            let text = match text.find(" (os error") {
-                Some(at) => text[..at].to_string(),
-                None => text,
-            };
-            if !text.is_empty() {
-                out.push(b' ');
-                out.extend_from_slice(text.as_bytes());
-            }
-        }
+        StreamStatus::Error(errno) => append_stream_errno(&mut out, errno),
         StreamStatus::Unknown | StreamStatus::Ready => {}
     }
     Ok(Some(interp.text_built(out)))
+}
+
+fn append_stream_errno(out: &mut Vec<u8>, errno: i32) {
+    out.extend_from_slice(errno.to_string().as_bytes());
+    if errno == 0 {
+        return;
+    }
+    let text = std::io::Error::from_raw_os_error(errno).to_string();
+    // Strip the suffix Rust adds to the system's error text.
+    let text = text
+        .split_once(" (os error")
+        .map_or(text.as_str(), |(text, _)| text);
+    if !text.is_empty() {
+        out.push(b' ');
+        out.extend_from_slice(text.as_bytes());
+    }
 }
 
 /// `qualify`: the resolved name, whether or not anything is there.

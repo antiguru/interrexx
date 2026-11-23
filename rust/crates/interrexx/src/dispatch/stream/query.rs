@@ -1,7 +1,7 @@
 //! Stream metadata and logical or descriptor position queries.
 
 use super::*;
-use chrono::TimeZone;
+use crate::builtin::rexxutil::timezone::program_zone;
 
 /// `query_exists`: the qualified name when it names a file, and the null string
 /// otherwise -- a directory answers nothing, because the check is for a regular
@@ -155,20 +155,26 @@ pub(in crate::dispatch) fn query_time(
         Some(metadata) => metadata,
         None => std::fs::metadata(qualified_path(interp, receiver)?),
     };
-    let modified = metadata
-        .and_then(|meta| meta.modified())
-        .ok()
-        .and_then(|at| at.duration_since(std::time::UNIX_EPOCH).ok());
-    let Some(since_epoch) = modified else {
+    let Ok(modified) = metadata.and_then(|meta| meta.modified()) else {
         return Ok(Some(interp.text(b"")));
     };
-    let seconds = i64::try_from(since_epoch.as_secs()).unwrap_or(0);
-    let rendered = match chrono::Local.timestamp_opt(seconds, 0) {
-        chrono::offset::LocalResult::Single(at) | chrono::offset::LocalResult::Ambiguous(at, _) => {
-            at.format("%a %b %e %H:%M:%S %Y").to_string()
+    let seconds = match modified.duration_since(std::time::UNIX_EPOCH) {
+        Ok(since) => i128::from(since.as_secs()),
+        Err(before) => {
+            let gap = before.duration();
+            // A fractional time before the epoch belongs to the preceding second.
+            -i128::from(gap.as_secs()) - i128::from(gap.subsec_nanos() != 0)
         }
-        chrono::offset::LocalResult::None => return Ok(Some(interp.text(b""))),
     };
+    let at = i64::try_from(seconds).ok().and_then(|seconds| {
+        let zone = program_zone(interp);
+        let offset = i64::from(zone.find_local_time_type(seconds).ok()?.ut_offset());
+        chrono::DateTime::from_timestamp(seconds.checked_add(offset)?, 0)
+    });
+    let Some(at) = at else {
+        return Ok(Some(interp.text(b"")));
+    };
+    let rendered = at.format("%a %b %e %H:%M:%S %Y").to_string();
     Ok(Some(interp.text_built(rendered.into_bytes())))
 }
 
@@ -404,7 +410,9 @@ pub(in crate::dispatch) fn query_position(
         Ok(answer) => Ok(Some(interp.text_built(answer.to_string().into_bytes()))),
         Err(error) => {
             let errno = error.raw_os_error().unwrap_or(0);
-            notready(interp, receiver, StreamStatus::Error(errno), Vec::new())
+            let mut answer = b"ERROR:".to_vec();
+            append_stream_errno(&mut answer, errno);
+            notready(interp, receiver, StreamStatus::Error(errno), answer)
         }
     }
 }

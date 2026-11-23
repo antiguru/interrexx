@@ -192,6 +192,27 @@ binary, or that it is alone.
   Both compile against `include/`. `build-testbinaries.sh --stage-only` only stages `librexx` and
   `librexxapi`, which needs no upstream source: the drivers this repository owns link against that.
 
+## Shrinking a failing simulation trace
+
+Use the same interpreter build, working directory and program arguments that recorded the failing
+trace. Start from the repository root under the usual test memory cap.
+
+```sh
+REXX_SWITCH_MODE=sim:7,uniform:0.3,trace=failed.trace rust/target/debug/rexx example.rex
+python3 scripts/shrink-sim-trace.py failed.trace smaller.trace -- example.rex
+REXX_SWITCH_MODE=sim:replay=smaller.trace rust/target/debug/rexx example.rex
+```
+
+The shrinker checks for a repeatable nonzero exit with the same stdout and stderr, excluding the
+interpreter's final simulation summary. It tries omitting blocks of decisions, retaining forced
+preemptions and using FIFO defaults for omitted picks. Each accepted trial records the decisions
+it actually took, which must then reproduce the failure in strict replay. The output is an ordinary
+trace file. An existing output file is refused.
+
+The search is bounded by `--trials` and `--timeout` and may leave some removable decisions. The
+program runs repeatedly with stdin at EOF, so use a fixture whose state can be reused between runs.
+Use `--rexx` if the original trace was recorded with a binary at a different path.
+
 ## The specification checker
 
 `tests/spec.rs` loads every page under `spec/src` through `interrexx-spec` and checks that each rule

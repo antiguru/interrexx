@@ -9,11 +9,16 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use interrexx_bench::{PROGRAMS, interpreter_under_test, program_path, programs_dir};
+use interrexx_oracle::private_service::{PrivateService, Side};
 use std::time::Duration;
 
 fn bench_interpreter(c: &mut Criterion) {
     let interpreter = interpreter_under_test();
     let cwd = programs_dir();
+    // REXX_BENCH_BINARY can name either implementation or a launcher.
+    let candidate = PrivateService::new(Side::Crate, None).expect("private interrexx API service");
+    let oracle = PrivateService::new(Side::Oracle, None).expect("private ooRexx API service");
+    let services = [&candidate, &oracle];
 
     let mut group = c.benchmark_group("interpreter");
     // Every sample here is a whole process launch costing 0.5-2s (the sizing
@@ -34,7 +39,7 @@ fn bench_interpreter(c: &mut Criterion) {
         group.bench_function(*name, |b| {
             b.iter(|| {
                 interpreter
-                    .run(&program, &[], &cwd)
+                    .run_with_api_services(&program, &[], &cwd, &services)
                     .expect("interpreter runs")
             });
         });

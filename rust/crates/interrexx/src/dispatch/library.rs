@@ -1725,18 +1725,18 @@ impl PooledCall {
     /// gives the baton back, calls the stub, and once it returns recalls the
     /// baton to leave the call, put its parts back on the activity's record
     /// and post its completion. A stub that panics recalls it to unwind.
-    pub(crate) fn run(self) {
+    pub(crate) fn run(self, posts: &Inbox<Posted>, bound: Option<std::time::Duration>) {
         let probe = 0u8;
         let recalling = Recalling {
             baton: &self.baton,
-            inbox: &self.inbox,
+            inbox: posts,
             activity: self.activity,
             frame: self.frame,
             base: &raw const probe as usize,
         };
         let entered = Lent::wait(&self.baton);
         let (mut call, thread) = self.work.take(&self.baton);
-        let (completion, mut ended, pending) = {
+        let (completion, mut ended, pending, blocked) = {
             let OffBaton {
                 held,
                 native,
@@ -1755,22 +1755,27 @@ impl PooledCall {
                 activation.open_variable_pool();
             }
             let _reachable = crate::embedding::OtherRun::enter(&self.inbox);
-            let (completion, ended) = thread.enter(&activation, |contexts| {
+            let (completion, ended, blocked) = thread.enter(&activation, |contexts| {
                 drop(entered);
+                let watch = bound.map(crate::sim::native_watch::Watch::start);
                 let completion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     held.call(native, contexts)
                 }));
+                let blocked = watch.is_some_and(crate::sim::native_watch::Watch::finish);
                 let ended = recalling.recall();
                 match completion {
-                    Ok(completion) => (completion, ended),
+                    Ok(completion) => (completion, ended, blocked),
                     // Unwound under the lend: the call's state drops on the
                     // baton.
                     Err(payload) => std::panic::resume_unwind(payload),
                 }
             });
-            (completion, ended, activation.pending())
+            (completion, ended, activation.pending(), blocked)
         };
         let interp = ended.interp();
+        if blocked {
+            interp.sim_mark_blocked_native();
+        }
         #[cfg(test)]
         if let Some(path) = &interp.panic_at_call_end {
             use std::io::Write;
@@ -1791,7 +1796,7 @@ impl PooledCall {
             interp.activity.native_park = record.back(call, pending);
         }
         drop(thread);
-        Interp::post_completion(&self.inbox, self.activity, self.frame, completion);
+        Interp::post_completion(posts, self.activity, self.frame, completion);
     }
 }
 

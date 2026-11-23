@@ -1,7 +1,7 @@
 use super::*;
 
-/// The watch on an inline native call in the simulation mode: a thread that
-/// interrupts the interpreter's thread once, if the call outlasts `block=`.
+/// The watch on a native call in simulation: a thread that interrupts
+/// the calling thread once if the call outlasts `block=`.
 pub(crate) enum Watch {
     Running {
         stop: std::sync::mpsc::Sender<()>,
@@ -30,6 +30,27 @@ impl Interp {
         if let Some(fired) = TEST_RESULT.with(std::cell::Cell::get) {
             return Some(Watch::Completed(fired));
         }
+        Some(Watch::start(bound))
+    }
+
+    /// Ends an inline call's watch once the call has returned.
+    pub(crate) fn sim_end_watch(&mut self, watch: Watch) {
+        if watch.finish() {
+            self.sim_mark_blocked_native();
+        }
+    }
+
+    /// Reports a timeout when simulation next checks for a refusal.
+    pub(crate) fn sim_mark_blocked_native(&mut self) {
+        if let Some(sim) = self.sim.as_deref_mut() {
+            sim.blocked_native = true;
+        }
+    }
+}
+
+impl Watch {
+    /// Watches the calling thread, which can be a pool worker.
+    pub(crate) fn start(bound: Duration) -> Watch {
         let target = crate::signal::Interrupter::here();
         let (stop, stopped) = std::sync::mpsc::channel();
         let watcher = std::thread::spawn(move || {
@@ -44,22 +65,18 @@ impl Interp {
             }
             timed_out
         });
-        Some(Watch::Running { stop, watcher })
+        Watch::Running { stop, watcher }
     }
 
-    /// Ends `watch` once its call has returned; a call that outlasted
-    /// `block=` is refused at the next boundary.
-    pub(crate) fn sim_end_watch(&mut self, watch: Watch) {
-        let fired = match watch {
+    /// Stops the watch and reports whether it fired.
+    pub(crate) fn finish(self) -> bool {
+        match self {
             Watch::Running { stop, watcher } => {
                 let _ = stop.send(());
                 watcher.join().unwrap_or(true)
             }
             #[cfg(test)]
             Watch::Completed(fired) => fired,
-        };
-        if let Some(sim) = self.sim.as_deref_mut() {
-            sim.blocked_native |= fired;
         }
     }
 }

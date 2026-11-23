@@ -418,8 +418,10 @@ when there has been none since the stream was opened.
 ## 50. A trace line that cannot be delivered
 
 When the trace destination refuses a line, the same condition as ooRexx's is
-raised, but some clauses may do their own work first. ooRexx raises it
-before the clause does anything.
+raised. Some clauses still apply the effect described by a refused line
+before raising the condition. For example, `NUMERIC DIGITS` changes the
+setting if the destination refuses its keyword line, while ooRexx leaves
+the setting unchanged.
 
 ## 51. `.context~rs` inside INTERPRET
 
@@ -1550,6 +1552,11 @@ object with no such method, `.nil` among them, raises `SYNTAX 88.909`. ooRexx
 sends the option `caselessStartsWith` and raises `SYNTAX 97.1` for any object
 that is no string and for `.nil`, whatever its `makeString` answers.
 
+`Object~send`, `sendWith`, `start` and `startWith`, and `Message~new`, can
+take a message name from an object that supplies a string when its array
+conversion gives no array. ooRexx ends with `SYNTAX 93.972` when the array
+conversion fails.
+
 `CommandInput~lineIn` reads its count through the required-string protocol
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
@@ -1559,3 +1566,7 @@ before comparing it with `0` and `1`. ooRexx refuses an object with
 `DATATYPE('N')` and `POS('.')` directly to the code object. An object that
 can supply valid code as text can still raise `SYNTAX 97.1` in the handler
 if it lacks a method ooRexx sends.
+
+`File~writeChars` and `File~writeLines` convert their mode as a string
+argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
+that method raises `SYNTAX 97.1` even if it can supply valid mode text.

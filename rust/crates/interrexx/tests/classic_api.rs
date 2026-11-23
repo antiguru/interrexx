@@ -33,6 +33,41 @@ fn scratch() -> &'static Path {
     })
 }
 
+#[test]
+fn concurrent_library_staging_preserves_the_source() {
+    let dir = scratch().join(format!("stage-fixture-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("the fixture directory");
+    let source = dir.join("source");
+    let destination = dir.join("destination");
+    let bytes = b"library fixture bytes";
+    std::fs::write(&source, bytes).expect("the fixture source");
+
+    let start = std::sync::Barrier::new(8);
+    std::thread::scope(|scope| {
+        for _ in 0..8 {
+            let (start, source, destination) = (&start, &source, &destination);
+            scope.spawn(move || {
+                start.wait();
+                for _ in 0..8 {
+                    cdylibs::stage_library(source, destination).expect("the fixture stages");
+                }
+            });
+        }
+    });
+    assert_eq!(std::fs::read(&source).expect("the source exists"), bytes);
+    assert_eq!(
+        std::fs::read(&destination).expect("the staged file exists"),
+        bytes
+    );
+    assert_eq!(
+        std::fs::read_dir(&dir)
+            .expect("the fixture directory")
+            .count(),
+        2
+    );
+    std::fs::remove_dir_all(dir).expect("the fixture directory is removable");
+}
+
 /// The directory holding `rexx`, `rxapi` and `rxsubcom`.
 fn bin_dir() -> PathBuf {
     let dir = Path::new(REXX).parent().expect("rexx has a directory");

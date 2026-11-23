@@ -79,41 +79,9 @@ fn run_directory(rel_path: &str) -> PathBuf {
         .join(rel_path.replace('/', "__"))
 }
 
-/// The runs of this crate that share this process. A library one run has loaded is still loaded
-/// for a run on another thread that did not name its path, so the sidecar control, which asks
-/// what a run does without a sidecar's `LD_LIBRARY_PATH`, runs alone ([`run_rust_alone`]) and
-/// every other run shares. Under nextest each test is a process and nothing waits.
-static IN_PROCESS_RUNS: std::sync::RwLock<()> = std::sync::RwLock::new(());
-
 /// Runs the executor in process, on `path`, from `directory`, with
 /// `overrides` laid over the process's own environment.
 fn run_rust(
-    path: &Path,
-    directory: &Path,
-    overrides: &[(String, String)],
-    stdin: Option<&[u8]>,
-) -> Outcome {
-    let _shared = IN_PROCESS_RUNS
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    run_rust_locked(path, directory, overrides, stdin)
-}
-
-/// [`run_rust`] with no other in-process run alongside it.
-fn run_rust_alone(
-    path: &Path,
-    directory: &Path,
-    overrides: &[(String, String)],
-    stdin: Option<&[u8]>,
-) -> Outcome {
-    let _alone = IN_PROCESS_RUNS
-        .write()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    run_rust_locked(path, directory, overrides, stdin)
-}
-
-/// [`run_rust`] without taking [`IN_PROCESS_RUNS`]; the caller holds it.
-fn run_rust_locked(
     path: &Path,
     directory: &Path,
     overrides: &[(String, String)],
@@ -695,6 +663,9 @@ fn a_sidecar_exists_for_the_control_to_iterate_over() {
 /// the shard its index in the sorted stems, modulo this count, names.
 const SIDECAR_SHARDS: usize = 8;
 
+/// Set only in the child running one sidecar control, to stop it spawning itself again.
+const SIDECAR_CONTROL_ENV: &str = "REXX_CORPUS_SIDECAR_CHILD";
+
 /// Every shard index below `SIDECAR_SHARDS` has a test running it.
 #[test]
 fn every_sidecar_shard_has_a_test() {
@@ -729,6 +700,26 @@ fn every_sidecar_shard_has_a_test() {
 ///
 /// Run in shards by `a_sidecar_changes_what_one_of_the_interpreters_answers_N`.
 fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
+    // A loaded library can satisfy later lookups by name. Run each shard in
+    // a fresh process so loads from other corpus tests cannot affect it.
+    if env::var_os(SIDECAR_CONTROL_ENV).is_none() {
+        let exe = env::current_exe().expect("a running test binary knows its own path");
+        let test = format!("a_sidecar_changes_what_one_of_the_interpreters_answers_{shard}");
+        let output = Command::new(exe)
+            .args(["--exact", &test])
+            .env(SIDECAR_CONTROL_ENV, "1")
+            .output()
+            .expect("the sidecar control starts");
+        assert!(
+            output.status.success(),
+            "sidecar control {shard} failed ({}):\n{}\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        return;
+    }
+
     let oracle = support::oracle::locate();
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
     let stems: Vec<String> = sidecar_stems(&corpus_dir)
@@ -779,7 +770,7 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
         let dir = &dirs[at].0;
         let overrides = resolved_environment(sidecar, dir);
         let cwd = prepare_run_directory(dir, sidecar);
-        run_rust_alone(abs, &cwd, &overrides, sidecar.stdin.as_deref())
+        run_rust(abs, &cwd, &overrides, sidecar.stdin.as_deref())
     };
     // **Runs that are to miss a library come first.** These runs share one
     // process, and once a run has loaded a library, a later load by the same
@@ -788,8 +779,7 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
     // run without its `LD_LIBRARY_PATH` answer as if it had it. Every run
     // without a half therefore comes before any run with a whole sidecar, and
     // of those, a run whose environment names no `LD_LIBRARY_PATH` before one
-    // that does. That relies only on the process having loaded nothing before
-    // this test, which nextest's process per test gives.
+    // that does. The shard starts with no libraries loaded by other tests.
     let mut order: Vec<usize> = (0..asked.len()).collect();
     order.sort_by_key(|&at| {
         asked[at]

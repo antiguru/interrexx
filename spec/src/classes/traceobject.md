@@ -1151,8 +1151,10 @@ r[class.traceobject.setmakestring]
 `setMakeString` replaces `makeStringImpl` with a method of the program: the
 argument is a `Method` object or a source that [`Method~new`](r:class.method.new)
 accepts. The method receives the `TraceObject` and answers the text. From then on it supplies `makeStringImpl`, and with it
-`makeString`, whatever the `option` is, until `unsetMakeString` takes it away; a
-second `setMakeString` replaces the first. It answers no value. A source that
+`makeString`, whatever the `option` is, until `unsetMakeString` takes it away.
+When the interpreter calls the method to render a trace line, it runs
+without producing trace lines of its own. A second `setMakeString` replaces the
+first. It answers no value. A source that
 does not translate raises the error that `Method~new` raises for it. An argument
 that cannot supply a source, such as `.nil`, raises `SYNTAX 93.961`. No argument
 raises `93.901` and a second one raises `93.902`. `unsetMakeString` takes no argument and answers no value.
@@ -1376,9 +1378,9 @@ made and given to the `collector` before the destination receives it, as [the
 lines rule](r:class.traceobject.lines) says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as [Deviation 50](r:instr.trace.deviation.50) states; ooRexx raises
-the condition before the clause does anything. In the example the destination
-refuses the second line, the value line of `say 'a'`: interrexx has written `a`
-by then and ooRexx has not, and on both the collector holds that line.
+the condition before applying that effect. In the example the destination
+refuses the keyword line of `NUMERIC DIGITS`. Interrexx has changed the
+setting by then and ooRexx keeps its old value. Both collect the refused line.
 
 ```rexx
 c = .array~new
@@ -1387,12 +1389,12 @@ c = .array~new
 signal on syntax name e
 trace o
 trace r
-say 'a'
+numeric digits 7
 exit
 e: trace o
 .traceoutput~destination(.output)
 .traceobject~collector = .nil
-say 'caught' condition('o')~code '['c[2]~traceline']'
+say 'caught' condition('o')~code digits() '['c[2]~traceline']'
 ::class sink
 ::method init
   expose n
@@ -1405,9 +1407,8 @@ say 'caught' condition('o')~code '['c[2]~traceline']'
 ```
 
 ```output
-       >>>   "a"
-a
-caught 93.900 [       >>>   "a"]
+       >K>   "DIGITS" => "7"
+caught 93.900 7 [       >K>   "DIGITS" => "7"]
 ```
 
 r[class.traceobject.deviation.109]

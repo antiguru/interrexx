@@ -181,27 +181,31 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
                        both nobuffer: <1 write 18, read 1, +3 read 4, =5 write 5, -2 write 3\n",
     },
     LicensedDivergence {
-        name: "undelivered-trace-clause-runs-first",
-        // The routine's chunk is compiled untraced, so after `trace r` its
-        // next clause is echoed from a stale chunk. That echo cannot be
-        // delivered, so it goes to stdout on both: the oracle raises 97.1
-        // before the clause runs, and this crate after it, so the counter is
-        // 0 there and 1 here.
-        program: ".local~c = 0\n\
-              signal on syntax\n\
-              call r\n\
-              exit\n\
-              syntax:\n\
-              x = .traceOutput~destination\n\
-              say 'syntax' condition('o')~code 'c='.local~c\n\
-              ::routine r\n\
-              .traceOutput~destination('')\n\
+        name: "undelivered-trace-keyword-applies-first",
+        // The destination refuses the keyword line for the new DIGITS setting.
+        // The oracle keeps the old setting, and this crate has applied the new one.
+        program: ".traceoutput~destination(.sink~new)\n\
+              signal on syntax name e\n\
+              trace o\n\
               trace r\n\
-              .local~c = .local~c + 1\n",
+              numeric digits 7\n\
+              exit\n\
+              e: trace o\n\
+              .traceoutput~destination(.output)\n\
+              say 'caught' condition('o')~code digits()\n\
+              ::class sink\n\
+              ::method init\n\
+              \x20 expose n\n\
+              \x20 n = 0\n\
+              ::method lineout\n\
+              \x20 expose n\n\
+              \x20 n = n + 1\n\
+              \x20 if n = 2 then raise syntax 93.900\n\
+              \x20 return 0\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "    11 *-* .local~c = .local~c + 1\nsyntax 97.1 c=0\n",
-        crate_stdout: "    11 *-* .local~c = .local~c + 1\nsyntax 97.1 c=1\n",
+        oracle_stdout: "       >K>   \"DIGITS\" => \"7\"\ncaught 93.900 9\n",
+        crate_stdout: "       >K>   \"DIGITS\" => \"7\"\ncaught 93.900 7\n",
     },
     LicensedDivergence {
         name: "context-rs-in-interpret",

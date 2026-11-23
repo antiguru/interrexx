@@ -1,6 +1,7 @@
 //! Runs a Rexx program under an interpreter and captures its observable output.
 
 mod normalize;
+pub mod private_service;
 pub use normalize::{Divergence, diff, normalize};
 
 use std::path::{Path, PathBuf};
@@ -23,12 +24,26 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn run(&self, program: &Path, args: &[String], cwd: &Path) -> std::io::Result<Outcome> {
+        self.run_with_api_services(program, args, cwd, &[])
+    }
+
+    /// Runs a program using the private API services owned by the caller.
+    pub fn run_with_api_services(
+        &self,
+        program: &Path,
+        args: &[String],
+        cwd: &Path,
+        services: &[&private_service::PrivateService],
+    ) -> std::io::Result<Outcome> {
         let mut cmd = Command::new(&self.binary);
         cmd.arg(program).args(args).current_dir(cwd);
         let joined = std::env::join_paths(&self.library_paths)
             .expect("library paths must not contain the path separator");
         for var in ["LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"] {
             cmd.env(var, &joined);
+        }
+        for service in services {
+            service.configure(&mut cmd);
         }
         let out = cmd.output()?;
         Ok(Outcome {

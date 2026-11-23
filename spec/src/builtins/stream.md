@@ -898,7 +898,9 @@ stream open for reading and writing answers its read position, and one open
 for one thing the position that it has. The option `CHAR` counts characters
 and is the default; `LINE` counts lines, and the answer is the number of the
 line that the position is in: one more than the number of line ends before the
-position, for the read position and the write position alike, so that the
+position, for the read position and the write position alike. When counting
+lines requires a read and that read fails, the query raises `NOTREADY` in
+the caller and gives the stream's error description as the result. The
 position after the last character of a last line that has no line end is in
 that line, not in a line after it ([Deviation
 167](r:bif.stream.deviation.167)). Each option may be shortened to its first
@@ -1092,8 +1094,8 @@ r[bif.stream.query.time]
 `QUERY TIMESTAMP` answers the date and time that the file was last changed
 as `yyyy-mm-dd hh:mm:ss`, and `QUERY DATETIME` the same moment as
 `mm-dd-yy hh:mm:ss`; the null string for a name that is not a file. For a
-directory they answer its time. They hold the host's time zone, which
-is not specified.
+directory they answer its time. Both queries use the program's time zone
+from `TZ`, as [the TIME rule](r:bif.time.zone) says.
 
 ```rexx
 f = 'spec-stream-time.tmp'
@@ -1115,6 +1117,34 @@ call sysfiledelete f
 9999-99-99 99:99:99 99-99-99 99:99:99
 1 1 1 1
 19 17
+```
+
+```rexx
+f = 'spec-stream-time-zone.tmp'
+call value 'TZ', 'UTC0', 'ENVIRONMENT'
+call charout f, 'a'
+call charout f
+say SysSetFileDateTime(f, '2020-12-31', '23:30:00')
+say stream(f, 'c', 'query timestamp')
+call value 'TZ', 'EET-2', 'ENVIRONMENT'
+say stream(f, 'c', 'query timestamp')
+say .stream~new(f)~query('datetime')
+call value 'TZ', 'UTC0', 'ENVIRONMENT'
+say SysSetFileDateTime(f, '1969-07-01', '04:30:00')
+call value 'TZ', 'AST4', 'ENVIRONMENT'
+say stream(f, 'c', 'query timestamp')
+say .stream~new(f)~query('datetime')
+call SysFileDelete f
+```
+
+```output
+0
+2020-12-31 23:30:00
+2021-01-01 01:30:00
+01-01-21 01:30:00
+0
+1969-07-01 00:30:00
+07-01-69 00:30:00
 ```
 
 r[bif.stream.query.handle]

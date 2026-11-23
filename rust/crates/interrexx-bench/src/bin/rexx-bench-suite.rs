@@ -305,7 +305,7 @@ fn main() -> ExitCode {
     }
 
     let oracle = Side::oracle();
-    let rust = Side::rust(rust_binary.clone(), arm);
+    let rust = Side::rust_with_private_service(rust_binary.clone(), arm);
 
     let mut report = String::new();
     let mut failures: Vec<String> = Vec::new();
@@ -677,11 +677,7 @@ mod tests {
                     candidates[1].display()
                 )
             });
-        let side = Side {
-            label: "rust",
-            binary,
-            env: Vec::new(),
-        };
+        let side = Side::rust(binary, Arm::Ir);
         let dir = std::env::temp_dir().join(format!(
             "rexx-bench-suite-blocked-{}-{:?}",
             std::process::id(),
@@ -788,10 +784,11 @@ mod tests {
         // Relative, so it lands in whatever directory the child was put in.
         fs::write(&script, "printf %s \"$REXX_BENCH_SIDE\" >> order\n").expect("probe script");
 
-        let side = |mark: &str| Side {
-            label: "probe",
-            binary: PathBuf::from("/bin/sh"),
-            env: vec![("REXX_BENCH_SIDE".to_string(), mark.to_string())],
+        let side = |mark: &str| {
+            let mut side = Side::rust(PathBuf::from("/bin/sh"), Arm::Ir);
+            side.env
+                .push(("REXX_BENCH_SIDE".to_string(), mark.to_string()));
+            side
         };
         measure_interleaved(
             &side("o"),
@@ -829,10 +826,10 @@ mod tests {
         let script = dir.join("fails.sh");
         fs::write(&script, "echo broken >&2\nexit 3\n").expect("probe script");
 
-        let side = |label: &'static str| Side {
-            label,
-            binary: PathBuf::from("/bin/sh"),
-            env: Vec::new(),
+        let side = |label: &'static str| {
+            let mut side = Side::rust(PathBuf::from("/bin/sh"), Arm::Ir);
+            side.label = label;
+            side
         };
         let outcome = measure_interleaved(
             &side("oracle"),

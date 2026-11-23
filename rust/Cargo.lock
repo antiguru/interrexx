@@ -679,6 +679,7 @@ dependencies = [
  "interrexx-inventory",
  "interrexx-lib",
  "interrexx-num",
+ "interrexx-oracle",
  "interrexx-parse",
  "interrexx-rxapi",
  "interrexx-spec",
@@ -780,6 +781,9 @@ dependencies = [
 [[package]]
 name = "interrexx-oracle"
 version = "0.1.0"
+dependencies = [
+ "rustix",
+]
 
 [[package]]
 name = "interrexx-parse"
