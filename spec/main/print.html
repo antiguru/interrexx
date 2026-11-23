@@ -17512,11 +17512,9 @@ say n 'clause lines'
 </code></pre>
 <pre><code class="language-output">4 clause lines
 </code></pre>
-<div class="rule" id="r-instr.trace.deviation.50"><a href="instructions/trace.html#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
-<p>Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx assigns the
-target of <code>PARSE VALUE</code> even if the destination refuses its <code>VALUE</code> line.
-ooRexx leaves the target unchanged.</p>
+<div class="rule" id="r-instr.trace.result.parse-value.refused"><a href="instructions/trace.html#r-instr.trace.result.parse-value.refused">[instr.trace.result.parse-value.refused]</a></div>
+<p>A destination that refuses the <code>VALUE</code> keyword line of <code>PARSE VALUE</code> raises
+the condition before the string conversion and template assignments.</p>
 <pre><code class="language-rexx">x = 'old'
 .traceoutput~destination(.sink~new)
 signal on syntax name e
@@ -17538,7 +17536,37 @@ say 'caught' condition('o')~code x
   return 0
 </code></pre>
 <pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
-caught 93.900 new
+caught 93.900 old
+</code></pre>
+<div class="rule" id="r-instr.trace.deviation.50"><a href="instructions/trace.html#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
+<p>Some trace lines still raise the destination's condition after the clause has
+applied the effect the line describes. For example, interrexx binds the
+variable of a controlled <code>DO</code> before raising a refusal of its <code>TO</code> line.
+ooRexx leaves the variable unchanged.</p>
+<pre><code class="language-rexx">x = 'old'
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+do x = 1 to 2
+  nop
+end
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code x
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">       &gt;K&gt;   "TO" =&gt; "2"
+caught 93.900 1
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="use"><a class="header" href="#use">USE</a></h1>
 <pre><code>USE [STRICT] ARG [target [= default]] [, ...] | USE LOCAL [name]...
@@ -75970,7 +75998,7 @@ lines rule</a> says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as <a href="classes/../instructions/trace.html#r-instr.trace.deviation.50">Deviation 50</a> states; ooRexx raises
 the condition before applying that effect. In the example the destination
-refuses the <code>VALUE</code> line of <code>PARSE VALUE</code>. Interrexx has assigned the target
+refuses the <code>TO</code> line of a controlled <code>DO</code>. Interrexx has bound the variable
 by then and ooRexx keeps its old value. Both collect the refused line.</p>
 <pre><code class="language-rexx">c = .array~new
 .traceobject~collector = c
@@ -75979,7 +76007,9 @@ x = 'old'
 signal on syntax name e
 trace o
 trace r
-parse value 'new' with x
+do x = 1 to 2
+  nop
+end
 exit
 e: trace o
 .traceoutput~destination(.output)
@@ -75995,8 +76025,8 @@ say 'caught' condition('o')~code x '['c[2]~traceline']'
   if n = 2 then raise syntax 93.900
   return 0
 </code></pre>
-<pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
-caught 93.900 new [       &gt;K&gt;   "VALUE" =&gt; "new"]
+<pre><code class="language-output">       &gt;K&gt;   "TO" =&gt; "2"
+caught 93.900 1 [       &gt;K&gt;   "TO" =&gt; "2"]
 </code></pre>
 <div class="rule" id="r-class.traceobject.deviation.109"><a href="classes/traceobject.html#r-class.traceobject.deviation.109">[class.traceobject.deviation.109]</a></div>
 <p>The argument of <code>option=</code> is read by its own characters when it is an instance

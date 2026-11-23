@@ -1447,11 +1447,9 @@ say n 'clause lines'
 </code></pre>
 <pre><code class="language-output">4 clause lines
 </code></pre>
-<div class="rule" id="r-instr.trace.deviation.50"><a href="#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
-<p>Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx assigns the
-target of <code>PARSE VALUE</code> even if the destination refuses its <code>VALUE</code> line.
-ooRexx leaves the target unchanged.</p>
+<div class="rule" id="r-instr.trace.result.parse-value.refused"><a href="#r-instr.trace.result.parse-value.refused">[instr.trace.result.parse-value.refused]</a></div>
+<p>A destination that refuses the <code>VALUE</code> keyword line of <code>PARSE VALUE</code> raises
+the condition before the string conversion and template assignments.</p>
 <pre><code class="language-rexx">x = 'old'
 .traceoutput~destination(.sink~new)
 signal on syntax name e
@@ -1473,7 +1471,37 @@ say 'caught' condition('o')~code x
   return 0
 </code></pre>
 <pre><code class="language-output">       &gt;K&gt;   "VALUE" =&gt; "new"
-caught 93.900 new
+caught 93.900 old
+</code></pre>
+<div class="rule" id="r-instr.trace.deviation.50"><a href="#r-instr.trace.deviation.50">[instr.trace.deviation.50]</a></div>
+<p>Some trace lines still raise the destination's condition after the clause has
+applied the effect the line describes. For example, interrexx binds the
+variable of a controlled <code>DO</code> before raising a refusal of its <code>TO</code> line.
+ooRexx leaves the variable unchanged.</p>
+<pre><code class="language-rexx">x = 'old'
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+do x = 1 to 2
+  nop
+end
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code x
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">       &gt;K&gt;   "TO" =&gt; "2"
+caught 93.900 1
 </code></pre>
 
                     </main>
