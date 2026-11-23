@@ -426,6 +426,7 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   class GETPATHSEPARATOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_path_separator
   class GETSEPARATOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_separator
   class INTERREXX_STRING private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_file_string
+  class INTERREXX_WRITE_MODE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class ISCASESENSITIVE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_case_sensitive
   class LISTROOTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_list_roots
   class PATHSEPARATOR private=0 protected=0 guarded=0 abstract=0 constant=1 attribute=0 package=0 entry=-
