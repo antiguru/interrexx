@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use strict arg root
+/* spec: util.windows.version */
+windowsVersion = value('REXX_TEST_WINDOWS_VERSION', , 'ENVIRONMENT')
+if SysVersion() \== windowsVersion | SysWinVer() \== windowsVersion then exit 47
 /* spec: util.windows.system-paths */
 systemDir = value('REXX_TEST_SYSTEM_DIRECTORY', , 'ENVIRONMENT')
 bootDrive = value('REXX_TEST_BOOT_DRIVE', , 'ENVIRONMENT')
@@ -18,6 +21,13 @@ parse value SysDriveInfo(driveRoot) with actualDrive free total label
 if actualDrive \== currentDrive | total \== driveSize | label \== driveLabel then exit 34
 if \datatype(free, 'Whole') then exit 35
 if free < 0 | free > total then exit 36
+/* spec: util.windows.drive-map */
+used = value('REXX_TEST_USED_DRIVES', , 'ENVIRONMENT')
+free = value('REXX_TEST_FREE_DRIVES', , 'ENVIRONMENT')
+if SysDriveMap('a:', 'used') \== used then exit 48
+if SysDriveMap('A:', 'FREE') \== free then exit 49
+if wordpos(bootDrive, SysDriveMap()) = 0 then exit 50
+if wordpos(bootDrive, SysDriveMap('A:', 'LOCAL')) = 0 then exit 51
 if SysDriveInfo('?:') \== '' | SysFileSystemType('?:') \== '' | SysVolumeLabel('?:') \== '' then exit 37
 if SysLoadFuncs() <> 0 | SysDropFuncs() <> 0 | SysUtilVersion() = "" then exit 12
 if \datatype(SysCls(), "Whole") then exit 16

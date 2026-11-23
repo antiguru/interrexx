@@ -296,3 +296,59 @@ fn volume_identifier(drive: &[u8]) -> Option<String> {
         _ => None,
     }
 }
+
+pub(crate) fn drive_map(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    use windows_sys::Win32::System::WindowsProgramming::{
+        DRIVE_CDROM, DRIVE_FIXED, DRIVE_RAMDISK, DRIVE_REMOTE, DRIVE_REMOVABLE,
+    };
+
+    check_arity(args, 2)?;
+    let start = optional_text(interp, args, 1)?;
+    let filter = optional_text(interp, args, 2)?;
+    let start: &[u8] = start.as_deref().map_or(b"C:", c_string);
+    let filter: &[u8] = filter.as_deref().map_or(b"USED", c_string);
+    let first = match start {
+        [letter] | [letter, b':'] | [letter, b':', b'\\' | b'/']
+            if letter.is_ascii_alphabetic() =>
+        {
+            letter.to_ascii_uppercase()
+        }
+        _ => return Ok(interp.text(b"")),
+    };
+    let filter = filter.to_ascii_uppercase();
+    let matches = |letter| match filter.as_slice() {
+        b"LOCAL" => matches!(
+            crate::host::drive_type(letter),
+            DRIVE_FIXED | DRIVE_REMOVABLE | DRIVE_CDROM | DRIVE_RAMDISK
+        ),
+        b"REMOTE" => crate::host::drive_type(letter) == DRIVE_REMOTE,
+        b"REMOVABLE" => crate::host::drive_type(letter) == DRIVE_REMOVABLE,
+        b"CDROM" => crate::host::drive_type(letter) == DRIVE_CDROM,
+        b"RAMDISK" => crate::host::drive_type(letter) == DRIVE_RAMDISK,
+        b"USED" => true,
+        _ => false,
+    };
+    let Some(drives) = crate::host::logical_drives() else {
+        return Ok(interp.text(b""));
+    };
+    let mut result = Vec::new();
+    for letter in first..=b'Z' {
+        let used = drives & (1 << (letter - b'A')) != 0;
+        let include = if filter == b"FREE" {
+            !used
+        } else {
+            used && matches(letter)
+        };
+        if include {
+            if !result.is_empty() {
+                result.push(b' ');
+            }
+            result.extend_from_slice(&[letter, b':']);
+        }
+    }
+    Ok(interp.text_built(result))
+}

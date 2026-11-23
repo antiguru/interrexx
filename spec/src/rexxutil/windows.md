@@ -100,3 +100,20 @@ omitted they query the drive of the interpreter's current directory.
 volume label separated by spaces. The other two routines answer the filesystem
 name and volume label respectively. They answer the null string if the drive
 cannot be queried.
+
+## Windows version
+
+r[util.windows.version]
+`SysWinVer()` and `SysVersion()` take no arguments and answer the same operating
+system version information on Windows. The result starts with `Windows`, followed
+by the operating system version when available.
+
+## Windows drive map
+
+r[util.windows.drive-map]
+`SysDriveMap([drive], [option])` lists drive letters from the given letter
+through `Z:`, separated by spaces and in ascending order. With both
+arguments omitted it lists the assigned drives starting at `C:`. `USED`
+lists assigned drives and `FREE` lists unassigned letters. `LOCAL`,
+`REMOTE`, `REMOVABLE`, `CDROM` and `RAMDISK` restrict the list to drives
+of the chosen type.

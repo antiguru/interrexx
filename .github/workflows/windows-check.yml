@@ -140,12 +140,17 @@ jobs:
       - name: Exercise Windows RexxUtil filesystem routines
         shell: pwsh
         run: |
+          $env:REXX_TEST_WINDOWS_VERSION = 'Windows ' + [Environment]::OSVersion.Version.ToString(3)
           $env:REXX_TEST_SYSTEM_DIRECTORY = [Environment]::SystemDirectory
           $env:REXX_TEST_BOOT_DRIVE = [IO.Path]::GetPathRoot($env:REXX_TEST_SYSTEM_DIRECTORY).TrimEnd([char]92)
           $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot((Get-Location).Path))
           $env:REXX_TEST_CURRENT_DRIVE = $drive.Name.TrimEnd([char]92)
           $env:REXX_TEST_VOLUME_FORMAT = $drive.DriveFormat
           $env:REXX_TEST_VOLUME_LABEL = $drive.VolumeLabel
+          $driveNames = [Environment]::GetLogicalDrives() | ForEach-Object { $_.TrimEnd([char]92) }
+          $env:REXX_TEST_USED_DRIVES = ($driveNames | Sort-Object) -join ' '
+          $env:REXX_TEST_FREE_DRIVES = ((65..90 | ForEach-Object { [string][char]$_ + ':' }) |
+            Where-Object { $_ -notin $driveNames }) -join ' '
           $env:REXX_TEST_VOLUME_SIZE = $drive.TotalSize.ToString([cultureinfo]::InvariantCulture)
           & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
           if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }

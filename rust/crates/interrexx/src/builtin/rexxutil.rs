@@ -658,8 +658,7 @@ fn outside_range(position: usize, min: i128, max: i128, found: &[u8]) -> Failure
     raised.into()
 }
 
-/// `SysVersion()` and `SysLinVer()`, which are one entry point: `uname`'s
-/// `sysname` and `release`, a space between them.
+/// `SysVersion()`, also named `SysLinVer()` on Unix and `SysWinVer()` on Windows.
 pub(crate) fn version(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -677,7 +676,9 @@ pub(crate) fn version(
         text
     };
     #[cfg(windows)]
-    let text = b"Windows".to_vec();
+    let text = crate::host::windows_version()
+        .unwrap_or_else(|| "Windows".into())
+        .into_bytes();
     Ok(interp.text_built(text))
 }
 

@@ -269,3 +269,37 @@ pub(crate) fn volume_space(root: &std::path::Path) -> Option<(u64, u64)> {
         unsafe { GetDiskFreeSpaceExW(root.as_ptr(), std::ptr::null_mut(), &mut total, &mut free) };
     (result != 0).then_some((free, total))
 }
+
+/// Read the running version regardless of the caller's application manifest.
+pub(crate) fn windows_version() -> Option<String> {
+    use windows_sys::Wdk::System::SystemServices::RtlGetVersion;
+    use windows_sys::Win32::System::SystemInformation::OSVERSIONINFOW;
+
+    let mut info = OSVERSIONINFOW {
+        dwOSVersionInfoSize: std::mem::size_of::<OSVERSIONINFOW>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: info is writable and its size identifies the structure version.
+    let status = unsafe { RtlGetVersion(&mut info) };
+    (status >= 0).then(|| {
+        format!(
+            "Windows {}.{}.{}",
+            info.dwMajorVersion, info.dwMinorVersion, info.dwBuildNumber
+        )
+    })
+}
+
+/// The bit for each drive letter currently assigned by Windows.
+pub(crate) fn logical_drives() -> Option<u32> {
+    use windows_sys::Win32::Storage::FileSystem::GetLogicalDrives;
+    // SAFETY: GetLogicalDrives has no parameters or memory to validate.
+    let drives = unsafe { GetLogicalDrives() };
+    (drives != 0).then_some(drives)
+}
+
+pub(crate) fn drive_type(letter: u8) -> u32 {
+    use windows_sys::Win32::Storage::FileSystem::GetDriveTypeW;
+    let root = [u16::from(letter), u16::from(b':'), u16::from(b'\\'), 0];
+    // SAFETY: root is NUL-terminated and lives through the query.
+    unsafe { GetDriveTypeW(root.as_ptr()) }
+}

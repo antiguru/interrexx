@@ -111,6 +111,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysDriveInfo",
         crate::builtin::rexxutil::windows_files::drive_info,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysDriveMap",
+        crate::builtin::rexxutil::windows_files::drive_map,
+    ),
     util_run("SysDropFuncs", crate::builtin::rexxutil::load_funcs),
     util_run(
         "SysDropRexxMacro",
@@ -330,6 +335,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
+    #[cfg(windows)]
+    util_run("SysWinVer", crate::builtin::rexxutil::version),
 ];
 
 /// Every row `package` exports, in table order.
