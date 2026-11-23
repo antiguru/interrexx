@@ -110,6 +110,17 @@ mod env_seam {
         }
     }
 
+    /// A native handle for one of the two interpreter-owned directories
+    /// remains valid for the lifetime of the interpreter.
+    pub(super) fn native_directory(
+        held: &Directories,
+        handle: interrexx_api::layout::RexxObjectPtr,
+    ) -> Option<ObjRef> {
+        [held.local, held.environment]
+            .into_iter()
+            .find(|&object| interrexx_api::handles::handle_of(object) == handle)
+    }
+
     /// The directory `scope` names, in exchange for a clearance.
     pub(super) fn directory(held: &Directories, admitted: Admitted, scope: EnvScope) -> ObjRef {
         let _ = admitted;
@@ -1046,6 +1057,13 @@ impl Interp {
         };
         self.roots.activity_mut().push_temp(queue);
         let _ = self.set_directory_entry(EnvScope::Local, b"STDQUE", queue);
+    }
+
+    pub(crate) fn native_environment_directory(
+        &self,
+        handle: interrexx_api::layout::RexxObjectPtr,
+    ) -> Option<ObjRef> {
+        env_seam::native_directory(&self.environment.as_ref()?.directories, handle)
     }
 
     /// Writes `name` into `scope`'s directory, through the same seam a read

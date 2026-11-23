@@ -1476,6 +1476,9 @@ struct Interp {
     /// it resolves to from any native call for as long as the interpreter
     /// runs.
     global_references: interrexx_api::handles::Table,
+    /// Native method receivers handed out as handles. Rexx code can keep
+    /// the receiver alive after the native call returns.
+    borrowed_native_receivers: FxHashMap<usize, ObjRef>,
     /// The terminated copies `StringData` and its kin answered, by the object
     /// they copy. Not roots: a collection drops the copy of an object it
     /// frees, and of a handle-carried value, which no collection frees, that
@@ -2460,6 +2463,7 @@ impl Interp {
             classic_functions: FxHashMap::default(),
             classic_subcoms: FxHashMap::default(),
             global_references: interrexx_api::handles::Table::new(),
+            borrowed_native_receivers: FxHashMap::default(),
             command_handlers: FxHashMap::default(),
             environments: command::Environments::default(),
             leave_next_native: false,
@@ -3586,6 +3590,7 @@ impl Interp {
             classic_functions: _,
             classic_subcoms: _,
             global_references,
+            borrowed_native_receivers: _,
             // Entry points, not objects.
             command_handlers: _,
             environments,
@@ -3758,6 +3763,8 @@ impl Interp {
             !matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
                 || heap.peek(*object).is_some()
         });
+        self.borrowed_native_receivers
+            .retain(|_, object| heap.peek(*object).is_some());
         self.drop_loose_kept_strings();
         let heap = &self.heap;
         self.activities.guards.prune_pools(|object| {
