@@ -129,6 +129,12 @@ jobs:
             & $rxapi --stop
           }
 
+      - name: Exercise Windows RexxUtil filesystem routines
+        shell: pwsh
+        run: |
+          & ./target/debug/rexx.exe ../ci/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
+
       - name: Check out the pinned ooRexx sources
         working-directory: .
         run: git submodule update --init --depth 1 -- third_party/ooRexx

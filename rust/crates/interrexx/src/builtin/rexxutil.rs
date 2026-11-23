@@ -11,6 +11,8 @@ pub(crate) mod stems;
 pub(crate) mod timezone;
 #[cfg(unix)]
 pub(crate) mod tree;
+#[cfg(windows)]
+pub(crate) mod windows_files;
 
 use interrexx_core::{Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
@@ -111,6 +113,37 @@ fn path_argument(
 ) -> Result<Vec<u8>, Failure> {
     let text = required_c_string(interp, args, position)?;
     Ok(crate::builtin::platform::qualify_name(interp, &text))
+}
+
+/// `SysCls()` on Windows: clear the console, returning the Win32 status.
+#[cfg(windows)]
+pub(crate) fn cls(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(answer(interp, crate::host::clear_console()))
+}
+
+/// `SysUtilVersion()`: `ORX_VER.ORX_REL.ORX_MOD`.
+pub(crate) fn util_version(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(interp.text_built(crate::version::VERSION_NUMBER.to_vec()))
+}
+
+/// `SysLoadFuncs()` and `SysDropFuncs()`, one body: nothing to do, `0`.
+pub(crate) fn load_funcs(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(answer(interp, 0))
 }
 
 /// The answer these routines give: a whole number, as text.
