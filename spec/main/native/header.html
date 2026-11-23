@@ -287,6 +287,9 @@ As a parameter of a method, <code>OSELF</code> is the receiver, <code>SUPER</cod
 method's scope inherits from, <code>SCOPE</code> the scope, and <code>CSELF</code> the address the
 receiver's variable <code>CSELF</code> holds as a Pointer or a Buffer. None of them is
 valid as a result, and none of them consumes an argument of the call.</p>
+<div class="rule" id="r-native.header.queue-time"><a href="#r-native.header.queue-time">[native.header.queue-time]</a></div>
+<p><code>RexxQueueTime</code> and the Unix <code>REXXDATETIME</code> each have a <code>uint16_t</code> member
+<code>hundredths</code> for the fraction of a second in hundredths.</p>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
 <div class="rule" id="r-native.header.value-codes"><a href="#r-native.header.value-codes">[native.header.value-codes]</a></div>
 <p>A value code names the type of a declaration's parameter or result.
@@ -422,6 +425,108 @@ number <code>m</code> is below 100: <code>Rexx_</code> followed by the error's s
 <code>symbol</code> column of the table of error numbers in this repository
 (<code>rust/crates/interrexx-inventory/data/errors.tsv</code>), with the value
 <code>m * 1000 + n</code>. A minor number 0 stands for the major error itself.</p>
+<h3 id="classic-invocation-and-result-storage"><a class="header" href="#classic-invocation-and-result-storage">Classic invocation and result storage</a></h3>
+<div class="rule" id="r-native.header.classic-start"><a href="#r-native.header.classic-start">[native.header.classic-start]</a></div>
+<p>The classic interface defines these invocation kinds and the size of its
+automatic result buffer:</p>
+<ul>
+<li><code>RXCOMMAND</code>: <code>0</code>, command invocation.</li>
+<li><code>RXSUBROUTINE</code>: <code>1</code>, subroutine invocation.</li>
+<li><code>RXFUNCTION</code>: <code>2</code>, function invocation.</li>
+<li><code>RXMETHOD</code>: <code>3</code>, method invocation.</li>
+<li><code>RXSCRIPT</code>: <code>4</code>, script invocation.</li>
+<li><code>RXAUTOBUFLEN</code>: <code>256</code>, the automatic result buffer size in bytes.</li>
+</ul>
+<h3 id="classic-registration-and-handler-codes"><a class="header" href="#classic-registration-and-handler-codes">Classic registration and handler codes</a></h3>
+<div class="rule" id="r-native.header.classic-handlers"><a href="#r-native.header.classic-handlers">[native.header.classic-handlers]</a></div>
+<p>Subcommand and exit registrations have parallel flag and status names. The
+exit handler's own disposition codes are also defined here:</p>
+<ul>
+<li><code>RXSUBCOM_DROPPABLE</code> / <code>RXEXIT_DROPPABLE</code>: <code>0x00</code>, any process may remove the registration.</li>
+<li><code>RXSUBCOM_NONDROP</code> / <code>RXEXIT_NONDROP</code>: <code>0x01</code>, only the registering process may remove it.</li>
+<li><code>RXSUBCOM_ISREG</code> / <code>RXEXIT_ISREG</code>: <code>0x01</code>, the queried name is registered.</li>
+<li><code>RXSUBCOM_ERROR</code> / <code>RXEXIT_ERROR</code>: <code>0x01</code>, the handler reports an error.</li>
+<li><code>RXSUBCOM_FAILURE</code> / <code>RXEXIT_FAILURE</code>: <code>0x02</code>, the handler reports failure.</li>
+<li><code>RXSUBCOM_OK</code> / <code>RXEXIT_OK</code>: <code>0</code>, the operation succeeded.</li>
+<li><code>RXSUBCOM_DUP</code> / <code>RXEXIT_DUP</code>: <code>10</code>, registration completed for a name
+already in use.</li>
+<li><code>RXSUBCOM_MAXREG</code> / <code>RXEXIT_MAXREG</code>: <code>20</code>, the registry cannot accept another handler.</li>
+<li><code>RXSUBCOM_NOTREG</code> / <code>RXEXIT_NOTREG</code>: <code>30</code>, the name is unregistered.</li>
+<li><code>RXSUBCOM_NOCANDROP</code> / <code>RXEXIT_NOCANDROP</code>: <code>40</code>, the caller lacks
+permission to remove that registration.</li>
+<li><code>RXSUBCOM_LOADERR</code> / <code>RXEXIT_LOADERR</code>: <code>50</code>, the handler could not be loaded.</li>
+<li><code>RXSUBCOM_NOPROC</code> / <code>RXEXIT_NOPROC</code>: <code>127</code>, the handler entry point could not be found.</li>
+<li><code>RXSUBCOM_BADENTRY</code> / <code>RXEXIT_BADENTRY</code>: <code>1001</code>, the registration entry is invalid.</li>
+<li><code>RXSUBCOM_NOEMEM</code> / <code>RXEXIT_NOEMEM</code>: <code>1002</code>, memory allocation failed.</li>
+<li><code>RXSUBCOM_BADTYPE</code> / <code>RXEXIT_BADTYPE</code>: <code>1003</code>, the registration type is invalid.</li>
+<li><code>RXSUBCOM_NOTINIT</code> / <code>RXEXIT_NOTINIT</code>: <code>1004</code>, the API service is unavailable.</li>
+<li><code>RXEXIT_HANDLED</code>: <code>0</code>, the exit handled the request.</li>
+<li><code>RXEXIT_NOT_HANDLED</code>: <code>1</code>, processing continues without this exit's handling.</li>
+<li><code>RXEXIT_RAISE_ERROR</code>: <code>(-1)</code>, the exit reports an error in handling the request.</li>
+</ul>
+<div class="rule" id="r-native.header.classic-functions"><a href="#r-native.header.classic-functions">[native.header.classic-functions]</a></div>
+<p>Classic external function registrations use these kinds and status values:</p>
+<ul>
+<li><code>RXFUNC_DYNALINK</code>: <code>1</code>, the entry is supplied by a shared library.</li>
+<li><code>RXFUNC_CALLENTRY</code>: <code>2</code>, the caller supplies the entry point directly.</li>
+<li><code>RXFUNC_OK</code>: <code>0</code>, the operation succeeded.</li>
+<li><code>RXFUNC_DEFINED</code>: <code>10</code>, the function name is already registered.</li>
+<li><code>RXFUNC_NOMEM</code>: <code>20</code>, the registry lacks space to add a function.</li>
+<li><code>RXFUNC_NOTREG</code>: <code>30</code>, the function name is unregistered.</li>
+<li><code>RXFUNC_MODNOTFND</code>: <code>40</code>, the shared library could not be found.</li>
+<li><code>RXFUNC_ENTNOTFND</code>: <code>50</code>, the entry point could not be found in the library.</li>
+<li><code>RXFUNC_BADTYPE</code>: <code>70</code>, the function registration kind is invalid.</li>
+<li><code>RXFUNC_NOEMEM</code>: <code>1002</code>, memory allocation failed.</li>
+<li><code>RXFUNC_NOTINIT</code>: <code>1004</code>, the API service is unavailable.</li>
+</ul>
+<h3 id="classic-api-service-codes"><a class="header" href="#classic-api-service-codes">Classic API service codes</a></h3>
+<div class="rule" id="r-native.header.classic-service"><a href="#r-native.header.classic-service">[native.header.classic-service]</a></div>
+<p>These codes describe the outcome of an operation using the API service:</p>
+<ul>
+<li><code>RXAPI_OK</code>: <code>0</code>, the operation succeeded.</li>
+<li><code>RXAPI_MEMFAIL</code>: <code>1002</code>, memory allocation failed.</li>
+<li><code>RXAPI_NORXAPI</code>: <code>1004</code>, the API service is unavailable.</li>
+</ul>
+<div class="rule" id="r-native.header.classic-queues"><a href="#r-native.header.classic-queues">[native.header.classic-queues]</a></div>
+<p>The external data queue interface uses the following flags, return codes
+and queue-name limit:</p>
+<ul>
+<li><code>RXQUEUE_FIFO</code>: <code>0</code>, add an item at the back of the queue.</li>
+<li><code>RXQUEUE_LIFO</code>: <code>1</code>, add an item at the front of the queue.</li>
+<li><code>RXQUEUE_NOWAIT</code>: <code>0</code>, return immediately if the queue is empty.</li>
+<li><code>RXQUEUE_WAIT</code>: <code>1</code>, wait for an item if the queue is empty.</li>
+<li><code>RXQUEUE_OK</code>: <code>0</code>, the operation succeeded.</li>
+<li><code>RXQUEUE_STORAGE</code>: <code>1</code>, the caller's output buffer is too small.</li>
+<li><code>RXQUEUE_SIZE</code>: <code>2</code>, the item exceeds the allowed size.</li>
+<li><code>RXQUEUE_DUP</code>: <code>3</code>, a queue with the requested name already exists.</li>
+<li><code>RXQUEUE_BADQNAME</code>: <code>5</code>, the queue name is invalid.</li>
+<li><code>RXQUEUE_PRIORITY</code>: <code>6</code>, the insertion flag is invalid.</li>
+<li><code>RXQUEUE_BADWAITFLAG</code>: <code>7</code>, the wait flag is invalid.</li>
+<li><code>RXQUEUE_EMPTY</code>: <code>8</code>, no item is available.</li>
+<li><code>RXQUEUE_NOTREG</code>: <code>9</code>, the queue does not exist.</li>
+<li><code>RXQUEUE_ACCESS</code>: <code>10</code>, a pending wait prevents deleting the queue.</li>
+<li><code>RXQUEUE_MAXREG</code>: <code>11</code>, resources are insufficient to create another queue.</li>
+<li><code>RXQUEUE_MEMFAIL</code> / <code>RXQUEUE_NOEMEM</code>: <code>1002</code>, memory allocation failed.</li>
+<li><code>RXQUEUE_NOTINIT</code>: <code>1004</code>, the API service is unavailable.</li>
+<li><code>MAX_QUEUE_NAME_LENGTH</code>: <code>250</code>, the maximum queue name length in bytes.</li>
+</ul>
+<div class="rule" id="r-native.header.classic-macros"><a href="#r-native.header.classic-macros">[native.header.classic-macros]</a></div>
+<p>The macrospace interface uses these search positions and status values:</p>
+<ul>
+<li><code>RXMACRO_SEARCH_BEFORE</code>: <code>1</code>, search this part of macrospace before the
+ordinary external search.</li>
+<li><code>RXMACRO_SEARCH_AFTER</code>: <code>2</code>, search this part after the ordinary external search.</li>
+<li><code>RXMACRO_OK</code>: <code>0</code>, the operation succeeded.</li>
+<li><code>RXMACRO_NO_STORAGE</code>: <code>1</code>, storage for the operation could not be allocated.</li>
+<li><code>RXMACRO_NOT_FOUND</code>: <code>2</code>, the requested macro is absent.</li>
+<li><code>RXMACRO_EXTENSION_REQUIRED</code>: <code>3</code>, the save filename requires an extension.</li>
+<li><code>RXMACRO_ALREADY_EXISTS</code>: <code>4</code>, the macro name is already in use.</li>
+<li><code>RXMACRO_FILE_ERROR</code>: <code>5</code>, reading or writing the macrospace file failed.</li>
+<li><code>RXMACRO_SIGNATURE_ERROR</code>: <code>6</code>, the file does not have the expected macrospace format.</li>
+<li><code>RXMACRO_SOURCE_NOT_FOUND</code>: <code>7</code>, the requested macro source could not be found.</li>
+<li><code>RXMACRO_INVALID_POSITION</code>: <code>8</code>, the search position is invalid.</li>
+<li><code>RXMACRO_NOT_INIT</code>: <code>1004</code>, the API service is unavailable.</li>
+</ul>
 <h2 id="exit-flag-words"><a class="header" href="#exit-flag-words">Exit flag words</a></h2>
 <div class="rule" id="r-native.header.exit-flags"><a href="#r-native.header.exit-flags">[native.header.exit-flags]</a></div>
 <p>Seven exit parameter blocks begin with a word of one-bit flags. Each flag is
