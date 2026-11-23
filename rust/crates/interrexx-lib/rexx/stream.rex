@@ -210,11 +210,13 @@ done:
   /* An instance of a String subclass is read by its own characters
      (Deviation 109). */
   if value~isInstanceOf(.string) then return value~makeString:.string
-  text = value~request('STRING')
-  if text~isInstanceOf(.string) then return text
-  text = value~string
-  if \text~isInstanceOf(.string) then text = .nil~string
-  return text
+  value~request('STRING')
+  if var('RESULT') then
+    if result~isInstanceOf(.string) then return result
+  value~string
+  if var('RESULT') then
+    if result~isInstanceOf(.string) then return result
+  return .nil~string
 
 /* The string value of the option of arrayIn and arrayOut, which sits at
    argument position `n`: read through makeString as the option of open is,

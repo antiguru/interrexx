@@ -784,8 +784,10 @@ check of its kind as [the kind rule](r:conv.string.argument-kind) says. The opti
 through `makeString` alone: an object that has no such method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`. The argument
 of `query` and of `command` is read through its string value with the fallback
-to `string`: when `REQUEST('STRING')` supplies no string, the argument's
-`string` answer is used. `.nil` is read as `The NIL object`, which no word or
+to `string`: when `REQUEST('STRING')` supplies no string or returns without an
+answer, the argument's `string` answer is used. The example with a request
+that returns without an answer is skipped on the oracle because pinned
+ooRexx can crash on that input. `.nil` is read as `The NIL object`, which no word or
 command starts with. The [non-string answer rule](r:class.stream.deviation.30)
 gives the errors when `string` yields no usable value.
 The option that `arrayIn`, `makeArray` and `arrayOut` take is read as a
@@ -886,6 +888,31 @@ t~command(.os~new("query size")) => [4]
 t~command(.nil) => 93.914
 t~query(.badrequest~new("size")) => [4]
 t~command(.badrequest~new("query size")) => [4]
+```
+
+```rexx
+f = 'spec-stream-no-result.tmp'
+call charout f, 'abc'
+call charout f
+s = .stream~new(f)
+say s~query(.option~new('size'))
+say s~command(.option~new('query size'))
+s~close
+call sysfiledelete f
+::class option
+::method init
+  expose option
+  use arg option
+::method request
+  return
+::method string
+  expose option
+  return option
+```
+
+```output no-oracle
+3
+3
 ```
 
 ```rexx
