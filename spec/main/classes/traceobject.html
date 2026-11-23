@@ -1215,8 +1215,10 @@ say '['n~makeString']'
 <p><code>setMakeString</code> replaces <code>makeStringImpl</code> with a method of the program: the
 argument is a <code>Method</code> object or a source that <a href="method.html#r-class.method.new"><code>Method~new</code></a>
 accepts. The method receives the <code>TraceObject</code> and answers the text. From then on it supplies <code>makeStringImpl</code>, and with it
-<code>makeString</code>, whatever the <code>option</code> is, until <code>unsetMakeString</code> takes it away; a
-second <code>setMakeString</code> replaces the first. It answers no value. A source that
+<code>makeString</code>, whatever the <code>option</code> is, until <code>unsetMakeString</code> takes it away.
+When the interpreter calls the method to render a trace line, it runs
+without producing trace lines of its own. A second <code>setMakeString</code> replaces the
+first. It answers no value. A source that
 does not translate raises the error that <code>Method~new</code> raises for it. An argument
 that cannot supply a source, such as <code>.nil</code>, raises <code>SYNTAX 93.961</code>. No argument
 raises <code>93.901</code> and a second one raises <code>93.902</code>. <code>unsetMakeString</code> takes no argument and answers no value.</p>

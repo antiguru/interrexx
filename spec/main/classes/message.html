@@ -306,8 +306,9 @@ target raises <code>88.901</code>. The target is any object, <code>.nil</code> i
 checked as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> checks it: a string, or an
 array of two items, the name and a class that starts the search (<a href="methods.html#r-class.methods.scoped.send">the scoped
 send rule</a>). A name that is not a string is read
-as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> reads it, through <code>request</code> with
-<code>ARRAY</code>; <code>.nil</code> and an object that answers <code>.nil</code> raise <code>93.972</code>, an array of
+as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> reads it, with an array conversion
+before any string conversion. A value that provides neither form, such as
+<code>.nil</code>, raises <code>93.972</code>, an array of
 another size <code>93.946</code>, an array whose first item is missing <code>88.901</code>, an array
 with a first item that has no string value <code>88.909</code> and one with a second item
 that is not a class <code>88.914</code>. The null string is a name. The option that
@@ -443,8 +444,8 @@ holds its target, its name and its arguments. The answer of <code>init</code> is
 used, and <code>new</code> answers the new object, as <a href="index.html#r-class.index.new">the new
 rule</a> says for every class. <code>new</code> makes an instance of the
 class that received it, so a subclass of <code>Message</code> makes instances of itself. A
-name that is no string is sent <code>request</code> once, at <code>new</code>; the message then holds
-the name the answer gives, and running it sends nothing more. The second
+name is converted at <code>new</code>; the message then holds the name the conversion
+gives, and running it sends nothing more. The second
 example shows it.</p>
 <pre><code class="language-rexx">t = .t~new
 m = .mine~new(t, 'show', 'A', .logged~new)

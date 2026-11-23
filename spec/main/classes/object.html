@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="object"><a class="header" href="#object">Object</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Object Class; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; Comparison Methods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; Concatenation Methods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; class; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; copy; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; hashCode; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; hasMethod; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; identityHash; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; init; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; instanceMethod; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; instanceMethods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isA; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isInstanceOf; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isNil; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName=; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; request; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; run (Private Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; send; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; sendWith; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; setMethod (Private Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; start; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; startWith; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; string; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; unsetMethod (Private Method)</p>
-<p class="deviations">Deviations: D4, D28, D30, D32, D33, D36, D105, D107, D109, D110, D118, D124</p>
+<p class="deviations">Deviations: D4, D28, D30, D32, D33, D36, D105, D107, D109, D110, D118, D124, D183</p>
 <p><code>Object</code> is the root of the class hierarchy: every class has it among its
 ancestors, so every object understands the methods of this page, and every
 class but those that <code>Class~new</code> makes understands its class method <code>new</code>. The
@@ -1197,8 +1197,12 @@ says. An object that is not a string is sent <code>request</code> with the argum
 <code>ARRAY</code>, and the answer is used as the two-item form, whatever the class of
 the first argument is (<a href="#r-class.object.send.sends">the sends rule</a>; an
 instance of a subclass of <code>String</code> is read as
-<a href="#r-class.object.deviation.109">Deviation 109</a> states). <code>.nil</code>, and an object
-that answers <code>.nil</code> or anything else that is not an <code>Array</code>, raise <code>SYNTAX 93.972</code>, an array of another size <code>93.946</code>, an array whose first item is missing <code>88.901</code>
+<a href="#r-class.object.deviation.109">Deviation 109</a> states). When the first argument
+is neither a string nor an array and the array conversion gives no array, it
+is read as <a href="index.html#r-class.index.string">a string argument</a>
+(<a href="#r-class.object.deviation.183">Deviation 183</a>). <code>.nil</code> and objects that supply
+neither form raise <code>SYNTAX 93.972</code>. An array of another size raises <code>93.946</code>,
+an array whose first item is missing <code>88.901</code>
 and one whose first item has no string value <code>88.909</code>, and no argument
 <code>88.901</code>. The null string is a name
 like any other: it names the abuttal method
@@ -1276,9 +1280,10 @@ o~send(.array~of("count", 1)) =&gt; 88.914
 <p><code>send</code> sends a first argument that is not a string the message <code>request</code> with
 the argument <code>ARRAY</code>; the same holds for <code>sendWith</code>, <code>startWith</code> and <code>start</code>,
 at the call, and for the message name of <a href="message.html#r-class.message.new"><code>Message~new</code></a>,
-at <code>new</code>. The answer of <code>request</code> is read as the previous rule says. The order
-differs by method. <code>send</code> and <code>start</code> send <code>request</code> first. <code>sendWith</code> checks
-the number of its arguments, then sends <code>request</code> to the name, then sends
+at <code>new</code>. The answer of <code>request</code> is read as the previous rule says, and any
+string conversion follows before the method reads another argument. The
+conversion order differs by method. <code>send</code> and <code>start</code> send <code>request</code> first.
+<code>sendWith</code> checks the number of its arguments, then sends <code>request</code> to the name, then sends
 <code>request</code> to the second argument. <code>startWith</code> checks the number of its
 arguments and that the second is there, sends <code>request</code> to the second
 argument, and then to the name, so an error in the array leaves the name
@@ -1313,7 +1318,8 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return .array~of('count', .w)
 ::class wrong
 ::method request
-  return 'count'
+  if arg(1) == 'ARRAY' then return 'count'
+  return .nil
 ::class none
 ::class larr subclass array
 ::method request
@@ -2154,6 +2160,47 @@ say '12'~request('ARRAY')~class~id 12~makeArray~class~id
 ran 12 c
 Array Array
 Array Array
+</code></pre>
+<div class="rule" id="r-class.object.deviation.183"><a href="#r-class.object.deviation.183">[class.object.deviation.183]</a></div>
+<p>A message name supplied by an object through <code>REQUEST('STRING')</code> is used
+when that object supplies no array through <code>REQUEST('ARRAY')</code>. ooRexx raises
+<code>SYNTAX 93.972</code> for that object. An array returned by the first request has
+priority, and an object with only a <code>STRING</code> method still supplies neither form.</p>
+<pre><code class="language-rexx">o = .target~new
+n = .named~new
+say o~send(n)
+say o~sendWith(n, .array~new)
+say o~start(n)~result
+say o~startWith(n, .array~new)~result
+say .message~new(o, n)~send
+say o~send(.both~new)
+signal on syntax name bad
+say o~send(.displayed~new)
+exit
+bad: say condition('o')~code
+exit
+::class target
+::method found
+  return 'found'
+::method scoped
+  return 'scoped'
+::class named
+::method makeString
+  return 'found'
+::class both subclass named
+::method makeArray
+  return .array~of('scoped', .target)
+::class displayed
+::method string
+  return 'found'
+</code></pre>
+<pre><code class="language-output">found
+found
+found
+found
+found
+scoped
+93.972
 </code></pre>
 <div class="rule" id="r-class.object.deviation.109"><a href="#r-class.object.deviation.109">[class.object.deviation.109]</a></div>
 <p>An instance of a subclass of <code>String</code> that names a message, for <code>send</code>,
