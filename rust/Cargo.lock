@@ -692,6 +692,7 @@ dependencies = [
  "rustix",
  "sha2",
  "tz-rs",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -728,6 +729,7 @@ version = "0.1.0"
 dependencies = [
  "interrexx-api",
  "libc",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

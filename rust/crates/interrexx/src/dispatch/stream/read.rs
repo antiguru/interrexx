@@ -44,6 +44,7 @@ pub(super) fn read_at(
 /// one byte is read and kept for the next read, which returns it first; a
 /// read at the end of input finds none, and is 0. A state that cannot be
 /// learned answers 1.
+#[cfg(unix)]
 pub(super) fn transient_has_data(open: &mut interrexx_core::OpenFile) -> bool {
     use rustix::event::{PollFd, PollFlags, Timespec, poll};
     use std::io::Read;
@@ -112,4 +113,9 @@ pub(super) fn read_line_from(
             }
         }
     }
+}
+
+#[cfg(windows)]
+pub(super) fn transient_has_data(open: &interrexx_core::OpenFile) -> bool {
+    open.pending.is_some() || crate::host::bytes_waiting(open.file()).is_none_or(|bytes| bytes > 0)
 }

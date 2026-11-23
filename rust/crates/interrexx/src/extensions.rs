@@ -86,6 +86,7 @@ static LIBRARIES: &[RustLibrary] = &[
             ("RegExp_Pos", crate::dispatch::regexp_methods::pos),
         ],
     },
+    #[cfg(unix)]
     RustLibrary {
         name: "rxsock",
         opened: crate::builtin::rxsock_wait::prepare,
@@ -127,6 +128,8 @@ static LIBRARIES: &[RustLibrary] = &[
         ],
         methods: &[],
     },
+    // The upstream Windows build does not ship this Unix extension.
+    #[cfg(unix)]
     RustLibrary {
         name: "rxunixsys",
         opened: || {},

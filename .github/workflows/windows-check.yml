@@ -1,0 +1,67 @@
+name: Windows port checks
+on:
+  pull_request:
+    paths:
+      - .github/workflows/windows-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-cargo-check
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  api-libraries:
+    name: Windows interpreter and library tests
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
+      - run: cargo test --locked --lib -p interrexx-rxapi -p interrexx-capi-rxapi
+      - name: Test interpreter paths and search on Windows
+        shell: pwsh
+        run: |
+          @'
+          #[path = "crates/interrexx/src/paths.rs"]
+          mod paths;
+          #[path = "crates/interrexx/src/require.rs"]
+          mod require;
+          '@ | Set-Content -Encoding utf8 windows-path-tests.rs
+          rustc --edition=2024 --test windows-path-tests.rs -o windows-path-tests.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./windows-path-tests.exe
+
+      - name: Build rexx.exe
+        run: cargo build --locked -p interrexx --bin rexx
+      - name: Run the Windows interpreter
+        shell: pwsh
+        run: |
+          $rexx = (Resolve-Path target/debug/rexx.exe).Path
+          function Check-Rexx($expected, $arguments) {
+            $output = @(& $rexx @arguments)
+            if ($LASTEXITCODE -ne 0 -or $output.Count -ne 1 -or $output[0] -cne $expected) {
+              throw "Expected '$expected', got '$($output -join '|')' (exit $LASTEXITCODE)"
+            }
+          }
+          Check-Rexx '4' @('-e', 'say 2 + 2')
+          Check-Rexx 'local queue' @('-e', "queue 'local queue'; parse pull answer; say answer")
+          Check-Rexx 'child process' @('-e', "address system 'echo child process'")
+          $script = Join-Path $env:RUNNER_TEMP 'échantillon.rex'
+          'say 2 + 2' | Set-Content -Encoding ascii $script
+          Check-Rexx '4' @($script)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rexx-windows-x64
+          path: rust/target/debug/rexx.exe
+          if-no-files-found: error
+          retention-days: 7

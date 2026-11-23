@@ -42,8 +42,33 @@ fn flag(interp: &mut Interp, yes: bool) -> Result<Option<ObjRef>, Failure> {
 /// both where its owner's bits alone would say nothing useful. As root every
 /// one of these answers 1 instead, which is a property of the run and not of
 /// the code.
-fn reachable(path: &Path, mode: rustix::fs::Access) -> bool {
-    rustix::fs::access(path, mode).is_ok()
+fn reachable(path: &Path, write: bool) -> bool {
+    #[cfg(unix)]
+    {
+        use rustix::fs::Access;
+        let mode = if write {
+            Access::WRITE_OK
+        } else {
+            Access::READ_OK
+        };
+        rustix::fs::access(path, mode).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_FLAG_BACKUP_SEMANTICS, FILE_READ_DATA, FILE_WRITE_DATA,
+        };
+        std::fs::OpenOptions::new()
+            .access_mode(if write {
+                FILE_WRITE_DATA
+            } else {
+                FILE_READ_DATA
+            })
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+            .open(path)
+            .is_ok()
+    }
 }
 
 /// `file_exists`: whether anything is there, following symlinks.
@@ -115,7 +140,7 @@ pub(super) fn can_read(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let path = path_argument(interp, args)?;
-    let yes = reachable(&path, rustix::fs::Access::READ_OK);
+    let yes = reachable(&path, false);
     flag(interp, yes)
 }
 
@@ -127,7 +152,7 @@ pub(super) fn can_write(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let path = path_argument(interp, args)?;
-    let yes = reachable(&path, rustix::fs::Access::WRITE_OK);
+    let yes = reachable(&path, true);
     flag(interp, yes)
 }
 
@@ -276,6 +301,7 @@ enum Stamp {
 /// **The file is not opened.** A read-only file's stamp is still the owner's to
 /// set, answering `1` (`class.file.lastmodified-set`), which an implementation
 /// going through an open writable handle could not do.
+#[cfg(unix)]
 fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
     let target = system_time_of(when);
     let spec = match target.duration_since(std::time::UNIX_EPOCH) {
@@ -315,6 +341,25 @@ fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
         },
     };
     rustix::fs::utimensat(rustix::fs::CWD, path, &times, rustix::fs::AtFlags::empty()).is_ok()
+}
+
+#[cfg(windows)]
+fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
+    use std::os::windows::fs::OpenOptionsExt as _;
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_BACKUP_SEMANTICS, FILE_WRITE_ATTRIBUTES,
+    };
+    let times = std::fs::FileTimes::new();
+    let times = match which {
+        Stamp::Modified => times.set_modified(system_time_of(when)),
+        Stamp::Accessed => times.set_accessed(system_time_of(when)),
+    };
+    std::fs::OpenOptions::new()
+        .access_mode(FILE_WRITE_ATTRIBUTES)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+        .open(path)
+        .and_then(|file| file.set_times(times))
+        .is_ok()
 }
 
 /// `file_set_last_modified`: the modification stamp, leaving the access stamp
@@ -374,7 +419,7 @@ pub(super) fn delete_file(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let path = path_argument(interp, args)?;
-    if !reachable(&path, rustix::fs::Access::WRITE_OK) {
+    if !reachable(&path, true) {
         return flag(interp, false);
     }
     let gone = std::fs::remove_file(&path).is_ok();
@@ -442,16 +487,25 @@ fn write_bits(
 ) -> Result<Option<ObjRef>, Failure> {
     let path = path_argument(interp, args)?;
     if let Ok(meta) = std::fs::metadata(&path) {
-        use std::os::unix::fs::PermissionsExt as _;
-        let mode = meta.permissions().mode();
-        // All three, not the owner's alone -- measured, `644` becomes `444`
-        // and then `666`, so the setter ignores the umask.
-        let rewritten = if writable {
-            mode | 0o222
-        } else {
-            mode & !0o222
-        };
-        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(rewritten));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let mode = meta.permissions().mode();
+            // All three, not the owner's alone -- measured, `644` becomes `444`
+            // and then `666`, so the setter ignores the umask.
+            let rewritten = if writable {
+                mode | 0o222
+            } else {
+                mode & !0o222
+            };
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(rewritten));
+        }
+        #[cfg(windows)]
+        {
+            let mut permissions = meta.permissions();
+            permissions.set_readonly(!writable);
+            let _ = std::fs::set_permissions(&path, permissions);
+        }
     }
     let _ = interp;
     Ok(None)

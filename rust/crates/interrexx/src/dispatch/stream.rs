@@ -769,6 +769,7 @@ fn open_failed(
 /// FIFO or a socket, which is what `QUERY STREAMTYPE` answers `TRANSIENT` for
 /// (`SysFile::getStreamTypeInfo`, a socket since upstream bug #2173). A
 /// regular file is persistent.
+#[cfg(unix)]
 fn is_transient(file: &std::fs::File) -> bool {
     use std::os::unix::fs::FileTypeExt;
     file.metadata().is_ok_and(|meta| {
@@ -779,6 +780,7 @@ fn is_transient(file: &std::fs::File) -> bool {
 
 /// Whether an open descriptor is a device, as `SysFile::getStreamTypeInfo`
 /// decides it: a character or block device.
+#[cfg(unix)]
 fn is_device(file: &std::fs::File) -> bool {
     use std::os::unix::fs::FileTypeExt;
     file.metadata()
@@ -916,6 +918,7 @@ fn stream_descriptor(interp: &Interp, receiver: ObjRef) -> Result<Option<i32>, F
 
 /// The file a `HANDLE:n` stream opens: a duplicate of descriptor `n`
 /// (`r[bif.stream.handle]`).
+#[cfg(unix)]
 fn descriptor_file(descriptor: i32) -> std::io::Result<std::fs::File> {
     crate::builtin::rxsock_sys::duplicate(descriptor)
         .map(std::fs::File::from)
@@ -924,6 +927,7 @@ fn descriptor_file(descriptor: i32) -> std::io::Result<std::fs::File> {
 
 /// The mode an implicit open of a `HANDLE:n` stream takes: the access mode the
 /// descriptor itself was opened with.
+#[cfg(unix)]
 fn descriptor_mode(file: &std::fs::File) -> interrexx_core::OpenMode {
     use rustix::fs::OFlags;
     // `O_RDONLY` is no bit at all, on Linux and macOS alike: the access mode is
@@ -1036,9 +1040,15 @@ fn ensure_owned_stdout_file(
         return Ok(None);
     }
     let buffered = !state.mode.nobuffer;
+    #[cfg(unix)]
     let file = match rustix::io::dup(std::io::stdout()) {
         Ok(descriptor) => std::fs::File::from(descriptor),
         Err(error) => return Ok(Some(error.into())),
+    };
+    #[cfg(windows)]
+    let file = match crate::host::standard_file(1) {
+        Ok(file) => file,
+        Err(error) => return Ok(Some(error)),
     };
     require_mut(interp, receiver)?.open =
         Some(interrexx_core::OpenFile::standard_output(file, buffered));
@@ -2488,4 +2498,27 @@ pub(super) fn uninit(
         interp.heap.rehold_body_bytes(before, after);
     }
     Ok(None)
+}
+
+#[cfg(windows)]
+fn is_transient(file: &std::fs::File) -> bool {
+    crate::host::transient(file)
+}
+
+#[cfg(windows)]
+fn is_device(file: &std::fs::File) -> bool {
+    crate::host::file_kind(file) == windows_sys::Win32::Storage::FileSystem::FILE_TYPE_CHAR
+}
+
+#[cfg(windows)]
+fn descriptor_file(descriptor: i32) -> std::io::Result<std::fs::File> {
+    crate::host::standard_file(descriptor)
+}
+
+#[cfg(windows)]
+fn descriptor_mode(_file: &std::fs::File) -> interrexx_core::OpenMode {
+    interrexx_core::OpenMode {
+        read_write: true,
+        ..Default::default()
+    }
 }

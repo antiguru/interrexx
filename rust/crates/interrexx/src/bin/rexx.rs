@@ -1,7 +1,6 @@
 //! `rexx`, the command-line interpreter.
 
 use std::io::{IsTerminal, Write};
-use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::process::ExitCode;
 
 use interrexx::launcher::{self, Command, Program};
@@ -16,7 +15,7 @@ fn main() -> ExitCode {
     interrexx::install_signal_handlers();
     let args: Vec<Vec<u8>> = std::env::args_os()
         .skip(1)
-        .map(OsStringExt::into_vec)
+        .map(std::ffi::OsString::into_encoded_bytes)
         .collect();
     let run = match launcher::parse(&args) {
         Command::Usage => {
@@ -56,7 +55,7 @@ fn main() -> ExitCode {
     // interpreter reads it, and passes over a value it cannot read, so that
     // value is refused here. An empty value leaves the seed unset.
     if let Some(value) = std::env::var_os(interrexx::HASH_SEED_ENV)
-        && let Err(message) = interrexx::parse_hash_seed(value.as_bytes())
+        && let Err(message) = interrexx::parse_hash_seed(value.as_encoded_bytes())
     {
         eprintln!("rexx: {message}");
         return ExitCode::from(2);
@@ -108,7 +107,11 @@ fn main() -> ExitCode {
             }
             match launcher::load(&name) {
                 Ok((found, text)) => (
-                    interrexx::run_program_named(found.as_os_str().as_bytes(), text, invocation),
+                    interrexx::run_program_named(
+                        found.as_os_str().as_encoded_bytes(),
+                        text,
+                        invocation,
+                    ),
                     false,
                 ),
                 // The oracle sends `-o`'s options before it looks for the
@@ -178,6 +181,7 @@ fn report((text, status): (Vec<u8>, i32)) -> ExitCode {
 
 /// Whether standard input, output and error are each a terminal or a pipe, from
 /// each descriptor's own status, which every Unix answers. A closed one is not.
+#[cfg(unix)]
 fn transient_standard_streams() -> [bool; 3] {
     use std::os::fd::{AsFd, BorrowedFd};
     let transient = |fd: BorrowedFd<'_>| {
@@ -195,4 +199,9 @@ fn transient_standard_streams() -> [bool; 3] {
         transient(std::io::stdout().as_fd()),
         transient(std::io::stderr().as_fd()),
     ]
+}
+
+#[cfg(windows)]
+fn transient_standard_streams() -> [bool; 3] {
+    launcher::transient_standard_streams()
 }

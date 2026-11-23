@@ -1,5 +1,6 @@
 use super::{Piece, UNKNOWN_COMMAND, Waited, exit_code};
 use std::io::Read;
+#[cfg(unix)]
 use std::os::fd::AsFd;
 
 /// A child's pieces' destination: the sink and where standard output and
@@ -16,6 +17,7 @@ type Routes<'a> = (&'a (dyn Fn(Piece, Vec<u8>) + Sync), Piece, Option<Piece>);
 /// fail. A command completes when its process does (rexxref intro.xml,
 /// "Commands to External Environments": the environment "returns control to
 /// the language processor after setting a return code").
+#[cfg(unix)]
 fn read_all<R: Read + AsFd + Send + 'static>(
     mut reader: R,
     ended: Option<&std::os::fd::OwnedFd>,
@@ -67,6 +69,60 @@ fn read_all<R: Read + AsFd + Send + 'static>(
     }
 }
 
+#[cfg(windows)]
+fn read_all<R: Read + std::os::windows::io::AsRawHandle + Send + 'static>(
+    mut reader: R,
+    ended: Option<&std::os::windows::io::OwnedHandle>,
+    kept: &mut Vec<u8>,
+    written: Option<(&(dyn Fn(Piece, Vec<u8>) + Sync), Piece)>,
+) {
+    let mut block = [0; 4096];
+    let mut take = |bytes: &[u8]| match written {
+        Some((written, kind)) => written(kind, bytes.to_vec()),
+        None => kept.extend_from_slice(bytes),
+    };
+    let mut remaining = None;
+    loop {
+        let maximum = match ended {
+            Some(process) => {
+                let Some(available) = crate::host::bytes_waiting(&reader) else {
+                    break;
+                };
+                let available = available as usize;
+                if remaining.is_none() && crate::host::child_ended(process, available == 0) {
+                    // Take only the data already written when the child exits.
+                    remaining = Some(crate::host::bytes_waiting(&reader).unwrap_or(0) as usize);
+                }
+                if remaining == Some(0) {
+                    std::thread::spawn(move || {
+                        let _ = std::io::copy(&mut reader, &mut std::io::sink());
+                    });
+                    break;
+                }
+                if available == 0 {
+                    continue;
+                }
+                remaining
+                    .unwrap_or(available)
+                    .min(available)
+                    .min(block.len())
+            }
+            None => block.len(),
+        };
+        match reader.read(&mut block[..maximum]) {
+            Ok(0) => break,
+            Ok(size) => {
+                take(&block[..size]);
+                if let Some(left) = &mut remaining {
+                    *left -= size;
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(_) => break,
+        }
+    }
+}
+
 /// Collects what `running` writes and its return code, writing `input` to
 /// it first where there is one.
 ///
@@ -90,8 +146,17 @@ pub(super) fn collect(
     let err_route = routes.and_then(|(written, _, err)| Some((written, err?)));
     // The readers poll it for the child's end, which reaps nothing; the reap
     // comes after them. Without one, every pipe is read to its end.
+    #[cfg(unix)]
     let ended = crate::host::exit_watch(&running).map(interrexx_rxapi::reserved::reserve);
+    #[cfg(unix)]
     let ended_reader = ended.as_deref();
+    #[cfg(windows)]
+    let ended = {
+        use std::os::windows::io::AsHandle as _;
+        running.as_handle().try_clone_to_owned().ok()
+    };
+    #[cfg(windows)]
+    let ended_reader = ended.as_ref();
     let mut out = Vec::new();
     let mut err = Vec::new();
     std::thread::scope(|scope| {

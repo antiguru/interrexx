@@ -39,7 +39,7 @@ pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
     }
     if name.first() == Some(&b'~') {
         return match expand_tilde(interp, name) {
-            Some(expanded) if expanded.first() == Some(&b'/') => {
+            Some(expanded) if crate::paths::os_path(&expanded).is_absolute() => {
                 crate::paths::normalize_bytes(&expanded, b"/")
             }
             _ => Vec::new(),
@@ -54,7 +54,14 @@ pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
 pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
     let rest = &name[1..];
     if rest.is_empty() || rest[0] == b'/' {
-        let mut out = interp.env_get(b"HOME").unwrap_or_default().to_vec();
+        let mut out = interp
+            .env_get(if cfg!(windows) {
+                b"USERPROFILE"
+            } else {
+                b"HOME"
+            })
+            .unwrap_or_default()
+            .to_vec();
         out.extend_from_slice(rest);
         return Some(out);
     }
@@ -70,6 +77,7 @@ pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
 /// The home directory the system's user database gives the account `user`,
 /// found as `getpwnam` finds it, so an account that only an NSS source
 /// (LDAP, sssd, systemd-homed) holds is found too.
+#[cfg(unix)]
 pub(crate) fn passwd_home(user: &[u8]) -> Option<Vec<u8>> {
     home_through(user, |name| {
         nix::unistd::User::from_name(name)
@@ -82,6 +90,7 @@ pub(crate) fn passwd_home(user: &[u8]) -> Option<Vec<u8>> {
 /// [`passwd_home`] over `lookup`, which answers the home directory of the
 /// account it is given the name of. A name that is not UTF-8 is no account's:
 /// `lookup` takes text, as the user database's own names are.
+#[cfg(unix)]
 fn home_through(
     user: &[u8],
     lookup: impl FnOnce(&str) -> Option<std::path::PathBuf>,
@@ -101,6 +110,7 @@ pub(crate) fn userid(
     _name: &'static [u8],
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
+    #[cfg(unix)]
     if let Some(name) = name_through(nix::unistd::geteuid().as_raw(), |uid| {
         nix::unistd::User::from_uid(nix::unistd::Uid::from_raw(uid))
             .ok()
@@ -109,7 +119,12 @@ pub(crate) fn userid(
     }) {
         return Ok(interp.text_built(name));
     }
-    for fallback in [b"USER".as_slice(), b"LOGNAME".as_slice()] {
+    for fallback in [
+        b"USER".as_slice(),
+        b"LOGNAME".as_slice(),
+        #[cfg(windows)]
+        b"USERNAME".as_slice(),
+    ] {
         if let Some(value) = interp.env_get(fallback) {
             let value = value.to_vec();
             return Ok(interp.text_built(value));
@@ -119,6 +134,7 @@ pub(crate) fn userid(
 }
 
 /// The login name `lookup` gives the account with uid `uid`, as bytes.
+#[cfg(unix)]
 fn name_through(uid: u32, lookup: impl FnOnce(u32) -> Option<String>) -> Option<Vec<u8>> {
     lookup(uid).map(String::into_bytes)
 }
@@ -180,6 +196,7 @@ pub(crate) fn directory(
 
 /// Whether the process may make `directory` its current one, which is what
 /// `chdir` asks: search permission, with the effective ids.
+#[cfg(unix)]
 fn can_enter(directory: &std::path::Path) -> bool {
     rustix::fs::accessat(
         rustix::fs::CWD,
@@ -454,4 +471,14 @@ mod tests {
         assert_eq!(outcome.exit_code, 0);
         assert_eq!(String::from_utf8_lossy(&outcome.stdout), "/h /h/x\n[] /x\n");
     }
+}
+
+#[cfg(windows)]
+pub(crate) fn passwd_home(_user: &[u8]) -> Option<Vec<u8>> {
+    None
+}
+
+#[cfg(windows)]
+fn can_enter(directory: &std::path::Path) -> bool {
+    std::fs::read_dir(directory).is_ok()
 }

@@ -266,7 +266,7 @@ pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 
     let Some(output) = output else {
         return 0;
     };
-    let path = <std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(output);
+    let path = crate::paths::os_path(output);
     if std::fs::write(path, &image).is_err() {
         let _ = std::fs::remove_file(path);
         let (report, _) = launcher::output_unwritable(output);

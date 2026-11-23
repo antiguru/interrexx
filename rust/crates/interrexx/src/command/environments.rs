@@ -21,9 +21,13 @@ use crate::scheduler::ActivityId;
 use crate::{Interp, Loud};
 
 /// The names of the built-in handler, each an environment of its own.
+#[cfg(unix)]
 const SYSTEM_NAMES: &[&[u8]] = &[
     b"SH", b"", b"COMMAND", b"SYSTEM", b"KSH", b"CSH", b"BSH", b"BASH", b"TCSH", b"ZSH", b"PATH",
 ];
+
+#[cfg(windows)]
+const SYSTEM_NAMES: &[&[u8]] = &[b"CMD", b"", b"COMMAND", b"SYSTEM", b"PATH"];
 
 /// A native command handler: what a `CommandHandler` holds for every handler
 /// type but `REXX_OBJECT`.

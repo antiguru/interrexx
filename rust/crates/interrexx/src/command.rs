@@ -2,8 +2,7 @@
 //! child it runs, and the return code that becomes `RC`, `.RS` and a
 //! condition.
 
-use std::ffi::OsStr;
-use std::os::unix::ffi::OsStrExt;
+#[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::process::Stdio;
 use std::rc::Rc;
@@ -36,6 +35,7 @@ pub(crate) fn whole_value(text: &[u8]) -> Option<i32> {
 }
 
 /// The shell directory for every unix but AIX.
+#[cfg(unix)]
 const SHELL_DIRECTORY: &str = "/bin";
 
 /// `MAX_COMMAND_ARGS`: the most arguments `ADDRESS PATH` splits a command
@@ -165,7 +165,11 @@ fn handler_for(environment: &[u8]) -> Option<Handler> {
     match upper.as_slice() {
         // `ioCommandHandler` maps these onto `sh` by name rather than by
         // lowercasing what it was given.
+        #[cfg(unix)]
         b"" | b"COMMAND" | b"SYSTEM" => Some(Handler::Shell("sh".to_string())),
+        #[cfg(windows)]
+        b"" | b"COMMAND" | b"SYSTEM" | b"CMD" => Some(Handler::Shell("cmd.exe".to_string())),
+        #[cfg(unix)]
         b"SH" | b"KSH" | b"CSH" | b"BSH" | b"BASH" | b"TCSH" | b"ZSH" => Some(Handler::Shell(
             String::from_utf8_lossy(&upper).to_ascii_lowercase(),
         )),
@@ -371,16 +375,20 @@ fn physical_directory(interp: &Interp, target: &[u8]) -> Result<std::path::PathB
     if target.is_empty() {
         return Err(ENOENT);
     }
+    #[cfg(unix)]
     let joined = if target[0] == b'/' {
         target.to_vec()
     } else {
         [interp.cwd_bytes(), b"/", target].concat()
     };
-    let directory = std::fs::canonicalize(OsStr::from_bytes(&joined))
+    #[cfg(windows)]
+    let joined = crate::paths::normalize_bytes(target, interp.cwd_bytes());
+    let directory = std::fs::canonicalize(crate::paths::os_path(&joined))
         .map_err(|error| error.raw_os_error().unwrap_or(ENOENT))?;
     if !directory.is_dir() {
         return Err(ENOTDIR);
     }
+    #[cfg(unix)]
     rustix::fs::access(&directory, rustix::fs::Access::EXEC_OK)
         .map_err(|errno| errno.raw_os_error())?;
     Ok(directory)
@@ -495,6 +503,7 @@ fn assign_environment(
 /// The return code reported for a finished child: the exit status where there
 /// is one, and the negated signal number where the child died of one (the
 /// `WIFEXITED`/`WTERMSIG` pair, whose `-1` clamp this keeps).
+#[cfg(unix)]
 fn exit_code(status: std::process::ExitStatus) -> i32 {
     match status.code() {
         Some(code) => code,
@@ -503,6 +512,11 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
             if rc == 1 { -1 } else { rc }
         }
     }
+}
+
+#[cfg(windows)]
+fn exit_code(status: std::process::ExitStatus) -> i32 {
+    status.code().unwrap_or(UNKNOWN_COMMAND)
 }
 
 /// The `SYNTAX` error the `::OPTIONS` for `condition` makes of it: 98.971 for
@@ -749,8 +763,25 @@ fn start(
     interp.sync_input_offset();
     let mut builder = match handler {
         Handler::Shell(shell) => {
-            let mut builder = std::process::Command::new(format!("{SHELL_DIRECTORY}/{shell}"));
-            builder.arg("-c").arg(OsStr::from_bytes(command));
+            let Some(text) = crate::paths::os_str(command) else {
+                return Ok(nothing(UNKNOWN_COMMAND));
+            };
+            #[cfg(unix)]
+            let builder = {
+                let mut builder = std::process::Command::new(format!("{SHELL_DIRECTORY}/{shell}"));
+                builder.arg("-c").arg(text);
+                builder
+            };
+            #[cfg(windows)]
+            let builder = {
+                use std::os::windows::process::CommandExt as _;
+                let root = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
+                let mut builder = std::process::Command::new(
+                    std::path::PathBuf::from(root).join("System32").join(shell),
+                );
+                builder.args(["/D", "/C"]).raw_arg(text);
+                builder
+            };
             builder
         }
         Handler::Path => {
@@ -760,21 +791,33 @@ fn start(
             let Some((program, rest)) = args.split_first() else {
                 return Ok(nothing(UNKNOWN_COMMAND));
             };
-            let mut builder = std::process::Command::new(OsStr::from_bytes(program));
-            for argument in rest {
-                builder.arg(OsStr::from_bytes(argument));
-            }
+            let Some(program) = crate::paths::os_str(program) else {
+                return Ok(nothing(UNKNOWN_COMMAND));
+            };
+            let Some(args) = rest
+                .iter()
+                .map(|arg| crate::paths::os_str(arg))
+                .collect::<Option<Vec<_>>>()
+            else {
+                return Ok(nothing(UNKNOWN_COMMAND));
+            };
+            let mut builder = std::process::Command::new(program);
+            builder.args(args);
             builder
         }
     };
     builder.env_clear();
     for (name, value) in &interp.env {
-        builder.env(OsStr::from_bytes(name), OsStr::from_bytes(value));
+        if let (Some(name), Some(value)) = (crate::paths::os_str(name), crate::paths::os_str(value))
+        {
+            builder.env(name, value);
+        }
     }
     if let Some(mode) = switch_mode {
         builder.env("REXX_SWITCH_MODE", mode);
         builder.env(crate::SIM_CHILD_ENV, "1");
         // A group of its own, which a refused wait kills whole.
+        #[cfg(unix)]
         std::os::unix::process::CommandExt::process_group(&mut builder, 0);
     }
     builder.current_dir(crate::paths::os_path(interp.cwd_bytes()));
@@ -959,7 +1002,13 @@ impl Interp {
         let Some(bound) = self.sim_block_bound() else {
             return Ok(collect(running, input, merged, ends, None));
         };
+        #[cfg(unix)]
         let pid = running.id();
+        #[cfg(windows)]
+        let process = {
+            use std::os::windows::io::AsHandle as _;
+            running.as_handle().try_clone_to_owned().ok()
+        };
         let (sender, receiver) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
             crate::signal::block();
@@ -969,12 +1018,18 @@ impl Interp {
         match receiver.recv_timeout(bound) {
             Ok(waited) => Ok(waited),
             Err(_) => {
+                #[cfg(unix)]
                 let group = i32::try_from(pid)
                     .ok()
                     .and_then(rustix::process::Pid::from_raw);
+                #[cfg(unix)]
                 if let Some(group) = group {
                     let _ =
                         rustix::process::kill_process_group(group, rustix::process::Signal::KILL);
+                }
+                #[cfg(windows)]
+                if let Some(process) = process {
+                    crate::host::terminate(&process);
                 }
                 Err(crate::Loud::sim_blocked_command().into())
             }

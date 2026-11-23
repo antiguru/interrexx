@@ -19,7 +19,7 @@ pub(crate) use std::thread;
 
 use std::sync::PoisonError;
 
-#[cfg(not(all(loom, test)))]
+#[cfg(all(unix, not(all(loom, test))))]
 use interrexx_rxapi::reserved::{Reserved, reserve};
 use std::time::{Duration, Instant};
 
@@ -40,7 +40,7 @@ pub(crate) fn wait<'a, T>(condvar: &Condvar, guard: MutexGuard<'a, T>) -> MutexG
 /// timeout. Registration changes and the signal handlers each write one
 /// byte to the socket's nonblocking write end. The socket is never closed,
 /// so a byte written while no timer thread reads stays until one does.
-#[cfg(not(all(loom, test)))]
+#[cfg(all(unix, not(all(loom, test))))]
 pub(crate) struct Wake {
     reader: Reserved<std::os::unix::net::UnixStream>,
     writer: Reserved<std::os::unix::net::UnixStream>,
@@ -48,7 +48,7 @@ pub(crate) struct Wake {
     timer: Reserved<std::os::fd::OwnedFd>,
 }
 
-#[cfg(not(all(loom, test)))]
+#[cfg(all(unix, not(all(loom, test))))]
 impl Wake {
     pub(crate) fn new() -> Wake {
         let (reader, writer) = crate::host::unix_stream_pair().expect("the timer's wake socket");
@@ -129,6 +129,55 @@ impl Wake {
     }
 
     /// Whether a signal arrived since the last call.
+    pub(crate) fn take_signal(&self) -> bool {
+        crate::signal::take_pending()
+    }
+}
+
+#[cfg(all(windows, not(all(loom, test))))]
+pub(crate) struct Wake {
+    pending: Mutex<bool>,
+    arrived: Condvar,
+}
+
+#[cfg(all(windows, not(all(loom, test))))]
+impl Wake {
+    pub(crate) fn new() -> Self {
+        Self {
+            pending: Mutex::new(false),
+            arrived: Condvar::new(),
+        }
+    }
+
+    pub(crate) fn notify(&self) {
+        *lock(&self.pending) = true;
+        self.arrived.notify_one();
+    }
+
+    pub(crate) fn wait(&self, timeout: Option<Duration>) {
+        if timeout == Some(Duration::ZERO) {
+            return;
+        }
+        let pending = lock(&self.pending);
+        let mut pending = match timeout {
+            Some(timeout) => {
+                self.arrived
+                    .wait_timeout_while(pending, timeout, |pending| !*pending)
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .0
+            }
+            None => self
+                .arrived
+                .wait_while(pending, |pending| !*pending)
+                .unwrap_or_else(PoisonError::into_inner),
+        };
+        *pending = false;
+    }
+
+    pub(crate) fn install_signals(&'static self) {
+        crate::signal::install(self);
+    }
+
     pub(crate) fn take_signal(&self) -> bool {
         crate::signal::take_pending()
     }

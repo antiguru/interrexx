@@ -24,7 +24,7 @@ pub struct ApiLibraries {
 }
 
 /// The libraries on the host `target_os` names, as Rust spells it (`linux`, `macos`).
-/// Hosts other than Apple's take the ELF names, which every other Unix shares.
+/// Other Unix targets share the ELF names.
 #[must_use]
 pub fn api_libraries(target_os: &str) -> ApiLibraries {
     match target_os {
@@ -34,6 +34,13 @@ pub fn api_libraries(target_os: &str) -> ApiLibraries {
             librexx_id: "@rpath/librexx.4.dylib",
             librexxapi_id: "@rpath/librexxapi.4.dylib",
             librexx_beside: "@loader_path/librexx.4.dylib",
+        },
+        "windows" => ApiLibraries {
+            librexx: "rexx.dll",
+            librexxapi: "rexxapi.dll",
+            librexx_id: "rexx.dll",
+            librexxapi_id: "rexxapi.dll",
+            librexx_beside: "rexx.dll",
         },
         _ => ApiLibraries {
             librexx: "librexx.so.4",

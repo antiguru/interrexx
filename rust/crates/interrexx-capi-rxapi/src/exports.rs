@@ -17,6 +17,7 @@ use interrexx_api::layout::{
 /// as a dependency of this library. Lookup goes through `librexx`'s handle, never the global scope, where
 /// this library's own definition may come first. Aborts where the library or the name is missing:
 /// there is no state to answer from.
+#[cfg(unix)]
 fn target(name: &CStr) -> *mut c_void {
     static LIBREXX: OnceLock<usize> = OnceLock::new();
     let handle = *LIBREXX.get_or_init(|| {
@@ -46,6 +47,94 @@ fn target(name: &CStr) -> *mut c_void {
         ));
     }
     symbol
+}
+
+/// Resolves an export in the interpreter DLL beside the forwarding DLL.
+#[cfg(windows)]
+fn target(name: &CStr) -> *mut c_void {
+    use windows_sys::Win32::System::LibraryLoader::GetProcAddress;
+
+    static LIBREXX: OnceLock<usize> = OnceLock::new();
+    let handle = *LIBREXX.get_or_init(load_sibling);
+    // SAFETY: the handle owns a process-lifetime reference to the interpreter
+    // DLL, and the symbol name is NUL-terminated.
+    let symbol = unsafe { GetProcAddress(handle as _, name.as_ptr().cast()) };
+    match symbol {
+        Some(symbol) => symbol as *mut c_void,
+        None => failed(&format!(
+            "{} defines no {}",
+            env!("REXX_LIBREXX"),
+            name.to_string_lossy()
+        )),
+    }
+}
+
+#[cfg(windows)]
+fn load_sibling() -> usize {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    use std::path::PathBuf;
+    use windows_sys::Win32::System::LibraryLoader::{
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        GetModuleFileNameW, GetModuleHandleExW, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS,
+        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR, LoadLibraryExW,
+    };
+
+    let mut own_module = std::ptr::null_mut();
+    // SAFETY: FROM_ADDRESS interprets the second argument as an address inside
+    // our loaded module. The output points to writable space for one handle.
+    let found = unsafe {
+        GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            load_sibling as *const () as *const u16,
+            &mut own_module,
+        )
+    };
+    if found == 0 {
+        failed(&format!(
+            "locating the forwarding module: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+
+    // Windows extended-length paths can hold up to 32,767 UTF-16 code units.
+    let mut filename = vec![0u16; 32_768];
+    // SAFETY: the forwarding module is executing, and the buffer is writable
+    // for the requested number of UTF-16 code units.
+    let length =
+        unsafe { GetModuleFileNameW(own_module, filename.as_mut_ptr(), filename.len() as u32) }
+            as usize;
+    if length == 0 || length >= filename.len() {
+        failed(&format!(
+            "reading the forwarding module path: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let mut path = PathBuf::from(OsString::from_wide(&filename[..length]));
+    path.set_file_name(env!("REXX_LIBREXX_BESIDE"));
+    let path_wide: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    // SAFETY: this is a NUL-terminated absolute path to the interpreter's
+    // companion DLL. Keep the loader reference for as long as exports can run.
+    let handle = unsafe {
+        LoadLibraryExW(
+            path_wide.as_ptr(),
+            std::ptr::null_mut(),
+            LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS,
+        )
+    };
+    if handle.is_null() {
+        failed(&format!(
+            "loading {}: {}",
+            path.display(),
+            std::io::Error::last_os_error()
+        ));
+    }
+    handle as usize
 }
 
 fn failed(what: &str) -> ! {
