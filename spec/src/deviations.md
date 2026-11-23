@@ -684,6 +684,8 @@ Command substitution, unquoted parameter expansion, parameter operators,
 arithmetic, unquoted tildes, pathname patterns, comments and line
 continuations raise `40.1`, as do malformed lists and embedded null
 characters. The whole call fails if any word uses unsupported syntax.
+Like ooRexx, the routine raises `40.1` for an empty argument and answers
+an empty array for text that contains only spaces or tabs.
 ooRexx also performs shell expansions, including command substitution.
 
 ## 91. A command whose child was already reaped

@@ -300,7 +300,7 @@ call show '"$INTERREXX_WORDEXP" "${INTERREXX_WORDEXP}!"'
 call show "'" || '$INTERREXX_WORDEXP' || "' " || '\$INTERREXX_WORDEXP'
 call show '"\q" ''*'' "a;b"'
 call show '''$()'' "\$()"'
-call show ''
+call show '  '
 exit
 show: procedure
   use arg text
@@ -344,7 +344,7 @@ ruled
 say RxFuncQuery('SysWordexp')
 do text over 'valid *', 'valid ~', 'valid $x', '"${x-word}"', 'valid $((1+2))',,
              'valid $()', '"$()"', 'valid ``', 'a;b', '"unfinished', 'a' || '0a'x || 'b',,
-             'a' || '00'x || 'b', 'valid path=~', 'valid #comment', 'a\' || '0a'x || 'b'
+             'a' || '00'x || 'b', 'valid path=~', 'valid #comment', 'a\' || '0a'x || 'b', ''
   say try(text)
 end
 signal on syntax name none
@@ -362,6 +362,7 @@ refused:
 rc 0
 [stdout]
 0
+40.1
 40.1
 40.1
 40.1

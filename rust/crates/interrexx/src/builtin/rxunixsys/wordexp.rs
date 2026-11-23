@@ -6,7 +6,7 @@ pub(super) fn words<'env>(
     mut input: &[u8],
     env: impl Fn(&[u8]) -> Option<&'env [u8]>,
 ) -> Option<Vec<Vec<u8>>> {
-    if input.contains(&0) {
+    if input.is_empty() || input.contains(&0) {
         return None;
     }
 
