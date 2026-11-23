@@ -92,10 +92,10 @@ jobs:
           cl /nologo /W4 /WX /TP /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-sdk-smoke.cpp /Fo:sdk-smoke.obj || exit /b 1
           cl /nologo /W4 /WX /TC /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-rxapi-smoke.c /Fo:rxapi-smoke.obj || exit /b 1
           link /nologo /OUT:sdk\bin\sdk-smoke.exe sdk-smoke.obj sdk\lib\rexx.lib || exit /b 1
-          link /nologo /OUT:sdk\bin\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
+          link /nologo /OUT:target\debug\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
           sdk\bin\sdk-smoke.exe || exit /b 1
-          sdk\bin\rxapi-smoke.exe || exit /b 1
-          del sdk\bin\sdk-smoke.exe sdk\bin\rxapi-smoke.exe
+          target\debug\rxapi-smoke.exe || exit /b 1
+          del sdk\bin\sdk-smoke.exe
 
       - uses: actions/upload-artifact@v7
         with:
@@ -121,6 +121,56 @@ jobs:
             if ($LASTEXITCODE -ne 0 -or $lines.Count -ne 1 -or $lines[0] -cne 'cross process') {
               throw "Expected queue text, got '$($lines -join '|')'"
             }
+            & $rexx -e "call rxqueue 'create', 'C_SMOKE'; call rxqueue 'set', 'C_SMOKE'; queue 'from the interpreter'"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not seed the legacy C queue test' }
+            & ./target/debug/rxapi-smoke.exe C_SMOKE
+            if ($LASTEXITCODE -ne 0) { throw "Legacy C queue test failed ($LASTEXITCODE)" }
           } finally {
             & $rxapi --stop
           }
+
+      - name: Check out the pinned ooRexx sources
+        working-directory: .
+        run: git submodule update --init --depth 1 -- third_party/ooRexx
+      - name: Build the pinned ooDialog packages and launchers
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
+          call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
+          cmake -S ..\ci\windows-oodialog -B oodialog-build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DINTERREXX_SDK=%CD%\sdk" "-DOOREXX_SOURCE=%CD%\..\third_party\ooRexx" || exit /b 1
+          cmake --build oodialog-build --parallel 2 || exit /b 1
+          for %%p in (oodialog ooshapes) do (
+            dumpbin /exports sdk\bin\%%p.dll | findstr /r /c:" RexxGetPackage$" || exit /b 1
+          )
+          for %%p in (ooDialog.exe ooDialog.com) do (
+            dumpbin /imports sdk\bin\%%p | findstr /i /c:"rexx.dll" || exit /b 1
+          )
+
+      - name: Generate the class libraries and exercise an ooDialog callback
+        shell: pwsh
+        timeout-minutes: 2
+        run: |
+          $bin = (Resolve-Path sdk/bin).Path
+          $source = (Resolve-Path ../third_party/ooRexx/extensions/platform/windows/oodialog).Path
+          Copy-Item target/debug/rexx.exe $bin
+          Copy-Item "$source/ooShapes.cls" $bin
+          Copy-Item ../ci/windows-oodialog/smoke.rex $bin
+          Push-Location $source
+          try {
+            & "$bin/rexx.exe" build_ooDialog_cls.rex $bin
+            if ($LASTEXITCODE -ne 0) { throw "ooDialog class generation failed ($LASTEXITCODE)" }
+          } finally { Pop-Location }
+          foreach ($class in 'ooDialog.cls', 'oodPlain.cls', 'oodWin32.cls') {
+            if (!(Test-Path "$bin/$class")) { throw "Missing $class" }
+          }
+          Push-Location $bin
+          try {
+            $output = @(& ./rexx.exe smoke.rex)
+            if ($LASTEXITCODE -ne 0 -or $output -cnotcontains 'ooDialog button event passed') {
+              throw "ooDialog callback failed ($LASTEXITCODE): $($output -join '|')"
+            }
+            $version = @(& ./ooDialog.com --version)
+            if ($LASTEXITCODE -ne 0 -or ($version -join ' ') -notmatch 'ooDialog') {
+              throw "ooDialog launcher failed ($LASTEXITCODE): $($version -join '|')"
+            }
+          } finally { Pop-Location }
