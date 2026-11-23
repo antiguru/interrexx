@@ -211,7 +211,8 @@ done:
      (Deviation 109). */
   if value~isInstanceOf(.string) then return value~makeString:.string
   text = value~request('STRING')
-  if .nil == text then text = value~string
+  if text~isInstanceOf(.string) then return text
+  text = value~string
   if \text~isInstanceOf(.string) then text = .nil~string
   return text
 
