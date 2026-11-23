@@ -370,42 +370,6 @@ ok 88.902 88.902 88.902
 88.926 my argument ; -3
 ```
 
-```rexx
-call t .withstr~new
-call t .withms~new
-call t .withreq~new
-exit
-t: procedure
-  use arg o
-  signal on syntax name bad
-  .validate~number('N', o)
-  say o~class~id 'ok'
-  return
-bad: say o~class~id condition('o')~code
-  return
-::class withstr
-::method string
-  say '  string'
-  return '5'
-::class withms
-::method makestring
-  say '  makestring'
-  return '5'
-::class withreq
-::method request
-  say '  request' arg(1)
-  return '5'
-```
-
-```output
-  string
-WITHSTR ok
-  makestring
-WITHMS ok
-  request STRING
-WITHREQ ok
-```
-
 r[class.validate.wholenumber]
 `wholeNumber` accepts a number whose value, under `digits`, is a whole number
 and raises `SYNTAX 88.903` for any other value: one with a fraction, one with
@@ -549,6 +513,42 @@ converted lower bound using `>=` and, if the result is true, with the converted
 upper bound using `<=`. The check raises its own error code if a comparison
 answers false. [Deviation 183](r:class.validate.deviation.183) describes these
 comparisons and the difference from ooRexx.
+
+```rexx
+call t .withstr~new
+call t .withms~new
+call t .withreq~new
+exit
+t: procedure
+  use arg o
+  signal on syntax name bad
+  .validate~number('N', o)
+  say o~class~id 'ok'
+  return
+bad: say o~class~id condition('o')~code
+  return
+::class withstr
+::method string
+  say '  string'
+  return '5'
+::class withms
+::method makestring
+  say '  makestring'
+  return '5'
+::class withreq
+::method request
+  say '  request' arg(1)
+  return '5'
+```
+
+```output
+  string
+WITHSTR ok
+  makestring
+WITHMS ok
+  request STRING
+WITHREQ ok
+```
 
 ## Logical values and classes
 
