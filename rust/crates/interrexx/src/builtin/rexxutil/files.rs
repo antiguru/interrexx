@@ -6,10 +6,9 @@ use rustix::fs::{AtFlags, FileType, Mode, OFlags, Timespec, Timestamps};
 use rustix::io::Errno;
 
 use super::{
-    answer, c_string, check_arity, optional_text, os_path, path_argument, required_c_string,
+    answer, c_string, check_arity, optional_text, os_path, path_argument, random_name_seed,
     scan_triple,
 };
-use crate::builtin::platform::qualify_name;
 use crate::error::Raised;
 use crate::{Failure, Interp};
 
@@ -139,7 +138,7 @@ fn copy_keeping_links(from: &[u8], to: &[u8]) -> i32 {
 /// `path` with six digits appended, naming no regular
 /// file, or `None` where every one does.
 fn spare_name(path: &[u8]) -> Option<Vec<u8>> {
-    let start = random() % 1_000_000;
+    let start = random_name_seed() % 1_000_000;
     let mut number = start;
     loop {
         let mut name = path.to_vec();
@@ -152,12 +151,6 @@ fn spare_name(path: &[u8]) -> Option<Vec<u8>> {
             return None;
         }
     }
-}
-
-/// A number from the process's random keys, for a name nobody predicts.
-fn random() -> u64 {
-    use std::hash::BuildHasher as _;
-    std::hash::RandomState::new().hash_one(0u8)
 }
 
 /// `SysFileCopy(from, to)`: keeps the
@@ -427,65 +420,6 @@ pub(crate) fn set_file_date_time(
     };
     let set = rustix::fs::utimensat(rustix::fs::CWD, path.as_slice(), &times, AtFlags::empty());
     Ok(answer(interp, if set.is_ok() { 0 } else { -1 }))
-}
-
-/// `SysTempFileName(template [, filler])`. Each filler
-/// character in the template becomes a digit, the first the lowest, from a
-/// random start counting up until the qualified name names nothing. The null
-/// string where the template has no filler or more than nine, or every name
-/// is taken.
-pub(crate) fn temp_file_name(
-    interp: &mut Interp,
-    _name: &'static [u8],
-    args: &[Option<ObjRef>],
-) -> Result<ObjRef, Failure> {
-    check_arity(args, 2)?;
-    let template = required_c_string(interp, args, 1)?;
-    let filler = match optional_text(interp, args, 2)? {
-        None => b'?',
-        Some(text) => match c_string(&text) {
-            [filler] => *filler,
-            other => {
-                return Err(Raised::routine_argument_not_a_character(
-                    "SysTempFileName",
-                    "filler",
-                    other,
-                )
-                .into());
-            }
-        },
-    };
-    let name = unique_name(interp, &template, filler);
-    Ok(interp.text_built(name))
-}
-
-/// [`temp_file_name`]'s search.
-fn unique_name(interp: &Interp, template: &[u8], filler: u8) -> Vec<u8> {
-    let places = template.iter().filter(|byte| **byte == filler).count();
-    if places == 0 || places > 9 {
-        return Vec::new();
-    }
-    let limit = 10u64.pow(u32::try_from(places).expect("nine at most"));
-    let start = random() % limit;
-    let mut number = start;
-    let mut candidate = template.to_vec();
-    loop {
-        let mut rest = number;
-        for (at, byte) in template.iter().enumerate() {
-            if *byte == filler {
-                candidate[at] = b'0' + u8::try_from(rest % 10).expect("a digit");
-                rest /= 10;
-            }
-        }
-        let qualified = qualify_name(interp, &candidate);
-        if rustix::fs::stat(qualified.as_slice()).is_err() {
-            return qualified;
-        }
-        number = (number + 1) % limit;
-        if number == start {
-            return Vec::new();
-        }
-    }
 }
 
 #[cfg(test)]

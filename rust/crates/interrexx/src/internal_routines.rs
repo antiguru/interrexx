@@ -320,10 +320,9 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSystemDirectory",
         crate::builtin::rexxutil::windows_files::system_directory,
     ),
-    #[cfg(unix)]
     util_run(
         "SysTempFileName",
-        crate::builtin::rexxutil::files::temp_file_name,
+        crate::builtin::rexxutil::search::temp_file_name,
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),

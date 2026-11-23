@@ -97,3 +97,12 @@ if probe \== '' then do
   if linein(probe) \== 'test data' then exit 59
   call stream probe, 'c', 'close'
 end
+
+/* spec: util.systempfilename.answer */
+prefix = dir || '\temporary'
+temporary = SysTempFileName(prefix || 'QQ', 'Q')
+if left(temporary, length(prefix)) \== prefix then exit 60
+digits = substr(temporary, length(prefix) + 1)
+if length(digits) <> 2 | verify(digits, '0123456789') <> 0 then exit 61
+if SysFileExists(temporary) then exit 62
+if SysTempFileName(dir || '\never') \== '' then exit 63
