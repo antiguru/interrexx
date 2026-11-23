@@ -1570,3 +1570,9 @@ if it lacks a method ooRexx sends.
 `File~writeChars` and `File~writeLines` convert their mode as a string
 argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
 that method raises `SYNTAX 97.1` even if it can supply valid mode text.
+
+`CircularQueue` converts size, count, order and option arguments before
+checking their values. ooRexx sends `<`, `UPPER`, `CASELESSSTARTSWITH` or
+`CASELESSMATCHCHAR` to the arguments themselves, which can raise
+`SYNTAX 97.1` even for objects that supply valid text
+([example](r:class.circularqueue.deviation.183)).

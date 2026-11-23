@@ -115,6 +115,8 @@ CIRCULARQUEUE.instance.INTERREXX_ITEMS replacement:queue.rex
 CIRCULARQUEUE.instance.INTERREXX_OPERAND replacement:queue.rex
 CIRCULARQUEUE.instance.INTERREXX_ORDER replacement:queue.rex
 CIRCULARQUEUE.instance.INTERREXX_SIZE replacement:queue.rex
+CIRCULARQUEUE.instance.INTERREXX_TEXT replacement:queue.rex
+CIRCULARQUEUE.instance.INTERREXX_UNIQUE replacement:queue.rex
 CIRCULARQUEUE.instance.INTERSECTION replacement:queue.rex
 CIRCULARQUEUE.instance.MAKEARRAY replacement:queue.rex
 CIRCULARQUEUE.instance.MAKESTRING replacement:queue.rex

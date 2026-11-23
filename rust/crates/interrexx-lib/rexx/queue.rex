@@ -93,39 +93,54 @@
 
 /* r[class.circularqueue.new] and r[class.circularqueue.new.sends] */
 ::method init
-  expose limit
+  expose limit givenLimit
   if arg() > 1 then raise syntax 93.902 array (1)
   if arg(1, 'O') then raise syntax 93.901 array (1)
-  self~interrexx_size(arg(1))
-  limit = arg(1)
+  limit = self~interrexx_size(arg(1), 1)
+  givenLimit = arg(1)
   self~init:super
 
 /* r[class.circularqueue.size] */
 ::method size
-  expose limit
+  expose givenLimit
   if arg() > 0 then raise syntax 93.902 array (0)
-  return limit
+  return givenLimit
 
-/* The check of the new rule that init, resize and section share: the string
-   value of the size, then `<` with 0 read as a logical value. Answers the
-   whole number the string value holds. */
+/* r[class.circularqueue.deviation.183]: numeric sizes also use the STRING
+   fallback. Return the checked text so callers can retain its spelling. */
 ::method interrexx_size private
+  use arg value, position
   numeric digits 40
-  size = arg(1)
-  text = '' || size
-  less = size~'<'(0)
-  if less \== 0 & less \== 1 then raise syntax 34.901 array (less)
-  if less == 1 | \datatype(text, 'W') | text > 999999999 then
-    raise syntax 93.906 array (1, text)
-  return text + 0
+  text = self~interrexx_text(value, 1)
+  if .nil \== text then do
+    if datatype(text, 'W') & text >= 0 & text <= 999999999 then return text
+  end
+  raise syntax 93.906 array (position, text)
 
-/* The order of the order rule: `F` or `L`, by the first character of the
-   answer to `upper`. */
+/* r[class.index.string]: operate on a String subclass's own bytes, even if
+   it overrides the type inquiry or makeString. */
+::method interrexx_text private
+  use arg value, numericArgument = 0
+  if value~isInstanceOf:.Object(.string) then return value~makeString:.string
+  text = value~request('STRING')
+  if numericArgument & \text~isInstanceOf:.Object(.string) then text = value~string
+  if text~isInstanceOf:.Object(.string) then return text~makeString:.string
+  return .nil
+
+/* r[class.circularqueue.order]: keep the order spelling for string's
+   makeArray send. */
 ::method interrexx_order private
-  order = arg(1)
-  first = order~upper~left(1)
-  if first == 'F' | first == 'L' then return first
+  use arg value, position
+  order = self~interrexx_text(value)
+  if .nil == order then raise syntax 88.909 array (position)
+  if order~caselessStartsWith('F') | order~caselessStartsWith('L') then return order
   raise syntax 93.914 array (2, 'FL', order)
+
+/* r[class.circularqueue.queue]: only a leading U makes the option Unique. */
+::method interrexx_unique private
+  text = self~interrexx_text(arg(1))
+  if .nil == text then raise syntax 88.909 array (2)
+  return text~caselessMatchChar(1, 'u')
 
 /* r[class.circularqueue.queue] and r[class.circularqueue.queue.sends] */
 ::method queue
@@ -134,9 +149,9 @@
   if arg() == 0 then raise syntax 93.901 array (1)
   if arg(1, 'O') then raise syntax 93.903 array (1)
   item = arg(1)
-  if 1 > limit then return .nil
   unique = 0
-  if arg(2, 'E') then if arg(2)~caselessMatchChar(1, 'u') then unique = 1
+  if arg(2, 'E') then unique = self~interrexx_unique(arg(2))
+  if 1 > limit then return .nil
   if unique then do
     do while self~hasItem(item)
       self~removeItem(item)
@@ -153,9 +168,9 @@
   if arg() == 0 then raise syntax 93.901 array (1)
   if arg(1, 'O') then raise syntax 93.903 array (1)
   item = arg(1)
-  if 1 > limit then return .nil
   unique = 0
-  if arg(2, 'E') then if arg(2)~caselessMatchChar(1, 'u') then unique = 1
+  if arg(2, 'E') then unique = self~interrexx_unique(arg(2))
+  if 1 > limit then return .nil
   if unique then do
     do while self~hasItem(item)
       self~removeItem(item)
@@ -186,30 +201,32 @@
 
 /* r[class.circularqueue.resize] and r[class.circularqueue.resize.sends] */
 ::method resize
-  expose limit
+  expose limit givenLimit
   if arg() > 2 then raise syntax 93.902 array (2)
   if arg() == 0 then raise syntax 93.901 array (1)
   if arg(1, 'O') then raise syntax 93.903 array (1)
-  new = self~interrexx_size(arg(1))
+  new = self~interrexx_size(arg(1), 1)
   order = 'F'
-  if arg(2, 'E') then order = self~interrexx_order(arg(2))
+  if arg(2, 'E') then order = self~interrexx_order(arg(2), 2)
+  fifo = order~caselessStartsWith('F')
   count = self~items
   if count > new then do
     count = self~items
     do count - new
-      if order == 'F' then self~remove(1)
+      if fifo then self~remove(1)
       else self~remove(new + 1)
     end
   end
-  limit = arg(1)
-  return arg(1)
+  limit = new
+  givenLimit = arg(1)
+  return givenLimit
 
 /* r[class.circularqueue.order] and r[class.circularqueue.order.sends] */
 ::method makeArray
   if arg() > 1 then raise syntax 93.902 array (1)
   order = 'F'
-  if arg(1, 'E') then order = self~interrexx_order(arg(1))
-  if order == 'F' then return self~makeArray:super
+  if arg(1, 'E') then order = self~interrexx_order(arg(1), 1)
+  if order~caselessStartsWith('F') then return self~makeArray:super
   copy = self~copy
   count = copy~items
   lines = .array~new
@@ -221,8 +238,8 @@
 ::method supplier
   if arg() > 1 then raise syntax 93.902 array (1)
   order = 'F'
-  if arg(1, 'E') then order = self~interrexx_order(arg(1))
-  if order == 'F' then return self~supplier:super
+  if arg(1, 'E') then order = self~interrexx_order(arg(1), 1)
+  if order~caselessStartsWith('F') then return self~supplier:super
   copy = self~copy
   count = copy~items
   lines = .array~new
@@ -237,11 +254,7 @@
 ::method string
   if arg() > 2 then raise syntax 93.902 array (2)
   order = 'F'
-  if arg(2, 'E') then do
-    order = arg(2)
-    if \order~caselessStartsWith('F') then
-      if \order~caselessStartsWith('L') then raise syntax 93.914 array (2, 'FL', order)
-  end
+  if arg(2, 'E') then order = self~interrexx_order(arg(2), 2)
   lines = self~makeArray(order)
   if arg(1, 'E') then delimiter = arg(1)
   else delimiter = ','
@@ -260,10 +273,7 @@
   size = limit + 0
   count = size
   if arg(2, 'E') then do
-    self~interrexx_size(arg(2))
-    text = '' || arg(2)
-    if \datatype(text, 'W') then raise syntax 93.906 array (2, text)
-    if text < 0 then raise syntax 93.906 array (2, text)
+    text = self~interrexx_size(arg(2), 2)
     count = text + 0
     if count > size then count = size
   end
