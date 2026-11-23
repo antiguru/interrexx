@@ -269,7 +269,8 @@ finished:
   name = args[1]
   value = args[2]
   if kind == 'logical' then do
-    if value == '1' | value == '0' then return
+    text = self~!text(value)
+    if text == '1' | text == '0' then return
     raise syntax 88.927 array (name, value)
   end
   if kind == 'classType' then do
@@ -340,22 +341,19 @@ finished:
     else ok = datatype(text, 'N')
   end
   if \ok then raise syntax (code) additional (extra)
-  if op == '' then return
-  count = 1
-  if op == 'range' then do
-    count = 2
-    lowText = self~!text(args[3])
-    highText = self~!text(args[4])
-    if lowText == .nil | highText == .nil then raise syntax (code) additional (extra)
+  select
+    when op == '>' then ok = (text > 0)
+    when op == '>=' then ok = (text >= 0)
+    when op == 'range' then do
+      lowText = self~!text(args[3])
+      highText = self~!text(args[4])
+      if lowText == .nil | highText == .nil then raise syntax (code) additional (extra)
+      ok = (text >= lowText)
+      if ok then ok = (text <= highText)
+    end
+    otherwise return
   end
-  do i = 1 to count
-    if op == '>' then answer = (value > 0)
-    else if op == '>=' then answer = (value >= 0)
-    else if i == 1 then answer = (value >= lowText)
-    else answer = (value <= highText)
-    if answer == 0 then raise syntax (code) additional (extra)
-    if answer \== 1 then raise syntax 34.6 array (answer)
-  end
+  if \ok then raise syntax (code) additional (extra)
   return
 
 /* A value read as a string, r[conv.string.object]: an instance of String
@@ -363,7 +361,7 @@ finished:
    that does not answer a string, by `string`; `.nil` when neither does. */
 ::method '!text' class private
   use arg object
-  if object == .nil then return .nil
+  if .nil == object then return .nil
   if object~isInstanceOf(.string) then return object~makeString:.string
   text = object~request('STRING')
   if text~isInstanceOf(.string) then return text~makeString:.string

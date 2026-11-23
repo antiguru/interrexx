@@ -1557,6 +1557,11 @@ take a message name from an object that supplies a string when its array
 conversion gives no array. ooRexx ends with `SYNTAX 93.972` when the array
 conversion fails.
 
+`Validate` compares the converted string in its numeric and logical checks.
+ooRexx compares the argument object itself. An object that supplies valid
+text can therefore raise `SYNTAX 97.1` in a numeric check or `SYNTAX 88.927`
+in the logical check, depending on the comparisons the object answers.
+
 `CommandInput~lineIn` reads its count through the required-string protocol
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.
