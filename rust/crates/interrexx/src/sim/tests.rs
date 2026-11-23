@@ -473,6 +473,66 @@ fn a_recorded_trace_replays_to_the_same_output_and_hash() {
     assert_ne!(hash(&recorded), hash(&other));
 }
 
+#[test]
+fn a_shrink_trial_defaults_omissions_and_replays_its_recorded_choices() {
+    use super::{Decision, Point, Replay, Replaying};
+
+    let mut trial = Replaying::new(&Replay {
+        path: "trace.txt".into(),
+        decisions: [
+            Decision::Collect(1),
+            Decision::Preempt(2),
+            Decision::Pick(1),
+            Decision::Pick(0),
+        ]
+        .into(),
+        omitted: Some(("omit.txt".into(), [0, 2].into()).into()),
+    });
+    assert!(!trial.point(Point::Collect, 1, false));
+    assert!(trial.point(Point::Preempt, 2, false));
+    assert!(trial.point(Point::Preempt, 3, true));
+    assert_eq!(trial.pick(2, 2), 2);
+    assert_eq!(trial.pick(2, 2), 0);
+    assert_eq!(trial.pick(1, 1), 1);
+    trial.finish();
+    assert!(trial.refusal.is_none());
+
+    let dir = trace_dir("shrink");
+    let original = dir.join("original.txt");
+    let decisions = record_deciding(&original);
+    let omitted = dir.join("omit.txt");
+    let indices = (0..decisions.len()).map(|index| format!("{index}\n"));
+    std::fs::write(&omitted, indices.collect::<String>()).expect("the omissions written");
+    let smaller = dir.join("smaller.txt");
+    let mode = format!(
+        "sim:replay={},omit={},trace={}",
+        original.display(),
+        omitted.display(),
+        smaller.display(),
+    );
+    let trial = run_in(DECIDING, Some(sim(&mode)));
+    let written = std::fs::read_to_string(&smaller).expect("the trace written");
+    let strict = replay(DECIDING, &smaller);
+    std::fs::remove_dir_all(dir).expect("remove the test directory");
+
+    assert_eq!(trial.exit_code, 0, "{}", stderr(&trial));
+    assert!(
+        written
+            .lines()
+            .skip(1)
+            .all(|line| !line.starts_with("preempt "))
+    );
+    assert_eq!(written.lines().count() - 1, 2, "{written}");
+    assert_eq!(
+        (strict.exit_code, strict.stdout, strict.stderr),
+        (0, trial.stdout, trial.stderr)
+    );
+    assert_eq!(
+        strict.sim.unwrap().trace_hash,
+        trial.sim.unwrap().trace_hash
+    );
+}
+
 /// A directory of its own for a test's trace files.
 fn trace_dir(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("rexx-sim-{name}-{}", std::process::id()));

@@ -19,7 +19,7 @@
 //! sim:replay=FILE        the decisions FILE holds taken in place of drawn
 //! ```
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
@@ -98,6 +98,8 @@ pub enum Decision {
 pub struct Replay {
     pub path: PathBuf,
     pub decisions: Arc<[Decision]>,
+    /// A shrink trial's input file and the zero-based indices it omits.
+    pub omitted: Option<Arc<(PathBuf, Arc<[usize]>)>>,
 }
 
 /// The simulation's knobs, each off by default.
@@ -201,21 +203,35 @@ impl SimConfig {
         if let Some(path) = first.strip_prefix("replay=") {
             let replay = nonempty_path(first, path)?;
             let mut trace = None;
+            let mut omit = None;
             let mut previous = first;
             for item in items {
                 if item.starts_with("replay=") {
                     return Err(format!("`{item}`: a second `replay=`"));
                 }
-                let Some(path) = item.strip_prefix("trace=") else {
+                let slot = if item.starts_with("trace=") {
+                    &mut trace
+                } else if item.starts_with("omit=") {
+                    &mut omit
+                } else {
                     return Err(comma_in_path(previous, item));
                 };
-                if trace.is_some() {
-                    return Err(format!("`{item}`: a second `trace=`"));
+                let (key, path) = item.split_once('=').expect("a path item");
+                if slot.is_some() {
+                    return Err(format!("`{item}`: a second `{key}=`"));
                 }
-                trace = Some(nonempty_path(item, path)?);
+                *slot = Some(nonempty_path(item, path)?);
                 previous = item;
             }
             config = read_replay(&replay)?;
+            if let Some(path) = omit {
+                if trace.is_none() {
+                    return Err("`omit=` requires `trace=` to record the trial".into());
+                }
+                let replay = config.replay.as_mut().expect("a replay");
+                let indices = read_omissions(&path, replay.decisions.len())?;
+                replay.omitted = Some(Arc::new((path, indices)));
+            }
             config.trace = trace;
             return Ok(config);
         }
@@ -410,8 +426,27 @@ fn read_replay(path: &Path) -> Result<SimConfig, String> {
     config.replay = Some(Replay {
         path: path.to_path_buf(),
         decisions,
+        omitted: None,
     });
     Ok(config)
+}
+
+fn read_omissions(path: &Path, len: usize) -> Result<Arc<[usize]>, String> {
+    let text =
+        std::fs::read_to_string(path).map_err(|error| format!("`{}`: {error}", path.display()))?;
+    text.lines()
+        .map(|line| {
+            line.parse::<usize>()
+                .ok()
+                .filter(|index| *index < len)
+                .ok_or_else(|| {
+                    format!(
+                        "`{}`: `{line}` is not a decision index below {len}",
+                        path.display()
+                    )
+                })
+        })
+        .collect()
 }
 
 impl std::fmt::Display for Policy {
@@ -440,6 +475,9 @@ impl std::fmt::Display for SimConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(replay) = &self.replay {
             write!(f, "sim:replay={}", replay.path.display())?;
+            if let Some((path, _)) = replay.omitted.as_deref() {
+                write!(f, ",omit={}", path.display())?;
+            }
             if let Some(path) = &self.trace {
                 write!(f, ",trace={}", path.display())?;
             }
@@ -703,6 +741,43 @@ struct Replaying {
     diverged: bool,
     /// That divergence's refusal, until a boundary raises it.
     refusal: Option<Loud>,
+    sparse: Option<SparseReplay>,
+}
+
+/// A shrink trial keeps point decisions at their original counters and
+/// keeps picks at their original ordinals. Decisions the trial actually
+/// takes are recorded normally for a subsequent strict replay.
+struct SparseReplay {
+    preempts: BTreeSet<u64>,
+    collects: BTreeSet<u64>,
+    picks: std::vec::IntoIter<Option<u64>>,
+}
+
+impl SparseReplay {
+    fn new(decisions: &[Decision], omitted: &[usize]) -> Self {
+        let omitted: BTreeSet<_> = omitted.iter().copied().collect();
+        let mut preempts = BTreeSet::new();
+        let mut collects = BTreeSet::new();
+        let mut picks = Vec::new();
+        for (index, decision) in decisions.iter().enumerate() {
+            let kept = !omitted.contains(&index);
+            match *decision {
+                Decision::Preempt(step) if kept => {
+                    preempts.insert(step);
+                }
+                Decision::Collect(at) if kept => {
+                    collects.insert(at);
+                }
+                Decision::Pick(index) => picks.push(kept.then_some(index)),
+                _ => {}
+            }
+        }
+        Self {
+            preempts,
+            collects,
+            picks: picks.into_iter(),
+        }
+    }
 }
 
 /// A decision keyed to a position the run counts: a contended step or an
@@ -731,6 +806,10 @@ impl Replaying {
             next_collect: 0,
             diverged: false,
             refusal: None,
+            sparse: replay
+                .omitted
+                .as_deref()
+                .map(|(_, omitted)| SparseReplay::new(&replay.decisions, omitted)),
         }
     }
 
@@ -738,6 +817,13 @@ impl Replaying {
     /// come in increasing order, one at a time. `forced` is a preemption the
     /// floor takes whatever the trace holds.
     fn point(&mut self, kind: Point, at: u64, forced: bool) -> bool {
+        if let Some(sparse) = &self.sparse {
+            return forced
+                || match kind {
+                    Point::Preempt => sparse.preempts.contains(&at),
+                    Point::Collect => sparse.collects.contains(&at),
+                };
+        }
         if self.diverged {
             return forced;
         }
@@ -782,7 +868,15 @@ impl Replaying {
     }
 
     /// The next pick, from 0 to `last`.
-    fn pick(&mut self, last: u64) -> u64 {
+    fn pick(&mut self, last: u64, default: u64) -> u64 {
+        if let Some(sparse) = &mut self.sparse {
+            return sparse
+                .picks
+                .next()
+                .flatten()
+                .filter(|index| *index <= last)
+                .unwrap_or(default);
+        }
         if self.diverged {
             return 0;
         }
@@ -800,7 +894,7 @@ impl Replaying {
 
     /// Refuses the decisions left where the run has ended.
     fn finish(&mut self) {
-        if !self.diverged && self.next < self.decisions.len() {
+        if self.sparse.is_none() && !self.diverged && self.next < self.decisions.len() {
             self.diverge(self.next, "ends".into());
         }
     }
@@ -1080,7 +1174,7 @@ impl Interp {
         }
         let last = ready.len() as u64 - 1;
         let index = match &mut sim.replaying {
-            Some(replaying) => replaying.pick(last),
+            Some(replaying) => replaying.pick(last, 0),
             None => {
                 let priorities = &sim.schedule.priorities;
                 let priority =
@@ -1113,7 +1207,7 @@ impl Interp {
         let readied = ready.len().saturating_sub(mark);
         for i in (1..readied).rev() {
             let j = match &mut sim.replaying {
-                Some(replaying) => replaying.pick(i as u64),
+                Some(replaying) => replaying.pick(i as u64, i as u64),
                 None => sim.streams.order.within(0..=i as u64),
             };
             sim.trace.record(Decision::Pick(j));
