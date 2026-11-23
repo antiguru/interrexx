@@ -101494,7 +101494,8 @@ call SysRmDir 'c1zqidxd'
 the value of the environment variable <code>HOME</code> as it is. When <code>HOME</code> is the null
 string, <code>~</code> alone names nothing and <code>~/</code> is replaced by <code>/</code>. When it is any
 other value that does not start with a slash, no name that starts with <code>~/</code>,
-or is <code>~</code> alone, names an entry. A name that starts with <code>~</code> and a user's
+or is <code>~</code> alone, names an entry. When <code>HOME</code> has no value, the <code>~</code> is read as
+it is for a user that does not exist, as below. A name that starts with <code>~</code> and a user's
 name, up to the first slash or the end, stands for the home directory of that
 user, as <a href="rexxutil/../builtins/directory.html#r-bif.directory.user">it does for DIRECTORY</a>; when there is no such
 user, no file has that name, and the name is never read as the name of a file
@@ -103602,7 +103603,8 @@ read as <a href="rexxutil/index.html#r-util.index.home">the home rule</a> says, 
 for the entries of the current directory, so it matches a directory <code>~name</code>
 there. A <code>filespec</code> that starts with <code>~name/</code>, where no user has that name,
 starts at <code>/</code> when only one component follows the slash, and matches nothing
-when more follow. A <code>HOME</code> that does not start with a slash is taken from the
+when more follow. A <code>filespec</code> that starts with <code>~/</code> when <code>HOME</code> has no value
+is read as one that starts with <code>~name/</code> for such a name. A <code>HOME</code> that does not start with a slash is taken from the
 current directory, as any relative name is. Each name stored
 is the full name of the match, formed as <a href="rexxutil/../builtins/qualify.html#r-bif.qualify.normal">QUALIFY</a> forms
 a name: made absolute, with the repeated slashes, the periods and the <code>..</code>
@@ -119412,8 +119414,8 @@ say sysisfiledirectory(base)
 <p>An argument that is <code>~</code> alone, or that starts with <code>~/</code>, has that <code>~</code> replaced
 by the value of the environment variable <code>HOME</code>, and the result is taken as
 above. When <code>HOME</code> has the null string as its value, does not start with a
-slash or names no directory, the call answers the null string and changes
-nothing. What the call does when <code>HOME</code> has no value is not specified.</p>
+slash, names no directory or has no value, the call answers the null string
+and changes nothing.</p>
 <pre><code class="language-rexx">call value 'HOME', '/', 'ENVIRONMENT'
 say directory('~') directory('/usr') directory('~/') directory('~//tmp')
 call value 'HOME', '/spec-directory-none', 'ENVIRONMENT'

@@ -329,8 +329,8 @@ say sysisfiledirectory(base)
 <p>An argument that is <code>~</code> alone, or that starts with <code>~/</code>, has that <code>~</code> replaced
 by the value of the environment variable <code>HOME</code>, and the result is taken as
 above. When <code>HOME</code> has the null string as its value, does not start with a
-slash or names no directory, the call answers the null string and changes
-nothing. What the call does when <code>HOME</code> has no value is not specified.</p>
+slash, names no directory or has no value, the call answers the null string
+and changes nothing.</p>
 <pre><code class="language-rexx">call value 'HOME', '/', 'ENVIRONMENT'
 say directory('~') directory('/usr') directory('~/') directory('~//tmp')
 call value 'HOME', '/spec-directory-none', 'ENVIRONMENT'

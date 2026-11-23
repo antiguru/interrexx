@@ -443,7 +443,8 @@ call SysRmDir 'c1zqidxd'
 the value of the environment variable <code>HOME</code> as it is. When <code>HOME</code> is the null
 string, <code>~</code> alone names nothing and <code>~/</code> is replaced by <code>/</code>. When it is any
 other value that does not start with a slash, no name that starts with <code>~/</code>,
-or is <code>~</code> alone, names an entry. A name that starts with <code>~</code> and a user's
+or is <code>~</code> alone, names an entry. When <code>HOME</code> has no value, the <code>~</code> is read as
+it is for a user that does not exist, as below. A name that starts with <code>~</code> and a user's
 name, up to the first slash or the end, stands for the home directory of that
 user, as <a href="../builtins/directory.html#r-bif.directory.user">it does for DIRECTORY</a>; when there is no such
 user, no file has that name, and the name is never read as the name of a file

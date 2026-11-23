@@ -524,7 +524,8 @@ read as <a href="index.html#r-util.index.home">the home rule</a> says, with thes
 for the entries of the current directory, so it matches a directory <code>~name</code>
 there. A <code>filespec</code> that starts with <code>~name/</code>, where no user has that name,
 starts at <code>/</code> when only one component follows the slash, and matches nothing
-when more follow. A <code>HOME</code> that does not start with a slash is taken from the
+when more follow. A <code>filespec</code> that starts with <code>~/</code> when <code>HOME</code> has no value
+is read as one that starts with <code>~name/</code> for such a name. A <code>HOME</code> that does not start with a slash is taken from the
 current directory, as any relative name is. Each name stored
 is the full name of the match, formed as <a href="../builtins/qualify.html#r-bif.qualify.normal">QUALIFY</a> forms
 a name: made absolute, with the repeated slashes, the periods and the <code>..</code>
