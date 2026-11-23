@@ -843,7 +843,7 @@ impl Interp {
         };
         let value = match value {
             Subject::Bytes(bytes) => {
-                self.trace_keyword(indent, keyword, &bytes);
+                self.trace_parse_keyword(indent, keyword, &bytes)?;
                 (SourceText::Owned(bytes), None)
             }
             // **`>K>` names the object and the template walks the conversion.**
@@ -856,14 +856,34 @@ impl Interp {
                 // it is taken under the line's own gate.
                 if self.traced_mode().results {
                     let traced = self.traced_into_parse_buffer(value)?;
-                    self.trace_keyword(indent, keyword, &traced);
+                    let result = self.trace_parse_keyword(indent, keyword, &traced);
                     self.give_parse_buffer(traced);
+                    result?;
                 }
                 let converted = self.required_string_value(value)?;
                 self.source_text(converted, parse)
             }
         };
         Ok(ParseStrings::One(Some(value)))
+    }
+
+    /// Raises a refused VALUE line before converting the subject or assigning
+    /// any of the template's targets.
+    #[inline]
+    fn trace_parse_keyword(
+        &mut self,
+        indent: usize,
+        keyword: &str,
+        value: &[u8],
+    ) -> Result<(), Failure> {
+        self.trace_keyword(indent, keyword, value);
+        if !self.activity.pending_traps.is_empty()
+            && keyword == "VALUE"
+            && let Some(failure) = self.take_trace_failure()
+        {
+            return Err(failure);
+        }
+        Ok(())
     }
 
     /// `PARSE VAR`'s source: the variable read, in all three name shapes.

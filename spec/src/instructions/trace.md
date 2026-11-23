@@ -1501,11 +1501,9 @@ say n 'clause lines'
 4 clause lines
 ```
 
-r[instr.trace.deviation.50]
-Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx assigns the
-target of `PARSE VALUE` even if the destination refuses its `VALUE` line.
-ooRexx leaves the target unchanged.
+r[instr.trace.result.parse-value.refused]
+A destination that refuses the `VALUE` keyword line of `PARSE VALUE` raises
+the condition before the string conversion and template assignments.
 
 ```rexx
 x = 'old'
@@ -1531,5 +1529,40 @@ say 'caught' condition('o')~code x
 
 ```output
        >K>   "VALUE" => "new"
-caught 93.900 new
+caught 93.900 old
+```
+
+r[instr.trace.deviation.50]
+Some trace lines still raise the destination's condition after the clause has
+applied the effect the line describes. For example, interrexx binds the
+variable of a controlled `DO` before raising a refusal of its `TO` line.
+ooRexx leaves the variable unchanged.
+
+```rexx
+x = 'old'
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+do x = 1 to 2
+  nop
+end
+exit
+e: trace o
+.traceoutput~destination(.output)
+say 'caught' condition('o')~code x
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+```
+
+```output
+       >K>   "TO" => "2"
+caught 93.900 1
 ```
