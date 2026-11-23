@@ -73,6 +73,20 @@ fn query_handle_after_open_answers_the_descriptor() {
     assert_eq!(stdout(&outcome), "[] 0\n[] 1\n[] 2\n");
 }
 
+/// spec: bif.stream.handle
+#[test]
+fn query_size_of_open_standard_handles_without_files_is_zero() {
+    let program = "do n = 0 to 2\n\
+                   s = .Stream~new('HANDLE:' || n)\n\
+                   before = s~query('size')\n\
+                   opened = s~open('read')\n\
+                   say '[' || before || ']' '[' || s~query('size') || ']'\n\
+                   end\n";
+    let outcome = run(program, Invocation::none());
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(stdout(&outcome), "[] [0]\n[] [0]\n[] [0]\n");
+}
+
 /// A second open of a `HANDLE:n` stream opens the descriptor again.
 #[test]
 fn a_second_open_opens_the_descriptor_again() {
