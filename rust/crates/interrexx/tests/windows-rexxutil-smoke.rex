@@ -5,6 +5,20 @@ systemDir = value('REXX_TEST_SYSTEM_DIRECTORY', , 'ENVIRONMENT')
 bootDrive = value('REXX_TEST_BOOT_DRIVE', , 'ENVIRONMENT')
 if SysBootDrive() \== bootDrive then exit 17
 if SysSystemDirectory() \== systemDir then exit 18
+/* spec: util.windows.volume */
+numeric digits 20
+currentDrive = value('REXX_TEST_CURRENT_DRIVE', , 'ENVIRONMENT')
+driveRoot = translate(currentDrive, 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') || '\'
+driveFormat = value('REXX_TEST_VOLUME_FORMAT', , 'ENVIRONMENT')
+driveLabel = value('REXX_TEST_VOLUME_LABEL', , 'ENVIRONMENT')
+driveSize = value('REXX_TEST_VOLUME_SIZE', , 'ENVIRONMENT')
+if SysFileSystemType() \== driveFormat | SysFileSystemType(driveRoot) \== driveFormat then exit 32
+if SysVolumeLabel() \== driveLabel | SysVolumeLabel(driveRoot) \== driveLabel then exit 33
+parse value SysDriveInfo(driveRoot) with actualDrive free total label
+if actualDrive \== currentDrive | total \== driveSize | label \== driveLabel then exit 34
+if \datatype(free, 'Whole') then exit 35
+if free < 0 | free > total then exit 36
+if SysDriveInfo('?:') \== '' | SysFileSystemType('?:') \== '' | SysVolumeLabel('?:') \== '' then exit 37
 if SysLoadFuncs() <> 0 | SysDropFuncs() <> 0 | SysUtilVersion() = "" then exit 12
 if \datatype(SysCls(), "Whole") then exit 16
 dir = root || '\rexxutil-smoke'

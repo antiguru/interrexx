@@ -226,3 +226,46 @@ fn system_path(query: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option
         buffer.resize((count as usize).checked_add(1)?, 0);
     }
 }
+
+/// Returns the volume label and filesystem name. The root includes a trailing backslash.
+pub(crate) fn volume_names(root: &std::path::Path) -> Option<(String, String)> {
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Storage::FileSystem::GetVolumeInformationW;
+
+    let root = file_path(root).ok()?;
+    let mut label = [0; 261];
+    let mut filesystem = [0; 261];
+    // SAFETY: root ends in NUL, and both output buffers have the advertised capacity.
+    let result = unsafe {
+        GetVolumeInformationW(
+            root.as_ptr(),
+            label.as_mut_ptr(),
+            label.len() as u32,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            filesystem.as_mut_ptr(),
+            filesystem.len() as u32,
+        )
+    };
+    if result == 0 {
+        return None;
+    }
+    Some((
+        String::from_utf16_lossy(label.split(|unit| *unit == 0).next()?),
+        String::from_utf16_lossy(filesystem.split(|unit| *unit == 0).next()?),
+    ))
+}
+
+/// Returns the free bytes on the volume and its total size.
+pub(crate) fn volume_space(root: &std::path::Path) -> Option<(u64, u64)> {
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+
+    let root = file_path(root).ok()?;
+    let mut free = 0;
+    let mut total = 0;
+    // SAFETY: root ends in NUL and the non-null outputs are writable u64s.
+    let result =
+        unsafe { GetDiskFreeSpaceExW(root.as_ptr(), std::ptr::null_mut(), &mut total, &mut free) };
+    (result != 0).then_some((free, total))
+}

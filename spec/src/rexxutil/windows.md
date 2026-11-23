@@ -89,3 +89,14 @@ On Windows, `SysBootDrive()` answers the drive letter and colon of the
 Windows installation, such as `C:`. `SysSystemDirectory()` answers the full
 path of the Windows system directory. Both routines take zero arguments
 and answer the null string if the system query fails.
+
+## Windows volume information
+
+r[util.windows.volume]
+On Windows, `SysDriveInfo([drive])`, `SysFileSystemType([drive])` and
+`SysVolumeLabel([drive])` query a drive letter or UNC share. With the argument
+omitted they query the drive of the interpreter's current directory.
+`SysDriveInfo` answers the drive identifier, unused bytes, total bytes and
+volume label separated by spaces. The other two routines answer the filesystem
+name and volume label respectively. They answer the null string if the drive
+cannot be queried.

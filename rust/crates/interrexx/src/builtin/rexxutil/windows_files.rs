@@ -228,3 +228,71 @@ pub(crate) fn system_directory(
             .into_bytes(),
     ))
 }
+
+pub(crate) fn drive_info(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    volume_query(interp, args, |drive, root| {
+        let (label, _) = crate::host::volume_names(root)?;
+        let (free, total) = crate::host::volume_space(root)?;
+        Some(format!("{drive} {free} {total} {label}"))
+    })
+}
+
+pub(crate) fn file_system_type(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    volume_query(interp, args, |_, root| {
+        crate::host::volume_names(root).map(|(_, filesystem)| filesystem)
+    })
+}
+
+pub(crate) fn volume_label(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    volume_query(interp, args, |_, root| {
+        crate::host::volume_names(root).map(|(label, _)| label)
+    })
+}
+
+fn volume_query(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    query: impl FnOnce(&str, &Path) -> Option<String>,
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 1)?;
+    let argument = optional_text(interp, args, 1)?;
+    let drive = argument.as_deref().map_or(interp.cwd_bytes(), c_string);
+    let result = volume_identifier(drive).and_then(|drive| {
+        let root = format!("{drive}\\");
+        query(&drive, Path::new(&root))
+    });
+    Ok(interp.text_built(result.unwrap_or_default().into_bytes()))
+}
+
+fn volume_identifier(drive: &[u8]) -> Option<String> {
+    use std::path::{Component, Prefix};
+
+    let path = std::str::from_utf8(drive).ok()?;
+    if let [letter] = drive
+        && letter.is_ascii_alphabetic()
+    {
+        return Some(format!("{}:", char::from(letter.to_ascii_uppercase())));
+    }
+    let Component::Prefix(prefix) = Path::new(path).components().next()? else {
+        return None;
+    };
+    match prefix.kind() {
+        Prefix::Disk(letter) => Some(format!("{}:", char::from(letter))),
+        Prefix::VerbatimDisk(_) | Prefix::UNC(_, _) | Prefix::VerbatimUNC(_, _) => {
+            prefix.as_os_str().to_str().map(str::to_owned)
+        }
+        _ => None,
+    }
+}

@@ -106,6 +106,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysCreatePipe",
         crate::builtin::rexxutil::process::create_pipe,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysDriveInfo",
+        crate::builtin::rexxutil::windows_files::drive_info,
+    ),
     util_run("SysDropFuncs", crate::builtin::rexxutil::load_funcs),
     util_run(
         "SysDropRexxMacro",
@@ -141,6 +146,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysFileSearch",
         crate::builtin::rexxutil::files::file_search,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysFileSystemType",
+        crate::builtin::rexxutil::windows_files::file_system_type,
     ),
     #[cfg(unix)]
     util_run("SysFileTree", crate::builtin::rexxutil::tree::file_tree),
@@ -314,6 +324,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
+    #[cfg(windows)]
+    util_run(
+        "SysVolumeLabel",
+        crate::builtin::rexxutil::windows_files::volume_label,
+    ),
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
