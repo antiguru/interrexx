@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="rexxqueue"><a class="header" href="#rexxqueue">RexxQueue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxQueue Class; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; new (Inherited Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; create (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; exists (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; open (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; empty; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; get; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; init; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineIn; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineOut; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; makeArray; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; pull; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; push; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queue; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queued; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; say; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; set</p>
-<p class="deviations">Deviations: D109, D135</p>
+<p class="deviations">Deviations: D109, D135, D183</p>
 <p>A <code>RexxQueue</code> is an object that works with one of the external data queues,
 the lists of lines that are kept outside the program in a service and that the
 <a href="../instructions/queue.html#r-instr.queue.fifo">QUEUE</a> and <a href="../instructions/push.html#r-instr.push.lifo">PUSH</a> instructions fill
@@ -296,17 +296,16 @@ TAGGED SPEC_RQ_NEW_SUB my tag
 (<code>SYNTAX 93.902</code>). It decides the name in one of three ways. With no argument
 the name is <code>SESSION</code>. With <code>.nil</code> it makes a queue whose name the service
 picks, as the class method <code>create</code> does with no argument, and uses that name;
-no program can know the name beforehand. With any other argument it sends the
-argument the message <code>upper</code>, and the answer is the name: a string in upper
-case, a number such as <code>12</code> or a <code>MutableBuffer</code> gives its upper-case string,
-and an object that does not understand <code>upper</code>, an <code>Object</code> or an <code>Array</code> for
-one, raises <code>SYNTAX 97.1</code>. For a name that was given, <code>init</code> then sends the
-class of the receiver the message <code>open</code> with the name, as <a href="#r-class.rexxqueue.open.class-side">the class
-method</a> says: a queue of that name is kept
-as it is with its lines, or made when there is none. An <code>init</code> does not look
-at the answer of <code>open</code>, so a name that no queue can have raises no error
-here: the object is made, and the methods that need the queue fail later, as
-<a href="#r-class.rexxqueue.missing">the missing queue rule</a> says. At last <code>init</code> sets
+no program can know the name beforehand. With any other argument it reads
+the name as a string, as <a href="#r-class.rexxqueue.name">the name rule</a> says, and
+converts its characters to upper case
+(<a href="#r-class.rexxqueue.deviation.183">Deviation 183</a>). For a name that was
+given, <code>init</code> then sends the class of the receiver the message <code>open</code> with
+the name, as <a href="#r-class.rexxqueue.open.class-side">the class method</a> says.
+An existing queue keeps its lines, and a missing queue is created.
+An <code>init</code> does not check the answer of <code>open</code>. A name that no queue can
+have still produces an object, and the methods that need the queue fail
+later, as <a href="#r-class.rexxqueue.missing">the missing queue rule</a> says. At last <code>init</code> sets
 the <code>objectName</code> of the object to the name, as <a href="#r-class.rexxqueue.string">the string
 rule</a> says. The messages that <code>init</code> sends are
 stated in <a href="#r-class.rexxqueue.init.sends">the next rule</a>.</p>
@@ -324,16 +323,6 @@ say .rexxqueue~exists(12) .rexxqueue~exists('MB') .rexxqueue~delete(12),
 say c~delete
 e = .rexxqueue~new('not a valid name')
 say e~get '|' .rexxqueue~exists(e~get)
-call try .object~new
-call try .array~new
-exit
-try:
-  signal on syntax name bad
-  x = .rexxqueue~new(arg(1))
-  say 'no error'
-  return
-bad: say condition('o')~code
-  return
 </code></pre>
 <pre><code class="language-output">SESSION | 1 1
 1 0 0
@@ -342,17 +331,16 @@ SPEC_RQ_INIT_KEPT 1 kept line
 1 1 0 0
 0
 NOT A VALID NAME | 0
-97.1
-97.1
 </code></pre>
 <div class="rule" id="r-class.rexxqueue.init.sends"><a href="#r-class.rexxqueue.init.sends">[class.rexxqueue.init.sends]</a></div>
-<p><code>init</code> sends messages in this order. With a name given, <code>upper</code> goes to the
-argument, once and before anything else. With <code>.nil</code>, <code>create</code> goes to the
-class of the receiver with no argument, and then <code>open</code> with the name that
-<code>create</code> answered. With a name given, <code>open</code> goes to the class of the
-receiver, with the upper-case name. With no argument, nothing is sent to the
-class. Then <code>objectName=</code> goes to the receiver itself with the name. A
-subclass of <code>RexxQueue</code> therefore sees its own class-side <code>create</code> and <code>open</code>
+<p><code>init</code> sends messages in this order. A name given as an argument is
+converted before any messages to the class or receiver. With <code>.nil</code>,
+<code>create</code> goes to the class of the receiver with no argument, then <code>open</code>
+with the name that <code>create</code> answered. With a name given, <code>open</code> goes to
+the class of the receiver with the upper-case name. With no argument,
+nothing is sent to the class. Then <code>objectName=</code> goes to the receiver
+itself with the name. A subclass of <code>RexxQueue</code> therefore sees its own
+class-side <code>create</code> and <code>open</code>
 and its own <code>objectName=</code>. In the example the subclass overrides them and
 writes what they receive.</p>
 <pre><code class="language-rexx">.environment~made = ''
@@ -362,9 +350,7 @@ say '-- nil'
 r = .spy~new(.nil)
 say '-- none'
 s = .spy~new
-say '-- upper'
-t = .spy~new(.shout~new)
-say q~delete r~delete t~delete
+say q~delete r~delete
 ::class spy subclass rexxqueue
 ::method create class
   say 'create' arg()
@@ -380,10 +366,6 @@ say q~delete r~delete t~delete
     say 'objectName= the name that create answered'
   else say 'objectName=' arg(1)
   forward class (super)
-::class shout
-::method upper
-  say 'upper'
-  return 'SPEC_RQ_SENDS_UPPER'
 </code></pre>
 <pre><code class="language-output">-- named
 open SPEC_RQ_SENDS_INIT
@@ -394,11 +376,7 @@ open the name that create answered
 objectName= the name that create answered
 -- none
 objectName= SESSION
--- upper
-upper
-open SPEC_RQ_SENDS_UPPER
-objectName= SPEC_RQ_SENDS_UPPER
-0 0 0
+0 0
 </code></pre>
 <h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
 <div class="rule" id="r-class.rexxqueue.create.class-side"><a href="#r-class.rexxqueue.create.class-side">[class.rexxqueue.create.class-side]</a></div>
@@ -946,8 +924,9 @@ one of these faults and another raises the error of one of them, as <a href="../
 precedence rule</a> says. <code>set</code> does not look for the
 queue: a name of a queue that does not exist is taken, and <a href="#r-class.rexxqueue.missing">the missing queue
 rule</a> says what the object then does. The name is
-decided as <code>init</code> does: the argument is sent <code>upper</code>, and an object without
-that method raises <code>SYNTAX 97.1</code>, <code>.nil</code> and an <code>Object</code> among them. Then
+read as a string and converted to upper case as <code>init</code> does for a supplied
+name. An argument with no string value, including <code>.nil</code>, raises
+<code>SYNTAX 88.909</code> (<a href="#r-class.rexxqueue.deviation.183">Deviation 183</a>). Then
 <code>objectName=</code> is sent to the receiver with the upper-case name (<a href="#r-class.rexxqueue.set.sends">the sends
 rule</a>). Only the object changes: the queue that
 the program uses with its instructions is not switched, and another object that
@@ -963,8 +942,6 @@ say q~set('spec_rq_set_a') b~get
 say q~delete b~delete
 call try 'set'
 call try 'set("x", "y")'
-call try 'set(.nil)'
-call try 'set(.object~new)'
 exit
 try:
   signal on syntax name bad
@@ -981,44 +958,90 @@ SPEC_RQ_SET_NONE SPEC_RQ_SET_B
 0 0
 set 93.901
 set("x", "y") 93.902
-set(.nil) 97.1
-set(.object~new) 97.1
 </code></pre>
 <div class="rule" id="r-class.rexxqueue.set.sends"><a href="#r-class.rexxqueue.set.sends">[class.rexxqueue.set.sends]</a></div>
-<p><code>set</code> sends the argument the message <code>upper</code>, once, and then sends the
+<p><code>set</code> converts the argument to a name and then sends the
 receiver <code>objectName=</code> with the upper-case name, whether or not the name
 changes, and answers the name that <code>get</code> answered before; it sends nothing
-else. <code>get</code> is not sent. The example overrides <code>objectName=</code> and gives an
-argument that has its own <code>upper</code>.</p>
+else. The example overrides <code>objectName=</code>.</p>
 <pre><code class="language-rexx">q = .spy~new('spec_rq_set_sends')
 say '-- string'
 say q~set('spec_rq_set_sends_b')
-say '-- object'
-say q~set(.shout~new)
 say '-- same name'
-say q~set('SPEC_RQ_SET_SENDS_Z')
+say q~set('SPEC_RQ_SET_SENDS_B')
 say .rexxqueue~delete('spec_rq_set_sends')
 ::class spy subclass rexxqueue
 ::method 'objectName='
   say 'objectName=' arg(1)
   forward class (super)
-::class shout
-::method upper
-  say 'upper'
-  return 'SPEC_RQ_SET_SENDS_Z'
 </code></pre>
 <pre><code class="language-output">objectName= SPEC_RQ_SET_SENDS
 -- string
 objectName= SPEC_RQ_SET_SENDS_B
 SPEC_RQ_SET_SENDS
--- object
-upper
-objectName= SPEC_RQ_SET_SENDS_Z
-SPEC_RQ_SET_SENDS_B
 -- same name
-objectName= SPEC_RQ_SET_SENDS_Z
-SPEC_RQ_SET_SENDS_Z
+objectName= SPEC_RQ_SET_SENDS_B
+SPEC_RQ_SET_SENDS_B
 0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.deviation.183"><a href="#r-class.rexxqueue.deviation.183">[class.rexxqueue.deviation.183]</a></div>
+<p>The name given to <code>init</code> or <code>set</code> follows the
+<a href="#r-class.rexxqueue.name"><code>request('STRING')</code> conversion</a>. The methods
+convert the characters to upper case before <code>init</code> opens the queue or
+<code>set</code> switches to it. ooRexx sends <code>upper</code> to the argument itself, so an
+object with <code>makeString</code> alone raises <code>SYNTAX 97.1</code> there. A failure to
+supply a string raises <code>SYNTAX 88.909</code> in interrexx. The explicit <code>.nil</code>
+accepted by <code>init</code> requests a service-generated name.</p>
+<pre><code class="language-rexx">q = .spy~new
+call try '.spy~new(.named~new("spec_rq_converted_init"))~get'
+call try 'q~set(.competing~new("spec_rq_converted_set"))'
+call try '.rexxqueue~new(.object~new)'
+call try 'q~set(.invalid~new)'
+call try 'q~set(.nil)'
+say q~get
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say r
+  return
+bad: say condition('o')~code
+  return
+::class spy subclass RexxQueue
+::method open class
+  say 'open' arg(1)
+  return 0
+::method 'objectName='
+  say 'objectName=' arg(1)
+  forward class (super)
+::class named
+::method init
+  expose name
+  use arg name
+::method makeString
+  expose name
+  say 'makeString' name
+  return name
+::class competing subclass named
+::method upper
+  say 'upper'
+  return 'UPPER_PATH'
+::class invalid
+::method request
+  return .object~new
+</code></pre>
+<pre><code class="language-output">objectName= SESSION
+makeString spec_rq_converted_init
+open SPEC_RQ_CONVERTED_INIT
+objectName= SPEC_RQ_CONVERTED_INIT
+SPEC_RQ_CONVERTED_INIT
+makeString spec_rq_converted_set
+objectName= SPEC_RQ_CONVERTED_SET
+SESSION
+88.909
+88.909
+88.909
+SPEC_RQ_CONVERTED_SET
 </code></pre>
 <h2 id="deleting"><a class="header" href="#deleting">Deleting</a></h2>
 <div class="rule" id="r-class.rexxqueue.delete"><a href="#r-class.rexxqueue.delete">[class.rexxqueue.delete]</a></div>
