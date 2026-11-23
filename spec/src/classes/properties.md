@@ -977,6 +977,9 @@ The typed getters and setters read the text of an object before checking it.
 ooRexx sends `DATATYPE` to the setter arguments themselves, checks whether
 the value of `getLogical` is an instance of `String` before comparing it,
 and can answer the original default object from `getWhole`.
+`load` and `save` try to obtain a filename by the string argument rule
+for an object that is neither a `File` nor a `Stream`.
+ooRexx treats such objects as line sources or targets.
 
 ```rexx
 p = .properties~new
@@ -1045,10 +1048,6 @@ String [ 2.0 ]
 26.901
 true [ +007 ]
 ```
-
-`load` and `save` try to obtain a filename by the string argument rule
-for an object that is neither a `File` nor a `Stream`.
-ooRexx treats such objects as line sources or targets.
 
 ```rexx
 f = 'spec-properties-converted-path.tmp'
