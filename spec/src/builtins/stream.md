@@ -1284,7 +1284,8 @@ descriptor's own mode. Nothing exists by such a name: `QUERY EXISTS` answers
 the null string, open or not. Once the stream is open, `qualify` answers the
 name as written; before, it answers the name resolved as a file's, and `QUERY
 SIZE` and `QUERY DATETIME` answer for a file of that name, as for any other
-stream.
+stream. Once opened, `QUERY SIZE` answers the byte count of the descriptor's
+regular file, or 0 when the descriptor does not refer to a regular file.
 Where reads and writes through a `HANDLE:` stream land relative to those
 through another stream on the same descriptor, what a `HANDLE:` stream does
 with a number that names no open descriptor, and which of the descriptors the
@@ -1538,7 +1539,12 @@ After a write, the write position is just after the last character, wherever
 the write was asked to go. ooRexx differs there: it moves the position, and
 the write goes after the last character as any other does; the write position
 it reports afterwards is the one that a CHAROUT start named, or that a `SEEK`
-set, moved past the characters written.
+set, moved past the characters written. The empty-output form of `LINEOUT`
+also requests a position. The second example attempts to move the write
+position back into the original file without passing a line. The request
+raises NOTREADY and leaves the write position unchanged. ooRexx moves the
+position to 1 and answers 0. The next write appends to the same place on both
+interpreters.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'
@@ -1574,6 +1580,27 @@ READY:
 20 0 0 2
 12 0 13
 abcdefghZWVU
+```
+
+```rexx
+f = 'spec-stream-append-position.tmp'
+call charout f, 'abcdefghijklm'
+call charout f
+say stream(f, 'c', 'open both binary reclength 4 append')
+say charout(f, 'x')
+say lineout(f, , 1) stream(f, 'c', 'query position write')
+say charout(f, 'abc')
+call stream f, 'c', 'close'
+say '['charin(f, 1, 100)']'
+call sysfiledelete f
+```
+
+```output
+READY:
+0
+1 17
+0
+[abcdefghijklmx  abc]
 ```
 
 r[bif.stream.deviation.98]

@@ -79,6 +79,10 @@ pub(in crate::dispatch) fn query_size(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let unopened = unopened_standard(interp, receiver)?;
+    if !unopened && let Some(handle) = require(interp, receiver)?.handle {
+        let size = standard_handle_size(interp, handle);
+        return Ok(Some(interp.text_built(size.to_string().into_bytes())));
+    }
     if !unopened && owned_standard_output(interp, receiver)? {
         interp.hand_over_stdout();
         if owned_stdout_alias(interp, receiver)? {
@@ -128,6 +132,41 @@ pub(in crate::dispatch) fn query_size(
         }
         Err(_) => Ok(Some(interp.text(b""))),
     }
+}
+
+/// Standard handles may refer to a regular file or to an embedding's
+/// in-memory streams, which have no file size.
+fn standard_handle_size(interp: &mut Interp, handle: StandardStream) -> u64 {
+    let metadata = match handle {
+        StandardStream::In => interp
+            .input_file()
+            .and_then(|open| open.file().metadata().ok()),
+        StandardStream::Out | StandardStream::Err => {
+            if !interp
+                .sinks
+                .as_ref()
+                .is_some_and(|sinks| sinks.own_descriptors)
+            {
+                return 0;
+            }
+            let descriptor = match handle {
+                StandardStream::Out => {
+                    interp.hand_over_stdout();
+                    1
+                }
+                _ => {
+                    interp.hand_over_stderr();
+                    2
+                }
+            };
+            descriptor_file(descriptor)
+                .and_then(|file| file.metadata())
+                .ok()
+        }
+    };
+    metadata
+        .filter(std::fs::Metadata::is_file)
+        .map_or(0, |meta| meta.len())
 }
 
 /// `query_time`: the modification time as `ctime` renders it, which the Rexx
