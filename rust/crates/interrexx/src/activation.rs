@@ -1546,6 +1546,12 @@ impl Interp {
         self.activity.suspended.len() + usize::from(self.activity.running.is_some())
     }
 
+    /// The depth the nesting limit counts: [`Interp::activation_depth`], on
+    /// top of the depth of the code whose trace line the activity delivers.
+    pub(crate) fn nesting_depth(&self) -> usize {
+        self.activation_depth() + self.activity.depth_base
+    }
+
     /// Makes `activation` the running one and suspends whatever was.
     pub(crate) fn push_activation(&mut self, activation: Activation) {
         let boxed = match self.activity.spare_activations.pop() {

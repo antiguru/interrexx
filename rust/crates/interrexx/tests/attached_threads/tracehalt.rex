@@ -1,9 +1,8 @@
-/* The example of conc.locks.trace.deviation.14 with the extension loaded: the destination's
-   guarded LINEOUT loops for ever while a started activity is ready from its first second, and a
-   thread of the extension, which never attaches, calls Halt through the instance twenty seconds
-   in. LINEOUT traps the HALT and answers every later line at once, and the started activity
-   traps one too where it comes.
-   spec: conc.locks.trace.deviation.14, conc.halt.signal */
+/* A destination's guarded LINEOUT loops for ever while a started activity is ready from its
+   first second, and a thread of the extension, which never attaches, calls Halt through the
+   instance twenty seconds in. LINEOUT traps the HALT and answers every later line at once, and the
+   started activity has ended before it.
+   spec: instr.trace.delivery.owner, conc.halt.signal */
 s = .sink~new
 .traceoutput~destination(s)
 m = .setter~new~start('go')
