@@ -1,6 +1,7 @@
 //! File routines backed by the Windows filesystem APIs.
 
-use super::{answer, check_arity, path_argument};
+use super::{answer, c_string, check_arity, optional_text, path_argument};
+use crate::error::Raised;
 use crate::{Failure, Interp};
 use interrexx_core::ObjRef;
 use std::io;
@@ -108,4 +109,43 @@ pub(crate) fn is_link(
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     has_attribute::<FILE_ATTRIBUTE_REPARSE_POINT>(interp, name, args)
+}
+
+/// Answers Windows creation, access or write time in local civil time.
+pub(crate) fn get_file_date_time(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 2)?;
+    let path = path_argument(interp, args, 1)?;
+    let selector = optional_text(interp, args, 2)?;
+    let selector = selector.as_deref().map_or(b"W".as_slice(), c_string);
+    let time = match selector.first().map(u8::to_ascii_uppercase) {
+        Some(b'A') => std::fs::Metadata::last_access_time,
+        Some(b'C') => std::fs::Metadata::creation_time,
+        Some(b'W') => std::fs::Metadata::last_write_time,
+        _ => {
+            return Err(Raised::invalid_routine_option(
+                "SysGetFileDateTime",
+                "time selector",
+                "'A', 'C', or 'W'",
+                selector,
+            )
+            .into());
+        }
+    };
+    let Ok(metadata) = std::fs::symlink_metadata(crate::paths::os_path(&path)) else {
+        return Ok(answer(interp, -1));
+    };
+    let Some(civil) = crate::host::local_file_time(time(&metadata)) else {
+        return Ok(answer(interp, -1));
+    };
+    Ok(interp.text_built(
+        format!(
+            "{:4}-{:02}-{:02} {:02}:{:02}:{:02}",
+            civil.wYear, civil.wMonth, civil.wDay, civil.wHour, civil.wMinute, civil.wSecond
+        )
+        .into_bytes(),
+    ))
 }

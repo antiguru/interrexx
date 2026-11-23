@@ -115,6 +115,17 @@ fn path_argument(
     Ok(crate::builtin::platform::qualify_name(interp, &text))
 }
 
+/// `SysCls()` on Windows: clear the console, returning the Win32 status.
+#[cfg(windows)]
+pub(crate) fn cls(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(answer(interp, crate::host::clear_console()))
+}
+
 /// `SysUtilVersion()`: `ORX_VER.ORX_REL.ORX_MOD`.
 pub(crate) fn util_version(
     interp: &mut Interp,

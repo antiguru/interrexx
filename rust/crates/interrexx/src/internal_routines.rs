@@ -84,6 +84,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     util_run("SysCloseEventSem", crate::builtin::rexxutil::close_sem),
     util_run("SysCloseMutexSem", crate::builtin::rexxutil::close_sem),
+    #[cfg(windows)]
+    util_run("SysCls", crate::builtin::rexxutil::cls),
     #[cfg(unix)]
     util_run("SysCls", crate::builtin::rexxutil::process::cls),
     util_run(
@@ -146,6 +148,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysGetErrorText",
         crate::builtin::rexxutil::messages::error_text,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysGetFileDateTime",
+        crate::builtin::rexxutil::windows_files::get_file_date_time,
     ),
     #[cfg(unix)]
     util_run(

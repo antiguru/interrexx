@@ -101,3 +101,60 @@ pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io
     }
     Ok(())
 }
+
+/// Decodes the filesystem's UTC FILETIME counter in Windows local time.
+pub(crate) fn local_file_time(ticks: u64) -> Option<windows_sys::Win32::Foundation::SYSTEMTIME> {
+    use windows_sys::Win32::{
+        Foundation::{FILETIME, SYSTEMTIME},
+        Storage::FileSystem::FileTimeToLocalFileTime,
+        System::Time::FileTimeToSystemTime,
+    };
+
+    let ticks = ticks.to_le_bytes();
+    let utc = FILETIME {
+        dwLowDateTime: u32::from_le_bytes(ticks[..4].try_into().unwrap()),
+        dwHighDateTime: u32::from_le_bytes(ticks[4..].try_into().unwrap()),
+    };
+    let mut local = FILETIME::default();
+    let mut civil = SYSTEMTIME::default();
+    // SAFETY: all pointers refer to live structures of the required type.
+    if unsafe { FileTimeToLocalFileTime(&utc, &mut local) } == 0
+        || unsafe { FileTimeToSystemTime(&local, &mut civil) } == 0
+    {
+        return None;
+    }
+    Some(civil)
+}
+
+/// Clears the console screen buffer and moves the cursor back to its origin.
+pub(crate) fn clear_console() -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{
+            CONSOLE_SCREEN_BUFFER_INFO, COORD, FillConsoleOutputAttribute,
+            FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, GetStdHandle,
+            STD_OUTPUT_HANDLE, SetConsoleCursorPosition,
+        },
+    };
+
+    let mut info = CONSOLE_SCREEN_BUFFER_INFO::default();
+    // SAFETY: info is writable and the console functions validate the handle.
+    unsafe {
+        let console = GetStdHandle(STD_OUTPUT_HANDLE);
+        if GetConsoleScreenBufferInfo(console, &mut info) == 0 {
+            return i64::from(GetLastError());
+        }
+        let area =
+            u32::from(info.dwSize.X.unsigned_abs()) * u32::from(info.dwSize.Y.unsigned_abs());
+        let origin = COORD { X: 0, Y: 0 };
+        let mut written = 0;
+        if FillConsoleOutputCharacterW(console, u16::from(b' '), area, origin, &mut written) == 0
+            || FillConsoleOutputAttribute(console, info.wAttributes, area, origin, &mut written)
+                == 0
+            || SetConsoleCursorPosition(console, origin) == 0
+        {
+            return i64::from(GetLastError());
+        }
+    }
+    0
+}
