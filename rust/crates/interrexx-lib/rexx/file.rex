@@ -319,21 +319,28 @@
 -- every directory of an array path before any is searched.
 ::method searchPath class
   use strict arg name, path = .nil
+  directories = .nil
   if arg(2, 'O') then do
     separator = self~pathSeparator
     list = value('PATH', , 'ENVIRONMENT')
-    directories = .nil
   end
   else do
     list = self~interrexx_string(path)
-    directories = .nil
+    if .nil == list then do
+      items = path~request('ARRAY')
+      if .nil \== items then do
+        if \items~isA(.Array) then items = .nil
+      end
+      if .nil == items then do
+        if path~isInstanceOf(.Array) then raise syntax 98.913 array(path)
+        list = self~interrexx_string(path~request('STRING'))
+        if .nil == list then raise syntax 98.913 array(path)
+      end
+    end
     if .nil \== list then do
       if list \== '' then separator = self~pathSeparator
     end
     else do
-      items = path~request('ARRAY')
-      if .nil == items then raise syntax 98.913 array(path)
-      if \items~isA(.Array) then raise syntax 98.913 array(path)
       directories = .array~new
       do item over items
         if item~isA(.File) then text = item~absolutePath

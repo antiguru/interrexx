@@ -1594,6 +1594,10 @@ if it lacks a method ooRexx sends.
 argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
 that method raises `SYNTAX 97.1` even if it can supply valid mode text.
 
+`File~searchPath` can read a directory list through a string request when
+an object outside the array class hierarchy supplies no array. ooRexx raises
+`SYNTAX 98.913` when the array conversion fails.
+
 `CircularQueue` converts size, count, order and option arguments before
 checking their values. ooRexx sends `<`, `UPPER`, `CASELESSSTARTSWITH` or
 `CASELESSMATCHCHAR` to the arguments themselves, which can raise
