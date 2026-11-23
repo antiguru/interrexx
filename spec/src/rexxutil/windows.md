@@ -133,7 +133,6 @@ console's buffer size as rows and columns. `WINDOWRECT` answers the visible
 rectangle as top, left, bottom and right. `MAXWINDOWSIZE` answers the maximum
 window size as rows and columns for the current buffer and display. A
 query without a console output buffer answers zero for each field.
-
 `BUFFERSIZE` with rows and columns, or `WINDOWRECT` with all four coordinates,
 changes that property and answers `0` on success or a Windows system error
 code on failure.
