@@ -10,7 +10,7 @@ use std::ffi::{CStr, c_char, c_void};
 use std::sync::OnceLock;
 
 use interrexx_api::layout::{
-    CONSTRXSTRING, REXXDATETIME, REXXPFN, RXSTRING, RexxQueueTime, RexxReturnCode,
+    CONSTRXSTRING, REXXPFN, RXSTRING, RexxLegacyQueueTime, RexxQueueTime, RexxReturnCode,
 };
 
 /// The definition of `name` in `librexx` (`librexx.so.4` on ELF hosts), which the loader mapped
@@ -705,7 +705,7 @@ pub unsafe extern "C" fn RexxPullFromQueue(
 pub unsafe extern "C" fn RexxPullQueue(
     name: *const c_char,
     data: *mut RXSTRING,
-    time: *mut REXXDATETIME,
+    time: *mut RexxLegacyQueueTime,
     wait: usize,
 ) -> RexxReturnCode {
     // SAFETY: `librexx.so.4` defines `RexxPullQueue` with this signature.
@@ -715,7 +715,7 @@ pub unsafe extern "C" fn RexxPullQueue(
             unsafe extern "C" fn(
                 *const c_char,
                 *mut RXSTRING,
-                *mut REXXDATETIME,
+                *mut RexxLegacyQueueTime,
                 usize,
             ) -> RexxReturnCode,
         >(target(c"RexxPullQueue"))

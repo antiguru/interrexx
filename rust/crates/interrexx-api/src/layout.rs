@@ -44,6 +44,24 @@ c_typedefs! {
 /// generator's per-platform table rather than in [`C_TYPEDEFS`].
 pub type REXXPFN = *mut c_void;
 
+/// The system time used by the Windows classic queue API.
+#[cfg(windows)]
+#[repr(C)]
+pub struct RexxLegacyQueueTime {
+    pub year: u16,
+    pub month: u16,
+    pub weekday: u16,
+    pub day: u16,
+    pub hours: u16,
+    pub minutes: u16,
+    pub seconds: u16,
+    pub milliseconds: u16,
+}
+
+/// The legacy Unix queue timestamp.
+#[cfg(unix)]
+pub type RexxLegacyQueueTime = REXXDATETIME;
+
 /// `process_id_t`, the identifier of a process. A platform type, in the header
 /// generator's per-platform table.
 #[cfg(unix)]

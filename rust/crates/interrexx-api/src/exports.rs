@@ -12,9 +12,9 @@
 use std::ffi::{c_char, c_int, c_short, c_ushort, c_void};
 
 use crate::layout::{
-    CMember, CONSTRXSTRING, CSTRING, REXXDATETIME, REXXPFN, RXSTRING, RXSYSEXIT, RexxInstance_,
-    RexxOption, RexxQueueTime, RexxReturnCode, RexxStemObject, RexxThreadContext_, SHVBLOCK,
-    process_id_t, thread_id_t,
+    CMember, CONSTRXSTRING, CSTRING, REXXPFN, RXSTRING, RXSYSEXIT, RexxInstance_,
+    RexxLegacyQueueTime, RexxOption, RexxQueueTime, RexxReturnCode, RexxStemObject,
+    RexxThreadContext_, SHVBLOCK, process_id_t, thread_id_t,
 };
 
 /// Where the headers declare an export.
@@ -218,7 +218,7 @@ exports! {
     /// Takes a line from a queue, with the time it was added as this
     /// platform's date and time.
     RexxPullQueue in platform pointer PFNREXXPULLQUEUE
-        = extern "C" fn(CSTRING, *mut RXSTRING, *mut REXXDATETIME, usize) -> RexxReturnCode;
+        = extern "C" fn(CSTRING, *mut RXSTRING, *mut RexxLegacyQueueTime, usize) -> RexxReturnCode;
     /// Allocates a block a result may be returned in.
     RexxAllocateMemory in "rexx.h" pointer PFNREXXALLOCATEMEMORY
         = extern "C" fn(usize) -> *mut c_void;
