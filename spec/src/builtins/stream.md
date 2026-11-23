@@ -1127,6 +1127,11 @@ say stream(f, 'c', 'query timestamp')
 call value 'TZ', 'EET-2', 'ENVIRONMENT'
 say stream(f, 'c', 'query timestamp')
 say .stream~new(f)~query('datetime')
+call value 'TZ', 'UTC0', 'ENVIRONMENT'
+say SysSetFileDateTime(f, '1969-07-01', '04:30:00')
+call value 'TZ', 'AST4', 'ENVIRONMENT'
+say stream(f, 'c', 'query timestamp')
+say .stream~new(f)~query('datetime')
 call SysFileDelete f
 ```
 
@@ -1135,6 +1140,9 @@ call SysFileDelete f
 2020-12-31 23:30:00
 2021-01-01 01:30:00
 01-01-21 01:30:00
+0
+1969-07-01 00:30:00
+07-01-69 00:30:00
 ```
 
 r[bif.stream.query.handle]

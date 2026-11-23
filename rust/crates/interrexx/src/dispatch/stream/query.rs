@@ -148,20 +148,22 @@ pub(in crate::dispatch) fn query_time(
         Some(metadata) => metadata,
         None => std::fs::metadata(qualified_path(interp, receiver)?),
     };
-    let modified = metadata
-        .and_then(|meta| meta.modified())
-        .ok()
-        .and_then(|at| at.duration_since(std::time::UNIX_EPOCH).ok());
-    let Some(since_epoch) = modified else {
+    let Ok(modified) = metadata.and_then(|meta| meta.modified()) else {
         return Ok(Some(interp.text(b"")));
     };
-    let at = i64::try_from(since_epoch.as_secs())
-        .ok()
-        .and_then(|seconds| {
-            let zone = program_zone(interp);
-            let offset = i64::from(zone.find_local_time_type(seconds).ok()?.ut_offset());
-            chrono::DateTime::from_timestamp(seconds.checked_add(offset)?, 0)
-        });
+    let seconds = match modified.duration_since(std::time::UNIX_EPOCH) {
+        Ok(since) => i128::from(since.as_secs()),
+        Err(before) => {
+            let gap = before.duration();
+            // A fractional time before the epoch belongs to the preceding second.
+            -i128::from(gap.as_secs()) - i128::from(gap.subsec_nanos() != 0)
+        }
+    };
+    let at = i64::try_from(seconds).ok().and_then(|seconds| {
+        let zone = program_zone(interp);
+        let offset = i64::from(zone.find_local_time_type(seconds).ok()?.ut_offset());
+        chrono::DateTime::from_timestamp(seconds.checked_add(offset)?, 0)
+    });
     let Some(at) = at else {
         return Ok(Some(interp.text(b"")));
     };
