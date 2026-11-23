@@ -1593,8 +1593,8 @@ fn the_extension_check_refuses_the_oracles_librexx() {
 /// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
 /// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
 /// a socket there both engines pass those six, 30 / 176 / 0 + 1. `TEST_WORDEXP` passes on the
-/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 139 / 8 here at
-/// r13532.
+/// oracle and fails here, where `SysWordexp("*")` is refused (Deviation 90): 30 / 139 / 8
+/// here at r13532.
 #[test]
 fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
     let runtime = scratch().join("rxunixsys-runtime");
