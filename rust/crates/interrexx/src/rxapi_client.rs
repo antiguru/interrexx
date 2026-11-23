@@ -8,14 +8,16 @@ use interrexx_rxapi::client::{Session, connect};
 use interrexx_rxapi::message::code::NO_SERVICE;
 use interrexx_rxapi::message::wire::PROTOCOL_VERSION;
 use interrexx_rxapi::message::{Reply, Request};
-use interrexx_rxapi::transport::unix::{Unix, service_dir, socket_path};
+#[cfg(unix)]
+use interrexx_rxapi::transport::unix::socket_path;
 use interrexx_rxapi::transport::{CancelToken, Transport};
+use interrexx_rxapi::transport::{PlatformClient, service_dir};
 
 pub(crate) use interrexx_rxapi::client::{SESSION_VARIABLE, session_value};
 
 /// The connection and the session queue it serves.
 pub(crate) struct ApiClient {
-    transport: Unix,
+    transport: PlatformClient,
     session: u64,
 }
 
@@ -62,9 +64,20 @@ pub(crate) fn session_handle() -> u64 {
 /// API code, and stays the answer for the process's life.
 pub(crate) fn client() -> Result<&'static ApiClient, u64> {
     CLIENT
-        .get_or_init(|| crate::signal::blocked(connect_client))
+        .get_or_init(|| connect_on_host(connect_client))
         .as_ref()
         .map_err(|status| *status)
+}
+
+fn connect_on_host<T>(connect: impl FnOnce() -> T) -> T {
+    #[cfg(unix)]
+    {
+        crate::signal::blocked(connect)
+    }
+    #[cfg(windows)]
+    {
+        connect()
+    }
 }
 
 /// A new connection, attached to this process's session queue.
@@ -73,10 +86,12 @@ fn connect_client() -> Result<ApiClient, u64> {
         return Err(NO_SERVICE);
     }
     let transport = match SERVICE.get() {
-        Some((dir, daemon)) => Unix::connect_or_start_with(dir, daemon).map_err(|error| {
-            interrexx_rxapi::client::report_refusal(&error);
-            error.status()
-        })?,
+        Some((dir, daemon)) => {
+            PlatformClient::connect_or_start_with(dir, daemon).map_err(|error| {
+                interrexx_rxapi::client::report_refusal(&error);
+                error.status()
+            })?
+        }
         None => connect()?,
     };
     let client = ApiClient {
@@ -99,11 +114,12 @@ pub(crate) fn running_client() -> Option<&'static ApiClient> {
         return None;
     }
     let dir = chosen_dir();
+    #[cfg(unix)]
     if !socket_path(&dir, PROTOCOL_VERSION).exists() {
         return None;
     }
     let transport =
-        crate::signal::blocked(|| Unix::connect_version(&dir, PROTOCOL_VERSION)).ok()?;
+        connect_on_host(|| PlatformClient::connect_version(&dir, PROTOCOL_VERSION)).ok()?;
     let client = ApiClient {
         transport,
         session: session_handle(),

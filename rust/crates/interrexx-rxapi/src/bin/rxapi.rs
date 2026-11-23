@@ -6,7 +6,9 @@ use std::time::Duration;
 
 use interrexx_rxapi::daemon::{Exit, MAX_BACKLOG, Options, serve};
 use interrexx_rxapi::message::wire::PROTOCOL_VERSION;
-use interrexx_rxapi::transport::unix::{Unix, detach, prepare_dir, service_dir};
+#[cfg(unix)]
+use interrexx_rxapi::transport::unix::{detach, prepare_dir};
+use interrexx_rxapi::transport::{PlatformClient, service_dir};
 
 /// The status `rxapi.testGroup` sees when another instance holds the lock.
 const LOCKED: u8 = 13;
@@ -27,9 +29,11 @@ fn idle_grace() -> Duration {
 fn main() -> ExitCode {
     // Started by a client: the daemon is this process's child, which outlives it. Only a start
     // detaches; a stop with the variable in its environment still stops before it returns.
+    #[cfg(unix)]
     let stopping = std::env::args()
         .skip(1)
         .any(|argument| argument == "--stop");
+    #[cfg(unix)]
     if !stopping && let Some(started) = detach() {
         return match started {
             Ok(()) => ExitCode::SUCCESS,
@@ -53,7 +57,7 @@ fn main() -> ExitCode {
     }
     let dir = service_dir();
     if stop {
-        return match Unix::stop(&dir) {
+        return match PlatformClient::stop(&dir) {
             Ok(_) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("rxapi: {error}");
@@ -61,6 +65,7 @@ fn main() -> ExitCode {
             }
         };
     }
+    #[cfg(unix)]
     let dir = match prepare_dir(&dir) {
         Ok(dir) => dir,
         Err(error) => {
@@ -69,15 +74,19 @@ fn main() -> ExitCode {
         }
     };
     // Fails harmlessly for a process group leader, which a shell's foreground job is.
+    #[cfg(unix)]
     let _ = rustix::process::setsid();
     let options = Options {
         dir: &dir,
         version: PROTOCOL_VERSION,
+        #[cfg(unix)]
         uid: rustix::process::getuid().as_raw(),
         backlog: MAX_BACKLOG,
         dry_run,
         idle_grace: idle_grace(),
+        #[cfg(unix)]
         close_inherited: true,
+        #[cfg(unix)]
         stop_on_signal: true,
         report: &say,
     };

@@ -1,6 +1,9 @@
 name: Windows port checks
 on:
+  push:
+    branches: [win-rxapi-960, win-extensions-961]
   pull_request:
+    branches: [main]
     paths:
       - .github/workflows/windows-check.yml
   workflow_dispatch:
@@ -89,10 +92,10 @@ jobs:
           cl /nologo /W4 /WX /TP /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-sdk-smoke.cpp /Fo:sdk-smoke.obj || exit /b 1
           cl /nologo /W4 /WX /TC /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-rxapi-smoke.c /Fo:rxapi-smoke.obj || exit /b 1
           link /nologo /OUT:sdk\bin\sdk-smoke.exe sdk-smoke.obj sdk\lib\rexx.lib || exit /b 1
-          link /nologo /OUT:sdk\bin\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
+          link /nologo /OUT:target\debug\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
           sdk\bin\sdk-smoke.exe || exit /b 1
-          sdk\bin\rxapi-smoke.exe || exit /b 1
-          del sdk\bin\sdk-smoke.exe sdk\bin\rxapi-smoke.exe
+          target\debug\rxapi-smoke.exe || exit /b 1
+          del sdk\bin\sdk-smoke.exe
 
       - uses: actions/upload-artifact@v7
         with:
@@ -100,6 +103,31 @@ jobs:
           path: rust/sdk/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Exercise the Windows RXAPI service across processes
+        shell: pwsh
+        run: |
+          cargo build --locked -p interrexx-rxapi --bins
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --locked -p interrexx-rxapi --test windows_transport
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:REXX_API_DIR = Join-Path $env:RUNNER_TEMP "interrexx-rxapi-$env:GITHUB_RUN_ID"
+          $rexx = (Resolve-Path target/debug/rexx.exe).Path
+          $rxapi = (Resolve-Path target/debug/rxapi.exe).Path
+          try {
+            & $rexx -e "call rxqueue 'create', 'SMOKE'; call rxqueue 'set', 'SMOKE'; queue 'cross process'"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not write to the service' }
+            $lines = @(& $rexx -e "call rxqueue 'set', 'SMOKE'; if queued() <> 1 then exit 1; parse pull item; say item; call rxqueue 'delete', 'SMOKE'")
+            if ($LASTEXITCODE -ne 0 -or $lines.Count -ne 1 -or $lines[0] -cne 'cross process') {
+              throw "Expected queue text, got '$($lines -join '|')'"
+            }
+            & $rexx -e "call rxqueue 'create', 'C_SMOKE'; call rxqueue 'set', 'C_SMOKE'; queue 'from the interpreter'"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not seed the legacy C queue test' }
+            & ./target/debug/rxapi-smoke.exe C_SMOKE
+            if ($LASTEXITCODE -ne 0) { throw "Legacy C queue test failed ($LASTEXITCODE)" }
+          } finally {
+            & $rxapi --stop
+          }
 
       - name: Check out the pinned ooRexx sources
         working-directory: .

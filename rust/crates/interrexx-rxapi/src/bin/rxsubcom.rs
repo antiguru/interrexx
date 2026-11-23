@@ -123,10 +123,9 @@ fn status(reply: Reply, load: bool) -> u64 {
 }
 
 fn main() -> ExitCode {
-    use std::os::unix::ffi::OsStringExt;
     let arguments: Vec<Vec<u8>> = std::env::args_os()
         .skip(1)
-        .map(OsStringExt::into_vec)
+        .map(std::ffi::OsString::into_encoded_bytes)
         .collect();
     let action = match parse(&arguments) {
         Ok(action) => action,

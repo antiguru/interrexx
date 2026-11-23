@@ -1,25 +1,37 @@
 //! The service: per-client threads around one owner of `Core`.
 
 use std::collections::HashMap;
+#[cfg(unix)]
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read, Write};
+#[cfg(unix)]
+use std::io::Read;
+use std::io::{self, Write};
+#[cfg(unix)]
 use std::os::fd::AsFd;
+#[cfg(unix)]
 use std::os::unix::fs::{FileTypeExt, OpenOptionsExt};
-use std::os::unix::net::{UnixListener, UnixStream};
+#[cfg(unix)]
+use std::os::unix::net::{UnixListener, UnixStream as ServiceStream};
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::Duration;
 
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
+#[cfg(unix)]
 use rustix::fs::{FlockOperation, flock};
+
+#[cfg(windows)]
+use crate::transport::windows::{Listener, Pipe as ServiceStream};
 
 use crate::core::{ClientId, Core, Outcome};
 use crate::message::wire::{self, Command};
 use crate::message::{Item, Reply, Request, Timestamp};
+#[cfg(unix)]
 use crate::transport::unix::{Unix, lock_path, peer_uid, socket_path};
 
 /// How long a silent connector may hold a thread before its handshake.
+#[cfg(unix)]
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// `Options::backlog` for a real service. One reply may exceed it, and the next waits.
@@ -30,6 +42,7 @@ pub struct Options<'a> {
     pub dir: &'a Path,
     pub version: u32,
     /// The one user served.
+    #[cfg(unix)]
     pub uid: u32,
     /// Reply bytes a connection may have waiting before the service stops reading it.
     pub backlog: usize,
@@ -39,10 +52,12 @@ pub struct Options<'a> {
     pub idle_grace: Duration,
     /// Close every descriptor above standard error besides the lock file and the listener, once
     /// both are open: only for a daemon that is its own process and has no other thread yet.
+    #[cfg(unix)]
     pub close_inherited: bool,
     /// Stop, as a client's stop request does, on `SIGTERM`, `SIGINT` or `SIGHUP`, whatever their
     /// mask and disposition were when the process started: only for a daemon that is its own
     /// process and has no other thread yet.
+    #[cfg(unix)]
     pub stop_on_signal: bool,
     /// Receives each `rxapi: ...` line.
     pub report: &'a dyn Fn(&str),
@@ -84,7 +99,7 @@ fn now() -> Timestamp {
 enum Event {
     Connected {
         connection: u64,
-        stream: UnixStream,
+        stream: ServiceStream,
         outgoing: Sender<Outgoing>,
         backlog: Arc<Backlog>,
     },
@@ -184,6 +199,7 @@ fn weight(reply: &Reply) -> usize {
         }
 }
 
+#[cfg(unix)]
 fn take_lock(path: &Path) -> io::Result<Option<File>> {
     let mut file = OpenOptions::new()
         .write(true)
@@ -202,6 +218,7 @@ fn take_lock(path: &Path) -> io::Result<Option<File>> {
 }
 
 /// Runs a daemon until it exits. The caller has prepared `options.dir`.
+#[cfg(unix)]
 pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
     let report = options.report;
     let lock = lock_path(options.dir, options.version);
@@ -248,7 +265,7 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
 
         let _ = fs::remove_file(&socket);
         for stream in connections {
-            let _ = stream.shutdown(std::net::Shutdown::Both);
+            close_stream(&stream);
         }
         ended?;
     }
@@ -257,6 +274,7 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
     Ok(Exit::Stopped)
 }
 
+#[cfg(unix)]
 fn accept(listener: UnixListener, version: u32, uid: u32, limit: usize, events: Sender<Event>) {
     let mut next_connection = 0;
     for stream in listener.incoming() {
@@ -271,6 +289,64 @@ fn accept(listener: UnixListener, version: u32, uid: u32, limit: usize, events: 
     }
 }
 
+#[cfg(unix)]
+fn close_stream(stream: &ServiceStream) {
+    let _ = stream.shutdown(std::net::Shutdown::Both);
+}
+
+#[cfg(windows)]
+fn close_stream(stream: &ServiceStream) {
+    stream.close();
+}
+
+/// Runs the per-account Windows service on a local named pipe.
+#[cfg(windows)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the acceptor polls for a Windows pipe or shutdown"
+)]
+pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
+    let listener = match Listener::bind(options.dir, options.version) {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == io::ErrorKind::PermissionDenied => {
+            return Ok(Exit::LockHeld);
+        }
+        Err(error) => return Err(error),
+    };
+    if options.dry_run {
+        return Ok(Exit::Stopped);
+    }
+    let (events, incoming) = mpsc::channel();
+    let (version, limit) = (options.version, options.backlog);
+    let stopping = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let thread_stopping = Arc::clone(&stopping);
+    let acceptor = std::thread::Builder::new().spawn(move || {
+        use std::sync::atomic::Ordering;
+        let mut connection = 0;
+        while !thread_stopping.load(Ordering::Acquire) {
+            match listener.accept() {
+                Ok(stream) => {
+                    let events = events.clone();
+                    spawn(move || read_client(stream, connection, version, limit, events));
+                    connection += 1;
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                Err(_) => break,
+            }
+        }
+    })?;
+    let (connections, ended) = own_core(incoming, options.idle_grace);
+    stopping.store(true, std::sync::atomic::Ordering::Release);
+    let _ = acceptor.join();
+    for stream in connections {
+        close_stream(&stream);
+    }
+    ended?;
+    Ok(Exit::Stopped)
+}
+
 /// Starts a connection's thread. At the thread limit that connection goes and the service stays.
 fn spawn(body: impl FnOnce() + Send + 'static) -> bool {
     std::thread::Builder::new().spawn(body).is_ok()
@@ -278,7 +354,7 @@ fn spawn(body: impl FnOnce() + Send + 'static) -> bool {
 
 /// Answers a connection's handshake, then feeds its frames to the owner until it ends.
 fn read_client(
-    mut stream: UnixStream,
+    mut stream: ServiceStream,
     connection: u64,
     version: u32,
     limit: usize,
@@ -287,12 +363,16 @@ fn read_client(
     if !accepted_hello(&mut stream, version) {
         return;
     }
+    #[cfg(unix)]
     let Ok(writer) = stream.try_clone() else {
         return;
     };
+    #[cfg(unix)]
     let Ok(owner_stream) = stream.try_clone() else {
         return;
     };
+    #[cfg(windows)]
+    let (writer, owner_stream) = (stream.clone(), stream.clone());
     let (outgoing, to_write) = mpsc::channel();
     let backlog = Arc::new(Backlog::default());
     let writer_events = events.clone();
@@ -330,12 +410,15 @@ fn read_client(
 }
 
 /// Reads the `hello`, refusing anything but this `version`.
-fn accepted_hello(stream: &mut UnixStream, version: u32) -> bool {
+fn accepted_hello(stream: &mut ServiceStream, version: u32) -> bool {
     let mut hello = [0; wire::HELLO_LENGTH];
+    #[cfg(unix)]
     let read = stream
         .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
         .and_then(|()| stream.read_exact(&mut hello))
         .and_then(|()| stream.set_read_timeout(None));
+    #[cfg(windows)]
+    let read = stream.hello(&mut hello);
     if read.is_err() {
         return false;
     }
@@ -349,7 +432,7 @@ fn accepted_hello(stream: &mut UnixStream, version: u32) -> bool {
 /// Writes on its own thread, so a client that stops reading stalls only itself. After a failed
 /// write every item still bound for this client goes back to the owner.
 fn write_client(
-    mut stream: UnixStream,
+    mut stream: ServiceStream,
     version: u32,
     to_write: Receiver<Outgoing>,
     backlog: Arc<Backlog>,
@@ -386,14 +469,14 @@ fn write_client(
 }
 
 struct Connection {
-    stream: UnixStream,
+    stream: ServiceStream,
     outgoing: Sender<Outgoing>,
     backlog: Arc<Backlog>,
 }
 
 /// Owns the core until the daemon should exit, answering the streams still open and whether this
 /// was a normal exit. Every sender gone means nothing can reach the core, which is a failure.
-fn own_core(events: Receiver<Event>, idle_grace: Duration) -> (Vec<UnixStream>, io::Result<()>) {
+fn own_core(events: Receiver<Event>, idle_grace: Duration) -> (Vec<ServiceStream>, io::Result<()>) {
     let mut core = Core::new();
     let mut connections: HashMap<u64, Connection> = HashMap::new();
     let mut parked: HashMap<ClientId, Source> = HashMap::new();
@@ -456,7 +539,7 @@ fn own_core(events: Receiver<Event>, idle_grace: Duration) -> (Vec<UnixStream>, 
                 core.client_closed(ClientId::connection(connection));
                 parked.retain(|client, _| client.connection != connection);
                 if let Some(closed) = connections.remove(&connection) {
-                    let _ = closed.stream.shutdown(std::net::Shutdown::Both);
+                    close_stream(&closed.stream);
                 }
             }
         }
@@ -520,20 +603,23 @@ mod tests {
         let (_, ended) = own_core(incoming, Duration::from_secs(60));
         assert!(ended.is_err(), "before any client");
 
-        let (events, incoming) = mpsc::channel();
-        let (stream, _peer) = UnixStream::pair().expect("a pair");
-        let (outgoing, _to_write) = mpsc::channel();
-        let connected = Event::Connected {
-            connection: 0,
-            stream,
-            outgoing,
-            backlog: Arc::default(),
-        };
-        events.send(connected).expect("the owner is listening");
-        drop(events);
-        let (streams, ended) = own_core(incoming, Duration::from_secs(60));
-        assert!(ended.is_err(), "with a client connected");
-        assert_eq!(streams.len(), 1, "its stream is handed back to be shut");
+        #[cfg(unix)]
+        {
+            let (events, incoming) = mpsc::channel();
+            let (stream, _peer) = ServiceStream::pair().expect("a pair");
+            let (outgoing, _to_write) = mpsc::channel();
+            let connected = Event::Connected {
+                connection: 0,
+                stream,
+                outgoing,
+                backlog: Arc::default(),
+            };
+            events.send(connected).expect("the owner is listening");
+            drop(events);
+            let (streams, ended) = own_core(incoming, Duration::from_secs(60));
+            assert!(ended.is_err(), "with a client connected");
+            assert_eq!(streams.len(), 1, "its stream is handed back to be shut");
+        }
     }
 
     #[test]
