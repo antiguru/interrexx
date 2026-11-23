@@ -144,7 +144,8 @@ done:
   parse upper var text word rest
   rest = rest~strip
   select
-    when 'POSITION'~abbrev(word, 1) | 'SEEK'~abbrev(word, 1) then return self~!query_position(rest)
+    when 'POSITION'~abbrev(word, 1) | 'SEEK'~abbrev(word, 1) then
+      forward message '!QUERY_POSITION' arguments (.array~of(rest))
     when rest \== '' then raise syntax 93.0
     when 'EXISTS'~abbrev(word, 1) then return self~!query_exists
     when 'SIZE'~abbrev(word, 2) then return self~!query_size

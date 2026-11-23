@@ -380,7 +380,9 @@ pub(in crate::dispatch) fn query_position(
         Ok(answer) => Ok(Some(interp.text_built(answer.to_string().into_bytes()))),
         Err(error) => {
             let errno = error.raw_os_error().unwrap_or(0);
-            notready(interp, receiver, StreamStatus::Error(errno), Vec::new())
+            let mut answer = b"ERROR:".to_vec();
+            append_stream_errno(&mut answer, errno);
+            notready(interp, receiver, StreamStatus::Error(errno), answer)
         }
     }
 }
