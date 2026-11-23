@@ -1,4 +1,15 @@
 //! The Rexx parser: source retention, scanning, and the grammar.
+//!
+//! The parsing functions run on the caller's thread. When nesting is unknown,
+//! use [`with_parser_stack`] or give the parsing thread [`PARSER_STACK_BYTES`]
+//! of stack. On a smaller stack, native stack exhaustion can abort the process
+//! before parsing reaches [`MAX_EXPR_DEPTH`].
+//!
+//! `Debug`, `Clone`, and equality on [`Expr`] and the AST types containing
+//! expressions recurse through the tree. Use a large stack for these operations
+//! on deep trees too. Flat expressions can build deeper trees than the
+//! grammar's nesting limit, so the parser stack size is not a depth guarantee
+//! for those traits.
 
 // A layer's entry
 // point can have no non-test caller. `cargo clippy
@@ -53,6 +64,44 @@ use crate::directive::{Declared, parse_directive};
 use crate::scanner::scan_to_error;
 use crate::selector::SelectorTable;
 use crate::token::ParseCtx;
+
+/// Stack size used to test parsing at [`MAX_EXPR_DEPTH`].
+pub const PARSER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
+/// Runs `work` on a fresh thread with [`PARSER_STACK_BYTES`] of stack and
+/// waits for it to finish. The closure can borrow its inputs from the caller.
+///
+/// # Errors
+///
+/// Returns an I/O error if the thread cannot be spawned. A parse error
+/// returned by the closure is part of the closure's result.
+///
+/// # Panics
+///
+/// Propagates a panic from the worker to the caller.
+///
+/// # Examples
+///
+/// ```
+/// let line = b"say 'hello'".to_vec();
+/// let program = interrexx_parse::with_parser_stack(|| {
+///     interrexx_parse::parse_lines(&[&line])
+/// })??;
+/// assert_eq!(program.main.instructions.len(), 1);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn with_parser_stack<T: Send>(work: impl FnOnce() -> T + Send) -> std::io::Result<T> {
+    std::thread::scope(|scope| {
+        let worker = std::thread::Builder::new()
+            .name("rexx-parse".into())
+            .stack_size(PARSER_STACK_BYTES)
+            .spawn_scoped(scope, work)?;
+        match worker.join() {
+            Ok(result) => Ok(result),
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
+    })
+}
 
 /// A whole program: everything `translate` produces from one source buffer.
 #[derive(Debug)]

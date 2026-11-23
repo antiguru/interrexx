@@ -11,6 +11,11 @@ use crate::token::{Operator, SymbolId};
 use crate::token::SymbolTable;
 
 /// One expression node: what it is, and the source it came from.
+///
+/// The `Debug`, `Clone`, and equality implementations recurse through the
+/// subtree. A deep tree can exhaust the thread's stack during these
+/// operations. Consider [`crate::with_parser_stack`] when processing deep
+/// trees. Dropping an expression is iterative.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Expr {
     pub kind: ExprKind,
