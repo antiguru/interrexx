@@ -31,14 +31,13 @@ pub(crate) fn transient(file: &std::fs::File) -> bool {
     matches!(file_kind(file), FILE_TYPE_CHAR | FILE_TYPE_PIPE)
 }
 
-pub(crate) fn bytes_waiting(file: &std::fs::File) -> Option<u32> {
-    use std::os::windows::io::AsRawHandle as _;
+pub(crate) fn bytes_waiting(pipe: &impl std::os::windows::io::AsRawHandle) -> Option<u32> {
     use windows_sys::Win32::System::Pipes::PeekNamedPipe;
     let mut available = 0;
     // SAFETY: the handle is live and the only non-null out parameter points to u32.
     let result = unsafe {
         PeekNamedPipe(
-            file.as_raw_handle(),
+            pipe.as_raw_handle(),
             std::ptr::null_mut(),
             0,
             std::ptr::null_mut(),
@@ -59,4 +58,14 @@ pub(crate) fn terminate(process: &std::os::windows::io::OwnedHandle) {
     use std::os::windows::io::AsRawHandle as _;
     // SAFETY: the handle was cloned from the child this interpreter started.
     unsafe { windows_sys::Win32::System::Threading::TerminateProcess(process.as_raw_handle(), 1) };
+}
+
+/// Checks for child exit, waiting briefly only when its pipe has no data.
+pub(crate) fn child_ended(process: &std::os::windows::io::OwnedHandle, pipe_empty: bool) -> bool {
+    use std::os::windows::io::AsRawHandle as _;
+    use windows_sys::Win32::{Foundation::WAIT_OBJECT_0, System::Threading::WaitForSingleObject};
+    // SAFETY: the handle is a live process handle with synchronization rights.
+    let timeout = if pipe_empty { 10 } else { 0 };
+    let status = unsafe { WaitForSingleObject(process.as_raw_handle(), timeout) };
+    status == WAIT_OBJECT_0
 }

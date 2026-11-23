@@ -116,6 +116,6 @@ pub(super) fn read_line_from(
 }
 
 #[cfg(windows)]
-pub(super) fn transient_has_data(open: &mut interrexx_core::OpenFile) -> bool {
+pub(super) fn transient_has_data(open: &interrexx_core::OpenFile) -> bool {
     open.pending.is_some() || crate::host::bytes_waiting(open.file()).is_none_or(|bytes| bytes > 0)
 }

@@ -53,7 +53,7 @@ jobs:
             }
           }
           Check-Rexx '4' @('-e', 'say 2 + 2')
-          Check-Rexx 'local queue' @('-e', "queue 'local queue'; pull answer; say answer")
+          Check-Rexx 'local queue' @('-e', "queue 'local queue'; parse pull answer; say answer")
           Check-Rexx 'child process' @('-e', "address system 'echo child process'")
           $script = Join-Path $env:RUNNER_TEMP 'échantillon.rex'
           'say 2 + 2' | Set-Content -Encoding ascii $script

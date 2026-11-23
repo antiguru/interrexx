@@ -70,24 +70,56 @@ fn read_all<R: Read + AsFd + Send + 'static>(
 }
 
 #[cfg(windows)]
-fn read_all<R: Read>(
+fn read_all<R: Read + std::os::windows::io::AsRawHandle + Send + 'static>(
     mut reader: R,
-    _ended: Option<&()>,
+    ended: Option<&std::os::windows::io::OwnedHandle>,
     kept: &mut Vec<u8>,
     written: Option<(&(dyn Fn(Piece, Vec<u8>) + Sync), Piece)>,
 ) {
-    if let Some((written, kind)) = written {
-        let mut block = [0; 4096];
-        loop {
-            match reader.read(&mut block) {
-                Ok(0) => break,
-                Ok(size) => written(kind, block[..size].to_vec()),
-                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
-                Err(_) => break,
+    let mut block = [0; 4096];
+    let mut take = |bytes: &[u8]| match written {
+        Some((written, kind)) => written(kind, bytes.to_vec()),
+        None => kept.extend_from_slice(bytes),
+    };
+    let mut remaining = None;
+    loop {
+        let maximum = match ended {
+            Some(process) => {
+                let Some(available) = crate::host::bytes_waiting(&reader) else {
+                    break;
+                };
+                let available = available as usize;
+                if remaining.is_none() && crate::host::child_ended(process, available == 0) {
+                    // Take only the data already written when the child exits.
+                    remaining = Some(crate::host::bytes_waiting(&reader).unwrap_or(0) as usize);
+                }
+                if remaining == Some(0) {
+                    std::thread::spawn(move || {
+                        let _ = std::io::copy(&mut reader, &mut std::io::sink());
+                    });
+                    break;
+                }
+                if available == 0 {
+                    continue;
+                }
+                remaining
+                    .unwrap_or(available)
+                    .min(available)
+                    .min(block.len())
             }
+            None => block.len(),
+        };
+        match reader.read(&mut block[..maximum]) {
+            Ok(0) => break,
+            Ok(size) => {
+                take(&block[..size]);
+                if let Some(left) = &mut remaining {
+                    *left -= size;
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(_) => break,
         }
-    } else {
-        let _ = reader.read_to_end(kept);
     }
 }
 
@@ -119,7 +151,12 @@ pub(super) fn collect(
     #[cfg(unix)]
     let ended_reader = ended.as_deref();
     #[cfg(windows)]
-    let ended_reader: Option<&()> = None;
+    let ended = {
+        use std::os::windows::io::AsHandle as _;
+        running.as_handle().try_clone_to_owned().ok()
+    };
+    #[cfg(windows)]
+    let ended_reader = ended.as_ref();
     let mut out = Vec::new();
     let mut err = Vec::new();
     std::thread::scope(|scope| {

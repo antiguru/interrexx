@@ -122,6 +122,7 @@ pub(crate) fn userid(
     for fallback in [
         b"USER".as_slice(),
         b"LOGNAME".as_slice(),
+        #[cfg(windows)]
         b"USERNAME".as_slice(),
     ] {
         if let Some(value) = interp.env_get(fallback) {
