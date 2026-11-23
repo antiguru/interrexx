@@ -2,7 +2,7 @@
 element: "Validate"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > Validate Class; Builtin Classes > Utility Classes > Validate Class > classType (Class Method); Builtin Classes > Utility Classes > Validate Class > length (Class Method); Builtin Classes > Utility Classes > Validate Class > logical (Class Method); Builtin Classes > Utility Classes > Validate Class > nonNegativeNumber (Class Method); Builtin Classes > Utility Classes > Validate Class > nonNegativeWholeNumber (Class Method); Builtin Classes > Utility Classes > Validate Class > number (Class Method); Builtin Classes > Utility Classes > Validate Class > numberRange (Class Method); Builtin Classes > Utility Classes > Validate Class > position (Class Method); Builtin Classes > Utility Classes > Validate Class > positiveNumber (Class Method); Builtin Classes > Utility Classes > Validate Class > positiveWholeNumber (Class Method); Builtin Classes > Utility Classes > Validate Class > requestClassType (Class Method); Builtin Classes > Utility Classes > Validate Class > wholeNumber (Class Method); Builtin Classes > Utility Classes > Validate Class > wholeNumberRange (Class Method)"
-deviations: [109]
+deviations: [109, 183]
 ---
 
 # Validate
@@ -86,11 +86,11 @@ omitted arguments at the end count as not given. The `ADDITIONAL` items of
 these three errors are [unspecified](r:conv.error.additional). A call with more
 than one fault, among the argument count, `digits` and the value, raises the
 error of one of them, as [the precedence rule](r:conv.error.precedence) says.
-Every value and bound is read as a string as [the conversion
-rule](r:conv.string.object) says. A check that fails raises the `SYNTAX` error
-of its method, which the rules below give. The second example asks every check,
-with no argument, for one fewer than it needs, for the first one left out and
-for one more than it takes.
+The number checks read their values and bounds as strings. `logical` reads its
+value as a string too. Both follow [the conversion rule](r:conv.string.object).
+A check that fails raises the `SYNTAX` error of its method, which the rules
+below give. The second example asks every check, with no argument, for one
+fewer than it needs, for the first one left out and for one more than it takes.
 
 ```rexx
 call t 'number', 'N', 'x'
@@ -540,184 +540,25 @@ wholeNumberRange 5 1.5 9.5 - => ok
 r[class.validate.sends]
 The number checks convert the value to a string once, as [the conversion
 rule](r:conv.string.object) says (apart from [the
-deviation](r:class.validate.deviation.109)); for an object without a `request`
-of its own that is one `makeString`. The string is checked first as a number,
-and as a whole number for the whole-number checks, and a value that passes that
-check is asked, as the object that was given and not the string, to compare.
-`positiveNumber`, `positiveWholeNumber` and `position` send it `>` with `0`;
-`nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it `>=` with
-`0`; `numberRange` and `wholeNumberRange` send it `>=` with `min` and, only
-when that answers true, `<=` with `max`. A comparison that answers `0` raises
-the error of the check, one that answers neither `0` nor `1` raises `SYNTAX
-34.6`, and a value whose class has no such comparison method raises `SYNTAX
-97.1`, so that an object with only a `makeString` is refused by
-`positiveNumber`, `nonNegativeNumber` and `numberRange`, which a number check
-alone would have passed. A value that fails the number check raises that error,
-and whether it is sent a comparison as well is unspecified, as [the precedence
-rule](r:conv.error.precedence) says. `number` and `wholeNumber` send nothing
-more, and the bounds and `digits` are read as strings and are sent no
-comparison. The example has an object whose `makeString` and `unknown` write a
-line, and whose comparisons answer `1` and then `0`.
-
-```rexx
-checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
-  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
-do answer over 1, 0
-  say 'comparisons answer' answer
-  do m over checks~makeArray(' ')
-    say m':' try(m, .probe~new(answer))
-  end
-end
-exit
-try: procedure
-  use arg m, o
-  signal on syntax name bad
-  if m~pos('Range') > 0 then .validate~send(m, 'N', o, 1, 9)
-  else .validate~send(m, 'N', o)
-  return 'ok'
-bad: return '=>' condition('o')~code
-::class probe
-::method init
-  expose answer
-  use arg answer
-::method makeString
-  say '  makeString'
-  return 5
-::method unknown
-  expose answer
-  use arg name, args
-  say ' ' name args[1]
-  return answer
-```
-
-```output
-comparisons answer 1
-  makeString
-number: ok
-  makeString
-  > 0
-positiveNumber: ok
-  makeString
-  >= 0
-nonNegativeNumber: ok
-  makeString
-wholeNumber: ok
-  makeString
-  > 0
-positiveWholeNumber: ok
-  makeString
-  >= 0
-nonNegativeWholeNumber: ok
-  makeString
-  > 0
-position: ok
-  makeString
-  >= 0
-length: ok
-  makeString
-  >= 1
-  <= 9
-numberRange: ok
-  makeString
-  >= 1
-  <= 9
-wholeNumberRange: ok
-comparisons answer 0
-  makeString
-number: ok
-  makeString
-  > 0
-positiveNumber: => 88.926
-  makeString
-  >= 0
-nonNegativeNumber: => 88.925
-  makeString
-wholeNumber: ok
-  makeString
-  > 0
-positiveWholeNumber: => 88.905
-  makeString
-  >= 0
-nonNegativeWholeNumber: => 88.904
-  makeString
-  > 0
-position: => 88.912
-  makeString
-  >= 0
-length: => 88.911
-  makeString
-  >= 1
-numberRange: => 88.907
-  makeString
-  >= 1
-wholeNumberRange: => 88.907
-```
-
-```rexx
-call t 'positiveNumber', .ms~new(5)
-call t 'nonNegativeNumber', .ms~new(5)
-call t 'numberRange', .ms~new(5), 1, 9
-call t 'positiveNumber', .cmp~new('x', 'x')
-call t 'positiveNumber', .cmp~new('5.5', 0)
-call t 'positiveWholeNumber', .cmp~new('5.5', 1)
-call t 'wholeNumberRange', .cmp~new('5.5', 1), 1, 9
-call t 'numberRange', .cmp~new('abc', 1), 1, 9
-call t 'numberRange', .cmp~new(5, 'x'), 1, 9
-call t 'positiveNumber', .cmp~new(5, .true)
-exit
-t: procedure
-  signal on syntax name bad
-  if arg() == 2 then .validate~send(arg(1), 'N', arg(2))
-  else .validate~send(arg(1), 'N', arg(2), arg(3), arg(4))
-  say arg(1) 'ok'
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class ms
-::method init
-  expose v
-  use arg v
-::method makeString
-  expose v
-  return v
-::class cmp
-::method init
-  expose v a
-  use arg v, a
-::method makeString
-  expose v
-  return v
-::method unknown
-  expose a
-  use arg name
-  say '  sent' name
-  return a
-```
-
-```output
-positiveNumber => 97.1
-nonNegativeNumber => 97.1
-numberRange => 97.1
-positiveNumber => 88.926
-  sent >
-positiveNumber => 88.926
-positiveWholeNumber => 88.905
-wholeNumberRange => 88.907
-numberRange => 88.907
-  sent >=
-numberRange => 34.6
-  sent >
-positiveNumber ok
-```
+deviation](r:class.validate.deviation.109)). They check that string as a
+number, and as a whole number for the whole-number checks.
+`positiveNumber`, `positiveWholeNumber` and `position` then compare the string
+with zero using `>`. `nonNegativeNumber`, `nonNegativeWholeNumber` and
+`length` compare it with zero using `>=`. The range checks compare it with the
+converted lower bound using `>=` and, if the result is true, with the converted
+upper bound using `<=`. The check raises its own error code if a comparison
+answers false. [Deviation 183](r:class.validate.deviation.183) describes these
+comparisons and the difference from ooRexx.
 
 ## Logical values and classes
 
 r[class.validate.logical]
-`logical` accepts exactly the strings `0` and `1`, or the objects `.true` and
-`.false`, and raises `SYNTAX 88.927` for any other value, such as `2`, a
-number written otherwise such as `1.0` or `01`, a string with blanks and the
-null string; the `ADDITIONAL` array has two items, the name and then the value,
-which tell a program which argument failed and what it held.
+`logical` accepts the strings `0` and `1`, the objects `.true` and `.false`,
+and an object that supplies exactly `0` or `1` through [string
+conversion](r:conv.string.object), as [Deviation 183](r:class.validate.deviation.183)
+says. Other values, including `2`, `1.0`, `01`, strings with blanks and the
+null string, raise `SYNTAX 88.927`. The `ADDITIONAL` array has two items, the
+name and then the original value.
 
 ```rexx
 call show .array~of('0', '1', .true, .false, '2')
@@ -924,4 +765,78 @@ bad: say condition('o')~code
 accepted
 in range
 88.902
+```
+
+r[class.validate.deviation.183]
+The numeric and logical checks compare the converted text. ooRexx compares
+the original object, so an object with only `makeString` can raise
+`SYNTAX 97.1` in a numeric comparison and `SYNTAX 88.927` in the logical check.
+The probe in this example supplies text and prints a line for each conversion
+or comparison sent to it.
+
+```rexx
+methods = 'positiveNumber nonNegativeNumber positiveWholeNumber',
+          'nonNegativeWholeNumber position length'
+do name over methods~makeArray(' ')
+  call check name, .probe~new(name, '5')
+end
+call check 'numberRange', .probe~new('value', '5.5'), .probe~new('min', '1'), .probe~new('max', '9')
+call check 'wholeNumberRange', .probe~new('value', '11'), 1, 9
+call check 'logical', .probe~new('flag', '1')
+call check 'logical', .probe~new('flag', '01')
+call check 'logical', .displayed~new
+exit
+check: procedure
+  use arg name
+  signal on syntax name refused
+  if arg() == 2 then .validate~send(name, 'N', arg(2))
+  else .validate~send(name, 'N', arg(2), arg(3), arg(4))
+  say name 'ok'
+  return
+refused:
+  say name condition('o')~code
+  return
+::class probe
+::method init
+  expose label text
+  use strict arg label, text
+::method makeString
+  expose label text
+  say 'convert' label
+  return text
+::method '=='
+  say 'strict comparison'
+  return 0
+::method unknown
+  say 'comparison' arg(1)
+  return 0
+::class displayed
+::method string
+  return '0'
+```
+
+```output
+convert positiveNumber
+positiveNumber ok
+convert nonNegativeNumber
+nonNegativeNumber ok
+convert positiveWholeNumber
+positiveWholeNumber ok
+convert nonNegativeWholeNumber
+nonNegativeWholeNumber ok
+convert position
+position ok
+convert length
+length ok
+convert value
+convert min
+convert max
+numberRange ok
+convert value
+wholeNumberRange 88.907
+convert flag
+logical ok
+convert flag
+logical 88.927
+logical ok
 ```
