@@ -1566,3 +1566,7 @@ before comparing it with `0` and `1`. ooRexx refuses an object with
 `DATATYPE('N')` and `POS('.')` directly to the code object. An object that
 can supply valid code as text can still raise `SYNTAX 97.1` in the handler
 if it lacks a method ooRexx sends.
+
+`File~writeChars` and `File~writeLines` convert their mode as a string
+argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
+that method raises `SYNTAX 97.1` even if it can supply valid mode text.

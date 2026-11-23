@@ -2,7 +2,7 @@
 element: "File"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > File Class; Builtin Classes > Utility Classes > File Class > isCaseSensitive (Class Method); Builtin Classes > Utility Classes > File Class > listRoots (Class Method); Builtin Classes > Utility Classes > File Class > pathSeparator (Class Method); Builtin Classes > Utility Classes > File Class > readChars (Class Method); Builtin Classes > Utility Classes > File Class > readLines (Class Method); Builtin Classes > Utility Classes > File Class > searchPath (Class Method); Builtin Classes > Utility Classes > File Class > separator (Class Method); Builtin Classes > Utility Classes > File Class > temporaryPath (Class Method); Builtin Classes > Utility Classes > File Class > writeChars (Class Method); Builtin Classes > Utility Classes > File Class > writeLines (Class Method); Builtin Classes > Utility Classes > File Class > absoluteFile; Builtin Classes > Utility Classes > File Class > absolutePath; Builtin Classes > Utility Classes > File Class > canRead; Builtin Classes > Utility Classes > File Class > canWrite; Builtin Classes > Utility Classes > File Class > compareTo; Builtin Classes > Utility Classes > File Class > delete; Builtin Classes > Utility Classes > File Class > exists; Builtin Classes > Utility Classes > File Class > extension; Builtin Classes > Utility Classes > File Class > hashCode; Builtin Classes > Utility Classes > File Class > init; Builtin Classes > Utility Classes > File Class > isCaseSensitive; Builtin Classes > Utility Classes > File Class > isDirectory; Builtin Classes > Utility Classes > File Class > isFile; Builtin Classes > Utility Classes > File Class > isHidden; Builtin Classes > Utility Classes > File Class > lastAccessed (Attribute); Builtin Classes > Utility Classes > File Class > lastModified (Attribute); Builtin Classes > Utility Classes > File Class > length; Builtin Classes > Utility Classes > File Class > list; Builtin Classes > Utility Classes > File Class > listFiles; Builtin Classes > Utility Classes > File Class > makeDir; Builtin Classes > Utility Classes > File Class > makeDirs; Builtin Classes > Utility Classes > File Class > makeString; Builtin Classes > Utility Classes > File Class > name; Builtin Classes > Utility Classes > File Class > parent; Builtin Classes > Utility Classes > File Class > parentFile; Builtin Classes > Utility Classes > File Class > path; Builtin Classes > Utility Classes > File Class > pathSeparator; Builtin Classes > Utility Classes > File Class > renameTo; Builtin Classes > Utility Classes > File Class > separator; Builtin Classes > Utility Classes > File Class > setReadOnly; Builtin Classes > Utility Classes > File Class > setWritable; Builtin Classes > Utility Classes > File Class > string; Builtin Classes > Utility Classes > Orderable Class > Comparison Methods"
-deviations: [34, 109, 118, 126, 137]
+deviations: [34, 109, 118, 126, 137, 183]
 ---
 
 # File
@@ -2069,12 +2069,14 @@ r[class.file.writechars]
 `writeChars` takes the name of a file, a string and an optional `mode`, and
 writes the string to the file, bytes unchanged, creating the file when it does
 not exist. It answers nothing, so a program that uses what it answers raises
-`SYNTAX 91.999`. The `mode` is sent `strip`, and the first character of the
-string that answers, in upper or lower case, decides: `A` appends the string to
+`SYNTAX 91.999`. The `mode` is read as a [string argument](r:class.index.string).
+After surrounding blanks are stripped, its first character, in upper or
+lower case, decides: `A` appends the string to
 the content of the file and `R` replaces the content, whatever follows the
 letter, so `Replace`, `r` and `repl!` replace. An omitted `mode` appends. Any
-other `mode`, the empty string among them, raises `SYNTAX 88.916`, and one that
-does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The name is
+other mode string, the empty string among them, raises `SYNTAX 88.916`. An
+argument that cannot supply a string, including `.nil`, raises `SYNTAX 88.909`
+([Deviation 183](r:class.file.deviation.183)). The name is
 read as [`readChars`](r:class.file.readchars) reads it, with the same error,
 and a call whose name and `mode` are both wrong raises the error of one of
 them, as [the precedence rule](r:conv.error.precedence) says. The string is
@@ -2106,7 +2108,6 @@ say .file~readChars(f)
 say .file~new('spec-file-writechars-none.tmp')~exists
 call try '.file~writeChars(f, "x", "")'
 call try '.file~writeChars(f, "x", "Q")'
-call try '.file~writeChars(f, "x", .nil)'
 call try '.file~writeChars(.nil, "x")'
 call try '.file~writeChars'
 call try '.file~writeChars(f)'
@@ -2133,7 +2134,6 @@ The NIL object12
 0
 .file~writeChars(f, "x", "") => 88.916
 .file~writeChars(f, "x", "Q") => 88.916
-.file~writeChars(f, "x", .nil) => 97.1
 .file~writeChars(.nil, "x") => 93.938
 .file~writeChars => 93.901
 .file~writeChars(f) => 93.901
@@ -2191,7 +2191,6 @@ call try '.file~writeLines(f, .stem~new)'
 call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
 call try '.file~writeLines(.nil, .array~of("a"))'
 call try '.file~writeLines(f, .array~of("a"), "")'
-call try '.file~writeLines(f, .array~of("a"), .nil)'
 call try '.file~writeLines(f, .bad~new)'
 call try '.file~writeLines'
 call try '.file~writeLines(f)'
@@ -2241,7 +2240,6 @@ an Object
 .file~writeLines(f, .mutablebuffer~new("abc")) => 88.914
 .file~writeLines(.nil, .array~of("a")) => 93.938
 .file~writeLines(f, .array~of("a"), "") => 88.916
-.file~writeLines(f, .array~of("a"), .nil) => 97.1
 .file~writeLines(f, .bad~new) => 98.913
 .file~writeLines => 93.901
 .file~writeLines(f) => 93.901
@@ -2450,4 +2448,51 @@ call endlocal
 File </tmp>
 < >
 </spec-file/tmp>
+```
+
+r[class.file.deviation.183]
+`writeChars` and `writeLines` read the mode through the [string argument
+rule](r:class.index.string). ooRexx sends `STRIP` to the mode itself, so an
+object without that method raises `SYNTAX 97.1` even if `MAKESTRING` supplies
+a valid mode.
+
+```rexx
+f = 'spec-file-write-mode.tmp'
+.file~writeChars(f, 'original', 'replace')
+.file~writeChars(f, 'one', .mode~new('  replace'))
+.file~writeLines(f, .array~of('two'), .mode~new('  append'))
+call try ".file~writeChars(f, 'x', .nil)"
+call try ".file~writeLines(f, .array~of('x'), .nil)"
+call try ".file~writeChars(f, 'x', .stringOnly~new)"
+call try ".file~writeLines(f, .array~of('x'), .mode~new(.object~new))"
+call try ".file~writeChars(f, 'x', .mode~new('bad'))"
+say c2x(.file~readChars(f))
+junk = .file~new(f)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'no error'
+  return
+bad: say condition('o')~code
+  return
+::class mode
+::method init
+  expose text
+  use arg text
+::method makeString
+  expose text
+  return text
+::class stringOnly
+::method string
+  return 'R'
+```
+
+```output
+88.909
+88.909
+88.909
+88.909
+88.916
+6F6E6574776F0A
 ```

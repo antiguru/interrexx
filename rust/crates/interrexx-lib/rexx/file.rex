@@ -419,11 +419,7 @@
 -- and the string is read last, by its string value.
 ::method writeChars class
   use strict arg name, string, mode = 'A'
-  if arg(3, 'E') then do
-    letter = mode~strip~left(1)~upper
-    if letter \== 'A' & letter \== 'R' then
-      raise syntax 88.916 array('mode', "'A[ppend]' or 'R[eplace]'", mode)
-  end
+  if arg(3, 'E') then letter = self~interrexx_write_mode(mode)
   else letter = 'A'
   if name~isA(.File) then text = name~absolutePath
   else do
@@ -447,11 +443,7 @@
   use strict arg name, collection, mode = 'A'
   if \collection~isA(.OrderedCollection) then
     raise syntax 88.914 array('collection', 'OrderedCollection')
-  if arg(3, 'E') then do
-    letter = mode~strip~left(1)~upper
-    if letter \== 'A' & letter \== 'R' then
-      raise syntax 88.916 array('mode', "'A[ppend]' or 'R[eplace]'", mode)
-  end
+  if arg(3, 'E') then letter = self~interrexx_write_mode(mode)
   else letter = 'A'
   if name~isA(.File) then text = name~absolutePath
   else do
@@ -478,6 +470,17 @@
   if opened~left(6) \== 'READY:' then return
   if content~length > 0 then stream~charOut(content~string)
   stream~close
+
+-- r[class.file.writechars], r[class.file.deviation.183]
+::method interrexx_write_mode class private
+  use arg mode
+  text = self~interrexx_string(mode)
+  if .nil == text then text = self~interrexx_string(mode~request('STRING'))
+  if .nil == text then raise syntax 88.909 array(3)
+  letter = text~strip~left(1)~upper
+  if letter \== 'A' & letter \== 'R' then
+    raise syntax 88.916 array('mode', "'A[ppend]' or 'R[eplace]'", text)
+  return letter
 
 ::method interrexx_string class private external "LIBRARY REXX interrexx_file_string"
 ::method searchPathImpl class private external "LIBRARY REXX file_search_path_impl"
