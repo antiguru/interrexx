@@ -40,7 +40,15 @@
   if arg(1, 'E') then do
     given = arg(1)
     if given~isInstanceOf(.string) then text = given~makeString:.string
-    else text = given~request('STRING')
+    else do
+      given~request('STRING')
+      text = .nil
+      if var('RESULT') then text = result
+      if \text~isInstanceOf(.string) then do
+        given~string
+        if var('RESULT') then text = result
+      end
+    end
     if text~isInstanceOf(.string) then do
       letter = translate(left(text, 1))
       if pos(letter, 'NTSFP') > 0 then do

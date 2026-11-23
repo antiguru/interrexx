@@ -532,10 +532,13 @@ say t~counter
 r[class.traceobject.option]
 `option` answers the setting that chooses the format of the trace lines, one
 of `N`, `T`, `S`, `F` and `P`, and `N` at the start. `option=` reads its
-argument as a string and keeps the first character in upper case if it is one
-of `n`, `t`, `s`, `f` or `p`, so that `Normal`, `Thread`, `Standard`, `Full`
-and `Profiling` or `Probing` can be written as words; the rest of the string
-is not examined. A string that does not begin with one of the five letters,
+argument by its [full string value](r:conv.string.object) and keeps the first
+character in upper case if it is one of `n`, `t`, `s`, `f` or `p`, so that
+`Normal`, `Thread`, `Standard`, `Full` and `Profiling` or `Probing` can be
+written as words; the rest of the string is not examined. An object can
+provide the option through `REQUEST('STRING')` or, if that produces no
+string, through `STRING`. `.nil` reads as `The NIL object` and sets the
+option to `T`. A string that does not begin with one of the five letters,
 the null string included, raises `SYNTAX 93.914`. `option=` takes no more
 than its first argument into account.
 
@@ -577,6 +580,56 @@ tx => T
 5 => 93.914
 " s" => 93.914
 T
+```
+
+```rexx
+t = .traceobject
+t~option = .both~new
+say t~option
+t~option = .stringOnly~new
+say t~option
+t~option = .badRequest~new
+say t~option
+t~option = .nil
+say t~option
+signal on syntax name bad
+t~option = .badOption~new
+exit
+bad:
+say condition('o')~code t~option
+::class both
+::method makeString
+  say 'makeString'
+  return 'Full'
+::method string
+  say 'unused STRING'
+  return 'Normal'
+::class stringOnly
+::method string
+  say 'STRING'
+  return 'Standard'
+::class badRequest
+::method request
+  say 'REQUEST' arg(1)
+  return .object~new
+::method string
+  say 'fallback STRING'
+  return 'Profiling'
+::class badOption
+::method string
+  return 'Invalid'
+```
+
+```output
+makeString
+F
+STRING
+S
+REQUEST STRING
+fallback STRING
+P
+T
+93.914 T
 ```
 
 r[class.traceobject.sends]
