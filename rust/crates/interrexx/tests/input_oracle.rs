@@ -867,9 +867,8 @@ fn the_first_seek_of_an_unopened_transient_stream_is_refused() {
 
 /// The `corpus/unfiled.txt` programs whose oracle answer a ruling departs
 /// from, each run from a copy in a fresh directory with its `.stdin` sidecar,
-/// or `/dev/null`, as standard input: an APPEND stream's write position kept
-/// out of the file as it was opened (funct.xml, STREAM OPEN APPEND). The case
-/// file holds this crate's answers, the run directory written as `<dir>`.
+/// or `/dev/null`, as standard input. The case file holds this crate's
+/// answers, with the run directory written as `<dir>` in either output stream.
 #[test]
 fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
     let mut cases = 0;
@@ -890,7 +889,7 @@ fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
             let shown = dir.display().to_string();
             let mut rendered = format!("rc> {}\n", rust.expect_exit_code());
             for line in String::from_utf8_lossy(&rust.stdout).lines() {
-                rendered.push_str(&format!("out> {line}\n"));
+                rendered.push_str(&format!("out> {}\n", line.replace(&shown, "<dir>")));
             }
             for line in String::from_utf8_lossy(&rust.stderr).lines() {
                 rendered.push_str(&format!("err> {}\n", line.replace(&shown, "<dir>")));
