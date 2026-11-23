@@ -393,9 +393,12 @@ pub(crate) struct Activation {
     /// The streams the builtins have opened by name in this activation,
     /// keyed by the **qualified** path, so `./a.txt` and `a.txt` are one
     /// entry. Only a program or method activation owns one; every other
-    /// kind resolves through its nearest such ancestor.
-    pub(crate) streams: NameMap<Box<[u8]>, ObjRef>,
+    /// kind resolves through its nearest such ancestor. Allocate the table
+    /// when the owning activation first remembers a named stream.
+    pub(crate) streams: Option<Box<StreamTable>>,
 }
+
+type StreamTable = NameMap<Box<[u8]>, ObjRef>;
 
 /// How control arrived at an activation.
 /// ```text
@@ -483,7 +486,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
-const _: () = assert!(size_of::<Activation>() == 416);
+const _: () = assert!(size_of::<Activation>() == 392);
 
 impl ActivationFlags {
     const FORWARDED: u8 = 1;
@@ -803,7 +806,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -878,7 +881,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -935,7 +938,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -990,7 +993,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -1092,7 +1095,7 @@ impl Activation {
         *invocation = None;
         *call_name = None;
         *call_arguments = None;
-        *streams = NameMap::default();
+        *streams = None;
     }
 
     /// The key this activation's body is cached under, in both the plan
@@ -1237,7 +1240,9 @@ impl Activation {
         }
         // The table's streams. An activation is a root, and a stream only
         // the table holds is reachable through nothing else.
-        out.extend(streams.values().copied());
+        if let Some(table) = streams {
+            out.extend(table.values().copied());
+        }
         // The convention's own values, which a moved `REPLY` continuation
         // also roots from its `CallContext`: this activation holds a
         // refcount clone of the same slice.
@@ -1332,18 +1337,15 @@ impl Interp {
     /// Internal calls, `PROCEDURE` routines, `::ROUTINE`s and `INTERPRET`
     /// all borrow their caller's, which is measured -- a routine advances
     /// the caller's read position where a method call does not.
-    pub(crate) fn stream_table(&self) -> Option<&NameMap<Box<[u8]>, ObjRef>> {
+    pub(crate) fn stream_table(&self) -> Option<&StreamTable> {
         self.frames()
             .find(|frame| matches!(frame.entry, Entry::TopLevel | Entry::Method))
-            .map(|frame| &frame.streams)
+            .and_then(|frame| frame.streams.as_deref())
     }
 
-    /// [`Interp::stream_table`] for a caller that inserts or removes. **By the
-    /// same predicate rather than by depth**: `frame_at_mut` counts backwards
-    /// into a vector that is oldest first, and an off-by-one there would put
-    /// one activation's streams on its caller -- a wrong table with nothing to
-    /// notice it, since both are plausible.
-    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut NameMap<Box<[u8]>, ObjRef>> {
+    /// The owning frame's optional table for a caller that inserts or removes.
+    /// Searches the frames innermost first, as [`Interp::stream_table`] does.
+    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut Option<Box<StreamTable>>> {
         if self
             .activity
             .running
@@ -1947,7 +1949,10 @@ mod method_tests {
         activation.invocation = Some(1);
         activation.call_name = Some(Rc::from(&b"F"[..]));
         activation.call_arguments = Some(Rc::from(Vec::new()));
-        activation.streams.insert(Box::from(&b"S"[..]), ObjRef::NIL);
+        activation
+            .streams
+            .get_or_insert_with(Box::default)
+            .insert(Box::from(&b"S"[..]), ObjRef::NIL);
     }
 
     /// Compares `a` and `b` field by field. The destructuring names every
