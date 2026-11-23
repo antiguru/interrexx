@@ -153,7 +153,7 @@ fn root_of(expr: &Expr) -> Root {
         // to it has no steps and every address reaches it. A call *below* the
         // root is an operand and never the last op, so it is [`native`]'s
         // business rather than this function's.
-        ExprKind::Call { .. } => Root::CallExpr,
+        ExprKind::Call { .. } | ExprKind::QualifiedCall { .. } => Root::CallExpr,
         ExprKind::Literal(_) => Root::Const,
         ExprKind::Constant(_) => Root::LoadConstant,
         ExprKind::Variable(_)
@@ -210,9 +210,10 @@ fn native(expr: &Expr, taken: Option<usize>) -> bool {
         | ExprKind::Stem(_)
         | ExprKind::Compound(_)
         | ExprKind::DotVariable(_) => true,
-        ExprKind::Call { .. } | ExprKind::VariableReference(_) | ExprKind::ClassResolver { .. } => {
-            taken.is_some()
-        }
+        ExprKind::Call { .. }
+        | ExprKind::QualifiedCall { .. }
+        | ExprKind::VariableReference(_)
+        | ExprKind::ClassResolver { .. } => taken.is_some(),
         // A `:scope` override has no route of its own.
         ExprKind::Message {
             target,
@@ -299,7 +300,10 @@ fn other_family(op: Operator) -> bool {
 /// anywhere, which the side table of loop conditions cannot run.
 fn outside_side_table(expr: &Expr) -> bool {
     match &expr.kind {
-        ExprKind::Call { .. } | ExprKind::Message { .. } | ExprKind::Logical(_) => true,
+        ExprKind::Call { .. }
+        | ExprKind::QualifiedCall { .. }
+        | ExprKind::Message { .. }
+        | ExprKind::Logical(_) => true,
         ExprKind::Binary { left, right, .. } => {
             outside_side_table(left) || outside_side_table(right)
         }

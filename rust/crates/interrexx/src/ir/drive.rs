@@ -2300,9 +2300,10 @@ impl Interp {
         // spelling**, which is what makes this op cheaper than `Op::CallExpr`:
         // it dispatches through the row the site holds. Every other resolution
         // passes the name on, to a traceback line or the security manager.
-        let target = || match Interp::chunk_node_at(clause, slot, path).map(|node| &node.kind) {
-            Some(ExprKind::Call { target, .. }) => Ok(call_target_name(code, target)),
-            _ => Err(Failure::from(Loud::call_op_off_its_node())),
+        let target = || {
+            Interp::chunk_node_at(clause, slot, path)
+                .map(|node| &node.kind)
+                .ok_or_else(|| Failure::from(Loud::call_op_off_its_node()))
         };
         let mut spelling: &[u8] = b"";
         let (resolved, keep) = match chunk.resolved_call(site, self.routine_generation) {
@@ -2310,20 +2311,33 @@ impl Interp {
                 #[cfg(test)]
                 count_call_site_hit();
                 if !matches!(resolved, Resolved::Builtin(_)) {
-                    spelling = target()?.0;
+                    let ExprKind::Call { target, .. } = target()? else {
+                        return Err(Loud::call_op_off_its_node().into());
+                    };
+                    spelling = call_target_name(code, target).0;
                 }
                 (resolved, None)
             }
-            None => {
-                let (name, search_labels) = target()?;
-                spelling = name;
-                let resolved = self.resolve_call(name, search_labels)?;
-                let generation = self.routine_generation;
-                (
-                    resolved,
-                    self.missed_site(chunk, site, resolved, generation),
-                )
-            }
+            None => match target()? {
+                ExprKind::Call { target, .. } => {
+                    let (name, search_labels) = call_target_name(code, target);
+                    spelling = name;
+                    let resolved = self.resolve_call(name, search_labels)?;
+                    let generation = self.routine_generation;
+                    (
+                        resolved,
+                        self.missed_site(chunk, site, resolved, generation),
+                    )
+                }
+                ExprKind::QualifiedCall {
+                    namespace, name, ..
+                } => {
+                    let namespace = code.symbols.name(*namespace).as_bytes();
+                    spelling = code.symbols.name(*name).as_bytes();
+                    (self.resolve_qualified_call(namespace, spelling)?, None)
+                }
+                _ => return Err(Loud::call_op_off_its_node().into()),
+            },
         };
         if let Some(keep) = keep {
             return self.begin_kept_call_args(chunk, site, resolved, spelling, mark, keep);
@@ -2406,13 +2420,28 @@ impl Interp {
         path: super::NodePath,
         site: u16,
     ) -> Result<Started<ObjRef>, Failure> {
-        let Some(ExprKind::Call { target, args }) =
-            Interp::chunk_node_at(clause, slot, path).map(|node| &node.kind)
-        else {
+        let Some(node) = Interp::chunk_node_at(clause, slot, path) else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let (name, search_labels) = call_target_name(code, target);
-        let resolution = self.site_resolution_before_arguments(chunk, site, name, search_labels)?;
+        let (name, args, resolution) = match &node.kind {
+            ExprKind::Call { target, args } => {
+                let (name, search_labels) = call_target_name(code, target);
+                let resolution =
+                    self.site_resolution_before_arguments(chunk, site, name, search_labels)?;
+                (name, args, resolution)
+            }
+            ExprKind::QualifiedCall {
+                namespace,
+                name,
+                args,
+                ..
+            } => {
+                let namespace = code.symbols.name(*namespace).as_bytes();
+                let name = code.symbols.name(*name).as_bytes();
+                (name, args, CallResolution::Qualified { namespace })
+            }
+            _ => return Err(Loud::call_op_off_its_node().into()),
+        };
         let probe = 0u8;
         self.enter_eval_node(&raw const probe)?;
         let started = self.begin_eval_call(code, resolution, name, args);
@@ -4105,6 +4134,9 @@ impl Interp {
         match Interp::chunk_node_at(clause, *slot, *path).map(|node| &node.kind) {
             Some(ExprKind::Call { target, .. }) => {
                 Raised::no_data_returned(call_target_name(code, target).0).into()
+            }
+            Some(ExprKind::QualifiedCall { name, .. }) => {
+                Raised::no_data_returned(code.symbols.name(*name).as_bytes()).into()
             }
             _ => Loud::call_op_off_its_node().into(),
         }

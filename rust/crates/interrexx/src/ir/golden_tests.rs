@@ -90,6 +90,46 @@ fn a_call_nested_past_the_paths_width_leaves_the_slot_general() {
     );
 }
 
+#[test]
+fn qualified_calls_use_call_ops_in_computed_clauses() {
+    let padding = ", ".repeat(31);
+    let source = format!(
+        "numeric digits ns:digits('12')\nsay 1 + ns:number(act(), , 4)\n\
+         say ns:f({padding}act())\n"
+    );
+    let chunk = compile_for_test(source.as_bytes()).expect("compiled qualified calls");
+    let rendered = render(&chunk);
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root.R "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallExpr index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(!rendered.contains("EvalExpr"), "{rendered}");
+
+    let traced =
+        compile_for_test_under(source.as_bytes(), intermediates()).expect("compiled TRACE I");
+    let rendered = render(&traced);
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallExpr index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("TraceFunction index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+}
+
 /// **The symbol a compiled read names is the one its own expression names**,
 /// which the rendered stream cannot say -- `render`'s own comment has why it
 /// prints no symbol index.
@@ -259,13 +299,20 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
     );
 }
 
+/// An expression whose qualified call is deeper than a call op can address.
+fn unaddressable_call() -> String {
+    let depth = u32::BITS as usize;
+    format!("{}zn:zf(){}", "0 + (".repeat(depth), ")".repeat(depth))
+}
+
 /// **A `WHEN`'s condition outside the native set stays one
 /// [`super::Op::WhenTest`] and takes no `ConditionJump` op**, which is the
 /// adjacent refusal to the two `SELECT` streams above and the sibling of
 /// `a_condition_outside_the_native_set_stays_one_eval_expr`.
 #[test]
 fn a_when_condition_outside_the_native_set_stays_one_when_test() {
-    let chunk = compile_for_test(b"select\n  when zn:zf() then nop\nend\n").expect("compiles");
+    let source = format!("select\n  when {} then nop\nend\n", unaddressable_call());
+    let chunk = compile_for_test(source.as_bytes()).expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=1\n\
@@ -509,7 +556,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
 /// fallback and **not** the `IF` one.
 #[test]
 fn a_return_expression_outside_the_native_set_keeps_its_return_op() {
-    let chunk = compile_for_test(b"return zn:zf()\n").expect("compiles");
+    let source = format!("return {}\n", unaddressable_call());
+    let chunk = compile_for_test(source.as_bytes()).expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=3\n\
