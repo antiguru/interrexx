@@ -100,3 +100,22 @@ jobs:
           path: rust/sdk/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Exercise the Windows RXAPI service across processes
+        shell: pwsh
+        run: |
+          cargo build --locked -p interrexx-rxapi --bins
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:REXX_API_DIR = Join-Path $env:RUNNER_TEMP "interrexx-rxapi-$env:GITHUB_RUN_ID"
+          $rexx = (Resolve-Path target/debug/rexx.exe).Path
+          $rxapi = (Resolve-Path target/debug/rxapi.exe).Path
+          try {
+            & $rexx -e "call rxqueue 'create', 'SMOKE'; call rxqueue 'set', 'SMOKE'; queue 'cross process'"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not write to the service' }
+            $lines = @(& $rexx -e "call rxqueue 'set', 'SMOKE'; if queued() <> 1 then exit 1; parse pull item; say item; call rxqueue 'delete', 'SMOKE'")
+            if ($LASTEXITCODE -ne 0 -or $lines.Count -ne 1 -or $lines[0] -cne 'cross process') {
+              throw "Expected queue text, got '$($lines -join '|')'"
+            }
+          } finally {
+            & $rxapi --stop
+          }

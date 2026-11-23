@@ -90,6 +90,7 @@ fn only_the_granted_module_may_say_unsafe() {
             "crates/interrexx-core/src/lib.rs".to_string(),
             "crates/interrexx-rxapi/src/descriptors.rs".to_string(),
             "crates/interrexx-rxapi/src/signals.rs".to_string(),
+            "crates/interrexx-rxapi/src/transport/windows_handles.rs".to_string(),
         ],
         "the set of `unsafe_code` opt-ins in this workspace has changed. Each \
          one is a decision taken per site; adding one here without that is what \
@@ -121,6 +122,7 @@ fn only_the_granted_module_may_say_unsafe() {
             "crates/interrexx-core/src/frame.rs".to_string(),
             "crates/interrexx-rxapi/src/descriptors.rs".to_string(),
             "crates/interrexx-rxapi/src/signals.rs".to_string(),
+            "crates/interrexx-rxapi/src/transport/windows_handles.rs".to_string(),
         ],
         "an `unsafe` block appeared outside the modules granted permission for \
          it"

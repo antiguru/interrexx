@@ -48,7 +48,6 @@ mod queue;
 use queue::Queue;
 
 // The process's connection to the API service.
-#[cfg_attr(windows, path = "rxapi_client_windows.rs")]
 mod rxapi_client;
 pub use rxapi_client::use_api_service;
 pub mod capi;
@@ -2297,7 +2296,6 @@ impl CallContext {
 
 /// Puts the session handle into `env` as the program's start state: a value that names a
 /// handle stays, any other is replaced.
-#[cfg(unix)]
 pub(crate) fn with_session_variable(env: &mut Vec<(Vec<u8>, Vec<u8>)>) {
     let name = crate::rxapi_client::SESSION_VARIABLE.as_bytes();
     let held = env.iter().position(|(held, _)| held == name);
@@ -2310,9 +2308,6 @@ pub(crate) fn with_session_variable(env: &mut Vec<(Vec<u8>, Vec<u8>)>) {
         None => env.push((name.to_vec(), value)),
     }
 }
-
-#[cfg(windows)]
-pub(crate) fn with_session_variable(_env: &mut Vec<(Vec<u8>, Vec<u8>)>) {}
 
 impl Interp {
     /// **Every field a caller might want to vary starts at a fixed value

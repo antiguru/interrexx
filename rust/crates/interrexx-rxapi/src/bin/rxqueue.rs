@@ -10,7 +10,6 @@ use interrexx_rxapi::message::code::{
 };
 use interrexx_rxapi::message::{FIFO, LIFO, Reply, Request};
 use interrexx_rxapi::transport::Transport;
-use interrexx_rxapi::transport::unix::Unix;
 use interrexx_rxapi::utility::{
     QUEUE_ACCESS, QUEUE_EXIST, QUEUE_NAME, QUEUE_NO_MEMORY, QUEUE_NOT_INITIALISED, QUEUE_SIZE,
     QUEUE_SYNTAX, message,
@@ -141,17 +140,16 @@ pub fn split(mut input: impl BufRead, mut line: impl FnMut(Vec<u8>) -> bool) {
 }
 
 fn main() -> ExitCode {
-    use std::os::unix::ffi::{OsStrExt, OsStringExt};
     let arguments: Vec<Vec<u8>> = std::env::args_os()
         .skip(1)
-        .map(OsStringExt::into_vec)
+        .map(std::ffi::OsString::into_encoded_bytes)
         .collect();
     let Some((name, action)) = parse(&arguments) else {
         say(&message(QUEUE_SYNTAX, &[]));
         return ExitCode::SUCCESS;
     };
     let name = name
-        .or_else(|| std::env::var_os("RXQUEUE").map(|value| value.as_bytes().to_vec()))
+        .or_else(|| std::env::var_os("RXQUEUE").map(|value| value.into_encoded_bytes()))
         .unwrap_or_else(|| b"SESSION".to_vec());
     let session = Session::of_process();
     // Deviation 93: with no session handed down, the session queue would be this process's own,
@@ -160,7 +158,7 @@ fn main() -> ExitCode {
         say("There is no session queue: name a queue, or run rxqueue from a Rexx program.");
         return ExitCode::from(QUEUE_NOT_REGISTERED as u8);
     }
-    let client: Unix = match connect() {
+    let client = match connect() {
         Ok(client) => client,
         Err(status) => return fail(status, &name),
     };

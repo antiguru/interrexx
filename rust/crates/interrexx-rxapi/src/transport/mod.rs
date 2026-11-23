@@ -4,6 +4,15 @@
 pub mod direct;
 #[cfg(unix)]
 pub mod unix;
+#[cfg(windows)]
+pub mod windows;
+#[cfg(windows)]
+mod windows_handles;
+
+#[cfg(unix)]
+pub use unix::{Unix as PlatformClient, service_dir};
+#[cfg(windows)]
+pub use windows::{Windows as PlatformClient, service_dir};
 
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard};

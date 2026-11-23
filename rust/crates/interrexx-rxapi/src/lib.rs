@@ -2,7 +2,6 @@
 
 pub mod client;
 pub mod core;
-#[cfg(unix)]
 pub mod daemon;
 #[cfg(unix)]
 mod descriptors;
