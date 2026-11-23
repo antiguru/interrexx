@@ -77,6 +77,23 @@ if SysFileMove(source, moved) = 0 then exit 5
 if linein(moved) <> 'content' then exit 6
 call stream moved, 'c', 'close'
 if SysFileDelete(source) <> 0 | SysFileDelete(moved) <> 0 then exit 7
+/* spec: util.windows.file-name-spelling */
+fullName = dir || '\Some Long Name.txt'
+call lineout fullName, 'name check'
+call stream fullName, 'c', 'close'
+shortFull = SysGetShortPathName(fullName)
+if shortFull == '' then exit 73
+if translate(SysGetLongPathName(shortFull)) \== translate(fullName) then exit 74
+savedDirectory = directory()
+if directory(dir) == '' then exit 75
+shortRelative = SysGetShortPathName('Some Long Name.txt')
+if shortRelative == '' | pos('\', shortRelative) <> 0 then exit 76
+if translate(SysGetLongPathName(shortRelative)) \== 'SOME LONG NAME.TXT' then exit 77
+rootName = substr(fullName, 3)
+if translate(SysGetLongPathName(rootName)) \== translate(rootName) then exit 80
+if SysGetLongPathName('gone.txt') \== '' | SysGetShortPathName('gone.txt') \== '' then exit 78
+call directory savedDirectory
+if SysFileDelete(fullName) <> 0 then exit 79
 if SysRmDir(dir) <> 0 then exit 8
 missing = dir || '\missing'
 if SysIsFileCompressed(missing) | SysIsFileEncrypted(missing) then exit 9

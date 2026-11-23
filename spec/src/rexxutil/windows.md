@@ -136,3 +136,12 @@ query without a console output buffer answers zero for each field.
 `BUFFERSIZE` with rows and columns, or `WINDOWRECT` with all four coordinates,
 changes that property and answers `0` on success or a Windows system error
 code on failure.
+
+## Windows file name spellings
+
+r[util.windows.file-name-spelling]
+`SysGetLongPathName(path)` and `SysGetShortPathName(path)` answer the long
+or short Windows spelling of an existing file or directory. A relative name
+is interpreted against the interpreter's current directory and answered as a
+relative name. An absolute name is answered as an absolute name. A missing
+entry or a failed Windows name query answers the null string.

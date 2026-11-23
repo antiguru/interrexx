@@ -281,14 +281,35 @@ pub(crate) fn system_directory() -> Option<String> {
     system_path(GetSystemDirectoryW)
 }
 
+pub(crate) fn file_name_spelling(path: &std::path::Path, short: bool) -> Option<String> {
+    use windows_sys::Win32::Storage::FileSystem::{GetLongPathNameW, GetShortPathNameW};
+
+    let path = file_path(path).ok()?;
+    let convert = if short {
+        GetShortPathNameW
+    } else {
+        GetLongPathNameW
+    };
+    wide_path_answer(|buffer, capacity| {
+        // SAFETY: path is NUL-terminated, and buffer is writable for capacity UTF-16 units.
+        unsafe { convert(path.as_ptr(), buffer, capacity) }
+    })
+}
+
+fn system_path(query: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option<String> {
+    wide_path_answer(|buffer, capacity| {
+        // SAFETY: buffer is writable for capacity UTF-16 units.
+        unsafe { query(buffer, capacity) }
+    })
+}
+
 /// These Win32 queries return the required capacity, including the
 /// terminator, if the supplied buffer cannot hold the path.
-fn system_path(query: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option<String> {
+fn wide_path_answer(query: impl Fn(*mut u16, u32) -> u32) -> Option<String> {
     let mut buffer = vec![0; 260];
     loop {
         let capacity = u32::try_from(buffer.len()).ok()?;
-        // SAFETY: the buffer is writable for exactly capacity UTF-16 units.
-        let count = unsafe { query(buffer.as_mut_ptr(), capacity) };
+        let count = query(buffer.as_mut_ptr(), capacity);
         if count == 0 {
             return None;
         }

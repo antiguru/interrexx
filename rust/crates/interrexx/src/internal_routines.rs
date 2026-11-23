@@ -180,6 +180,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(unix)]
     util_run("SysGetKey", crate::builtin::rexxutil::process::get_key),
+    #[cfg(windows)]
+    util_run(
+        "SysGetLongPathName",
+        crate::builtin::rexxutil::windows_files::file_name_spelling::<false>,
+    ),
     util_run(
         "SysGetMessage",
         crate::builtin::rexxutil::messages::get_message,
@@ -187,6 +192,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysGetMessageX",
         crate::builtin::rexxutil::messages::get_message_x,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysGetShortPathName",
+        crate::builtin::rexxutil::windows_files::file_name_spelling::<true>,
     ),
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
     #[cfg(windows)]
