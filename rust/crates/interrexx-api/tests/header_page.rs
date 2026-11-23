@@ -3,13 +3,14 @@
 //! The lists of the header page (`spec/src/native/header.md`) against the Rust tables the
 //! headers are generated from.
 //!
-//! The page lists value codes, versions, entry constants, exit flag bits and convenience methods
-//! by name and value. Each list is read here and compared with the table `src/header.rs` writes
-//! the header from, so the page and the header cannot disagree; the ABI dump (`abi_dump.rs`)
-//! then checks the header against a C and a C++ compiler.
+//! The page lists constants, exit flag bits and convenience methods by name and value. Each
+//! list is read here and compared with the table `src/header.rs` writes the header from, so the
+//! page and the header cannot disagree; the ABI dump (`abi_dump.rs`) then checks the header
+//! against a C and a C++ compiler.
 
 use interrexx_api::constants::{
-    API_VERSIONS, ARGUMENT_TYPES, ENTRY_CONSTANTS, OPTIONAL_VALUES, VALUE_ALIASES,
+    API_VERSIONS, ARGUMENT_TYPES, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENTRY_CONSTANTS,
+    OPTIONAL_VALUES, VALUE_ALIASES,
 };
 use interrexx_api::layout::{EXIT_FLAG_BITS, THREAD_ALIASES, c_type};
 use interrexx_api::values::rows;
@@ -92,6 +93,61 @@ fn the_page_lists_every_entry_constant() {
         .iter()
         .map(|constant| format!("`{}`: `{}`", constant.name, constant.text()))
         .collect();
+    assert_eq!(listed, expected);
+}
+
+// spec: native.header.classic-start native.header.classic-handlers native.header.classic-functions
+// spec: native.header.classic-service native.header.classic-queues native.header.classic-macros
+#[test]
+fn the_page_lists_the_classic_start_registration_and_service_constants() {
+    let page = page();
+    let mut listed = Vec::new();
+    for rule in [
+        "start",
+        "handlers",
+        "functions",
+        "service",
+        "queues",
+        "macros",
+    ] {
+        for item in items(&page, &format!("native.header.classic-{rule}")) {
+            let (definition, _) = item.split_once(',').expect("the constant has a meaning");
+            let (names, value) = definition
+                .split_once(": ")
+                .expect("the constant has a value");
+            listed.extend(names.split(" / ").map(|name| format!("{name}: {value}")));
+        }
+    }
+    let prefixes = [
+        "RXSUBCOM_",
+        "RXEXIT_",
+        "RXFUNC_",
+        "RXAPI_",
+        "RXQUEUE_",
+        "RXMACRO_",
+    ];
+    let single = [
+        "RXCOMMAND",
+        "RXSUBROUTINE",
+        "RXFUNCTION",
+        "RXMETHOD",
+        "RXSCRIPT",
+        "RXAUTOBUFLEN",
+        "MAX_QUEUE_NAME_LENGTH",
+    ];
+    let mut expected: Vec<String> = CLASSIC_CONSTANTS
+        .iter()
+        .chain(CLASSIC_LIMITS)
+        .filter(|constant| {
+            single.contains(&constant.name.as_ref())
+                || prefixes
+                    .iter()
+                    .any(|prefix| constant.name.starts_with(prefix))
+        })
+        .map(|constant| format!("`{}`: `{}`", constant.name, constant.text()))
+        .collect();
+    listed.sort_unstable();
+    expected.sort_unstable();
     assert_eq!(listed, expected);
 }
 
