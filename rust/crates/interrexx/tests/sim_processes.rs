@@ -1,4 +1,4 @@
-//! A seed of the simulation mode replays across processes.
+//! A seed of the simulation mode replays across processes and exercises clause boundaries.
 
 use std::process::Command;
 
@@ -165,4 +165,82 @@ fn a_child_writes_no_sim_line_into_output_its_parent_captures() {
     assert_eq!(String::from_utf8_lossy(&ran.stdout), "1\nchild sim:\n");
     assert!(stderr.starts_with("rexx-sim: seed=5 "), "{stderr}");
     assert_eq!(stderr.lines().count(), 1, "{stderr}");
+}
+
+/// Two unguarded activities increment the same object variable. Only the
+/// right operand differs between the two versions.
+const COUNTER: &str = "c = .counter~new
+a = c~start('bump', 200)
+b = c~start('bump', 200)
+a~wait; b~wait
+say c~n
+::class counter
+::method init
+  expose n
+  n = 0
+::method n unguarded
+  expose n
+  return n
+::method one unguarded
+  return 1
+::method bump unguarded
+  expose n
+  use arg count
+  do count
+    n = n + self~one
+  end
+";
+const INCREMENTS: u32 = 400;
+
+fn contended_modes() -> impl Iterator<Item = String> {
+    (1..=8).map(|seed| format!("sim:{seed},uniform:0.3"))
+}
+
+fn run_counter(program: &str, mode: &str) -> u32 {
+    let output = Command::new(env!("CARGO_BIN_EXE_rexx"))
+        .args(["-e", program])
+        .env("REXX_SWITCH_MODE", mode)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("rexx runs");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{mode}: {stderr}");
+    stdout
+        .trim_end()
+        .parse()
+        .unwrap_or_else(|_| panic!("{mode}: expected a count, got {stdout:?}\n{stderr}"))
+}
+
+// spec: conc.activities.order
+#[test]
+fn a_clause_without_rexx_calls_or_waits_is_one_step() {
+    let program = COUNTER.replace("self~one", "1");
+    let extra = ["sim:3,pct:3,k=400", "sim:7,uniform:0.2", "sim:7,uniform:1"];
+    for mode in contended_modes().chain(extra.map(str::to_owned)) {
+        assert_eq!(run_counter(&program, &mode), INCREMENTS, "{mode}");
+    }
+}
+
+// spec: conc.activities.order
+#[test]
+fn a_clause_that_calls_rexx_code_can_lose_an_update() {
+    let mut witness = None;
+    for mode in contended_modes() {
+        let count = run_counter(COUNTER, &mode);
+        assert!((1..=INCREMENTS).contains(&count), "{mode}: {count}");
+        if count < INCREMENTS && witness.is_none() {
+            witness = Some((mode, count));
+        }
+    }
+    let (mode, count) =
+        witness.expect("at least one of seeds 1–8 with uniform:0.3 loses an update");
+    let dir = std::env::temp_dir().join(format!("rexx-sim-counter-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a directory for the decision trace");
+    let trace = dir.join("counter.txt");
+    let recorded = run_counter(COUNTER, &format!("{mode},trace={}", trace.display()));
+    let replayed = run_counter(COUNTER, &format!("sim:replay={}", trace.display()));
+    std::fs::remove_dir_all(&dir).expect("the decision trace removed");
+    assert_eq!(recorded, count, "{mode}: recording changed the count");
+    assert_eq!(replayed, count, "{mode}: replay changed the count");
 }
