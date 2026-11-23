@@ -83,8 +83,8 @@
       sched = atime
       us = span~totalMicroseconds
     end
-    when atime~isA(.String) then do
-      text = atime
+    otherwise do
+      text = timerText(atime)
       if pos(':', text) > 0 then do
         -- hh:mm:ss, optionally followed by one blank and d Mmm yyyy
         blank = pos(' ', text)
@@ -139,7 +139,6 @@
       end
       us = (sched - now)~totalMicroseconds
     end
-    otherwise raise syntax 93.951 array(atime)
   end
   -- The wait is a number of whole days and the milliseconds after them,
   -- the milliseconds rounded up.
@@ -232,8 +231,9 @@
       us = ival~totalMicroseconds
       span = .TimeSpan~fromMicroseconds(us)
     end
-    when ival~isA(.String) then do
-      text = ival
+    when ival~isInstanceOf(.DateTime) then raise syntax 93.951 array(ival)
+    otherwise do
+      text = timerText(ival)
       if \datatype(text, 'N') then raise syntax 93.951 array(text)
       secs = text + 0
       if abs(secs) >= 10 ** 12 then raise syntax 88.903 array(1, text)
@@ -243,7 +243,6 @@
       days = span~days
       us = span~totalMicroseconds
     end
-    otherwise raise syntax 93.951 array(ival)
   end
   days = us % 86400000000
   millis = (us // 86400000000 + 999) % 1000
@@ -281,3 +280,12 @@
   guard off
   self~!stopTimer(eventSemHandle)
   target~cancel(self)
+
+/* Read the string value used for an alarm's clock time or a timer's seconds. */
+::routine timerText
+  use arg value
+  if value~isInstanceOf(.String) then return value~makeString:.String
+  text = value~request('STRING')
+  if \text~isInstanceOf(.String) then text = value~string
+  if \text~isInstanceOf(.String) then raise syntax 93.951 array(value)
+  return text~makeString:.String

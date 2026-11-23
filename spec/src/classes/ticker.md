@@ -1,7 +1,7 @@
 ---
 element: "Ticker"
 kind: class
-deviations: [109, 119, 135]
+deviations: [109, 119, 135, 183]
 rexxref: "Builtin Classes > Utility Classes > Ticker Class; Builtin Classes > Utility Classes > Ticker Class > attachment; Builtin Classes > Utility Classes > Ticker Class > cancel; Builtin Classes > Utility Classes > Ticker Class > canceled/cancelled; Builtin Classes > Utility Classes > Ticker Class > init; Builtin Classes > Utility Classes > Ticker Class > interval"
 ---
 
@@ -135,7 +135,10 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.ticker.init.interval]
-An interval that is a string is a number of seconds. It is read as a number as
+An interval other than a `TimeSpan` or `DateTime` is read by
+[the string conversion rule](r:conv.string.object) and its string is a
+number of seconds ([Deviation 183](r:class.ticker.deviation.183) for an object
+that supplies the string). It is read as a number as
 [the DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either
 end are allowed and a decimal point or an exponent is too, and it has to be
 zero or more: a string that is no number, the empty string and a negative
@@ -218,6 +221,8 @@ decides whether the target is an implementation. Then, for an interval that is
 a `TimeSpan`, the span is sent `sign`, `days` and `totalMicroseconds`, once
 each and in that order, and for an interval that is a string nothing is sent
 ([Deviation 109](r:class.ticker.deviation.109) covers a subclass of `String`).
+Other intervals except `DateTime` are read through `request('STRING')` and
+then `string` if needed.
 When the span is negative `init` stops after `sign`; the further messages that
 build the text of the error are not specified. A ticker that is refused for
 its target sends the interval nothing. `init` sends no message to the
@@ -553,6 +558,28 @@ target-cancel attachment canceled cancelled interval
 ```
 
 ## Deviations
+
+r[class.ticker.deviation.183]
+When the converted string is a number, `Ticker` uses it as the
+[number of seconds](r:class.ticker.init.interval). ooRexx sends the original
+object a message and can raise `SYNTAX 97.1` even when its conversion gives
+a valid number.
+
+```rexx
+t = .ticker~new(.seconds~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class seconds
+::method makeString
+  return '600'
+```
+
+```output
+600
+```
 
 r[class.ticker.deviation.109]
 A string interval that is an instance of a subclass of `String` is read by its

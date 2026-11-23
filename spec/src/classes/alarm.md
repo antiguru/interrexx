@@ -1,7 +1,7 @@
 ---
 element: "Alarm"
 kind: class
-deviations: [109, 119, 135]
+deviations: [109, 119, 135, 183]
 rexxref: "Builtin Classes > Utility Classes > Alarm Class; Builtin Classes > Utility Classes > Alarm Class > attachment; Builtin Classes > Utility Classes > Alarm Class > cancel; Builtin Classes > Utility Classes > Alarm Class > canceled/cancelled; Builtin Classes > Utility Classes > Alarm Class > init; Builtin Classes > Utility Classes > Alarm Class > scheduledTime; Builtin Classes > Utility Classes > Alarm Class > triggered"
 ---
 
@@ -139,8 +139,10 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.alarm.init.seconds]
-A time that is a string without a colon is a number of seconds from now. It is
-read as a number as [the DATATYPE `N` rule](r:bif.datatype.number) reads it, so
+A time whose string value has no colon is a number of seconds from now
+([Deviation 183](r:class.alarm.deviation.183) for an object that supplies
+the string). It is read as a number as
+[the DATATYPE `N` rule](r:bif.datatype.number) reads it, so
 blanks at either end are allowed and a decimal point or an exponent is too, and
 it has to be zero or more: a string that is no number, the empty string and a
 negative number raise `SYNTAX 93.951`. The number is cut to the microsecond
@@ -210,7 +212,10 @@ digits 3: 3 25 45
 ```
 
 r[class.alarm.init.clock]
-A time that is a string with a colon names a time of day, and may name a date.
+A time whose string value has a colon names a time of day, and may name a
+date. A time that is neither a `TimeSpan` nor a `DateTime` is read by
+[the string conversion rule](r:conv.string.object). If conversion does not
+give a string, `init` raises `SYNTAX 93.951`.
 The forms are `hh:mm:ss` and `hh:mm:ss d Mmm yyyy`, with exactly one blank
 before the date, and nothing else is accepted: not a blank at either end, not
 a time with fewer than the two digits of each part, not hours of 24 or more or
@@ -307,6 +312,29 @@ bad: say '"'arg(1)'" =>' condition('o')~code
 01 02 03 04 05 06 07 08 09 10 11 12
 ```
 
+```rexx
+n = .note~new
+do value over .array~of(.byRequest~new, .byString~new)
+  a = .alarm~new(value, n)
+  say a~scheduledTime~normalTime
+  a~cancel
+end
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class byRequest
+::method makeString
+  return '23:59:59'
+::class byString
+::method string
+  return '03:04:05'
+```
+
+```output
+23:59:59
+03:04:05
+```
+
 r[class.alarm.init.moment]
 A time that is a `DateTime` sets the alarm for that moment, and it has to be
 after the moment `init` reads the clock: a `DateTime` that is not after now
@@ -393,7 +421,8 @@ decides whether the target is an implementation. Then, for a time that is a
 `totalMicroseconds` again, once each and in that order, and for a time that is
 a `DateTime`, it is sent `-` once, with a `DateTime` of the moment of the call
 as the argument. A time that is a string is sent nothing ([Deviation
-109](r:class.alarm.deviation.109) covers a subclass of `String`). When the
+109](r:class.alarm.deviation.109) covers a subclass of `String`). Other times
+are read through `request('STRING')` and then `string` if needed. When the
 span is negative `init` stops after `sign` and when the `DateTime` is not
 after now it stops after `-`; the further messages that build the text of the
 error are not specified. An alarm that is refused for its target sends the
@@ -801,6 +830,30 @@ target-cancel attachment canceled cancelled scheduledTime triggered
 ```
 
 ## Deviations
+
+r[class.alarm.deviation.183]
+When the converted string is a number, `Alarm` uses it as the
+[number of seconds](r:class.alarm.init.seconds). ooRexx sends the original
+object a message in the number form and can raise `SYNTAX 97.1` even when
+its conversion gives a valid number.
+
+```rexx
+before = .datetime~new
+a = .alarm~new(.seconds~new, .note~new)
+remaining = (a~scheduledTime - before)~totalSeconds
+say (remaining >= 600)
+a~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class seconds
+::method string
+  return '600'
+```
+
+```output
+1
+```
 
 r[class.alarm.deviation.109]
 A time that is an instance of a subclass of `String` is read by its own
