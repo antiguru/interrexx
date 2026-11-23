@@ -465,9 +465,8 @@ fn set_trace_leaves_a_routine_called_afterwards_its_own_setting() {
 
 /// `Halt` and `SetTrace` through the instance of an interpreter that has ended do nothing and
 /// return: the driver creates an interpreter, terminates it, calls the three and prints
-/// `returned`, as `r[native.threads.trace]` says a request made after the interpreter has ended
-/// does nothing. Not compared with the oracle.
-// spec: native.threads.trace
+/// `returned`. This driver is specific to interrexx.
+// spec: native.threads.halt, native.threads.trace
 #[test]
 fn halt_and_set_trace_after_the_interpreter_ended_return() {
     let dir = fresh_dir("halt-trace-ended");
