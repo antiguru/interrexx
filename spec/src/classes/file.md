@@ -2457,7 +2457,9 @@ r[class.file.deviation.183]
 `writeChars` and `writeLines` read the mode through the [string argument
 rule](r:class.index.string). ooRexx sends `STRIP` to the mode itself, so an
 object without that method raises `SYNTAX 97.1` even if `MAKESTRING` supplies
-a valid mode.
+a valid mode. `searchPath` also accepts a directory list from an object's
+`request('STRING')` when its array conversion gives no array. ooRexx
+raises `SYNTAX 98.913` in that case.
 
 ```rexx
 f = 'spec-file-write-mode.tmp'
@@ -2499,10 +2501,6 @@ bad: say condition('o')~code
 88.916
 6F6E6574776F0A
 ```
-
-`searchPath` also accepts a directory list from an object's
-`request('STRING')` when its array conversion gives no array. ooRexx
-raises `SYNTAX 98.913` in that case.
 
 ```rexx
 root = 'spec-file-search-convert.tmp'
