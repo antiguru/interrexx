@@ -110,17 +110,6 @@ mod env_seam {
         }
     }
 
-    /// A native handle for one of the two interpreter-owned directories
-    /// remains valid for the lifetime of the interpreter.
-    pub(super) fn native_directory(
-        held: &Directories,
-        handle: interrexx_api::layout::RexxObjectPtr,
-    ) -> Option<ObjRef> {
-        [held.local, held.environment]
-            .into_iter()
-            .find(|&object| interrexx_api::handles::handle_of(object) == handle)
-    }
-
     /// The directory `scope` names, in exchange for a clearance.
     pub(super) fn directory(held: &Directories, admitted: Admitted, scope: EnvScope) -> ObjRef {
         let _ = admitted;
@@ -377,6 +366,13 @@ impl Interp {
         let environment =
             self.interpreter_directory(ENVIRONMENT_ROOT, b"The Environment Directory");
         let local = self.interpreter_directory(LOCAL_ROOT, b"The Local Directory");
+
+        // Native extensions can retain these handles across callbacks. The
+        // interpreter already roots both directories for its lifetime.
+        for object in [local, environment] {
+            let handle = interrexx_api::handles::handle_of(object);
+            self.borrowed_native_handles.insert(handle.addr(), object);
+        }
 
         // `completeSystemClass` puts every native class into the environment
         // under its uppercased id, and that is the whole of what this crate
@@ -1057,13 +1053,6 @@ impl Interp {
         };
         self.roots.activity_mut().push_temp(queue);
         let _ = self.set_directory_entry(EnvScope::Local, b"STDQUE", queue);
-    }
-
-    pub(crate) fn native_environment_directory(
-        &self,
-        handle: interrexx_api::layout::RexxObjectPtr,
-    ) -> Option<ObjRef> {
-        env_seam::native_directory(&self.environment.as_ref()?.directories, handle)
     }
 
     /// Writes `name` into `scope`'s directory, through the same seam a read
