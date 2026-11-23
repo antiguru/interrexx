@@ -534,15 +534,13 @@ r[class.traceobject.option]
 of `N`, `T`, `S`, `F` and `P`, and `N` at the start. `option=` reads its
 argument by its [full string value](r:conv.string.object) and keeps the first
 character in upper case if it is one of `n`, `t`, `s`, `f` or `p`, so that
-`Normal`, `Thread`, `Standard`, `Full`
-and `Profiling` or `Probing` can be written as words; the rest of the string
-is not examined. A string that does not begin with one of the five letters,
+`Normal`, `Thread`, `Standard`, `Full` and `Profiling` or `Probing` can be
+written as words; the rest of the string is not examined. An object can
+provide the option through `REQUEST('STRING')` or, if that produces no
+string, through `STRING`. `.nil` reads as `The NIL object` and sets the
+option to `T`. A string that does not begin with one of the five letters,
 the null string included, raises `SYNTAX 93.914`. `option=` takes no more
 than its first argument into account.
-
-An object can provide the option through `REQUEST('STRING')` or, if that
-produces no string, through `STRING`. `.nil` reads as `The NIL object` and
-sets the option to `T`.
 
 ```rexx
 t = .traceobject
