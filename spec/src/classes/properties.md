@@ -2,7 +2,7 @@
 element: "Properties"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33, 109, 123, 124]
+deviations: [29, 33, 109, 123, 124, 183]
 ---
 
 # Properties
@@ -265,12 +265,12 @@ r[class.properties.getlogical]
 [`getProperty`](r:class.properties.getproperty) does, with the same arguments,
 which it sends to the receiver, and answers 1 for the value `1` or `true` and
 0 for `0` or `false`. Case counts, and no other text is accepted:
-`SYNTAX 34.904` is raised. The default is used when the name has no value and
-is checked in the same way, so it must be one of those four strings (or a
-logical value), or the error is raised; when the name has a value, the default
-is not looked at. A missing name with no default raises `SYNTAX 34.904` too.
-A value that is not a string is not converted and raises `SYNTAX 34.904`. The
-arguments are counted as for `getProperty`.
+`SYNTAX 34.904` is raised. A non-string value is read through
+the [conversion rule](r:conv.string.object) before testing for those four
+strings ([Deviation 183](r:class.properties.deviation.183)). The default is
+used and converted only when the name has no value. A missing name with no
+default raises `SYNTAX 34.904` too. The arguments are counted as for
+`getProperty`.
 
 ```rexx
 p = .properties~new
@@ -287,8 +287,6 @@ do v over .array~of('TRUE', 'False', 'yes', '2', '-1', '00', '', ' 1')
   p~setProperty('k', v)
   call try 'p~getLogical("k")', '['v']'
 end
-p~setEntry('k', .text~new('true'))
-call try 'p~getLogical("K")', 'object'
 call try 'p~getLogical("zz")', 'missing'
 call try 'p~getLogical("zz", "junk")', 'default junk'
 call try 'p~getLogical("zz", .nil)', 'default nil'
@@ -302,17 +300,6 @@ try:
   return
 bad: say arg(2) '=>' condition('o')~code
   return
-::class text
-::method init
-  expose v
-  use arg v
-::method makestring
-  expose v
-  return v
-::method request
-  expose v
-  if arg(1) = 'STRING' then return v
-  return .nil
 ```
 
 ```output
@@ -328,7 +315,6 @@ bad: say arg(2) '=>' condition('o')~code
 [00] => 34.904
 [] => 34.904
 [ 1] => 34.904
-object => 34.904
 missing => 34.904
 default junk => 34.904
 default nil => 34.904
@@ -338,16 +324,16 @@ three => 93.902
 
 r[class.properties.getwhole]
 `getWhole(name, default)` reads the value as `getProperty` does, with the same
-arguments, which it sends to the receiver, and answers it as it is stored, not
-reformatted, when it is a whole number, and raises `SYNTAX 26.901` when it is
-not. A whole number is judged at `NUMERIC DIGITS` 9 whatever the caller's
+arguments, which it sends to the receiver. It answers the converted text
+unchanged when it gives a whole number and raises `SYNTAX 26.901` otherwise.
+A whole number is judged at `NUMERIC DIGITS` 9 whatever the caller's
 setting: blanks around it are allowed, a sign, an exponent and a point
 followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
 default raises `SYNTAX 26.901` too. A value that is not a string is read
-through [the string-value rule](r:conv.string.object), by one send of `request`,
-for a default as for a stored value, and the value is answered as it is stored.
+through the [conversion rule](r:conv.string.object), including its fallback
+to `STRING` ([Deviation 183](r:class.properties.deviation.183)).
 
 ```rexx
 p = .properties~new
@@ -449,15 +435,12 @@ say p~getWhole('B') .local~n
 ## Setting logical and whole values
 
 r[class.properties.setlogical]
-`setLogical(name, value)` sends `datatype` with the argument `O` to the value
-and, when that answers true, stores `true` for the value 1 and `false` for 0
-with `setProperty`, which it sends to the receiver with the name and the new
-text. A string is accepted only as `0` or `1`, and a logical value `.true` or
-`.false` too: `true`, `2`, `00`, a blank around the digit and the null string
-raise `SYNTAX 34.901`. A value that has no `datatype` method, `.nil` and an
-instance of a class that does not understand the message among them, raises
-`SYNTAX 97.1`; one whose `datatype` answers 1 but that is not a logical value
-raises `SYNTAX 34.1`, and one that answers 0 raises `SYNTAX 34.901`. The method
+`setLogical(name, value)` reads the value through the
+[conversion rule](r:conv.string.object) and stores `true` for `1` and `false`
+for `0`. It sends `setProperty` to the receiver with the name and the new
+text. Any other text, including `true`, `00`, or a digit surrounded by blanks,
+raises `SYNTAX 34.901`. An argument with no logical value raises the same
+error ([Deviation 183](r:class.properties.deviation.183)). The method
 answers nothing and takes exactly two arguments, counted as for `put`: fewer
 raises `SYNTAX 93.901`, an omitted name before the value `SYNTAX 93.903` and a
 third `SYNTAX 93.902`. A call whose value and name are both in error raises the
@@ -473,10 +456,6 @@ say
 do v over .array~of('true', '2', '00', 'yes', '1.0', '', ' 1')
   call try 'p~setLogical("k", v)', '['v']'
 end
-call try 'p~setLogical("k", .nil)', 'nil'
-call try 'p~setLogical("k", .object~new)', 'object'
-call try 'p~setLogical("k", .answers~new(1))', 'answers 1'
-call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
 call try 'p~setLogical("k")', 'one argument'
 call try 'p~setLogical("k", 1, 2)', 'three'
 call try 'p~setLogical(, 1)', 'omitted name'
@@ -489,14 +468,6 @@ try:
   return
 bad: say arg(2) '=>' condition('o')~code
   return
-::class answers
-::method init
-  expose r
-  use arg r
-::method datatype
-  expose r
-  say '  datatype' arg(1)
-  return r
 ```
 
 ```output
@@ -508,12 +479,6 @@ false true true false
 [1.0] => 34.901
 [] => 34.901
 [ 1] => 34.901
-nil => 97.1
-object => 97.1
-  datatype O
-answers 1 => 34.1
-  datatype O
-answers 0 => 34.901
 one argument => 93.901
 three => 93.902
 omitted name => 93.903
@@ -521,17 +486,14 @@ name nil => 88.909
 ```
 
 r[class.properties.setwhole]
-`setWhole(name, value)` sends `datatype` with the argument `W` to the value
-and, when that answers true, stores the value as its string with
-`setProperty`, which it sends to the receiver with the name and the text, as
-it is, not reformatted. A string that is a whole number at `NUMERIC DIGITS` 9
-is accepted: `12`, `+7`, `007`, `1.0`, `1e2`, `3.` and a blank around the
-number. Anything else that answers a string, such as `1.5`, `abc`, the null
-string or a number of more than nine digits, raises `SYNTAX 93.905`. A value
-that has no `datatype` method raises `SYNTAX 97.1`; one whose `datatype`
-answers 1 but that is not a string raises `SYNTAX 93.938`, and one that
-answers 0 raises `SYNTAX 93.905`. The method answers nothing and takes exactly
-two arguments, counted and checked as for `setLogical`.
+`setWhole(name, value)` reads the value through the
+[conversion rule](r:conv.string.object). It sends `setProperty` to the
+receiver with the name and the converted text unchanged if that text gives a
+whole number at `NUMERIC DIGITS` 9, including `+7`, `007`, `1.0`, `1e2`,
+`3.` or a number with surrounding blanks. An argument without a whole number
+raises `SYNTAX 93.905` ([Deviation 183](r:class.properties.deviation.183)).
+The method answers nothing and takes exactly two arguments, counted and
+checked as for `setLogical`.
 
 ```rexx
 p = .properties~new
@@ -543,9 +505,6 @@ say
 do v over .array~of('1.5', 'abc', '1000000000', '99999999999', '1e9', '')
   call try 'p~setWhole("k", v)', '['v']'
 end
-call try 'p~setWhole("k", .nil)', 'nil'
-call try 'p~setWhole("k", .answers~new(1))', 'answers 1'
-call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
 call try 'p~setWhole("k")', 'one argument'
 call try 'p~setWhole("k", 1, 2)', 'three'
 call try 'p~setWhole(, 1)', 'omitted name'
@@ -558,14 +517,6 @@ try:
   return
 bad: say arg(2) '=>' condition('o')~code
   return
-::class answers
-::method init
-  expose r
-  use arg r
-::method datatype
-  expose r
-  say '  datatype' arg(1)
-  return r
 ```
 
 ```output
@@ -576,11 +527,6 @@ bad: say arg(2) '=>' condition('o')~code
 [99999999999] => 93.905
 [1e9] => 93.905
 [] => 93.905
-nil => 97.1
-  datatype W
-answers 1 => 93.938
-  datatype W
-answers 0 => 93.905
 one argument => 93.901
 three => 93.902
 omitted name => 93.903
@@ -639,9 +585,13 @@ call sysfiledelete f
 r[class.properties.load.class]
 The class method `load(source)` answers a new `Properties` that holds what the
 source gives, an instance of `Properties` whatever class received the message,
-and `new` is not sent. `source` is the name of a file or a `File` object,
-which is read through a `Stream` made for it, or any other object, a `Stream`
-included, which is sent `linein` with no argument until it raises the NOTREADY
+and `new` is not sent. A `File` supplies its path through `string`, and a
+`String` supplies a filename directly. A `Stream` or an object with a
+`linein` method is used directly. Other objects are read as a
+[string argument](r:class.index.string) to obtain a filename
+([Deviation 183](r:class.properties.deviation.183)). A filename is read
+through a `Stream` made for it. An object used directly, including one that
+supplies no string, is sent `linein` with no argument until it raises NOTREADY
 condition, so a stream is read from its read position to its end, is opened by
 its first `linein` when it was not open, and is not closed ([the instance
 rule](r:class.properties.load)). A file that does not exist gives an empty
@@ -807,10 +757,12 @@ feed, in the order the entries were first put ([the hash order
 rule](r:class.properties.deviation.33)); the name and the value are written as
 they are, a value that is not a string through [the string-value
 rule](r:conv.string.object), with no escaping, so a name that holds `=` or a
-value that holds a line feed does not load back as it was. `target` is the name
-of a file, whose old contents are replaced, a `File` object, treated the same,
-or an object that understands `lineout`, such as a `Stream`, which is written at
-its write position and is not closed. When the target is a name or a `File`,
+value that holds a line feed does not load back as it was. The target follows
+the same filename conversion as [load](r:class.properties.load.class), using
+`lineout` as the stream adapter method. The contents of a file selected by
+name are replaced. A stream adapter or an object with no string value
+receives `lineout` directly and stays open. When the
+target gives a filename or is a `File`,
 `save` first sends `save` to the receiver with a `Stream` made for it, and that
 message does the writing. The writing sends `supplier` to the receiver, and
 `lineout` with the line as the only argument to the target for each entry. The
@@ -963,17 +915,14 @@ r[class.properties.sends]
 The messages that `Properties` methods send to the receiver, to the values and
 to the source or target, are these. `getProperty` sends `at` with the name;
 `getLogical` and `getWhole` send `getProperty` with their own arguments;
-`setLogical` and `setWhole` send `datatype` to the value, and `setProperty`
-with the name and the text; `setProperty`, `put` and `[]=` send nothing to the
+`setLogical` and `setWhole` convert the value and send `setProperty`
+with the name and the text. `setProperty`, `put` and `[]=` send nothing to the
 receiver; `load` and `save` send what [the load rule](r:class.properties.load)
 and [the save rule](r:class.properties.save) say, `linein` with no argument to
-a source that is not a name or a `File` and `lineout` with the line to a
-target that is not a name or a `File`. The methods `put`, `setProperty`, `[]=`
-and the setters read a value that is not a string with `request` and the
-argument `STRING` ([the put rule](r:class.properties.put)), and `save` sends
-`request` with `STRING` to a stored value that is not a string, and `getWhole`
-sends it once ([the getWhole rule](r:class.properties.getwhole) and [the save
-rule](r:class.properties.save)).
+a source used directly and `lineout` with the line to a target used
+directly. The methods `put`, `setProperty` and `[]=` read a value with
+`request` and the argument `STRING` ([the put rule](r:class.properties.put)).
+`save` sends the same message to a stored value that is not a string.
 In the example each method of a subclass records its name, the number of its
 arguments and its first argument, and each call shows the records it caused.
 
@@ -1023,6 +972,188 @@ x = a~name => unknown 2:NAME
 ```
 
 ## Deviations
+
+r[class.properties.deviation.183]
+The typed getters and setters read the text of an object before checking it.
+`getWhole` answers the whole number's text, preserving its spelling.
+ooRexx sends `DATATYPE` to the setter arguments themselves, checks whether
+the value of `getLogical` is an instance of `String` before comparing it,
+and can answer the original default object from `getWhole`.
+`load` and `save` try to obtain a filename by the string argument rule
+for an object that is neither a `File` nor a stream or line adapter.
+ooRexx treats such objects as line sources or targets.
+
+```rexx
+p = .properties~new
+p~setLogical('flag', .supplied~new('1'))
+p~setWhole('number', .emptyRequest~new(' +007 '))
+say p['flag'] '['p['number']']'
+say p~getLogical('absent', .supplied~new('false'))
+say p~getLogical('absent', .fallback~new('true'))
+say p~getLogical('flag', .unexpected~new)
+p~setEntry('unchecked', .supplied~new('0'))
+say p~getLogical('UNCHECKED')
+whole = .supplied~new(' 2.0 ')
+answer = p~getWhole('absent', whole)
+say answer~class~id '['answer']'
+say '['p~getWhole('absent', .fallback~new('-2'))']'
+say '['p~getWhole('number', .unexpected~new)']'
+call check "p~setLogical('flag', .nil)"
+call check "p~setWhole('number', .fallback~new(.object~new))"
+call check "p~setLogical('flag', .supplied~new('true'))"
+call check "r = p~getLogical('absent', .fallback~new(.object~new))"
+call check "r = p~getWhole('absent', .supplied~new('1.5'))"
+call check "p~setLogical('flag', .emptyText~new)"
+call check "p~setWhole('number', .emptyText~new)"
+call check "r = p~getLogical('absent', .emptyText~new)"
+call check "r = p~getWhole('absent', .emptyText~new)"
+say p['flag'] '['p['number']']'
+exit
+check:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'success'
+  return
+bad: say condition('o')~code
+  return
+::class supplied
+::method init
+  expose value
+  use arg value
+::method makeString
+  expose value
+  return value
+::class fallback
+::method init
+  expose value
+  use arg value
+::method request
+  return .object~new
+::method string
+  expose value
+  return value
+::class unexpected
+::method request
+  say 'unexpected conversion'
+  return 'false'
+::class emptyRequest subclass fallback
+::method request
+  return
+::class emptyText
+::method request
+  return
+::method string
+  return
+```
+
+```output
+true [ +007 ]
+0
+1
+1
+0
+String [ 2.0 ]
+[-2]
+[ +007 ]
+34.901
+93.905
+34.901
+34.904
+26.901
+34.901
+93.905
+34.904
+26.901
+true [ +007 ]
+```
+
+```rexx
+f = 'spec-properties-converted-path.tmp'
+p = .properties~new
+p~put('one', 'k')
+path = .path~new(f)
+p~save(path)
+loaded = .properties~load(path)
+say loaded['k']
+p~put('two', 'k')
+p~save(path)
+p~put('wrong', 'k')
+p~load(path)
+say p['k']
+
+s = .countedStream~new(f)
+s~open('write append')
+p~put('three', 'other')
+p~save(s)
+say s~state s~writes
+s~close
+s = .countedStream~new(f)
+s~open('read')
+say s~lineIn
+p = .properties~load(s)
+say p['other'] s~reads
+s~close
+adapter = .lineAdapter~new(f)
+p = .properties~load(adapter)
+say p['k']
+p~save(adapter)
+say adapter~written
+say .properties~load(path)['k']
+call sysfiledelete f
+exit
+::class path
+::method init
+  expose filename
+  use arg filename
+::method makeString
+  expose filename
+  return filename
+::class lineAdapter subclass path
+::attribute written
+::method request
+  say 'unexpected adapter request'
+  forward class (super)
+::method lineIn
+  expose read
+  if \var('READ') then do
+    read = 1
+    return 'k=adapter'
+  end
+  raise notready
+::method lineOut
+  expose written
+  use strict arg written
+::class countedStream subclass Stream
+::attribute reads
+::attribute writes
+::method init
+  expose reads writes
+  reads = 0
+  writes = 0
+  forward class (super)
+::method request
+  say 'unexpected stream conversion'
+  forward class (super)
+::method lineIn
+  expose reads
+  reads += 1
+  forward class (super)
+::method lineOut
+  expose writes
+  writes += 1
+  forward class (super)
+```
+
+```output
+one
+two
+READY 2
+k=two
+three 4
+adapter
+k=adapter
+two
+```
 
 r[class.properties.deviation.29]
 An assignment through `unknown` that gives no value, by message or by a direct

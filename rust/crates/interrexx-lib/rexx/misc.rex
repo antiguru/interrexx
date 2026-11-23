@@ -71,9 +71,10 @@
 ::method getLogical
   forward message 'GETPROPERTY' continue
   value = result
-  if value~isInstanceOf(.string) then do
-    if value == '1' | value == 'true' then return .true
-    if value == '0' | value == 'false' then return .false
+  text = propertyText(value, 1)
+  if .nil \== text then do
+    if text == '1' | text == 'true' then return .true
+    if text == '0' | text == 'false' then return .false
   end
   raise syntax 34.904 array (value)
 
@@ -82,9 +83,9 @@
   numeric digits 9
   forward message 'GETPROPERTY' continue
   value = result
-  text = value~request('STRING')
-  if text~isInstanceOf(.string) then do
-    if text~datatype('W') then return text
+  text = propertyText(value, 1)
+  if .nil \== text then do
+    if datatype(text, 'W') then return text
   end
   raise syntax 26.901 array (value)
 
@@ -99,12 +100,12 @@
   if n > 2 then raise syntax 93.902 array (2)
   if \arg(1, 'E') then raise syntax 93.903 array (1)
   value = arg(2)
-  if \value~datatype('O') then raise syntax 34.901 array (value)
-  if value~isInstanceOf(.string) then flag = value~makeString:.string
-  else flag = value
-  if flag then text = 'true'
-  else text = 'false'
-  self~setProperty(arg(1), text)
+  text = propertyText(value, 1)
+  if .nil == text then raise syntax 34.901 array (value)
+  if \datatype(text, 'O') then raise syntax 34.901 array (value)
+  if text then flag = 'true'
+  else flag = 'false'
+  self~setProperty(arg(1), flag)
 
 /* r[class.properties.setwhole] */
 ::method setWhole
@@ -118,13 +119,9 @@
   if n > 2 then raise syntax 93.902 array (2)
   if \arg(1, 'E') then raise syntax 93.903 array (1)
   value = arg(2)
-  if \value~datatype('W') then raise syntax 93.905 array (2, value)
-  if value~isInstanceOf(.string) then text = value~makeString:.string
-  else do
-    text = value~request('STRING')
-    if \text~isInstanceOf(.string) then raise syntax 93.938 array (2)
-    text = text~makeString:.string
-  end
+  text = propertyText(value, 1)
+  if .nil == text then raise syntax 93.905 array (2, value)
+  if \datatype(text, 'W') then raise syntax 93.905 array (2, value)
   self~setProperty(arg(1), text)
 
 /* r[class.properties.load.class] */
@@ -150,8 +147,9 @@
   if n < 1 then raise syntax 93.901 array (1)
   if n > 1 then raise syntax 93.902 array (1)
   source = arg(1)
-  if source~isInstanceOf(.string) | source~isInstanceOf(.file) then do
-    stream = .stream~new(source~string)
+  path = propertyPath(source, 'LINEIN')
+  if .nil \== path then do
+    stream = .stream~new(path)
     self~load(stream)
     stream~close
     return
@@ -193,8 +191,9 @@ finished:
   if n < 1 then raise syntax 93.901 array (1)
   if n > 1 then raise syntax 93.902 array (1)
   target = arg(1)
-  if target~isInstanceOf(.string) | target~isInstanceOf(.file) then do
-    stream = .stream~new(target~string)
+  path = propertyPath(target, 'LINEOUT')
+  if .nil \== path then do
+    stream = .stream~new(path)
     stream~open('write replace')
     self~save(stream)
     stream~close
@@ -370,8 +369,26 @@ finished:
   return .nil
 
 ::routine propertyText
-  use arg value
-  if value~isInstanceOf(.string) then return value~makeString:.string
-  text = value~request('STRING')
-  if \text~isInstanceOf(.string) then return .nil
-  return text~makeString:.string
+  use arg value, typed = 0
+  if .nil == value then return .nil
+  if value~isInstanceOf:.object(.string) then return value~makeString:.string
+  value~request('STRING')
+  if var('RESULT') then
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  if typed then do
+    value~string
+    if var('RESULT') then
+      if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  return .nil
+
+/* File and String supply filenames. Other objects with the requested line
+   method are used directly, at their current position when they are streams
+   (r[class.properties.deviation.183]). */
+::routine propertyPath
+  use arg object, lineMethod
+  if object~isInstanceOf:.object(.file) then return object~string
+  if object~isInstanceOf:.object(.string) then return object~makeString:.string
+  if object~isInstanceOf:.object(.stream) then return .nil
+  if object~hasMethod:.object(lineMethod) then return .nil
+  return propertyText(object)

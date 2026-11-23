@@ -1610,6 +1610,14 @@ an object outside the array class hierarchy supplies no array. ooRexx raises
 argument. ooRexx sends `STRIP` to the mode itself, so a mode object without
 that method raises `SYNTAX 97.1` even if it can supply valid mode text.
 
+`Properties` reads the string value of logical and whole-number arguments.
+ooRexx sends datatype or comparison messages to the objects themselves,
+and `getWhole` can return the original default object. When loading or
+saving, interrexx also accepts a filename through the string request of an
+object without the corresponding line method, where ooRexx sends the line
+message
+([examples](r:class.properties.deviation.183)).
+
 `CircularQueue` converts size, count, order and option arguments before
 checking their values. ooRexx sends `<`, `UPPER`, `CASELESSSTARTSWITH` or
 `CASELESSMATCHCHAR` to the arguments themselves, which can raise
