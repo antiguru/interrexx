@@ -1,11 +1,19 @@
 name: Windows port checks
 on:
-  push:
-    branches: [win-rxapi-960, win-extensions-961]
   pull_request:
     branches: [main]
     paths:
       - .github/workflows/windows-check.yml
+      - .gitmodules
+      - ci/windows-*
+      - ci/windows-*/**
+      - include/**
+      - rust/.cargo/**
+      - rust/Cargo.lock
+      - rust/Cargo.toml
+      - rust/crates/**
+      - rust/rust-toolchain.toml
+      - third_party/ooRexx
   workflow_dispatch:
 
 permissions:
