@@ -68,8 +68,11 @@ statics of `unsafe extern "C" fn` slots.
 
 * `RexxObjectPtr` is an opaque handle registered in the calling native activation's local
   reference table, not an address. The table is released when the activation ends.
-* A handle that outlives its activation is a lookup miss, never another object: heap slots carry a
-  generation that moves on when a slot is reused.
+* A local handle that outlives its activation is a lookup miss. Heap slots carry a generation
+  that moves on when a slot is reused. The interpreter-owned directories returned by
+  `GetLocalEnvironment` and `GetGlobalEnvironment` remain valid in later callbacks on the same
+  interpreter. A receiver given to a native method remains usable from later callbacks while
+  Rexx still holds it. That handle alone does not keep the receiver alive.
 * `True()` and `False()` are the handles of `.true` and `.false`. A result the API converts from
   `logical_t`, and the answer of a built-in method that the specification says answers true or
   false, is one of those two handles, so an extension may compare it to them by handle. A built-in

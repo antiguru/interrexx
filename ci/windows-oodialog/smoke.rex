@@ -18,10 +18,6 @@ exit 0
      return
   end
 
-::method initDialog unguarded
-  /* Send WM_COMMAND with IDOK through the native dialog procedure. */
-  self~sendWinIntMsg("0x0111", 1, 0)
-
 ::method ok unguarded
   self~handledCommand = .true
   forward class (super)

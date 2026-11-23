@@ -2470,6 +2470,10 @@ impl Host for Interp {
             .resolve_live(handle, |object| lives(heap, object))
             .or_else(|| self.global_references.resolve(handle))
             .or_else(|| self.native_environment_directory(handle))
+            .or_else(|| {
+                let object = *self.borrowed_native_receivers.get(&handle.addr())?;
+                lives(heap, object).then_some(object)
+            })
     }
 
     fn register_local(&mut self, object: ObjRef) -> interrexx_api::layout::RexxObjectPtr {
@@ -2479,6 +2483,12 @@ impl Host for Interp {
             .last_mut()
             .expect("a native activation is running");
         let handle = frame.locals.register(object);
+        if frame.method
+            && frame.receiver == object
+            && matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
+        {
+            self.borrowed_native_receivers.insert(handle.addr(), object);
+        }
         self.roots
             .activity_mut()
             .pop_temp_above(frame.temps_floor, object);

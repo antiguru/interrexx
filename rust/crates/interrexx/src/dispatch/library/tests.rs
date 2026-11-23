@@ -1237,3 +1237,52 @@ fn callbacks_held_while_one_runs_are_served_in_arrival_order() {
     assert_eq!(*served.lock().expect("no panic"), [0, 1, 2]);
     assert!(interp.activities.held.is_empty());
 }
+
+#[test]
+fn interpreter_owned_directory_handles_resolve_after_their_first_callback() {
+    use interrexx_api::values::Host;
+    use interrexx_core::ObjRef;
+
+    let mut interp = Interp::new();
+    let local = interp.dot_variable(b".LOCAL").expect("the local directory");
+    let environment = interp
+        .dot_variable(b".ENVIRONMENT")
+        .expect("the global directory");
+
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    let local_handle = Host::register_local(&mut interp, local);
+    let environment_handle = Host::register_local(&mut interp, environment);
+    interp.pop_native_frame();
+
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    assert_eq!(Host::resolve(&mut interp, local_handle), Some(local));
+    assert_eq!(
+        Host::resolve(&mut interp, environment_handle),
+        Some(environment)
+    );
+    interp.pop_native_frame();
+}
+
+#[test]
+fn a_native_receiver_handle_resolves_only_while_its_object_lives() {
+    use interrexx_api::values::Host;
+    use interrexx_core::{Body, ObjRef};
+
+    let mut interp = Interp::new();
+    let receiver = interp.heap.alloc(Body::Array {
+        dimensions: None,
+        slots: Vec::new().into(),
+    });
+    interp.roots.add_global("native receiver", receiver);
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, Some(receiver), b"", &[], None);
+    let handle = Host::register_local(&mut interp, receiver);
+    interp.pop_native_frame();
+
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    interp.collect_now();
+    assert_eq!(Host::resolve(&mut interp, handle), Some(receiver));
+    interp.roots.remove_global("native receiver");
+    interp.collect_now();
+    assert_eq!(Host::resolve(&mut interp, handle), None);
+    interp.pop_native_frame();
+}
