@@ -2,7 +2,7 @@
 element: "CircularQueue"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > CircularQueue Class; Builtin Classes > Collection Classes > CircularQueue Class > of (Class Method); Builtin Classes > Collection Classes > CircularQueue Class > init; Builtin Classes > Collection Classes > CircularQueue Class > append; Builtin Classes > Collection Classes > CircularQueue Class > insert; Builtin Classes > Collection Classes > CircularQueue Class > intersection; Builtin Classes > Collection Classes > CircularQueue Class > makeArray; Builtin Classes > Collection Classes > CircularQueue Class > makeString; Builtin Classes > Collection Classes > CircularQueue Class > push; Builtin Classes > Collection Classes > CircularQueue Class > queue; Builtin Classes > Collection Classes > CircularQueue Class > resize; Builtin Classes > Collection Classes > CircularQueue Class > section; Builtin Classes > Collection Classes > CircularQueue Class > size; Builtin Classes > Collection Classes > CircularQueue Class > string; Builtin Classes > Collection Classes > CircularQueue Class > supplier; Builtin Classes > Collection Classes > CircularQueue Class > union; Builtin Classes > Collection Classes > CircularQueue Class > xor"
-deviations: [109, 121]
+deviations: [109, 121, 183]
 ---
 
 # CircularQueue
@@ -60,7 +60,8 @@ second one `SYNTAX 93.902`. The size must be a whole number from 0 to
 999999999, read from its string value as a whole-number argument of a builtin
 is ([the form rule](r:conv.whole.form), [the digits
 rule](r:conv.whole.digits)): a negative number, a number that is not whole,
-text that is not a number and a number above that bound raise `SYNTAX 93.906`.
+an argument that gives no number and a number above that bound raise
+`SYNTAX 93.906`.
 A size of 0 makes a queue that holds nothing. A new queue is empty. `new`
 sends `init` to the new object with the arguments it received, so a subclass's
 `init` sees them ([the new rule](r:class.index.new)); the checks are those of
@@ -77,8 +78,6 @@ call try '.circularqueue~new("x")'
 call try '.circularqueue~new(1.5)'
 call try '.circularqueue~new(1000000000)'
 call try '.circularqueue~new(3, 4)'
-call try '.circularqueue~new(.nil)'
-call try '.circularqueue~new(.object~new)'
 x = .watch~new(7)
 exit
 try:
@@ -104,86 +103,130 @@ bad: say arg(1) '=>' condition('o')~code
 .circularqueue~new(1.5) => 93.906
 .circularqueue~new(1000000000) => 93.906
 .circularqueue~new(3, 4) => 93.902
-.circularqueue~new(.nil) => 97.1
-.circularqueue~new(.object~new) => 97.1
 init 1 (7)
 ```
 
 r[class.circularqueue.new.sends]
-`init` first reads the string value of the size, as [the conversion
-rule](r:conv.string.object) says, and then sends it `<` with the argument 0,
-reading the answer as a logical value: an answer that is neither 0 nor 1
-raises `SYNTAX 34.901`. `SYNTAX 93.906` is raised when `<` answered 1 or when
-the string value is not a whole number or is above 999999999; only `<`
-decides whether the size is below 0, so a size whose string value is `-1` and
-whose `<` answers 0 is not refused. An object that does not understand `<`,
-`.nil` included, raises `SYNTAX 97.1`. The queue then keeps the very object
-it was given as its size, `size` answers it ([the size
-rule](r:class.circularqueue.size)), and its string value is read again each
-time a method compares the number of items with the size.
+`init` reads the string value of the size as [the conversion
+rule](r:conv.string.object) reads a whole number, with a fallback to
+`STRING`. It uses the resulting number as the capacity for later operations
+([Deviation 183](r:class.circularqueue.deviation.183)). The [size
+method](r:class.circularqueue.size) answers the original argument.
 
 ```rexx
-q = .circularqueue~new(.pretend~new(0))
-say q~size~class~id q~size
-do i = 1 to 6
-  q~queue(i)
-end
-say q~allItems~makeString('L', ',')
-call try '.circularqueue~new(.pretend~new(1))'
-call try '.circularqueue~new(.pretend~new(3))'
-call try '.circularqueue~new(.nil)'
-w = .circularqueue~new(.loud~new(0, '-1'))
-say 'made' w~size~class~id
-w~queue('a')
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class pretend
-::method init
-  expose answer
-  use arg answer
-::method makeString
-  return 4
-::method string
-  return 4
-::method '<'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
-::class loud
-::method init
-  expose answer text
-  use arg answer, text
-::method makeString
-  expose text
-  say 'makestring'
-  return text
-::method '<'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
+q = .circularqueue~new(' +2 ')
+q~queue('a'); q~queue('b')
+say '['q~size']' q~queue('c') q~string
 ```
 
 ```output
-lt 0
-PRETEND 4
-3,4,5,6
-lt 0
-.circularqueue~new(.pretend~new(1)) => 93.906
-lt 0
-.circularqueue~new(.pretend~new(3)) => 34.901
-.circularqueue~new(.nil) => 97.1
-makestring
-lt 0
-made LOUD
-makestring
+[ +2 ] a b,c
+```
+
+r[class.circularqueue.deviation.183]
+`new`, `resize` and `section` read sizes and counts by their numeric value.
+`resize`, `makeArray`, `supplier`, `string` and `makeString` read their
+order as a string argument. `queue` and `push` read explicit options the
+same way, even at size 0. ooRexx sends `<`, `UPPER`,
+`CASELESSSTARTSWITH` or `CASELESSMATCHCHAR` to these arguments directly.
+
+```rexx
+size = .convertible~new(' 3 ')
+q = .circularqueue~new(size)
+say q~size == size
+size~text = '1'
+q~queue('a'); q~queue('b'); q~queue('c')
+say q~allItems~makeString('L', ',')
+order = .convertible~new('lifo')
+smaller = .stringOnly~new(2)
+say (q~resize(smaller, order) == smaller) (q~size == smaller)
+say q~allItems~makeString('L', ',') q~makeArray(order)~makeString('L', ',') q~supplier(order)~item
+say q~string('|', order) q~makeString('|', .orderString~new('Lifo'))
+say q~section(1, .convertible~new(1))~string
+
+q = .circularqueue~of('a', 'b', 'a', 'c')
+option = .uniqueOption~new
+.local~requests = 0
+say q~queue('a', option) == .nil
+say q~allItems~makeString('L', ',')
+say q~push('c', option) == .nil
+say q~allItems~makeString('L', ',')
+zero = .circularqueue~new(0)
+zero~queue('x', option)
+zero~push('x', option)
+say .local~requests zero~items
+
+call try '.circularqueue~new(.nil)'
+call try 'q~resize(.stringOnly~new(.object~new))'
+call try 'q~section(1, .nil)'
+call try 'q~resize(1, .stringOnly~new("L"))'
+call try 'q~makeArray(.nil)'
+call try 'q~supplier(.convertible~new("x"))'
+call try 'q~makeString("|", .nil)'
+call try 'zero~queue("x", .nil)'
+call try 'q~push("z", .convertible~new(.object~new))'
+say q~size q~allItems~makeString('L', ',')
+exit
+try:
+  signal on syntax name bad
+  interpret 'result =' arg(1)
+  say 'no error'
+  return
+bad: say condition('o')~code
+  return
+::class convertible
+::attribute text
+::method init
+  expose text
+  use arg text
+::method makeString
+  expose text
+  return text
+::class stringOnly
+::method init
+  expose text
+  use arg text
+::method string
+  expose text
+  return text
+::class orderString subclass String
+::method isInstanceOf
+  return 0
+::method makeString
+  return 'F'
+::method request
+  return 'F'
+::class uniqueOption
+::method request
+  .local~requests += 1
+  if arg(1) == 'STRING' then return 'unique'
+  return .nil
+::method makeString
+  return 'normal'
+```
+
+```output
+1
+a,b,c
+1 1
+a,b b,a b
+b|a b|a
+a
+1
+b,c,a
+1
+c,b,a
+4 0
+93.906
+93.906
+93.906
+88.909
+88.909
+93.914
+88.909
+88.909
+88.909
+4 c,b,a
 ```
 
 r[class.circularqueue.of]
@@ -284,9 +327,11 @@ nothing was taken out, both answer `.nil`. A queue of size 0 holds nothing.
 The `option` is `Normal` by default; one whose first character is `U`, in
 either case, is `Unique`: before the item is added, every item that is equal
 to it by the strict `==` is taken out, and when that made room nothing else
-is. Any other option, a null string and one that begins with a blank included,
-is `Normal`, and `option` is read as [the option
-rule](r:class.circularqueue.queue.sends) says. No argument at all raises
+is. Any other option string, including a null string or one with a leading
+blank, is `Normal`. An explicit option is read as a [string
+argument](r:class.index.string), even at size 0, and an object with no string
+value raises `SYNTAX 88.909` ([Deviation 183](r:class.circularqueue.deviation.183)).
+No argument at all raises
 `SYNTAX 93.901`; an omitted item before an option raises `SYNTAX 93.903`; a
 third argument raises `SYNTAX 93.902`.
 
@@ -340,16 +385,6 @@ say r~queue('y', 'Z') r~queue('y', ' U') r~allItems~makeString('L', ',')
 say r~queue(1.0, 'U') r~queue(1, 'U') r~allItems~makeString('L', ',')
 say r~queue('Y', 'U') r~allItems~makeString('L', ',')
 say r~queue('b', 'U') r~push(.nil) r~queue(.nil, 'U') r~items
-call try 'r~queue("n", .nil)'
-call try 'r~push("n", .nil)'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
 ```
 
 ```output
@@ -363,23 +398,21 @@ x b a,q,y,y
 a q y,y,1.0,1
 y y,1.0,1,Y
 y b The NIL object 4
-r~queue("n", .nil) => 97.1
-r~push("n", .nil) => 97.1
 ```
 
 r[class.circularqueue.queue.zero]
 On a queue of size 0, `queue`, `push` and `append` hold nothing: after the
 argument checks of their own rules they answer `.nil` and add nothing, and
-they send no message to the receiver. The `option` of `queue` and `push` is
-not read, `Unique` included, so that an option that does not understand
-`caselessMatchChar` raises no error. `insert` is not covered: it adds the item
-and takes it out again by [the insert rule](r:class.circularqueue.insert). A
+they send no message to the receiver. The explicit option of `queue` and
+`push` is still read as in [the queue rule](r:class.circularqueue.queue).
+`insert` adds the item and takes it out again by
+[the insert rule](r:class.circularqueue.insert). A
 queue that `resize(0)` made size 0 behaves so too.
 
 ```rexx
 q = .circularqueue~new(0)
 say (q~queue('a') == .nil) (q~push('b') == .nil) (q~append('c') == .nil) q~items
-say (q~queue('d', .object~new) == .nil) (q~push('e', 'U') == .nil) q~items
+say (q~queue('d', 'N') == .nil) (q~push('e', 'U') == .nil) q~items
 call try 'q~queue'
 call try 'q~push(, "U")'
 call try 'q~append(1, 2)'
@@ -414,11 +447,7 @@ as long as it answers true, `removeItem` with the item and `hasItem` again, and
 only then the `items`. The strict `==` of that search is the one of [the Queue
 search rule](r:class.queue.removeitem.sends): the first example shows the order.
 The search ends at the very object that is searched for without a `==` sent to
-it ([the identity rule](r:class.collection.identity)). The option is sent
-`caselessMatchChar` with the arguments 1 and `u`, whose answer is read as a
-logical value: neither 0 nor 1 raises `SYNTAX 34.1`, and an option that does not
-understand the message raises `SYNTAX 97.1`, `.nil` included. The second example
-shows these.
+it ([the identity rule](r:class.collection.identity)).
 
 ```rexx
 q = .circularqueue~of(.thing~new('p'), .thing~new('q'), .thing~new('p'))
@@ -455,49 +484,6 @@ q == q
 q == q
 q == p
 2
-```
-
-```rexx
-q = .circularqueue~of('a', 'b')
-q~resize(4)
-q~queue('c', .opt~new(0))
-q~queue('c', .opt~new(1))
-q~push('c', .opt~new(1))
-say q~allItems~makeString('L', ',')
-call try 'q~queue("s", .opt~new("x"))'
-call try 'q~push("s", .opt~new(.nil))'
-call try 'q~queue("s", .object~new)'
-say q~allItems~makeString('L', ',')
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class opt
-::method init
-  expose answer
-  use arg answer
-::method caselessMatchChar
-  expose answer
-  use arg pos, set
-  say 'caselessMatchChar' pos set
-  return answer
-```
-
-```output
-caselessMatchChar 1 u
-caselessMatchChar 1 u
-caselessMatchChar 1 u
-c,a,b
-caselessMatchChar 1 u
-q~queue("s", .opt~new("x")) => 34.1
-caselessMatchChar 1 u
-q~push("s", .opt~new(.nil)) => 34.1
-q~queue("s", .object~new) => 97.1
-c,a,b
 ```
 
 r[class.circularqueue.append]
@@ -594,8 +580,8 @@ r[class.circularqueue.resize]
 it was given. When the queue holds more items than the new size, the surplus is
 taken out, from the head for the order `Fifo`, which is the default, and from
 the tail for `Lifo`, so that the other end is kept. The `newSize` is read as
-the size of [the new rule](r:class.circularqueue.new) is, with the message `<`
-and the errors that rule names; a missing `newSize` raises `SYNTAX 93.901`, an
+the size of [the new rule](r:class.circularqueue.new) is, with the same errors.
+A missing `newSize` raises `SYNTAX 93.901`, an
 omitted one before an `order` raises `SYNTAX 93.903`, and a third argument
 `SYNTAX 93.902`; a call with more than one of these faults raises the error of
 one of them, as [the precedence rule](r:conv.error.precedence) says. The first
@@ -623,10 +609,8 @@ call try 'q~resize(-1)'
 call try 'q~resize("x")'
 call try 'q~resize(1.5)'
 call try 'q~resize(1000000000)'
-call try 'q~resize(.nil)'
 call try 'q~resize(1, "x")'
 call try 'q~resize(1, "")'
-call try 'q~resize(1, .nil)'
 call try 'q~resize(1, "L", 1)'
 say q~size q~allItems~makeString('L', ',')
 exit
@@ -653,10 +637,8 @@ q~resize(-1) => 93.906
 q~resize("x") => 93.906
 q~resize(1.5) => 93.906
 q~resize(1000000000) => 93.906
-q~resize(.nil) => 97.1
 q~resize(1, "x") => 93.914
 q~resize(1, "") => 93.914
-q~resize(1, .nil) => 97.1
 q~resize(1, "L", 1) => 93.902
 4.0 2,3,4,5
 ```
@@ -679,7 +661,7 @@ call run 'a~resize(3)'
 call run 'a~resize(2)'
 call run 'a~resize(2, "L")'
 call run 'a~resize(0)'
-call run 'a~resize(1, .opt~new)'
+call run 'a~resize(1, "F")'
 exit
 run:
   use arg c
@@ -691,11 +673,6 @@ run:
   .local~on = 0
   say left(c, 20) '=>' .local~log~makeString('L', ' ')
   return
-::class opt
-::method unknown
-  use arg name
-  .local~log~append(name)
-  return 'F'
 ::class spy subclass circularqueue
 ::method items
   if .local~on then .local~log~append('items')
@@ -711,7 +688,7 @@ a~resize(3)          => items
 a~resize(2)          => items items remove(1)
 a~resize(2, "L")     => items items remove(3)
 a~resize(0)          => items items remove(1) remove(1) remove(1)
-a~resize(1, .opt~new => UPPER items items remove(1) remove(1)
+a~resize(1, "F")     => items items remove(1) remove(1)
 ```
 
 ## Parts, arrays and strings
@@ -727,13 +704,11 @@ when it is omitted or larger; the new queue holds `count` items, `.nil` ones
 included. When `start` is above the size, the first entry is what `[]` answers
 for `start`, which is `.nil`, and the positions after it are 1, 2 and so on.
 The `start` is read as [the Queue index rule](r:class.queue.indexes) says;
-`count` must be a whole number from 0 up, or `SYNTAX 93.906` is raised, `.nil`
-raising `SYNTAX 97.1`. No `start` raises `SYNTAX 93.901`, an omitted one
-`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. `count` is checked with
-the messages and conditions of [the new rule](r:class.circularqueue.new.sends),
-after which its string value is read once more; that second value is the count,
-and one below 0 or not a whole number raises `SYNTAX 93.906`, so a count whose
-string value is `-1` is refused even when its `<` answers 0. A call whose
+`count` is read and checked as the size is in
+[the new rule](r:class.circularqueue.new.sends). A value outside the range
+from 0 to 999999999 or one that does not give a whole number raises
+`SYNTAX 93.906`. No `start` raises `SYNTAX 93.901`, an omitted one
+`SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. A call whose
 `start` and `count` are both wrong raises the error of one of them, as [the
 precedence rule](r:conv.error.precedence) says. The answer is not the receiver,
 and the receiver is not changed.
@@ -761,8 +736,6 @@ call try 'q~section("x")'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, 1.5)'
-call try 'q~section(1, .nil)'
-call try 'q~section(2, .loud~new(0, "-1"))'
 call try 'q~section(1, 1, 1)'
 exit
 show: procedure
@@ -776,19 +749,6 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
-::class loud
-::method init
-  expose answer text
-  use arg answer, text
-::method makeString
-  expose text
-  say 'makestring'
-  return text
-::method '<'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
 ```
 
 ```output
@@ -811,11 +771,6 @@ q~section("x") => 93.907
 q~section(1, -1) => 93.906
 q~section(1, "x") => 93.906
 q~section(1, 1.5) => 93.906
-q~section(1, .nil) => 97.1
-makestring
-lt 0
-makestring
-q~section(2, .loud~new(0, "-1")) => 93.906
 q~section(1, 1, 1) => 93.902
 ```
 
@@ -889,10 +844,11 @@ order `Fifo`, which is the default, and from the tail for `Lifo`; `allItems`
 answers the items from the head, and `allIndexes` the indexes 1 to the number
 of items, as for any queue ([the Queue rule](r:class.queue.makearray)).
 `supplier(order)` answers a `Supplier` that goes over the same items, a
-snapshot as for any queue. The first character of the `order`, in either case,
-is `F` or `L`, the rest does not count, and anything else raises
-`SYNTAX 93.914`; an order that is a null string, a number, or a string with a
-leading blank is anything else. With `Lifo` the index of an item in the answer
+snapshot as for any queue. The order is read as a [string
+argument](r:class.index.string), and an object with no string value raises
+`SYNTAX 88.909` ([Deviation 183](r:class.circularqueue.deviation.183)).
+An order string must start with `F` or `L`, in either case, or
+`SYNTAX 93.914` is raised. With `Lifo` the index of an item in the answer
 of `supplier` is its index in the queue, so that the supplier counts down.
 `makeArray` and `supplier` take at most one argument: a second raises
 `SYNTAX 93.902`.
@@ -913,10 +869,8 @@ call try 'x~makeArray("X")'
 call try 'x~makeArray("")'
 call try 'x~makeArray(" L")'
 call try 'x~makeArray(1)'
-call try 'x~makeArray(.nil)'
 call try 'x~makeArray("L", 1)'
 call try 'x~supplier("X")'
-call try 'x~supplier(.nil)'
 call try 'x~supplier("L", 1)'
 exit
 try:
@@ -941,72 +895,20 @@ x~makeArray("X") => 93.914
 x~makeArray("") => 93.914
 x~makeArray(" L") => 93.914
 x~makeArray(1) => 93.914
-x~makeArray(.nil) => 97.1
 x~makeArray("L", 1) => 93.902
 x~supplier("X") => 93.914
-x~supplier(.nil) => 97.1
 x~supplier("L", 1) => 93.902
 ```
 
 r[class.circularqueue.order.sends]
-`makeArray` and `supplier` read the order by sending it `upper` with no
-argument, and use the first character of the answer. `string` and `makeString`
-send it `caselessStartsWith` with `F` and, when the answer is not true, with
-`L`, and raise `SYNTAX 93.914` when neither is; they pass the order on to
-`makeArray`, which reads it as above. `resize` reads it as `makeArray` does.
+`string`, `makeString` and `resize` read the order as `makeArray` and
+`supplier` do. `string` and `makeString` pass the converted order string on
+to `makeArray`.
 For the order `Lifo`, `makeArray` and `supplier` send `copy` to the receiver,
 then `items` to that copy, then `at` to the copy with each index from that
 number down to 1, and the answer holds what `at` answered, in that order;
 `Fifo` sends nothing to the receiver. `string` and `makeString` reach these
-through the `makeArray` they send. In the first example the order is an object
-that answers every message itself; the second shows the messages for `Lifo`.
-
-```rexx
-q = .circularqueue~of('a', 'b', 'c')
-.local~up = 'LX'
-say q~makeArray(.ord~new)~makeString('L', ',')
-say q~supplier(.ord~new)~item
-.local~up = 'F'
-.local~cs = 1
-say q~string(',', .ord~new)
-.local~cs = 0
-call try 'q~makeString(",", .ord~new)'
-.local~up = 'Q'
-call try 'q~makeArray(.ord~new)'
-.local~up = 'L'
-say q~resize(2, .ord~new) q~size q~allItems~makeString('L', ',')
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class ord
-::method unknown
-  use arg name, args
-  say name args~makeString('L', ',')
-  if name = 'UPPER' then return .local~up
-  return .local~cs
-```
-
-```output
-UPPER 
-c,b,a
-UPPER 
-c
-CASELESSSTARTSWITH F
-UPPER 
-a,b,c
-CASELESSSTARTSWITH F
-CASELESSSTARTSWITH L
-q~makeString(",", .ord~new) => 93.914
-UPPER 
-q~makeArray(.ord~new) => 93.914
-UPPER 
-2 2 a,b
-```
+through the `makeArray` they send.
 
 ```rexx
 q = .spy~of('a', 'b', 'c')
@@ -1080,7 +982,6 @@ say .circularqueue~of('a', , 'c')~string '|' .circularqueue~new(2)~string'|'
 say .circularqueue~of(.nil, 1.0, 'a b')~makeString('|') x~request('STRING')
 call try 'x~makeString("/", "X")'
 call try 'x~makeString("/", "")'
-call try 'x~makeString("/", .nil)'
 call try 'x~makeString("/", "L", 1)'
 call try 'x~makeString(.object~new)'
 call try 'x~string("/", "X")'
@@ -1105,7 +1006,6 @@ a,,c | |
 The NIL object|1.0|a b x,y,z
 x~makeString("/", "X") => 93.914
 x~makeString("/", "") => 93.914
-x~makeString("/", .nil) => 97.1
 x~makeString("/", "L", 1) => 93.902
 x~makeString(.object~new) => 88.909
 x~string("/", "X") => 93.914
