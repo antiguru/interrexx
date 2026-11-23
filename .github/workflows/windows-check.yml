@@ -86,8 +86,10 @@ jobs:
         run: |
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
           call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
-          cl /nologo /W4 /WX /TP /I sdk\include /I sdk\include\platform\windows ..\ci\windows-sdk-smoke.cpp sdk\lib\rexx.lib /Fe:sdk\bin\sdk-smoke.exe || exit /b 1
-          cl /nologo /W4 /WX /TC /I sdk\include /I sdk\include\platform\windows ..\ci\windows-rxapi-smoke.c sdk\lib\rexxapi.lib /Fe:sdk\bin\rxapi-smoke.exe || exit /b 1
+          cl /nologo /W4 /WX /TP /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-sdk-smoke.cpp /Fo:sdk-smoke.obj || exit /b 1
+          cl /nologo /W4 /WX /TC /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-rxapi-smoke.c /Fo:rxapi-smoke.obj || exit /b 1
+          link /nologo /OUT:sdk\bin\sdk-smoke.exe sdk-smoke.obj sdk\lib\rexx.lib || exit /b 1
+          link /nologo /OUT:sdk\bin\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
           sdk\bin\sdk-smoke.exe || exit /b 1
           sdk\bin\rxapi-smoke.exe || exit /b 1
           del sdk\bin\sdk-smoke.exe sdk\bin\rxapi-smoke.exe
