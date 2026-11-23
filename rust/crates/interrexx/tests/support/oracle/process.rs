@@ -49,7 +49,21 @@ pub(super) fn wait_with_deadline(
     let start = Instant::now();
     let (mut code, mut deadline_exceeded) = loop {
         match child.try_wait() {
-            Ok(Some(status)) => break (status.code(), false),
+            Ok(Some(status)) => {
+                // A signal-terminated oracle is a structural failure, but
+                // ExitStatus::code() loses the signal number. Keep the
+                // existing Termination classification and report the signal
+                // here so intermittent native crashes can be diagnosed.
+                if status.code().is_none() {
+                    use std::os::unix::process::ExitStatusExt as _;
+                    eprintln!(
+                        "oracle signal: probe={} signal={:?} status={status:?}",
+                        path.display(),
+                        status.signal()
+                    );
+                }
+                break (status.code(), false);
+            },
             Ok(None) => {
                 if start.elapsed() >= deadline {
                     // The process is still running past its deadline: kill
