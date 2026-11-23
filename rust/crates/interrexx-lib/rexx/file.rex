@@ -327,13 +327,16 @@
   else do
     list = self~interrexx_string(path)
     if .nil == list then do
-      items = path~request('ARRAY')
+      path~request('ARRAY')
+      items = .nil
+      if var('RESULT') then items = result
       if .nil \== items then do
         if \items~isA(.Array) then items = .nil
       end
       if .nil == items then do
         if path~isInstanceOf(.Array) then raise syntax 98.913 array(path)
-        list = self~interrexx_string(path~request('STRING'))
+        path~request('STRING')
+        if var('RESULT') then list = self~interrexx_string(result)
         if .nil == list then raise syntax 98.913 array(path)
       end
     end

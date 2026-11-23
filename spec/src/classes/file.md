@@ -2515,6 +2515,8 @@ call show .bothPaths~new(second':'first, .array~of(first))
 call show .list~of(second, first)
 call show .stringOnlyPath~new
 call show .invalidArray~new
+call show .emptyArrayReply~new(first)
+call show .emptyReply~new
 do dir over .array~of(first, second)
   junk = .file~new(dir'/a.txt')~delete
   junk = .file~new(dir)~delete
@@ -2550,6 +2552,13 @@ bad: say condition('o')~code
 ::method request
   if arg(1) == 'ARRAY' then return .nil
   return 'spec-file-search-convert.tmp/first'
+::class emptyArrayReply subclass textPath
+::method request
+  if arg(1) == 'ARRAY' then return
+  forward class (super)
+::class emptyReply
+::method request
+  return
 ```
 
 ```output
@@ -2557,5 +2566,7 @@ first
 first
 second
 98.913
+98.913
+first
 98.913
 ```
