@@ -105,3 +105,20 @@ fn bracket_expressions_match_as_fnmatch_does() {
     assert!(matches(b"[_-a]", b"A", true));
     assert!(!matches(b"[_-a]", b"B", true));
 }
+
+/// **A spec whose `~` does not resolve searches nothing when more than one
+/// component follows its slash**, as `util.sysfiletree.spec.dir` says, for
+/// `HOME` unset as for a user no account has: the directory part qualifies
+/// to nothing, and `/` is not searched for the last component in its place.
+/// The adjacent success is one component after the slash, searched in `/`.
+#[test]
+fn an_unresolved_tilde_with_a_nested_path_matches_nothing() {
+    let source = b"'unset HOME'\n\
+        call SysFileTree '~/tmp', 'a.', 'B'\n\
+        call SysFileTree '~/no-such-dir/tmp', 'b.', 'B'\n\
+        call SysFileTree '~spec_tree_nouser/no-such-dir/tmp', 'c.', 'B'\n\
+        say a.0 b.0 c.0\n";
+    let outcome = crate::run_program("/t.rex", source.to_vec(), crate::Invocation::none());
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(String::from_utf8_lossy(&outcome.stdout), "1 0 0\n");
+}

@@ -387,7 +387,8 @@ read as [the home rule](r:util.index.home) says, with these exceptions. A
 for the entries of the current directory, so it matches a directory `~name`
 there. A `filespec` that starts with `~name/`, where no user has that name,
 starts at `/` when only one component follows the slash, and matches nothing
-when more follow. A `HOME` that does not start with a slash is taken from the
+when more follow. A `filespec` that starts with `~/` when `HOME` has no value
+is read as one that starts with `~name/` for such a name. A `HOME` that does not start with a slash is taken from the
 current directory, as any relative name is. Each name stored
 is the full name of the match, formed as [QUALIFY](r:bif.qualify.normal) forms
 a name: made absolute, with the repeated slashes, the periods and the `..`

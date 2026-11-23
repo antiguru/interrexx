@@ -185,8 +185,8 @@ r[bif.directory.home]
 An argument that is `~` alone, or that starts with `~/`, has that `~` replaced
 by the value of the environment variable `HOME`, and the result is taken as
 above. When `HOME` has the null string as its value, does not start with a
-slash or names no directory, the call answers the null string and changes
-nothing. What the call does when `HOME` has no value is not specified.
+slash, names no directory or has no value, the call answers the null string
+and changes nothing.
 
 ```rexx
 call value 'HOME', '/', 'ENVIRONMENT'

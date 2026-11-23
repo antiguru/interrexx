@@ -84,20 +84,21 @@ fn check_mask(mask: Option<&[u8]>, position: usize) -> Result<(), Failure> {
 }
 
 /// Canonicalisation of a name starting with `~`: the
-/// tilde resolved where it can be, and the result normalised where it is
-/// absolute. What does not resolve or is not absolute stays as it is.
-fn canonicalize_tilde(interp: &Interp, name: Vec<u8>) -> Vec<u8> {
-    let expanded = expand_tilde(interp, &name).unwrap_or(name);
-    if expanded.first() == Some(&b'/') {
+/// tilde resolved, and the result normalised where it is absolute. `None`
+/// where the tilde does not resolve: an unknown user, or `HOME` unset.
+fn canonicalize_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
+    let expanded = expand_tilde(interp, name)?;
+    Some(if expanded.first() == Some(&b'/') {
         crate::paths::normalize_bytes(&expanded, b"/")
     } else {
         expanded
-    }
+    })
 }
 
 /// `*` becomes `./*`, a spec ending in `/`,
-/// `/.` or `/..` gains a wildcard, and a leading `~` is resolved.
-fn adjust_directory(interp: &Interp, spec: &[u8]) -> Vec<u8> {
+/// `/.` or `/..` gains a wildcard, and a leading `~` is resolved. The flag is
+/// set where a leading `~` did not resolve and the spec is kept as it is.
+fn adjust_directory(interp: &Interp, spec: &[u8]) -> (Vec<u8>, bool) {
     let mut spec = spec.to_vec();
     if spec == b"*" {
         spec = b"./*".to_vec();
@@ -107,9 +108,12 @@ fn adjust_directory(interp: &Interp, spec: &[u8]) -> Vec<u8> {
         spec.extend_from_slice(b"/*");
     }
     if spec.first() == Some(&b'~') {
-        spec = canonicalize_tilde(interp, spec);
+        match canonicalize_tilde(interp, &spec) {
+            Some(resolved) => spec = resolved,
+            None => return (spec, true),
+        }
     }
-    spec
+    (spec, false)
 }
 
 /// The directory to search, ending in `/`, and
@@ -119,8 +123,10 @@ fn adjust_directory(interp: &Interp, spec: &[u8]) -> Vec<u8> {
 /// and `..` searches the directory named by the current one's name with `..`
 /// appended. Measured, `SysFileTree('..', s.)` run from `/` lists `/../bin`.
 /// The directory part of any other spec is qualified, and where that fails
-/// the search is in `/`.
-fn full_path(interp: &Interp, spec: &[u8]) -> (Vec<u8>, Vec<u8>) {
+/// the search is in `/`. A spec whose `~` did not resolve (`unresolved`) is
+/// searched for in `/` when one component follows its first slash, and
+/// `None`, no search, when more do.
+fn full_path(interp: &Interp, spec: &[u8], unresolved: bool) -> Option<(Vec<u8>, Vec<u8>)> {
     let (mut directory, pattern) = match spec.iter().rposition(|byte| *byte == b'/') {
         None => {
             let mut directory = interp.cwd_bytes().to_vec();
@@ -134,6 +140,7 @@ fn full_path(interp: &Interp, spec: &[u8]) -> (Vec<u8>, Vec<u8>) {
             };
             (directory, pattern)
         }
+        Some(slash) if unresolved && spec[..slash].contains(&b'/') => return None,
         Some(slash) => {
             let pattern = if spec.ends_with(b"/") {
                 b"*".to_vec()
@@ -146,7 +153,7 @@ fn full_path(interp: &Interp, spec: &[u8]) -> (Vec<u8>, Vec<u8>) {
     if directory.last() != Some(&b'/') {
         directory.push(b'/');
     }
-    (directory, pattern)
+    Some((directory, pattern))
 }
 
 /// `SysFileTree(filespec, stem [, options [, tattrib [, nattrib]]])`: the
@@ -182,11 +189,12 @@ pub(crate) fn file_tree(
             return Err(failure);
         }
     };
-    let spec = adjust_directory(interp, &spec);
-    let (directory, pattern) = full_path(interp, &spec);
+    let (spec, unresolved) = adjust_directory(interp, &spec);
     let zone = program_zone(interp);
     let mut lines = Vec::new();
-    search(&directory, &pattern, options, &zone, &mut lines);
+    if let Some((directory, pattern)) = full_path(interp, &spec, unresolved) {
+        search(&directory, &pattern, options, &zone, &mut lines);
+    }
     let count = lines.len();
     for (index, line) in lines.into_iter().enumerate() {
         found.add(interp, index + 1, line)?;
