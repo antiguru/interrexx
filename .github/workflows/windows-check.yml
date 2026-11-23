@@ -153,7 +153,7 @@ jobs:
               throw "ooDialog launcher failed ($LASTEXITCODE): $($version -join '|')"
             }
             & ./rexx.exe smoke.rex | Tee-Object -Variable output | Write-Host
-            if ($LASTEXITCODE -ne 0 -or $output -cnotcontains 'ooDialog button event passed') {
+            if ($LASTEXITCODE -ne 0 -or $output -cnotcontains 'ooDialog command event passed') {
               throw "ooDialog callback failed ($LASTEXITCODE): $($output -join '|')"
             }
           } finally { Pop-Location }
