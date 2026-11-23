@@ -10,15 +10,30 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use interrexx_bench::{PROGRAMS, interpreter_under_test, program_path, programs_dir};
 use interrexx_oracle::private_service::{PrivateService, Side};
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
+
+fn interrexx_rxapi(binary: &Path) -> Option<PathBuf> {
+    let sibling = binary.with_file_name("rxapi");
+    if !sibling.is_file() {
+        return None;
+    }
+    // ooRexx also has a sibling named rxapi, but lacks interrexx's stop flag.
+    let version = Command::new(binary).arg("-v").output().ok()?;
+    (version.status.success() && version.stdout.starts_with(b"interrexx ")).then_some(sibling)
+}
 
 fn bench_interpreter(c: &mut Criterion) {
     let interpreter = interpreter_under_test();
     let cwd = programs_dir();
     // REXX_BENCH_BINARY can name either implementation or a launcher.
-    let candidate = PrivateService::new(Side::Crate, None).expect("private interrexx API service");
-    let oracle = PrivateService::new(Side::Oracle, None).expect("private ooRexx API service");
-    let services = [&candidate, &oracle];
+    let candidate =
+        PrivateService::for_benchmark(Side::Crate, interrexx_rxapi(&interpreter.binary))
+            .expect("private interrexx API service");
+    let oracle =
+        PrivateService::for_benchmark(Side::Oracle, None).expect("private ooRexx API service");
+    let services: Vec<_> = candidate.iter().chain(oracle.iter()).collect();
 
     let mut group = c.benchmark_group("interpreter");
     // Every sample here is a whole process launch costing 0.5-2s (the sizing
