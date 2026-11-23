@@ -1386,6 +1386,9 @@ before uppercasing it. ooRexx sends <code>UPPER</code> to the name object, which
 <code>DATATYPE('N')</code> and <code>POS('.')</code> directly to the code object. An object that
 can supply valid code as text can still raise <code>SYNTAX 97.1</code> in the handler
 if it lacks a method ooRexx sends.</p>
+<p><code>File~searchPath</code> can read a directory list through a string request when
+an object outside the array class hierarchy supplies no array. ooRexx raises
+<code>SYNTAX 98.913</code> when the array conversion fails.</p>
 <p><code>File~writeChars</code> and <code>File~writeLines</code> convert their mode as a string
 argument. ooRexx sends <code>STRIP</code> to the mode itself, so a mode object without
 that method raises <code>SYNTAX 97.1</code> even if it can supply valid mode text.</p>

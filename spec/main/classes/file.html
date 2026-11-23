@@ -1717,10 +1717,13 @@ SUB
 <code>File</code>, or <code>.nil</code> when nothing is found. The <code>path</code> lists directories. A string
 <code>path</code> is cut at every <code>:</code>, the class is sent <code>pathSeparator</code>, whose answer
 plays no part, and the empty pieces are dropped. Any other <code>path</code> is sent
-<code>request</code> with the argument <code>ARRAY</code>, and the items of the array it answers are
+<code>request</code> with the argument <code>ARRAY</code>. When it answers an array, its items are
 the directories, each read as <a href="index.html#r-class.index.string">a string argument</a>, so a
-<code>.nil</code> item raises <code>SYNTAX 88.909</code>; an answer that is not an array raises
-<code>SYNTAX 98.913</code>. An omitted <code>path</code> stands for the directories of the environment
+<code>.nil</code> item raises <code>SYNTAX 88.909</code>. A path object outside the <code>Array</code> class and
+its subclasses can supply a string through <code>request('STRING')</code> when the
+array request gives no array. A path that supplies neither valid form raises
+<code>SYNTAX 98.913</code> (<a href="#r-class.file.deviation.183">Deviation 183</a>). An omitted
+<code>path</code> stands for the directories of the environment
 variable <code>PATH</code>. The directories are tried in order, and the answer is the first
 one that holds a file of that name, as <code>new</code> of <code>File</code> with <code>name</code> as <code>path</code> and
 the directory as <code>dir</code> would make it: the class of the answer is <code>File</code>,
@@ -1862,8 +1865,8 @@ show:
 </code></pre>
 <div class="rule" id="r-class.file.searchpath.order"><a href="#r-class.file.searchpath.order">[class.file.searchpath.order]</a></div>
 <p><code>searchPath</code> reads its <code>path</code> before its <code>name</code>. A <code>path</code> that is no string is
-sent <code>request</code> with <code>ARRAY</code> first, and an answer that is no array raises
-<code>SYNTAX 98.913</code>. A call whose <code>path</code> and <code>name</code> are both wrong raises the error
+sent <code>request</code> with <code>ARRAY</code> before any string request. A call whose <code>path</code> and
+<code>name</code> are both wrong raises the error
 of one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. All the
 items of an array <code>path</code> are read as strings before any directory is searched,
 so a <code>.nil</code> item raises <code>SYNTAX 88.909</code> even when a directory before it holds
@@ -2376,7 +2379,9 @@ File &lt;/tmp&gt;
 <p><code>writeChars</code> and <code>writeLines</code> read the mode through the <a href="index.html#r-class.index.string">string argument
 rule</a>. ooRexx sends <code>STRIP</code> to the mode itself, so an
 object without that method raises <code>SYNTAX 97.1</code> even if <code>MAKESTRING</code> supplies
-a valid mode.</p>
+a valid mode. <code>searchPath</code> also accepts a directory list from an object's
+<code>request('STRING')</code> when its array conversion gives no array. ooRexx
+raises <code>SYNTAX 98.913</code> in that case.</p>
 <pre><code class="language-rexx">f = 'spec-file-write-mode.tmp'
 .file~writeChars(f, 'original', 'replace')
 .file~writeChars(f, 'one', .mode~new('  replace'))
@@ -2413,6 +2418,71 @@ bad: say condition('o')~code
 88.909
 88.916
 6F6E6574776F0A
+</code></pre>
+<pre><code class="language-rexx">root = 'spec-file-search-convert.tmp'
+first = root'/first'
+second = root'/second'
+junk = .file~new(first)~makeDirs
+junk = .file~new(second)~makeDirs
+.file~writeChars(first'/a.txt', 'first', 'Replace')
+.file~writeChars(second'/a.txt', 'second', 'Replace')
+call show .textPath~new(first':'second)
+call show .bothPaths~new(second':'first, .array~of(first))
+call show .list~of(second, first)
+call show .stringOnlyPath~new
+call show .invalidArray~new
+call show .emptyArrayReply~new(first)
+call show .emptyReply~new
+do dir over .array~of(first, second)
+  junk = .file~new(dir'/a.txt')~delete
+  junk = .file~new(dir)~delete
+end
+junk = .file~new(root)~delete
+exit
+show:
+  signal on syntax name bad
+  found = .file~searchPath('a.txt', arg(1))
+  say .file~readChars(found)
+  return
+bad: say condition('o')~code
+  return
+::class textPath
+::method init
+  expose path
+  use arg path
+::method makeString
+  expose path
+  return path
+::class bothPaths subclass textPath
+::method init
+  expose dirs
+  use arg path, dirs
+  self~init:super(path)
+::method makeArray
+  expose dirs
+  return dirs
+::class stringOnlyPath
+::method string
+  return 'spec-file-search-convert.tmp/first'
+::class invalidArray subclass array
+::method request
+  if arg(1) == 'ARRAY' then return .nil
+  return 'spec-file-search-convert.tmp/first'
+::class emptyArrayReply subclass textPath
+::method request
+  if arg(1) == 'ARRAY' then return
+  forward class (super)
+::class emptyReply
+::method request
+  return
+</code></pre>
+<pre><code class="language-output">first
+first
+second
+98.913
+98.913
+first
+98.913
 </code></pre>
 
                     </main>
