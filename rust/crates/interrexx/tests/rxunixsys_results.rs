@@ -13,8 +13,8 @@
 //!   and stderr.
 //! * `ruled`: as `program`, where this crate's answer is not the oracle's by
 //!   a ruling the case's comment names: the oracle crashes (Deviation 88),
-//!   reports an `errno` of its own I/O (Rulings, errno), or the routine is
-//!   refused (Deviation 90).
+//!   reports an `errno` of its own I/O (Rulings, errno), or a word list
+//!   uses unsupported expansion syntax (Deviation 90).
 //!
 //! Each case gets an API service of its own, stopped after it, so that a
 //! registration `RxFuncAdd` made in one case (or a failed run) is not seen

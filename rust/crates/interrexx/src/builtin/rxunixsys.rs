@@ -11,6 +11,7 @@
 //! not provided (Rulings).
 
 mod tzname;
+mod wordexp;
 
 use interrexx_core::{BehaviourId, Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
@@ -884,17 +885,18 @@ pub(crate) fn gettzname2(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
     tzname(interp, args, true)
 }
 
-/// `SysWordexp(text)`: refused, whatever its arguments (Deviation 90). The routine stays
-/// registered, so `RxFuncQuery` answers 0, but every call is the routine's failure, 40.1,
-/// whose condition description says why; nothing is expanded and no process is started.
-pub(crate) fn wordexp(interp: &mut Interp, _args: &[Option<ObjRef>]) -> Result<ObjRef> {
-    let mut refused = Raised::routine_failed(&interp.native_frame().name.to_ascii_uppercase());
-    refused.description = Some(WORDEXP_REFUSED.to_vec());
-    Err(refused.into())
+/// `SysWordexp(text)`: parses the supported word list directly.
+pub(crate) fn wordexp(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
+    check_arity(args, 1)?;
+    let value = required(args, 1)?;
+    let Some(text) = interp.blamed_string_conversion(value)? else {
+        return Err(Raised::native_argument_needs_a_string_value(1).into());
+    };
+    let bytes = interp.to_text(text).into_owned();
+    let words =
+        wordexp::words(&bytes, |name| interp.env_get(name)).ok_or_else(|| failed(interp))?;
+    Ok(array(interp, words))
 }
-
-/// The condition description of every `SysWordexp` call.
-const WORDEXP_REFUSED: &[u8] = b"SysWordexp is refused (Deviation 90)";
 
 /// `SysSetxattr(path, name, value)`: the value with a trailing NUL.
 pub(crate) fn setxattr(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {

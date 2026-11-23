@@ -102,7 +102,8 @@ and `SysGeterrno`/`SysGeterrnomsg`.
 * `SysGettid` answers the `pthread_self()` value, not the kernel thread id.
 * `SysGeterrnomsg` answers `Ok` for 0 and the platform's `strerror` text otherwise, read at run time.
 * `SysSignal` with SIGCHLD ignored makes a command's return code −10.
-* `SysWordexp` is registered and refused: every call raises 40.1 (a Deviation).
+* `SysWordexp` reads quoted word lists and expands simple environment variables inside double
+  quotes. Other expansions, including command substitution, raise 40.1 (Deviation 90).
 * `SysCrypt` is absent, as on the ooRexx build it is compared with.
 
 ## rxsock

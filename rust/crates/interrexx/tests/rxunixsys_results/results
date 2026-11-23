@@ -291,46 +291,94 @@ ERR 40.1
 ERR 40.1
 ERR 40.1
 
-# Deviation 90: SysWordexp is refused. It stays registered (RxFuncQuery
-# answers 0 once RxFuncAdd has registered it, as on the oracle), and every call raises the routine failure,
-# whose description says why: the PR 4 review's input, a plain pattern, a
-# command substitution of each form, plain words, empty text and no argument
-# alike. Nothing runs: the review's input and the substitutions would each
-# make a file, and none exists after.
+# Quoted words, empty words, concatenated pieces and environment values.
+program
+call value 'INTERREXX_WORDEXP', 'red blue * $other', 'ENVIRONMENT'
+call show '  alpha' || '09'x || 'beta  '
+call show "before' two words 'after " || '"" x\ y'
+call show '"$INTERREXX_WORDEXP" "${INTERREXX_WORDEXP}!"'
+call show "'" || '$INTERREXX_WORDEXP' || "' " || '\$INTERREXX_WORDEXP'
+call show '"\q" ''*'' "a;b"'
+call show '''$()'' "\$()"'
+call show '  '
+exit
+show: procedure
+  use arg text
+  words = SysWordexp(text)
+  say words~items
+  do word over words
+    say '[' || word || ']'
+  end
+  return
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+2
+[alpha]
+[beta]
+3
+[before two words after]
+[]
+[x y]
+2
+[red blue * $other]
+[red blue * $other!]
+2
+[$INTERREXX_WORDEXP]
+[$INTERREXX_WORDEXP]
+3
+[\q]
+[*]
+[a;b]
+2
+[$()]
+[$()]
+0
+[stderr]
+
+# Deviation 90: Unsupported constructs refuse the entire call, even after
+# a valid word. Keep these cases off the oracle, which can reject them
+# differently (Deviation 88) or allow command substitution.
 ruled
-call RxFuncAdd 'SysWordexp', 'rxunixsys', 'SysWordexp'
 say RxFuncQuery('SysWordexp')
-do text over '"${x-''}"; touch made1; "''}"', '*', '$(touch made2)', '`touch made3`', 'a b', ''
+do text over 'valid *', 'valid ~', 'valid $x', '"${x-word}"', 'valid $((1+2))',,
+             'valid $()', '"$()"', 'valid ``', 'a;b', '"unfinished', 'a' || '0a'x || 'b',,
+             'a' || '00'x || 'b', 'valid path=~', 'valid #comment', 'a\' || '0a'x || 'b', ''
   say try(text)
 end
 signal on syntax name none
 call SysWordexp
-none: say condition('o')~code condition('d')
-made = 0
-do n = 1 to 3
-  if stream('made'n, 'c', 'query exists') \== '' then made += 1
-end
-say 'made' made
+none: say condition('o')~code
 exit
 try: procedure
   use arg text
   signal on syntax name refused
   return SysWordexp(text)~items
 refused:
-  return condition('o')~code condition('d')
+  return condition('o')~code
 ::requires 'rxunixsys' LIBRARY
 ----
 rc 0
 [stdout]
 0
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-40.1 SysWordexp is refused (Deviation 90)
-made 0
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+40.1
+88.901
 [stderr]
 
 # glibc's tzname for the program's TZ.

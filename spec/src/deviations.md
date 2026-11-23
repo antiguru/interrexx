@@ -672,11 +672,21 @@ lines of them, their numbers and text, and an error the package raises may be
 reported from another clause of it or from the caller. Codes and results match
 ooRexx.
 
-## 90. SysWordexp is refused
+## 90. SysWordexp supports quoted word lists
 
-SysWordexp stays registered, but every call raises `40.1` and expands
-nothing. ooRexx expands the words with a shell, command substitution
-included.
+SysWordexp separates words at unquoted spaces and tabs, removes single
+and double quotes and backslash escapes, and keeps empty quoted words.
+Inside double quotes it expands simple variable names, with or without
+braces, from the interpreter's environment. An undefined name contributes
+an empty string. A value inserted there stays part of the same word.
+
+Command substitution, unquoted parameter expansion, parameter operators,
+arithmetic, unquoted tildes, pathname patterns, comments and line
+continuations raise `40.1`, as do malformed lists and embedded null
+characters. The whole call fails if any word uses unsupported syntax.
+Like ooRexx, the routine raises `40.1` for an empty argument and answers
+an empty array for text that contains only spaces or tabs.
+ooRexx also performs shell expansions, including command substitution.
 
 ## 91. A command whose child was already reaped
 
