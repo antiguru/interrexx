@@ -1552,6 +1552,11 @@ object with no such method, `.nil` among them, raises `SYNTAX 88.909`. ooRexx
 sends the option `caselessStartsWith` and raises `SYNTAX 97.1` for any object
 that is no string and for `.nil`, whatever its `makeString` answers.
 
+`Object~send`, `sendWith`, `start` and `startWith`, and `Message~new`, can
+take a message name from an object that supplies a string when its array
+conversion gives no array. ooRexx ends with `SYNTAX 93.972` when the array
+conversion fails.
+
 `CommandInput~lineIn` reads its count through the required-string protocol
 before comparing it with `0` and `1`. ooRexx refuses an object with
 `SYNTAX 93.963` even when its conversion gives one of those values.

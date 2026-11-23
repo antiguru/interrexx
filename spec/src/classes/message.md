@@ -153,8 +153,9 @@ target raises `88.901`. The target is any object, `.nil` included. The name is
 checked as [the `send` rule](r:class.object.send) checks it: a string, or an
 array of two items, the name and a class that starts the search ([the scoped
 send rule](r:class.methods.scoped.send)). A name that is not a string is read
-as [the `send` rule](r:class.object.send) reads it, through `request` with
-`ARRAY`; `.nil` and an object that answers `.nil` raise `93.972`, an array of
+as [the `send` rule](r:class.object.send) reads it, with an array conversion
+before any string conversion. A value that provides neither form, such as
+`.nil`, raises `93.972`, an array of
 another size `93.946`, an array whose first item is missing `88.901`, an array
 with a first item that has no string value `88.909` and one with a second item
 that is not a class `88.914`. The null string is a name. The option that
@@ -300,8 +301,8 @@ holds its target, its name and its arguments. The answer of `init` is not
 used, and `new` answers the new object, as [the new
 rule](r:class.index.new) says for every class. `new` makes an instance of the
 class that received it, so a subclass of `Message` makes instances of itself. A
-name that is no string is sent `request` once, at `new`; the message then holds
-the name the answer gives, and running it sends nothing more. The second
+name is converted at `new`; the message then holds the name the conversion
+gives, and running it sends nothing more. The second
 example shows it.
 
 ```rexx
