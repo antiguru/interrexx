@@ -173,6 +173,60 @@ pub(crate) fn set_local_file_time(
     ok.then_some(())
 }
 
+pub(crate) fn console_info()
+-> Option<windows_sys::Win32::System::Console::CONSOLE_SCREEN_BUFFER_INFO> {
+    use windows_sys::Win32::System::Console::{
+        CONSOLE_SCREEN_BUFFER_INFO, GetConsoleScreenBufferInfo, GetStdHandle, STD_OUTPUT_HANDLE,
+    };
+
+    let mut info = CONSOLE_SCREEN_BUFFER_INFO::default();
+    // SAFETY: info is writable and GetConsoleScreenBufferInfo validates the handle.
+    let ok = unsafe { GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &mut info) };
+    (ok != 0).then_some(info)
+}
+
+pub(crate) fn resize_console_buffer(rows: i16, columns: i16) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{COORD, GetStdHandle, STD_OUTPUT_HANDLE, SetConsoleScreenBufferSize},
+    };
+
+    // SAFETY: SetConsoleScreenBufferSize validates the dimensions and handle.
+    unsafe {
+        let size = COORD {
+            X: columns,
+            Y: rows,
+        };
+        if SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), size) != 0 {
+            0
+        } else {
+            i64::from(GetLastError())
+        }
+    }
+}
+
+pub(crate) fn set_console_window([top, left, bottom, right]: [i16; 4]) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{GetStdHandle, SMALL_RECT, STD_OUTPUT_HANDLE, SetConsoleWindowInfo},
+    };
+
+    // SAFETY: the rectangle lives through the call, which validates the handle.
+    unsafe {
+        let rect = SMALL_RECT {
+            Top: top,
+            Left: left,
+            Bottom: bottom,
+            Right: right,
+        };
+        if SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), 1, &rect) != 0 {
+            0
+        } else {
+            i64::from(GetLastError())
+        }
+    }
+}
+
 /// Clears the console screen buffer and moves the cursor back to its origin.
 pub(crate) fn clear_console() -> i64 {
     use windows_sys::Win32::{

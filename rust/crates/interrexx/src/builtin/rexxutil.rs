@@ -13,6 +13,8 @@ pub(crate) mod timezone;
 #[cfg(unix)]
 pub(crate) mod tree;
 #[cfg(windows)]
+pub(crate) mod windows_console;
+#[cfg(windows)]
 pub(crate) mod windows_files;
 
 use interrexx_core::{Body, Decoded, ObjRef};

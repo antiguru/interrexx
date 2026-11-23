@@ -324,6 +324,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysTempFileName",
         crate::builtin::rexxutil::search::temp_file_name,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysTextScreenSize",
+        crate::builtin::rexxutil::windows_console::screen_size,
+    ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
     #[cfg(windows)]
