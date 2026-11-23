@@ -1552,6 +1552,10 @@ object with no such method, `.nil` among them, raises `SYNTAX 88.909`. ooRexx
 sends the option `caselessStartsWith` and raises `SYNTAX 97.1` for any object
 that is no string and for `.nil`, whatever its `makeString` answers.
 
+`Alarm` and `Ticker` use a time object's string value as the number of
+seconds. ooRexx sends the original object a message for this form and can
+raise `SYNTAX 97.1` even when the conversion gives a valid number.
+
 `Object~send`, `sendWith`, `start` and `startWith`, and `Message~new`, can
 take a message name from an object that supplies a string when its array
 conversion gives no array. ooRexx ends with `SYNTAX 93.972` when the array
