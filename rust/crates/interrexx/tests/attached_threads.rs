@@ -361,16 +361,21 @@ fn build_driver(name: &str) -> (PathBuf, PathBuf) {
         std::os::unix::fs::symlink(format!("{library}.so.4"), dir.join(format!("{library}.so")))
             .expect("the library's link");
     }
+    let binary = link_driver(name, &dir, &dir);
+    (dir, binary)
+}
+
+fn link_driver(name: &str, dir: &Path, libraries: &Path) -> PathBuf {
     let binary = dir.join(name);
     let built = compile(&format!("{name}.cpp"), &["-o"])
         .arg(&binary)
-        .arg(format!("-L{}", dir.display()))
-        .arg(format!("-Wl,-rpath,{}", dir.display()))
+        .arg(format!("-L{}", libraries.display()))
+        .arg(format!("-Wl,-rpath,{}", libraries.display()))
         .args(["-pthread", "-lrexx", "-lrexxapi"])
         .status()
         .expect("g++ runs, which this test needs to build its driver");
     assert!(built.success(), "the driver did not build");
-    (dir, binary)
+    binary
 }
 
 /// Runs the embedding driver `name` with `arguments`, memory-capped and limited in time as
@@ -382,6 +387,33 @@ fn run_driver(name: &str, arguments: &[&str]) -> Answer {
 /// [`run_driver`], killed after `seconds` rather than [`SECONDS`]: the driver waits for ever.
 fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
     run_driver_with(name, arguments, seconds, false)
+}
+
+/// Runs the same embedding driver linked against the oracle's libraries.
+fn run_oracle_driver(name: &str, arguments: &[&str], seconds: &str) -> Answer {
+    let oracle = support::oracle::locate();
+    let dir = fresh_dir(name);
+    let binary = link_driver(name, &dir, oracle.lib_dir());
+    let path = std::env::join_paths(std::iter::once(oracle.bin_dir().to_path_buf()).chain(
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+    ))
+    .expect("a PATH with the oracle's binaries");
+    let output = capped(seconds)
+        .arg(binary)
+        .args(arguments)
+        .current_dir(&dir)
+        .env("LD_LIBRARY_PATH", oracle.lib_dir())
+        .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
+        .env("PATH", path)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the capped oracle driver spawns");
+    fs::remove_dir_all(&dir).expect("the oracle driver's directory is removable");
+    (
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+        exit_status(output.status),
+    )
 }
 
 /// [`run_driver_for`], with the extension `attach` built beside the driver and on the library
@@ -1532,6 +1564,48 @@ fn a_wait_in_a_program_rexx_start_runs_is_not_refused() {
         run_driver("hostwait", &["start", program]),
         ("rc 0 result halted\n".to_owned(), String::new(), 0)
     );
+}
+
+/// A classic function in the embedding host calls RexxStart twice from the
+/// outer program. Each invocation has an independent local environment.
+#[test]
+fn a_nested_rexx_start_has_its_own_local_environment() {
+    let outer = fixture("nestedstart-outer.rex");
+    let inner = fixture("nestedstart-inner.rex");
+    let arguments = [
+        outer.to_str().expect("the outer program's path is UTF-8"),
+        inner.to_str().expect("the inner program's path is UTF-8"),
+    ];
+    let ours = run_driver("nestedstart", &arguments);
+    assert_eq!(
+        ours,
+        (
+            "inner saw marker 0\ninner saw marker 0\nouter code 0 result outer\n".to_owned(),
+            String::new(),
+            0,
+        )
+    );
+    if gate_mode() {
+        assert_eq!(run_oracle_driver("nestedstart", &arguments, SECONDS), ours);
+    }
+}
+
+/// The inner program can also wait for native code outside the interpreter.
+/// Nothing posts its semaphore here, so it parks until the driver is killed.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_nested_rexx_start_waits_under_a_classic_host_function() {
+    let outer = fixture("nestedstart-outer.rex");
+    let inner = fixture("nestedstart-wait.rex");
+    let arguments = [
+        outer.to_str().expect("the outer program's path is UTF-8"),
+        inner.to_str().expect("the inner program's path is UTF-8"),
+    ];
+    let ours = run_driver_for("nestedstart", &arguments, "10");
+    assert_eq!(ours, (String::new(), "inner waiting\n".to_owned(), KILLED));
+    if gate_mode() {
+        assert_eq!(run_oracle_driver("nestedstart", &arguments, "10"), ours);
+    }
 }
 
 /// A thread of the extension that a program `RexxStart` runs started calls `AttachThread` once the
