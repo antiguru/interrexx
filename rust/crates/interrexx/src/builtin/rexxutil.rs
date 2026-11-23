@@ -679,3 +679,53 @@ pub(crate) fn version(
     let text = b"Windows".to_vec();
     Ok(interp.text_built(text))
 }
+
+/// `sscanf` over `text` with the format `%<w>d<sep>%<w>d<sep>%<w>d`, the
+/// widths in `widths`: the three numbers where all three convert. Each
+/// number skips white space before it and then reads a sign and digits,
+/// `width` bytes at most with the sign counted. A separator matches only
+/// itself, with no white space before it, and whatever follows the third
+/// number is ignored.
+fn scan_triple(text: &[u8], separator: u8, widths: [usize; 3]) -> Option<[i64; 3]> {
+    let mut at = 0;
+    let mut out = [0; 3];
+    for (index, width) in widths.into_iter().enumerate() {
+        if index > 0 {
+            if text.get(at) != Some(&separator) {
+                return None;
+            }
+            at += 1;
+        }
+        while text
+            .get(at)
+            .is_some_and(|byte| matches!(byte, b' ' | b'\t'..=b'\r'))
+        {
+            at += 1;
+        }
+        let end = (at + width).min(text.len());
+        let mut cursor = at;
+        let negative = match text.get(cursor) {
+            Some(b'-') if cursor < end => {
+                cursor += 1;
+                true
+            }
+            Some(b'+') if cursor < end => {
+                cursor += 1;
+                false
+            }
+            _ => false,
+        };
+        let digits_start = cursor;
+        let mut value: i64 = 0;
+        while cursor < end && text[cursor].is_ascii_digit() {
+            value = value * 10 + i64::from(text[cursor] - b'0');
+            cursor += 1;
+        }
+        if cursor == digits_start {
+            return None;
+        }
+        out[index] = if negative { -value } else { value };
+        at = cursor;
+    }
+    Some(out)
+}

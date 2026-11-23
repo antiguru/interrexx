@@ -126,6 +126,35 @@ pub(crate) fn local_file_time(ticks: u64) -> Option<windows_sys::Win32::Foundati
     Some(civil)
 }
 
+/// Writes the modification time, interpreting `civil` in Windows local time.
+pub(crate) fn set_local_file_time(
+    file: &std::fs::File,
+    civil: &windows_sys::Win32::Foundation::SYSTEMTIME,
+) -> Option<()> {
+    use std::os::windows::io::AsRawHandle as _;
+    use windows_sys::Win32::{
+        Foundation::FILETIME,
+        Storage::FileSystem::{LocalFileTimeToFileTime, SetFileTime},
+        System::Time::SystemTimeToFileTime,
+    };
+
+    let mut local = FILETIME::default();
+    let mut utc = FILETIME::default();
+    // SAFETY: both conversions use distinct initialized structures. The
+    // file handle stays open and null leaves creation and access unchanged.
+    let ok = unsafe {
+        SystemTimeToFileTime(civil, &mut local) != 0
+            && LocalFileTimeToFileTime(&local, &mut utc) != 0
+            && SetFileTime(
+                file.as_raw_handle(),
+                std::ptr::null(),
+                std::ptr::null(),
+                &utc,
+            ) != 0
+    };
+    ok.then_some(())
+}
+
 /// Clears the console screen buffer and moves the cursor back to its origin.
 pub(crate) fn clear_console() -> i64 {
     use windows_sys::Win32::{

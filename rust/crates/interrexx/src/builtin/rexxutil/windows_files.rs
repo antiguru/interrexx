@@ -1,11 +1,11 @@
 //! File routines backed by the Windows filesystem APIs.
 
-use super::{answer, c_string, check_arity, optional_text, path_argument};
+use super::{answer, c_string, check_arity, optional_text, path_argument, scan_triple};
 use crate::error::Raised;
 use crate::{Failure, Interp};
 use interrexx_core::ObjRef;
 use std::io;
-use std::os::windows::fs::MetadataExt;
+use std::os::windows::fs::{MetadataExt, OpenOptionsExt as _};
 use std::path::Path;
 use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT,
@@ -148,6 +148,62 @@ pub(crate) fn get_file_date_time(
         )
         .into_bytes(),
     ))
+}
+
+/// Updates the last-write time of an existing Windows file or directory.
+pub(crate) fn set_file_date_time(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES,
+        FILE_WRITE_ATTRIBUTES,
+    };
+
+    check_arity(args, 3)?;
+    let path = path_argument(interp, args, 1)?;
+    let date = optional_text(interp, args, 2)?;
+    let time = optional_text(interp, args, 3)?;
+    let Ok(file) = std::fs::OpenOptions::new()
+        .access_mode(FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(crate::paths::os_path(&path))
+    else {
+        return Ok(answer(interp, -1));
+    };
+
+    let updated = if date.is_none() && time.is_none() {
+        file.set_modified(interp.wall_now()).is_ok()
+    } else {
+        edit_file_date_time(&file, date.as_deref(), time.as_deref()).is_some()
+    };
+    Ok(answer(interp, if updated { 0 } else { -1 }))
+}
+
+fn edit_file_date_time(
+    file: &std::fs::File,
+    date: Option<&[u8]>,
+    time: Option<&[u8]>,
+) -> Option<()> {
+    let mut civil = crate::host::local_file_time(file.metadata().ok()?.last_write_time())?;
+    if let Some(date) = date {
+        let [year, month, day] = scan_triple(c_string(date), b'-', [4, 2, 2])?;
+        if year < 1800 {
+            return None;
+        }
+        civil.wYear = u16::try_from(year).ok()?;
+        civil.wMonth = u16::try_from(month).ok()?;
+        civil.wDay = u16::try_from(day).ok()?;
+    }
+    if let Some(time) = time {
+        let [hour, minute, second] = scan_triple(c_string(time), b':', [2, 2, 2])?;
+        civil.wHour = u16::try_from(hour).ok()?;
+        civil.wMinute = u16::try_from(minute).ok()?;
+        civil.wSecond = u16::try_from(second).ok()?;
+        civil.wMilliseconds = 0;
+    }
+    crate::host::set_local_file_time(file, &civil)
 }
 
 pub(crate) fn boot_drive(

@@ -282,6 +282,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSearchPath",
         crate::builtin::rexxutil::files::search_path,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysSetFileDateTime",
+        crate::builtin::rexxutil::windows_files::set_file_date_time,
+    ),
     #[cfg(unix)]
     util_run(
         "SysSetFileDateTime",
