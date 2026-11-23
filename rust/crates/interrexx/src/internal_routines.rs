@@ -78,6 +78,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Filespec", crate::builtin::platform::filespec),
     rexx_run("Beep", crate::builtin::platform::beep),
     util_run("SysAddRexxMacro", crate::builtin::rexxutil::macros::add),
+    #[cfg(windows)]
+    util_run(
+        "SysBootDrive",
+        crate::builtin::rexxutil::windows_files::boot_drive,
+    ),
     util_run(
         "SysClearRexxMacroSpace",
         crate::builtin::rexxutil::macros::clear,
@@ -292,6 +297,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysStemDelete", crate::builtin::rexxutil::stems::delete),
     util_run("SysStemInsert", crate::builtin::rexxutil::stems::insert),
     util_run("SysStemSort", crate::builtin::rexxutil::stems::sort),
+    #[cfg(windows)]
+    util_run(
+        "SysSystemDirectory",
+        crate::builtin::rexxutil::windows_files::system_directory,
+    ),
     #[cfg(unix)]
     util_run(
         "SysTempFileName",

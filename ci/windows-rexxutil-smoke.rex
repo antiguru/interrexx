@@ -1,5 +1,9 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use strict arg root
+systemDir = value('REXX_TEST_SYSTEM_DIRECTORY', , 'ENVIRONMENT')
+bootDrive = value('REXX_TEST_BOOT_DRIVE', , 'ENVIRONMENT')
+if SysBootDrive() \== bootDrive then exit 17
+if SysSystemDirectory() \== systemDir then exit 18
 if SysLoadFuncs() <> 0 | SysDropFuncs() <> 0 | SysUtilVersion() = "" then exit 12
 if \datatype(SysCls(), "Whole") then exit 16
 dir = root || '\rexxutil-smoke'

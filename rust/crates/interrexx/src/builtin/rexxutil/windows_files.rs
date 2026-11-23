@@ -149,3 +149,26 @@ pub(crate) fn get_file_date_time(
         .into_bytes(),
     ))
 }
+
+pub(crate) fn boot_drive(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    let drive = crate::host::boot_drive();
+    Ok(interp.text(drive.as_ref().map_or(b"", |drive| drive.as_slice())))
+}
+
+pub(crate) fn system_directory(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 0)?;
+    Ok(interp.text_built(
+        crate::host::system_directory()
+            .unwrap_or_default()
+            .into_bytes(),
+    ))
+}

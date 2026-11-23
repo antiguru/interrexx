@@ -158,3 +158,42 @@ pub(crate) fn clear_console() -> i64 {
     }
     0
 }
+
+/// The drive containing the Windows installation.
+pub(crate) fn boot_drive() -> Option<[u8; 2]> {
+    use std::path::{Component, Path, Prefix};
+    use windows_sys::Win32::System::SystemInformation::GetSystemWindowsDirectoryW;
+
+    let directory = system_path(GetSystemWindowsDirectoryW)?;
+    match Path::new(&directory).components().next()? {
+        Component::Prefix(prefix) => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => Some([drive, b':']),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub(crate) fn system_directory() -> Option<String> {
+    use windows_sys::Win32::System::SystemInformation::GetSystemDirectoryW;
+
+    system_path(GetSystemDirectoryW)
+}
+
+/// These Win32 queries return the required capacity, including the
+/// terminator, if the supplied buffer cannot hold the path.
+fn system_path(query: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option<String> {
+    let mut buffer = vec![0; 260];
+    loop {
+        let capacity = u32::try_from(buffer.len()).ok()?;
+        // SAFETY: the buffer is writable for exactly capacity UTF-16 units.
+        let count = unsafe { query(buffer.as_mut_ptr(), capacity) };
+        if count == 0 {
+            return None;
+        }
+        if count < capacity {
+            return String::from_utf16(&buffer[..count as usize]).ok();
+        }
+        buffer.resize((count as usize).checked_add(1)?, 0);
+    }
+}
