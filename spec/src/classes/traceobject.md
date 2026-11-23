@@ -1432,22 +1432,23 @@ lines rule](r:class.traceobject.lines) says. When the destination refuses it by
 raising a condition, the clause may have done its own work before the line is
 written, as [Deviation 50](r:instr.trace.deviation.50) states; ooRexx raises
 the condition before applying that effect. In the example the destination
-refuses the keyword line of `NUMERIC DIGITS`. Interrexx has changed the
-setting by then and ooRexx keeps its old value. Both collect the refused line.
+refuses the `VALUE` line of `PARSE VALUE`. Interrexx has assigned the target
+by then and ooRexx keeps its old value. Both collect the refused line.
 
 ```rexx
 c = .array~new
 .traceobject~collector = c
+x = 'old'
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-numeric digits 7
+parse value 'new' with x
 exit
 e: trace o
 .traceoutput~destination(.output)
 .traceobject~collector = .nil
-say 'caught' condition('o')~code digits() '['c[2]~traceline']'
+say 'caught' condition('o')~code x '['c[2]~traceline']'
 ::class sink
 ::method init
   expose n
@@ -1460,8 +1461,8 @@ say 'caught' condition('o')~code digits() '['c[2]~traceline']'
 ```
 
 ```output
-       >K>   "DIGITS" => "7"
-caught 93.900 7 [       >K>   "DIGITS" => "7"]
+       >K>   "VALUE" => "new"
+caught 93.900 new [       >K>   "VALUE" => "new"]
 ```
 
 r[class.traceobject.deviation.109]

@@ -76,6 +76,57 @@ say digits() fuzz()
 9 0
 ```
 
+r[instr.numeric.trace-refusal]
+If the trace destination refuses the keyword line for a NUMERIC operand,
+the condition is raised before the clause requests its operand's string
+value or changes the setting.
+
+```rexx
+call probe 'numeric digits 7'
+call probe 'numeric fuzz 2'
+call probe "numeric form value 'ENGINEERING'"
+call probe 'numeric digits 0'
+call probe 'numeric digits .sink'
+exit
+
+probe: procedure
+  .local~converted = 0
+  .traceoutput~destination(.sink~new)
+  signal on syntax name rejected
+  trace r
+  interpret arg(1)
+  trace o
+  return
+rejected:
+  trace o
+  .traceoutput~destination(.output)
+  say condition('o')~code digits() fuzz() form() .local~converted
+  return
+
+::class sink
+::method lineout
+  use arg line
+  text = '' || line
+  if word(text, 1) = '>K>' then raise syntax 93.900
+  return 0
+::method makestring class
+  .local~converted = 1
+  return '7'
+```
+
+```output
+       >K>     "DIGITS" => "7"
+93.900 9 0 SCIENTIFIC 0
+       >K>     "FUZZ" => "2"
+93.900 9 0 SCIENTIFIC 0
+       >K>     "FORM" => "ENGINEERING"
+93.900 9 0 SCIENTIFIC 0
+       >K>     "DIGITS" => "0"
+93.900 9 0 SCIENTIFIC 0
+       >K>     "DIGITS" => "The SINK class"
+93.900 9 0 SCIENTIFIC 0
+```
+
 ## FORM
 
 r[instr.numeric.form]
