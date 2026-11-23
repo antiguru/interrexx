@@ -11,6 +11,8 @@ pub(crate) mod stems;
 pub(crate) mod timezone;
 #[cfg(unix)]
 pub(crate) mod tree;
+#[cfg(windows)]
+pub(crate) mod windows_files;
 
 use interrexx_core::{Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};

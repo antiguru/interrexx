@@ -112,11 +112,26 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysDumpVariables",
         crate::builtin::rexxutil::stems::dump_variables,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysFileCopy",
+        crate::builtin::rexxutil::windows_files::file_copy,
+    ),
     #[cfg(unix)]
     util_run("SysFileCopy", crate::builtin::rexxutil::files::file_copy),
+    #[cfg(windows)]
+    util_run(
+        "SysFileDelete",
+        crate::builtin::rexxutil::windows_files::file_delete,
+    ),
     #[cfg(unix)]
     util_run("SysFileDelete", crate::builtin::rexxutil::file_delete),
     util_run("SysFileExists", crate::builtin::rexxutil::file_exists),
+    #[cfg(windows)]
+    util_run(
+        "SysFileMove",
+        crate::builtin::rexxutil::windows_files::file_move,
+    ),
     #[cfg(unix)]
     util_run("SysFileMove", crate::builtin::rexxutil::files::file_move),
     #[cfg(unix)]
@@ -152,10 +167,20 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         crate::builtin::rexxutil::messages::get_message_x,
     ),
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileDirectory",
+        crate::builtin::rexxutil::windows_files::is_directory,
+    ),
     #[cfg(unix)]
     util_run(
         "SysIsFileDirectory",
         crate::builtin::rexxutil::files::is_file_directory,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysIsFileLink",
+        crate::builtin::rexxutil::windows_files::is_link,
     ),
     #[cfg(unix)]
     util_run(
@@ -172,6 +197,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysLoadRexxMacroSpace",
         crate::builtin::rexxutil::macros::load,
     ),
+    #[cfg(windows)]
+    util_run("SysMkDir", crate::builtin::rexxutil::windows_files::mk_dir),
     #[cfg(unix)]
     util_run("SysMkDir", crate::builtin::rexxutil::mk_dir),
     util_run("SysOpenEventSem", crate::builtin::rexxutil::open_sem),
@@ -196,6 +223,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysResetEventSem",
         crate::builtin::rexxutil::reset_event_sem,
     ),
+    #[cfg(windows)]
+    util_run("SysRmDir", crate::builtin::rexxutil::windows_files::rm_dir),
     #[cfg(unix)]
     util_run("SysRmDir", crate::builtin::rexxutil::rm_dir),
     util_run(

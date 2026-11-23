@@ -69,3 +69,35 @@ pub(crate) fn child_ended(process: &std::os::windows::io::OwnedHandle, pipe_empt
     let status = unsafe { WaitForSingleObject(process.as_raw_handle(), timeout) };
     status == WAIT_OBJECT_0
 }
+
+fn file_path(path: &std::path::Path) -> std::io::Result<Vec<u16>> {
+    use std::os::windows::ffi::OsStrExt as _;
+    let mut wide: Vec<_> = path.as_os_str().encode_wide().collect();
+    if wide.contains(&0) {
+        return Err(std::io::ErrorKind::InvalidInput.into());
+    }
+    wide.push(0);
+    Ok(wide)
+}
+
+pub(crate) fn copy_file(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::CopyFileW;
+    let from = file_path(from)?;
+    let to = file_path(to)?;
+    // SAFETY: both pointers address live NUL-terminated paths.
+    if unsafe { CopyFileW(from.as_ptr(), to.as_ptr(), 0) } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::MoveFileW;
+    let from = file_path(from)?;
+    let to = file_path(to)?;
+    // SAFETY: both pointers address live NUL-terminated paths.
+    if unsafe { MoveFileW(from.as_ptr(), to.as_ptr()) } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}
