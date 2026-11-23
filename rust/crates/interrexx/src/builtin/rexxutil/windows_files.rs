@@ -83,6 +83,16 @@ pub(crate) fn file_move(
     two_paths(interp, args, crate::host::move_file)
 }
 
+pub(crate) fn set_encrypted<const ENCRYPTED: bool>(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    one_path(interp, args, |path| {
+        crate::host::set_file_encryption(path, ENCRYPTED)
+    })
+}
+
 pub(crate) fn has_attribute<const ATTRIBUTE: u32>(
     interp: &mut Interp,
     _: &'static [u8],

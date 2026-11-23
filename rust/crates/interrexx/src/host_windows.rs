@@ -91,6 +91,25 @@ pub(crate) fn copy_file(from: &std::path::Path, to: &std::path::Path) -> std::io
     Ok(())
 }
 
+pub(crate) fn set_file_encryption(path: &std::path::Path, encrypted: bool) -> std::io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::{DecryptFileW, EncryptFileW};
+
+    let path = file_path(path)?;
+    // SAFETY: path is a NUL-terminated UTF-16 string live across the call.
+    let done = unsafe {
+        if encrypted {
+            EncryptFileW(path.as_ptr())
+        } else {
+            DecryptFileW(path.as_ptr(), 0)
+        }
+    };
+    if done == 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
     use windows_sys::Win32::Storage::FileSystem::MoveFileW;
     let from = file_path(from)?;

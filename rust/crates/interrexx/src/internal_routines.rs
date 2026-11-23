@@ -336,6 +336,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
     #[cfg(windows)]
+    util_run(
+        "SysWinDecryptFile",
+        crate::builtin::rexxutil::windows_files::set_encrypted::<false>,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinEncryptFile",
+        crate::builtin::rexxutil::windows_files::set_encrypted::<true>,
+    ),
+    #[cfg(windows)]
     util_run("SysWinVer", crate::builtin::rexxutil::version),
 ];
 

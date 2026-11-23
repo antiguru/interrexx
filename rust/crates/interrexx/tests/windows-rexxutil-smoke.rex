@@ -84,3 +84,16 @@ if SysIsFileNotContentIndexed(missing) | SysIsFileOffline(missing) then exit 10
 if SysIsFileSparse(missing) | SysIsFileTemporary(missing) then exit 11
 if SysGetFileDateTime(missing) <> -1 then exit 15
 if SysSetFileDateTime(missing) <> -1 then exit 29
+
+/* spec: util.windows.efs */
+if SysWinEncryptFile(missing) <= 0 | SysWinDecryptFile(missing) <= 0 then exit 53
+probe = value('REXX_TEST_EFS_PROBE', , 'ENVIRONMENT')
+if probe \== '' then do
+  if \SysIsFileEncrypted(probe) then exit 54
+  if SysWinDecryptFile(probe) <> 0 then exit 55
+  if SysIsFileEncrypted(probe) then exit 56
+  if SysWinEncryptFile(probe) <> 0 then exit 57
+  if \SysIsFileEncrypted(probe) then exit 58
+  if linein(probe) \== 'test data' then exit 59
+  call stream probe, 'c', 'close'
+end
