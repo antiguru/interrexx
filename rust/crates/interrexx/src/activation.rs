@@ -1550,10 +1550,11 @@ impl Interp {
         self.shared_key_for = None;
         // `trace_cache`'s own invariant: the setting travels with whichever
         // activation is running, and this changes which one that is.
-        // A routine or method called from a line typed at a debug pause runs
-        // untraced: `r[env.debugging.deviation.182]`.
+        // Debug commands and trace delivery call routines or methods without
+        // tracing them (`r[env.debugging.deviation.182]` and
+        // `r[class.traceobject.setmakestring]`).
         let mut boxed = boxed;
-        if self.silenced() {
+        if self.silenced() || self.activity.routing_trace {
             boxed.flags.set_untraced(true);
         }
         self.activity.trace_cache =

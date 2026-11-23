@@ -173,6 +173,7 @@ impl Interp {
     fn deliver_trace_line_as(&mut self, start: usize, entry: bool) {
         let variable = self.traced_variable.take();
         if self.activity.routing_trace {
+            self.trace.truncate(start);
             return;
         }
         if self.trace_failure_queued() {
@@ -542,11 +543,7 @@ impl Interp {
                 return Ok(Delivered::KeptBack);
             }
             if self.routes_to_standard_error() {
-                // The error stream writes the object's string, which is the line
-                // itself under option `N` and `makeStringImpl`'s format otherwise.
-                if letter == b'N' {
-                    return Ok(Delivered::ToStandardError);
-                }
+                // Even option N can have a custom MAKESTRING formatter.
                 let caller_ref = self.caller();
                 let shown = self
                     .send_message(object, b"MAKESTRING", None, &[], caller_ref)?
