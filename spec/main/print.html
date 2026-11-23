@@ -71138,7 +71138,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="file"><a class="header" href="#file">File</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; File Class; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isCaseSensitive (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; listRoots (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; pathSeparator (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; readChars (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; readLines (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; searchPath (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; separator (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; temporaryPath (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; writeChars (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; writeLines (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; absoluteFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; absolutePath; Builtin Classes &gt; Utility Classes &gt; File Class &gt; canRead; Builtin Classes &gt; Utility Classes &gt; File Class &gt; canWrite; Builtin Classes &gt; Utility Classes &gt; File Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; File Class &gt; delete; Builtin Classes &gt; Utility Classes &gt; File Class &gt; exists; Builtin Classes &gt; Utility Classes &gt; File Class &gt; extension; Builtin Classes &gt; Utility Classes &gt; File Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; File Class &gt; init; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isCaseSensitive; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isDirectory; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isHidden; Builtin Classes &gt; Utility Classes &gt; File Class &gt; lastAccessed (Attribute); Builtin Classes &gt; Utility Classes &gt; File Class &gt; lastModified (Attribute); Builtin Classes &gt; Utility Classes &gt; File Class &gt; length; Builtin Classes &gt; Utility Classes &gt; File Class &gt; list; Builtin Classes &gt; Utility Classes &gt; File Class &gt; listFiles; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeDir; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeDirs; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; File Class &gt; name; Builtin Classes &gt; Utility Classes &gt; File Class &gt; parent; Builtin Classes &gt; Utility Classes &gt; File Class &gt; parentFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; path; Builtin Classes &gt; Utility Classes &gt; File Class &gt; pathSeparator; Builtin Classes &gt; Utility Classes &gt; File Class &gt; renameTo; Builtin Classes &gt; Utility Classes &gt; File Class &gt; separator; Builtin Classes &gt; Utility Classes &gt; File Class &gt; setReadOnly; Builtin Classes &gt; Utility Classes &gt; File Class &gt; setWritable; Builtin Classes &gt; Utility Classes &gt; File Class &gt; string; Builtin Classes &gt; Utility Classes &gt; Orderable Class &gt; Comparison Methods</p>
-<p class="deviations">Deviations: D34, D109, D118, D126, D137</p>
+<p class="deviations">Deviations: D34, D109, D118, D126, D137, D183</p>
 <p>A <code>File</code> holds a path, and its methods ask about or change the file or
 directory that the path names. The path may name something that does not
 exist: the methods look at the file system when they are called.
@@ -72996,12 +72996,14 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <p><code>writeChars</code> takes the name of a file, a string and an optional <code>mode</code>, and
 writes the string to the file, bytes unchanged, creating the file when it does
 not exist. It answers nothing, so a program that uses what it answers raises
-<code>SYNTAX 91.999</code>. The <code>mode</code> is sent <code>strip</code>, and the first character of the
-string that answers, in upper or lower case, decides: <code>A</code> appends the string to
+<code>SYNTAX 91.999</code>. The <code>mode</code> is read as a <a href="classes/index.html#r-class.index.string">string argument</a>.
+After surrounding blanks are stripped, its first character, in upper or
+lower case, decides: <code>A</code> appends the string to
 the content of the file and <code>R</code> replaces the content, whatever follows the
 letter, so <code>Replace</code>, <code>r</code> and <code>repl!</code> replace. An omitted <code>mode</code> appends. Any
-other <code>mode</code>, the empty string among them, raises <code>SYNTAX 88.916</code>, and one that
-does not understand <code>strip</code>, <code>.nil</code> for one, raises <code>SYNTAX 97.1</code>. The name is
+other mode string, the empty string among them, raises <code>SYNTAX 88.916</code>. An
+argument that cannot supply a string, including <code>.nil</code>, raises <code>SYNTAX 88.909</code>
+(<a href="classes/file.html#r-class.file.deviation.183">Deviation 183</a>). The name is
 read as <a href="classes/file.html#r-class.file.readchars"><code>readChars</code></a> reads it, with the same error,
 and a call whose name and <code>mode</code> are both wrong raises the error of one of
 them, as <a href="classes/../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The string is
@@ -73031,7 +73033,6 @@ say .file~readChars(f)
 say .file~new('spec-file-writechars-none.tmp')~exists
 call try '.file~writeChars(f, "x", "")'
 call try '.file~writeChars(f, "x", "Q")'
-call try '.file~writeChars(f, "x", .nil)'
 call try '.file~writeChars(.nil, "x")'
 call try '.file~writeChars'
 call try '.file~writeChars(f)'
@@ -73056,7 +73057,6 @@ The NIL object12
 0
 .file~writeChars(f, "x", "") =&gt; 88.916
 .file~writeChars(f, "x", "Q") =&gt; 88.916
-.file~writeChars(f, "x", .nil) =&gt; 97.1
 .file~writeChars(.nil, "x") =&gt; 93.938
 .file~writeChars =&gt; 93.901
 .file~writeChars(f) =&gt; 93.901
@@ -73110,7 +73110,6 @@ call try '.file~writeLines(f, .stem~new)'
 call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
 call try '.file~writeLines(.nil, .array~of("a"))'
 call try '.file~writeLines(f, .array~of("a"), "")'
-call try '.file~writeLines(f, .array~of("a"), .nil)'
 call try '.file~writeLines(f, .bad~new)'
 call try '.file~writeLines'
 call try '.file~writeLines(f)'
@@ -73158,7 +73157,6 @@ an Object
 .file~writeLines(f, .mutablebuffer~new("abc")) =&gt; 88.914
 .file~writeLines(.nil, .array~of("a")) =&gt; 93.938
 .file~writeLines(f, .array~of("a"), "") =&gt; 88.916
-.file~writeLines(f, .array~of("a"), .nil) =&gt; 97.1
 .file~writeLines(f, .bad~new) =&gt; 98.913
 .file~writeLines =&gt; 93.901
 .file~writeLines(f) =&gt; 93.901
@@ -73336,6 +73334,48 @@ call endlocal
 File &lt;/tmp&gt;
 &lt; &gt;
 &lt;/spec-file/tmp&gt;
+</code></pre>
+<div class="rule" id="r-class.file.deviation.183"><a href="classes/file.html#r-class.file.deviation.183">[class.file.deviation.183]</a></div>
+<p><code>writeChars</code> and <code>writeLines</code> read the mode through the <a href="classes/index.html#r-class.index.string">string argument
+rule</a>. ooRexx sends <code>STRIP</code> to the mode itself, so an
+object without that method raises <code>SYNTAX 97.1</code> even if <code>MAKESTRING</code> supplies
+a valid mode.</p>
+<pre><code class="language-rexx">f = 'spec-file-write-mode.tmp'
+.file~writeChars(f, 'original', 'replace')
+.file~writeChars(f, 'one', .mode~new('  replace'))
+.file~writeLines(f, .array~of('two'), .mode~new('  append'))
+call try ".file~writeChars(f, 'x', .nil)"
+call try ".file~writeLines(f, .array~of('x'), .nil)"
+call try ".file~writeChars(f, 'x', .stringOnly~new)"
+call try ".file~writeLines(f, .array~of('x'), .mode~new(.object~new))"
+call try ".file~writeChars(f, 'x', .mode~new('bad'))"
+say c2x(.file~readChars(f))
+junk = .file~new(f)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'no error'
+  return
+bad: say condition('o')~code
+  return
+::class mode
+::method init
+  expose text
+  use arg text
+::method makeString
+  expose text
+  return text
+::class stringOnly
+::method string
+  return 'R'
+</code></pre>
+<pre><code class="language-output">88.909
+88.909
+88.909
+88.909
+88.916
+6F6E6574776F0A
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rexxcontext"><a class="header" href="#rexxcontext">RexxContext</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxContext Class; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; args; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; condition; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; digits; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; executable; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; form; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; fuzz; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; interpreter; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; invocation; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; line; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; name; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; package; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; rs; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; stackFrames; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; thread; Builtin Classes &gt; Utility Classes &gt; RexxContext Class &gt; variables</p>
@@ -131204,6 +131244,9 @@ before comparing it with <code>0</code> and <code>1</code>. ooRexx refuses an ob
 <code>DATATYPE('N')</code> and <code>POS('.')</code> directly to the code object. An object that
 can supply valid code as text can still raise <code>SYNTAX 97.1</code> in the handler
 if it lacks a method ooRexx sends.</p>
+<p><code>File~writeChars</code> and <code>File~writeLines</code> convert their mode as a string
+argument. ooRexx sends <code>STRIP</code> to the mode itself, so a mode object without
+that method raises <code>SYNTAX 97.1</code> even if it can supply valid mode text.</p>
 
                     </main>
 
