@@ -1360,6 +1360,11 @@ if it lacks a method ooRexx sends.</p>
 <p><code>File~writeChars</code> and <code>File~writeLines</code> convert their mode as a string
 argument. ooRexx sends <code>STRIP</code> to the mode itself, so a mode object without
 that method raises <code>SYNTAX 97.1</code> even if it can supply valid mode text.</p>
+<p><code>CircularQueue</code> converts size, count, order and option arguments before
+checking their values. ooRexx sends <code>&lt;</code>, <code>UPPER</code>, <code>CASELESSSTARTSWITH</code> or
+<code>CASELESSMATCHCHAR</code> to the arguments themselves, which can raise
+<code>SYNTAX 97.1</code> even for objects that supply valid text
+(<a href="classes/circularqueue.html#r-class.circularqueue.deviation.183">example</a>).</p>
 
                     </main>
 

@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="circularqueue"><a class="header" href="#circularqueue">CircularQueue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; CircularQueue Class; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; init; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; append; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; makeString; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; push; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; queue; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; resize; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; section; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; size; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; string; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; union; Builtin Classes &gt; Collection Classes &gt; CircularQueue Class &gt; xor</p>
-<p class="deviations">Deviations: D109, D121</p>
+<p class="deviations">Deviations: D109, D121, D183</p>
 <p>A <code>CircularQueue</code> is a <a href="queue.html"><code>Queue</code></a> that has a size, fixed when it is
 made and changed by <code>resize</code>: it never holds more items than that. An item
 added to a full queue pushes another out at the opposite end, so a circular
@@ -220,7 +220,8 @@ second one <code>SYNTAX 93.902</code>. The size must be a whole number from 0 to
 999999999, read from its string value as a whole-number argument of a builtin
 is (<a href="../conventions.html#r-conv.whole.form">the form rule</a>, <a href="../conventions.html#r-conv.whole.digits">the digits
 rule</a>): a negative number, a number that is not whole,
-text that is not a number and a number above that bound raise <code>SYNTAX 93.906</code>.
+an argument that gives no number and a number above that bound raise
+<code>SYNTAX 93.906</code>.
 A size of 0 makes a queue that holds nothing. A new queue is empty. <code>new</code>
 sends <code>init</code> to the new object with the arguments it received, so a subclass's
 <code>init</code> sees them (<a href="index.html#r-class.index.new">the new rule</a>); the checks are those of
@@ -235,8 +236,6 @@ call try '.circularqueue~new("x")'
 call try '.circularqueue~new(1.5)'
 call try '.circularqueue~new(1000000000)'
 call try '.circularqueue~new(3, 4)'
-call try '.circularqueue~new(.nil)'
-call try '.circularqueue~new(.object~new)'
 x = .watch~new(7)
 exit
 try:
@@ -260,81 +259,120 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .circularqueue~new(1.5) =&gt; 93.906
 .circularqueue~new(1000000000) =&gt; 93.906
 .circularqueue~new(3, 4) =&gt; 93.902
-.circularqueue~new(.nil) =&gt; 97.1
-.circularqueue~new(.object~new) =&gt; 97.1
 init 1 (7)
 </code></pre>
 <div class="rule" id="r-class.circularqueue.new.sends"><a href="#r-class.circularqueue.new.sends">[class.circularqueue.new.sends]</a></div>
-<p><code>init</code> first reads the string value of the size, as <a href="../conventions.html#r-conv.string.object">the conversion
-rule</a> says, and then sends it <code>&lt;</code> with the argument 0,
-reading the answer as a logical value: an answer that is neither 0 nor 1
-raises <code>SYNTAX 34.901</code>. <code>SYNTAX 93.906</code> is raised when <code>&lt;</code> answered 1 or when
-the string value is not a whole number or is above 999999999; only <code>&lt;</code>
-decides whether the size is below 0, so a size whose string value is <code>-1</code> and
-whose <code>&lt;</code> answers 0 is not refused. An object that does not understand <code>&lt;</code>,
-<code>.nil</code> included, raises <code>SYNTAX 97.1</code>. The queue then keeps the very object
-it was given as its size, <code>size</code> answers it (<a href="#r-class.circularqueue.size">the size
-rule</a>), and its string value is read again each
-time a method compares the number of items with the size.</p>
-<pre><code class="language-rexx">q = .circularqueue~new(.pretend~new(0))
-say q~size~class~id q~size
-do i = 1 to 6
-  q~queue(i)
-end
+<p><code>init</code> reads the string value of the size as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> reads a whole number, with a fallback to
+<code>STRING</code>. It uses the resulting number as the capacity for later operations
+(<a href="#r-class.circularqueue.deviation.183">Deviation 183</a>). The <a href="#r-class.circularqueue.size">size
+method</a> answers the original argument.</p>
+<pre><code class="language-rexx">q = .circularqueue~new(' +2 ')
+q~queue('a'); q~queue('b')
+say '['q~size']' q~queue('c') q~string
+</code></pre>
+<pre><code class="language-output">[ +2 ] a b,c
+</code></pre>
+<div class="rule" id="r-class.circularqueue.deviation.183"><a href="#r-class.circularqueue.deviation.183">[class.circularqueue.deviation.183]</a></div>
+<p><code>new</code>, <code>resize</code> and <code>section</code> read sizes and counts by their numeric value.
+<code>resize</code>, <code>makeArray</code>, <code>supplier</code>, <code>string</code> and <code>makeString</code> read their
+order as a string argument. <code>queue</code> and <code>push</code> read explicit options the
+same way, even at size 0. ooRexx sends <code>&lt;</code>, <code>UPPER</code>,
+<code>CASELESSSTARTSWITH</code> or <code>CASELESSMATCHCHAR</code> to these arguments directly.</p>
+<pre><code class="language-rexx">size = .convertible~new(' 3 ')
+q = .circularqueue~new(size)
+say q~size == size
+size~text = '1'
+q~queue('a'); q~queue('b'); q~queue('c')
 say q~allItems~makeString('L', ',')
-call try '.circularqueue~new(.pretend~new(1))'
-call try '.circularqueue~new(.pretend~new(3))'
+order = .convertible~new('lifo')
+smaller = .stringOnly~new(2)
+say (q~resize(smaller, order) == smaller) (q~size == smaller)
+say q~allItems~makeString('L', ',') q~makeArray(order)~makeString('L', ',') q~supplier(order)~item
+say q~string('|', order) q~makeString('|', .orderString~new('Lifo'))
+say q~section(1, .convertible~new(1))~string
+
+q = .circularqueue~of('a', 'b', 'a', 'c')
+option = .uniqueOption~new
+.local~requests = 0
+say q~queue('a', option) == .nil
+say q~allItems~makeString('L', ',')
+say q~push('c', option) == .nil
+say q~allItems~makeString('L', ',')
+zero = .circularqueue~new(0)
+zero~queue('x', option)
+zero~push('x', option)
+say .local~requests zero~items
+
 call try '.circularqueue~new(.nil)'
-w = .circularqueue~new(.loud~new(0, '-1'))
-say 'made' w~size~class~id
-w~queue('a')
+call try 'q~resize(.stringOnly~new(.object~new))'
+call try 'q~section(1, .nil)'
+call try 'q~resize(1, .stringOnly~new("L"))'
+call try 'q~makeArray(.nil)'
+call try 'q~supplier(.convertible~new("x"))'
+call try 'q~makeString("|", .nil)'
+call try 'zero~queue("x", .nil)'
+call try 'q~push("z", .convertible~new(.object~new))'
+say q~size q~allItems~makeString('L', ',')
 exit
 try:
   signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt;' r
+  interpret 'result =' arg(1)
+  say 'no error'
   return
-bad: say arg(1) '=&gt;' condition('o')~code
+bad: say condition('o')~code
   return
-::class pretend
+::class convertible
+::attribute text
 ::method init
-  expose answer
-  use arg answer
-::method makeString
-  return 4
-::method string
-  return 4
-::method '&lt;'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
-::class loud
-::method init
-  expose answer text
-  use arg answer, text
+  expose text
+  use arg text
 ::method makeString
   expose text
-  say 'makestring'
   return text
-::method '&lt;'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
+::class stringOnly
+::method init
+  expose text
+  use arg text
+::method string
+  expose text
+  return text
+::class orderString subclass String
+::method isInstanceOf
+  return 0
+::method makeString
+  return 'F'
+::method request
+  return 'F'
+::class uniqueOption
+::method request
+  .local~requests += 1
+  if arg(1) == 'STRING' then return 'unique'
+  return .nil
+::method makeString
+  return 'normal'
 </code></pre>
-<pre><code class="language-output">lt 0
-PRETEND 4
-3,4,5,6
-lt 0
-.circularqueue~new(.pretend~new(1)) =&gt; 93.906
-lt 0
-.circularqueue~new(.pretend~new(3)) =&gt; 34.901
-.circularqueue~new(.nil) =&gt; 97.1
-makestring
-lt 0
-made LOUD
-makestring
+<pre><code class="language-output">1
+a,b,c
+1 1
+a,b b,a b
+b|a b|a
+a
+1
+b,c,a
+1
+c,b,a
+4 0
+93.906
+93.906
+93.906
+88.909
+88.909
+93.914
+88.909
+88.909
+88.909
+4 c,b,a
 </code></pre>
 <div class="rule" id="r-class.circularqueue.of"><a href="#r-class.circularqueue.of">[class.circularqueue.of]</a></div>
 <p><code>of</code> makes a circular queue that holds its arguments in the order given, with
@@ -423,9 +461,11 @@ nothing was taken out, both answer <code>.nil</code>. A queue of size 0 holds no
 The <code>option</code> is <code>Normal</code> by default; one whose first character is <code>U</code>, in
 either case, is <code>Unique</code>: before the item is added, every item that is equal
 to it by the strict <code>==</code> is taken out, and when that made room nothing else
-is. Any other option, a null string and one that begins with a blank included,
-is <code>Normal</code>, and <code>option</code> is read as <a href="#r-class.circularqueue.queue.sends">the option
-rule</a> says. No argument at all raises
+is. Any other option string, including a null string or one with a leading
+blank, is <code>Normal</code>. An explicit option is read as a <a href="index.html#r-class.index.string">string
+argument</a>, even at size 0, and an object with no string
+value raises <code>SYNTAX 88.909</code> (<a href="#r-class.circularqueue.deviation.183">Deviation 183</a>).
+No argument at all raises
 <code>SYNTAX 93.901</code>; an omitted item before an option raises <code>SYNTAX 93.903</code>; a
 third argument raises <code>SYNTAX 93.902</code>.</p>
 <pre><code class="language-rexx">q = .circularqueue~new(3)
@@ -473,16 +513,6 @@ say r~queue('y', 'Z') r~queue('y', ' U') r~allItems~makeString('L', ',')
 say r~queue(1.0, 'U') r~queue(1, 'U') r~allItems~makeString('L', ',')
 say r~queue('Y', 'U') r~allItems~makeString('L', ',')
 say r~queue('b', 'U') r~push(.nil) r~queue(.nil, 'U') r~items
-call try 'r~queue("n", .nil)'
-call try 'r~push("n", .nil)'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt;' r
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
 </code></pre>
 <pre><code class="language-output">1 b,c,a
 1 c,b,a
@@ -494,20 +524,18 @@ x b a,q,y,y
 a q y,y,1.0,1
 y y,1.0,1,Y
 y b The NIL object 4
-r~queue("n", .nil) =&gt; 97.1
-r~push("n", .nil) =&gt; 97.1
 </code></pre>
 <div class="rule" id="r-class.circularqueue.queue.zero"><a href="#r-class.circularqueue.queue.zero">[class.circularqueue.queue.zero]</a></div>
 <p>On a queue of size 0, <code>queue</code>, <code>push</code> and <code>append</code> hold nothing: after the
 argument checks of their own rules they answer <code>.nil</code> and add nothing, and
-they send no message to the receiver. The <code>option</code> of <code>queue</code> and <code>push</code> is
-not read, <code>Unique</code> included, so that an option that does not understand
-<code>caselessMatchChar</code> raises no error. <code>insert</code> is not covered: it adds the item
-and takes it out again by <a href="#r-class.circularqueue.insert">the insert rule</a>. A
+they send no message to the receiver. The explicit option of <code>queue</code> and
+<code>push</code> is still read as in <a href="#r-class.circularqueue.queue">the queue rule</a>.
+<code>insert</code> adds the item and takes it out again by
+<a href="#r-class.circularqueue.insert">the insert rule</a>. A
 queue that <code>resize(0)</code> made size 0 behaves so too.</p>
 <pre><code class="language-rexx">q = .circularqueue~new(0)
 say (q~queue('a') == .nil) (q~push('b') == .nil) (q~append('c') == .nil) q~items
-say (q~queue('d', .object~new) == .nil) (q~push('e', 'U') == .nil) q~items
+say (q~queue('d', 'N') == .nil) (q~push('e', 'U') == .nil) q~items
 call try 'q~queue'
 call try 'q~push(, "U")'
 call try 'q~append(1, 2)'
@@ -539,11 +567,7 @@ as long as it answers true, <code>removeItem</code> with the item and <code>hasI
 only then the <code>items</code>. The strict <code>==</code> of that search is the one of <a href="queue.html#r-class.queue.removeitem.sends">the Queue
 search rule</a>: the first example shows the order.
 The search ends at the very object that is searched for without a <code>==</code> sent to
-it (<a href="collection.html#r-class.collection.identity">the identity rule</a>). The option is sent
-<code>caselessMatchChar</code> with the arguments 1 and <code>u</code>, whose answer is read as a
-logical value: neither 0 nor 1 raises <code>SYNTAX 34.1</code>, and an option that does not
-understand the message raises <code>SYNTAX 97.1</code>, <code>.nil</code> included. The second example
-shows these.</p>
+it (<a href="collection.html#r-class.collection.identity">the identity rule</a>).</p>
 <pre><code class="language-rexx">q = .circularqueue~of(.thing~new('p'), .thing~new('q'), .thing~new('p'))
 q~resize(4)
 q~queue(.thing~new('p'), 'U')
@@ -576,45 +600,6 @@ q == q
 q == q
 q == p
 2
-</code></pre>
-<pre><code class="language-rexx">q = .circularqueue~of('a', 'b')
-q~resize(4)
-q~queue('c', .opt~new(0))
-q~queue('c', .opt~new(1))
-q~push('c', .opt~new(1))
-say q~allItems~makeString('L', ',')
-call try 'q~queue("s", .opt~new("x"))'
-call try 'q~push("s", .opt~new(.nil))'
-call try 'q~queue("s", .object~new)'
-say q~allItems~makeString('L', ',')
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt;' r
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class opt
-::method init
-  expose answer
-  use arg answer
-::method caselessMatchChar
-  expose answer
-  use arg pos, set
-  say 'caselessMatchChar' pos set
-  return answer
-</code></pre>
-<pre><code class="language-output">caselessMatchChar 1 u
-caselessMatchChar 1 u
-caselessMatchChar 1 u
-c,a,b
-caselessMatchChar 1 u
-q~queue("s", .opt~new("x")) =&gt; 34.1
-caselessMatchChar 1 u
-q~push("s", .opt~new(.nil)) =&gt; 34.1
-q~queue("s", .object~new) =&gt; 97.1
-c,a,b
 </code></pre>
 <div class="rule" id="r-class.circularqueue.append"><a href="#r-class.circularqueue.append">[class.circularqueue.append]</a></div>
 <p><code>append(item)</code> adds the item at the tail and answers its index, which is the
@@ -699,8 +684,8 @@ q~insert("q", 1, 1) =&gt; 93.902
 it was given. When the queue holds more items than the new size, the surplus is
 taken out, from the head for the order <code>Fifo</code>, which is the default, and from
 the tail for <code>Lifo</code>, so that the other end is kept. The <code>newSize</code> is read as
-the size of <a href="#r-class.circularqueue.new">the new rule</a> is, with the message <code>&lt;</code>
-and the errors that rule names; a missing <code>newSize</code> raises <code>SYNTAX 93.901</code>, an
+the size of <a href="#r-class.circularqueue.new">the new rule</a> is, with the same errors.
+A missing <code>newSize</code> raises <code>SYNTAX 93.901</code>, an
 omitted one before an <code>order</code> raises <code>SYNTAX 93.903</code>, and a third argument
 <code>SYNTAX 93.902</code>; a call with more than one of these faults raises the error of
 one of them, as <a href="../conventions.html#r-conv.error.precedence">the precedence rule</a> says. The first
@@ -726,10 +711,8 @@ call try 'q~resize(-1)'
 call try 'q~resize("x")'
 call try 'q~resize(1.5)'
 call try 'q~resize(1000000000)'
-call try 'q~resize(.nil)'
 call try 'q~resize(1, "x")'
 call try 'q~resize(1, "")'
-call try 'q~resize(1, .nil)'
 call try 'q~resize(1, "L", 1)'
 say q~size q~allItems~makeString('L', ',')
 exit
@@ -754,10 +737,8 @@ q~resize(-1) =&gt; 93.906
 q~resize("x") =&gt; 93.906
 q~resize(1.5) =&gt; 93.906
 q~resize(1000000000) =&gt; 93.906
-q~resize(.nil) =&gt; 97.1
 q~resize(1, "x") =&gt; 93.914
 q~resize(1, "") =&gt; 93.914
-q~resize(1, .nil) =&gt; 97.1
 q~resize(1, "L", 1) =&gt; 93.902
 4.0 2,3,4,5
 </code></pre>
@@ -777,7 +758,7 @@ call run 'a~resize(3)'
 call run 'a~resize(2)'
 call run 'a~resize(2, "L")'
 call run 'a~resize(0)'
-call run 'a~resize(1, .opt~new)'
+call run 'a~resize(1, "F")'
 exit
 run:
   use arg c
@@ -789,11 +770,6 @@ run:
   .local~on = 0
   say left(c, 20) '=&gt;' .local~log~makeString('L', ' ')
   return
-::class opt
-::method unknown
-  use arg name
-  .local~log~append(name)
-  return 'F'
 ::class spy subclass circularqueue
 ::method items
   if .local~on then .local~log~append('items')
@@ -807,7 +783,7 @@ a~resize(3)          =&gt; items
 a~resize(2)          =&gt; items items remove(1)
 a~resize(2, "L")     =&gt; items items remove(3)
 a~resize(0)          =&gt; items items remove(1) remove(1) remove(1)
-a~resize(1, .opt~new =&gt; UPPER items items remove(1) remove(1)
+a~resize(1, "F")     =&gt; items items remove(1) remove(1)
 </code></pre>
 <h2 id="parts-arrays-and-strings"><a class="header" href="#parts-arrays-and-strings">Parts, arrays and strings</a></h2>
 <div class="rule" id="r-class.circularqueue.section"><a href="#r-class.circularqueue.section">[class.circularqueue.section]</a></div>
@@ -821,13 +797,11 @@ when it is omitted or larger; the new queue holds <code>count</code> items, <cod
 included. When <code>start</code> is above the size, the first entry is what <code>[]</code> answers
 for <code>start</code>, which is <code>.nil</code>, and the positions after it are 1, 2 and so on.
 The <code>start</code> is read as <a href="queue.html#r-class.queue.indexes">the Queue index rule</a> says;
-<code>count</code> must be a whole number from 0 up, or <code>SYNTAX 93.906</code> is raised, <code>.nil</code>
-raising <code>SYNTAX 97.1</code>. No <code>start</code> raises <code>SYNTAX 93.901</code>, an omitted one
-<code>SYNTAX 93.903</code>, and a third argument <code>SYNTAX 93.902</code>. <code>count</code> is checked with
-the messages and conditions of <a href="#r-class.circularqueue.new.sends">the new rule</a>,
-after which its string value is read once more; that second value is the count,
-and one below 0 or not a whole number raises <code>SYNTAX 93.906</code>, so a count whose
-string value is <code>-1</code> is refused even when its <code>&lt;</code> answers 0. A call whose
+<code>count</code> is read and checked as the size is in
+<a href="#r-class.circularqueue.new.sends">the new rule</a>. A value outside the range
+from 0 to 999999999 or one that does not give a whole number raises
+<code>SYNTAX 93.906</code>. No <code>start</code> raises <code>SYNTAX 93.901</code>, an omitted one
+<code>SYNTAX 93.903</code>, and a third argument <code>SYNTAX 93.902</code>. A call whose
 <code>start</code> and <code>count</code> are both wrong raises the error of one of them, as <a href="../conventions.html#r-conv.error.precedence">the
 precedence rule</a> says. The answer is not the receiver,
 and the receiver is not changed.</p>
@@ -853,8 +827,6 @@ call try 'q~section("x")'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, 1.5)'
-call try 'q~section(1, .nil)'
-call try 'q~section(2, .loud~new(0, "-1"))'
 call try 'q~section(1, 1, 1)'
 exit
 show: procedure
@@ -868,19 +840,6 @@ try:
   return
 bad: say arg(1) '=&gt;' condition('o')~code
   return
-::class loud
-::method init
-  expose answer text
-  use arg answer, text
-::method makeString
-  expose text
-  say 'makestring'
-  return text
-::method '&lt;'
-  expose answer
-  use arg limit
-  say 'lt' limit
-  return answer
 </code></pre>
 <pre><code class="language-output">CircularQueue 4 4 [b|c|d|a]
 CircularQueue 2 2 [c|d]
@@ -901,11 +860,6 @@ q~section("x") =&gt; 93.907
 q~section(1, -1) =&gt; 93.906
 q~section(1, "x") =&gt; 93.906
 q~section(1, 1.5) =&gt; 93.906
-q~section(1, .nil) =&gt; 97.1
-makestring
-lt 0
-makestring
-q~section(2, .loud~new(0, "-1")) =&gt; 93.906
 q~section(1, 1, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.circularqueue.section.sends"><a href="#r-class.circularqueue.section.sends">[class.circularqueue.section.sends]</a></div>
@@ -973,10 +927,11 @@ order <code>Fifo</code>, which is the default, and from the tail for <code>Lifo<
 answers the items from the head, and <code>allIndexes</code> the indexes 1 to the number
 of items, as for any queue (<a href="queue.html#r-class.queue.makearray">the Queue rule</a>).
 <code>supplier(order)</code> answers a <code>Supplier</code> that goes over the same items, a
-snapshot as for any queue. The first character of the <code>order</code>, in either case,
-is <code>F</code> or <code>L</code>, the rest does not count, and anything else raises
-<code>SYNTAX 93.914</code>; an order that is a null string, a number, or a string with a
-leading blank is anything else. With <code>Lifo</code> the index of an item in the answer
+snapshot as for any queue. The order is read as a <a href="index.html#r-class.index.string">string
+argument</a>, and an object with no string value raises
+<code>SYNTAX 88.909</code> (<a href="#r-class.circularqueue.deviation.183">Deviation 183</a>).
+An order string must start with <code>F</code> or <code>L</code>, in either case, or
+<code>SYNTAX 93.914</code> is raised. With <code>Lifo</code> the index of an item in the answer
 of <code>supplier</code> is its index in the queue, so that the supplier counts down.
 <code>makeArray</code> and <code>supplier</code> take at most one argument: a second raises
 <code>SYNTAX 93.902</code>.</p>
@@ -995,10 +950,8 @@ call try 'x~makeArray("X")'
 call try 'x~makeArray("")'
 call try 'x~makeArray(" L")'
 call try 'x~makeArray(1)'
-call try 'x~makeArray(.nil)'
 call try 'x~makeArray("L", 1)'
 call try 'x~supplier("X")'
-call try 'x~supplier(.nil)'
 call try 'x~supplier("L", 1)'
 exit
 try:
@@ -1021,67 +974,19 @@ x~makeArray("X") =&gt; 93.914
 x~makeArray("") =&gt; 93.914
 x~makeArray(" L") =&gt; 93.914
 x~makeArray(1) =&gt; 93.914
-x~makeArray(.nil) =&gt; 97.1
 x~makeArray("L", 1) =&gt; 93.902
 x~supplier("X") =&gt; 93.914
-x~supplier(.nil) =&gt; 97.1
 x~supplier("L", 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.circularqueue.order.sends"><a href="#r-class.circularqueue.order.sends">[class.circularqueue.order.sends]</a></div>
-<p><code>makeArray</code> and <code>supplier</code> read the order by sending it <code>upper</code> with no
-argument, and use the first character of the answer. <code>string</code> and <code>makeString</code>
-send it <code>caselessStartsWith</code> with <code>F</code> and, when the answer is not true, with
-<code>L</code>, and raise <code>SYNTAX 93.914</code> when neither is; they pass the order on to
-<code>makeArray</code>, which reads it as above. <code>resize</code> reads it as <code>makeArray</code> does.
+<p><code>string</code>, <code>makeString</code> and <code>resize</code> read the order as <code>makeArray</code> and
+<code>supplier</code> do. <code>string</code> and <code>makeString</code> pass the converted order string on
+to <code>makeArray</code>.
 For the order <code>Lifo</code>, <code>makeArray</code> and <code>supplier</code> send <code>copy</code> to the receiver,
 then <code>items</code> to that copy, then <code>at</code> to the copy with each index from that
 number down to 1, and the answer holds what <code>at</code> answered, in that order;
 <code>Fifo</code> sends nothing to the receiver. <code>string</code> and <code>makeString</code> reach these
-through the <code>makeArray</code> they send. In the first example the order is an object
-that answers every message itself; the second shows the messages for <code>Lifo</code>.</p>
-<pre><code class="language-rexx">q = .circularqueue~of('a', 'b', 'c')
-.local~up = 'LX'
-say q~makeArray(.ord~new)~makeString('L', ',')
-say q~supplier(.ord~new)~item
-.local~up = 'F'
-.local~cs = 1
-say q~string(',', .ord~new)
-.local~cs = 0
-call try 'q~makeString(",", .ord~new)'
-.local~up = 'Q'
-call try 'q~makeArray(.ord~new)'
-.local~up = 'L'
-say q~resize(2, .ord~new) q~size q~allItems~makeString('L', ',')
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt;' r
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class ord
-::method unknown
-  use arg name, args
-  say name args~makeString('L', ',')
-  if name = 'UPPER' then return .local~up
-  return .local~cs
-</code></pre>
-<pre><code class="language-output">UPPER 
-c,b,a
-UPPER 
-c
-CASELESSSTARTSWITH F
-UPPER 
-a,b,c
-CASELESSSTARTSWITH F
-CASELESSSTARTSWITH L
-q~makeString(",", .ord~new) =&gt; 93.914
-UPPER 
-q~makeArray(.ord~new) =&gt; 93.914
-UPPER 
-2 2 a,b
-</code></pre>
+through the <code>makeArray</code> they send.</p>
 <pre><code class="language-rexx">q = .spy~of('a', 'b', 'c')
 say '--'
 say q~makeArray('L')~makeString('L', ',')
@@ -1148,7 +1053,6 @@ say .circularqueue~of('a', , 'c')~string '|' .circularqueue~new(2)~string'|'
 say .circularqueue~of(.nil, 1.0, 'a b')~makeString('|') x~request('STRING')
 call try 'x~makeString("/", "X")'
 call try 'x~makeString("/", "")'
-call try 'x~makeString("/", .nil)'
 call try 'x~makeString("/", "L", 1)'
 call try 'x~makeString(.object~new)'
 call try 'x~string("/", "X")'
@@ -1171,7 +1075,6 @@ a,,c | |
 The NIL object|1.0|a b x,y,z
 x~makeString("/", "X") =&gt; 93.914
 x~makeString("/", "") =&gt; 93.914
-x~makeString("/", .nil) =&gt; 97.1
 x~makeString("/", "L", 1) =&gt; 93.902
 x~makeString(.object~new) =&gt; 88.909
 x~string("/", "X") =&gt; 93.914
