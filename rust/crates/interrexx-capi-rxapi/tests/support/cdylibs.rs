@@ -13,7 +13,10 @@
 
 #![allow(dead_code, reason = "each test uses some of these")]
 
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
 /// The file cargo builds for the library `name`: `lib<name>.so`, or `lib<name>.dylib` on Apple's
@@ -40,20 +43,39 @@ pub fn librexxapi() -> PathBuf {
 /// from one place. Hard links where the filesystem allows, copies otherwise.
 pub fn libs_dir(scratch: &Path) -> PathBuf {
     let dir = scratch.join("libs");
-    std::fs::create_dir_all(&dir).expect("a directory for the libraries");
+    fs::create_dir_all(&dir).expect("a directory for the libraries");
     for source in [librexx(), librexxapi()] {
         let name = source.file_name().expect("a library name");
-        // Tests run as processes of their own: link under a private name, then rename over.
-        let mut staged = name.to_owned();
-        staged.push(format!(".{}", std::process::id()));
-        let staged = dir.join(staged);
-        let _ = std::fs::remove_file(&staged);
-        if std::fs::hard_link(&source, &staged).is_err() {
-            std::fs::copy(&source, &staged).expect("a copy of the library");
-        }
-        std::fs::rename(&staged, dir.join(name)).expect("the library in place");
+        stage_library(&source, &dir.join(name)).expect("the library in place");
     }
     dir
+}
+
+pub(crate) fn stage_library(source: &Path, destination: &Path) -> io::Result<()> {
+    static NEXT_STAGE: AtomicU64 = AtomicU64::new(0);
+    let parent = destination
+        .parent()
+        .expect("the library has a staging directory");
+    let stage = loop {
+        let sequence = NEXT_STAGE.fetch_add(1, Ordering::Relaxed);
+        let directory = parent.join(format!(".stage-{}-{sequence}", std::process::id()));
+        match fs::create_dir(&directory) {
+            Ok(()) => break directory,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    };
+    // Only this call can create a link at the copy destination. A shared
+    // pathname there could make a copy truncate the source through a hard link.
+    let staged = stage.join("library");
+    let result = if fs::hard_link(source, &staged).is_ok() {
+        fs::rename(&staged, destination)
+    } else {
+        fs::copy(source, &staged).and_then(|_| fs::rename(&staged, destination))
+    };
+    // Renaming one hard link over another to the same inode can leave both names.
+    let cleanup = fs::remove_dir_all(&stage);
+    result.and(cleanup)
 }
 
 fn locate(package: &str, library: &str) -> PathBuf {
