@@ -270,7 +270,8 @@ interpreter is asked to halt every activity is not asked: the next message it
 sends runs unhalted. A message that has arrived but is held under [Deviation
 178](r:native.threads.attach.deviation.178) has not begun, so its activity
 runs no message and is not asked either: the message runs to its end once it
-is let go. In the examples a second activity loops with a short sleep and
+is let go. A call to the instance's `Halt` after its interpreter has ended
+does nothing. In the examples a second activity loops with a short sleep and
 records whether it was halted.
 
 ```rexx
