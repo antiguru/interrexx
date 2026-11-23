@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="stream"><a class="header" href="#stream">Stream</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Stream Classes &gt; Stream Class; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; new (Inherited Class Method); Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; chars; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; close; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; command; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; description; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; flush; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; init; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lines; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; makeArray; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; open; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; position; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; qualify; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; query; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; say; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; seek; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; state; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; string; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; supplier; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; uninit</p>
-<p class="deviations">Deviations: D34, D55, D58, D59, D62, D109, D135, D139, D140, D142, D183</p>
+<p class="deviations">Deviations: D30, D34, D55, D58, D59, D62, D109, D135, D139, D140, D142, D183</p>
 <p>A <code>Stream</code> is an object that stands for a stream: the file, or the standard
 stream, that its name denotes. Its methods do what the stream built-in
 functions do, with the stream as the receiver in place of a name argument, and
@@ -885,10 +885,13 @@ check of its kind as <a href="../conventions.html#r-conv.string.argument-kind">t
 through <code>makeString</code> alone: an object that has no such method, <code>.nil</code> and an
 object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>. The argument
 of <code>query</code> and of <code>command</code> is read through its string value with the fallback
-to <code>string</code>: an object that has only <code>string</code> is read by that answer, and
-<code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with, and
-so is an answer of <code>string</code> that has no string value: <code>query</code> raises <code>SYNTAX 93.0</code> and <code>command</code> <code>SYNTAX 93.914</code> for it, as for a word that nothing starts
-with. The option that <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> take is read as a
+to <code>string</code>: when <code>REQUEST('STRING')</code> supplies no string or returns without an
+answer, the argument's <code>string</code> answer is used. The example with a request
+that returns without an answer is skipped on the oracle because pinned
+ooRexx can crash on that input. <code>.nil</code> is read as <code>The NIL object</code>, which no word or
+command starts with. The <a href="#r-class.stream.deviation.30">non-string answer rule</a>
+gives the errors when <code>string</code> yields no usable value.
+The option that <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> take is read as a
 string argument as that of <code>open</code> is, through <code>makeString</code> alone, so an object
 with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code> at its position,
 1 for <code>arrayIn</code> and <code>makeArray</code> and 2 for <code>arrayOut</code> (<a href="#r-class.stream.deviation.183">Deviation
@@ -927,6 +930,8 @@ call try 't~query(.os~new("size"))'
 call try 't~query(.nil)'
 call try 't~command(.os~new("query size"))'
 call try 't~command(.nil)'
+call try 't~query(.badrequest~new("size"))'
+call try 't~command(.badrequest~new("query size"))'
 t~close
 call sysfiledelete f
 call sysfiledelete g
@@ -952,6 +957,9 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method string
   expose v
   return v
+::class badrequest subclass os
+::method request
+  return .object~new
 </code></pre>
 <pre><code class="language-output">s~charin(1, .ms~new(2)) =&gt; [ab]
 s~linein(.ms~new(1)) =&gt; [abc]
@@ -975,6 +983,29 @@ t~query(.os~new("size")) =&gt; [4]
 t~query(.nil) =&gt; 93.0
 t~command(.os~new("query size")) =&gt; [4]
 t~command(.nil) =&gt; 93.914
+t~query(.badrequest~new("size")) =&gt; [4]
+t~command(.badrequest~new("query size")) =&gt; [4]
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-no-result.tmp'
+call charout f, 'abc'
+call charout f
+s = .stream~new(f)
+say s~query(.option~new('size'))
+say s~command(.option~new('query size'))
+s~close
+call sysfiledelete f
+::class option
+::method init
+  expose option
+  use arg option
+::method request
+  return
+::method string
+  expose option
+  return option
+</code></pre>
+<pre><code class="language-output no-oracle">3
+3
 </code></pre>
 <pre><code class="language-rexx">o = .nostr~new
 s = .stream~new('spec-stream-nostring-zq.tmp')
@@ -1006,6 +1037,30 @@ s~charout("x", o) =&gt; 88.907
 s~lineout("x", o) =&gt; 88.907
 s~lineout(o, 1) =&gt; 88.909
 s~open(o) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.30"><a href="#r-class.stream.deviation.30">[class.stream.deviation.30]</a></div>
+<p>When <code>string</code> answers an object with no string value, <code>query</code> raises
+<code>SYNTAX 93.0</code> and <code>command</code> raises <code>SYNTAX 93.914</code>, as for an unrecognized
+word. The result of such an answer on ooRexx is unreliable
+(<a href="../deviations.html#30-a-string-method-answering-a-non-string">Deviation 30</a>).</p>
+<pre><code class="language-rexx">s = .stream~new('spec-stream-bad-string.tmp')
+call try 's~query(.badString~new)'
+call try 's~command(.badString~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad:
+  say arg(1) '=&gt;' condition('o')~code
+  return
+::class badString
+::method string
+  return .object~new
+</code></pre>
+<pre><code class="language-output">s~query(.badString~new) =&gt; 93.0
+s~command(.badString~new) =&gt; 93.914
 </code></pre>
 <div class="rule" id="r-class.stream.deviation.183"><a href="#r-class.stream.deviation.183">[class.stream.deviation.183]</a></div>
 <p>The option of <code>arrayIn</code>, <code>makeArray</code> and <code>arrayOut</code> is read as a string
