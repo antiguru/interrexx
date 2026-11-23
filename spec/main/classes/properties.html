@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="properties"><a class="header" href="#properties">Properties</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Properties Class; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; new (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getWhole; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; save; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setWhole</p>
-<p class="deviations">Deviations: D29, D33, D109, D123, D124</p>
+<p class="deviations">Deviations: D29, D33, D109, D123, D124, D183</p>
 <p>A <code>Properties</code> is a <a href="directory.html"><code>Directory</code></a> whose items are strings, with
 methods to read and write them as text, as logical values and as whole
 numbers, and to load and save them as lines of a file. It inherits
@@ -396,12 +396,12 @@ p~getProperty(.nil) =&gt; 88.909
 <a href="#r-class.properties.getproperty"><code>getProperty</code></a> does, with the same arguments,
 which it sends to the receiver, and answers 1 for the value <code>1</code> or <code>true</code> and
 0 for <code>0</code> or <code>false</code>. Case counts, and no other text is accepted:
-<code>SYNTAX 34.904</code> is raised. The default is used when the name has no value and
-is checked in the same way, so it must be one of those four strings (or a
-logical value), or the error is raised; when the name has a value, the default
-is not looked at. A missing name with no default raises <code>SYNTAX 34.904</code> too.
-A value that is not a string is not converted and raises <code>SYNTAX 34.904</code>. The
-arguments are counted as for <code>getProperty</code>.</p>
+<code>SYNTAX 34.904</code> is raised. A non-string value is read through
+the <a href="../conventions.html#r-conv.string.object">conversion rule</a> before testing for those four
+strings (<a href="#r-class.properties.deviation.183">Deviation 183</a>). The default is
+used and converted only when the name has no value. A missing name with no
+default raises <code>SYNTAX 34.904</code> too. The arguments are counted as for
+<code>getProperty</code>.</p>
 <pre><code class="language-rexx">p = .properties~new
 do v over .array~of('1', '0', 'true', 'false')
   p~setProperty('k', v)
@@ -416,8 +416,6 @@ do v over .array~of('TRUE', 'False', 'yes', '2', '-1', '00', '', ' 1')
   p~setProperty('k', v)
   call try 'p~getLogical("k")', '['v']'
 end
-p~setEntry('k', .text~new('true'))
-call try 'p~getLogical("K")', 'object'
 call try 'p~getLogical("zz")', 'missing'
 call try 'p~getLogical("zz", "junk")', 'default junk'
 call try 'p~getLogical("zz", .nil)', 'default nil'
@@ -431,17 +429,6 @@ try:
   return
 bad: say arg(2) '=&gt;' condition('o')~code
   return
-::class text
-::method init
-  expose v
-  use arg v
-::method makestring
-  expose v
-  return v
-::method request
-  expose v
-  if arg(1) = 'STRING' then return v
-  return .nil
 </code></pre>
 <pre><code class="language-output">1 0 1 0 
 1 1
@@ -455,7 +442,6 @@ bad: say arg(2) '=&gt;' condition('o')~code
 [00] =&gt; 34.904
 [] =&gt; 34.904
 [ 1] =&gt; 34.904
-object =&gt; 34.904
 missing =&gt; 34.904
 default junk =&gt; 34.904
 default nil =&gt; 34.904
@@ -464,16 +450,16 @@ three =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.properties.getwhole"><a href="#r-class.properties.getwhole">[class.properties.getwhole]</a></div>
 <p><code>getWhole(name, default)</code> reads the value as <code>getProperty</code> does, with the same
-arguments, which it sends to the receiver, and answers it as it is stored, not
-reformatted, when it is a whole number, and raises <code>SYNTAX 26.901</code> when it is
-not. A whole number is judged at <code>NUMERIC DIGITS</code> 9 whatever the caller's
+arguments, which it sends to the receiver. It answers the converted text
+unchanged when it gives a whole number and raises <code>SYNTAX 26.901</code> otherwise.
+A whole number is judged at <code>NUMERIC DIGITS</code> 9 whatever the caller's
 setting: blanks around it are allowed, a sign, an exponent and a point
 followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
 default raises <code>SYNTAX 26.901</code> too. A value that is not a string is read
-through <a href="../conventions.html#r-conv.string.object">the string-value rule</a>, by one send of <code>request</code>,
-for a default as for a stored value, and the value is answered as it is stored.</p>
+through the <a href="../conventions.html#r-conv.string.object">conversion rule</a>, including its fallback
+to <code>STRING</code> (<a href="#r-class.properties.deviation.183">Deviation 183</a>).</p>
 <pre><code class="language-rexx">p = .properties~new
 do v over .array~of('0', '12', '-5', '+7', '007', '1.0', '1e2', '3.', ' 8 ')
   p~setProperty('k', v)
@@ -561,15 +547,12 @@ say p~getWhole('B') .local~n
 </code></pre>
 <h2 id="setting-logical-and-whole-values"><a class="header" href="#setting-logical-and-whole-values">Setting logical and whole values</a></h2>
 <div class="rule" id="r-class.properties.setlogical"><a href="#r-class.properties.setlogical">[class.properties.setlogical]</a></div>
-<p><code>setLogical(name, value)</code> sends <code>datatype</code> with the argument <code>O</code> to the value
-and, when that answers true, stores <code>true</code> for the value 1 and <code>false</code> for 0
-with <code>setProperty</code>, which it sends to the receiver with the name and the new
-text. A string is accepted only as <code>0</code> or <code>1</code>, and a logical value <code>.true</code> or
-<code>.false</code> too: <code>true</code>, <code>2</code>, <code>00</code>, a blank around the digit and the null string
-raise <code>SYNTAX 34.901</code>. A value that has no <code>datatype</code> method, <code>.nil</code> and an
-instance of a class that does not understand the message among them, raises
-<code>SYNTAX 97.1</code>; one whose <code>datatype</code> answers 1 but that is not a logical value
-raises <code>SYNTAX 34.1</code>, and one that answers 0 raises <code>SYNTAX 34.901</code>. The method
+<p><code>setLogical(name, value)</code> reads the value through the
+<a href="../conventions.html#r-conv.string.object">conversion rule</a> and stores <code>true</code> for <code>1</code> and <code>false</code>
+for <code>0</code>. It sends <code>setProperty</code> to the receiver with the name and the new
+text. Any other text, including <code>true</code>, <code>00</code>, or a digit surrounded by blanks,
+raises <code>SYNTAX 34.901</code>. An argument with no logical value raises the same
+error (<a href="#r-class.properties.deviation.183">Deviation 183</a>). The method
 answers nothing and takes exactly two arguments, counted as for <code>put</code>: fewer
 raises <code>SYNTAX 93.901</code>, an omitted name before the value <code>SYNTAX 93.903</code> and a
 third <code>SYNTAX 93.902</code>. A call whose value and name are both in error raises the
@@ -583,10 +566,6 @@ say
 do v over .array~of('true', '2', '00', 'yes', '1.0', '', ' 1')
   call try 'p~setLogical("k", v)', '['v']'
 end
-call try 'p~setLogical("k", .nil)', 'nil'
-call try 'p~setLogical("k", .object~new)', 'object'
-call try 'p~setLogical("k", .answers~new(1))', 'answers 1'
-call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
 call try 'p~setLogical("k")', 'one argument'
 call try 'p~setLogical("k", 1, 2)', 'three'
 call try 'p~setLogical(, 1)', 'omitted name'
@@ -599,14 +578,6 @@ try:
   return
 bad: say arg(2) '=&gt;' condition('o')~code
   return
-::class answers
-::method init
-  expose r
-  use arg r
-::method datatype
-  expose r
-  say '  datatype' arg(1)
-  return r
 </code></pre>
 <pre><code class="language-output">false true true false 
 [true] =&gt; 34.901
@@ -616,29 +587,20 @@ bad: say arg(2) '=&gt;' condition('o')~code
 [1.0] =&gt; 34.901
 [] =&gt; 34.901
 [ 1] =&gt; 34.901
-nil =&gt; 97.1
-object =&gt; 97.1
-  datatype O
-answers 1 =&gt; 34.1
-  datatype O
-answers 0 =&gt; 34.901
 one argument =&gt; 93.901
 three =&gt; 93.902
 omitted name =&gt; 93.903
 name nil =&gt; 88.909
 </code></pre>
 <div class="rule" id="r-class.properties.setwhole"><a href="#r-class.properties.setwhole">[class.properties.setwhole]</a></div>
-<p><code>setWhole(name, value)</code> sends <code>datatype</code> with the argument <code>W</code> to the value
-and, when that answers true, stores the value as its string with
-<code>setProperty</code>, which it sends to the receiver with the name and the text, as
-it is, not reformatted. A string that is a whole number at <code>NUMERIC DIGITS</code> 9
-is accepted: <code>12</code>, <code>+7</code>, <code>007</code>, <code>1.0</code>, <code>1e2</code>, <code>3.</code> and a blank around the
-number. Anything else that answers a string, such as <code>1.5</code>, <code>abc</code>, the null
-string or a number of more than nine digits, raises <code>SYNTAX 93.905</code>. A value
-that has no <code>datatype</code> method raises <code>SYNTAX 97.1</code>; one whose <code>datatype</code>
-answers 1 but that is not a string raises <code>SYNTAX 93.938</code>, and one that
-answers 0 raises <code>SYNTAX 93.905</code>. The method answers nothing and takes exactly
-two arguments, counted and checked as for <code>setLogical</code>.</p>
+<p><code>setWhole(name, value)</code> reads the value through the
+<a href="../conventions.html#r-conv.string.object">conversion rule</a>. It sends <code>setProperty</code> to the
+receiver with the name and the converted text unchanged if that text gives a
+whole number at <code>NUMERIC DIGITS</code> 9, including <code>+7</code>, <code>007</code>, <code>1.0</code>, <code>1e2</code>,
+<code>3.</code> or a number with surrounding blanks. An argument without a whole number
+raises <code>SYNTAX 93.905</code> (<a href="#r-class.properties.deviation.183">Deviation 183</a>).
+The method answers nothing and takes exactly two arguments, counted and
+checked as for <code>setLogical</code>.</p>
 <pre><code class="language-rexx">p = .properties~new
 do v over .array~of('0', '12', '-5', '+7', '007', '1.0', '1e2', '3.', ' 8 ')
   p~setWhole('k', v)
@@ -648,9 +610,6 @@ say
 do v over .array~of('1.5', 'abc', '1000000000', '99999999999', '1e9', '')
   call try 'p~setWhole("k", v)', '['v']'
 end
-call try 'p~setWhole("k", .nil)', 'nil'
-call try 'p~setWhole("k", .answers~new(1))', 'answers 1'
-call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
 call try 'p~setWhole("k")', 'one argument'
 call try 'p~setWhole("k", 1, 2)', 'three'
 call try 'p~setWhole(, 1)', 'omitted name'
@@ -663,14 +622,6 @@ try:
   return
 bad: say arg(2) '=&gt;' condition('o')~code
   return
-::class answers
-::method init
-  expose r
-  use arg r
-::method datatype
-  expose r
-  say '  datatype' arg(1)
-  return r
 </code></pre>
 <pre><code class="language-output">[0] [12] [-5] [+7] [007] [1.0] [1e2] [3.] [ 8 ] 
 [1.5] =&gt; 93.905
@@ -679,11 +630,6 @@ bad: say arg(2) '=&gt;' condition('o')~code
 [99999999999] =&gt; 93.905
 [1e9] =&gt; 93.905
 [] =&gt; 93.905
-nil =&gt; 97.1
-  datatype W
-answers 1 =&gt; 93.938
-  datatype W
-answers 0 =&gt; 93.905
 one argument =&gt; 93.901
 three =&gt; 93.902
 omitted name =&gt; 93.903
@@ -735,9 +681,13 @@ call sysfiledelete f
 <div class="rule" id="r-class.properties.load.class"><a href="#r-class.properties.load.class">[class.properties.load.class]</a></div>
 <p>The class method <code>load(source)</code> answers a new <code>Properties</code> that holds what the
 source gives, an instance of <code>Properties</code> whatever class received the message,
-and <code>new</code> is not sent. <code>source</code> is the name of a file or a <code>File</code> object,
-which is read through a <code>Stream</code> made for it, or any other object, a <code>Stream</code>
-included, which is sent <code>linein</code> with no argument until it raises the NOTREADY
+and <code>new</code> is not sent. A <code>File</code> supplies its path through <code>string</code>, and a
+<code>String</code> supplies a filename directly. A <code>Stream</code> or an object with a
+<code>linein</code> method is used directly. Other objects are read as a
+<a href="index.html#r-class.index.string">string argument</a> to obtain a filename
+(<a href="#r-class.properties.deviation.183">Deviation 183</a>). A filename is read
+through a <code>Stream</code> made for it. An object used directly, including one that
+supplies no string, is sent <code>linein</code> with no argument until it raises NOTREADY
 condition, so a stream is read from its read position to its end, is opened by
 its first <code>linein</code> when it was not open, and is not closed (<a href="#r-class.properties.load">the instance
 rule</a>). A file that does not exist gives an empty
@@ -892,10 +842,12 @@ feed, in the order the entries were first put (<a href="#r-class.properties.devi
 rule</a>); the name and the value are written as
 they are, a value that is not a string through <a href="../conventions.html#r-conv.string.object">the string-value
 rule</a>, with no escaping, so a name that holds <code>=</code> or a
-value that holds a line feed does not load back as it was. <code>target</code> is the name
-of a file, whose old contents are replaced, a <code>File</code> object, treated the same,
-or an object that understands <code>lineout</code>, such as a <code>Stream</code>, which is written at
-its write position and is not closed. When the target is a name or a <code>File</code>,
+value that holds a line feed does not load back as it was. The target follows
+the same filename conversion as <a href="#r-class.properties.load.class">load</a>, using
+<code>lineout</code> as the stream adapter method. The contents of a file selected by
+name are replaced. A stream adapter or an object with no string value
+receives <code>lineout</code> directly and stays open. When the
+target gives a filename or is a <code>File</code>,
 <code>save</code> first sends <code>save</code> to the receiver with a <code>Stream</code> made for it, and that
 message does the writing. The writing sends <code>supplier</code> to the receiver, and
 <code>lineout</code> with the line as the only argument to the target for each entry. The
@@ -1032,17 +984,14 @@ x 2 MANY
 <p>The messages that <code>Properties</code> methods send to the receiver, to the values and
 to the source or target, are these. <code>getProperty</code> sends <code>at</code> with the name;
 <code>getLogical</code> and <code>getWhole</code> send <code>getProperty</code> with their own arguments;
-<code>setLogical</code> and <code>setWhole</code> send <code>datatype</code> to the value, and <code>setProperty</code>
-with the name and the text; <code>setProperty</code>, <code>put</code> and <code>[]=</code> send nothing to the
+<code>setLogical</code> and <code>setWhole</code> convert the value and send <code>setProperty</code>
+with the name and the text. <code>setProperty</code>, <code>put</code> and <code>[]=</code> send nothing to the
 receiver; <code>load</code> and <code>save</code> send what <a href="#r-class.properties.load">the load rule</a>
 and <a href="#r-class.properties.save">the save rule</a> say, <code>linein</code> with no argument to
-a source that is not a name or a <code>File</code> and <code>lineout</code> with the line to a
-target that is not a name or a <code>File</code>. The methods <code>put</code>, <code>setProperty</code>, <code>[]=</code>
-and the setters read a value that is not a string with <code>request</code> and the
-argument <code>STRING</code> (<a href="#r-class.properties.put">the put rule</a>), and <code>save</code> sends
-<code>request</code> with <code>STRING</code> to a stored value that is not a string, and <code>getWhole</code>
-sends it once (<a href="#r-class.properties.getwhole">the getWhole rule</a> and <a href="#r-class.properties.save">the save
-rule</a>).
+a source used directly and <code>lineout</code> with the line to a target used
+directly. The methods <code>put</code>, <code>setProperty</code> and <code>[]=</code> read a value with
+<code>request</code> and the argument <code>STRING</code> (<a href="#r-class.properties.put">the put rule</a>).
+<code>save</code> sends the same message to a stored value that is not a string.
 In the example each method of a subclass records its name, the number of its
 arguments and its first argument, and each call shows the records it caused.</p>
 <pre><code class="language-rexx">f = 'spec-properties-sends.tmp'
@@ -1087,6 +1036,179 @@ a~name = "v" =&gt; unknown 2:NAME=
 x = a~name =&gt; unknown 2:NAME
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.properties.deviation.183"><a href="#r-class.properties.deviation.183">[class.properties.deviation.183]</a></div>
+<p>The typed getters and setters read the text of an object before checking it.
+<code>getWhole</code> answers the whole number's text, preserving its spelling.
+ooRexx sends <code>DATATYPE</code> to the setter arguments themselves, checks whether
+the value of <code>getLogical</code> is an instance of <code>String</code> before comparing it,
+and can answer the original default object from <code>getWhole</code>.
+<code>load</code> and <code>save</code> try to obtain a filename by the string argument rule
+for an object that is neither a <code>File</code> nor a stream or line adapter.
+ooRexx treats such objects as line sources or targets.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~setLogical('flag', .supplied~new('1'))
+p~setWhole('number', .emptyRequest~new(' +007 '))
+say p['flag'] '['p['number']']'
+say p~getLogical('absent', .supplied~new('false'))
+say p~getLogical('absent', .fallback~new('true'))
+say p~getLogical('flag', .unexpected~new)
+p~setEntry('unchecked', .supplied~new('0'))
+say p~getLogical('UNCHECKED')
+whole = .supplied~new(' 2.0 ')
+answer = p~getWhole('absent', whole)
+say answer~class~id '['answer']'
+say '['p~getWhole('absent', .fallback~new('-2'))']'
+say '['p~getWhole('number', .unexpected~new)']'
+call check "p~setLogical('flag', .nil)"
+call check "p~setWhole('number', .fallback~new(.object~new))"
+call check "p~setLogical('flag', .supplied~new('true'))"
+call check "r = p~getLogical('absent', .fallback~new(.object~new))"
+call check "r = p~getWhole('absent', .supplied~new('1.5'))"
+call check "p~setLogical('flag', .emptyText~new)"
+call check "p~setWhole('number', .emptyText~new)"
+call check "r = p~getLogical('absent', .emptyText~new)"
+call check "r = p~getWhole('absent', .emptyText~new)"
+say p['flag'] '['p['number']']'
+exit
+check:
+  signal on syntax name bad
+  interpret arg(1)
+  say 'success'
+  return
+bad: say condition('o')~code
+  return
+::class supplied
+::method init
+  expose value
+  use arg value
+::method makeString
+  expose value
+  return value
+::class fallback
+::method init
+  expose value
+  use arg value
+::method request
+  return .object~new
+::method string
+  expose value
+  return value
+::class unexpected
+::method request
+  say 'unexpected conversion'
+  return 'false'
+::class emptyRequest subclass fallback
+::method request
+  return
+::class emptyText
+::method request
+  return
+::method string
+  return
+</code></pre>
+<pre><code class="language-output">true [ +007 ]
+0
+1
+1
+0
+String [ 2.0 ]
+[-2]
+[ +007 ]
+34.901
+93.905
+34.901
+34.904
+26.901
+34.901
+93.905
+34.904
+26.901
+true [ +007 ]
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-properties-converted-path.tmp'
+p = .properties~new
+p~put('one', 'k')
+path = .path~new(f)
+p~save(path)
+loaded = .properties~load(path)
+say loaded['k']
+p~put('two', 'k')
+p~save(path)
+p~put('wrong', 'k')
+p~load(path)
+say p['k']
+
+s = .countedStream~new(f)
+s~open('write append')
+p~put('three', 'other')
+p~save(s)
+say s~state s~writes
+s~close
+s = .countedStream~new(f)
+s~open('read')
+say s~lineIn
+p = .properties~load(s)
+say p['other'] s~reads
+s~close
+adapter = .lineAdapter~new(f)
+p = .properties~load(adapter)
+say p['k']
+p~save(adapter)
+say adapter~written
+say .properties~load(path)['k']
+call sysfiledelete f
+exit
+::class path
+::method init
+  expose filename
+  use arg filename
+::method makeString
+  expose filename
+  return filename
+::class lineAdapter subclass path
+::attribute written
+::method request
+  say 'unexpected adapter request'
+  forward class (super)
+::method lineIn
+  expose read
+  if \var('READ') then do
+    read = 1
+    return 'k=adapter'
+  end
+  raise notready
+::method lineOut
+  expose written
+  use strict arg written
+::class countedStream subclass Stream
+::attribute reads
+::attribute writes
+::method init
+  expose reads writes
+  reads = 0
+  writes = 0
+  forward class (super)
+::method request
+  say 'unexpected stream conversion'
+  forward class (super)
+::method lineIn
+  expose reads
+  reads += 1
+  forward class (super)
+::method lineOut
+  expose writes
+  writes += 1
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">one
+two
+READY 2
+k=two
+three 4
+adapter
+k=adapter
+two
+</code></pre>
 <div class="rule" id="r-class.properties.deviation.29"><a href="#r-class.properties.deviation.29">[class.properties.deviation.29]</a></div>
 <p>An assignment through <code>unknown</code> that gives no value, by message or by a direct
 call, is refused as it is for a directory (<a href="directory.html#r-class.directory.deviation.29">the Directory

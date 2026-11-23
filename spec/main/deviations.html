@@ -1392,6 +1392,13 @@ an object outside the array class hierarchy supplies no array. ooRexx raises
 <p><code>File~writeChars</code> and <code>File~writeLines</code> convert their mode as a string
 argument. ooRexx sends <code>STRIP</code> to the mode itself, so a mode object without
 that method raises <code>SYNTAX 97.1</code> even if it can supply valid mode text.</p>
+<p><code>Properties</code> reads the string value of logical and whole-number arguments.
+ooRexx sends datatype or comparison messages to the objects themselves,
+and <code>getWhole</code> can return the original default object. When loading or
+saving, interrexx also accepts a filename through the string request of an
+object without the corresponding line method, where ooRexx sends the line
+message
+(<a href="classes/properties.html#r-class.properties.deviation.183">examples</a>).</p>
 <p><code>CircularQueue</code> converts size, count, order and option arguments before
 checking their values. ooRexx sends <code>&lt;</code>, <code>UPPER</code>, <code>CASELESSSTARTSWITH</code> or
 <code>CASELESSMATCHCHAR</code> to the arguments themselves, which can raise
