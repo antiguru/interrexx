@@ -1503,20 +1503,21 @@ say n 'clause lines'
 
 r[instr.trace.deviation.50]
 Some trace lines still raise the destination's condition after the clause has
-applied the effect the line describes. For example, interrexx changes
-`NUMERIC DIGITS` even if the destination refuses the keyword line for the
-new setting. ooRexx keeps the previous setting.
+applied the effect the line describes. For example, interrexx assigns the
+target of `PARSE VALUE` even if the destination refuses its `VALUE` line.
+ooRexx leaves the target unchanged.
 
 ```rexx
+x = 'old'
 .traceoutput~destination(.sink~new)
 signal on syntax name e
 trace o
 trace r
-numeric digits 7
+parse value 'new' with x
 exit
 e: trace o
 .traceoutput~destination(.output)
-say 'caught' condition('o')~code digits()
+say 'caught' condition('o')~code x
 ::class sink
 ::method init
   expose n
@@ -1529,6 +1530,6 @@ say 'caught' condition('o')~code digits()
 ```
 
 ```output
-       >K>   "DIGITS" => "7"
-caught 93.900 7
+       >K>   "VALUE" => "new"
+caught 93.900 new
 ```

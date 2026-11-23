@@ -475,11 +475,7 @@ impl Interp {
                 // unmodified case -- `set_form_str`'s own no-uppercasing
                 // rule for this one path, unlike the two keyword spellings
                 // above.
-                self.trace_keyword(
-                    self.activity.clause_state.current_value_indent,
-                    "FORM",
-                    &text,
-                );
+                self.trace_numeric_operand("FORM", &text)?;
                 // The required-string protocol between the `>K>` and the
                 // validation, which is where the string request sits.
                 let converted = self.required_string_or_nil(value)?;
@@ -505,11 +501,10 @@ impl Interp {
         self.roots.activity_mut().push_temp(value);
         let mut text = self.take_result_buffer();
         text.extend_from_slice(&self.to_text(value));
-        self.trace_keyword(
-            self.activity.clause_state.current_value_indent,
-            keyword,
-            &text,
-        );
+        if let Err(failure) = self.trace_numeric_operand(keyword, &text) {
+            self.give_result_buffer(text);
+            return Err(failure);
+        }
         // **The required-string protocol runs after the `>K>` and its answer
         // replaces the bytes**, which is the string request. The trace above
         // names the object and the parse below reads the conversion: `numeric
@@ -523,5 +518,20 @@ impl Interp {
             text.extend_from_slice(&self.to_text(converted));
         }
         Ok(Some((value, text)))
+    }
+
+    /// Traces the operand before its string conversion or any setting change.
+    fn trace_numeric_operand(&mut self, keyword: &str, text: &[u8]) -> Result<(), Failure> {
+        self.trace_keyword(
+            self.activity.clause_state.current_value_indent,
+            keyword,
+            text,
+        );
+        if !self.activity.pending_traps.is_empty()
+            && let Some(failure) = self.take_trace_failure()
+        {
+            return Err(failure);
+        }
+        Ok(())
     }
 }
