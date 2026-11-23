@@ -76903,7 +76903,7 @@ return self
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="alarm"><a class="header" href="#alarm">Alarm</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Alarm Class; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; attachment; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; cancel; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; canceled/cancelled; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; init; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; scheduledTime; Builtin Classes &gt; Utility Classes &gt; Alarm Class &gt; triggered</p>
-<p class="deviations">Deviations: D109, D119, D135</p>
+<p class="deviations">Deviations: D109, D119, D135, D183</p>
 <p>An <code>Alarm</code> is a one-shot timer. It is made for a moment, a target that wants
 to hear of it and, if the program likes, an object to attach; when the moment
 comes it sends its target <code>triggered</code>, and when it is cancelled before that it
@@ -77023,8 +77023,10 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .alarm~new(60, n, .array~new) =&gt; ok
 </code></pre>
 <div class="rule" id="r-class.alarm.init.seconds"><a href="classes/alarm.html#r-class.alarm.init.seconds">[class.alarm.init.seconds]</a></div>
-<p>A time that is a string without a colon is a number of seconds from now. It is
-read as a number as <a href="classes/../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so
+<p>A time whose string value has no colon is a number of seconds from now
+(<a href="classes/alarm.html#r-class.alarm.deviation.183">Deviation 183</a> for an object that supplies
+the string). It is read as a number as
+<a href="classes/../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so
 blanks at either end are allowed and a decimal point or an exponent is too, and
 it has to be zero or more: a string that is no number, the empty string and a
 negative number raise <code>SYNTAX 93.951</code>. The number is cut to the microsecond
@@ -77089,7 +77091,10 @@ bad: say '"'arg(1)'" =&gt;' condition('o')~code
 digits 3: 3 25 45
 </code></pre>
 <div class="rule" id="r-class.alarm.init.clock"><a href="classes/alarm.html#r-class.alarm.init.clock">[class.alarm.init.clock]</a></div>
-<p>A time that is a string with a colon names a time of day, and may name a date.
+<p>A time whose string value has a colon names a time of day, and may name a
+date. A time that is neither a <code>TimeSpan</code> nor a <code>DateTime</code> is read by
+<a href="classes/../conventions.html#r-conv.string.object">the string conversion rule</a>. If conversion does not
+give a string, <code>init</code> raises <code>SYNTAX 93.951</code>.
 The forms are <code>hh:mm:ss</code> and <code>hh:mm:ss d Mmm yyyy</code>, with exactly one blank
 before the date, and nothing else is accepted: not a blank at either end, not
 a time with fewer than the two digits of each part, not hours of 24 or more or
@@ -77181,6 +77186,25 @@ bad: say '"'arg(1)'" =&gt;' condition('o')~code
 "12:00:00.5" =&gt; 93.951
 01 02 03 04 05 06 07 08 09 10 11 12
 </code></pre>
+<pre><code class="language-rexx">n = .note~new
+do value over .array~of(.byRequest~new, .byString~new)
+  a = .alarm~new(value, n)
+  say a~scheduledTime~normalTime
+  a~cancel
+end
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class byRequest
+::method makeString
+  return '23:59:59'
+::class byString
+::method string
+  return '03:04:05'
+</code></pre>
+<pre><code class="language-output">23:59:59
+03:04:05
+</code></pre>
 <div class="rule" id="r-class.alarm.init.moment"><a href="classes/alarm.html#r-class.alarm.init.moment">[class.alarm.init.moment]</a></div>
 <p>A time that is a <code>DateTime</code> sets the alarm for that moment, and it has to be
 after the moment <code>init</code> reads the clock: a <code>DateTime</code> that is not after now
@@ -77258,7 +77282,8 @@ decides whether the target is an implementation. Then, for a time that is a
 <code>totalMicroseconds</code> again, once each and in that order, and for a time that is
 a <code>DateTime</code>, it is sent <code>-</code> once, with a <code>DateTime</code> of the moment of the call
 as the argument. A time that is a string is sent nothing (<a href="classes/alarm.html#r-class.alarm.deviation.109">Deviation
-109</a> covers a subclass of <code>String</code>). When the
+109</a> covers a subclass of <code>String</code>). Other times
+are read through <code>request('STRING')</code> and then <code>string</code> if needed. When the
 span is negative <code>init</code> stops after <code>sign</code> and when the <code>DateTime</code> is not
 after now it stops after <code>-</code>; the further messages that build the text of the
 error are not specified. An alarm that is refused for its target sends the
@@ -77620,6 +77645,27 @@ say .environment~log~makeArray~makeString('l', ' ')
 target-cancel attachment canceled cancelled scheduledTime triggered
 </code></pre>
 <h2 id="deviations-64"><a class="header" href="#deviations-64">Deviations</a></h2>
+<div class="rule" id="r-class.alarm.deviation.183"><a href="classes/alarm.html#r-class.alarm.deviation.183">[class.alarm.deviation.183]</a></div>
+<p>When the converted string is a number, <code>Alarm</code> uses it as the
+<a href="classes/alarm.html#r-class.alarm.init.seconds">number of seconds</a>. ooRexx sends the original
+object a message in the number form and can raise <code>SYNTAX 97.1</code> even when
+its conversion gives a valid number.</p>
+<pre><code class="language-rexx">before = .datetime~new
+a = .alarm~new(.seconds~new, .note~new)
+remaining = (a~scheduledTime - before)~totalSeconds
+say (remaining &gt;= 600)
+a~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class seconds
+::method request
+  return
+::method string
+  return '600'
+</code></pre>
+<pre><code class="language-output">1
+</code></pre>
 <div class="rule" id="r-class.alarm.deviation.109"><a href="classes/alarm.html#r-class.alarm.deviation.109">[class.alarm.deviation.109]</a></div>
 <p>A time that is an instance of a subclass of <code>String</code> is read by its own
 characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
@@ -77699,7 +77745,7 @@ o~triggered =&gt; 98.901
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ticker"><a class="header" href="#ticker">Ticker</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Ticker Class; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; attachment; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; cancel; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; canceled/cancelled; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; init; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; interval</p>
-<p class="deviations">Deviations: D109, D119, D135</p>
+<p class="deviations">Deviations: D109, D119, D135, D183</p>
 <p>A <code>Ticker</code> is a repeating timer. It is made for an interval, a target that
 wants to hear of it and, if the program likes, an object to attach; at the end
 of every interval it sends its target <code>triggered</code>, until it is cancelled, and
@@ -77814,7 +77860,10 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .ticker~new(60, n, .array~new) =&gt; ok
 </code></pre>
 <div class="rule" id="r-class.ticker.init.interval"><a href="classes/ticker.html#r-class.ticker.init.interval">[class.ticker.init.interval]</a></div>
-<p>An interval that is a string is a number of seconds. It is read as a number as
+<p>An interval other than a <code>TimeSpan</code> or <code>DateTime</code> is read by
+<a href="classes/../conventions.html#r-conv.string.object">the string conversion rule</a> and its string is a
+number of seconds (<a href="classes/ticker.html#r-class.ticker.deviation.183">Deviation 183</a> for an object
+that supplies the string). It is read as a number as
 <a href="classes/../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so blanks at either
 end are allowed and a decimal point or an exponent is too, and it has to be
 zero or more: a string that is no number, the empty string and a negative
@@ -77892,6 +77941,8 @@ decides whether the target is an implementation. Then, for an interval that is
 a <code>TimeSpan</code>, the span is sent <code>sign</code>, <code>days</code> and <code>totalMicroseconds</code>, once
 each and in that order, and for an interval that is a string nothing is sent
 (<a href="classes/ticker.html#r-class.ticker.deviation.109">Deviation 109</a> covers a subclass of <code>String</code>).
+Other intervals except <code>DateTime</code> are read through <code>request('STRING')</code> and
+then <code>string</code> if needed.
 When the span is negative <code>init</code> stops after <code>sign</code>; the further messages that
 build the text of the error are not specified. A ticker that is refused for
 its target sends the interval nothing. <code>init</code> sends no message to the
@@ -78190,6 +78241,32 @@ say .environment~log~makeArray~makeString('l', ' ')
 target-cancel attachment canceled cancelled interval
 </code></pre>
 <h2 id="deviations-65"><a class="header" href="#deviations-65">Deviations</a></h2>
+<div class="rule" id="r-class.ticker.deviation.183"><a href="classes/ticker.html#r-class.ticker.deviation.183">[class.ticker.deviation.183]</a></div>
+<p>When the converted string is a number, <code>Ticker</code> uses it as the
+<a href="classes/ticker.html#r-class.ticker.init.interval">number of seconds</a>. ooRexx sends the original
+object a message and can raise <code>SYNTAX 97.1</code> even when its conversion gives
+a valid number.</p>
+<pre><code class="language-rexx">t = .ticker~new(.seconds~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
+t = .ticker~new(.fallback~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class seconds
+::method makeString
+  return '600'
+::class fallback
+::method request
+  return
+::method string
+  return '601'
+</code></pre>
+<pre><code class="language-output">600
+601
+</code></pre>
 <div class="rule" id="r-class.ticker.deviation.109"><a href="classes/ticker.html#r-class.ticker.deviation.109">[class.ticker.deviation.109]</a></div>
 <p>A string interval that is an instance of a subclass of <code>String</code> is read by its
 own characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
@@ -131151,6 +131228,9 @@ so an object whose <code>makeString</code> answers <code>L</code> or <code>C</co
 object with no such method, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>. ooRexx
 sends the option <code>caselessStartsWith</code> and raises <code>SYNTAX 97.1</code> for any object
 that is no string and for <code>.nil</code>, whatever its <code>makeString</code> answers.</p>
+<p><code>Alarm</code> and <code>Ticker</code> use a time object's string value as the number of
+seconds. ooRexx sends the original object a message for this form and can
+raise <code>SYNTAX 97.1</code> even when the conversion gives a valid number.</p>
 <p><code>Object~send</code>, <code>sendWith</code>, <code>start</code> and <code>startWith</code>, and <code>Message~new</code>, can
 take a message name from an object that supplies a string when its array
 conversion gives no array. ooRexx ends with <code>SYNTAX 93.972</code> when the array

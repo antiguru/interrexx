@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="ticker"><a class="header" href="#ticker">Ticker</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Ticker Class; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; attachment; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; cancel; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; canceled/cancelled; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; init; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; interval</p>
-<p class="deviations">Deviations: D109, D119, D135</p>
+<p class="deviations">Deviations: D109, D119, D135, D183</p>
 <p>A <code>Ticker</code> is a repeating timer. It is made for an interval, a target that
 wants to hear of it and, if the program likes, an object to attach; at the end
 of every interval it sends its target <code>triggered</code>, until it is cancelled, and
@@ -290,7 +290,10 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .ticker~new(60, n, .array~new) =&gt; ok
 </code></pre>
 <div class="rule" id="r-class.ticker.init.interval"><a href="#r-class.ticker.init.interval">[class.ticker.init.interval]</a></div>
-<p>An interval that is a string is a number of seconds. It is read as a number as
+<p>An interval other than a <code>TimeSpan</code> or <code>DateTime</code> is read by
+<a href="../conventions.html#r-conv.string.object">the string conversion rule</a> and its string is a
+number of seconds (<a href="#r-class.ticker.deviation.183">Deviation 183</a> for an object
+that supplies the string). It is read as a number as
 <a href="../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so blanks at either
 end are allowed and a decimal point or an exponent is too, and it has to be
 zero or more: a string that is no number, the empty string and a negative
@@ -368,6 +371,8 @@ decides whether the target is an implementation. Then, for an interval that is
 a <code>TimeSpan</code>, the span is sent <code>sign</code>, <code>days</code> and <code>totalMicroseconds</code>, once
 each and in that order, and for an interval that is a string nothing is sent
 (<a href="#r-class.ticker.deviation.109">Deviation 109</a> covers a subclass of <code>String</code>).
+Other intervals except <code>DateTime</code> are read through <code>request('STRING')</code> and
+then <code>string</code> if needed.
 When the span is negative <code>init</code> stops after <code>sign</code>; the further messages that
 build the text of the error are not specified. A ticker that is refused for
 its target sends the interval nothing. <code>init</code> sends no message to the
@@ -666,6 +671,32 @@ say .environment~log~makeArray~makeString('l', ' ')
 target-cancel attachment canceled cancelled interval
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.ticker.deviation.183"><a href="#r-class.ticker.deviation.183">[class.ticker.deviation.183]</a></div>
+<p>When the converted string is a number, <code>Ticker</code> uses it as the
+<a href="#r-class.ticker.init.interval">number of seconds</a>. ooRexx sends the original
+object a message and can raise <code>SYNTAX 97.1</code> even when its conversion gives
+a valid number.</p>
+<pre><code class="language-rexx">t = .ticker~new(.seconds~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
+t = .ticker~new(.fallback~new, .note~new)
+say t~interval~totalSeconds
+t~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class seconds
+::method makeString
+  return '600'
+::class fallback
+::method request
+  return
+::method string
+  return '601'
+</code></pre>
+<pre><code class="language-output">600
+601
+</code></pre>
 <div class="rule" id="r-class.ticker.deviation.109"><a href="#r-class.ticker.deviation.109">[class.ticker.deviation.109]</a></div>
 <p>A string interval that is an instance of a subclass of <code>String</code> is read by its
 own characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
