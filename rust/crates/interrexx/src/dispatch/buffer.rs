@@ -632,7 +632,7 @@ pub(super) fn strip_arguments(
 }
 
 /// The argument of `EQUALS` or `CASELESSEQUALS`, through the required-string
-/// protocol. `.nil` and a conversion with no string value compare unequal.
+/// protocol. An explicit `.nil` argument compares unequal.
 pub(super) fn equals_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -643,8 +643,8 @@ pub(super) fn equals_argument(
     if value == ObjRef::NIL {
         return Ok(None);
     }
-    let text = interp.required_string_or_nil(value)?;
-    Ok((text != ObjRef::NIL).then(|| interp.to_text(text).into_owned()))
+    let text = interp.required_string_value(value)?;
+    Ok(Some(interp.to_text(text).into_owned()))
 }
 
 /// `COMPARETO`'s and `CASELESSCOMPARETO`'s three arguments.

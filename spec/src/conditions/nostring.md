@@ -375,25 +375,21 @@ NOSTRING [a PLAIN] The Stem class
 ```
 
 r[cond.nostring.deviation.30]
-When the `STRING` method of an object answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
-`SYNTAX 98.973` ([Deviation
-169](r:conv.string.deviation.169)) after raising NOSTRING if it is trapped. For a
-NOSTRING raised for such an object, the description is not specified. ooRexx
-reads `.nil` as a string there, with garbage results or a crash. [The
-conventions](r:conv.string.deviation.30) state it for builtin arguments.
+With a missing or unusable `STRING` answer, the description of NOSTRING is the fallback text. If the condition goes untrapped, the clause uses that same text. The pinned ooRexx revision can supply an unusable description or fail during conversion.
 
 ```rexx
 signal on nostring name n
 say 'x' .weird~new
 n: say 'trapped' condition('c') condition('o')~additional~class
-x = 'a' || .weird~new
-say 'not reached'
+say 'a' || .weird~new
+say 'after'
 ::class weird
 ::method string
   return .directory~new
 ```
 
-```output rc=158
+```output
 trapped NOSTRING The WEIRD class
+aa WEIRD
+after
 ```

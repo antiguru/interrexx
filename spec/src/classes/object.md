@@ -2099,11 +2099,7 @@ set
 ```
 
 r[class.object.deviation.30]
-When the `string` method of an object answers an object that is not a string,
-interrexx gives the answer ooRexx gives wherever that is defined, and
-elsewhere raises `SYNTAX 98.973`, as [the chapter
-rule](r:class.index.deviation.30) says. The `string` method of `Object` is not
-affected: it answers the name.
+An explicit `STRING` send returns the method's answer. When a clause needs text, the [conversion rule](r:conv.string.object) checks that answer and can use the object's name. The pinned ooRexx revision may fail during that conversion.
 
 ```rexx
 a = .weird~new
@@ -2115,9 +2111,10 @@ say 'x' a
   return .directory~new
 ```
 
-```output rc=158
+```output
 Directory
 before
+x a WEIRD
 ```
 
 r[class.object.deviation.32]

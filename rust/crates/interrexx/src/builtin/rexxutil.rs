@@ -601,7 +601,7 @@ fn number_source(interp: &mut Interp, value: ObjRef) -> Result<ObjRef, Failure> 
     if let Some(answered) = request_string_answer(interp, value)? {
         return Ok(answered);
     }
-    interp.required_string_or_nil(value)
+    interp.required_string_value(value)
 }
 
 /// What `value`'s `request` with the argument `STRING` answers where that is a

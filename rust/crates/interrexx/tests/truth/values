@@ -483,8 +483,7 @@ list-index: true
 table-hasitem: true
 table-index: true
 
-# a user object whose STRING answers an object with no string value is
-# judged as .nil, as primitiveMakeString makes it
+# An unusable STRING answer leaves the object's default name as its text.
 truth
 .sn~new
 ----

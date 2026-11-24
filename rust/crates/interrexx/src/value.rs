@@ -523,10 +523,8 @@ impl Interp {
             _ => (false, false),
         };
         if object && self.overrides_object_method(value, crate::dispatch::STRING) {
-            return match self.send_for_conversion(value, crate::dispatch::STRING)? {
-                Some(answered) => Ok(self.default_string_value_text(answered)),
-                None => Ok(self.default_string_value_text(value)),
-            };
+            let answered = self.send_for_conversion(value, crate::dispatch::STRING)?;
+            return self.string_method_answer_text(value, answered);
         }
         let store = match (object, stem) {
             (_, true) => Some(value),
@@ -632,20 +630,48 @@ impl Interp {
         } else {
             return Ok(None);
         };
-        let answered = match leveled {
-            true => {
-                let sent =
-                    self.primitive_level(value, crate::dispatch::OBJECTNAME, &[], |interp| {
-                        interp.send_for_conversion(value, crate::dispatch::DEFAULTNAME)
-                    });
-                if sent.is_err() {
-                    self.blame_native_method(crate::dispatch::OBJECTNAME, "Object", value, &[]);
-                }
-                sent?
+        if leveled {
+            let sent = self.primitive_level(value, crate::dispatch::OBJECTNAME, &[], |interp| {
+                interp.send_for_conversion(value, crate::dispatch::DEFAULTNAME)
+            });
+            if sent.is_err() {
+                self.blame_native_method(crate::dispatch::OBJECTNAME, "Object", value, &[]);
             }
-            false => self.send_for_conversion(value, crate::dispatch::OBJECTNAME)?,
-        };
-        Ok(answered.map(|answered| self.default_string_value_text(answered)))
+            return Ok(sent?.map(|answer| self.default_string_value_text(answer)));
+        }
+        let answered = self.send_for_conversion(value, crate::dispatch::OBJECTNAME)?;
+        self.object_name_answer_text(value, answered).map(Some)
+    }
+
+    /// Uses an OBJECTNAME answer's intrinsic string value. If it supplied
+    /// none, derives the receiver's default name without another message.
+    pub(crate) fn object_name_answer_text(
+        &mut self,
+        receiver: ObjRef,
+        answered: Option<ObjRef>,
+    ) -> Result<Vec<u8>, Failure> {
+        if let Some(answered) = answered
+            && let Some(text) = self.primitive_string_answer_text(answered)?
+        {
+            return Ok(text);
+        }
+        if self.heap.is_class(receiver) {
+            return Ok(self.class_default_name(receiver).to_vec());
+        }
+        if let Some(Body::Instance { class, own, .. }) =
+            self.heap.get(receiver).map(|object| &object.body)
+        {
+            let class = *class;
+            let enhanced = own.as_ref().is_some_and(|own| own.is_enhanced_instance());
+            let id = self.classes().id_string(class);
+            let name = if enhanced {
+                enhanced_object_name(id)
+            } else {
+                crate::environment::default_object_name(id)
+            };
+            return Ok(name.into_bytes());
+        }
+        Ok(self.default_string_value_text(receiver))
     }
 
     /// [`Interp::string_value_text`] with nothing sent: the rendering the
@@ -1066,7 +1092,7 @@ impl Interp {
         if let Ok(number) = self.to_number(value) {
             return Ok(Some(number));
         }
-        let text = self.required_string_or_nil(value)?;
+        let text = self.required_string_value(value)?;
         if text == ObjRef::NIL {
             return Ok(None);
         }

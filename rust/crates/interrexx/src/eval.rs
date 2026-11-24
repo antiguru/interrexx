@@ -923,7 +923,7 @@ impl Interp {
         // rather than the conversion when the converted string is not numeric:
         // `'2' + .K` with a class-side `makeString` returning `'xx'` is 41.1
         // with `The K class` as its item.
-        let converted = self.required_string_or_nil(right_value)?;
+        let converted = self.required_string_value(right_value)?;
 
         let result = if op == Operator::Power {
             let exponent = match self.to_number(converted) {
@@ -1113,7 +1113,7 @@ impl Interp {
         right: ObjRef,
     ) -> Result<ObjRef, Failure> {
         let left = self.required_string_value(left)?;
-        let right = self.required_string_operand(right, op)?;
+        let right = self.required_string_value(right)?;
         let separator = (op == Operator::Blank).then_some(b' ');
         self.concat_values(left, right, separator)
     }
@@ -1237,7 +1237,7 @@ impl Interp {
         }
         // `apply_binary`'s own sequence for a string receiver: the right
         // operand through the required-string protocol, then the join.
-        let right = self.required_string_operand(right, op)?;
+        let right = self.required_string_value(right)?;
         // An operand whose bytes live in its handle is appended from a local
         // copy; one in the heap goes through the lent buffer, because its
         // bytes cannot be borrowed while the string they join is written.
@@ -1776,9 +1776,7 @@ impl Interp {
         if right == ObjRef::NIL && is_comparison(op) {
             return Ok(logical(is_inequality(op)));
         }
-        let right = self.required_string_operand(right, op)?;
-        // A `STRING` answer with no string value converts to `.nil`, which
-        // the same rule judges.
+        let right = self.required_string_value(right)?;
         if right == ObjRef::NIL && is_equality(op) {
             return Ok(logical(is_inequality(op)));
         }
@@ -1944,7 +1942,7 @@ impl Interp {
     ) -> Result<bool, Failure> {
         let frame = self.roots.activity_mut().push_frame();
         self.roots.activity_mut().push_temp(value);
-        let string = self.required_string_or_nil(value)?;
+        let string = self.required_string_value(value)?;
         let text = self.to_text(string);
         let holds = match logical_value(&text) {
             Some(holds) => holds,

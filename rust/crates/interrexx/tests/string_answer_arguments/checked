@@ -1,277 +1,229 @@
-# One argument at each position that argument_kinds.rs marks Kind::Checked, whose check the
-# builtin body makes, with every other argument valid: one fault per call.
-
-# oracle Error 40.904 (3 of 3 runs)
 checked
 arg(1, o)
 ----
-40.904
+value=[]
+after
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 center('a', 5, o)
 ----
 40.23
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 centre('a', 5, o)
 ----
 40.23
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 charin('zz_nofile.txt', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 d2c(1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 d2x(1, o)
 ----
 40.12
 
-# oracle Error 40.19 (3 of 3 runs)
 checked
 date('N', o)
 ----
 40.19
 
-# oracle Error 40.904 (3 of 3 runs)
 checked
 date('N', '1 Jan 2020', o)
 ----
 40.904
 
-# oracle Error 40.43 (3 of 3 runs)
 checked
 date('S', , , o)
 ----
 40.43
 
-# oracle Error 40.43 (3 of 3 runs)
 checked
 date('S', '20200101', 'S', '-', o)
 ----
 40.43
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 delstr('abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 delword('a b', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 format(1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 format(1, 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 format(1, 1, 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 format(1, 1, 1, 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 insert('a', 'b', 1, o)
 ----
 40.12
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 insert('a', 'b', 1, 1, o)
 ----
 40.23
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 lastpos('a', 'abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 left('abc', 2, o)
 ----
 40.23
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 linein('zz_nofile.txt', , o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 lower('abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 overlay('a', 'b', 1, o)
 ----
 40.12
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 overlay('a', 'b', 1, 1, o)
 ----
 40.23
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 pos('a', 'abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 random(1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 random(1, 2, o)
 ----
 40.12
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 right('abc', 2, o)
 ----
 40.23
 
-# oracle Error 40.26 (3 of 3 runs)
 checked
 rxqueue('S', o)
 ----
 40.26
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 space('a b', 1, o)
 ----
 40.23
 
-# oracle Error 5.0 (3 of 3 runs), the error of no check of the command; interrexx raises 93.914, that of a command that is not one (r[conv.string.argument-kind]), and quotes the string of .nil, not the text the builtin reads in its place
 checked
 stream('zz_nofile.txt', 'C', o)
 ----
 93.914
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 substr('abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 substr('abc', 1, 1, o)
 ----
 40.23
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 subword('a b', 1, o)
 ----
 40.12
 
-# oracle Error 40.19 (3 of 3 runs)
 checked
 time('N', o)
 ----
 40.19
 
-# oracle Error 40.904 (3 of 3 runs)
 checked
 time('N', '10:00:00', o)
 ----
 40.904
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 translate('abc', 'x', 'a', ' ', o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 translate('abc', 'x', 'a', ' ', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 trunc(1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 upper('abc', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 verify('abc', 'a', 'N', o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 verify('abc', 'a', 'N', 1, o)
 ----
 40.12
 
-# oracle Error 40.12 (3 of 3 runs)
 checked
 x2d('a', o)
 ----
 40.12
 
-# oracle Error 40.11 (3 of 3 runs)
 checked
 max(1, o)
 ----
 40.11
 
-# oracle Error 40.11 (3 of 3 runs)
 checked
 min(1, o)
 ----
 40.11
 
-# oracle Error 40.23 (3 of 3 runs)
 checked
 xrange('a', o)
 ----

@@ -1320,12 +1320,6 @@ impl Raised {
         Raised::syntax(88, 909, vec![position.to_string().into_bytes()])
     }
 
-    /// 93.938: the argument of a method that names a stream has no string
-    /// value. `position` is 1-based in the method's own argument list.
-    pub(crate) fn method_argument_needs_a_string_value(position: usize) -> Raised {
-        Raised::syntax(93, 938, vec![position.to_string().into_bytes()])
-    }
-
     /// [`Raised::argument_needs_a_string_value`] for a native method's declared
     /// string parameter. For example, `Error 88 running <declaring package>:`
     /// with no line.

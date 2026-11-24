@@ -331,11 +331,7 @@ pub(super) fn native_string(
         } else {
             send(interp)?
         };
-        if let Some(answered) = answered {
-            let text = interp.default_string_value_text(answered);
-            return Ok(Some(interp.text_built(text)));
-        }
-        let text = interp.default_string_value_text(receiver);
+        let text = interp.object_name_answer_text(receiver, answered)?;
         return Ok(Some(interp.text_built(text)));
     }
     let text = match interp.is_stem_object(receiver) {

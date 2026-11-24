@@ -174,7 +174,7 @@ fn timeout_seconds(
     let text = pinned!(
         interp,
         crate::pinning::PinKind::native(method),
-        interp.required_string_or_nil(seconds)
+        interp.required_string_value(seconds)
     )?;
     // A `STRING` answer with no string value is `.nil` here, and the refusal
     // names the object: 88.902 `found "a SN"`.

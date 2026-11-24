@@ -1,14 +1,6 @@
-//! The `rxregexp` pattern language and its matcher, as
-//! `docs/design/extensions.md` describes
-//! them: a pattern compiles to a Thompson automaton, and every question the
-//! `RegularExpression` methods ask is one pass of it over the subject, which
-//! keeps each answer linear in the subject and the automaton (Deviation 87:
-//! `(a*)*` and a set range ending at `'7F'x` terminate).
-//!
-//! The language is the grammar's, with standard meanings for alternation and
-//! repetition; the reference implementation's departures from it (a starred
-//! factor at the start of an alternative, and `X+` followed by a starred
-//! factor) are not reproduced.
+//! The `rxregexp` pattern language and its Thompson automaton. The matcher
+//! tracks the states reached at each byte position so that repetition of an
+//! empty match terminates. The compiler bounds the size of the automaton.
 
 /// One automaton state.
 #[derive(Clone, Debug)]
@@ -273,13 +265,10 @@ impl Parser<'_> {
                         return Err(bad(ILLEGAL_SET));
                     };
                     let low = self.pattern[at - 1];
-                    let signed = |b: u8| i16::from(i8::from_ne_bytes([b]));
-                    let (lo, hi) = {
-                        let (a, b) = (signed(low), signed(high));
-                        (a.min(b), a.max(b))
-                    };
-                    for value in lo + 1..=hi {
-                        let byte = i8::try_from(value).expect("a signed byte").to_ne_bytes()[0];
+                    // A forward range continues after the preceding byte.
+                    // That byte was already handled as a set item or delimiter.
+                    let range = low.min(high)..=low.max(high);
+                    for byte in range.skip(usize::from(low <= high)) {
                         set_add(&mut members, byte);
                     }
                     at += 2;

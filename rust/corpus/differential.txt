@@ -760,9 +760,6 @@ lang/routine_new_directive_subclass.rex
 lang/package_new_directive_subclass.rex
 lang/external_directive_subclass.rex
 lang/routine_new_parent_required.rex
-lang/string_answer_nostring_trapped.rex
-lang/string_answer_nil_consumers.rex
-lang/string_answer_nil_native.rex
 lang/call_condition_three_deep.rex
 lang/call_signal_out_of_callee.rex
 lang/call_trace_nested.rex

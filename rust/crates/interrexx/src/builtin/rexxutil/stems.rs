@@ -33,7 +33,7 @@ fn stem_argument(
     if interp.is_stem_object(value) {
         return Ok(value);
     }
-    let text = interp.required_string_or_nil(value)?;
+    let text = interp.required_string_value(value)?;
     if text != ObjRef::NIL {
         let name = interp.to_text(text).into_owned();
         if let Some(stem) = interp.context_stem_named(&name) {
@@ -57,7 +57,7 @@ pub(crate) fn whole_value(
     let number = match value.decode() {
         Decoded::SmallInt(number) => Some(number),
         _ => {
-            let text = interp.required_string_or_nil(value)?;
+            let text = interp.required_string_value(value)?;
             Number::parse_bytes(&interp.to_text(text))
                 .and_then(|number| number.int64_value(DIGITS64))
         }
@@ -148,7 +148,7 @@ fn element_count(interp: &mut Interp, stem: ObjRef) -> Result<Option<Option<i64>
     let number = match value.decode() {
         Decoded::SmallInt(number) => Some(number),
         _ => {
-            let text = interp.required_string_or_nil(value)?;
+            let text = interp.required_string_value(value)?;
             Number::parse_bytes(&interp.to_text(text))
                 .and_then(|number| number.int64_value(ARGUMENT_DIGITS))
         }
@@ -691,7 +691,7 @@ fn sort_count(interp: &mut Interp, value: ObjRef) -> Result<Option<i64>, Failure
     let count = match value.decode() {
         Decoded::SmallInt(number) => u64::try_from(number).ok(),
         _ => {
-            let text = interp.required_string_or_nil(value)?;
+            let text = interp.required_string_value(value)?;
             Number::parse_bytes(&interp.to_text(text)).and_then(|number| {
                 number.unsigned_int64_value(interrexx_num::DEFAULT_DIGITS as usize)
             })

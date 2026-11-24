@@ -2,7 +2,6 @@
 //! fallbacks behind them.
 
 use super::{Body, Decoded, Failure, Interp, ObjRef, Primitive, Raised};
-use crate::builtin::argument_kinds::{BuiltinArgument, Deferred};
 use crate::value::Referent;
 
 /// What the protocol's conversion limbs answered, before anything is built.
@@ -46,59 +45,10 @@ enum StringConversion {
 }
 
 impl Interp {
-    /// The required-string protocol: `request("STRING")`, then the
-    /// receiver's `makeString`, then the NOSTRING condition if trapped, else
-    /// `defaultName`. **This is the value every context `provide.xml`
-    /// `reqstr` lists renders, and rendering it without coming through here
-    /// is the silent wrong answer the protocol exists to prevent.**
+    /// Requests a string value, falling back to the receiver's readable
+    /// string representation and offering NOSTRING when conversion fails.
     #[inline]
     pub(crate) fn required_string_value(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
-        self.required_string_or(value, || false, None)
-    }
-
-    /// [`Interp::required_string_value`] for a consumer that reads the answer
-    /// as an object (a truth value, a native logical argument): a user
-    /// `STRING` answer with no string value is `.nil` here, as the primitive
-    /// string conversion makes it, where the bytes consumers refuse it.
-    #[inline]
-    pub(crate) fn required_string_or_nil(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
-        self.required_string_or(value, || true, None)
-    }
-
-    /// [`Interp::required_string_value`] for the right operand of `op`: a
-    /// logical operator and an equality read it as
-    /// [`Interp::required_string_or_nil`] does, and every other operator reads
-    /// its bytes. An ordering operator reads `.nil` through the string layout.
-    #[inline]
-    pub(crate) fn required_string_operand(
-        &mut self,
-        value: ObjRef,
-        op: interrexx_parse::Operator,
-    ) -> Result<ObjRef, Failure> {
-        use interrexx_parse::Operator;
-        self.required_string_or(
-            value,
-            || {
-                matches!(op, Operator::And | Operator::Or | Operator::Xor)
-                    || crate::eval::is_equality(op)
-            },
-            None,
-        )
-    }
-
-    /// The required-string protocol, with `nil` saying whether a user
-    /// `STRING` answer with no string value is `.nil` or refused. It is asked
-    /// only where a `STRING` method runs. `argument` is the builtin argument
-    /// the value is, whose kind decides the refusal
-    /// (`r[conv.string.builtin-argument]`, `r[conv.string.argument-kind]`),
-    /// and `None` everywhere else.
-    #[inline]
-    fn required_string_or(
-        &mut self,
-        value: ObjRef,
-        nil: impl FnOnce() -> bool,
-        argument: Option<BuiltinArgument<'_>>,
-    ) -> Result<ObjRef, Failure> {
         // **A string and a small integer are their own string value**, and
         // that is the answer whether the latch is armed or clear:
         // `classify_string_conversion`'s first arm returns
@@ -125,7 +75,7 @@ impl Interp {
                 self.roots.activity_mut().push_temp(value);
                 return Ok(value);
             }
-            return self.required_string_dispatch(value, nil(), argument);
+            return self.required_string_dispatch(value);
         }
         debug_assert!(
             unshared!(self, self.required_string_latch_holds(value)),
@@ -177,12 +127,7 @@ impl Interp {
     /// value.
     #[cold]
     #[inline(never)]
-    fn required_string_dispatch(
-        &mut self,
-        value: ObjRef,
-        nil: bool,
-        argument: Option<BuiltinArgument<'_>>,
-    ) -> Result<ObjRef, Failure> {
+    fn required_string_dispatch(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
         match self.required_string_answer(value) {
             Ok(Some(RequiredString::Object(text))) => {
                 self.roots.activity_mut().push_temp(text);
@@ -204,34 +149,24 @@ impl Interp {
         // object sent `STRING` (rexxref condtra.xml, NOSTRING's DESCRIPTION
         // and ADDITIONAL).
         let value = self.conversion_subject(value)?;
+        self.roots.activity_mut().push_temp(value);
         // `sendMessage(STRING)`. An instance's or a class's `STRING` can be a
         // Rexx method, so it is sent; the shortcut below is what the send
         // answers wherever `STRING` resolves to `native_string`. For example,
         // with `::METHOD string` returning `from-string`, `say o`, `'x' o` and
         // `length(o)` all follow it, and with `::METHOD string CLASS` returning
         // `KS`, `say .k` prints `KS`.
-        let mut no_string = false;
         let readable = if matches!(
             self.receiver_kind(value),
             Ok(Primitive::Instance { .. } | Primitive::Class(_))
         ) {
             let caller = self.caller();
-            match pinned!(
+            let answered = pinned!(
                 self,
                 crate::pinning::PinKind::Conversion,
                 self.send_message(value, STRING, None, &[], caller)
-            )? {
-                Some(answered) => match self.string_answer_text(answered)? {
-                    Some(text) => text,
-                    // `.nil`, raised as NOSTRING's description before any
-                    // consumer reads it.
-                    None => {
-                        no_string = true;
-                        self.string_value_text(ObjRef::NIL)?
-                    }
-                },
-                None => self.string_value_text(value)?,
-            }
+            )?;
+            self.string_method_answer_text(value, answered)?
         } else if self.is_stem_object(value) {
             self.stem_string_representation(value)?
         } else {
@@ -255,31 +190,43 @@ impl Interp {
         if self.condition_raises_syntax(b"NOSTRING") {
             return Err(Raised::nostring_syntax(&readable).into());
         }
-        if no_string {
-            // Consumers of bytes raise the SYNTAX condition that a NOSTRING
-            // turned into SYNTAX raises, trappable and untrapped alike
-            // (Deviation 169).
-            if nil {
-                return Ok(ObjRef::NIL);
-            }
-            // A builtin's argument fails the check of its kind
-            // (`r[conv.string.argument-kind]`).
-            if let Some(argument) = argument {
-                return crate::builtin::argument_kinds::refuse(self, argument, &readable);
-            }
-            return Err(Raised::nostring_syntax(&readable).into());
-        }
         let readable = self.text_built(readable);
         self.roots.activity_mut().push_temp(readable);
         Ok(readable)
     }
 
-    /// What a user `STRING` method's answer reads as under the primitive
-    /// string conversion. A string or a number is itself, an array (not a
-    /// queue) is its items joined by a newline, and a buffer is its text. Any
-    /// other object is `None`: `.nil` there, which a consumer of bytes reads
-    /// as a string (Deviations 30 and 169).
-    fn string_answer_text(&mut self, answered: ObjRef) -> Result<Option<Vec<u8>>, Failure> {
+    /// Reads a STRING answer, allowing one string request on the answer
+    /// before falling back to the original receiver's object name.
+    pub(crate) fn string_method_answer_text(
+        &mut self,
+        receiver: ObjRef,
+        answered: Option<ObjRef>,
+    ) -> Result<Vec<u8>, Failure> {
+        if let Some(answered) = answered {
+            if let Some(text) = self.primitive_string_answer_text(answered)? {
+                return Ok(text);
+            }
+            if self.heap.is_class(answered)
+                || matches!(
+                    self.heap.get(answered).map(|object| &object.body),
+                    Some(Body::Instance { .. })
+                )
+            {
+                self.roots.activity_mut().push_temp(answered);
+                if let Some(text) = self.string_conversion(answered)? {
+                    return Ok(self.to_text(text).into_owned());
+                }
+            }
+        }
+        self.string_value_text(receiver)
+    }
+
+    /// Reads an answer that has an intrinsic string value without sending
+    /// another REQUEST, STRING or OBJECTNAME to it.
+    pub(crate) fn primitive_string_answer_text(
+        &mut self,
+        answered: ObjRef,
+    ) -> Result<Option<Vec<u8>>, Failure> {
         let joined = match answered.decode() {
             Decoded::SmallInt(_) | Decoded::Text(_) => None,
             Decoded::Heap { .. } if !self.heap.is_class(answered) => {
@@ -287,6 +234,7 @@ impl Interp {
                     self.heap.get(answered).map(|object| &object.body),
                     Some(Body::Text { .. } | Body::Num { .. })
                 ) || self.buffer(answered).is_some()
+                    || super::string::subclass_text(self, answered).is_some()
                 {
                     None
                 } else {
@@ -318,7 +266,6 @@ impl Interp {
         &mut self,
         name: &'static [u8],
         args: &[Option<ObjRef>],
-        deferred: &Deferred,
     ) -> Result<Option<Vec<Option<ObjRef>>>, Failure> {
         if !self.reqstr_armed {
             return Ok(None);
@@ -358,15 +305,7 @@ impl Interp {
             converted.push(match argument {
                 None => None,
                 Some(value) if raw.contains(&position) => Some(*value),
-                Some(value) => Some(self.required_string_or(
-                    *value,
-                    || false,
-                    Some(BuiltinArgument {
-                        name,
-                        position,
-                        deferred,
-                    }),
-                )?),
+                Some(value) => Some(self.required_string_value(*value)?),
             });
         }
         Ok(Some(converted))
@@ -397,7 +336,9 @@ impl Interp {
                         StringConversion::Array(store) => Some(RequiredString::Bytes(
                             self.string_conversion_array_text(store)?,
                         )),
-                        StringConversion::MakeString | StringConversion::None => None,
+                        StringConversion::MakeString | StringConversion::None => self
+                            .primitive_string_answer_text(answered)?
+                            .map(RequiredString::Bytes),
                     },
                     None => None,
                 }

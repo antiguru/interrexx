@@ -2308,7 +2308,7 @@ impl Host for Interp {
                 _ => Err(object),
             });
         }
-        let text = match self.required_string_or_nil(object) {
+        let text = match self.required_string_value(object) {
             Ok(text) => {
                 self.roots.activity_mut().push_temp(text);
                 text
@@ -2583,7 +2583,7 @@ impl Interp {
     /// The string request for a native argument, holding a raised condition on
     /// the running native frame as [`Host::string_value`] does.
     fn native_string_conversion(&mut self, object: ObjRef) -> Result<ObjRef, Condition> {
-        match self.required_string_or_nil(object) {
+        match self.required_string_value(object) {
             Ok(text) => {
                 self.roots.activity_mut().push_temp(text);
                 Ok(text)

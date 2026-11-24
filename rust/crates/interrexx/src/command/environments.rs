@@ -631,7 +631,7 @@ impl Interp {
                 (self.string_value_text(description)?, false)
             }
             Some(description) => {
-                let value = self.required_string_or_nil(description)?;
+                let value = self.required_string_value(description)?;
                 (self.string_value_text(value)?, value == ObjRef::NIL)
             }
             None => (command.to_vec(), false),
