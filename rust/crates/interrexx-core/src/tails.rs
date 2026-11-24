@@ -3,18 +3,17 @@
 //!
 //! **The ordinal is load-bearing.** A stem answers its tails in insertion
 //! order, which is ordinal order, and a map cannot say which tail came first.
-//! A dropped tail stays as a tombstone: it keeps its place in that order, and
-//! it reads as unset rather than as the stem's default. A value assigned to a
-//! tombstoned tail starts the tail afresh: it takes the next ordinal, at the
-//! end of the order, and its old slot becomes a hole, a slot no key maps to.
-//! An overwrite of a tail that holds a value, and a drop, keep the ordinal.
+//! A stem with a default keeps a dropped tail as a tombstone so it reads
+//! as unset. A drop from a stem without a default removes the key and makes
+//! its slot a hole. A new tail or an assignment after a drop goes to the
+//! end. Overwriting an existing value keeps its ordinal.
 //!
 //! Holes are reclaimed by compaction: when they make up more than half of a
 //! slab larger than [`INLINE`], the slab is rebuilt in ordinal order without
-//! them, and every ordinal is renumbered. So a loop that drops and assigns
-//! one tail forever holds a bounded slab. The bound covers holes only: a
-//! dropped tail that is not assigned again stays a tombstone, in the map and
-//! the slab, until [`Tails::clear`] removes it. Renumbering, and
+//! them, and every ordinal is renumbered. This bounds the slab even when
+//! a stem without a default drops a different tail on each pass. Tombstones
+//! needed to shadow a default stay until reassignment or [`Tails::clear`].
+//! Renumbering, and
 //! [`Tails::clear`], change [`Tails::epoch`]: an ordinal is good only with
 //! the epoch it was read under.
 //!
@@ -106,7 +105,7 @@ enum Slot {
     Value(ObjRef),
     /// A dropped tail: keeps its place, reads as unset.
     Tombstone,
-    /// No tail: left by a tombstone that was assigned again.
+    /// No tail: left by removal or by a tombstone that was assigned again.
     #[default]
     Hole,
 }
@@ -314,6 +313,22 @@ impl Tails {
         if let EntryRef::Vacant(entry) = store.ordinals.entry_ref(key) {
             entry.insert(store.values.len());
             store.values.push(Slot::of(value));
+        }
+    }
+
+    /// Removes a tail entirely, when its absence already has the right
+    /// value. Its ordinal stays vacant until compaction invalidates it.
+    pub fn remove(&mut self, key: &[u8]) {
+        let Some(store) = self.0.as_deref_mut() else {
+            return;
+        };
+        if let Some(ordinal) = store.ordinals.remove(key) {
+            let slot = store.values.get_mut(ordinal).expect("a mapped ordinal");
+            *slot = Slot::Hole;
+            store.holes += 1;
+            if store.compact_if_sparse() {
+                store.ordinals.shrink_to_fit();
+            }
         }
     }
 
