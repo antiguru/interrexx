@@ -1,13 +1,15 @@
 -- A condition object answers the whole Directory surface.
+-- The THROWN entry, of level 6.07, is left out (Deviation 179, #804).
 signal on syntax name h1
 x = 1/0
 h1: c = condition('o')
-say c~class~id c~items c~hasEntry('CODE') c~hasIndex('CODE') c~hasEntry('RC') c~code c~rc
-say c~allIndexes~sortWith(.caselessComparator~new)~makeString('L', ' ')
+say c~class~id items(c) c~hasEntry('CODE') c~hasIndex('CODE') c~hasEntry('RC') c~code c~rc
+say space(changestr(' THROWN ', ' 'c~allIndexes~sortWith(.caselessComparator~new)~makeString('L', ' ')' ', ' '))
 say c~isA(.directory) c~entry('condition')
-c~extra = 5; say c~extra c~items
+c~extra = 5; say c~extra items(c)
 call on error name he
 'exit 3'
 say 'end'
 exit
-he: d = condition('o'); say d~items d~hasEntry('RC') d~rc d~condition condition('d'); return
+he: d = condition('o'); say items(d) d~hasEntry('RC') d~rc d~condition condition('d'); return
+items: return arg(1)~items - arg(1)~hasIndex('THROWN')

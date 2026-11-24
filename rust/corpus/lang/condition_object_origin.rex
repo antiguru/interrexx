@@ -7,6 +7,7 @@
    a condition that a built-in function or method, or a method of the class
    library, raised itself (r[cond.information.propagated]): dump leaves it
    out for those. */
+/* The THROWN entry, of level 6.07, is left out (Deviation 179, #804). */
 signal on nomethod name n1
 'object'~no_method
 n1: call dump 'nomethod string'
@@ -56,6 +57,7 @@ dump:
   line = heading':'
   do i over idx
     if i = 'POSITION' & o~program == 'REXX' then iterate
+    if i = 'THROWN' then iterate
     if i = 'PROPAGATED' & \showPropagated then iterate
     v = o[i]
     if i = 'STACKFRAMES' | i = 'TRACEBACK' then v = v~class~id

@@ -2,6 +2,7 @@
 -- to one copy reaches no later CONDITION('O') or CONDITION('A'), while the
 -- items themselves are shared, and a copy holds the same indexes, listed sorted
 -- because the order of the interpreter's own entries is not specified.
+-- The THROWN entry, of level 6.07, is left out (Deviation 179, #804).
 signal on syntax name h1
 raise syntax 93.900 array('orig')
 h1:
@@ -11,11 +12,11 @@ c['CODE'] = 'changed'
 c~remove('MESSAGE')
 c['ADDITIONAL'] = .array~of('replaced')
 say condition('O')['CODE'] condition('O')~hasEntry('MESSAGE') condition('A')[1]
-say c~code c~hasEntry('MESSAGE') c~additional[1] c~items condition('O')~items
+say c~code c~hasEntry('MESSAGE') c~additional[1] items(c) items(condition('O'))
 d = condition('O')
 d~additional[1] = 'inplace'
 say condition('A')[1] condition('O')~additional[1] (d~additional == condition('A'))
-say condition('O')~allIndexes~sort~makeString('L', ' ')
+say indexes(condition('O'))
 call on error name h2
 'exit 3'
 say 'end'
@@ -24,5 +25,7 @@ h2:
 e = condition('O')
 e['RC'] = 99
 say condition('O')~rc e~rc rc (e == condition('O'))
-say condition('O')~allIndexes~sort~makeString('L', ' ')
+say indexes(condition('O'))
 return
+items: return arg(1)~items - arg(1)~hasIndex('THROWN')
+indexes: return space(changestr(' THROWN ', ' 'arg(1)~allIndexes~sort~makeString('L', ' ')' ', ' '))
