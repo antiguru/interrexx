@@ -194,21 +194,31 @@ fn daemons_naming(dir: &Path) -> Vec<rustix::process::Pid> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
-    use std::os::unix::process::CommandExt;
+    use std::os::unix::process::{CommandExt, ExitStatusExt};
+    use std::process::ExitStatus;
 
     #[expect(
         clippy::disallowed_methods,
         reason = "the fixture waits for the kernel's process state"
     )]
-    fn wait_until(mut ready: impl FnMut() -> bool) -> bool {
+    fn wait_until<T>(mut ready: impl FnMut() -> Option<T>) -> Option<T> {
         let deadline = Instant::now() + Duration::from_secs(5);
-        while !ready() {
+        loop {
+            if let Some(result) = ready() {
+                return Some(result);
+            }
             if Instant::now() >= deadline {
-                return false;
+                return None;
             }
             std::thread::sleep(Duration::from_millis(10));
         }
-        true
+    }
+
+    fn stopped_by_cleanup(status: Option<ExitStatus>) -> bool {
+        use rustix::process::Signal;
+        status
+            .and_then(|status| status.signal())
+            .is_some_and(|signal| [Signal::TERM.as_raw(), Signal::KILL.as_raw()].contains(&signal))
     }
 
     #[test]
@@ -234,15 +244,17 @@ mod tests {
         let first_pid = rustix::process::Pid::from_child(&first_daemon);
         let second_pid = rustix::process::Pid::from_child(&second_daemon);
         let daemons_ready = wait_until(|| {
-            daemons_naming(&first_dir).contains(&first_pid)
-                && daemons_naming(&second_dir).contains(&second_pid)
-        });
+            (daemons_naming(&first_dir).contains(&first_pid)
+                && daemons_naming(&second_dir).contains(&second_pid))
+            .then_some(())
+        })
+        .is_some();
 
         drop(first);
-        let first_stopped = wait_until(|| first_daemon.try_wait().unwrap().is_some());
+        let first_status = wait_until(|| first_daemon.try_wait().unwrap());
         let second_status = second_daemon.try_wait().unwrap();
         drop(second);
-        let second_stopped = wait_until(|| second_daemon.try_wait().unwrap().is_some());
+        let second_cleanup = wait_until(|| second_daemon.try_wait().unwrap());
         // Keep the test bounded even if daemon cleanup regresses.
         for mut child in [first_daemon, second_daemon] {
             let _ = child.kill();
@@ -250,12 +262,18 @@ mod tests {
         }
 
         assert!(daemons_ready, "both daemons must be visible before cleanup");
-        assert!(first_stopped, "the first daemon outlived its service");
+        assert!(
+            stopped_by_cleanup(first_status),
+            "the first daemon did not terminate in cleanup: {first_status:?}"
+        );
         assert!(
             second_status.is_none(),
             "the second daemon was stopped early"
         );
-        assert!(second_stopped, "the second daemon outlived its service");
+        assert!(
+            stopped_by_cleanup(second_cleanup),
+            "the second daemon did not terminate in cleanup: {second_cleanup:?}"
+        );
         assert!(!first_dir.exists());
         assert!(!second_dir.exists());
     }
