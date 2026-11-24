@@ -1665,7 +1665,13 @@ interface! {
             )
         },
         Throw: {
-            unwinds call(*mut RexxMethodContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
+            unwinds call(
+                *mut RexxMethodContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
+                RexxObjectPtr
+            )
         },
     }
 }
@@ -1708,7 +1714,13 @@ interface! {
             )
         },
         Throw: {
-            unwinds call(*mut RexxCallContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
+            unwinds call(
+                *mut RexxCallContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
+                RexxObjectPtr
+            )
         },
     }
 }
@@ -1741,7 +1753,13 @@ interface! {
             )
         },
         Throw: {
-            unwinds call(*mut RexxExitContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
+            unwinds call(
+                *mut RexxExitContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
+                RexxObjectPtr
+            )
         },
     }
 }
