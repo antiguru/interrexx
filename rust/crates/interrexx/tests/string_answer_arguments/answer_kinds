@@ -1,0 +1,51 @@
+# Which answers have a string value (r[conv.string.answer]): each line is a STRING
+# answer read by SAY and by LENGTH, then a MAKESTRING answer and the answer of a
+# REQUEST of the object's own, for a Stem with a default value, a VariableReference,
+# a StackFrame, a CircularQueue, a Queue subclass instance with its own REQUEST, a
+# Stem subclass instance whose default value is a VariableReference and one whose
+# default value is a File, an object whose MAKESTRING answers a string, and a class
+# whose class-side MAKESTRING does; the oracle's answers
+program
+v = 'vv'
+s = .stem~new('SN'); s[] = 'dflt'
+d = .substem~new; d[] = >v
+f = .substem~new; f[] = .file~new('/fdef')
+l = .array~of(s, >v, .context~stackFrames[1], .circularqueue~of(1, 2), .requeue~new, d, f, .maker~new, .kc)
+do a over l
+  .x~ans = a
+  say '['.x~new']' length(.x~new) '['.z~new']' '['.r~new']'
+end
+::class x
+::attribute ans class
+::method string
+  return .x~ans
+::class z
+::method makestring
+  return .x~ans
+::class r
+::method request
+  return .x~ans
+::class substem subclass stem
+::class requeue subclass queue
+::method request
+  return 'rq'
+::class maker
+::method makestring
+  return 'mk'
+::class kc
+::method makestring class
+  return 'kc'
+----
+rc 0
+[stdout]
+[a X] 3 [a Z] [a R]
+[a X] 3 [a Z] [a R]
+[a X] 3 [a Z] [a R]
+[a X] 3 [a Z] [a R]
+[a X] 3 [a Z] [a R]
+[a X] 3 [a Z] [a R]
+[/fdef] 5 [a Z] [a R]
+[mk] 2 [a Z] [a R]
+[kc] 2 [a Z] [a R]
+[stderr]
+

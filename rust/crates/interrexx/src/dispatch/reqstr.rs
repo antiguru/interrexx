@@ -204,15 +204,37 @@ impl Interp {
     }
 
     /// What a user `STRING` method's answer reads as: its text under the
-    /// primitive conversion, else what its own `MAKESTRING` (or `REQUEST`)
-    /// converts it to, else `None`, an answer with no string value
-    /// (`r[conv.string.answer]`).
+    /// primitive conversion; for a `Stem` subclass instance, its default
+    /// value read the same way, or its name; for any other instance of a
+    /// class defined in Rexx, other than a `Queue`, and for a class object,
+    /// what its `REQUEST('STRING')` answers; else `None`, an answer with no
+    /// string value (`r[conv.string.answer]`).
     pub(crate) fn string_answer_conversion(
         &mut self,
         answered: ObjRef,
     ) -> Result<Option<Vec<u8>>, Failure> {
         if let Some(text) = self.primitive_answer_text(answered)? {
             return Ok(Some(text));
+        }
+        if let Some(store) = self.stem_subclass_store(answered) {
+            let default = match self.heap.get(store).map(|object| &object.body) {
+                Some(Body::Stem { default, .. }) => *default,
+                _ => None,
+            };
+            return match default {
+                Some(default) => self.string_answer_conversion(default),
+                None => Ok(Some(self.to_text(store).into_owned())),
+            };
+        }
+        // A `Stem`, a `VariableReference` or a `StackFrame` has no string
+        // value here, whatever its `REQUEST` answers, and neither has a
+        // `Queue` nor an instance of a subclass of it.
+        let asked = match self.heap.get(answered).map(|object| &object.body) {
+            Some(Body::Instance { .. }) => !super::collection::is_queue(self, answered),
+            _ => self.heap.is_class(answered),
+        };
+        if !asked {
+            return Ok(None);
         }
         Ok(match self.required_string_answer(answered)? {
             Some(RequiredString::Object(text)) => Some(self.to_text(text).into_owned()),
@@ -327,23 +349,33 @@ impl Interp {
                 // 5` prints `5`, `return .Object~superClasses` prints the empty
                 // line an empty array joins to, and `return .array` prints `The
                 // K class` -- the third fell back.
+                // A string or a number is itself; any other answer is read by
+                // the primitive conversion, and one that has no string value
+                // there, a `Stem` or a `VariableReference` included, is no
+                // answer (`r[conv.string.answer]`).
                 match self.send_make_string(value)? {
-                    Some(answered) => match self.classify_string_conversion(answered) {
-                        StringConversion::Object(text) => Some(RequiredString::Object(text)),
-                        StringConversion::Bytes(bytes) => Some(RequiredString::Bytes(bytes)),
-                        StringConversion::Array(store) => Some(RequiredString::Bytes(
-                            self.string_conversion_array_text(store)?,
-                        )),
-                        // A buffer converts by its own `MAKESTRING`; any
-                        // other answer is no answer (`r[conv.string.answer]`).
-                        StringConversion::MakeString | StringConversion::None => self
-                            .primitive_answer_text(answered)?
-                            .map(RequiredString::Bytes),
-                    },
+                    Some(answered) if self.is_plain_string(answered) => {
+                        Some(RequiredString::Object(answered))
+                    }
+                    Some(answered) => self
+                        .primitive_answer_text(answered)?
+                        .map(RequiredString::Bytes),
                     None => None,
                 }
             }
         })
+    }
+
+    /// Whether `value` is a string or a number, which is its own string value.
+    fn is_plain_string(&self, value: ObjRef) -> bool {
+        match value.decode() {
+            Decoded::SmallInt(_) | Decoded::Text(_) => true,
+            Decoded::Heap { .. } => matches!(
+                self.heap.get(value).map(|object| &object.body),
+                Some(Body::Text { .. } | Body::Num { .. })
+            ),
+            _ => false,
+        }
     }
 
     /// The protocol's conversion limbs alone, with **no** `~string` fallback

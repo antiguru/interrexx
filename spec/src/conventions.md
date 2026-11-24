@@ -193,18 +193,25 @@ An answer that has no string value counts as no answer, so that the
 conversion of an object always ends in a string and never raises an error of
 its own. The answer of a `STRING` method has a string value when it is a
 string, a number or an instance of a subclass of `String`, when it is an array,
-whose items joined by a newline are its string value, or a `MutableBuffer`,
-and when its own `MAKESTRING` answers one of these. The answer of an
-`OBJECTNAME` method of the object's own and of a `MAKESTRING` method has one
-when it is one of the first five; no message is sent to it. Any other answer,
-such as `.nil`, a `Directory`, a `Queue`, an `Object` or the object itself, has
-none. Where the `STRING` answer has none, the object's string value is the one
-the `STRING` method of `Object` answers for it, its `OBJECTNAME`. Where the
-`OBJECTNAME` answer has none, it is the default name of the object's class: `a`
-or `an` and the class's id, whatever name was set on the object and whatever
-its `DEFAULTNAME` answers. Where the `MAKESTRING` answer, or the answer of a
-`REQUEST` method of the object's own, has none, or a `REQUEST` method answers
-nothing, the object has not converted, and its `STRING` method is sent as
+whose items joined by a newline are its string value, or a `MutableBuffer`.
+An instance of a subclass of `Stem` has the one its default value would have
+as such an answer, or its name when it has no default value. An instance of a
+class that a program defines, other than a subclass of `Queue`, an instance of
+`File`, `DateTime`, `TimeSpan` or `TraceObject`, and a class object have the
+one that the object's `REQUEST('STRING')` answers. The answer of an
+`OBJECTNAME` method of the object's own, of a `MAKESTRING` method and of a
+`REQUEST` method of the object's own has one when it is one of the first five;
+no message is sent to it. Any other answer, such as `.nil`, a `Directory`, a
+`Queue`, a `Stem`, a `VariableReference`, a `StackFrame`, an `Object` or the
+object itself, has none, whatever its own `REQUEST` answers. Where the
+`STRING` answer has none, the object's string value is the one the `STRING`
+method of `Object` answers for it, its `OBJECTNAME`. Where the `OBJECTNAME`
+answer has none, it is the object's default name as
+[the default name rule](r:class.object.defaultname) gives it, whatever name
+was set on the object and whatever its own `DEFAULTNAME` answers. Where the
+`MAKESTRING` answer, or the answer of a `REQUEST` method of the object's own,
+has none, or a `REQUEST` method answers nothing, the object has not
+converted, and its `STRING` method is sent as
 [the string rule](r:conv.string.object) says. Every clause and every argument
 of a builtin reads that string as it reads any string: a builtin checks it as
 the argument's kind requires, `PARSE VALUE` parses it, and an operator, a
@@ -221,6 +228,10 @@ signal on syntax name s
 say left('abc', o)
 s: say condition('o')~code
 say ('a' || .named~new) ('a' || .badname~new) ('a' || .made~new)
+say .stemmed~new '|' .substemmed~new '|' .queued~new
+say .stemmaker~new '|' .stemrequest~new '|' length(.requester~new)
+t = .table~new; t['OBJECTNAME'] = 'return .nil'
+say .object~enhanced(t) '|' .unnamed
 ::class weird
 ::method string
   return .directory~new
@@ -238,6 +249,35 @@ say ('a' || .named~new) ('a' || .badname~new) ('a' || .made~new)
 ::class maker
 ::method makestring
   return 'made'
+::class stemmed
+::method string
+  return .stem~new('NM')
+::class substemmed
+::method string
+  return .substem~new('SN')
+::class substem subclass stem
+::class queued
+::method string
+  return .madequeue~new
+::class madequeue subclass queue
+::method makestring
+  return 'MQ'
+::class stemmaker
+::method makestring
+  return .stem~new('Q')
+::class stemrequest
+::method request
+  return .stem~new('Q')
+::method string
+  return 'own'
+::class requester
+::method request
+  return 'rqq'
+::class unnamed
+::method objectname class
+  return .nil
+::method string class
+  return .nil
 ```
 
 ```output
@@ -245,6 +285,9 @@ say ('a' || .named~new) ('a' || .badname~new) ('a' || .made~new)
 WEIRD 1 xa WEIRDy
 40.12
 aNAMED aa BADNAME amade
+a STEMMED | SN | a QUEUED
+a STEMMAKER | own | 3
+enhanced Object | The UNNAMED class
 ```
 
 r[conv.string.whitespace]
