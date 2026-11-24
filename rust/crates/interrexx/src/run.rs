@@ -3909,6 +3909,17 @@ impl Interp {
                 interrexx_parse::ParseSource::Value(Some(expression)) => expression,
                 _ => return None,
             },
+            (
+                InstructionKind::Parse(parse)
+                | InstructionKind::Arg(parse)
+                | InstructionKind::Pull(parse),
+                slot,
+            ) => parse
+                .template
+                .get(usize::from(slot) - 1)?
+                .as_ref()?
+                .value
+                .as_ref()?,
             (InstructionKind::If { condition, .. }, 0) => condition,
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
@@ -4060,10 +4071,9 @@ impl Interp {
                 self.eval(code, expr)
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
-            // `>K>` echo and the whole template walk are `Op::ParseBegin`'s; only
-            // the source is a register, and only this source has one --
-            // `compile` emits no register for any other, so reaching here with
-            // one is an op off its node.
+            // `>K>` echo belongs to `Op::ParseBegin`. This fallback is only for
+            // the source expression, since an unsupported trigger always runs
+            // in the template engine.
             (
                 InstructionKind::Parse(parse)
                 | InstructionKind::Arg(parse)

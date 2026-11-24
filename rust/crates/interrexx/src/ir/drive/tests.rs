@@ -820,6 +820,24 @@ fn a_reply_splits_once() {
     assert_eq!(splits, 1);
 }
 
+#[test]
+fn parse_trigger_calls_see_earlier_targets() {
+    let (outcome, _) = scripted(
+        b"parse value input() with head ' ' middle (separator(head)) tail, \
+          empty +(position(tail)) last\n\
+          say '['head']['middle']['tail']['empty']['last']'\nexit\n\
+          input:\n  say 'source'\n  return 'x middlextail'\n\
+          separator:\n  use arg value\n  say 'separator:' value\n  return value\n\
+          position:\n  use arg value\n  say 'position:' value\n  return 2\n",
+        &[],
+    );
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(
+        outcome.stdout,
+        b"source\nseparator: x\nposition: tail\n[x][middle][tail][][]\n"
+    );
+}
+
 /// A `REPLY`'s expression runs as the method chunk's own ops: a call in it
 /// resolves at its call site once and answers from the site on every later
 /// invocation, which the walked expression never does. Outside a method the

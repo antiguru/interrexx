@@ -1915,8 +1915,7 @@ fn parse_opening(parse: &interrexx_parse::Parse, plan: &Plan) -> (ParseOpening, 
 
 /// Whether the template of `parse` is walked by [`Op::ParseBegin`] and its
 /// [`Op::ParseRun`]s: a source the compiled walk reads in place, no fold, and
-/// every trigger operand a literal or an expression of reads and operators,
-/// which runs without parking the driver and so between two steps. `PARSE VAR
+/// every trigger operand an expression the stream can evaluate. `PARSE VAR
 /// name w1 ... rest` keeps the template engine's own walk for that shape.
 fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
     use interrexx_parse::TriggerKind;
@@ -1934,10 +1933,10 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
         && !(parse.upper || parse.lower)
         && u16::try_from(parse.template.len()).is_ok()
         && parse.template.iter().flatten().all(|trigger| {
-            trigger.value.as_ref().is_none_or(|operand| {
-                matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_))
-                    || (value_only(operand) && native_shape(operand, Some(NodePath::ROOT)))
-            })
+            trigger
+                .value
+                .as_ref()
+                .is_none_or(|operand| native_shape(operand, Some(NodePath::ROOT)))
         })
 }
 
@@ -2028,7 +2027,9 @@ fn push_template<'a>(
             plan,
             operand,
             index,
-            0,
+            // Slot zero names the PARSE VALUE source. A trigger's slot
+            // follows its template index, including any comma fences.
+            u32::from(width(from + 1)?),
             Some(NodePath::ROOT),
             dst,
         )?;
