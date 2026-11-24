@@ -39,13 +39,19 @@ has to remember to avoid.
 
 ### Rules this design serves
 
-The owner has ruled on three points the design is built around:
+The owner has ruled on these points, and the design is built around them:
 
 * **An expression has no size limit.** A long input takes long to process, and that is all: no
   length of chain, no run of prefix operators and no depth of parentheses or argument lists raises
-  11.1. The only nesting that keeps a limit is routine calls nested at run time (see
-  [The nesting rule](#the-nesting-rule)). ooRexx raises 11.1 for a long enough prefix chain and for
-  deep parentheses; interrexx does not.
+  11.1. The parser reads parentheses and argument lists nested to any depth. The only nesting that
+  keeps a limit is routine calls nested at run time (see [The nesting rule](#the-nesting-rule)).
+  ooRexx raises 11.1 for a long enough prefix chain and for deep parentheses and argument lists;
+  interrexx does not, under an approved Deviation.
+* **The fixed widths of the compiled form are resource limits, not language rules.** Register
+  indices stay `u16` and the arena's ids and offsets `u32`. An expression that needs more of
+  either than the width holds raises Error 5, system resources exhausted. The bound is set by the
+  implementation, as the depth of routine calls is set by the interpreter's stack, and no rule of
+  the language puts it there, so it raises 5 and not 11.1.
 * **There is one evaluator.** The tree-walking evaluator is retired, and every expression runs on
   the compiled ops, traced or not, in a program or in an `INTERPRET` string.
 * **A malformed expression raises an error that describes a fault present in its text.** Which of
@@ -123,9 +129,10 @@ instruction meaningless without its body, so a test that compares instructions c
 Nothing found moves an instruction between bodies.
 
 The `u32` ids and offsets are the arena's only fixed widths. A body whose nodes or source offsets
-do not fit them is refused as resources exhausted when it is parsed, under the decision that
-behaviour when memory runs out is best effort: an arena that large does not fit beside the
-interpreter in the memory it runs under.
+do not fit them raises Error 5 when it is parsed, with no subcode: the error table has none under
+5 for this, and 5.900 is the user-defined one. That falls under the decision that behaviour when
+memory runs out is best effort: an arena that large does not fit beside the interpreter in the
+memory it runs under.
 
 ### Invariants
 
@@ -292,8 +299,8 @@ work a worklist does. What the stack holds is **data**: the values computed and 
 exactly the operands of the operators still to come. That is the stack an expression evaluator
 needs whatever the representation, and the compiler has it already: it hands out registers from a
 compile-time stack (`Registers`). For a left-deep chain the stack holds two entries however long
-the chain is; it grows only with right-nested operands and with nesting, which has no limit, so it
-lives in memory that grows with it (see [IR compilation](#ir-compilation)).
+the chain is; it grows only with values that wait while a nested operand runs, and its height is
+bounded by the register width (see [IR compilation](#ir-compilation)).
 
 ### Keeping recursion unnatural
 
@@ -343,16 +350,23 @@ or a send sits too deep compiles natively.
 Ops that address a node carry its `ExprId` in place of `(index, slot, path)`: `CallArgs`,
 `TraceFunction`, `Reference` and `ClassAt`. `Op` stays 16 bytes, with room to spare.
 
-**Deep nesting and the register width.** Register indices are `u16`, and a value waiting for a
-nested operand holds a register for as long as the operand runs: the left operand of
-`1 + (1 + (1 + ...))`, the receiver of `a~m(a~m(...))`, each argument register of
-`f(f(f(...)))`. So the registers a slot needs grow with its nesting, and with no nesting limit a
-legal slot can need more than the width holds, which today is `ChunkTooLarge` and a loud refusal.
-The compiler instead parks the waiting values: when the register stack would pass the width, the
-value of the oldest waiting register is pushed onto the driver's argument stack, the heap stack
-`PushArg` already uses, and taken back into a register before the op that consumes it. Nesting is
-last in, first out, so parked values come back in the order they went. Only a slot past the width
-emits the parking ops, and the driver's stack grows with memory.
+**Deep nesting and the register width.** Register indices stay `u16`, so `Op` stays 16 bytes.
+The register allocator is stack-disciplined (`Registers`' mark and release), so what the width
+bounds is the number of values pending at once in one body, not the number a body computes. A
+value pending for a nested operand holds its register for as long as that operand runs: the left
+operand of `1 + (1 + (1 + ...))`, the receiver of `a~m(a~m(...))`, the first argument of
+`f(1, f(1, ...))`, whose register the call's result takes. Only deep right nesting of that kind
+reaches the width. A wide call does not, because each argument goes to the driver's argument
+stack after its root and frees its register, and a flat chain does not, because it holds two
+registers however long it runs.
+
+A slot that needs more registers than the width holds raises Error 5, with no subcode, where today
+it is `ChunkTooLarge` and a loud refusal. The compiler finds it when it compiles the body, which
+is where the refusal happens today, and the error names the clause whose expression passed the
+width. This is a resource limit set by the register width, as the depth of routine calls is set
+by the interpreter's stack, and not a rule of the language, so it raises 5 and not 11.1. If
+generated code ever meets it, values past the width could be parked on the driver's argument
+stack and taken back before the op that consumes them, without widening `Op`.
 
 ### The plan, and the other scans
 
@@ -420,9 +434,9 @@ it reads a node only for an assignment target's kind, which is a leaf its op nam
 compiler in three ways:
 
 * It reads expression nodes only through the ids its ops carry, never by walking a subtree.
-* Every op this design adds (the qualified call, the logical tests, the parking ops, the cascade
-  send) gets an arm of its own in `jit_host.rs`'s step match: a native step, a `Step::Op` the
-  driver runs from inside the compiled loop, or a refusal with the reason. The match's catch-all
+* Every op this design adds (the qualified call, the logical tests, the cascade send) gets an arm
+  of its own in `jit_host.rs`'s step match: a native step, a `Step::Op` the driver runs from
+  inside the compiled loop, or a refusal with the reason. The match's catch-all
   arm refuses the whole loop without saying so, so an op left to it costs speed silently; the pull
   request that adds an op names it there. The arms for `Op::EvalExpr` and `Op::CallExpr` go with
   those ops.
@@ -463,30 +477,36 @@ The image writes a body's arena as its vectors, each a loop, and `FORMAT` moves 
 
 ## The nesting rule
 
-With the loop parser, no pass recurses per nesting level, so the parser's limit has nothing left
-to protect. This design removes it: parentheses and argument lists nest without limit, as terms
-side by side and prefix operators already do. `MAX_EXPR_DEPTH` goes, and with it the error the
-parser raises for depth.
+Parentheses and argument lists nest without limit in the parser, as terms side by side and prefix
+operators already do. With the loop parser no pass recurses per nesting level, so a limit would
+have nothing left to protect. `MAX_EXPR_DEPTH` goes, and with it the error the parser raises for
+depth.
+
+What is left is the register width of [IR compilation](#ir-compilation): an expression nested to
+the right deeply enough raises Error 5. That is a resource running out, like memory, and the
+specification already leaves how much a program can ask for before 5 unspecified.
 
 The proposed text of `r[expr.index.nesting]`:
 
 > An expression has no nesting limit. Parentheses, argument lists, prefix operators and message
 > sends nest inside one another to any depth, and any number of terms stand side by side at one
 > level; a longer expression takes longer to read and to evaluate, and nothing in its text raises
-> `SYNTAX 11.1`. Routine calls nested inside one another when the program runs have a limit that
-> this book does not fix: the call that goes past it raises `SYNTAX 11.1`. Calls written inside
-> one another's arguments are not nested in this sense, because each inner call returns before the
-> outer one is made. Parentheses nested 100,000 deep are read and evaluated, and calls nested
-> 1,000,000 deep raise the error.
+> `SYNTAX 11.1`. An expression that keeps more values pending at once than the interpreter can
+> hold raises `SYNTAX 5`, at a depth this book does not fix. Routine calls nested inside one
+> another when the program runs have a limit that this book does not fix: the call that goes past
+> it raises `SYNTAX 11.1`. Calls written inside one another's arguments are not nested in this
+> sense, because each inner call returns before the outer one is made. Parentheses nested 100,000
+> deep around one term are read and evaluated, and calls nested 1,000,000 deep raise the error.
 
 Its example keeps the `deep` routine and changes the `INTERPRET` line to show a value instead of
 11.1. The same change touches:
 
 * `spec/src/conditions/errors.md`'s system-fault list, where 11 becomes calls nested beyond the
-  limit;
-* a new Deviation in `spec/src/deviations.md`: ooRexx raises 11.1 for parentheses, argument lists
-  or prefix operators nested past its own limit, and interrexx reads them, by the owner's ruling
-  that an expression has no size limit;
+  limit, and the note on 5, which names an expression that keeps too many values pending among
+  what a program can ask for;
+* a new Deviation in `spec/src/deviations.md`, approved by the owner: ooRexx raises 11.1 for
+  parentheses, argument lists or prefix operators nested past its own limit, and interrexx reads
+  them, under the ruling that an expression has no size limit;
 * the 11.1 row of `corpus/errors/parse-errors.tsv`, which ooRexx refuses and interrexx accepts, and
   which `tests/errors.rs` takes as an accepted program under that Deviation;
 * `architecture.md`: its Parsing section, which says the parser has a nesting limit, and the
@@ -566,7 +586,9 @@ one stack.
 2. **IR compilation as a loop.** `push_native`, `native_shape`, `value_only`, `push_arguments` and
    `push_scope` as loops; ops address nodes by `ExprId`; `NodePath` and the slot-and-path lookup
    go; goldens are re-recorded. The flat chain that aborts in `push_native` today runs, and so does
-   the chain whose leftmost term is a call, which no longer falls back for width.
+   the chain whose leftmost term is a call, which no longer falls back for width. Register
+   exhaustion raises Error 5 from this step on, because a slot that ran on the evaluator for width
+   now compiles and can pass the register width (see Risks).
 3. **The scans.** `note`, `guard_exposes`, `calls_nothing`, and the remaining shallow matches.
 4. **Retiring the evaluator.** Ops for `QualifiedCall`, `Logical` lists and cascade message
    instructions; the step functions, message-term assignment, PARSE template patterns and
@@ -582,10 +604,10 @@ one stack.
    keeps counting nesting against `MAX_EXPR_DEPTH` on the pending stack, so that no program's
    result moves in this step except where a malformed expression now reports another fault that
    is present (see Testing). `D10`'s row is amended.
-7. **No nesting limit.** `MAX_EXPR_DEPTH`, `PARSER_STACK_BYTES` and `with_parser_stack` go; the
-   compiler parks values past the register width; `r[expr.index.nesting]`, the error list, the
-   Deviation and the corpus row change as above; the deep-nesting test lands. This step closes
-   #69.
+7. **No nesting limit.** `MAX_EXPR_DEPTH`, `PARSER_STACK_BYTES` and `with_parser_stack` go;
+   arena overflow in the parser raises Error 5; `r[expr.index.nesting]`, the error list, the
+   Deviation and the corpus row change as above; the deep-nesting test and the program-level
+   Error 5 test land (see Testing). This step closes #69.
 
 The parser comes after the view is gone rather than with the arena. The arena step then shows
 that nothing moved, with the parser whose answers every test was written against, and the parser
@@ -593,9 +615,8 @@ step lands on a settled arena with no tree-shaped view for it to lean on; its on
 is which fault a malformed expression reports, and nothing else in the stack changes error codes,
 so a moved code points at it. The cost is that step 1 adapts the recursive-descent functions to
 emit nodes and step 6 replaces them; the leaf-reading functions (symbols, literals, message names,
-scopes, references, qualified symbols) carry over. The limit goes last because it needs both the
-loop parser and the parking in the compiler, and until then a deep nesting still meets a fixed
-width.
+scopes, references, qualified symbols) carry over. The limit goes last because it needs the loop
+parser.
 
 ## Testing
 
@@ -605,9 +626,21 @@ Each test below fails on main today, which is the check that it covers the chang
   the interpreter's stack prints its value, with and without `TRACE I`, and under `GUARD WHEN`.
 * **A chain whose leftmost term is a call runs.** It raises 11.1 from `MAX_EVAL_DEPTH` today.
 * **A long prefix chain runs.** It parses, compiles and prints its value, and raises no 11.1.
-* **Deep nesting runs.** Parentheses, argument lists of calls and of messages, and a mix of them,
-  each nested deeper than `MAX_EXPR_DEPTH` and with right-nested operands deep enough to pass the
-  register width, parse, compile, run and trace, and print their value.
+* **Deep nesting runs.** Parentheses around one term, `f(f(f(...)))`, and a mix of parentheses,
+  call and message argument lists that keeps fewer values pending than the register width, each
+  nested deeper than `MAX_EXPR_DEPTH`, parse, compile, run and trace, and print their value. Today
+  each raises 11.1 from the parser.
+* **Register exhaustion raises 5.** In step 2, a compiler unit test pins the change itself: the
+  register refusal that today ends the run as a loud error is a `SYNTAX` condition with code 5 and
+  no subcode. A program test in the same step nests `1 + a~m(1 + a~m(...))`, which keeps two
+  values pending per level, deep enough to pass the width while staying under `MAX_EXPR_DEPTH`;
+  it traps the error with `SIGNAL ON SYNTAX` and goes on. Today it prints its value, because the
+  slot runs on the evaluator past `NodePath`'s width, so the test pins the move from a value to
+  Error 5. In step 7, `1 + (1 + (...))`, `a~m(a~m(...))` and `f(1, f(1, ...))`, which keep one
+  value pending per level and so pass the width only past `MAX_EXPR_DEPTH`, raise Error 5 the
+  same way; today each raises 11.1 from the parser.
+* **Arena overflow raises 5.** The builder, with its id width lowered under `cfg(test)`, raises
+  Error 5 when a body's nodes pass it, instead of panicking or wrapping.
 * **Every pass on a small thread.** A flat chain and a deep nesting, run through
   `run_program_on_stack` with a small stack (the one `tests/resources.rs` uses), long and deep
   enough that any pass recursing once per term or per level overflows it, parse, compile, run,
@@ -674,7 +707,7 @@ compiling loops instead of recursing, so neither should regress, and the budget 
 did. Retiring the evaluator moves the slots that ran on it onto ops, which the budget measures the
 same way.
 
-## Risks and open questions
+## Risks
 
 * **The order of a call's resolution.** The evaluator resolves a call's fixed target before its
   arguments and reports a failed resolution after them; the compiled path (`Op::CallArgs`)
@@ -685,13 +718,11 @@ same way.
   report another of them. That is allowed; what must hold is that the reported fault is present,
   which the comparison above checks and the reviewed list makes visible. An expression with one
   fault should report the code it reports today; a difference there is a defect of the new parser.
-* **The parking ops are a second register discipline.** They exist only for slots past the
-  register width, which ordinary programs never reach, so they are tested only by the deep-nesting
-  test. Widening register indices instead would grow `Op` past 16 bytes for every program.
+* **A program that runs today raises 5.** A slot that passes the register width while staying
+  under `MAX_EXPR_DEPTH`, such as `1 + a~m(1 + a~m(...))` nested deep, runs today because it
+  falls back to the evaluator for `NodePath`'s width. From step 2 it compiles and raises Error 5.
+  That follows from keeping registers `u16` with no parking, and the test above pins it.
 * **Golden and image churn.** Every golden with a node address and every recorded image change
   once.
 * **The view lives for several steps.** It keeps the recursive consumers compiling, which makes
   recursion easy until step 5 removes it; until then the structural guarantee is not in place.
-* **Unlimited parentheses rest on the owner's ruling against limits.** The ruling names expression
-  size; this design reads it as covering parentheses and argument lists too, since nothing is left
-  that needs a limit on them, and the nesting rule, the Deviation and step 7 are written that way.
