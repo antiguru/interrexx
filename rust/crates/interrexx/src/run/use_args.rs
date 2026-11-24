@@ -1,3 +1,5 @@
+use crate::ir::UseArgOp;
+
 use super::*;
 
 impl Interp {
@@ -108,51 +110,116 @@ impl Interp {
     ) -> Result<(), Failure> {
         let in_method = self.activation().entry == Entry::Method;
         if strict {
-            let supplied = self.activity.call_context.arguments.len();
-            // The minimum is the position of the last target that must be
-            // supplied -- one with no default of its own. A later target
-            // carrying a default does not raise it, which is what makes `use
-            // strict arg p, q = 'dflt'` legal with one argument.
-            let minimum = targets
-                .iter()
-                .rposition(|target| {
-                    target
-                        .as_ref()
-                        .is_none_or(|target| target.default.is_none())
-                })
-                .map_or(0, |index| index + 1);
-            if supplied < minimum {
-                return Err(if in_method {
-                    Raised::not_enough_method_arguments(minimum).into()
-                } else {
-                    let name = Rc::clone(&self.activity.call_context.name);
-                    Raised::not_enough_arguments(&name, minimum).into()
-                });
-            }
-            if !allow_optionals && supplied > targets.len() {
-                return Err(if in_method {
-                    Raised::too_many_method_arguments(targets.len()).into()
-                } else {
-                    let name = Rc::clone(&self.activity.call_context.name);
-                    Raised::too_many_arguments(&name, targets.len()).into()
-                });
-            }
+            self.check_use_argument_count(allow_optionals, targets, in_method)?;
         }
 
         for (index, target) in targets.iter().enumerate() {
             let Some(target) = target else { continue };
-            // `get` past the end and a `None` inside the list are the same
-            // thing to a target: nothing was supplied for this position.
-            let argument = self
-                .activity
-                .call_context
-                .arguments
-                .get(index)
-                .cloned()
-                .flatten();
+            let argument = self.use_argument_at(index);
             self.bind_use_target(code, index, target, argument, strict, in_method)?;
         }
         Ok(())
+    }
+
+    #[inline(always)]
+    fn check_use_argument_count(
+        &self,
+        allow_optionals: bool,
+        targets: &[Option<UseTarget>],
+        in_method: bool,
+    ) -> Result<(), Failure> {
+        let supplied = self.activity.call_context.arguments.len();
+        // The minimum is the position of the last target that must be
+        // supplied -- one with no default of its own. A later target
+        // carrying a default does not raise it, which is what makes `use
+        // strict arg p, q = 'dflt'` legal with one argument.
+        let minimum = targets
+            .iter()
+            .rposition(|target| {
+                target
+                    .as_ref()
+                    .is_none_or(|target| target.default.is_none())
+            })
+            .map_or(0, |index| index + 1);
+        if supplied < minimum {
+            return Err(if in_method {
+                Raised::not_enough_method_arguments(minimum).into()
+            } else {
+                let name = Rc::clone(&self.activity.call_context.name);
+                Raised::not_enough_arguments(&name, minimum).into()
+            });
+        }
+        if !allow_optionals && supplied > targets.len() {
+            return Err(if in_method {
+                Raised::too_many_method_arguments(targets.len()).into()
+            } else {
+                let name = Rc::clone(&self.activity.call_context.name);
+                Raised::too_many_arguments(&name, targets.len()).into()
+            });
+        }
+        Ok(())
+    }
+
+    /// Past the end and an omitted argument in the list both mean absence.
+    #[inline(always)]
+    fn use_argument_at(&self, index: usize) -> Option<ObjRef> {
+        self.activity
+            .call_context
+            .arguments
+            .get(index)
+            .copied()
+            .flatten()
+    }
+
+    pub(super) fn use_arg_default(use_: &Use, slot: usize) -> Option<&Expr> {
+        let Use::Arg { targets, .. } = use_ else {
+            return None;
+        };
+        targets.get(slot)?.as_ref()?.default.as_ref()
+    }
+
+    /// Bind the supplied value, or leave the next ops to compute and bind the
+    /// default. Answer the number of ops to skip when a default was unused.
+    #[inline(never)]
+    pub(crate) fn use_arg_op(
+        &mut self,
+        code: &Code<'_>,
+        clause: &Instruction,
+        registers: RegFrame<'_>,
+        op: UseArgOp,
+    ) -> Result<usize, Failure> {
+        let InstructionKind::Use(use_) = &clause.kind else {
+            return Err(Loud::instruction(&clause.kind).into());
+        };
+        let Use::Arg {
+            strict,
+            allow_optionals,
+            targets,
+        } = &**use_
+        else {
+            return Err(Loud::instruction(&clause.kind).into());
+        };
+        let in_method = self.activation().entry == Entry::Method;
+        let (slot, argument, skip) = match op {
+            UseArgOp::CheckCount => {
+                self.check_use_argument_count(*allow_optionals, targets, in_method)?;
+                return Ok(0);
+            }
+            UseArgOp::Bind { slot, skip } => {
+                let argument = self.use_argument_at(usize::from(slot));
+                if skip != 0 && argument.is_none() {
+                    return Ok(0);
+                }
+                (slot, argument, skip)
+            }
+            UseArgOp::BindDefault { slot, src } => (slot, Some(registers.get(src)), 0),
+        };
+        let index = usize::from(slot);
+        let Some(Some(target)) = targets.get(index) else {
+            return Err(Loud::instruction(&clause.kind).into());
+        };
+        self.bind_use_target(code, index, target, argument, *strict, in_method)?;
+        Ok(skip as usize)
     }
 
     /// Binds one `USE ARG` target to one argument, or to its default, or to

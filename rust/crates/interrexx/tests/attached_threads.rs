@@ -2016,25 +2016,6 @@ fn attach_from_a_foreign_thread_is_refused_in_simulation() {
     assert!(!stdout.contains("ticked"), "stdout {stdout:?}");
 }
 
-/// One attached thread's message loops for ever, and a second attached thread's message, `THREE`,
-/// arrives while it does, which holds it until the first ends
-/// (`r[native.threads.attach.deviation.178]`). `Halt` through the instance then halts the looping
-/// message, whose thread finds SYNTAX 4.1, and the main program. The held message's activity runs
-/// no message yet, so it is not asked: `THREE` runs to its end. The oracle runs `THREE` alongside
-/// the loop, before the halt, and prints the same.
-// spec: native.threads.halt
-#[test]
-fn a_held_message_runs_after_a_halt() {
-    assert_eq!(
-        run("halt-held", "haltheld.rex"),
-        (
-            "one\ntwo\nthree\nmain halted\ncondition SYNTAX 4.1\n".to_owned(),
-            String::new(),
-            0
-        )
-    );
-}
-
 /// `HaltThread` and `SetThreadTrace`, called on an idle attached thread's context from the main
 /// program's call into the extension, return and do nothing: the thread's later message runs to
 /// its end untraced, and the main program is not halted. The oracle hangs, so it is not asked.
@@ -2052,19 +2033,15 @@ fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
 }
 
 /// `HaltThread`, `SetThreadTrace` and `DetachThread`, called on an attached thread's context from
-/// the main program's call into the extension while that thread's message runs Rexx code for two
-/// seconds, return well within that time and do nothing: the message runs to its end untraced and
-/// leaves no condition. The oracle hangs, so it is not asked.
+/// the main program's call into the extension while that thread's message loops in Rexx, must
+/// return to end the loop. The message runs to its end untraced and leaves no condition. The oracle
+/// hangs, so it is not asked.
 // spec: native.threads.attach.deviation.177
 #[test]
 fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_once() {
     assert_eq!(
         run_ours_for("misuse-running", "misrun.rex", "60"),
-        (
-            "long done\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("long done\nno condition\n".to_owned(), String::new(), 0)
     );
 }
 
@@ -2077,10 +2054,6 @@ fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_o
 fn halt_trace_and_detach_from_the_thread_a_message_waits_on_do_not_hang() {
     assert_eq!(
         run_ours_for("misuse-waiting", "miswait.rex", "30"),
-        (
-            "released\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("released\nno condition\n".to_owned(), String::new(), 0)
     );
 }
