@@ -49,7 +49,8 @@ The owner has ruled on these points, and the design is built around them:
   interrexx does not, under an approved Deviation.
 * **The fixed widths of the compiled form are resource limits, not language rules.** Register
   indices stay `u16` and the arena's ids and offsets `u32`. An expression that needs more of
-  either than the width holds raises Error 5, system resources exhausted. The bound is set by the
+  either than the width holds raises Error 5, system resources exhausted, and so does a body that
+  fills any other width of the compiled form (see IR compilation). The bound is set by the
   implementation, as the depth of routine calls is set by the interpreter's stack, and no rule of
   the language puts it there, so it raises 5 and not 11.1.
 * **There is one evaluator.** The tree-walking evaluator is retired, and every expression runs on
@@ -368,6 +369,12 @@ by the interpreter's stack, and not a rule of the language, so it raises 5 and n
 generated code ever meets it, values past the width could be parked on the driver's argument
 stack and taken back before the op that consumes them, without widening `Op`.
 
+The same holds for every other width the compiler can fill: constants, the op stream, send and
+call sites, expression slots, call arguments, template widths and `RAISE ARRAY` items. Each of
+those `ChunkTooLarge` refusals raises Error 5, with no subcode, against the clause being compiled.
+The one refusal that stays a loud error is `ValidOps`'s check for a register operand outside the
+chunk's register count: no program fills that, and it firing means the compiler is wrong.
+
 ### The plan, and the other scans
 
 `note` scans the slot's range in index order. A post-order and a pre-order walk meet the leaves in
@@ -588,7 +595,8 @@ one stack.
    go; goldens are re-recorded. The flat chain that aborts in `push_native` today runs, and so does
    the chain whose leftmost term is a call, which no longer falls back for width. Register
    exhaustion raises Error 5 from this step on, because a slot that ran on the evaluator for width
-   now compiles and can pass the register width (see Risks).
+   now compiles and can pass the register width (see Risks), and so does every other width
+   refusal of the compiler, so that no step leaves a loud refusal a program can reach.
 3. **The scans.** `note`, `guard_exposes`, `calls_nothing`, and the remaining shallow matches.
 4. **Retiring the evaluator.** Ops for `QualifiedCall`, `Logical` lists and cascade message
    instructions; the step functions, message-term assignment, PARSE template patterns and
@@ -640,6 +648,9 @@ Each test below fails on main today, which is the check that it covers the chang
   Error 5. In step 7, `1 + (1 + (...))`, `a~m(a~m(...))` and `f(1, f(1, ...))`, which keep one
   value pending per level and so pass the width only past `MAX_EXPR_DEPTH`, raise Error 5 the
   same way; today each raises 11.1 from the parser.
+* **Every compiler width raises 5.** In step 2, each `ChunkTooLarge` reason a program can reach
+  raises a `SYNTAX` condition with code 5, built from an oversized input where that is cheap and
+  otherwise with the width lowered under `cfg(test)`; the `ValidOps` operand check stays loud.
 * **Arena overflow raises 5.** The builder, with its id width lowered under `cfg(test)`, raises
   Error 5 when a body's nodes pass it, instead of panicking or wrapping.
 * **Every pass on a small thread.** A flat chain and a deep nesting, run through
