@@ -361,8 +361,11 @@ its next clause as under `TRACE ?R`, with the pause of interactive trace, except
 for the lines that [Deviation 166](r:native.threads.trace.deviation.166) leaves
 out of code that was already running. The setting is that of the code each
 activity is running: a method or a `::ROUTINE` it calls afterwards starts with
-its own, as [the scope of the setting](r:bif.trace.scope) says. Turned off,
-every activity runs on untraced from its next clause. An [attached
+its own, as [the scope of the setting](r:bif.trace.scope) says. A `::ROUTINE`
+reached by a request to turn tracing on at its first clause announces its
+entry, even if that clause returns. It announces its exit if the setting
+still traces labels when it leaves. Turned off, every activity runs on
+untraced from its next clause. An [attached
 thread](r:native.threads.attach) whose activity runs no message when the trace
 is turned on or off is not reached: the next message it sends runs with its
 method's own setting. A request made after the interpreter has ended does

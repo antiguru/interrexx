@@ -823,7 +823,10 @@ impl Interp {
                 return Err(failure);
             }
             if pending.request {
-                self.raise_requested_halt(pending.description)?;
+                self.raise_requested_halt(
+                    pending.description,
+                    pending.object == Some(ObjRef::NIL),
+                )?;
                 continue;
             }
             if let Some(exit) = self.deliver_one_pending_trap(pending)? {
