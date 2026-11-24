@@ -22222,9 +22222,11 @@ package does not make visible raises <code>98.988</code>, and a qualified routin
 does not make visible raises <code>43.902</code>. What a package makes visible is what
 <a href="directives/requires.html#r-dir.requires.visible">the visibility rule</a> says, including the public
 classes and routines that it found through its own ::REQUIRES. A qualified
-name written as a function call needs the parenthesis to follow the name at
-once, and without it the name is read as a class. The CALL instruction does
-not accept the qualified form, as <a href="directives/../instructions/call.html#r-instr.call.error">its error rule</a> says.</p>
+function call evaluates its arguments before looking up the namespace and
+the routine. A qualified name written as a function call needs the
+parenthesis to follow the name at once. Without it the name is read as a
+class. The CALL instruction does not accept the qualified form, as <a href="directives/../instructions/call.html#r-instr.call.error">its
+error rule</a> says.</p>
 <pre><code class="language-rexx">fa = 'spec-dir-requires-lk.tmp'
 call sysfiledelete fa
 call lineout fa, '::routine only_a public'
