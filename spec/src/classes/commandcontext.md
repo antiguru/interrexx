@@ -991,7 +991,9 @@ rule](r:conv.string.object) finds it: `request` with `STRING` is sent to it
 first, and its `string` method when that answers no string, so that a class
 with its own `request` decides the description. The condition holds that
 string; an instance of a subclass of `String` is a string here ([the deviation
-rule](r:class.commandcontext.deviation.109)). `additional` is the `ADDITIONAL`
+rule](r:class.commandcontext.deviation.109)). If the `string` result has no
+string value and the conversion does not raise a condition, the condition
+holds `.nil` for its description. `additional` is the `ADDITIONAL`
 entry of the condition object, the object as it was given, and when it is
 omitted or `.nil` the condition object has no such entry. The condition object
 has `RC`, holding the `rc` object. `condition` and `rc` are required: `SYNTAX
@@ -1051,6 +1053,66 @@ USER returned, rc <8> 0
 DEFAULTS returned, rc <9> 1
   trap ERROR <NILS> rc 10 entry 10 none
 NILS returned, rc <10> 1
+```
+
+```rexx
+x = .commandhandler~register('spec_cc_no_text', .raiser~new)
+do mode over .array~of('error call', 'error signal', 'halt call',,
+    'halt signal', 'nostring')
+  call exercise mode
+end
+x = .commandhandler~deregister('spec_cc_no_text')
+exit
+exercise: procedure
+  use arg mode
+  select
+    when mode = 'error call' then call on error name trapped
+    when mode = 'error signal' then signal on error name trapped
+    when mode = 'halt call' then call on halt name trapped
+    when mode = 'halt signal' then signal on halt name trapped
+    otherwise signal on nostring name trapped
+  end
+  address spec_cc_no_text mode
+  say 'return' rc
+  say 'next clause'
+  return
+trapped:
+  if condition('c') = 'NOSTRING' then say 'NOSTRING'
+  else say condition('c') (condition('d') == .nil) (condition('o')~description == .nil)
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  parse var command kind .
+  if kind = 'nostring' then kind = 'error'
+  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
+  return 10
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+```
+
+```output
+raise returned 5
+string called
+ERROR 1 1
+return 5
+next clause
+raise returned 5
+string called
+ERROR 1 1
+raise returned 5
+string called
+return 5
+HALT 1 1
+next clause
+raise returned 5
+string called
+HALT 1 1
+raise returned 5
+string called
+NOSTRING
 ```
 
 ```rexx

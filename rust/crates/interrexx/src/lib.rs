@@ -1148,6 +1148,7 @@ struct PendingTrap {
     /// An `ObjRef` reachable only through this queue, so
     /// [`Activity::object_roots`] names it: that destructure guards `Activity`'s
     /// own fields and would not have caught one added inside a `VecDeque`.
+    /// For a halt request, `Some(.nil)` means its description is `.nil`.
     object: Option<ObjRef>,
     /// The activation this may be delivered to: the raising activation's
     /// **caller**, which is the one whose trap table matched.
