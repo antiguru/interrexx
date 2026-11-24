@@ -422,6 +422,40 @@ return zn + 1
 rc> 0
 out> 6
 
+# target conversion and tracing precede arguments, and a bare return drops RESULT
+program
+n = .target~new
+result = 'previous'
+trace r
+call (n) zarg()
+say result
+exit
+zsub: return
+zarg:
+say 'argument'
+return 'value'
+::class target
+::method makeString
+say 'conversion'
+return 'ZSUB'
+----
+rc> 0
+out> conversion
+out> argument
+out> RESULT
+err>      4 *-* call (n) zarg()
+err>        >>>   "ZSUB"
+err>      8 *-*   zarg:
+err>      9 *-*   say 'argument'
+err>        >>>     "argument"
+err>     10 *-*   return 'value'
+err>        >>>     "value"
+err>      7 *-*   zsub:
+err>      7 *-*   return
+err>      5 *-* say result
+err>        >>>   "RESULT"
+err>      6 *-* exit
+
 # a recursive function call, one call site under many live activations
 program
 say zfact(5)
