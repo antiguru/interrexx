@@ -196,11 +196,11 @@ rule](r:expr.index.prefix), by which a message binds tighter than a prefix
 operator. When `~`, `~~` or `[` follows a reference, the message goes to the
 whole term that the prefix operators before the reference make, and those
 operators apply first. So `- b~length` sends `LENGTH` to `b` and negates the
-answer, but with `a` set to 3, `- >a~value` applies `-` to the reference,
-which raises `SYNTAX 97.1`, and sends nothing to a number. Likewise `- >b[1]`
-applies the `-` to the reference before any `[]` is sent, and raises
-`SYNTAX 41.1` when `b` is `'abc'`. Parentheses end the cascade: `- (>a~value)`
-negates the answer, 3. The message names of such a cascade are read with the
+answer, but with `a` set to 3, `- >a~value` applies `-` to the reference
+first, which gives `-3`, and then sends `VALUE` to `-3`, which raises
+`SYNTAX 97.1`. Likewise `- >b[1]` applies the `-` to the reference before any
+`[]` is sent, and raises `SYNTAX 41.1` when `b` is `'abc'`. Parentheses end
+the cascade: `- (>a~value)` negates the answer, 3. The message names of such a cascade are read with the
 terminators of the enclosing clause, so a keyword that ends the expression
 there ends it before the name. `do i = 1 to >a~for` raises `SYNTAX 19.909`
 when the clause is translated, because `for` is read as the keyword of the
@@ -212,8 +212,8 @@ a = 3
 b = 'abc'
 say - b~length
 say - (>a~value)
-call try '- >a~value'
-call try '- >b[1]'
+call try 'say - >a~value'
+call try 'say - >b[1]'
 call try 'do i = 1 to >a~for; end'
 call try 'do i = 1 to - >a~for; end'
 call try 'do i = 1 to b~for; end'
@@ -228,8 +228,8 @@ caught: say arg(1) '->' condition('o')~code
 ```output
 -3
 -3
-- >a~value -> 97.1
-- >b[1] -> 41.1
+say - >a~value -> 97.1
+say - >b[1] -> 41.1
 do i = 1 to >a~for; end -> 19.909
 do i = 1 to - >a~for; end -> 19.909
 do i = 1 to b~for; end -> 97.1
