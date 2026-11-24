@@ -194,8 +194,8 @@ fn daemons_naming(dir: &Path) -> Vec<rustix::process::Pid> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
-    use std::os::unix::process::{CommandExt, ExitStatusExt};
-    use std::process::ExitStatus;
+    use std::os::unix::process::ExitStatusExt;
+    use std::process::{ExitStatus, Stdio};
 
     #[expect(
         clippy::disallowed_methods,
@@ -223,6 +223,14 @@ mod tests {
 
     #[test]
     fn dropping_a_service_stops_only_its_daemon_and_removes_its_directory() {
+        const CHILD: &str = "INTERREXX_PRIVATE_SERVICE_TEST_DAEMON";
+        if std::env::var_os(CHILD).is_some() {
+            // The parent keeps this pipe open. If it exits unexpectedly, EOF
+            // lets the fixture child exit too.
+            std::io::stdin().read_line(&mut String::new()).unwrap();
+            return;
+        }
+
         let first = PrivateService::new(Side::Oracle, None).unwrap();
         let second = PrivateService::new(Side::Oracle, None).unwrap();
         let (_, first_dir) = first.variable();
@@ -231,13 +239,22 @@ mod tests {
         let second_dir = second_dir.to_path_buf();
 
         let rxapi = second_dir.join("rxapi");
-        std::fs::copy("/bin/sleep", &rxapi).unwrap();
+        // Linux reports the copied executable's name in /proc. Reusing the
+        // test binary avoids differences in multicall coreutils dispatch.
+        std::fs::copy(std::env::current_exe().unwrap(), &rxapi).unwrap();
         let daemon = |service: &PrivateService| {
             let mut command = Command::new(&rxapi);
             service.configure(&mut command);
-            // Multicall coreutils dispatches by argv[0]. The executable's
-            // name still gives the process its rxapi name in /proc.
-            command.arg0("sleep").arg("60").spawn().unwrap()
+            command
+                .env(CHILD, "1")
+                .args([
+                    "--exact",
+                    "private_service::tests::dropping_a_service_stops_only_its_daemon_and_removes_its_directory",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .spawn()
+                .unwrap()
         };
         let mut first_daemon = daemon(&first);
         let mut second_daemon = daemon(&second);

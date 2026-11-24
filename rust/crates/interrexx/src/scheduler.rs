@@ -3831,6 +3831,7 @@ impl Interp {
     pub(crate) fn raise_requested_halt(
         &mut self,
         description: Option<Vec<u8>>,
+        description_is_nil: bool,
     ) -> Result<(), Failure> {
         let raised = Raised {
             description: description.clone(),
@@ -3840,8 +3841,10 @@ impl Interp {
         if self.exits.is_some() && self.trap_for(b"HALT").is_some() {
             self.halt_clear_exit()?;
         }
+        let description_object = description_is_nil.then_some(ObjRef::NIL);
         match self.trap_for(b"HALT") {
             Some(trap) if trap.call => {
+                self.activity.pending_description = description_object;
                 let object = self.build_condition_object(&raised, Some(true))?;
                 // In a forwarding activation, such as the `.INPUT` monitor's
                 // `UNKNOWN` a halted read ran in, the trap is the caller's,
@@ -3863,7 +3866,10 @@ impl Interp {
                 });
                 Ok(())
             }
-            Some(_) => Err(raised.into()),
+            Some(_) => {
+                self.activity.pending_description = description_object;
+                Err(raised.into())
+            }
             None => Err(Raised::halt().into()),
         }
     }
@@ -3886,7 +3892,7 @@ impl Interp {
                 }
             };
             return match target {
-                Some(target) => request_halt(target, description) != Some(false),
+                Some(target) => request_halt(target, description, false) != Some(false),
                 None => true,
             };
         }
@@ -3907,7 +3913,7 @@ impl Interp {
                 .find(|activity| runs(activity))
         };
         match target {
-            Some(target) => request_halt(target, description) != Some(false),
+            Some(target) => request_halt(target, description, false) != Some(false),
             None => true,
         }
     }
@@ -3936,7 +3942,7 @@ impl Interp {
     /// is asked to halt.
     pub(crate) fn halt_running(&mut self) {
         let running = self.activities.running;
-        if request_halt(&mut self.activity, None) == Some(true) {
+        if request_halt(&mut self.activity, None, false) == Some(true) {
             self.wake_for_halt(running);
         }
     }
@@ -3944,8 +3950,8 @@ impl Interp {
     /// A halt with a description for the running activation, as a handler
     /// written in Rexx asks it with `caller~raise("HALT", rc)`: seen at the
     /// end of the clause, as a Ctrl-C is.
-    pub(crate) fn request_running_halt(&mut self, description: Vec<u8>) {
-        request_halt(&mut self.activity, Some(description));
+    pub(crate) fn request_running_halt(&mut self, description: Vec<u8>, description_is_nil: bool) {
+        request_halt(&mut self.activity, Some(description), description_is_nil);
     }
 
     /// [`Interp::halt_all`] before the order of the activities it readies is
@@ -3962,7 +3968,7 @@ impl Interp {
                     _ => continue,
                 }
             };
-            if request_halt(record, None) == Some(true) {
+            if request_halt(record, None, false) == Some(true) {
                 self.wake_for_halt(activity);
             }
         }
@@ -4084,14 +4090,18 @@ impl Interp {
             .pending_traps
             .remove(at)
             .expect("position answered an index inside the queue");
-        self.raise_requested_halt(pending.description)?;
+        self.raise_requested_halt(pending.description, pending.object == Some(ObjRef::NIL))?;
         Ok(true)
     }
 }
 
 /// Queues a halt request for `target`'s running activation: `None` where it
 /// has none, `Some(false)` where one is already queued, else `Some(true)`.
-fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<bool> {
+fn request_halt(
+    target: &mut Activity,
+    description: Option<Vec<u8>>,
+    description_is_nil: bool,
+) -> Option<bool> {
     let activation = target.running.as_ref()?.id;
     if target.pending_traps.iter().any(|pending| pending.request) {
         return Some(false);
@@ -4100,7 +4110,7 @@ fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<b
         condition: b"HALT".as_slice().into(),
         rc: None,
         description,
-        object: None,
+        object: description_is_nil.then_some(ObjRef::NIL),
         activation,
         queued_during_delivery: true,
         request: true,
