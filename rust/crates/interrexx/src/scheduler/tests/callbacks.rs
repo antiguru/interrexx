@@ -272,19 +272,17 @@ fn a_callback_while_the_holder_is_pinned_is_answered() {
     );
 }
 
-/// Two activities in native calls on pool threads call back in turn: each
-/// call's first callback waits in a `GUARD ON WHEN` until both calls have
-/// called back, a pinned wait on the callback's thread, and the second call,
-/// entered last, calls back again once the first has returned, so the
-/// calls end in the order they were entered. Each callback reaches its own
-/// call.
+/// Two activities in native calls on pool threads call back in turn. The
+/// first callback starts the second activity just before parking in
+/// `GUARD ON WHEN`, so the second callback can satisfy the pinned wait.
+/// The second native call calls back again once the first has returned.
 #[test]
 fn two_activities_in_native_calls_with_interleaved_callbacks() {
     let path = std::env::temp_dir().join(format!("rexx-interleaved-{}", std::process::id()));
     let _ = std::fs::remove_file(&path);
     let ran = run(&format!(
-        "m = .meet~new\na = .t~new~start('first', .side~new(m, 'A'))\n\
-         b = .t~new~start('second', .side~new(m, 'B'))\nsay a~result b~result\n\
+        "m = .meet~new\nb = .message~new(.t~new, 'SECOND', 'I', .side~new(m, 'B'))\n\
+         m~second = b\na = .t~new~start('first', .side~new(m, 'A'))\nsay a~result b~result\n\
          ::requires 'callbacktest' LIBRARY\n\
          ::class t\n::method first\n  use arg side\n  r = SENDTWICE(side, 'FIRST', 'SECOND')\n  \
          call lineout '{path}', r\n  call lineout '{path}'\n  return r\n\
@@ -292,8 +290,9 @@ fn two_activities_in_native_calls_with_interleaved_callbacks() {
          ::class side\n::method init\n  expose m who\n  use arg m, who\n\
          ::method first\n  expose m who\n  call HERE3\n  m~arrive\n  return who'1'\n\
          ::method second\n  expose who\n  call HERE3\n  return who'2'\n\
-         ::class meet\n::method init\n  expose n\n  n = 0\n\
-         ::method arrive\n  expose n\n  n += 1\n  guard on when n >= 2\n",
+         ::class meet\n::attribute second\n::method init\n  expose n\n  n = 0\n\
+         ::method arrive\n  expose n second\n  n += 1\n  if n == 1 then second~start\n  \
+         guard on when n >= 2\n",
         path = path.display()
     ));
     let written = std::fs::read_to_string(&path).unwrap_or_default();
@@ -307,6 +306,9 @@ fn two_activities_in_native_calls_with_interleaved_callbacks() {
         !threads.contains(&ran.thread),
         "a callback ran on the interpreter's thread"
     );
+    assert_ne!(threads[0], threads[1]);
+    assert_eq!(threads[0], threads[2]);
+    assert_eq!(threads[1], threads[3]);
 }
 
 /// A recall that arrives while another call's callback runs, and that a
