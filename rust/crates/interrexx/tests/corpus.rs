@@ -3,6 +3,8 @@
 //! code, and on stderr up to DEVIATION 0's own narrow indent normalisation
 //! (see the "DEVIATION 0" section below).
 
+#[path = "support/ruled_corpus.rs"]
+mod ruled_corpus;
 mod support;
 mod watchdog;
 
@@ -554,13 +556,13 @@ fn emit_uncaptured(text: &str) {
 /// STRICT and how the oracle and the memory limit are handled.
 const SUBSET_FILES: &[&str] = &["differential.txt"];
 
-/// The list the scheduler-simulation gate replays, which the differential
-/// must run too.
+/// The list the scheduler-simulation gate replays.
 const CONCURRENCY_FILE: &str = "concurrency.txt";
 
-/// Every program [`CONCURRENCY_FILE`] names is one the differential runs.
+/// Every scheduler probe runs in the differential or has a licensed answer
+/// checked by the ruled fixture runner.
 #[test]
-fn every_concurrency_program_is_run_by_the_differential() {
+fn every_concurrency_program_is_run_by_the_differential_or_a_ruled_fixture() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
     let paths: Vec<PathBuf> = SUBSET_FILES
         .iter()
@@ -575,14 +577,28 @@ fn every_concurrency_program_is_run_by_the_differential() {
         !concurrency.is_empty(),
         "{CONCURRENCY_FILE} names no programs"
     );
+    let unfiled = read_unfiled(&corpus_dir);
+    let mut ruled = BTreeSet::new();
+    for &(program, deviation) in ruled_corpus::CONCURRENCY {
+        assert!(
+            concurrency.iter().any(|entry| entry == program),
+            "{program} has a ruled scheduler outcome but is absent from {CONCURRENCY_FILE}"
+        );
+        assert!(
+            unfiled
+                .iter()
+                .any(|(entry, reason)| entry == program && reason.contains(deviation)),
+            "{UNFILED_FILE} must record {deviation} for {program}"
+        );
+        ruled.insert(program);
+    }
     let missing: Vec<&String> = concurrency
         .iter()
-        .filter(|entry| !run.contains(*entry))
+        .filter(|entry| !run.contains(*entry) && !ruled.contains(entry.as_str()))
         .collect();
     assert!(
         missing.is_empty(),
-        "{missing:?} are in {CONCURRENCY_FILE} and not in {SUBSET_FILES:?}, so the oracle \
-         never judges them"
+        "{missing:?} are in {CONCURRENCY_FILE} but have no differential run or ruled fixture"
     );
 }
 
