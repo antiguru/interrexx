@@ -175,6 +175,7 @@ jobs:
             }
             & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
             if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
+            if ($env:REXX_TEST_CASE_PARENT) { Write-Host 'The case-sensitive NTFS sibling check passed.' }
           } finally {
             Remove-Item -LiteralPath $probe
             Remove-Item -LiteralPath $caseRoot -Recurse
