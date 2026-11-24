@@ -317,6 +317,46 @@ say .point~new~'Shown' .point~new~shown
 20 3 3
 shown shown
 </code></pre>
+<div class="rule" id="r-expr.terms.message.reference"><a href="#r-expr.terms.message.reference">[expr.terms.message.reference]</a></div>
+<p>A message after a variable reference term is the exception to <a href="index.html#r-expr.index.prefix">the prefix
+rule</a>, by which a message binds tighter than a prefix
+operator. When <code>~</code>, <code>~~</code> or <code>[</code> follows a reference, the message goes to the
+whole term that the prefix operators before the reference make, and those
+operators apply first. So <code>- b~length</code> sends <code>LENGTH</code> to <code>b</code> and negates the
+answer, but with <code>a</code> set to 3, <code>- &gt;a~value</code> applies <code>-</code> to the reference
+first, which gives <code>-3</code>, and then sends <code>VALUE</code> to <code>-3</code>, which raises
+<code>SYNTAX 97.1</code>. Likewise <code>- &gt;b[1]</code> applies the <code>-</code> to the reference before any
+<code>[]</code> is sent, and raises <code>SYNTAX 41.1</code> when <code>b</code> is <code>'abc'</code>. Parentheses end
+the cascade: <code>- (&gt;a~value)</code> negates the answer, 3. The message names of such a cascade are read with the
+terminators of the enclosing clause, so a keyword that ends the expression
+there ends it before the name. <code>do i = 1 to &gt;a~for</code> raises <code>SYNTAX 19.909</code>
+when the clause is translated, because <code>for</code> is read as the keyword of the
+<code>DO</code> and leaves no message name, whereas <code>do i = 1 to b~for</code> sends the message
+<code>FOR</code> to <code>b</code>.</p>
+<pre><code class="language-rexx">a = 3
+b = 'abc'
+say - b~length
+say - (&gt;a~value)
+call try 'say - &gt;a~value'
+call try 'say - &gt;b[1]'
+call try 'do i = 1 to &gt;a~for; end'
+call try 'do i = 1 to - &gt;a~for; end'
+call try 'do i = 1 to b~for; end'
+exit
+try:
+  signal on syntax name caught
+  interpret arg(1)
+caught: say arg(1) '-&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">-3
+-3
+say - &gt;a~value -&gt; 97.1
+say - &gt;b[1] -&gt; 41.1
+do i = 1 to &gt;a~for; end -&gt; 19.909
+do i = 1 to - &gt;a~for; end -&gt; 19.909
+do i = 1 to b~for; end -&gt; 97.1
+</code></pre>
 <div class="rule" id="r-expr.terms.array"><a href="#r-expr.terms.array">[expr.terms.array]</a></div>
 <p>A list of two or more expressions separated by commas, in parentheses, is
 an array term. Its value is a new array that holds the values of the
