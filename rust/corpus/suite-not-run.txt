@@ -5,9 +5,14 @@
 # `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts each is
 # present. A `platform windows` row is a test of a group below
 # `extensions/platform/windows/`, which needs a Windows API this host lacks.
-# ootest revision 13532
+# ootest revision 13624
+base/rexxutil/SysEventSem	TEST_CLOSED_HANDLE	NotRun	restrictOS line 41
+base/rexxutil/SysEventSem	TEST_MADE_UP_HANDLE	NotRun	restrictOS line 41
+base/rexxutil/SysEventSem	TEST_POST_WAIT_RESET_CLOSE	NotRun	restrictOS line 41
+base/rexxutil/SysMutexSem	TEST_CLOSED_HANDLE	NotRun	restrictOS line 41
 base/rexxutil/SysMutexSem	TEST_CREATE_EMPTY_NAME	NotRun	restrictOS line 41
 base/rexxutil/SysMutexSem	TEST_CREATE_NO_NAME	NotRun	restrictOS line 41
+base/rexxutil/SysMutexSem	TEST_MADE_UP_HANDLE	NotRun	restrictOS line 41
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE2	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysCurPos	TESTCURPOS	NotRun	restrictOS line 43
