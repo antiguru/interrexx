@@ -1525,10 +1525,16 @@ rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
 character to standard output. `.RexxInfo~languageLevel`, and the level in
 `PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
 argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
-interrexx. ooRexx is at level 6.07: the three are builtins there, with argument
-errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
-argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
-(#796).
+interrexx. Neither is the THROW instruction of level 6.07: a clause that starts
+with THROW is a command, a condition object has no `THROWN` entry, and the
+native interface's function tables and interface versions are those of level
+6.06, without the `Throw` and `ThrowObject` entry points. ooRexx is at level
+6.07: the three are builtins there, with argument errors of the 40.xxx family,
+BEEP writes no bell, ERRORTEXT takes a second argument of values for an error
+code's message, THROW raises a condition that goes from caller to caller until
+it is caught, every condition object has a `THROWN` entry, and the level reads
+6.07. Ruled by the owner on 2026-11-17 (#796), and for THROW on 2026-11-24
+(#804).
 
 The same difference applies to the [required language level in compiled
 images](r:env.invocation.rexxc.required-level). ooRexx records 6.07 when a

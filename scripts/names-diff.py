@@ -114,7 +114,7 @@ EXCEPTIONS = [
     (
         "both",
         "macro REXX_CURRENT_LANGUAGE_LEVEL",
-        "interrexx implements level 6.06; 6.07 adds CATCH and FINALLY, which it does not have "
+        "interrexx implements level 6.06; 6.07 adds CATCH, FINALLY and THROW, which it does not have "
         "(decisions.md, the language level)",
     ),
     *[

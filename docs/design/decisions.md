@@ -168,10 +168,11 @@ page records why they are the way they are.
   `SSIZE_MIN` to be 0. These are fixes, not Deviations.
 * **The language level is the one interrexx implements, not the pinned one** (2026-11-17, #796).
   `REXX_CURRENT_LANGUAGE_LEVEL`, `LanguageLevel`, `.RexxInfo~languageLevel` and `PARSE VERSION`
-  answer 6.06 while the pinned ooRexx answers 6.07, whose CATCH and FINALLY clauses interrexx
-  does not have, so a program that asks for the level is not told features are there that are
+  answer 6.06 while the pinned ooRexx answers 6.07, whose CATCH and FINALLY clauses and THROW
+  instruction interrexx does not have, so a program that asks for the level is not told features are there that are
   not. `include/` declares `REXX_LANGUAGE_6_07`, which only names the level, and
-  the names diff lists the differing current level with this reason. The level moves when the
+  the names diff lists the differing current level with this reason, and the `Throw` and
+  `ThrowObject` entry points and interface versions of THROW too. The level moves when the
   features of the next level are in.
 
 ## Performance
