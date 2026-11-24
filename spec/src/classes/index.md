@@ -820,6 +820,11 @@ that
 ([Deviation 109](r:class.string.deviation.109)). A `string` method that
 answers an object with no string value counts as one that answered nothing,
 as [the answer rule](r:conv.string.answer) says.
+An argument that a method reads as a number then reads as the object's
+default string value, which is not a number, so the method's own check of the
+argument raises its error, as for any other value that is not a number. So
+does a size or an index of an `Array`, a `List` or a `Queue`, and a number
+that a method of `DateTime` or `TimeSpan` creates an instance from or adds.
 
 ```rexx
 a = .plain~new
@@ -910,6 +915,85 @@ bad: say arg(1) '=>' condition('o')~code
 "abc"~left(5, .nil) => 88.909
 "x"~"||"(.askstr~new) => x-
 filespec("N", .asknamed~new) => q
+```
+
+```rexx
+o = .weird~new
+a = .array~of('a', 'b')
+m = .array~new(2, 2)
+l = .list~of('a', 'b')
+q = .queue~of('a', 'b')
+call try '.array~new(o)'
+call try '.array~new(1, o)'
+call try 'a~at(o)'
+call try 'a[o]'
+call try 'a~section(o)'
+call try 'a~dimension(o)'
+call try 'm~at(o, 1)'
+call try 'l~insert("x", o)'
+call try 'l~section(o)'
+call try 'q~insert("x", o)'
+say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
+say a~at(.numberText~new) q~at(.numberText~new)
+call try '.datetime~fromBaseDate(o)'
+call try '.datetime~fromTicks(o)'
+call try '.datetime~new(o)'
+d = .datetime~new(1, 0)
+call try 'd~addMicroseconds(o)'
+call try 'd~addYears(o)'
+call try '.timespan~new(o)'
+call try '.timespan~new(o, 0)'
+call try '.timespan~new(o, 0, 0, 0)'
+call try '.timespan~fromSeconds(o)'
+call try '.timespan~fromMicroseconds(o)'
+t = .timespan~new(1)
+call try 't~addMicroseconds(o)'
+call try 't * o'
+call try 't % o'
+call try 't // o'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class weird
+::method string
+  return .object~new
+::class numberText
+::method string
+  return '2'
+```
+
+```output
+.array~new(o) => 93.906
+.array~new(1, o) => 93.906
+a~at(o) => 93.907
+a[o] => 93.907
+a~section(o) => 93.907
+a~dimension(o) => 93.907
+m~at(o, 1) => 93.924
+l~insert("x", o) => 93.918
+l~section(o) => 93.918
+q~insert("x", o) => 93.907
+a,b a,b
+b b
+.datetime~fromBaseDate(o) => 88.918
+.datetime~fromTicks(o) => 88.918
+.datetime~new(o) => 40.19
+d~addMicroseconds(o) => 88.902
+d~addYears(o) => 88.903
+.timespan~new(o) => 88.903
+.timespan~new(o, 0) => 88.907
+.timespan~new(o, 0, 0, 0) => 88.904
+.timespan~fromSeconds(o) => 88.902
+.timespan~fromMicroseconds(o) => 88.902
+t~addMicroseconds(o) => 88.902
+t * o => 41.1
+t % o => 41.1
+t // o => 41.1
 ```
 
 ## Messages a method sends
