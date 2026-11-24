@@ -4259,7 +4259,9 @@ impl Interp {
         // own stream object is never checked.
         if let Some(replacement) = self.check_stream_access(&qualified)? {
             if let Some(table) = self.stream_table_mut() {
-                table.insert(qualified.into_boxed_slice(), replacement);
+                table
+                    .get_or_insert_with(Box::default)
+                    .insert(qualified.into_boxed_slice(), replacement);
             }
             return Ok(replacement);
         }
@@ -4278,7 +4280,9 @@ impl Interp {
         )?
         .ok_or_else(|| Failure::from(Raised::no_result(b"NEW")))?;
         if added && let Some(table) = self.stream_table_mut() {
-            table.insert(qualified.into_boxed_slice(), built);
+            table
+                .get_or_insert_with(Box::default)
+                .insert(qualified.into_boxed_slice(), built);
         }
         Ok(built)
     }
@@ -4309,7 +4313,7 @@ impl Interp {
     /// fresh one.
     pub(crate) fn forget_stream(&mut self, name: &[u8]) {
         let qualified = crate::builtin::platform::qualify_name(self, name);
-        if let Some(table) = self.stream_table_mut() {
+        if let Some(table) = self.stream_table_mut().and_then(Option::as_deref_mut) {
             table.remove(qualified.as_slice());
         }
     }
