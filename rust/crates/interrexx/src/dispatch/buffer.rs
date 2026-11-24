@@ -603,7 +603,8 @@ pub(super) fn bit_arguments(
     Ok((other, pad))
 }
 
-/// `DATATYPE`'s option letter, or `None` when it is omitted.
+/// `DATATYPE`'s option letter, or `None` when it is omitted. A supplied empty
+/// option raises with an empty found value.
 pub(super) fn datatype_option_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -615,9 +616,10 @@ pub(super) fn datatype_option_argument(
     let letter = interp
         .to_text(text)
         .first()
-        .copied()
-        .unwrap_or(0)
-        .to_ascii_uppercase();
+        .map(u8::to_ascii_uppercase)
+        .ok_or_else(|| {
+            Raised::method_option_not_recognised(crate::builtin::datatype::DATATYPE_OPTIONS, b"")
+        })?;
     Ok(Some(letter))
 }
 

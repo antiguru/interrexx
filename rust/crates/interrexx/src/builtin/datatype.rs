@@ -187,11 +187,11 @@ pub(crate) fn datatype(
         };
         return Ok(interp.text(kind));
     };
-    // An empty option's first byte is `0x00`, which matches none of the
-    // thirteen letters below and falls straight to the `None` arm -- the same
-    // path a bad letter takes, and the byte `error.rs`'s `displayable`
-    // turns into `?` when the report line it landed in gets printed.
-    let letter = option.first().copied().unwrap_or(0).to_ascii_uppercase();
+    let invalid = |found: &[u8]| Raised::argument_not_in_list(name, 2, DATATYPE_OPTIONS, found);
+    let letter = option
+        .first()
+        .map(u8::to_ascii_uppercase)
+        .ok_or_else(|| invalid(b""))?;
     let plain = {
         let text = super::required_render(interp, args, 1);
         datatype_letter_matches(text.text(interp), letter)
@@ -203,9 +203,7 @@ pub(crate) fn datatype(
             Some(datatype_whole(interp, value)?)
         }
     };
-    let Some(matched) = matched else {
-        return Err(Raised::argument_not_in_list(name, 2, DATATYPE_OPTIONS, &[letter]).into());
-    };
+    let matched = matched.ok_or_else(|| invalid(&[letter]))?;
     Ok(interp.text(if matched { b"1" } else { b"0" }))
 }
 
@@ -675,9 +673,7 @@ mod tests {
 
     /// `DATATYPE`'s option is read as one byte, and the omitted argument is
     /// not an empty one: an omitted second argument selects the one-argument
-    /// form, while an empty one is 40.904 with `found "?"` -- the NUL byte
-    /// an empty option's first-character read gives, turned into `?` by the report
-    /// line's own control-byte substitution (`error.rs`'s `displayable`).
+    /// form, while an empty one is 40.904 with an empty found value.
     #[test]
     fn datatype_tells_an_omitted_option_from_an_empty_one() {
         // The omitted form: no second argument at all is the one-argument
@@ -686,9 +682,7 @@ mod tests {
         let (code, stderr) = failure(b"say datatype('','')\n");
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&expand(
-                "Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦?⟩"
-            )),
+            stderr.contains(&expand("Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦⟩")),
             "{stderr}"
         );
         let (code, stderr) = failure(b"say datatype(1,'Z')\n");
@@ -697,6 +691,20 @@ mod tests {
             stderr.contains(&expand(
                 "Error 40.904:  ⟨40.904¦DATATYPE¦2¦ABILMNOSUVWX9¦Z⟩"
             )),
+            "{stderr}"
+        );
+        let (major, minor, inserts) = raised(b"DATATYPE", &[b"abc", b"\0"]);
+        assert_eq!((major, minor), (40, 904));
+        assert_eq!(inserts[3], [0]);
+    }
+
+    #[test]
+    fn datatype_reports_an_empty_method_option_as_empty() {
+        assert_eq!(output(b"say 'abc'~dataType()\n"), "CHAR\n");
+        let (code, stderr) = failure(b"say 'abc'~dataType('')\n");
+        assert_eq!(code, 163, "{stderr}");
+        assert!(
+            stderr.contains(&expand("Error 93.915:  ⟨93.915¦ABILMNOSUVWX9¦⟩")),
             "{stderr}"
         );
     }
