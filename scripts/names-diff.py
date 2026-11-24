@@ -42,8 +42,8 @@ CAST = (
     "(decisions.md, the header fixes)"
 )
 THROW_API = (
-    "the Throw and ThrowObject entry points and the interface versions that announce them belong "
-    "to THROW, a level 6.07 feature interrexx does not have (decisions.md, the language level)"
+    "the interface versions stay those of level 6.06: the Throw and ThrowObject entry points they "
+    "announce belong to THROW, a level 6.07 feature, and refuse (decisions.md, the language level)"
 )
 EXCEPTIONS = [
     ("upstream", "macro REXXAPIDEFS_INCLUDED", GUARD),
@@ -133,27 +133,6 @@ EXCEPTIONS = [
             "CALL_INTERFACE_VERSION_5_3_0",
             "EXIT_INTERFACE_VERSION_5_3_0",
             "METHOD_INTERFACE_VERSION_5_3_0",
-        )
-    ],
-    *[
-        ("upstream", f"field {name}", THROW_API)
-        for name in (
-            "CallContextInterface::Throw",
-            "ExitContextInterface::Throw",
-            "MethodContextInterface::Throw",
-            "RexxThreadInterface::ThrowObject",
-        )
-    ],
-    *[
-        ("upstream", f"CXXMethodDecl {name}", THROW_API)
-        for name in (
-            "RexxCallContext_::Throw",
-            "RexxCallContext_::ThrowObject",
-            "RexxExitContext_::Throw",
-            "RexxExitContext_::ThrowObject",
-            "RexxMethodContext_::Throw",
-            "RexxMethodContext_::ThrowObject",
-            "RexxThreadContext_::ThrowObject",
         )
     ],
 ]

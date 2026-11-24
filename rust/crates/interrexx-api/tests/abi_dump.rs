@@ -1136,11 +1136,22 @@ fn differences(measured: &Facts, expected: &Facts) -> Vec<String> {
 
 /// The facts on which the pinned upstream headers differ from `include/` by design, each with
 /// its reason; the dump against `include/` has none.
-const UPSTREAM_DIFFERENCES: &[(&str, &str)] = &[(
-    "const REXX_CURRENT_LANGUAGE_LEVEL",
-    "interrexx implements level 6.06, the pinned headers name 6.07 (decisions.md, the language \
-     level)",
-)];
+const UPSTREAM_DIFFERENCES: &[(&str, &str)] = &[
+    (
+        "const REXX_CURRENT_LANGUAGE_LEVEL",
+        "interrexx implements level 6.06, the pinned headers name 6.07 (decisions.md, the \
+         language level)",
+    ),
+    ("const CALL_INTERFACE_VERSION", THROW_VERSIONS),
+    ("const EXIT_INTERFACE_VERSION", THROW_VERSIONS),
+    ("const METHOD_INTERFACE_VERSION", THROW_VERSIONS),
+    ("const THREAD_INTERFACE_VERSION", THROW_VERSIONS),
+    ("const THREAD_INTERFACE_VERSION_5_3_0", THROW_VERSIONS),
+];
+
+/// Why the interface versions differ from the pinned headers'.
+const THROW_VERSIONS: &str = "the versions stay those of level 6.06: the Throw and ThrowObject \
+     members they announce belong to THROW, a level 6.07 feature, and refuse (Deviation 179)";
 
 fn check(language: Language, headers: Headers) {
     let dir = scratch(&format!(

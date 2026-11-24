@@ -1610,6 +1610,7 @@ interface! {
         },
         GetInterpreterInstance: { aborts call(*mut RexxThreadContext_) -> *mut RexxInstance_ },
         RaiseConditionObject: { call(*mut RexxThreadContext_, RexxDirectoryObject) },
+        ThrowObject: { unwinds call(*mut RexxThreadContext_, RexxDirectoryObject) },
     }
 }
 
@@ -1663,6 +1664,9 @@ interface! {
                 RexxObjectPtr
             )
         },
+        Throw: {
+            unwinds call(*mut RexxMethodContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
+        },
     }
 }
 
@@ -1703,6 +1707,9 @@ interface! {
                 RexxObjectPtr
             )
         },
+        Throw: {
+            unwinds call(*mut RexxCallContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
+        },
     }
 }
 
@@ -1732,6 +1739,9 @@ interface! {
                 RexxObjectPtr,
                 RexxObjectPtr
             )
+        },
+        Throw: {
+            unwinds call(*mut RexxExitContext_, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr)
         },
     }
 }
