@@ -245,12 +245,12 @@ is refused, exit code 120, and so is `d~unknown('A=', args)` sent directly
 with an argument array that holds no item. ooRexx stores an unrelated leftover
 value for the first and removes the entry for the second.
 
-## 30. A STRING method answering a non-string
+## 30. Withdrawn
 
-String conversion falls back to the object's name when `STRING` supplies no
-usable value. The pinned ooRexx revision may give an unusable result or crash.
-ooRexx r13624 adopted this fallback. See the [conversion
-rule](r:conv.string.deviation.30).
+A `STRING` method that answers an object with no string value: interrexx
+reads the object as its default string value, as ooRexx does since r13624
+([the answer rule](r:conv.string.answer)). Withdrawn by the owner on
+2026-11-24 (ooRexx r13624, upstream #1743).
 
 ## 31. Withdrawn
 
@@ -1395,9 +1395,10 @@ one. ooRexx accepts a tab after the word that names a command, and raises
 
 ## 169. Withdrawn
 
-The fallback to the object's name replaces the unconditional SYNTAX error.
-[Deviation 30](#30-a-string-method-answering-a-non-string) covers comparison
-with the pinned ooRexx revision.
+The `SYNTAX 98.973` that a clause reading the bytes of such an answer raised:
+the answer counts as none, and the clause reads the default string value
+([the answer rule](r:conv.string.answer)). Withdrawn by the owner on
+2026-11-24 (ooRexx r13624, upstream #1743).
 
 ## 170. Withdrawn
 

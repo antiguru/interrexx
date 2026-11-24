@@ -161,12 +161,20 @@ impl Interp {
             Ok(Primitive::Instance { .. } | Primitive::Class(_))
         ) {
             let caller = self.caller();
-            let answered = pinned!(
+            match pinned!(
                 self,
                 crate::pinning::PinKind::Conversion,
                 self.send_message(value, STRING, None, &[], caller)
-            )?;
-            self.string_method_answer_text(value, answered)?
+            )? {
+                // An answer with no string value counts as no answer, and the
+                // default string value stands in for it
+                // (`r[conv.string.answer]`).
+                Some(answered) => match self.string_answer_conversion(answered)? {
+                    Some(text) => text,
+                    None => self.string_value_text(value)?,
+                },
+                None => self.string_value_text(value)?,
+            }
         } else if self.is_stem_object(value) {
             self.stem_string_representation(value)?
         } else {
@@ -195,47 +203,37 @@ impl Interp {
         Ok(readable)
     }
 
-    /// Reads a STRING answer, allowing one string request on the answer
-    /// before falling back to the original receiver's object name.
-    pub(crate) fn string_method_answer_text(
+    /// What a user `STRING` method's answer reads as: its text under the
+    /// primitive conversion, else what its own `MAKESTRING` (or `REQUEST`)
+    /// converts it to, else `None`, an answer with no string value
+    /// (`r[conv.string.answer]`).
+    pub(crate) fn string_answer_conversion(
         &mut self,
-        receiver: ObjRef,
-        answered: Option<ObjRef>,
-    ) -> Result<Vec<u8>, Failure> {
-        if let Some(answered) = answered {
-            if let Some(text) = self.primitive_string_answer_text(answered)? {
-                return Ok(text);
-            }
-            if self.heap.is_class(answered)
-                || matches!(
-                    self.heap.get(answered).map(|object| &object.body),
-                    Some(Body::Instance { .. })
-                )
-            {
-                self.roots.activity_mut().push_temp(answered);
-                if let Some(text) = self.string_conversion(answered)? {
-                    return Ok(self.to_text(text).into_owned());
-                }
-            }
+        answered: ObjRef,
+    ) -> Result<Option<Vec<u8>>, Failure> {
+        if let Some(text) = self.primitive_answer_text(answered)? {
+            return Ok(Some(text));
         }
-        self.string_value_text(receiver)
+        Ok(match self.required_string_answer(answered)? {
+            Some(RequiredString::Object(text)) => Some(self.to_text(text).into_owned()),
+            Some(RequiredString::Bytes(bytes)) => Some(bytes),
+            None => None,
+        })
     }
 
-    /// Reads an answer that has an intrinsic string value without sending
-    /// another REQUEST, STRING or OBJECTNAME to it.
-    pub(crate) fn primitive_string_answer_text(
+    /// What a user method's answer reads as under the primitive string
+    /// conversion. A string, a number or an instance of a `String` subclass is
+    /// itself, an array (not a queue) is its items joined by a newline, and a
+    /// buffer is its text. Any other object is `None`: it has no string value
+    /// here, and nothing is sent to it.
+    pub(crate) fn primitive_answer_text(
         &mut self,
         answered: ObjRef,
     ) -> Result<Option<Vec<u8>>, Failure> {
         let joined = match answered.decode() {
             Decoded::SmallInt(_) | Decoded::Text(_) => None,
             Decoded::Heap { .. } if !self.heap.is_class(answered) => {
-                if matches!(
-                    self.heap.get(answered).map(|object| &object.body),
-                    Some(Body::Text { .. } | Body::Num { .. })
-                ) || self.buffer(answered).is_some()
-                    || super::string::subclass_text(self, answered).is_some()
-                {
+                if self.is_string_valued(answered) || self.buffer(answered).is_some() {
                     None
                 } else {
                     // An `Array` subclass instance's items live in a store
@@ -278,7 +276,7 @@ impl Interp {
         // and being armed is not rare: any instance of a Rexx class arms it.
         //
         // A heap string or number is its own string value too, which is
-        // [`Interp::required_string_or`]'s answer for it; that answer roots
+        // [`Interp::required_string_value`]'s answer for it; that answer roots
         // it, so it is rooted here as well. Only a position whose conversion
         // could answer another object makes the list worth copying, and only
         // then is the exemption table asked: an exempt position copied
@@ -336,8 +334,10 @@ impl Interp {
                         StringConversion::Array(store) => Some(RequiredString::Bytes(
                             self.string_conversion_array_text(store)?,
                         )),
+                        // A buffer converts by its own `MAKESTRING`; any
+                        // other answer is no answer (`r[conv.string.answer]`).
                         StringConversion::MakeString | StringConversion::None => self
-                            .primitive_string_answer_text(answered)?
+                            .primitive_answer_text(answered)?
                             .map(RequiredString::Bytes),
                     },
                     None => None,

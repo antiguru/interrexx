@@ -2,7 +2,7 @@
 element: "Classes"
 kind: chapter
 rexxref: "Builtin Classes; Objects and Classes > Mixin Classes; Objects and Classes > Overview of Classes Provided by Rexx; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > string"
-deviations: [30, 32, 36, 109]
+deviations: [32, 36, 109]
 ---
 
 # Classes
@@ -818,8 +818,8 @@ of `String` is a string, and its string value is its own characters, whatever
 `makeString`, `request` and `string` it declares: no message is sent to it for
 that
 ([Deviation 109](r:class.string.deviation.109)). A `string` method that
-answers an object that is not a string is covered by
-[Deviation 30](r:class.index.deviation.30).
+answers an object with no string value counts as one that answered nothing,
+as [the answer rule](r:conv.string.answer) says.
 
 ```rexx
 a = .plain~new
@@ -997,22 +997,6 @@ e: say arg(1) '=>' condition('o')~code
 ```
 
 ## Deviations
-
-r[class.index.deviation.30]
-Conversion uses the object's name when its `STRING` method answers no usable value. The pinned ooRexx revision can give an unusable result or crash. See the [conversion rule](r:conv.string.object).
-
-```rexx
-say 'before'
-say 'x' .weird~new
-::class weird
-::method string
-  return .directory~new
-```
-
-```output
-before
-x a WEIRD
-```
 
 r[class.index.deviation.32]
 When a class-side `new` reached through `enhanced` answers an object it did

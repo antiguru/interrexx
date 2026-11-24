@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30, 109]
+deviations: [109]
 ---
 
 # Conventions
@@ -50,17 +50,22 @@ say c2x(upper('61007a'x))
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
-replacement is found by sending `REQUEST('STRING')`. If it supplies a value
-that can be read as a string, that value supplies the replacement. Otherwise
-the interpreter sends [`STRING`](r:class.object.string). It can use the
-answer's own string value or ask that answer once for a string through
-`REQUEST('STRING')`. If neither supplies a string, the interpreter uses the
-original object's name. An unusable or missing `OBJECTNAME` answer leaves
-the object's built-in default name. An absent return value and `.nil`
-both count as failing to supply a string.
-The [`REQUEST`](r:class.object.request) of `Object` sends `MAKESTRING` when
-the object has that method. A class that overrides `REQUEST` controls that
-step and can forward to its `MAKESTRING`. An instance of
+replacement is found by sending the object the message `REQUEST` with the
+argument `STRING`, and nothing else is sent first. When the answer is a string,
+it is the replacement. When the answer is `.nil` or another object that is not
+a string, the replacement is the answer of the object's public
+[`STRING`](r:class.object.string) method, and when that answer has no string
+value either, [the answer rule](r:conv.string.answer) gives the replacement. The
+[`REQUEST`](r:class.object.request) of `Object` sends the object `MAKESTRING`
+when it has one and answers what that answers, and answers `.nil` when it has
+none. So an object with a `MAKESTRING` method is replaced by its answer, as for
+an [`Array`](r:class.array.makestring) or a
+[`MutableBuffer`](r:class.mutablebuffer.makestring), and an object with only a
+`STRING` method by the answer of that method. A class that declares its own
+`REQUEST` method decides the answer itself: its `MAKESTRING` method is not used
+unless its `REQUEST` sends it, and a `REQUEST` that answers a string is used
+even when the class has a `STRING` method. A `MAKESTRING` that answers `.nil`
+or an object that is not a string is like a `REQUEST` that does. An instance of
 a subclass of `String` is a string here, whether it is passed directly or is
 what `REQUEST` answers: the builtin works on its own characters, and no message
 is sent to it for that ([Deviation 109](r:class.string.deviation.109)). A
@@ -181,6 +186,65 @@ makestring
 1
 abab 3 x2
 97.2
+```
+
+r[conv.string.answer]
+An answer that has no string value counts as no answer, so that the
+conversion of an object always ends in a string and never raises an error of
+its own. The answer of a `STRING` method has a string value when it is a
+string, a number or an instance of a subclass of `String`, when it is an array,
+whose items joined by a newline are its string value, or a `MutableBuffer`,
+and when its own `MAKESTRING` answers one of these. The answer of an
+`OBJECTNAME` method of the object's own and of a `MAKESTRING` method has one
+when it is one of the first five; no message is sent to it. Any other answer,
+such as `.nil`, a `Directory`, a `Queue`, an `Object` or the object itself, has
+none. Where the `STRING` answer has none, the object's string value is the one
+the `STRING` method of `Object` answers for it, its `OBJECTNAME`. Where the
+`OBJECTNAME` answer has none, it is the default name of the object's class: `a`
+or `an` and the class's id, whatever name was set on the object and whatever
+its `DEFAULTNAME` answers. Where the `MAKESTRING` answer, or the answer of a
+`REQUEST` method of the object's own, has none, or a `REQUEST` method answers
+nothing, the object has not converted, and its `STRING` method is sent as
+[the string rule](r:conv.string.object) says. Every clause and every argument
+of a builtin reads that string as it reads any string: a builtin checks it as
+the argument's kind requires, `PARSE VALUE` parses it, and an operator, a
+comparison and a truth value read it. A `NOSTRING` trap takes the conversion
+as it takes that of any object converted by its `STRING` method, with that
+string as its description ([the information rule](r:cond.nostring.information)).
+
+```rexx
+o = .weird~new
+say length(o) words(o) 'a'||o
+parse value o with p q
+say q ('a WEIRD' == o) changestr('E', 'xEy', o)
+signal on syntax name s
+say left('abc', o)
+s: say condition('o')~code
+say ('a' || .named~new) ('a' || .badname~new) ('a' || .made~new)
+::class weird
+::method string
+  return .directory~new
+::class named
+::method string
+  return .nil
+::method objectname
+  return 'NAMED'
+::class badname
+::method objectname
+  return .directory~new
+::class made
+::method string
+  return .maker~new
+::class maker
+::method makestring
+  return 'made'
+```
+
+```output
+7 2 aa WEIRD
+WEIRD 1 xa WEIRDy
+40.12
+aNAMED aa BADNAME amade
 ```
 
 r[conv.string.whitespace]
@@ -521,8 +585,8 @@ objects, by sending them `STRING`, is part of its checks: a call that has no
 fault sends `STRING` to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
 call of a builtin or a method, or the checks of one instruction, find one
-fault, the operation raises the error that the rule for that fault gives. When
-they find more
+fault, the operation raises the error that the rule for that fault gives.
+When they find more
 than one, a wrong number of arguments or an omitted required argument among
 them, the operation raises the error of one of them, and which one is
 unspecified. Whether the checks after the first fault found are made, and so
@@ -686,123 +750,6 @@ say '['substr('abc', 2)']' '['substr(' a ', 1)']'
 ```
 
 ## Deviations
-
-r[conv.string.deviation.30]
-The [string conversion rule](r:conv.string.object) uses the object's name
-when its `STRING` method provides no usable answer. The ooRexx revision
-pinned for comparisons can give inconsistent results or crash in this case.
-ooRexx r13624 corrected that behavior.
-
-```rexx
-o = .weird~new
-say upper(o) length(o)
-say pos(o, 'x a WEIRD')
-signal on syntax name bad
-say 'x a WEIRD'~pos(o)
-bad: say condition('o')~code
-::class weird
-::method string
-  return .directory~new
-```
-
-```output
-A WEIRD 7
-3
-88.909
-```
-
-r[conv.string.builtin-argument]
-Builtins that use the [full conversion](r:conv.string.object) use the
-resulting text at each string position, including where the text is the
-object's name. A method or native routine that requires a string through
-`REQUEST('STRING')` alone raises `SYNTAX 88.909` if the argument supplies no
-usable value. The error identifies the position in that method or routine's
-argument list.
-
-r[conv.string.argument-kind]
-An argument interpreted as a number, position, option, or other constrained
-value is checked in that role after conversion. For example, a nonnumeric
-default name fails the normal numeric check. Where several checks fail,
-[the precedence rule](r:conv.error.precedence) applies.
-
-```rexx
-o = .weird~new
-a = .array~of('a', 'b')
-m = .array~new(2, 2)
-l = .list~of('a', 'b')
-q = .queue~of('a', 'b')
-call try '.array~new(o)'
-call try '.array~new(1, o)'
-call try 'a~at(o)'
-call try 'a[o]'
-call try 'a~section(o)'
-call try 'a~dimension(o)'
-call try 'm~at(o, 1)'
-call try 'l~insert("x", o)'
-call try 'l~section(o)'
-call try 'q~insert("x", o)'
-say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
-say a~at(.numberText~new) q~at(.numberText~new)
-call try '.datetime~fromBaseDate(o)'
-call try '.datetime~fromTicks(o)'
-call try '.datetime~new(o)'
-d = .datetime~new(1, 0)
-call try 'd~addMicroseconds(o)'
-call try 'd~addYears(o)'
-call try '.timespan~new(o)'
-call try '.timespan~new(o, 0)'
-call try '.timespan~new(o, 0, 0, 0)'
-call try '.timespan~fromSeconds(o)'
-call try '.timespan~fromMicroseconds(o)'
-t = .timespan~new(1)
-call try 't~addMicroseconds(o)'
-call try 't * o'
-call try 't % o'
-call try 't // o'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=> ok'
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class weird
-::method string
-  return .object~new
-::class numberText
-::method string
-  return '2'
-```
-
-```output
-.array~new(o) => 93.906
-.array~new(1, o) => 93.906
-a~at(o) => 93.907
-a[o] => 93.907
-a~section(o) => 93.907
-a~dimension(o) => 93.907
-m~at(o, 1) => 93.924
-l~insert("x", o) => 93.918
-l~section(o) => 93.918
-q~insert("x", o) => 93.907
-a,b a,b
-b b
-.datetime~fromBaseDate(o) => 88.918
-.datetime~fromTicks(o) => 88.918
-.datetime~new(o) => 40.19
-d~addMicroseconds(o) => 88.902
-d~addYears(o) => 88.903
-.timespan~new(o) => 88.903
-.timespan~new(o, 0) => 88.907
-.timespan~new(o, 0, 0, 0) => 88.904
-.timespan~fromSeconds(o) => 88.902
-.timespan~fromMicroseconds(o) => 88.902
-t~addMicroseconds(o) => 88.902
-t * o => 41.1
-t % o => 41.1
-t // o => 41.1
-```
 
 r[conv.string.deviation.109]
 A builtin that takes a string works on the own characters of an instance of a

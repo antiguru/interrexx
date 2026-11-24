@@ -324,14 +324,20 @@ pub(super) fn native_string(
         let send =
             |interp: &mut Interp| interp.send_message(receiver, OBJECTNAME, None, &[], caller);
         // A level of its own where the send reaches a Rexx method.
-        let answered = if interp.answers_by_method(receiver, OBJECTNAME)
-            || interp.answers_by_method(receiver, DEFAULTNAME)
-        {
+        let own_name = interp.answers_by_method(receiver, OBJECTNAME);
+        let answered = if own_name || interp.answers_by_method(receiver, DEFAULTNAME) {
             interp.primitive_level(receiver, b"STRING", &[], send)?
         } else {
             send(interp)?
         };
-        let text = interp.object_name_answer_text(receiver, answered)?;
+        if let Some(answered) = answered {
+            let text = match own_name {
+                true => interp.object_name_answer_text(receiver, answered)?,
+                false => interp.default_string_value_text(answered),
+            };
+            return Ok(Some(interp.text_built(text)));
+        }
+        let text = interp.default_string_value_text(receiver);
         return Ok(Some(interp.text_built(text)));
     }
     let text = match interp.is_stem_object(receiver) {

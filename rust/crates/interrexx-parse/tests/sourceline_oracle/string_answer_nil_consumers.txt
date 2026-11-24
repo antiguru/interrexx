@@ -1,16 +1,14 @@
-count 45
-/* A STRING answer with no string value is .nil, and the consumers that read
-   .nil as an object answer as the oracle does: SIGNAL VALUE, a stem tail,
+count 43
+/* A STRING answer with no string value counts as none, and the default string
+   value stands in for it in each consumer: SIGNAL VALUE, a stem tail,
    arithmetic, NUMERIC DIGITS and FUZZ, a DO count and FOR, a host command,
-   INTERPRET, an equality, NUMERIC FORM VALUE and a semaphore timeout. The
-   errors that name the operand name the original object, and .nil is equal
-   to no string. */
+   INTERPRET, an equality, NUMERIC FORM VALUE and a semaphore timeout. */
 o = .sn~new
 signal on syntax name s1
 signal value o
 s1: say 'signal value' condition('O')~code
 x.o = 1
-say 'tail' x.o x.['The NIL object']
+say 'tail' x.o x.['a SN']
 signal on syntax name s2
 say 1 + o
 s2: say 'arithmetic' condition('O')~code
@@ -35,7 +33,7 @@ s8: say 'form' condition('O')~code
 signal on syntax name s9
 say .eventsemaphore~new~wait(o)
 s9: say 'timeout' condition('O')~code
-say 'equal' ("abc" = o) ("The NIL object" = o) ("The NIL object" == o) ("abc" \= o) ("abc" \== o) ("" = o) ("" == o) ("" \= o) (1 = o) (1 <> o)
+say 'equal' ("abc" = o) ("a SN" = o) ("a SN" == o) ("abc" \= o) ("abc" \== o) ("" = o) ("" == o) ("" \= o) (1 = o) (1 <> o)
 address system o
 say 'command rc' rc
 interpret o

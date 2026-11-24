@@ -174,13 +174,7 @@ fn timeout_seconds(
         crate::pinning::PinKind::native(method),
         interp.required_string_value(seconds)
     )?;
-    // A `STRING` answer with no string value is `.nil` here, and the refusal
-    // names the object: 88.902 `found "a SN"`.
-    let bytes = if text == ObjRef::NIL && seconds != ObjRef::NIL {
-        interp.string_value_text(seconds)?
-    } else {
-        interp.to_text(text).into_owned()
-    };
+    let bytes = interp.to_text(text).into_owned();
     if let Some(number) = Number::parse_bytes(&bytes) {
         return Ok(super::library::double_of(&number));
     }

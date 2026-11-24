@@ -1971,10 +1971,8 @@ pub(super) fn lines(
 
 /// The text a method reads a start, a line or a count from, which is the
 /// string value of `value` as the conversion rule reads an argument of a
-/// builtin: the `makeString` answer, else the answer of `string`. An object
-/// whose `STRING` answer has no string value reads as `.nil`, which is no
-/// number, so the argument fails the check of its kind, `SYNTAX 88.907`, as a
-/// string of the wrong form does (`r[conv.string.argument-kind]`).
+/// builtin: the `makeString` answer, else the answer of `string`
+/// (`r[conv.string.object]`, `r[conv.string.answer]`).
 fn number_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let text = interp.required_string_value(value)?;
     Ok(interp.to_text(text).into_owned())

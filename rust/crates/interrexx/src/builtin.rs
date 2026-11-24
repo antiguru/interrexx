@@ -10,8 +10,6 @@ use crate::error::{Failure, Raised};
 use crate::value::Rendered;
 use crate::{Interp, Loud};
 
-/// What each builtin reads its arguments as, for the error of an argument
-/// whose `STRING` answer has no string value.
 /// Crate-visible because the eight base conversions are methods on `String`
 /// as well as builtins -- `B2X` and the rest of the eight -- and the cores
 /// here are what keep the two forms from coming to disagree about a grouping
