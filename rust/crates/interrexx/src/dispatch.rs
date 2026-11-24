@@ -3933,7 +3933,7 @@ impl Interp {
             let opened = std::mem::take(&mut callee.streams);
             self.recycle_activation(callee);
             if !opened.is_empty() {
-                self.close_opened_streams(opened.into_values());
+                self.close_opened_streams(opened.into_values().map(|entry| entry.object()));
             }
             return None;
         };

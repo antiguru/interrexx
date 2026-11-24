@@ -394,7 +394,23 @@ pub(crate) struct Activation {
     /// keyed by the **qualified** path, so `./a.txt` and `a.txt` are one
     /// entry. Only a program or method activation owns one; every other
     /// kind resolves through its nearest such ancestor.
-    pub(crate) streams: NameMap<Box<[u8]>, ObjRef>,
+    pub(crate) streams: NameMap<Box<[u8]>, StreamEntry>,
+}
+
+/// A named stream owned by an activation. A replacement may have its own
+/// `CLOSE`, so the owner sends it before leaving (spec: env.security.stream.close).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StreamEntry {
+    Opened(ObjRef),
+    Replacement(ObjRef),
+}
+
+impl StreamEntry {
+    pub(crate) fn object(self) -> ObjRef {
+        match self {
+            Self::Opened(object) | Self::Replacement(object) => object,
+        }
+    }
 }
 
 /// How control arrived at an activation.
@@ -1237,7 +1253,7 @@ impl Activation {
         }
         // The table's streams. An activation is a root, and a stream only
         // the table holds is reachable through nothing else.
-        out.extend(streams.values().copied());
+        out.extend(streams.values().map(|entry| entry.object()));
         // The convention's own values, which a moved `REPLY` continuation
         // also roots from its `CallContext`: this activation holds a
         // refcount clone of the same slice.
@@ -1332,7 +1348,7 @@ impl Interp {
     /// Internal calls, `PROCEDURE` routines, `::ROUTINE`s and `INTERPRET`
     /// all borrow their caller's, which is measured -- a routine advances
     /// the caller's read position where a method call does not.
-    pub(crate) fn stream_table(&self) -> Option<&NameMap<Box<[u8]>, ObjRef>> {
+    pub(crate) fn stream_table(&self) -> Option<&NameMap<Box<[u8]>, StreamEntry>> {
         self.frames()
             .find(|frame| matches!(frame.entry, Entry::TopLevel | Entry::Method))
             .map(|frame| &frame.streams)
@@ -1343,7 +1359,7 @@ impl Interp {
     /// into a vector that is oldest first, and an off-by-one there would put
     /// one activation's streams on its caller -- a wrong table with nothing to
     /// notice it, since both are plausible.
-    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut NameMap<Box<[u8]>, ObjRef>> {
+    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut NameMap<Box<[u8]>, StreamEntry>> {
         if self
             .activity
             .running
@@ -1947,7 +1963,9 @@ mod method_tests {
         activation.invocation = Some(1);
         activation.call_name = Some(Rc::from(&b"F"[..]));
         activation.call_arguments = Some(Rc::from(Vec::new()));
-        activation.streams.insert(Box::from(&b"S"[..]), ObjRef::NIL);
+        activation
+            .streams
+            .insert(Box::from(&b"S"[..]), StreamEntry::Opened(ObjRef::NIL));
     }
 
     /// Compares `a` and `b` field by field. The destructuring names every
