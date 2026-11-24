@@ -1364,6 +1364,7 @@ mod row_checks {
         "regressions/bug2061_newline_misalignment",
         "doc/rexxref/chapter7/Section4",
         "samples/sfserver",
+        "base/rexxutil/SysEventSem",
     ];
 
     const PASSING: &[(&str, &str)] = &[
@@ -1545,6 +1546,12 @@ mod row_checks {
             NOT_RUN,
             "regressions/bug2061_newline_misalignment\tTEST_STDOUT_NEWLINE\tNotRun\trestrictOS line 40",
         ),
+        // A restrictOS whose argument is an expression and not a string
+        // literal: its value, here every system but macOS, is not read.
+        (
+            NOT_RUN,
+            "base/rexxutil/SysEventSem\tTEST_CLOSED_HANDLE\tNotRun\trestrictOS line 41",
+        ),
         (
             NOT_RUN,
             "base/rexxutil/platform/unix/tilde\tTEST_TILDE\tNotRun\trestrictOS line 41",
@@ -1583,6 +1590,17 @@ mod row_checks {
                 "passed: {file}: {line}"
             );
         }
+    }
+
+    /// A group whose restrictOS argument is not a string literal gets no
+    /// derived row: what the expression admits is not read from the text.
+    #[test]
+    fn a_restrict_os_expression_derives_no_row() {
+        let context = context(&["base/rexxutil/SysEventSem"]);
+        assert_eq!(
+            super::suite_rows::derived_rows(&context),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
