@@ -434,6 +434,7 @@ fn check_body(
                     .entry(match keyword {
                         ConditionKeyword::If => "IF",
                         ConditionKeyword::When => "WHEN",
+                        ConditionKeyword::ListItem | ConditionKeyword::ListLast => "comma list",
                     })
                     .or_default() += 1;
             }
@@ -786,7 +787,7 @@ fn check_body(
             | InstructionKind::Exit { expression }
             | InstructionKind::Push { expression }
             | InstructionKind::Queue { expression } => expression.as_ref().map(root_of),
-            InstructionKind::If { condition, .. } => Some(root_of(condition)),
+            InstructionKind::If { condition, .. } => Some(condition_root(condition)),
             // An instruction `Op::ExecValue` runs from its expression's value.
             InstructionKind::Numeric {
                 expression: Some(expression),
@@ -809,7 +810,7 @@ fn check_body(
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
-            InstructionKind::When { condition, .. } => match root_of(condition) {
+            InstructionKind::When { condition, .. } => match condition_root(condition) {
                 Root::EvalExpr => None,
                 root => Some(root),
             },
@@ -850,6 +851,17 @@ fn check_body(
             *seen.roots.entry(root).or_default() += 1;
         }
     }
+}
+
+fn condition_root(condition: &Expr) -> Root {
+    if let ExprKind::Logical(items) = &condition.kind
+        && u16::try_from(items.len()).is_ok()
+        && items.iter().all(|item| native(item, Some(0)))
+        && let Some(last) = items.last()
+    {
+        return root_of(last);
+    }
+    root_of(condition)
 }
 
 /// Every body of `program`: the main one and each directive's.
@@ -1078,7 +1090,6 @@ fn sweep_every_corpus_body() {
         Root::Arith,
         Root::Binary,
         Root::Prefix,
-        Root::EvalExpr,
     ] {
         assert!(
             seen.roots.contains_key(&root),

@@ -1611,6 +1611,10 @@ macro_rules! region_ops {
                                     InstructionKind::When { .. },
                                     ConditionKeyword::When
                                 )
+                                | (
+                                    InstructionKind::If { .. } | InstructionKind::When { .. },
+                                    ConditionKeyword::ListItem | ConditionKeyword::ListLast
+                                )
                         ),
                         "a ConditionJump op's keyword does not name the clause whose \
                      condition it is validating"
@@ -1631,18 +1635,27 @@ macro_rules! region_ops {
                     // `IF`/`WHEN` tests once, and its value is
                     // already rooted in the register it came
                     // from.
-                    let quick = crate::eval::truth_without_conversion(value);
-                    let holds = match quick {
-                        Some(holds) if !$self.trace_mode().results => holds,
-                        _ => match $self.condition_value(
-                            value,
-                            ConditionTrace::Result(indent),
-                            false,
-                            keyword.raiser(),
-                        ) {
-                            Ok(holds) => holds,
-                            Err(failure) => break $cold Err(failure),
-                        },
+                    let holds = match keyword {
+                        ConditionKeyword::ListItem | ConditionKeyword::ListLast => {
+                            match $self.condition_list_item(
+                                value, indent, matches!(keyword, ConditionKeyword::ListLast),
+                            ) {
+                                Ok(holds) => holds,
+                                Err(failure) => break $cold Err(failure),
+                            }
+                        }
+                        _ => match crate::eval::truth_without_conversion(value) {
+                            Some(holds) if !$self.trace_mode().results => holds,
+                            _ => match $self.condition_value(
+                                value,
+                                ConditionTrace::Result(indent),
+                                false,
+                                keyword.raiser(),
+                            ) {
+                                Ok(holds) => holds,
+                                Err(failure) => break $cold Err(failure),
+                            },
+                        }
                     };
                     if !holds {
                         break $region *target;

@@ -1662,3 +1662,45 @@ raise user zu array () exit
 1: Exec index=0
 registers: 0
 consts:
+
+# a comma-list condition evaluates one element at a time in the clause
+compile trace=i
+if 1, ztail() then nop
+select
+  when 1, ztail() then nop
+end
+----
+0: CallingClause index=0 end=8
+1: TraceClause index=0
+2: LoadConstant dst=0
+3: TraceLiteral src=0
+4: ConditionJump index=0 reg=0 keyword=LIST ITEM target=13
+5: CallArgs slot=2 path=root site=0 argc=0 dst=0
+6: TraceFunction index=0 slot=2 path=root src=0
+7: ConditionJump index=0 reg=0 keyword=LIST LAST target=13
+8: Clause index=1 end=10
+9: TraceClause index=1
+10: Clause index=2 end=12
+11: TraceClause index=2
+12: EndBranch
+13: Clause index=3 end=15
+14: TraceClause index=3
+15: CallingClause index=4 end=23
+16: TraceClause index=4
+17: LoadConstant dst=0
+18: TraceLiteral src=0
+19: ConditionJump index=4 reg=0 keyword=LIST ITEM target=29
+20: CallArgs slot=2 path=root site=1 argc=0 dst=0
+21: TraceFunction index=4 slot=2 path=root src=0
+22: ConditionJump index=4 reg=0 keyword=LIST LAST target=29
+23: EnterWhen select=3 when=4
+24: Clause index=5 end=26
+25: TraceClause index=5
+26: Clause index=6 end=28
+27: TraceClause index=6
+28: EndWhen
+29: Clause index=7 end=32
+30: TraceClause index=7
+31: Exec index=7
+registers: 1
+consts:
