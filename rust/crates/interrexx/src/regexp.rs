@@ -267,8 +267,9 @@ impl Parser<'_> {
                         return Err(bad(ILLEGAL_SET));
                     };
                     let low = self.pattern[at - 1];
-                    // A forward range continues after the preceding byte.
-                    // That byte was already handled as a set item or delimiter.
+                    // r[class.regularexpression.grammar.set]: a forward range
+                    // continues after its start, which is a member already or
+                    // is a name's closing colon, which it leaves out.
                     let range = low.min(high)..=low.max(high);
                     for byte in range.skip(usize::from(low <= high)) {
                         set_add(&mut members, byte);

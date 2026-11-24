@@ -1535,7 +1535,7 @@ Error 3.901:  ⟨3.901¦nothere.rex⟩
 fn the_rust_extension_library_groups_match_the_oracles_counts() {
     for (dir, group, ran, assertions) in [
         ("extensions/rxmath", "RxMath", 289, 478),
-        ("extensions/rxregexp", "rxregexp", 33, 11741),
+        ("extensions/rxregexp", "rxregexp", 36, 16511),
     ] {
         let outcome = run_group(dir, group, library_path(false));
         assert_eq!(

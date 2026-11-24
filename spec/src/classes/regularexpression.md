@@ -468,13 +468,15 @@ members are characters, ranges and [symbolic
 names](r:class.regularexpression.grammar.names). A `^` right after the opening
 bracket negates the set: it matches one character that is not a member; a `^`
 anywhere else is an ordinary member. A `-` between two characters makes a
-range. Each range includes both endpoints in unsigned byte order, from
-`'00'x` through `'FF'x`. The endpoints may appear in either order.
-A character that ends a range can also start the next range, so `[a-c-e]`
-includes every byte from `a` to `e`. Immediately after a range hyphen, a
-backslash is the endpoint itself. After a symbolic name, a range starts at
-the closing colon of the name. A range continuing up from that colon
-excludes it. A `[` inside a set is an ordinary
+range: the characters from the lower of the two to the higher, both included,
+with the bytes counted as numbers from 0 to 255, so `[d-a]` is `a` to `d` and
+`[a-'ff'x]` is `a` to `'ff'x`. In a chain such as `[a-c-e]` the character that
+ends a range also starts the next one, so that set is `a` to `e`. A `\` right
+after the `-` of a range is the end of the range and not an escape, and a `-`
+after a symbolic name starts a range at the closing colon of the name, which
+is left out when the end is not below it: `[:digit:-z]` is the digits and the
+characters from `;` to `z`, and `[:digit:-#]` is the digits and the characters
+from `#` to `:`. A `[` inside a set is an ordinary
 member. A `-` that opens the set, or follows the `^` that opens it, is an
 ordinary member, and a `-` that ends the set is error 3. Inside a set the
 characters `?`, `*`, `+`, `|`, `(`, `)`, `{`, `}` and `.` stand for
@@ -487,8 +489,18 @@ present: error 3.
 re = .RegularExpression~new
 say 'members' re~parse('[xyz]') re~match('y') re~match('w')
 say 'range' re~parse('[a-d]') re~match('c') re~match('e')
+say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
+say 'bytes' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
+  re~match('b')
+say 'to 7f' re~parse('[a-'||'7f'x||']') re~match('7f'x) re~match('80'x)
 say 'high' re~parse('['||'80'x||'-'||'ff'x||']') re~match('90'x) re~match('a')
 say 'chain' re~parse('[a-c-e]') re~match('d') re~match('b') re~match('f')
+say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
+  re~match('\') re~match('c')
+say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
+  re~match('5') re~match('{')
+say 'name back' re~parse('[:digit:-#]') re~match('#') re~match(':'),
+  re~match('"')
 say 'bracket' re~parse('[[]') re~match('[') re~match('a')
 say 'ranges' re~parse('[a-cx-z]') re~match('b') re~match('y') re~match('m')
 say 'negated' re~parse('[^a-c]') re~match('d') re~match('b')
@@ -509,8 +521,14 @@ exit
 ```output
 members 0 1 0
 range 0 1 0
+backward 0 1 0 1
+bytes 0 0 1 1
+to 7f 0 1 0
 high 0 1 0
 chain 0 1 1 0
+late end 0 1 1 0 1 1
+after name 0 1 0 1 0
+name back 0 1 1 0
 bracket 0 1 0
 ranges 0 1 1 0
 negated 0 1 0
@@ -725,31 +743,10 @@ re~position(5) => 93.902
 ## Deviations
 
 r[class.regularexpression.deviation.87]
-The pinned ooRexx revision uses signed range endpoints, miscompiles some
-alternatives and fails to terminate on some patterns with empty matches.
-ooRexx r13618 corrected the byte ranges and r13620 corrected the automaton.
+ooRexx before r13620 miscompiles some alternatives and fails to terminate on
+some patterns with empty matches; r13620 corrected the automaton.
 Interrexx also limits the size of the compiled pattern. If expanding a count
 would exceed that limit, `parse` answers 5.
-
-```rexx
-re = .RegularExpression~new
-say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
-say 'byte order' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
-  re~match('b')
-say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
-  re~match('\') re~match('c')
-say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
-  re~match('5') re~match('{')
-exit
-::requires "rxregexp.cls"
-```
-
-```output
-backward 0 1 0 1
-byte order 0 0 1 1
-late end 0 1 1 0 1 1
-after name 0 1 0 1 0
-```
 
 ```rexx
 re = .RegularExpression~new('b*c|a')
