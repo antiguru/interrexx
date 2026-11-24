@@ -582,11 +582,24 @@ fn a_template_of_literals_is_one_parse_begin() {
     );
 }
 
+#[test]
+fn parse_trigger_calls_address_their_own_template_entries() {
+    let source = b"parse value input() with a ' ' b (separator(a)) c, d +(position(c)) e\n";
+    let rendered = render(&compile_for_test(source).expect("the chunk fits"));
+    for (slot, site) in [(0, 0), (2, 1), (5, 2)] {
+        assert!(
+            rendered.contains(&format!("CallArgs slot={slot} path=root site={site} ")),
+            "{rendered}"
+        );
+    }
+    assert_eq!(rendered.matches("ParseRun").count(), 2, "{rendered}");
+}
+
 /// The shapes the walk takes no runs for are its opening alone, with no
 /// walk registers, and the opening names the ones it hands to the template
 /// engine whole: a fold, a source read as a line, `PARSE VAR` into words or
 /// of a compound. A clause that may trace is walked whole while it does not,
-/// and an operand with a call in it is evaluated where the walk reaches it.
+/// including an operand that can change the clause's TRACE setting.
 #[test]
 fn a_template_with_no_runs_is_its_opening_alone() {
     let normal = || ChunkTrace::of(TraceMode::NORMAL);
@@ -601,7 +614,7 @@ fn a_template_with_no_runs_is_its_opening_alone() {
         (b"parse pull a (p + 1) b\n", normal(), "Engine"),
         (b"parse var s a b c\n", normal(), "Engine"),
         (b"parse var s.i a ' ' b\n", normal(), "Engine"),
-        (b"parse var s a (f()) b\n", normal(), "Var"),
+        (b"parse var s a (trace('I')) b\n", normal(), "Var"),
         (b"parse arg a ' ' b, c, d\n", normal(), "Arg strings=3"),
     ] {
         let rendered = render(&compile_for_test_under(source, trace).expect("the chunk fits"));
