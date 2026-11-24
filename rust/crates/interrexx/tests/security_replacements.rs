@@ -1,5 +1,5 @@
-//! Security-manager replacements the oracle answers and then crashes on, run
-//! on this crate alone (`corpus/oracle-crashes.txt` entries 54 and 55). The
+//! Security-manager replacements the oracle crashed on before r13532, run on
+//! this crate alone (`corpus/oracle-crashes.txt` entries 54 and 55). The
 //! answers are rexxref's: the `STREAM` entry is the stream target, and the
 //! `REQUIRES` entry `NAME` is the file loaded.
 
