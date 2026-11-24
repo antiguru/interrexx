@@ -625,7 +625,8 @@ Each test below fails on main today, which is the check that it covers the chang
 * **The flat chain runs.** A program assigning a chain long enough to abort in `push_native` on
   the interpreter's stack prints its value, with and without `TRACE I`, and under `GUARD WHEN`.
 * **A chain whose leftmost term is a call runs.** It raises 11.1 from `MAX_EVAL_DEPTH` today.
-* **A long prefix chain runs.** It parses, compiles and prints its value, and raises no 11.1.
+* **A long prefix chain runs.** A chain long enough to overflow the parser's own stack, which
+  recurses once per prefix operator today, parses, compiles and prints its value.
 * **Deep nesting runs.** Parentheses around one term, `f(f(f(...)))`, and a mix of parentheses,
   call and message argument lists that keeps fewer values pending than the register width, each
   nested deeper than `MAX_EXPR_DEPTH`, parse, compile, run and trace, and print their value. Today
