@@ -658,13 +658,12 @@ first attempt to reach the service, for a queue, a registration or the
 macrospace, writes a line to standard error that says so
 ([the rule](r:util.macrospace.deviation.86)). ooRexx accepts such a directory.
 
-## 87. rxregexp follows its documented grammar
+## 87. rxregexp refuses a pattern too large to compile
 
-A pattern whose compiled automaton exceeds the size limit raises parse
-error 5. The pinned ooRexx revision can exhaust memory at large repeat
-counts. It also miscompiles some alternatives, loops on some empty matches,
-and uses signed byte values for set ranges. ooRexx r13618 fixed the range
-rules and r13620 fixed the automaton construction and empty cycles.
+A pattern whose counts are too large for its automaton to be built, such as
+`a{99999999999}`, is compile error 5 in interrexx. ooRexx uses memory until
+it is killed. Narrowed by the owner on 2026-11-24 (ooRexx r13624, upstream
+#2183 and #2184).
 
 ## 88. Extension calls that crash ooRexx
 

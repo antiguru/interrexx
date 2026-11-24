@@ -292,8 +292,7 @@ max	[^c-a]	a
 0@11 0@0 0@0
 0@6 0@0 0@0
 
-# Alternation, repeated terms, and empty cycles repaired in ooRexx r13620.
-# The range ending at 7F was repaired in r13618.
+# A repeated element that begins an alternative belongs to that alternative alone.
 probe
 max	a*b|c	ac
 max	a*|b	ab
@@ -305,6 +304,7 @@ max	d(a*b|c)	dac
 0@7 0@1 1@1
 0@8 0@2 0@0
 
+# X+ followed by a repeated element.
 probe
 max	a+c*	aa
 max	(a|b)+c*	aa
@@ -316,6 +316,7 @@ max	b+c*	bbcc
 0@7 1@4 1@4
 0@4 1@4 1@4
 
+# Repeated groups that can match the empty string, and ranges ending at '7F'x.
 probe
 max	(a*)*	aaab
 max	(a*)*b	aaab
@@ -350,6 +351,12 @@ max	c+b*	cc
 0@9 0@1 0@0
 0@4 0@1 2@2
 0@4 1@2 1@2
+
+# Deviation 87: a count too large for the automaton is compile error 5. The expectation is this crate's. Oracle: uses memory until it is killed.
+deviation
+max	a{99999999999}	a
+----
+5@1 1@0 1@0
 
 # Deviation 88: a method with no pattern compiled, or after uninit, raises 93.900 where the oracle crashes. Oracle: SIGSEGV.
 ours

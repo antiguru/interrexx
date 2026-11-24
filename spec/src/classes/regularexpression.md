@@ -425,11 +425,14 @@ from the text between the braces: blanks and the characters `'09'x` to `'0d'x`
 before it, and a sign, are allowed, it ends at the first character that is not
 a digit, and the text after it up to the `}` is ignored, so `a{2,3}` is
 `a{2}`. A count with no digit, or one below 2, is error 5, and so is one too
-large for the pattern to be built; how large that is is not specified. The
-element may be a character, `?`, a set or a group, so `?*` matches any string,
-the empty one included, and `(ab){2}` matches `abab`. A group that can match
-the empty string, as in `(a*)`, may itself be repeated; [Deviation
-87](r:class.regularexpression.deviation.87) gives examples.
+large for the pattern to be built; how large that is is not specified, and
+ooRexx differs there ([Deviation 87](r:class.regularexpression.deviation.87)).
+The element may be a character, `?`, a set or a group, so `?*` matches any
+string, the empty one included, and `(ab){2}` matches `abab`. A group that can
+match the empty string, as in `(a*)`, may itself be repeated. A repeated
+element that begins an alternative belongs to that alternative alone, so
+`b*c|a` is `b*c` or `a`, and a `+` may be followed by another repeated
+element, as in `c+a*`.
 
 ```rexx
 re = .RegularExpression~new
@@ -446,6 +449,21 @@ say 'braces' re~parse('a{ 3}') re~match('aaa') re~parse('a{2,3}'),
   re~match('aa') re~match('aaa') re~parse('a{+2}') re~match('aa')
 say 'start' re~parse('a{0}') re~parse('a{1}') re~parse('a{2}'),
   re~parse('a{-2}')
+re~parse('b*c|a')
+say 'first alt' re~match('ba') re~position re~pos('ba') re~position,
+  re~match('bc') re~match('a')
+re~parse('x(b*c|a)')
+say 'in group' re~match('xba') re~position re~match('xa')
+re~parse('c+a*')
+say 'plus star' re~match('cca') re~position
+re~parse('(a*)*')
+say 'empty' re~match('aaa') re~position re~pos('baa') re~position
+re~parse('((ab)*|c)*')
+say 'nested' re~match('ababcab') re~position
+re~parse('(c*|b)|d')
+say 'empty alt' re~match('d') re~match('cc') re~match('b')
+re~parse('(c*|b)c|d')
+say 'then c' re~match('d') re~match('cc') re~match('bc') re~match('c')
 exit
 ::requires "rxregexp.cls"
 ```
@@ -460,6 +478,13 @@ mixed 0 1 1 0
 set 0 1 0
 braces 0 1 0 1 0 0 1
 start 5 5 0 5
+first alt 0 1 2 2 1 1
+in group 0 2 1
+plus star 1 3
+empty 1 3 1 0
+nested 1 7
+empty alt 1 1 1
+then c 1 1 1 1
 ```
 
 r[class.regularexpression.grammar.set]
@@ -743,35 +768,19 @@ re~position(5) => 93.902
 ## Deviations
 
 r[class.regularexpression.deviation.87]
-ooRexx before r13620 miscompiles some alternatives and fails to terminate on
-some patterns with empty matches; r13620 corrected the automaton.
-Interrexx also limits the size of the compiled pattern. If expanding a count
-would exceed that limit, `parse` answers 5.
+A count too large for the pattern to be built, as in `a{99999999999}`, is
+error 5 from `parse`, as [the repetition
+rule](r:class.regularexpression.grammar.repeat) says. ooRexx uses memory
+until it is killed. The example is not run on ooRexx.
 
 ```rexx
-re = .RegularExpression~new('b*c|a')
-say re~match('ba') re~position re~pos('ba') re~position
-say re~match('bc') re~position re~match('a') re~position
-re~parse('c+a*')
-say re~match('cca') re~position
-re~parse('x(b*c|a)')
-say re~match('xba') re~position
-re~parse('(a*)*')
-say re~match('aaa') re~position re~pos('baa') re~position
-re~parse('((ab)*|c)*')
-say re~match('ababcab') re~position
+re = .RegularExpression~new
 say re~parse('a{99999999999}')
 exit
 ::requires "rxregexp.cls"
 ```
 
 ```output
-0 1 2 2
-1 2 1 1
-1 3
-0 2
-1 3 1 0
-1 7
 5
 ```
 
