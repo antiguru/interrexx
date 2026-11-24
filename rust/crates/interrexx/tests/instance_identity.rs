@@ -446,6 +446,41 @@ fn set_trace_traces_an_internal_routine_entered_after_the_first() {
     );
 }
 
+/// The first clause of a routine can switch on external tracing, even if
+/// it is also the clause that returns. A later clause only gets a source banner.
+// spec: native.threads.trace
+#[test]
+fn set_trace_at_a_routines_first_clause_announces_its_invocation() {
+    fn invocation_lines((stdout, stderr, code): Answer) -> Answer {
+        let lines = stderr
+            .lines()
+            .filter(|line| {
+                line.contains(">I>") || line.contains("<I<") || line.contains("+++ \"LINUX")
+            })
+            .map(|line| format!("{line}\n"))
+            .collect();
+        (stdout, lines, code)
+    }
+
+    let program = "trace_routine_entry.rex";
+    let (stdout, stderr, code) = run_halt_trace("trace-routine-entry", program, invocation_lines);
+    assert_eq!(
+        (stdout.as_str(), code),
+        ("first\nlater\nend\n", 0),
+        "{stderr}"
+    );
+    assert_eq!(
+        traced(&stderr, program),
+        interrexx_inventory::errors::expand(
+            "       >I> ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      >I> ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      +++ \"LINUX SUBROUTINE PROGRAM\"\n"
+        )
+    );
+}
+
 /// `SetTrace(1)` traces the main program, and a `::ROUTINE` it calls afterwards starts with its
 /// own setting: none of its clauses is traced, and the main program's are again after it returns.
 // spec: native.threads.trace
