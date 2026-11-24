@@ -1059,3 +1059,74 @@ fn loop_conditions_that_send_run_from_their_test_region() {
     let (tests, _) = run(program.as_bytes(), "5\n");
     assert_eq!(tests, 0);
 }
+
+#[test]
+fn forward_checks_and_converts_options_before_evaluating_later_ones() {
+    let outcome = run_program(
+        TEST_PATH,
+        br#"
+o = .relay~new
+say o~ordered
+say o~badClass
+say o~viaArrayRequest
+call outside
+exit
+outside:
+  signal on syntax name refused
+  forward to (o~step('outside option', o)) message 'receive'
+refused:
+  say 'outside' condition('o')~code
+  return
+::class destination
+::method receive
+  return arg() arg(1) arg(2, 'o') arg(3)
+::class relay subclass destination
+::method step
+  use arg label, value
+  say label
+  return value
+::method ordered
+  trace i
+  forward array (self~step('first', 'x'), , self~step('third', 'z')),
+    class (self~step('class', .destination)),
+    message (self~step('message', .spelling~new)),
+    to (self~step('to', self)) continue
+  trace off
+  return 'continued' result
+::method badClass
+  signal on syntax name refused
+  forward class (self~step('invalid class', 5)) array (self~step('late option', 'x'))
+refused:
+  return condition('o')~code
+::method viaArrayRequest
+  forward arguments (.arguments~new) message 'receive'
+  say 'left after forward'
+::class spelling
+::method makeString
+  say 'MAKESTRING'
+  return 'receive'
+::class arguments
+::method makeArray
+  say 'MAKEARRAY'
+  return .array~of('x', , 'z')
+"#
+        .to_vec(),
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        outcome.stdout,
+        b"to\nmessage\nMAKESTRING\nclass\nfirst\nthird\ncontinued 3 x 1 z\n\
+          invalid class\n88.914\nMAKEARRAY\n3 x 1 z\noutside 98.947\n",
+        "{stderr}"
+    );
+    let keyword_lines: Vec<_> = stderr.lines().filter(|line| line.contains(">K>")).collect();
+    assert_eq!(keyword_lines.len(), 4, "{stderr}");
+    for (line, keyword) in keyword_lines
+        .into_iter()
+        .zip(["TO", "MESSAGE", "CLASS", "ARRAY"])
+    {
+        assert!(line.contains(&format!("\"{keyword}\" =>")), "{line}");
+    }
+}

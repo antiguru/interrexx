@@ -632,3 +632,32 @@ fn a_template_with_no_runs_is_its_opening_alone() {
         );
     }
 }
+
+#[test]
+fn forward_options_compile_with_early_checks_and_their_own_slots() {
+    let source = b"forward array (last(), , 'z') class (scope()) message (name()) to (target())";
+    let chunk = compile_for_test(source).expect("compiled FORWARD");
+    let ops = render(&chunk);
+    let mut after = 0;
+    for line in [
+        "part=Method",
+        "CallArgs slot=0 path=root",
+        "part=To",
+        "CallArgs slot=1 path=root",
+        "part=Message",
+        "CallArgs slot=2 path=root",
+        "part=Class",
+        "CallArgs slot=4 path=root",
+        "PushArg src=omitted",
+        "ExecWith index=0 src=0",
+    ] {
+        let at = ops[after..]
+            .find(line)
+            .unwrap_or_else(|| panic!("{line}\n{ops}"));
+        after += at + line.len();
+    }
+    assert!(
+        !ops.contains("EvalExpr") && !ops.contains(" Exec "),
+        "{ops}"
+    );
+}

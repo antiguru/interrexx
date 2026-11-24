@@ -409,6 +409,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::ExecWith { .. } => "ExecWith",
         Op::ReplyCheck { .. } => "ReplyCheck",
         Op::RaisePart { .. } => "RaisePart",
+        Op::ForwardPart { .. } => "ForwardPart",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -1823,7 +1824,9 @@ macro_rules! region_ops {
                 // `Op::RaisePart` shares the arm, for the reason `Exec`'s arm
                 // gives for sharing its own: a second call here costs every op
                 // of every clause in the driver's codegen.
-                Op::ExecValue { $index, .. } | Op::RaisePart { $index, .. } => {
+                Op::ExecValue { $index, .. }
+                | Op::RaisePart { $index, .. }
+                | Op::ForwardPart { $index, .. } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ExecValue",
                     );

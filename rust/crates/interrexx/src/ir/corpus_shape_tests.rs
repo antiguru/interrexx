@@ -62,6 +62,7 @@ impl Root {
             | Op::ExecWith { .. }
             | Op::ReplyCheck { .. }
             | Op::RaisePart { .. }
+            | Op::ForwardPart { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
             | Op::UseArg(..)

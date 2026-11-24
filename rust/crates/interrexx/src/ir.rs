@@ -9,8 +9,8 @@ use interrexx_parse::{Operator, PrefixOp, SymbolId};
 use crate::error::Raised;
 use crate::eval::SymbolRead;
 use crate::run::{
-    HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword, SiteHold,
-    raised_if_not_logical, raised_when_not_logical,
+    ForwardPart, HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword,
+    SiteHold, raised_if_not_logical, raised_when_not_logical,
 };
 use crate::trace::ChunkTrace;
 
@@ -114,6 +114,13 @@ pub(crate) enum Op {
     /// method, so that the expression does not run where the instruction may
     /// not.
     ReplyCheck { index: u32 },
+    /// A `FORWARD` option's check, conversion or keyword trace, before the
+    /// next option is evaluated. The opening method check reads no register.
+    ForwardPart {
+        index: u32,
+        part: ForwardPart,
+        src: u16,
+    },
     /// One part of the `RAISE` at `index`: what the instruction does with the
     /// value its expression left in register `src` before it evaluates the
     /// next, its results kept in the registers [`crate::run::RaiseLayout`]
