@@ -506,8 +506,15 @@ fn both_interpreters_write_an_image_with_the_same_opening() {
 // spec: env.invocation.rexxc.required-level
 #[test]
 fn the_header_records_the_required_language_level() {
-    let ours = Side::ours("required-level");
-    let oracle = Side::oracle();
+    check_required_language_level(Side::ours("required-level"));
+}
+
+#[test]
+fn the_oracle_header_records_the_required_language_level() {
+    check_required_language_level(Side::oracle());
+}
+
+fn check_required_language_level(side: Side) {
     for (source, expected) in [
         ("say 'hello'", 60500),
         ("do i = 1 to 2; nop; end", 60500),
@@ -527,42 +534,38 @@ fn the_header_records_the_required_language_level() {
         ("::options numeric inherit", 60600),
         ("::options numeric noinherit", 60600),
     ] {
-        for side in [&ours, &oracle] {
-            std::fs::write(side.dir.join("level.rex"), source).expect("the source");
-            let result = side
-                .command(&side.rexxc)
-                .args(["level.rex", "level.rxo", "-s"])
-                .output()
-                .expect("rexxc starts");
-            assert!(result.status.success(), "{source:?}: {result:?}");
-            let image = std::fs::read(side.dir.join("level.rxo")).expect("the image");
-            // ProgramMetaData::requiredLevel, 24 bytes from the header's tag.
-            assert_eq!(
-                u32::from_le_bytes(image[44..48].try_into().unwrap()),
-                expected,
-                "{source:?} on {}",
-                side.rexxc.display()
-            );
-        }
-    }
-    for side in [&ours, &oracle] {
-        std::fs::write(side.dir.join("level.rex"), "say gc()").expect("the source");
+        std::fs::write(side.dir.join("level.rex"), source).expect("the source");
         let result = side
             .command(&side.rexxc)
-            .args(["level.rex", "level.rxo", "-s", "-e"])
+            .args(["level.rex", "level.rxo", "-s"])
             .output()
             .expect("rexxc starts");
-        assert!(result.status.success(), "{result:?}");
+        assert!(result.status.success(), "{source:?}: {result:?}");
         let image = std::fs::read(side.dir.join("level.rxo")).expect("the image");
-        let encoded = image
-            .strip_prefix(b"#!/usr/bin/env rexx\n/**/@REXX@\n")
-            .expect("the encoded image's opening");
+        // ProgramMetaData::requiredLevel, 24 bytes from the header's tag.
         assert_eq!(
-            u32::from_le_bytes(decode(&encoded[..72])[24..28].try_into().unwrap()),
-            60600
+            u32::from_le_bytes(image[44..48].try_into().unwrap()),
+            expected,
+            "{source:?} on {}",
+            side.rexxc.display()
         );
-        std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
     }
+    std::fs::write(side.dir.join("level.rex"), "say gc()").expect("the source");
+    let result = side
+        .command(&side.rexxc)
+        .args(["level.rex", "level.rxo", "-s", "-e"])
+        .output()
+        .expect("rexxc starts");
+    assert!(result.status.success(), "{result:?}");
+    let image = std::fs::read(side.dir.join("level.rxo")).expect("the image");
+    let encoded = image
+        .strip_prefix(b"#!/usr/bin/env rexx\n/**/@REXX@\n")
+        .expect("the encoded image's opening");
+    assert_eq!(
+        u32::from_le_bytes(decode(&encoded[..72])[24..28].try_into().unwrap()),
+        60600
+    );
+    std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
 }
 
 /// An image runs by its bytes alone: without its first line, with another
