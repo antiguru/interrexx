@@ -57,18 +57,20 @@ base/directives/CONSTANT.testGroup	whole	0	70	0	50	66	-	-
 base/directives/CONSTANT.testGroup	derived	0	70	14	50	55	-	-
 base/directives/METHOD.testGroup	whole	8	70	0	61	71	-	-
 base/directives/METHOD.testGroup	derived	8	70	14	55	71	-	-
-base/keyword/CALL.testGroup	whole	1	70	0	219	261	-	-
-base/keyword/CALL.testGroup	derived	1	70	14	138	133	-	-
+base/keyword/CALL.testGroup	whole	1	70	0	182	234	-	-
+base/keyword/CALL.testGroup	derived	1	70	14	91	112	-	-
 base/keyword/GUARD.testGroup	whole	336	70	0	29	31	-	-
 base/keyword/GUARD.testGroup	derived	336	70	14	25	56	-	-
-base/keyword/RAISE.testGroup	whole	3	70	0	55	61	-	-
-base/keyword/RAISE.testGroup	derived	3	70	14	56	56	-	-
+# RAISE leaves TEST_RAISE_SYNTAX_BAD_CODE and TEST_RAISE_SYNTAX_UNKNOWN_CODE out of whole: they
+# use CATCH, of language level 6.07 (decisions.md, the language level).
+base/keyword/RAISE.testGroup	whole	3	70	0	41	53	-	TEST_RAISE_SYNTAX_BAD_CODE TEST_RAISE_SYNTAX_UNKNOWN_CODE
+base/keyword/RAISE.testGroup	derived	3	70	14	20	25	-	-
 base/keyword/REPLY.testGroup	whole	1218	70	0	51	61	-	-
 base/keyword/REPLY.testGroup	derived	1098	70	14	51	61	-	-
-base/keyword/TRACE.testGroup	whole	4	70	0	81	96	-	-
-base/keyword/TRACE.testGroup	derived	3	70	14	50	66	-	-
-base/keyword/TRACE_TraceObject.testGroup	whole	9	70	0	56	71	-	-
-base/keyword/TRACE_TraceObject.testGroup	derived	9	70	14	51	66	-	-
+base/keyword/TRACE.testGroup	whole	71	70	0	152	199	-	-
+base/keyword/TRACE.testGroup	derived	71	70	14	126	162	-	-
+base/keyword/TRACE_TraceObject.testGroup	whole	298	70	0	30	42	-	-
+base/keyword/TRACE_TraceObject.testGroup	derived	298	70	14	25	30	-	-
 base/rexxutil/SysEventSem.testGroup	whole	0	70	0	36	67	-	-
 base/rexxutil/SysEventSem.testGroup	derived	0	70	14	20	36	-	-
 base/rexxutil/SysMutexSem.testGroup	whole	0	70	0	41	51	-	-
