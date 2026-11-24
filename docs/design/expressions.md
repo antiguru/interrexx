@@ -50,9 +50,9 @@ The owner has ruled on these points, and the design is built around them:
 * **The fixed widths of the compiled form are resource limits, not language rules.** Register
   indices stay `u16` and the arena's ids and offsets `u32`. An expression that needs more of
   either than the width holds raises Error 5, system resources exhausted, and so does a body that
-  fills any other width of the compiled form (see IR compilation). The bound is set by the
-  implementation, as the depth of routine calls is set by the interpreter's stack, and no rule of
-  the language puts it there, so it raises 5 and not 11.1.
+  fills any other width of the compiled form (see IR compilation, which also proposes where each
+  is raised). The bound is set by the implementation, as the depth of routine calls is set by the
+  interpreter's stack, and no rule of the language puts it there, so it raises 5 and not 11.1.
 * **There is one evaluator.** The tree-walking evaluator is retired, and every expression runs on
   the compiled ops, traced or not, in a program or in an `INTERPRET` string.
 * **A malformed expression raises an error that describes a fault present in its text.** Which of
@@ -113,8 +113,12 @@ The field names and widths are a sketch; the implementation fixes them with a si
 * **A message's children are one range**: the receiver first, then the `:scope` override where
   `scoped`, then the arguments. That is the order they are evaluated in.
 * **`VariableReference` is a leaf.** Its operand is never evaluated, only named, so it is not a
-  child; the symbol and whether it is a stem are the node's payload. `ClassResolver` is a leaf
-  already.
+  child; the symbol and whether it is a stem are the node's payload. The scans that collect the
+  symbols an expression names read that payload, as they visit the child today: the plan's
+  `note` gives the symbol its variable slot, and `guard_exposes` counts it among the variables a
+  `GUARD ... WHEN` watches, so `GUARD ON WHEN check(>x)`, whose only variable is the reference,
+  is accepted as it is today and not refused with 99.913. Neither reads the variable.
+  `ClassResolver` is a leaf already.
 * **Every node is addressable by its id.** An op that names a node today does it by instruction
   index, expression slot and `NodePath`, a 31-step route from the slot's root; past that width a
   node has no address and its whole slot falls back to `Op::EvalExpr`. An `ExprId` addresses any
@@ -123,7 +127,8 @@ The field names and widths are a sketch; the implementation fixes them with a si
 
 `Debug`, `PartialEq` and `Clone` are derived on `Exprs`, and over flat vectors they are loops. An
 instruction's `Debug` prints ids; a test or a panic message that wants an expression's text uses a
-renderer that is itself a loop (see below).
+renderer made of loops that writes each byte once (see
+[Golden rendering](#golden-rendering-and-the-parsers-test-renderer)).
 
 A body-wide arena lets an op name a node by one `u32` and keeps instructions small; it makes an
 instruction meaningless without its body, so a test that compares instructions compares bodies.
@@ -137,8 +142,9 @@ memory it runs under.
 
 ### Invariants
 
-The arena of a body satisfies these after the body is parsed, and a validator checks all of them
-(in debug builds after each body, and in a test over the whole corpus):
+The arena of a body satisfies these after the body is parsed, and a validator checks all of them:
+in debug builds after each body is parsed, in every build when a body is read from an image (see
+[The image](#the-image)), and in a test over the whole corpus.
 
 1. **Children before parents.** Every child's id is less than its parent's.
 2. **A subtree is a contiguous range, in evaluation order.** The nodes of the subtree rooted at `n`
@@ -192,28 +198,47 @@ where an argument or list item would start is an omitted position and pushes an 
 except a `)` right after a parenthesis's `(`, which is 35.1 as today. A terminator anywhere else
 ends the expression, which is an error if an operator is waiting for its operand.
 
-**Having an operand.** The message operators bind tighter than any operator, prefix ones
-included, so they act as postfix operators on the operand just completed, whose root is the last
-node pushed: `~` and `~~` read the message name and an optional `:scope` leaf, then either build
-the `Message` node at once or, with an abutted `(`, push an argument-list marker that records the
-receiver; `[` pushes a collection marker the same way. A message name is read under `EOC`, as
-today, except after a variable reference, where it is read under the marker's set, also as
-today. A dyadic operator pops and builds every waiting operator of greater or equal precedence
-(so every level associates to the left, `**` included), then is pushed itself. A blank is the
-blank operator, unless the next token that is not a blank terminates, in which case it is skipped
-and ends the operand. A symbol, a literal or a `(` where an operator was expected is the abuttal
-operator, which consumes no token. A `,` pops the operators down to the top marker and counts an
-item. The marker's closer does the same, then pops the marker and builds its node: a `Call`,
-`QualifiedCall` or `Message` whose children are the items since the marker's mark, a `List` for a
-parenthesis that held a comma, or nothing for a parenthesis around one expression, which returns
-its inner expression unchanged as today. An argument list drops its trailing `Omitted` nodes
-before it builds the call: they are the last nodes pushed, so dropping them is a rewind. A closer
-that is not the top marker's, a `\` as a dyadic operator and an assignment operator are errors.
+**Having an operand.** The message operators bind tighter than any operator, prefix ones included,
+so they act as postfix operators on the operand just completed, whose root is the last node pushed:
+`~` and `~~` read the message name and an optional `:scope` leaf, then either build the `Message`
+node at once or, with an abutted `(`, push an argument-list marker that records the receiver; `[`
+pushes a collection marker the same way. A message name is read under `EOC`, as today, except after
+a variable reference (below). A dyadic operator pops and builds every waiting operator of greater
+or equal precedence (so every level associates to the left, `**` included), then is pushed itself.
+A blank is the blank operator, unless the next token that is not a blank terminates, in which case
+it is skipped and ends the operand. A symbol, a literal or a `(` where an operator was expected is
+the abuttal operator, which consumes no token. A `,` pops the operators down to the top marker and
+counts an item. The marker's closer does the same, then pops the marker and builds its node: a
+`Call`, `QualifiedCall` or `Message` whose children are the items since the marker's mark, a `List`
+for a parenthesis that held a comma, or nothing for a parenthesis around one expression, which
+returns its inner expression unchanged as today. An argument list drops its trailing `Omitted`
+nodes before it builds the call: they are the last nodes pushed, so dropping them is a rewind. A
+closer that is not the top marker's, a `\` as a dyadic operator and an assignment operator are
+errors.
+
+**After a variable reference** the postfix rule has an exception, which keeps today's parse. When
+the operand just completed is a `VariableReference` leaf read in operand position (not one inside
+a parenthesis that has closed) and a `~`, `~~` or `[` follows it, the loop first pops and builds
+every prefix operator waiting above the nearest dyadic operator or marker, so the message goes to
+the prefixed value. `- >a~value` is `(- >a)~value`: with `a = 3` it raises 97.1, because `VALUE`
+is sent to `-3`, where `- (>a~value)` prints `-3`; and with `a = 'abc'`, `- >a[1]` raises 41.1
+from the prefix before any `[]` is sent. The message names of that cascade, up to the first token
+that is not a message operator, are read under the top marker's set rather than `EOC`, so
+`do i = 1 to >a~for` and `do i = 1 to - >a~for` are 19.909 at translation, where
+`do i = 1 to b~for` sends `FOR`. Today's parser does both because `>a` returns from
+`message_subterm` without its cascade, through any prefix operators before it, and the cascade
+is then read by `binary_rest` under the caller's terminators. No rule of the specification states
+either; the loop keeps them so that no parse moves.
 
 At the end of the clause, or at a terminator of the bottom marker's set, every operator is popped
-and built, and a marker still open other than the bottom one is error 36 for its opener. In message
-term mode the bottom marker takes no dyadic operator: anything but a message operator ends the
-term, and a term that took none answers `None` after rewinding what it pushed, which is how a bare
+and built, and a marker still open other than the bottom one is error 36 for its opener.
+
+**Message term mode** starts at an atom, as today's trial starts in `subterm`. A prefix `+`, `-`
+or `\` where the term would begin answers `None` before anything is pushed, so the clause falls
+through to the command parser: a clause `-2~abs` is a command whose expression is `-(2~abs)`,
+where `(-2)~abs` is a message instruction. A `>` or `<` there reads a reference, as `subterm`
+does. The bottom marker takes no dyadic operator: anything but a message operator ends the term,
+and a term that took none answers `None` after rewinding what it pushed, which is how a bare
 `f(1)` clause stays a command.
 
 Building a node does constant work per child: its operands are found from the arena by invariant
@@ -233,7 +258,8 @@ These places build out of order today and change, in the parser's callers in `in
   The copy is the term's range pushed again with its ids rebased, before the value is parsed: a
   loop over a slice.
 * **Prefix operators.** Today `message_subterm` recurses once per prefix operator. In the loop
-  each is a pending operator, built when its operand is complete, innermost first.
+  each is a pending operator, built when its operand is complete, innermost first, or, before the
+  cascade after a variable reference, when that cascade starts (above).
 
 ### Trial parses rewind the arena
 
@@ -362,18 +388,47 @@ stack after its root and frees its register, and a flat chain does not, because 
 registers however long it runs.
 
 A slot that needs more registers than the width holds raises Error 5, with no subcode, where today
-it is `ChunkTooLarge` and a loud refusal. The compiler finds it when it compiles the body, which
-is where the refusal happens today, and the error names the clause whose expression passed the
-width. This is a resource limit set by the register width, as the depth of routine calls is set
-by the interpreter's stack, and not a rule of the language, so it raises 5 and not 11.1. If
-generated code ever meets it, values past the width could be parked on the driver's argument
-stack and taken back before the op that consumes them, without widening `Op`.
+it is `ChunkTooLarge` and a loud refusal. This is a resource limit set by the register width, as
+the depth of routine calls is set by the interpreter's stack, and not a rule of the language, so it
+raises 5 and not 11.1. If generated code ever meets it, values past the width could be parked on
+the driver's argument stack and taken back before the op that consumes them, without widening
+`Op`.
 
-The same holds for every other width the compiler can fill: constants, the op stream, send and
-call sites, expression slots, call arguments, template widths and `RAISE ARRAY` items. Each of
-those `ChunkTooLarge` refusals raises Error 5, with no subcode, against the clause being compiled.
-The one refusal that stays a loud error is `ValidOps`'s check for a register operand outside the
-chunk's register count: no program fills that, and it firing means the compiler is wrong.
+The same holds for every other width the compiler can fill. Each `ChunkTooLarge` refusal a
+program can reach raises Error 5, with no subcode. The one refusal that stays a loud error is
+`ValidOps`'s check for a register operand outside the chunk's register count: no program fills
+that, and it firing means the compiler is wrong.
+
+**Where Error 5 is raised.** This is the proposed answer, which the owner has to confirm. A body
+is compiled whole when it is first entered under a trace setting: `run_activation` takes the
+body's chunk before it runs the first clause. A refusal turned into a condition at that point
+would be raised before the body's own `SIGNAL ON SYNTAX` is set, and would refuse a body for a
+clause it never reaches. So the widths split by what they bound, read from the refusals in
+`ir.rs` and `ir/compile.rs`:
+
+* **A width of one clause raises when that clause runs.** The clause compiles, in place of its
+  ops, to one op that raises `SYNTAX 5` at the clause: it is traced as the clause is, the body's
+  own `SIGNAL ON SYNTAX` traps it, and a clause that never runs never raises. The compiler takes
+  the clause's ops, jump patches and register top back to where the clause opened and goes on
+  with the next clause, so the refusal does not spread. These widths are the registers, the
+  arguments of one call, the items of one `RAISE ARRAY` and the entries of one `PARSE` template.
+  Registers count what is pending in the clause and what an enclosing `DO`, `LOOP` or
+  `SELECT CASE` holds across its body, so a clause nested in enough loops can pass the width
+  with little of its own. A `DO`, `LOOP` or `SELECT CASE` whose own header registers do not fit
+  raises at its header clause, and the `END` of such a loop, which reads them, compiles to the
+  same op. The width of a clause's expression slots, which today's ops carry, goes with
+  `NodePath` in step 2, since an op names its node by `ExprId`.
+* **A width of the whole body refuses the body before it runs.** These are the op stream, the
+  constant table, and the arithmetic, send and call sites, each counted over the body. They raise
+  `SYNTAX 5` when the body is entered, in the activation that enters it, before any clause of the
+  body runs, as a syntax error in an external routine is raised at the `CALL` that reaches it:
+  the caller's `SIGNAL ON SYNTAX` traps it. For an `INTERPRET` string it is raised at the
+  `INTERPRET` instruction, where the running body's trap sees it, as it sees a syntax error in the
+  string. A main program that passes one ends with Error 5 before its first clause, as one that
+  fails to parse ends with its error. The arena's `u32` ids and offsets are of this kind, and
+  raise when the body is parsed (see [Representation](#representation)). A body is compiled once
+  per trace setting, and a traced chunk carries trace ops, so a body near a width can fit under
+  one setting and not another; the bound is the implementation's, as above.
 
 ### The plan, and the other scans
 
@@ -418,7 +473,16 @@ to a chunk of its own. What reaches the evaluator today, read from the compiler 
   compiled walk already stops at the first operand the stream computes, and the pattern's ops run
   before the engine resumes, so the pattern is evaluated when the template reaches it.
 * **`::CONSTANT` values** (`install/constant_expression.rs`): the directive's arena compiles as a
-  one-slot chunk and runs once at install.
+  one-slot chunk, and both paths that run the expression today run that chunk. One runs it at
+  install, below the level installing the package, for the constant's value. The other is
+  `install.rs::run_constant_expression`: the expression's `Method`, captured and defined on a
+  class with `.Class~define`, runs again when it is sent, with that send's receiver, scope and
+  arguments, answers no result (91.999 when a result is wanted), and has no install-only
+  `::CLASS` level below it. Each path keeps its own level, trace and failure site; only how the
+  value is computed changes. The corpus programs `constant_expression_method_runs`, `_scopes`,
+  `_trace` and `_fails` cover the second path and `class_constant_expression_*` and
+  `directive_constant_expression_*` the first; the step that moves `::CONSTANT` keeps every one
+  of them passing unchanged.
 
 The compiler finds the list: the step that removes `Interp::eval` and `Interp::eval_node` fails to
 build at every caller that is left. The work that today runs between children in the evaluator
@@ -454,9 +518,26 @@ compiler in three ways:
 ### Golden rendering and the parser's test renderer
 
 A golden renders a node address as the node's id instead of a path (`root.L.R`), and every golden
-that holds one is re-recorded with the rewrite switch. `Expr::shape`, which renders a tree as an
-S-expression for parser tests, becomes a loop with a stack of rendered strings: each node pops its
-children's strings and pushes its own. The expected shapes in the parser's tests do not change.
+that holds one is re-recorded with the rewrite switch.
+
+`Expr::shape`, which renders a tree as an S-expression for parser tests, writes each byte of its
+output once, into one buffer. Building each node's string from its children's strings would copy
+a child's whole text again at every ancestor, which for a left-deep chain is quadratic. The
+S-expression is in pre-order and the arena in post-order, so the renderer places the text by
+offsets, in three loops of the forms above:
+
+* a forward attribute gives each node the length of its rendering: its own opening, name and
+  closing, a separator between children, and its children's lengths;
+* a backward attribute gives each node its offset in the output: a parent, which the reverse loop
+  reaches before its children, hands each child its offset in one sweep over its child list,
+  using `position` to order them;
+* one loop over the range writes each node's own bytes at its offset: the opening and name at
+  its start, a separator after each child's end, the closing at its end.
+
+The buffer is allocated once at the root's length, and the work is linear in the output. The text
+renderer that tests and panic messages use (see [Representation](#representation)) is the same
+three loops. The expected shapes in the parser's tests do not change, and the small-thread test
+renders its deep chain and deep nesting with `shape` (see Testing).
 
 ### The differential test
 
@@ -467,7 +548,39 @@ evaluation order the tree had.
 
 ### The image
 
-The image writes a body's arena as its vectors, each a loop, and `FORMAT` moves on.
+The image writes a body's arena as its vectors, each a loop, and `FORMAT` in
+`interrexx-parse/src/image.rs`, the version of the `RXPARSED` layout, moves from 3 to 4. That is
+the parser's image, which the interpreter's build writes for the built-in library and which
+`program_from_image` reads for a library caller. `rexxc`'s compiled program file (`compiled.rs`)
+holds the program's source, not a parsed image, has a format version of its own, and does not
+change.
+
+**An image of another format is refused, and its reader parses the text.** Both readers,
+`program_from_image` and `program_from_static_image`, take the source text with the image, check
+the image against it, and answer `None` for an image of another format, of other text, cut short
+or carrying more; the module documents `None` as the caller's cue to parse the text. The
+built-in library does that (`enter_library_program`), and its image is written by the same build
+that reads it. A library caller holding a FORMAT 3 image and its text gets `None`, with no error
+code, and parses the text; no entry point reads an image without its text, so there is no case
+of old bytes alone to fall back from. No FORMAT 3 decoder is kept: the image is a cache of a
+parse, rebuilt from the text it is checked against. A test pins this with a FORMAT 3 image of a
+small program, written by today's writer and checked in beside its text: the new reader answers
+`None` for it, not a misread program, and the text parses.
+
+**A decoded arena is checked before anything uses it.** The decoder checks each id and range
+against the vectors it has read, then runs the invariant validator on each body's arena and on a
+`::CONSTANT` directive's. An arena whose ids are in range but whose roots, subtree ranges, or
+parent or position links disagree is refused like any image that does not fit. The validator
+reads through checked indices only, so such an arena cannot make it panic.
+`program_from_image` decodes every body before it answers, so a library caller gets `None` for
+an inconsistent arena and parses its text. The built-in image leaves each body encoded until it
+is first read (`Body`), and the check runs then, as part of that decode, before the compiler or
+any scan sees the body. A built-in body that fails it is a defect of the build, which wrote the
+image from a validated parse, and panics, as a built-in body that does not decode does today. The
+test that reads the built-in image through `program_from_image`
+(`the_librarys_embedded_image_reads_back_as_it_parses`) decodes, and so validates, every body,
+so such a defect fails in CI rather than in a program. The check is one loop over the body, as
+the decode is.
 
 ## What it enables
 
@@ -583,9 +696,11 @@ one stack.
 1. **The arena in `interrexx-parse`.** `Exprs`, the builder with `mark` and `rewind`, the
    validator, the recursive-descent parser emitting nodes in post-order (which falls out of
    recursive descent, since every node is built after the calls that return its children), the
-   prefix operators read as a run instead of by recursion, the `op=` reorderings, the image
-   format, the loop renderers for `Debug` and `shape`, the differential test as a loop, and a
-   sentence in `architecture.md`'s Parsing section. To keep this step reviewable, it adds a
+   prefix operators read as a run instead of by recursion (built before the cascade after a
+   variable reference, as today), the `op=` reorderings, the image format with its FORMAT 3
+   fixture and the validator run at decode, the renderers for `Debug` and `shape` as loops that
+   write each byte once, the differential test as a loop, and a sentence in `architecture.md`'s
+   Parsing section. To keep this step reviewable, it adds a
    transitional borrowed view, `ExprRef { exprs, id }`, whose `kind()` answers today's `ExprKind`
    shape with views for children; the interpreter's consumers change their types from `&Expr` to
    `ExprRef` and keep their recursion for now. The owner has accepted this view for the steps up to
@@ -596,11 +711,15 @@ one stack.
    the chain whose leftmost term is a call, which no longer falls back for width. Register
    exhaustion raises Error 5 from this step on, because a slot that ran on the evaluator for width
    now compiles and can pass the register width (see Risks), and so does every other width
-   refusal of the compiler, so that no step leaves a loud refusal a program can reach.
-3. **The scans.** `note`, `guard_exposes`, `calls_nothing`, and the remaining shallow matches.
+   refusal of the compiler, so that no step leaves a loud refusal a program can reach. A width of
+   one clause raises when that clause runs and a width of the body when the body is entered (see
+   [IR compilation](#ir-compilation)), which needs the owner's confirmation before this step.
+3. **The scans.** `note`, `guard_exposes`, `calls_nothing`, and the remaining shallow matches;
+   `note` and `guard_exposes` read a variable reference's symbol from its payload.
 4. **Retiring the evaluator.** Ops for `QualifiedCall`, `Logical` lists and cascade message
    instructions; the step functions, message-term assignment, PARSE template patterns and
-   `::CONSTANT` values taking their values from registers; `Op::EvalExpr`, `Op::CallExpr`,
+   `::CONSTANT` values, on both of their paths, taking their values from registers; the
+   call-resolution witnesses of Risks carried to the compiled path; `Op::EvalExpr`, `Op::CallExpr`,
    `eval.rs`'s tree walker and `MAX_EVAL_DEPTH` removed; the JIT host's arms. If it is too large
    to review as one, it splits where it stays green: first the new ops, which leave
    `Op::EvalExpr` with no slot to compile, then the step functions, which leave `eval` with no
@@ -611,7 +730,9 @@ one stack.
 6. **The operator-precedence parser.** `expr.rs`'s recursive descent is replaced by the loop. It
    keeps counting nesting against `MAX_EXPR_DEPTH` on the pending stack, so that no program's
    result moves in this step except where a malformed expression now reports another fault that
-   is present (see Testing). `D10`'s row is amended.
+   is present (see Testing). The loop keeps the cascade after a variable reference and the
+   atom-only start of message term mode, which the tests under What the rewrite keeps pin.
+   `D10`'s row is amended.
 7. **No nesting limit.** `MAX_EXPR_DEPTH`, `PARSER_STACK_BYTES` and `with_parser_stack` go;
    arena overflow in the parser raises Error 5; `r[expr.index.nesting]`, the error list, the
    Deviation and the corpus row change as above; the deep-nesting test and the program-level
@@ -628,7 +749,9 @@ parser.
 
 ## Testing
 
-Each test below fails on main today, which is the check that it covers the change.
+Each test below fails on main today, which is the check that it covers the change. The tests
+under [What the rewrite keeps](#what-the-rewrite-keeps) pass on main instead, and each fails
+under a named mistake of the new code.
 
 * **The flat chain runs.** A program assigning a chain long enough to abort in `push_native` on
   the interpreter's stack prints its value, with and without `TRACE I`, and under `GUARD WHEN`.
@@ -639,32 +762,72 @@ Each test below fails on main today, which is the check that it covers the chang
   call and message argument lists that keeps fewer values pending than the register width, each
   nested deeper than `MAX_EXPR_DEPTH`, parse, compile, run and trace, and print their value. Today
   each raises 11.1 from the parser.
-* **Register exhaustion raises 5.** In step 2, a compiler unit test pins the change itself: the
-  register refusal that today ends the run as a loud error is a `SYNTAX` condition with code 5 and
-  no subcode. A program test in the same step nests `1 + a~m(1 + a~m(...))`, which keeps two
-  values pending per level, deep enough to pass the width while staying under `MAX_EXPR_DEPTH`;
-  it traps the error with `SIGNAL ON SYNTAX` and goes on. Today it prints its value, because the
-  slot runs on the evaluator past `NodePath`'s width, so the test pins the move from a value to
-  Error 5. In step 7, `1 + (1 + (...))`, `a~m(a~m(...))` and `f(1, f(1, ...))`, which keep one
-  value pending per level and so pass the width only past `MAX_EXPR_DEPTH`, raise Error 5 the
-  same way; today each raises 11.1 from the parser.
+* **Register exhaustion raises 5.** In step 2, a compiler unit test pins the change itself: a
+  clause whose registers today make the body's refusal a loud error compiles to the op that raises
+  a `SYNTAX` condition with code 5 and no subcode at that clause. A program test in the same step
+  nests `1 + a~m(1 + a~m(...))`, which keeps two values pending per level, deep enough to pass the
+  width while staying under `MAX_EXPR_DEPTH`; it traps the error with `SIGNAL ON SYNTAX` and goes
+  on. Today it prints its value, because the slot runs on the evaluator past `NodePath`'s width, so
+  the test pins the move from a value to Error 5. In step 7, `1 + (1 + (...))`, `a~m(a~m(...))` and
+  `f(1, f(1, ...))`, which keep one value pending per level and so pass the width only past
+  `MAX_EXPR_DEPTH`, raise Error 5 the same way; today each raises 11.1 from the parser.
 * **Every compiler width raises 5.** In step 2, each `ChunkTooLarge` reason a program can reach
   raises a `SYNTAX` condition with code 5, built from an oversized input where that is cheap and
   otherwise with the width lowered under `cfg(test)`; the `ValidOps` operand check stays loud.
+* **Where 5 is raised.** In step 2, with the widths lowered under `cfg(test)` where an oversized
+  input is not cheap, and each failing on main, where the refusal is a loud error:
+  * a clause past a width of one clause, after `SIGNAL ON SYNTAX` in the same body, is trapped
+    with code 5 and `SIGL` at that clause's line, and the clauses before it have run;
+  * the same clause behind `if 0 then` or after `exit` is never reached, and the body runs to its
+    end without a condition;
+  * an `INTERPRET`ed string holding such a clause raises at that clause, and one past a width of
+    the whole body raises at the `INTERPRET` instruction, each trapped by the running body;
+  * a routine past a width of the whole body, called from a caller that has set
+    `SIGNAL ON SYNTAX`, is trapped by the caller with code 5, and the routine's first clause, a
+    `SAY`, prints nothing.
 * **Arena overflow raises 5.** The builder, with its id width lowered under `cfg(test)`, raises
   Error 5 when a body's nodes pass it, instead of panicking or wrapping.
 * **Every pass on a small thread.** A flat chain and a deep nesting, run through
   `run_program_on_stack` with a small stack (the one `tests/resources.rs` uses), long and deep
   enough that any pass recursing once per term or per level overflows it, parse, compile, run,
-  trace and round-trip through the image. This is the test that catches a future recursive pass.
+  trace, render with `shape` and round-trip through the image. This is the test that catches a
+  future recursive pass, and the quadratic renderer it replaces is the reason the chain is
+  rendered too.
 * **#69.** Parsing, `Debug`, `PartialEq`, `Clone` and drop of a deep expression's arena on a
   default 2 MiB thread, with no sized thread.
 * **The invariants.** The validator over every program in the corpus and the library: ranges
   contiguous, every node reachable once, `parent` and `position` consistent. A mutation that skips
   a rewind or reorders the `op=` operand fails it.
+* **The image boundary.** A checked-in FORMAT 3 image and its text: the new reader answers
+  `None` and the text parses. An image of a parsed program edited so that every id stays in range
+  but the arena is inconsistent (a `parent` link pointed elsewhere, a `first` moved, a root left
+  out of its slot) is refused by `program_from_image`, one edit per case.
 * **Nothing else moves.** The differential test's recorded values, the parser's expected shapes,
   the trace oracle comparisons and the corpus outputs are unchanged; the goldens change only in
   node addresses and call registers.
+
+### What the rewrite keeps
+
+These pin today's behaviour where a natural reading of the new design would move it. Each passes
+on main and fails under the mistake named with it.
+
+* **The cascade after a variable reference.** With `a = 3`, `say - >a~value` raises 97.1 and
+  `say - (>a~value)` prints `-3`; with `a = 'abc'`, `say - >a[1]` raises 41.1;
+  `do i = 1 to - >a~for` and `do i = 1 to >a~for` are 19.909 at translation, and
+  `do i = 1 to b~for` sends `FOR`. A parser shape test pins `(- >a)~value` and `(- >a)[1]`. They
+  fail on a loop that applies the postfix rule to a reference as to any operand.
+* **Message term mode starts at an atom.** A clause `-2~abs` is a command and `(-2)~abs` a
+  message instruction: an instruction-kind test pins each, and a golden pins their ops (a value
+  send, the prefix and `ExecWith` for the first; the prefix and a clause send for the second).
+  They fail on a message term mode that accepts a prefix operator before its term.
+* **A reference names a variable to the scans.** A method that exposes `x` and runs
+  `GUARD ON WHEN check(>x)`, where `check` reads the value through the reference, is accepted and
+  passes the guard. It fails with 99.913 on scans that read only variable and stem nodes.
+* **`::CONSTANT` on both paths.** The `constant_expression_*`, `class_constant_expression_*` and
+  `directive_constant_expression_*` corpus programs, unchanged. They fail if the
+  `run_constant_expression` path is dropped with `Interp::eval` or runs with the install level.
+* **The order of a call's resolution.** The cases listed under Risks, in the shapes that run on
+  each engine today. They fail on a compiled call that resolves its target before its arguments.
 
 ### Malformed expressions
 
@@ -721,10 +884,27 @@ same way.
 
 ## Risks
 
-* **The order of a call's resolution.** The evaluator resolves a call's fixed target before its
-  arguments and reports a failed resolution after them; the compiled path (`Op::CallArgs`)
-  resolves after its arguments, and once the evaluator is retired that is the only order. The
-  trace oracle comparisons and the corpus have to show the earlier lookup was not observable.
+* **The order of a call's resolution.** The evaluator resolves a call's fixed target (a label or
+  a builtin) before its arguments and reports a failed resolution after them; the compiled path
+  (`Op::CallArgs`) resolves after its arguments, and once the evaluator is retired that is the
+  only order. The routine search that is not fixed runs after the arguments on both paths today,
+  so an argument that adds the routine to the package is seen. #994 moves a qualified call's
+  namespace lookup after its arguments on both paths. The corpus alone does not show that the
+  earlier lookup was unobservable, so the tests carry the witnesses explicitly, each in a slot
+  that compiles natively today and in one that runs on the evaluator (a call nested past
+  `NodePath`'s width, or traced with an argument that falls back), and step 4 keeps every one with
+  its expected output once both shapes compile:
+  * #994's `qualified_calls_resolve_after_arguments_in_the_driver_and_walker`: an argument that
+    rebinds the namespace reaches the new package, an argument that creates the namespace is
+    seen, and an argument that raises takes precedence over a namespace or a routine that does
+    not resolve (42.3 rather than 98.987 or 43.902), with each argument's side effect seen before
+    a failed resolution is reported;
+  * for a plain call, an argument that adds the routine through the package is seen, and an
+    argument that raises takes precedence over a target that does not resolve (42.3 rather than
+    43.1).
+
+  If #994 has not landed when step 4 does, the qualified call's op this design adds takes #994's
+  order, and its test lands with that step.
 * **Error codes for malformed expressions move.** A loop parser meets the faults of a malformed
   expression in another order than recursive descent, so for text with more than one fault it can
   report another of them. That is allowed; what must hold is that the reported fault is present,
