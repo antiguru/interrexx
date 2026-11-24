@@ -94,6 +94,21 @@ if translate(SysGetLongPathName(rootName)) \== translate(rootName) then exit 80
 if SysGetLongPathName('gone.txt') \== '' | SysGetShortPathName('gone.txt') \== '' then exit 78
 call directory savedDirectory
 if SysFileDelete(fullName) <> 0 then exit 79
+caseParent = value('REXX_TEST_CASE_PARENT', , 'ENVIRONMENT')
+if caseParent \== '' then do
+  if directory(caseParent || '\Foo') == '' then exit 81
+  if linein('entry.txt') \== 'upper' then exit 82
+  call stream 'entry.txt', 'c', 'close'
+  longCase = SysGetLongPathName('..\foo\entry.txt')
+  if longCase == '' then exit 83
+  if linein(longCase) \== 'lower' then exit 84
+  call stream longCase, 'c', 'close'
+  shortCase = SysGetShortPathName('..\foo\entry.txt')
+  if shortCase == '' then exit 85
+  if linein(shortCase) \== 'lower' then exit 86
+  call stream shortCase, 'c', 'close'
+  call directory savedDirectory
+end
 if SysRmDir(dir) <> 0 then exit 8
 missing = dir || '\missing'
 if SysIsFileCompressed(missing) | SysIsFileEncrypted(missing) then exit 9

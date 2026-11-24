@@ -153,7 +153,9 @@ jobs:
             Where-Object { $_ -notin $driveNames }) -join ' '
           $env:REXX_TEST_VOLUME_SIZE = $drive.TotalSize.ToString([cultureinfo]::InvariantCulture)
           $probe = Join-Path $env:RUNNER_TEMP 'rexxutil-efs-probe'
+          $caseRoot = Join-Path $env:RUNNER_TEMP 'rexxutil-case-probe'
           [IO.File]::WriteAllText($probe, 'test data')
+          New-Item -ItemType Directory -Path $caseRoot | Out-Null
           try {
             try {
               [IO.File]::Encrypt($probe)
@@ -161,10 +163,21 @@ jobs:
             } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
               Write-Host 'The runner cannot encrypt a file on its temporary volume.'
             }
+            $caseStatus = fsutil.exe file setCaseSensitiveInfo $caseRoot enable
+            if ($LASTEXITCODE -eq 0) {
+              $upper = [IO.Directory]::CreateDirectory((Join-Path $caseRoot 'Foo'))
+              $lower = [IO.Directory]::CreateDirectory((Join-Path $caseRoot 'foo'))
+              [IO.File]::WriteAllText((Join-Path $upper.FullName 'entry.txt'), 'upper')
+              [IO.File]::WriteAllText((Join-Path $lower.FullName 'entry.txt'), 'lower')
+              $env:REXX_TEST_CASE_PARENT = $caseRoot
+            } else {
+              Write-Host "The runner cannot enable case sensitivity for the live fixture: $caseStatus"
+            }
             & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
             if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
           } finally {
             Remove-Item -LiteralPath $probe
+            Remove-Item -LiteralPath $caseRoot -Recurse
           }
 
       - name: Verify Windows file timestamps across daylight saving time

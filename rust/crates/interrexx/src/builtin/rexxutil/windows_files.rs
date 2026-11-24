@@ -378,8 +378,8 @@ pub(crate) fn file_name_spelling<const SHORT: bool>(
 
 fn converted_name(interp: &Interp, given: &[u8], short: bool) -> Option<String> {
     use crate::builtin::platform::qualify_name;
-    use crate::paths::os_path;
-    use std::path::{Component, PathBuf};
+    use crate::paths::{os_path, relative_windows_path};
+    use std::path::Component;
 
     let original = os_path(given);
     let qualified = qualify_name(interp, given);
@@ -406,25 +406,7 @@ fn converted_name(interp: &Interp, given: &[u8], short: bool) -> Option<String> 
     // Qualify against the interpreter's directory without changing the process
     // directory. Convert that directory as well before making the answer relative.
     let base = crate::host::file_name_spelling(os_path(interp.cwd_bytes()), short)?;
-    let mut base = Path::new(&base).components().peekable();
-    let mut rest = answer.components().peekable();
-    while let (Some(parent), Some(part)) = (base.peek(), rest.peek()) {
-        if !parent.as_os_str().eq_ignore_ascii_case(part.as_os_str()) {
-            break;
-        }
-        base.next();
-        rest.next();
-    }
-    let mut relative = PathBuf::new();
-    for _ in base {
-        relative.push("..");
-    }
-    for component in rest {
-        relative.push(component.as_os_str());
-    }
-    if relative.as_os_str().is_empty() {
-        relative.push(".");
-    }
+    let relative = relative_windows_path(Path::new(&base), answer)?;
     let relative = relative.to_str()?;
     match original.components().next() {
         Some(Component::Prefix(prefix)) => {
