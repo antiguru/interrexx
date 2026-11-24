@@ -20930,7 +20930,11 @@ has no method entry of the given name raises <code>90.998</code>. Both are raise
 the section of the directive ends, so a clause in the section is refused
 first, as the section rule below says. How they are ordered against the faults
 of other directives is the subject of <a href="directives/method.html#r-dir.method.external">the rule for external
-methods</a>.</p>
+methods</a>. An external attribute with neither GET nor
+SET looks up its getter before its setter. When the getter exists and the
+setter does not, <code>90.998</code> names the missing setter and the package construction
+fails. Loading the library to look up the accessors does not call the getter.
+A GET-only declaration can still use it.</p>
 <pre><code class="language-rexx">call try '::attribute a external'
 call try '::attribute a external library'
 call try '::attribute a external "library spec_no_such_lib_xyz"'
@@ -20960,6 +20964,35 @@ e: say arg(1) '=&gt;' condition('o')~code
 ::attribute a external "library a b c" =&gt; 99.917
 ::attribute a external "library rexxutil sysfiledelete" =&gt; 90.998
 ::attribute a external "library spec_no_such_lib_xyz" =&gt; 98.903
+</code></pre>
+<pre><code class="language-rexx">say 'loaded before' .local~hasIndex('SPECFIXTURE.LOADS')
+call tryBoth 'FxPartial'
+say 'loads' .local~specfixture.loads
+say 'called on refusal' .local~hasIndex('SPECFIXTURE.ATTRIBUTE.GET')
+call tryBoth 'FxNotThere'
+p = .package~new('spec-external-getter', .array~of('::class k', ,
+  '::attribute a get external "library specfixture GetFxPartial"'))
+say 'read' p~findClass('K')~new~a
+say 'called on read' .local~hasIndex('SPECFIXTURE.ATTRIBUTE.GET')
+exit
+tryBoth:
+  signal on syntax name bad
+  p = .package~new('spec-external-both-'arg(1), .array~of('::class k', ,
+    '::attribute a external "library specfixture' arg(1)'"'))
+  say 'unexpected package'
+  return
+bad:
+  info = condition('o')
+  say info~code info~additional[1]
+  return
+</code></pre>
+<pre><code class="language-output">loaded before 0
+90.998 SETFxPartial
+loads 1
+called on refusal 0
+90.998 GETFxNotThere
+read getter ran
+called on read 1
 </code></pre>
 <h2 id="the-section"><a class="header" href="#the-section">The section</a></h2>
 <div class="rule" id="r-dir.attribute.section"><a href="directives/attribute.html#r-dir.attribute.section">[dir.attribute.section]</a></div>
@@ -99818,6 +99851,7 @@ to the next.</p>
 <div class="table-wrapper"><table><thead><tr><th>Method</th><th>Arguments</th><th>Answers</th></tr></thead><tbody>
 <tr><td><code>FxSelf</code></td><td>none</td><td>the receiver</td></tr>
 <tr><td><code>FxMessage</code></td><td>none</td><td>the name of the message</td></tr>
+<tr><td><code>GetFxPartial</code></td><td>none</td><td>records a call in <code>SPECFIXTURE.ATTRIBUTE.GET</code> in <code>.local</code> and answers <code>getter ran</code>. The fixture has no matching setter</td></tr>
 <tr><td><code>FxScope</code></td><td>none</td><td>the class that defines the method</td></tr>
 <tr><td><code>FxObjSet</code>, <code>FxObjGet</code></td><td>a variable name, and for <code>FxObjSet</code> a value</td><td>set and get (or <code>(unset)</code>) an object variable of the method's scope</td></tr>
 <tr><td><code>FxMethodRaise</code></td><td>a message</td><td>raises <code>SYNTAX 93.900</code> with it, and answers <code>returned</code></td></tr>

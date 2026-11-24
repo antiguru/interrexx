@@ -249,6 +249,7 @@ to the next.</p>
 <div class="table-wrapper"><table><thead><tr><th>Method</th><th>Arguments</th><th>Answers</th></tr></thead><tbody>
 <tr><td><code>FxSelf</code></td><td>none</td><td>the receiver</td></tr>
 <tr><td><code>FxMessage</code></td><td>none</td><td>the name of the message</td></tr>
+<tr><td><code>GetFxPartial</code></td><td>none</td><td>records a call in <code>SPECFIXTURE.ATTRIBUTE.GET</code> in <code>.local</code> and answers <code>getter ran</code>. The fixture has no matching setter</td></tr>
 <tr><td><code>FxScope</code></td><td>none</td><td>the class that defines the method</td></tr>
 <tr><td><code>FxObjSet</code>, <code>FxObjGet</code></td><td>a variable name, and for <code>FxObjSet</code> a value</td><td>set and get (or <code>(unset)</code>) an object variable of the method's scope</td></tr>
 <tr><td><code>FxMethodRaise</code></td><td>a message</td><td>raises <code>SYNTAX 93.900</code> with it, and answers <code>returned</code></td></tr>
