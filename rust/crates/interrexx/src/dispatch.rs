@@ -3927,13 +3927,13 @@ impl Interp {
             // `CALL` path alone, so a program of method sends missed it every
             // time: measured on `bench-programs/dispatch.rex`, 5,000,089
             // misses and no hits, each one a `Box::new` of a 416-byte
-            // `Activation` and the free that follows.
+            // `Activation` at the time and the free that follows.
             // The streams the call opened are closed when it returns, so what
             // it wrote is in the file then (r[bif.index.stream.lifetime]).
             let opened = std::mem::take(&mut callee.streams);
             self.recycle_activation(callee);
-            if !opened.is_empty() {
-                self.close_opened_streams(opened.into_values());
+            if let Some(opened) = opened.filter(|table| !table.is_empty()) {
+                self.close_opened_streams(opened.into_values().map(|entry| entry.object()));
             }
             return None;
         };

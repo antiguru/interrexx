@@ -876,6 +876,16 @@ impl Interp {
             .copied()
     }
 
+    /// The routine named by a qualified function call in the running program.
+    pub(crate) fn resolve_qualified_call(
+        &self,
+        namespace: &[u8],
+        name: &[u8],
+    ) -> Result<run::Resolved, Failure> {
+        let package = self.running_program().ok_or_else(Loud::missing_body)?;
+        self.namespace_routine(package, namespace, name)
+    }
+
     /// The routine `namespace:name` names from `package`, or the refusal for
     /// either half missing.
     pub(super) fn namespace_routine(

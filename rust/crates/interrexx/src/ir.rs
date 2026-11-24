@@ -9,8 +9,8 @@ use interrexx_parse::{Operator, PrefixOp, SymbolId};
 use crate::error::Raised;
 use crate::eval::SymbolRead;
 use crate::run::{
-    HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword, SiteHold,
-    raised_if_not_logical, raised_when_not_logical,
+    ForwardPart, HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword,
+    SiteHold, raised_if_not_logical, raised_when_not_logical,
 };
 use crate::trace::ChunkTrace;
 
@@ -114,6 +114,13 @@ pub(crate) enum Op {
     /// method, so that the expression does not run where the instruction may
     /// not.
     ReplyCheck { index: u32 },
+    /// A `FORWARD` option's check, conversion or keyword trace, before the
+    /// next option is evaluated. The opening method check reads no register.
+    ForwardPart {
+        index: u32,
+        part: ForwardPart,
+        src: u16,
+    },
     /// One part of the `RAISE` at `index`: what the instruction does with the
     /// value its expression left in register `src` before it evaluates the
     /// next, its results kept in the registers [`crate::run::RaiseLayout`]
@@ -273,6 +280,8 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
+    /// One step of a `USE ARG` clause that has a default expression.
+    UseArg(UseArgOp),
     /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
     /// string, from register `src` for `PARSE VALUE`, and walks the
     /// template's entries up to `to`, the first whose operand the stream
@@ -416,6 +425,8 @@ pub(crate) enum SendForm {
 pub(crate) enum ConditionKeyword {
     If,
     When,
+    ListItem,
+    ListLast,
 }
 
 impl ConditionKeyword {
@@ -424,6 +435,7 @@ impl ConditionKeyword {
         match self {
             ConditionKeyword::If => raised_if_not_logical,
             ConditionKeyword::When => raised_when_not_logical,
+            ConditionKeyword::ListItem | ConditionKeyword::ListLast => Raised::logical_list_element,
         }
     }
 }
@@ -458,6 +470,15 @@ pub(crate) enum BodyEngine<'a> {
         chunk: &'a Chunk,
         registers: RegFrame<'a>,
     },
+}
+
+/// A `USE ARG` clause checks its argument count before binding targets
+/// in order. Only an absent argument enters its default's region.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum UseArgOp {
+    CheckCount,
+    Bind { slot: u16, skip: u32 },
+    BindDefault { slot: u16, src: u16 },
 }
 
 /// The route from an expression slot's root down to the node one op names.
@@ -609,6 +630,9 @@ impl Hints {
 
 /// Whether a compiled call site keeps the resolution it made.
 const CALL_SITE_CACHE: bool = true;
+
+/// A call whose target is resolved anew on each entry, with no cache slot.
+const UNCACHED_CALL: u16 = u16::MAX;
 
 /// One call site's kept resolution, or none yet, with the
 /// `Interp::routine_generation` it was made under. A `Routine` copy the kept

@@ -53,6 +53,22 @@ rc> 0
 out> when list
 out> 3
 
+# a false WHEN element skips a following call and proceeds to the next WHEN
+program
+select
+  when 0, tail('skipped') then say 'wrong'
+  when 1, tail('taken') then say 'chosen'
+  otherwise say 'wrong'
+end
+exit
+tail:
+say arg(1)
+return 1
+----
+rc> 0
+out> taken
+out> chosen
+
 # an item that is not 0 or 1 is 34.6
 program
 if 1, 'x' then nop
