@@ -2058,7 +2058,7 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         // A call needs an address, and a node past the width has none. The
         // whole slot then falls to `Op::EvalExpr`, which is the answer it had
         // before there was an address at all.
-        ExprKind::Call { .. } => path.is_some(),
+        ExprKind::Call { .. } | ExprKind::QualifiedCall { .. } => path.is_some(),
         // A send needs an address for the same reason; the receiver is child
         // 0 and the arguments follow it. A `:scope` override has no address
         // of its own, so a call in it leaves the slot general.
@@ -2412,17 +2412,21 @@ fn push_native<'a>(
                 ops.push(Op::TracePrefix { op: *op, src: dst });
             }
         }
-        // **A call takes its own op wherever it sits**, which is
-        // [`Op::CallExpr`], and the only thing that op changes about running
-        // the call is that the resolution comes from a site instead of being
-        // made afresh. What it needs and no other arm here does is an address:
-        // the value is not computed from operand registers, so the driver goes
-        // back to the node to find the target and the arguments.
-        ExprKind::Call { args, .. } => {
+        // The call's address leads back to the target and to any arguments
+        // that need the expression evaluator.
+        ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
             let slot16 = u16::try_from(slot).map_err(|_| ChunkTooLarge {
                 what: "expression slots past u16",
             })?;
             let path = path.expect("native_shape accepts a call only where an address reaches it");
+            let qualified = matches!(expr.kind, ExprKind::QualifiedCall { .. });
+            let reserve_site = |calls: &mut Calls| {
+                if qualified {
+                    Ok(super::UNCACHED_CALL)
+                } else {
+                    calls.reserve()
+                }
+            };
             // **The arguments become ops of their own where they can.** Then
             // the call op takes values off the driver's argument stack
             // instead of walking back to the node for expressions and
@@ -2448,7 +2452,7 @@ fn push_native<'a>(
                 ops.push(Op::CallArgs {
                     slot: slot16,
                     path,
-                    site: calls.reserve()?,
+                    site: reserve_site(calls)?,
                     argc,
                     dst,
                 });
@@ -2468,7 +2472,7 @@ fn push_native<'a>(
                 index,
                 slot,
                 path,
-                site: calls.reserve()?,
+                site: reserve_site(calls)?,
                 dst,
             });
             // Behind the call rather than in front of it, because `eval.rs`

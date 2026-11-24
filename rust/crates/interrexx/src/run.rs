@@ -3977,7 +3977,12 @@ impl Interp {
                 (ExprKind::Binary { right, .. }, true) => right,
                 (ExprKind::Prefix { operand, .. }, false) => operand,
                 // A list step: its index in clear steps, then a set one.
-                (ExprKind::Call { args, .. } | ExprKind::List(args), _) => {
+                (
+                    ExprKind::Call { args, .. }
+                    | ExprKind::QualifiedCall { args, .. }
+                    | ExprKind::List(args),
+                    _,
+                ) => {
                     let index = list_step(step, &mut steps)?;
                     args.get(index)?.as_ref()?
                 }

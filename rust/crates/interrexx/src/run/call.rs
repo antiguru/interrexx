@@ -52,8 +52,8 @@ fn add_internal_level(
 /// A call's target as it stands when its arguments are about to run.
 #[derive(Clone, Copy)]
 pub(crate) enum CallResolution<'a> {
-    /// Decided before the arguments: a label or a builtin, a namespace-qualified
-    /// routine, or a routine-search answer a call site keeps.
+    /// Decided before the arguments: a label or a builtin, or a routine-search
+    /// answer a call site keeps.
     Settled(Resolved),
     /// Searched for once the arguments have run, as an external call's are: what
     /// `site` keeps by then, or a search whose answer `site` keeps once the call
@@ -61,6 +61,8 @@ pub(crate) enum CallResolution<'a> {
     AfterArguments {
         site: Option<crate::ir::CallSiteSlot<'a>>,
     },
+    /// Look up the namespace and its routine after the arguments have run.
+    Qualified { namespace: &'a [u8] },
 }
 
 /// What a call site keeps once the call through it that found `resolved` under
@@ -507,6 +509,11 @@ impl Interp {
         let site = match resolution {
             CallResolution::Settled(resolved) => return Ok((resolved, None)),
             CallResolution::AfterArguments { site } => site,
+            CallResolution::Qualified { namespace } => {
+                return self
+                    .resolve_qualified_call(namespace, name)
+                    .map(|resolved| (resolved, None));
+            }
         };
         let generation = self.routine_generation;
         if let Some(site) = site

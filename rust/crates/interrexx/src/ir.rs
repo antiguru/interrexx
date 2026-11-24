@@ -628,6 +628,9 @@ impl Hints {
 /// Whether a compiled call site keeps the resolution it made.
 const CALL_SITE_CACHE: bool = true;
 
+/// A call whose target is resolved anew on each entry, with no cache slot.
+const UNCACHED_CALL: u16 = u16::MAX;
+
 /// One call site's kept resolution, or none yet, with the
 /// `Interp::routine_generation` it was made under. A `Routine` copy the kept
 /// resolution names is pinned, and the program of a `::ROUTINE` it names in
