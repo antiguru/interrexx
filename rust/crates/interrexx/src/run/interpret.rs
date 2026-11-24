@@ -2,7 +2,7 @@
 
 use super::{
     BodyEngine, Code, Failure, Flow, Fragment, Instruction, InstructionKind, Interp, Loud,
-    NameShape, ObjRef, ProgramSource, Rc, TraceEntry, VariableRef, raised_iterate_no_loop,
+    NameShape, ProgramSource, Rc, TraceEntry, VariableRef, raised_iterate_no_loop,
     raised_iterate_no_match, raised_leave_no_loop, raised_leave_no_match, shape_of,
     split_indirect_words, validate_indirect_word,
 };
@@ -329,7 +329,7 @@ impl Interp {
     /// empty nor `=` runs as an `INTERPRET` fragment; the pause ends when the
     /// fragment ended debug or changed a setting from inside it.
     pub(crate) fn debug_pause_now(&mut self) -> Result<Pause, Failure> {
-        if self.silenced() {
+        if self.activity.reading_debug_input || self.silenced() {
             return Ok(Pause::Go);
         }
         if self.activation().debug.bypass {
@@ -359,7 +359,10 @@ impl Interp {
             self.route_trace_line(start);
         }
         loop {
-            let line = self.debug_input_line()?;
+            self.activity.reading_debug_input = true;
+            let line = self.debug_input_line();
+            self.activity.reading_debug_input = false;
+            let line = line?;
             if line.is_empty() {
                 return Ok(Pause::Go);
             }
@@ -398,10 +401,7 @@ impl Interp {
             crate::pinning::PinKind::TraceWrapper,
             self.send_message(route, crate::dispatch::LINEIN, None, &[], caller)
         )?;
-        Ok(match answer {
-            Some(value) if value != ObjRef::NIL => self.to_text(value).into_owned(),
-            _ => Vec::new(),
-        })
+        self.input_answer_text(answer)
     }
 
     /// One line typed at a pause, run as an `INTERPRET` fragment that traces
