@@ -196,6 +196,21 @@ mod tests {
     use super::*;
     use std::os::unix::process::CommandExt;
 
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the fixture waits for the kernel's process state"
+    )]
+    fn wait_until(mut ready: impl FnMut() -> bool) -> bool {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !ready() {
+            if Instant::now() >= deadline {
+                return false;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        true
+    }
+
     #[test]
     fn dropping_a_service_stops_only_its_daemon_and_removes_its_directory() {
         let first = PrivateService::new(Side::Oracle, None).unwrap();
@@ -216,22 +231,26 @@ mod tests {
         };
         let mut first_daemon = daemon(&first);
         let mut second_daemon = daemon(&second);
+        let first_pid = rustix::process::Pid::from_child(&first_daemon);
+        let second_pid = rustix::process::Pid::from_child(&second_daemon);
+        let daemons_ready = wait_until(|| {
+            daemons_naming(&first_dir).contains(&first_pid)
+                && daemons_naming(&second_dir).contains(&second_pid)
+        });
 
         drop(first);
-        let first_status = first_daemon.try_wait().unwrap();
+        let first_stopped = wait_until(|| first_daemon.try_wait().unwrap().is_some());
         let second_status = second_daemon.try_wait().unwrap();
         drop(second);
-        let second_stopped = second_daemon.try_wait().unwrap().is_some();
+        let second_stopped = wait_until(|| second_daemon.try_wait().unwrap().is_some());
         // Keep the test bounded even if daemon cleanup regresses.
         for mut child in [first_daemon, second_daemon] {
             let _ = child.kill();
             let _ = child.wait();
         }
 
-        assert!(
-            first_status.is_some(),
-            "the first daemon outlived its service"
-        );
+        assert!(daemons_ready, "both daemons must be visible before cleanup");
+        assert!(first_stopped, "the first daemon outlived its service");
         assert!(
             second_status.is_none(),
             "the second daemon was stopped early"
