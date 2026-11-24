@@ -269,11 +269,13 @@ impl Interp {
             }
         };
         self.roots.activity_mut().push_temp(code);
-        // An argument that is not an error number fails the clause as soon as
-        // it is evaluated, before DESCRIPTION and ADDITIONAL are.
+        // An argument that is not an error number, or names no error that has
+        // a message, fails the clause as soon as it is evaluated, before
+        // DESCRIPTION and ADDITIONAL are (r[instr.raise.number],
+        // r[instr.raise.order]).
         if syntax {
             let text = self.to_text(code).to_vec();
-            if syntax_code(&text).is_none() {
+            if names_no_error(&text) {
                 let mut raised = raise_syntax_condition(&text, Vec::new());
                 raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
                 raised.delivery.search = Search::Here;
@@ -465,17 +467,11 @@ impl Interp {
             let mut raised = raise_syntax_condition(rc_text.as_deref().unwrap_or(b""), additional);
             raised.description = description;
             self.activity.pending_description = description_object;
-            // **The delivery rule follows the tail even when the argument was
-            // rejected**, which is measured rather than convenient: `raise
-            // syntax 40.10` inside a routine, with the trap in the main body
-            // and none in between, reports 98.941 fatally exactly as a
-            // well-formed tail-less `RAISE SYNTAX` reports its own number
-            // there. The substituted condition is still a `SYNTAX` condition
-            // and travels like one.
             raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
-            // An argument that is not an error number fails the clause itself,
-            // in the code that holds it, whatever the tail says.
-            let invalid = syntax_code(rc_text.as_deref().unwrap_or(b"")).is_none();
+            // An argument that is not an error number, or names no error that
+            // has a message, fails the clause itself, in the code that holds
+            // it, whatever the tail says (r[instr.raise.number]).
+            let invalid = names_no_error(rc_text.as_deref().unwrap_or(b""));
             raised.delivery.search = if returns || invalid {
                 Search::Here
             } else {

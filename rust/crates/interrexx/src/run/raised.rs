@@ -80,6 +80,21 @@ pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> R
     }
 }
 
+/// Whether the text of a RAISE SYNTAX number is no error number, or one that
+/// names no error with a message: the clause's own faults, 33.904 and 98.941,
+/// raised where the clause is (r[instr.raise.number]).
+pub(super) fn names_no_error(text: &[u8]) -> bool {
+    let Some(code) = syntax_code(text) else {
+        return true;
+    };
+    let (major, sub) = (code / 1000, code % 1000);
+    let known = u16::try_from(major)
+        .ok()
+        .zip(u16::try_from(sub).ok())
+        .is_some_and(|(major, sub)| interrexx_inventory::errors::lookup(major, sub).is_some());
+    !known
+}
+
 /// The `SYNTAX` condition for error `code`, `major * 1000 + sub`, or 98.941
 /// where the catalogue has no text for it: naming the code as a whole number
 /// where the major has text, and as `major.sub` where it has none.

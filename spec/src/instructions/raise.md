@@ -280,13 +280,10 @@ that no error has raises `SYNTAX 98.941`. The null string, a minus sign, a
 letter that is not the exponent of a number, a second point, a point with no
 digit on one side of it, a major number outside 1 to 99 and a subcode above
 999 raise `SYNTAX 33.904`. The text of any other form, such as a number with a
-plus sign, with blanks in it or with an exponent, is not specified. The error
-33.904 is a fault of the clause itself, so it is raised in the code that holds
-the RAISE, as an error found at that clause would be, whichever option ends
-the clause. The error 98.941 is a SYNTAX condition that the clause raises,
-like the condition that the clause names: it goes where [the RETURN
-rule](r:instr.raise.here) puts it, and with EXIT where [the EXIT
-rule](r:instr.raise.exit) puts it.
+plus sign, with blanks in it or with an exponent, is not specified. The errors
+33.904 and 98.941 are faults of the clause itself, so they are raised in the
+code that holds the RAISE, as an error found at that clause would be, whichever
+option ends the clause.
 
 ```rexx
 n.1 = '40'
@@ -347,8 +344,9 @@ e: o = condition('o')
      .3 => 33.904  33
 ```
 
-> With EXIT in an internal routine, 98.941 is raised at the level of the unit,
-> as the condition that the clause names would be.
+> With EXIT in an internal routine, 98.941 is raised in the internal routine,
+> where the trap of the internal routine answers it, and the condition that the
+> clause names is raised at the level of the unit.
 
 ```rexx
 say u('40.999')
@@ -365,8 +363,8 @@ unit: say '  unit' sigl condition('o')~code; return 'unit'
 ```
 
 ```output
-  unit 6 98.941
-unit
+  inner 9 98.941
+inner
   unit 6 40.3
 unit
 ```
@@ -611,10 +609,11 @@ code that holds the RAISE and with its variables, in a fixed order that does
 not depend on the order of the options: the code or the number first, then the
 DESCRIPTION expression, then the ADDITIONAL expression or the ARRAY list from
 left to right, and last the RETURN or EXIT expression. A name of a user
-condition is not evaluated. When the number of a RAISE SYNTAX is not valid,
-the number is checked as soon as it is evaluated, and the error 33.904 of [the
-number rule](r:instr.raise.number) is raised before the DESCRIPTION,
-ADDITIONAL, ARRAY, RETURN and EXIT expressions are evaluated.
+condition is not evaluated. When the number of a RAISE SYNTAX is not valid or
+names no error that has a message, the number is checked as soon as it is
+evaluated, and the error 33.904 or 98.941 of [the number
+rule](r:instr.raise.number) is raised before the DESCRIPTION, ADDITIONAL,
+ARRAY, RETURN and EXIT expressions are evaluated.
 
 ```rexx
 call on error name h
@@ -658,6 +657,21 @@ t: say 'evaluate' arg(1)
 ```output
 evaluate abc
 SYNTAX 33.904
+```
+
+```rexx
+signal on syntax name s
+raise syntax (t('40.999')) description (t('text')) additional (t('extra')),
+      return (t('value'))
+s: say condition('c') condition('o')~code
+exit
+t: say 'evaluate' arg(1)
+  return arg(1)
+```
+
+```output
+evaluate 40.999
+SYNTAX 98.941
 ```
 
 ## Where the condition is raised

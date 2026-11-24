@@ -41,12 +41,12 @@ pub(crate) use indent::{all_indents, static_indent};
 // The `Raised` constructors for the conditions the instruction loop raises.
 pub(crate) mod raised;
 use raised::{
-    raise_syntax_condition, raised_available_not_logical, raised_digit_led, raised_dot_led,
-    raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
+    names_no_error, raise_syntax_condition, raised_available_not_logical, raised_digit_led,
+    raised_dot_led, raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
     raised_iterate_no_match, raised_iterate_wrong_kind, raised_leave_no_loop,
     raised_leave_no_match, raised_naming_the_operand, raised_repetition_count_not_whole,
     raised_select_no_when, raised_symbol_expected, raised_until_not_logical,
-    raised_when_case_not_logical, raised_while_not_logical, syntax_code,
+    raised_when_case_not_logical, raised_while_not_logical,
 };
 pub(crate) use raised::{
     raised_for_code, raised_from_settings, raised_if_not_logical, raised_when_not_logical,
