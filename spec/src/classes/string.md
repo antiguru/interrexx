@@ -517,10 +517,10 @@ r[class.string.equals]
 receiver, and 0 otherwise. It is a strict comparison of text: case matters, a
 trailing blank matters, and numbers are not compared as numbers, so `1` and
 `1.0` are not equal. The argument is required (`SYNTAX 93.903`) and a second
-raises `93.902`. The argument's string value is found as the joining operators
-find it, so an object whose `request` answers no string is compared by its
-`string`
-text and `.nil` as the text `The NIL object`; no argument is refused.
+raises `93.902`. The argument is converted by the [required-string
+protocol](r:conv.string.object). `.nil` compares unequal to every string.
+An object whose `string` method returns something with no string value also
+compares unequal when the conversion does not raise a condition.
 
 ```rexx
 say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
@@ -568,6 +568,35 @@ e: say condition('o')~code
 0 1
 0 0
 93.903
+```
+
+```rexx
+o = .unreadable~new
+say 'abc'~equals(o) ''~equals(o) 'The NIL object'~caselessEquals(o)
+say 'The NIL object'~equals(.nil) 'The NIL object'~caselessEquals(.nil)
+say 'abc'~equals(.readable~new) 'ABC'~caselessEquals(.readable~new)
+signal on nostring name missing
+say 'abc'~equals(o)
+exit
+missing: say condition('c')
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+::class readable
+::method string
+  return 'abc'
+```
+
+```output
+string called
+string called
+string called
+0 0 0
+0 0
+1 1
+string called
+NOSTRING
 ```
 
 r[class.string.compareto]

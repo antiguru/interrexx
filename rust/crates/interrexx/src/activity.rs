@@ -40,6 +40,9 @@ pub(crate) struct Activity {
     /// The `TRACE` setting of whatever [`Activity::running`] holds, kept beside
     /// it rather than read through it.
     pub(crate) trace_cache: crate::trace::TraceCache,
+    /// A debug input handler may trace its clauses, but cannot open another
+    /// interactive stop while it is supplying the current stop's input.
+    pub(crate) reading_debug_input: bool,
     /// The activations that entered before [`Activity::running`], oldest
     /// first, so `suspended.last()` is the running activation's own caller.
     #[expect(
@@ -666,6 +669,7 @@ impl Activity {
             parked_socket: None,
             waiting_traced: None,
             trace_cache: crate::trace::TraceCache::of(crate::trace::TraceMode::OFF, false),
+            reading_debug_input: false,
             #[cfg(feature = "pinning")]
             pins: crate::pinning::PinStack::default(),
             #[cfg(feature = "sharing")]
@@ -729,6 +733,7 @@ impl Activity {
             builtin_answered_nothing: _,
             running,
             trace_cache: _,
+            reading_debug_input: _,
             suspended,
             // A finished activation's leftovers, overwritten at reuse and read
             // by nothing in between.

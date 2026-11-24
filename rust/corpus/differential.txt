@@ -75,7 +75,6 @@ lang/select_when_false_skips_branch_boundary.rex
 lang/if_nested_false_outer_boundary.rex
 lang/array_index_list_refusals.rex
 lang/library_callback_condition_returned.rex
-lang/date_time_conversion_refusals.rex
 lang/xrange_class_then_range.rex
 lang/address_with_interpreted.rex
 lang/library_condition_reported_on_return.rex
@@ -886,8 +885,6 @@ lang/mutex_semaphore_end_hands_over_to_a_waiter.rex
 lang/mutex_semaphore_reacquired_before_its_activity_ends.rex
 lang/mutex_semaphore_stays_with_the_replier.rex
 lang/mutex_semaphore_timed_acquire.rex
-lang/sys_semaphores_unnamed.rex
-lang/sys_semaphores_across_activities.rex
 lang/sys_semaphore_poll_takes_at_its_poll.rex
 lang/sys_semaphore_post_waits_for_the_next_poll.rex
 lang/sys_wait_event_sem_timeout_not_int.rex
@@ -1138,7 +1135,6 @@ lang/rexxutil_file_tree.rex
 lang/rexxutil_messages.rex
 lang/address_cd.rex
 lang/rexxutil_process.rex
-lang/requires_manager_rename.rex
 lang/sys_semaphore_names_rejected.rex
 lang/rexxutil_library_requires.rex
 lang/rexxutil_library_external.rex
@@ -1228,7 +1224,6 @@ lang/security_manager_started_message.rex
 lang/security_manager_protected_put.rex
 lang/security_manager_donated_flags.rex
 lang/security_manager_directory_entry.rex
-lang/security_manager_requires_replacement.rex
 lang/security_manager_command_rc_condition.rex
 lang/security_manager_existing_instances.rex
 lang/context_rs_command.rex

@@ -436,7 +436,11 @@ has no method entry of the given name raises `90.998`. Both are raised when
 the section of the directive ends, so a clause in the section is refused
 first, as the section rule below says. How they are ordered against the faults
 of other directives is the subject of [the rule for external
-methods](r:dir.method.external).
+methods](r:dir.method.external). An external attribute with neither GET nor
+SET looks up its getter before its setter. When the getter exists and the
+setter does not, `90.998` names the missing setter and the package construction
+fails. Loading the library to look up the accessors does not call the getter.
+A GET-only declaration can still use it.
 
 ```rexx
 call try '::attribute a external'
@@ -470,6 +474,39 @@ e: say arg(1) '=>' condition('o')~code
 ::attribute a external "library a b c" => 99.917
 ::attribute a external "library rexxutil sysfiledelete" => 90.998
 ::attribute a external "library spec_no_such_lib_xyz" => 98.903
+```
+
+```rexx
+say 'loaded before' .local~hasIndex('SPECFIXTURE.LOADS')
+call tryBoth 'FxPartial'
+say 'loads' .local~specfixture.loads
+say 'called on refusal' .local~hasIndex('SPECFIXTURE.ATTRIBUTE.GET')
+call tryBoth 'FxNotThere'
+p = .package~new('spec-external-getter', .array~of('::class k', ,
+  '::attribute a get external "library specfixture GetFxPartial"'))
+say 'read' p~findClass('K')~new~a
+say 'called on read' .local~hasIndex('SPECFIXTURE.ATTRIBUTE.GET')
+exit
+tryBoth:
+  signal on syntax name bad
+  p = .package~new('spec-external-both-'arg(1), .array~of('::class k', ,
+    '::attribute a external "library specfixture' arg(1)'"'))
+  say 'unexpected package'
+  return
+bad:
+  info = condition('o')
+  say info~code info~additional[1]
+  return
+```
+
+```output
+loaded before 0
+90.998 SETFxPartial
+loads 1
+called on refusal 0
+90.998 GETFxNotThere
+read getter ran
+called on read 1
 ```
 
 ## The section

@@ -342,6 +342,7 @@ fn structs() -> Vec<Struct> {
                 shvret
             }
         ),
+        // spec: native.header.queue-time
         strukt!(
             "RexxQueueTime" = RexxQueueTime {
                 hours,
