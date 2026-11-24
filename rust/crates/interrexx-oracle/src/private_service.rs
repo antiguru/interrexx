@@ -194,6 +194,32 @@ fn daemons_naming(dir: &Path) -> Vec<rustix::process::Pid> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
+    use std::os::unix::process::{CommandExt, ExitStatusExt};
+    use std::process::ExitStatus;
+
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the fixture waits for the kernel's process state"
+    )]
+    fn wait_until<T>(mut ready: impl FnMut() -> Option<T>) -> Option<T> {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if let Some(result) = ready() {
+                return Some(result);
+            }
+            if Instant::now() >= deadline {
+                return None;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn stopped_by_cleanup(status: Option<ExitStatus>) -> bool {
+        use rustix::process::Signal;
+        status
+            .and_then(|status| status.signal())
+            .is_some_and(|signal| [Signal::TERM.as_raw(), Signal::KILL.as_raw()].contains(&signal))
+    }
 
     #[test]
     fn dropping_a_service_stops_only_its_daemon_and_removes_its_directory() {
@@ -209,31 +235,45 @@ mod tests {
         let daemon = |service: &PrivateService| {
             let mut command = Command::new(&rxapi);
             service.configure(&mut command);
-            command.arg("60").spawn().unwrap()
+            // Multicall coreutils dispatches by argv[0]. The executable's
+            // name still gives the process its rxapi name in /proc.
+            command.arg0("sleep").arg("60").spawn().unwrap()
         };
         let mut first_daemon = daemon(&first);
         let mut second_daemon = daemon(&second);
+        let first_pid = rustix::process::Pid::from_child(&first_daemon);
+        let second_pid = rustix::process::Pid::from_child(&second_daemon);
+        let daemons_ready = wait_until(|| {
+            (daemons_naming(&first_dir).contains(&first_pid)
+                && daemons_naming(&second_dir).contains(&second_pid))
+            .then_some(())
+        })
+        .is_some();
 
         drop(first);
-        let first_status = first_daemon.try_wait().unwrap();
+        let first_status = wait_until(|| first_daemon.try_wait().unwrap());
         let second_status = second_daemon.try_wait().unwrap();
         drop(second);
-        let second_stopped = second_daemon.try_wait().unwrap().is_some();
+        let second_cleanup = wait_until(|| second_daemon.try_wait().unwrap());
         // Keep the test bounded even if daemon cleanup regresses.
         for mut child in [first_daemon, second_daemon] {
             let _ = child.kill();
             let _ = child.wait();
         }
 
+        assert!(daemons_ready, "both daemons must be visible before cleanup");
         assert!(
-            first_status.is_some(),
-            "the first daemon outlived its service"
+            stopped_by_cleanup(first_status),
+            "the first daemon did not terminate in cleanup: {first_status:?}"
         );
         assert!(
             second_status.is_none(),
             "the second daemon was stopped early"
         );
-        assert!(second_stopped, "the second daemon outlived its service");
+        assert!(
+            stopped_by_cleanup(second_cleanup),
+            "the second daemon did not terminate in cleanup: {second_cleanup:?}"
+        );
         assert!(!first_dir.exists());
         assert!(!second_dir.exists());
     }
