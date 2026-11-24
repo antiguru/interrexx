@@ -205,6 +205,10 @@ oracle answers rc 0 and rewires that class, Deviation 32.
 
 A `FORWARD` without `CONTINUE` that resolves back to the method it is in
 
+Dropped at r13624: Error 11.1 rc 245, 3 of 3 from fresh directories on an r13624 build under `memcap
+8G` and `timeout 20`, not the wrapper's `ulimit -v`. One run on the r13532 build answers the same.
+Not narrowed to an upstream ticket. The measurement at r13346 follows.
+
     o = .K~new
     say o~m
 
@@ -314,6 +318,11 @@ one is the design question entry 7 already puts.
 --------------------------------------------------------------------------
 
 A strict *ordering* comparison sent to a string with no argument
+
+Dropped at r13624 (SF #2142, r13391): Error 93.903 rc 163 for `"abc"~"<<"`, 3 of 3 from fresh
+directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`,
+and the same for each of the other five, one run each. One run on the r13532 build answers the same.
+The measurement at r13346 follows.
 
     say "abc"~"<<"
 
@@ -500,6 +509,11 @@ the same program ending at `say 'after'` prints `H` and `after` at rc 0. It is
 
 Nothing on either descriptor.
 
+At r13624 11c and 11d no longer crash: each ends at an untrapped Error 97.1 with rc 159 (SF #2149,
+r13424, as for entry 51), 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and
+`timeout 20`, not the wrapper's `ulimit -v`, and one run each on the r13532 build answers the same.
+11a and 11b still crash, 3 of 3.
+
 **11c, a traced clause while `.TRACEOUTPUT`'s destination cannot take one:**
 
     .traceoutput~destination(.nil)
@@ -601,6 +615,10 @@ Dropped at r13346: rc 0, 5 of 5, nothing on stderr. No upstream ticket names it.
 
 ## 14. Package-wide `::OPTIONS TRACE I` with a Rexx object as the trace destination
 
+Dropped at r13624 (SF #2163, r13469): rc 0, the trace lines on stderr, 3 of 3 from fresh directories
+on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`. One run on the
+r13532 build answers the same. The measurement at r13346 follows.
+
 At r13346 this is SIGBUS, rc 135, where it was SIGSEGV.
 
     s = .sink~new
@@ -648,6 +666,11 @@ answer by crashing *or by hanging*, so delivery to the trace route is guarded ag
 re-entry and the run terminates.
 
 ## 15. A context argument whose package is `.nil`, then a name resolved through it
+
+Dropped at r13624 (SF #2165, r13474): prints `prolog ran`, `The Array class`, `.NOSUCHZZ`, `answered
+x`, rc 0, 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not
+the wrapper's `ulimit -v`. One run on the r13532 build answers the same. The measurement at r13346
+follows.
 
     m = .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
     p = .Package~new('x', .array~of('say "prolog ran"', 'say .array', 'say .nosuchzz'), m)
@@ -715,6 +738,10 @@ Dropped at r13346: Error 93.900 rc 163: `RaiseCondition cannot raise a SYNTAX co
 
 ## 19. Two orxmethod `TestRaiseCondition` USER raises trapped by CALL ON in one clause
 
+Dropped at r13624 (SF #2084, r13365): prints `twice a b`, `handler USER BAR` twice, `after`, rc 0, 3
+of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`. One run on the r13532 build answers the same. The measurement at r13346 follows.
+
     t = .T~new
     call on user bar name h
     say 'twice' t~rc('USER BAR', , , 'a') t~rc('USER BAR', , , 'b')
@@ -771,6 +798,11 @@ No upstream ticket.
 
 ## 23. `Message~halt` sent again once a halted started activity has ended with 4.1
 
+Dropped at r13624: prints `1`, `1`, `1` and the started activity's 4.1 report, rc 0, 30 of 30 from
+fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit
+-v`; 10 runs on the r13532 build answer the same. Not narrowed to an upstream ticket. The
+measurement at r13346 follows.
+
     g = .gate~new
     m = .message~new(.t~new, 'plain', 'I', g)
     m~start
@@ -805,6 +837,11 @@ crash. The other runs exit 0 with the started activity's 4.1 report alone. Witho
 started activity has no Rexx frame) and exits 0. No upstream ticket.
 
 ## 24. `.traceOutput` redirected to a Rexx object's `lineout` under `trace r`
+
+Dropped at r13624: the object's `LINEOUT` runs, and its untrapped Error 41.1 ends the program at rc
+215, 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the
+wrapper's `ulimit -v`. One run on the r13532 build answers the same. Not narrowed to an upstream
+ticket. The measurement at r13346 follows.
 
     .traceOutput~destination(.tc~new)
     trace r
@@ -886,6 +923,10 @@ waits' current day (`a_post_wakes_every_waiter_of_a_timer`). No upstream ticket.
 
 ## 27. `SysCreateMutexSem()` with no argument
 
+Dropped at r13624 (SF #2145, r13402): prints `before`, rc 0, 3 of 3 from fresh directories on an
+r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`. One run on the
+r13532 build answers the same. The measurement at r13346 follows.
+
     say 'before'
     h = SysCreateMutexSem()
 
@@ -895,6 +936,10 @@ and an omitted `OPTIONAL_CSTRING` is a null pointer. The
 oracle's unnamed form is `SysCreateMutexSem('')`. This crate creates an unnamed semaphore for both. No upstream ticket.
 
 ## 28. FORWARD ARGUMENTS over an instance whose `MAKEARRAY` answers a List
+
+Dropped at r13624 (SF #2150, r13426): Error 98.946 rc 158, 3 of 3 from fresh directories on an
+r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`. One run on the
+r13532 build answers the same. The measurement at r13346 follows.
 
     say .t~new~go(.w~new)
     ::class t
@@ -956,6 +1001,10 @@ No upstream ticket.
 
 ## 31. A `.DebugInput` whose `LINEIN` answers no value
 
+Dropped at r13624 (SF #2154, r13434): prints `x` and `y` with the trace on stderr, rc 0, 3 of 3 from
+fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit
+-v`. One run on the r13532 build answers the same. The measurement at r13346 follows.
+
     .local~debuginput = .o~new
     trace ?a
     say 'x'
@@ -1014,6 +1063,12 @@ it was written for. This crate
 refuses each with `Loud::receiver_class` (`a message send to a value that is not a list is not
 implemented`, and the like); the shapes that answer garbage instead of crashing are Deviation 28. No upstream ticket.
 
+At r13624 this family no longer crashes (SF #1743, r13624): the program below prints `end`, rc 0, 3
+of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`; the `expose v (v)` and `drop (v)` forms were not run again. One run on the r13532 build
+crashes (rc 139). The shapes above still crash, 3 of 3 for `.list~method('ITEMS')` and the
+`Supplier` subclass, one run each for the other five.
+
 A variable reference list, `(v)` in `DROP`, `EXPOSE` or `PROCEDURE EXPOSE`, whose variable holds an
 object with a `STRING` method that answers a non-string object:
 
@@ -1034,6 +1089,11 @@ Interrexx and fixed ooRexx both use the object's name and print `end` in the
 example above (Deviation 30).
 
 ## 34. An `arrayArgument` whose `MAKEARRAY` answers a List, or a string of some contents
+
+Dropped at r13624 (SF #2150, r13426): Error 98.913 rc 158, 3 of 3 from fresh directories on an
+r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`, and 98.913 rc 158
+for each `MAKEARRAY` answer in entry 43's table, one run each. One run on the r13532 build answers
+the same. The measurement at r13346 follows.
 
     say .environment~unknown('ARRAY', .k~new)
     ::class k
@@ -1064,6 +1124,11 @@ not a supplier`). No upstream ticket.
 
 ## 36. A `TRACE` write to the REXX package's settings
 
+Dropped at r13624 (SF #2163, r13469): prints `?n/a?`, then the trace of the `REXX` package's
+methods, rc 0, 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`,
+not the wrapper's `ulimit -v`. One run on the r13532 build answers the same. The measurement at
+r13346 follows.
+
     say .object~package~options('T', 'r')
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper, nothing on stdout or stderr. The read
@@ -1075,6 +1140,10 @@ so it is the trace write that crashes. This crate stores the setting and answers
 Dropped at r13346: its programs raise their error, rc 216 and 163 (SF #2068, r13284).
 
 ## 38. `SysDumpVariables` over a variable whose `STRING` method raises
+
+Dropped at r13624 (SF #2151, r13428): prints `Name=A, Value='first'` and `trapped 93.900`, rc 0, 3
+of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`. One run on the r13532 build answers the same. The measurement at r13346 follows.
 
     signal on syntax
     call p
@@ -1123,6 +1192,10 @@ witness `lang/rexxutil_file_tree.rex` makes no dangling link.
 
 ## 41. `SysFormatMessage` with a value the message refers to whose `STRING` raises
 
+Dropped at r13624 (SF #2151, r13428): Error 93.900 rc 163, 3 of 3 from fresh directories on an
+r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`. One run on the
+r13532 build answers the same. The measurement at r13346 follows.
+
     say SysFormatMessage('&1', .array~of(.raiser~new))
     ::class raiser
     ::method string; raise syntax 93.900 array('raised')
@@ -1144,6 +1217,11 @@ Dropped at r13532: both catalogs answer "Error: Invalid message catalog" (SF #21
 answers the same, pinned by `builtin::rexxutil::messages::tests::a_damaged_catalog_is_rejected`.
 
 ## 43. A `RexxArrayObject` argument whose `MAKEARRAY` answers a string other than a short one
+
+Dropped at r13624 (SF #2150, r13426): Error 98.913 rc 158, 3 of 3 from fresh directories on an
+r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`, and 98.913 rc 158
+for each `MAKEARRAY` answer in the table below on both programs, one run each. One run on the r13532
+build answers the same. The measurement at r13346 follows.
 
     say SysFormatMessage('&1', .k~new)
     ::class k
@@ -1167,6 +1245,11 @@ strings agree and are in the corpus witness `lang/rexxutil_messages.rex`. The re
 ticket.
 
 ## 44. `cd ~` with `HOME` unset
+
+Dropped at r13624 (SF #2182, r13616): prints `2`, rc 0, the shell's complaint about `~` on stderr, 3
+of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`, under `env -u HOME`. The r13532 build still crashes, 3 of 3. The measurement at r13346
+follows.
 
     'cd ~'
     say rc
@@ -1230,6 +1313,12 @@ joining main thread, which a forked child would not have
 
 ## 47. A stem passed by name whose variable a `STRING` method in the same call drops
 
+Dropped at r13624 (SF #2159, r13456): the copy above prints `0 2`, the copied values and `LIT`, rc
+0, and a `SysStemDelete` and a `SysStemInsert` program of the same shape answer rc 0, 3 of 3 each
+from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`. One run of the copy on the r13532 build answers the same. The measurement at r13346
+follows.
+
     .k~new~run
     ::class k
     ::method run
@@ -1264,6 +1353,10 @@ the oracle does when it does not collect, collecting or not: pinned by
 collecting at every allocation. No corpus witness can run it. No upstream ticket.
 
 ## 48. `~` with `HOME` unset, as a file name
+
+Dropped at r13624 (SF #2182, r13616): prints an empty line, rc 0, 3 of 3 from fresh directories on
+an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`, under `env -u
+HOME`. One run on the r13532 build crashes (rc 139). The measurement at r13346 follows.
 
     say qualify('~')
 
@@ -1319,6 +1412,11 @@ take either, on stdout under entry 11's licence. No upstream ticket.
 
 ## 52. A `.TRACEOUTPUT` destination whose `LINEOUT` recurses without end
 
+Dropped at r13624: the trace lines of the destination's `call spin` on stdout, then Error 11.1 rc
+245, 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the
+wrapper's `ulimit -v`. One run on the r13532 build answers the same. Not narrowed to an upstream
+ticket. The measurement at r13346 follows.
+
     .traceOutput~destination(.deep~new)
     trace r
     x = 1
@@ -1336,6 +1434,11 @@ is empty. Measured 1 run, under the standard wrapper from a fresh empty director
 killed at a 2G memory cap after about 7 s (rc 137). No upstream ticket.
 
 ## 53. HALT sent to a started message whose activity is inside a trace delivery
+
+Dropped at r13624: prints `halt 1`, `    23 *-* a = 1`, `result error 4.1`, `result none`, `main
+lines 1`, rc 0, 3 of 3 from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`,
+not the wrapper's `ulimit -v`. One run on the r13532 build answers the same. Not narrowed to an
+upstream ticket. The measurement at r13346 follows.
 
     .traceOutput~destination(.d~new)
     m = .w~new~start('run')
@@ -1443,6 +1546,11 @@ with `timeout -k 5 20`, from a fresh empty directory. This crate gives the four 
 
 ## 58. A redirect target's method raising ERROR under `CALL ON ERROR`, the command ending non-zero
 
+Dropped at r13624: prints `O:a`, `O:b`, `handler ERROR  rc 9 rs 1 sigl 4`, `after 9 1`, rc 0, 3 of 3
+from fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's
+`ulimit -v`. One run on the r13532 build answers the same. Not narrowed to an upstream ticket. The
+measurement at r13346 follows.
+
     address system 'exit 7'
     o = .Bad~new
     call on error name h
@@ -1526,6 +1634,11 @@ Dropped at r13346: prints `3` rc 0, 5 of 5, with the crate's stderr. No upstream
 
 ## 64. A direct RAISE ... RETURN of a CALL ON condition in its own handler, then a SIGNAL ON re-issued in a handler over its condition raised again
 
+Dropped at r13624: rc 0, stdout from `h 1 first` to `hs not reached` and `not reached`, 3 of 3 from
+fresh directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit
+-v`. One run on the r13532 build answers the same. Not narrowed to an upstream ticket. The
+measurement at r13346 follows.
+
     -- direct RAISE ... RETURN inside the handler
     call on user ping name h
     n = 0
@@ -1562,6 +1675,11 @@ This crate holds the conditions (rexxref, `condtra.xml`, CALL ON):
 `crates/interrexx/tests/delayed_trap_cases/crate`. No upstream ticket.
 
 ## 65. ERROR and FAILURE raised again from their own CALL ON handlers
+
+Dropped at r13624: rc 0, stdout `hf FAILURE` to `after error, k = 1` and then `he2 2 6`, with the
+command trace lines on stderr, 3 of 3 from fresh directories on an r13624 build under `memcap 8G`
+and `timeout 20`, not the wrapper's `ulimit -v`. One run on the r13532 build answers the same. Not
+narrowed to an upstream ticket. The measurement at r13346 follows.
 
     -- FAILURE and ERROR again in their own handlers
     call on failure name hf
@@ -1625,6 +1743,12 @@ The measurement at r13346 was: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_fi
 fresh directory; not narrowed to one half.
 
 ## 67. Two differently named conditions raised in one clause, both trapped by one CALL ON ANY
+
+Dropped at r13624: prints `ha 1 USER U one`, `ha 2 NOTREADY no_such_file_zz.txt`, `after a, m = 2`,
+`ha 3 NOTREADY no_such_file_zz2.txt`, `ha 4 USER U two`, `after b, m = 4`, rc 0, 3 of 3 from fresh
+directories on an r13624 build under `memcap 8G` and `timeout 20`, not the wrapper's `ulimit -v`.
+One run on the r13532 build answers the same. Not narrowed to an upstream ticket. The measurement at
+r13346 follows.
 
     call on any name ha
     m = 0
