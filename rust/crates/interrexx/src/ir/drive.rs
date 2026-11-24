@@ -388,6 +388,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Store { .. } => "Store",
         Op::Say { .. } => "Say",
         Op::Signal { .. } => "Signal",
+        Op::UseArg(..) => "UseArg",
         Op::ParseBegin { .. } => "ParseBegin",
         Op::ParseRun { .. } => "ParseRun",
         Op::Return { .. } => "Return",
@@ -449,7 +450,8 @@ macro_rules! region_ops {
         $region:lifetime,
         $park:lifetime
     ) => {
-        'region_loop: for region_op in $ops {
+        let mut remaining = $ops.iter();
+        'region_loop: while let Some(region_op) = remaining.next() {
             let deliver: Deliver = 'entered: {
             match region_op {
                 // **No gate**: this op exists only in a chunk
@@ -1789,6 +1791,17 @@ macro_rules! region_ops {
                                 Err(failure) => break $cold Err(failure),
                             }
                             break $region $end;
+                        }
+                        Err(failure) => break $cold Err(failure),
+                    }
+                }
+                Op::UseArg(step) => {
+                    match $self.use_arg_op($code, $clause, $registers, *step) {
+                        Ok(0) => {}
+                        Ok(skip) => {
+                            if remaining.nth(skip - 1).is_none() {
+                                break $cold Err(Loud::jump_out_of_range().into());
+                            }
                         }
                         Err(failure) => break $cold Err(failure),
                     }

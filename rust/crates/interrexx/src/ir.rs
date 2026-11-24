@@ -280,6 +280,8 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
+    /// One step of a `USE ARG` clause that has a default expression.
+    UseArg(UseArgOp),
     /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
     /// string, from register `src` for `PARSE VALUE`, and walks the
     /// template's entries up to `to`, the first whose operand the stream
@@ -465,6 +467,15 @@ pub(crate) enum BodyEngine<'a> {
         chunk: &'a Chunk,
         registers: RegFrame<'a>,
     },
+}
+
+/// A `USE ARG` clause checks its argument count before binding targets
+/// in order. Only an absent argument enters its default's region.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum UseArgOp {
+    CheckCount,
+    Bind { slot: u16, skip: u32 },
+    BindDefault { slot: u16, src: u16 },
 }
 
 /// The route from an expression slot's root down to the node one op names.

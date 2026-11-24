@@ -17,6 +17,50 @@ const RUN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 /// program below raises, so it never reaches a report.
 const TEST_PATH: &str = "/nonexistent/ir-drive-test.rex";
 
+#[test]
+fn use_arg_runs_only_the_needed_defaults_after_binding_earlier_targets() {
+    let outcome = run_program(
+        TEST_PATH,
+        br#"
+value = 40
+call fill >value, , 'provided'
+call fill >value, 10, ''
+call fill >value, , , 'after'
+say value
+call countFirst
+exit
+fill:
+  procedure
+  trace i
+  use strict arg >base, derived = (base + 1), tag = (mark()), suffix = '.'
+  trace off
+  say derived '['tag']' suffix
+  base = base + 1
+  return
+countFirst:
+  signal on syntax name refused
+  use strict arg optional = (mark()), required
+  return
+refused:
+  say condition('o')~code
+  return
+mark:
+  say 'default ran'
+  return 'default'
+"#
+        .to_vec(),
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        outcome.stdout,
+        b"41 [provided] .\n10 [] .\ndefault ran\n43 [default] after\n43\n40.3\n"
+    );
+    assert_eq!(stderr.matches("MARK =>").count(), 1, "{stderr}");
+    assert_eq!(stderr.matches(">R>").count(), 3, "{stderr}");
+}
+
 /// A program that enters three bodies: its own main body, the internal label
 /// `sub` a `CALL` transfers to, and the `::ROUTINE` body a second `CALL`
 /// resolves to.

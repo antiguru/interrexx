@@ -3956,6 +3956,7 @@ impl Interp {
             ) => value,
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
             (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
+            (InstructionKind::Use(use_), slot) => Self::use_arg_default(use_, usize::from(slot))?,
             _ => return None,
         };
         let mut steps = path.steps();
@@ -3992,6 +3993,12 @@ impl Interp {
         match (&instruction.kind, slot) {
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
                 self.eval(code, expression)
+            }
+            (InstructionKind::Use(use_), slot) => {
+                let Some(expr) = Self::use_arg_default(use_, slot as usize) else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.
@@ -4419,7 +4426,9 @@ impl Interp {
         // own stream object is never checked.
         if let Some(replacement) = self.check_stream_access(&qualified)? {
             if let Some(table) = self.stream_table_mut() {
-                table.insert(qualified.into_boxed_slice(), replacement);
+                table
+                    .get_or_insert_with(Box::default)
+                    .insert(qualified.into_boxed_slice(), replacement);
             }
             return Ok(replacement);
         }
@@ -4438,7 +4447,9 @@ impl Interp {
         )?
         .ok_or_else(|| Failure::from(Raised::no_result(b"NEW")))?;
         if added && let Some(table) = self.stream_table_mut() {
-            table.insert(qualified.into_boxed_slice(), built);
+            table
+                .get_or_insert_with(Box::default)
+                .insert(qualified.into_boxed_slice(), built);
         }
         Ok(built)
     }
@@ -4469,7 +4480,7 @@ impl Interp {
     /// fresh one.
     pub(crate) fn forget_stream(&mut self, name: &[u8]) {
         let qualified = crate::builtin::platform::qualify_name(self, name);
-        if let Some(table) = self.stream_table_mut() {
+        if let Some(table) = self.stream_table_mut().and_then(Option::as_deref_mut) {
             table.remove(qualified.as_slice());
         }
     }

@@ -65,6 +65,7 @@ impl Root {
             | Op::ForwardPart { .. }
             | Op::SendScope { .. }
             | Op::Signal { .. }
+            | Op::UseArg(..)
             | Op::ParseBegin { .. }
             | Op::ParseRun { .. }
             | Op::Clause { .. }

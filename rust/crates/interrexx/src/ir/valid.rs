@@ -2,7 +2,7 @@
 //! count, checked once when the chunk is built. The only way to a `Chunk`'s
 //! ops is through this type.
 
-use super::{ChunkTooLarge, Op};
+use super::{ChunkTooLarge, Op, UseArgOp};
 
 pub(crate) struct ValidOps(Vec<Op>);
 
@@ -52,7 +52,8 @@ impl ValidOps {
                 Op::LoopTested { src, .. }
                 | Op::SelectCase { src, .. }
                 | Op::ExecValue { src, .. }
-                | Op::ExecWith { src, .. } => inside(src),
+                | Op::ExecWith { src, .. }
+                | Op::UseArg(UseArgOp::BindDefault { src, .. }) => inside(src),
                 // An item's register, or an omitted position; every other
                 // part's pair of registers.
                 Op::RaisePart {
@@ -100,6 +101,7 @@ impl ValidOps {
                 | Op::Expose { .. }
                 | Op::Exec { .. }
                 | Op::ReplyCheck { .. }
+                | Op::UseArg(UseArgOp::CheckCount | UseArgOp::Bind { .. })
                 | Op::Escape { .. }
                 | Op::Jump { .. } => true,
             };
