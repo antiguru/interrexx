@@ -1430,19 +1430,7 @@ mod measured {
         ),
         (
             "TreeEval",
-            "x = rexx:g(.c~new~m)\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "call f rexx:g(.c~new~m)\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "x = length(rexx:g(.c~new~m))\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
+            "select case 1\n  when SysSleep(0) + 1 then nop\nend\n",
         ),
         (
             "TreeSend",
@@ -1519,6 +1507,10 @@ mod measured {
             "call f g()\nexit\nf: return\ng:\n  call SysSleep 0\n  return 2\n",
             "x = abs(g())\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "x = (g(), 1)\nexit\ng:\n  call SysSleep 0\n  return 2\n",
+            "x = rexx:g(.c~new~m)\n",
+            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n",
+            "call f rexx:g(.c~new~m)\nexit\nf: return\n",
+            "x = length(rexx:g(.c~new~m))\n",
             "if .c~new~m then nop\n",
             ".c~new~m\n",
             "x = f(.c~new~m)\nexit\nf: return 1\n",
