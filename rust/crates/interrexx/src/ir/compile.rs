@@ -15,8 +15,9 @@ use super::{
 use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
 use crate::run::{
-    HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan,
-    loop_header_slot, otherwise_range, when_targets,
+    FORWARD_ARRAY_SLOT, ForwardPart, HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword,
+    forward_option_parts, if_targets, loop_header_plan, loop_header_slot, otherwise_range,
+    when_targets,
 };
 use crate::trace::ChunkTrace;
 
@@ -1376,6 +1377,90 @@ fn compile_settled(
                         index: instruction_index(index)?,
                         src: dst,
                     }
+                });
+                close_region(&mut ops, at)?;
+                registers.release(mark);
+            }
+            // Bare FORWARD has no option expressions to compile.
+            InstructionKind::Forward(forward)
+                if forward.array.as_ref().is_none_or(|array| {
+                    array.len() <= (u32::from(u16::MAX) - FORWARD_ARRAY_SLOT) as usize
+                }) && (forward.array.is_some()
+                    || forward_option_parts(forward)
+                        .iter()
+                        .any(|(_, expr)| expr.is_some())) =>
+            {
+                let mark = registers.mark();
+                let at = op_index(&ops)?;
+                let clause = instruction_index(index)?;
+                ops.push(Op::Clause {
+                    index: clause,
+                    end: 0,
+                });
+                push_echo(&mut ops, echoes(trace, instruction), clause);
+                ops.push(Op::ForwardPart {
+                    index: clause,
+                    part: ForwardPart::Method,
+                    src: Op::ARG_OMITTED,
+                });
+                let scalars = forward_option_parts(forward);
+                let base = registers.alloc()?;
+                for _ in 1..scalars.iter().filter(|(_, expr)| expr.is_some()).count() {
+                    registers.alloc()?;
+                }
+                let mut src = base;
+                for (slot, (part, expr)) in scalars.into_iter().enumerate() {
+                    let Some(expr) = expr else { continue };
+                    push_value(
+                        &mut ops,
+                        echoes_values,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        expr,
+                        clause,
+                        slot as u32,
+                        src,
+                    )?;
+                    ops.push(Op::ForwardPart {
+                        index: clause,
+                        part,
+                        src,
+                    });
+                    src += 1;
+                }
+                if let Some(items) = &forward.array {
+                    for (slot, item) in items.iter().enumerate() {
+                        let src = if let Some(expr) = item {
+                            let src = registers.alloc()?;
+                            push_value(
+                                &mut ops,
+                                echoes_values,
+                                &mut consts,
+                                &mut registers,
+                                &mut hints,
+                                &mut calls,
+                                plan,
+                                expr,
+                                clause,
+                                FORWARD_ARRAY_SLOT + slot as u32,
+                                src,
+                            )?;
+                            src
+                        } else {
+                            Op::ARG_OMITTED
+                        };
+                        ops.push(Op::PushArg { src });
+                        if echoes_values {
+                            ops.push(Op::TraceArgument { src });
+                        }
+                    }
+                }
+                ops.push(Op::ExecWith {
+                    index: clause,
+                    src: base,
                 });
                 close_region(&mut ops, at)?;
                 registers.release(mark);

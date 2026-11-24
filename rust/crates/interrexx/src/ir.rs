@@ -9,8 +9,8 @@ use interrexx_parse::{Operator, PrefixOp, SymbolId};
 use crate::error::Raised;
 use crate::eval::SymbolRead;
 use crate::run::{
-    HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword, SiteHold,
-    raised_if_not_logical, raised_when_not_logical,
+    ForwardPart, HeaderRole, ProgramRepin, QueueKeyword, RaisePart, Repin, Resolved, ReturnKeyword,
+    SiteHold, raised_if_not_logical, raised_when_not_logical,
 };
 use crate::trace::ChunkTrace;
 
@@ -273,6 +273,13 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
+    /// A `FORWARD` option's check, conversion or keyword trace, before the
+    /// next option is evaluated. The opening method check reads no register.
+    ForwardPart {
+        index: u32,
+        part: ForwardPart,
+        src: u16,
+    },
     /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
     /// string, from register `src` for `PARSE VALUE`, and walks the
     /// template's entries up to `to`, the first whose operand the stream
