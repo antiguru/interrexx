@@ -183,7 +183,9 @@ calls. ooRexx blocks for ever there too.
 Program end does not wait for activities that termination-time UNINIT
 methods start, REPLY continuations included, nor for any activity once the
 main program ends with a refusal. ooRexx's such activities race its exit and
-often print.
+often print. A native call that any activity is in when a refusal ends the
+program runs on, and holds the program's interpreter in memory until it
+returns.
 
 ## 22. One schedule for racing activities
 
