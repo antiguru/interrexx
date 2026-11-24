@@ -192,18 +192,24 @@ r[conv.string.answer]
 An answer that has no string value counts as no answer, so that the
 conversion of an object always ends in a string and never raises an error of
 its own. The answer of a `STRING` method has a string value when it is a
-string, a number or an instance of a subclass of `String`, when it is an array,
-whose items joined by a newline are its string value, or a `MutableBuffer`.
-An instance of a subclass of `Stem` has the one its default value would have
-as such an answer, or its name when it has no default value. An instance of a
-class that a program defines, other than a subclass of `Queue`, an instance of
-`File`, `DateTime`, `TimeSpan` or `TraceObject`, and a class object have the
-one that the object's `REQUEST('STRING')` answers. The answer of an
+string, a number or an instance of a subclass of `String`, when it is an array
+or an instance of a subclass of `Array`, whose items joined by a newline are
+its string value, or a `MutableBuffer` or an instance of a subclass of it,
+whatever `MAKESTRING` such a subclass has. An instance of a subclass of `Stem`
+has the one its default value would have as such an answer, or its name when
+it has no default value, whatever `MAKESTRING` the subclass has. An instance of
+`File`, `DateTime`, `TimeSpan` or `TraceObject`, an instance of any other class
+that a program defines, other than a subclass of `Queue`, and a class object
+have the one that the object's `REQUEST('STRING')` answers. An instance of any other
+class of the interpreter or of a package it provides has none, whatever its
+`REQUEST` answers: a `Stem`, a `VariableReference`, a `StackFrame` and a
+`CircularQueue` answer one there, and the others answer `.nil`. An
+instance of a subclass of `Queue`, `CircularQueue` included, has none either,
+even when the subclass has a `MAKESTRING` of its own. The answer of an
 `OBJECTNAME` method of the object's own, of a `MAKESTRING` method and of a
 `REQUEST` method of the object's own has one when it is one of the first five;
-no message is sent to it. Any other answer, such as `.nil`, a `Directory`, a
-`Queue`, a `Stem`, a `VariableReference`, a `StackFrame`, an `Object` or the
-object itself, has none, whatever its own `REQUEST` answers. Where the
+no message is sent to it. Any other answer, such as `.nil`, a `Directory`, an
+`Object` or the object itself, has none. Where the
 `STRING` answer has none, the object's string value is the one the `STRING`
 method of `Object` answers for it, its `OBJECTNAME`. Where the `OBJECTNAME`
 answer has none, it is the object's default name as

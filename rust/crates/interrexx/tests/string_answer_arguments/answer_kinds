@@ -49,3 +49,243 @@ rc 0
 [kc] 2 [a Z] [a R]
 [stderr]
 
+
+# Every class a program reaches, as the probe's comment says; the oracle's answers.
+# ooRexx refuses `new` on a TraceObject subclass (41.1), so that row is skipped.
+# Buffer, Pointer and NativeCommandHandler have no instance a program can make.
+program
+-- For every class a program reaches (.environment, the REXX package, the bundled
+-- packages), whether a STRING answer that is an instance of it, of a subclass of it,
+-- and of a subclass with a MAKESTRING of its own answering 'ms' is read (`read`,
+-- `own` for 'ms') or falls back to the default string (`default`), with `+` where
+-- the instance's REQUEST('STRING') answers something and `-` where it answers .nil: .environment, the REXX package, the bundled packages
+names = .array~new
+seen = .set~new
+s = .environment~supplier
+do while s~available
+  if s~item~isA(.class) then call add s~item
+  s~next
+end
+p = .object~package
+do src over .array~of(p~classes, p~publicClasses)
+  s = src~supplier
+  do while s~available; call add s~item; s~next; end
+end
+do f over .array~of('socket.cls', 'streamsocket.cls', 'mime.cls', 'smtp.cls', 'rxregexp.cls')
+  s = .context~package~loadPackage(f)~publicClasses~supplier
+  do while s~available; call add s~item; s~next; end
+end
+byid = .stringtable~new
+do c over names; byid[c~id~upper] = c; end
+ids = byid~allIndexes~sort
+-- the command handler's context objects, kept for the probe
+x = .commandhandler~register('probe_ctx', .keeper~new)
+address probe_ctx 'go' with input using (.array~of('l')) output using (.array~new)
+x = .commandhandler~deregister('probe_ctx')
+-- constructor arguments, as source text, for classes `new` with none refuses
+args = .stringtable~new
+args['STRING'] = "'sv'"
+args['STEM'] = "'SN'"
+args['FILE'] = "'/fz'"
+args['STREAM'] = "'/nonexistent/zz'"
+args['METHOD'] = "'m', 'nop'"
+args['ROUTINE'] = "'r', 'nop'"
+args['PACKAGE'] = "'pk', 'nop'"
+args['CLASS'] = "'KK'"
+args['MESSAGE'] = ".nil, 'X'"
+args['WEAKREFERENCE'] = ".nil"
+args['MUTABLEBUFFER'] = "'mb'"
+args['STREAMSOCKET'] = "'127.0.0.1', 9"
+args['REGULAREXPRESSION'] = "'a'"
+args['REXXQUEUE'] = "'SESSION'"
+args['DATETIME'] = "2020, 1, 1"
+args['TIMESPAN'] = "5"
+args['PROPERTIES'] = ""
+args['SMTPMSG'] = ""
+args['MIMEPART'] = ""
+args['VARIABLEREFERENCE'] = "-"
+args['STACKFRAME'] = "-"
+args['REXXCONTEXT'] = "-"
+args['POINTER'] = "-"
+args['ALARM'] = "-"
+args['STREAMSUPPLIER'] = "-"
+args['SINGLETON'] = "-"
+args['COMMANDCONTEXT'] = "-"
+args['COMMANDINPUT'] = "-"
+args['COMMANDOUTPUT'] = "-"
+args['TICKER'] = "-"
+args['BUFFER'] = "4"
+args['CASELESSCOLUMNCOMPARATOR'] = "1, 1"
+args['COLUMNCOMPARATOR'] = "1, 1"
+args['CIRCULARQUEUE'] = "3"
+args['HOSTINFO'] = "'127.0.0.1'"
+args['INETADDRESS'] = "'127.0.0.1', 9"
+args['INVERTINGCOMPARATOR'] = ".comparator~new"
+args['SUPPLIER'] = ".array~of(1), .array~of(1)"
+do id over ids
+  c = byid[id]
+  a = args[id]
+  say left(c~id~upper, 26) verdict(c, a, 0) verdict(c, a, 1) verdict(c, a, 2)
+end
+exit
+add: procedure expose names seen
+  use arg c
+  if seen~hasIndex(c) then return
+  seen~put(c); names~append(c)
+  return
+verdict: procedure
+  use arg c, a, sub
+  if a == '-' then return made(c, sub)
+  -- ooRexx refuses `new` on a TraceObject subclass (41.1), interrexx does not
+  if sub > 0 & c~id~upper == 'TRACEOBJECT' then return 'skipped'
+  if sub > 0 then do
+    signal on syntax name nosub
+    c = c~subclass('SUB_'c~id)
+    if sub == 2 then c~define('MAKESTRING', "return 'ms'")
+  end
+  signal on syntax name nonew
+  if a == .nil then o = c~new
+  else interpret 'o = c~new('a')'
+  signal off syntax
+  return judge(o)
+nosub: return 'nosubclass'
+nonew: return 'nonew' condition('o')~code
+made: procedure
+  use arg c, sub
+  timed = wordpos(c~id~upper, 'ALARM TICKER') > 0
+  if sub > 0 & \timed then return 'n/a'
+  if sub > 0 then do
+    c = c~subclass('SUB_'c~id)
+    if sub == 2 then c~define('MAKESTRING', "return 'ms'")
+  end
+  v = 'vv'
+  select
+    when c~id~upper == 'VARIABLEREFERENCE' then return judge(>v)
+    when c~id~upper == 'STACKFRAME' then return judge(.context~stackFrames[1])
+    when c~id~upper == 'REXXCONTEXT' then return judge(.context)
+    when c~id~upper == 'STREAMSUPPLIER' then return judge(.stream~new('/nonexistent/zz')~supplier)
+    when c~id~upper == 'SINGLETON' then return judge(.object~subclass('SG', .singleton)~new)
+    when c~id~upper == 'COMMANDCONTEXT' then return judge(.local~probe.ctx)
+    when c~id~upper == 'COMMANDINPUT' then return judge(.local~probe.in)
+    when c~id~upper == 'COMMANDOUTPUT' then return judge(.local~probe.out)
+    when timed & c~id~upper~pos('ALARM') > 0 then do
+      al = c~new(.timespan~fromHours(20), .message~new(.nil, 'X'))
+      r = judge(al); al~cancel; return r
+    end
+    when timed then do
+      tk = c~new(.timespan~fromHours(20), .message~new(.nil, 'X'))
+      r = judge(tk); tk~cancel; return r
+    end
+    otherwise return 'skipped'
+  end
+judge: procedure
+  use arg o
+  .x~ans = o
+  rq = asked(o)
+  t = .x~new || ''
+  if t == 'a X' then return 'default'rq
+  if t == 'ms' then return 'own'rq
+  return 'read'rq
+asked: procedure
+  use arg o
+  signal on syntax name refused
+  if o~request('STRING') == .nil then return '-'
+  return '+'
+refused: return '!'
+::class x
+::attribute ans class
+::method string
+  return .x~ans
+::class keeper inherit CommandHandler
+::method command
+  use arg command, ctx
+  .local~probe.ctx = ctx
+  .local~probe.in = ctx~input
+  .local~probe.out = ctx~output
+  return 0
+----
+rc 0
+[stdout]
+ALARM                      default- default- own+
+ALARMNOTIFICATION          default- default- own+
+ARGUTIL                    default- default- own+
+ARRAY                      read+ read+ read+
+BAG                        default- default- own+
+BAGMIXIN                   default- default- own+
+BUFFER                     nonew 93.967 nonew 93.967 nonew 93.967
+CASELESSCOLUMNCOMPARATOR   default- default- own+
+CASELESSCOMPARATOR         default- default- own+
+CASELESSDESCENDINGCOMPARAT default- default- own+
+CIRCULARQUEUE              default+ default+ default+
+CLASS                      default- default- own+
+COLLECTION                 default- default- own+
+COLUMNCOMPARATOR           default- default- own+
+COMMANDCONTEXT             default- n/a n/a
+COMMANDHANDLER             default- default- own+
+COMMANDINPUT               default- n/a n/a
+COMMANDOUTPUT              default- n/a n/a
+COMPARABLE                 default- default- own+
+COMPARATOR                 default- default- own+
+DATETIME                   read+ read+ own+
+DESCENDINGCOMPARATOR       default- default- own+
+DIRECTORY                  default- default- own+
+EVENTSEMAPHORE             default- default- own+
+FILE                       read+ read+ own+
+HOSTINFO                   default- default- own+
+IDENTITYTABLE              default- default- own+
+INETADDRESS                default- default- own+
+INPUTOUTPUTSTREAM          default- default- own+
+INPUTSTREAM                default- default- own+
+INVERTINGCOMPARATOR        default- default- own+
+LIST                       default- default- own+
+LOCALSERVER                default- default- own+
+MANYITEMMIXIN              default- default- own+
+MAPCOLLECTION              default- default- own+
+MESSAGE                    default- default- own+
+MESSAGENOTIFICATION        default- default- own+
+METHOD                     default- default- own+
+MIMEMULTIPART              default- default- own+
+MIMEPART                   default- default- own+
+MONITOR                    default- default- own+
+MUTABLEBUFFER              read+ read+ read+
+MUTEXSEMAPHORE             default- default- own+
+NATIVECOMMANDHANDLER       nonew 97.2 nonew 97.2 nonew 97.2
+NUMERICCOMPARATOR          default- default- own+
+OBJECT                     default- default- own+
+ORDERABLE                  default- default- own+
+ORDEREDCOLLECTION          default- default- own+
+OUTPUTSTREAM               default- default- own+
+PACKAGE                    default- default- own+
+POINTER                    skipped n/a n/a
+PROPERTIES                 default- default- own+
+QUEUE                      default- default- default+
+REGULAREXPRESSION          default- default- own+
+RELATION                   default- default- own+
+REXXCONTEXT                default- n/a n/a
+REXXQUEUE                  default- default- own+
+ROUTINE                    default- default- own+
+SET                        default- default- own+
+SETCOLLECTION              default- default- own+
+SETMIXIN                   default- default- own+
+SINGLETON                  default- n/a n/a
+SMTP                       default- default- own+
+SMTPMSG                    default- default- own+
+SOCKET                     default- default- own+
+STACKFRAME                 default+ n/a n/a
+STEM                       default+ read+ read+
+STREAM                     default- default- own+
+STREAMSOCKET               default- default- own+
+STREAMSUPPLIER             default- n/a n/a
+STRING                     read+ read+ read+
+STRINGTABLE                default- default- own+
+SUPPLIER                   default- default- own+
+SUPPLIERMIXIN              default- default- own+
+TABLE                      default- default- own+
+TICKER                     default- default- own+
+TIMESPAN                   read+ read+ own+
+TRACEOBJECT                read+ skipped skipped
+VALIDATE                   default- default- own+
+VARIABLEREFERENCE          default+ n/a n/a
+WEAKREFERENCE              default- default- own+
+[stderr]
+
