@@ -412,12 +412,14 @@ clause it never reaches. So the widths split by what they bound, read from the r
   is a transaction over everything the compiler accumulates for the body, not only its ops: when
   the clause opens, the compiler marks the op stream, the jump patches, the register top, the
   length of the constant table, of the arithmetic hints and of the send and call sites, and the
-  depth of the control-region stack. A refused clause takes each of them back to its mark, and
-  the constant table also drops the interning entries of the constants it removes, so that a
-  later clause does not find an index past the table's end. The raise op is emitted after the
-  rollback, and the compiler goes on with the next clause. Nothing the refused clause added
-  survives, so a dead clause cannot fill a table of the body and refuse the whole body, and the
-  refusal does not spread. These widths are the registers, the
+  control-region stack. A refused clause takes each of them back to its mark, including changes
+  to existing control regions and patches. The constant table also drops the interning entries
+  of the constants it removes, so a later clause does not find an index past the table's end.
+  Check body-wide widths against the committed state after determining whether the clause fits
+  its own limits. If tentative entries would overflow a body-wide table, record the overflow
+  and finish checking the clause's local limits before deciding which refusal to emit. The
+  replacement raise op counts against the committed op stream. The compiler then goes on with
+  the next clause, and a dead clause that was replaced cannot exhaust a body-wide table. These widths are the registers, the
   arguments of one call, the items of one `RAISE ARRAY` and the entries of one `PARSE` template.
   Registers count what is pending in the clause and what an enclosing `DO`, `LOOP` or
   `SELECT CASE` holds across its body, so a clause nested in enough loops can pass the width
