@@ -3889,6 +3889,7 @@ impl Interp {
                 },
                 0,
             ) => expression,
+            (InstructionKind::Forward(forward), slot) => forward_slot(forward, u32::from(slot))?,
             // The two instructions whose slot `0` exists only in one of their
             // forms. Both are reachable: the expression is compiled through
             // `push_value` like any other, so a call inside it emits an
@@ -3955,7 +3956,6 @@ impl Interp {
             ) => value,
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
             (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
-            (InstructionKind::Forward(forward), slot) => forward_slot(forward, u32::from(slot))?,
             _ => return None,
         };
         let mut steps = path.steps();
@@ -3992,12 +3992,6 @@ impl Interp {
         match (&instruction.kind, slot) {
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
                 self.eval(code, expression)
-            }
-            (InstructionKind::Forward(forward), slot) => {
-                let Some(expr) = forward_slot(forward, slot) else {
-                    return Err(Loud::instruction(&instruction.kind).into());
-                };
-                self.eval(code, expr)
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.
@@ -4042,6 +4036,12 @@ impl Interp {
             // is `crate::ir::Op::Load` instead -- and each is trace-identical
             // to arm here because this is the same
             // `eval` call it makes.
+            (InstructionKind::Forward(forward), slot) => {
+                let Some(expr) = forward_slot(forward, slot) else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
+            }
             // `SIGNAL VALUE`'s own expression, for the shapes `compile` emits
             // no native op for. The `>K>` echo and the search are
             // `Op::Signal`'s, not this arm's, exactly as a loop header's

@@ -114,6 +114,13 @@ pub(crate) enum Op {
     /// method, so that the expression does not run where the instruction may
     /// not.
     ReplyCheck { index: u32 },
+    /// A `FORWARD` option's check, conversion or keyword trace, before the
+    /// next option is evaluated. The opening method check reads no register.
+    ForwardPart {
+        index: u32,
+        part: ForwardPart,
+        src: u16,
+    },
     /// One part of the `RAISE` at `index`: what the instruction does with the
     /// value its expression left in register `src` before it evaluates the
     /// next, its results kept in the registers [`crate::run::RaiseLayout`]
@@ -273,13 +280,6 @@ pub(crate) enum Op {
     /// The `SIGNAL` at `index`, in whichever of its three forms that
     /// instruction carries.
     Signal { index: u32, src: Option<u16> },
-    /// A `FORWARD` option's check, conversion or keyword trace, before the
-    /// next option is evaluated. The opening method check reads no register.
-    ForwardPart {
-        index: u32,
-        part: ForwardPart,
-        src: u16,
-    },
     /// The `PARSE`, `ARG` or `PULL` at `index`: takes its first parse
     /// string, from register `src` for `PARSE VALUE`, and walks the
     /// template's entries up to `to`, the first whose operand the stream
