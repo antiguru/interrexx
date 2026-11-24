@@ -53,6 +53,9 @@ pub(crate) struct ClauseState {
     /// it began**, which is the only thing an assignment's `>>>` echo is
     /// allowed to consult.
     pub(crate) instructions_traced_at_entry: bool,
+    /// Instance SetTrace enabled result tracing while this clause was open.
+    /// A CALL already in progress does not gain a result echo.
+    pub(crate) instance_trace_started: bool,
     /// The line the clause currently being stepped starts at -- **`SIGL`'s** own value, one
     /// control transfer away from being read, and the exact analogue of
     /// `current_value_indent` just above: `Interp::invoke_call` (`CALL`, and
@@ -100,6 +103,7 @@ impl ClauseState {
             // `false` is the state an interpreter with nothing running is in,
             // matching `Activity::trace_cache`'s own `TraceMode::OFF`.
             instructions_traced_at_entry: false,
+            instance_trace_started: false,
         }
     }
 }
@@ -238,6 +242,7 @@ impl Interp {
         // already zero. Measured: 200,000 abandoned pushes grew the process
         // by 3.3 MB without it.
         self.activity.value_buffer.clear();
+        self.activity.clause_state.instance_trace_started = false;
         // **Tripwire.** A condition queued by
         // this activation's clause at line L that is still waiting when a
         // clause at a *different* line begins means some construct resolved
@@ -274,6 +279,7 @@ impl Interp {
         state.current_clause_line = line;
         state.current_value_indent = indent;
         state.instructions_traced_at_entry = all;
+        state.instance_trace_started = false;
     }
 
     /// The entry for a clause whose boundary compiled code opened itself
@@ -506,6 +512,7 @@ impl Interp {
             // Names no instruction: the level's frame echoes the directive.
             current_clause_index: usize::MAX,
             instructions_traced_at_entry: self.trace_mode().all,
+            instance_trace_started: false,
         };
     }
 
@@ -517,12 +524,23 @@ impl Interp {
             current_clause_line: self.activity.clause_state.current_clause_line,
             current_clause_index: self.activity.clause_state.current_clause_index,
             instructions_traced_at_entry: self.activity.clause_state.instructions_traced_at_entry,
+            instance_trace_started: self.activity.clause_state.instance_trace_started,
         })
     }
 
     /// Puts back what [`Interp::save_clause_state`] took.
     pub(crate) fn restore_clause_state(&mut self, saved: SavedClauseState) {
         self.activity.clause_state = saved.0;
+    }
+
+    /// An instance SetTrace request can be delivered while a native CALL is
+    /// waiting. Its new mode must not echo that already-open CALL's result.
+    pub(crate) fn set_instance_activity_trace(&mut self, on: bool) {
+        let had_results = self.trace_mode().results;
+        self.set_external_trace(on);
+        if on && !had_results && self.trace_mode().results {
+            self.activity.clause_state.instance_trace_started = true;
+        }
     }
 }
 

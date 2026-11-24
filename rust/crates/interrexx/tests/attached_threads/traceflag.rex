@@ -1,7 +1,7 @@
-/* The example of conc.locks.trace.deviation.14 with the extension loaded: the destination's
-   guarded LINEOUT loops until a thread of the extension, which never attaches, raises a flag of
-   the extension's own twenty seconds in, while a started activity is ready from its first second.
-   spec: conc.locks.trace.deviation.14 */
+/* A destination's guarded LINEOUT loops until a thread of the extension, which never attaches,
+   raises a flag of the extension's own twenty seconds in, while a started activity is ready from
+   its first second. The started activity runs meanwhile.
+   spec: instr.trace.delivery.others */
 .traceoutput~destination(.sink~new)
 m = .setter~new~start('go')
 call AtRaiseAfter 20000

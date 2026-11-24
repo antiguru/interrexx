@@ -12,6 +12,7 @@
 API/oo/CONVERSION	TESTISSTRING	Deviation 173	the second and third assertions expect the oracle's false from IsString for 80+1 and 1+.1, numbers an operator made
 API/oo/METHOD	TESTDECODECONDITION03	Deviation 173	the third assertion expects no description from DecodeConditionInfo for 2 + 3, a number an operator made
 API/oo/METHOD	TESTISSTRING01	Deviation 173	the second assertion expects the oracle's false from IsString for 1, a number written as a literal
+API/oo/ProcessInvocation	TESTTERMINATEONOTHERTHREADUNINITWAITSFORGUARD	Deviation 85	case 6 of detach_root_terminate calls a guarded method on an object of another interpreter instance from an UNINIT method; objects belong to their owning instance
 base/bif/CHAROUT	TEST_STDOUT_START	Flaky	common.txt: CHAROUT.testGroup/TEST_STDOUT_START
 base/bif/ERRORTEXT	TEST_ERRORTEXT	Unspecified	assertions 56 61-69 71-89 91-107 146-151 155-157; each compares ERRORTEXT's result for a number that has a message with a text, whose wording is unspecified, r[bif.errortext.result]; the same call checks that the result is not the null string, which the rule's example checks
 base/bif/ERRORTEXT	TEST_ERRORTEXT_CONDITION_CODE	Unspecified	assertions 207; the call compares ERRORTEXT's result for the code of a SYNTAX condition with a text, whose wording is unspecified, r[bif.errortext.result]; the same call checks that the result is not the null string, which the rule's example checks

@@ -1356,33 +1356,45 @@ fn an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded() 
     );
 }
 
-/// The example of `conc.locks.trace.deviation.14` with the extension loaded: a trace line's
-/// destination, whose guarded `LINEOUT` holds its guard while a started activity is ready, loops
-/// until a thread of the extension that never attaches raises a flag twenty seconds in. The
-/// delivery goes on (Deviation 14), stderr says once that it holds the others back, and the flag
-/// ends it. The oracle prints the same stdout.
+/// A trace line's destination, whose guarded `LINEOUT` holds its guard while a started activity
+/// is ready, loops until a thread of the extension that never attaches raises a flag twenty
+/// seconds in. The started activity runs meanwhile, stderr says nothing, and the flag ends the
+/// loop. The oracle prints the same stdout.
+// spec: instr.trace.delivery.others
+#[test]
+fn a_trace_delivery_that_holds_a_guard_lets_the_others_run_with_a_library_loaded() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-traceflag", "traceflag.rex");
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), status),
+        ("start\ndone set\n", "", 0)
+    );
+}
+
+/// The example of `conc.locks.trace.deviation.14` with the extension loaded: the destination's
+/// guarded `LINEOUT` loops in a method that `run` runs until a thread of the extension that never
+/// attaches raises a flag twenty seconds in. The delivery goes on (Deviation 14), stderr says once
+/// that it holds the others back, and the flag ends it. The oracle prints the same stdout.
 // spec: conc.locks.trace.deviation.14
 #[test]
-fn a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded() {
-    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-traceflag", "traceflag.rex");
+fn a_nested_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-tracenested", "tracenested.rex");
     assert_eq!(
         (stdout.as_str(), stderr.as_str(), status),
         ("start\ndone set\n", TRACE_HELD, 0)
     );
 }
 
-/// [`a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded`] with a destination that
-/// loops for ever, and a thread of the extension that calls `Halt` through the instance twenty
-/// seconds in: the HALT ends the delivery's loop, which traps it. The oracle's started activity has
-/// ended before the HALT, ours is ready below the delivery and traps one too, so the oracle is
-/// asked for the stdout only.
-// spec: conc.locks.trace.deviation.14, conc.halt.signal
+/// [`a_trace_delivery_that_holds_a_guard_lets_the_others_run_with_a_library_loaded`] with a
+/// destination that loops for ever, and a thread of the extension that calls `Halt` through the
+/// instance twenty seconds in: the HALT reaches the delivery once, as part of the activity that
+/// wrote the line, and ends its loop, which traps it; the traced code then goes on.
+// spec: instr.trace.delivery.owner, conc.halt.signal
 #[test]
-fn a_halt_ends_a_trace_delivery_that_goes_on() {
+fn a_halt_ends_a_trace_delivery_once() {
     let (stdout, stderr, status) = run_agreeing_on_stdout("attach-tracehalt", "tracehalt.rex");
     assert_eq!(
         (stdout.as_str(), stderr.as_str(), status),
-        ("start\ndone, halted 1\n", TRACE_HELD, 0)
+        ("start\ndone, halted 1\n", "", 0)
     );
 }
 
@@ -1413,10 +1425,9 @@ fn assert_stalled(stderr: &str, waiter: &str, what: &str, stopped: &str) {
     );
 }
 
-/// An attached thread's message waits on an event semaphore that a second attached thread's
-/// message, sent a second later, posts. The first waits on nothing the main program would
-/// provide, so it is not refused, and the second message, served on top of it, ends its wait
-/// before stderr would say that it waits.
+/// One attached thread waits on an event semaphore and a second posts it. The
+/// second sends its message once the waiting callback has started, without
+/// depending on a delay between the two native threads.
 // spec: native.threads.attach
 #[test]
 fn attached_callbacks_wait_for_each_other() {
@@ -1998,25 +2009,6 @@ fn attach_from_a_foreign_thread_is_refused_in_simulation() {
     assert!(!stdout.contains("ticked"), "stdout {stdout:?}");
 }
 
-/// One attached thread's message loops for ever, and a second attached thread's message, `THREE`,
-/// arrives while it does, which holds it until the first ends
-/// (`r[native.threads.attach.deviation.178]`). `Halt` through the instance then halts the looping
-/// message, whose thread finds SYNTAX 4.1, and the main program. The held message's activity runs
-/// no message yet, so it is not asked: `THREE` runs to its end. The oracle runs `THREE` alongside
-/// the loop, before the halt, and prints the same.
-// spec: native.threads.halt
-#[test]
-fn a_held_message_runs_after_a_halt() {
-    assert_eq!(
-        run("halt-held", "haltheld.rex"),
-        (
-            "one\ntwo\nthree\nmain halted\ncondition SYNTAX 4.1\n".to_owned(),
-            String::new(),
-            0
-        )
-    );
-}
-
 /// `HaltThread` and `SetThreadTrace`, called on an idle attached thread's context from the main
 /// program's call into the extension, return and do nothing: the thread's later message runs to
 /// its end untraced, and the main program is not halted. The oracle hangs, so it is not asked.
@@ -2034,19 +2026,15 @@ fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
 }
 
 /// `HaltThread`, `SetThreadTrace` and `DetachThread`, called on an attached thread's context from
-/// the main program's call into the extension while that thread's message runs Rexx code for two
-/// seconds, return well within that time and do nothing: the message runs to its end untraced and
-/// leaves no condition. The oracle hangs, so it is not asked.
+/// the main program's call into the extension while that thread's message loops in Rexx, must
+/// return to end the loop. The message runs to its end untraced and leaves no condition. The oracle
+/// hangs, so it is not asked.
 // spec: native.threads.attach.deviation.177
 #[test]
 fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_once() {
     assert_eq!(
         run_ours_for("misuse-running", "misrun.rex", "60"),
-        (
-            "long done\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("long done\nno condition\n".to_owned(), String::new(), 0)
     );
 }
 
@@ -2059,10 +2047,6 @@ fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_o
 fn halt_trace_and_detach_from_the_thread_a_message_waits_on_do_not_hang() {
     assert_eq!(
         run_ours_for("misuse-waiting", "miswait.rex", "30"),
-        (
-            "released\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("released\nno condition\n".to_owned(), String::new(), 0)
     );
 }

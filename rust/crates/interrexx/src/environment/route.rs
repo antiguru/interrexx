@@ -172,7 +172,7 @@ impl Interp {
     /// class the line goes to standard error as it is.
     fn deliver_trace_line_as(&mut self, start: usize, entry: bool) {
         let variable = self.traced_variable.take();
-        if self.activity.routing_trace {
+        if self.activity.routing_trace || self.activity.delivering {
             self.trace.truncate(start);
             return;
         }
@@ -559,18 +559,60 @@ impl Interp {
             if let Some(delivery) = self.deliveries.last_mut() {
                 delivery.floor = floor;
             }
-            let caller_ref = self.caller();
-            self.send_message(
-                route,
-                crate::dispatch::LINEOUT,
-                None,
-                &[Some(object)],
-                caller_ref,
-            )?;
-            Ok(Delivered::Sent)
+            self.deliver_on_own_activity(route, object)
         })();
         self.activity.call_tails.pop();
         delivered
+    }
+
+    /// `route~lineout(object)`, sent on an activity of its own that runs as
+    /// part of the running one (`r[instr.trace.delivery.owner]`), and waited
+    /// for here. The delivery runs before any other activity that is ready,
+    /// so no other line comes between. With no Rust frame of the running
+    /// activity below it, the destination can wait for another activity and
+    /// give up its slices like any other code (`r[instr.trace.delivery.others]`).
+    /// Its failure comes back as it was raised, with the levels it unwound.
+    fn deliver_on_own_activity(
+        &mut self,
+        route: ObjRef,
+        object: ObjRef,
+    ) -> Result<Delivered, Failure> {
+        let Some(class) = self.rexx_package_class(b"MESSAGE") else {
+            return Err(crate::Loud::environment_symbol(b".MESSAGE").into());
+        };
+        let name = self.text(crate::dispatch::LINEOUT);
+        self.roots.activity_mut().push_temp(name);
+        let form = self.text(b"I");
+        self.roots.activity_mut().push_temp(form);
+        let caller_ref = self.caller();
+        let message = self
+            .send_message(
+                class,
+                b"NEW",
+                None,
+                &[Some(route), Some(name), Some(form), Some(object)],
+                caller_ref,
+            )?
+            .unwrap_or(ObjRef::NIL);
+        self.roots.activity_mut().push_temp(message);
+        let me = self.running_activity();
+        let delivery = crate::dispatch::start_trace_delivery(self, message)?;
+        self.activities.delivery_owners.insert(delivery, me);
+        self.activities.handoff = Some(delivery);
+        let caller_ref = self.caller();
+        let waited = self.send_message(message, b"WAIT", None, &[], caller_ref);
+        self.activities.delivery_owners.remove(&delivery);
+        if self.activities.handoff == Some(delivery) {
+            self.activities.handoff = None;
+        }
+        // The delivery's clauses spent the countdown: a pending reserve of
+        // the traced method is served at its next clause.
+        self.clause_countdown = 1;
+        waited?;
+        if let Some(failure) = self.activity.delivery_failure.take() {
+            return Err(failure);
+        }
+        Ok(Delivered::Sent)
     }
 
     /// The `VARIABLE` entry of a `>V>` or `>=>` line's `TraceObject`: a

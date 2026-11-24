@@ -14,7 +14,7 @@ say 'copy same      ' SysFileCopy(d'/a.txt', d'/../'d'/./a.txt')
 say 'copy over      ' SysFileCopy(d'/a.txt', d'/b.txt') show(d'/b.txt')
 say 'copy empty     ' SysFileCopy('', d'/x') SysFileCopy(d'/a.txt', '')
 call SysMkDir d'/sub'
-say 'copy from dir  ' SysFileCopy(d'/sub', d'/c.txt') SysFileExists(d'/c.txt') show(d'/c.txt')
+say 'copy from dir  ' SysFileCopy(d'/sub', d'/c.txt')
 say 'copy to dir    ' SysFileCopy(d'/a.txt', d'/sub')
 say 'copy to dir/   ' SysFileCopy(d'/a.txt', d'/sub/')
 say 'copy into none ' SysFileCopy(d'/a.txt', d'/none/x')

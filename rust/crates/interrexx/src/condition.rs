@@ -718,6 +718,17 @@ impl Interp {
                 position = self.send_message(frame, b"LINE", None, &[], caller)?;
             }
         }
+        for frame in crate::dispatch::context::owner_live_frames(self)? {
+            let caller = self.caller();
+            self.send_message(frames, b"APPEND", None, &[Some(frame)], caller)?;
+            let caller = self.caller();
+            let line = self
+                .send_message(frame, b"TRACELINE", None, &[], caller)?
+                .unwrap_or(ObjRef::NIL);
+            self.roots.activity_mut().push_temp(line);
+            let caller = self.caller();
+            self.send_message(lines, b"APPEND", None, &[Some(line)], caller)?;
+        }
         Ok((frames, lines, position))
     }
 

@@ -623,28 +623,29 @@ impl Interp {
             }
             return Err(crate::run::raised_for_code(code, texts).into());
         }
-        let text = match item(2) {
+        let (text, description_is_nil) = match item(2) {
             // A `String` subclass instance is read by its own characters
             // (spec: class.commandcontext.deviation.109); any other object
             // by its string value, not named as a message insert names it.
             Some(description) if crate::dispatch::subclass_text(self, description).is_some() => {
-                self.string_value_text(description)?
+                (self.string_value_text(description)?, false)
             }
             Some(description) => {
-                let text = self.required_string_value(description)?;
-                self.string_value_text(text)?
+                let value = self.required_string_or_nil(description)?;
+                (self.string_value_text(value)?, value == ObjRef::NIL)
             }
-            None => command.to_vec(),
+            None => (command.to_vec(), false),
         };
         if name == b"HALT" {
             // Given back as a HALT, seen at the end of the clause as a
             // Ctrl-C is.
-            self.request_running_halt(text);
+            self.request_running_halt(text, description_is_nil);
             return self.supplied_outcome(rc, None);
         }
         let condition = HandlerCondition {
             name,
             description: Some(text),
+            description_is_nil,
             additional,
             result: Some(rc),
         };

@@ -286,15 +286,20 @@ fn halt_through_the_instance_reaches_a_started_activity() {
 }
 
 /// `SetTrace` through the instance from a thread that runs no Rexx code traces the activity
-/// `start` made, which is waiting when it is called. Only the worker's clauses after the wait are
-/// compared: the main activity's lines interleave with them in no fixed order.
+/// `start` made, which is waiting when it is called. The worker's clauses after the wait are
+/// compared, and the CALL already running when the request arrives has no result echo.
+/// The remaining lines of the activities interleave in no fixed order.
 // spec: native.threads.trace
 #[test]
 fn set_trace_through_the_instance_traces_a_started_activity() {
     fn worker((stdout, stderr, code): Answer) -> Answer {
         let lines: String = stderr
             .lines()
-            .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
+            .filter(|line| {
+                line.contains("*-* say 'worker ran'")
+                    || line.contains("*-* done~post")
+                    || (line.trim_start().starts_with(">>>") && line.ends_with("\"0\""))
+            })
             .map(|line| format!("{line}\n"))
             .collect();
         (stdout, lines, code)
@@ -442,6 +447,41 @@ fn set_trace_traces_an_internal_routine_entered_after_the_first() {
              \x20      >K>     \"BY\" => \"1\"\n"
                 .to_owned(),
             0
+        )
+    );
+}
+
+/// The first clause of a routine can switch on external tracing, even if
+/// it is also the clause that returns. A later clause only gets a source banner.
+// spec: native.threads.trace
+#[test]
+fn set_trace_at_a_routines_first_clause_announces_its_invocation() {
+    fn invocation_lines((stdout, stderr, code): Answer) -> Answer {
+        let lines = stderr
+            .lines()
+            .filter(|line| {
+                line.contains(">I>") || line.contains("<I<") || line.contains("+++ \"LINUX")
+            })
+            .map(|line| format!("{line}\n"))
+            .collect();
+        (stdout, lines, code)
+    }
+
+    let program = "trace_routine_entry.rex";
+    let (stdout, stderr, code) = run_halt_trace("trace-routine-entry", program, invocation_lines);
+    assert_eq!(
+        (stdout.as_str(), code),
+        ("first\nlater\nend\n", 0),
+        "{stderr}"
+    );
+    assert_eq!(
+        traced(&stderr, program),
+        interrexx_inventory::errors::expand(
+            "       >I> ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      >I> ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      +++ \"LINUX SUBROUTINE PROGRAM\"\n"
         )
     );
 }

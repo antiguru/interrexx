@@ -351,6 +351,13 @@ pub(crate) struct Activities {
     /// The parked activities waiting on each message, in the order they
     /// parked.
     waiters: FxHashMap<MessageId, Vec<ActivityId>>,
+    /// Each activity delivering a trace line, by the activity that wrote the
+    /// line, whose guards and mutexes it holds as its own
+    /// (`r[instr.trace.delivery.owner]`).
+    pub(crate) delivery_owners: FxHashMap<ActivityId, ActivityId>,
+    /// A trace delivery just started, which the next pick runs before any
+    /// other ready activity: the line is delivered before another runs.
+    pub(crate) handoff: Option<ActivityId>,
     /// The thread contexts of ended activities that made a native call or
     /// ran a package hook, which an extension may have kept and which last
     /// until interpreter termination.
@@ -500,6 +507,8 @@ impl Activities {
             next_message: 0,
             senders: FxHashMap::default(),
             waiters: FxHashMap::default(),
+            delivery_owners: FxHashMap::default(),
+            handoff: None,
             retired: Vec::new(),
             thread_table,
             pooled: VecDeque::new(),
@@ -1242,6 +1251,18 @@ impl Interp {
     /// The running activity's handle.
     pub(crate) fn running_activity(&self) -> ActivityId {
         self.activities.running
+    }
+
+    /// The activity whose trace line the running one delivers. A delivering
+    /// activity writes no trace lines of its own, so deliveries do not nest.
+    pub(crate) fn delivery_owner(&self) -> Option<ActivityId> {
+        if self.activities.delivery_owners.is_empty() {
+            return None;
+        }
+        self.activities
+            .delivery_owners
+            .get(&self.activities.running)
+            .copied()
     }
 
     /// Whether the waits chained from `owner`'s lead back to the running
@@ -3144,7 +3165,17 @@ impl Interp {
             if !self.activities.sleepers.is_empty() {
                 self.wake_due_sleepers();
             }
-            let next = if self.sim.is_some() {
+            let handed = self.activities.handoff.take().and_then(|handoff| {
+                let at = self
+                    .activities
+                    .ready
+                    .iter()
+                    .position(|&ready| ready == handoff)?;
+                self.activities.ready.remove(at)
+            });
+            let next = if handed.is_some() {
+                handed
+            } else if self.sim.is_some() {
                 self.sim_pick()
             } else {
                 self.activities.ready.pop_front()
@@ -3294,6 +3325,22 @@ impl Interp {
             self.ended_with_trace_refusal(sent)
         } else {
             sent
+        };
+        // A delivery's failure goes back to the activity whose line it
+        // delivered, with the levels it unwound, as if it ran there.
+        let sent = match sent {
+            Err(failure) if self.activity.delivering => match self.delivery_owner() {
+                Some(owner) => {
+                    let levels = self.take_failure_levels();
+                    self.with_idle_activity(owner, |interp| {
+                        interp.restore_failure_levels(levels);
+                        interp.activity.delivery_failure = Some(failure);
+                    });
+                    Ok(None)
+                }
+                None => Err(failure),
+            },
+            sent => sent,
         };
         let untrapped = match &sent {
             Err(Failure::Raised(raised)) => Some(raised.clone()),
@@ -3644,8 +3691,41 @@ impl Interp {
             self.slice_deferred = false;
             return Ok(());
         }
+        // A delivering activity keeps the kernel for the clauses a short
+        // destination runs, so no other activity's lines come between. Pinned
+        // while it holds a guard, it does not yield either: an activity run on
+        // top of it whose own delivery waits for that guard would wait on an
+        // activity buried below it. Such a delivery that waits for another
+        // activity spins, and after a bound of slices is refused as the
+        // inverted wait it is (Deviation 14).
+        if self.activity.delivering {
+            self.activity.delivery_clauses = self.activity.delivery_clauses.saturating_add(1);
+            let short = self.activity.delivery_clauses <= DELIVERY_YIELD_CLAUSES;
+            let held = self.activity.pin_depth > 0 && self.delivering_holds_a_guard();
+            if held && fresh {
+                self.activity.guarded_slices = self.activity.guarded_slices.saturating_add(1);
+                let refuses = self.refuses_unending_waits();
+                if self.activity.guarded_slices > GUARDED_DELIVERY_SLICES && refuses {
+                    self.slice_deferred = false;
+                    inverted_wait!(self, ParkReason::GuardWhen);
+                    return Err(Loud::inverted_wait("a guard").into());
+                }
+                if self.activity.guarded_slices == GUARDED_DELIVERY_SLICES + 1 {
+                    self.write_err(
+                        b"interrexx: a trace line's delivery holds a guard and has kept the \
+                          activities ready to run from running for several seconds\n",
+                    );
+                }
+            }
+            if short || held {
+                self.slice_deferred = true;
+                self.clause_countdown = 1;
+                return Ok(());
+            }
+        }
         if yields && self.activity.pin_depth == 0 {
             self.slice_deferred = false;
+            self.activity.delivery_clauses = 0;
             return Err(Failure::Slice);
         }
         if self.slice_deferred && self.activity.routing_trace {
@@ -3754,6 +3834,17 @@ impl Interp {
             })
     }
 
+    /// Whether an activation of the running activity holds a guard.
+    fn delivering_holds_a_guard(&self) -> bool {
+        let activity = &self.activity;
+        activity
+            .suspended
+            .iter()
+            .map(Box::as_ref)
+            .chain(activity.running.as_deref())
+            .any(|activation| activation.flags.reserved())
+    }
+
     /// Whether an activation of the running delivery's destination holds a
     /// guard.
     fn delivery_holds_a_guard(&self) -> bool {
@@ -3816,6 +3907,7 @@ impl Interp {
     /// would not, a recorded divergence.
     fn pinned_yield(&mut self) -> Result<(), Failure> {
         pinned_yield!(self);
+        self.activity.delivery_clauses = 0;
         self.yield_at_slice();
         let (_, set_aside) = self.run_round(true)?;
         if set_aside {
@@ -3831,6 +3923,7 @@ impl Interp {
     pub(crate) fn raise_requested_halt(
         &mut self,
         description: Option<Vec<u8>>,
+        description_is_nil: bool,
     ) -> Result<(), Failure> {
         let raised = Raised {
             description: description.clone(),
@@ -3840,8 +3933,10 @@ impl Interp {
         if self.exits.is_some() && self.trap_for(b"HALT").is_some() {
             self.halt_clear_exit()?;
         }
+        let description_object = description_is_nil.then_some(ObjRef::NIL);
         match self.trap_for(b"HALT") {
             Some(trap) if trap.call => {
+                self.activity.pending_description = description_object;
                 let object = self.build_condition_object(&raised, Some(true))?;
                 // In a forwarding activation, such as the `.INPUT` monitor's
                 // `UNKNOWN` a halted read ran in, the trap is the caller's,
@@ -3863,7 +3958,10 @@ impl Interp {
                 });
                 Ok(())
             }
-            Some(_) => Err(raised.into()),
+            Some(_) => {
+                self.activity.pending_description = description_object;
+                Err(raised.into())
+            }
             None => Err(Raised::halt().into()),
         }
     }
@@ -3886,7 +3984,7 @@ impl Interp {
                 }
             };
             return match target {
-                Some(target) => request_halt(target, description) != Some(false),
+                Some(target) => request_halt(target, description, false) != Some(false),
                 None => true,
             };
         }
@@ -3907,7 +4005,7 @@ impl Interp {
                 .find(|activity| runs(activity))
         };
         match target {
-            Some(target) => request_halt(target, description) != Some(false),
+            Some(target) => request_halt(target, description, false) != Some(false),
             None => true,
         }
     }
@@ -3936,7 +4034,7 @@ impl Interp {
     /// is asked to halt.
     pub(crate) fn halt_running(&mut self) {
         let running = self.activities.running;
-        if request_halt(&mut self.activity, None) == Some(true) {
+        if request_halt(&mut self.activity, None, false) == Some(true) {
             self.wake_for_halt(running);
         }
     }
@@ -3944,16 +4042,24 @@ impl Interp {
     /// A halt with a description for the running activation, as a handler
     /// written in Rexx asks it with `caller~raise("HALT", rc)`: seen at the
     /// end of the clause, as a Ctrl-C is.
-    pub(crate) fn request_running_halt(&mut self, description: Vec<u8>) {
-        request_halt(&mut self.activity, Some(description));
+    pub(crate) fn request_running_halt(&mut self, description: Vec<u8>, description_is_nil: bool) {
+        request_halt(&mut self.activity, Some(description), description_is_nil);
     }
 
     /// [`Interp::halt_all`] before the order of the activities it readies is
     /// settled.
     fn halt_each(&mut self) {
         let running = self.activities.running;
+        // An activity whose trace line is being delivered is halted once, in
+        // the delivery, which runs as part of it
+        // (`r[instr.trace.delivery.owner]`).
+        let delivering: Vec<ActivityId> =
+            self.activities.delivery_owners.values().copied().collect();
         for index in 0..self.activities.idle.len() {
             let activity = ActivityId(u32::try_from(index).expect("handles fit u32"));
+            if delivering.contains(&activity) {
+                continue;
+            }
             let record = if activity == running {
                 &mut self.activity
             } else {
@@ -3962,7 +4068,7 @@ impl Interp {
                     _ => continue,
                 }
             };
-            if request_halt(record, None) == Some(true) {
+            if request_halt(record, None, false) == Some(true) {
                 self.wake_for_halt(activity);
             }
         }
@@ -3975,11 +4081,11 @@ impl Interp {
     /// trace setting ([`Interp::make_trace_switchable`]).
     pub(crate) fn set_external_trace_all(&mut self, on: bool) {
         self.make_trace_switchable();
-        self.set_external_trace(on);
+        self.set_instance_activity_trace(on);
         for index in 0..self.activities.idle.len() {
             if self.activities.idle[index].is_some() {
                 let activity = ActivityId(u32::try_from(index).expect("handles fit u32"));
-                self.with_idle_activity(activity, |interp| interp.set_external_trace(on));
+                self.with_idle_activity(activity, |interp| interp.set_instance_activity_trace(on));
             }
         }
     }
@@ -4084,14 +4190,18 @@ impl Interp {
             .pending_traps
             .remove(at)
             .expect("position answered an index inside the queue");
-        self.raise_requested_halt(pending.description)?;
+        self.raise_requested_halt(pending.description, pending.object == Some(ObjRef::NIL))?;
         Ok(true)
     }
 }
 
 /// Queues a halt request for `target`'s running activation: `None` where it
 /// has none, `Some(false)` where one is already queued, else `Some(true)`.
-fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<bool> {
+fn request_halt(
+    target: &mut Activity,
+    description: Option<Vec<u8>>,
+    description_is_nil: bool,
+) -> Option<bool> {
     let activation = target.running.as_ref()?.id;
     if target.pending_traps.iter().any(|pending| pending.request) {
         return Some(false);
@@ -4100,7 +4210,7 @@ fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<b
         condition: b"HALT".as_slice().into(),
         rc: None,
         description,
-        object: None,
+        object: description_is_nil.then_some(ObjRef::NIL),
         activation,
         queued_during_delivery: true,
         request: true,

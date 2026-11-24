@@ -922,6 +922,85 @@ from debuginput
 LINEIN sent 3 times, with 0 arguments
 ```
 
+r[env.debugging.read.line-result]
+The result of a debug read is converted to a string before the interpreter
+runs it. A return without a result or with `.nil` supplies an empty line and
+ends the stop.
+
+```rexx
+.traceoutput~destination(.quiet~new)
+.debuginput~destination(.reader~new)
+trace ?a
+nop
+nop
+call trace 'o'
+say 'done'
+::class quiet
+::method lineout
+  return 0
+::class reader
+::attribute calls
+::method init
+  self~calls = 0
+::method linein
+  self~calls += 1
+  say 'debug read' self~calls
+  select
+    when self~calls = 1 then return .line~new
+    when self~calls = 2 then return
+    otherwise return .nil
+  end
+::class line
+::method makeString
+  return 'say "debug line ran"'
+```
+
+```output
+debug read 1
+debug line ran
+debug read 2
+debug read 3
+done
+```
+
+r[env.debugging.read.tracing]
+A method that supplies a debug line can trace its own clauses. While the
+interpreter is reading that line, those clauses do not open another
+interactive stop. In the example the reader traces its assignment twice.
+Its first line changes `a` and its second line turns tracing off.
+
+```rexx
+sink = .sink~new
+.traceoutput~destination(sink)
+.debuginput~destination(.reader~new)
+trace ?r
+a = 1
+.debuginput~destination
+.traceoutput~destination
+say a sink~readerLines
+::class reader
+::attribute reads
+::method init
+  self~reads = 0
+::method linein
+  trace ?r
+  self~reads += 1
+  if self~reads = 1 then return 'a = 2'
+  return 'trace off'
+::class sink
+::attribute readerLines
+::method init
+  self~readerLines = 0
+::method lineout
+  use arg line
+  if line['TRACELINE']~pos('self~reads += 1') > 0 then self~readerLines += 1
+  return 0
+```
+
+```output
+2 2
+```
+
 r[env.debugging.read.fallback]
 When nothing was installed, the object that `.debuginput` holds is a monitor
 whose destination is the monitor `.input`, as [the bindings
