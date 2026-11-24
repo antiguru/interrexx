@@ -574,6 +574,18 @@ RexxRoutine0(int, AtStart)
     return 1;
 }
 
+static void *send_when_started(void *argument)
+{
+    await_start();
+    return body(argument);
+}
+
+// Sends a second message after a method on the first thread calls AtStart.
+RexxRoutine2(logical_t, AtSendWhenStarted, RexxObjectPtr, target, CSTRING, name)
+{
+    return start_with(context, target, NAMED, 0, send_when_started, name);
+}
+
 RexxRoutine0(int, AtHaltStarted)
 {
     gate_open = 1;
@@ -1084,6 +1096,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtTraceIdle, AtTraceIdle),
     REXX_TYPED_ROUTINE(AtAttachHeld, AtAttachHeld),
     REXX_TYPED_ROUTINE(AtStart, AtStart),
+    REXX_TYPED_ROUTINE(AtSendWhenStarted, AtSendWhenStarted),
     REXX_TYPED_ROUTINE(AtHaltStarted, AtHaltStarted),
     REXX_TYPED_ROUTINE(AtHaltHeld, AtHaltHeld),
     REXX_TYPED_ROUTINE(AtMisuse, AtMisuse),
