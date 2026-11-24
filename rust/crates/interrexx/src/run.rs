@@ -3802,6 +3802,7 @@ impl Interp {
             ) => value,
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
             (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
+            (InstructionKind::Use(use_), slot) => Self::use_arg_default(use_, usize::from(slot))?,
             _ => return None,
         };
         let mut steps = path.steps();
@@ -3838,6 +3839,12 @@ impl Interp {
         match (&instruction.kind, slot) {
             (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
                 self.eval(code, expression)
+            }
+            (InstructionKind::Use(use_), slot) => {
+                let Some(expr) = Self::use_arg_default(use_, slot as usize) else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.
