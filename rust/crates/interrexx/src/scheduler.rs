@@ -3981,11 +3981,11 @@ impl Interp {
     /// trace setting ([`Interp::make_trace_switchable`]).
     pub(crate) fn set_external_trace_all(&mut self, on: bool) {
         self.make_trace_switchable();
-        self.set_external_trace(on);
+        self.set_instance_activity_trace(on);
         for index in 0..self.activities.idle.len() {
             if self.activities.idle[index].is_some() {
                 let activity = ActivityId(u32::try_from(index).expect("handles fit u32"));
-                self.with_idle_activity(activity, |interp| interp.set_external_trace(on));
+                self.with_idle_activity(activity, |interp| interp.set_instance_activity_trace(on));
             }
         }
     }

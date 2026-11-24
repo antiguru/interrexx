@@ -286,15 +286,20 @@ fn halt_through_the_instance_reaches_a_started_activity() {
 }
 
 /// `SetTrace` through the instance from a thread that runs no Rexx code traces the activity
-/// `start` made, which is waiting when it is called. Only the worker's clauses after the wait are
-/// compared: the main activity's lines interleave with them in no fixed order.
+/// `start` made, which is waiting when it is called. The worker's clauses after the wait are
+/// compared, and the CALL already running when the request arrives has no result echo.
+/// The remaining lines of the activities interleave in no fixed order.
 // spec: native.threads.trace
 #[test]
 fn set_trace_through_the_instance_traces_a_started_activity() {
     fn worker((stdout, stderr, code): Answer) -> Answer {
         let lines: String = stderr
             .lines()
-            .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
+            .filter(|line| {
+                line.contains("*-* say 'worker ran'")
+                    || line.contains("*-* done~post")
+                    || (line.trim_start().starts_with(">>>") && line.ends_with("\"0\""))
+            })
             .map(|line| format!("{line}\n"))
             .collect();
         (stdout, lines, code)
