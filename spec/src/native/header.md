@@ -125,6 +125,10 @@ method's scope inherits from, `SCOPE` the scope, and `CSELF` the address the
 receiver's variable `CSELF` holds as a Pointer or a Buffer. None of them is
 valid as a result, and none of them consumes an argument of the call.
 
+r[native.header.queue-time]
+`RexxQueueTime` and the Unix `REXXDATETIME` each have a `uint16_t` member
+`hundredths` for the fraction of a second in hundredths.
+
 ## Constants
 
 r[native.header.value-codes]
@@ -258,6 +262,105 @@ number `m` is below 100: `Rexx_` followed by the error's symbolic name, the
 `symbol` column of the table of error numbers in this repository
 (`rust/crates/interrexx-inventory/data/errors.tsv`), with the value
 `m * 1000 + n`. A minor number 0 stands for the major error itself.
+
+### Classic invocation and result storage
+
+r[native.header.classic-start]
+The classic interface defines these invocation kinds and the size of its
+automatic result buffer:
+* `RXCOMMAND`: `0`, command invocation.
+* `RXSUBROUTINE`: `1`, subroutine invocation.
+* `RXFUNCTION`: `2`, function invocation.
+* `RXMETHOD`: `3`, method invocation.
+* `RXSCRIPT`: `4`, script invocation.
+* `RXAUTOBUFLEN`: `256`, the automatic result buffer size in bytes.
+
+### Classic registration and handler codes
+
+r[native.header.classic-handlers]
+Subcommand and exit registrations have parallel flag and status names. The
+exit handler's own disposition codes are also defined here:
+* `RXSUBCOM_DROPPABLE` / `RXEXIT_DROPPABLE`: `0x00`, any process may remove the registration.
+* `RXSUBCOM_NONDROP` / `RXEXIT_NONDROP`: `0x01`, only the registering process may remove it.
+* `RXSUBCOM_ISREG` / `RXEXIT_ISREG`: `0x01`, the queried name is registered.
+* `RXSUBCOM_ERROR` / `RXEXIT_ERROR`: `0x01`, the handler reports an error.
+* `RXSUBCOM_FAILURE` / `RXEXIT_FAILURE`: `0x02`, the handler reports failure.
+* `RXSUBCOM_OK` / `RXEXIT_OK`: `0`, the operation succeeded.
+* `RXSUBCOM_DUP` / `RXEXIT_DUP`: `10`, registration completed for a name
+  already in use.
+* `RXSUBCOM_MAXREG` / `RXEXIT_MAXREG`: `20`, the registry cannot accept another handler.
+* `RXSUBCOM_NOTREG` / `RXEXIT_NOTREG`: `30`, the name is unregistered.
+* `RXSUBCOM_NOCANDROP` / `RXEXIT_NOCANDROP`: `40`, the caller lacks
+  permission to remove that registration.
+* `RXSUBCOM_LOADERR` / `RXEXIT_LOADERR`: `50`, the handler could not be loaded.
+* `RXSUBCOM_NOPROC` / `RXEXIT_NOPROC`: `127`, the handler entry point could not be found.
+* `RXSUBCOM_BADENTRY` / `RXEXIT_BADENTRY`: `1001`, the registration entry is invalid.
+* `RXSUBCOM_NOEMEM` / `RXEXIT_NOEMEM`: `1002`, memory allocation failed.
+* `RXSUBCOM_BADTYPE` / `RXEXIT_BADTYPE`: `1003`, the registration type is invalid.
+* `RXSUBCOM_NOTINIT` / `RXEXIT_NOTINIT`: `1004`, the API service is unavailable.
+* `RXEXIT_HANDLED`: `0`, the exit handled the request.
+* `RXEXIT_NOT_HANDLED`: `1`, processing continues without this exit's handling.
+* `RXEXIT_RAISE_ERROR`: `(-1)`, the exit reports an error in handling the request.
+
+r[native.header.classic-functions]
+Classic external function registrations use these kinds and status values:
+* `RXFUNC_DYNALINK`: `1`, the entry is supplied by a shared library.
+* `RXFUNC_CALLENTRY`: `2`, the caller supplies the entry point directly.
+* `RXFUNC_OK`: `0`, the operation succeeded.
+* `RXFUNC_DEFINED`: `10`, the function name is already registered.
+* `RXFUNC_NOMEM`: `20`, the registry lacks space to add a function.
+* `RXFUNC_NOTREG`: `30`, the function name is unregistered.
+* `RXFUNC_MODNOTFND`: `40`, the shared library could not be found.
+* `RXFUNC_ENTNOTFND`: `50`, the entry point could not be found in the library.
+* `RXFUNC_BADTYPE`: `70`, the function registration kind is invalid.
+* `RXFUNC_NOEMEM`: `1002`, memory allocation failed.
+* `RXFUNC_NOTINIT`: `1004`, the API service is unavailable.
+
+### Classic API service codes
+
+r[native.header.classic-service]
+These codes describe the outcome of an operation using the API service:
+* `RXAPI_OK`: `0`, the operation succeeded.
+* `RXAPI_MEMFAIL`: `1002`, memory allocation failed.
+* `RXAPI_NORXAPI`: `1004`, the API service is unavailable.
+
+r[native.header.classic-queues]
+The external data queue interface uses the following flags, return codes
+and queue-name limit:
+* `RXQUEUE_FIFO`: `0`, add an item at the back of the queue.
+* `RXQUEUE_LIFO`: `1`, add an item at the front of the queue.
+* `RXQUEUE_NOWAIT`: `0`, return immediately if the queue is empty.
+* `RXQUEUE_WAIT`: `1`, wait for an item if the queue is empty.
+* `RXQUEUE_OK`: `0`, the operation succeeded.
+* `RXQUEUE_STORAGE`: `1`, the caller's output buffer is too small.
+* `RXQUEUE_SIZE`: `2`, the item exceeds the allowed size.
+* `RXQUEUE_DUP`: `3`, a queue with the requested name already exists.
+* `RXQUEUE_BADQNAME`: `5`, the queue name is invalid.
+* `RXQUEUE_PRIORITY`: `6`, the insertion flag is invalid.
+* `RXQUEUE_BADWAITFLAG`: `7`, the wait flag is invalid.
+* `RXQUEUE_EMPTY`: `8`, no item is available.
+* `RXQUEUE_NOTREG`: `9`, the queue does not exist.
+* `RXQUEUE_ACCESS`: `10`, a pending wait prevents deleting the queue.
+* `RXQUEUE_MAXREG`: `11`, resources are insufficient to create another queue.
+* `RXQUEUE_MEMFAIL` / `RXQUEUE_NOEMEM`: `1002`, memory allocation failed.
+* `RXQUEUE_NOTINIT`: `1004`, the API service is unavailable.
+* `MAX_QUEUE_NAME_LENGTH`: `250`, the maximum queue name length in bytes.
+
+r[native.header.classic-macros]
+The macrospace interface uses these search positions and status values:
+* `RXMACRO_SEARCH_BEFORE`: `1`, search this part of macrospace before the
+  ordinary external search.
+* `RXMACRO_SEARCH_AFTER`: `2`, search this part after the ordinary external search.
+* `RXMACRO_OK`: `0`, the operation succeeded.
+* `RXMACRO_NO_STORAGE`: `1`, storage for the operation could not be allocated.
+* `RXMACRO_NOT_FOUND`: `2`, the requested macro is absent.
+* `RXMACRO_EXTENSION_REQUIRED`: `3`, the save filename requires an extension.
+* `RXMACRO_ALREADY_EXISTS`: `4`, the macro name is already in use.
+* `RXMACRO_FILE_ERROR`: `5`, reading or writing the macrospace file failed.
+* `RXMACRO_SIGNATURE_ERROR`: `6`, the file does not have the expected macrospace format.
+* `RXMACRO_SOURCE_NOT_FOUND`: `7`, the requested macro source could not be found.
+* `RXMACRO_INVALID_POSITION`: `8`, the search position is invalid.
+* `RXMACRO_NOT_INIT`: `1004`, the API service is unavailable.
 
 ## Exit flag words
 
