@@ -6,11 +6,12 @@ use rustc_hash::FxHashMap;
 
 use interrexx_parse::{
     Call, CodeBody, Expr, ExprKind, Instruction, InstructionKind, LoopKind, ParseSource, SymbolId,
+    Use,
 };
 
 use super::{
     Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, ConditionOps,
-    Hints, LoopTestOps, NodePath, Op, ParseOpening, PlanSlot, SendForm,
+    Hints, LoopTestOps, NodePath, Op, ParseOpening, PlanSlot, SendForm, UseArgOp,
 };
 use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
@@ -1474,6 +1475,55 @@ fn compile_settled(
                 });
                 close_region(&mut ops, at_op)?;
                 registers.release(mark);
+            }
+            // Only clauses with defaults need a conditional region. The
+            // default-free binder still runs as a single Op::Exec.
+            InstructionKind::Use(use_)
+                if let Use::Arg {
+                    strict, targets, ..
+                } = &**use_
+                    && u16::try_from(targets.len()).is_ok()
+                    && targets.iter().flatten().any(|t| t.default.is_some()) =>
+            {
+                let at = op_index(&ops)?;
+                let clause = instruction_index(index)?;
+                ops.push(Op::Clause {
+                    index: clause,
+                    end: 0,
+                });
+                push_echo(&mut ops, echoes(trace, instruction), clause);
+                if *strict {
+                    ops.push(Op::UseArg(UseArgOp::CheckCount));
+                }
+                for (slot, target) in targets.iter().enumerate() {
+                    let Some(target) = target else { continue };
+                    let slot = u16::try_from(slot).expect("the targets fit u16");
+                    let bind = op_index(&ops)?;
+                    ops.push(Op::UseArg(UseArgOp::Bind { slot, skip: 0 }));
+                    let Some(default) = &target.default else {
+                        continue;
+                    };
+                    let mark = registers.mark();
+                    let src = registers.alloc()?;
+                    push_value(
+                        &mut ops,
+                        echoes_values,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        default,
+                        clause,
+                        u32::from(slot),
+                        src,
+                    )?;
+                    ops.push(Op::UseArg(UseArgOp::BindDefault { slot, src }));
+                    let skip = op_index(&ops)? - bind - 1;
+                    ops[bind as usize] = Op::UseArg(UseArgOp::Bind { slot, skip });
+                    registers.release(mark);
+                }
+                close_region(&mut ops, at)?;
             }
             // A `GUARD ... WHEN` whose condition only reads and compares: the
             // condition's ops go to the side table `Chunk::conditions`, where

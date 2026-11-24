@@ -427,6 +427,14 @@ RexxMethod1(CSTRING, FxMessage, NAME, name)
     return name;
 }
 
+// Serves r[dir.attribute.external]. There is no corresponding SetFxPartial entry.
+RexxMethod0(CSTRING, GetFxPartial)
+{
+    context->DirectoryPut(context->GetLocalEnvironment(), context->True(),
+                          "SPECFIXTURE.ATTRIBUTE.GET");
+    return "getter ran";
+}
+
 // Serves r[native.calls.method].
 RexxMethod1(RexxObjectPtr, FxScope, SCOPE, scope)
 {
@@ -513,6 +521,7 @@ static RexxMethodEntry fixtureMethods[] =
 {
     REXX_METHOD(FxSelf, FxSelf),
     REXX_METHOD(FxMessage, FxMessage),
+    REXX_METHOD(GetFxPartial, GetFxPartial),
     REXX_METHOD(FxScope, FxScope),
     REXX_METHOD(FxObjSet, FxObjSet),
     REXX_METHOD(FxObjGet, FxObjGet),
