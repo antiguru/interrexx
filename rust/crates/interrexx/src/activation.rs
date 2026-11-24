@@ -1853,7 +1853,7 @@ mod address_tests {
 mod method_tests {
     use super::{
         Activation, CallType, Entry, InstanceVar, IoConfigs, MethodIdentity, Replied, ReplyState,
-        TraceEntry,
+        StreamEntry, TraceEntry,
     };
     use crate::Interp;
     use crate::plan::Plan;
