@@ -656,6 +656,88 @@ fn a_halt_or_trace_request_to_a_closed_inbox_posts_nothing() {
     );
 }
 
+/// Halt reaches the main and running attached activations. The second attached callback
+/// is already held at that point, but it has no running activation to halt yet.
+// spec: native.threads.halt, native.threads.attach.deviation.178
+#[test]
+fn a_held_callback_runs_after_an_instance_halt() {
+    use super::{DrainAt, Posted, Recall, Recaller};
+    use crate::{Activation, Failure, island::wait_served, plan::BodyKey};
+    use std::rc::Rc;
+
+    fn push_probe(interp: &mut Interp) {
+        let program = Rc::new(parse_program(b"nop".to_vec()).expect("a NOP program"));
+        let program_id = interp.programs.insert(Rc::clone(&program));
+        let plan = interp.plan_for(
+            BodyKey {
+                program: program_id,
+                directive: None,
+            },
+            &program.main,
+            &program.symbols,
+            &program.source,
+        );
+        let slots = interp.roots.push_slots(plan.len());
+        let id = interp.next_activation_id();
+        interp.push_activation(Activation::new(id, program, program_id, plan, slots));
+    }
+
+    fn probe_halt(interp: &mut Interp) -> Result<bool, Failure> {
+        let halt = interp.take_requested_halt();
+        let ended = interp.pop_activation().expect("the test frame");
+        interp.roots.activity_mut().pop_slots(ended.frame);
+        halt
+    }
+
+    let mut interp = Interp::new();
+    push_probe(&mut interp);
+    let main = interp.activities.running;
+    let first = interp.pending_attached_context().expect("first attachment");
+    let first = interp.file_attached(first).expect("first activity");
+    interp.swap_running(first, main);
+    push_probe(&mut interp);
+    interp.pretend_callback_runs(true);
+
+    let held = interp
+        .pending_attached_context()
+        .expect("second attachment");
+    let baton = crate::sync::Arc::clone(&interp.baton);
+    let worker = std::thread::spawn(move || {
+        let Some(mut lent) = wait_served(&baton, true) else {
+            return false;
+        };
+        let interp = lent.interp();
+        push_probe(interp);
+        matches!(probe_halt(interp), Ok(false))
+    });
+    let inbox = interp.timer.inbox();
+    inbox.post(Posted::Recall(Recall {
+        by: Recaller::Context(held),
+        thread: worker.thread().id(),
+        base: None,
+        room: None,
+    }));
+    interp.drain_completions(DrainAt::MidRun);
+    assert_eq!(interp.activities.held.len(), 1);
+
+    inbox.post_halt();
+    interp.drain_completions(DrainAt::MidRun);
+    assert_eq!(interp.activities.held.len(), 1);
+    assert!(
+        matches!(probe_halt(&mut interp), Err(Failure::Raised(e)) if (e.number, e.sub) == (4, 1)),
+        "the running callback missed 4.1"
+    );
+    interp.pretend_callback_runs(false);
+    interp.swap_running(main, first);
+    assert!(
+        matches!(probe_halt(&mut interp), Err(Failure::Raised(e)) if (e.number, e.sub) == (4, 1)),
+        "main missed 4.1"
+    );
+    interp.drain_completions(DrainAt::Stopped);
+    assert!(interp.activities.held.is_empty());
+    assert!(worker.join().expect("the held callback ran"));
+}
+
 /// A thread running no native call attaches through the instance while the
 /// interpreter is live, and gets nothing once it has terminated, though the
 /// instance still has its root context (`r[native.threads.end]`).

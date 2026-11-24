@@ -731,6 +731,56 @@ say s~log~makeString('l', ' ') x y z v
 LINEIN LINEIN CHARIN CHARS LINES LINEIN LINEIN 7 7 7 7
 ```
 
+r[env.objects.input.line-result]
+PARSE LINEIN converts the result of the input object's `LINEIN` to a string.
+A return without a result or with `.nil` supplies an empty line. PULL and
+PARSE PULL read from the input object when the queue object's `PULL` returns
+without a result or with `.nil`, and convert any other queue result to a string.
+
+```rexx
+.input~destination(.source~new)
+.local~stdque = .source~new
+parse pull x
+say 'pull with no result [' || x || ']'
+parse pull x
+say 'pull with an object [' || x || ']'
+parse linein x
+say 'linein with an object [' || x || ']'
+parse linein x
+say 'linein with no result [' || x || ']'
+parse linein x
+say 'linein with nil [' || x || ']'
+::class source
+::attribute lines
+::attribute pulls
+::method init
+  self~lines = 0
+  self~pulls = 0
+::method pull
+  self~pulls += 1
+  if self~pulls = 1 then return
+  return .value~new
+::method linein
+  self~lines += 1
+  select
+    when self~lines = 1 then return 'fallback'
+    when self~lines = 2 then return .value~new
+    when self~lines = 3 then return
+    otherwise return .nil
+  end
+::class value
+::method makeString
+  return 'converted'
+```
+
+```output
+pull with no result [fallback]
+pull with an object [converted]
+linein with an object [converted]
+linein with no result []
+linein with nil []
+```
+
 r[env.objects.queue]
 PUSH and QUEUE send `PUSH` and `QUEUE` with the line to the `STDQUE` entry of
 `.local`. The builtin QUEUED sends it `QUEUED`, and the builtin RXQUEUE sends
