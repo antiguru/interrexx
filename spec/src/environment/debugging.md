@@ -963,6 +963,44 @@ debug read 3
 done
 ```
 
+r[env.debugging.read.tracing]
+A method that supplies a debug line can trace its own clauses. While the
+interpreter is reading that line, those clauses do not open another
+interactive stop. In the example the reader traces its assignment twice.
+Its first line changes `a` and its second line turns tracing off.
+
+```rexx
+sink = .sink~new
+.traceoutput~destination(sink)
+.debuginput~destination(.reader~new)
+trace ?r
+a = 1
+.debuginput~destination
+.traceoutput~destination
+say a sink~readerLines
+::class reader
+::attribute reads
+::method init
+  self~reads = 0
+::method linein
+  trace ?r
+  self~reads += 1
+  if self~reads = 1 then return 'a = 2'
+  return 'trace off'
+::class sink
+::attribute readerLines
+::method init
+  self~readerLines = 0
+::method lineout
+  use arg line
+  if line['TRACELINE']~pos('self~reads += 1') > 0 then self~readerLines += 1
+  return 0
+```
+
+```output
+2 2
+```
+
 r[env.debugging.read.fallback]
 When nothing was installed, the object that `.debuginput` holds is a monitor
 whose destination is the monitor `.input`, as [the bindings

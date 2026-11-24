@@ -329,7 +329,7 @@ impl Interp {
     /// empty nor `=` runs as an `INTERPRET` fragment; the pause ends when the
     /// fragment ended debug or changed a setting from inside it.
     pub(crate) fn debug_pause_now(&mut self) -> Result<Pause, Failure> {
-        if self.silenced() {
+        if self.activity.reading_debug_input || self.silenced() {
             return Ok(Pause::Go);
         }
         if self.activation().debug.bypass {
@@ -359,7 +359,10 @@ impl Interp {
             self.route_trace_line(start);
         }
         loop {
-            let line = self.debug_input_line()?;
+            self.activity.reading_debug_input = true;
+            let line = self.debug_input_line();
+            self.activity.reading_debug_input = false;
+            let line = line?;
             if line.is_empty() {
                 return Ok(Pause::Go);
             }
