@@ -775,7 +775,8 @@ answer as an object, such as a truth value, a logical operator or an equality
 comparison, takes it as <code>.nil</code>. Every other argument of a builtin has the error
 of its own kind, which <a href="#r-conv.string.builtin-argument">the next rule</a> states
 for an argument read as a string and <a href="#r-conv.string.argument-kind">the rule after
-it</a> for the others. ooRexx reads the answer
+it</a> for the others. That latter rule applies
+also to method arguments read as a number. ooRexx reads the answer
 as a string in each of the clauses above, with garbage results or a crash, so
 no answer of it is specified. The text of the message is not specified.</p>
 <pre><code class="language-rexx">o = .weird~new
@@ -855,11 +856,11 @@ The name of a stream raises <code>93.938</code>, numbered 1, the error of the ar
 the <code>Stream</code> method the builtin sends, and the command of <code>STREAM</code> raises
 <code>93.914</code>, the error of a command that is not one. When the call has another
 fault as well, it raises the error of one of them, as <a href="#r-conv.error.precedence">the precedence
-rule</a> says. In the message form of a method of <code>String</code>,
-an argument that the method reads as a number raises the error of the
-method's own check of it, as <a href="classes/string.html#r-class.string.builtins.errors">the message
-rule</a> gives it, and an argument it reads as a
-string, a pad among them, raises <code>88.909</code> (the previous rule). The string a
+rule</a> says. A method argument read as a number
+raises the error of its own check when <code>STRING</code> gives no string value. For
+<code>String</code> methods the <a href="classes/string.html#r-class.string.builtins.errors">message rule</a> names
+these errors. An argument such a method reads as a string, a pad among them,
+raises <code>88.909</code> (the previous rule). The string a
 builtin works on keeps <code>98.973</code> (<a href="#r-conv.string.deviation.169">Deviation 169</a>).</p>
 <pre><code class="language-rexx">o = .weird~new
 call try "left('abc', o)"
@@ -906,6 +907,81 @@ linein(o) =&gt; 93.938
 'abc'~left(o) =&gt; 93.923
 'abc'~substr(o) =&gt; 93.924
 'abc'~left(2, o) =&gt; 88.909
+</code></pre>
+<pre><code class="language-rexx">o = .weird~new
+a = .array~of('a', 'b')
+m = .array~new(2, 2)
+l = .list~of('a', 'b')
+q = .queue~of('a', 'b')
+call try '.array~new(o)'
+call try '.array~new(1, o)'
+call try 'a~at(o)'
+call try 'a[o]'
+call try 'a~section(o)'
+call try 'a~dimension(o)'
+call try 'm~at(o, 1)'
+call try 'l~insert("x", o)'
+call try 'l~section(o)'
+call try 'q~insert("x", o)'
+say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
+say a~at(.numberText~new) q~at(.numberText~new)
+call try '.datetime~fromBaseDate(o)'
+call try '.datetime~fromTicks(o)'
+call try '.datetime~new(o)'
+d = .datetime~new(1, 0)
+call try 'd~addMicroseconds(o)'
+call try 'd~addYears(o)'
+call try '.timespan~new(o)'
+call try '.timespan~new(o, 0)'
+call try '.timespan~new(o, 0, 0, 0)'
+call try '.timespan~fromSeconds(o)'
+call try '.timespan~fromMicroseconds(o)'
+t = .timespan~new(1)
+call try 't~addMicroseconds(o)'
+call try 't * o'
+call try 't % o'
+call try 't // o'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class weird
+::method string
+  return .object~new
+::class numberText
+::method string
+  return '2'
+</code></pre>
+<pre><code class="language-output">.array~new(o) =&gt; 93.906
+.array~new(1, o) =&gt; 93.906
+a~at(o) =&gt; 93.907
+a[o] =&gt; 93.907
+a~section(o) =&gt; 93.907
+a~dimension(o) =&gt; 93.907
+m~at(o, 1) =&gt; 93.924
+l~insert("x", o) =&gt; 93.918
+l~section(o) =&gt; 93.918
+q~insert("x", o) =&gt; 93.907
+a,b a,b
+b b
+.datetime~fromBaseDate(o) =&gt; 88.918
+.datetime~fromTicks(o) =&gt; 88.918
+.datetime~new(o) =&gt; 40.19
+d~addMicroseconds(o) =&gt; 88.902
+d~addYears(o) =&gt; 88.903
+.timespan~new(o) =&gt; 88.903
+.timespan~new(o, 0) =&gt; 88.907
+.timespan~new(o, 0, 0, 0) =&gt; 88.904
+.timespan~fromSeconds(o) =&gt; 88.902
+.timespan~fromMicroseconds(o) =&gt; 88.902
+t~addMicroseconds(o) =&gt; 88.902
+t * o =&gt; 41.1
+t % o =&gt; 41.1
+t // o =&gt; 41.1
 </code></pre>
 <div class="rule" id="r-conv.string.deviation.109"><a href="#r-conv.string.deviation.109">[conv.string.deviation.109]</a></div>
 <p>A builtin that takes a string works on the own characters of an instance of a

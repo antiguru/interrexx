@@ -860,7 +860,8 @@ answer as an object, such as a truth value, a logical operator or an equality
 comparison, takes it as <code>.nil</code>. Every other argument of a builtin has the error
 of its own kind, which <a href="conventions.html#r-conv.string.builtin-argument">the next rule</a> states
 for an argument read as a string and <a href="conventions.html#r-conv.string.argument-kind">the rule after
-it</a> for the others. ooRexx reads the answer
+it</a> for the others. That latter rule applies
+also to method arguments read as a number. ooRexx reads the answer
 as a string in each of the clauses above, with garbage results or a crash, so
 no answer of it is specified. The text of the message is not specified.</p>
 <pre><code class="language-rexx">o = .weird~new
@@ -940,11 +941,11 @@ The name of a stream raises <code>93.938</code>, numbered 1, the error of the ar
 the <code>Stream</code> method the builtin sends, and the command of <code>STREAM</code> raises
 <code>93.914</code>, the error of a command that is not one. When the call has another
 fault as well, it raises the error of one of them, as <a href="conventions.html#r-conv.error.precedence">the precedence
-rule</a> says. In the message form of a method of <code>String</code>,
-an argument that the method reads as a number raises the error of the
-method's own check of it, as <a href="classes/string.html#r-class.string.builtins.errors">the message
-rule</a> gives it, and an argument it reads as a
-string, a pad among them, raises <code>88.909</code> (the previous rule). The string a
+rule</a> says. A method argument read as a number
+raises the error of its own check when <code>STRING</code> gives no string value. For
+<code>String</code> methods the <a href="classes/string.html#r-class.string.builtins.errors">message rule</a> names
+these errors. An argument such a method reads as a string, a pad among them,
+raises <code>88.909</code> (the previous rule). The string a
 builtin works on keeps <code>98.973</code> (<a href="conventions.html#r-conv.string.deviation.169">Deviation 169</a>).</p>
 <pre><code class="language-rexx">o = .weird~new
 call try "left('abc', o)"
@@ -991,6 +992,81 @@ linein(o) =&gt; 93.938
 'abc'~left(o) =&gt; 93.923
 'abc'~substr(o) =&gt; 93.924
 'abc'~left(2, o) =&gt; 88.909
+</code></pre>
+<pre><code class="language-rexx">o = .weird~new
+a = .array~of('a', 'b')
+m = .array~new(2, 2)
+l = .list~of('a', 'b')
+q = .queue~of('a', 'b')
+call try '.array~new(o)'
+call try '.array~new(1, o)'
+call try 'a~at(o)'
+call try 'a[o]'
+call try 'a~section(o)'
+call try 'a~dimension(o)'
+call try 'm~at(o, 1)'
+call try 'l~insert("x", o)'
+call try 'l~section(o)'
+call try 'q~insert("x", o)'
+say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
+say a~at(.numberText~new) q~at(.numberText~new)
+call try '.datetime~fromBaseDate(o)'
+call try '.datetime~fromTicks(o)'
+call try '.datetime~new(o)'
+d = .datetime~new(1, 0)
+call try 'd~addMicroseconds(o)'
+call try 'd~addYears(o)'
+call try '.timespan~new(o)'
+call try '.timespan~new(o, 0)'
+call try '.timespan~new(o, 0, 0, 0)'
+call try '.timespan~fromSeconds(o)'
+call try '.timespan~fromMicroseconds(o)'
+t = .timespan~new(1)
+call try 't~addMicroseconds(o)'
+call try 't * o'
+call try 't % o'
+call try 't // o'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class weird
+::method string
+  return .object~new
+::class numberText
+::method string
+  return '2'
+</code></pre>
+<pre><code class="language-output">.array~new(o) =&gt; 93.906
+.array~new(1, o) =&gt; 93.906
+a~at(o) =&gt; 93.907
+a[o] =&gt; 93.907
+a~section(o) =&gt; 93.907
+a~dimension(o) =&gt; 93.907
+m~at(o, 1) =&gt; 93.924
+l~insert("x", o) =&gt; 93.918
+l~section(o) =&gt; 93.918
+q~insert("x", o) =&gt; 93.907
+a,b a,b
+b b
+.datetime~fromBaseDate(o) =&gt; 88.918
+.datetime~fromTicks(o) =&gt; 88.918
+.datetime~new(o) =&gt; 40.19
+d~addMicroseconds(o) =&gt; 88.902
+d~addYears(o) =&gt; 88.903
+.timespan~new(o) =&gt; 88.903
+.timespan~new(o, 0) =&gt; 88.907
+.timespan~new(o, 0, 0, 0) =&gt; 88.904
+.timespan~fromSeconds(o) =&gt; 88.902
+.timespan~fromMicroseconds(o) =&gt; 88.902
+t~addMicroseconds(o) =&gt; 88.902
+t * o =&gt; 41.1
+t % o =&gt; 41.1
+t // o =&gt; 41.1
 </code></pre>
 <div class="rule" id="r-conv.string.deviation.109"><a href="conventions.html#r-conv.string.deviation.109">[conv.string.deviation.109]</a></div>
 <p>A builtin that takes a string works on the own characters of an instance of a
@@ -64791,6 +64867,48 @@ d~addDays(3000000) =&gt; 40.19
 d~addDays =&gt; 93.901
 d~addDays(1, 2) =&gt; 93.902
 d~addMonths(1) =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.datetime.add.reads"><a href="classes/datetime.html#r-class.datetime.add.reads">[class.datetime.add.reads]</a></div>
+<p><code>addMicroseconds</code> and <code>addYears</code> first read the argument for its form. An
+unreadable value at that point raises <code>88.902</code> or <code>88.903</code>, respectively. If
+that check succeeds, the method reads the argument again for the addition.
+The addition uses the second value and raises <code>41.1</code> if that value has no
+usable number.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 1, 1, 0)
+do method over .array~of('addMicroseconds', 'addYears')
+  call probe method, 'first'
+  call probe method, 'second'
+  call probe method, '2'
+end
+exit
+probe: procedure expose d
+  use arg method, answer
+  amount = .changing~new(answer)
+  signal on syntax name bad
+  say method answer d~send(method, amount)~isoDate amount~reads
+  return
+bad: say method answer condition('o')~code amount~reads
+  return
+::class changing
+::attribute reads get
+::method init
+  expose answer reads
+  use arg answer
+  reads = 0
+::method string
+  expose answer reads
+  reads += 1
+  if answer = 'first' then return .object~new
+  if reads = 1 then return '1'
+  if answer = 'second' then return .object~new
+  return answer
+</code></pre>
+<pre><code class="language-output">addMicroseconds first 88.902 1
+addMicroseconds second 41.1 2
+addMicroseconds 2 2017-01-01T00:00:00.000002 2
+addYears first 88.903 1
+addYears second 41.1 2
+addYears 2 2019-01-01T00:00:00.000000 2
 </code></pre>
 <div class="rule" id="r-class.datetime.plus"><a href="classes/datetime.html#r-class.datetime.plus">[class.datetime.plus]</a></div>
 <p><code>+</code> takes a <a href="classes/timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> and answers a new instance,

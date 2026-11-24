@@ -1438,6 +1438,48 @@ d~addDays =&gt; 93.901
 d~addDays(1, 2) =&gt; 93.902
 d~addMonths(1) =&gt; 97.1
 </code></pre>
+<div class="rule" id="r-class.datetime.add.reads"><a href="#r-class.datetime.add.reads">[class.datetime.add.reads]</a></div>
+<p><code>addMicroseconds</code> and <code>addYears</code> first read the argument for its form. An
+unreadable value at that point raises <code>88.902</code> or <code>88.903</code>, respectively. If
+that check succeeds, the method reads the argument again for the addition.
+The addition uses the second value and raises <code>41.1</code> if that value has no
+usable number.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 1, 1, 0)
+do method over .array~of('addMicroseconds', 'addYears')
+  call probe method, 'first'
+  call probe method, 'second'
+  call probe method, '2'
+end
+exit
+probe: procedure expose d
+  use arg method, answer
+  amount = .changing~new(answer)
+  signal on syntax name bad
+  say method answer d~send(method, amount)~isoDate amount~reads
+  return
+bad: say method answer condition('o')~code amount~reads
+  return
+::class changing
+::attribute reads get
+::method init
+  expose answer reads
+  use arg answer
+  reads = 0
+::method string
+  expose answer reads
+  reads += 1
+  if answer = 'first' then return .object~new
+  if reads = 1 then return '1'
+  if answer = 'second' then return .object~new
+  return answer
+</code></pre>
+<pre><code class="language-output">addMicroseconds first 88.902 1
+addMicroseconds second 41.1 2
+addMicroseconds 2 2017-01-01T00:00:00.000002 2
+addYears first 88.903 1
+addYears second 41.1 2
+addYears 2 2019-01-01T00:00:00.000000 2
+</code></pre>
 <div class="rule" id="r-class.datetime.plus"><a href="#r-class.datetime.plus">[class.datetime.plus]</a></div>
 <p><code>+</code> takes a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> and answers a new instance,
 of the class of the receiver, that is the receiver moved forward by the span
