@@ -607,14 +607,16 @@ They set the stem <code>host</code>: its field <code>name</code> to the official
 <code>addr</code> to its address in dotted form, <code>addrtype</code> to <code>AF_INET</code>, and <code>alias.0</code> to the number of
 its other names, followed by the names in <code>alias.1</code> and on. A host that is given by
 an address in dotted form is its own name. <code>SockGetHostName()</code> answers the name
-of this host and <code>SockGetHostId()</code> its address in dotted form.</p>
+of this host. <code>SockGetHostId()</code> answers the first IPv4 address outside the
+loopback range in interface-list order, leaving the last IPv4 address out
+of the search. If the list is available and no address qualifies, it raises
+<code>SYNTAX 40.1</code>. If the system cannot read the interface list, it answers
+<code>0.0.0.0</code>.</p>
 <pre><code class="language-rexx">say SockGetHostByName('127.0.0.1', 'h.') h.name h.addr h.addrtype h.alias.0
 say SockGetHostByAddr('127.0.0.1', 'k.') k.addr k.addrtype
 say SockGetHostByAddr('127.0.0.1', 'k.', 2)
 say SockGetHostByAddr('x', 'k.')
 say (length(SockGetHostName()) &gt; 0)
-parse value SockGetHostId() with p1 '.' p2 '.' p3 '.' p4
-say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 ::requires 'rxsock' library
 </code></pre>
 <pre><code class="language-output">1 127.0.0.1 127.0.0.1 AF_INET 0
@@ -622,7 +624,6 @@ say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 1
 0
 1
-1 1 1 1
 </code></pre>
 
                     </main>
