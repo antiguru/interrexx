@@ -55,6 +55,10 @@ hazard is not this program; the rule stands.
 
 ## 5. One clause queuing the same `CALL ON` condition twice
 
+Dropped at r13532 (SF #2084, r13365): prints `h1 2`, `h1 2`, `after 2`, rc 0, 3 of 3 from fresh
+directories on an r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`.
+The measurement at r13346 follows.
+
     call on user c1 name h1
     zr = ra() + ra()
     say 'after' zr
@@ -162,6 +166,10 @@ whether an interpreter should detect that no other activity can ever satisfy a
 particular wait is a design question not put to the maintainers.
 
 ## 8. A metaclass whose `NEW` answers something that is not a class
+
+Dropped at r13532 (SF #2164, r13471): Error 99.927 rc 157, 3 of 3 from fresh directories on an
+r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at
+r13346 follows.
 
     say .object~subclass("k", .MyMeta)~id
 
@@ -356,6 +364,10 @@ rather than a verdict.
 
 `Stem~index` and `Stem~hasItem` sent with no argument
 
+Dropped at r13532 (SF #2143, r13393): Error 93.903 rc 163, 3 of 3 from fresh directories on an
+r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. `hasItem` was not
+run again. The measurement at r13346 follows.
+
     s = .Stem~new
     s['k1'] = 'v1'
     say s~index
@@ -390,6 +402,10 @@ cannot answer for them.
 --------------------------------------------------------------------------
 
 `List~removeItem`, `~hasItem` or `~index` on a list holding an empty entry
+
+Dropped at r13532 (SF #2144, r13396): the `insert(, 0)` raises Error 93.903 rc 163, so the empty
+entry is never made, 3 of 3 from fresh directories on an r13532 build under `memcap 4G` and `timeout
+20`, not the wrapper's `ulimit -v`. The measurement at r13346 follows.
 
     l = .List~of('a', 'c')
     l~insert(, 0)
@@ -731,6 +747,10 @@ ticket.
 
 ## 22. `~result` re-raising a started message's condition whose TRACEBACK holds a non-string
 
+Dropped at r13532 (SF #2148, r13422): Error 42.3 rc 214, the started message's own error, 3 of 3
+from fresh directories on an r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's
+`ulimit -v`. The measurement at r13346 follows.
+
     m = .t~new~start('boom')
     m~wait
     call SysSleep 0.3
@@ -892,6 +912,10 @@ upstream ticket.
 
 ## 29. GUARD WHEN on a compound tail set by another method
 
+Dropped at r13532 (SF #2167, r13483): prints `woke 1`, rc 0, 3 of 3 from fresh directories on an
+r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at
+r13346 follows.
+
     o = .t~new
     m = o~start('waitit')
     do until o~ready == 1; end
@@ -915,6 +939,10 @@ a stem `[]=`. The shape of entry 7. This crate wakes the waiter and prints `woke
 ticket.
 
 ## 30. A method source whose `MAKEARRAY` answers a string
+
+Dropped at r13532 (SF #2150, r13426): Error 93.961 rc 163, 3 of 3 from fresh directories on an
+r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at
+r13346 follows.
 
     m = .method~new('m', .ba~new)
     ::class ba
@@ -942,6 +970,11 @@ of `LINEIN` to a string unchecked). This crate reads an absent answer as the nul
 upstream ticket.
 
 ## 32. A `.DebugInput` whose `LINEIN` itself runs under interactive debug
+
+Dropped at r13532 (SF #2162, r13464): no crash. The pauses inside `LINEIN` are skipped, and the
+program prints `typed` at every pause until it is killed (rc 124 at the timeout), because its
+`.DebugInput` answers a command each time, 3 of 3 from fresh directories on an r13532 build under
+`memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at r13346 follows.
 
     .local~debuginput = .o~new
     trace ?a
@@ -1012,6 +1045,10 @@ content: the table under entry 43 holds it, measured on this program and on that
 raises 98.913 for any answer that is not a single-dimensional array. No upstream ticket.
 
 ## 35. `~defineMethods` over an object whose `SUPPLIER` answers a string
+
+Dropped at r13532 (SF #2152, r13431): Error 98.994 rc 158, 3 of 3 from fresh directories on an
+r13532 build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at
+r13346 follows.
 
     s = .s~new
     .k~defineMethods(s); say .k~new~m
@@ -1259,6 +1296,10 @@ not implemented` (rc 120), and answers on Set (`0`, rc 0). No upstream ticket.
 
 ## 51. A `.TRACEOUTPUT` destination with no `LINEOUT`, the failure untrapped
 
+Dropped at r13532 (SF #2149, r13424): the trace lines on stdout, then Error 97.1 rc 159, and neither
+`routine end` nor `not reached`, 3 of 3 from fresh directories on an r13532 build under `memcap 4G`
+and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at r13346 follows.
+
     call r
     say 'not reached'
     ::routine r
@@ -1333,6 +1374,10 @@ the halted activity, prints `result error 4.1` and `main lines 1`, rc 0. No upst
 
 ## 54. A security manager's STREAM replacement that does not support the Stream methods
 
+Dropped at r13532 (SF #2161, r13462): prints `97.1`, then Error 97.1 rc 159 at exit, the file not
+created, 3 of 3 from fresh directories on an r13532 build under `memcap 4G` and `timeout 20`, not
+the wrapper's `ulimit -v`. The measurement at r13346 follows.
+
     mgr = .Mgr~new
     r = .Routine~new("", "signal on syntax; call lineout 'secret.txt', 'written'; return 'wrote'; syntax: return condition('o')~code")
     r~setSecurityManager(mgr)
@@ -1350,6 +1395,10 @@ the stream target, so this crate answers the same 97.1, leaves the file alone an
 (`tests/security_replacements.rs`). No upstream ticket.
 
 ## 55. An untrapped `loadPackage` whose REQUIRES `NAME` the security manager replaces with `.object~new`
+
+Dropped at r13532 (SF #2160, r13459): Error 3.1 rc 253, 3 of 3 from fresh directories on an r13532
+build under `memcap 4G` and `timeout 20`, not the wrapper's `ulimit -v`. The measurement at r13346
+follows.
 
     mgr = .Mgr~new
     r = .Routine~new("", "return .Package~new('', '')~loadPackage('present.cls')~name")

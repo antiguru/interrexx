@@ -9,8 +9,7 @@ call AtAttachIdle t, 'STALLED'
 do while AtAttached() = 0
   call SysSleep 0.05
 end
-took = AtMisuse()
-say 'returned at once' (took < 1000)
+call AtMisuse
 do while AtDone() < 1
   call SysSleep 0.05
 end

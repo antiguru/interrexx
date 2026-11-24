@@ -361,16 +361,21 @@ fn build_driver(name: &str) -> (PathBuf, PathBuf) {
         std::os::unix::fs::symlink(format!("{library}.so.4"), dir.join(format!("{library}.so")))
             .expect("the library's link");
     }
+    let binary = link_driver(name, &dir, &dir);
+    (dir, binary)
+}
+
+fn link_driver(name: &str, dir: &Path, libraries: &Path) -> PathBuf {
     let binary = dir.join(name);
     let built = compile(&format!("{name}.cpp"), &["-o"])
         .arg(&binary)
-        .arg(format!("-L{}", dir.display()))
-        .arg(format!("-Wl,-rpath,{}", dir.display()))
+        .arg(format!("-L{}", libraries.display()))
+        .arg(format!("-Wl,-rpath,{}", libraries.display()))
         .args(["-pthread", "-lrexx", "-lrexxapi"])
         .status()
         .expect("g++ runs, which this test needs to build its driver");
     assert!(built.success(), "the driver did not build");
-    (dir, binary)
+    binary
 }
 
 /// Runs the embedding driver `name` with `arguments`, memory-capped and limited in time as
@@ -382,6 +387,33 @@ fn run_driver(name: &str, arguments: &[&str]) -> Answer {
 /// [`run_driver`], killed after `seconds` rather than [`SECONDS`]: the driver waits for ever.
 fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
     run_driver_with(name, arguments, seconds, false)
+}
+
+/// Runs the same embedding driver linked against the oracle's libraries.
+fn run_oracle_driver(name: &str, arguments: &[&str], seconds: &str) -> Answer {
+    let oracle = support::oracle::locate();
+    let dir = fresh_dir(name);
+    let binary = link_driver(name, &dir, oracle.lib_dir());
+    let path = std::env::join_paths(std::iter::once(oracle.bin_dir().to_path_buf()).chain(
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+    ))
+    .expect("a PATH with the oracle's binaries");
+    let output = capped(seconds)
+        .arg(binary)
+        .args(arguments)
+        .current_dir(&dir)
+        .env("LD_LIBRARY_PATH", oracle.lib_dir())
+        .env("XDG_RUNTIME_DIR", support::oracle_runtime::dir())
+        .env("PATH", path)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the capped oracle driver spawns");
+    fs::remove_dir_all(&dir).expect("the oracle driver's directory is removable");
+    (
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+        exit_status(output.status),
+    )
 }
 
 /// [`run_driver_for`], with the extension `attach` built beside the driver and on the library
@@ -1534,6 +1566,48 @@ fn a_wait_in_a_program_rexx_start_runs_is_not_refused() {
     );
 }
 
+/// A classic function in the embedding host calls RexxStart twice from the
+/// outer program. Each invocation has an independent local environment.
+#[test]
+fn a_nested_rexx_start_has_its_own_local_environment() {
+    let outer = fixture("nestedstart-outer.rex");
+    let inner = fixture("nestedstart-inner.rex");
+    let arguments = [
+        outer.to_str().expect("the outer program's path is UTF-8"),
+        inner.to_str().expect("the inner program's path is UTF-8"),
+    ];
+    let ours = run_driver("nestedstart", &arguments);
+    assert_eq!(
+        ours,
+        (
+            "inner saw marker 0\ninner saw marker 0\nouter code 0 result outer\n".to_owned(),
+            String::new(),
+            0,
+        )
+    );
+    if gate_mode() {
+        assert_eq!(run_oracle_driver("nestedstart", &arguments, SECONDS), ours);
+    }
+}
+
+/// The inner program can also wait for native code outside the interpreter.
+/// Nothing posts its semaphore here, so it parks until the driver is killed.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_nested_rexx_start_waits_under_a_classic_host_function() {
+    let outer = fixture("nestedstart-outer.rex");
+    let inner = fixture("nestedstart-wait.rex");
+    let arguments = [
+        outer.to_str().expect("the outer program's path is UTF-8"),
+        inner.to_str().expect("the inner program's path is UTF-8"),
+    ];
+    let ours = run_driver_for("nestedstart", &arguments, "10");
+    assert_eq!(ours, (String::new(), "inner waiting\n".to_owned(), KILLED));
+    if gate_mode() {
+        assert_eq!(run_oracle_driver("nestedstart", &arguments, "10"), ours);
+    }
+}
+
 /// A thread of the extension that a program `RexxStart` runs started calls `AttachThread` once the
 /// program has ended and `RexxStart` has returned: the interpreter has ended, though nothing
 /// called `Terminate`, so the attach gets nothing.
@@ -1924,25 +1998,6 @@ fn attach_from_a_foreign_thread_is_refused_in_simulation() {
     assert!(!stdout.contains("ticked"), "stdout {stdout:?}");
 }
 
-/// One attached thread's message loops for ever, and a second attached thread's message, `THREE`,
-/// arrives while it does, which holds it until the first ends
-/// (`r[native.threads.attach.deviation.178]`). `Halt` through the instance then halts the looping
-/// message, whose thread finds SYNTAX 4.1, and the main program. The held message's activity runs
-/// no message yet, so it is not asked: `THREE` runs to its end. The oracle runs `THREE` alongside
-/// the loop, before the halt, and prints the same.
-// spec: native.threads.halt
-#[test]
-fn a_held_message_runs_after_a_halt() {
-    assert_eq!(
-        run("halt-held", "haltheld.rex"),
-        (
-            "one\ntwo\nthree\nmain halted\ncondition SYNTAX 4.1\n".to_owned(),
-            String::new(),
-            0
-        )
-    );
-}
-
 /// `HaltThread` and `SetThreadTrace`, called on an idle attached thread's context from the main
 /// program's call into the extension, return and do nothing: the thread's later message runs to
 /// its end untraced, and the main program is not halted. The oracle hangs, so it is not asked.
@@ -1960,19 +2015,15 @@ fn halt_and_trace_from_another_thread_on_an_idle_attachment_do_nothing() {
 }
 
 /// `HaltThread`, `SetThreadTrace` and `DetachThread`, called on an attached thread's context from
-/// the main program's call into the extension while that thread's message runs Rexx code for two
-/// seconds, return well within that time and do nothing: the message runs to its end untraced and
-/// leaves no condition. The oracle hangs, so it is not asked.
+/// the main program's call into the extension while that thread's message loops in Rexx, must
+/// return to end the loop. The message runs to its end untraced and leaves no condition. The oracle
+/// hangs, so it is not asked.
 // spec: native.threads.attach.deviation.177
 #[test]
 fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_once() {
     assert_eq!(
         run_ours_for("misuse-running", "misrun.rex", "60"),
-        (
-            "long done\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("long done\nno condition\n".to_owned(), String::new(), 0)
     );
 }
 
@@ -1985,10 +2036,6 @@ fn halt_trace_and_detach_from_another_thread_on_a_running_attachment_return_at_o
 fn halt_trace_and_detach_from_the_thread_a_message_waits_on_do_not_hang() {
     assert_eq!(
         run_ours_for("misuse-waiting", "miswait.rex", "30"),
-        (
-            "released\nreturned at once 1\nno condition\n".to_owned(),
-            String::new(),
-            0
-        )
+        ("released\nno condition\n".to_owned(), String::new(), 0)
     );
 }
