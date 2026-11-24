@@ -74,30 +74,23 @@
 //   left, `condition NAME CODE` or `no condition`, then clears it.
 // * `AtAttachIdle(target, name)` attaches and stays idle until `AtOpen` is called, then does what
 //   `AtSendReporting` does. `AtAttached` answers 1 once that thread has attached, and 0 before.
-// * `AtAttachHeld(target, name)` attaches and stays idle until `AtHaltHeld` lets it go on, then
-//   sends `name` without reporting.
 // * `AtHalt(milliseconds)` blocks for `milliseconds`, then calls `Halt` through the instance the
 //   call's thread context links, and answers 1. `AtTrace(on)` calls `SetTrace` through it.
 // * `AtStart()`, called by a method, notes that the method has started. `AtHaltStarted()` opens
 //   what `AtOpen` opens, blocks until a method has called `AtStart`, then does what `AtHalt(0)`
 //   does.
-// * `AtHaltHeld()` opens what `AtOpen` opens and blocks until a method has called `AtStart`. Then
-//   it lets the thread `AtAttachHeld` started go on, blocks until that thread is about to send,
-//   and a further 300 milliseconds, and then does what `AtHalt(0)` does.
 // * `AtHaltIdle(milliseconds)` blocks for `milliseconds`, then calls `HaltThread`, and
 //   `AtTraceIdle(on)` calls `SetThreadTrace`, on the thread context of the thread `AtAttachIdle`
 //   or `AtSendReporting` started, which has attached, from the thread running the call.
-// * `AtMisuse()` opens what `AtOpen` opens and blocks until a method has called `AtStart`. Then,
+// * `AtMisuse()` opens what `AtOpen` opens and blocks until a method signals readiness. Then,
 //   from the thread running the call, it calls `HaltThread`, `SetThreadTrace(1)` and
-//   `DetachThread` on the thread context `AtHaltIdle` uses, lets `AtAwaitRelease` return, and
-//   answers how many milliseconds the three calls took.
-// * `AtAwaitRelease()`, called by a method, blocks until `AtMisuse` lets it return.
+//   `DetachThread` on the thread context `AtHaltIdle` uses, then sets the release flag.
+// * `AtReleased()` reads the flag. `AtAwaitRelease()` signals readiness and waits for the flag.
 #include <atomic>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 #include "oorexxapi.h"
 
@@ -117,8 +110,7 @@ enum Job
     JOIN,
     NAMED,
     REPORTED,
-    IDLE_REPORTED,
-    HELD
+    IDLE_REPORTED
 };
 
 struct Thread
@@ -140,13 +132,9 @@ static char report[128] = "";
 // attached, and whether `AtOpen` has let it send.
 static std::atomic<RexxThreadContext *> idle_context(NULL);
 static std::atomic<int> gate_open(0);
-// Whether a method has called `AtStart`, and whether `AtMisuse` has let `AtAwaitRelease` return.
+// Whether a method is ready, and whether `AtMisuse` has finished all three calls.
 static std::atomic<int> started(0);
 static std::atomic<int> released(0);
-// Whether `AtHaltHeld` has let the thread `AtAttachHeld` started go on, and whether that thread
-// is about to send.
-static std::atomic<int> held_open(0);
-static std::atomic<int> held_sending(0);
 
 // Counts a thread as finished and wakes `AtAwaitDone`.
 static void finish(void)
@@ -241,14 +229,6 @@ static void run(RexxThreadContext *thread, Thread *self)
         case REPORTED:
             idle_context = thread;
             send_reporting(thread, self->target, self->name);
-            break;
-        case HELD:
-            while (held_open == 0)
-            {
-                usleep(1000);
-            }
-            held_sending = 1;
-            thread->SendMessage0(self->target, self->name);
             break;
         case IDLE_REPORTED:
             idle_context = thread;
@@ -530,11 +510,6 @@ RexxRoutine2(logical_t, AtAttachIdle, RexxObjectPtr, target, CSTRING, name)
     return start_with(context, target, IDLE_REPORTED, 0, body, name);
 }
 
-RexxRoutine2(logical_t, AtAttachHeld, RexxObjectPtr, target, CSTRING, name)
-{
-    return start_with(context, target, HELD, 0, body, name);
-}
-
 RexxRoutine0(int, AtAttached)
 {
     return idle_context != NULL ? 1 : 0;
@@ -582,38 +557,26 @@ RexxRoutine0(int, AtHaltStarted)
     return 1;
 }
 
-RexxRoutine0(int, AtHaltHeld)
-{
-    gate_open = 1;
-    await_start();
-    held_open = 1;
-    while (held_sending == 0)
-    {
-        usleep(1000);
-    }
-    usleep(300000);
-    context->threadContext->instance->Halt();
-    return 1;
-}
-
-RexxRoutine0(wholenumber_t, AtMisuse)
+RexxRoutine0(int, AtMisuse)
 {
     gate_open = 1;
     await_start();
     RexxThreadContext *attached = idle_context.load();
-    struct timespec before, after;
-    clock_gettime(CLOCK_MONOTONIC, &before);
     attached->HaltThread();
     attached->SetThreadTrace(1);
     attached->DetachThread();
-    clock_gettime(CLOCK_MONOTONIC, &after);
     released = 1;
-    return (wholenumber_t)((after.tv_sec - before.tv_sec) * 1000 +
-                           (after.tv_nsec - before.tv_nsec) / 1000000);
+    return 1;
+}
+
+RexxRoutine0(int, AtReleased)
+{
+    return released;
 }
 
 RexxRoutine0(int, AtAwaitRelease)
 {
+    started = 1;
     while (released == 0)
     {
         usleep(1000);
@@ -1082,11 +1045,10 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtTrace, AtTrace),
     REXX_TYPED_ROUTINE(AtHaltIdle, AtHaltIdle),
     REXX_TYPED_ROUTINE(AtTraceIdle, AtTraceIdle),
-    REXX_TYPED_ROUTINE(AtAttachHeld, AtAttachHeld),
     REXX_TYPED_ROUTINE(AtStart, AtStart),
     REXX_TYPED_ROUTINE(AtHaltStarted, AtHaltStarted),
-    REXX_TYPED_ROUTINE(AtHaltHeld, AtHaltHeld),
     REXX_TYPED_ROUTINE(AtMisuse, AtMisuse),
+    REXX_TYPED_ROUTINE(AtReleased, AtReleased),
     REXX_TYPED_ROUTINE(AtAwaitRelease, AtAwaitRelease),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtAwaitDone, AtAwaitDone),
