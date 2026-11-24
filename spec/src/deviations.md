@@ -609,8 +609,11 @@ The first SEEK of a transient stream that nothing has opened raises
 
 ## 81. A stem's STRING method
 
-A stem's `STRING` sends `STRING` to its default value. ooRexx answers the
-default's default name. A trace value line still shows the default's name.
+A stem's [`STRING`](r:class.stem.deviation.81) sends `STRING` to its default
+value. SAY uses that answer when it falls back to the stem's `STRING`.
+ooRexx uses the default's name in both cases. SAY on an unset compound
+variable converts the default object itself on both interpreters. A trace
+value line shows the default's name.
 
 ## 82. Closing LINEOUT on a FIFO
 

@@ -2,7 +2,7 @@
 element: "Stem"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Stem Class; Builtin Classes > Collection Classes > Stem Class > new (Class Method); Builtin Classes > Collection Classes > Stem Class > []; Builtin Classes > Collection Classes > Stem Class > []=; Builtin Classes > Collection Classes > Stem Class > allIndexes; Builtin Classes > Collection Classes > Stem Class > allItems; Builtin Classes > Collection Classes > Stem Class > at; Builtin Classes > Collection Classes > Stem Class > empty; Builtin Classes > Collection Classes > Stem Class > hasIndex; Builtin Classes > Collection Classes > Stem Class > hasItem; Builtin Classes > Collection Classes > Stem Class > index; Builtin Classes > Collection Classes > Stem Class > isEmpty; Builtin Classes > Collection Classes > Stem Class > items; Builtin Classes > Collection Classes > Stem Class > makeArray; Builtin Classes > Collection Classes > Stem Class > put; Builtin Classes > Collection Classes > Stem Class > remove; Builtin Classes > Collection Classes > Stem Class > removeItem; Builtin Classes > Collection Classes > Stem Class > request; Builtin Classes > Collection Classes > Stem Class > supplier; Builtin Classes > Collection Classes > Stem Class > toDirectory; Builtin Classes > Collection Classes > Stem Class > unknown"
-deviations: [1, 68, 109, 118, 124]
+deviations: [1, 68, 81, 109, 118, 124]
 ---
 
 # Stem
@@ -807,6 +807,8 @@ The string value of a stem is the string value of its default, and its name
 when it has no default ([the stem rule](r:expr.variables.stem)); `string` and
 `say` use it, and a stem has no `makeString` of its own, so `makeString` is
 passed on by [the unknown rule](r:class.stem.unknown) with the same answer.
+`STRING` and the fallback conversion in SAY follow [Deviation
+81](r:class.stem.deviation.81) for a default with its own `STRING` method.
 `objectName` is that of `Object`, `a Stem`, and is not the string value.
 
 ```rexx
@@ -1061,6 +1063,33 @@ say s~length s~foo(1, 2)
 
 ```output
 asked for LENGTH 0 asked for FOO 2
+```
+
+r[class.stem.deviation.81]
+When a stem's default has its own `STRING` method, the stem's `STRING`
+sends it to the default. SAY uses that answer when it falls back to the
+stem's `STRING`. ooRexx uses the default's name in both cases. An unset
+compound variable reads the default object itself, so SAY sends that
+object's `STRING` on both interpreters. See [Deviation 81](../deviations.md).
+
+```rexx
+sample. = .example~new
+say sample.~string
+say sample.
+say sample.1
+::class example
+::method string
+  say 'STRING ran'
+  return 'rendered'
+```
+
+```output
+STRING ran
+rendered
+STRING ran
+rendered
+STRING ran
+rendered
 ```
 
 r[class.stem.deviation.109]
