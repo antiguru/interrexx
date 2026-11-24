@@ -399,7 +399,7 @@ program can reach raises Error 5, with no subcode. The one refusal that stays a 
 `ValidOps`'s check for a register operand outside the chunk's register count: no program fills
 that, and it firing means the compiler is wrong.
 
-**Where Error 5 is raised.** This is the proposed answer, which the owner has to confirm. A body
+**Where Error 5 is raised.** A body
 is compiled whole when it is first entered under a trace setting: `run_activation` takes the
 body's chunk before it runs the first clause. A refusal turned into a condition at that point
 would be raised before the body's own `SIGNAL ON SYNTAX` is set, and would refuse a body for a
@@ -574,13 +574,12 @@ parent or position links disagree is refused like any image that does not fit. T
 reads through checked indices only, so such an arena cannot make it panic.
 `program_from_image` decodes every body before it answers, so a library caller gets `None` for
 an inconsistent arena and parses its text. The built-in image leaves each body encoded until it
-is first read (`Body`), and the check runs then, as part of that decode, before the compiler or
-any scan sees the body. A built-in body that fails it is a defect of the build, which wrote the
-image from a validated parse, and panics, as a built-in body that does not decode does today. The
-test that reads the built-in image through `program_from_image`
+is first read (`Body`), and that decode skips the validator, as it already skips the text
+fingerprint for a built-in image: the image is the build's own output, written from a validated
+parse, so a run pays nothing for a check whose failure would be a defect of the build. The test
+that reads the built-in image through `program_from_image`
 (`the_librarys_embedded_image_reads_back_as_it_parses`) decodes, and so validates, every body,
-so such a defect fails in CI rather than in a program. The check is one loop over the body, as
-the decode is.
+which is where such a defect fails: in CI, not in a program.
 
 ## What it enables
 
@@ -713,7 +712,7 @@ one stack.
    now compiles and can pass the register width (see Risks), and so does every other width
    refusal of the compiler, so that no step leaves a loud refusal a program can reach. A width of
    one clause raises when that clause runs and a width of the body when the body is entered (see
-   [IR compilation](#ir-compilation)), which needs the owner's confirmation before this step.
+   [IR compilation](#ir-compilation)).
 3. **The scans.** `note`, `guard_exposes`, `calls_nothing`, and the remaining shallow matches;
    `note` and `guard_exposes` read a variable reference's symbol from its payload.
 4. **Retiring the evaluator.** Ops for `QualifiedCall`, `Logical` lists and cascade message
@@ -815,7 +814,9 @@ on main and fails under the mistake named with it.
   `say - (>a~value)` prints `-3`; with `a = 'abc'`, `say - >a[1]` raises 41.1;
   `do i = 1 to - >a~for` and `do i = 1 to >a~for` are 19.909 at translation, and
   `do i = 1 to b~for` sends `FOR`. A parser shape test pins `(- >a)~value` and `(- >a)[1]`. They
-  fail on a loop that applies the postfix rule to a reference as to any operand.
+  fail on a loop that applies the postfix rule to a reference as to any operand. The spec states
+  this parse as a rule of its own in `spec/src/expressions/terms.md`, with these cases as its
+  examples, so the spec run checks it too.
 * **Message term mode starts at an atom.** A clause `-2~abs` is a command and `(-2)~abs` a
   message instruction: an instruction-kind test pins each, and a golden pins their ops (a value
   send, the prefix and `ExecWith` for the first; the prefix and a clause send for the second).
