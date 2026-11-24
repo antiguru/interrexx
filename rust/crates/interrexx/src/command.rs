@@ -106,6 +106,9 @@ pub(crate) struct CommandOutcome {
 pub(crate) struct HandlerCondition {
     pub(crate) name: Vec<u8>,
     pub(crate) description: Option<Vec<u8>>,
+    /// A Rexx handler's description converted to `.nil`, carried as the
+    /// object rather than its rendering when a trap takes the condition.
+    pub(crate) description_is_nil: bool,
     pub(crate) additional: Option<ObjRef>,
     pub(crate) result: Option<ObjRef>,
 }
@@ -1103,6 +1106,7 @@ impl Interp {
                 Some(Box::new(HandlerCondition {
                     name: held.condition.to_ascii_uppercase().into_bytes(),
                     description: held.description,
+                    description_is_nil: false,
                     additional: handled.additional,
                     result: handled.result,
                 }))
@@ -1642,11 +1646,13 @@ impl Interp {
             None if command_status => Some(ObjRef::NIL),
             None => None,
         };
+        let description = held.description_is_nil.then_some(ObjRef::NIL);
         match self.trap_for(name) {
             Some(trap) if trap.call => {
                 self.activity.pending_rc = rc;
                 self.activity.pending_additional = held.additional;
                 self.activity.pending_result = held.result;
+                self.activity.pending_description = description;
                 let object = self.build_condition_object(&raised, Some(true))?;
                 self.activity.pending_traps.push_back(crate::PendingTrap {
                     condition: name.into(),
@@ -1665,6 +1671,7 @@ impl Interp {
                 self.activity.pending_rc = rc;
                 self.activity.pending_additional = held.additional;
                 self.activity.pending_result = held.result;
+                self.activity.pending_description = description;
                 Err(raised.into())
             }
             None if name == b"FAILURE" => self.raise_handler_condition(held, b"ERROR"),
