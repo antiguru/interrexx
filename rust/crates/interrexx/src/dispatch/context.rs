@@ -564,6 +564,7 @@ fn context_stack_frames(
             interp.roots.activity_mut().push_temp(object);
             slots.push(Some(object));
         }
+        slots.extend(owner_live_frames(interp)?.into_iter().map(Some));
         let array = interp.alloc_charged(
             BehaviourId::ARRAY,
             Body::Array {
@@ -594,6 +595,29 @@ pub(crate) enum LiveLevel {
     /// This row of [`Activity::native_tails`]: a sent primitive method that
     /// entered the activation listed before it.
     Entering(usize),
+}
+
+/// The frames of the code whose trace line the running activity delivers,
+/// innermost first, each rooted on the running activity; none where it
+/// delivers none (`r[instr.trace.delivery.context]`).
+pub(crate) fn owner_live_frames(interp: &mut Interp) -> Result<Vec<ObjRef>, Failure> {
+    let Some(owner) = interp.delivery_owner() else {
+        return Ok(Vec::new());
+    };
+    let frames = interp.with_idle_activity(owner, |interp| {
+        let levels = live_levels(interp);
+        let mut frames = Vec::with_capacity(levels.len());
+        for level in levels {
+            let frame = build_live_frame(interp, level)?;
+            interp.roots.activity_mut().push_temp(frame);
+            frames.push(frame);
+        }
+        Ok::<_, Failure>(frames)
+    })?;
+    for &frame in &frames {
+        interp.roots.activity_mut().push_temp(frame);
+    }
+    Ok(frames)
 }
 
 /// Every level of the running stack, innermost first: before each

@@ -52,8 +52,8 @@ fn add_internal_level(
 /// A call's target as it stands when its arguments are about to run.
 #[derive(Clone, Copy)]
 pub(crate) enum CallResolution<'a> {
-    /// Decided before the arguments: a label or a builtin, a namespace-qualified
-    /// routine, or a routine-search answer a call site keeps.
+    /// Decided before the arguments: a label or a builtin, or a routine-search
+    /// answer a call site keeps.
     Settled(Resolved),
     /// Searched for once the arguments have run, as an external call's are: what
     /// `site` keeps by then, or a search whose answer `site` keeps once the call
@@ -61,6 +61,8 @@ pub(crate) enum CallResolution<'a> {
     AfterArguments {
         site: Option<crate::ir::CallSiteSlot<'a>>,
     },
+    /// Look up the namespace and its routine after the arguments have run.
+    Qualified { namespace: &'a [u8] },
 }
 
 /// What a call site keeps once the call through it that found `resolved` under
@@ -507,6 +509,11 @@ impl Interp {
         let site = match resolution {
             CallResolution::Settled(resolved) => return Ok((resolved, None)),
             CallResolution::AfterArguments { site } => site,
+            CallResolution::Qualified { namespace } => {
+                return self
+                    .resolve_qualified_call(namespace, name)
+                    .map(|resolved| (resolved, None));
+            }
         };
         let generation = self.routine_generation;
         if let Some(site) = site
@@ -1127,8 +1134,7 @@ impl Interp {
         // `Raised::insufficient_stack` already existed (`error.rs`); the same
         // 11.1 is answered at rc 245 for the same program.
         let probe = 0u8;
-        if self.activation_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe)
-        {
+        if self.nesting_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe) {
             return Err(Raised::insufficient_stack().into());
         }
 
@@ -1669,6 +1675,22 @@ impl Interp {
         failure
     }
 
+    /// Converts and traces the computed target before evaluating arguments.
+    /// Its verbatim text searches labels and then the regular routine order
+    /// (r[instr.call.expr], r[instr.call.search]).
+    pub(super) fn exec_dynamic_call(
+        &mut self,
+        code: &Code<'_>,
+        value: ObjRef,
+        args: &[Option<Expr>],
+    ) -> Result<Flow, Failure> {
+        self.roots.activity_mut().push_temp(value);
+        let value = self.required_string_value(value)?;
+        let name = self.to_text(value).to_vec();
+        self.trace_result(self.activity.clause_state.current_value_indent, &name);
+        self.exec_call(code, &name, true, args)
+    }
+
     /// Runs one named `CALL`: `resolve_fixed_call`, then
     /// [`Interp::invoke_named_call`].
     pub(super) fn exec_call(
@@ -1738,7 +1760,9 @@ impl Interp {
                 // The caller's own `>>>`, at the `CALL` clause's indent --
                 // `base_indent`, saved before the callee overwrote
                 // `current_value_indent` with its own clauses'.
-                if let Some(rendered) = self.result_text(value)? {
+                if !self.activity.clause_state.instance_trace_started
+                    && let Some(rendered) = self.result_text(value)?
+                {
                     self.trace_result(base_indent, &rendered);
                 }
                 self.set_variable(frame, slot, value);

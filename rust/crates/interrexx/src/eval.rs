@@ -599,12 +599,9 @@ impl Interp {
                 name,
                 args,
             } => {
-                let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
-                let name = code.symbols.name(*name).as_bytes().to_vec();
-                let package = self.running_program().ok_or_else(Loud::missing_body)?;
-                let resolution = self.namespace_routine(package, &namespace, &name);
-                let resolved = self.resolved_after_arguments(code, resolution, args)?;
-                self.eval_call_resolved(code, CallResolution::Settled(resolved), &name, args)
+                let namespace = code.symbols.name(*namespace).as_bytes();
+                let name = code.symbols.name(*name).as_bytes();
+                self.eval_call_resolved(code, CallResolution::Qualified { namespace }, name, args)
             }
             other => Err(Loud::expression(other).into()),
         }
@@ -1804,11 +1801,7 @@ impl Interp {
         let mut holds = true;
         for item in items {
             let value = self.eval(code, item)?;
-            self.roots.activity_mut().push_temp(value);
-            let text = self.to_text(value).to_vec();
-            self.trace_result(indent, &text);
-            let item_holds = self.truth(value, Raised::logical_list_element)?;
-            if !item_holds {
+            if !self.logical_list_item(value, indent)? {
                 holds = false;
                 break;
             }
@@ -1817,6 +1810,19 @@ impl Interp {
         let result = logical(holds);
         self.roots.activity_mut().pop_frame(frame);
         Ok(result)
+    }
+
+    /// Roots and traces one comma-list element before its truth test.
+    #[inline]
+    pub(crate) fn logical_list_item(
+        &mut self,
+        value: ObjRef,
+        indent: usize,
+    ) -> Result<bool, Failure> {
+        self.roots.activity_mut().push_temp(value);
+        let text = self.to_text(value).to_vec();
+        self.trace_result(indent, &text);
+        self.truth(value, Raised::logical_list_element)
     }
 
     pub(crate) fn stack_span(&self) -> StackSpan {

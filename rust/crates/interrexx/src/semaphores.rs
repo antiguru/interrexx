@@ -340,6 +340,7 @@ impl Interp {
     /// zero, which never waits; a closed one is refused whatever the timeout.
     pub(crate) fn request_mutex(&mut self, object: ObjRef, immediate: bool) -> Request {
         let me = self.running_activity();
+        let delivers_for = self.delivery_owner();
         let semaphore = self
             .activities
             .semaphores
@@ -348,6 +349,14 @@ impl Interp {
             .or_default();
         if semaphore.closed {
             return Request::Refused;
+        }
+        // A trace delivery acquires again what the activity whose line it
+        // delivers holds (`r[instr.trace.delivery.mutex]`); the hold stays
+        // that activity's.
+        if semaphore.owner.is_some() && semaphore.owner == delivers_for {
+            semaphore.depth += 1;
+            semaphore.nest += 1;
+            return Request::Acquired;
         }
         if semaphore.owner == Some(me) || semaphore.depth == 0 {
             let taken = semaphore.depth == 0;
@@ -372,11 +381,16 @@ impl Interp {
     /// not by the running activity.
     pub(crate) fn release_mutex(&mut self, object: ObjRef) -> bool {
         let me = self.running_activity();
+        let delivers_for = self.delivery_owner();
         let key = SemaphoreKey::Object(object);
         let Some(semaphore) = self.activities.semaphores.table.get_mut(&key) else {
             return false;
         };
-        if semaphore.nest == 0 || semaphore.owner != Some(me) {
+        if semaphore.nest == 0
+            || !semaphore
+                .owner
+                .is_some_and(|owner| owner == me || Some(owner) == delivers_for)
+        {
             return false;
         }
         semaphore.nest -= 1;

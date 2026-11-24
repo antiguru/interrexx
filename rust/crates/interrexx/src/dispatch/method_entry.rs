@@ -41,8 +41,7 @@ impl Interp {
         // recursion, and it must become a reportable condition rather than a
         // native abort.
         let probe = 0u8;
-        if self.activation_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe)
-        {
+        if self.nesting_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe) {
             return Err(Raised::insufficient_stack().into());
         }
         let plan = self.plan_for(

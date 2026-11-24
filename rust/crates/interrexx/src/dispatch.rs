@@ -197,6 +197,7 @@ use construct::{
 
 // `Object`'s own methods, `run`/`send`/`start`, and the `Message` readers.
 mod object_protocol;
+pub(crate) use object_protocol::start_trace_delivery;
 use object_protocol::{
     ArrayArgument, array_argument, array_argument_object, decode_message_name, hash_value,
     invoke_executable, native_class, native_copy, native_default_name, native_has_method,
@@ -3933,7 +3934,7 @@ impl Interp {
             let opened = std::mem::take(&mut callee.streams);
             self.recycle_activation(callee);
             if let Some(opened) = opened.filter(|table| !table.is_empty()) {
-                self.close_opened_streams(opened.into_values());
+                self.close_opened_streams(opened.into_values().map(|entry| entry.object()));
             }
             return None;
         };

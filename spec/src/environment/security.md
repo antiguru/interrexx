@@ -882,6 +882,105 @@ governed: lines("envsec_tab.tmp")
   offered
 ```
 
+r[env.security.stream.close]
+A replacement still in the stream table is sent `CLOSE` with no arguments
+when the method or program that owns the table ends ([the stream lifetime
+rule](r:bif.index.stream.lifetime)). A routine that borrows its caller's
+table leaves that table open, including a replacement whose earlier
+`LINEOUT` raised a condition that the routine trapped. A missing `CLOSE`
+raises `SYNTAX 97.1`. A condition raised by `CLOSE` can be trapped in the
+owning method or program.
+The order of the close messages is unspecified. Every replacement is closed
+even if some closes fail, and the first failure is offered to the owner's traps.
+A close that fails can replace a method's outcome. If the program is
+already ending on an untrapped error, that error takes precedence over a
+close error during program cleanup.
+
+```rexx
+src = 'call lineout "envsec_cleanup.tmp", "a line"'
+r = .method~new('run', src)
+r~setSecurityManager(.manager~new(.recorded~new))
+worker = .worker~new(r)
+worker~run
+say 'method returned'
+
+localTrap = 'signal on syntax name caught; ' || src || '; return;' ,
+  'caught: say "method caught" condition("o")~code'
+r = .method~new('run', localTrap)
+r~setSecurityManager(.manager~new(.noClose~new))
+.worker~new(r)~run
+
+r = .method~new('run', src)
+r~setSecurityManager(.manager~new(.refused~new))
+call try .worker~new(r)
+
+r = .routine~new('run', src)
+r~setSecurityManager(.manager~new(.refused~new))
+r~call
+.local~closeCount = 0
+r = .routine~new('run', 'call lineout "envsec_cleanup_other.tmp", "a line"')
+r~setSecurityManager(.manager~new(.counted~new))
+r~call
+say 'routine returned'
+signal on syntax name caught
+exit
+caught:
+say 'program caught' condition('o')~code .local~closeCount
+exit
+try: procedure
+  use arg worker
+  signal on syntax name failed
+  worker~run
+  say 'unexpected return'
+  return
+failed:
+  say 'caller caught' condition('o')~code
+  return
+::class worker
+::method init
+  use arg code
+  self~setMethod('RUN', code)
+::class manager
+::method init
+  expose replacement
+  use arg replacement
+::method stream
+  expose replacement
+  use arg info
+  info~stream = replacement
+  return 1
+::class noClose
+::method lineOut
+  say 'write' arg(1)
+  return 0
+::class recorded subclass noClose
+::method close
+  say 'close with' arg() 'arguments'
+::class refused subclass noClose
+::method close
+  say 'close failed'
+  raise syntax 40.1
+::class counted subclass noClose
+::method close
+  .local~closeCount += 1
+```
+
+```output
+write a line
+close with 0 arguments
+method returned
+write a line
+method caught 97.1
+write a line
+close failed
+caller caught 40.1
+write a line
+write a line
+routine returned
+close failed
+program caught 40.1 1
+```
+
 r[env.security.standard]
 A stream function that uses a standard stream sends no checkpoint at all:
 neither `STREAM` nor `LOCAL`. This covers a function whose stream name is

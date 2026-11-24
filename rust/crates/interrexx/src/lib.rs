@@ -2845,7 +2845,7 @@ impl Interp {
         let nested = self.running_activation().is_some();
         let probe = 0u8;
         if nested
-            && (self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+            && (self.nesting_depth() >= crate::run::MAX_ACTIVATION_DEPTH
                 || self.stack_exhausted(&raw const probe))
         {
             return Err(Raised::insufficient_stack().into());
@@ -2947,7 +2947,7 @@ impl Interp {
         name: &[u8],
     ) -> Result<Option<ObjRef>, Failure> {
         let probe = 0u8;
-        if self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+        if self.nesting_depth() >= crate::run::MAX_ACTIVATION_DEPTH
             || self.stack_exhausted(&raw const probe)
         {
             return Err(Raised::insufficient_stack().into());
