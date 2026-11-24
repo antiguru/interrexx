@@ -989,11 +989,16 @@ start
 
 r[conc.locks.trace.deviation.14]
 The same holds for the destination of a trace line (an object set with
-`.traceoutput~destination`) whose guarded `LINEOUT` method waits for a change
-that only another activity can make: a delivery that holds a guard does not
-give the kernel to another activity, so such a wait is refused after the delivery
-has gone on for several seconds with another activity ready, and the program
-ends with exit code 120.
+`.traceoutput~destination`) whose guarded `LINEOUT` method waits inside a
+nested construct, such as a method that [`run`](r:class.object.run) runs, for
+a change that only another activity can make. A destination that waits
+directly in its `LINEOUT` lets the other activities run
+([the TRACE rule](r:instr.trace.delivery.others)), but inside a nested
+construct a delivery that holds a guard does not give the kernel to another
+activity: one that ran on top of it and traced a line into the same
+destination would wait for that guard beneath itself. So such a wait is
+refused after the delivery has gone on for several seconds with another
+activity ready, and the program ends with exit code 120.
 The refusal follows the same switch as the waits above: it comes only while no
 native code from outside the interpreter can run, as [the rule of Deviation
 20](r:conc.activities.deviation.20) defines such code. The refusal rests on
@@ -1004,8 +1009,8 @@ activities that are ready from running, and apart from that line the program
 runs as it would without it. A HALT the host asks for reaches the delivery's
 clauses as [the host's request](r:conc.halt.signal) reaches any running
 activity's.
-In the example, which loads no library, the destination loops until a started
-activity sets a flag.
+In the example, which loads no library, the destination loops in a method
+that `run` runs until a started activity sets a flag.
 
 ```rexx
 .environment~flag = 0
@@ -1018,8 +1023,7 @@ trace off
 say 'done'
 ::class sink
 ::method lineout guarded
-  do while .environment~flag \= 1; end
-  return 0
+  return self~run(.method~new('w', 'do while .environment~flag \= 1; end; return 0'))
 ::class setter
 ::method go
   call syssleep 0.2

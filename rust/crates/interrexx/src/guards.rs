@@ -74,8 +74,14 @@ struct Watch {
 }
 
 impl GuardTable {
-    /// Takes `key` for `me`, or nests it where `me` owns it.
-    pub(crate) fn try_reserve(&mut self, key: GuardKey, me: ActivityId) -> Reserve {
+    /// Takes `key` for `me`, or nests it where `me` owns it or `owner`, the
+    /// activity whose trace line `me` delivers, does.
+    pub(crate) fn try_reserve(
+        &mut self,
+        key: GuardKey,
+        me: ActivityId,
+        owner: Option<ActivityId>,
+    ) -> Reserve {
         match self.locks.entry(key) {
             Entry::Vacant(vacant) => {
                 vacant.insert(Lock {
@@ -85,7 +91,9 @@ impl GuardTable {
                 });
                 Reserve::Held
             }
-            Entry::Occupied(mut held) if held.get().owner == me => {
+            Entry::Occupied(mut held)
+                if held.get().owner == me || Some(held.get().owner) == owner =>
+            {
                 held.get_mut().count += 1;
                 Reserve::Held
             }
@@ -530,7 +538,8 @@ impl Interp {
             return Reserve::Held;
         }
         let me = self.running_activity();
-        self.activities.guards.try_reserve(key, me)
+        let owner = self.delivery_owner();
+        self.activities.guards.try_reserve(key, me, owner)
     }
 
     /// Puts into the table the locks the running activity's method
@@ -1019,6 +1028,27 @@ mod tests {
     }
 
     #[test]
+    fn a_delivery_nests_the_lock_of_the_activity_whose_line_it_delivers() {
+        let (a, d, c) = (
+            ActivityId::test(1),
+            ActivityId::test(2),
+            ActivityId::test(3),
+        );
+        let mut table = GuardTable::default();
+        assert!(matches!(table.try_reserve(key(1), a, None), Reserve::Held));
+        assert!(matches!(
+            table.try_reserve(key(1), d, Some(a)),
+            Reserve::Held
+        ));
+        assert_eq!((table.owner(key(1)), table.count(key(1))), (Some(a), 2));
+        assert!(
+            matches!(table.try_reserve(key(1), c, Some(d)), Reserve::Contended(owner) if owner == a)
+        );
+        assert_eq!(table.release(key(1)), None);
+        assert_eq!((table.owner(key(1)), table.count(key(1))), (Some(a), 1));
+    }
+
+    #[test]
     fn a_release_hands_the_lock_to_the_first_waiter_at_count_one() {
         let (a, b, c) = (
             ActivityId::test(1),
@@ -1026,9 +1056,11 @@ mod tests {
             ActivityId::test(3),
         );
         let mut table = GuardTable::default();
-        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
-        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
-        assert!(matches!(table.try_reserve(key(1), b), Reserve::Contended(owner) if owner == a));
+        assert!(matches!(table.try_reserve(key(1), a, None), Reserve::Held));
+        assert!(matches!(table.try_reserve(key(1), a, None), Reserve::Held));
+        assert!(
+            matches!(table.try_reserve(key(1), b, None), Reserve::Contended(owner) if owner == a)
+        );
         table.enqueue(key(1), b);
         table.enqueue(key(1), c);
         assert_eq!(table.release(key(1)), None);
@@ -1091,7 +1123,7 @@ mod tests {
             ActivityId::test(4),
         );
         let mut table = GuardTable::default();
-        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
+        assert!(matches!(table.try_reserve(key(1), a, None), Reserve::Held));
         table.enqueue(key(1), b);
         table.enqueue(key(1), c);
         table.enqueue(key(1), d);
@@ -1121,7 +1153,7 @@ mod tests {
             ActivityId::test(3),
         );
         let mut table = GuardTable::default();
-        assert!(matches!(table.try_reserve(key(1), a), Reserve::Held));
+        assert!(matches!(table.try_reserve(key(1), a, None), Reserve::Held));
         table.enqueue(key(1), b);
         table.queue_retry(key(1), c, None);
         table.queue_retry(key(1), c, Some(0));
