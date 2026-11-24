@@ -1399,7 +1399,9 @@ mod measured {
     }
 
     /// One program per frame kind reachable from Rexx, each reaching `SysSleep`
-    /// under that kind.
+    /// under that kind. A trace destination runs on an activity of its own, so
+    /// only the emitter's wait for it is under `TraceWrapper`: the trace tests
+    /// below cover that kind.
     const FRAME_PROBES: &[(&str, &str)] = &[
         // A stem's primitive `UNKNOWN` forwards to the stem's value, whose
         // own `UNKNOWN` then runs beneath that primitive's frame.
@@ -1458,10 +1460,6 @@ mod measured {
         (
             "PullWrapper",
             ".input~destination(.c~new)\nparse pull line\n::class c\n::method linein\n  call SysSleep 0\n  return 'x'\n",
-        ),
-        (
-            "TraceWrapper",
-            ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n::class c\n::method lineout\n  call SysSleep 0\n",
         ),
         (
             "SecurityManager",
@@ -1546,42 +1544,37 @@ mod measured {
         assert!(pinned.is_empty(), "{pinned:#?}");
     }
 
-    /// A line traced to a destination behind `.traceOutput`'s `Monitor`
-    /// reaches it through the `Monitor`'s Rexx `UNKNOWN`, which the send
-    /// begins with no Rust frame of its own: a park in the destination is
-    /// under the trace delivery's frame and not under an `Unknown` one.
+    /// A trace line is delivered on an activity of its own, which starts with
+    /// no Rust frame beneath it: a park in the destination, behind the default
+    /// `.traceOutput` monitor's `UNKNOWN` and its `FORWARD`, is under no
+    /// pinned frame.
     #[test]
-    fn a_park_in_a_trace_destination_is_under_no_unknown_frame() {
+    fn a_park_in_a_trace_destination_is_under_no_pinned_frame() {
+        for body in ["  call SysSleep 0\n", "  call SysSleep 0\n  return 0\n"] {
+            let report = report_of(&format!(
+                ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n\
+                 ::class c\n::method lineout\n{body}"
+            ));
+            let frames = frames_at(&report, ParkKind::SysSleep);
+            assert_eq!(frames, [Vec::<PinKind>::new()], "{body:?}: {report:?}");
+        }
+    }
+
+    /// The activity that wrote a trace line waits for its delivery under the
+    /// trace frame.
+    #[test]
+    fn the_writer_of_a_trace_line_waits_for_its_delivery_under_the_trace_frame() {
         let report = report_of(
             ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n\
              ::class c\n::method lineout\n  call SysSleep 0\n",
         );
-        let frames = frames_at(&report, ParkKind::SysSleep);
+        let frames = frames_at(&report, ParkKind::MessageWait);
         assert!(
             !frames.is_empty()
-                && frames.iter().all(|frames| {
-                    frames.contains(&PinKind::TraceWrapper) && !frames.contains(&PinKind::Unknown)
-                }),
-            "{frames:?}"
-        );
-    }
-
-    /// The default `.TRACEOUTPUT` monitor's `UNKNOWN` forwards a line to its
-    /// destination, and that `FORWARD` enters the destination's `LINEOUT` on
-    /// the driver: a park there is under no `Forward` frame.
-    #[test]
-    fn a_trace_destination_behind_the_monitor_parks_under_no_forward_frame() {
-        let report = report_of(
-            ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n\
-             ::class c\n::method lineout\n  call SysSleep 0\n  return 0\n",
-        );
-        let frames = frames_at(&report, ParkKind::SysSleep);
-        assert!(
-            !frames.is_empty()
-                && frames.iter().all(|frames| {
-                    frames.contains(&PinKind::TraceWrapper) && !frames.contains(&PinKind::Forward)
-                }),
-            "{frames:?}"
+                && frames
+                    .iter()
+                    .all(|frames| frames.contains(&PinKind::TraceWrapper)),
+            "{report:?}"
         );
     }
 
