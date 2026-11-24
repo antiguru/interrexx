@@ -492,7 +492,11 @@ They set the stem `host`: its field `name` to the official name of the host,
 `addr` to its address in dotted form, `addrtype` to `AF_INET`, and `alias.0` to the number of
 its other names, followed by the names in `alias.1` and on. A host that is given by
 an address in dotted form is its own name. `SockGetHostName()` answers the name
-of this host and `SockGetHostId()` its address in dotted form.
+of this host. `SockGetHostId()` answers the first IPv4 address outside the
+loopback range in interface-list order, leaving the last IPv4 address out
+of the search. If the list is available and no address qualifies, it raises
+`SYNTAX 40.1`. If the system cannot read the interface list, it answers
+`0.0.0.0`.
 
 ```rexx
 say SockGetHostByName('127.0.0.1', 'h.') h.name h.addr h.addrtype h.alias.0
@@ -500,8 +504,6 @@ say SockGetHostByAddr('127.0.0.1', 'k.') k.addr k.addrtype
 say SockGetHostByAddr('127.0.0.1', 'k.', 2)
 say SockGetHostByAddr('x', 'k.')
 say (length(SockGetHostName()) > 0)
-parse value SockGetHostId() with p1 '.' p2 '.' p3 '.' p4
-say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 ::requires 'rxsock' library
 ```
 
@@ -511,5 +513,4 @@ say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 1
 0
 1
-1 1 1 1
 ```

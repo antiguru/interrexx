@@ -1,6 +1,7 @@
 # Programs that start activities, replayed under the scheduler simulation by
-# group_runs' sim gate. Each is also in differential.txt. One path per line,
-# relative to this directory; # starts a comment, blank lines are ignored.
+# group_runs' sim gate. Each also runs in differential.txt or as a licensed
+# ruled fixture. One path per line, relative to this directory; # starts a
+# comment, blank lines are ignored.
 lang/call_condition_three_deep.rex
 lang/call_signal_out_of_callee.rex
 lang/call_trace_nested.rex

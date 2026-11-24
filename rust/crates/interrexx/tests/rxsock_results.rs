@@ -33,18 +33,12 @@
 mod host_cases;
 mod support;
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Stdio;
 
 use support::rexx_service;
 
 const CASES: &str = "tests/rxsock_results";
-
-/// The scratch directory every run of this test binary works under: short,
-/// because the API service's socket lives in it.
-fn scratch() -> PathBuf {
-    rexx_service::scratch("rxsock")
-}
 
 /// The program an `eval` case runs, requiring `requires`.
 fn eval_program(lines: &[&str], requires: &str) -> String {
@@ -64,8 +58,7 @@ fn eval_program(lines: &[&str], requires: &str) -> String {
 }
 
 /// Runs `program` from a fresh directory, on the oracle where `oracle`.
-fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
-    let root = scratch();
+fn run(root: &Path, name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let dir = root.join(format!("case{name}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("sub")).expect("a case directory");
@@ -73,7 +66,7 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let program = program.replace("{dir}", &dir.display().to_string());
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
-    let api = rexx_service::service_dir(&root, name);
+    let api = rexx_service::service_dir(root, name);
     let rexx = if oracle {
         rexx_service::oracle_rexx()
     } else {
@@ -118,6 +111,7 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
 #[test]
 fn rxsock_answers_as_the_oracle_does() {
     let record = std::env::var_os("RXSOCK_RECORD").is_some();
+    let root = rexx_service::scratch("rxsock");
     let mut cases = 0;
     datadriven::walk_exclusive(
         CASES,
@@ -132,14 +126,18 @@ fn rxsock_answers_as_the_oracle_does() {
                             _ => "::requires 'socket.cls'\n::requires 'streamsocket.cls'\n",
                         };
                         let program = eval_program(&lines, requires);
-                        let (rc, stdout, stderr) = run(cases, &program, record);
+                        let (rc, stdout, stderr) = run(&root, cases, &program, record);
                         assert_eq!(rc, 0, "{stderr}");
                         stdout
                     }
                     "program" | "ruled" => {
                         let oracle = record && case.directive == "program";
-                        let (rc, stdout, stderr) =
-                            run(cases, &format!("{}\n", case.input.trim_end()), oracle);
+                        let (rc, stdout, stderr) = run(
+                            &root,
+                            cases,
+                            &format!("{}\n", case.input.trim_end()),
+                            oracle,
+                        );
                         format!("rc {rc}\n[stdout]\n{stdout}[stderr]\n{stderr}")
                     }
                     other => panic!("unknown directive {other}"),
@@ -150,4 +148,41 @@ fn rxsock_answers_as_the_oracle_does() {
     );
     assert!(cases > 0, "no case ran");
     rexx_service::remove_scratch("rxsock");
+}
+
+/// The host decides which address is available (r[rxsock.sockets.host]).
+/// The oracle can return arbitrary bytes when there is no candidate.
+#[cfg(unix)]
+#[test]
+fn sockgethostid_answers_for_the_current_interfaces() {
+    let expected = match nix::ifaddrs::getifaddrs() {
+        Err(_) => "0.0.0.0".to_owned(),
+        Ok(interfaces) => {
+            let addresses: Vec<_> = interfaces
+                .filter_map(|interface| {
+                    interface
+                        .address?
+                        .as_sockaddr_in()
+                        .map(|address| address.ip())
+                })
+                .collect();
+            addresses
+                .split_last()
+                .and_then(|(_, candidates)| candidates.iter().find(|ip| !ip.is_loopback()))
+                .map_or_else(|| "SYNTAX 40.1".to_owned(), |address| address.to_string())
+        }
+    };
+    let fixture = "rxsock-host-id";
+    let program = "drop errno h_errno\n\
+        signal on syntax name rejected\n\
+        say SockGetHostId() '|' errno '|' h_errno\n\
+        exit\n\
+        rejected: say 'SYNTAX' condition('o')~code '|' errno '|' h_errno\n\
+        ::requires 'rxsock' library\n";
+    let actual = run(&rexx_service::scratch(fixture), 0, program, false);
+    assert_eq!(
+        actual,
+        (0, format!("{expected} | ERRNO | H_ERRNO\n"), String::new()),
+    );
+    rexx_service::remove_scratch(fixture);
 }

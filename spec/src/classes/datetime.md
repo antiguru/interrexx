@@ -1402,6 +1402,53 @@ d~addDays(1, 2) => 93.902
 d~addMonths(1) => 97.1
 ```
 
+r[class.datetime.add.reads]
+`addMicroseconds` and `addYears` first read the argument for its form. An
+unreadable value at that point raises `88.902` or `88.903`, respectively. If
+that check succeeds, the method reads the argument again for the addition.
+The addition uses the second value and raises `41.1` if that value has no
+usable number.
+
+```rexx
+d = .datetime~new(2017, 1, 1, 0)
+do method over .array~of('addMicroseconds', 'addYears')
+  call probe method, 'first'
+  call probe method, 'second'
+  call probe method, '2'
+end
+exit
+probe: procedure expose d
+  use arg method, answer
+  amount = .changing~new(answer)
+  signal on syntax name bad
+  say method answer d~send(method, amount)~isoDate amount~reads
+  return
+bad: say method answer condition('o')~code amount~reads
+  return
+::class changing
+::attribute reads get
+::method init
+  expose answer reads
+  use arg answer
+  reads = 0
+::method string
+  expose answer reads
+  reads += 1
+  if answer = 'first' then return .object~new
+  if reads = 1 then return '1'
+  if answer = 'second' then return .object~new
+  return answer
+```
+
+```output
+addMicroseconds first 88.902 1
+addMicroseconds second 41.1 2
+addMicroseconds 2 2017-01-01T00:00:00.000002 2
+addYears first 88.903 1
+addYears second 41.1 2
+addYears 2 2019-01-01T00:00:00.000000 2
+```
+
 r[class.datetime.plus]
 `+` takes a [`TimeSpan`](r:class.timespan.value) and answers a new instance,
 of the class of the receiver, that is the receiver moved forward by the span

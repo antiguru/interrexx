@@ -78,8 +78,8 @@ err>      1 *-* numeric form value 'engineering'
 err> Error 25 running /nonexistent/ir-dual-case.rex line 1:
 err> Error 25.11:
 
-# an expression outside the native set: the clause evaluates it through
-# `Op::EvalExpr`, addressed as NUMERIC's own slot
+# a qualified function call in NUMERIC's value raises when its namespace
+# has no routine of that name
 program
 numeric digits rexx:length('abcdefghijkl')
 ----
