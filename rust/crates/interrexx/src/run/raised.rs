@@ -67,10 +67,10 @@ pub(super) fn raised_select_no_when() -> Raised {
 /// raise syntax 40         -> 40.0       ditto, major line only (sub 0)
 /// raise syntax 40.001     -> 40.1       ".001" is the integer 1
 /// raise syntax '4E1'      -> 40.0       each half is a Rexx number, not an int literal
-/// raise syntax '40.1E2'   -> 98.941     found "40100"
-/// raise syntax 40.10      -> 98.941     found "40010"
+/// raise syntax '40.1E2'   -> 98.941     found "40.100"
+/// raise syntax 40.10      -> 98.941     found "40.10"
 /// raise syntax 1          -> 98.941     found "1.0"
-/// raise syntax 3.5        -> 98.941     found "3005"
+/// raise syntax 3.5        -> 98.941     found "3.5"
 /// raise syntax 0 / 100 / 999 / 'abc' / 40.1000 / '40.'  -> 33.904
 /// ```
 pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> Raised {
@@ -96,23 +96,18 @@ pub(super) fn names_no_error(text: &[u8]) -> bool {
 }
 
 /// The `SYNTAX` condition for error `code`, `major * 1000 + sub`, or 98.941
-/// where the catalogue has no text for it: naming the code as a whole number
-/// where the major has text, and as `major.sub` where it has none.
+/// where the catalogue has no text for it, naming the code as `major.sub`
+/// (r[instr.raise.number]).
 pub(crate) fn raised_for_code(code: u64, additional: Vec<Vec<u8>>) -> Raised {
     let (major, sub) = (code / 1000, code % 1000);
-    let entry = |major: u64, sub: u64| {
-        let (major, sub) = (u16::try_from(major).ok()?, u16::try_from(sub).ok()?);
-        interrexx_inventory::errors::lookup(major, sub).map(|_| (major, sub))
-    };
-    if let Some((major, sub)) = entry(major, sub) {
+    let known = u16::try_from(major)
+        .ok()
+        .zip(u16::try_from(sub).ok())
+        .filter(|&(major, sub)| interrexx_inventory::errors::lookup(major, sub).is_some());
+    if let Some((major, sub)) = known {
         return Raised::syntax(major, sub, additional);
     }
-    let found = if entry(major, 0).is_some() {
-        code.to_string()
-    } else {
-        format!("{major}.{sub}")
-    };
-    Raised::syntax(98, 941, vec![found.into_bytes()])
+    Raised::syntax(98, 941, vec![format!("{major}.{sub}").into_bytes()])
 }
 
 /// [`raised_from_settings`] with the operand's own rendering in place of the

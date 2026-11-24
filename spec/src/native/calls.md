@@ -269,7 +269,7 @@ whose `CONDITION` entry names it and whose other entries, such as
 raised as [the rule above](r:native.calls.condition) says. A `SYNTAX`
 condition is raised by its `CODE`, and a `CODE` of the form of [the number of
 RAISE SYNTAX](r:instr.raise.number) that no error has raises `SYNTAX 98.941`,
-as RAISE SYNTAX does.
+as RAISE SYNTAX does, with the same `ADDITIONAL` item.
 
 ```rexx
 call on user n2zqobj name h
@@ -290,7 +290,9 @@ raised: procedure
   signal on syntax
   call fxconditionobject arg(1)
   return 'nothing'
-syntax: return condition('o')~code
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
 ::requires 'specfixture' LIBRARY
 ```
 
@@ -298,9 +300,9 @@ syntax: return condition('o')~code
 returned
 handler USER N2ZQOBJ desc
 41.1 => 41.1
-93.9 => 98.941
-40.999 => 98.941
-2.1 => 98.941
+93.9 => 98.941 93.9
+40.999 => 98.941 40.999
+2.1 => 98.941 2.1
 ```
 
 r[native.calls.send]

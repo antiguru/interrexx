@@ -276,14 +276,16 @@ the value, and the digits after the point are one whole number, so `40.3`,
 number without a point is the error of that number with the subcode 0. The
 `CODE` entry of the condition holds the number as `m.n`, and the `RC` entry
 holds the major number. A number of digits, or of digits, a point and digits,
-that no error has raises `SYNTAX 98.941`. The null string, a minus sign, a
-letter that is not the exponent of a number, a second point, a point with no
-digit on one side of it, a major number outside 1 to 99 and a subcode above
-999 raise `SYNTAX 33.904`. The text of any other form, such as a number with a
-plus sign, with blanks in it or with an exponent, is not specified. The errors
-33.904 and 98.941 are faults of the clause itself, so they are raised in the
-code that holds the RAISE, as an error found at that clause would be, whichever
-option ends the clause.
+that no error has raises `SYNTAX 98.941`, and the one item of the `ADDITIONAL`
+entry of that condition is the number as `m.n`, both numbers written without
+leading zeros, so `93.009` is named `93.9` and `40.030` is named `40.30`. The
+null string, a minus sign, a letter that is not the exponent of a number, a
+second point, a point with no digit on one side of it, a major number outside 1
+to 99 and a subcode above 999 raise `SYNTAX 33.904`. The text of any other
+form, such as a number with a plus sign, with blanks in it or with an exponent,
+is not specified. The errors 33.904 and 98.941 are faults of the clause itself,
+so they are raised in the code that holds the RAISE, as an error found at that
+clause would be, whichever option ends the clause.
 
 ```rexx
 n.1 = '40'
@@ -306,7 +308,8 @@ n.17 = 'abc'
 n.18 = ''
 n.19 = '40.'
 n.20 = '.3'
-do i = 1 to 20
+n.21 = '93.009'
+do i = 1 to 21
   call go n.i
 end
 exit
@@ -315,7 +318,9 @@ go: procedure
   call raiser arg(1)
   return
 e: o = condition('o')
-  say right(arg(1), 7) '=>' left(o~code, 7) o~rc
+  found = ''
+  if o~code == 98.941 then found = o~additional[1]
+  say strip(right(arg(1), 7) '=>' left(o~code, 7) o~rc found, 'T')
   return
 ::routine raiser
   raise syntax (arg(1))
@@ -328,20 +333,21 @@ e: o = condition('o')
  040.03 => 40.3    40
    41.1 => 41.1    41
       5 => 5.0     5
- 40.030 => 98.941  98
-  40.99 => 98.941  98
-    1.1 => 98.941  98
-      2 => 98.941  98
+ 40.030 => 98.941  98 40.30
+  40.99 => 98.941  98 40.99
+    1.1 => 98.941  98 1.1
+      2 => 98.941  98 2.0
       0 => 33.904  33
     100 => 33.904  33
 40.1000 => 33.904  33
  40.3.5 => 33.904  33
-    4.5 => 98.941  98
+    4.5 => 98.941  98 4.5
      -3 => 33.904  33
     abc => 33.904  33
         => 33.904  33
     40. => 33.904  33
      .3 => 33.904  33
+ 93.009 => 98.941  98 93.9
 ```
 
 > With EXIT in an internal routine, 98.941 is raised in the internal routine,
