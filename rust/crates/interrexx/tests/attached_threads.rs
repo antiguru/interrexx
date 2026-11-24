@@ -1062,6 +1062,24 @@ array 3 directory 0 table 0
     );
 }
 
+/// `DirectoryAt` skips the receiver's `AT` override. Reading a computed entry still runs
+/// its body, including the body's own send to the receiver's `ENTRY` override.
+// spec: native.threads.members
+#[test]
+fn directory_at_runs_a_computed_entry_that_sends_an_overridden_message() {
+    let expected = "\
+ENTRY runs BASE
+native seed
+AT runs
+ENTRY runs BASE
+message seed
+";
+    assert_eq!(
+        run("attach-directory-at", "directory_at.rex"),
+        (expected.to_owned(), String::new(), 0)
+    );
+}
+
 /// [`thread_interface_members_send_no_message_a_subclass_redefines`] on instances of the built-in
 /// classes themselves, each given methods of its own under the names of the matching messages with
 /// `setMethod` and the scope `OBJECT`: none of those methods runs.

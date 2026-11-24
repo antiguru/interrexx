@@ -246,16 +246,18 @@ r[native.threads.members]
 The members of the thread interface that store into or fetch from an array, a
 stem, a supplier, a directory or a string table, that ask an object whether it
 is an instance of a class or has a method, or that ask a package, a routine or
-a method for what it holds, send the object no message. Each runs the
-interpreter's own method for what it does, found by a search that starts in
-the receiver's class order at the last class of the interpreter's library
-ahead of the first class a program made. So a method a program's class defines
+a method for what it holds, use the interpreter's own implementation of the
+operation. When the interpreter looks up the method for that operation, the
+search starts in the receiver's class order at the last class of its library
+ahead of the first class a program made. A method a program's class defines
 under the matching name, such as `PUT`, `ISINSTANCEOF` or `HASMETHOD`, does
-not run, nor does a method the object was given with `setMethod`, while a
-subclass the interpreter's own library defines, such as that of the supplier a
-stream answers, keeps its own methods. The members act the same on every
-thread, attached or not. Their tests need an extension that calls them by
-name, so they run outside this page.
+not run, nor does a method the object was given with `setMethod` under that
+name. A subclass the interpreter's own library defines, such as that of the
+supplier a stream answers, keeps its own methods. A computed directory entry
+still runs when `DirectoryAt` reads it. A message the entry sends to the
+directory uses ordinary method lookup and can run a subclass override. The
+members act the same on every thread, attached or not. Their tests need an
+extension that calls them by name, so they run outside this page.
 
 ## Halting
 

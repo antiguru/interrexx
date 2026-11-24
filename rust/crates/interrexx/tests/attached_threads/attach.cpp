@@ -70,6 +70,7 @@
 //   `HasMethod`, asks the package for its classes and routines, and the routine and the method
 //   for their packages. It answers an array of one line per member, the member's name and what it
 //   answered, `null` for a null object.
+// * `AtDirectoryAt(directory, key)` reads through the call's thread interface.
 // * `AtSendReporting(target, name)` sends the message `name`, and reports the condition the send
 //   left, `condition NAME CODE` or `no condition`, then clears it.
 // * `AtAttachIdle(target, name)` attaches and stays idle until `AtOpen` is called, then does what
@@ -764,6 +765,11 @@ RexxRoutine2(logical_t, AtPutTick, RexxObjectPtr, array, RexxObjectPtr, target)
     return start_then(context, true, array, target, target);
 }
 
+RexxRoutine2(RexxObjectPtr, AtDirectoryAt, RexxObjectPtr, directory, CSTRING, key)
+{
+    return context->DirectoryAt((RexxDirectoryObject)directory, key);
+}
+
 // Detaches the thread running this call from the thread context of the call, and answers 1.
 // One line of `AtMembers`'s answer: `member`, then `text`.
 static void line(RexxCallContext *context, RexxArrayObject lines, const char *member,
@@ -1074,6 +1080,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtCallTick, AtCallTick),
     REXX_TYPED_ROUTINE(AtPutTick, AtPutTick),
     REXX_TYPED_ROUTINE(AtMembers, AtMembers),
+    REXX_TYPED_ROUTINE(AtDirectoryAt, AtDirectoryAt),
     REXX_TYPED_ROUTINE(AtSendReporting, AtSendReporting),
     REXX_TYPED_ROUTINE(AtAttachIdle, AtAttachIdle),
     REXX_TYPED_ROUTINE(AtAttached, AtAttached),
