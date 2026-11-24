@@ -41,6 +41,10 @@ CAST = (
     "ours casts each descriptor value to the parameter type, so a C method can take OSELF "
     "(decisions.md, the header fixes)"
 )
+THROW_API = (
+    "the Throw and ThrowObject entry points and the interface versions that announce them belong "
+    "to THROW, a level 6.07 feature interrexx does not have (decisions.md, the language level)"
+)
 EXCEPTIONS = [
     ("upstream", "macro REXXAPIDEFS_INCLUDED", GUARD),
     ("upstream", "macro REXXAPITYPES_INCLUDED", GUARD),
@@ -113,6 +117,45 @@ EXCEPTIONS = [
         "interrexx implements level 6.06; 6.07 adds CATCH and FINALLY, which it does not have "
         "(decisions.md, the language level)",
     ),
+    *[
+        ("both", f"macro {name}", THROW_API)
+        for name in (
+            "CALL_INTERFACE_VERSION",
+            "EXIT_INTERFACE_VERSION",
+            "METHOD_INTERFACE_VERSION",
+            "THREAD_INTERFACE_VERSION",
+            "THREAD_INTERFACE_VERSION_5_3_0",
+        )
+    ],
+    *[
+        ("upstream", f"macro {name}", THROW_API)
+        for name in (
+            "CALL_INTERFACE_VERSION_5_3_0",
+            "EXIT_INTERFACE_VERSION_5_3_0",
+            "METHOD_INTERFACE_VERSION_5_3_0",
+        )
+    ],
+    *[
+        ("upstream", f"field {name}", THROW_API)
+        for name in (
+            "CallContextInterface::Throw",
+            "ExitContextInterface::Throw",
+            "MethodContextInterface::Throw",
+            "RexxThreadInterface::ThrowObject",
+        )
+    ],
+    *[
+        ("upstream", f"CXXMethodDecl {name}", THROW_API)
+        for name in (
+            "RexxCallContext_::Throw",
+            "RexxCallContext_::ThrowObject",
+            "RexxExitContext_::Throw",
+            "RexxExitContext_::ThrowObject",
+            "RexxMethodContext_::Throw",
+            "RexxMethodContext_::ThrowObject",
+            "RexxThreadContext_::ThrowObject",
+        )
+    ],
 ]
 
 # The headers of a tree, relative to its root, that are listed but not compiled: the platform
