@@ -51935,6 +51935,25 @@ c,b,a
 88.909
 4 c,b,a
 </code></pre>
+<pre><code class="language-rexx">q = .circularqueue~of('p', 'q', 'r')
+say q~section(1, .array~of(2))~makeArray~toString('L', ' ')
+say q~section(1, .array~of('099'))~items
+say q~section(1, .array~of('1.0'))~items
+say q~section(1, .array~of(' 2 '))~items
+say q~section(1, .array~new(5)~~put(2, 1))~items
+signal on syntax
+q~section(1, .array~of(1, 2))
+say 'unexpected section'
+exit
+syntax: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">p q
+3
+1
+2
+2
+93.906
+</code></pre>
 <div class="rule" id="r-class.circularqueue.of"><a href="classes/circularqueue.html#r-class.circularqueue.of">[class.circularqueue.of]</a></div>
 <p><code>of</code> makes a circular queue that holds its arguments in the order given, with
 the size that is the number of arguments, an argument left out before a given
