@@ -52,6 +52,7 @@ redirect.rs using_input_lines b"REQUEST"
 redirect.rs write_target b"APPEND"
 redirect.rs write_target b"LINEOUT"
 redirect.rs write_target b"QUEUE"
+run.rs close_stream_replacements b"CLOSE"
 run.rs queue_evaluated message
 run.rs resolve_stream b"NEW"
 run.rs say_evaluated crate::dispatch::SAY
