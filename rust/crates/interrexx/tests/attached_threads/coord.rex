@@ -1,12 +1,16 @@
-/* An attached thread's message waits on an event semaphore that a second attached thread's
-   message, sent a second later, posts.
+/* An attached thread waits on an event semaphore. A second thread sends the post
+   once the waiting callback has started.
    spec: native.threads.attach */
-t = .ticks~new
+t = .coordinatedTicks~new
+call AtSendWhenStarted t, 'POSTSEM'
 call AtSend t, 'AWAITSEM'
-call AtSendAfter t, 'POSTSEM', 1000
 do while AtDone() < 2
   call SysSleep 0.05
 end
 say 'done'
 ::requires 'ticks.cls'
 ::requires 'attach' LIBRARY
+::class coordinatedTicks subclass ticks
+::method awaitsem unguarded
+  call AtStart
+  forward class (super)

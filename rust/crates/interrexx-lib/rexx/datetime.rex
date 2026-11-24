@@ -41,7 +41,7 @@
 ::method fromBaseDate class
   use strict arg days, offset = 0
   numeric digits 18
-  n = whole('' || days)
+  n = whole(dateTimeNumberText(days))
   if n == '' then raise syntax 88.918 array('date', days)
   if n < 0 | n > 3652058 then raise syntax 88.918 array('date', days)
   if arg(2, 'E') then given = offset
@@ -235,7 +235,7 @@ unreadable:
 ::method fromTicks class
   use strict arg ticks, offset = 0
   numeric digits 18
-  n = whole('' || ticks)
+  n = whole(dateTimeNumberText(ticks))
   if n == '' then raise syntax 88.918 array('ticks', ticks)
   if n < -62135596849 | n > 253402300799 then
     raise syntax 88.918 array('ticks', ticks)
@@ -328,7 +328,7 @@ unreadable:
       return
     end
     when count <= 2 then do
-      n = whole('' || arg(1))
+      n = whole(dateTimeNumberText(arg(1)))
       if n == '' then raise syntax 40.19 array('DATE', arg(1), 'F')
       if n < 0 | n > 315537897599999999 then
         raise syntax 40.19 array('DATE', arg(1), 'F')
@@ -784,8 +784,8 @@ weeks: procedure
   use strict arg amount
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(amount, 'N') then raise syntax 88.902 array('microseconds', amount)
-  moved = stamp + amount
+  if \datatype(dateTimeNumberText(amount), 'N') then raise syntax 88.902 array('microseconds', amount)
+  moved = stamp + dateTimeNumberText(amount)
   whole = moved
   if abs(moved) < 1e18 then do
     whole = moved % 1
@@ -803,8 +803,8 @@ weeks: procedure
   use strict arg years
   numeric digits 18
   if \var('STAMP') then parse value 0 0 with stamp zone
-  if \datatype(years, 'N') then raise syntax 88.903 array('years', years)
-  n = 0 + years
+  if \datatype(dateTimeNumberText(years), 'N') then raise syntax 88.903 array('years', years)
+  n = 0 + dateTimeNumberText(years)
   if abs(n) >= 1e9 then raise syntax 88.903 array('years', years)
   if n // 1 \= 0 then raise syntax 88.903 array('years', years)
   n = n % 1

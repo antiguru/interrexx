@@ -300,14 +300,14 @@ fn small_index(value: ObjRef) -> Option<usize> {
 }
 
 /// An index's number: the value itself where it is one, else its requested
-/// string's.
+/// string's. No string value fails the index's check (r[conv.string.argument-kind]).
 fn index_number(
     interp: &mut Interp,
     value: ObjRef,
 ) -> Result<Option<interrexx_num::Number>, Failure> {
     match interp.to_number(value) {
         Ok(number) => Ok(Some(number)),
-        Err(_) => interp.requested_number(value),
+        Err(_) => interp.requested_argument_number(value),
     }
 }
 

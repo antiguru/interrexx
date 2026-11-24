@@ -1,0 +1,7 @@
+# Programs moved from differential.txt to the ruled corpus that still run
+# under collect-on-every-allocation. Paths are relative to this directory.
+lang/date_time_conversion_refusals.rex
+lang/sys_semaphores_unnamed.rex
+lang/sys_semaphores_across_activities.rex
+lang/requires_manager_rename.rex
+lang/security_manager_requires_replacement.rex

@@ -388,6 +388,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Store { .. } => "Store",
         Op::Say { .. } => "Say",
         Op::Signal { .. } => "Signal",
+        Op::UseArg(..) => "UseArg",
         Op::ParseBegin { .. } => "ParseBegin",
         Op::ParseRun { .. } => "ParseRun",
         Op::Return { .. } => "Return",
@@ -408,6 +409,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::ExecWith { .. } => "ExecWith",
         Op::ReplyCheck { .. } => "ReplyCheck",
         Op::RaisePart { .. } => "RaisePart",
+        Op::ForwardPart { .. } => "ForwardPart",
         Op::Reference { .. } => "Reference",
         Op::ClassAt { .. } => "ClassAt",
         Op::List { .. } => "List",
@@ -448,7 +450,8 @@ macro_rules! region_ops {
         $region:lifetime,
         $park:lifetime
     ) => {
-        'region_loop: for region_op in $ops {
+        let mut remaining = $ops.iter();
+        'region_loop: while let Some(region_op) = remaining.next() {
             let deliver: Deliver = 'entered: {
             match region_op {
                 // **No gate**: this op exists only in a chunk
@@ -1608,6 +1611,10 @@ macro_rules! region_ops {
                                     InstructionKind::When { .. },
                                     ConditionKeyword::When
                                 )
+                                | (
+                                    InstructionKind::If { .. } | InstructionKind::When { .. },
+                                    ConditionKeyword::ListItem | ConditionKeyword::ListLast
+                                )
                         ),
                         "a ConditionJump op's keyword does not name the clause whose \
                      condition it is validating"
@@ -1628,18 +1635,27 @@ macro_rules! region_ops {
                     // `IF`/`WHEN` tests once, and its value is
                     // already rooted in the register it came
                     // from.
-                    let quick = crate::eval::truth_without_conversion(value);
-                    let holds = match quick {
-                        Some(holds) if !$self.trace_mode().results => holds,
-                        _ => match $self.condition_value(
-                            value,
-                            ConditionTrace::Result(indent),
-                            false,
-                            keyword.raiser(),
-                        ) {
-                            Ok(holds) => holds,
-                            Err(failure) => break $cold Err(failure),
-                        },
+                    let holds = match keyword {
+                        ConditionKeyword::ListItem | ConditionKeyword::ListLast => {
+                            match $self.condition_list_item(
+                                value, indent, matches!(keyword, ConditionKeyword::ListLast),
+                            ) {
+                                Ok(holds) => holds,
+                                Err(failure) => break $cold Err(failure),
+                            }
+                        }
+                        _ => match crate::eval::truth_without_conversion(value) {
+                            Some(holds) if !$self.trace_mode().results => holds,
+                            _ => match $self.condition_value(
+                                value,
+                                ConditionTrace::Result(indent),
+                                false,
+                                keyword.raiser(),
+                            ) {
+                                Ok(holds) => holds,
+                                Err(failure) => break $cold Err(failure),
+                            },
+                        }
                     };
                     if !holds {
                         break $region *target;
@@ -1792,6 +1808,17 @@ macro_rules! region_ops {
                         Err(failure) => break $cold Err(failure),
                     }
                 }
+                Op::UseArg(step) => {
+                    match $self.use_arg_op($code, $clause, $registers, *step) {
+                        Ok(0) => {}
+                        Ok(skip) => {
+                            if remaining.nth(skip - 1).is_none() {
+                                break $cold Err(Loud::jump_out_of_range().into());
+                            }
+                        }
+                        Err(failure) => break $cold Err(failure),
+                    }
+                }
                 Op::Jump { target } => {
                     break $region *target;
                 }
@@ -1810,7 +1837,9 @@ macro_rules! region_ops {
                 // `Op::RaisePart` shares the arm, for the reason `Exec`'s arm
                 // gives for sharing its own: a second call here costs every op
                 // of every clause in the driver's codegen.
-                Op::ExecValue { $index, .. } | Op::RaisePart { $index, .. } => {
+                Op::ExecValue { $index, .. }
+                | Op::RaisePart { $index, .. }
+                | Op::ForwardPart { $index, .. } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "ExecValue",
                     );
@@ -2300,9 +2329,10 @@ impl Interp {
         // spelling**, which is what makes this op cheaper than `Op::CallExpr`:
         // it dispatches through the row the site holds. Every other resolution
         // passes the name on, to a traceback line or the security manager.
-        let target = || match Interp::chunk_node_at(clause, slot, path).map(|node| &node.kind) {
-            Some(ExprKind::Call { target, .. }) => Ok(call_target_name(code, target)),
-            _ => Err(Failure::from(Loud::call_op_off_its_node())),
+        let target = || {
+            Interp::chunk_node_at(clause, slot, path)
+                .map(|node| &node.kind)
+                .ok_or_else(|| Failure::from(Loud::call_op_off_its_node()))
         };
         let mut spelling: &[u8] = b"";
         let (resolved, keep) = match chunk.resolved_call(site, self.routine_generation) {
@@ -2310,20 +2340,33 @@ impl Interp {
                 #[cfg(test)]
                 count_call_site_hit();
                 if !matches!(resolved, Resolved::Builtin(_)) {
-                    spelling = target()?.0;
+                    let ExprKind::Call { target, .. } = target()? else {
+                        return Err(Loud::call_op_off_its_node().into());
+                    };
+                    spelling = call_target_name(code, target).0;
                 }
                 (resolved, None)
             }
-            None => {
-                let (name, search_labels) = target()?;
-                spelling = name;
-                let resolved = self.resolve_call(name, search_labels)?;
-                let generation = self.routine_generation;
-                (
-                    resolved,
-                    self.missed_site(chunk, site, resolved, generation),
-                )
-            }
+            None => match target()? {
+                ExprKind::Call { target, .. } => {
+                    let (name, search_labels) = call_target_name(code, target);
+                    spelling = name;
+                    let resolved = self.resolve_call(name, search_labels)?;
+                    let generation = self.routine_generation;
+                    (
+                        resolved,
+                        self.missed_site(chunk, site, resolved, generation),
+                    )
+                }
+                ExprKind::QualifiedCall {
+                    namespace, name, ..
+                } => {
+                    let namespace = code.symbols.name(*namespace).as_bytes();
+                    spelling = code.symbols.name(*name).as_bytes();
+                    (self.resolve_qualified_call(namespace, spelling)?, None)
+                }
+                _ => return Err(Loud::call_op_off_its_node().into()),
+            },
         };
         if let Some(keep) = keep {
             return self.begin_kept_call_args(chunk, site, resolved, spelling, mark, keep);
@@ -2406,13 +2449,28 @@ impl Interp {
         path: super::NodePath,
         site: u16,
     ) -> Result<Started<ObjRef>, Failure> {
-        let Some(ExprKind::Call { target, args }) =
-            Interp::chunk_node_at(clause, slot, path).map(|node| &node.kind)
-        else {
+        let Some(node) = Interp::chunk_node_at(clause, slot, path) else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let (name, search_labels) = call_target_name(code, target);
-        let resolution = self.site_resolution_before_arguments(chunk, site, name, search_labels)?;
+        let (name, args, resolution) = match &node.kind {
+            ExprKind::Call { target, args } => {
+                let (name, search_labels) = call_target_name(code, target);
+                let resolution =
+                    self.site_resolution_before_arguments(chunk, site, name, search_labels)?;
+                (name, args, resolution)
+            }
+            ExprKind::QualifiedCall {
+                namespace,
+                name,
+                args,
+                ..
+            } => {
+                let namespace = code.symbols.name(*namespace).as_bytes();
+                let name = code.symbols.name(*name).as_bytes();
+                (name, args, CallResolution::Qualified { namespace })
+            }
+            _ => return Err(Loud::call_op_off_its_node().into()),
+        };
         let probe = 0u8;
         self.enter_eval_node(&raw const probe)?;
         let started = self.begin_eval_call(code, resolution, name, args);
@@ -3776,6 +3834,24 @@ impl Interp {
                             next = Next::Body;
                         }
                     };
+                    let ended = if self.activation().streams.is_some()
+                        && let Some(code) = code.as_ref()
+                        && let Some(failure) = self.close_stream_replacements(&ended)
+                    {
+                        match self.offer_to_trap(failure) {
+                            Ok(flow) => match self.apply_flow(code, flow) {
+                                Ok(Some(ended)) => Ok(ended),
+                                Ok(None) => {
+                                    next = Next::Body;
+                                    continue;
+                                }
+                                Err(failure) => Err(failure),
+                            },
+                            Err(failure) => Err(failure),
+                        }
+                    } else {
+                        ended
+                    };
                     // Released on both paths rather than only on `Ok`: the loud
                     // and raised paths leave the activation for its caller to
                     // tear down, and a frame left behind would keep its
@@ -4105,6 +4181,9 @@ impl Interp {
         match Interp::chunk_node_at(clause, *slot, *path).map(|node| &node.kind) {
             Some(ExprKind::Call { target, .. }) => {
                 Raised::no_data_returned(call_target_name(code, target).0).into()
+            }
+            Some(ExprKind::QualifiedCall { name, .. }) => {
+                Raised::no_data_returned(code.symbols.name(*name).as_bytes()).into()
             }
             _ => Loud::call_op_off_its_node().into(),
         }

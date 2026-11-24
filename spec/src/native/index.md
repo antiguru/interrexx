@@ -87,6 +87,7 @@ and these methods:
 | --- | --- | --- |
 | `FxSelf` | none | the receiver |
 | `FxMessage` | none | the name of the message |
+| `GetFxPartial` | none | records a call in `SPECFIXTURE.ATTRIBUTE.GET` in `.local` and answers `getter ran`. The fixture has no matching setter |
 | `FxScope` | none | the class that defines the method |
 | `FxObjSet`, `FxObjGet` | a variable name, and for `FxObjSet` a value | set and get (or `(unset)`) an object variable of the method's scope |
 | `FxMethodRaise` | a message | raises `SYNTAX 93.900` with it, and answers `returned` |

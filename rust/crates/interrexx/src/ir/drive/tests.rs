@@ -17,6 +17,50 @@ const RUN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 /// program below raises, so it never reaches a report.
 const TEST_PATH: &str = "/nonexistent/ir-drive-test.rex";
 
+#[test]
+fn use_arg_runs_only_the_needed_defaults_after_binding_earlier_targets() {
+    let outcome = run_program(
+        TEST_PATH,
+        br#"
+value = 40
+call fill >value, , 'provided'
+call fill >value, 10, ''
+call fill >value, , , 'after'
+say value
+call countFirst
+exit
+fill:
+  procedure
+  trace i
+  use strict arg >base, derived = (base + 1), tag = (mark()), suffix = '.'
+  trace off
+  say derived '['tag']' suffix
+  base = base + 1
+  return
+countFirst:
+  signal on syntax name refused
+  use strict arg optional = (mark()), required
+  return
+refused:
+  say condition('o')~code
+  return
+mark:
+  say 'default ran'
+  return 'default'
+"#
+        .to_vec(),
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        outcome.stdout,
+        b"41 [provided] .\n10 [] .\ndefault ran\n43 [default] after\n43\n40.3\n"
+    );
+    assert_eq!(stderr.matches("MARK =>").count(), 1, "{stderr}");
+    assert_eq!(stderr.matches(">R>").count(), 3, "{stderr}");
+}
+
 /// A program that enters three bodies: its own main body, the internal label
 /// `sub` a `CALL` transfers to, and the `::ROUTINE` body a second `CALL`
 /// resolves to.
@@ -776,6 +820,24 @@ fn a_reply_splits_once() {
     assert_eq!(splits, 1);
 }
 
+#[test]
+fn parse_trigger_calls_see_earlier_targets() {
+    let (outcome, _) = scripted(
+        b"parse value input() with head ' ' middle (separator(head)) tail, \
+          empty +(position(tail)) last\n\
+          say '['head']['middle']['tail']['empty']['last']'\nexit\n\
+          input:\n  say 'source'\n  return 'x middlextail'\n\
+          separator:\n  use arg value\n  say 'separator:' value\n  return value\n\
+          position:\n  use arg value\n  say 'position:' value\n  return 2\n",
+        &[],
+    );
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(
+        outcome.stdout,
+        b"source\nseparator: x\nposition: tail\n[x][middle][tail][][]\n"
+    );
+}
+
 /// A `REPLY`'s expression runs as the method chunk's own ops: a call in it
 /// resolves at its call site once and answers from the site on every later
 /// invocation, which the walked expression never does. Outside a method the
@@ -1014,4 +1076,75 @@ fn loop_conditions_that_send_run_from_their_test_region() {
         format!("trace i\no = .c~new\ndo while o~more\nend\ntrace o\nsay o~n\nexit\n{COUNTER}");
     let (tests, _) = run(program.as_bytes(), "5\n");
     assert_eq!(tests, 0);
+}
+
+#[test]
+fn forward_checks_and_converts_options_before_evaluating_later_ones() {
+    let outcome = run_program(
+        TEST_PATH,
+        br#"
+o = .relay~new
+say o~ordered
+say o~badClass
+say o~viaArrayRequest
+call outside
+exit
+outside:
+  signal on syntax name refused
+  forward to (o~step('outside option', o)) message 'receive'
+refused:
+  say 'outside' condition('o')~code
+  return
+::class destination
+::method receive
+  return arg() arg(1) arg(2, 'o') arg(3)
+::class relay subclass destination
+::method step
+  use arg label, value
+  say label
+  return value
+::method ordered
+  trace i
+  forward array (self~step('first', 'x'), , self~step('third', 'z')),
+    class (self~step('class', .destination)),
+    message (self~step('message', .spelling~new)),
+    to (self~step('to', self)) continue
+  trace off
+  return 'continued' result
+::method badClass
+  signal on syntax name refused
+  forward class (self~step('invalid class', 5)) array (self~step('late option', 'x'))
+refused:
+  return condition('o')~code
+::method viaArrayRequest
+  forward arguments (.arguments~new) message 'receive'
+  say 'left after forward'
+::class spelling
+::method makeString
+  say 'MAKESTRING'
+  return 'receive'
+::class arguments
+::method makeArray
+  say 'MAKEARRAY'
+  return .array~of('x', , 'z')
+"#
+        .to_vec(),
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        outcome.stdout,
+        b"to\nmessage\nMAKESTRING\nclass\nfirst\nthird\ncontinued 3 x 1 z\n\
+          invalid class\n88.914\nMAKEARRAY\n3 x 1 z\noutside 98.947\n",
+        "{stderr}"
+    );
+    let keyword_lines: Vec<_> = stderr.lines().filter(|line| line.contains(">K>")).collect();
+    assert_eq!(keyword_lines.len(), 4, "{stderr}");
+    for (line, keyword) in keyword_lines
+        .into_iter()
+        .zip(["TO", "MESSAGE", "CLASS", "ARRAY"])
+    {
+        assert!(line.contains(&format!("\"{keyword}\" =>")), "{line}");
+    }
 }

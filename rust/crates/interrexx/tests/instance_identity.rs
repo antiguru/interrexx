@@ -286,15 +286,20 @@ fn halt_through_the_instance_reaches_a_started_activity() {
 }
 
 /// `SetTrace` through the instance from a thread that runs no Rexx code traces the activity
-/// `start` made, which is waiting when it is called. Only the worker's clauses after the wait are
-/// compared: the main activity's lines interleave with them in no fixed order.
+/// `start` made, which is waiting when it is called. The worker's clauses after the wait are
+/// compared, and the CALL already running when the request arrives has no result echo.
+/// The remaining lines of the activities interleave in no fixed order.
 // spec: native.threads.trace
 #[test]
 fn set_trace_through_the_instance_traces_a_started_activity() {
     fn worker((stdout, stderr, code): Answer) -> Answer {
         let lines: String = stderr
             .lines()
-            .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
+            .filter(|line| {
+                line.contains("*-* say 'worker ran'")
+                    || line.contains("*-* done~post")
+                    || (line.trim_start().starts_with(">>>") && line.ends_with("\"0\""))
+            })
             .map(|line| format!("{line}\n"))
             .collect();
         (stdout, lines, code)
@@ -446,6 +451,41 @@ fn set_trace_traces_an_internal_routine_entered_after_the_first() {
     );
 }
 
+/// The first clause of a routine can switch on external tracing, even if
+/// it is also the clause that returns. A later clause only gets a source banner.
+// spec: native.threads.trace
+#[test]
+fn set_trace_at_a_routines_first_clause_announces_its_invocation() {
+    fn invocation_lines((stdout, stderr, code): Answer) -> Answer {
+        let lines = stderr
+            .lines()
+            .filter(|line| {
+                line.contains(">I>") || line.contains("<I<") || line.contains("+++ \"LINUX")
+            })
+            .map(|line| format!("{line}\n"))
+            .collect();
+        (stdout, lines, code)
+    }
+
+    let program = "trace_routine_entry.rex";
+    let (stdout, stderr, code) = run_halt_trace("trace-routine-entry", program, invocation_lines);
+    assert_eq!(
+        (stdout.as_str(), code),
+        ("first\nlater\nend\n", 0),
+        "{stderr}"
+    );
+    assert_eq!(
+        traced(&stderr, program),
+        interrexx_inventory::errors::expand(
+            "       >I> ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦FIRST¦PROGRAM⟩\n\
+             \x20      >I> ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      <I< ⟨101.18¦ONLY¦PROGRAM⟩\n\
+             \x20      +++ \"LINUX SUBROUTINE PROGRAM\"\n"
+        )
+    );
+}
+
 /// `SetTrace(1)` traces the main program, and a `::ROUTINE` it calls afterwards starts with its
 /// own setting: none of its clauses is traced, and the main program's are again after it returns.
 // spec: native.threads.trace
@@ -465,9 +505,8 @@ fn set_trace_leaves_a_routine_called_afterwards_its_own_setting() {
 
 /// `Halt` and `SetTrace` through the instance of an interpreter that has ended do nothing and
 /// return: the driver creates an interpreter, terminates it, calls the three and prints
-/// `returned`, as `r[native.threads.trace]` says a request made after the interpreter has ended
-/// does nothing. Not compared with the oracle.
-// spec: native.threads.trace
+/// `returned`. This driver is specific to interrexx.
+// spec: native.threads.halt, native.threads.trace
 #[test]
 fn halt_and_set_trace_after_the_interpreter_ended_return() {
     let dir = fresh_dir("halt-trace-ended");

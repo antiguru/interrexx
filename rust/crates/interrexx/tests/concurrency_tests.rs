@@ -1348,23 +1348,28 @@ mod measured {
         );
     }
 
-    /// A sleep in a PARSE template position or a SELECT CASE `WHEN` value is
-    /// evaluated on the Rust stack, so it is a pinned wait under `TreeEval`.
+    /// A SELECT CASE `WHEN` value is evaluated on the Rust stack, so a sleep
+    /// inside it is a pinned wait under `TreeEval`.
     #[test]
     fn a_sleep_in_a_tree_evaluated_expression_is_a_pinned_wait() {
-        for program in [
-            "parse value 'ab' with x (SysSleep(0)) y\n",
-            "select case 1\n  when SysSleep(0) + 1 then nop\nend\n",
-        ] {
-            let report = report_of(program);
-            let parks: Vec<_> = report.pinned_parks.iter().collect();
-            assert!(
-                parks.len() == 1
-                    && parks[0].0.0 == ParkKind::SysSleep
-                    && parks[0].0.1.contains(&PinKind::TreeEval),
-                "{program:?}: {report:?}"
-            );
-        }
+        let report = report_of("select case 1\n  when SysSleep(0) + 1 then nop\nend\n");
+        let parks: Vec<_> = report.pinned_parks.keys().collect();
+        assert!(
+            parks.len() == 1
+                && parks[0].0 == ParkKind::SysSleep
+                && parks[0].1.contains(&PinKind::TreeEval),
+            "{report:?}"
+        );
+    }
+
+    #[test]
+    fn a_sleep_in_a_compiled_parse_trigger_parks_without_a_pinned_frame() {
+        let report = report_of("parse value 'ab' with x (SysSleep(0)) y\n");
+        assert_eq!(
+            frames_at(&report, ParkKind::SysSleep),
+            [Vec::<PinKind>::new()],
+            "{report:?}"
+        );
     }
 
     /// A pinned sleeper due while a later sleeper's loop runs above its own
@@ -1430,19 +1435,7 @@ mod measured {
         ),
         (
             "TreeEval",
-            "x = rexx:g(.c~new~m)\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "call f rexx:g(.c~new~m)\nexit\nf: return\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
-        ),
-        (
-            "TreeEval",
-            "x = length(rexx:g(.c~new~m))\n::class c\n::method m\n  call SysSleep 0\n  return 1\n",
+            "select case 1\n  when SysSleep(0) + 1 then nop\nend\n",
         ),
         (
             "TreeSend",
@@ -1519,6 +1512,10 @@ mod measured {
             "call f g()\nexit\nf: return\ng:\n  call SysSleep 0\n  return 2\n",
             "x = abs(g())\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "x = (g(), 1)\nexit\ng:\n  call SysSleep 0\n  return 2\n",
+            "x = rexx:g(.c~new~m)\n",
+            "x = f(rexx:g(.c~new~m))\nexit\nf: return 1\n",
+            "call f rexx:g(.c~new~m)\nexit\nf: return\n",
+            "x = length(rexx:g(.c~new~m))\n",
             "if .c~new~m then nop\n",
             ".c~new~m\n",
             "x = f(.c~new~m)\nexit\nf: return 1\n",
