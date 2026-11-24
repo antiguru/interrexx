@@ -1676,6 +1676,22 @@ impl Interp {
         failure
     }
 
+    /// Converts and traces the computed target before evaluating arguments.
+    /// Its verbatim text searches labels and then the regular routine order
+    /// (r[instr.call.expr], r[instr.call.search]).
+    pub(super) fn exec_dynamic_call(
+        &mut self,
+        code: &Code<'_>,
+        value: ObjRef,
+        args: &[Option<Expr>],
+    ) -> Result<Flow, Failure> {
+        self.roots.activity_mut().push_temp(value);
+        let value = self.required_string_value(value)?;
+        let name = self.to_text(value).to_vec();
+        self.trace_result(self.activity.clause_state.current_value_indent, &name);
+        self.exec_call(code, &name, true, args)
+    }
+
     /// Runs one named `CALL`: `resolve_fixed_call`, then
     /// [`Interp::invoke_named_call`].
     pub(super) fn exec_call(

@@ -987,20 +987,7 @@ impl Interp {
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
-                    self.roots.activity_mut().push_temp(value);
-                    // The target is converted to a string
-                    // before the
-                    // `>>>` below: measured, `trace r` over `call (.K)` with a
-                    // class-side `makeString` returning `'MS'` traces
-                    // `>>>   "MS"` and runs `MS:`.
-                    let value = self.required_string_value(value)?;
-                    let name = self.to_text(value).to_vec();
-                    // Its own `>>>`, at the `CALL` clause's own indent, which
-                    // `Call::Named` has no equivalent of -- measured, `call
-                    // sub 1+1, 'q'` under `trace r` traces no value line at
-                    // all while `call (nm)` traces one for the target.
-                    self.trace_result(self.activity.clause_state.current_value_indent, &name);
-                    self.exec_call(code, &name, true, args)
+                    self.exec_dynamic_call(code, value, args)
                 }
                 // `CALL ON cond NAME label` / `CALL OFF cond`. Shares every
                 // line of its implementation with `SIGNAL ON`/`OFF` except
@@ -2807,6 +2794,10 @@ impl Interp {
             InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
                 expression.as_ref()
             }
+            InstructionKind::Call(call) => match &**call {
+                interrexx_parse::Call::Dynamic { target, .. } => Some(target),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -2820,7 +2811,8 @@ impl Interp {
             InstructionKind::Interpret { .. }
                 | InstructionKind::Command { .. }
                 | InstructionKind::Reply { .. }
-        )
+        ) || matches!(kind, InstructionKind::Call(call)
+            if matches!(&**call, interrexx_parse::Call::Dynamic { .. }))
     }
 
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
@@ -2916,6 +2908,12 @@ impl Interp {
             InstructionKind::Interpret { .. } => self
                 .exec_interpret_value(index, instruction, source, value)
                 .map(ExecOutcome::Done),
+            InstructionKind::Call(call)
+                if let interrexx_parse::Call::Dynamic { args, .. } = &**call =>
+            {
+                self.exec_dynamic_call(code, value, args)
+                    .map(ExecOutcome::Done)
+            }
             // A command that blocked re-runs this op when it is woken, as a
             // blocked `Op::Exec` re-runs its instruction, and ends there.
             InstructionKind::Command { .. } if self.blocked_command_woken(index) => {

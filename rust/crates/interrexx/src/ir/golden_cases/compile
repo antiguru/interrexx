@@ -1062,18 +1062,32 @@ call zsub 1
 registers: 1
 consts:
 
-# a trap call and a dynamic call keep no resolved site
-# **`CALL ON`/`CALL OFF` and `CALL (expr)` carry no resolved call site**,
-# and each carries none for a reason of its own rather than by oversight.
+# traps and qualified calls stay whole-clause ops
 compile
 call on error name zh
-call (zn)
+call off error
+call zns:zrtn
 ----
 0: Clause index=0 end=2
 1: Exec index=0
 2: Clause index=1 end=4
 3: Exec index=1
+4: Clause index=2 end=6
+5: Exec index=2
 registers: 0
+consts:
+
+# a computed CALL evaluates its target into a register
+# Only the inner function has a call site. The outer CALL has a name that can
+# change between executions, and reads its register before running its arguments.
+compile
+call (ztarget()) 1
+----
+0: CallingClause index=0 end=4
+1: CallArgs slot=0 path=root site=0 argc=0 dst=0
+2: TraceFunction index=0 slot=0 path=root src=0
+3: ExecWith index=0 src=0
+registers: 1
 consts:
 
 # a compiled write names a slot only for a simple target
