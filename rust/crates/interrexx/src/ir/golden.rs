@@ -15,6 +15,15 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             Op::TraceKeyword { role, src } => {
                 out.push_str(&format!("{index}: TraceKeyword role={role:?} src={src}\n"));
             }
+            Op::ForwardPart {
+                index: at,
+                part,
+                src,
+            } => {
+                out.push_str(&format!(
+                    "{index}: ForwardPart index={at} part={part:?} src={src}\n"
+                ));
+            }
             Op::LoopHeaderValue { role, src } => {
                 out.push_str(&format!(
                     "{index}: LoopHeaderValue role={role:?} src={src}\n"
@@ -492,6 +501,8 @@ fn render_condition_keyword(keyword: ConditionKeyword) -> &'static str {
     match keyword {
         ConditionKeyword::If => "IF",
         ConditionKeyword::When => "WHEN",
+        ConditionKeyword::ListItem => "LIST ITEM",
+        ConditionKeyword::ListLast => "LIST LAST",
     }
 }
 

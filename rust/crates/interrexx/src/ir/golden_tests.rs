@@ -108,6 +108,46 @@ fn a_call_nested_past_the_paths_width_leaves_the_slot_general() {
     );
 }
 
+#[test]
+fn qualified_calls_use_call_ops_in_computed_clauses() {
+    let padding = ", ".repeat(31);
+    let source = format!(
+        "numeric digits ns:digits('12')\nsay 1 + ns:number(act(), , 4)\n\
+         say ns:f({padding}act())\n"
+    );
+    let chunk = compile_for_test(source.as_bytes()).expect("compiled qualified calls");
+    let rendered = render(&chunk);
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root.R "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallExpr index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(!rendered.contains("EvalExpr"), "{rendered}");
+
+    let traced =
+        compile_for_test_under(source.as_bytes(), intermediates()).expect("compiled TRACE I");
+    let rendered = render(&traced);
+    assert!(
+        rendered.contains("CallArgs slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("CallExpr index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("TraceFunction index=2 slot=0 path=root "),
+        "{rendered}"
+    );
+}
+
 /// **The symbol a compiled read names is the one its own expression names**,
 /// which the rendered stream cannot say -- `render`'s own comment has why it
 /// prints no symbol index.
@@ -277,13 +317,20 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
     );
 }
 
+/// An expression whose qualified call is deeper than a call op can address.
+fn unaddressable_call() -> String {
+    let depth = u32::BITS as usize;
+    format!("{}zn:zf(){}", "0 + (".repeat(depth), ")".repeat(depth))
+}
+
 /// **A `WHEN`'s condition outside the native set stays one
 /// [`super::Op::WhenTest`] and takes no `ConditionJump` op**, which is the
 /// adjacent refusal to the two `SELECT` streams above and the sibling of
 /// `a_condition_outside_the_native_set_stays_one_eval_expr`.
 #[test]
 fn a_when_condition_outside_the_native_set_stays_one_when_test() {
-    let chunk = compile_for_test(b"select\n  when zn:zf() then nop\nend\n").expect("compiles");
+    let source = format!("select\n  when {} then nop\nend\n", unaddressable_call());
+    let chunk = compile_for_test(source.as_bytes()).expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=1\n\
@@ -527,7 +574,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
 /// fallback and **not** the `IF` one.
 #[test]
 fn a_return_expression_outside_the_native_set_keeps_its_return_op() {
-    let chunk = compile_for_test(b"return zn:zf()\n").expect("compiles");
+    let source = format!("return {}\n", unaddressable_call());
+    let chunk = compile_for_test(source.as_bytes()).expect("compiles");
     assert_eq!(
         render(&chunk),
         "0: Clause index=0 end=3\n\
@@ -600,11 +648,24 @@ fn a_template_of_literals_is_one_parse_begin() {
     );
 }
 
+#[test]
+fn parse_trigger_calls_address_their_own_template_entries() {
+    let source = b"parse value input() with a ' ' b (separator(a)) c, d +(position(c)) e\n";
+    let rendered = render(&compile_for_test(source).expect("the chunk fits"));
+    for (slot, site) in [(0, 0), (2, 1), (5, 2)] {
+        assert!(
+            rendered.contains(&format!("CallArgs slot={slot} path=root site={site} ")),
+            "{rendered}"
+        );
+    }
+    assert_eq!(rendered.matches("ParseRun").count(), 2, "{rendered}");
+}
+
 /// The shapes the walk takes no runs for are its opening alone, with no
 /// walk registers, and the opening names the ones it hands to the template
 /// engine whole: a fold, a source read as a line, `PARSE VAR` into words or
 /// of a compound. A clause that may trace is walked whole while it does not,
-/// and an operand with a call in it is evaluated where the walk reaches it.
+/// including an operand that can change the clause's TRACE setting.
 #[test]
 fn a_template_with_no_runs_is_its_opening_alone() {
     let normal = || ChunkTrace::of(TraceMode::NORMAL);
@@ -619,7 +680,7 @@ fn a_template_with_no_runs_is_its_opening_alone() {
         (b"parse pull a (p + 1) b\n", normal(), "Engine"),
         (b"parse var s a b c\n", normal(), "Engine"),
         (b"parse var s.i a ' ' b\n", normal(), "Engine"),
-        (b"parse var s a (f()) b\n", normal(), "Var"),
+        (b"parse var s a (trace('I')) b\n", normal(), "Var"),
         (b"parse arg a ' ' b, c, d\n", normal(), "Arg strings=3"),
     ] {
         let rendered = render(&compile_for_test_under(source, trace).expect("the chunk fits"));
@@ -631,4 +692,33 @@ fn a_template_with_no_runs_is_its_opening_alone() {
             String::from_utf8_lossy(source)
         );
     }
+}
+
+#[test]
+fn forward_options_compile_with_early_checks_and_their_own_slots() {
+    let source = b"forward array (last(), , 'z') class (scope()) message (name()) to (target())";
+    let chunk = compile_for_test(source).expect("compiled FORWARD");
+    let ops = render(&chunk);
+    let mut after = 0;
+    for line in [
+        "part=Method",
+        "CallArgs slot=0 path=root",
+        "part=To",
+        "CallArgs slot=1 path=root",
+        "part=Message",
+        "CallArgs slot=2 path=root",
+        "part=Class",
+        "CallArgs slot=4 path=root",
+        "PushArg src=omitted",
+        "ExecWith index=0 src=0",
+    ] {
+        let at = ops[after..]
+            .find(line)
+            .unwrap_or_else(|| panic!("{line}\n{ops}"));
+        after += at + line.len();
+    }
+    assert!(
+        !ops.contains("EvalExpr") && !ops.contains(" Exec "),
+        "{ops}"
+    );
 }

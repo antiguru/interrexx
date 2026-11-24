@@ -418,8 +418,7 @@ impl Interp {
         };
         // A compaction or a clear since the read renumbered the ordinals, so
         // `ordinal` may now be another tail's. A tail dropped since the read
-        // left a tombstone, or a hole where it was assigned again, and
-        // `set_at` refuses both.
+        // left a tombstone or hole, both of which `set_at` refuses.
         if exposed_home(exposed, key).is_some()
             || tails.epoch() != epoch
             || !tails.set_at(ordinal, Some(value))
@@ -585,8 +584,7 @@ impl Interp {
         }
     }
 
-    /// Drops one tail: a tombstone (`Some(key) -> None`) in the stem's
-    /// object, which does not take the default. A stem never used before is
+    /// Drops one tail so it reads as unset. A stem never used before is
     /// created first, as any use of a compound creates it.
     pub(crate) fn stem_drop_tail(&mut self, stem_name: &[u8], key: &[u8]) {
         self.stem_drop_tail_at(stem_name, None, key);
@@ -602,21 +600,15 @@ impl Interp {
             Some(stem_value) => stem_value,
             None => self.create_stem_variable(frame, slot, stem_name),
         };
-        let object = self.heap.get_mut(stem_value).expect("a live value");
-        let Body::Stem { tails, exposed, .. } = &mut object.body else {
+        let object = self.heap.get(stem_value).expect("a live value");
+        let Body::Stem { exposed, .. } = &object.body else {
             unreachable!(
                 "a stem-named slot holds only Body::Stem, got {}",
                 body_variant_name(&object.body)
             );
         };
-        if let Some(home) = exposed_home(exposed, key) {
-            self.set_tail(home, key, None);
-            return;
-        }
-        // A drop keeps the tail's place, so the ordinal survives it until the
-        // tail is assigned again, which moves it to the end.
-        tails.set(self.hash_seed, key, None);
-        self.stem_changed(stem_value);
+        let home = exposed_home(exposed, key).unwrap_or(stem_value);
+        self.set_tail(home, key, None);
     }
 
     /// `stem. = expr`: replaces the whole object and rebinds the variable.
@@ -672,8 +664,8 @@ impl Interp {
     /// What an expose does past resolving the tail: `key` of `home` (the
     /// object's stem or the caller's) becomes the same tail of the stem the
     /// running activation names `stem_name`, so one value is read and written
-    /// through both. The tail is made in `home` first, holding the stem's
-    /// assigned default if it has one.
+    /// through both. If `home` has a default, an absent tail is made in it
+    /// first, holding that default.
     pub(crate) fn expose_tail(&mut self, home: ObjRef, stem_name: &[u8], key: &[u8]) {
         // The tail's own stem when `home`'s is already another's, so that
         // every exposed tail names the stem that holds the value.
@@ -681,10 +673,13 @@ impl Interp {
             Some(Body::Stem { exposed, .. }) => exposed_home(exposed, key).unwrap_or(home),
             _ => home,
         };
-        if let Some(Body::Stem { default, tails, .. }) =
-            self.heap.get_mut(home).map(|object| &mut object.body)
+        if let Some(Body::Stem {
+            default: Some(default),
+            tails,
+            ..
+        }) = self.heap.get_mut(home).map(|object| &mut object.body)
         {
-            tails.insert_if_absent(self.hash_seed, key, *default);
+            tails.insert_if_absent(self.hash_seed, key, Some(*default));
         }
         let local = self.read_stem(stem_name);
         // `expose a. a.1`: the local stem is the object's own.
@@ -823,13 +818,17 @@ impl Interp {
         }
     }
 
-    /// Writes `key` of `stem`, `None` dropping it; a drop keeps the tail's
-    /// place, as an overwrite does.
+    /// Writes `key` of `stem`, keeping a dropped tail only if it must
+    /// shadow the default.
     pub(crate) fn set_tail(&mut self, stem: ObjRef, key: &[u8], value: Option<ObjRef>) {
-        if let Some(Body::Stem { tails, .. }) =
+        if let Some(Body::Stem { default, tails, .. }) =
             self.heap.get_mut(stem).map(|object| &mut object.body)
         {
-            tails.set(self.hash_seed, key, value);
+            if value.is_none() && default.is_none() {
+                tails.remove(key);
+            } else {
+                tails.set(self.hash_seed, key, value);
+            }
             self.stem_changed(stem);
         }
     }
@@ -930,6 +929,64 @@ mod tests {
     use interrexx_num::{Form, Number};
     use interrexx_parse::{ExprKind, InstructionKind, Program, parse_program};
     use std::rc::Rc;
+
+    #[test]
+    fn dropping_distinct_tails_keeps_a_defaultless_stem_small() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let value = interp.text(b"held");
+        interp.stem_set(b"S.", b"first", value);
+        for at in 0..10_000 {
+            let key = at.to_string();
+            interp.stem_set(b"S.", key.as_bytes(), value);
+            interp.stem_drop_tail(b"S.", key.as_bytes());
+        }
+        interp.stem_set(b"S.", b"last", value);
+        let stem = interp.read_stem(b"S.");
+        let Some(Body::Stem { tails, .. }) = interp.heap.get(stem).map(|object| &object.body)
+        else {
+            panic!("S. holds a stem");
+        };
+        assert_eq!(
+            tails.in_order(),
+            [(&b"first"[..], Some(value)), (b"last", Some(value))]
+        );
+        assert!(tails.slab_len() <= 4);
+        assert_eq!(interp.stem_get(b"S.", b"9999").1, Novalue::Unset);
+    }
+
+    #[test]
+    fn dropping_an_exposed_tail_shadows_its_homes_default() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let value = interp.text(b"default");
+        interp.stem_assign(b"HOME.", value);
+        let home = interp.read_stem(b"HOME.");
+        interp.expose_tail(home, b"LOCAL.", b"1");
+        assert_eq!(interp.stem_get(b"LOCAL.", b"1").0, value);
+        interp.stem_drop_tail(b"LOCAL.", b"1");
+        assert_eq!(interp.stem_get(b"LOCAL.", b"1").1, Novalue::Unset);
+        assert_eq!(interp.stem_get(b"HOME.", b"1").1, Novalue::Unset);
+        assert_eq!(interp.stem_get(b"HOME.", b"2").0, value);
+        interp.stem_set(b"LOCAL.", b"1", value);
+        assert_eq!(interp.stem_get(b"HOME.", b"1").0, value);
+    }
+
+    #[test]
+    fn exposing_an_unset_tail_still_links_to_a_defaultless_stem() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let home = interp.read_stem(b"HOME.");
+        interp.expose_tail(home, b"LOCAL.", b"1");
+        assert_eq!(interp.stem_get(b"LOCAL.", b"1").1, Novalue::Unset);
+        let value = interp.text(b"held");
+        interp.stem_set(b"HOME.", b"1", value);
+        assert_eq!(interp.stem_get(b"LOCAL.", b"1").0, value);
+        interp.stem_drop_tail(b"LOCAL.", b"1");
+        assert_eq!(interp.stem_get(b"HOME.", b"1").1, Novalue::Unset);
+        interp.stem_set(b"LOCAL.", b"1", value);
+        assert_eq!(interp.stem_get(b"HOME.", b"1").0, value);
+    }
 
     /// Pushes a fresh top-level activation for `program`, the same setup
     /// `Interp::run` does inline, but stopping short of calling

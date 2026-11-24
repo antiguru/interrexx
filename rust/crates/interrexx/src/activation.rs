@@ -403,7 +403,23 @@ pub(crate) struct Activation {
     pub(crate) streams: Option<Box<StreamTable>>,
 }
 
-type StreamTable = NameMap<Box<[u8]>, ObjRef>;
+/// A named stream owned by an activation. A replacement may have its own
+/// `CLOSE`, so the owner sends it before leaving (spec: env.security.stream.close).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StreamEntry {
+    Opened(ObjRef),
+    Replacement(ObjRef),
+}
+
+impl StreamEntry {
+    pub(crate) fn object(self) -> ObjRef {
+        match self {
+            Self::Opened(object) | Self::Replacement(object) => object,
+        }
+    }
+}
+
+type StreamTable = NameMap<Box<[u8]>, StreamEntry>;
 
 /// How control arrived at an activation.
 /// ```text
@@ -1246,7 +1262,7 @@ impl Activation {
         // The table's streams. An activation is a root, and a stream only
         // the table holds is reachable through nothing else.
         if let Some(table) = streams {
-            out.extend(table.values().copied());
+            out.extend(table.values().map(|entry| entry.object()));
         }
         // The convention's own values, which a moved `REPLY` continuation
         // also roots from its `CallContext`: this activation holds a
@@ -1844,7 +1860,7 @@ mod address_tests {
 mod method_tests {
     use super::{
         Activation, CallType, Entry, InstanceVar, IoConfigs, MethodIdentity, Replied, ReplyState,
-        TraceEntry,
+        StreamEntry, TraceEntry,
     };
     use crate::Interp;
     use crate::plan::Plan;
@@ -1957,7 +1973,7 @@ mod method_tests {
         activation
             .streams
             .get_or_insert_with(Box::default)
-            .insert(Box::from(&b"S"[..]), ObjRef::NIL);
+            .insert(Box::from(&b"S"[..]), StreamEntry::Opened(ObjRef::NIL));
     }
 
     /// Compares `a` and `b` field by field. The destructuring names every

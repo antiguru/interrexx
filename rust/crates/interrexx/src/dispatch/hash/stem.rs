@@ -493,16 +493,8 @@ fn native_stem_index(
 
 /// Writes one tail, `None` dropping it.
 fn stem_write(interp: &mut Interp, receiver: ObjRef, tail: Vec<u8>, value: Option<ObjRef>) {
-    if let Some(home) = exposed_tail(interp, receiver, &tail) {
-        interp.set_tail(home, &tail, value);
-        return;
-    }
-    if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(receiver).map(|held| &mut held.body)
-    {
-        // The ordinal survives a drop and an overwrite -- see `Body::Stem`.
-        tails.set(interp.hash_seed, &tail, value);
-        interp.stem_changed(receiver);
-    }
+    let home = exposed_tail(interp, receiver, &tail).unwrap_or(receiver);
+    interp.set_tail(home, &tail, value);
 }
 
 /// `remove(tail)`: drops the tail and answers what it held, or `.nil`.

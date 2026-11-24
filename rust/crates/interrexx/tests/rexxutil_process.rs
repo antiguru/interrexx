@@ -16,7 +16,7 @@ const PROGRAM: &str = "a = .w~new~start('WAIT')\nb = .w~new~start('WAIT')\n\
 /// answering the directory too.
 fn rexx(name: &str, program: &str) -> (Command, std::path::PathBuf) {
     let dir = std::env::temp_dir().join(format!("rexx-{name}-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).expect("a directory");
+    std::fs::create_dir(&dir).expect("a fresh fixture directory");
     std::fs::write(dir.join("p.rex"), program).expect("the program written");
     let mut command = Command::new(env!("CARGO_BIN_EXE_rexx"));
     command
@@ -81,20 +81,27 @@ fn pgid_is_the_parents_group() {
 
 /// The command waiter and SysWait may each reap the command's child. Either
 /// winner is valid. When SysWait wins, the command's wait answers ECHILD and
-/// its return code is -10 with no FAILURE (Deviation 91).
+/// its return code is minus ECHILD with no FAILURE (Deviation 91).
 #[test]
 fn competing_child_waiters_accept_either_valid_winner() {
+    // The child announces its start and waits until the main activity
+    // releases it immediately before SysWait. Only the outer watchdog
+    // imposes a deadline.
     // Normal command RC tracing is unrelated to wait ownership.
     let program = "a = .w~new~start('RUN')\n\
-        do 400 until SysFileExists('started'); call SysSleep 0.05; end\n\
+        do while SysFileExists('started') = 0 & a~completed = 0\n\
+          call SysSleep 0.01\n\
+        end\n\
         say 'ready' SysFileExists('started')\n\
+        call charout 'release', 'go'\n\
+        call charout 'release'\n\
         say 'wait' SysWait()\n\
         say 'cmd' a~result\n\
         ::class w\n\
         ::method run\n\
         trace off\n\
         call on failure name failed\n\
-        'touch started; sleep 0.6; exit 5'\n\
+        ': >started || exit 6; while [ ! -f release ]; do sleep 0.01; done; exit 5'\n\
         return 'rc' rc\n\
         failed:\n\
         say 'failure' rc\n\
@@ -108,24 +115,17 @@ fn competing_child_waiters_accept_either_valid_winner() {
         .stdin(std::process::Stdio::null())
         .output()
         .expect("timeout runs rexx");
-    eprintln!(
-        "waiter race: ready={} status={:?} stdout={:?} stderr={:?}",
-        dir.join("started").exists(),
-        output.status,
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(output.status.success(), "{output:?}");
-    assert!(output.stderr.is_empty(), "{output:?}");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut lines: Vec<&str> = stdout.lines().collect();
-    lines.sort_unstable();
-    assert!(
-        lines == ["cmd rc -10", "ready 1", "wait 1280"]
-            || lines == ["cmd rc 5", "ready 1", "wait -1"],
-        "{stdout}"
-    );
+    let started = dir.join("started").exists();
+    let released = dir.join("release").exists();
     std::fs::remove_dir_all(dir).expect("remove race fixture");
+    let command_lost = format!("ready 1\nwait 1280\ncmd rc {}\n", -libc::ECHILD);
+    assert!(
+        output.status.success()
+            && output.stderr.is_empty()
+            && (output.stdout == command_lost.as_bytes()
+                || output.stdout == b"ready 1\nwait -1\ncmd rc 5\n"),
+        "waiter race: started={started} released={released} {output:?}"
+    );
 }
 
 /// Runs the owned-child fixture after the child is waitable without reaping.

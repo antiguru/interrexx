@@ -1413,10 +1413,9 @@ fn assert_stalled(stderr: &str, waiter: &str, what: &str, stopped: &str) {
     );
 }
 
-/// An attached thread's message waits on an event semaphore that a second attached thread's
-/// message, sent a second later, posts. The first waits on nothing the main program would
-/// provide, so it is not refused, and the second message, served on top of it, ends its wait
-/// before stderr would say that it waits.
+/// One attached thread waits on an event semaphore and a second posts it. The
+/// second sends its message once the waiting callback has started, without
+/// depending on a delay between the two native threads.
 // spec: native.threads.attach
 #[test]
 fn attached_callbacks_wait_for_each_other() {

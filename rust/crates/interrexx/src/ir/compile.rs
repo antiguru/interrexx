@@ -16,8 +16,9 @@ use super::{
 use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
 use crate::run::{
-    HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan,
-    loop_header_slot, otherwise_range, when_targets,
+    FORWARD_ARRAY_SLOT, ForwardPart, HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword,
+    forward_option_parts, if_targets, loop_header_plan, loop_header_slot, otherwise_range,
+    when_targets,
 };
 use crate::trace::ChunkTrace;
 
@@ -549,48 +550,39 @@ fn compile_settled(
                     end: 0,
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
-                let jump = if native_shape(condition, Some(NodePath::ROOT)) {
-                    push_native(
-                        &mut ops,
-                        echoes_values,
-                        &mut consts,
-                        &mut registers,
-                        &mut hints,
-                        &mut calls,
-                        plan,
-                        condition,
-                        instruction_index(index)?,
-                        0,
-                        Some(NodePath::ROOT),
-                        dst,
-                    )?;
-                    let jump = op_index(&ops)?;
-                    ops.push(Op::ConditionJump {
-                        index: instruction_index(index)?,
-                        reg: dst,
-                        keyword: ConditionKeyword::If,
-                        target: 0,
-                    });
-                    jump
-                } else {
+                let mut patch = |op| {
+                    patches.push(Patch {
+                        op,
+                        target: targets.false_target,
+                        kind: PatchKind::IfFalse(index),
+                    })
+                };
+                if !push_condition(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    condition,
+                    instruction_index(index)?,
+                    dst,
+                    ConditionKeyword::If,
+                    &mut patch,
+                )? {
                     ops.push(Op::EvalExpr {
                         index: instruction_index(index)?,
                         slot: 0,
                         dst,
                     });
-                    let jump = op_index(&ops)?;
+                    patch(op_index(&ops)?);
                     ops.push(Op::JumpUnless {
                         reg: dst,
                         target: 0,
                     });
-                    jump
-                };
+                }
                 close_region(&mut ops, at)?;
-                patches.push(Patch {
-                    op: jump,
-                    target: targets.false_target,
-                    kind: PatchKind::IfFalse(index),
-                });
                 registers.release(mark);
                 // Only when the false path lands on an `ELSE`: without one,
                 // the true branch's fallthrough is already the resume, and a
@@ -754,55 +746,45 @@ fn compile_settled(
                 // So it stays on `Op::WhenTest`, which is the op that does
                 // that whole job, and so does a `When` whose condition
                 // `native_shape` declines.
-                let jump = match &instruction.kind {
-                    InstructionKind::When { condition, .. }
-                        if native_shape(condition, Some(NodePath::ROOT)) =>
-                    {
-                        push_native(
-                            &mut ops,
-                            echoes_values,
-                            &mut consts,
-                            &mut registers,
-                            &mut hints,
-                            &mut calls,
-                            plan,
-                            condition,
-                            instruction_index(index)?,
-                            0,
-                            Some(NodePath::ROOT),
-                            dst,
-                        )?;
-                        let jump = op_index(&ops)?;
-                        ops.push(Op::ConditionJump {
-                            index: instruction_index(index)?,
-                            reg: dst,
-                            keyword: ConditionKeyword::When,
-                            target: 0,
-                        });
-                        jump
-                    }
-                    _ => {
-                        ops.push(Op::WhenTest {
-                            index: instruction_index(index)?,
-                            case: info.case,
-                            dst,
-                        });
-                        let jump = op_index(&ops)?;
-                        ops.push(Op::JumpUnless {
-                            reg: dst,
-                            target: 0,
-                        });
-                        jump
-                    }
+                let mut patch = |op| {
+                    patches.push(Patch {
+                        op,
+                        target: info.false_target,
+                        kind: info.false_kind,
+                    })
                 };
+                let native = match &instruction.kind {
+                    InstructionKind::When { condition, .. } => push_condition(
+                        &mut ops,
+                        echoes_values,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        condition,
+                        instruction_index(index)?,
+                        dst,
+                        ConditionKeyword::When,
+                        &mut patch,
+                    )?,
+                    _ => false,
+                };
+                if !native {
+                    ops.push(Op::WhenTest {
+                        index: instruction_index(index)?,
+                        case: info.case,
+                        dst,
+                    });
+                    patch(op_index(&ops)?);
+                    ops.push(Op::JumpUnless {
+                        reg: dst,
+                        target: 0,
+                    });
+                }
                 // Closed before `EnterWhen`, which opens the branch's frame and
                 // is the branch's business rather than the clause's.
                 close_region(&mut ops, at)?;
-                patches.push(Patch {
-                    op: jump,
-                    target: info.false_target,
-                    kind: info.false_kind,
-                });
                 registers.release(mark);
                 ops.push(Op::EnterWhen {
                     select: info.select,
@@ -1381,6 +1363,90 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
+            // Bare FORWARD has no option expressions to compile.
+            InstructionKind::Forward(forward)
+                if forward.array.as_ref().is_none_or(|array| {
+                    array.len() <= (u32::from(u16::MAX) - FORWARD_ARRAY_SLOT) as usize
+                }) && (forward.array.is_some()
+                    || forward_option_parts(forward)
+                        .iter()
+                        .any(|(_, expr)| expr.is_some())) =>
+            {
+                let mark = registers.mark();
+                let at = op_index(&ops)?;
+                let clause = instruction_index(index)?;
+                ops.push(Op::Clause {
+                    index: clause,
+                    end: 0,
+                });
+                push_echo(&mut ops, echoes(trace, instruction), clause);
+                ops.push(Op::ForwardPart {
+                    index: clause,
+                    part: ForwardPart::Method,
+                    src: Op::ARG_OMITTED,
+                });
+                let scalars = forward_option_parts(forward);
+                let base = registers.alloc()?;
+                for _ in 1..scalars.iter().filter(|(_, expr)| expr.is_some()).count() {
+                    registers.alloc()?;
+                }
+                let mut src = base;
+                for (slot, (part, expr)) in scalars.into_iter().enumerate() {
+                    let Some(expr) = expr else { continue };
+                    push_value(
+                        &mut ops,
+                        echoes_values,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        expr,
+                        clause,
+                        slot as u32,
+                        src,
+                    )?;
+                    ops.push(Op::ForwardPart {
+                        index: clause,
+                        part,
+                        src,
+                    });
+                    src += 1;
+                }
+                if let Some(items) = &forward.array {
+                    for (slot, item) in items.iter().enumerate() {
+                        let src = if let Some(expr) = item {
+                            let src = registers.alloc()?;
+                            push_value(
+                                &mut ops,
+                                echoes_values,
+                                &mut consts,
+                                &mut registers,
+                                &mut hints,
+                                &mut calls,
+                                plan,
+                                expr,
+                                clause,
+                                FORWARD_ARRAY_SLOT + slot as u32,
+                                src,
+                            )?;
+                            src
+                        } else {
+                            Op::ARG_OMITTED
+                        };
+                        ops.push(Op::PushArg { src });
+                        if echoes_values {
+                            ops.push(Op::TraceArgument { src });
+                        }
+                    }
+                }
+                ops.push(Op::ExecWith {
+                    index: clause,
+                    src: base,
+                });
+                close_region(&mut ops, at)?;
+                registers.release(mark);
+            }
             // A `RAISE` with an expression: each expression's ops into its
             // part's registers, each followed by the `Op::RaisePart` that does
             // what the instruction does with that value before it evaluates
@@ -1787,6 +1853,72 @@ fn push_value<'a>(
     }
 }
 
+/// A native condition branches out of its one clause region when any of its
+/// values is false. Only a comma list addresses its values in slots starting
+/// at one; slot zero is the unsplit condition.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the expression emitter's state plus the branch patch"
+)]
+fn push_condition<'a>(
+    ops: &mut Vec<Op>,
+    echoes_values: bool,
+    consts: &mut Constants<'a>,
+    registers: &mut Registers,
+    hints: &mut Hints,
+    calls: &mut Calls,
+    plan: &Plan,
+    condition: &'a Expr,
+    index: u32,
+    dst: u16,
+    keyword: ConditionKeyword,
+    patch: &mut impl FnMut(u32),
+) -> Result<bool, ChunkTooLarge> {
+    let (items, comma_list) = match &condition.kind {
+        ExprKind::Logical(items) => (items.as_slice(), true),
+        _ => (std::slice::from_ref(condition), false),
+    };
+    if u16::try_from(items.len()).is_err()
+        || items
+            .iter()
+            .any(|item| !native_shape(item, Some(NodePath::ROOT)))
+    {
+        return Ok(false);
+    }
+    for (item_at, item) in items.iter().enumerate() {
+        let slot = if comma_list { item_at as u32 + 1 } else { 0 };
+        push_native(
+            ops,
+            echoes_values,
+            consts,
+            registers,
+            hints,
+            calls,
+            plan,
+            item,
+            index,
+            slot,
+            Some(NodePath::ROOT),
+            dst,
+        )?;
+        let keyword = if !comma_list {
+            keyword
+        } else if item_at + 1 == items.len() {
+            ConditionKeyword::ListLast
+        } else {
+            ConditionKeyword::ListItem
+        };
+        patch(op_index(ops)?);
+        ops.push(Op::ConditionJump {
+            index,
+            reg: dst,
+            keyword,
+            target: 0,
+        });
+    }
+    Ok(true)
+}
+
 /// How the opening of `parse` takes it, from what the template and the plan
 /// already say, and for `PARSE ARG` how many parse strings it reads. A
 /// `PARSE VAR` name with a dot in it is a stem or a compound, which the plan
@@ -1830,8 +1962,7 @@ fn parse_opening(parse: &interrexx_parse::Parse, plan: &Plan) -> (ParseOpening, 
 
 /// Whether the template of `parse` is walked by [`Op::ParseBegin`] and its
 /// [`Op::ParseRun`]s: a source the compiled walk reads in place, no fold, and
-/// every trigger operand a literal or an expression of reads and operators,
-/// which runs without parking the driver and so between two steps. `PARSE VAR
+/// every trigger operand an expression the stream can evaluate. `PARSE VAR
 /// name w1 ... rest` keeps the template engine's own walk for that shape.
 fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
     use interrexx_parse::TriggerKind;
@@ -1849,10 +1980,10 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
         && !(parse.upper || parse.lower)
         && u16::try_from(parse.template.len()).is_ok()
         && parse.template.iter().flatten().all(|trigger| {
-            trigger.value.as_ref().is_none_or(|operand| {
-                matches!(operand.kind, ExprKind::Literal(_) | ExprKind::Constant(_))
-                    || (value_only(operand) && native_shape(operand, Some(NodePath::ROOT)))
-            })
+            trigger
+                .value
+                .as_ref()
+                .is_none_or(|operand| native_shape(operand, Some(NodePath::ROOT)))
         })
 }
 
@@ -1943,7 +2074,9 @@ fn push_template<'a>(
             plan,
             operand,
             index,
-            0,
+            // Slot zero names the PARSE VALUE source. A trigger's slot
+            // follows its template index, including any comma fences.
+            u32::from(width(from + 1)?),
             Some(NodePath::ROOT),
             dst,
         )?;
@@ -1972,7 +2105,7 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         // A call needs an address, and a node past the width has none. The
         // whole slot then falls to `Op::EvalExpr`, which is the answer it had
         // before there was an address at all.
-        ExprKind::Call { .. } => path.is_some(),
+        ExprKind::Call { .. } | ExprKind::QualifiedCall { .. } => path.is_some(),
         // A send needs an address for the same reason; the receiver is child
         // 0 and the arguments follow it. A `:scope` override has no address
         // of its own, so a call in it leaves the slot general.
@@ -2326,17 +2459,21 @@ fn push_native<'a>(
                 ops.push(Op::TracePrefix { op: *op, src: dst });
             }
         }
-        // **A call takes its own op wherever it sits**, which is
-        // [`Op::CallExpr`], and the only thing that op changes about running
-        // the call is that the resolution comes from a site instead of being
-        // made afresh. What it needs and no other arm here does is an address:
-        // the value is not computed from operand registers, so the driver goes
-        // back to the node to find the target and the arguments.
-        ExprKind::Call { args, .. } => {
+        // The call's address leads back to the target and to any arguments
+        // that need the expression evaluator.
+        ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
             let slot16 = u16::try_from(slot).map_err(|_| ChunkTooLarge {
                 what: "expression slots past u16",
             })?;
             let path = path.expect("native_shape accepts a call only where an address reaches it");
+            let qualified = matches!(expr.kind, ExprKind::QualifiedCall { .. });
+            let reserve_site = |calls: &mut Calls| {
+                if qualified {
+                    Ok(super::UNCACHED_CALL)
+                } else {
+                    calls.reserve()
+                }
+            };
             // **The arguments become ops of their own where they can.** Then
             // the call op takes values off the driver's argument stack
             // instead of walking back to the node for expressions and
@@ -2362,7 +2499,7 @@ fn push_native<'a>(
                 ops.push(Op::CallArgs {
                     slot: slot16,
                     path,
-                    site: calls.reserve()?,
+                    site: reserve_site(calls)?,
                     argc,
                     dst,
                 });
@@ -2382,7 +2519,7 @@ fn push_native<'a>(
                 index,
                 slot,
                 path,
-                site: calls.reserve()?,
+                site: reserve_site(calls)?,
                 dst,
             });
             // Behind the call rather than in front of it, because `eval.rs`

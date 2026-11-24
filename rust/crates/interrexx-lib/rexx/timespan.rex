@@ -23,7 +23,7 @@
   end
   if n = 1 then do
     /* three readings of the argument: the form, the range, the count */
-    s = substr(arg(1), 1)
+    s = timeSpanNumberText(arg(1))
     if \datatype(s, 'W') then raise syntax 88.903 array (1, s)
     if abs(arg(1)) > 315537897599999999 then raise syntax 40.19 array ('TimeSpan', s, 'range')
     us = trunc(arg(1))
@@ -35,7 +35,7 @@
   do i = 1 to n
     if \arg(i, 'E') then iterate
     f = substr(kind, i, 1)
-    s = substr(arg(i), 1)
+    s = timeSpanNumberText(arg(i))
     ok = datatype(s, 'W')
     if ok & f = 'd' then if length(abs(s + 0)) > 9 then ok = 0
     if \ok then do
@@ -65,7 +65,7 @@
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   return self~new(trunc(s * 24 * 3600 * 1000000))
 
@@ -73,7 +73,7 @@
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   return self~new(trunc(s * 3600 * 1000000))
 
@@ -81,7 +81,7 @@
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   return self~new(trunc(s * 60 * 1000000))
 
@@ -89,7 +89,7 @@
   numeric digits 18
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   return self~new(trunc(s * 1000000))
 
@@ -98,7 +98,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   n = arg(1)
-  s = substr(n, 1)
+  s = timeSpanNumberText(n)
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   return self~new(trunc(n))
 
@@ -304,7 +304,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   amount = s * 604800000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
@@ -319,7 +319,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   amount = s * 86400000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
@@ -334,7 +334,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   amount = s * 3600000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
@@ -349,7 +349,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   amount = s * 60000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
@@ -364,7 +364,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
   amount = s * 1000000
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
@@ -379,9 +379,9 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  s = substr(arg(1), 1)
+  s = timeSpanNumberText(arg(1))
   if \datatype(s, 'N') then raise syntax 88.902 array (1, s)
-  amount = substr(arg(1), 1)
+  amount = timeSpanNumberText(arg(1))
   if abs(amount) >= 1000000000000000000 then raise syntax 88.903 array (1, amount)
   c = trunc(us + amount)
   r = self~class~new(c)
@@ -438,7 +438,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  v = substr(arg(1), 1)
+  v = timeSpanNumberText(arg(1))
   c = trunc(us * v)
   r = self~class~new(c)
   r~'!setCount'(c)
@@ -456,7 +456,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  v = substr(arg(1), 1)
+  v = timeSpanNumberText(arg(1))
   c = us % v
   r = self~class~new(c)
   r~'!setCount'(c)
@@ -469,7 +469,7 @@
   if arg() > 1 then raise syntax 93.902 array (1)
   if \arg(1, 'E') then raise syntax 93.901 array (1)
   if datatype(us, 'W') = 0 then us = 0
-  v = substr(arg(1), 1)
+  v = timeSpanNumberText(arg(1))
   r = us // v
   if \datatype(r, 'W') then raise syntax 88.903 array (1, v)
   c = trunc(r)
@@ -517,3 +517,18 @@
     h = (h * 31 + c2d(substr(us, i, 1))) // 18446744073709551616
   end
   return reverse(d2c(h, 8))
+
+/* r[conv.string.argument-kind]: a nonnumeric value fails the method's
+   check even if STRING gives no text. */
+::routine timeSpanNumberText
+  use arg value
+  if value~isInstanceOf:.object(.string) then return value~makeString:.string
+  value~request('STRING')
+  if var('RESULT') then do
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  value~string
+  if var('RESULT') then do
+    if result~isInstanceOf:.object(.string) then return result~makeString:.string
+  end
+  return ''

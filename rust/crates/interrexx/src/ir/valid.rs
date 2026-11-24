@@ -67,6 +67,11 @@ impl ValidOps {
                     ..
                 } => inside(src),
                 Op::RaisePart { src, .. } => src.checked_add(1).is_some_and(inside),
+                Op::ForwardPart {
+                    part: crate::run::ForwardPart::Method,
+                    ..
+                } => true,
+                Op::ForwardPart { src, .. } => inside(src),
                 Op::ParseBegin { src, base, .. } => {
                     arg(src)
                         && (base == Op::ARG_OMITTED

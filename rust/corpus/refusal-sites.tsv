@@ -173,7 +173,7 @@ Raised	library_not_loaded	body	crates/interrexx/src/error.rs	off-send-surface	-	
 Loud	library_procedure_gone	send	crates/interrexx/src/lib.rs	agrees	no	no route: Libraries holds every library that loaded until the interpreter ends, so a row found at binding is found at every call	r~doparse() over a ::method doparse external in re.cls (library_method_package_blame.rex), and RxCalcSqrt(1, 2, 3) over a required package's ::routine sq external (library_routine_package_blame.rex)
 Loud	library_source	body	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	library_version	body+send	crates/interrexx/src/error.rs	agrees	yes	98.982	.context~package~loadLibrary('forgever') over a forged extension whose package entry asks for 6.0.0 -- no oracle-built extension asks for a newer interpreter, so the program cannot be a corpus witness
-Raised	logical_list_element	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
+Raised	logical_list_element	body+ir	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Loud	loop_op_off_its_node	body+ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	lostdigits	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	message_array_shape	send	crates/interrexx/src/error.rs	agrees	yes	93.946	say o~sendWith(.array~new(2,2)) -- the message-NAME array; the argument array's own multidimensional case is a separate silent divergence

@@ -5,7 +5,7 @@ mod use_args;
 
 use crate::activation::{
     Activation, AutoExpose, CallType, Entry, ExtraNames, Inherited, InstanceVar, ReplyState,
-    TraceEntry, Trap, TrappedCondition, body_of,
+    StreamEntry, TraceEntry, Trap, TrappedCondition, body_of,
 };
 use crate::builtin;
 use crate::clause::{ClauseEntry, ClauseOutcome, ClauseValue, HandlerExit};
@@ -103,6 +103,35 @@ pub(crate) struct ForwardSend {
     /// The clause's value indent, which the `>>>` line of a `CONTINUE`'s
     /// result is traced at.
     pub(crate) indent: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ForwardPart {
+    Method,
+    To,
+    Message,
+    Class,
+    Arguments,
+}
+
+/// Scalar options in evaluation order. The index also addresses the option
+/// expression in the instruction; `ARRAY` items follow these four slots.
+pub(crate) fn forward_option_parts(forward: &Forward) -> [(ForwardPart, Option<&Expr>); 4] {
+    [
+        (ForwardPart::To, forward.to.as_ref()),
+        (ForwardPart::Message, forward.message.as_ref()),
+        (ForwardPart::Class, forward.class.as_ref()),
+        (ForwardPart::Arguments, forward.arguments.as_ref()),
+    ]
+}
+
+pub(crate) const FORWARD_ARRAY_SLOT: u32 = 4;
+
+fn forward_slot(forward: &Forward, slot: u32) -> Option<&Expr> {
+    if let Some(item) = slot.checked_sub(FORWARD_ARRAY_SLOT) {
+        return forward.array.as_ref()?.get(item as usize)?.as_ref();
+    }
+    forward_option_parts(forward)[slot as usize].1
 }
 
 /// Where control goes after one instruction (the design's "Control flow").
@@ -958,20 +987,7 @@ impl Interp {
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
-                    self.roots.activity_mut().push_temp(value);
-                    // The target is converted to a string
-                    // before the
-                    // `>>>` below: measured, `trace r` over `call (.K)` with a
-                    // class-side `makeString` returning `'MS'` traces
-                    // `>>>   "MS"` and runs `MS:`.
-                    let value = self.required_string_value(value)?;
-                    let name = self.to_text(value).to_vec();
-                    // Its own `>>>`, at the `CALL` clause's own indent, which
-                    // `Call::Named` has no equivalent of -- measured, `call
-                    // sub 1+1, 'q'` under `trace r` traces no value line at
-                    // all while `call (nm)` traces one for the target.
-                    self.trace_result(self.activity.clause_state.current_value_indent, &name);
-                    self.exec_call(code, &name, true, args)
+                    self.exec_dynamic_call(code, value, args)
                 }
                 // `CALL ON cond NAME label` / `CALL OFF cond`. Shares every
                 // line of its implementation with `SIGNAL ON`/`OFF` except
@@ -1947,47 +1963,105 @@ impl Interp {
             Some(expr) => {
                 let value = self.eval(code, expr)?;
                 self.roots.activity_mut().push_temp(value);
-                // The class check is reported with the same two
-                // fixed substitutions a `~name:scope` override's own check
-                // takes. Measured, `forward class (5) message('OTHER')` is
-                // 88.914 at rc 168.
-                if !self.heap.is_class(value) {
-                    return Err(Raised::scope_override_not_a_class().into());
-                }
-                self.trace_forward_keyword("CLASS", value)?;
+                self.forward_class(value)?;
                 Some(value)
             }
         };
 
         let (mut values, mark) = self.take_value_buffer();
-        let evaluated = self.forward_arguments(code, forward, &mut values);
-        // **After every option and before the send**, which is where it is
-        // asked: a non-continuing `FORWARD` answers the sender, and a `REPLY`
-        // carrying a value has answered it already.
-        let owed = evaluated.and_then(|()| self.forward_after_reply(forward));
-        // The activation is marked forwarded
-        // after the 98.937 above and before the send, so a condition
-        // the send raises is not offered to this activation's own traps.
-        // [`Activation::forwarded`] carries what that costs.
-        if owed.is_ok() && !forward.continue_ {
+        let evaluated = self.forward_arguments(code, forward, &mut values, mark);
+        self.prepare_forward(
+            ForwardSend {
+                target,
+                message,
+                start_scope,
+                mark,
+                continue_: forward.continue_,
+                indent,
+            },
+            values,
+            evaluated,
+        )
+    }
+
+    /// Read the checked scalar options from their consecutive registers, and
+    /// take the arguments this clause's ops pushed for ARRAY, if any.
+    #[inline(never)]
+    fn exec_forward_evaluated(
+        &mut self,
+        forward: &Forward,
+        registers: RegFrame<'_>,
+        mut src: u16,
+    ) -> Result<ExecOutcome, Failure> {
+        let Some(identity) = self.activation().method_identity.as_ref() else {
+            return Err(Raised::forward_outside_method().into());
+        };
+        let [target, message, start_scope, arguments] =
+            forward_option_parts(forward).map(|(_, expr)| {
+                expr.map(|_| {
+                    let value = registers.get(src);
+                    src += 1;
+                    value
+                })
+            });
+        let target = target.unwrap_or(identity.receiver);
+        let message = match message {
+            None => Rc::clone(&identity.name),
+            Some(text) => Rc::from(self.to_text(text).to_ascii_uppercase()),
+        };
+        let indent = self.activity.clause_state.current_value_indent;
+        let (values, mark, evaluated) = if let Some(items) = &forward.array {
+            let Some(mark) = self.activity.value_buffer.len().checked_sub(items.len()) else {
+                return Err(Loud::op_not_driven("FORWARD ARRAY with no pushed arguments").into());
+            };
+            let values = std::mem::take(&mut self.activity.value_buffer);
+            self.trace_forward_array();
+            (values, mark, Ok(()))
+        } else {
+            let (mut values, mark) = self.take_value_buffer();
+            let evaluated = if let Some(value) = arguments {
+                self.convert_forward_arguments(value, &mut values, mark)
+            } else {
+                self.forward_original_arguments(&mut values);
+                Ok(())
+            };
+            (values, mark, evaluated)
+        };
+        self.prepare_forward(
+            ForwardSend {
+                target,
+                message,
+                start_scope,
+                mark,
+                continue_: forward.continue_,
+                indent,
+            },
+            values,
+            evaluated,
+        )
+    }
+
+    fn prepare_forward(
+        &mut self,
+        send: ForwardSend,
+        values: Vec<Option<ObjRef>>,
+        evaluated: Result<(), Failure>,
+    ) -> Result<ExecOutcome, Failure> {
+        // A non-continuing FORWARD cannot answer a sender already answered
+        // by REPLY. Ask after the options, before committing to the send.
+        let owed = evaluated.and_then(|()| self.forward_after_reply(send.continue_));
+        // Conditions from a non-continuing send bypass this level's traps.
+        if owed.is_ok() && !send.continue_ {
             self.activation_mut().flags.set_forwarded(true);
         }
-        if let Err(failure) = owed.and_then(|()| self.validate_scope_override(target, start_scope))
+        if let Err(failure) =
+            owed.and_then(|()| self.validate_scope_override(send.target, send.start_scope))
         {
-            self.give_value_buffer(values, mark);
+            self.give_value_buffer(values, send.mark);
             return Err(failure);
         }
-        // The arguments stay on the value buffer above `mark`, rooted by this
-        // clause's temps, for the driver to send them from.
         self.activity.value_buffer = values;
-        Ok(ExecOutcome::Forward(Box::new(ForwardSend {
-            target,
-            message,
-            start_scope,
-            mark,
-            continue_: forward.continue_,
-            indent,
-        })))
+        Ok(ExecOutcome::Forward(Box::new(send)))
     }
 
     /// A `FORWARD`'s send run on this Rust stack, under a pinned frame, for a
@@ -2043,11 +2117,54 @@ impl Interp {
     /// 98.937 for a non-continuing `FORWARD` under a `REPLY` that carried a
     /// value, which is the one legality question `FORWARD` asks that is not
     /// about `FORWARD`.
-    fn forward_after_reply(&self, forward: &Forward) -> Result<(), Failure> {
-        if forward.continue_ || !self.activation().replied_a_value {
+    fn forward_after_reply(&self, continue_: bool) -> Result<(), Failure> {
+        if continue_ || !self.activation().replied_a_value {
             return Ok(());
         }
         Err(Raised::exit_after_reply().into())
+    }
+
+    fn forward_part(
+        &mut self,
+        registers: RegFrame<'_>,
+        part: ForwardPart,
+        src: u16,
+    ) -> Result<(), Failure> {
+        if matches!(part, ForwardPart::Method) {
+            return if self.activation().method_identity.is_some() {
+                Ok(())
+            } else {
+                Err(Raised::forward_outside_method().into())
+            };
+        }
+        let value = registers.get(src);
+        match part {
+            ForwardPart::To => self.trace_forward_keyword("TO", value),
+            ForwardPart::Message => {
+                self.trace_forward_keyword("MESSAGE", value)?;
+                let text = self.required_string_value(value)?;
+                // Later options can run Rexx code. Snapshot a value whose
+                // textual representation can change before the send.
+                let text = if self.plain_string(text) {
+                    text
+                } else {
+                    let bytes = self.to_text(text).into_owned();
+                    self.text_built(bytes)
+                };
+                registers.set(src, text);
+                Ok(())
+            }
+            ForwardPart::Class => self.forward_class(value),
+            ForwardPart::Arguments => self.trace_forward_keyword("ARGUMENTS", value),
+            ForwardPart::Method => unreachable!("method check takes no register"),
+        }
+    }
+
+    fn forward_class(&mut self, value: ObjRef) -> Result<(), Failure> {
+        if !self.heap.is_class(value) {
+            return Err(Raised::scope_override_not_a_class().into());
+        }
+        self.trace_forward_keyword("CLASS", value)
     }
 
     /// One `FORWARD` option that is a single expression: its value, rooted,
@@ -2083,14 +2200,11 @@ impl Interp {
         code: &Code<'_>,
         forward: &Forward,
         values: &mut Vec<Option<ObjRef>>,
+        mark: usize,
     ) -> Result<(), Failure> {
         if let Some(expr) = &forward.arguments {
             let value = self.forward_keyword(code, expr, "ARGUMENTS")?;
-            self.forward_arguments_converted(value, values)?;
-            while values.last().is_some_and(Option::is_none) {
-                values.pop();
-            }
-            return Ok(());
+            return self.convert_forward_arguments(value, values, mark);
         }
         if let Some(items) = &forward.array {
             for item in items {
@@ -2104,22 +2218,41 @@ impl Interp {
                     }
                 }
             }
-            // The line renders the instruction's own array of expressions,
-            // which has no evaluated counterpart here. Measured under
-            // `trace i`, `forward message('OTHER') array(1,2)` writes
-            // `>K>   "ARRAY" => "an Array"` after the items' own `>A>` lines.
-            self.trace_keyword(
-                self.activity.clause_state.current_value_indent,
-                "ARRAY",
-                crate::dispatch::ARRAY_DEFAULT_NAME,
-            );
+            self.trace_forward_array();
             return Ok(());
         }
+        self.forward_original_arguments(values);
+        Ok(())
+    }
+
+    fn trace_forward_array(&mut self) {
+        self.trace_keyword(
+            self.activity.clause_state.current_value_indent,
+            "ARRAY",
+            crate::dispatch::ARRAY_DEFAULT_NAME,
+        );
+    }
+
+    fn forward_original_arguments(&mut self, values: &mut Vec<Option<ObjRef>>) {
         values.extend(self.activity.call_context.arguments.iter().copied());
         // Rooted here rather than relied on through `call_context`, which the
         // collector does not walk.
         for value in values.iter().flatten() {
             self.roots.activity_mut().push_temp(*value);
+        }
+    }
+
+    fn convert_forward_arguments(
+        &mut self,
+        value: ObjRef,
+        values: &mut Vec<Option<ObjRef>>,
+        mark: usize,
+    ) -> Result<(), Failure> {
+        self.forward_arguments_converted(value, values)?;
+        // A call evaluating this FORWARD can have its own omitted arguments
+        // below the mark. Only trim the arguments of this send.
+        while values.len() > mark && values.last().is_some_and(Option::is_none) {
+            values.pop();
         }
         Ok(())
     }
@@ -2661,6 +2794,10 @@ impl Interp {
             InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
                 expression.as_ref()
             }
+            InstructionKind::Call(call) => match &**call {
+                interrexx_parse::Call::Dynamic { target, .. } => Some(target),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -2674,7 +2811,8 @@ impl Interp {
             InstructionKind::Interpret { .. }
                 | InstructionKind::Command { .. }
                 | InstructionKind::Reply { .. }
-        )
+        ) || matches!(kind, InstructionKind::Call(call)
+            if matches!(&**call, interrexx_parse::Call::Dynamic { .. }))
     }
 
     /// [`crate::ir::Op::Exec`]'s work, or [`crate::ir::Op::ExecWith`]'s from
@@ -2749,7 +2887,8 @@ impl Interp {
             (Self::exec_value_expression(&instruction.kind).is_some()
                 && Self::exec_value_transfers(&instruction.kind))
                 || matches!(&instruction.kind, InstructionKind::Raise(raise)
-                    if RaiseLayout::of(raise).is_some()),
+                    if RaiseLayout::of(raise).is_some())
+                || matches!(&instruction.kind, InstructionKind::Forward(_)),
             "Op::ExecWith on an instruction exec_value_transfers does not name"
         );
         #[cfg(test)]
@@ -2761,11 +2900,20 @@ impl Interp {
                 .raise_from_registers(instruction, registers, src)
                 .map(ExecOutcome::Done);
         }
+        if let InstructionKind::Forward(forward) = &instruction.kind {
+            return self.exec_forward_evaluated(forward, registers, src);
+        }
         let value = registers.get(src);
         match &instruction.kind {
             InstructionKind::Interpret { .. } => self
                 .exec_interpret_value(index, instruction, source, value)
                 .map(ExecOutcome::Done),
+            InstructionKind::Call(call)
+                if let interrexx_parse::Call::Dynamic { args, .. } = &**call =>
+            {
+                self.exec_dynamic_call(code, value, args)
+                    .map(ExecOutcome::Done)
+            }
             // A command that blocked re-runs this op when it is woken, as a
             // blocked `Op::Exec` re-runs its instruction, and ends there.
             InstructionKind::Command { .. } if self.blocked_command_woken(index) => {
@@ -2813,6 +2961,9 @@ impl Interp {
         let src = match *op {
             crate::ir::Op::RaisePart { part, src, .. } => {
                 return self.raise_part(instruction, registers, part, src);
+            }
+            crate::ir::Op::ForwardPart { part, src, .. } => {
+                return self.forward_part(registers, part, src);
             }
             crate::ir::Op::ExecValue { src, .. } => src,
             _ => return Err(Loud::instruction(&instruction.kind).into()),
@@ -3736,6 +3887,7 @@ impl Interp {
                 },
                 0,
             ) => expression,
+            (InstructionKind::Forward(forward), slot) => forward_slot(forward, u32::from(slot))?,
             // The two instructions whose slot `0` exists only in one of their
             // forms. Both are reachable: the expression is compiled through
             // `push_value` like any other, so a call inside it emits an
@@ -3755,6 +3907,17 @@ impl Interp {
                 interrexx_parse::ParseSource::Value(Some(expression)) => expression,
                 _ => return None,
             },
+            (
+                InstructionKind::Parse(parse)
+                | InstructionKind::Arg(parse)
+                | InstructionKind::Pull(parse),
+                slot,
+            ) => parse
+                .template
+                .get(usize::from(slot) - 1)?
+                .as_ref()?
+                .value
+                .as_ref()?,
             (InstructionKind::If { condition, .. }, 0) => condition,
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
@@ -3766,10 +3929,14 @@ impl Interp {
                 },
                 0,
             ) => case,
-            // A **plain** `WHEN`'s condition. A `WhenCase`'s values are not a
-            // condition and compile to no native op at all, so no address ever
-            // names one and this arm does not answer for them.
             (InstructionKind::When { condition, .. }, 0) => condition,
+            (
+                InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. },
+                slot,
+            ) => match &condition.kind {
+                ExprKind::Logical(items) => items.get(usize::from(slot - 1))?,
+                _ => return None,
+            },
             // A `DO`/`LOOP` header's `slot`th expression, resolved through the
             // same `loop_header_slot` the compiler emitted the slot's ops from
             // and the same one `eval_chunk_expr` evaluates a declining slot
@@ -3812,7 +3979,12 @@ impl Interp {
                 (ExprKind::Binary { right, .. }, true) => right,
                 (ExprKind::Prefix { operand, .. }, false) => operand,
                 // A list step: its index in clear steps, then a set one.
-                (ExprKind::Call { args, .. } | ExprKind::List(args), _) => {
+                (
+                    ExprKind::Call { args, .. }
+                    | ExprKind::QualifiedCall { args, .. }
+                    | ExprKind::List(args),
+                    _,
+                ) => {
                     let index = list_step(step, &mut steps)?;
                     args.get(index)?.as_ref()?
                 }
@@ -3889,6 +4061,12 @@ impl Interp {
             // is `crate::ir::Op::Load` instead -- and each is trace-identical
             // to arm here because this is the same
             // `eval` call it makes.
+            (InstructionKind::Forward(forward), slot) => {
+                let Some(expr) = forward_slot(forward, slot) else {
+                    return Err(Loud::instruction(&instruction.kind).into());
+                };
+                self.eval(code, expr)
+            }
             // `SIGNAL VALUE`'s own expression, for the shapes `compile` emits
             // no native op for. The `>K>` echo and the search are
             // `Op::Signal`'s, not this arm's, exactly as a loop header's
@@ -3900,10 +4078,9 @@ impl Interp {
                 self.eval(code, expr)
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
-            // `>K>` echo and the whole template walk are `Op::ParseBegin`'s; only
-            // the source is a register, and only this source has one --
-            // `compile` emits no register for any other, so reaching here with
-            // one is an op off its node.
+            // `>K>` echo belongs to `Op::ParseBegin`. This fallback is only for
+            // the source expression, since an unsupported trigger always runs
+            // in the template engine.
             (
                 InstructionKind::Parse(parse)
                 | InstructionKind::Arg(parse)
@@ -3982,6 +4159,23 @@ impl Interp {
         let value = self.eval(code, condition)?;
         let checked = matches!(condition.kind, ExprKind::Logical(_));
         self.condition_value(value, trace, checked, raise)
+    }
+
+    /// A compiled comma-list element owns its result line, followed by the
+    /// list's result line only when the list is decided.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn condition_list_item(
+        &mut self,
+        value: ObjRef,
+        indent: usize,
+        last: bool,
+    ) -> Result<bool, Failure> {
+        let holds = self.logical_list_item(value, indent)?;
+        if last || !holds {
+            self.trace_result(indent, if holds { b"1" } else { b"0" });
+        }
+        Ok(holds)
     }
 
     /// Everything an evaluated condition value still owes: its `>>>` or `>K>`
@@ -4257,18 +4451,19 @@ impl Interp {
         let qualified = crate::builtin::platform::qualify_name(self, name);
         if let Some(found) = self
             .stream_table()
-            .and_then(|table| table.get(qualified.as_slice()).copied())
+            .and_then(|table| table.get(qualified.as_slice()))
         {
-            return Ok(found);
+            return Ok(found.object());
         }
         // **The manager sees the qualified name, and only a table miss.**
         // `.Stream~new` reaches none of this, so a program that builds its
         // own stream object is never checked.
         if let Some(replacement) = self.check_stream_access(&qualified)? {
             if let Some(table) = self.stream_table_mut() {
-                table
-                    .get_or_insert_with(Box::default)
-                    .insert(qualified.into_boxed_slice(), replacement);
+                table.get_or_insert_with(Box::default).insert(
+                    qualified.into_boxed_slice(),
+                    StreamEntry::Replacement(replacement),
+                );
             }
             return Ok(replacement);
         }
@@ -4289,7 +4484,7 @@ impl Interp {
         if added && let Some(table) = self.stream_table_mut() {
             table
                 .get_or_insert_with(Box::default)
-                .insert(qualified.into_boxed_slice(), built);
+                .insert(qualified.into_boxed_slice(), StreamEntry::Opened(built));
         }
         Ok(built)
     }
@@ -4323,6 +4518,89 @@ impl Interp {
         if let Some(table) = self.stream_table_mut().and_then(Option::as_deref_mut) {
             table.remove(qualified.as_slice());
         }
+    }
+
+    /// A manager's replacement is closed in the owning level. Removing the
+    /// entries before the sends lets a trap after a failed close use the
+    /// names again (spec: env.security.stream.close).
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn close_stream_replacements(
+        &mut self,
+        ended: &Result<Ended, Failure>,
+    ) -> Option<Failure> {
+        let table = self.activation_mut().streams.as_deref_mut()?;
+        let mut replacements = Vec::new();
+        table.retain(|_, entry| match *entry {
+            StreamEntry::Opened(_) => true,
+            StreamEntry::Replacement(object) => {
+                replacements.push(object);
+                false
+            }
+        });
+        if replacements.is_empty() {
+            return None;
+        }
+
+        let frame = self.roots.activity_mut().push_frame();
+        let returned = match ended {
+            Ok(ended) => ended.value_ref(),
+            Err(Failure::Exited(value)) => *value,
+            _ => None,
+        };
+        for object in replacements.iter().copied().chain(returned) {
+            self.roots.activity_mut().push_temp(object);
+        }
+        let program_failed = self.activation().entry == Entry::TopLevel
+            && matches!(ended, Err(failure) if !matches!(failure, Failure::Exited(_)));
+        let previous = match ended {
+            Ok(_) | Err(Failure::Exited(_)) => None,
+            Err(_) => Some(self.take_stream_close_condition()),
+        };
+        let mut first = None;
+        for stream in replacements {
+            let caller = self.caller();
+            let closed = pinned!(
+                self,
+                crate::pinning::PinKind::StreamWrapper,
+                self.send_message(stream, b"CLOSE", None, &[], caller)
+            );
+            if let Err(failure) = closed {
+                let condition = self.take_stream_close_condition();
+                if first.is_none() && !program_failed {
+                    first = Some((failure, condition));
+                }
+            }
+        }
+        let (failure, condition) = match first {
+            Some((failure, condition)) => (Some(failure), Some(condition)),
+            None => (None, previous),
+        };
+        if let Some((levels, [additional, result, description, rc])) = condition {
+            self.restore_failure_levels(levels);
+            self.activity.pending_additional = additional;
+            self.activity.pending_result = result;
+            self.activity.pending_description = description;
+            self.activity.pending_rc = rc;
+        }
+        self.roots.activity_mut().pop_frame(frame);
+        failure
+    }
+
+    /// Roots a condition while the remaining `CLOSE` sends run.
+    fn take_stream_close_condition(&mut self) -> (FailureLevels, [Option<ObjRef>; 4]) {
+        let levels = self.take_failure_levels();
+        self.hold_origin_package(levels.origin);
+        let pending = [
+            self.activity.pending_additional.take(),
+            self.activity.pending_result.take(),
+            self.activity.pending_description.take(),
+            self.activity.pending_rc.take(),
+        ];
+        for object in pending.into_iter().flatten() {
+            self.roots.activity_mut().push_temp(object);
+        }
+        (levels, pending)
     }
 }
 

@@ -1001,6 +1001,81 @@ fn a_parse_pattern_and_an_expression_share_the_eval_depth_limit() {
 
 // ---- ExprKind::Call: the internal-function expression form ----
 
+#[test]
+fn qualified_calls_resolve_after_arguments_in_the_driver_and_walker() {
+    let padding = ", ".repeat(31);
+    let walk_open = "'' || (".repeat(32);
+    let walk_close = ")".repeat(32);
+    let outcome = crate::run_program(
+        "qualified-call-order.rex",
+        r#"
+p = .context~package
+first = .package~new('first', .array~of('::routine f public', "return 'first' arg(1) arg(2, 'o') arg(3)"))
+second = .package~new('second', .array~of('::routine f public', "return 'second' arg(1) arg(2, 'o') arg(3)"))
+p~addPackage(first, 'ns')
+call sameSite
+say ns:f(rebind(), , 'last')
+call sameSite
+trace i
+say ns:f('traced', , 'last')
+say ns:f('fallback', , 'last', {padding}reset())
+trace off
+say {walk_open}ns:f(rebind(), , 'last'){walk_close}
+say later:f(define(), , 'last')
+numeric digits {walk_open}length('abcdefghijkl'){walk_close}
+say digits()
+call attempt 1
+call attempt 2
+call attempt 3
+exit
+sameSite:
+  say ns:f('same', , 'last')
+  return
+rebind:
+  p~addPackage(second, 'ns')
+  return 'changed'
+reset:
+  p~addPackage(first, 'ns')
+  return 'ignored'
+define:
+  p~addPackage(first, 'later')
+  return 'defined'
+attempt:
+  signal on syntax name caught
+  select
+    when arg(1) = 1 then say missing:f(mark('namespace'))
+    when arg(1) = 2 then say ns:missing(mark('routine'))
+    otherwise say missing:f(1 / 0)
+  end
+  return
+caught:
+  say condition('o')~code
+  return
+mark:
+  say arg(1)
+  return arg(1)
+"#
+        .replace("{padding}", &padding)
+        .replace("{walk_open}", &walk_open)
+        .replace("{walk_close}", &walk_close)
+        .into_bytes(),
+        crate::Invocation::none(),
+    );
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
+    assert_eq!(
+        outcome.stdout,
+        b"first same 1 last\nsecond changed 1 last\nsecond same 1 last\n\
+          second traced 1 last\nfirst fallback 1 last\nsecond changed 1 last\n\
+          first defined 1 last\n12\nnamespace\n98.987\nroutine\n43.902\n42.3\n"
+    );
+    assert!(stderr.contains("F => \"second traced 1 last\""), "{stderr}");
+    assert!(
+        stderr.contains("F => \"first fallback 1 last\""),
+        "{stderr}"
+    );
+}
+
 /// An internal routine called from inside
 /// an expression, not a `CALL` clause of its own, returns its value into
 /// the enclosing arithmetic.
