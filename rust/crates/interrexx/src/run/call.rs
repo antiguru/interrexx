@@ -1738,7 +1738,9 @@ impl Interp {
                 // The caller's own `>>>`, at the `CALL` clause's indent --
                 // `base_indent`, saved before the callee overwrote
                 // `current_value_indent` with its own clauses'.
-                if let Some(rendered) = self.result_text(value)? {
+                if !self.activity.clause_state.instance_trace_started
+                    && let Some(rendered) = self.result_text(value)?
+                {
                     self.trace_result(base_indent, &rendered);
                 }
                 self.set_variable(frame, slot, value);
