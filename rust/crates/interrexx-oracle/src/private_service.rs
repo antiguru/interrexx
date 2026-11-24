@@ -194,6 +194,7 @@ fn daemons_naming(dir: &Path) -> Vec<rustix::process::Pid> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
+    use std::os::unix::process::CommandExt;
 
     #[test]
     fn dropping_a_service_stops_only_its_daemon_and_removes_its_directory() {
@@ -209,7 +210,9 @@ mod tests {
         let daemon = |service: &PrivateService| {
             let mut command = Command::new(&rxapi);
             service.configure(&mut command);
-            command.arg("60").spawn().unwrap()
+            // Multicall coreutils dispatches by argv[0]. The executable's
+            // name still gives the process its rxapi name in /proc.
+            command.arg0("sleep").arg("60").spawn().unwrap()
         };
         let mut first_daemon = daemon(&first);
         let mut second_daemon = daemon(&second);
