@@ -81811,7 +81811,9 @@ rule</a> finds it: <code>request</code> with <code>STRING</code> is sent to it
 first, and its <code>string</code> method when that answers no string, so that a class
 with its own <code>request</code> decides the description. The condition holds that
 string; an instance of a subclass of <code>String</code> is a string here (<a href="classes/commandcontext.html#r-class.commandcontext.deviation.109">the deviation
-rule</a>). <code>additional</code> is the <code>ADDITIONAL</code>
+rule</a>). If the <code>string</code> result has no
+string value and the conversion does not raise a condition, the condition
+holds <code>.nil</code> for its description. <code>additional</code> is the <code>ADDITIONAL</code>
 entry of the condition object, the object as it was given, and when it is
 omitted or <code>.nil</code> the condition object has no such entry. The condition object
 has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
@@ -81866,6 +81868,62 @@ USER returned, rc &lt;8&gt; 0
 DEFAULTS returned, rc &lt;9&gt; 1
   trap ERROR &lt;NILS&gt; rc 10 entry 10 none
 NILS returned, rc &lt;10&gt; 1
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_no_text', .raiser~new)
+do mode over .array~of('error call', 'error signal', 'halt call',,
+    'halt signal', 'nostring')
+  call exercise mode
+end
+x = .commandhandler~deregister('spec_cc_no_text')
+exit
+exercise: procedure
+  use arg mode
+  select
+    when mode = 'error call' then call on error name trapped
+    when mode = 'error signal' then signal on error name trapped
+    when mode = 'halt call' then call on halt name trapped
+    when mode = 'halt signal' then signal on halt name trapped
+    otherwise signal on nostring name trapped
+  end
+  address spec_cc_no_text mode
+  say 'return' rc
+  say 'next clause'
+  return
+trapped:
+  if condition('c') = 'NOSTRING' then say 'NOSTRING'
+  else say condition('c') (condition('d') == .nil) (condition('o')~description == .nil)
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  parse var command kind .
+  if kind = 'nostring' then kind = 'error'
+  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
+  return 10
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+</code></pre>
+<pre><code class="language-output">raise returned 5
+string called
+ERROR 1 1
+return 5
+next clause
+raise returned 5
+string called
+ERROR 1 1
+raise returned 5
+string called
+return 5
+HALT 1 1
+next clause
+raise returned 5
+string called
+HALT 1 1
+raise returned 5
+string called
+NOSTRING
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_halt', .halter~new)
 call on halt name stopped
@@ -90499,6 +90557,51 @@ say s~log~makeString('l', ' ') x y z v
 </code></pre>
 <pre><code class="language-output">LINEIN LINEIN CHARIN CHARS LINES LINEIN LINEIN 7 7 7 7
 </code></pre>
+<div class="rule" id="r-env.objects.input.line-result"><a href="environment/objects.html#r-env.objects.input.line-result">[env.objects.input.line-result]</a></div>
+<p>PARSE LINEIN converts the result of the input object's <code>LINEIN</code> to a string.
+A return without a result or with <code>.nil</code> supplies an empty line. PULL and
+PARSE PULL read from the input object when the queue object's <code>PULL</code> returns
+without a result or with <code>.nil</code>, and convert any other queue result to a string.</p>
+<pre><code class="language-rexx">.input~destination(.source~new)
+.local~stdque = .source~new
+parse pull x
+say 'pull with no result [' || x || ']'
+parse pull x
+say 'pull with an object [' || x || ']'
+parse linein x
+say 'linein with an object [' || x || ']'
+parse linein x
+say 'linein with no result [' || x || ']'
+parse linein x
+say 'linein with nil [' || x || ']'
+::class source
+::attribute lines
+::attribute pulls
+::method init
+  self~lines = 0
+  self~pulls = 0
+::method pull
+  self~pulls += 1
+  if self~pulls = 1 then return
+  return .value~new
+::method linein
+  self~lines += 1
+  select
+    when self~lines = 1 then return 'fallback'
+    when self~lines = 2 then return .value~new
+    when self~lines = 3 then return
+    otherwise return .nil
+  end
+::class value
+::method makeString
+  return 'converted'
+</code></pre>
+<pre><code class="language-output">pull with no result [fallback]
+pull with an object [converted]
+linein with an object [converted]
+linein with no result []
+linein with nil []
+</code></pre>
 <div class="rule" id="r-env.objects.queue"><a href="environment/objects.html#r-env.objects.queue">[env.objects.queue]</a></div>
 <p>PUSH and QUEUE send <code>PUSH</code> and <code>QUEUE</code> with the line to the <code>STDQUE</code> entry of
 <code>.local</code>. The builtin QUEUED sends it <code>QUEUED</code>, and the builtin RXQUEUE sends
@@ -95179,6 +95282,75 @@ say 'LINEIN sent' a~calls 'times, with' a~args 'arguments'
 <pre><code class="language-output">from debuginput
 LINEIN sent 3 times, with 0 arguments
 </code></pre>
+<div class="rule" id="r-env.debugging.read.line-result"><a href="environment/debugging.html#r-env.debugging.read.line-result">[env.debugging.read.line-result]</a></div>
+<p>The result of a debug read is converted to a string before the interpreter
+runs it. A return without a result or with <code>.nil</code> supplies an empty line and
+ends the stop.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+.debuginput~destination(.reader~new)
+trace ?a
+nop
+nop
+call trace 'o'
+say 'done'
+::class quiet
+::method lineout
+  return 0
+::class reader
+::attribute calls
+::method init
+  self~calls = 0
+::method linein
+  self~calls += 1
+  say 'debug read' self~calls
+  select
+    when self~calls = 1 then return .line~new
+    when self~calls = 2 then return
+    otherwise return .nil
+  end
+::class line
+::method makeString
+  return 'say "debug line ran"'
+</code></pre>
+<pre><code class="language-output">debug read 1
+debug line ran
+debug read 2
+debug read 3
+done
+</code></pre>
+<div class="rule" id="r-env.debugging.read.tracing"><a href="environment/debugging.html#r-env.debugging.read.tracing">[env.debugging.read.tracing]</a></div>
+<p>A method that supplies a debug line can trace its own clauses. While the
+interpreter is reading that line, those clauses do not open another
+interactive stop. In the example the reader traces its assignment twice.
+Its first line changes <code>a</code> and its second line turns tracing off.</p>
+<pre><code class="language-rexx">sink = .sink~new
+.traceoutput~destination(sink)
+.debuginput~destination(.reader~new)
+trace ?r
+a = 1
+.debuginput~destination
+.traceoutput~destination
+say a sink~readerLines
+::class reader
+::attribute reads
+::method init
+  self~reads = 0
+::method linein
+  trace ?r
+  self~reads += 1
+  if self~reads = 1 then return 'a = 2'
+  return 'trace off'
+::class sink
+::attribute readerLines
+::method init
+  self~readerLines = 0
+::method lineout
+  use arg line
+  if line['TRACELINE']~pos('self~reads += 1') &gt; 0 then self~readerLines += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">2 2
+</code></pre>
 <div class="rule" id="r-env.debugging.read.fallback"><a href="environment/debugging.html#r-env.debugging.read.fallback">[env.debugging.read.fallback]</a></div>
 <p>When nothing was installed, the object that <code>.debuginput</code> holds is a monitor
 whose destination is the monitor <code>.input</code>, as <a href="environment/objects.html#r-env.objects.bindings">the bindings
@@ -99651,7 +99823,12 @@ with a refusal of one of the Deviations, exit code 120: they are cut off. In
 the second example a started message waits for a gate that the program opens
 just before the refusal (<a href="concurrency/../deviations.html#30-a-string-method-answering-a-non-string">Deviation
 30</a>), and never
-writes its line.</p>
+writes its line. A native call that an activity, the main program's included,
+is in when a refusal ends the program is not ended with it: interrexx cannot
+end the call, which runs on. A host's <code>RexxStart</code> returns meanwhile, and the
+program's interpreter, with a thread that waits for the call, stays in memory
+until the call returns; a call that never returns keeps them, and its own
+thread, for as long as the process runs.</p>
 <pre><code class="language-rexx">x = .keeper~new
 say 'the main program ends'
 ::class keeper
@@ -130671,7 +130848,9 @@ calls. ooRexx blocks for ever there too.</p>
 <p>Program end does not wait for activities that termination-time UNINIT
 methods start, REPLY continuations included, nor for any activity once the
 main program ends with a refusal. ooRexx's such activities race its exit and
-often print.</p>
+often print. A native call that any activity is in when a refusal ends the
+program runs on, and holds the program's interpreter in memory until it
+returns.</p>
 <h2 id="22-one-schedule-for-racing-activities"><a class="header" href="#22-one-schedule-for-racing-activities">22. One schedule for racing activities</a></h2>
 <p>Activities switch only at slice ends, waits and ends, chosen by one
 scheduler, so a program whose ooRexx output depends on thread timing gets

@@ -790,6 +790,51 @@ say s~log~makeString('l', ' ') x y z v
 </code></pre>
 <pre><code class="language-output">LINEIN LINEIN CHARIN CHARS LINES LINEIN LINEIN 7 7 7 7
 </code></pre>
+<div class="rule" id="r-env.objects.input.line-result"><a href="#r-env.objects.input.line-result">[env.objects.input.line-result]</a></div>
+<p>PARSE LINEIN converts the result of the input object's <code>LINEIN</code> to a string.
+A return without a result or with <code>.nil</code> supplies an empty line. PULL and
+PARSE PULL read from the input object when the queue object's <code>PULL</code> returns
+without a result or with <code>.nil</code>, and convert any other queue result to a string.</p>
+<pre><code class="language-rexx">.input~destination(.source~new)
+.local~stdque = .source~new
+parse pull x
+say 'pull with no result [' || x || ']'
+parse pull x
+say 'pull with an object [' || x || ']'
+parse linein x
+say 'linein with an object [' || x || ']'
+parse linein x
+say 'linein with no result [' || x || ']'
+parse linein x
+say 'linein with nil [' || x || ']'
+::class source
+::attribute lines
+::attribute pulls
+::method init
+  self~lines = 0
+  self~pulls = 0
+::method pull
+  self~pulls += 1
+  if self~pulls = 1 then return
+  return .value~new
+::method linein
+  self~lines += 1
+  select
+    when self~lines = 1 then return 'fallback'
+    when self~lines = 2 then return .value~new
+    when self~lines = 3 then return
+    otherwise return .nil
+  end
+::class value
+::method makeString
+  return 'converted'
+</code></pre>
+<pre><code class="language-output">pull with no result [fallback]
+pull with an object [converted]
+linein with an object [converted]
+linein with no result []
+linein with nil []
+</code></pre>
 <div class="rule" id="r-env.objects.queue"><a href="#r-env.objects.queue">[env.objects.queue]</a></div>
 <p>PUSH and QUEUE send <code>PUSH</code> and <code>QUEUE</code> with the line to the <code>STDQUE</code> entry of
 <code>.local</code>. The builtin QUEUED sends it <code>QUEUED</code>, and the builtin RXQUEUE sends
