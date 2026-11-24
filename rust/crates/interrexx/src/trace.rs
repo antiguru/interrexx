@@ -176,6 +176,9 @@ impl Interp {
     /// Seven blanks, `+++`, a blank and the `PARSE SOURCE` string in double
     /// quotes -- measured, `       +++ "LINUX COMMAND /abs/t.rex"`.
     pub(crate) fn trace_debug_source(&mut self) {
+        if self.activation().trace_entry == crate::activation::TraceEntry::External {
+            self.trace_invocation_entry();
+        }
         if !self.traced_mode().debug
             || self.activation().debug.source_traced
             || self.untraceable_code()
