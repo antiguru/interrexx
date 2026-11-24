@@ -3766,10 +3766,14 @@ impl Interp {
                 },
                 0,
             ) => case,
-            // A **plain** `WHEN`'s condition. A `WhenCase`'s values are not a
-            // condition and compile to no native op at all, so no address ever
-            // names one and this arm does not answer for them.
             (InstructionKind::When { condition, .. }, 0) => condition,
+            (
+                InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. },
+                slot,
+            ) => match &condition.kind {
+                ExprKind::Logical(items) => items.get(usize::from(slot - 1))?,
+                _ => return None,
+            },
             // A `DO`/`LOOP` header's `slot`th expression, resolved through the
             // same `loop_header_slot` the compiler emitted the slot's ops from
             // and the same one `eval_chunk_expr` evaluates a declining slot
@@ -3975,6 +3979,23 @@ impl Interp {
         let value = self.eval(code, condition)?;
         let checked = matches!(condition.kind, ExprKind::Logical(_));
         self.condition_value(value, trace, checked, raise)
+    }
+
+    /// A compiled comma-list element owns its result line, followed by the
+    /// list's result line only when the list is decided.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn condition_list_item(
+        &mut self,
+        value: ObjRef,
+        indent: usize,
+        last: bool,
+    ) -> Result<bool, Failure> {
+        let holds = self.logical_list_item(value, indent)?;
+        if last || !holds {
+            self.trace_result(indent, if holds { b"1" } else { b"0" });
+        }
+        Ok(holds)
     }
 
     /// Everything an evaluated condition value still owes: its `>>>` or `>K>`

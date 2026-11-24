@@ -548,48 +548,39 @@ fn compile_settled(
                     end: 0,
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
-                let jump = if native_shape(condition, Some(NodePath::ROOT)) {
-                    push_native(
-                        &mut ops,
-                        echoes_values,
-                        &mut consts,
-                        &mut registers,
-                        &mut hints,
-                        &mut calls,
-                        plan,
-                        condition,
-                        instruction_index(index)?,
-                        0,
-                        Some(NodePath::ROOT),
-                        dst,
-                    )?;
-                    let jump = op_index(&ops)?;
-                    ops.push(Op::ConditionJump {
-                        index: instruction_index(index)?,
-                        reg: dst,
-                        keyword: ConditionKeyword::If,
-                        target: 0,
-                    });
-                    jump
-                } else {
+                let mut patch = |op| {
+                    patches.push(Patch {
+                        op,
+                        target: targets.false_target,
+                        kind: PatchKind::IfFalse(index),
+                    })
+                };
+                if !push_condition(
+                    &mut ops,
+                    echoes_values,
+                    &mut consts,
+                    &mut registers,
+                    &mut hints,
+                    &mut calls,
+                    plan,
+                    condition,
+                    instruction_index(index)?,
+                    dst,
+                    ConditionKeyword::If,
+                    &mut patch,
+                )? {
                     ops.push(Op::EvalExpr {
                         index: instruction_index(index)?,
                         slot: 0,
                         dst,
                     });
-                    let jump = op_index(&ops)?;
+                    patch(op_index(&ops)?);
                     ops.push(Op::JumpUnless {
                         reg: dst,
                         target: 0,
                     });
-                    jump
-                };
+                }
                 close_region(&mut ops, at)?;
-                patches.push(Patch {
-                    op: jump,
-                    target: targets.false_target,
-                    kind: PatchKind::IfFalse(index),
-                });
                 registers.release(mark);
                 // Only when the false path lands on an `ELSE`: without one,
                 // the true branch's fallthrough is already the resume, and a
@@ -753,55 +744,45 @@ fn compile_settled(
                 // So it stays on `Op::WhenTest`, which is the op that does
                 // that whole job, and so does a `When` whose condition
                 // `native_shape` declines.
-                let jump = match &instruction.kind {
-                    InstructionKind::When { condition, .. }
-                        if native_shape(condition, Some(NodePath::ROOT)) =>
-                    {
-                        push_native(
-                            &mut ops,
-                            echoes_values,
-                            &mut consts,
-                            &mut registers,
-                            &mut hints,
-                            &mut calls,
-                            plan,
-                            condition,
-                            instruction_index(index)?,
-                            0,
-                            Some(NodePath::ROOT),
-                            dst,
-                        )?;
-                        let jump = op_index(&ops)?;
-                        ops.push(Op::ConditionJump {
-                            index: instruction_index(index)?,
-                            reg: dst,
-                            keyword: ConditionKeyword::When,
-                            target: 0,
-                        });
-                        jump
-                    }
-                    _ => {
-                        ops.push(Op::WhenTest {
-                            index: instruction_index(index)?,
-                            case: info.case,
-                            dst,
-                        });
-                        let jump = op_index(&ops)?;
-                        ops.push(Op::JumpUnless {
-                            reg: dst,
-                            target: 0,
-                        });
-                        jump
-                    }
+                let mut patch = |op| {
+                    patches.push(Patch {
+                        op,
+                        target: info.false_target,
+                        kind: info.false_kind,
+                    })
                 };
+                let native = match &instruction.kind {
+                    InstructionKind::When { condition, .. } => push_condition(
+                        &mut ops,
+                        echoes_values,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        condition,
+                        instruction_index(index)?,
+                        dst,
+                        ConditionKeyword::When,
+                        &mut patch,
+                    )?,
+                    _ => false,
+                };
+                if !native {
+                    ops.push(Op::WhenTest {
+                        index: instruction_index(index)?,
+                        case: info.case,
+                        dst,
+                    });
+                    patch(op_index(&ops)?);
+                    ops.push(Op::JumpUnless {
+                        reg: dst,
+                        target: 0,
+                    });
+                }
                 // Closed before `EnterWhen`, which opens the branch's frame and
                 // is the branch's business rather than the clause's.
                 close_region(&mut ops, at)?;
-                patches.push(Patch {
-                    op: jump,
-                    target: info.false_target,
-                    kind: info.false_kind,
-                });
                 registers.release(mark);
                 ops.push(Op::EnterWhen {
                     select: info.select,
@@ -1735,6 +1716,72 @@ fn push_value<'a>(
         ops.push(Op::EvalExpr { index, slot, dst });
         Ok(())
     }
+}
+
+/// A native condition branches out of its one clause region when any of its
+/// values is false. Only a comma list addresses its values in slots starting
+/// at one; slot zero is the unsplit condition.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the expression emitter's state plus the branch patch"
+)]
+fn push_condition<'a>(
+    ops: &mut Vec<Op>,
+    echoes_values: bool,
+    consts: &mut Constants<'a>,
+    registers: &mut Registers,
+    hints: &mut Hints,
+    calls: &mut Calls,
+    plan: &Plan,
+    condition: &'a Expr,
+    index: u32,
+    dst: u16,
+    keyword: ConditionKeyword,
+    patch: &mut impl FnMut(u32),
+) -> Result<bool, ChunkTooLarge> {
+    let (items, comma_list) = match &condition.kind {
+        ExprKind::Logical(items) => (items.as_slice(), true),
+        _ => (std::slice::from_ref(condition), false),
+    };
+    if u16::try_from(items.len()).is_err()
+        || items
+            .iter()
+            .any(|item| !native_shape(item, Some(NodePath::ROOT)))
+    {
+        return Ok(false);
+    }
+    for (item_at, item) in items.iter().enumerate() {
+        let slot = if comma_list { item_at as u32 + 1 } else { 0 };
+        push_native(
+            ops,
+            echoes_values,
+            consts,
+            registers,
+            hints,
+            calls,
+            plan,
+            item,
+            index,
+            slot,
+            Some(NodePath::ROOT),
+            dst,
+        )?;
+        let keyword = if !comma_list {
+            keyword
+        } else if item_at + 1 == items.len() {
+            ConditionKeyword::ListLast
+        } else {
+            ConditionKeyword::ListItem
+        };
+        patch(op_index(ops)?);
+        ops.push(Op::ConditionJump {
+            index,
+            reg: dst,
+            keyword,
+            target: 0,
+        });
+    }
+    Ok(true)
 }
 
 /// How the opening of `parse` takes it, from what the template and the plan

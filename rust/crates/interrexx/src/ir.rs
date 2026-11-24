@@ -416,6 +416,8 @@ pub(crate) enum SendForm {
 pub(crate) enum ConditionKeyword {
     If,
     When,
+    ListItem,
+    ListLast,
 }
 
 impl ConditionKeyword {
@@ -424,6 +426,7 @@ impl ConditionKeyword {
         match self {
             ConditionKeyword::If => raised_if_not_logical,
             ConditionKeyword::When => raised_when_not_logical,
+            ConditionKeyword::ListItem | ConditionKeyword::ListLast => Raised::logical_list_element,
         }
     }
 }

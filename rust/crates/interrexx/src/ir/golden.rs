@@ -489,6 +489,8 @@ fn render_condition_keyword(keyword: ConditionKeyword) -> &'static str {
     match keyword {
         ConditionKeyword::If => "IF",
         ConditionKeyword::When => "WHEN",
+        ConditionKeyword::ListItem => "LIST ITEM",
+        ConditionKeyword::ListLast => "LIST LAST",
     }
 }
 
