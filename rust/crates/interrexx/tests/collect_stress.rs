@@ -1,7 +1,9 @@
-//! The differential corpus list, `rust/corpus/differential.txt`, passes again
-//! under collect-on-every-allocation, and the mode is proved to do something
-//! before its pass is believed.
+//! The differential corpus and the ruled programs in `rust/corpus/collect-stress.txt`
+//! pass again under collect-on-every-allocation, and the mode is proved to do
+//! something before its pass is believed.
 
+#[path = "support/ruled_corpus.rs"]
+mod ruled_corpus;
 mod support;
 
 use std::fs;
@@ -38,7 +40,7 @@ fn read_subset(list_paths: &[&Path]) -> Vec<String> {
 }
 
 /// The corpus list this harness reads.
-const SUBSET_FILES: &[&str] = &["differential.txt"];
+const SUBSET_FILES: &[&str] = &["differential.txt", "collect-stress.txt"];
 
 /// The directory one corpus program runs in: its own, under the target
 /// directory, named by the program's corpus path with `/` spelled `__`. That
@@ -178,6 +180,12 @@ fn the_l0_subset_names_every_listed_program() {
         assert!(
             subset.iter().any(|path| path == timed),
             "{timed} is not in the subset"
+        );
+    }
+    for &(program, _) in ruled_corpus::CONCURRENCY {
+        assert!(
+            subset.iter().any(|path| path == program),
+            "{program} has a ruled scheduler outcome but is absent from the subset"
         );
     }
     for reused in LIBRARY_REUSE_PROGRAMS {

@@ -6,9 +6,12 @@
     reason = "this harness times or bounds real runs"
 )]
 
+#[path = "support/ruled_corpus.rs"]
+mod ruled_corpus;
 mod support;
 
 use interrexx_inventory::errors::expand;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -871,12 +874,12 @@ fn the_first_seek_of_an_unopened_transient_stream_is_refused() {
 /// answers, with the run directory written as `<dir>` in either output stream.
 #[test]
 fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
-    let mut cases = 0;
+    let mut programs = BTreeSet::new();
     datadriven::walk("tests/input_oracle", |file| {
         file.run(|case| {
             assert_eq!(case.directive, "run", "{}", case.directive);
-            cases += 1;
             let program = case.input.trim();
+            programs.insert(program.to_owned());
             let source = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../../corpus")
                 .join(program);
@@ -897,5 +900,8 @@ fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
             rendered
         });
     });
-    assert!(cases > 0, "tests/input_oracle ran no case");
+    assert!(!programs.is_empty(), "tests/input_oracle ran no case");
+    for &(program, _) in ruled_corpus::CONCURRENCY {
+        assert!(programs.contains(program), "{program} has no ruled outcome");
+    }
 }
