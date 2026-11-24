@@ -64,6 +64,49 @@ const RECORDED: &[(&str, bool)] = &[
     // Deviation 173: expects no description from `DecodeConditionInfo` for
     // `RAISE ... DESCRIPTION (2 + 3)`, a number an operator made.
     ("METHOD.TESTDECODECONDITION03", true),
+    // Level 6.07 THROW (Deviation 179, #804): these call a Throw or ThrowObject
+    // member, which refuses by ending the process, so they run on neither side.
+    ("METHOD.TESTTHROWOBJECTUSER", false),
+    ("METHOD.TESTTHROWOBJECTHANDMADE", false),
+    ("METHOD.TESTTHROWOBJECTSYNTAX", false),
+    ("METHOD.TESTTHROWOBJECTCALLON", false),
+    ("METHOD.TESTTHROWOBJECTOPTIONSSYNTAX", false),
+    ("METHOD.TESTTHROWOBJECTERRORS", false),
+    ("METHOD.TESTTHROW01", false),
+    ("METHOD.TESTTHROW02", false),
+    ("METHOD.TESTTHROW03", false),
+    ("METHOD.TESTTHROW04", false),
+    ("METHOD.TESTTHROW06", false),
+    ("FUNCTION.TEST_ADDCOMMANDENVIRONMENT_THROW", false),
+    (
+        "FUNCTION.TEST_ADDCOMMANDENVIRONMENT_THROW_REDIRECTING",
+        false,
+    ),
+    ("FUNCTION.TEST_ADDCOMMANDENVIRONMENT_THROW_ERROR", false),
+    ("FUNCTION.TEST_NATIVECOMMANDHANDLER_FORWARD_THROW", false),
+    ("FUNCTION.TESTTHROWROUTINE01", false),
+    ("FUNCTION.TESTTHROWROUTINE02", false),
+    ("FUNCTION.TESTTHROWROUTINE03", false),
+    // Level 6.07 THROW (Deviation 179, #804): these need the THROW instruction,
+    // CATCH, a condition's THROWN entry or error 4.901, or call a Throw member
+    // in a child process.
+    ("METHOD.TESTRAISECONDITIONOBJECTTHROWNOBJECT", true),
+    ("METHOD.TESTRAISECONDITIONOBJECTTHROWNFROMCALLEE", true),
+    ("METHOD.TESTTHROWOBJECTFROMCALLEE", true),
+    ("METHOD.TESTCALLROUTINETHROWN01", true),
+    ("METHOD.TESTCALLROUTINETHROWN02", true),
+    ("METHOD.TESTSENDMESSAGETHROWN01", true),
+    ("METHOD.TESTSENDMESSAGETHROWN02", true),
+    ("METHOD.TESTTHROW05", true),
+    ("METHOD.TESTTHROW07", true),
+    ("METHOD.TESTTHROWCONDITION01", true),
+    ("FUNCTION.TEST_ADDCOMMANDENVIRONMENT_THROW_UNCAUGHT", true),
+    // Level 6.07 THROW (Deviation 179, #804): asserts the THROWN entry every
+    // condition object has at that level.
+    ("METHOD.TESTRAISECONDITIONOBJECTHANDMADE", true),
+    // Deviation 179: the oracle's build of the test library expects the
+    // language level it was compiled for, 6.07, and refuses 6.06.
+    ("METHOD.TESTVERSION01", true),
 ];
 
 /// The tests whose outcome, assertion count, stderr and exit status agree while
