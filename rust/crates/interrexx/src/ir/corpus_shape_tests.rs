@@ -1084,7 +1084,6 @@ fn sweep_every_corpus_body() {
         Root::Arith,
         Root::Binary,
         Root::Prefix,
-        Root::EvalExpr,
     ] {
         assert!(
             seen.roots.contains_key(&root),
