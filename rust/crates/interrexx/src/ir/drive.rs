@@ -3789,6 +3789,24 @@ impl Interp {
                             next = Next::Body;
                         }
                     };
+                    let ended = if self.activation().streams.is_some()
+                        && let Some(code) = code.as_ref()
+                        && let Some(failure) = self.close_stream_replacements(&ended)
+                    {
+                        match self.offer_to_trap(failure) {
+                            Ok(flow) => match self.apply_flow(code, flow) {
+                                Ok(Some(ended)) => Ok(ended),
+                                Ok(None) => {
+                                    next = Next::Body;
+                                    continue;
+                                }
+                                Err(failure) => Err(failure),
+                            },
+                            Err(failure) => Err(failure),
+                        }
+                    } else {
+                        ended
+                    };
                     // Released on both paths rather than only on `Ok`: the loud
                     // and raised paths leave the activation for its caller to
                     // tear down, and a frame left behind would keep its

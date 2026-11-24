@@ -5,7 +5,7 @@ mod use_args;
 
 use crate::activation::{
     Activation, AutoExpose, CallType, Entry, ExtraNames, Inherited, InstanceVar, ReplyState,
-    TraceEntry, Trap, TrappedCondition, body_of,
+    StreamEntry, TraceEntry, Trap, TrappedCondition, body_of,
 };
 use crate::builtin;
 use crate::clause::{ClauseEntry, ClauseOutcome, ClauseValue, HandlerExit};
@@ -4257,18 +4257,19 @@ impl Interp {
         let qualified = crate::builtin::platform::qualify_name(self, name);
         if let Some(found) = self
             .stream_table()
-            .and_then(|table| table.get(qualified.as_slice()).copied())
+            .and_then(|table| table.get(qualified.as_slice()))
         {
-            return Ok(found);
+            return Ok(found.object());
         }
         // **The manager sees the qualified name, and only a table miss.**
         // `.Stream~new` reaches none of this, so a program that builds its
         // own stream object is never checked.
         if let Some(replacement) = self.check_stream_access(&qualified)? {
             if let Some(table) = self.stream_table_mut() {
-                table
-                    .get_or_insert_with(Box::default)
-                    .insert(qualified.into_boxed_slice(), replacement);
+                table.get_or_insert_with(Box::default).insert(
+                    qualified.into_boxed_slice(),
+                    StreamEntry::Replacement(replacement),
+                );
             }
             return Ok(replacement);
         }
@@ -4289,7 +4290,7 @@ impl Interp {
         if added && let Some(table) = self.stream_table_mut() {
             table
                 .get_or_insert_with(Box::default)
-                .insert(qualified.into_boxed_slice(), built);
+                .insert(qualified.into_boxed_slice(), StreamEntry::Opened(built));
         }
         Ok(built)
     }
@@ -4323,6 +4324,89 @@ impl Interp {
         if let Some(table) = self.stream_table_mut().and_then(Option::as_deref_mut) {
             table.remove(qualified.as_slice());
         }
+    }
+
+    /// A manager's replacement is closed in the owning level. Removing the
+    /// entries before the sends lets a trap after a failed close use the
+    /// names again (spec: env.security.stream.close).
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn close_stream_replacements(
+        &mut self,
+        ended: &Result<Ended, Failure>,
+    ) -> Option<Failure> {
+        let table = self.activation_mut().streams.as_deref_mut()?;
+        let mut replacements = Vec::new();
+        table.retain(|_, entry| match *entry {
+            StreamEntry::Opened(_) => true,
+            StreamEntry::Replacement(object) => {
+                replacements.push(object);
+                false
+            }
+        });
+        if replacements.is_empty() {
+            return None;
+        }
+
+        let frame = self.roots.activity_mut().push_frame();
+        let returned = match ended {
+            Ok(ended) => ended.value_ref(),
+            Err(Failure::Exited(value)) => *value,
+            _ => None,
+        };
+        for object in replacements.iter().copied().chain(returned) {
+            self.roots.activity_mut().push_temp(object);
+        }
+        let program_failed = self.activation().entry == Entry::TopLevel
+            && matches!(ended, Err(failure) if !matches!(failure, Failure::Exited(_)));
+        let previous = match ended {
+            Ok(_) | Err(Failure::Exited(_)) => None,
+            Err(_) => Some(self.take_stream_close_condition()),
+        };
+        let mut first = None;
+        for stream in replacements {
+            let caller = self.caller();
+            let closed = pinned!(
+                self,
+                crate::pinning::PinKind::StreamWrapper,
+                self.send_message(stream, b"CLOSE", None, &[], caller)
+            );
+            if let Err(failure) = closed {
+                let condition = self.take_stream_close_condition();
+                if first.is_none() && !program_failed {
+                    first = Some((failure, condition));
+                }
+            }
+        }
+        let (failure, condition) = match first {
+            Some((failure, condition)) => (Some(failure), Some(condition)),
+            None => (None, previous),
+        };
+        if let Some((levels, [additional, result, description, rc])) = condition {
+            self.restore_failure_levels(levels);
+            self.activity.pending_additional = additional;
+            self.activity.pending_result = result;
+            self.activity.pending_description = description;
+            self.activity.pending_rc = rc;
+        }
+        self.roots.activity_mut().pop_frame(frame);
+        failure
+    }
+
+    /// Roots a condition while the remaining `CLOSE` sends run.
+    fn take_stream_close_condition(&mut self) -> (FailureLevels, [Option<ObjRef>; 4]) {
+        let levels = self.take_failure_levels();
+        self.hold_origin_package(levels.origin);
+        let pending = [
+            self.activity.pending_additional.take(),
+            self.activity.pending_result.take(),
+            self.activity.pending_description.take(),
+            self.activity.pending_rc.take(),
+        ];
+        for object in pending.into_iter().flatten() {
+            self.roots.activity_mut().push_temp(object);
+        }
+        (levels, pending)
     }
 }
 

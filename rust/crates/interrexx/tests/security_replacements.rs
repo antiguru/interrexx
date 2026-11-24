@@ -15,7 +15,9 @@ fn run(program: &str) -> Outcome {
 }
 
 /// A `STREAM` replacement that is not a Stream, `.nil` included, is the
-/// target of the builtin's message: 97.1, and the file is never written.
+/// target of the builtin's message. The routine traps its missing LINEOUT.
+/// The program still owns the replacement, so its missing CLOSE raises
+/// another 97.1 when the program ends. The file is never written.
 #[test]
 fn a_stream_replacement_that_is_not_a_stream_is_the_target() {
     let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("security_replacements");
@@ -38,12 +40,8 @@ fn a_stream_replacement_that_is_not_a_stream_is_the_target() {
             file.display()
         );
         let outcome = run(&program);
-        assert_eq!(
-            outcome.exit_code,
-            0,
-            "{label}: {}",
-            String::from_utf8_lossy(&outcome.stderr)
-        );
+        let stderr = String::from_utf8_lossy(&outcome.stderr);
+        assert_eq!(outcome.exit_code, 159, "{label}: {stderr}");
         let target = if label == "nil" {
             "The NIL object"
         } else {
@@ -54,6 +52,8 @@ fn a_stream_replacement_that_is_not_a_stream_is_the_target() {
             expand(&format!("97.1 ⟨97.1¦{target}¦LINEOUT⟩\n")),
             "{label}"
         );
+        let close_error = expand(&format!("⟨97.1¦{target}¦CLOSE⟩"));
+        assert!(stderr.contains(&close_error), "{label}: {stderr}");
         assert!(!file.exists(), "{label}: the replaced file was written");
     }
 }
