@@ -1527,8 +1527,10 @@ character to standard output. `.RexxInfo~languageLevel`, and the level in
 argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
 interrexx. Neither is the THROW instruction of level 6.07: a clause that starts
 with THROW is a command, a condition object has no `THROWN` entry, and the
-native interface's function tables and interface versions are those of level
-6.06, without the `Throw` and `ThrowObject` entry points. ooRexx is at level
+native interface's interface versions are those of level 6.06. Its function
+tables have the `Throw` and `ThrowObject` members, so that code written for
+level 6.07 builds, but a call of one ends the process with a message naming
+the member. ooRexx is at level
 6.07: the three are builtins there, with argument errors of the 40.xxx family,
 BEEP writes no bell, ERRORTEXT takes a second argument of values for an error
 code's message, THROW raises a condition that goes from caller to caller until
