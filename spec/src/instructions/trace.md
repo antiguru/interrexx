@@ -1274,8 +1274,9 @@ c ok
 r[instr.trace.delivery.context]
 While the destination runs, the code that wrote the line is still active. The
 frames of `.CONTEXT~STACKFRAMES` in the destination are the destination's own
-first, then the frames of the traced code, and a context object that the
-traced code kept reads that code's variables.
+first, then the frames of the traced code, and so are the `STACKFRAMES` of a
+condition raised in the destination. A context object that the traced code
+kept reads that code's variables.
 
 ```rexx
 .local~first = .true
@@ -1335,6 +1336,39 @@ Y 7 items 1
 name GO
 ```
 
+```rexx
+.local~done = .false
+.traceoutput~destination(.sink~new)
+call outer
+.traceoutput~destination(.output)
+::routine outer
+  call inner
+::routine inner
+  trace r
+  x = 1
+  trace off
+::class sink
+::method lineout
+  signal on syntax name e
+  if \.local~done then do
+    .local~done = .true
+    y = 1/0
+  end
+  return 0
+e:
+  do fr over condition('O')~stackFrames
+    if fr~type = 'METHOD' | fr~type = 'ROUTINE' then
+      if fr~name \= 'UNKNOWN' then say fr~type fr~name
+  end
+  return 0
+```
+
+```output
+METHOD LINEOUT
+ROUTINE INNER
+ROUTINE OUTER
+```
+
 r[instr.trace.delivery.wait]
 An activity that waits while a line of its own is delivered is not out of the
 program: a store that another activity makes to a variable a traced `GUARD WHEN`
@@ -1369,6 +1403,81 @@ say 'waiter' w~result
 
 ```output
 waiter ended
+```
+
+r[instr.trace.delivery.others]
+The destination can wait for what another activity does, and the other
+activities run while it waits, a guarded `LINEOUT` holding its guard included.
+In the first example the destination's guarded `LINEOUT` loops until a started
+activity sets a variable; in the second two activities trace into one guarded
+destination that sleeps in each `LINEOUT`, and every line of both is
+delivered. In what order the lines of the two activities reach the destination
+is not specified.
+
+```rexx
+.environment~flag = 0
+.traceoutput~destination(.sink~new)
+m = .setter~new~start('go')
+say 'start'
+trace r
+x = 1
+trace off
+.traceoutput~destination(.output)
+say 'done' m~result
+::class sink
+::method lineout guarded
+  do while .environment~flag \= 1; end
+  return 0
+::class setter
+::method go
+  call syssleep 0.2
+  .environment~flag = 1
+  return 'set'
+```
+
+```output
+start
+done set
+```
+
+```rexx
+s = .sink~new
+.traceoutput~destination(s)
+a = .w~new~start('go', 'A')
+b = .w~new~start('go', 'B')
+say a~result b~result
+.traceoutput~destination(.output)
+say 'A' s~count('A') 'B' s~count('B')
+::class w
+::method go
+  use arg n
+  trace r
+  x = n
+  y = n
+  trace off
+  return n
+::class sink
+::method init
+  expose lines
+  lines = .array~new
+::method lineout guarded
+  expose lines
+  call SysSleep 0.01
+  lines~append(arg(1)~traceLine)
+  return 0
+::method count unguarded
+  expose lines
+  use arg n
+  c = 0
+  do l over lines
+    if l~pos('"'n'"') > 0 then c += 1
+  end
+  return c
+```
+
+```output
+A B
+A 2 B 2
 ```
 
 r[instr.trace.delivery.depth]

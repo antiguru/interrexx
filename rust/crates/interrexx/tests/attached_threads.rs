@@ -1356,33 +1356,45 @@ fn an_inverted_wait_above_an_activity_set_aside_goes_on_with_a_library_loaded() 
     );
 }
 
-/// The example of `conc.locks.trace.deviation.14` with the extension loaded: a trace line's
-/// destination, whose guarded `LINEOUT` holds its guard while a started activity is ready, loops
-/// until a thread of the extension that never attaches raises a flag twenty seconds in. The
-/// delivery goes on (Deviation 14), stderr says once that it holds the others back, and the flag
-/// ends it. The oracle prints the same stdout.
+/// A trace line's destination, whose guarded `LINEOUT` holds its guard while a started activity
+/// is ready, loops until a thread of the extension that never attaches raises a flag twenty
+/// seconds in. The started activity runs meanwhile, stderr says nothing, and the flag ends the
+/// loop. The oracle prints the same stdout.
+// spec: instr.trace.delivery.others
+#[test]
+fn a_trace_delivery_that_holds_a_guard_lets_the_others_run_with_a_library_loaded() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-traceflag", "traceflag.rex");
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), status),
+        ("start\ndone set\n", "", 0)
+    );
+}
+
+/// The example of `conc.locks.trace.deviation.14` with the extension loaded: the destination's
+/// guarded `LINEOUT` loops in a method that `run` runs until a thread of the extension that never
+/// attaches raises a flag twenty seconds in. The delivery goes on (Deviation 14), stderr says once
+/// that it holds the others back, and the flag ends it. The oracle prints the same stdout.
 // spec: conc.locks.trace.deviation.14
 #[test]
-fn a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded() {
-    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-traceflag", "traceflag.rex");
+fn a_nested_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded() {
+    let (stdout, stderr, status) = run_agreeing_on_stdout("attach-tracenested", "tracenested.rex");
     assert_eq!(
         (stdout.as_str(), stderr.as_str(), status),
         ("start\ndone set\n", TRACE_HELD, 0)
     );
 }
 
-/// [`a_trace_delivery_that_holds_a_guard_goes_on_with_a_library_loaded`] with a destination that
-/// loops for ever, and a thread of the extension that calls `Halt` through the instance twenty
-/// seconds in: the HALT ends the delivery's loop, which traps it. The oracle's started activity has
-/// ended before the HALT, ours is ready below the delivery and traps one too, so the oracle is
-/// asked for the stdout only.
-// spec: conc.locks.trace.deviation.14, conc.halt.signal
+/// [`a_trace_delivery_that_holds_a_guard_lets_the_others_run_with_a_library_loaded`] with a
+/// destination that loops for ever, and a thread of the extension that calls `Halt` through the
+/// instance twenty seconds in: the HALT reaches the delivery once, as part of the activity that
+/// wrote the line, and ends its loop, which traps it; the traced code then goes on.
+// spec: instr.trace.delivery.owner, conc.halt.signal
 #[test]
-fn a_halt_ends_a_trace_delivery_that_goes_on() {
+fn a_halt_ends_a_trace_delivery_once() {
     let (stdout, stderr, status) = run_agreeing_on_stdout("attach-tracehalt", "tracehalt.rex");
     assert_eq!(
         (stdout.as_str(), stderr.as_str(), status),
-        ("start\ndone, halted 1\n", TRACE_HELD, 0)
+        ("start\ndone, halted 1\n", "", 0)
     );
 }
 

@@ -120,9 +120,10 @@ Once such code is present, a thread it started may still end the wait, so the
 wait goes on. Once it has waited five seconds with nothing else left to run, a
 line on stderr says so, and the program otherwise runs as it would without the
 line. A HALT the host asks for ends such a wait where it ends the same wait
-elsewhere. A trace line's delivery that holds a guard and spins until another
-activity acts ([the locks page's rule](r:conc.locks.trace.deviation.14))
-follows the same switch: it is refused only while no such code is present.
+elsewhere. A trace line's delivery that holds a guard and spins inside a
+nested construct until another activity acts ([the locks page's
+rule](r:conc.locks.trace.deviation.14)) follows the same switch: it is refused
+only while no such code is present.
 
 ## 15. Withdrawn
 

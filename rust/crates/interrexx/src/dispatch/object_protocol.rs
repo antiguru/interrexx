@@ -1331,6 +1331,51 @@ fn start_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<Obj
     Ok(None)
 }
 
+/// Starts `message`'s send on a new activity that delivers a trace line the
+/// running activity wrote, nested as deep as the code that wrote it
+/// (`r[instr.trace.delivery.depth]`), and answers that activity.
+pub(crate) fn start_trace_delivery(
+    interp: &mut Interp,
+    message: ObjRef,
+) -> Result<crate::scheduler::ActivityId, Failure> {
+    debug_assert!(
+        !interp.activity.delivering,
+        "a delivery writes no trace lines"
+    );
+    interp.started_messages.insert(message);
+    let (Some(target), Some(name), Some(arguments)) = (
+        interp.native_entry(message, MESSAGE_TARGET),
+        interp.native_entry(message, MESSAGE_NAME),
+        interp.native_entry(message, MESSAGE_ARGUMENTS),
+    ) else {
+        return Err(crate::Raised::receiver_kind(NOT_A_MESSAGE).into());
+    };
+    let name = interp.to_text(name).into_owned();
+    let args = interp.array_slots_of(arguments).unwrap_or_default();
+    clear_completion(interp, message);
+    let caller = interp.caller();
+    let send = StartedSend {
+        receiver: target,
+        name,
+        scope: None,
+        args,
+        caller,
+    };
+    let mut held = vec![message];
+    send.object_roots(&mut held);
+    for object in held {
+        interp.roots.activity_mut().push_temp(object);
+    }
+    let spawner = interp.spawner_of_running()?;
+    let mut idle = interp.new_activity();
+    idle.activity.spawner = Some(spawner);
+    idle.activity.delivering = true;
+    idle.activity.depth_base = interp.nesting_depth();
+    idle.activity.first = Some(First::Send(Box::new(send)));
+    idle.activity.root_then = Some(Then::Started(message));
+    Ok(interp.spawn(idle))
+}
+
 /// Files a new activity whose first step is `send`, recording its outcome on
 /// `message`.
 fn spawn_send(interp: &mut Interp, send: StartedSend, message: ObjRef) -> Result<(), Failure> {
