@@ -229,6 +229,29 @@ c,b,a
 4 c,b,a
 ```
 
+```rexx
+q = .circularqueue~of('p', 'q', 'r')
+say q~section(1, .array~of(2))~makeArray~toString('L', ' ')
+say q~section(1, .array~of('099'))~items
+say q~section(1, .array~of('1.0'))~items
+say q~section(1, .array~of(' 2 '))~items
+say q~section(1, .array~new(5)~~put(2, 1))~items
+signal on syntax
+q~section(1, .array~of(1, 2))
+say 'unexpected section'
+exit
+syntax: say condition('o')~code
+```
+
+```output
+p q
+3
+1
+2
+2
+93.906
+```
+
 r[class.circularqueue.of]
 `of` makes a circular queue that holds its arguments in the order given, with
 the size that is the number of arguments, an argument left out before a given
