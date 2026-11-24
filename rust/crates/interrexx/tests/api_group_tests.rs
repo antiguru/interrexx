@@ -104,8 +104,8 @@ const RECORDED: &[(&str, bool)] = &[
     // Level 6.07 THROW (Deviation 179, #804): asserts the THROWN entry every
     // condition object has at that level.
     ("METHOD.TESTRAISECONDITIONOBJECTHANDMADE", true),
-    // Deviation 179: the oracle's build of the test library expects the
-    // language level it was compiled for, 6.07, and refuses 6.06.
+    // Level 6.07 (Deviation 179, #804): the oracle's build of the test library
+    // expects the language level it was compiled for and refuses 6.06.
     ("METHOD.TESTVERSION01", true),
 ];
 
