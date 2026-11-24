@@ -175,6 +175,10 @@ pub(crate) enum TraceEntry {
     /// The clause being stepped is this activation's first, so a `TRACE`
     /// executing right now may announce.
     Allowed,
+    /// External trace was switched on during the first clause of a routine.
+    /// Its running activity emits the announcement before the next traced
+    /// clause or before leaving the routine.
+    External,
     /// A second clause has begun, or a fragment was entered from a state that
     /// could not announce. Nothing more will be announced and no `<I<` is
     /// owed.
@@ -189,6 +193,7 @@ impl TraceEntry {
         match self {
             TraceEntry::Pending => TraceEntry::Allowed,
             TraceEntry::Allowed | TraceEntry::Spent => TraceEntry::Spent,
+            TraceEntry::External => TraceEntry::External,
             TraceEntry::Done => TraceEntry::Done,
         }
     }
@@ -393,8 +398,9 @@ pub(crate) struct Activation {
     /// The streams the builtins have opened by name in this activation,
     /// keyed by the **qualified** path, so `./a.txt` and `a.txt` are one
     /// entry. Only a program or method activation owns one; every other
-    /// kind resolves through its nearest such ancestor.
-    pub(crate) streams: NameMap<Box<[u8]>, StreamEntry>,
+    /// kind resolves through its nearest such ancestor. Allocate the table
+    /// when the owning activation first remembers a named stream.
+    pub(crate) streams: Option<Box<StreamTable>>,
 }
 
 /// A named stream owned by an activation. A replacement may have its own
@@ -412,6 +418,8 @@ impl StreamEntry {
         }
     }
 }
+
+type StreamTable = NameMap<Box<[u8]>, StreamEntry>;
 
 /// How control arrived at an activation.
 /// ```text
@@ -499,7 +507,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
-const _: () = assert!(size_of::<Activation>() == 416);
+const _: () = assert!(size_of::<Activation>() == 392);
 
 impl ActivationFlags {
     const FORWARDED: u8 = 1;
@@ -819,7 +827,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -894,7 +902,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -951,7 +959,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -1006,7 +1014,7 @@ impl Activation {
             invocation: None,
             call_name: None,
             call_arguments: None,
-            streams: NameMap::default(),
+            streams: None,
         }
     }
 
@@ -1108,7 +1116,7 @@ impl Activation {
         *invocation = None;
         *call_name = None;
         *call_arguments = None;
-        *streams = NameMap::default();
+        *streams = None;
     }
 
     /// The key this activation's body is cached under, in both the plan
@@ -1253,7 +1261,9 @@ impl Activation {
         }
         // The table's streams. An activation is a root, and a stream only
         // the table holds is reachable through nothing else.
-        out.extend(streams.values().map(|entry| entry.object()));
+        if let Some(table) = streams {
+            out.extend(table.values().map(|entry| entry.object()));
+        }
         // The convention's own values, which a moved `REPLY` continuation
         // also roots from its `CallContext`: this activation holds a
         // refcount clone of the same slice.
@@ -1348,18 +1358,15 @@ impl Interp {
     /// Internal calls, `PROCEDURE` routines, `::ROUTINE`s and `INTERPRET`
     /// all borrow their caller's, which is measured -- a routine advances
     /// the caller's read position where a method call does not.
-    pub(crate) fn stream_table(&self) -> Option<&NameMap<Box<[u8]>, StreamEntry>> {
+    pub(crate) fn stream_table(&self) -> Option<&StreamTable> {
         self.frames()
             .find(|frame| matches!(frame.entry, Entry::TopLevel | Entry::Method))
-            .map(|frame| &frame.streams)
+            .and_then(|frame| frame.streams.as_deref())
     }
 
-    /// [`Interp::stream_table`] for a caller that inserts or removes. **By the
-    /// same predicate rather than by depth**: `frame_at_mut` counts backwards
-    /// into a vector that is oldest first, and an off-by-one there would put
-    /// one activation's streams on its caller -- a wrong table with nothing to
-    /// notice it, since both are plausible.
-    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut NameMap<Box<[u8]>, StreamEntry>> {
+    /// The owning frame's optional table for a caller that inserts or removes.
+    /// Searches the frames innermost first, as [`Interp::stream_table`] does.
+    pub(crate) fn stream_table_mut(&mut self) -> Option<&mut Option<Box<StreamTable>>> {
         if self
             .activity
             .running
@@ -1965,6 +1972,7 @@ mod method_tests {
         activation.call_arguments = Some(Rc::from(Vec::new()));
         activation
             .streams
+            .get_or_insert_with(Box::default)
             .insert(Box::from(&b"S"[..]), StreamEntry::Opened(ObjRef::NIL));
     }
 

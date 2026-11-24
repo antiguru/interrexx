@@ -3776,7 +3776,7 @@ impl Interp {
                             next = Next::Body;
                         }
                     };
-                    let ended = if !self.activation().streams.is_empty()
+                    let ended = if self.activation().streams.is_some()
                         && let Some(code) = code.as_ref()
                         && let Some(failure) = self.close_stream_replacements(&ended)
                     {

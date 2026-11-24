@@ -886,8 +886,10 @@ r[env.security.stream.close]
 A replacement still in the stream table is sent `CLOSE` with no arguments
 when the method or program that owns the table ends ([the stream lifetime
 rule](r:bif.index.stream.lifetime)). A routine that borrows its caller's
-table leaves that table open. A missing `CLOSE` raises `SYNTAX 97.1`; a
-condition raised by `CLOSE` can be trapped in the owning method or program.
+table leaves that table open, including a replacement whose earlier
+`LINEOUT` raised a condition that the routine trapped. A missing `CLOSE`
+raises `SYNTAX 97.1`. A condition raised by `CLOSE` can be trapped in the
+owning method or program.
 The order of the close messages is unspecified. Every replacement is closed
 even if some closes fail, and the first failure is offered to the owner's traps.
 A close that fails can replace a method's outcome. If the program is
