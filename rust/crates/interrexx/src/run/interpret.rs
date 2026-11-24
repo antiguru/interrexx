@@ -2,7 +2,7 @@
 
 use super::{
     BodyEngine, Code, Failure, Flow, Fragment, Instruction, InstructionKind, Interp, Loud,
-    NameShape, ObjRef, ProgramSource, Rc, TraceEntry, VariableRef, raised_iterate_no_loop,
+    NameShape, ProgramSource, Rc, TraceEntry, VariableRef, raised_iterate_no_loop,
     raised_iterate_no_match, raised_leave_no_loop, raised_leave_no_match, shape_of,
     split_indirect_words, validate_indirect_word,
 };
@@ -398,10 +398,7 @@ impl Interp {
             crate::pinning::PinKind::TraceWrapper,
             self.send_message(route, crate::dispatch::LINEIN, None, &[], caller)
         )?;
-        Ok(match answer {
-            Some(value) if value != ObjRef::NIL => self.to_text(value).into_owned(),
-            _ => Vec::new(),
-        })
+        self.input_answer_text(answer)
     }
 
     /// One line typed at a pause, run as an `INTERPRET` fragment that traces

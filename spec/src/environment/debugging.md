@@ -922,6 +922,47 @@ from debuginput
 LINEIN sent 3 times, with 0 arguments
 ```
 
+r[env.debugging.read.line-result]
+The result of a debug read is converted to a string before the interpreter
+runs it. A return without a result or with `.nil` supplies an empty line and
+ends the stop.
+
+```rexx
+.traceoutput~destination(.quiet~new)
+.debuginput~destination(.reader~new)
+trace ?a
+nop
+nop
+call trace 'o'
+say 'done'
+::class quiet
+::method lineout
+  return 0
+::class reader
+::attribute calls
+::method init
+  self~calls = 0
+::method linein
+  self~calls += 1
+  say 'debug read' self~calls
+  select
+    when self~calls = 1 then return .line~new
+    when self~calls = 2 then return
+    otherwise return .nil
+  end
+::class line
+::method makeString
+  return 'say "debug line ran"'
+```
+
+```output
+debug read 1
+debug line ran
+debug read 2
+debug read 3
+done
+```
+
 r[env.debugging.read.fallback]
 When nothing was installed, the object that `.debuginput` holds is a monitor
 whose destination is the monitor `.input`, as [the bindings
