@@ -2029,9 +2029,8 @@ pub(super) enum ArrayArgument {
 /// `requestArray` where it is not already an array.
 ///
 /// A conversion answering an object that is not an array raises what `.nil`
-/// does. The reference run reads that answer through the array layout, so a
-/// string answer is 98.913 and a `List` answer kills it (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 34).
+/// does, 98.913, as in the reference run (`corpus/oracle-crashes.txt` entry
+/// 34, dropped).
 pub(super) fn array_argument(
     interp: &mut Interp,
     value: ObjRef,

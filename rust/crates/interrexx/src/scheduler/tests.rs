@@ -25,8 +25,8 @@ fn stderr(outcome: &Outcome) -> String {
 /// rexxref, CALL ON: a trap is delayed from the raise on, and an ERROR raised
 /// again while it is delayed is ignored. The command's own ERROR comes after
 /// the one its expression's method raised, so the handler runs once, for
-/// that one; the oracle runs it for the command's and then dies
-/// (`corpus/oracle-crashes.txt` entry 58).
+/// that one. The oracle answers the same (`corpus/oracle-crashes.txt` entry
+/// 58, dropped).
 #[test]
 fn a_command_error_while_its_call_on_trap_is_delayed_is_ignored() {
     let outcome = run(

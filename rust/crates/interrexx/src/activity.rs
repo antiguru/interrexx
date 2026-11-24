@@ -296,9 +296,9 @@ pub(crate) struct Activity {
     pub(crate) fragment_clause: usize,
     /// Whether a trace line is being delivered to `.TRACEOUTPUT`. A traced
     /// clause inside that delivery writes to the buffer instead of routing
-    /// again: the reference run SIGSEGVs in the one shape that reaches this
-    /// (oracle defect, `corpus/oracle-crashes.txt` entry 14), and this crate
-    /// must terminate.
+    /// again, so the delivery terminates; the reference run of the one shape
+    /// that reaches this answers rc 0 with the trace lines on stderr
+    /// (`corpus/oracle-crashes.txt` entry 14, dropped).
     pub(crate) routing_trace: bool,
     /// Whether this activity delivers a trace line another activity wrote, to
     /// the end of that line's `LINEOUT`.

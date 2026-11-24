@@ -168,9 +168,7 @@ impl Substitutions<'_> {
 ///
 /// Every value is converted, in order, before the message is read, an omitted
 /// one as the null string. A conversion that raises ends the call, and no later
-/// value is converted (r[util.sysformatmessage.substitutions]). The reference
-/// run reads a raising value that the message refers to as a null pointer and
-/// dies (oracle defect, `corpus/oracle-crashes.txt` entry 41).
+/// value is converted (r[util.sysformatmessage.substitutions]).
 fn format_message(
     interp: &mut Interp,
     message: &[u8],
