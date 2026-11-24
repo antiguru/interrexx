@@ -613,10 +613,10 @@ String first
 receiver, and 0 otherwise. It is a strict comparison of text: case matters, a
 trailing blank matters, and numbers are not compared as numbers, so <code>1</code> and
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
-raises <code>93.902</code>. The argument's string value is found as the joining operators
-find it, so an object whose <code>request</code> answers no string is compared by its
-<code>string</code>
-text and <code>.nil</code> as the text <code>The NIL object</code>; no argument is refused.</p>
+raises <code>93.902</code>. The argument is converted by the <a href="../conventions.html#r-conv.string.object">required-string
+protocol</a>. <code>.nil</code> compares unequal to every string.
+An object whose <code>string</code> method returns something with no string value also
+compares unequal when the conversion does not raise a condition.</p>
 <pre><code class="language-rexx">say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
 say '1'~equals('1.0') 12~equals('12') 'abc'~equals(.nil)
 say 'an Object'~equals(.object~new)
@@ -655,6 +655,31 @@ e: say condition('o')~code
 0 1
 0 0
 93.903
+</code></pre>
+<pre><code class="language-rexx">o = .unreadable~new
+say 'abc'~equals(o) ''~equals(o) 'The NIL object'~caselessEquals(o)
+say 'The NIL object'~equals(.nil) 'The NIL object'~caselessEquals(.nil)
+say 'abc'~equals(.readable~new) 'ABC'~caselessEquals(.readable~new)
+signal on nostring name missing
+say 'abc'~equals(o)
+exit
+missing: say condition('c')
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+::class readable
+::method string
+  return 'abc'
+</code></pre>
+<pre><code class="language-output">string called
+string called
+string called
+0 0 0
+0 0
+1 1
+string called
+NOSTRING
 </code></pre>
 <div class="rule" id="r-class.string.compareto"><a href="#r-class.string.compareto">[class.string.compareto]</a></div>
 <p><code>compareTo</code> compares the receiver with its first argument and answers <code>0</code> when
