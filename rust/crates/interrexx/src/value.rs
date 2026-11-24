@@ -1095,7 +1095,8 @@ impl Interp {
     }
 
     /// [`Interp::requested_number`] for a method argument that has a check of
-    /// its own: `.nil` is no number, so the caller raises that check's error.
+    /// its own, with `.nil` read through the required-string protocol too:
+    /// with a `NOSTRING` trap, `'abc'~left(.nil)` raises `NOSTRING`.
     #[cold]
     #[inline(never)]
     pub(crate) fn requested_argument_number(
@@ -1106,9 +1107,6 @@ impl Interp {
             return Ok(Some(number));
         }
         let text = self.required_string_value(value)?;
-        if text == ObjRef::NIL {
-            return Ok(None);
-        }
         Ok(self.to_number(text).ok())
     }
 
