@@ -53,6 +53,8 @@ rc 0
 # Every class a program reaches, as the probe's comment says; the oracle's answers.
 # ooRexx refuses `new` on a TraceObject subclass (41.1), so that row is skipped.
 # Buffer, Pointer and NativeCommandHandler have no instance a program can make.
+# HostInfo and StreamSocket are skipped: making one resolves a host or opens a
+# connection, and the case must not depend on the network.
 program
 -- For every class a program reaches (.environment, the REXX package, the bundled
 -- packages), whether a STRING answer that is an instance of it, of a subclass of it,
@@ -95,7 +97,7 @@ args['CLASS'] = "'KK'"
 args['MESSAGE'] = ".nil, 'X'"
 args['WEAKREFERENCE'] = ".nil"
 args['MUTABLEBUFFER'] = "'mb'"
-args['STREAMSOCKET'] = "'127.0.0.1', 9"
+args['STREAMSOCKET'] = "-"
 args['REGULAREXPRESSION'] = "'a'"
 args['REXXQUEUE'] = "'SESSION'"
 args['DATETIME'] = "2020, 1, 1"
@@ -118,7 +120,7 @@ args['BUFFER'] = "4"
 args['CASELESSCOLUMNCOMPARATOR'] = "1, 1"
 args['COLUMNCOMPARATOR'] = "1, 1"
 args['CIRCULARQUEUE'] = "3"
-args['HOSTINFO'] = "'127.0.0.1'"
+args['HOSTINFO'] = "-"
 args['INETADDRESS'] = "'127.0.0.1', 9"
 args['INVERTINGCOMPARATOR'] = ".comparator~new"
 args['SUPPLIER'] = ".array~of(1), .array~of(1)"
@@ -231,7 +233,7 @@ DESCENDINGCOMPARATOR       default- default- own+
 DIRECTORY                  default- default- own+
 EVENTSEMAPHORE             default- default- own+
 FILE                       read+ read+ own+
-HOSTINFO                   default- default- own+
+HOSTINFO                   skipped n/a n/a
 IDENTITYTABLE              default- default- own+
 INETADDRESS                default- default- own+
 INPUTOUTPUTSTREAM          default- default- own+
@@ -274,7 +276,7 @@ SOCKET                     default- default- own+
 STACKFRAME                 default+ n/a n/a
 STEM                       default+ read+ read+
 STREAM                     default- default- own+
-STREAMSOCKET               default- default- own+
+STREAMSOCKET               skipped n/a n/a
 STREAMSUPPLIER             default- n/a n/a
 STRING                     read+ read+ read+
 STRINGTABLE                default- default- own+
