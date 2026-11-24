@@ -408,9 +408,16 @@ clause it never reaches. So the widths split by what they bound, read from the r
 
 * **A width of one clause raises when that clause runs.** The clause compiles, in place of its
   ops, to one op that raises `SYNTAX 5` at the clause: it is traced as the clause is, the body's
-  own `SIGNAL ON SYNTAX` traps it, and a clause that never runs never raises. The compiler takes
-  the clause's ops, jump patches and register top back to where the clause opened and goes on
-  with the next clause, so the refusal does not spread. These widths are the registers, the
+  own `SIGNAL ON SYNTAX` traps it, and a clause that never runs never raises. Emitting a clause
+  is a transaction over everything the compiler accumulates for the body, not only its ops: when
+  the clause opens, the compiler marks the op stream, the jump patches, the register top, the
+  length of the constant table, of the arithmetic hints and of the send and call sites, and the
+  depth of the control-region stack. A refused clause takes each of them back to its mark, and
+  the constant table also drops the interning entries of the constants it removes, so that a
+  later clause does not find an index past the table's end. The raise op is emitted after the
+  rollback, and the compiler goes on with the next clause. Nothing the refused clause added
+  survives, so a dead clause cannot fill a table of the body and refuse the whole body, and the
+  refusal does not spread. These widths are the registers, the
   arguments of one call, the items of one `RAISE ARRAY` and the entries of one `PARSE` template.
   Registers count what is pending in the clause and what an enclosing `DO`, `LOOP` or
   `SELECT CASE` holds across its body, so a clause nested in enough loops can pass the width
@@ -779,6 +786,12 @@ under a named mistake of the new code.
     with code 5 and `SIGL` at that clause's line, and the clauses before it have run;
   * the same clause behind `if 0 then` or after `exit` is never reached, and the body runs to its
     end without a condition;
+  * with a width of one clause and a width of the whole body both lowered, a refused clause that
+    interned constants and registered arithmetic, send and call sites before it ran out, followed
+    by a valid clause that needs one more entry in each of those tables, compiles and runs the
+    valid clause; it fails if the rollback leaves any of the refused clause's entries behind, and
+    a compiler unit test asserts that each table's length after the refused clause equals its
+    length before it;
   * an `INTERPRET`ed string holding such a clause raises at that clause, and one past a width of
     the whole body raises at the `INTERPRET` instruction, each trapped by the running body;
   * a routine past a width of the whole body, called from a caller that has set
