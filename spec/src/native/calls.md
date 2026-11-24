@@ -262,6 +262,47 @@ handler USER N2ZQFOO desc extra CALL
 after
 ```
 
+r[native.calls.condition-object]
+A routine may also raise a condition from a condition object, a Directory
+whose `CONDITION` entry names it and whose other entries, such as
+`DESCRIPTION`, are those of the condition object the condition gets. It is
+raised as [the rule above](r:native.calls.condition) says. A `SYNTAX`
+condition is raised by its `CODE`, and a `CODE` of the form of [the number of
+RAISE SYNTAX](r:instr.raise.number) that no error has raises `SYNTAX 98.941`,
+as RAISE SYNTAX does.
+
+```rexx
+call on user n2zqobj name h
+d = .directory~new
+d~condition = 'USER N2ZQOBJ'
+d~description = 'desc'
+say fxconditionobject(d)
+do code over .array~of('41.1', '93.9', '40.999', '2.1')
+  d = .directory~new
+  d~condition = 'SYNTAX'
+  d~code = code
+  say code '=>' raised(d)
+end
+exit
+h: say 'handler' condition('c') condition('d')
+  return
+raised: procedure
+  signal on syntax
+  call fxconditionobject arg(1)
+  return 'nothing'
+syntax: return condition('o')~code
+::requires 'specfixture' LIBRARY
+```
+
+```output
+returned
+handler USER N2ZQOBJ desc
+41.1 => 41.1
+93.9 => 98.941
+40.999 => 98.941
+2.1 => 98.941
+```
+
 r[native.calls.send]
 A routine may send a message to an object and receive its result. A condition
 that the message raises and does not trap ends the message and is held for the

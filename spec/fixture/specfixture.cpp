@@ -193,6 +193,14 @@ RexxRoutine3(CSTRING, FxCondition, CSTRING, name, CSTRING, description, RexxObje
     return "returned";
 }
 
+// Raises the condition the condition object `condition` describes, then answers `returned`.
+// Serves r[native.calls.condition-object].
+RexxRoutine1(CSTRING, FxConditionObject, RexxObjectPtr, condition)
+{
+    context->RaiseConditionObject((RexxDirectoryObject)condition);
+    return "returned";
+}
+
 // Sends `message` to `target` and answers its result, or `no result`; a condition the message
 // raised is cleared and answered as `condition` followed by its code.
 // Serves r[native.calls.send].
@@ -521,6 +529,7 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxNothing, FxNothing),
     REXX_TYPED_ROUTINE(FxRaise, FxRaise),
     REXX_TYPED_ROUTINE(FxCondition, FxCondition),
+    REXX_TYPED_ROUTINE(FxConditionObject, FxConditionObject),
     REXX_TYPED_ROUTINE(FxSend, FxSend),
     REXX_TYPED_ROUTINE(FxConditionCode, FxConditionCode),
     REXX_TYPED_ROUTINE(FxSetVar, FxSetVar),
