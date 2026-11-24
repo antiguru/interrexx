@@ -259,9 +259,10 @@ Once such code is present, a thread it started may still end the wait, so the
 wait goes on. Once it has waited five seconds with nothing else left to run, a
 line on stderr says so, and the program otherwise runs as it would without the
 line. A HALT the host asks for ends such a wait where it ends the same wait
-elsewhere. A trace line's delivery that holds a guard and spins until another
-activity acts (<a href="concurrency/locks.html#r-conc.locks.trace.deviation.14">the locks page's rule</a>)
-follows the same switch: it is refused only while no such code is present.</p>
+elsewhere. A trace line's delivery that holds a guard and spins inside a
+nested construct until another activity acts (<a href="concurrency/locks.html#r-conc.locks.trace.deviation.14">the locks page's
+rule</a>) follows the same switch: it is refused
+only while no such code is present.</p>
 <h2 id="15-withdrawn"><a class="header" href="#15-withdrawn">15. Withdrawn</a></h2>
 <p>A REPLY inside a labelled DO group runs as it does in ooRexx.</p>
 <h2 id="16-blocking-operations-hold-every-activity"><a class="header" href="#16-blocking-operations-hold-every-activity">16. Blocking operations hold every activity</a></h2>
