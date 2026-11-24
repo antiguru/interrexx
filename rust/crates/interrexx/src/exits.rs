@@ -12,7 +12,7 @@ use std::ffi::c_int;
 use interrexx_api::load::{ContextExit, ExitHandler, ExitReply, ExitRequest, exit_code};
 use interrexx_core::ObjRef;
 
-use crate::activation::CallType;
+use crate::activation::{CallType, Entry, TraceEntry};
 use crate::capi::Registry;
 use crate::command::{CommandOutcome, ReturnStatus, Supplied, whole_value};
 use crate::error::Raised;
@@ -359,11 +359,22 @@ impl Interp {
         } else {
             crate::trace::TraceMode::OFF
         };
-        if depth == 0 {
+        let frame = if depth == 0 {
             self.set_trace_mode(mode);
+            self.activation_mut()
         } else if let Some(frame) = self.frame_at_mut(depth) {
             // The running frame's cache is its own; resuming this one reads its mode.
             frame.trace_mode = mode;
+            frame
+        } else {
+            return;
+        };
+        if frame.entry == Entry::Routine {
+            frame.trace_entry = match (on, frame.trace_entry) {
+                (true, TraceEntry::Allowed) => TraceEntry::External,
+                (false, TraceEntry::External) => TraceEntry::Spent,
+                (_, entry) => entry,
+            };
         }
     }
 

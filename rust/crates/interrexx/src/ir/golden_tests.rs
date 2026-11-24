@@ -40,6 +40,24 @@ fn intermediates() -> ChunkTrace {
     ChunkTrace::of(crate::trace::mode_from_setting(b"i").expect("I is a valid TRACE setting"))
 }
 
+#[test]
+fn use_arg_compiles_defaults_without_splitting_the_default_free_binder() {
+    let chunk = compile_for_test(b"use strict arg >a, b = (a + 1), , d = (f())\n")
+        .expect("compiled defaults");
+    let ops = render(&chunk);
+    assert!(ops.contains("UseArg CheckCount"), "{ops}");
+    assert!(ops.contains("UseArg Bind { slot: 1, skip: 4 }"), "{ops}");
+    assert!(
+        ops.contains("UseArg BindDefault { slot: 1, src: 0 }"),
+        "{ops}"
+    );
+    assert!(ops.contains("CallArgs slot=3 path=root"), "{ops}");
+    assert!(!ops.contains("EvalExpr") && !ops.contains("Exec"), "{ops}");
+
+    let chunk = compile_for_test(b"use strict arg >a, b\n").expect("compiled USE ARG");
+    assert_eq!(render(&chunk), "0: Clause index=0 end=2\n1: Exec index=0\n");
+}
+
 /// The setting `TRACE R` puts in force, as far as compilation can see it.
 fn traced() -> ChunkTrace {
     ChunkTrace::of(crate::trace::mode_from_setting(b"r").expect("R is a valid TRACE setting"))

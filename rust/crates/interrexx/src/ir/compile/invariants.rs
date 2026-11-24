@@ -290,6 +290,7 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
                 | Op::PushArg { .. }
                 | Op::TraceArgument { .. }
                 | Op::CallArgs { .. }
+                | Op::UseArg(..)
                 | Op::JumpUnless { .. } => None,
             };
             assert!(
