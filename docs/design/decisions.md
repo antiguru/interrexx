@@ -28,8 +28,8 @@ page records why they are the way they are.
   side effects are observable: a function call in an operand or an argument runs or does not run.
   When the checks of one operation (one operator, one builtin or method invocation, one
   instruction's checks) find more than one fault, which of their errors is raised is unspecified;
-  it is the error of one of the faults. The faults include a wrong argument count, an omitted
-  required argument and a `STRING` answer that has no string value. A builtin's conversion of its
+  it is the error of one of the faults. The faults include a wrong argument count and an omitted
+  required argument. A builtin's conversion of its
   arguments by `STRING` is part of its checks: a call with no fault sends `STRING` to each argument
   from the left before the other checks (`r[bif.index.call.convert]`), and for a call with a fault, whether and
   how many `STRING` sends happen is unspecified. Whether the checks after the first fault are made,
