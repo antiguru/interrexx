@@ -236,6 +236,27 @@ fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {
     );
 }
 
+/// The same bound for an `INTERPRET` that interprets itself, whose levels
+/// push no activation: the thread's stack is what bounds it.
+#[test]
+fn unbounded_interpret_recursion_raises_11_1_rather_than_overflowing() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"signal on syntax\nzs = 'interpret zs'\ninterpret zs\nexit\n\
+          syntax: say condition('o')~code\n"
+            .to_vec(),
+        interrexx::Invocation::none(),
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "11.1\n",
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(outcome.exit_code, 0);
+}
+
 /// The same bound for an external routine recursing on itself, whose levels
 /// each run a nested driver.
 #[test]

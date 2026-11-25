@@ -2689,6 +2689,15 @@ impl Interp {
             interpret::Pause::Again => return Ok(Flow::Goto(index)),
             interpret::Pause::Transfer(flow) => return Ok(flow),
         }
+        // A fragment runs one Rust frame deeper and pushes no activation, so
+        // neither the activation count nor a call's stack check sees an
+        // `INTERPRET` that interprets itself: the check is here, as at a
+        // call, so that the recursion raises 11.1 instead of overflowing the
+        // thread's stack.
+        let probe = 0u8;
+        if self.stack_exhausted(&raw const probe) {
+            return Err(Raised::insufficient_stack().into());
+        }
         // **The fragment's level, with delta 0.** Measured: a
         // fragment's clauses print at the enclosing `INTERPRET`
         // clause's own absolute indent plus whatever nests them
