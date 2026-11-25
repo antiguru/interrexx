@@ -272,8 +272,9 @@ held at its bound, as follows:
 * An array size within the limit that the target cannot address is error 5, as an allocator's
   refusal is. An index that large is past every array's end, and an array grown to it is
   refused the same way; an index past the limit is 93.959, as on a 64-bit host.
-* `NUMERIC DIGITS`, `FUZZ` and their `::OPTIONS` forms refuse a value past `usize::MAX` with
-  their 26 errors.
+* `NUMERIC DIGITS` and `FUZZ` keep their eighteen-digit settings, which `.context~digits` and
+  `~fuzz` answer whole. The `::OPTIONS` forms, which the parser holds as `usize`, refuse a value
+  past `usize::MAX` with their 26 errors.
 * The C API's `wholenumber_t`, `stringsize_t`, `size_t`, `ssize_t`, `intptr_t` and `uintptr_t`
   are the target's widths: an argument outside one is 88.907 naming that range, and a reader
   such as `ObjectToWholeNumber` refuses a value its type cannot hold.

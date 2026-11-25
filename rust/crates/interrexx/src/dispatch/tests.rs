@@ -2394,3 +2394,20 @@ fn an_index_past_the_array_limit_is_93_959_on_every_target() {
         );
     }
 }
+
+/// `.context~digits` and `~fuzz` answer the setting in force whole, on a
+/// 32-bit target too, where it can be wider than an address.
+#[test]
+fn the_context_answers_a_setting_wider_than_an_address() {
+    assert_eq!(
+        run_source(
+            "numeric digits 10\nnumeric digits 5000000000\nnumeric fuzz 4999999999\n\
+             say .context~digits digits() .context~fuzz fuzz()\n"
+        ),
+        (
+            0,
+            "5000000000 5000000000 4999999999 4999999999\n".to_string(),
+            String::new()
+        )
+    );
+}
