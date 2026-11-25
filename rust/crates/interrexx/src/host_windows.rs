@@ -437,3 +437,148 @@ pub(crate) fn set_file_attributes(path: &std::path::Path, attributes: u32) -> bo
     // SAFETY: path is NUL terminated and remains live for the call.
     unsafe { SetFileAttributesW(path.as_ptr(), attributes) != 0 }
 }
+
+pub(crate) fn decode_code_page(page: u32, flags: u32, bytes: &[u8]) -> Result<Vec<u16>, u32> {
+    use std::ptr::null_mut;
+    use windows_sys::Win32::{
+        Foundation::{ERROR_INVALID_PARAMETER, GetLastError},
+        Globalization::MultiByteToWideChar,
+    };
+
+    let length = i32::try_from(bytes.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    // SAFETY: bytes contains length readable bytes. A null destination and
+    // zero capacity ask the API to compute the required number of code units.
+    let needed = unsafe { MultiByteToWideChar(page, flags, bytes.as_ptr(), length, null_mut(), 0) };
+    if needed == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    let mut wide = vec![0; needed as usize];
+    // SAFETY: wide has room for needed units and does not alias bytes.
+    let written = unsafe {
+        MultiByteToWideChar(
+            page,
+            flags,
+            bytes.as_ptr(),
+            length,
+            wide.as_mut_ptr(),
+            needed,
+        )
+    };
+    if written == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    wide.truncate(written as usize);
+    Ok(wide)
+}
+
+pub(crate) fn encode_code_page(
+    page: u32,
+    flags: u32,
+    wide: &[u16],
+    default: Option<[u8; 2]>,
+) -> Result<(Vec<u8>, bool), u32> {
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::{
+        Foundation::{ERROR_INVALID_PARAMETER, GetLastError},
+        Globalization::{CP_UTF7, CP_UTF8, WideCharToMultiByte},
+    };
+
+    let length = i32::try_from(wide.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    let replacement = default.as_ref().map_or(null(), |bytes| bytes.as_ptr());
+    let mut used = 0;
+    let used_pointer = if matches!(page, CP_UTF7 | CP_UTF8) {
+        null_mut()
+    } else {
+        &mut used
+    };
+    // SAFETY: the input has length readable units, the optional replacement
+    // has room for the longest replacement character, and a null output with
+    // zero capacity asks the API for the required buffer size.
+    let needed = unsafe {
+        WideCharToMultiByte(
+            page,
+            flags,
+            wide.as_ptr(),
+            length,
+            null_mut(),
+            0,
+            replacement,
+            used_pointer,
+        )
+    };
+    if needed == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    let mut bytes = vec![0; needed as usize];
+    // SAFETY: bytes has room for needed bytes; the remaining pointers have
+    // the same valid backing memory as in the size query.
+    let written = unsafe {
+        WideCharToMultiByte(
+            page,
+            flags,
+            wide.as_ptr(),
+            length,
+            bytes.as_mut_ptr(),
+            needed,
+            replacement,
+            used_pointer,
+        )
+    };
+    if written == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    bytes.truncate(written as usize);
+    Ok((bytes, used != 0))
+}
+
+pub(crate) fn read_profile(
+    file: &[u16],
+    section: Option<&[u16]>,
+    key: Option<&[u16]>,
+    fallback: Option<&[u16]>,
+) -> Vec<u16> {
+    use windows_sys::Win32::System::WindowsProgramming::GetPrivateProfileStringW;
+
+    let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
+    let mut buffer = vec![0; 256];
+    loop {
+        // SAFETY: the callers pass NUL-terminated strings, and the output
+        // buffer is writable for the specified number of units.
+        let count = unsafe {
+            GetPrivateProfileStringW(
+                string(section),
+                string(key),
+                string(fallback),
+                buffer.as_mut_ptr(),
+                buffer.len() as u32,
+                file.as_ptr(),
+            )
+        } as usize;
+        let terminator = if key.is_some() { 1 } else { 2 };
+        if count < buffer.len() - terminator || buffer.len() >= 32_768 {
+            buffer.truncate(count);
+            return buffer;
+        }
+        buffer.resize(buffer.len() * 2, 0);
+    }
+}
+
+pub(crate) fn write_profile(
+    file: &[u16],
+    section: &[u16],
+    key: Option<&[u16]>,
+    value: Option<&[u16]>,
+) -> bool {
+    use windows_sys::Win32::System::WindowsProgramming::WritePrivateProfileStringW;
+
+    let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
+    // SAFETY: the callers pass live NUL-terminated strings and the optional
+    // null pointers request removal of the key or section.
+    unsafe {
+        WritePrivateProfileStringW(section.as_ptr(), string(key), string(value), file.as_ptr()) != 0
+    }
+}
