@@ -570,10 +570,11 @@ overwriting what another writer appended meanwhile.
 
 ## 75. A condition raised while its CALL trap is delayed
 
-While a CALL ON trap is delayed, a condition raised for it again is held as
-the reference manual describes, and ERROR, FAILURE and NOTREADY raised again
-are ignored. ooRexx loses a held condition raised from a routine the handler
-calls, and crashes in some such programs.
+An interrexx CALL ON trap [holds and delivers conditions](r:cond.traps.delay)
+as the reference manual describes. ooRexx can deliver a re-raised USER
+condition after the next clause, and a SIGNAL ON in the handler can leave the
+held condition undelivered. ooRexx can also deliver an explicit ERROR raised
+again by its own handler, where interrexx ignores it.
 
 ## 76. Package of an INTERPRET translation failure
 

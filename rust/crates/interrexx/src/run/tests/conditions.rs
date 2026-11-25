@@ -1053,16 +1053,15 @@ fn a_handler_that_fails_at_a_clause_boundary_blames_that_clause() {
 }
 
 /// rexxref (Condition traps, CALL ON): the same condition raised again in
-/// the clause that raised it, while its trap is delayed, is ignored for
-/// ERROR, FAILURE and NOTREADY, and for any other condition delivered once
-/// the first handler returns. The oracle segfaults on this shape (`corpus/oracle-crashes.txt`).
+/// the clause that raised it is ignored for ERROR and FAILURE. NOTREADY and
+/// USER raised before the handler runs are both delivered.
 #[test]
 fn a_condition_raised_again_while_its_call_trap_is_delayed() {
     for (condition, raise, handled) in [
         ("error", "error 5", "h ERROR\n"),
         ("failure", "failure 6", "h FAILURE\n"),
         ("user c1", "user c1", "h USER C1\nh USER C1\n"),
-        ("notready", "notready", "h NOTREADY\n"),
+        ("notready", "notready", "h NOTREADY\nh NOTREADY\n"),
     ] {
         let mut interp = Interp::new();
         let program = format!(
@@ -1079,9 +1078,9 @@ fn a_condition_raised_again_while_its_call_trap_is_delayed() {
 
 /// rexxref (`condtra.xml`, CALL ON): a condition raised again while its
 /// handler runs is held until the handler returns, which calls it again, or
-/// until a trap instruction for the condition runs. The oracle drops it and
-/// segfaults on some of these shapes (`corpus/oracle-crashes.txt`), so the
-/// case file is this crate's own answer, in `rc>`/`out>`/`err>` lines.
+/// until a trap instruction for the condition runs. The oracle can deliver
+/// these conditions at different points (Deviation 75), so the case file
+/// records this crate's answer in `rc>`/`out>`/`err>` lines.
 #[test]
 fn a_condition_raised_while_its_handler_runs_is_held() {
     let mut cases = 0;

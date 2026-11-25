@@ -579,10 +579,11 @@ impl Interp {
                 self.activity.pending_additional = None;
                 Err(Raised::return_after_reply().into())
             }
-            // Raised again while the trap is delayed by its first raise.
+            // ERROR and FAILURE are ignored as soon as a delivery is queued.
+            // NOTREADY is ignored only while the handler runs.
             Some(trap)
                 if trap.call
-                    && ignored_while_delayed(&raise.condition)
+                    && matches!(raise.condition.as_ref(), b"ERROR" | b"FAILURE")
                     && caller.is_some_and(|caller| self.call_trap_delayed_at(caller, &name)) =>
             {
                 self.activity.pending_additional = None;
