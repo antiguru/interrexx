@@ -319,7 +319,7 @@ Loud	sim_trace_unwritten	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Raised	single_dimension_only	send	crates/interrexx/src/error.rs	agrees	yes	93.954	.Array~new(2,3)~delete(1)
 Raised	source_not_string_or_array	send	crates/interrexx/src/error.rs	agrees	yes	93.961	.method~new('m', .object~new) (corpus/lang/method_new_object_source.rex); Routine~new the same
 Raised	sourceline_out_of_range	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
-Loud	stale_handle	send	crates/interrexx/src/lib.rs	recorded	yes	the handle is no longer held by this activation	the forge's StashLocal then UseStashed (stash.rex), recorded as the exclusions row A LOCAL HANDLE KEPT FROM AN EARLIER CALL IS STILL REFUSED
+Loud	stale_handle	send	crates/interrexx/src/lib.rs	recorded	yes	a handle naming no live object	kept_local_reference.rs: KeepMake then KeepLoose under a collection at every allocation, the kept string collected in between
 Raised	stem_argument_unresolved	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	stem_count_invalid	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	stem_element_unset	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-

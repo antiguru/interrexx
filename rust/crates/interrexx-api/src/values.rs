@@ -250,7 +250,7 @@ impl std::fmt::Display for Failure {
                 Failure::ClassicStyle => write!(f, "a call to a ROUTINE_CLASSIC_STYLE routine"),
                 Failure::UnfilledSlot { entry } => write!(f, "{entry}"),
                 Failure::StaleHandle => {
-                    write!(f, "the handle is no longer held by this activation")
+                    write!(f, "a handle naming no live object")
                 }
                 Failure::Raised => {
                     write!(f, "the interpreter raised a condition while converting")

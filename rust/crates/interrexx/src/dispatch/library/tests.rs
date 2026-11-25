@@ -1312,3 +1312,35 @@ fn a_native_receiver_handle_resolves_only_while_its_object_lives() {
     assert_eq!(Host::resolve(&mut interp, handle), None);
     interp.pop_native_frame();
 }
+
+/// **A heap object's handle names it from a later call only once it has been
+/// lent.** The handle is minted with this interpreter's key, as a call would
+/// mint it, for a live object no call has been handed: it resolves to
+/// nothing until a call registers the object, and from then on resolves in
+/// later calls too.
+#[test]
+fn a_handle_names_its_object_after_a_call_only_once_the_object_was_lent() {
+    use interrexx_api::values::Host;
+    use interrexx_core::ObjRef;
+    let mut interp = Interp::new();
+    let object = interp.text(b"a string long enough to live on the heap");
+    // The handle a call would mint for it, in this interpreter's space: on a
+    // 32-bit target a fresh heap's early slots are carried in the address.
+    let handle = std::ptr::without_provenance_mut(
+        interp
+            .handle_space
+            .peek(object)
+            .expect("the address carries the reference"),
+    );
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    assert_eq!(
+        Host::resolve(&mut interp, handle),
+        None,
+        "a never-lent object resolved"
+    );
+    assert_eq!(Host::register_local(&mut interp, object), handle);
+    interp.pop_native_frame();
+    interp.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    assert_eq!(Host::resolve(&mut interp, handle), Some(object));
+    interp.pop_native_frame();
+}

@@ -99,6 +99,28 @@ impl ObjRef {
         self.0
     }
 
+    /// The heap reference `bits` are, if they carry the heap tag: what an
+    /// extension's handle names once the table that minted it is gone. The
+    /// slot may be free or reused; the heap's own lookup decides.
+    pub fn heap_bits(bits: u64) -> Option<Self> {
+        (bits & TAG_MASK == TAG_HEAP).then_some(ObjRef(bits, PhantomData))
+    }
+
+    /// The value `bits` carries, if they are exactly the bits of an integer,
+    /// a short string or `.nil` held in the handle itself; `None` for a heap
+    /// reference and for bits no constructor produces. Such a value names no
+    /// heap object, so it is the same value wherever the bits come from.
+    pub fn carried(bits: u64) -> Option<Self> {
+        let candidate = ObjRef(bits, PhantomData);
+        let canonical = match candidate.decode() {
+            Decoded::Heap { .. } => return None,
+            Decoded::SmallInt(value) => ObjRef::small_int(value)?,
+            Decoded::Text(text) => ObjRef::inline_text(&text)?,
+            Decoded::Nil => ObjRef::NIL,
+        };
+        (canonical == candidate).then_some(candidate)
+    }
+
     pub const fn heap(slot: u32, generation: u32) -> Self {
         debug_assert!(generation <= GENERATION_MAX);
         ObjRef(

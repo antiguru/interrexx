@@ -624,6 +624,7 @@ impl Heap {
                         has_uninit: false,
                         ready_for_uninit: false,
                         watched: false,
+                        lent: false,
                     },
                     generation,
                 };
@@ -640,6 +641,7 @@ impl Heap {
                         has_uninit: false,
                         ready_for_uninit: false,
                         watched: false,
+                        lent: false,
                     },
                     generation: 0,
                 });

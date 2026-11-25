@@ -200,7 +200,10 @@ are waiting, the earliest pending delivery runs immediately. Use this mode with 
 fixtures that can finish at launch without progress from another Rexx activity. Policies: `pre:d` (d
 preemptions among the first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness
 floor. Knobs include `gc=q`, `halt@K`, `fail=wait:K` and `hash=SEED`, which a `REXX_HASH_SEED`
-override records so that a trace replays under the same hash seed. The scheduler checks its own
+override records so that a trace replays under the same hash seed, and `ordinal=N`, the live
+ordinal a recording records when another simulated interpreter was running beside it (it was not
+0, see `native-api.md`), so that a replay makes the same handle key and hands native code the
+handles its recording did whatever runs beside either. The scheduler checks its own
 invariants at every switch. Record decisions with `sim:SEED,trace=FILE` and replay them with
 `sim:replay=FILE`. The [trace shrinker](testing.md#shrinking-a-failing-simulation-trace) removes
 decisions while preserving a reproducible failure.
@@ -300,7 +303,7 @@ only, with the reason beside its `cfg`.
 | D2 | no saved image; bootstrap from the embedded library program at start | an image is an optimisation and startup is fast enough without one |
 | D3 | isolated interpreters, a per-interpreter baton, no process-wide lock; cross-activity requests by flag or channel only | no invariant may rest on one activity running at a time |
 | D4 | the decimal arithmetic is a port of ooRexx's, not a decimal crate | ANSI rounding and rendering differ from IEEE decimal in tested details |
-| D5 | the C API is source-compatible with ooRexx's frozen headers; `RexxObjectPtr` is a handle in the activation's reference table | extensions recompile unchanged; a stale handle misses instead of aliasing |
+| D5 | the C API is source-compatible with ooRexx's frozen headers; `RexxObjectPtr` is a handle: an object's reference, keyed by its interpreter, held in the activation's reference table while the call runs | extensions recompile unchanged; a kept handle names its object while it lives, as an ooRexx pointer does, and a handle to a collected object or another interpreter's misses instead of aliasing |
 | D6 | platform calls through `std`, then `rustix`, then raw `libc` only with a reason | safety by construction |
 | D7 | a Rust API daemon with its own protocol; no wire compatibility with ooRexx's `rxapi` | no C++ at run time, and no shared daemon with ooRexx |
 | D8 | conformance ladder: differential corpus (L0), extracted assertions (L1), the ooTest framework boots (L2), the suite passes (L3) | the suite needs a nearly complete interpreter to run at all |

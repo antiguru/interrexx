@@ -13,7 +13,9 @@ use crate::layout::RexxObjectPtr;
 /// the [`HandleSpace`] the table was made in, so two handles of one space are
 /// equal exactly when they name the same object while either resolves, and a
 /// handle minted before a slot was recycled does not name the slot's next
-/// occupant.
+/// occupant. On a 64-bit target a heap object's handle also carries the
+/// space's key ([`instance_key`]), so the same slot and generation in two
+/// interpreters make different handles.
 pub struct Table {
     entries: FxHashMap<usize, ObjRef>,
     /// `None` until the first [`Table::release`].
@@ -225,6 +227,32 @@ impl Drop for Table {
     }
 }
 
+/// A key for a new interpreter's handles. Its two low bits are zero, so
+/// mixing it in keeps a handle's tag. It is splitmix64 of a per-process
+/// random base plus a counter, with the tag bits cleared: two calls in a
+/// process answer the same key with a chance of about 2^-62, and the keys
+/// differ from one process to the next.
+#[cfg(target_pointer_width = "64")]
+#[must_use]
+pub fn instance_key() -> u64 {
+    use std::hash::{BuildHasher, Hasher};
+    use std::sync::OnceLock;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static BASE: OnceLock<u64> = OnceLock::new();
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let base = *BASE.get_or_init(|| {
+        std::collections::hash_map::RandomState::new()
+            .build_hasher()
+            .finish()
+    });
+    let counter = NEXT.fetch_add(1, Ordering::Relaxed);
+    let mut z = base.wrapping_add(counter);
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^= z >> 31;
+    z & !0b11
+}
+
 /// The handle a thread table's data members carry for one of the
 /// interpreter's constants before any call has registered them: the handle
 /// every [`Table`] answers for it.
@@ -284,6 +312,11 @@ fn carried(object: ObjRef) -> Option<usize> {
 pub struct HandleSpace {
     #[cfg(not(target_pointer_width = "64"))]
     numbering: std::sync::Arc<std::sync::Mutex<Numbering>>,
+    /// The key mixed into every heap object's handle, shared by every clone,
+    /// so that re-keying a fresh interpreter ([`HandleSpace::set_key`])
+    /// reaches the tables already made in its space.
+    #[cfg(target_pointer_width = "64")]
+    key: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 
 impl HandleSpace {
@@ -291,9 +324,63 @@ impl HandleSpace {
     /// dropped or cleared need not walk its handles where it holds nothing.
     const COUNTS: bool = cfg!(not(target_pointer_width = "64"));
 
-    /// A space with no handle numbered.
+    /// A space with no handle numbered, and on a 64-bit target a fresh key
+    /// ([`instance_key`]).
     pub fn new() -> HandleSpace {
-        HandleSpace::default()
+        let space = HandleSpace::default();
+        #[cfg(target_pointer_width = "64")]
+        space.set_key(instance_key());
+        space
+    }
+
+    /// Makes heap objects' handles carry `key` from now on, in every clone of
+    /// this space: for an interpreter that has handed native code none yet.
+    #[cfg(target_pointer_width = "64")]
+    pub fn set_key(&self, key: u64) {
+        debug_assert_eq!(key & 0b11, 0, "a key keeps a handle's tag bits");
+        self.key.store(key, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// The `ObjRef` a handle this space minted names, if its bits say: a heap
+    /// object's reference, whether or not that object still lives, or the
+    /// value a handle carries (an integer, a short string, `.nil`). A heap
+    /// handle another space minted decodes to an unrelated slot and
+    /// generation. `None` for an address no `ObjRef` encodes to here.
+    #[cfg(target_pointer_width = "64")]
+    pub fn decode(&self, handle: RexxObjectPtr) -> Option<ObjRef> {
+        let bits = (handle.addr() as u64).wrapping_sub(1);
+        ObjRef::heap_bits(bits ^ self.key.load(std::sync::atomic::Ordering::Relaxed))
+            .or_else(|| ObjRef::carried(bits))
+    }
+
+    /// The `ObjRef` a handle this space minted names, if its bits say: on a
+    /// 32-bit target only an odd handle carries one, a heap object's
+    /// reference or a carried value, with no key. A numbered handle resolves
+    /// through the tables and holders that hold its number, not its bits.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn decode(&self, handle: RexxObjectPtr) -> Option<ObjRef> {
+        let address = handle.addr();
+        if address & 1 == 0 {
+            return None;
+        }
+        let bits = (address >> 1) as u64;
+        ObjRef::heap_bits(bits).or_else(|| ObjRef::carried(bits))
+    }
+
+    /// `object`'s handle: a heap object's bits mixed with the key, a carried
+    /// value's as they are (a value is the same value in every interpreter).
+    #[cfg(target_pointer_width = "64")]
+    #[inline]
+    fn keyed(&self, object: ObjRef) -> usize {
+        match object.decode() {
+            interrexx_core::Decoded::Heap { .. } => {
+                // The key's two low bits are clear, so the tag stays the heap's
+                // and the address stays odd, never null.
+                let key = self.key.load(std::sync::atomic::Ordering::Relaxed);
+                (object.bits() ^ key).wrapping_add(1) as usize
+            }
+            _ => carried(object).expect("a 64-bit address carries every ObjRef"),
+        }
     }
 
     /// `object`'s handle, as an address, held once more until a matching
@@ -301,7 +388,7 @@ impl HandleSpace {
     #[cfg(target_pointer_width = "64")]
     #[inline]
     pub fn hold(&self, object: ObjRef) -> usize {
-        carried(object).expect("a 64-bit address carries every ObjRef")
+        self.keyed(object)
     }
 
     /// `object`'s handle, as an address, without holding it: `None` when the
@@ -309,7 +396,7 @@ impl HandleSpace {
     #[cfg(target_pointer_width = "64")]
     #[inline]
     pub fn peek(&self, object: ObjRef) -> Option<usize> {
-        carried(object)
+        Some(self.keyed(object))
     }
 
     /// Lets go of one hold of `object`'s handle.

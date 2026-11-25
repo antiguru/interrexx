@@ -640,7 +640,9 @@ between instances through the native API is refused. ooRexx shares one
 Each instance also has its own objects. A reference that native code got from
 one instance names no object in another: passed as an argument there it is
 omitted, a message sent to it answers `NULLOBJECT`, and any other call given
-it answers as for `NULLOBJECT`.
+it answers as for `NULLOBJECT`. A reference that carries its value, an
+integer, a string of at most 7 bytes or `.nil` (Deviation 95), is that same
+value in every instance.
 ooRexx keeps the objects of every instance in a process in one space, so an
 extension that holds an object it got from one instance, as BSF4ooRexx does
 for the objects it hands to Java, can use it from any other.
@@ -718,12 +720,17 @@ the null string was produced. ooRexx takes a null string from some builtins
 as an omitted `tablei`. The [TRANSLATE page](r:bif.translate.deviation.94)
 states it.
 
-## 95. A native handle used after its call
+## 95. A native handle used after its object is collected
 
-An extension that keeps a local object reference past the native call that
-received it, and uses it in a later call, ends the program with exit code
-120 and a message that the handle is no longer held. The API does not
-define such a use; ooRexx may still reach the object or one that replaced it.
+An extension may keep a local object reference past the native call that
+received it and use it in a later call: the reference names the same object
+for as long as the object exists, as on ooRexx. A reference to an integer,
+a string of at most 7 bytes or `.nil` that the reference itself carries
+always names it. A reference whose object has since been collected ends
+the program with exit code 120 and a message that the handle names no live
+object. The API does not define such a use; ooRexx may reach the object that
+replaced it. An address that is no reference at all may read as such a carried
+value rather than be refused; ooRexx does not define that use either.
 
 ## 96. Version and library banners
 

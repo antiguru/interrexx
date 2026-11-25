@@ -1423,9 +1423,9 @@ impl Interp {
             }
             Refused::ClassicStyle => return Loud::classic_style_routine().into(),
             Refused::UnfilledSlot { entry } => return Loud::unfilled_slot(entry).into(),
-            // A stale handle stays refused: a local reference protects its
-            // object only until the call that made it ends, so an extension
-            // using one past that call is outside the API.
+            // A handle naming no live object stays refused: a kept handle
+            // whose object was collected, or an address no handle encodes,
+            // is a use the API does not define (Deviation 95).
             Refused::StaleHandle => return Loud::stale_handle().into(),
             Refused::Raised => return Loud::conversion_raised().into(),
         };
@@ -2473,6 +2473,20 @@ impl Host for Interp {
                 let object = *self.borrowed_native_handles.get(&handle.addr())?;
                 lives(heap, object).then_some(object)
             })
+            .or_else(|| {
+                // A handle a call made, kept by the extension past it: a
+                // heap object's names it while it lives, if this interpreter
+                // lent it (never one of another instance's that only shares
+                // its bits with an object here nothing native was handed); a
+                // carried value's is that value.
+                let object = self.handle_space.decode(handle)?;
+                match object.decode() {
+                    interrexx_core::Decoded::Heap { .. } => {
+                        heap.peek(object)?.lent().then_some(object)
+                    }
+                    _ => Some(object),
+                }
+            })
     }
 
     fn register_local(&mut self, object: ObjRef) -> interrexx_api::layout::RexxObjectPtr {
@@ -2482,13 +2496,23 @@ impl Host for Interp {
             .last_mut()
             .expect("a native activation is running");
         let handle = frame.locals.register(object);
-        let borrowed = frame.method
-            && frame.receiver == object
-            && matches!(object.decode(), interrexx_core::Decoded::Heap { .. });
         let floor = frame.temps_floor;
-        if borrowed {
+        // An extension may keep the handle past this call, as ooRexx's
+        // pointers allow while the object lives: it resolves from any later
+        // call on this interpreter until a collection frees the object.
+        let lent = self
+            .heap
+            .peek_mut(object)
+            .map(interrexx_core::Object::mark_lent);
+        // On a 32-bit target a handle the address cannot carry is a number,
+        // which the interpreter holds for later calls as it holds any
+        // borrowed handle's, until a collection finds the object gone.
+        #[cfg(not(target_pointer_width = "64"))]
+        if lent.is_some() && handle.addr() & 1 == 0 {
             self.borrow_native_handle(object);
         }
+        #[cfg(target_pointer_width = "64")]
+        let _ = lent;
         self.roots.activity_mut().pop_temp_above(floor, object);
         handle
     }

@@ -779,11 +779,11 @@ impl Loud {
         }
     }
 
-    /// An extension's local handle used after the call that made it ended,
+    /// An extension's local handle used after its object was collected,
     /// which the API does not define (Deviation 95).
     fn stale_handle() -> Loud {
         Loud {
-            message: owned_message("the handle is no longer held by this activation"),
+            message: owned_message("a handle naming no live object"),
         }
     }
 
@@ -1485,11 +1485,20 @@ struct Interp {
     /// runs.
     global_references: interrexx_api::handles::Table,
     /// The space every handle table of this interpreter is made in, so that a
-    /// handle names one object in all of them.
+    /// handle names one object in all of them. On a 64-bit target it holds the
+    /// interpreter's handle key ([`interrexx_api::handles::instance_key`]),
+    /// mixed into every heap object's handle, so a handle another interpreter
+    /// minted names nothing here.
     handle_space: interrexx_api::handles::HandleSpace,
-    /// Non-rooting handles for interpreter-owned directories and native
-    /// method receivers that can be used across callbacks, each holding its
-    /// handle in [`Interp::handle_space`] until a collection drops it.
+    /// A simulated interpreter's live ordinal, which its handle key is made
+    /// from and which it holds until it drops ([`sim::LiveOrdinal`]).
+    sim_ordinal: Option<sim::LiveOrdinal>,
+    /// Non-rooting handles for interpreter-owned directories, and on a 32-bit
+    /// target every lent object whose handle is a number, which resolve
+    /// across callbacks, each holding its handle in [`Interp::handle_space`]
+    /// until a collection drops it. On a 64-bit target any other object a
+    /// native call was handed is marked lent on the heap instead
+    /// ([`interrexx_core::Object::lent`]).
     borrowed_native_handles: FxHashMap<usize, ObjRef>,
     /// The terminated copies `StringData` and its kin answered, by the object
     /// they copy. Not roots: a collection drops the copy of an object it
@@ -2478,6 +2487,7 @@ impl Interp {
             classic_subcoms: FxHashMap::default(),
             global_references: interrexx_api::handles::Table::new(&handle_space),
             handle_space,
+            sim_ordinal: None,
             borrowed_native_handles: FxHashMap::default(),
             command_handlers: FxHashMap::default(),
             environments: command::Environments::default(),
@@ -3607,6 +3617,7 @@ impl Interp {
             global_references,
             // Numbers for handles, which name objects but root none.
             handle_space: _,
+            sim_ordinal: _,
             borrowed_native_handles: _,
             // Entry points, not objects.
             command_handlers: _,
@@ -4123,6 +4134,32 @@ fn hash_seed_of(
 }
 
 impl Interp {
+    /// Keys this interpreter's handles with `key` from now on, before any
+    /// native call has been handed one: every table of its space mints with
+    /// it, and the directories' handles, if built already, are re-keyed. A
+    /// 32-bit target's handles carry no key, and nothing changes there.
+    fn set_handle_key(&mut self, key: u64) {
+        debug_assert!(
+            self.global_references.roots().next().is_none(),
+            "a global reference was minted under the old key"
+        );
+        #[cfg(target_pointer_width = "64")]
+        {
+            self.handle_space.set_key(key);
+            let directories: Vec<ObjRef> = self
+                .borrowed_native_handles
+                .drain()
+                .map(|(_, object)| object)
+                .collect();
+            for object in directories {
+                let address = self.handle_space.hold(object);
+                self.borrowed_native_handles.insert(address, object);
+            }
+        }
+        #[cfg(not(target_pointer_width = "64"))]
+        let _ = key;
+    }
+
     /// Writes to the run's standard error that its [`HASH_SEED_ENV`] value
     /// was refused, and the seed drawn as if it were unset, where it was: an
     /// embedding cannot be refused a run the way the `rexx` command refuses
@@ -4635,6 +4672,16 @@ fn execute_kept(
     {
         config.knobs.hash = Some(seed);
     }
+    // So is the handle key, where a replay could not make it again; it is
+    // set below, before the bootstrap mints the first handles.
+    let sim_handles = match &mut switch_mode {
+        Some(SwitchMode::Sim(config)) => {
+            let ordinal = sim::LiveOrdinal::take();
+            let key = sim::run_handle_key(config, &ordinal);
+            Some((ordinal, key))
+        }
+        _ => None,
+    };
     let sim_config = match &switch_mode {
         Some(SwitchMode::Sim(config)) => Some(config),
         _ => None,
@@ -4644,6 +4691,12 @@ fn execute_kept(
     // one is made.
     interp.hash_seed = hash_seed_of(&interp.env, sim_config);
     interp.warn_of_refused_hash_seed();
+    // Before the bootstrap too, which mints the first handles: a simulated
+    // run's handles follow its seed.
+    if let Some((ordinal, key)) = sim_handles {
+        interp.set_handle_key(key);
+        interp.sim_ordinal = Some(ordinal);
+    }
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
     // below runs clauses of its own and is inside the bound, which is what a

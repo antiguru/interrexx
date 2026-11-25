@@ -1,0 +1,7 @@
+# ooSQLite examples whose standard output may differ from the oracle's, each with its reason, one
+# per line: path under examples/, a tab, the reason. scripts/run-oosqlite.sh compares a listed
+# example's lines up to the order of the words on each: the same lines, each holding the same
+# words. A listed example whose output matches the oracle's exactly fails the run, so the list
+# does not outlive its cause.
+informal/pragmaSpecialCS.rex	Deviation 33: a result row as a Directory lists its columns in the order they were put, ooRexx in hash order
+informal/pragmaTrigger.rex	Deviation 33: a result row as a Directory lists its columns in the order they were put, ooRexx in hash order

@@ -68,18 +68,30 @@ statics of `unsafe extern "C" fn` slots.
 
 * `RexxObjectPtr` is an opaque handle registered in the calling native activation's local
   reference table, not an address. The table is released when the activation ends.
-* A local handle that outlives its activation is a lookup miss. Heap slots carry a generation
-  that moves on when a slot is reused. The interpreter-owned directories returned by
-  `GetLocalEnvironment` and `GetGlobalEnvironment` remain valid in later callbacks on the same
-  interpreter. A receiver given to a native method remains usable from later callbacks while
-  Rexx still holds it. That handle alone does not keep the receiver alive.
+* A local handle that outlives its activation names its object from any later callback on the
+  same interpreter for as long as the object lives, as an ooRexx pointer does: extensions such
+  as ooSQLite cache handles in their own structures and keep the object alive through an
+  object variable. Registering a heap object as a local marks it lent (`Object::lent`, never
+  cleared); a handle no table holds resolves by decoding its bits to the heap reference and
+  answering the object if it is live and lent on this interpreter's heap. The flag costs no
+  memory (`Object` is 88 bytes with and without it). Registering costs one slot lookup and write
+  for each heap object, usually one just allocated: on a call-heavy benchmark (20,000 calls each
+  handing out 9 heap objects) cachegrind measured 0.5% more instructions and 0.1% more L1 data
+  misses than before handles outlived their call, where a side table of every lent handle cost
+  2.8% and 84%. Heap slots carry a generation that moves on when a slot is reused, so a handle to a
+  freed object is a lookup miss (Deviation 95) and never names the slot's next occupant. A handle that
+  carries its value (a small integer, a string of at most 7 bytes, `.nil`) resolves by decoding
+  its bits, which must be exactly those the value encodes to. The handle alone does not keep its
+  object alive. The interpreter-owned directories returned by `GetLocalEnvironment` and
+  `GetGlobalEnvironment` are recorded the same way and live as long as the interpreter.
 * `True()` and `False()` are the handles of `.true` and `.false`. A result the API converts from
   `logical_t`, and the answer of a built-in method that the specification says answers true or
   false, is one of those two handles, so an extension may compare it to them by handle. A built-in
   that answers `1` or `0` as numbers (`RegularExpression~match`, say) and Rexx code that does
   `return 1` answer numbers, as on ooRexx.
 * A handle is derived from the object reference, so the same object has the same handle in every
-  table of one interpreter. On a 64-bit target the handle's address is the reference's bits. On
+  table of one interpreter. On a 64-bit target the handle's address is the reference's bits,
+  mixed with the interpreter's key for a heap object (below). On
   a 32-bit target a reference that fits in 31 bits is carried in the address, and every other is
   given a number by the interpreter's handle space. A number is held while any table of the
   interpreter holds the reference, released handles included, or the interpreter keeps the
@@ -88,12 +100,34 @@ statics of `unsafe extern "C" fn` slots.
   nothing else until about two billion others have been handed out since: a handle kept past its
   activation misses rather than naming another object, short of that. The space grows with the
   handles in use, not with the handles ever made. Two handles to one object agree while either
-  resolves; one that no longer resolves may differ from a fresh handle to the object.
+  resolves; one that no longer resolves may differ from a fresh handle to the object. A kept
+  handle resolves on a 32-bit target as on a 64-bit one: one carried in the address by decoding
+  it (the lent check included), and a numbered one because registering a lent object whose
+  handle is a number holds that number in the interpreter's borrowed handles until a collection
+  finds the object gone. A 32-bit handle carries no key, so there two interpreters' heaps laid
+  out alike make the same handles, and a handle kept from one can name a lent object of the
+  other: instance isolation of kept handles is a 64-bit property, and its tests run there only.
 * `RequestGlobalReference` holds an object in a separate table until `ReleaseGlobalReference`.
 * Memory lent to a native call (a `CSTRING` argument, `BufferData`, `MutableBufferData`) stays
   valid until that call completes. A buffer that grows during the call gets new storage, and the
   old stays alive until the call returns.
-* Objects never cross interpreter instances through the API; such a call is refused. Each instance
+* Objects never cross interpreter instances through the API; such a call is refused. A heap
+  object's handle is its reference's bits mixed with its interpreter's key
+  (`handles::instance_key`, splitmix64 of a per-process random base and a counter, tag bits
+  clear), so instances whose heaps are laid out alike still make different handles for their
+  objects: another instance's handle decodes here to a random slot and a random 30-bit
+  generation, which name a lent object only where the slot is in the heap and the generation is
+  its own, a chance below one in 2^30 for each lookup. Under the simulation mode the key comes from the run's seed and
+  its live ordinal, the least index no other simulated interpreter running in the process holds
+  (`sim::LiveOrdinal`), so two simulated interpreters running at once with one seed still key their
+  handles apart. A replay hands out its recording's handles whatever ran beside either: a recording
+  whose ordinal was not 0 records it in the trace header (`ordinal=N`) and the replay makes its key
+  from it; a recording that records none had ordinal 0, whose key its replay takes whatever ordinal
+  the replay holds. A child `rexx` takes a key of its own. A handle that carries its value is not keyed,
+  and is the same value in every instance. Because carried values decode without a table, an
+  address that is no handle can read as one (Deviation 95): an address that is 2 mod 4 reads as
+  an integer, and one in 16 of 16-byte-aligned addresses (low byte `0x20`) as a 7-byte string.
+  That is the price of keeping ooSQLite's cached small integers and short strings working. Each instance
   has its own `.environment` and `.local`.
 
 ## Calling a native method or routine
