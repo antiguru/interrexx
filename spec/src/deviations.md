@@ -1531,6 +1531,12 @@ errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
 argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
 (#796).
 
+The same difference applies to the [required language level in compiled
+images](r:env.invocation.rexxc.required-level). ooRexx records 6.07 when a
+program uses one of its new forms, including a call to BEEP, DIRECTORY or
+FILESPEC that resolves to its built-in. interrexx treats these calls as
+ordinary routine calls and they do not raise the required level (#861).
+
 ## 180. Withdrawn
 
 ERRORTEXT's argument: interrexx takes an error code `nn.nnn` as ooRexx does,

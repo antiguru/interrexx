@@ -462,17 +462,26 @@ minus its major number as [the status rule](r:env.invocation.status) gives it.
 ### What an image is
 
 r[env.invocation.rexxc.image]
-An image is the program in its translated form. Only its opening is specified,
-and it is the same for both interpreters. The first line is `#!/usr/bin/env
+An image is the program in its translated form. Its opening is the same for
+both interpreters. The first line is `#!/usr/bin/env
 rexx` and a line feed. The nine characters `/**/@REXX` follow, and then either
 two bytes of 0, for the binary form that `rexxc` writes by default, or the
 character `@` and a line feed, for the form that the flag `e` asks for. The
 binary form is not text: it goes on with a header and the translated program,
-which include the byte 0, and what they hold is not specified. In the encoded
+which include the byte 0. In the encoded
 form what follows is lines of base64 text, each of 72 characters and each
 ended by a line feed, except the last, which may be shorter. Decoded, they
 give bytes that begin with `/**/@REXX` and the same two bytes of 0, as the
 binary form does after its first line.
+
+r[env.invocation.rexxc.required-level]
+The image header records the program's required language level in both forms.
+It starts at 6.05 and rises to 6.06 if translation resolves a call to the GC
+built-in or the program explicitly selects NUMERIC INHERIT or NUMERIC NOINHERIT
+in an OPTIONS directive.
+A symbol call to a local label named GC does not use the built-in. The
+[language-level deviation](../deviations.md#179-language-level-606) covers
+features of 6.07.
 
 ### Running an image
 
