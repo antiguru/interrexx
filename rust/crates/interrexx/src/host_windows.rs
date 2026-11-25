@@ -855,10 +855,74 @@ pub(crate) fn wait_named_pipe(
     }
 }
 
-pub(crate) fn message_box(text: &[u16], title: &[u16], flags: u32) -> u32 {
-    use windows_sys::Win32::UI::WindowsAndMessaging::MessageBoxW;
-    // SAFETY: both strings are live and NUL terminated; null selects no owner window.
-    unsafe { MessageBoxW(std::ptr::null_mut(), text.as_ptr(), title.as_ptr(), flags) as u32 }
+thread_local! {
+    // The modal loop and timer callback run on the same pool thread.
+    static MESSAGE_BOX_STOPPED: std::cell::Cell<*const std::sync::atomic::AtomicBool> =
+        const { std::cell::Cell::new(std::ptr::null()) };
+}
+
+pub(crate) fn message_box(
+    text: &[u16],
+    title: &[u16],
+    flags: u32,
+    stopped: &std::sync::atomic::AtomicBool,
+) -> u32 {
+    use std::{ptr::null_mut, sync::atomic::Ordering};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{IDCANCEL, KillTimer, MessageBoxW, SetTimer};
+
+    if stopped.load(Ordering::Relaxed) {
+        return IDCANCEL as u32;
+    }
+    // SAFETY: timer callbacks run on this same thread during the modal loop.
+    let timer = unsafe { SetTimer(null_mut(), 0, 25, Some(cancel_modal_dialog)) };
+    if timer == 0 {
+        return 0;
+    }
+    MESSAGE_BOX_STOPPED.set(std::ptr::from_ref(stopped));
+    // SAFETY: the strings are live and NUL terminated; null selects no owner.
+    let result = unsafe { MessageBoxW(null_mut(), text.as_ptr(), title.as_ptr(), flags) };
+    MESSAGE_BOX_STOPPED.set(std::ptr::null());
+    // SAFETY: timer is the identifier SetTimer returned on this thread.
+    unsafe { KillTimer(null_mut(), timer) };
+    result as u32
+}
+
+unsafe extern "system" fn cancel_modal_dialog(
+    _: windows_sys::Win32::Foundation::HWND,
+    _: u32,
+    _: usize,
+    _: u32,
+) {
+    use std::sync::atomic::Ordering;
+    use windows_sys::Win32::UI::WindowsAndMessaging::EnumThreadWindows;
+
+    // SAFETY: message_box clears the thread-local pointer before the borrow
+    // ends. A timer message left in the queue after KillTimer sees null.
+    if unsafe { MESSAGE_BOX_STOPPED.get().as_ref() }
+        .is_some_and(|stopped| stopped.load(Ordering::Relaxed))
+    {
+        // SAFETY: only this worker's own thread windows are enumerated.
+        unsafe { EnumThreadWindows(thread_id(), Some(close_modal_dialog), 0) };
+    }
+}
+
+unsafe extern "system" fn close_modal_dialog(
+    window: windows_sys::Win32::Foundation::HWND,
+    _: isize,
+) -> i32 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{EndDialog, GetClassNameW, IDCANCEL};
+    let mut class = [0; 16];
+    // SAFETY: Windows supplies the current thread's window. The class
+    // buffer is live and writable for class.len() UTF-16 units.
+    let length = unsafe { GetClassNameW(window, class.as_mut_ptr(), class.len() as i32) };
+    let dialog_class = [35, 51, 50, 55, 55, 48]; // #32770
+    if length == dialog_class.len() as i32 && class[..dialog_class.len()] == dialog_class {
+        // SAFETY: this thread owns the dialog. EndDialog exits its modal
+        // loop even when the selected button set has no Cancel button.
+        unsafe { EndDialog(window, IDCANCEL as isize) };
+        return 0;
+    }
+    1
 }
 
 pub(crate) fn switch_window(title: &[u16]) -> u32 {

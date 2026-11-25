@@ -204,7 +204,8 @@ instance. It uses the server's default timeout for zero and waits
 without a deadline for minus one. It answers zero for an available
 pipe or the Windows system error code. `SysGetKey` reads one character
 from the Windows keyboard with optional echo. A keyboard, pipe or
-message-box wait parks its calling Rexx activity.
+message-box wait parks its calling Rexx activity. Halting the activity
+waiting for a message box closes that dialog.
 
 ## Windows processes
 

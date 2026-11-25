@@ -104,12 +104,13 @@ jobs:
           sdk\bin\sdk-smoke.exe || exit /b 1
           target\debug\rxapi-smoke.exe || exit /b 1
           del sdk\bin\sdk-smoke.exe
-          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe || exit /b 1
+          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe user32.lib || exit /b 1
           target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-rexxutil-console.rex"
           if errorlevel 1 (
             echo RexxUtil console fixture failed at check %ERRORLEVEL%
             exit /b 1
           )
+          echo RexxUtil console input, cursor, screen, and dialog cancellation passed.
 
       - uses: actions/upload-artifact@v7
         with:
@@ -201,6 +202,11 @@ jobs:
             Remove-Item -LiteralPath $probe
             Remove-Item -LiteralPath $caseRoot -Recurse
           }
+
+      - name: Exercise RexxUtil with a Windows print queue
+        shell: pwsh
+        timeout-minutes: 2
+        run: ../ci/windows-rexxutil-printers.ps1
 
       - name: Verify Windows file timestamps across daylight saving time
         shell: pwsh

@@ -217,7 +217,7 @@ pub(crate) fn message_box(
     wait(
         interp,
         |_| Reply::Status(0),
-        move |_| Reply::Status(host::message_box(&text, &title, buttons | icon)),
+        move |stopped| Reply::Status(host::message_box(&text, &title, buttons | icon, stopped)),
     )
 }
 
