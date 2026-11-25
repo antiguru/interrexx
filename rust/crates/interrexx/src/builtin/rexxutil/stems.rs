@@ -24,7 +24,7 @@ const SORT_COUNT_MAXIMUM: u64 = 999_999_999;
 
 /// A `RexxStemObject` argument: a stem itself, or a string naming a stem
 /// variable of the caller's.
-fn stem_argument(
+pub(super) fn stem_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
     position: usize,
