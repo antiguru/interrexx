@@ -1,7 +1,6 @@
 /* Compare public RexxUtil behavior in an isolated Windows directory. */
-parse arg root
+root = directory()
 if root = '' then exit 1
-if directory(root) = '' then exit 2
 call SysMkDir 'sub'
 call makeFile 'Mixed.TXT'
 call makeFile 'plain'

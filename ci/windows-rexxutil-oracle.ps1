@@ -19,17 +19,16 @@ function Invoke-Probe($label, $executable) {
     $stderr = Join-Path $env:RUNNER_TEMP "rexxutil-$label.stderr"
     New-Item -ItemType Directory -Path $fixture | Out-Null
     try {
-        $probe = Start-Process $executable -NoNewWindow -PassThru -ArgumentList @(
-            ('"' + $script + '"'), ('"' + $fixture + '"')
-        ) -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $probe = Start-Process $executable -NoNewWindow -PassThru -WorkingDirectory $fixture `
+            -ArgumentList ('"' + $script + '"') -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         if (-not $probe.WaitForExit(30000)) {
             $probe.Kill()
             throw "$label RexxUtil probe timed out"
         }
         Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ }
-        if ($probe.ExitCode -ne 0) { throw "$label RexxUtil probe exited $($probe.ExitCode)" }
         Write-Host "$label observations:"
         Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_; $_ }
+        if ($probe.ExitCode -ne 0) { throw "$label RexxUtil probe exited $($probe.ExitCode)" }
     } finally {
         Remove-Item -LiteralPath $fixture -Recurse -Force
     }
