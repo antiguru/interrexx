@@ -129,7 +129,7 @@ pub(crate) enum ParkReason {
     /// An `rxsock` call's wait for its sockets, run off the baton by the
     /// socket reactor or a pool thread ([`crate::builtin::rxsock`]), until
     /// its end has been posted.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     Socket,
 }
 
@@ -145,7 +145,7 @@ impl ParkReason {
             ParkReason::Semaphore(_) => "a semaphore",
             ParkReason::Native => "a native call's return",
             ParkReason::Block => "a command's end",
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             ParkReason::Socket => "a socket",
         }
     }
@@ -170,7 +170,7 @@ pub(crate) enum Posted {
     },
     /// `activity`'s socket wait, started under `token`, has ended: its
     /// sockets are ready, its deadline has passed, or it was cancelled.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     SocketWaited {
         activity: ActivityId,
         token: u64,
@@ -836,7 +836,7 @@ impl Scheduler for Interp {
             ParkReason::Block => {
                 self.activity.parked_block = self.activity.blocked.innermost_token()
             }
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             ParkReason::Socket => match crate::builtin::rxsock::helper_state(&self.activity) {
                 // Its end was drained before the park: woken at once.
                 Some((_, true)) | None => self.unpark(running),
@@ -1024,7 +1024,7 @@ impl Interp {
     /// is no reactor to take it. Counted in flight like a pool thread's
     /// wait, so [`Interp::wind_down`] waits for its end, which a
     /// cancellation posts too.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     pub(crate) fn register_socket_wait(
         &mut self,
         polls: &[crate::builtin::rxsock_sys::PollRequest],
@@ -1047,7 +1047,7 @@ impl Interp {
     /// Runs `wait` on `worker`, a pool thread, for the running activity,
     /// and answers the token its end is posted under
     /// ([`Posted::SocketWaited`]).
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     pub(crate) fn exit_for_socket_wait(
         &mut self,
         worker: Worker,
@@ -2004,9 +2004,9 @@ impl Interp {
     pub(crate) fn wind_down(mut self) {
         // A socket wait's thread ends only when told to or when its sockets
         // are ready; nothing will take up its answer now.
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         crate::builtin::rxsock::cancel_helper(&self.activity);
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         for idle in self.activities.idle.iter().flatten() {
             crate::builtin::rxsock::cancel_helper(&idle.activity);
         }
@@ -2345,7 +2345,7 @@ impl Interp {
                         self.unpark(activity);
                     }
                 }
-                #[cfg(unix)]
+                #[cfg(any(unix, windows))]
                 Posted::SocketWaited { activity, token } => {
                     self.activities.in_flight -= 1;
                     let woken = self.record_of(activity).is_some_and(|record| {
@@ -3454,12 +3454,12 @@ impl Interp {
                 let deadline = self.now() + crate::dispatch::queue_methods::WAIT_POLL;
                 Some(ParkReason::Sleep { deadline })
             }
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             ParkReason::Sleep { .. } if !self.activity.woken_by_halt => {
                 crate::builtin::rxsock::wait_again(self)
                     .map(|deadline| ParkReason::Sleep { deadline })
             }
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             ParkReason::Socket if !self.activity.woken_by_halt => {
                 crate::builtin::rxsock::block_again(self)
             }
@@ -4123,7 +4123,7 @@ impl Interp {
             // Its thread is told to stop, and the activity wakes when that
             // thread posts its end.
             record.woken_by_halt = true;
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             crate::builtin::rxsock::cancel_helper(record);
         } else if let Some(order) = record.semaphore_wait.take() {
             let before = table.sleepers.len();

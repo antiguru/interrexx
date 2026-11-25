@@ -73,8 +73,10 @@ impl Drop for Wait {
 pub(crate) struct Canceller {
     #[cfg(any(target_os = "linux", target_os = "android"))]
     event: std::os::fd::OwnedFd,
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    #[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
     pipe: (std::os::fd::OwnedFd, std::os::fd::OwnedFd),
+    #[cfg(windows)]
+    sockets: (std::net::UdpSocket, std::net::UdpSocket),
 }
 
 impl Canceller {
@@ -89,7 +91,7 @@ impl Canceller {
             .ok()?;
             Some(Canceller { event })
         }
-        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        #[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
         {
             let (read, write) = crate::host::pipe().ok()?;
             let (read, write): (std::os::fd::OwnedFd, std::os::fd::OwnedFd) =
@@ -99,18 +101,34 @@ impl Canceller {
                 pipe: (read, write),
             })
         }
+        #[cfg(windows)]
+        {
+            use std::net::{Ipv4Addr, UdpSocket};
+            let read = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()?;
+            let write = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()?;
+            read.connect(write.local_addr().ok()?).ok()?;
+            write.connect(read.local_addr().ok()?).ok()?;
+            write.set_nonblocking(true).ok()?;
+            Some(Canceller {
+                sockets: (read, write),
+            })
+        }
     }
 
     /// The descriptor to poll for readability.
-    pub(crate) fn polled(&self) -> std::os::fd::BorrowedFd<'_> {
-        use std::os::fd::AsFd as _;
+    pub(crate) fn polled(&self) -> rustix::fd::BorrowedFd<'_> {
+        use rustix::fd::AsFd as _;
         #[cfg(any(target_os = "linux", target_os = "android"))]
         {
             self.event.as_fd()
         }
-        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        #[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
         {
             self.pipe.0.as_fd()
+        }
+        #[cfg(windows)]
+        {
+            self.sockets.0.as_fd()
         }
     }
 
@@ -119,8 +137,10 @@ impl Canceller {
     pub(crate) fn signal(&self) {
         #[cfg(any(target_os = "linux", target_os = "android"))]
         let _ = rustix::io::write(&self.event, &1u64.to_ne_bytes());
-        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        #[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
         let _ = rustix::io::write(&self.pipe.1, &[1u8]);
+        #[cfg(windows)]
+        let _ = self.sockets.1.send(&[1]);
     }
 }
 

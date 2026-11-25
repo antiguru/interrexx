@@ -86,7 +86,7 @@ static LIBRARIES: &[RustLibrary] = &[
             ("RegExp_Pos", crate::dispatch::regexp_methods::pos),
         ],
     },
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     RustLibrary {
         name: "rxsock",
         opened: crate::builtin::rxsock_wait::prepare,

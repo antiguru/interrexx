@@ -25,8 +25,8 @@ mod hosts;
 
 use super::rxsock_wait;
 
+use rustix::fd::{AsFd as _, BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::os::fd::{AsFd as _, BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -43,12 +43,15 @@ use crate::{Failure, Interp};
 
 type Result<T> = std::result::Result<T, Failure>;
 
-const EINTR: i32 = libc::EINTR;
-const EAGAIN: i32 = libc::EAGAIN;
-const EBADF: i32 = libc::EBADF;
-const ENOPROTOOPT: i32 = libc::ENOPROTOOPT;
-const EAFNOSUPPORT: i32 = libc::EAFNOSUPPORT;
-const EINPROGRESS: i32 = libc::EINPROGRESS;
+const EINTR: i32 = rustix::io::Errno::INTR.raw_os_error();
+const EAGAIN: i32 = rustix::io::Errno::WOULDBLOCK.raw_os_error();
+#[cfg(unix)]
+const EBADF: i32 = rustix::io::Errno::BADF.raw_os_error();
+#[cfg(windows)]
+const EBADF: i32 = wsa::WSAENOTSOCK;
+const ENOPROTOOPT: i32 = rustix::io::Errno::NOPROTOOPT.raw_os_error();
+const EAFNOSUPPORT: i32 = rustix::io::Errno::AFNOSUPPORT.raw_os_error();
+const EINPROGRESS: i32 = rustix::io::Errno::INPROGRESS.raw_os_error();
 
 /// How often a waiting call polls its sockets.
 const WAIT_POLL: Duration = Duration::from_millis(5);
@@ -59,6 +62,7 @@ const MUTED_RECHECK: Duration = Duration::from_millis(50);
 
 /// The `errno` values the variable names symbolically, by the host's number
 /// for each name; any other is set in decimal.
+#[cfg(unix)]
 const ERRNO_NAMES: &[(i32, &str)] = &[
     (libc::EWOULDBLOCK, "EWOULDBLOCK"),
     (libc::EINPROGRESS, "EINPROGRESS"),
@@ -92,6 +96,44 @@ const ERRNO_NAMES: &[(i32, &str)] = &[
     (libc::EHOSTDOWN, "EHOSTDOWN"),
     (libc::EHOSTUNREACH, "EHOSTUNREACH"),
     (libc::ENOTEMPTY, "ENOTEMPTY"),
+];
+
+#[cfg(windows)]
+use windows_sys::Win32::Networking::WinSock as wsa;
+#[cfg(windows)]
+const ERRNO_NAMES: &[(i32, &str)] = &[
+    (wsa::WSAEWOULDBLOCK, "EWOULDBLOCK"),
+    (wsa::WSAEINPROGRESS, "EINPROGRESS"),
+    (wsa::WSAEALREADY, "EALREADY"),
+    (wsa::WSAENOTSOCK, "ENOTSOCK"),
+    (wsa::WSAEDESTADDRREQ, "EDESTADDRREQ"),
+    (wsa::WSAEMSGSIZE, "EMSGSIZE"),
+    (wsa::WSAEPROTOTYPE, "EPROTOTYPE"),
+    (wsa::WSAENOPROTOOPT, "ENOPROTOOPT"),
+    (wsa::WSAEPROTONOSUPPORT, "EPROTONOSUPPORT"),
+    (wsa::WSAESOCKTNOSUPPORT, "ESOCKTNOSUPPORT"),
+    (wsa::WSAEOPNOTSUPP, "EOPNOTSUPP"),
+    (wsa::WSAEPFNOSUPPORT, "EPFNOSUPPORT"),
+    (wsa::WSAEAFNOSUPPORT, "EAFNOSUPPORT"),
+    (wsa::WSAEADDRINUSE, "EADDRINUSE"),
+    (wsa::WSAEADDRNOTAVAIL, "EADDRNOTAVAIL"),
+    (wsa::WSAENETDOWN, "ENETDOWN"),
+    (wsa::WSAENETUNREACH, "ENETUNREACH"),
+    (wsa::WSAENETRESET, "ENETRESET"),
+    (wsa::WSAECONNABORTED, "ECONNABORTED"),
+    (wsa::WSAECONNRESET, "ECONNRESET"),
+    (wsa::WSAENOBUFS, "ENOBUFS"),
+    (wsa::WSAEISCONN, "EISCONN"),
+    (wsa::WSAENOTCONN, "ENOTCONN"),
+    (wsa::WSAESHUTDOWN, "ESHUTDOWN"),
+    (wsa::WSAETOOMANYREFS, "ETOOMANYREFS"),
+    (wsa::WSAETIMEDOUT, "ETIMEDOUT"),
+    (wsa::WSAECONNREFUSED, "ECONNREFUSED"),
+    (wsa::WSAELOOP, "ELOOP"),
+    (wsa::WSAENAMETOOLONG, "ENAMETOOLONG"),
+    (wsa::WSAEHOSTDOWN, "EHOSTDOWN"),
+    (wsa::WSAEHOSTUNREACH, "EHOSTUNREACH"),
+    (wsa::WSAENOTEMPTY, "ENOTEMPTY"),
 ];
 
 /// The text the `errno` variable gets for `errno`.
@@ -140,8 +182,68 @@ fn code(interp: &mut Interp, result: Os<()>) -> ObjRef {
 }
 
 /// Whether the socket blocks: its descriptor is not in non-blocking mode.
+#[cfg(unix)]
 fn blocks(fd: BorrowedFd<'_>) -> bool {
     rustix::fs::fcntl_getfl(fd).is_ok_and(|flags| !flags.contains(rustix::fs::OFlags::NONBLOCK))
+}
+
+#[cfg(windows)]
+use rxsock_sys::blocks;
+
+#[cfg(unix)]
+fn socket_arg(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<SocketId> {
+    int(interp, args, 1)
+}
+
+#[cfg(windows)]
+fn socket_arg(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<SocketId> {
+    let value = required(args, 1)?;
+    let parsed = match value.decode() {
+        Decoded::SmallInt(n) => {
+            if n == -1 {
+                Some(SocketId::MAX)
+            } else {
+                SocketId::try_from(n).ok()
+            }
+        }
+        _ => interp
+            .blamed_string_conversion(value)?
+            .and_then(|text| parse_socket(&interp.to_text(text))),
+    };
+    parsed.ok_or_else(|| {
+        let found = interp.native_found(value);
+        crate::error::Raised::native_argument_outside_range(
+            1,
+            -1,
+            i128::from(SocketId::MAX),
+            &found,
+        )
+        .into()
+    })
+}
+
+#[cfg(unix)]
+fn parse_socket(bytes: &[u8]) -> Option<SocketId> {
+    whole(bytes).and_then(|fd| SocketId::try_from(fd).ok())
+}
+
+#[cfg(windows)]
+fn parse_socket(bytes: &[u8]) -> Option<SocketId> {
+    let number = Number::parse_bytes(trimmed(bytes))?;
+    if number.int64_value(DIGITS64) == Some(-1) {
+        return Some(SocketId::MAX);
+    }
+    number.unsigned_int64_value(20)
+}
+
+fn answer_socket(interp: &mut Interp, result: Os<SocketId>) -> ObjRef {
+    match result {
+        Ok(socket) => {
+            report(interp, 0);
+            number(interp, socket)
+        }
+        Err(error) => answer(interp, Err(error)),
+    }
 }
 
 /// The string value of a data argument, every byte of it.
@@ -281,7 +383,7 @@ impl Stem {
         self.set(interp, element, value);
     }
 
-    fn set_number(&self, interp: &mut Interp, element: &[u8], value: i64) {
+    fn set_number(&self, interp: &mut Interp, element: &[u8], value: impl Into<i128>) {
         let value = number(interp, value);
         self.set(interp, element, value);
     }
@@ -506,6 +608,13 @@ enum Pending {
         len: usize,
         flags: RecvFlags,
         from: Option<Vec<u8>>,
+    },
+    #[cfg(windows)]
+    Send {
+        fd: SocketId,
+        bytes: Vec<u8>,
+        flags: SendFlags,
+        target: Option<Target>,
     },
     Select {
         sets: [Option<Set>; 3],
@@ -815,7 +924,7 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             // Not writable is the deadline: `SO_SNDTIMEO` 500 then a
             // `SockConnect` that cannot complete gives -1 with `errno` 115
             // after half a second, and the connection goes on.
-            let result = if any_ready(&[(fd, crate::host::CONNECT_WAIT_EVENTS)]) {
+            let result = if any_ready(&[(fd, rxsock_sys::CONNECT_WAIT_EVENTS)]) {
                 with_socket(fd, |socket| finish_connect(socket, to))
             } else {
                 Err(EINPROGRESS)
@@ -830,14 +939,21 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             from,
         } => {
             let target = stem(interp, 0, from);
-            finish_recv(
-                interp,
-                fd,
-                &var,
-                len,
-                flags | RecvFlags::DONTWAIT,
-                target.as_ref(),
-            )
+            #[cfg(unix)]
+            let flags = flags | RecvFlags::DONTWAIT;
+            finish_recv(interp, fd, &var, len, flags, target.as_ref())
+        }
+        #[cfg(windows)]
+        Pending::Send {
+            fd,
+            bytes,
+            flags,
+            target,
+        } => {
+            let result = with_socket(fd, |socket| {
+                send_now(socket, &bytes, flags, target.as_ref())
+            });
+            answer(interp, result)
         }
         Pending::Select { sets } => {
             let mut sets = sets;
@@ -917,39 +1033,46 @@ pub(crate) fn socket_new(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
         b"0" => None,
         _ => return Err(failed(interp)),
     };
+    #[cfg(windows)]
+    if let Err(error) = rxsock_sys::ensure_started() {
+        return Ok(answer(interp, Err(error)));
+    }
     let made = rustix::net::socket(rustix::net::AddressFamily::INET, kind, protocol)
         .and_then(|socket| {
-            crate::host::prepare_socket(socket.as_fd())?;
-            Ok(i64::from(socket.into_raw_fd()))
+            rxsock_sys::prepare_socket(socket.as_fd())?;
+            let fd = socket.into_raw_fd();
+            #[cfg(windows)]
+            let fd = rxsock_sys::publish_socket(fd, false);
+            Ok(fd)
         })
         .map_err(os);
-    Ok(answer(interp, made))
+    Ok(answer_socket(interp, made))
 }
 
 /// `SockClose(s)` and `SockSoClose(s)`.
 pub(crate) fn close(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     Ok(code(interp, rxsock_sys::close(fd)))
 }
 
 pub(crate) fn shutdown(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let how = int(interp, args, 2)?;
     Ok(code(interp, rxsock_sys::shutdown(fd, how)))
 }
 
 pub(crate) fn listen(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let backlog = int(interp, args, 2)?;
     Ok(code(interp, rxsock_sys::listen(fd, backlog)))
 }
 
 pub(crate) fn bind(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let Some(stem) = stem_argument(interp, args, 2)? else {
         return Ok(number(interp, 0));
     };
@@ -969,7 +1092,7 @@ pub(crate) fn bind(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
 /// and the call waits for the outcome.
 pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let Some(stem) = stem_argument(interp, args, 2)? else {
         return Ok(number(interp, 0));
     };
@@ -988,19 +1111,12 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
         if !blocks(socket) {
             return rustix::net::connect(socket, &v4).map(|()| None).map_err(os);
         }
-        let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
-        rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
-        let connected = rustix::net::connect(socket, &v4).map_err(os);
-        let _ = rustix::fs::fcntl_setfl(socket, flags);
-        match connected {
-            Err(EINPROGRESS) => Ok(Some(v4)),
-            result => result.map(|()| None),
-        }
+        start_connect(socket, v4)
     });
     match begun {
         Ok(Some(to)) => {
             let wait = SocketWait {
-                polls: vec![(fd, crate::host::CONNECT_WAIT_EVENTS)],
+                polls: vec![(fd, rxsock_sys::CONNECT_WAIT_EVENTS)],
                 deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Send),
                 helper: None,
                 op: Pending::Connect { fd, to },
@@ -1011,10 +1127,32 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     }
 }
 
+#[cfg(unix)]
+fn start_connect(socket: BorrowedFd<'_>, v4: SocketAddrV4) -> Os<Option<SocketAddrV4>> {
+    let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
+    rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
+    let connected = rustix::net::connect(socket, &v4).map_err(os);
+    let _ = rustix::fs::fcntl_setfl(socket, flags);
+    match connected {
+        Err(EINPROGRESS) => Ok(Some(v4)),
+        result => result.map(|()| None),
+    }
+}
+
+#[cfg(windows)]
+fn start_connect(socket: BorrowedFd<'_>, v4: SocketAddrV4) -> Os<Option<SocketAddrV4>> {
+    let connected = try_without_blocking(socket, || rustix::net::connect(socket, &v4).map_err(os));
+    match connected {
+        Err(EAGAIN) => Ok(Some(v4)),
+        result => result.map(|()| None),
+    }
+}
+
 /// A connection's outcome once its socket is writable: a second `connect`,
 /// without blocking, which answers `EISCONN` for one made and the error for
 /// one refused, and which disconnects the failed socket as a blocking
 /// connect does (its local address goes back to 0.0.0.0).
+#[cfg(unix)]
 fn finish_connect(socket: BorrowedFd<'_>, to: SocketAddrV4) -> Os<()> {
     let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
     rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
@@ -1031,10 +1169,17 @@ fn finish_connect(socket: BorrowedFd<'_>, to: SocketAddrV4) -> Os<()> {
     }
 }
 
+#[cfg(windows)]
+fn finish_connect(socket: BorrowedFd<'_>, _: SocketAddrV4) -> Os<()> {
+    rustix::net::sockopt::socket_error(socket)
+        .map_err(os)?
+        .map_err(os)
+}
+
 /// `SockAccept(s [, addrstem])`.
 pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let (stem, lost) = match args.get(1).copied().flatten() {
         Some(value) => match stem_of(interp, value, 2)? {
             Some(stem) => (Some(stem), false),
@@ -1071,13 +1216,28 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 }
 
 /// An accepted connection and its peer's address.
-type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
+struct Accepted {
+    socket: OwnedFd,
+    address: Option<rustix::net::SocketAddrAny>,
+    #[cfg(windows)]
+    nonblocking: bool,
+}
+
+impl Accepted {
+    fn into_parts(self) -> (SocketId, Option<rustix::net::SocketAddrAny>) {
+        let fd = self.socket.into_raw_fd();
+        #[cfg(windows)]
+        let fd = rxsock_sys::publish_socket(fd, self.nonblocking);
+        (fd, self.address)
+    }
+}
 
 /// `accept` on the socket numbered `fd` without blocking: a blocking socket
 /// is made non-blocking for the call. The socket it answers has the mode the
 /// host's `accept` gives it for the listening socket's own mode, which the
 /// call's toggle does not change. A socket it cannot ready is closed and the
 /// failure answered.
+#[cfg(unix)]
 fn try_accept(fd: SocketId) -> Os<Accepted> {
     with_socket(fd, |socket| {
         let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
@@ -1095,14 +1255,40 @@ fn try_accept(fd: SocketId) -> Os<Accepted> {
         if toggled && crate::host::ACCEPT_INHERITS_NONBLOCK {
             blocking(&new).map_err(os)?;
         }
-        crate::host::prepare_socket(new.as_fd()).map_err(os)?;
-        Ok((new, address))
+        rxsock_sys::prepare_socket(new.as_fd()).map_err(os)?;
+        Ok(Accepted {
+            socket: new,
+            address,
+        })
+    })
+}
+
+#[cfg(windows)]
+fn try_accept(fd: SocketId) -> Os<Accepted> {
+    with_socket(fd, |socket| {
+        let toggled = blocks(socket);
+        if toggled {
+            rustix::io::ioctl_fionbio(socket, true).map_err(os)?;
+        }
+        let accepted = rustix::net::acceptfrom(socket).map_err(os);
+        if toggled {
+            rustix::io::ioctl_fionbio(socket, false).map_err(os)?;
+        }
+        let (new, address) = accepted?;
+        rxsock_sys::prepare_socket(new.as_fd()).map_err(os)?;
+        rustix::io::ioctl_fionbio(new.as_fd(), !toggled).map_err(os)?;
+        Ok(Accepted {
+            socket: new,
+            address,
+            nonblocking: !toggled,
+        })
     })
 }
 
 /// Makes `socket` blocking. A socket `accept` answers starts blocking on
 /// Linux; Apple's systems and the BSDs give it the listening socket's
 /// `O_NONBLOCK`, which [`try_accept`] sets for its call.
+#[cfg(unix)]
 fn blocking(socket: &OwnedFd) -> rustix::io::Result<()> {
     let flags = rustix::fs::fcntl_getfl(socket)?;
     if flags.contains(rustix::fs::OFlags::NONBLOCK) {
@@ -1114,9 +1300,9 @@ fn blocking(socket: &OwnedFd) -> rustix::io::Result<()> {
 /// Whether a receive on `socket` can never be answered by data: a listening
 /// socket, and where the host's poll does not report it hung up, a stream
 /// socket with no peer.
-fn unconnected_stream(socket: std::os::fd::BorrowedFd<'_>) -> bool {
-    crate::host::is_listening(socket)
-        || (!crate::host::POLL_HANGS_UP_UNCONNECTED
+fn unconnected_stream(socket: BorrowedFd<'_>) -> bool {
+    rxsock_sys::is_listening(socket)
+        || (!rxsock_sys::POLL_HANGS_UP_UNCONNECTED
             && rustix::net::sockopt::socket_type(socket) == Ok(rustix::net::SocketType::STREAM)
             && rustix::net::getpeername(socket) == Err(rustix::io::Errno::NOTCONN))
 }
@@ -1147,25 +1333,28 @@ fn finish_accept(
     lost: bool,
 ) -> ObjRef {
     if lost {
-        if let Ok((accepted, _)) = accepted {
-            let _ = accepted.into_raw_fd();
+        if let Ok(accepted) = accepted {
+            let _ = accepted.into_parts();
         }
         return number(interp, 0);
     }
     let (result, peer) = match accepted {
-        Ok((accepted, peer)) => (Ok(i64::from(accepted.into_raw_fd())), peer),
+        Ok(accepted) => {
+            let (socket, peer) = accepted.into_parts();
+            (Ok(socket), peer)
+        }
         Err(errno) => (Err(errno), None),
     };
     if let Some(stem) = stem {
         write_socket_address(interp, stem, peer);
     }
-    answer(interp, result)
+    answer_socket(interp, result)
 }
 
 /// `SockGetSockName(s, stem)` and `SockGetPeerName(s, stem)`.
 fn name_of(interp: &mut Interp, args: &[Option<ObjRef>], peer: bool) -> Result<ObjRef> {
     check_arity(args, 2)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let Some(stem) = stem_argument(interp, args, 2)? else {
         return Ok(number(interp, 0));
     };
@@ -1266,9 +1455,20 @@ pub(crate) fn get_host_by_addr(interp: &mut Interp, args: &[Option<ObjRef>]) -> 
 /// `SockGetHostName()`: the node name, at most 255 bytes.
 pub(crate) fn get_host_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 0)?;
-    let info = rustix::system::uname();
-    let name = info.nodename().to_bytes();
-    let name = name[..name.len().min(255)].to_vec();
+    #[cfg(unix)]
+    let name = {
+        let info = rustix::system::uname();
+        let name = info.nodename().to_bytes();
+        name[..name.len().min(255)].to_vec()
+    };
+    #[cfg(windows)]
+    let name = match rxsock_sys::hostname() {
+        Ok(name) => name,
+        Err(error) => {
+            report(interp, error);
+            return Ok(interp.text(b""));
+        }
+    };
     report(interp, 0);
     Ok(interp.text_built(name))
 }
@@ -1277,6 +1477,7 @@ pub(crate) fn get_host_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Res
 /// whose text does not begin `127`, the last interface never examined, as
 /// ooRexx does; 40.1 where none qualifies, `0.0.0.0` where the list cannot be
 /// read.
+#[cfg(unix)]
 pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 0)?;
     let Ok(interfaces) = nix::ifaddrs::getifaddrs() else {
@@ -1298,12 +1499,24 @@ pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resul
 
 /// [`get_host_id`]'s choice among the interfaces' IPv4 `addresses`, in list
 /// order: the first whose text does not begin `127`, the last never examined.
+#[cfg(unix)]
 fn host_id(addresses: &[Ipv4Addr]) -> Option<String> {
     let examined = addresses.len().saturating_sub(1);
     addresses[..examined]
         .iter()
         .map(Ipv4Addr::to_string)
         .find(|text| !text.starts_with("127"))
+}
+
+#[cfg(windows)]
+pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
+    check_arity(args, 0)?;
+    let address = rxsock_sys::hostname()
+        .ok()
+        .and_then(|name| hosts::by_name(&name))
+        .and_then(|host| host.addresses.into_iter().find(|addr| !addr.is_loopback()))
+        .unwrap_or(Ipv4Addr::UNSPECIFIED);
+    Ok(interp.text_built(address.to_string().into_bytes()))
 }
 
 // --- Data -------------------------------------------------------------------
@@ -1346,30 +1559,16 @@ fn recv_flags(text: &[u8]) -> RecvFlags {
 
 pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 3)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let bytes = data(interp, args, 2)?;
     let flags = optional_string(interp, args, 3)?.unwrap_or_default();
-    let flags = send_flags(&flags, true);
-    // A blocking send takes a halting signal on this thread, which ends it, and
-    // the halt is served at this clause: SIGINT during a blocked `SockSend`
-    // raises HALT on the `SockSend` line.
-    let sent = crate::signal::unblocked(|| {
-        with_socket(fd, |socket| {
-            let flags = flags | crate::host::no_sigpipe_flags(socket);
-            rustix::net::send(socket, &bytes, flags)
-                .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
-                .map_err(os)
-        })
-    });
-    let answered = answer(interp, sent);
-    interp.serve_signal_now();
-    Ok(answered)
+    send_data(interp, fd, bytes, send_flags(&flags, true), None)
 }
 
 /// `SockSendTo(s, data, addrstem)` or `SockSendTo(s, data, flags, addrstem)`.
 pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 4)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let bytes = data(interp, args, 2)?;
     required(args, 3)?;
     let (flags, stem) = match args.get(3).copied().flatten() {
@@ -1382,32 +1581,114 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     let Some(stem) = stem else {
         return Ok(number(interp, 0));
     };
-    let flags = send_flags(&flags, false);
     let address = read_address(interp, &stem);
-    // As `SockSend`: a halting signal ends a blocked send at this clause.
+    send_data(
+        interp,
+        fd,
+        bytes,
+        send_flags(&flags, false),
+        Some(target(address)),
+    )
+}
+
+#[cfg(unix)]
+fn send_data(
+    interp: &mut Interp,
+    fd: SocketId,
+    bytes: Vec<u8>,
+    flags: SendFlags,
+    target: Option<Target>,
+) -> Result<ObjRef> {
+    // On Unix, a halting signal ends a blocked send at this clause.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
-            let flags = flags | crate::host::no_sigpipe_flags(socket);
-            let count = match target(address) {
-                Target::Inet(v4) | Target::Unspec(v4) => {
-                    rustix::net::sendto(socket, &bytes, flags, &v4)
-                }
-                Target::Other
-                    if rustix::net::sockopt::socket_type(socket)
-                        == Ok(rustix::net::SocketType::STREAM) =>
-                {
-                    rustix::net::send(socket, &bytes, flags)
-                }
-                Target::Other => return Err(EAFNOSUPPORT),
-            };
-            count
-                .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
-                .map_err(os)
+            send_on_socket(socket, &bytes, flags, target.as_ref())
         })
     });
     let answered = answer(interp, sent);
     interp.serve_signal_now();
     Ok(answered)
+}
+
+/// Tries a send without holding the activity baton while Winsock waits.
+#[cfg(windows)]
+fn send_data(
+    interp: &mut Interp,
+    fd: SocketId,
+    bytes: Vec<u8>,
+    flags: SendFlags,
+    target: Option<Target>,
+) -> Result<ObjRef> {
+    let mut blocking = false;
+    let sent = with_socket(fd, |socket| {
+        blocking = blocks(socket);
+        send_now(socket, &bytes, flags, target.as_ref())
+    });
+    if blocking && sent == Err(EAGAIN) {
+        return park(
+            interp,
+            SocketWait {
+                polls: vec![(fd, PollFlags::OUT)],
+                deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Send),
+                helper: None,
+                op: Pending::Send {
+                    fd,
+                    bytes,
+                    flags,
+                    target,
+                },
+            },
+            &[],
+        );
+    }
+    Ok(answer(interp, sent))
+}
+
+#[cfg(windows)]
+fn send_now(
+    socket: BorrowedFd<'_>,
+    bytes: &[u8],
+    flags: SendFlags,
+    target: Option<&Target>,
+) -> Os<i64> {
+    try_without_blocking(socket, || send_on_socket(socket, bytes, flags, target))
+}
+
+/// Winsock has no per-call `MSG_DONTWAIT`. Keep the current mode when it is
+/// already nonblocking and otherwise toggle it around the single I/O call.
+#[cfg(windows)]
+fn try_without_blocking<T>(socket: BorrowedFd<'_>, call: impl FnOnce() -> Os<T>) -> Os<T> {
+    if !blocks(socket) {
+        return call();
+    }
+    rustix::io::ioctl_fionbio(socket, true).map_err(os)?;
+    let result = call();
+    rustix::io::ioctl_fionbio(socket, false).map_err(os)?;
+    result
+}
+
+fn send_on_socket(
+    socket: BorrowedFd<'_>,
+    bytes: &[u8],
+    flags: SendFlags,
+    target: Option<&Target>,
+) -> Os<i64> {
+    let flags = flags | rxsock_sys::no_sigpipe_flags(socket);
+    let count = match target {
+        None => rustix::net::send(socket, bytes, flags),
+        Some(Target::Inet(v4) | Target::Unspec(v4)) => {
+            rustix::net::sendto(socket, bytes, flags, v4)
+        }
+        Some(Target::Other)
+            if rustix::net::sockopt::socket_type(socket) == Ok(rustix::net::SocketType::STREAM) =>
+        {
+            rustix::net::send(socket, bytes, flags)
+        }
+        Some(Target::Other) => return Err(EAFNOSUPPORT),
+    };
+    count
+        .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
+        .map_err(os)
 }
 
 /// The most a receive reads in one call, whatever length it asks for.
@@ -1427,7 +1708,7 @@ pub(crate) fn recv_from(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<
 }
 
 fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<ObjRef> {
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let var = c_string(interp, args, 2)?;
     let len = int(interp, args, 3)?;
     let (flags, stem) = if from {
@@ -1489,13 +1770,24 @@ fn finish_recv(
     from: Option<&Stem>,
 ) -> ObjRef {
     let mut buffer = vec![0; len.min(RECV_MOST)];
-    let received = with_socket(fd, |socket| match from {
-        Some(_) => rustix::net::recvfrom(socket, &mut buffer[..], flags)
-            .map(|(_, count, address)| (count, address))
-            .map_err(os),
-        None => rustix::net::recv(socket, &mut buffer[..], flags)
-            .map(|(_, count)| (count, None))
-            .map_err(os),
+    let received = with_socket(fd, |socket| {
+        let receive = || match from {
+            Some(_) => rustix::net::recvfrom(socket, &mut buffer[..], flags)
+                .map(|(_, count, address)| (count, address))
+                .map_err(os),
+            None => rustix::net::recv(socket, &mut buffer[..], flags)
+                .map(|(_, count)| (count, None))
+                .map_err(os),
+        };
+        #[cfg(windows)]
+        {
+            try_without_blocking(socket, receive)
+        }
+        #[cfg(unix)]
+        {
+            let mut receive = receive;
+            receive()
+        }
     });
     let (result, address) = match received {
         Ok((count, address)) => {
@@ -1561,7 +1853,7 @@ fn check_level(interp: &Interp, level: &[u8]) -> Result<()> {
 /// `SockGetSockOpt(s, level, option, var)`.
 pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 4)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let level = c_string(interp, args, 2)?;
     let option = c_string(interp, args, 3)?;
     let var = c_string(interp, args, 4)?;
@@ -1588,7 +1880,7 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
 /// `SockSetSockOpt(s, level, option, value)`.
 pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 4)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let level = c_string(interp, args, 2)?;
     let option = c_string(interp, args, 3)?;
     let value = c_string(interp, args, 4)?;
@@ -1616,7 +1908,7 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
 /// `SockIoctl(s, cmd, arg)`.
 pub(crate) fn ioctl(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 3)?;
-    let fd = int(interp, args, 1)?;
+    let fd = socket_arg(interp, args)?;
     let command = c_string(interp, args, 2)?;
     let value = required(args, 3)?;
     if command.eq_ignore_ascii_case(b"FIONBIO") {
@@ -1672,11 +1964,7 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
     let mut sockets = Vec::new();
     for index in 1..=count.max(0) {
         let entry = stem.get(interp, index.to_string().as_bytes());
-        let Some(fd) = entry
-            .as_deref()
-            .and_then(whole)
-            .and_then(|fd| SocketId::try_from(fd).ok())
-        else {
+        let Some(fd) = entry.as_deref().and_then(parse_socket) else {
             return Err(failed(interp));
         };
         sockets.push(fd);
@@ -1691,12 +1979,21 @@ const SET_EVENTS: [PollFlags; 3] = [PollFlags::IN, PollFlags::OUT, PollFlags::PR
 /// descriptor table is never ready and no error, while a closed one inside it
 /// answers -1 with `EBADF`. Taken once per call, so the polls and the walk of
 /// their answers agree on every entry.
+#[cfg(unix)]
 fn reached(sets: &[Option<Set>; 3]) -> [Vec<bool>; 3] {
     let table = crate::host::SelectTable::now();
     sets.each_ref().map(|set| {
         set.as_ref().map_or_else(Vec::new, |set| {
             set.sockets.iter().map(|fd| table.reaches(*fd)).collect()
         })
+    })
+}
+
+#[cfg(windows)]
+fn reached(sets: &[Option<Set>; 3]) -> [Vec<bool>; 3] {
+    sets.each_ref().map(|set| {
+        set.as_ref()
+            .map_or_else(Vec::new, |set| vec![true; set.sockets.len()])
     })
 }
 
@@ -1788,14 +2085,14 @@ fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
             set.stem.set_number(interp, b"0", total);
             for (index, fd) in ready.into_iter().enumerate() {
                 set.stem
-                    .set_number(interp, (index + 1).to_string().as_bytes(), i64::from(fd));
+                    .set_number(interp, (index + 1).to_string().as_bytes(), i128::from(fd));
             }
         }
     }
     answer(interp, Ok(i64::try_from(count).unwrap_or(i64::MAX)))
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use std::os::fd::AsRawFd as _;
 
@@ -1861,10 +2158,10 @@ mod tests {
                 .set_nonblocking(!listener_blocks)
                 .expect("the listener's mode");
             let _client = connected(&listener);
-            let (accepted, _) = try_accept(listener.as_raw_fd()).expect("the connection");
+            let accepted = try_accept(listener.as_raw_fd()).expect("the connection");
             let expected = listener_blocks || !crate::host::ACCEPT_INHERITS_NONBLOCK;
             assert_eq!(
-                blocks(accepted.as_fd()),
+                blocks(accepted.socket.as_fd()),
                 expected,
                 "listener blocking: {listener_blocks}"
             );
