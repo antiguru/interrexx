@@ -26,6 +26,15 @@ const SELF_FORWARD: &[u8] =
 /// far above this.
 const SHORT: Duration = Duration::from_millis(500);
 
+/// The deadline of the `INTERPRET recursion` row: a small fraction of the
+/// time that recursion takes to reach the interpreter's stack check, on the
+/// smallest interpreter stack a supported target has, so that the deadline
+/// answers first however fast the machine is.
+const RECURSION_DEADLINE: Duration = Duration::from_millis(50);
+
+/// The name of the row [`RECURSION_DEADLINE`] is for.
+const RECURSION_ROW: &str = "INTERPRET recursion";
+
 fn under_deadline(text: &[u8], limit: Duration) -> Outcome {
     run_program(PATH, text.to_vec(), Invocation::none().with_deadline(limit))
 }
@@ -235,25 +244,26 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // **The row that says where the check has to be.** This recursion
         // iterates no loop, transfers by no `SIGNAL` and resumes no reply, so
         // a deadline honoured at those cycles instead of at the clause
-        // boundary never sees it. Measured: with the
-        // check at the clause boundary it is `DEADLINE_EXIT` in under 0.5 s;
-        // with the check moved to `loop_advance`, `Flow::Signal` and the
-        // reply drain it overflows the interpreter thread's stack and the
-        // process dies with SIGABRT. **So a regression here aborts this test
-        // binary rather than failing it** -- that is what the shape does with
-        // no bound, and `on_interpreter_thread`'s own doc says a stack
-        // overflow is the one failure it cannot report.
-        (
-            "INTERPRET recursion",
-            b"zs = 'interpret zs'\ninterpret zs\n",
-        ),
+        // boundary never sees it. With the check at the clause boundary it is
+        // `DEADLINE_EXIT`; with the check moved to `loop_advance`,
+        // `Flow::Signal` and the reply drain the recursion runs on until the
+        // stack check raises 11.1, and the row fails on its exit code (245,
+        // not `DEADLINE_EXIT`). It runs under `RECURSION_DEADLINE` rather
+        // than `SHORT`, which a fast machine can recurse past.
+        (RECURSION_ROW, b"zs = 'interpret zs'\ninterpret zs\n"),
     ];
+    assert!(shapes.iter().any(|(name, _)| *name == RECURSION_ROW));
     for (name, text) in shapes {
+        let deadline = if *name == RECURSION_ROW {
+            RECURSION_DEADLINE
+        } else {
+            SHORT
+        };
         let started = Instant::now();
         let outcome = watchdog::run_bounded_with(
             PATH,
             text.to_vec(),
-            Invocation::none().with_deadline(SHORT),
+            Invocation::none().with_deadline(deadline),
             Duration::from_secs(30),
         );
         let elapsed = started.elapsed();
