@@ -646,6 +646,12 @@ fn pass_of(
                     target,
                     keep_open: at + 1 < end,
                 },
+                Op::JumpUnless { reg, target } if at + 1 == end && inside(target) => Step::Branch {
+                    pc: at,
+                    reg,
+                    target,
+                    keep_open: false,
+                },
                 Op::Load {
                     read: SymbolRead::Simple,
                     at: slot,
@@ -695,6 +701,7 @@ fn pass_of(
                 | Op::Reference { .. }
                 | Op::ClassAt { .. }
                 | Op::SelectCase { .. }
+                | Op::WhenTest { .. }
                 | Op::ExecValue { .. }
                 | Op::ExecWith { .. }
                 | Op::ReplyCheck { .. }
@@ -1897,7 +1904,8 @@ impl Driven<'_, '_> {
         // target, which the driver's hot exit closes plainly when nothing is
         // queued at the boundary.
         if let Ok(RegionEnd::At(next)) = ran
-            && let Some(&Op::ConditionJump { target, .. }) = ops.first()
+            && let Some(&(Op::ConditionJump { target, .. } | Op::JumpUnless { target, .. })) =
+                ops.first()
             && next == target
             && self.interp.activity.pending_traps.is_empty()
             && !self.interp.clause_exits

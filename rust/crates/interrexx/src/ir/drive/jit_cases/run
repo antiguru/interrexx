@@ -78,6 +78,45 @@ syntax: say rc sigl i t
 34 6 9500 9499
 compiled: line 3
 
+# SELECT CASE keeps strict equality, list order and the default branch
+run
+a = 0; b = 0; c = 0; wrong = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  q = x + y; r = q - z; s = r + w; t = s - x
+  q = q + 1; r = r + 2; s = s + 3; t = t + 4
+  select case i // 4
+    when '00' then wrong = wrong + 1
+    when 0, 1 then a = a + 1
+    when 2 then b = b + 1
+    otherwise c = c + 1
+  end
+end
+say a b c wrong
+----
+5000 2500 2500 0
+compiled: line 2
+
+# SELECT CASE does not evaluate later values after a match
+run
+a = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  select case i
+    when i, mustNotRun() then a = a + 1
+  end
+end
+say a
+exit
+mustNotRun: say 'unexpected case operand'; exit 1
+----
+10000
+compiled: line 2
+
 # DO n, and DO FOREVER left by LEAVE
 run
 k = 0
