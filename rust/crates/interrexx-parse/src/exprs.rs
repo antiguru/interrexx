@@ -546,5 +546,8 @@ impl Exprs {
 }
 
 mod shape;
+mod view;
+
+pub use view::{Args, ExprRef, ExprView, Target};
 #[cfg(test)]
 mod tests;

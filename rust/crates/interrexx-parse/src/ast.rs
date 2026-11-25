@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
+use crate::exprs::{Args, ExprRef};
 use crate::selector::Selector;
 use crate::token::{Operator, SymbolId};
 // Only `shape` needs the table, to turn a `SymbolId` back into a spelling, and
@@ -435,6 +436,26 @@ pub struct CodeBody {
     pub labels: BTreeMap<Box<[u8]>, usize>,
 }
 
+impl CodeBody {
+    /// The view of `expr`, an expression slot of one of this body's
+    /// instructions.
+    pub fn expr<'a>(&'a self, expr: &'a Expr) -> ExprRef<'a> {
+        ExprRef::tree(expr)
+    }
+
+    /// The view of `list`, an argument or item list of one of this body's
+    /// instructions, where `None` is omitted.
+    pub fn args<'a>(&'a self, list: &'a [Option<Expr>]) -> Args<'a> {
+        Args::tree(list)
+    }
+
+    /// The view of `list`, a list of one of this body's instructions whose
+    /// items are all present.
+    pub fn items<'a>(&'a self, list: &'a [Expr]) -> Args<'a> {
+        Args::tree_required(list)
+    }
+}
+
 /// A directive's code body. A program read from an image (see
 /// [`crate::program_from_static_image`]) holds each one still encoded until
 /// it is first read; reading it then decodes it, once. Every other body is
@@ -752,6 +773,133 @@ impl InstructionKind {
     }
 }
 
+impl InstructionKind {
+    /// Calls `f` on the root of each expression slot the instruction holds,
+    /// skipping the slots left empty and the omitted positions of a list.
+    /// The slots come in the order the fields are declared, which is source
+    /// order except for a controlled loop's `TO`, `BY` and `FOR`, which come
+    /// in that order whatever order they were written in.
+    pub fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
+        let opt = |slot: &'a Option<Expr>, f: &mut dyn FnMut(&'a Expr)| {
+            if let Some(expr) = slot {
+                f(expr);
+            }
+        };
+        match self {
+            InstructionKind::Assignment { target, value } => {
+                f(target);
+                f(value);
+            }
+            InstructionKind::Message { term, value } => {
+                f(term);
+                opt(value, f);
+            }
+            InstructionKind::Command { expression }
+            | InstructionKind::Push { expression }
+            | InstructionKind::Queue { expression }
+            | InstructionKind::Say { expression }
+            | InstructionKind::Return { expression }
+            | InstructionKind::Exit { expression }
+            | InstructionKind::Reply { expression }
+            | InstructionKind::Numeric { expression, .. } => opt(expression, f),
+            InstructionKind::Do(header) | InstructionKind::Loop(header) => header.for_each_root(f),
+            InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. } => {
+                f(condition)
+            }
+            InstructionKind::WhenCase { values, .. } => values.iter().for_each(&mut *f),
+            InstructionKind::Select { case, .. } => opt(case, f),
+            InstructionKind::Label { .. }
+            | InstructionKind::Then
+            | InstructionKind::Else { .. }
+            | InstructionKind::Otherwise
+            | InstructionKind::Catch(_)
+            | InstructionKind::Leave { .. }
+            | InstructionKind::Iterate { .. }
+            | InstructionKind::End { .. }
+            | InstructionKind::Drop { .. }
+            | InstructionKind::Expose { .. }
+            | InstructionKind::Procedure { .. }
+            | InstructionKind::Nop => {}
+            InstructionKind::Parse(parse)
+            | InstructionKind::Arg(parse)
+            | InstructionKind::Pull(parse) => parse.for_each_root(f),
+            InstructionKind::Call(call) => match &**call {
+                Call::Named { args, .. } | Call::Qualified { args, .. } => {
+                    args.iter().flatten().for_each(&mut *f)
+                }
+                Call::Dynamic { target, args } => {
+                    f(target);
+                    args.iter().flatten().for_each(&mut *f);
+                }
+                Call::Trap(_) => {}
+            },
+            InstructionKind::Signal(signal) => match &**signal {
+                Signal::Value(expr) => f(expr),
+                Signal::Label(_) | Signal::Trap(_) => {}
+            },
+            InstructionKind::Interpret { expression } | InstructionKind::Options { expression } => {
+                f(expression)
+            }
+            InstructionKind::Guard(guard) => opt(&guard.condition, f),
+            InstructionKind::Forward(forward) => {
+                let Forward {
+                    to,
+                    message,
+                    class,
+                    arguments,
+                    array,
+                    continue_: _,
+                } = &**forward;
+                for slot in [to, message, class, arguments] {
+                    opt(slot, f);
+                }
+                array.iter().flatten().flatten().for_each(&mut *f);
+            }
+            InstructionKind::Raise(raise) => {
+                let Raise {
+                    condition: _,
+                    propagate: _,
+                    rc,
+                    description,
+                    additional,
+                    array,
+                    result,
+                } = &**raise;
+                for slot in [rc, description, additional] {
+                    opt(slot, f);
+                }
+                array.iter().flatten().flatten().for_each(&mut *f);
+                if let Some(result) = result {
+                    opt(&result.value, f);
+                }
+            }
+            InstructionKind::Use(using) => match &**using {
+                Use::Arg { targets, .. } => {
+                    for target in targets.iter().flatten() {
+                        f(&target.target);
+                        opt(&target.default, f);
+                    }
+                }
+                Use::Local { .. } => {}
+            },
+            InstructionKind::Address(address) => {
+                opt(&address.dynamic, f);
+                opt(&address.command, f);
+                if let Some(io) = &address.io {
+                    for redirection in [&io.input, &io.output, &io.error] {
+                        match redirection {
+                            Redirection::Stream(expr) | Redirection::Using(expr) => f(expr),
+                            Redirection::Default | Redirection::Normal | Redirection::Stem(_) => {}
+                        }
+                    }
+                }
+            }
+            InstructionKind::Trace(Trace::Value(expr)) => f(expr),
+            InstructionKind::Trace(Trace::Default | Trace::Setting(_) | Trace::Skip(_)) => {}
+        }
+    }
+}
+
 /// A condition handler at the end of a DO, LOOP or SELECT block.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Catch {
@@ -802,6 +950,35 @@ pub struct Loop {
     pub conditional: Option<LoopConditional>,
     /// The `END` that closes this block.
     pub end: Option<usize>,
+}
+
+impl Loop {
+    /// [`InstructionKind::for_each_root`] for a `DO` or `LOOP` header.
+    fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
+        match &self.kind {
+            LoopKind::Simple | LoopKind::Forever => {}
+            LoopKind::Count(count) => count.iter().for_each(&mut *f),
+            LoopKind::Controlled(controlled) => {
+                f(&controlled.initial);
+                [&controlled.to, &controlled.by, &controlled.for_count]
+                    .into_iter()
+                    .flatten()
+                    .for_each(&mut *f);
+            }
+            LoopKind::Over {
+                target, for_count, ..
+            }
+            | LoopKind::With {
+                target, for_count, ..
+            } => {
+                f(target);
+                for_count.iter().for_each(&mut *f);
+            }
+        }
+        if let Some(conditional) = &self.conditional {
+            f(&conditional.condition);
+        }
+    }
 }
 
 /// Which loop a `DO` or `LOOP` header is.
@@ -873,6 +1050,19 @@ pub struct Parse {
     /// The templates. `None` is the comma fence between one template and the
     /// next, which is pushed as a null entry.
     pub template: Vec<Option<ParseTrigger>>,
+}
+
+impl Parse {
+    /// [`InstructionKind::for_each_root`] for a `PARSE`, `ARG` or `PULL`.
+    fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
+        if let ParseSource::Value(Some(value)) = &self.source {
+            f(value);
+        }
+        for trigger in self.template.iter().flatten() {
+            trigger.value.iter().for_each(&mut *f);
+            trigger.targets.iter().flatten().for_each(&mut *f);
+        }
+    }
 }
 
 /// Where a `PARSE` gets its string.
@@ -1321,6 +1511,16 @@ pub enum ConstantValue {
     /// `(expr)`, which is evaluated when the package is installed rather than
     /// now.
     Expression(Expr),
+}
+
+impl ConstantValue {
+    /// The view of the `(expr)` value, if the value is one.
+    pub fn expression(&self) -> Option<ExprRef<'_>> {
+        match self {
+            ConstantValue::Expression(expr) => Some(ExprRef::tree(expr)),
+            ConstantValue::Name | ConstantValue::Text(_) => None,
+        }
+    }
 }
 
 /// A `::ANNOTATE` directive.

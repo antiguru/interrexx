@@ -48,7 +48,10 @@ pub use convert::syntax_code;
 /// as an AST, and it is the number a test or an embedder checks its own depths
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
-pub use exprs::{BytesRange, EdgeRange, ExprId, Exprs, Inconsistent, Node, NodeKind};
+pub use exprs::{
+    Args, BytesRange, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node, NodeKind,
+    Target,
+};
 pub use image::{program_from_image, program_from_static_image, program_image};
 pub use scanner::{ResourceBody, Scanned, scan};
 pub use selector::Selector;
