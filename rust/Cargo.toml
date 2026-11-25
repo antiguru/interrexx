@@ -55,21 +55,10 @@ wrong_self_convention = "allow"
 should_implement_trait = "allow"
 module_inception = "allow"
 
-# Upstream carries this line commented out. Set explicitly here so the decision
-# is recorded rather than inherited by omission.
-#
-# Measured with this line set to `warn`, by `cargo clippy --workspace
-# --all-targets --message-format=json`, counted by `message.code.code`: 574
-# warnings over 299 distinct source spans. Set the line back to `warn` before
-# reproducing it; run against the tree as it stands, that command answers zero,
-# which is the `allow` working and not the number having rotted.
-#
-# Each span is a truncation-and-sign judgement inside a numeric interpreter
-# whose bar is byte-for-byte agreement with the C++ oracle, so a wrong rewrite
-# is a silent behavioural change and not a build failure.
-# What would close this: a checked cast helper in the shape of Materialize's
-# `CastFrom`/`CastLossy`, which this tree does not have.
-as_conversions = "allow"
+# An `as` reads alike whether it is exact, rounds or drops bits, and which it
+# is can change with the target's pointer width. Conversions are written by
+# name through `interrexx-cast`, the one crate that allows `as`.
+as_conversions = "deny"
 bool_comparison = "warn"
 borrow_interior_mutable_const = "warn"
 borrowed_box = "warn"

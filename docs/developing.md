@@ -216,6 +216,12 @@ module comment of `rust/crates/interrexx-parse/tests/sourceline_oracle.rs` has t
   clear the bar: the unsafety sits in one module behind a safe interface, its invariant is stated
   there and checkable from that module alone, a safe alternative was measured, and a test fails if
   the invariant breaks.
+* `as_conversions = "deny"`. A numeric conversion is written by what it keeps: `From`/`TryFrom`
+  where `std` has them, and otherwise `interrexx-cast`'s `CastFrom` (exact), `CastLossy` (to a
+  float), `CastTruncate` (the low bits) or `TryCastFrom` (a float toward zero, `None` out of
+  range). That crate is the only one that writes `as`. A `CastFrom` pair involving `usize` or
+  `isize` exists only on the pointer widths where it is exact, so code that needs `u64` to `usize`
+  does not build for a 32-bit target until it says what a value that does not fit does.
 * Macros only for small mechanical code; prefer an `#[inline(always)]` function.
 * Tests that are a table of inputs and expected outputs are datadriven files, not cases written
   out in Rust: a new case is a few lines of data, and a rewrite switch re-records the expectations.
