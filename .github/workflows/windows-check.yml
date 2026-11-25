@@ -192,11 +192,6 @@ jobs:
             Remove-Item -LiteralPath $caseRoot -Recurse
           }
 
-      - name: Measure Windows RexxUtil behavior with ooRexx 5.2.0
-        if: ${{ !cancelled() && github.head_ref == 'windows-rexxutil-filetree' }}
-        shell: pwsh
-        run: ../ci/windows-rexxutil-oracle.ps1
-
       - name: Verify Windows file timestamps across daylight saving time
         shell: pwsh
         run: |
