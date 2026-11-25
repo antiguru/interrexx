@@ -32615,7 +32615,9 @@ A
 case that the <code>::CLASS</code> directive wrote it, which is upper case for a name
 written as a symbol, or the string that <code>subclass</code>, <code>mixinClass</code> or <code>new</code> got.
 It takes no argument, and raises <code>SYNTAX 93.902</code> with one. The id is not
-changed by <code>objectName=</code>, and two classes may have one id.</p>
+changed by <code>objectName=</code>, and two classes may have one id.
+The class library keeps the mixed-case ids of its internal mixins. Its
+package class table keys use upper case (<a href="classes/package.html#r-class.package.classes">the package rule</a>).</p>
 <pre><code class="language-rexx">say .plain~id .mixed~id .quoted~id .class~id .object~id
 x = .plain~subclass('Dyn One')
 y = .plain~subclass('Dyn One')
@@ -32639,6 +32641,15 @@ bad: say arg(1) '=&gt;' condition('o')~code
 Dyn One Dyn One 0
 Dyn One renamed renamed
 .plain~id(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">classes = .object~package~classes
+do name over .array~of('BAGMIXIN', 'SETMIXIN', 'SUPPLIERMIXIN')
+  say name classes[name]~id
+end
+</code></pre>
+<pre><code class="language-output">BAGMIXIN BagMixin
+SETMIXIN SetMixin
+SUPPLIERMIXIN SupplierMixin
 </code></pre>
 <div class="rule" id="r-class.class.defaultname"><a href="classes/class.html#r-class.class.defaultname">[class.class.defaultname]</a></div>
 <p><code>defaultName</code> answers <code>The</code>, a blank, the id of the class and <code>class</code>, and
