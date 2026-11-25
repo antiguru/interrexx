@@ -9,7 +9,7 @@ use interrexx_core::{
     BehaviourHandle, BehaviourId, Body, BufferState, Decoded, NativeState, ObjRef, Object,
     ObjectMethod, ObjectMethods,
 };
-use interrexx_parse::{Access, Expr, Operator};
+use interrexx_parse::{Access, Args, ExprRef, Operator};
 
 use crate::activation::{Activation, MethodIdentity, Replied, ReplyState, TraceEntry, body_of};
 use crate::error::{FailureSite, Raised};
@@ -1910,18 +1910,18 @@ enum Behaviour {
 /// One message term's own parts, as the two call sites already hold them.
 #[derive(Copy, Clone)]
 pub(crate) struct MessageTerm<'a> {
-    pub(crate) target: &'a Expr,
+    pub(crate) target: ExprRef<'a>,
     /// Already upcased by the parser, and already carrying the trailing `=`
     /// for the message-assignment form.
     pub(crate) name: &'a [u8],
     /// The `:scope` override's own expression.
-    pub(crate) super_class: Option<&'a Expr>,
-    pub(crate) args: &'a [Option<Expr>],
+    pub(crate) super_class: Option<ExprRef<'a>>,
+    pub(crate) args: Args<'a>,
     /// `~~`, which yields the target rather than the method's result.
     pub(crate) cascade: bool,
     /// The message-assignment form's value expression, which is inserted as the
     /// **first** argument ahead of the term's own.
-    pub(crate) assigned: Option<&'a Expr>,
+    pub(crate) assigned: Option<ExprRef<'a>>,
 }
 
 /// The sending side of a send, which the receiver does not carry.
@@ -4827,14 +4827,14 @@ impl Interp {
     fn evaluate_message_arguments(
         &mut self,
         code: &crate::Code<'_>,
-        args: &[Option<Expr>],
-        assigned: Option<&Expr>,
+        args: Args<'_>,
+        assigned: Option<ExprRef<'_>>,
         values: &mut Vec<Option<ObjRef>>,
     ) -> Result<(), Failure> {
         if let Some(expr) = assigned {
             values.push(Some(self.eval_traced_argument(code, expr)?));
         }
-        for arg in args {
+        for arg in args.iter() {
             match arg {
                 // An omitted position traces an empty value line, not no
                 // line -- the same rule a call's own argument list follows.

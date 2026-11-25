@@ -1,5 +1,5 @@
 use super::*;
-use interrexx_parse::Expr;
+use interrexx_parse::{ExprRef, ExprView};
 
 impl Interp {
     /// Evaluates one trigger's operand, if it has one, and moves the cursor.
@@ -25,7 +25,7 @@ impl Interp {
                 return Ok(());
             }
             _ => match &trigger.value {
-                Some(operand) => operand,
+                Some(operand) => code.body.expr(operand),
                 None => return Err(Loud::parse_trigger_operand().into()),
             },
         };
@@ -37,8 +37,8 @@ impl Interp {
         // no line will show it: its value would be a string holding exactly
         // those bytes, which is its own string value, so building it changes
         // nothing a search can see.
-        if let (TriggerKind::String | TriggerKind::Mixed, ExprKind::Literal(needle)) =
-            (trigger.kind, &operand.kind)
+        if let (TriggerKind::String | TriggerKind::Mixed, ExprView::Literal(needle)) =
+            (trigger.kind, operand.kind())
             && !results
             && !self.tracing_intermediates()
         {
@@ -152,21 +152,19 @@ impl Interp {
     /// sub-expression, so the evaluation-depth bookkeeping `eval_in_parse`
     /// wraps around it has nothing to guard.
     #[inline(always)]
-    fn trigger_operand(&mut self, code: &Code<'_>, operand: &Expr) -> Result<ObjRef, Failure> {
+    fn trigger_operand(
+        &mut self,
+        code: &Code<'_>,
+        operand: ExprRef<'_>,
+    ) -> Result<ObjRef, Failure> {
         if !self.tracing_intermediates() {
-            match &operand.kind {
-                ExprKind::Literal(bytes) => return Ok(self.literal(bytes)),
-                ExprKind::Constant(id) => {
-                    return Ok(self.literal(code.symbols.name(*id).as_bytes()));
+            match operand.kind() {
+                ExprView::Literal(bytes) => return Ok(self.literal(bytes)),
+                ExprView::Constant(id) => {
+                    return Ok(self.literal(code.symbols.name(id).as_bytes()));
                 }
-                ExprKind::Variable(id) => {
-                    return self.read_symbol(
-                        code,
-                        None,
-                        crate::eval::SymbolRead::Simple,
-                        *id,
-                        None,
-                    );
+                ExprView::Variable(id) => {
+                    return self.read_symbol(code, None, crate::eval::SymbolRead::Simple, id, None);
                 }
                 _ => {}
             }

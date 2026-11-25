@@ -7,7 +7,7 @@ impl Interp {
     pub(crate) fn assign_evaluated(
         &mut self,
         code: &Code<'_>,
-        target: &Expr,
+        target: ExprRef<'_>,
         value: ObjRef,
         at: Option<usize>,
         shared_key: bool,
@@ -30,8 +30,8 @@ impl Interp {
         {
             self.trace_result_before_effect(indent, &rendered)?;
         }
-        if shared_key && let ExprKind::Compound(id) = &target.kind {
-            return self.assign_compound(code, *id, value, indent, true);
+        if shared_key && let ExprView::Compound(id) = target.kind() {
+            return self.assign_compound(code, id, value, indent, true);
         }
         self.assign_expr_target(code, target, value, indent, at)
     }
@@ -132,65 +132,24 @@ impl Interp {
     pub(crate) fn assign_expr_target(
         &mut self,
         code: &Code<'_>,
-        target: &Expr,
+        target: ExprRef<'_>,
         value: ObjRef,
         indent: usize,
         at: Option<usize>,
     ) -> Result<(), Failure> {
-        match &target.kind {
-            ExprKind::Variable(id) => {
-                let name = code.symbols.name(*id).as_bytes();
-                let slot = match at {
-                    Some(slot) => slot,
-                    None => self.slot_of(name),
-                };
-                let frame = self.activation().frame;
-                self.set_variable(frame, slot, value);
-                if let Some(rendered) = self.intermediate_text(value)? {
-                    self.trace_assignment(indent, name, &rendered, value);
-                }
+        match target.kind() {
+            ExprView::Variable(id) => {
+                self.assign_name_target(code, NameShape::Simple, id, value, indent, at)
             }
-            // `stem. = expr`: replace-and-rebind, through the
-            // library `stem_assign` already builds -- this arm is the
-            // dispatch, not new stem logic.
-            ExprKind::Stem(id) => {
-                // The tripwire `crate::ir::drive`'s `Op::Store` arm carries
-                // for the compiled side, here where **both** engines pass:
-                // a slot handed to this arm was resolved against the symbol's
-                // own id and is silently shadowed below, so a caller that
-                // started supplying one would write through the entry's slot
-                // and never learn that its own was ignored.
-                debug_assert!(
-                    at.is_none(),
-                    "a stem write was handed a slot, and the slot it writes comes from the entry"
-                );
-                let name = code.symbols.name(*id).as_bytes();
-                let at = code.compound(*id).and_then(|entry| entry.stem_at);
-                self.stem_assign_at(name, at, value);
-                if let Some(rendered) = self.intermediate_text(value)? {
-                    self.trace_assignment(indent, name, &rendered, value);
-                }
+            ExprView::Stem(id) => {
+                self.assign_name_target(code, NameShape::Stem, id, value, indent, at)
             }
-            // `a.b = expr`: resolve the tail key the same way reading
-            // `a.b` would (`eval_node`'s own `Compound` arm), then
-            // mutate that one tail in place through `stem_set`.
-            ExprKind::Compound(id) => {
-                // `read_symbol`'s own compound tripwire, on the writing
-                // side. A compound-shaped name **can** reach
-                // `Plan::by_symbol`: `Plan::bind` puts every name it binds
-                // whole there, and `note_loop` and `note_parse` both call it
-                // with spellings that may be compound-shaped. So a caller
-                // reaching for a slot by this symbol's id can find one, and it
-                // is not the slot this arm writes.
-                debug_assert!(
-                    at.is_none(),
-                    "a compound write was handed a slot, and the slot it writes is the stem's"
-                );
-                self.assign_compound(code, *id, value, indent, false)?;
+            ExprView::Compound(id) => {
+                self.assign_name_target(code, NameShape::Compound, id, value, indent, at)
             }
             // the term's `NAME=` sent with the value ahead of its own
             // arguments, each argument traced as a result.
-            ExprKind::Message {
+            ExprView::Message {
                 target: receiver,
                 name,
                 super_class,
@@ -208,7 +167,7 @@ impl Interp {
                     None => None,
                 };
                 let mut values = vec![Some(value)];
-                for arg in args {
+                for arg in args.iter() {
                     let evaluated = match arg {
                         Some(expr) => {
                             let evaluated = self.eval(code, expr)?;
@@ -242,8 +201,74 @@ impl Interp {
                 {
                     self.trace_assignment(indent, &setter, &shown, answer);
                 }
+                Ok(())
             }
-            other => return Err(Loud::expression(other).into()),
+            other => Err(Loud::expression(other).into()),
+        }
+    }
+
+    /// Writes `value` through the variable `id` names, of the given shape,
+    /// and traces the write.
+    pub(crate) fn assign_name_target(
+        &mut self,
+        code: &Code<'_>,
+        shape: NameShape,
+        id: SymbolId,
+        value: ObjRef,
+        indent: usize,
+        at: Option<usize>,
+    ) -> Result<(), Failure> {
+        match shape {
+            NameShape::Simple => {
+                let name = code.symbols.name(id).as_bytes();
+                let slot = match at {
+                    Some(slot) => slot,
+                    None => self.slot_of(name),
+                };
+                let frame = self.activation().frame;
+                self.set_variable(frame, slot, value);
+                if let Some(rendered) = self.intermediate_text(value)? {
+                    self.trace_assignment(indent, name, &rendered, value);
+                }
+            }
+            // `stem. = expr`: replace-and-rebind, through the
+            // library `stem_assign` already builds -- this arm is the
+            // dispatch, not new stem logic.
+            NameShape::Stem => {
+                // The tripwire `crate::ir::drive`'s `Op::Store` arm carries
+                // for the compiled side, here where **both** engines pass:
+                // a slot handed to this arm was resolved against the symbol's
+                // own id and is silently shadowed below, so a caller that
+                // started supplying one would write through the entry's slot
+                // and never learn that its own was ignored.
+                debug_assert!(
+                    at.is_none(),
+                    "a stem write was handed a slot, and the slot it writes comes from the entry"
+                );
+                let name = code.symbols.name(id).as_bytes();
+                let at = code.compound(id).and_then(|entry| entry.stem_at);
+                self.stem_assign_at(name, at, value);
+                if let Some(rendered) = self.intermediate_text(value)? {
+                    self.trace_assignment(indent, name, &rendered, value);
+                }
+            }
+            // `a.b = expr`: resolve the tail key the same way reading
+            // `a.b` would (`eval_node`'s own `Compound` arm), then
+            // mutate that one tail in place through `stem_set`.
+            NameShape::Compound => {
+                // `read_symbol`'s own compound tripwire, on the writing
+                // side. A compound-shaped name **can** reach
+                // `Plan::by_symbol`: `Plan::bind` puts every name it binds
+                // whole there, and `note_loop` and `note_parse` both call it
+                // with spellings that may be compound-shaped. So a caller
+                // reaching for a slot by this symbol's id can find one, and it
+                // is not the slot this arm writes.
+                debug_assert!(
+                    at.is_none(),
+                    "a compound write was handed a slot, and the slot it writes is the stem's"
+                );
+                self.assign_compound(code, id, value, indent, false)?;
+            }
         }
         Ok(())
     }

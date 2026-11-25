@@ -16,7 +16,7 @@ use crate::error::{Failure, Raised};
 use crate::version::{PLATFORM, VERSION};
 use crate::{Code, Interp, Loud};
 use interrexx_core::{Bytes, Decoded, InlineText, ObjRef};
-use interrexx_parse::{ExprKind, Parse, ParseSource, ParseTrigger, TriggerKind};
+use interrexx_parse::{ExprView, Parse, ParseSource, ParseTrigger, TriggerKind};
 
 /// The two bytes `PARSE` treats as whitespace when carving a section into
 /// words: blank and tab, and nothing else.
@@ -686,13 +686,15 @@ impl Interp {
                 self.piece_value(&source, piece)
             };
             self.roots.activity_mut().push_temp(value);
-            let bound = match &target.kind {
-                ExprKind::Variable(id) => code.slot_for(*id).map(|slot| (*id, slot)),
+            let bound = match code.body.expr(target).kind() {
+                ExprView::Variable(id) => code.slot_for(id).map(|slot| (id, slot)),
                 _ => None,
             };
             match bound {
                 Some((id, slot)) => self.assign_bound_variable(code, id, slot, value, None, indent),
-                None => self.assign_expr_target(code, target, value, indent, None)?,
+                None => {
+                    self.assign_expr_target(code, code.body.expr(target), value, indent, None)?
+                }
             }
         }
         self.give_source(source);
@@ -786,7 +788,7 @@ impl Interp {
                 let value = match evaluated {
                     Some(value) => value,
                     None => {
-                        let value = self.eval_in_parse(code, expression)?;
+                        let value = self.eval_in_parse(code, code.body.expr(expression))?;
                         self.roots.activity_mut().push_temp(value);
                         value
                     }
@@ -989,8 +991,8 @@ impl Interp {
                     // changed: of the `slot_of` calls that program makes,
                     // 2,800,003 were `PARSE` targets and every one of them
                     // resolved to the slot `by_symbol` already held.
-                    let bound = match &target.kind {
-                        ExprKind::Variable(id) => code.slot_for(*id).map(|slot| (*id, slot)),
+                    let bound = match code.body.expr(target).kind() {
+                        ExprView::Variable(id) => code.slot_for(id).map(|slot| (id, slot)),
                         _ => None,
                     };
                     // One copy of the piece for whichever of the two lines
@@ -1007,7 +1009,7 @@ impl Interp {
                     if let Some((id, slot)) = bound {
                         self.assign_bound_variable(code, id, slot, value, rendered, indent);
                     } else {
-                        self.assign_expr_target(code, target, value, indent, None)?;
+                        self.assign_expr_target(code, code.body.expr(target), value, indent, None)?;
                     }
                     // The `TRACE R` half of the pair -- see this module's own
                     // `exec_parse` doc for why it is a choice of prefix and

@@ -721,7 +721,7 @@ impl Interp {
                 (Pending::Stem(object), Origin::Stem(object))
             }
             Redirection::Using(expression) => {
-                let object = self.eval(code, expression)?;
+                let object = self.eval(code, code.body.expr(expression))?;
                 self.roots.activity_mut().push_temp(object);
                 self.trace_redirect_target(Stream::Input, object)?;
                 let origin = if self.is_stem_object(object) {
@@ -831,7 +831,7 @@ impl Interp {
                 Ok(Target::Stem { object, append })
             }
             Redirection::Using(expression) => {
-                let object = self.eval(code, expression)?;
+                let object = self.eval(code, code.body.expr(expression))?;
                 self.roots.activity_mut().push_temp(object);
                 self.trace_redirect_target(stream, object)?;
                 self.using_output_target(object, option, input_name)
@@ -1034,7 +1034,7 @@ impl Interp {
         expression: &Expr,
         stream: Stream,
     ) -> Result<Vec<u8>, Failure> {
-        let value = self.eval(code, expression)?;
+        let value = self.eval(code, code.body.expr(expression))?;
         self.roots.activity_mut().push_temp(value);
         self.trace_redirect_target(stream, value)?;
         let value = self.required_string_value(value)?;

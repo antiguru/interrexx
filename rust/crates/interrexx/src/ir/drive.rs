@@ -6,13 +6,13 @@ use std::rc::Rc;
 
 use interrexx_core::{FrameId, ObjRef, ParkedFrame, RegFrame};
 use interrexx_parse::{
-    Call, ExprKind, Instruction, InstructionKind, Program, ProgramSource, SymbolId,
+    Call, ExprView, Instruction, InstructionKind, Program, ProgramSource, SymbolId,
 };
 
 use super::{Chunk, ConditionKeyword, ConditionOps, Op, SendForm};
 use crate::activation::{CallType, body_of};
 use crate::clause::{ClauseOutcome, ClauseValue};
-use crate::eval::{SymbolRead, call_target_name};
+use crate::eval::{SymbolRead, view_target_name};
 use crate::plan::Plan;
 use crate::run::interpret::Pause;
 use crate::run::{
@@ -622,7 +622,7 @@ macro_rules! region_ops {
                         continue 'region_loop;
                     }
                     let Some(expr) =
-                        Interp::chunk_node_at($clause, *slot, *path)
+                        Interp::chunk_node_at($code.body, $clause, *slot, *path)
                     else {
                         break $cold Err(Loud::call_op_off_its_node().into());
                     };
@@ -661,12 +661,13 @@ macro_rules! region_ops {
                         $chunk.holds_register(*dst),
                         "op writes register {dst} outside the region the chunk reserved"
                     );
-                    let Some(ExprKind::VariableReference(inner)) =
-                        Interp::chunk_node_at($clause, *slot, *path).map(|node| &node.kind)
+                    let Some(ExprView::VariableReference { symbol, stem }) =
+                        Interp::chunk_node_at($code.body, $clause, *slot, *path)
+                            .map(|node| node.kind())
                     else {
                         break $cold Err(Loud::call_op_off_its_node().into());
                     };
-                    match $self.variable_reference($code, inner) {
+                    match $self.variable_reference($code, symbol, stem) {
                         Ok(value) => $registers.set(*dst, value),
                         Err(failure) => break $cold Err(failure),
                     }
@@ -676,12 +677,13 @@ macro_rules! region_ops {
                         $chunk.holds_register(*dst),
                         "op writes register {dst} outside the region the chunk reserved"
                     );
-                    let Some(ExprKind::ClassResolver { namespace, name }) =
-                        Interp::chunk_node_at($clause, *slot, *path).map(|node| &node.kind)
+                    let Some(ExprView::ClassResolver { namespace, name }) =
+                        Interp::chunk_node_at($code.body, $clause, *slot, *path)
+                            .map(|node| node.kind())
                     else {
                         break $cold Err(Loud::call_op_off_its_node().into());
                     };
-                    match $self.resolve_class_at($code, *namespace, *name) {
+                    match $self.resolve_class_at($code, namespace, name) {
                         Ok(value) => $registers.set(*dst, value),
                         Err(failure) => break $cold Err(failure),
                     }
@@ -1180,8 +1182,8 @@ macro_rules! region_ops {
                                 &$clause.kind,
                                 InstructionKind::Assignment { target, .. }
                                     if matches!(
-                                        &target.kind,
-                                        ExprKind::Variable(id) if $code.slot_for(*id) == at
+                                        $code.body.expr(target).kind(),
+                                        ExprView::Variable(id) if $code.slot_for(id) == at
                                     )
                             ),
                             "a compiled write names a slot this body's plan does not give \
@@ -1198,7 +1200,13 @@ macro_rules! region_ops {
                             );
                         };
                         if let Err(failure) =
-                            $self.assign_evaluated($code, target, value, at, *shared)
+                            $self.assign_evaluated(
+                                $code,
+                                $code.body.expr(target),
+                                value,
+                                at,
+                                *shared,
+                            )
                         {
                             break $cold Err(failure);
                         }
@@ -1493,7 +1501,11 @@ macro_rules! region_ops {
                     let flow = match pinned!(
                         $self,
                         crate::pinning::PinKind::TreeSend,
-                        $self.exec_message($code, term, value.as_ref())
+                        $self.exec_message(
+                            $code,
+                            $code.body.expr(term),
+                            value.as_ref().map(|value| $code.body.expr(value)),
+                        )
                     ) {
                         Ok(flow) => flow,
                         Err(failure) => break $cold Err(failure),
@@ -2242,7 +2254,7 @@ impl Interp {
     fn trace_intermediate_op(
         &mut self,
         code: &Code<'_>,
-        expr: &interrexx_parse::Expr,
+        expr: interrexx_parse::ExprRef<'_>,
         value: ObjRef,
     ) -> bool {
         let traced = self.trace_intermediate(code, expr, value);
@@ -2341,8 +2353,8 @@ impl Interp {
         // it dispatches through the row the site holds. Every other resolution
         // passes the name on, to a traceback line or the security manager.
         let target = || {
-            Interp::chunk_node_at(clause, slot, path)
-                .map(|node| &node.kind)
+            Interp::chunk_node_at(code.body, clause, slot, path)
+                .map(|node| node.kind())
                 .ok_or_else(|| Failure::from(Loud::call_op_off_its_node()))
         };
         let mut spelling: &[u8] = b"";
@@ -2351,16 +2363,16 @@ impl Interp {
                 #[cfg(test)]
                 count_call_site_hit();
                 if !matches!(resolved, Resolved::Builtin(_)) {
-                    let ExprKind::Call { target, .. } = target()? else {
+                    let ExprView::Call { target, .. } = target()? else {
                         return Err(Loud::call_op_off_its_node().into());
                     };
-                    spelling = call_target_name(code, target).0;
+                    spelling = view_target_name(code, target).0;
                 }
                 (resolved, None)
             }
             None => match target()? {
-                ExprKind::Call { target, .. } => {
-                    let (name, search_labels) = call_target_name(code, target);
+                ExprView::Call { target, .. } => {
+                    let (name, search_labels) = view_target_name(code, target);
                     spelling = name;
                     let resolved = self.resolve_call(name, search_labels)?;
                     let generation = self.routine_generation;
@@ -2369,11 +2381,11 @@ impl Interp {
                         self.missed_site(chunk, site, resolved, generation),
                     )
                 }
-                ExprKind::QualifiedCall {
+                ExprView::QualifiedCall {
                     namespace, name, ..
                 } => {
-                    let namespace = code.symbols.name(*namespace).as_bytes();
-                    spelling = code.symbols.name(*name).as_bytes();
+                    let namespace = code.symbols.name(namespace).as_bytes();
+                    spelling = code.symbols.name(name).as_bytes();
                     (self.resolve_qualified_call(namespace, spelling)?, None)
                 }
                 _ => return Err(Loud::call_op_off_its_node().into()),
@@ -2460,24 +2472,23 @@ impl Interp {
         path: super::NodePath,
         site: u16,
     ) -> Result<Started<ObjRef>, Failure> {
-        let Some(node) = Interp::chunk_node_at(clause, slot, path) else {
+        let Some(node) = Interp::chunk_node_at(code.body, clause, slot, path) else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let (name, args, resolution) = match &node.kind {
-            ExprKind::Call { target, args } => {
-                let (name, search_labels) = call_target_name(code, target);
+        let (name, args, resolution) = match node.kind() {
+            ExprView::Call { target, args } => {
+                let (name, search_labels) = view_target_name(code, target);
                 let resolution =
                     self.site_resolution_before_arguments(chunk, site, name, search_labels)?;
                 (name, args, resolution)
             }
-            ExprKind::QualifiedCall {
+            ExprView::QualifiedCall {
                 namespace,
                 name,
                 args,
-                ..
             } => {
-                let namespace = code.symbols.name(*namespace).as_bytes();
-                let name = code.symbols.name(*name).as_bytes();
+                let namespace = code.symbols.name(namespace).as_bytes();
+                let name = code.symbols.name(name).as_bytes();
                 (name, args, CallResolution::Qualified { namespace })
             }
             _ => return Err(Loud::call_op_off_its_node().into()),
@@ -2639,7 +2650,7 @@ impl Interp {
                 (
                     name.as_ref(),
                     args,
-                    self.resolved_after_arguments(code, resolution, args)?,
+                    self.resolved_after_arguments(code, resolution, code.body.args(args))?,
                 )
             }
             Call::Qualified {
@@ -2656,7 +2667,13 @@ impl Interp {
             _ => return Err(Loud::call_op_off_its_node().into()),
         };
         let base_indent = self.activity.clause_state.current_value_indent;
-        let begun = self.begin_invoke_call(code, resolution, name, args, CallType::Subroutine)?;
+        let begun = self.begin_invoke_call(
+            code,
+            resolution,
+            name,
+            code.body.args(args),
+            CallType::Subroutine,
+        )?;
         Ok((subroutine_started(begun), base_indent))
     }
 
@@ -4224,12 +4241,12 @@ impl Interp {
         else {
             return Loud::call_op_off_its_node().into();
         };
-        match Interp::chunk_node_at(clause, *slot, *path).map(|node| &node.kind) {
-            Some(ExprKind::Call { target, .. }) => {
-                Raised::no_data_returned(call_target_name(code, target).0).into()
+        match Interp::chunk_node_at(code.body, clause, *slot, *path).map(|node| node.kind()) {
+            Some(ExprView::Call { target, .. }) => {
+                Raised::no_data_returned(view_target_name(code, target).0).into()
             }
-            Some(ExprKind::QualifiedCall { name, .. }) => {
-                Raised::no_data_returned(code.symbols.name(*name).as_bytes()).into()
+            Some(ExprView::QualifiedCall { name, .. }) => {
+                Raised::no_data_returned(code.symbols.name(name).as_bytes()).into()
             }
             _ => Loud::call_op_off_its_node().into(),
         }

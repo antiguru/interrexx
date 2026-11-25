@@ -1231,7 +1231,7 @@ impl Interp {
         ) {
             self.echo_address_command(source, instruction, indent);
         }
-        let value = self.eval(code, expression)?;
+        let value = self.eval(code, code.body.expr(expression))?;
         self.exec_command_value(
             code,
             index,

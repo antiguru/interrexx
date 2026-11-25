@@ -1,7 +1,7 @@
 use super::*;
 use crate::Loud;
 use interrexx_core::RegFrame;
-use interrexx_parse::{Expr, Instruction, InstructionKind};
+use interrexx_parse::{CodeBody, Expr, ExprRef, Instruction, InstructionKind};
 
 /// One step of a compiled `RAISE` ([`crate::ir::Op::RaisePart`]): what the
 /// instruction does with one of its expressions once it is evaluated and
@@ -83,14 +83,19 @@ fn raise_result_expr(raise: &Raise) -> Option<&Expr> {
 /// so that the lookup of every other instruction's slots does not carry it.
 #[cold]
 #[inline(never)]
-pub(crate) fn raise_slot(raise: &Raise, slot: u16) -> Option<&Expr> {
-    match slot {
+pub(crate) fn raise_slot<'a>(
+    code: &'a CodeBody,
+    raise: &'a Raise,
+    slot: u16,
+) -> Option<ExprRef<'a>> {
+    let expr = match slot {
         0 => raise.rc.as_ref(),
         1 => raise.description.as_ref(),
         2 => raise.additional.as_ref(),
         3 => raise_result_expr(raise),
         item => raise.array.as_deref()?.get(usize::from(item - 4))?.as_ref(),
-    }
+    };
+    expr.map(|expr| code.expr(expr))
 }
 
 /// What a `RAISE` keeps of each expression once its part has run: the
@@ -128,15 +133,15 @@ impl Interp {
     ) -> Result<Flow, Failure> {
         let mut held = RaiseHeld::default();
         if let Some(expr) = &raise.rc {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(expr))?;
             held.code = Some(self.raise_code(raise, value)?);
         }
         if let Some(expr) = &raise.description {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(expr))?;
             held.description = Some(self.raise_description(raise, value)?);
         }
         if let Some(expr) = &raise.additional {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(expr))?;
             self.raise_additional_operand(raise, value)?;
             held.additional = Some(value);
         }
@@ -144,7 +149,7 @@ impl Interp {
             let mut values = Vec::with_capacity(items.len());
             for item in items {
                 let value = match item {
-                    Some(expr) => Some(self.eval(code, expr)?),
+                    Some(expr) => Some(self.eval(code, code.body.expr(expr))?),
                     None => None,
                 };
                 self.raise_item(value)?;
@@ -153,7 +158,7 @@ impl Interp {
             held.array = Some(self.raise_array(raise, &values));
         }
         if let Some(expr) = raise_result_expr(raise) {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(expr))?;
             self.raise_result(value)?;
             held.result = Some(value);
         }

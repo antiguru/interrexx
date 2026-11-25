@@ -110,7 +110,7 @@ impl Interp {
             // `whole_number` attempt precedes its `check_trace_setting`
             // fallback).
             Trace::Value(expression) => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(expression))?;
                 return self.exec_trace_value(code, value);
             }
         }
@@ -332,7 +332,7 @@ impl Interp {
                 self.store_io_config(code, environment, address);
             }
             (None, Some(expression)) => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(expression))?;
                 return self.exec_address_value(code, address, value);
             }
         }
@@ -380,7 +380,7 @@ impl Interp {
         expression: &Option<Expr>,
     ) -> Result<(), Failure> {
         let value = match expression {
-            Some(expression) => Some(self.eval(code, expression)?),
+            Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
             None => None,
         };
         self.exec_numeric_value(setting, value)

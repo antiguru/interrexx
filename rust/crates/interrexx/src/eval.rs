@@ -11,7 +11,7 @@ use crate::value::{
 use crate::{Code, Failure, Interp, Loud, StackSpan};
 use interrexx_core::{Body, Bytes, Decoded, INLINE_BYTES, INLINE_TEXT, NotNumeric, ObjRef};
 use interrexx_num::{ArithError, CompareOp, DivOp, Number, Scaled};
-use interrexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
+use interrexx_parse::{Args, ExprRef, ExprView, Operator, PrefixOp, SymbolId, Target};
 
 /// The evaluation-depth limit: `eval`'s own recursion, one level per
 /// left-deep term, refuses anything past this depth with 11.1 ("Insufficient
@@ -88,7 +88,7 @@ impl Interp {
         Ok(())
     }
 
-    pub(crate) fn eval(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+    pub(crate) fn eval(&mut self, code: &Code<'_>, expr: ExprRef<'_>) -> Result<ObjRef, Failure> {
         let probe = 0u8;
         self.enter_eval_node(&raw const probe)?;
         let value = self.eval_node(code, expr);
@@ -116,7 +116,7 @@ impl Interp {
     pub(crate) fn eval_in_parse(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
     ) -> Result<ObjRef, Failure> {
         let probe = 0u8;
         self.enter_eval_node(&raw const probe)?;
@@ -132,7 +132,7 @@ impl Interp {
     /// [`Interp::take_held_trace_failure`], answering whether it failed.
     #[cold]
     #[inline(never)]
-    fn trace_intermediate_held(&mut self, code: &Code<'_>, expr: &Expr, v: ObjRef) -> bool {
+    fn trace_intermediate_held(&mut self, code: &Code<'_>, expr: ExprRef<'_>, v: ObjRef) -> bool {
         let traced = self.trace_intermediate_event(code, expr, v);
         self.hold_trace_failure(traced)
     }
@@ -149,7 +149,7 @@ impl Interp {
     pub(crate) fn trace_intermediate(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
         value: ObjRef,
     ) -> Result<(), Failure> {
         if !self.tracing_intermediates() {
@@ -165,7 +165,7 @@ impl Interp {
     fn trace_intermediate_event(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
         value: ObjRef,
     ) -> Result<(), Failure> {
         let frame = self.roots.activity_mut().push_frame();
@@ -178,11 +178,11 @@ impl Interp {
     fn trace_intermediate_line(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
         value: ObjRef,
     ) -> Result<(), Failure> {
         let indent = self.activity.clause_state.current_value_indent;
-        match &expr.kind {
+        match expr.kind() {
             // `Constant`'s own shape is reasoned from `Literal`'s measured
             // one, not independently probed (this crate's own report says
             // so) -- both are `>L>` with no tag.
@@ -190,7 +190,7 @@ impl Interp {
             // `trace_literal`, because the compiled stream's own
             // `Op::TraceLiteral` emits the identical line from a register and
             // the two must not be able to disagree about it.
-            ExprKind::Literal(_) | ExprKind::Constant(_) => self.echo_literal(value),
+            ExprView::Literal(_) | ExprView::Constant(_) => self.echo_literal(value),
             // The three bare-symbol reads, all through the one function
             // `crate::ir::Op::TraceRead` enters from a register -- for the
             // reason `echo_literal` above is one function: a compiled read
@@ -198,13 +198,13 @@ impl Interp {
             // and the two emissions must not be able to disagree.
             // `echo_symbol_read`'s own doc comment has what a compound owes
             // that this does not emit.
-            ExprKind::Variable(id) | ExprKind::Stem(id) | ExprKind::Compound(id) => {
-                self.echo_symbol_read(code, *id, value)?;
+            ExprView::Variable(id) | ExprView::Stem(id) | ExprView::Compound(id) => {
+                self.echo_symbol_read(code, id, value)?;
             }
             // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`. The other `DotVariable` names all fail loudly
             // before reaching here (`eval_node`'s own arm), so this is
             // exhaustive over what can arrive.
-            ExprKind::DotVariable(id) => self.echo_environment_symbol(code, *id, value)?,
+            ExprView::DotVariable(id) => self.echo_environment_symbol(code, id, value)?,
             // `>P>`, not `>O>` -- a prefix operator's line is its own, which
             // is why this is not the arm below with a different operator type.
             // `echo_prefix_op` rather than an open-coded render plus
@@ -212,7 +212,7 @@ impl Interp {
             // `crate::ir::Op::TracePrefix` emits the identical line from a
             // register and the two must not be able to disagree -- the reason
             // `echo_literal` above is one function.
-            ExprKind::Prefix { op, .. } => self.echo_prefix_op(*op, value),
+            ExprView::Prefix { op, .. } => self.echo_prefix_op(op, value),
             // Every binary operator, arithmetic, comparison, logical and
             // concatenation alike, traces as `>O>` -- one `match` arm is shared
             // by every family. `echo_operator` rather than an open-coded render
@@ -220,7 +220,7 @@ impl Interp {
             // `crate::ir::Op::TraceOperator` emits the identical line from a
             // register and the two must not be able to disagree -- the reason
             // `echo_literal` above is one function.
-            ExprKind::Binary { op, .. } => self.echo_operator(*op, value),
+            ExprView::Binary { op, .. } => self.echo_operator(op, value),
             // `>name`/`<name` traces as an **operator**, not as the read of the
             // variable it names: `>O> ">" => "PQ"`, the referenced variable's
             // own *name* as the operator's value (the reference operator never
@@ -229,19 +229,12 @@ impl Interp {
             // >pq`, `say <pq`, `call sub >pq` and `call sub <pq` -- all trace
             // `>O> ">" => "PQ"`, the `<` form included: the literal `">"` is
             // passed regardless of which byte was written.
-            ExprKind::VariableReference(inner) => {
-                let (ExprKind::Variable(id) | ExprKind::Stem(id)) = &inner.kind else {
-                    // `interrexx-parse` admits nothing else inside a reference
-                    // (20.930 at parse time), and `eval_node`'s own arm
-                    // fails loudly on anything that arrives regardless, so
-                    // there is no value here to have traced.
-                    return Ok(());
-                };
+            ExprView::VariableReference { symbol, .. } => {
                 // The reference's own name, `value->getName()`: an alias
                 // made by `USE ARG >x` names the variable it refers to.
                 let name = match self.as_variable_reference(value) {
                     Some(reference) => reference.name.to_vec(),
-                    None => code.symbols.name(*id).as_bytes().to_vec(),
+                    None => code.symbols.name(symbol).as_bytes().to_vec(),
                 };
                 self.trace_operator(indent, b">", &name);
             }
@@ -251,10 +244,10 @@ impl Interp {
             // symbol target arrives already upcased and a literal one
             // verbatim (`interrexx-parse`'s own `CallTarget`), which is the same
             // pair of spellings `eval_call` resolves against.
-            ExprKind::Call { target, .. } => {
+            ExprView::Call { target, .. } => {
                 let name = match target {
-                    CallTarget::Symbol(id) => code.symbols.name(*id).as_bytes().to_vec(),
-                    CallTarget::Literal(bytes) => bytes.to_vec(),
+                    Target::Symbol(id) => code.symbols.name(id).as_bytes().to_vec(),
+                    Target::Literal(bytes) => bytes.to_vec(),
                 };
                 let text = self.traced_string_value_text(value)?;
                 self.trace_function(indent, &name, &text);
@@ -264,17 +257,17 @@ impl Interp {
             // `>F>   WROUTINE => "wroutine ran"`, with no qualifier on the
             // tag, which is why this shares the arm above's emitter rather
             // than `>N>`'s.
-            ExprKind::QualifiedCall { name, .. } => {
-                let name = code.symbols.name(*name).as_bytes().to_vec();
+            ExprView::QualifiedCall { name, .. } => {
+                let name = code.symbols.name(name).as_bytes().to_vec();
                 let text = self.traced_string_value_text(value)?;
                 self.trace_function(indent, &name, &text);
             }
             // `>N>`, tagged `namespace:class` -- `traceClassResolution`,
             // whose tag is the two symbols joined by a colon.
-            ExprKind::ClassResolver { namespace, name } => {
-                let mut tag = code.symbols.name(*namespace).as_bytes().to_vec();
+            ExprView::ClassResolver { namespace, name } => {
+                let mut tag = code.symbols.name(namespace).as_bytes().to_vec();
                 tag.push(b':');
-                tag.extend_from_slice(code.symbols.name(*name).as_bytes());
+                tag.extend_from_slice(code.symbols.name(name).as_bytes());
                 let text = self.traced_string_value_text(value)?;
                 self.trace_namespace(indent, &tag, &text);
             }
@@ -284,7 +277,7 @@ impl Interp {
             // a hook arm would print the line for one of the two forms only.
             // `Interp::message_term` (`dispatch.rs`) emits it instead, at the
             // same point in the sequence this hook would have.
-            ExprKind::Message { .. } => {}
+            ExprView::Message { .. } => {}
             // A comma list (`ExprKind::Logical`) has no value line of its
             // own -- each element is a full `eval` call in its own right
             // (`eval_logical_list`), and traces itself through this same
@@ -471,25 +464,29 @@ impl Interp {
         Ok(())
     }
 
-    pub(crate) fn eval_node(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
-        match &expr.kind {
-            ExprKind::Literal(bytes) => Ok(self.literal(bytes)),
+    pub(crate) fn eval_node(
+        &mut self,
+        code: &Code<'_>,
+        expr: ExprRef<'_>,
+    ) -> Result<ObjRef, Failure> {
+        match expr.kind() {
+            ExprView::Literal(bytes) => Ok(self.literal(bytes)),
             // A constant's value is its own upcased spelling, which is
             // observable rather than incidental: `say 1e5` prints `1E5`.
-            ExprKind::Constant(id) => Ok(self.literal(code.symbols.name(*id).as_bytes())),
+            ExprView::Constant(id) => Ok(self.literal(code.symbols.name(id).as_bytes())),
             // The three bare-symbol reads, each through the one function
             // `crate::ir::Op::Load` enters with the slot already resolved.
             // They are three *different* operations sharing one entry point,
             // not one operation under three spellings -- `read_symbol`'s own
             // doc comment has what separates them -- so the dispatch is on a
             // kind rather than absent.
-            ExprKind::Variable(id) => self.read_symbol(code, None, SymbolRead::Simple, *id, None),
-            ExprKind::Stem(id) => self.read_symbol(code, None, SymbolRead::Stem, *id, None),
-            ExprKind::Compound(id) => self.read_symbol(code, None, SymbolRead::Compound, *id, None),
+            ExprView::Variable(id) => self.read_symbol(code, None, SymbolRead::Simple, id, None),
+            ExprView::Stem(id) => self.read_symbol(code, None, SymbolRead::Stem, id, None),
+            ExprView::Compound(id) => self.read_symbol(code, None, SymbolRead::Compound, id, None),
 
-            ExprKind::DotVariable(id) => self.environment_symbol(code, *id),
+            ExprView::DotVariable(id) => self.environment_symbol(code, id),
 
-            ExprKind::Prefix { op, operand } => self.eval_prefix(code, *op, operand),
+            ExprView::Prefix { op, operand } => self.eval_prefix(code, op, operand),
 
             // Arithmetic (`+ - * / % // **`), through `interrexx-num` under the
             // settings in force *now* -- the rendering of the result is fixed
@@ -500,8 +497,8 @@ impl Interp {
             // that arithmetic reaches `eval_arithmetic`: `**`'s exponent is
             // not converted the way its base is, and that asymmetry has
             // nowhere to live in a shared operand path.
-            ExprKind::Binary { op, left, right } if is_arithmetic(*op) => {
-                self.eval_arithmetic(code, *op, left, right)
+            ExprView::Binary { op, left, right } if is_arithmetic(op) => {
+                self.eval_arithmetic(code, op, left, right)
             }
 
             // Concatenation, comparison and `&`/`|`/`&&`, which share this operand
@@ -511,9 +508,7 @@ impl Interp {
             // decided. What each operator then does with two values is
             // `apply_binary`, entered from here and from
             // `crate::ir::Op::Binary`.
-            ExprKind::Binary { op, left, right }
-                if is_native_binary(*op) && !is_arithmetic(*op) =>
-            {
+            ExprView::Binary { op, left, right } if is_native_binary(op) && !is_arithmetic(op) => {
                 let frame = self.roots.activity_mut().push_frame();
                 let left_value = self.eval(code, left)?;
                 self.roots.activity_mut().push_temp(left_value);
@@ -524,8 +519,8 @@ impl Interp {
                 // discards its operands here, where the `?` on an operand's
                 // evaluation above leaves them for `Op::Clause`'s region to
                 // truncate. The module doc has why both are safe.
-                let text = compares_as_text(*op, left, right);
-                let result = self.apply_binary_op(*op, text, left_value, right_value);
+                let text = compares_as_text(op, left, right);
+                let result = self.apply_binary_op(op, text, left_value, right_value);
                 self.roots.activity_mut().pop_frame(frame);
                 result
             }
@@ -534,15 +529,17 @@ impl Interp {
             // `WHEN`/`GUARD`/`WHILE`/`UNTIL`'s own versions of the same
             // syntax) -- see `eval_logical_list`'s own doc comment for the
             // short-circuit and sub-number this arm alone can give it.
-            ExprKind::Logical(items) => self.eval_logical_list(code, items),
+            ExprView::Logical(items) => self.eval_logical_list(code, items),
 
             // `>name`/`<name` answers a `VariableReference`, the variable
             // itself rather than its value: `vr = 5; o = >vr; say o~class~id`
             // is `VariableReference`, and `o~value = 7` writes `vr`.
-            ExprKind::VariableReference(inner) => self.variable_reference(code, inner),
+            ExprView::VariableReference { symbol, stem } => {
+                self.variable_reference(code, symbol, stem)
+            }
 
             // `f(...)`/`"f"(...)` -- see `eval_call`'s own doc.
-            ExprKind::Call { target, args } => self.eval_call(code, target, args),
+            ExprView::Call { target, args } => self.eval_call(code, target, args),
 
             // `target~name(...)`, `target~~name(...)` and `target[...]`
             // -- see `Interp::message_term` (`dispatch.rs`) for
@@ -550,7 +547,7 @@ impl Interp {
             // for the send itself. The **expression** form only: the
             // message-assignment form is an instruction and never an
             // expression, so `assigned` is `None` here.
-            ExprKind::Message {
+            ExprView::Message {
                 target,
                 name,
                 super_class,
@@ -564,9 +561,9 @@ impl Interp {
                     &crate::dispatch::MessageTerm {
                         target,
                         name,
-                        super_class: super_class.as_deref(),
+                        super_class,
                         args,
-                        cascade: *cascade,
+                        cascade,
                         assigned: None,
                     },
                 )
@@ -580,27 +577,27 @@ impl Interp {
     /// Every expression form the match above does not name: `(a, b, ...)`, and
     /// the ones that fail loudly.
     #[inline(never)]
-    fn eval_cold(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
-        match &expr.kind {
+    fn eval_cold(&mut self, code: &Code<'_>, expr: ExprRef<'_>) -> Result<ObjRef, Failure> {
+        match expr.kind() {
             // The list evaluation builds an array of the list's own length and fills the
             // positions that were written.
-            ExprKind::List(items) => self.eval_list(code, items),
+            ExprView::List(items) => self.eval_list(code, items),
             // `ns:Name`, the qualified class lookup. The `>N>` line it owes
             // is this hook's sibling below, in `trace_intermediate`.
-            ExprKind::ClassResolver { namespace, name } => {
-                self.resolve_class_at(code, *namespace, *name)
+            ExprView::ClassResolver { namespace, name } => {
+                self.resolve_class_at(code, namespace, name)
             }
             // `ns:name(...)`, resolved against that namespace's public
             // routines alone -- so none of `resolve_call`'s four steps runs,
             // and a builtin of the same name is never reached. Measured,
             // `rexx:length('abc')` is 43.902 rather than `3`.
-            ExprKind::QualifiedCall {
+            ExprView::QualifiedCall {
                 namespace,
                 name,
                 args,
             } => {
-                let namespace = code.symbols.name(*namespace).as_bytes();
-                let name = code.symbols.name(*name).as_bytes();
+                let namespace = code.symbols.name(namespace).as_bytes();
+                let name = code.symbols.name(name).as_bytes();
                 self.eval_call_resolved(code, CallResolution::Qualified { namespace }, name, args)
             }
             other => Err(Loud::expression(other).into()),
@@ -624,11 +621,11 @@ impl Interp {
     /// `ExprKind::List`: a fresh `.Array` whose slots are the list's
     /// positions.
     #[inline(never)]
-    fn eval_list(&mut self, code: &Code<'_>, items: &[Option<Expr>]) -> Result<ObjRef, Failure> {
+    fn eval_list(&mut self, code: &Code<'_>, items: Args<'_>) -> Result<ObjRef, Failure> {
         let frame = self.roots.activity_mut().push_frame();
         let indent = self.activity.clause_state.current_value_indent;
         let mut slots = Vec::with_capacity(items.len());
-        for item in items {
+        for item in items.iter() {
             let Some(expr) = item else {
                 slots.push(None);
                 continue;
@@ -654,10 +651,10 @@ impl Interp {
     fn eval_call(
         &mut self,
         code: &Code<'_>,
-        target: &CallTarget,
-        args: &[Option<Expr>],
+        target: Target<'_>,
+        args: Args<'_>,
     ) -> Result<ObjRef, Failure> {
-        let (name, search_labels) = call_target_name(code, target);
+        let (name, search_labels) = view_target_name(code, target);
         // Held until the arguments have run -- `Interp::resolved_after_
         // arguments` has the details and the two measurements.
         let fixed = self.resolve_fixed_call(name, search_labels);
@@ -672,7 +669,7 @@ impl Interp {
         code: &Code<'_>,
         resolution: CallResolution<'_>,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<ObjRef, Failure> {
         pinned!(self, crate::pinning::PinKind::TreeEval, {
             let started = self.begin_eval_call(code, resolution, name, args);
@@ -687,7 +684,7 @@ impl Interp {
         code: &Code<'_>,
         resolution: CallResolution<'_>,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<Started<ObjRef>, Failure> {
         // **A builtin goes straight to its own entry point**, which is the
         // same call `invoke_call` would make and answers the value this
@@ -715,7 +712,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         op: PrefixOp,
-        operand: &Expr,
+        operand: ExprRef<'_>,
     ) -> Result<ObjRef, Failure> {
         let frame = self.roots.activity_mut().push_frame();
         let value = self.eval(code, operand)?;
@@ -806,8 +803,8 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         op: Operator,
-        left: &Expr,
-        right: &Expr,
+        left: ExprRef<'_>,
+        right: ExprRef<'_>,
     ) -> Result<ObjRef, Failure> {
         let frame = self.roots.activity_mut().push_frame();
         let left_value = self.eval(code, left)?;
@@ -1790,11 +1787,11 @@ impl Interp {
     /// c THEN` (and `WHEN`/`GUARD`/`WHILE`/`UNTIL`'s own versions)
     /// desugars to, "a logical AND of its parts" (`ast.rs`'s own doc
     /// comment).
-    fn eval_logical_list(&mut self, code: &Code<'_>, items: &[Expr]) -> Result<ObjRef, Failure> {
+    fn eval_logical_list(&mut self, code: &Code<'_>, items: Args<'_>) -> Result<ObjRef, Failure> {
         let frame = self.roots.activity_mut().push_frame();
         let indent = self.activity.clause_state.current_value_indent;
         let mut holds = true;
-        for item in items {
+        for item in items.iter().flatten() {
             let value = self.eval(code, item)?;
             if !self.logical_list_item(value, indent)? {
                 holds = false;
@@ -2043,11 +2040,11 @@ fn is_comparison(op: Operator) -> bool {
 /// literal that is not a number, so the numeric rule, which needs both, never
 /// applies -- and a strict operator never applies it at all. Decided from the
 /// syntax alone.
-pub(crate) fn compares_as_text(op: Operator, left: &Expr, right: &Expr) -> bool {
+pub(crate) fn compares_as_text(op: Operator, left: ExprRef<'_>, right: ExprRef<'_>) -> bool {
     is_comparison(op)
         && [left, right]
             .iter()
-            .any(|side| matches!(&side.kind, ExprKind::Literal(bytes) if never_a_number(bytes)))
+            .any(|side| matches!(side.kind(), ExprView::Literal(bytes) if never_a_number(bytes)))
 }
 
 /// Whether `bytes` cannot be a number however `NUMERIC` is set: it is blank or
@@ -2085,10 +2082,10 @@ pub(crate) fn is_native_binary(op: Operator) -> bool {
 }
 
 /// The bytes a call target names, and whether an internal label may answer it.
-pub(crate) fn call_target_name<'a>(code: &Code<'a>, target: &'a CallTarget) -> (&'a [u8], bool) {
+pub(crate) fn view_target_name<'a>(code: &Code<'a>, target: Target<'a>) -> (&'a [u8], bool) {
     match target {
-        CallTarget::Symbol(id) => (code.symbols.name(*id).as_bytes(), true),
-        CallTarget::Literal(bytes) => (bytes, false),
+        Target::Symbol(id) => (code.symbols.name(id).as_bytes(), true),
+        Target::Literal(bytes) => (bytes, false),
     }
 }
 

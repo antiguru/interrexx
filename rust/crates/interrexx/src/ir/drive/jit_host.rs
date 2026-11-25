@@ -681,7 +681,7 @@ fn pass_of(
                     if matches!(
                         kind_at(code, index),
                         Some(InstructionKind::Assignment { target, .. })
-                            if matches!(target.kind, ExprKind::Compound(_))
+                            if matches!(code.body.expr(target).kind(), ExprView::Compound(_))
                     ) =>
                 {
                     Step::Compound { pc: at }
@@ -1433,7 +1433,8 @@ impl Host for Driven<'_, '_> {
                 else {
                     return false;
                 };
-                let ExprKind::Compound(id) = target.kind else {
+                let target = self.code.body.expr(target);
+                let ExprView::Compound(id) = target.kind() else {
                     return false;
                 };
                 // The key the write takes: the one the read before it holds,

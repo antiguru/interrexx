@@ -9,7 +9,7 @@ use interrexx_classes::MethodId;
 use interrexx_core::{Heap, NameMap, ObjRef, RootSet, SlotRef};
 use interrexx_num::Settings;
 use interrexx_parse::{
-    CodeBody, ExprKind, InstructionKind, Operator, Program, SymbolId, SymbolTable, compound_parts,
+    CodeBody, ExprView, InstructionKind, Operator, Program, SymbolId, SymbolTable, compound_parts,
     parse_known_program,
 };
 use rustc_hash::FxHashMap;
@@ -514,9 +514,9 @@ impl Loud {
 
     /// An expression form handed to a site its caller routes elsewhere -- an
     /// internal inconsistency, never a program error: every form evaluates.
-    fn expression(kind: &ExprKind) -> Loud {
+    fn expression(expr: ExprView<'_>) -> Loud {
         Loud {
-            message: owned_message(&form_name(kind)),
+            message: owned_message(&form_name(expr)),
         }
     }
 
@@ -990,32 +990,32 @@ impl Loud {
 }
 
 /// Names an expression form in **bounded** text, for a loud failure to quote.
-fn form_name(kind: &ExprKind) -> String {
-    let name = match kind {
-        ExprKind::Literal(_) => "a literal",
-        ExprKind::Constant(_) => "a constant symbol",
-        ExprKind::Variable(_) => "a simple variable",
-        ExprKind::Stem(_) => "a stem",
-        ExprKind::Compound(_) => "a compound variable",
-        ExprKind::DotVariable(_) => "an environment symbol",
+fn form_name(expr: ExprView<'_>) -> String {
+    let name = match expr {
+        ExprView::Literal(_) => "a literal",
+        ExprView::Constant(_) => "a constant symbol",
+        ExprView::Variable(_) => "a simple variable",
+        ExprView::Stem(_) => "a stem",
+        ExprView::Compound(_) => "a compound variable",
+        ExprView::DotVariable(_) => "an environment symbol",
         // The two operator forms name the operator, because "a dyadic
         // operator is not implemented" does not tell a reader which one to
         // go and implement. Each asks its own operator type for the spelling,
         // which is where the canonical bytes live and what the trace line for
         // that operator carries.
-        ExprKind::Prefix { op, .. } => {
+        ExprView::Prefix { op, .. } => {
             return format!("the prefix operator `{}`", op.spelling());
         }
-        ExprKind::Binary { op, .. } => {
+        ExprView::Binary { op, .. } => {
             return format!("the operator `{}`", op.spelling());
         }
-        ExprKind::Call { .. } => "a function call",
-        ExprKind::QualifiedCall { .. } => "a namespace-qualified call",
-        ExprKind::ClassResolver { .. } => "a namespace-qualified class lookup",
-        ExprKind::Message { .. } => "a message send",
-        ExprKind::List(_) => "a parenthesised list",
-        ExprKind::Logical(_) => "a comma list in a condition",
-        ExprKind::VariableReference(_) => "a variable reference",
+        ExprView::Call { .. } => "a function call",
+        ExprView::QualifiedCall { .. } => "a namespace-qualified call",
+        ExprView::ClassResolver { .. } => "a namespace-qualified class lookup",
+        ExprView::Message { .. } => "a message send",
+        ExprView::List(_) => "a parenthesised list",
+        ExprView::Logical(_) => "a comma list in a condition",
+        ExprView::VariableReference { .. } => "a variable reference",
     };
     name.to_string()
 }

@@ -16,7 +16,7 @@ impl Interp {
     ) -> Result<ObjRef, Failure> {
         // The clause unit set this to the `SELECT`'s own printed indent on the
         // way in.
-        let value = self.eval(code, case_expr)?;
+        let value = self.eval(code, code.body.expr(case_expr))?;
         self.select_case_value(value)
     }
 
@@ -73,7 +73,7 @@ impl Interp {
                 // never matches, the identical fallback.
                 None => {
                     for value in values {
-                        let v = self.eval(code, value)?;
+                        let v = self.eval(code, code.body.expr(value))?;
                         self.roots.activity_mut().push_temp(v);
                     }
                     Ok(false)

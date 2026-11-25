@@ -27,9 +27,9 @@ use interrexx_core::{
 };
 use interrexx_num::{ArithError, CompareOp, Form, Number, SettingsError, compare_decoded};
 use interrexx_parse::{
-    ConditionTrap, ControlExpr, DirectiveKind, EndStyle, Expr, ExprKind, Forward, Fragment, Guard,
-    Instruction, InstructionKind, Loop, LoopConditional, LoopKind, NumericSetting, ProgramSource,
-    Raise, SymbolId, Trace, Use, UseTarget, VariableRef,
+    Args, CodeBody, ConditionTrap, ControlExpr, DirectiveKind, EndStyle, Expr, ExprRef, ExprView,
+    Forward, Fragment, Guard, Instruction, InstructionKind, Loop, LoopConditional, LoopKind,
+    NumericSetting, ProgramSource, Raise, SymbolId, Trace, Use, UseTarget, VariableRef,
 };
 use std::borrow::Cow;
 use std::rc::Rc;
@@ -88,7 +88,7 @@ pub(crate) use loops::QuickTest;
 use loops::numeric_less;
 pub(crate) use loops::{
     FlatLoop, FlatStart, FlatStep, HeaderRole, LOOP_CONDITION_SLOT, LoopHeaderValues, TestOpen,
-    loop_header_plan, loop_header_slot,
+    loop_header_expr, loop_header_plan, loop_header_slot,
 };
 
 /// A `FORWARD` with its options evaluated and checked, whose send the driver
@@ -767,7 +767,7 @@ impl Interp {
                     let environment = match (&address.environment, &address.dynamic) {
                         (Some(name), _) => name.to_vec(),
                         (None, Some(expression)) => {
-                            let value = self.eval(code, expression)?;
+                            let value = self.eval(code, code.body.expr(expression))?;
                             self.roots.activity_mut().push_temp(value);
                             let value = self.required_string_value(value)?;
                             self.to_text(value).into_owned()
@@ -811,7 +811,7 @@ impl Interp {
         match &instruction.kind {
             InstructionKind::Say { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, expression)?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
                     None => None,
                 };
                 self.say_evaluated(value)?;
@@ -819,10 +819,10 @@ impl Interp {
             }
 
             InstructionKind::Assignment { target, value } => {
-                let value = self.eval(code, value)?;
+                let value = self.eval(code, code.body.expr(value))?;
                 // `None`: this engine resolves nothing ahead of time, so the
                 // write resolves its own slot the way it always has.
-                self.assign_evaluated(code, target, value, None, false)?;
+                self.assign_evaluated(code, code.body.expr(target), value, None, false)?;
                 Ok(Flow::Next)
             }
 
@@ -866,7 +866,7 @@ impl Interp {
             // that `execute` does not already have.
             InstructionKind::Exit { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, expression)?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
                     None => None,
                 };
                 self.returned_value(value, ReturnKeyword::Exit)
@@ -886,7 +886,7 @@ impl Interp {
             // run it against **this** activation, through `run_fragment`. The
             // arm is thin because `run_fragment` is where the work is.
             InstructionKind::Interpret { expression } => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(expression))?;
                 self.exec_interpret_value(index, instruction, source, value)
             }
 
@@ -982,7 +982,7 @@ impl Interp {
                     name,
                     literal,
                     args,
-                } => self.exec_call(code, name, !*literal, args),
+                } => self.exec_call(code, name, !*literal, code.body.args(args)),
                 // `CALL (expr)`: the target is evaluated in the caller, its
                 // value is traced, and the **verbatim** text is what the
                 // label search sees. Both halves are measured and they pull
@@ -991,8 +991,8 @@ impl Interp {
                 // while `nm = 'sub'; call (nm)` is Error 43.1 naming `sub`,
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
-                    let value = self.eval(code, target)?;
-                    self.exec_dynamic_call(code, value, args)
+                    let value = self.eval(code, code.body.expr(target))?;
+                    self.exec_dynamic_call(code, value, code.body.args(args))
                 }
                 // `CALL ON cond NAME label` / `CALL OFF cond`. Shares every
                 // line of its implementation with `SIGNAL ON`/`OFF` except
@@ -1018,7 +1018,7 @@ impl Interp {
                         code,
                         CallResolution::Qualified { namespace },
                         name,
-                        args,
+                        code.body.args(args),
                     )
                 }
             },
@@ -1029,7 +1029,7 @@ impl Interp {
             // `RETURN` ends the program.
             InstructionKind::Return { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, expression)?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
                     None => None,
                 };
                 self.returned_value(value, ReturnKeyword::Return)
@@ -1060,7 +1060,7 @@ impl Interp {
                 // ordinary non-label string all raise 16.1 naming that exact
                 // text, none of them a different error.
                 interrexx_parse::Signal::Value(expr) => {
-                    let value = self.eval(code, expr)?;
+                    let value = self.eval(code, code.body.expr(expr))?;
                     // Rooted here rather than inside `signal_to_value`, which
                     // the compiled stream reaches with the value already in a
                     // register: the temp is what roots it across the render
@@ -1112,7 +1112,7 @@ impl Interp {
             // `crate::ir::Op::Queue`.
             InstructionKind::Push { expression } | InstructionKind::Queue { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, expression)?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
                     None => None,
                 };
                 let keyword = if matches!(instruction.kind, InstructionKind::Push { .. }) {
@@ -1142,14 +1142,16 @@ impl Interp {
             // A message send as a whole clause: `q~append(1)`, `q~~append(1)`
             // and the message-assignment form `q[1] = 2`. See
             // `exec_message`.
-            InstructionKind::Message { term, value } => {
-                self.exec_message(code, term, value.as_ref())
-            }
+            InstructionKind::Message { term, value } => self.exec_message(
+                code,
+                code.body.expr(term),
+                value.as_ref().map(|v| code.body.expr(v)),
+            ),
 
             // `OPTIONS`: the expression is evaluated, converted and traced, and
             // nothing else.
             InstructionKind::Options { expression } => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(expression))?;
                 self.exec_options_value(value)?;
                 Ok(Flow::Next)
             }
@@ -1162,22 +1164,22 @@ impl Interp {
     pub(crate) fn exec_message(
         &mut self,
         code: &Code<'_>,
-        term: &Expr,
-        value: Option<&Expr>,
+        term: ExprRef<'_>,
+        value: Option<ExprRef<'_>>,
     ) -> Result<Flow, Failure> {
-        let ExprKind::Message {
+        let ExprView::Message {
             target,
             name,
             super_class,
             args,
             cascade,
-        } = &term.kind
+        } = term.kind()
         else {
             // `interrexx-parse` builds this variant only from a message term
             // (`instruction.rs`'s `message`), so nothing else can arrive;
             // loud rather than a panic, on the standing rule that a parser
             // guarantee the type system does not carry must not abort.
-            return Err(Loud::expression(&term.kind).into());
+            return Err(Loud::expression(term.kind()).into());
         };
         // **`message_term` directly rather than through `Interp::eval`**,
         // even for the form that is an ordinary expression: `eval`'s own
@@ -1195,9 +1197,9 @@ impl Interp {
                     &crate::dispatch::MessageTerm {
                         target,
                         name,
-                        super_class: super_class.as_deref(),
+                        super_class,
                         args,
-                        cascade: *cascade,
+                        cascade,
                         assigned: None,
                     },
                 );
@@ -1212,7 +1214,7 @@ impl Interp {
                     &crate::dispatch::MessageTerm {
                         target,
                         name: &assigned_name,
-                        super_class: super_class.as_deref(),
+                        super_class,
                         args,
                         // This form is built as `KEYWORD_MESSAGE` whatever the
                         // term's own tilde count, so a `~~` written here is not
@@ -1883,7 +1885,7 @@ impl Interp {
         self.reply_permitted()?;
         park_point!(self, crate::pinning::ParkKind::Reply);
         let value = match expression {
-            Some(expression) => Some(self.eval(code, expression)?),
+            Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
             None => None,
         };
         self.exec_reply_value(value)
@@ -1968,7 +1970,7 @@ impl Interp {
         let start_scope = match &forward.class {
             None => None,
             Some(expr) => {
-                let value = self.eval(code, expr)?;
+                let value = self.eval(code, code.body.expr(expr))?;
                 self.roots.activity_mut().push_temp(value);
                 self.forward_class(value)?;
                 Some(value)
@@ -2182,7 +2184,7 @@ impl Interp {
         expr: &Expr,
         keyword: &str,
     ) -> Result<ObjRef, Failure> {
-        let value = self.eval(code, expr)?;
+        let value = self.eval(code, code.body.expr(expr))?;
         self.roots.activity_mut().push_temp(value);
         self.trace_forward_keyword(keyword, value)?;
         Ok(value)
@@ -2221,7 +2223,7 @@ impl Interp {
                         values.push(None);
                     }
                     Some(expr) => {
-                        values.push(Some(self.eval_traced_argument(code, expr)?));
+                        values.push(Some(self.eval_traced_argument(code, code.body.expr(expr))?));
                     }
                 }
             }
@@ -2796,30 +2798,40 @@ impl Interp {
     /// environment-naming `ADDRESS VALUE`'s, `OPTIONS`'s, `INTERPRET`'s, a
     /// command clause's and `REPLY`'s. `None` for every other
     /// instruction, which compiles as before.
-    pub(crate) fn exec_value_expression(kind: &InstructionKind) -> Option<&Expr> {
-        match kind {
+    pub(crate) fn exec_value_expression<'a>(
+        body: &'a CodeBody,
+        kind: &'a InstructionKind,
+    ) -> Option<ExprRef<'a>> {
+        Self::exec_value_node(kind).map(|expression| body.expr(expression))
+    }
+
+    /// [`Interp::exec_value_expression`]'s expression, as the node the
+    /// body's tree holds.
+    pub(crate) fn exec_value_node(kind: &InstructionKind) -> Option<&Expr> {
+        let expression = match kind {
             InstructionKind::Numeric {
                 expression: Some(expression),
                 ..
             }
-            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => Some(expression),
+            | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => expression,
             InstructionKind::Address(address)
                 if address.command.is_none() && address.environment.is_none() =>
             {
-                address.dynamic.as_ref()
+                address.dynamic.as_ref()?
             }
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
-                Some(expression)
+                expression
             }
             InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
-                expression.as_ref()
+                expression.as_ref()?
             }
             InstructionKind::Call(call) => match &**call {
-                interrexx_parse::Call::Dynamic { target, .. } => Some(target),
-                _ => None,
+                interrexx_parse::Call::Dynamic { target, .. } => target,
+                _ => return None,
             },
-            _ => None,
-        }
+            _ => return None,
+        };
+        Some(expression)
     }
 
     /// Whether the instruction [`Interp::exec_value_expression`] names runs
@@ -2904,7 +2916,7 @@ impl Interp {
         src: u16,
     ) -> Result<ExecOutcome, Failure> {
         debug_assert!(
-            (Self::exec_value_expression(&instruction.kind).is_some()
+            (Self::exec_value_expression(code.body, &instruction.kind).is_some()
                 && Self::exec_value_transfers(&instruction.kind))
                 || matches!(&instruction.kind, InstructionKind::Raise(raise)
                     if RaiseLayout::of(raise).is_some())
@@ -2931,7 +2943,7 @@ impl Interp {
             InstructionKind::Call(call)
                 if let interrexx_parse::Call::Dynamic { args, .. } = &**call =>
             {
-                self.exec_dynamic_call(code, value, args)
+                self.exec_dynamic_call(code, value, code.body.args(args))
                     .map(ExecOutcome::Done)
             }
             // A command that blocked re-runs this op when it is woken, as a
@@ -2990,7 +3002,7 @@ impl Interp {
         };
         let value = registers.get(src);
         debug_assert!(
-            Self::exec_value_expression(&instruction.kind).is_some()
+            Self::exec_value_expression(code.body, &instruction.kind).is_some()
                 && !Self::exec_value_transfers(&instruction.kind),
             "Op::ExecValue on an instruction exec_value_expression does not name, or one \
              that runs as Op::ExecWith"
@@ -3885,13 +3897,14 @@ impl Interp {
 
     /// The expression an op's address names: expression `slot` of
     /// `instruction`, then `path`'s steps down from that slot's root.
-    pub(crate) fn chunk_node_at(
-        instruction: &Instruction,
+    pub(crate) fn chunk_node_at<'a>(
+        body: &'a CodeBody,
+        instruction: &'a Instruction,
         slot: u16,
         path: NodePath,
-    ) -> Option<&Expr> {
+    ) -> Option<ExprRef<'a>> {
         let mut node = match (&instruction.kind, slot) {
-            (InstructionKind::Assignment { value, .. }, 0) => value,
+            (InstructionKind::Assignment { value, .. }, 0) => body.expr(value),
             // The one expression of an instruction that computes a value and
             // does something with it, slot `0`. A bare form holds no
             // expression at all, so it names no node and matches no arm here.
@@ -3912,14 +3925,16 @@ impl Interp {
                     expression: Some(expression),
                 },
                 0,
-            ) => expression,
-            (InstructionKind::Forward(forward), slot) => forward_slot(forward, u32::from(slot))?,
+            ) => body.expr(expression),
+            (InstructionKind::Forward(forward), slot) => {
+                body.expr(forward_slot(forward, u32::from(slot))?)
+            }
             // The two instructions whose slot `0` exists only in one of their
             // forms. Both are reachable: the expression is compiled through
             // `push_value` like any other, so a call inside it emits an
             // `Op::CallExpr` that addresses the node from here.
             (InstructionKind::Signal(signal), 0) => match &**signal {
-                interrexx_parse::Signal::Value(expression) => expression,
+                interrexx_parse::Signal::Value(expression) => body.expr(expression),
                 interrexx_parse::Signal::Label(_) | interrexx_parse::Signal::Trap(_) => {
                     return None;
                 }
@@ -3930,7 +3945,7 @@ impl Interp {
                 | InstructionKind::Pull(parse),
                 0,
             ) => match &parse.source {
-                interrexx_parse::ParseSource::Value(Some(expression)) => expression,
+                interrexx_parse::ParseSource::Value(Some(expression)) => body.expr(expression),
                 _ => return None,
             },
             (
@@ -3938,29 +3953,33 @@ impl Interp {
                 | InstructionKind::Arg(parse)
                 | InstructionKind::Pull(parse),
                 slot,
-            ) => parse
-                .template
-                .get(usize::from(slot) - 1)?
-                .as_ref()?
-                .value
-                .as_ref()?,
-            (InstructionKind::If { condition, .. }, 0) => condition,
+            ) => body.expr(
+                parse
+                    .template
+                    .get(usize::from(slot) - 1)?
+                    .as_ref()?
+                    .value
+                    .as_ref()?,
+            ),
+            (InstructionKind::If { condition, .. }, 0) => body.expr(condition),
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
-            (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => expression,
+            (kind, 0) if let Some(expression) = Self::exec_value_expression(body, kind) => {
+                expression
+            }
             // A `SELECT CASE`'s expression.
             (
                 InstructionKind::Select {
                     case: Some(case), ..
                 },
                 0,
-            ) => case,
-            (InstructionKind::When { condition, .. }, 0) => condition,
+            ) => body.expr(case),
+            (InstructionKind::When { condition, .. }, 0) => body.expr(condition),
             (
                 InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. },
                 slot,
-            ) => match &condition.kind {
-                ExprKind::Logical(items) => items.get(usize::from(slot - 1))?,
+            ) => match body.expr(condition).kind() {
+                ExprView::Logical(items) => items.get(usize::from(slot - 1))??,
                 _ => return None,
             },
             // A `DO`/`LOOP` header's `slot`th expression, resolved through the
@@ -3970,55 +3989,57 @@ impl Interp {
             // is why this arm binds `slot` rather than matching a number.
             // Its `WHILE`/`UNTIL` condition, compiled into the loop's test
             // region, at the one slot no header expression takes.
-            (InstructionKind::Do(body) | InstructionKind::Loop(body), slot)
+            (InstructionKind::Do(loop_body) | InstructionKind::Loop(loop_body), slot)
                 if u32::from(slot) == LOOP_CONDITION_SLOT =>
             {
-                &body.conditional.as_ref()?.condition
+                body.expr(&loop_body.conditional.as_ref()?.condition)
             }
-            (InstructionKind::Do(body) | InstructionKind::Loop(body), slot) => {
-                loop_header_slot(body, u32::from(slot))?
+            (InstructionKind::Do(loop_body) | InstructionKind::Loop(loop_body), slot) => {
+                loop_header_slot(body, loop_body, u32::from(slot))?
             }
             // A `CALL`'s argument `slot`.
             (InstructionKind::Call(call), slot) => match &**call {
                 interrexx_parse::Call::Named { args, .. }
                 | interrexx_parse::Call::Qualified { args, .. } => {
-                    args.get(usize::from(slot))?.as_ref()?
+                    body.args(args).get(usize::from(slot))??
                 }
                 _ => return None,
             },
             // A message instruction's term, and the assignment form's value.
-            (InstructionKind::Message { term, .. }, 0) => term,
+            (InstructionKind::Message { term, .. }, 0) => body.expr(term),
             (
                 InstructionKind::Message {
                     value: Some(value), ..
                 },
                 1,
-            ) => value,
+            ) => body.expr(value),
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
-            (InstructionKind::Raise(raise), slot) => raise_slot(raise, slot)?,
-            (InstructionKind::Use(use_), slot) => Self::use_arg_default(use_, usize::from(slot))?,
+            (InstructionKind::Raise(raise), slot) => raise_slot(body, raise, slot)?,
+            (InstructionKind::Use(use_), slot) => {
+                body.expr(Self::use_arg_default(use_, usize::from(slot))?)
+            }
             _ => return None,
         };
         let mut steps = path.steps();
         while let Some(step) = steps.next() {
-            node = match (&node.kind, step) {
-                (ExprKind::Binary { left, .. }, false) => left,
-                (ExprKind::Binary { right, .. }, true) => right,
-                (ExprKind::Prefix { operand, .. }, false) => operand,
+            node = match (node.kind(), step) {
+                (ExprView::Binary { left, .. }, false) => left,
+                (ExprView::Binary { right, .. }, true) => right,
+                (ExprView::Prefix { operand, .. }, false) => operand,
                 // A list step: its index in clear steps, then a set one.
                 (
-                    ExprKind::Call { args, .. }
-                    | ExprKind::QualifiedCall { args, .. }
-                    | ExprKind::List(args),
+                    ExprView::Call { args, .. }
+                    | ExprView::QualifiedCall { args, .. }
+                    | ExprView::List(args),
                     _,
                 ) => {
                     let index = list_step(step, &mut steps)?;
-                    args.get(index)?.as_ref()?
+                    args.get(index)??
                 }
-                (ExprKind::Message { target, args, .. }, _) => {
+                (ExprView::Message { target, args, .. }, _) => {
                     match list_step(step, &mut steps)?.checked_sub(1) {
                         None => target,
-                        Some(index) => args.get(index)?.as_ref()?,
+                        Some(index) => args.get(index)??,
                     }
                 }
                 _ => return None,
@@ -4036,21 +4057,21 @@ impl Interp {
         slot: u32,
     ) -> Result<ObjRef, Failure> {
         match (&instruction.kind, slot) {
-            (kind, 0) if let Some(expression) = Self::exec_value_expression(kind) => {
+            (kind, 0) if let Some(expression) = Self::exec_value_expression(code.body, kind) => {
                 self.eval(code, expression)
             }
             (InstructionKind::Use(use_), slot) => {
                 let Some(expr) = Self::use_arg_default(use_, usize::cast_from(slot)) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, expr)
+                self.eval(code, code.body.expr(expr))
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.
             (InstructionKind::Raise(raise), slot) => {
                 let Some(expr) = u16::try_from(slot)
                     .ok()
-                    .and_then(|slot| raise_slot(raise, slot))
+                    .and_then(|slot| raise_slot(code.body, raise, slot))
                 else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
@@ -4075,7 +4096,7 @@ impl Interp {
             // ops of their own, because both have to happen before the next
             // expression is evaluated at all.
             (InstructionKind::Do(body) | InstructionKind::Loop(body), slot) => {
-                let Some(expr) = loop_header_slot(body, slot) else {
+                let Some(expr) = loop_header_slot(code.body, body, slot) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
                 self.eval(code, expr)
@@ -4092,7 +4113,7 @@ impl Interp {
                 let Some(expr) = forward_slot(forward, slot) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, expr)
+                self.eval(code, code.body.expr(expr))
             }
             // `SIGNAL VALUE`'s own expression, for the shapes `compile` emits
             // no native op for. The `>K>` echo and the search are
@@ -4102,7 +4123,7 @@ impl Interp {
                 let interrexx_parse::Signal::Value(expr) = &**signal else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, expr)
+                self.eval(code, code.body.expr(expr))
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
             // `>K>` echo belongs to `Op::ParseBegin`. This fallback is only for
@@ -4117,9 +4138,11 @@ impl Interp {
                 let interrexx_parse::ParseSource::Value(Some(expr)) = &parse.source else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, expr)
+                self.eval(code, code.body.expr(expr))
             }
-            (InstructionKind::Assignment { value, .. }, 0) => self.eval(code, value),
+            (InstructionKind::Assignment { value, .. }, 0) => {
+                self.eval(code, code.body.expr(value))
+            }
             (
                 InstructionKind::Say {
                     expression: Some(expression),
@@ -4137,7 +4160,7 @@ impl Interp {
                     expression: Some(expression),
                 },
                 0,
-            ) => self.eval(code, expression),
+            ) => self.eval(code, code.body.expr(expression)),
             (kind, _) => Err(Loud::instruction(kind).into()),
         }
     }
@@ -4183,8 +4206,8 @@ impl Interp {
         trace: ConditionTrace<'_>,
         raise: fn(&[u8]) -> Raised,
     ) -> Result<bool, Failure> {
-        let value = self.eval(code, condition)?;
-        let checked = matches!(condition.kind, ExprKind::Logical(_));
+        let value = self.eval(code, code.body.expr(condition))?;
+        let checked = matches!(code.body.expr(condition).kind(), ExprView::Logical(_));
         self.condition_value(value, trace, checked, raise)
     }
 
@@ -4269,7 +4292,7 @@ impl Interp {
         indent: usize,
     ) -> Result<bool, Failure> {
         for value in values {
-            let value = self.eval(code, value)?;
+            let value = self.eval(code, code.body.expr(value))?;
             self.roots.activity_mut().push_temp(value);
             self.trace_value_result(indent, value);
             let answer = self.apply_binary(interrexx_parse::Operator::StrictEqual, case, value)?;

@@ -18,7 +18,7 @@ use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary}
 use crate::plan::Plan;
 use crate::run::{
     FORWARD_ARRAY_SLOT, ForwardPart, HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword,
-    forward_option_parts, if_targets, loop_header_plan, loop_header_slot, otherwise_range,
+    forward_option_parts, if_targets, loop_header_expr, loop_header_plan, otherwise_range,
     when_targets,
 };
 use crate::trace::ChunkTrace;
@@ -368,7 +368,7 @@ fn compile_settled(
                     // before any of it compiled. `run.rs`'s own
                     // `eval_chunk_expr` is where a slot with no expression then
                     // ends up, and it is loud there.
-                    match loop_header_slot(body_node, slot) {
+                    match loop_header_expr(body_node, slot) {
                         Some(expr) if native_shape(expr, Some(NodePath::ROOT)) => push_native(
                             &mut ops,
                             echoes_values,
@@ -1369,7 +1369,7 @@ fn compile_settled(
             // expression's ops, then `Op::ExecValue`, which does the rest.
             // A `REPLY` has `Op::ReplyCheck` ahead of them, the check it makes
             // before evaluating.
-            kind if let Some(expression) = crate::Interp::exec_value_expression(kind) => {
+            kind if let Some(expression) = crate::Interp::exec_value_node(kind) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);
@@ -2463,7 +2463,11 @@ fn push_native<'a>(
                     lhs: dst,
                     rhs,
                     dst,
-                    text: crate::eval::compares_as_text(*op, left, right),
+                    text: crate::eval::compares_as_text(
+                        *op,
+                        interrexx_parse::ExprRef::tree(left),
+                        interrexx_parse::ExprRef::tree(right),
+                    ),
                     // The left operand compiled into `dst` ends in its own
                     // concatenation op, which is what `onto` claims.
                     onto: is_concatenation(*op)

@@ -927,7 +927,7 @@ mod tests {
     use crate::plan::{BodyKind, Plan};
     use crate::{Activation, BodyKey};
     use interrexx_num::{Form, Number};
-    use interrexx_parse::{ExprKind, InstructionKind, Program, parse_program};
+    use interrexx_parse::{ExprView, InstructionKind, Program, parse_program};
     use std::rc::Rc;
 
     #[test]
@@ -1163,9 +1163,9 @@ mod tests {
         let id = match &program.main.instructions[0].kind {
             InstructionKind::Say {
                 expression: Some(expr),
-            } => match expr.kind {
-                ExprKind::Compound(id) => id,
-                ref other => panic!("expected a compound expression, got {other:?}"),
+            } => match program.main.expr(expr).kind() {
+                ExprView::Compound(id) => id,
+                other => panic!("expected a compound expression, got {other:?}"),
             },
             other => panic!("expected a SAY with an expression, got {other:?}"),
         };

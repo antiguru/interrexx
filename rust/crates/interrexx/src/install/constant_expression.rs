@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_parse::ExprRef;
 
 impl Interp {
     /// Runs the `::CONSTANT` expression of `program`'s directive `directive` as
@@ -14,7 +15,7 @@ impl Interp {
         program: &Rc<Program>,
         run: ConstantRun<'_>,
         directive: usize,
-        expr: &Expr,
+        expr: ExprRef<'_>,
         level: Option<usize>,
     ) -> Result<ObjRef, Failure> {
         let ConstantRun {
