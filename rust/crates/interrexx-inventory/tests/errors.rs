@@ -1,3 +1,4 @@
+use interrexx_cast::CastFrom;
 use interrexx_inventory::errors;
 
 #[test]
@@ -45,7 +46,7 @@ fn highest_placeholder(code: (u16, u16)) -> usize {
         .skip(1)
         .filter_map(|rest| rest.chars().next()?.to_digit(10))
         .max()
-        .map_or(0, |k| k as usize)
+        .map_or(0, usize::cast_from)
 }
 
 #[test]

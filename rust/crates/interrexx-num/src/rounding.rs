@@ -1,5 +1,7 @@
 //! `FLOOR`, `CEILING` and `ROUND`, and the wholeness test `MODULO` gates on.
 
+use interrexx_cast::CastFrom;
+
 use crate::{Digits, Number};
 
 /// Which neighbouring integer a value between two of them is taken to.
@@ -32,7 +34,7 @@ impl Number {
         if self.is_zero() || self.exponent == 0 {
             return true;
         }
-        let adjusted = self.digits.len() as i64 + i64::from(self.exponent);
+        let adjusted = crate::signed_len(self.digits.len()) + i64::from(self.exponent);
         // Saturated rather than cast: a `digits` past i64 can only mean "no
         // bound", and a bare cast would wrap it into a negative one.
         if adjusted > i64::try_from(digits).unwrap_or(i64::MAX) || adjusted <= 0 {
@@ -41,7 +43,9 @@ impl Number {
         if self.exponent > 0 {
             return true;
         }
-        self.digits[adjusted as usize..].iter().all(|d| *d == 0)
+        // Positive, and below the digit count since the exponent is negative.
+        let adjusted = usize::try_from(adjusted).expect("inside the digits");
+        self.digits[adjusted..].iter().all(|d| *d == 0)
     }
 
     /// The neighbouring integer `toward` names, as a `Number` whose decimals
@@ -52,7 +56,9 @@ impl Number {
         if value.is_zero() {
             return Number::zero();
         }
-        let integer_digits = value.digits.len() as i32 + value.exponent;
+        let integer_digits = crate::signed_count(value.digits.len()) + value.exponent;
+        // Where the integer part ends, for once it is known not negative.
+        let end = usize::cast_from(integer_digits.unsigned_abs());
         let step = match toward {
             Toward::Lower => value.negative && value.has_nonzero_decimals(),
             Toward::Higher => !value.negative && value.has_nonzero_decimals(),
@@ -60,7 +66,7 @@ impl Number {
             // has a zero there, so it can only round to zero.
             Toward::Nearest if value.exponent >= 0 => false,
             Toward::Nearest if integer_digits < 0 => return Number::zero(),
-            Toward::Nearest => value.digits[integer_digits as usize] >= 5,
+            Toward::Nearest => value.digits[end] >= 5,
         };
         if !step {
             return value.into_owned();
@@ -68,9 +74,9 @@ impl Number {
         if integer_digits <= 0 {
             return Number::from_i64(if value.negative { -1 } else { 1 });
         }
-        let mut kept = Digits::from_slice(&value.digits[..integer_digits as usize]);
+        let mut kept = Digits::from_slice(&value.digits[..end]);
         let mut exponent = 0;
-        let mut i = integer_digits as usize;
+        let mut i = end;
         loop {
             if i == 0 {
                 // Every kept digit was a nine, so the carry runs off the top
@@ -97,7 +103,10 @@ impl Number {
         if self.exponent >= 0 {
             return false;
         }
-        let decimals = self.digits.len().min(self.exponent.unsigned_abs() as usize);
+        let decimals = self
+            .digits
+            .len()
+            .min(usize::cast_from(self.exponent.unsigned_abs()));
         self.digits[self.digits.len() - decimals..]
             .iter()
             .any(|d| *d != 0)

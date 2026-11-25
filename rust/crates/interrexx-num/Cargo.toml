@@ -8,6 +8,7 @@ repository.workspace = true
 description = "Decimal arithmetic for Rexx numbers under NUMERIC DIGITS, FUZZ and FORM"
 
 [dependencies]
+interrexx-cast.workspace = true
 interrexx-inventory.workspace = true
 
 [dev-dependencies]

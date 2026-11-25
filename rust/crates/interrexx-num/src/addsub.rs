@@ -6,13 +6,15 @@
 
 use std::borrow::Cow;
 
-use crate::{ArithError, Digits, Number};
+use interrexx_cast::CastFrom;
+
+use crate::{ArithError, Digits, Number, last_digit, signed_count, signed_len};
 
 impl Number {
     /// Extends the digit vector downward so both operands share an exponent.
     #[inline(always)]
     fn aligned_to(&self, exponent: i32) -> Digits {
-        let pad = (self.exponent - exponent).max(0) as usize;
+        let pad = usize::cast_from((self.exponent - exponent).max(0).unsigned_abs());
         let mut digits = self.digits.clone();
         digits.extend_zeros(pad);
         digits
@@ -27,7 +29,7 @@ impl Number {
     /// answer, range check aside, and is handed back without being copied.
     #[inline]
     pub fn plus(self, digits: u64) -> Result<Number, ArithError> {
-        if self.digits.len() as u64 <= digits {
+        if u64::cast_from(self.digits.len()) <= digits {
             self.check_range()?;
             return Ok(self);
         }
@@ -55,8 +57,12 @@ impl Number {
         let right = other.truncated_to(max_length);
 
         let min_exp = left.exponent.min(right.exponent);
-        let adjusted_left_exp = (left.exponent - min_exp) as usize;
-        let adjusted_right_exp = (right.exponent - min_exp) as usize;
+        // Both exponents are within the exponent range, so neither
+        // difference from their minimum leaves an `i32`.
+        let left_gap = (left.exponent - min_exp).unsigned_abs();
+        let right_gap = (right.exponent - min_exp).unsigned_abs();
+        let adjusted_left_exp = usize::cast_from(left_gap);
+        let adjusted_right_exp = usize::cast_from(right_gap);
         let left_len = left.digits.len();
         let right_len = right.digits.len();
         // Saturated for the fast-path sums below: `digits` is a bare u64,
@@ -107,17 +113,20 @@ impl Number {
         let mut right_digits = right.digits.clone();
         let mut left_exp = left.exponent;
         let mut right_exp = right.exponent;
-        let adjusted_left_exp = adjusted_left_exp as i64;
-        let adjusted_right_exp = adjusted_right_exp as i64;
+        let adjusted_left_exp = i64::from(left_gap);
+        let adjusted_right_exp = i64::from(right_gap);
         // Saturated: `max_length` came from the bare `digits` and may sit at
         // usize::MAX, which an `as i64` would fold to -1. i64::MAX keeps
         // both `adjusted_*_digits` differences negative, exactly as a
         // precision that large should -- nothing ever needs shortening.
         let max_len = i64::try_from(max_length).unwrap_or(i64::MAX);
 
-        let adjusted_left_digits = left_digits.len() as i64 + adjusted_left_exp - max_len;
-        let adjusted_right_digits = right_digits.len() as i64 + adjusted_right_exp - max_len;
+        let adjusted_left_digits = signed_len(left_digits.len()) + adjusted_left_exp - max_len;
+        let adjusted_right_digits = signed_len(right_digits.len()) + adjusted_right_exp - max_len;
         if adjusted_left_digits > 0 || adjusted_right_digits > 0 {
+            // Neither operand is longer than `max_len`, so each count here is
+            // at most an exponent gap, which fits an `i32`.
+            let gap = |count: i64| i32::try_from(count).expect("at most an exponent gap");
             let mut adjust = adjusted_left_digits.max(adjusted_right_digits);
 
             // Exactly one of the adjusted exponents is non-zero: the more
@@ -125,20 +134,20 @@ impl Number {
             if adjusted_left_exp != 0 {
                 let taken = adjust.min(adjusted_left_exp);
                 drop_low_digits(&mut right_digits, taken);
-                right_exp = right_exp.saturating_add(taken as i32);
+                right_exp = right_exp.saturating_add(gap(taken));
                 adjust -= taken;
             } else if adjusted_right_exp != 0 {
                 let taken = adjust.min(adjusted_right_exp);
                 drop_low_digits(&mut left_digits, taken);
-                left_exp = left_exp.saturating_add(taken as i32);
+                left_exp = left_exp.saturating_add(gap(taken));
                 adjust -= taken;
             }
 
             if adjust != 0 {
                 drop_low_digits(&mut left_digits, adjust);
-                left_exp = left_exp.saturating_add(adjust as i32);
+                left_exp = left_exp.saturating_add(gap(adjust));
                 drop_low_digits(&mut right_digits, adjust);
-                right_exp = right_exp.saturating_add(adjust as i32);
+                right_exp = right_exp.saturating_add(gap(adjust));
             }
         }
 
@@ -191,7 +200,7 @@ impl Number {
         Cow::Owned(Number {
             negative: self.negative,
             digits: Digits::from_slice(&self.digits[..max_length]),
-            exponent: self.exponent + dropped as i32,
+            exponent: self.exponent + signed_count(dropped),
         })
     }
 }
@@ -226,18 +235,20 @@ fn exact_small_sum(
     // at all -- which is the answer for every operand a program has widened
     // to its own precision, and for every one `div` hands back at the
     // inflated precision it works in.
-    let longest = left.digits.len().max(right.digits.len()) as i64;
-    if longest >= 18 || longest >= digits as i64 {
+    // A `digits` past `i64` declines, as a negative one would.
+    let longest = signed_len(left.digits.len().max(right.digits.len()));
+    if longest >= 18 || i64::try_from(digits).map_or(true, |digits| longest >= digits) {
         return None;
     }
     let min_exp = i64::from(left.exponent.min(right.exponent));
     let left_shift = i64::from(left.exponent) - min_exp;
     let right_shift = i64::from(right.exponent) - min_exp;
-    let width =
-        (left.digits.len() as i64 + left_shift).max(right.digits.len() as i64 + right_shift) + 1;
+    let width = (signed_len(left.digits.len()) + left_shift)
+        .max(signed_len(right.digits.len()) + right_shift)
+        + 1;
     // Eighteen digits is the widest an `i64` holds whatever they are, and it
     // bounds the scaling loop below as well as the sum.
-    if width > 18 || width > digits as i64 {
+    if width > 18 || i64::try_from(digits).map_or(true, |digits| width > digits) {
         return None;
     }
     let mantissa = |number: &Number, shift: i64, negative: bool| {
@@ -256,7 +267,7 @@ fn exact_small_sum(
         return Some(Number::zero());
     }
     let mut result = Number::from_i64(sum);
-    result.exponent = min_exp as i32;
+    result.exponent = left.exponent.min(right.exponent);
     Some(result)
 }
 
@@ -294,8 +305,8 @@ fn aligned_wide_sum(
     let first_min = left_exp.min(right_exp);
     let left_shift = i64::from(left_exp) - i64::from(first_min);
     let right_shift = i64::from(right_exp) - i64::from(first_min);
-    let left_over = left_digits.len() as i64 + left_shift - max_length;
-    let right_over = right_digits.len() as i64 + right_shift - max_length;
+    let left_over = signed_len(left_digits.len()) + left_shift - max_length;
+    let right_over = signed_len(right_digits.len()) + right_shift - max_length;
     if left_over > 0 || right_over > 0 {
         let shorten = |slice: &[u8], count: i64| -> usize {
             slice
@@ -303,23 +314,26 @@ fn aligned_wide_sum(
                 .saturating_sub(usize::try_from(count.max(0)).unwrap_or(usize::MAX))
                 .max(1)
         };
+        // Neither operand is longer than the working length, so each count
+        // here is at most an exponent gap, which fits an `i32`.
+        let gap = |count: i64| i32::try_from(count).expect("at most an exponent gap");
         let mut adjust = left_over.max(right_over);
         if left_shift != 0 {
             let taken = adjust.min(left_shift);
             right_digits = &right_digits[..shorten(right_digits, taken)];
-            right_exp = right_exp.saturating_add(taken as i32);
+            right_exp = right_exp.saturating_add(gap(taken));
             adjust -= taken;
         } else if right_shift != 0 {
             let taken = adjust.min(right_shift);
             left_digits = &left_digits[..shorten(left_digits, taken)];
-            left_exp = left_exp.saturating_add(taken as i32);
+            left_exp = left_exp.saturating_add(gap(taken));
             adjust -= taken;
         }
         if adjust != 0 {
             left_digits = &left_digits[..shorten(left_digits, adjust)];
-            left_exp = left_exp.saturating_add(adjust as i32);
+            left_exp = left_exp.saturating_add(gap(adjust));
             right_digits = &right_digits[..shorten(right_digits, adjust)];
-            right_exp = right_exp.saturating_add(adjust as i32);
+            right_exp = right_exp.saturating_add(gap(adjust));
         }
     }
     let min_exp = left_exp.min(right_exp);
@@ -328,7 +342,7 @@ fn aligned_wide_sum(
     let right_width =
         right_digits.len() + usize::try_from(i64::from(right_exp) - i64::from(min_exp)).ok()?;
     let widest = left_width.max(right_width);
-    if widest > WIDE_DIGITS || widest as i64 > max_length {
+    if widest > WIDE_DIGITS || signed_len(widest) > max_length {
         return None;
     }
     // Folded in a `u64` while nineteen digits fit one, which is every
@@ -342,13 +356,13 @@ fn aligned_wide_sum(
         for digit in &digits[split..] {
             value = value * 10 + u128::from(*digit);
         }
-        value * 10u128.pow((width - digits.len()) as u32)
+        value * 10u128.pow(u32::try_from(width - digits.len()).expect("at most WIDE_DIGITS"))
     };
     let a = magnitude(left_digits, left_width);
     let b = magnitude(right_digits, right_width);
     let (raw, negative, raw_length) = if left_negative == right_negative {
         let sum = a + b;
-        let carried = sum >= 10u128.pow(widest as u32);
+        let carried = sum >= 10u128.pow(u32::try_from(widest).expect("at most WIDE_DIGITS"));
         (sum, left_negative, widest + usize::from(carried))
     } else {
         match a.cmp(&b) {
@@ -363,17 +377,18 @@ fn aligned_wide_sum(
     let mut buffer = [0u8; WIDE_DIGITS + 1];
     let raw_digits = &mut buffer[..raw_length];
     let split = 10u128.pow(19);
+    let half = |value: u128| u64::try_from(value).expect("below 2 * 10^18 or 10^19");
     let (mut high, mut low) = if raw < split {
-        (0, raw as u64)
+        (0, half(raw))
     } else {
-        ((raw / split) as u64, (raw % split) as u64)
+        (half(raw / split), half(raw % split))
     };
     for (place, slot) in raw_digits.iter_mut().rev().enumerate() {
         if place < 19 {
-            *slot = (low % 10) as u8;
+            *slot = last_digit(low);
             low /= 10;
         } else {
-            *slot = (high % 10) as u8;
+            *slot = last_digit(high);
             high /= 10;
         }
     }
@@ -383,7 +398,7 @@ fn aligned_wide_sum(
     let keep = usize::try_from(digits).unwrap_or(usize::MAX);
     let mut exponent = min_exp;
     let kept = if keep != 0 && raw_length > keep {
-        exponent += (raw_length - keep) as i32;
+        exponent += i32::try_from(raw_length - keep).expect("at most WIDE_DIGITS + 1");
         let round_up = raw_digits[keep] >= 5;
         let kept = &mut raw_digits[..keep];
         if round_up {
@@ -448,8 +463,8 @@ fn sub_magnitudes(a: &[u8], b: &[u8]) -> Digits {
     let mut out = Digits::zeros(n);
     let mut borrow = 0i8;
     for i in 0..n {
-        let x = a[n - 1 - i] as i8;
-        let y = b.len().checked_sub(i + 1).map_or(0, |k| b[k] as i8);
+        let x = a[n - 1 - i].cast_signed();
+        let y = b.len().checked_sub(i + 1).map_or(0, |k| b[k].cast_signed());
         let mut d = x - y - borrow;
         if d < 0 {
             d += 10;
@@ -457,7 +472,7 @@ fn sub_magnitudes(a: &[u8], b: &[u8]) -> Digits {
         } else {
             borrow = 0;
         }
-        out[n - 1 - i] = d as u8;
+        out[n - 1 - i] = d.cast_unsigned();
     }
     out
 }
@@ -465,7 +480,9 @@ fn sub_magnitudes(a: &[u8], b: &[u8]) -> Digits {
 /// Removes `count` digits from the low end, by walking the end pointer
 /// backwards. Never empties the vector.
 fn drop_low_digits(digits: &mut Digits, count: i64) {
-    let count = count.max(0) as usize;
+    // Saturated: a count past `usize` (only where `usize` is 32 bits) is
+    // longer than any vector, and leaves the one digit kept as it would.
+    let count = usize::try_from(count.max(0)).unwrap_or(usize::MAX);
     let keep = digits.len().saturating_sub(count).max(1);
     digits.truncate(keep);
 }
@@ -582,7 +599,7 @@ mod add_shortcut_tests {
             state % bound
         };
         let number = |next: &mut dyn FnMut(u64) -> u64| {
-            let length = 1 + next(40) as usize;
+            let length = 1 + usize::try_from(next(40)).expect("below 40");
             let mut text = String::new();
             if next(2) == 0 {
                 text.push('-');
@@ -593,14 +610,17 @@ mod add_shortcut_tests {
                 let digit = match next(4) {
                     0 => 9,
                     1 => 0,
-                    _ => next(10) as u8,
+                    _ => u8::try_from(next(10)).expect("a digit"),
                 };
                 text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
             }
             // Mostly near each other, sometimes far apart, which is what
             // makes the alignment adjustment shorten an operand.
             let spread = if next(4) == 0 { 90 } else { 30 };
-            text.push_str(&format!("E{}", next(spread) as i64 - spread as i64 / 2));
+            text.push_str(&format!(
+                "E{}",
+                next(spread).cast_signed() - (spread / 2).cast_signed()
+            ));
             Number::parse(&text).expect("a generated spelling parses")
         };
         let mut taken = 0;
@@ -645,7 +665,7 @@ mod add_shortcut_tests {
             state % bound
         };
         let number = |next: &mut dyn FnMut(u64) -> u64| {
-            let length = 1 + next(18) as usize;
+            let length = 1 + usize::try_from(next(18)).expect("below 18");
             let mut text = String::new();
             if next(2) == 0 {
                 text.push('-');
@@ -654,12 +674,15 @@ mod add_shortcut_tests {
                 let digit = match next(4) {
                     0 => 9,
                     1 => 0,
-                    _ => next(10) as u8,
+                    _ => u8::try_from(next(10)).expect("a digit"),
                 };
                 text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
             }
             let spread = if next(4) == 0 { 60 } else { 20 };
-            text.push_str(&format!("E{}", next(spread) as i64 - spread as i64 / 2));
+            text.push_str(&format!(
+                "E{}",
+                next(spread).cast_signed() - (spread / 2).cast_signed()
+            ));
             if next(16) == 0 {
                 text = String::from("0");
             }
@@ -688,8 +711,9 @@ mod add_shortcut_tests {
                 right.format(40)
             );
             taken += 1;
-            let width = |n: &Number| n.digits.len() as i64 + i64::from(n.exponent);
-            if (width(&left) - i64::from(left.exponent.min(right.exponent))) as u64 > digits {
+            let width = |n: &Number| crate::signed_len(n.digits.len()) + i64::from(n.exponent);
+            if (width(&left) - i64::from(left.exponent.min(right.exponent))).unsigned_abs() > digits
+            {
                 rounded += 1;
             }
         }

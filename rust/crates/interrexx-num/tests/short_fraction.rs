@@ -1,6 +1,7 @@
 //! `Number::write_short_fraction`, the allocation-free rendering a short
 //! fractional result takes, against `Number::format_form`.
 
+use interrexx_cast::CastFrom;
 use interrexx_num::{Form, Number};
 
 const MANTISSAS: &[&str] = &[
@@ -45,7 +46,7 @@ fn agrees_with_the_full_rendering_and_parses_back_unchanged() {
                                 None => {
                                     let declined_rightly = !full.contains('.')
                                         || full.contains('E')
-                                        || value.digit_count() as u64 > digits
+                                        || u64::cast_from(value.digit_count()) > digits
                                         || full.len() > width;
                                     assert!(
                                         declined_rightly,

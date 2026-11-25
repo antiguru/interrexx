@@ -786,6 +786,7 @@ version = "0.1.0"
 name = "interrexx-inventory"
 version = "0.1.0"
 dependencies = [
+ "interrexx-cast",
  "interrexx-upstream",
 ]
 
@@ -801,6 +802,7 @@ name = "interrexx-num"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "interrexx-cast",
  "interrexx-inventory",
 ]
 
