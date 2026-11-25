@@ -99,7 +99,7 @@ impl Interpreter {
             null_string,
             on_whole_number: OnWholeNumber::Nothing,
             collections: 0,
-            locals: Table::new(),
+            locals: Table::new(&interrexx_api::handles::HandleSpace::new()),
         }
     }
 

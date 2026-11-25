@@ -277,8 +277,9 @@ held at its bound, as follows:
 * The C API's `wholenumber_t`, `stringsize_t`, `size_t`, `ssize_t`, `intptr_t` and `uintptr_t`
   are the target's widths: an argument outside one is 88.907 naming that range, and a reader
   such as `ObjectToWholeNumber` refuses a value its type cannot hold.
-* An `ObjRef` is 64 bits, wider than a native handle: the handle encoding is in
-  `native-api.md`, Handles and lifetimes.
+* An `ObjRef` is 64 bits, wider than a native handle: the handle encoding, a per-interpreter
+  numbering of the references an address cannot carry, is in `native-api.md`, Handles and
+  lifetimes.
 * The interpreter thread's stack is 256 MiB, half the 64-bit one, so that more than a few
   interpreter and pool threads fit in the address space.
 * A map of names hashes as on a 64-bit target (`interrexx-core/src/name_hash.rs`), so

@@ -101,7 +101,7 @@ impl Interpreter {
             heap,
             cself: None,
             variables: Vec::new(),
-            locals: Table::new(),
+            locals: Table::new(&interrexx_api::handles::HandleSpace::new()),
             digits: 9,
             doubles: Vec::new(),
             null_string,

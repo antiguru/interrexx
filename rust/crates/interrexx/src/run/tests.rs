@@ -142,7 +142,7 @@ fn a_stale_native_frame_token_is_refused() {
             name: Vec::new(),
             arguments: Vec::new(),
             argument_list: None,
-            locals: interrexx_api::handles::Table::new(),
+            locals: interrexx_api::handles::Table::new(&interrexx_api::handles::HandleSpace::new()),
             raised: None,
             additional: None,
             result: None,

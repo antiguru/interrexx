@@ -9,10 +9,11 @@ use crate::layout::RexxObjectPtr;
 /// The objects one activation has handed a native call, held so the collector
 /// can see them (D5).
 ///
-/// A handle is derived from the whole of the `ObjRef`, generation included, so
-/// two handles are equal exactly when they name the same object and a handle
-/// minted before a slot was recycled cannot name the slot's next occupant.
-#[derive(Default)]
+/// A handle is derived from the whole of the `ObjRef`, generation included, in
+/// the [`HandleSpace`] the table was made in, so two handles of one space are
+/// equal exactly when they name the same object while either resolves, and a
+/// handle minted before a slot was recycled does not name the slot's next
+/// occupant.
 pub struct Table {
     entries: FxHashMap<usize, ObjRef>,
     /// `None` until the first [`Table::release`].
@@ -22,6 +23,7 @@ pub struct Table {
     /// registering them hashes nothing. Empty until then, and again after
     /// [`Table::clear`].
     constants: Option<[ObjRef; CONSTANTS]>,
+    space: HandleSpace,
 }
 
 /// How many objects [`Table::register_constants`] holds.
@@ -41,21 +43,52 @@ struct Released {
 const RELEASED_FLOOR: usize = 4096;
 
 impl Table {
-    pub fn new() -> Table {
-        Table::default()
+    /// An empty table whose handles are `space`'s: every table one
+    /// interpreter resolves a handle through is made in that interpreter's
+    /// space.
+    pub fn new(space: &HandleSpace) -> Table {
+        Table {
+            entries: FxHashMap::default(),
+            released: None,
+            constants: None,
+            space: space.clone(),
+        }
     }
 
     /// The handle for `object`, held until [`Table::release`] or
     /// [`Table::clear`]. Registering an object this table already holds
     /// answers the same handle and changes nothing.
+    #[cfg(target_pointer_width = "64")]
     pub fn register(&mut self, object: ObjRef) -> RexxObjectPtr {
-        let address = address_of(object);
+        let address = self.space.hold(object);
         self.entries.insert(address, object);
         if let Some(released) = &mut self.released
             && !released.handles.is_empty()
         {
             released.handles.remove(&address);
         }
+        std::ptr::without_provenance_mut(address)
+    }
+
+    /// The handle for `object`, held until [`Table::release`] or
+    /// [`Table::clear`]. Registering an object this table already holds,
+    /// registered or released, answers the same handle and holds its number
+    /// no more than once.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn register(&mut self, object: ObjRef) -> RexxObjectPtr {
+        if let Some(address) = self.space.peek(object) {
+            if self.entries.contains_key(&address) {
+                return std::ptr::without_provenance_mut(address);
+            }
+            if let Some(released) = &mut self.released
+                && released.handles.remove(&address).is_some()
+            {
+                self.entries.insert(address, object);
+                return std::ptr::without_provenance_mut(address);
+            }
+        }
+        let address = self.space.hold(object);
+        self.entries.insert(address, object);
         std::ptr::without_provenance_mut(address)
     }
 
@@ -68,8 +101,10 @@ impl Table {
         &mut self,
         objects: [ObjRef; CONSTANTS],
     ) -> [RexxObjectPtr; CONSTANTS] {
-        self.constants = Some(objects);
-        objects.map(|object| std::ptr::without_provenance_mut(address_of(object)))
+        if let Some(held) = self.constants.replace(objects) {
+            held.iter().for_each(|object| self.space.unhold(*object));
+        }
+        objects.map(|object| std::ptr::without_provenance_mut(self.space.hold(object)))
     }
 
     /// The constant `address` names, if [`Table::register_constants`] holds
@@ -79,7 +114,7 @@ impl Table {
             .as_ref()?
             .iter()
             .copied()
-            .find(|object| address_of(*object) == address)
+            .find(|object| self.space.peek(*object) == Some(address))
     }
 
     /// The object `handle` names, held or released, or `None` if this table
@@ -111,8 +146,9 @@ impl Table {
 
     /// Whether this table holds `object`.
     pub fn holds(&self, object: ObjRef) -> bool {
-        let address = address_of(object);
-        self.entries.contains_key(&address) || self.constant(address).is_some()
+        self.space.peek(object).is_some_and(|address| {
+            self.entries.contains_key(&address) || self.constant(address).is_some()
+        })
     }
 
     /// Drops `handle`'s registration, so it no longer roots its object. A
@@ -127,7 +163,14 @@ impl Table {
         let released = self.released.get_or_insert_with(Box::default);
         released.handles.insert(address, object);
         if released.handles.len() >= released.limit.max(RELEASED_FLOOR) {
-            released.handles.retain(|_, object| live(*object));
+            let space = &self.space;
+            released.handles.retain(|_, object| {
+                let kept = live(*object);
+                if !kept {
+                    space.unhold(*object);
+                }
+                kept
+            });
             released.limit = released.handles.len() * 2;
         }
     }
@@ -135,6 +178,7 @@ impl Table {
     /// Drops every registration and every released handle, which is what
     /// the end of an activation does.
     pub fn clear(&mut self) {
+        self.unhold_all();
         // Clearing an empty table that has capacity still rewrites its control bytes.
         if !self.entries.is_empty() {
             self.entries.clear();
@@ -143,6 +187,26 @@ impl Table {
         if let Some(released) = &mut self.released {
             released.handles.clear();
             released.limit = 0;
+        }
+    }
+
+    /// Gives back to the space every number this table holds: its
+    /// registrations, its released handles and its constants.
+    fn unhold_all(&self) {
+        if !HandleSpace::COUNTS {
+            return;
+        }
+        let released = self
+            .released
+            .iter()
+            .flat_map(|released| released.handles.values());
+        for object in self
+            .entries
+            .values()
+            .chain(released)
+            .chain(self.constants.iter().flatten())
+        {
+            self.space.unhold(*object);
         }
     }
 
@@ -155,65 +219,216 @@ impl Table {
     }
 }
 
-/// The handle [`Table::register`] answers for `object`, without registering
-/// it: what a thread table's data members carry for the interpreter's
-/// constants before any call has registered them.
-#[must_use]
-pub fn handle_of(object: ObjRef) -> RexxObjectPtr {
-    std::ptr::without_provenance_mut(address_of(object))
+impl Drop for Table {
+    fn drop(&mut self) {
+        self.unhold_all();
+    }
 }
 
-/// `object`'s handle, as an address: on a 64-bit target the `ObjRef`'s own
-/// bits, carried in the address of a pointer nothing dereferences.
+/// The handle a thread table's data members carry for one of the
+/// interpreter's constants before any call has registered them: the handle
+/// every [`Table`] answers for it.
+///
+/// # Panics
+/// On a target narrower than an `ObjRef`, for an object whose handle would
+/// need a [`HandleSpace`]'s number, which none of the constants does.
+#[must_use]
+pub fn handle_of(object: ObjRef) -> RexxObjectPtr {
+    let address = carried(object).expect("a constant's handle is carried in its address");
+    std::ptr::without_provenance_mut(address)
+}
+
+/// `object`'s handle, as an address, where the address carries the `ObjRef`
+/// itself, which is always on a 64-bit target: the `ObjRef`'s own bits, plus
+/// one so that the `ObjRef` whose bits are zero -- heap slot zero at
+/// generation zero, the first object a fresh heap allocates -- does not encode
+/// to `NULLOBJECT`, the null pointer.
 ///
 /// # Panics
 /// If every bit of `object` is set, which no constructible `ObjRef` has: the
 /// tag reserves the low two bits, and the only tag that sets both leaves the
 /// three above the length clear.
 #[cfg(target_pointer_width = "64")]
-fn address_of(object: ObjRef) -> usize {
-    // `NULLOBJECT` is the null pointer, so the `ObjRef`
-    // whose bits are zero -- heap slot zero at generation zero, the first
-    // object a fresh heap allocates -- must not encode to it.
+fn carried(object: ObjRef) -> Option<usize> {
     let biased = object.bits().wrapping_add(1);
     assert!(biased != 0, "an ObjRef with every bit set has no handle");
-    biased as usize
+    Some(biased as usize)
 }
 
-/// `object`'s handle, as an address, on a target whose addresses are narrower
-/// than an `ObjRef`.
-///
-/// An `ObjRef` whose bits fit in one bit less than an address is carried in
-/// the address itself, shifted up with the low bit set, so the address is odd
-/// and never null. Every other `ObjRef` is numbered from one, in the order its
-/// handle is first asked for, by a table the whole process shares, and its
-/// address is that number shifted up, so it is even and never null. Either
-/// way two handles are equal exactly when they name the same `ObjRef`, in
-/// every table and every interpreter of the process, as on a 64-bit target.
-/// The shared table forgets nothing: a handle an extension kept may be
-/// presented again at any time, and a number given to a second `ObjRef` would
-/// let a stale handle name it.
-///
-/// # Panics
-/// Once the numbers an address can carry are used up.
+/// `object`'s handle, as an address, where the address carries the `ObjRef`
+/// itself: on a target narrower than an `ObjRef`, one whose bits fit in one
+/// bit less than an address, shifted up with the low bit set, so the address
+/// is odd and never null. `None` for any other, which a [`HandleSpace`]
+/// numbers.
 #[cfg(not(target_pointer_width = "64"))]
-fn address_of(object: ObjRef) -> usize {
-    use std::sync::{LazyLock, Mutex, PoisonError};
-
-    static NUMBERED: LazyLock<Mutex<FxHashMap<u64, usize>>> = LazyLock::new(Mutex::default);
-
+fn carried(object: ObjRef) -> Option<usize> {
     let bits = object.bits();
-    if bits < 1 << (usize::BITS - 1) {
-        return ((bits as usize) << 1) | 1;
+    (bits < 1 << (usize::BITS - 1)).then_some(((bits as usize) << 1) | 1)
+}
+
+/// The handles of one interpreter. On a 64-bit target a handle is the
+/// `ObjRef`'s bits and the space holds nothing.
+///
+/// On a narrower target an `ObjRef` the address cannot carry ([`carried`]) is
+/// given a number, and its handle is that number shifted up, so it is even and
+/// never null. A number is held by each [`Table`] that registered the
+/// `ObjRef`, released handles included, and by each holder the interpreter
+/// keeps beside them ([`HandleSpace::hold`]); it is given back when the last
+/// holder lets it go. Numbers are handed out in turn and wrap at the largest
+/// an address carries, skipping those held, so a number given back is not
+/// given to another `ObjRef` until every other number has been handed out
+/// since: a handle an extension kept past its activation does not name the
+/// next object it might, short of that. The space is the interpreter's, as
+/// its tables are: nothing resolves one interpreter's handle in another's.
+#[derive(Clone, Default)]
+pub struct HandleSpace {
+    #[cfg(not(target_pointer_width = "64"))]
+    numbering: std::sync::Arc<std::sync::Mutex<Numbering>>,
+}
+
+impl HandleSpace {
+    /// Whether this target's space holds anything, so that a table that is
+    /// dropped or cleared need not walk its handles where it holds nothing.
+    const COUNTS: bool = cfg!(not(target_pointer_width = "64"));
+
+    /// A space with no handle numbered.
+    pub fn new() -> HandleSpace {
+        HandleSpace::default()
     }
-    let mut numbered = NUMBERED.lock().unwrap_or_else(PoisonError::into_inner);
-    let next = numbered.len() + 1;
-    let number = *numbered.entry(bits).or_insert(next);
-    assert!(
-        number <= usize::MAX >> 1,
-        "every handle an address can carry has been given out"
-    );
-    number << 1
+
+    /// `object`'s handle, as an address, held once more until a matching
+    /// [`HandleSpace::unhold`].
+    #[cfg(target_pointer_width = "64")]
+    #[inline]
+    pub fn hold(&self, object: ObjRef) -> usize {
+        carried(object).expect("a 64-bit address carries every ObjRef")
+    }
+
+    /// `object`'s handle, as an address, without holding it: `None` when the
+    /// address cannot carry it and nothing holds a number for it.
+    #[cfg(target_pointer_width = "64")]
+    #[inline]
+    pub fn peek(&self, object: ObjRef) -> Option<usize> {
+        carried(object)
+    }
+
+    /// Lets go of one hold of `object`'s handle.
+    #[cfg(target_pointer_width = "64")]
+    #[inline]
+    pub fn unhold(&self, _object: ObjRef) {}
+
+    /// `object`'s handle, as an address, held once more until a matching
+    /// [`HandleSpace::unhold`].
+    ///
+    /// # Panics
+    /// If every number an address carries is held.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn hold(&self, object: ObjRef) -> usize {
+        carried(object).unwrap_or_else(|| self.numbering().hold(object.bits()) << 1)
+    }
+
+    /// `object`'s handle, as an address, without holding it: `None` when the
+    /// address cannot carry it and nothing holds a number for it.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn peek(&self, object: ObjRef) -> Option<usize> {
+        carried(object).or_else(|| {
+            self.numbering()
+                .peek(object.bits())
+                .map(|number| number << 1)
+        })
+    }
+
+    /// Lets go of one hold of `object`'s handle; the last one gives its
+    /// number back.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn unhold(&self, object: ObjRef) {
+        if carried(object).is_none() {
+            self.numbering().unhold(object.bits());
+        }
+    }
+
+    /// How many `ObjRef`s hold a number, which is what the space's memory
+    /// grows with.
+    #[cfg(not(target_pointer_width = "64"))]
+    pub fn numbered(&self) -> usize {
+        self.numbering().held.len()
+    }
+
+    #[cfg(not(target_pointer_width = "64"))]
+    fn numbering(&self) -> std::sync::MutexGuard<'_, Numbering> {
+        self.numbering
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+
+/// The numbers of a [`HandleSpace`] on a narrow target.
+#[cfg(not(target_pointer_width = "64"))]
+struct Numbering {
+    /// Each numbered `ObjRef`'s bits, its number and how many hold it.
+    held: FxHashMap<u64, (usize, usize)>,
+    /// The numbers in `held`.
+    taken: rustc_hash::FxHashSet<usize>,
+    /// The number handed out next, unless it is taken.
+    next: usize,
+    /// The largest number, after which the turn wraps to one.
+    last: usize,
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+impl Default for Numbering {
+    fn default() -> Numbering {
+        Numbering::up_to(usize::MAX >> 1)
+    }
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+impl Numbering {
+    fn up_to(last: usize) -> Numbering {
+        Numbering {
+            held: FxHashMap::default(),
+            taken: rustc_hash::FxHashSet::default(),
+            next: 1,
+            last,
+        }
+    }
+
+    fn hold(&mut self, bits: u64) -> usize {
+        if let Some((number, holders)) = self.held.get_mut(&bits) {
+            *holders += 1;
+            return *number;
+        }
+        assert!(
+            self.taken.len() < self.last,
+            "every handle an address can carry is held"
+        );
+        let number = loop {
+            let number = self.next;
+            self.next = if number == self.last { 1 } else { number + 1 };
+            if !self.taken.contains(&number) {
+                break number;
+            }
+        };
+        self.taken.insert(number);
+        self.held.insert(bits, (number, 1));
+        number
+    }
+
+    fn peek(&self, bits: u64) -> Option<usize> {
+        self.held.get(&bits).map(|(number, _)| *number)
+    }
+
+    fn unhold(&mut self, bits: u64) {
+        let Some((number, holders)) = self.held.get_mut(&bits) else {
+            return;
+        };
+        *holders -= 1;
+        if *holders == 0 {
+            let number = *number;
+            self.held.remove(&bits);
+            self.taken.remove(&number);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -226,7 +441,7 @@ mod tests {
     fn constants_resolve_until_the_table_is_cleared() {
         let objects = [0, 1, 2, 3].map(|slot| ObjRef::heap(slot, 7));
         let other = ObjRef::heap(9, 7);
-        let mut table = Table::new();
+        let mut table = Table::new(&HandleSpace::new());
         let handles = table.register_constants(objects);
         let plain = table.register(other);
         for (handle, object) in handles.iter().zip(objects) {
@@ -247,14 +462,15 @@ mod tests {
 
     /// On a narrow target the references carried in the address and the
     /// numbered ones never share a handle, none is null, and the numbered
-    /// ones answer the same handle in every table.
+    /// ones answer the same handle in every table of the space.
     #[cfg(not(target_pointer_width = "64"))]
     #[test]
     fn narrow_handles_are_distinct_and_shared_between_tables() {
         let carried = [ObjRef::heap(0, 0), ObjRef::heap(1, 0), ObjRef::NIL];
         let numbered = [ObjRef::heap(0, 1), ObjRef::heap(1, 1), ObjRef::heap(0, 2)];
-        let mut first = Table::new();
-        let mut second = Table::new();
+        let space = HandleSpace::new();
+        let mut first = Table::new(&space);
+        let mut second = Table::new(&space);
         let handles: Vec<RexxObjectPtr> = carried
             .iter()
             .chain(&numbered)
@@ -267,7 +483,9 @@ mod tests {
         for (object, handle) in carried.iter().chain(&numbered).zip(&handles) {
             assert_eq!(second.register(*object), *handle);
             assert_eq!(second.resolve(*handle), Some(*object));
-            assert_eq!(handle_of(*object), *handle);
+        }
+        for object in carried {
+            assert_eq!(handle_of(object), first.register(object));
         }
         assert!(
             handles[..carried.len()]
@@ -279,5 +497,58 @@ mod tests {
                 .iter()
                 .all(|handle| handle.addr() & 1 == 0)
         );
+    }
+
+    /// A number stays held while any table holds its `ObjRef`, registered or
+    /// released, and is given back when the last one clears or is dropped.
+    #[cfg(not(target_pointer_width = "64"))]
+    #[test]
+    fn a_number_is_given_back_when_no_table_holds_it() {
+        let space = HandleSpace::new();
+        let object = ObjRef::heap(3, 9);
+        let mut first = Table::new(&space);
+        let mut second = Table::new(&space);
+        let handle = first.register(object);
+        assert_eq!(first.register(object), handle);
+        assert_eq!(second.register(object), handle);
+        assert_eq!(space.numbered(), 1);
+        first.release(handle, |_| true);
+        assert_eq!(first.register(object), handle);
+        first.release(handle, |_| true);
+        first.clear();
+        assert_eq!(space.numbered(), 1, "the second table still holds it");
+        assert_eq!(second.resolve(handle), Some(object));
+        drop(second);
+        assert_eq!(space.numbered(), 0);
+        assert!(!first.holds(object));
+    }
+
+    /// A number given back is not handed to another `ObjRef` until the turn
+    /// has wrapped, and the turn skips numbers still held.
+    #[cfg(not(target_pointer_width = "64"))]
+    #[test]
+    fn a_number_given_back_waits_for_the_turn_to_wrap() {
+        let mut numbering = Numbering::up_to(3);
+        assert_eq!(numbering.hold(10), 1);
+        assert_eq!(numbering.hold(11), 2);
+        numbering.unhold(10);
+        assert_eq!(
+            numbering.hold(12),
+            3,
+            "1 was given back but its turn has passed"
+        );
+        assert_eq!(
+            numbering.hold(13),
+            1,
+            "the turn wraps to the number given back"
+        );
+        assert_eq!(numbering.peek(10), None);
+        numbering.unhold(12);
+        assert_eq!(
+            numbering.hold(14),
+            3,
+            "the wrapped turn skips 2, still held"
+        );
+        assert_eq!(numbering.hold(11), 2, "a held ObjRef keeps its number");
     }
 }

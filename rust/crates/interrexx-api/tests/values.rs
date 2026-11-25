@@ -50,7 +50,7 @@ impl Interpreter {
             speechless: Vec::new(),
             raising: Vec::new(),
             variables: Vec::new(),
-            locals: Table::new(),
+            locals: Table::new(&interrexx_api::handles::HandleSpace::new()),
             receiver: ObjRef::NIL,
             scope: ObjRef::NIL,
             super_scope: ObjRef::NIL,

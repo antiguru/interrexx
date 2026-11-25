@@ -176,7 +176,7 @@ impl Interpreter {
             heap: Heap::new(),
             asked: 0,
             variables: Vec::new(),
-            locals: Table::new(),
+            locals: Table::new(&crate::handles::HandleSpace::new()),
             numeric: Numeric {
                 digits: 9,
                 fuzz: 0,

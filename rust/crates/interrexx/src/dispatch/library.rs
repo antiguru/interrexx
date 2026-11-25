@@ -1176,7 +1176,7 @@ impl Interp {
                 name: Vec::new(),
                 arguments: Vec::new(),
                 argument_list: None,
-                locals: Table::new(),
+                locals: Table::new(&self.handle_space),
                 raised: None,
                 additional: None,
                 result: None,
@@ -2482,15 +2482,14 @@ impl Host for Interp {
             .last_mut()
             .expect("a native activation is running");
         let handle = frame.locals.register(object);
-        if frame.method
+        let borrowed = frame.method
             && frame.receiver == object
-            && matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
-        {
-            self.borrowed_native_handles.insert(handle.addr(), object);
+            && matches!(object.decode(), interrexx_core::Decoded::Heap { .. });
+        let floor = frame.temps_floor;
+        if borrowed {
+            self.borrow_native_handle(object);
         }
-        self.roots
-            .activity_mut()
-            .pop_temp_above(frame.temps_floor, object);
+        self.roots.activity_mut().pop_temp_above(floor, object);
         handle
     }
 
@@ -2552,6 +2551,17 @@ impl Host for Interp {
 }
 
 impl Interp {
+    /// Keeps `object`'s handle resolving across callbacks without rooting it,
+    /// holding the handle's number until a collection finds the object gone.
+    pub(crate) fn borrow_native_handle(&mut self, object: ObjRef) {
+        let held = self.handle_space.peek(object);
+        if held.is_some_and(|address| self.borrowed_native_handles.contains_key(&address)) {
+            return;
+        }
+        let address = self.handle_space.hold(object);
+        self.borrowed_native_handles.insert(address, object);
+    }
+
     /// A native refusal's `found` insert: the object's `stringValue()`, which
     /// for an instance sends `OBJECTNAME` and so runs a class's own
     /// `defaultName`, and which falls back to the default name where that send
