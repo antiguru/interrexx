@@ -143,7 +143,7 @@ levels there are, their position, `type`, `line` and trace line are unspecified
 wherever levels are listed or shown: in the array of `stackFrames`, in the
 `STACKFRAMES` and `TRACEBACK` entries of a condition, in the traceback of the
 report of an error and in the output of tracing, and so is whether a condition
-that came from a built-in method is `PROPAGATED` ([the propagated
+that a built-in method raised is `PROPAGATED` ([the propagated
 rule](r:cond.information.propagated)). A level of Rexx code, of a
 program or of the class library, is always there, so the level of a method that
 a built-in method ran is the first of its own `stackFrames`, and the main part
