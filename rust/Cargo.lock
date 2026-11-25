@@ -692,6 +692,7 @@ dependencies = [
  "interrexx-api",
  "interrexx-capi",
  "interrexx-capi-rxapi",
+ "interrexx-cast",
  "interrexx-classes",
  "interrexx-core",
  "interrexx-extract",
