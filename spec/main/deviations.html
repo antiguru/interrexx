@@ -586,10 +586,11 @@ name unless one was set, and raises NOSTRING for it in most positions.</p>
 file's current end. ooRexx writes at the end as it was when opened,
 overwriting what another writer appended meanwhile.</p>
 <h2 id="75-a-condition-raised-while-its-call-trap-is-delayed"><a class="header" href="#75-a-condition-raised-while-its-call-trap-is-delayed">75. A condition raised while its CALL trap is delayed</a></h2>
-<p>While a CALL ON trap is delayed, a condition raised for it again is held as
-the reference manual describes, and ERROR, FAILURE and NOTREADY raised again
-are ignored. ooRexx loses a held condition raised from a routine the handler
-calls, and crashes in some such programs.</p>
+<p>An interrexx CALL ON trap <a href="conditions/traps.html#r-cond.traps.delay">holds and delivers conditions</a>
+as the reference manual describes. ooRexx can deliver a re-raised USER
+condition after the next clause, and a SIGNAL ON in the handler can leave the
+held condition undelivered. ooRexx can also deliver an explicit ERROR raised
+again by its own handler, where interrexx ignores it.</p>
 <h2 id="76-package-of-an-interpret-translation-failure"><a class="header" href="#76-package-of-an-interpret-translation-failure">76. Package of an INTERPRET translation failure</a></h2>
 <p>The condition object of an INTERPRET that fails to translate names the
 running package. ooRexx names another package object.</p>

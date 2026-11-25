@@ -24364,7 +24364,19 @@ or SIGNAL OFF for the condition drops them. A CALL ON or SIGNAL ON for the
 condition answers them at the end of that instruction, with the trap that the
 instruction set. When the routine returns, the CALL trap answers them by
 calling the routine again. A SIGNAL trap is never <code>DELAY</code>.
-The held conditions are <a href="conditions/traps.html#r-cond.traps.deviation.75">Deviation 75</a>.</p>
+Differences in the delivery of held conditions are
+<a href="conditions/traps.html#r-cond.traps.deviation.75">Deviation 75</a>.</p>
+<pre><code class="language-rexx">call on notready name report
+total = readValue('first') + readValue('second')
+say 'total' total
+exit
+readValue: raise notready description (arg(1)) return 1
+report: say condition('c') condition('d'); return
+</code></pre>
+<pre><code class="language-output">NOTREADY first
+NOTREADY second
+total 2
+</code></pre>
 <pre><code class="language-rexx">address system
 call on error name h
 'exit 3'
@@ -24551,7 +24563,10 @@ routine that the handler calls, is held and answered as <a href="conditions/trap
 rule</a> says: the handler is called again when it returns,
 or at once when a CALL ON or a SIGNAL ON for the condition runs, and several
 such conditions are answered one after the other in the order raised. ooRexx
-loses such a condition, and crashes in some programs.</p>
+can resume the caller for another clause before it delivers a held USER
+condition, and issuing SIGNAL ON inside a handler can leave a held condition
+undelivered. An explicit ERROR raised again by its own handler can call the
+ooRexx handler again.</p>
 <pre><code class="language-rexx">call on user foo name h
 call r
 say 'main after'
@@ -131626,10 +131641,11 @@ name unless one was set, and raises NOSTRING for it in most positions.</p>
 file's current end. ooRexx writes at the end as it was when opened,
 overwriting what another writer appended meanwhile.</p>
 <h2 id="75-a-condition-raised-while-its-call-trap-is-delayed"><a class="header" href="#75-a-condition-raised-while-its-call-trap-is-delayed">75. A condition raised while its CALL trap is delayed</a></h2>
-<p>While a CALL ON trap is delayed, a condition raised for it again is held as
-the reference manual describes, and ERROR, FAILURE and NOTREADY raised again
-are ignored. ooRexx loses a held condition raised from a routine the handler
-calls, and crashes in some such programs.</p>
+<p>An interrexx CALL ON trap <a href="conditions/traps.html#r-cond.traps.delay">holds and delivers conditions</a>
+as the reference manual describes. ooRexx can deliver a re-raised USER
+condition after the next clause, and a SIGNAL ON in the handler can leave the
+held condition undelivered. ooRexx can also deliver an explicit ERROR raised
+again by its own handler, where interrexx ignores it.</p>
 <h2 id="76-package-of-an-interpret-translation-failure"><a class="header" href="#76-package-of-an-interpret-translation-failure">76. Package of an INTERPRET translation failure</a></h2>
 <p>The condition object of an INTERPRET that fails to translate names the
 running package. ooRexx names another package object.</p>
