@@ -246,7 +246,7 @@
   end
 
 
-::class 'InetAddress' public
+::class InetAddress public
 
 ::attribute address get
 ::attribute port get
@@ -294,7 +294,7 @@
   return stem.
 
 
-::class 'HostInfo' public
+::class HostInfo public
 
 ::attribute name get
 ::attribute address get

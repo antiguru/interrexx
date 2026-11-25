@@ -22,7 +22,7 @@
   return text
 
 
-::class 'mimepart' public
+::class mimepart public
 
 ::constant crlf '0d0a'x
 
@@ -57,7 +57,7 @@
   return text || headers(self) || self~crlf || content || self~crlf
 
 
-::class 'mimemultipart' public
+::class mimemultipart public
 
 ::constant crlf '0d0a'x
 

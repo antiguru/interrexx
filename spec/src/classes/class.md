@@ -218,6 +218,8 @@ case that the `::CLASS` directive wrote it, which is upper case for a name
 written as a symbol, or the string that `subclass`, `mixinClass` or `new` got.
 It takes no argument, and raises `SYNTAX 93.902` with one. The id is not
 changed by `objectName=`, and two classes may have one id.
+The class library keeps the mixed-case ids of its internal mixins. Its
+package class table keys use upper case ([the package rule](r:class.package.classes)).
 
 ```rexx
 say .plain~id .mixed~id .quoted~id .class~id .object~id
@@ -245,6 +247,19 @@ PLAIN Mixed quoted Class Object
 Dyn One Dyn One 0
 Dyn One renamed renamed
 .plain~id(1) => 93.902
+```
+
+```rexx
+classes = .object~package~classes
+do name over .array~of('BAGMIXIN', 'SETMIXIN', 'SUPPLIERMIXIN')
+  say name classes[name]~id
+end
+```
+
+```output
+BAGMIXIN BagMixin
+SETMIXIN SetMixin
+SUPPLIERMIXIN SupplierMixin
 ```
 
 r[class.class.defaultname]

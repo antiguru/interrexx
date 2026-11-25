@@ -3,7 +3,7 @@
    class.set.operand, class.set.operand.list, class.bag.operand and
    class.bag.operand.list; Deviation 125 is the List case of the walk. */
 
-::class SetMixin
+::class "SetMixin"
 
 /* Sends the message NAME to OBJ, with ARG as its argument when one is given.
    An object that does not understand it raises SYNTAX 93.948, the error of an
@@ -104,7 +104,7 @@ missing:
   use arg member, copy
   copy~remove(member)
 
-::class BagMixin
+::class "BagMixin"
 
 /* Sends the message NAME to OBJ, with ARG as its argument when one is given.
    An object that does not understand it raises SYNTAX 93.948, the error of an
