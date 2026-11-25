@@ -113,8 +113,8 @@ err>      2 *-* raise syntax ('5.x') description (g()) exit (g())
 err> Error 33 running /nonexistent/ir-dual-case.rex line 2:
 err> Error 33.904:
 
-# ADDITIONAL's conversion under SYNTAX comes before RETURN is evaluated: a
-# value with no array is 98.939, and an object's MAKEARRAY runs first
+# ADDITIONAL is evaluated before RETURN and converted after it. A value with
+# no array is 98.939, and an object's MAKEARRAY runs after RETURN's call.
 program
 signal on syntax
 o = .noisy~new
@@ -133,12 +133,32 @@ t2: say 't2' condition('O')~code condition('O')~additional[1]; return
 ::method makearray; say 'makearray sent'; return .array~of('item')
 ----
 rc> 0
+out> f R
 out> trapped 98.939 0
 out> string sent
 out> f D
-out> makearray sent
 out> f R2
+out> makearray sent
 out> t2 40.1 item
+
+# A failure evaluating EXIT is reported before ADDITIONAL's array check.
+program
+signal on syntax
+call sub
+exit
+syntax: say 'trapped' condition('O')~code; exit
+sub:
+  raise syntax 40.1 additional (f('A')) exit (f('E'))
+f:
+  say 'f' arg(1)
+  if arg(1) = 'A' then return .nil
+  zero = 0
+  return 1 / zero
+----
+rc> 0
+out> f A
+out> f E
+out> trapped 42.3
 
 # RAISE PROPAGATE replaces DESCRIPTION, ADDITIONAL and RESULT
 program

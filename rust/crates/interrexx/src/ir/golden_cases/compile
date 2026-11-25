@@ -1650,7 +1650,7 @@ raise propagate additional (zv) return
 1: Load read=Simple at=0 dst=0
 2: RaisePart index=0 part=Additional src=0
 3: ExecWith index=0 src=0
-registers: 2
+registers: 1
 consts:
 
 # A `RAISE` with no expression stays the one `Exec`, an empty `ARRAY` list

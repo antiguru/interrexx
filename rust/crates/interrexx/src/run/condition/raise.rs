@@ -13,7 +13,7 @@ pub(crate) enum RaisePart {
     /// checked here.
     Code,
     Description,
-    /// `ADDITIONAL`'s value, which `SYNTAX` converts to an array here.
+    /// The trace line of the `ADDITIONAL` expression.
     Additional,
     /// One item of the `ARRAY` list: its trace lines.
     Item,
@@ -24,9 +24,9 @@ pub(crate) enum RaisePart {
 }
 
 /// Where a compiled `RAISE` keeps what each of its parts leaves, as offsets
-/// from its first register. `Code`, `Description` and `Additional` take two
-/// registers each, `Array` one and one more per item, `Result` one; an
-/// absent part takes none.
+/// from its first register. `Code` and `Description` take two registers each,
+/// `Array` takes one and one more per item, and `Additional` and `Result`
+/// take one each. An absent part takes none.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) struct RaiseLayout {
     pub(crate) code: Option<u16>,
@@ -64,7 +64,7 @@ impl RaiseLayout {
         Some(RaiseLayout {
             code: take(raise.rc.is_some(), 2)?,
             description: take(raise.description.is_some(), 2)?,
-            additional: take(raise.additional.is_some(), 2)?,
+            additional: take(raise.additional.is_some(), 1)?,
             array: take(raise.array.is_some(), items.len().checked_add(1)?)?,
             result: take(raise_result_expr(raise).is_some(), 1)?,
             len,
@@ -102,9 +102,8 @@ struct RaiseHeld {
     code: Option<[ObjRef; 2]>,
     /// The value, and for `NOMETHOD` or `PROPAGATE` the string of its text.
     description: Option<[ObjRef; 2]>,
-    /// The value the condition carries, and for `SYNTAX` the array its
-    /// substitutions are read from or the string of the one substitution.
-    additional: Option<[ObjRef; 2]>,
+    /// The value before the condition converts it, if needed.
+    additional: Option<ObjRef>,
     array: Option<ObjRef>,
     result: Option<ObjRef>,
 }
@@ -138,7 +137,8 @@ impl Interp {
         }
         if let Some(expr) = &raise.additional {
             let value = self.eval(code, expr)?;
-            held.additional = Some(self.raise_additional(raise, value)?);
+            self.raise_additional_operand(raise, value)?;
+            held.additional = Some(value);
         }
         if let Some(items) = &raise.array {
             let mut values = Vec::with_capacity(items.len());
@@ -183,7 +183,7 @@ impl Interp {
         match part {
             RaisePart::Code => pair(self.raise_code(raise, registers.get(src))?),
             RaisePart::Description => pair(self.raise_description(raise, registers.get(src))?),
-            RaisePart::Additional => pair(self.raise_additional(raise, registers.get(src))?),
+            RaisePart::Additional => self.raise_additional_operand(raise, registers.get(src))?,
             RaisePart::Item => {
                 let value = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
                 self.raise_item(value)?;
@@ -220,7 +220,7 @@ impl Interp {
         let held = RaiseHeld {
             code: layout.code.map(pair),
             description: layout.description.map(pair),
-            additional: layout.additional.map(pair),
+            additional: layout.additional.map(|at| registers.get(base + at)),
             array: layout.array.map(|at| registers.get(base + at)),
             result: layout.result.map(|at| registers.get(base + at)),
         };
@@ -321,80 +321,29 @@ impl Interp {
         Ok([value, ObjRef::NIL])
     }
 
-    /// The `ADDITIONAL` part: the value the condition carries, and for
-    /// `SYNTAX` the array its substitutions are read from, or the string of
-    /// its one substitution.
-    fn raise_additional(&mut self, raise: &Raise, value: ObjRef) -> Result<[ObjRef; 2], Failure> {
-        let indent = self.activity.clause_state.current_value_indent;
-        let mut value = value;
+    /// Keep the `ADDITIONAL` value live and trace it before the next expression.
+    /// The array request for `SYNTAX` waits until every expression has run.
+    fn raise_additional_operand(&mut self, raise: &Raise, value: ObjRef) -> Result<(), Failure> {
         self.roots.activity_mut().push_temp(value);
-        if raise.propagate {
-            if self.traced_mode().results {
-                let traced = self.traced_string_value_text(value)?;
-                self.trace_keyword(indent, "ADDITIONAL", &traced);
-            }
-            return Ok([value, ObjRef::NIL]);
-        }
-        // **A surface that is neither `stringValue()` nor an operator, and only under one
-        // condition.** The additional information is converted to an array exactly once, and
-        // only for `SYNTAX` -- so under `USER` or any other condition the value is never
-        // array-converted. For example `raise syntax 40.1 additional (.array)` is a 98
-        // execution error at rc 158, `additional (.environment)` substitutes
-        // `INPUTOUTPUTSTREAM` -- the first entry of the array the directory converts to -- and
-        // `raise user zork additional (.array)` under a trap is rc 0. The array is retained for
-        // every condition, but only `SYNTAX` splits it into substitutions and refuses a value
-        // that is not one. The conversion is inside the `SYNTAX` branch alone, and that governs
-        // the *substitution list* a catalogue message renders from -- which only a `SYNTAX`
-        // condition has. The condition object's `ADDITIONAL` carries the raise's own array
-        // whatever the condition is: `raise user mycond additional (.array~of('x','y'))` gives
-        // a directory holding two items, and pushing the rendered whole value gave one holding
-        // `x\ny`. `Raised::message` is the only other reader and runs for a catalogue entry
-        // alone, so nothing else sees the split.
-        //
-        // `ADDITIONAL expr` and `ARRAY (a, b)` produce the identical
-        // substitution list -- measured, `additional ('MYROUTINE', 3)` and
-        // `array ('MYROUTINE', 3)` give byte-identical reports. A single
-        // non-array `ADDITIONAL` value is one substitution, also measured:
-        // `additional 'JUSTONE'` fills `&1` and leaves `&2` as the literal
-        // `&2`.
-        let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
-        let mut has_slots = self.array_slots(value).is_some();
-        let mut held_in = value;
-        // The object on the line, the same split the two keywords above
-        // take. Measured, `trace i` over `raise syntax 93.900 additional
-        // (1,2)`: `>K>   "ADDITIONAL" => "an Array"`.
         if self.traced_mode().results {
+            let indent = self.activity.clause_state.current_value_indent;
             let traced = self.traced_string_value_text(value)?;
             self.trace_keyword(indent, "ADDITIONAL", &traced);
         }
-        if converted && !has_slots {
-            // An array request, a string's lines included, and 98.939 for
-            // `.nil` or a multi-dimensional answer.
-            let Some((array, store)) = self.single_dimension_request(value)? else {
-                return Err(Raised::syntax_additional().into());
-            };
-            // The answer itself is carried, an `Array` subclass instance
-            // as it is; its items are read from the array holding them.
-            value = array;
-            held_in = store;
-            has_slots = self.array_slots(store).is_some();
+        if !raise.propagate && raise.condition.as_ref() != b"SYNTAX" {
+            self.activity.pending_additional = Some(value);
         }
-        // The object itself, for the condition object to carry. The
-        // substitution list is a different thing: it is what a catalogue
-        // message renders from, and only a `SYNTAX` condition has one.
-        self.activity.pending_additional = Some(value);
-        if !converted {
-            return Ok([value, ObjRef::NIL]);
+        Ok(())
+    }
+
+    /// The value a `SYNTAX` condition carries and the array holding its
+    /// message substitutions. An `Array` subclass holds its items separately.
+    fn syntax_additional_array(&mut self, value: ObjRef) -> Result<(ObjRef, ObjRef), Failure> {
+        if self.array_slots(value).is_some() {
+            return Ok((value, value));
         }
-        self.roots.activity_mut().push_temp(value);
-        if has_slots {
-            Ok([value, held_in])
-        } else {
-            let text = self.to_text(value).to_vec();
-            let text = self.text(&text);
-            self.roots.activity_mut().push_temp(text);
-            Ok([value, text])
-        }
+        self.single_dimension_request(value)?
+            .ok_or_else(|| Raised::syntax_additional().into())
     }
 
     /// The trace lines of one `ARRAY` item, `None` for an omitted position.
@@ -485,26 +434,17 @@ impl Interp {
             }
             _ => None,
         };
-        let mut additional: Vec<Vec<u8>> = Vec::new();
-        let mut substitutions = None;
-        if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
-            if let Some([carried, held_in]) = held.additional {
-                if self.array_slots(held_in).is_some() {
-                    substitutions = Some((carried, held_in));
-                } else {
-                    additional.push(self.to_text(held_in).to_vec());
-                }
-            }
-            if let Some(array) = held.array {
-                substitutions = Some((array, array));
-            }
-        }
         let result = held.result;
         let returns = raise.result.as_ref().is_some_and(|result| !result.exit);
+        let mut additional = Vec::new();
 
         if raise.condition.as_ref() == b"SYNTAX" {
             // Catalogue substitution happens when the condition is raised,
             // after all operands and their trace lines have been evaluated.
+            let substitutions = match held.additional {
+                Some(value) => Some(self.syntax_additional_array(value)?),
+                None => held.array.map(|array| (array, array)),
+            };
             if let Some((carried, array)) = substitutions {
                 self.activity.pending_additional = Some(carried);
                 let count = self.array_slots(array).map_or(0, <[_]>::len);
@@ -598,8 +538,6 @@ impl Interp {
                 let queued = Raised {
                     rc: rc.clone(),
                     description: description.clone(),
-                    // `RAISE ... ADDITIONAL`'s own list, which the condition
-                    // object reports and which this arm used to drop.
                     additional: additional.clone(),
                     position: u32::try_from(self.activity.clause_state.line()).unwrap_or(0),
                     ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
@@ -651,10 +589,6 @@ impl Interp {
                 // does not take, and a `SIGNAL ON` handler sees the caller's
                 // frame rather than this one.
                 raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
-                // The raise's own `ADDITIONAL`, which the condition object
-                // reports. Measured: `raise user mycond additional (an
-                // array)` gives a directory carrying `ADDITIONAL`, and this
-                // arm built the condition without it.
                 raised.additional = additional;
                 raised.delivery.search = sender.search();
                 self.activity.pending_result = result;
@@ -737,7 +671,7 @@ impl Interp {
         let description = held
             .description
             .map(|[value, text]| (value, self.to_text(text).to_vec()));
-        let additional = held.additional.map(|[value, _]| value).or(held.array);
+        let additional = held.additional.or(held.array);
         let result = held.result;
         let Some(active) = self
             .activation()
