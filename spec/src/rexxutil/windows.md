@@ -170,3 +170,14 @@ write, deletion or enumeration answers the null string. A missing key
 or failed profile operation answers `ERROR:`. Omitting the filename
 uses `WIN.INI`; Windows resolves a relative profile file against its
 Windows directory.
+
+## Windows console cursor and text
+
+r[util.windows.console-cursor]
+`SysCurPos()` answers the current cursor position as row and column,
+starting at zero. With both coordinates given, it returns the previous
+position and moves the cursor. `SysCurState('ON')` and
+`SysCurState('OFF')` show or hide the cursor.
+`SysTextScreenRead(row, column[, length])` reads screen characters
+starting at the specified cell. With no length, it reads to the end of
+the screen buffer. A read outside the buffer answers the null string.

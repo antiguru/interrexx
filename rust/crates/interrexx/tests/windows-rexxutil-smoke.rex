@@ -198,3 +198,17 @@ if keys~items <> 1 | keys[1] \== 'test' then exit 126
 if SysIni(iniFile, 'interrexx', 'test', 'DELETE:') \== '' then exit 127
 if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 128
 if SysFileDelete(iniFile) <> 0 then exit 129
+
+/* spec: util.windows.console-cursor */
+if words(SysCurPos()) <> 2 then exit 130
+if SysTextScreenRead(0, 0, 0) \== '' then exit 131
+if SysTextScreenRead(-1, 0, 1) \== '' then exit 132
+if size \== '0 0' then do
+  parse value SysCurPos() with oldRow oldColumn
+  if SysCurPos(0, 0) \== (oldRow oldColumn) then exit 133
+  if SysCurPos() \== '0 0' then exit 134
+  call SysCurPos oldRow, oldColumn
+  if SysCurState('OFF') <> 0 then exit 135
+  if SysCurState('ON') <> 0 then exit 136
+  if length(SysTextScreenRead(0, 0, 1)) <> 1 then exit 137
+end
