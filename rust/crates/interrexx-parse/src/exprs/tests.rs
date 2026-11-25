@@ -655,3 +655,218 @@ fn a_node_is_adopted_by_one_parent_only() {
         0..1,
     );
 }
+
+/// Copies `expr` into `into` and answers the copy's root, an omitted argument
+/// or item becoming an `Omitted` node at the parent's start. Recursive, so its
+/// callers run it on a large stack.
+pub(crate) fn lower(expr: &crate::ast::Expr, into: &mut Exprs) -> ExprId {
+    use crate::ast::{CallTarget as Target, ExprKind};
+
+    let at = expr.span.start;
+    let list = |items: &[Option<crate::ast::Expr>], into: &mut Exprs, ids: &mut Vec<ExprId>| {
+        for item in items {
+            ids.push(match item {
+                Some(item) => lower(item, into),
+                None => into.push(NodeKind::Omitted, at..at),
+            });
+        }
+    };
+    let mut ids = Vec::new();
+    let kind = match &expr.kind {
+        ExprKind::Literal(bytes) => NodeKind::Literal(into.push_bytes(bytes)),
+        ExprKind::Constant(id) => NodeKind::Constant(*id),
+        ExprKind::Variable(id) => NodeKind::Variable(*id),
+        ExprKind::Stem(id) => NodeKind::Stem(*id),
+        ExprKind::Compound(id) => NodeKind::Compound(*id),
+        ExprKind::DotVariable(id) => NodeKind::DotVariable(*id),
+        ExprKind::ClassResolver { namespace, name } => NodeKind::ClassResolver {
+            namespace: *namespace,
+            name: *name,
+        },
+        ExprKind::VariableReference(inner) => match inner.kind {
+            ExprKind::Variable(symbol) => NodeKind::VariableReference {
+                symbol,
+                stem: false,
+            },
+            ExprKind::Stem(symbol) => NodeKind::VariableReference { symbol, stem: true },
+            _ => panic!("a reference names a variable or a stem"),
+        },
+        ExprKind::Prefix { op, operand } => NodeKind::Prefix {
+            op: *op,
+            operand: lower(operand, into),
+        },
+        ExprKind::Binary { op, left, right } => {
+            let left = lower(left, into);
+            NodeKind::Binary {
+                op: *op,
+                left,
+                right: lower(right, into),
+            }
+        }
+        ExprKind::Call { target, args } => {
+            let target = match target {
+                Target::Symbol(id) => CallTarget::Symbol(*id),
+                Target::Literal(bytes) => CallTarget::Literal(into.push_bytes(bytes)),
+            };
+            list(args, into, &mut ids);
+            NodeKind::Call {
+                target,
+                args: into.push_edges(&ids),
+            }
+        }
+        ExprKind::QualifiedCall {
+            namespace,
+            name,
+            args,
+        } => {
+            list(args, into, &mut ids);
+            NodeKind::QualifiedCall {
+                namespace: *namespace,
+                name: *name,
+                args: into.push_edges(&ids),
+            }
+        }
+        ExprKind::Message {
+            target,
+            name,
+            super_class,
+            args,
+            cascade,
+        } => {
+            ids.push(lower(target, into));
+            if let Some(scope) = super_class {
+                ids.push(lower(scope, into));
+            }
+            list(args, into, &mut ids);
+            NodeKind::Message {
+                name: name.clone(),
+                cascade: *cascade,
+                scoped: super_class.is_some(),
+                children: into.push_edges(&ids),
+            }
+        }
+        ExprKind::List(items) => {
+            list(items, into, &mut ids);
+            NodeKind::List(into.push_edges(&ids))
+        }
+        ExprKind::Logical(items) => {
+            for item in items {
+                ids.push(lower(item, into));
+            }
+            NodeKind::Logical(into.push_edges(&ids))
+        }
+    };
+    into.push(kind, expr.span.clone())
+}
+
+/// Asserts that the arena renders `expr` as the tree does, and that the copy
+/// is a valid arena.
+fn assert_renders_alike(expr: &crate::ast::Expr, symbols: &crate::token::SymbolTable) {
+    let mut exprs = Exprs::default();
+    let root = lower(expr, &mut exprs);
+    assert_eq!(exprs.check([root]), Ok(()));
+    assert_eq!(exprs.shape(root, symbols), expr.shape(symbols));
+}
+
+#[test]
+fn the_arena_renders_every_shape_the_tree_renders() {
+    use crate::ast::InstructionKind;
+
+    crate::with_parser_stack(|| {
+        let texts = [
+            "'a''b'",
+            "abc",
+            "3",
+            "s.",
+            "s.1.k",
+            ".nil",
+            "- \\ + a",
+            "a b",
+            "a||b",
+            "a'q'",
+            "f(1,,3)",
+            "'F'(1)",
+            "ns:f(,2)",
+            "ns:cls",
+            "a~m:super(1, , 2)",
+            "a~~m",
+            "a[1, 2]",
+            "(1, , )",
+            ">a",
+            "<s.",
+        ];
+        for text in texts {
+            let program = crate::parse_program(format!("x = {text}").into_bytes())
+                .unwrap_or_else(|error| panic!("`x = {text}` parses: {error:?}"));
+            let value = program
+                .main
+                .instructions
+                .iter()
+                .find_map(|instruction| match &instruction.kind {
+                    InstructionKind::Assignment { value, .. } => Some(value),
+                    _ => None,
+                })
+                .expect("the program assigns");
+            assert_renders_alike(value, &program.symbols);
+        }
+        let program = crate::parse_program(b"if a, b then nop".to_vec()).expect("the IF parses");
+        let condition = program
+            .main
+            .instructions
+            .iter()
+            .find_map(|instruction| match &instruction.kind {
+                InstructionKind::If { condition, .. } => Some(condition),
+                _ => None,
+            })
+            .expect("the program has an IF");
+        assert_renders_alike(condition, &program.symbols);
+    })
+    .expect("the parser thread spawns");
+}
+
+#[test]
+fn a_long_chain_and_a_deep_nesting_render_on_a_small_thread() {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024)
+        .spawn(|| {
+            let n = 200_000;
+            let symbols = crate::token::SymbolTable::default();
+            let plus = |left, right| NodeKind::Binary {
+                op: Operator::Plus,
+                left,
+                right,
+            };
+
+            // `1 + 1 + ...`
+            let mut exprs = Exprs::default();
+            let mut chain = literal(&mut exprs, b"1", 0);
+            for term in 1..n {
+                let at = 4 * term;
+                let one = literal(&mut exprs, b"1", at);
+                chain = exprs.push(plus(chain, one), at - 2..at - 1);
+            }
+            assert_eq!(
+                exprs.shape(chain, &symbols),
+                "(+ ".repeat(n - 1) + "\"1\"" + &" \"1\")".repeat(n - 1)
+            );
+
+            // `1 + (1 + (...))`: the leaves, then the operators innermost
+            // first, which is the post-order of a right nesting.
+            let mut exprs = Exprs::default();
+            let leaves: Vec<ExprId> = (0..n)
+                .map(|term| literal(&mut exprs, b"1", 6 * term))
+                .collect();
+            let mut nest = leaves[n - 1];
+            for term in (0..n - 1).rev() {
+                let at = 6 * term + 2;
+                nest = exprs.push(plus(leaves[term], nest), at..at + 1);
+            }
+            assert_eq!(
+                exprs.shape(nest, &symbols),
+                "(+ \"1\" ".repeat(n - 1) + "\"1\"" + &")".repeat(n - 1)
+            );
+        })
+        .expect("a thread spawns")
+        .join()
+        .expect("the render thread finishes");
+}

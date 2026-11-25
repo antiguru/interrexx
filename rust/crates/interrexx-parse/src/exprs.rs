@@ -545,5 +545,6 @@ impl Exprs {
     }
 }
 
+mod shape;
 #[cfg(test)]
 mod tests;
