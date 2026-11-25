@@ -115,27 +115,43 @@ fn run_with_argument(
 }
 
 /// **A kept handle names its object in a later call for as long as the
-/// object lives,** as an answer, as the receiver of a message, and for a
-/// value carried in the handle itself. Measured on the oracle with the same
-/// program: this stdout, empty stderr, rc 0. Under a collection at every
-/// allocation, so the answers do not depend on when the collector runs.
+/// object lives,** as an answer and as the receiver of a message. Measured on
+/// the oracle with the same program: this stdout, empty stderr, rc 0. Under a
+/// collection at every allocation, so the answers do not depend on when the
+/// collector runs.
 #[test]
 fn a_kept_handle_names_its_live_object_in_a_later_call() {
     let dir = fresh_dir("kept-live");
     build_library(&dir);
     let ours = run_in(
         &dir,
-        "say k~make\nsay k~anchored\nsay k~length\nsay k~values\nsay 'end'\n",
+        "say k~make\nsay k~anchored\nsay k~length\nsay 'end'\n",
         true,
     );
     assert_eq!(
         ours,
         (
-            "made\nanchored in an object variable\n30\nshort 42\nend\n".to_owned(),
+            "made\nanchored in an object variable\n30\nend\n".to_owned(),
             String::new(),
             0
         )
     );
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// **A kept handle that carries its value names that value in a later
+/// call:** here a 5-byte string and a small integer, as ooSQLite keeps its
+/// NULL text and its last error code. Measured on the oracle with the same
+/// program: this stdout, empty stderr, rc 0. On a 32-bit target a value whose
+/// bits the address cannot carry, such as this string, has a numbered handle,
+/// which its call gives back (native-api.md, Handles and lifetimes).
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn a_kept_handle_carrying_its_value_names_it_in_a_later_call() {
+    let dir = fresh_dir("kept-values");
+    build_library(&dir);
+    let ours = run_in(&dir, "say k~make\nsay k~values\nsay 'end'\n", true);
+    assert_eq!(ours, ("made\nshort 42\nend\n".to_owned(), String::new(), 0));
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
 
@@ -344,5 +360,82 @@ fn a_replay_hands_out_its_recordings_handles_whatever_ran_beside_it() {
         );
         assert_eq!(replayed, *recording, "{role}'s replay");
     }
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// **A replay that cannot have its recording's handle key is refused, and
+/// runs once the key is free.** A trace is recorded under `sim:7` alone, so
+/// with ordinal 0's key. While another `sim:7` run holds that key, a replay
+/// of the trace is refused before it starts (`rexx` status 2) rather than
+/// given another key; once that run has ended, the replay runs and hands out
+/// the handle its recording did.
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn a_replay_whose_key_is_held_is_refused_until_it_is_free() {
+    let _alone = SIMULATED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let dir = fresh_dir("kept-sim-replay-held");
+    build_library(&dir);
+    let mode = |text: String| {
+        Some(interrexx::SwitchMode::Sim(
+            interrexx::SimConfig::parse(&text).expect("a simulation mode"),
+        ))
+    };
+    let trace = dir.join("alone.trace");
+    let recorded = run_with(
+        &dir,
+        "say k~address\n",
+        false,
+        mode(format!("sim:7,trace={}", trace.display())),
+    );
+    assert_eq!((recorded.1.as_str(), recorded.2), ("", 0), "{recorded:?}");
+    let started = dir.join("holder-started");
+    std::thread::scope(|scope| {
+        // Holds ordinal 0's key under seed 7 until flag 6 is set.
+        let holder = scope.spawn(|| {
+            run_with(
+                &dir,
+                &format!(
+                    "call lineout '{}', 'started'\ncall lineout '{}'\nsay k~wait(6)\n",
+                    started.display(),
+                    started.display()
+                ),
+                false,
+                mode("sim:7".to_owned()),
+            )
+        });
+        for _ in 0..2000 {
+            if started.exists() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(started.exists(), "the holder never started");
+        let refused = run_with(
+            &dir,
+            "say k~address\n",
+            false,
+            mode(format!("sim:replay={}", trace.display())),
+        );
+        assert_eq!((refused.0.as_str(), refused.2), ("", 2), "{refused:?}");
+        assert!(
+            refused
+                .1
+                .starts_with("rexx: REXX_SWITCH_MODE: the handle key of seed 7 and ordinal 0"),
+            "{refused:?}"
+        );
+        // Set flag 6 from a run outside the simulation mode, which holds no key.
+        assert_eq!(run_in(&dir, "say k~signal(6)\n", false).2, 0);
+        let holder = holder.join().expect("the holder ran");
+        assert_eq!((holder.1.as_str(), holder.2), ("", 0), "{holder:?}");
+    });
+    let replayed = run_with(
+        &dir,
+        "say k~address\n",
+        false,
+        mode(format!("sim:replay={}", trace.display())),
+    );
+    assert_eq!(replayed, recorded);
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }

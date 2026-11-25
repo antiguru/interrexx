@@ -104,7 +104,9 @@ statics of `unsafe extern "C" fn` slots.
   handle resolves on a 32-bit target as on a 64-bit one: one carried in the address by decoding
   it (the lent check included), and a numbered one because registering a lent object whose
   handle is a number holds that number in the interpreter's borrowed handles until a collection
-  finds the object gone. A 32-bit handle carries no key, so there two interpreters' heaps laid
+  finds the object gone. A value carried in a handle never dies, so a kept handle to one whose
+  bits a 32-bit address cannot carry (an integer that is negative or 2^29 or more, a string of 4
+  to 7 bytes, or of 3 whose third byte is not ASCII) is not held: its number is given back with its call, and the kept handle misses. A 32-bit handle carries no key, so there two interpreters' heaps laid
   out alike make the same handles, and a handle kept from one can name a lent object of the
   other: instance isolation of kept handles is a 64-bit property, and its tests run there only.
 * `RequestGlobalReference` holds an object in a separate table until `ReleaseGlobalReference`.
@@ -118,12 +120,14 @@ statics of `unsafe extern "C" fn` slots.
   objects: another instance's handle decodes here to a random slot and a random 30-bit
   generation, which name a lent object only where the slot is in the heap and the generation is
   its own, a chance below one in 2^30 for each lookup. Under the simulation mode the key comes from the run's seed and
-  its live ordinal, the least index no other simulated interpreter running in the process holds
-  (`sim::LiveOrdinal`), so two simulated interpreters running at once with one seed still key their
-  handles apart. A replay hands out its recording's handles whatever ran beside either: a recording
-  whose ordinal was not 0 records it in the trace header (`ordinal=N`) and the replay makes its key
-  from it; a recording that records none had ordinal 0, whose key its replay takes whatever ordinal
-  the replay holds. A child `rexx` takes a key of its own. A handle that carries its value is not keyed,
+  an ordinal, and each simulated interpreter reserves its key while it runs (`sim::LiveKey`): no
+  two simulated interpreters running in one process at once hold the same key. A run takes the
+  least ordinal whose key is free and records it in the trace header (`ordinal=N`) when it is not
+  0. A replay needs exactly its recording's key, of the recorded ordinal or else of 0; if a
+  running simulated interpreter holds that key (the recording itself, or another replay of the
+  same trace), the replay is refused before it starts (`rexx` status 2) rather than given
+  another, so a replay that runs hands out its recording's handles. A child `rexx` takes a key of
+  its own. A handle that carries its value is not keyed,
   and is the same value in every instance. Because carried values decode without a table, an
   address that is no handle can read as one (Deviation 95): an address that is 2 mod 4 reads as
   an integer, and one in 16 of 16-byte-aligned addresses (low byte `0x20`) as a 7-byte string.

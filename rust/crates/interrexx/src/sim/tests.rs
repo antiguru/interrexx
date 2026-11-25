@@ -454,7 +454,20 @@ fn a_recorded_trace_replays_to_the_same_output_and_hash() {
         "sim:3,uniform:0.2,gc=0.05 hash={:016x}",
         hash(&recorded).expect("a hash")
     );
-    assert_eq!(lines.next(), Some(header.as_str()));
+    // A run beside another simulated interpreter of the same seed and key
+    // records its live ordinal too (`ordinal=N`, before ` hash=`), which this
+    // test's threads can give it.
+    let first = lines.next().expect("a header");
+    let without_ordinal = match first.find(",ordinal=") {
+        Some(at) => {
+            let end = first[at + 1..]
+                .find([',', ' '])
+                .map_or(first.len(), |offset| at + 1 + offset);
+            format!("{}{}", &first[..at], &first[end..])
+        }
+        None => first.to_owned(),
+    };
+    assert_eq!(without_ordinal, header);
     for kind in ["preempt ", "pick ", "collect "] {
         assert!(written.contains(kind), "no {kind}in {written}");
     }

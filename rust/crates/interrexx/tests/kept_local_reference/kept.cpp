@@ -85,7 +85,7 @@ RexxMethod0(RexxObjectPtr, KeepAddress)
 // thread's in `published` for the other; flags let them take turns.
 static thread_local RexxObjectPtr mine;
 static RexxObjectPtr published;
-static volatile int flags[5];
+static volatile int flags[7];
 
 // Makes a string long enough for the heap, keeps it alive in `.local` and
 // keeps its handle in this thread's `mine`.

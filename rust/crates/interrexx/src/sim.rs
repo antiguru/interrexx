@@ -127,7 +127,7 @@ pub struct Knobs {
     pub hash: Option<u64>,
     /// The live ordinal a recording held where it was not 0, which its handle
     /// key was made from in place of the replay's own, so that a trace replays
-    /// with the handles its recording handed out ([`handle_key`]).
+    /// with the handles its recording handed out ([`reserve_handle_key`]).
     pub ordinal: Option<std::num::NonZeroU32>,
 }
 
@@ -646,54 +646,80 @@ impl Streams {
     }
 }
 
-/// A simulated interpreter's place among those running in this process at
-/// once: the least ordinal none of them holds, given back when it drops. A
-/// recording and its replay, each running alone, both hold 0; two running at
-/// once hold different ones.
-pub(crate) struct LiveOrdinal(usize);
+/// The handle key a simulated interpreter holds while it runs, given back when
+/// it drops: no two simulated interpreters running in this process at once
+/// hold the same key, so neither can name the other's objects through a
+/// handle (instances share no objects).
+pub(crate) struct LiveKey(u64);
 
-/// The ordinals simulated interpreters hold now.
-static LIVE_ORDINALS: std::sync::Mutex<std::collections::BTreeSet<usize>> =
+/// The keys simulated interpreters hold now.
+static LIVE_KEYS: std::sync::Mutex<std::collections::BTreeSet<u64>> =
     std::sync::Mutex::new(std::collections::BTreeSet::new());
 
-impl LiveOrdinal {
-    pub(crate) fn take() -> LiveOrdinal {
-        let mut live = LIVE_ORDINALS
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let ordinal = (0..)
-            .find(|ordinal| !live.contains(ordinal))
-            .expect("an ordinal is free");
-        live.insert(ordinal);
-        LiveOrdinal(ordinal)
+impl LiveKey {
+    /// The key itself.
+    pub(crate) fn key(&self) -> u64 {
+        self.0
     }
 }
 
-impl Drop for LiveOrdinal {
+impl Drop for LiveKey {
     fn drop(&mut self) {
-        LIVE_ORDINALS
+        LIVE_KEYS
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .remove(&self.0);
     }
 }
 
-/// The interpreter's handle key in the simulation mode: from the handle stream
-/// of `config`'s seed and the interpreter's live ordinal, so that two
-/// simulated interpreters running at once with one seed still key their
-/// handles apart (instances share no objects). A replay hands native code the
-/// handles its recording did: a recording whose ordinal was not 0 records it
-/// as `ordinal=`, which [`run_handle_key`] then makes the key from, and a
-/// replay of one that recorded none uses ordinal 0, whatever ordinal the
-/// replay holds. splitmix64 mixes the two, so keys of different ordinals
-/// differ in every field of a handle, not only in its low slot bits; two
-/// collide with a chance of about 2^-62. Its two low bits are clear, as
-/// [`interrexx_api::handles::instance_key`]'s.
-pub(crate) fn handle_key(config: &SimConfig, ordinal: &LiveOrdinal) -> u64 {
-    key_of(config.seed, ordinal.0)
+/// Reserves the handle key a simulated run's interpreter uses, recording in
+/// `config` what a replay needs to make the same key again.
+///
+/// A run that is no replay takes the least ordinal whose key, splitmix64 of
+/// the seed's handle stream and the ordinal, no running simulated
+/// interpreter holds, and records it as `ordinal=N` when it is not 0. A
+/// replay, or a run that names `ordinal=N`, needs exactly the key its
+/// recording held: that of the recorded ordinal, else of ordinal 0. If a
+/// running simulated interpreter holds that key -- the recording itself, or
+/// another replay of the same trace -- the run is refused rather than given
+/// another key, so a replay that runs hands out its recording's handles.
+pub(crate) fn reserve_handle_key(config: &mut SimConfig) -> Result<LiveKey, String> {
+    let mut live = LIVE_KEYS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let key = if config.replay.is_some() || config.knobs.ordinal.is_some() {
+        let ordinal = config
+            .knobs
+            .ordinal
+            .map_or(0, |ordinal| ordinal.get() as usize);
+        let key = key_of(config.seed, ordinal);
+        if live.contains(&key) {
+            return Err(format!(
+                "the handle key of seed {} and ordinal {ordinal}, which this run must use to \
+                 hand out its recording's handles, is held by a simulated interpreter running \
+                 in this process; run it when that one has ended",
+                config.seed
+            ));
+        }
+        key
+    } else {
+        let ordinal = (0..)
+            .find(|ordinal| !live.contains(&key_of(config.seed, *ordinal)))
+            .expect("an ordinal is free");
+        if ordinal != 0 {
+            config.knobs.ordinal = u32::try_from(ordinal)
+                .ok()
+                .and_then(std::num::NonZeroU32::new);
+        }
+        key_of(config.seed, ordinal)
+    };
+    live.insert(key);
+    Ok(LiveKey(key))
 }
 
-/// splitmix64 of the seed's handle stream and `ordinal`, tag bits clear.
+/// splitmix64 of the seed's handle stream and `ordinal`, tag bits clear: keys
+/// of different ordinals differ in every field of a handle, not only in its
+/// low slot bits, and two collide with a chance of about 2^-62.
 fn key_of(seed: u64, ordinal: usize) -> u64 {
     let mut z = Streams::new(seed)
         .handles
@@ -703,25 +729,6 @@ fn key_of(seed: u64, ordinal: usize) -> u64 {
     z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
     z ^= z >> 31;
     z & !0b11
-}
-
-/// The key a simulated run's interpreter uses, recording in `config` what a
-/// replay needs to make it again: the ordinal a recording recorded, else, in
-/// a replay, ordinal 0 (a recording records its ordinal whenever it was not
-/// 0), else `ordinal`, which is recorded when it is not 0.
-pub(crate) fn run_handle_key(config: &mut SimConfig, ordinal: &LiveOrdinal) -> u64 {
-    if let Some(recorded) = config.knobs.ordinal {
-        return key_of(config.seed, recorded.get() as usize);
-    }
-    if config.replay.is_some() {
-        return key_of(config.seed, 0);
-    }
-    if ordinal.0 != 0 {
-        config.knobs.ordinal = u32::try_from(ordinal.0)
-            .ok()
-            .and_then(std::num::NonZeroU32::new);
-    }
-    handle_key(config, ordinal)
 }
 
 /// The seed of the keyed string hash in the simulation mode: `hash=`'s, else

@@ -200,10 +200,10 @@ are waiting, the earliest pending delivery runs immediately. Use this mode with 
 fixtures that can finish at launch without progress from another Rexx activity. Policies: `pre:d` (d
 preemptions among the first k contended steps), `uniform:p`, and `pct:d`; each keeps a fairness
 floor. Knobs include `gc=q`, `halt@K`, `fail=wait:K` and `hash=SEED`, which a `REXX_HASH_SEED`
-override records so that a trace replays under the same hash seed, and `ordinal=N`, the live
-ordinal a recording records when another simulated interpreter was running beside it (it was not
-0, see `native-api.md`), so that a replay makes the same handle key and hands native code the
-handles its recording did whatever runs beside either. The scheduler checks its own
+override records so that a trace replays under the same hash seed, and `ordinal=N`, the ordinal
+of the handle key a recording held when another simulated interpreter of its seed held ordinal
+0's (see `native-api.md`), so that a replay makes the same key and hands native code the handles
+its recording did; a replay whose key a running simulated interpreter holds is refused. The scheduler checks its own
 invariants at every switch. Record decisions with `sim:SEED,trace=FILE` and replay them with
 `sim:replay=FILE`. The [trace shrinker](testing.md#shrinking-a-failing-simulation-trace) removes
 decisions while preserving a reproducible failure.

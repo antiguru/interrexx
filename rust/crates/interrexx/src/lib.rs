@@ -1490,9 +1490,9 @@ struct Interp {
     /// mixed into every heap object's handle, so a handle another interpreter
     /// minted names nothing here.
     handle_space: interrexx_api::handles::HandleSpace,
-    /// A simulated interpreter's live ordinal, which its handle key is made
-    /// from and which it holds until it drops ([`sim::LiveOrdinal`]).
-    sim_ordinal: Option<sim::LiveOrdinal>,
+    /// A simulated interpreter's handle key, which it holds against every
+    /// other running simulated interpreter until it drops ([`sim::LiveKey`]).
+    sim_key: Option<sim::LiveKey>,
     /// Non-rooting handles for interpreter-owned directories, and on a 32-bit
     /// target every lent object whose handle is a number, which resolve
     /// across callbacks, each holding its handle in [`Interp::handle_space`]
@@ -2487,7 +2487,7 @@ impl Interp {
             classic_subcoms: FxHashMap::default(),
             global_references: interrexx_api::handles::Table::new(&handle_space),
             handle_space,
-            sim_ordinal: None,
+            sim_key: None,
             borrowed_native_handles: FxHashMap::default(),
             command_handlers: FxHashMap::default(),
             environments: command::Environments::default(),
@@ -3617,7 +3617,7 @@ impl Interp {
             global_references,
             // Numbers for handles, which name objects but root none.
             handle_space: _,
-            sim_ordinal: _,
+            sim_key: _,
             borrowed_native_handles: _,
             // Entry points, not objects.
             command_handlers: _,
@@ -4507,6 +4507,26 @@ fn parse_failure_outcome(path: &[u8], rejected: &interrexx_parse::Rejected) -> O
 /// condition displayed with no position, as a failure to start.
 #[cold]
 #[inline(never)]
+/// A simulated run refused before it starts, as the `rexx` command refuses a
+/// `REXX_SWITCH_MODE` it cannot read: `message` on standard error, status 2.
+fn switch_mode_refused(message: &str) -> Outcome {
+    Outcome {
+        exit_code: 2,
+        result: None,
+        error: None,
+        stdout: Vec::new(),
+        stderr: format!("rexx: REXX_SWITCH_MODE: {message}\n").into_bytes(),
+        stack: StackSpan::default(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        #[cfg(test)]
+        failure_level_roots: 0,
+        chunks_refused: 0,
+        sim: None,
+    }
+}
+
 fn unrestorable_outcome(raised: Raised) -> Outcome {
     let number = i32::from(raised.number);
     let (stderr, exit_code) = launcher::positionless(raised);
@@ -4674,12 +4694,11 @@ fn execute_kept(
     }
     // So is the handle key, where a replay could not make it again; it is
     // set below, before the bootstrap mints the first handles.
-    let sim_handles = match &mut switch_mode {
-        Some(SwitchMode::Sim(config)) => {
-            let ordinal = sim::LiveOrdinal::take();
-            let key = sim::run_handle_key(config, &ordinal);
-            Some((ordinal, key))
-        }
+    let sim_key = match &mut switch_mode {
+        Some(SwitchMode::Sim(config)) => match sim::reserve_handle_key(config) {
+            Ok(live) => Some(live),
+            Err(refusal) => return (switch_mode_refused(&refusal), None),
+        },
         _ => None,
     };
     let sim_config = match &switch_mode {
@@ -4693,9 +4712,9 @@ fn execute_kept(
     interp.warn_of_refused_hash_seed();
     // Before the bootstrap too, which mints the first handles: a simulated
     // run's handles follow its seed.
-    if let Some((ordinal, key)) = sim_handles {
-        interp.set_handle_key(key);
-        interp.sim_ordinal = Some(ordinal);
+    if let Some(live) = sim_key {
+        interp.set_handle_key(live.key());
+        interp.sim_key = Some(live);
     }
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
