@@ -99,7 +99,7 @@ impl Interpreter {
             null_string,
             on_whole_number: OnWholeNumber::Nothing,
             collections: 0,
-            locals: Table::new(),
+            locals: Table::new(&interrexx_api::handles::HandleSpace::new()),
         }
     }
 
@@ -184,15 +184,14 @@ impl Host for Interpreter {
         self.set_object_variable(name, None);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
         if matches!(self.on_whole_number, OnWholeNumber::Collect) {
             let mut roots = RootSet::new();
             roots.add_global(".RECEIVER", self.receiver);
             self.heap.collect(&roots);
             self.collections += 1;
         }
-        ObjRef::small_int(i64::try_from(value).expect("a position fits an i64"))
-            .expect("a position is a small integer")
+        ObjRef::small_int(value).expect("a position is a small integer")
     }
 
     fn new_pointer(&mut self, value: POINTER) -> ObjRef {

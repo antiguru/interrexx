@@ -13,6 +13,8 @@ mod frame;
 mod handle;
 mod hash_seed;
 mod heap;
+#[cfg(any(test, not(target_pointer_width = "64")))]
+mod name_hash;
 mod roots;
 mod slots;
 mod tails;
@@ -41,7 +43,13 @@ pub use slots::ArraySlots;
 pub use tails::Tails;
 
 /// The hasher behind [`NameMap`].
+#[cfg(target_pointer_width = "64")]
 pub type NameHasher = rustc_hash::FxBuildHasher;
+
+/// The hasher behind [`NameMap`]: the 64-bit target's, so that a map of names
+/// iterates in the same order on every target.
+#[cfg(not(target_pointer_width = "64"))]
+pub type NameHasher = name_hash::WideFxBuildHasher;
 
 /// A map keyed by a name out of the program text.
 pub type NameMap<K, V> = std::collections::HashMap<K, V, NameHasher>;

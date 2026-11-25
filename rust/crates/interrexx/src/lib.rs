@@ -248,7 +248,14 @@ pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
 /// ```text
 /// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 47999520 bytes, per frame: 480.0 bytes
 /// ```
+#[cfg(target_pointer_width = "64")]
 pub const INTERPRETER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
+/// The interpreter thread's stack on a 32-bit target, in bytes: half the
+/// 64-bit stack, whose frames hold pointers half as wide, so that more than a
+/// handful of interpreter and pool threads fit in the address space.
+#[cfg(not(target_pointer_width = "64"))]
+pub const INTERPRETER_STACK_BYTES: usize = 256 * 1024 * 1024;
 
 /// A new interpreter's pool.
 #[cfg(not(test))]
@@ -1477,8 +1484,12 @@ struct Interp {
     /// it resolves to from any native call for as long as the interpreter
     /// runs.
     global_references: interrexx_api::handles::Table,
+    /// The space every handle table of this interpreter is made in, so that a
+    /// handle names one object in all of them.
+    handle_space: interrexx_api::handles::HandleSpace,
     /// Non-rooting handles for interpreter-owned directories and native
-    /// method receivers that can be used across callbacks.
+    /// method receivers that can be used across callbacks, each holding its
+    /// handle in [`Interp::handle_space`] until a collection drops it.
     borrowed_native_handles: FxHashMap<usize, ObjRef>,
     /// The terminated copies `StringData` and its kin answered, by the object
     /// they copy. Not roots: a collection drops the copy of an object it
@@ -2027,6 +2038,7 @@ impl MethodBodies {
 /// path -- measured, `bench-programs/dispatchclass.rex` at +1.88% and 121
 /// `instructions:u` per send when a [`GeneratedKind`] discriminant sat
 /// beside `program` and `directive` (see [`GeneratedMethod`]).
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<InstalledMethodBody>() == 16);
 
 /// One installed method that the *directive* implements rather than a body:
@@ -2340,6 +2352,7 @@ impl Interp {
         let requester = crate::dispatch::library::Requester::new(&baton, timer.inbox());
         let constants = crate::dispatch::library::constant_objects();
         let handle = interrexx_api::handles::handle_of;
+        let handle_space = interrexx_api::handles::HandleSpace::new();
         let thread_table = interrexx_api::ffi::ThreadTable::requesting(
             crate::sync::Arc::new(requester),
             interrexx_api::values::Constants {
@@ -2463,7 +2476,8 @@ impl Interp {
             api_changes_seen: capi::changes(),
             classic_functions: FxHashMap::default(),
             classic_subcoms: FxHashMap::default(),
-            global_references: interrexx_api::handles::Table::new(),
+            global_references: interrexx_api::handles::Table::new(&handle_space),
+            handle_space,
             borrowed_native_handles: FxHashMap::default(),
             command_handlers: FxHashMap::default(),
             environments: command::Environments::default(),
@@ -3591,6 +3605,8 @@ impl Interp {
             classic_functions: _,
             classic_subcoms: _,
             global_references,
+            // Numbers for handles, which name objects but root none.
+            handle_space: _,
             borrowed_native_handles: _,
             // Entry points, not objects.
             command_handlers: _,
@@ -3764,8 +3780,14 @@ impl Interp {
             !matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
                 || heap.peek(*object).is_some()
         });
-        self.borrowed_native_handles
-            .retain(|_, object| heap.peek(*object).is_some());
+        let space = &self.handle_space;
+        self.borrowed_native_handles.retain(|_, object| {
+            let kept = heap.peek(*object).is_some();
+            if !kept {
+                space.unhold(*object);
+            }
+            kept
+        });
         self.drop_loose_kept_strings();
         let heap = &self.heap;
         self.activities.guards.prune_pools(|object| {

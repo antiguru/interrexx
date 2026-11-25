@@ -27,6 +27,9 @@ fn main() {
         elf(&names, &out);
     }
     println!("cargo:rerun-if-changed=build.rs");
+    for variable in compiler_variables() {
+        println!("cargo:rerun-if-env-changed={variable}");
+    }
     println!("cargo:rerun-if-changed=../interrexx-api/src/library_names.rs");
 }
 
@@ -67,10 +70,38 @@ fn apple(names: &library_names::ApiLibraries, out: &Path) {
     );
 }
 
-/// Links an empty shared library at `stub` with the driver's `flags`.
+/// The variables that name the C driver, in the order the `cc` crate reads
+/// them: `CC_<target>`, the same with `-` and `.` as `_`, `TARGET_CC` when
+/// cross-compiling or `HOST_CC` when not, and `CC`.
+fn compiler_variables() -> [String; 4] {
+    let target = std::env::var("TARGET").expect("cargo sets TARGET");
+    let host = std::env::var("HOST").expect("cargo sets HOST");
+    let kind = if target == host { "HOST" } else { "TARGET" };
+    [
+        format!("CC_{target}"),
+        format!("CC_{}", target.replace(['-', '.'], "_")),
+        format!("{kind}_CC"),
+        "CC".to_string(),
+    ]
+}
+
+/// Links an empty shared library at `stub` with the driver's `flags`, for the
+/// target: the first of [`compiler_variables`] that is set, or `cc`. On x86
+/// the target's width is passed as well, so a multilib driver links a 32-bit
+/// stub for a 32-bit target.
 fn stub_library(stub: &Path, flags: &[&str]) {
-    let compiler = std::env::var_os("CC").unwrap_or_else(|| "cc".into());
-    let status = Command::new(&compiler)
+    let compiler = compiler_variables()
+        .iter()
+        .find_map(std::env::var_os)
+        .unwrap_or_else(|| "cc".into());
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").expect("cargo sets CARGO_CFG_TARGET_ARCH");
+    let width = std::env::var("CARGO_CFG_TARGET_POINTER_WIDTH")
+        .expect("cargo sets CARGO_CFG_TARGET_POINTER_WIDTH");
+    let mut command = Command::new(&compiler);
+    if matches!(arch.as_str(), "x86" | "x86_64") {
+        command.arg(format!("-m{width}"));
+    }
+    let status = command
         .args(flags)
         .arg("-o")
         .arg(stub)

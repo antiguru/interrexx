@@ -402,7 +402,6 @@ impl Activation<'_> {
     /// value that fits a pointer becomes.
     pub fn signed_object(&self, value: i64) -> RexxObjectPtr {
         let mut cx = self.conversion();
-        let value = isize::try_from(value).expect("a pointer is 64 bits");
         let object = cx.host.whole_number(value);
         cx.host.register_local(object)
     }
@@ -683,7 +682,8 @@ impl Activation<'_> {
                                 .ok()
                                 .flatten()
                         })
-                        .map_or(0, |rc| rc as isize);
+                        .and_then(|rc| isize::try_from(rc).ok())
+                        .unwrap_or(0);
                     (0, rc)
                 }
             };
@@ -1053,7 +1053,7 @@ impl Activation<'_> {
                 }
                 Argument::Number(number) => {
                     let mut cx = self.conversion();
-                    let value = isize::try_from(*number).unwrap_or(isize::MAX);
+                    let value = i64::try_from(*number).unwrap_or(i64::MAX);
                     let object = cx.host.whole_number(value);
                     cx.host.register_local(object);
                     Some(object)
@@ -1173,7 +1173,7 @@ impl Activation<'_> {
     fn raise_not_positive(&self, slot: &'static str, position: usize) {
         let position = {
             let mut cx = self.conversion();
-            let object = cx.host.whole_number(isize::try_from(position).unwrap_or(0));
+            let object = cx.host.whole_number(i64::try_from(position).unwrap_or(0));
             cx.host.register_local(object)
         };
         self.raise_with(slot, INCORRECT_METHOD_POSITIVE, &[position]);
@@ -1250,8 +1250,8 @@ impl Activation<'_> {
     /// above the largest fixed array size, as `new_array` raises it.
     pub fn new_array_sized(&self, size: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.NewArray";
-        const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
-        if size > MAX_FIXED_ARRAY_SIZE {
+        const MAX_FIXED_ARRAY_SIZE: u64 = 100_000_000_000_000_000;
+        if size as u64 > MAX_FIXED_ARRAY_SIZE {
             self.with_surface(SLOT, (), |cx| {
                 let limit = cx
                     .host

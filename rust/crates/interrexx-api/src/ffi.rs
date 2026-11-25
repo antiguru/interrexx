@@ -2771,8 +2771,14 @@ unsafe extern "C" fn object_to_whole_number(
     let found =
         or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToWholeNumber") })
             .signed_value(object, -MAX_WHOLENUMBER, MAX_WHOLENUMBER);
-    // SAFETY: the caller guarantees `result`; the value is within the range.
-    unsafe { answer_through(result, found.map(|number| number as isize)) }
+    // SAFETY: the caller guarantees `result`; the value is within the range,
+    // and one a narrower target's `wholenumber_t` cannot hold is no answer.
+    unsafe {
+        answer_through(
+            result,
+            found.and_then(|number| isize::try_from(number).ok()),
+        )
+    }
 }
 
 /// # Safety
@@ -2787,8 +2793,14 @@ unsafe extern "C" fn object_to_string_size(
     let found =
         or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToStringSize") })
             .unsigned_value(object, MAX_WHOLENUMBER.unsigned_abs());
-    // SAFETY: the caller guarantees `result`; the value is within the range.
-    unsafe { answer_through(result, found.map(|number| number as usize)) }
+    // SAFETY: the caller guarantees `result`; the value is within the range,
+    // and one a narrower target's `stringsize_t` cannot hold is no answer.
+    unsafe {
+        answer_through(
+            result,
+            found.and_then(|number| usize::try_from(number).ok()),
+        )
+    }
 }
 
 /// # Safety
@@ -2864,8 +2876,14 @@ unsafe extern "C" fn object_to_uintptr(
     // SAFETY: as `whole_number_to_object`.
     let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToUintptr") })
         .unsigned_value(object, u64::MAX);
-    // SAFETY: the caller guarantees `result`; a pointer is 64 bits.
-    unsafe { answer_through(result, found.map(|number| number as usize)) }
+    // SAFETY: the caller guarantees `result`; a value wider than a pointer
+    // is no answer.
+    unsafe {
+        answer_through(
+            result,
+            found.and_then(|number| usize::try_from(number).ok()),
+        )
+    }
 }
 
 /// # Safety
@@ -2879,8 +2897,14 @@ unsafe extern "C" fn object_to_intptr(
     // SAFETY: as `whole_number_to_object`.
     let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToIntptr") })
         .signed_value(object, i64::MIN, i64::MAX);
-    // SAFETY: the caller guarantees `result`; a pointer is 64 bits.
-    unsafe { answer_through(result, found.map(|number| number as isize)) }
+    // SAFETY: the caller guarantees `result`; a value wider than a pointer
+    // is no answer.
+    unsafe {
+        answer_through(
+            result,
+            found.and_then(|number| isize::try_from(number).ok()),
+        )
+    }
 }
 
 /// # Safety
@@ -7522,6 +7546,31 @@ mod tests {
         assert_eq!(host.bytes(doubled), Some(b"0.5 at 9".to_vec()));
     }
 
+    /// **A pointer-sized reader refuses a number its type cannot hold** on a
+    /// 32-bit target, and leaves its out-pointer as it was.
+    #[cfg(not(target_pointer_width = "64"))]
+    #[test]
+    fn a_pointer_sized_reader_refuses_a_number_wider_than_its_type() {
+        let mut host = FakeHost::new();
+        let (read, refused) = with_thread(&mut host, |thread, t| {
+            // SAFETY: as in the round-trip test above.
+            unsafe {
+                let wide = (t.Int64ToObject)(thread, 1 << 40);
+                let negative = (t.Int64ToObject)(thread, -(1 << 40));
+                let (mut whole, mut size, mut iptr, mut uptr) = (7isize, 7usize, 7isize, 7usize);
+                let answered = [
+                    (t.ObjectToWholeNumber)(thread, wide, &raw mut whole),
+                    (t.ObjectToStringSize)(thread, wide, &raw mut size),
+                    (t.ObjectToIntptr)(thread, negative, &raw mut iptr),
+                    (t.ObjectToUintptr)(thread, wide, &raw mut uptr),
+                ];
+                (answered, (whole, size, iptr, uptr))
+            }
+        });
+        assert_eq!(refused, None);
+        assert_eq!(read, ([0; 4], (7, 7, 7, 7)));
+    }
+
     /// **A released local reference still answers while its object lives**,
     /// until its next collection.
     #[test]
@@ -7670,10 +7719,11 @@ mod tests {
     }
 
     /// A value of each shape, chosen so that a read of the wrong width or the
-    /// wrong member answers something else.
+    /// wrong member answers something else. The pointer-sized ones keep the
+    /// low bits of their 64-bit pattern on a narrower target.
     fn sample(repr: Repr) -> Value {
         let address: *mut std::ffi::c_void =
-            std::ptr::without_provenance_mut(0x0123_4567_89ab_cdef);
+            std::ptr::without_provenance_mut(0x0123_4567_89ab_cdef_u64 as usize);
         match repr {
             Repr::Object => Value::Object(address.cast()),
             Repr::CString => Value::CString(address.cast()),
@@ -7687,8 +7737,8 @@ mod tests {
             Repr::Uint16 => Value::Uint16(0xfedc),
             Repr::Uint32 => Value::Uint32(0xfedc_ba98),
             Repr::Uint64 => Value::Uint64(0xfedc_ba98_7654_3210),
-            Repr::Isize => Value::Isize(-0x0123_4567_89ab_cdef),
-            Repr::Usize => Value::Usize(0xfedc_ba98_7654_3210),
+            Repr::Isize => Value::Isize(-0x0123_4567_89ab_cdef_i64 as isize),
+            Repr::Usize => Value::Usize(0xfedc_ba98_7654_3210_u64 as usize),
             Repr::Double => Value::Double(-1.5e300),
             Repr::Float => Value::Float(-1.5e30),
         }

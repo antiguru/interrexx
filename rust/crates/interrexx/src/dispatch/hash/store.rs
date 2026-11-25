@@ -980,7 +980,14 @@ pub(super) fn append(
     let position = store.used;
     write_slot(interp, store.indexes, position, Some(index));
     write_slot(interp, store.items, position, item);
-    write_field(interp, &store, stride, position, CODE, Some(code as usize));
+    // A code is wider than a position on a 32-bit target, so it is written
+    // as the number it is rather than through [`write_field`].
+    write_slot(
+        interp,
+        store.codes,
+        position * stride + CODE,
+        Some(small(code as i64)),
+    );
     match chain {
         Ok((head, tail)) => {
             write_field(interp, &store, stride, tail, NEXT, Some(position));

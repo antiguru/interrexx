@@ -50,7 +50,7 @@ impl Interpreter {
             speechless: Vec::new(),
             raising: Vec::new(),
             variables: Vec::new(),
-            locals: Table::new(),
+            locals: Table::new(&interrexx_api::handles::HandleSpace::new()),
             receiver: ObjRef::NIL,
             scope: ObjRef::NIL,
             super_scope: ObjRef::NIL,
@@ -166,8 +166,8 @@ impl Host for Interpreter {
         self.set_object_variable(name, None);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
-        match i64::try_from(value).ok().and_then(ObjRef::small_int) {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
+        match ObjRef::small_int(value) {
             Some(object) => object,
             None => self.text(value.to_string().as_bytes()),
         }
@@ -1545,28 +1545,41 @@ fn the_int64_row_converts_its_range_both_ways() {
 fn the_intptr_row_converts_its_range_both_ways() {
     signed_row(
         code::INTPTR_T,
-        i128::from(i64::MIN),
-        i128::from(i64::MAX),
+        isize::MIN as i128,
+        isize::MAX as i128,
         |v| Value::Isize(narrow(v)),
     );
 }
 
 #[test]
 fn the_ssize_row_converts_its_range_both_ways() {
-    signed_row(
-        code::SSIZE_T,
-        i128::from(i64::MIN),
-        i128::from(i64::MAX),
-        |v| Value::Isize(narrow(v)),
-    );
+    signed_row(code::SSIZE_T, isize::MIN as i128, isize::MAX as i128, |v| {
+        Value::Isize(narrow(v))
+    });
 }
+
+/// The largest `wholenumber_t` the row converts: eighteen nines, or what the C
+/// type holds where that is less.
+const WHOLENUMBER_MAX: i128 = if isize::MAX as i128 > 999_999_999_999_999_999 {
+    999_999_999_999_999_999
+} else {
+    isize::MAX as i128
+};
+
+/// The largest `stringsize_t` the row converts, as [`WHOLENUMBER_MAX`] for the
+/// unsigned type.
+const STRINGSIZE_MAX: i128 = if usize::MAX as i128 > 999_999_999_999_999_999 {
+    999_999_999_999_999_999
+} else {
+    usize::MAX as i128
+};
 
 #[test]
 fn the_wholenumber_row_converts_its_range_both_ways() {
     signed_row(
         code::WHOLENUMBER_T,
-        -999_999_999_999_999_999,
-        999_999_999_999_999_999,
+        -WHOLENUMBER_MAX,
+        WHOLENUMBER_MAX,
         |v| Value::Isize(narrow(v)),
     );
 }
@@ -1597,21 +1610,21 @@ fn the_uint64_row_converts_its_range_both_ways() {
 
 #[test]
 fn the_uintptr_row_converts_its_range_both_ways() {
-    unsigned_row(code::UINTPTR_T, i128::from(u64::MAX), |v| {
+    unsigned_row(code::UINTPTR_T, usize::MAX as i128, |v| {
         Value::Usize(narrow(v))
     });
 }
 
 #[test]
 fn the_size_row_converts_its_range_both_ways() {
-    unsigned_row(code::SIZE_T, i128::from(u64::MAX), |v| {
+    unsigned_row(code::SIZE_T, usize::MAX as i128, |v| {
         Value::Usize(narrow(v))
     });
 }
 
 #[test]
 fn the_stringsize_row_converts_its_range_both_ways() {
-    unsigned_row(code::STRINGSIZE_T, 999_999_999_999_999_999, |v| {
+    unsigned_row(code::STRINGSIZE_T, STRINGSIZE_MAX, |v| {
         Value::Usize(narrow(v))
     });
 }
@@ -1993,13 +2006,17 @@ fn the_pointer_string_row_reads_an_address_and_writes_one_back() {
 }
 
 /// The forms measured on the oracle over the address `TestPointerStringValue`
-/// answers, here over `0x7f5d14eeece0`, what `strtoul` reads past the end of
-/// the range, and the `(nil)` spelling glibc prints for a null pointer and
-/// reads back.
+/// answers, here over `0x7f5d14eeece0` (on a 32-bit target, over an address
+/// of that width), what `strtoul` reads past the end of the range, and the
+/// `(nil)` spelling glibc prints for a null pointer and reads back.
 #[test]
 fn a_pointer_string_is_read_as_sscanf_reads_0x_p() {
-    let hex = "7f5d14eeece0";
-    let address = 0x7f5d_14ee_ece0_usize;
+    let hex = if cfg!(target_pointer_width = "64") {
+        "7f5d14eeece0"
+    } else {
+        "f7d14eec"
+    };
+    let address = usize::from_str_radix(hex, 16).expect("an address");
     for (text, read) in [
         (format!("0x{hex}"), Some(address)),
         (format!("0x0x{hex}"), Some(address)),

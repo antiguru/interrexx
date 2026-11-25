@@ -1,0 +1,4 @@
+#!/bin/sh
+# `g++` for a 32-bit x86 target: what the `i686` CI job puts first on `PATH`, so that the C and
+# C++ fixtures the tests compile and load are 32-bit, as the test binaries are.
+exec /usr/bin/g++ -m32 "$@"

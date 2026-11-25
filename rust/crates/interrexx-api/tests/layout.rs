@@ -3,8 +3,11 @@
 //! Member names and interface versions are read out of the frozen header here
 //! rather than written down, because an omitted member is what a written list
 //! cannot see. The sizes and offsets are what `g++` reports for the same
-//! header on this platform.
+//! header on a 64-bit platform; on any other, `tests/abi_dump.rs` measures them
+//! against the compiler.
 
+// The layout pins below hold on a 64-bit target only.
+#[cfg_attr(not(target_pointer_width = "64"), allow(unused_imports))]
 use interrexx_api::layout::{
     CallContextInterface, ExitContextInterface, IORedirectorInterface, MethodContextInterface,
     Owned, RexxCallContext_, RexxCondition, RexxExitContext_, RexxIORedirectorContext_,
@@ -12,6 +15,7 @@ use interrexx_api::layout::{
     RexxRoutineEntry, RexxThreadContext_, RexxThreadInterface, ValueDescriptor,
 };
 use std::collections::BTreeSet;
+#[cfg_attr(not(target_pointer_width = "64"), allow(unused_imports))]
 use std::mem::{align_of, offset_of, size_of};
 use std::path::PathBuf;
 
@@ -237,6 +241,7 @@ fn the_populated_tables_carry_the_interface_version() {
     );
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn an_instance_has_a_table_and_application_data() {
     assert_eq!(size_of::<RexxInstance_>(), 16);
@@ -245,6 +250,7 @@ fn an_instance_has_a_table_and_application_data() {
     assert_eq!(offset_of!(RexxInstance_, applicationData), 8);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_thread_context_has_an_instance_and_a_table() {
     assert_eq!(size_of::<RexxThreadContext_>(), 16);
@@ -253,6 +259,7 @@ fn a_thread_context_has_an_instance_and_a_table() {
     assert_eq!(offset_of!(RexxThreadContext_, functions), 8);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_method_context_has_a_thread_a_table_and_arguments() {
     assert_eq!(size_of::<RexxMethodContext_>(), 24);
@@ -262,6 +269,7 @@ fn a_method_context_has_a_thread_a_table_and_arguments() {
     assert_eq!(offset_of!(RexxMethodContext_, arguments), 16);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_call_context_is_shaped_as_a_method_context() {
     assert_eq!(size_of::<RexxCallContext_>(), 24);
@@ -270,6 +278,7 @@ fn a_call_context_is_shaped_as_a_method_context() {
     assert_eq!(offset_of!(RexxCallContext_, arguments), 16);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn an_exit_context_is_shaped_as_a_method_context() {
     assert_eq!(size_of::<RexxExitContext_>(), 24);
@@ -278,12 +287,14 @@ fn an_exit_context_is_shaped_as_a_method_context() {
     assert_eq!(offset_of!(RexxExitContext_, arguments), 16);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_redirector_context_is_a_table_alone() {
     assert_eq!(size_of::<RexxIORedirectorContext_>(), 8);
     assert_eq!(offset_of!(RexxIORedirectorContext_, functions), 0);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_value_descriptor_is_a_word_and_two_shorts() {
     assert_eq!(size_of::<ValueDescriptor>(), 16);
@@ -293,6 +304,7 @@ fn a_value_descriptor_is_a_word_and_two_shorts() {
     assert_eq!(offset_of!(ValueDescriptor, flags), 10);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_condition_is_what_decode_condition_info_fills() {
     assert_eq!(size_of::<RexxCondition>(), 72);
@@ -307,6 +319,7 @@ fn a_condition_is_what_decode_condition_info_fills() {
     assert_eq!(offset_of!(RexxCondition, additional), 64);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_package_entry_is_what_an_extension_publishes() {
     assert_eq!(size_of::<RexxPackageEntry>(), 64);
@@ -322,6 +335,7 @@ fn a_package_entry_is_what_an_extension_publishes() {
     assert_eq!(offset_of!(RexxPackageEntry, methods), 56);
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_table_row_is_what_the_entry_macros_expand_to() {
     assert_eq!(size_of::<RexxMethodEntry>(), 32);

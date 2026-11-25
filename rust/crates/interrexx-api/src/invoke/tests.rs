@@ -176,7 +176,7 @@ impl Interpreter {
             heap: Heap::new(),
             asked: 0,
             variables: Vec::new(),
-            locals: Table::new(),
+            locals: Table::new(&crate::handles::HandleSpace::new()),
             numeric: Numeric {
                 digits: 9,
                 fuzz: 0,
@@ -233,7 +233,7 @@ impl Host for Interpreter {
         set_variable(&mut self.variables, name, None);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
         if self.nest {
             let entry = stub_entry(b"refusing", crate::ffi::refusing_stub);
             let thread = self.thread.clone().unwrap_or_default();
@@ -371,8 +371,8 @@ fn set_variable(variables: &mut Vec<(Vec<u8>, ObjRef)>, name: &[u8], value: Opti
 
 /// A small integer where the value fits
 /// the tag, and its digits otherwise.
-fn whole_number_object(heap: &mut Heap, value: isize) -> ObjRef {
-    match i64::try_from(value).ok().and_then(ObjRef::small_int) {
+fn whole_number_object(heap: &mut Heap, value: i64) -> ObjRef {
+    match ObjRef::small_int(value) {
         Some(object) => object,
         None => heap.alloc(Body::Text {
             bytes: Bytes::from_slice(value.to_string().as_bytes()),

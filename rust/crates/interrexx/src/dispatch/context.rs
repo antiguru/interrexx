@@ -188,8 +188,15 @@ fn context_digits(
 ) -> Result<Option<ObjRef>, Failure> {
     at_context(interp, receiver, |interp, depth| {
         let digits = frame(interp, depth)?.settings.digits();
-        Ok(Some(interp.counted(digits as usize)))
+        Ok(Some(setting_value(interp, digits)))
     })
+}
+
+/// A `NUMERIC` setting as the whole number it is, on every target: a
+/// setting is at most eighteen digits, which a `usize` need not hold.
+fn setting_value(interp: &mut Interp, setting: u64) -> ObjRef {
+    let setting = i64::try_from(setting).expect("a NUMERIC setting has at most eighteen digits");
+    ObjRef::small_int(setting).unwrap_or_else(|| interp.text(setting.to_string().as_bytes()))
 }
 
 /// The fuzz setting in force -- see [`context_digits`].
@@ -201,7 +208,7 @@ fn context_fuzz(
 ) -> Result<Option<ObjRef>, Failure> {
     at_context(interp, receiver, |interp, depth| {
         let fuzz = frame(interp, depth)?.settings.fuzz();
-        Ok(Some(interp.counted(fuzz as usize)))
+        Ok(Some(setting_value(interp, fuzz)))
     })
 }
 

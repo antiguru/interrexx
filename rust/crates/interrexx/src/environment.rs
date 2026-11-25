@@ -370,8 +370,7 @@ impl Interp {
         // Native extensions can retain these handles across callbacks. The
         // interpreter already roots both directories for its lifetime.
         for object in [local, environment] {
-            let handle = interrexx_api::handles::handle_of(object);
-            self.borrowed_native_handles.insert(handle.addr(), object);
+            self.borrow_native_handle(object);
         }
 
         // `completeSystemClass` puts every native class into the environment

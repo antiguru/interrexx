@@ -481,9 +481,10 @@ mod tests {
             format!(
                 "interrexx {} (Open Object Rexx 5.3.0 compatible)\n\
                  Build date: {month} {day:>2} {year}\n\
-                 Addressing mode: 64\n\
+                 Addressing mode: {}\n\
                  Licensed under MIT OR Apache-2.0.",
-                env!("CARGO_PKG_VERSION")
+                env!("CARGO_PKG_VERSION"),
+                usize::BITS
             )
         );
     }

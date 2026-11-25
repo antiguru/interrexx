@@ -340,6 +340,14 @@ fn every_program_the_oracle_translates_this_parser_accepts() {
         if case.class != Class::Accepted {
             continue;
         }
+        // A DIGITS value past `usize::MAX` is refused on a narrower target
+        // (`docs/design/architecture.md`, 32-bit targets), where the oracle's 64-bit
+        // build accepts it.
+        if !cfg!(target_pointer_width = "64")
+            && case.program == b"::options digits 123456789012345678\n"
+        {
+            continue;
+        }
         checked += 1;
         if let Err(e) = parse(&case.program) {
             wrong.push(format!("row {}: rejected with {e}", case.row));

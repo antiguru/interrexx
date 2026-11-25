@@ -220,16 +220,19 @@ interrexx-extract = { path = "../interrexx-extract" }
 # fold that consumes it -- and so the emitted report -- untouched.
 rayon = "1.12.0"
 
-# Model checking of the baton, the inbox and the timer:
-# `tests/loom.rs` compiles their sources against `loom`'s primitives under
-# `--cfg loom`. Test-only.
-loom = "0.7.2"
 
 # The pseudo-terminal `SysGetKey`'s unit tests read a key from. Test-only.
 rustix = { version = "1.1.4", features = ["pty"] }
 
 # The specification parser, which `tests/spec.rs` checks `spec/` with. Test-only.
 interrexx-spec = { path = "../interrexx-spec" }
+
+# Model checking of the baton, the inbox and the timer: `tests/loom.rs`
+# compiles their sources against `loom`'s primitives under `--cfg loom`.
+# Test-only, and a dependency only under that flag: `loom` does not build for
+# every target the interpreter does.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7.2"
 
 [lints]
 workspace = true

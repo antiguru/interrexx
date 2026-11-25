@@ -26,11 +26,11 @@ rc 0
 [stderr]
 
 program
-say rxfuncadd('SysGetppid', 'rxunixsys') SysGetsizeofptr()
+say rxfuncadd('SysGetppid', 'rxunixsys') (SysGetsizeofptr() = .RexxInfo~architecture)
 ----
 rc 0
 [stdout]
-0 64
+0 1
 [stderr]
 
 # Argument conversion: arity, omitted arguments, 32-bit integers (as the
@@ -137,7 +137,7 @@ null strings:
 
 # Constant and option-driven results.
 eval
-SysGetsizeofptr()
+SysGetsizeofptr() = .RexxInfo~architecture
 SysUname()
 SysUname('s')
 SysUname('System')
@@ -159,7 +159,7 @@ SysSignal(1, 'x')
 SysSignal(999, 'd')
 SysSignal(999, 'Ignore')
 ----
-"64"
+"1"
 "{sysname}"
 "{sysname}"
 "{sysname}"

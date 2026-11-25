@@ -667,7 +667,10 @@ fn a_form_check_and_a_range_check_each_raise_their_own_code() {
 }
 
 /// A result too large to allocate is the oracle's own Error 5, not a
-/// process abort.
+/// process abort. On a 32-bit target a length past the address space is held
+/// at `isize::MAX` (`builtin::extent`), which an allocator may grant, so the
+/// sizes here are unallocatable on a 64-bit target only.
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn a_result_too_large_to_allocate_is_the_oracles_own_error_5() {
     let failure =

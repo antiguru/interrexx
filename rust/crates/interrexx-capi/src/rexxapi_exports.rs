@@ -584,7 +584,7 @@ pub unsafe extern "C" fn RexxQueryQueue(name: *const c_char, count: *mut usize) 
         && !count.is_null()
     {
         // SAFETY: the caller's guarantee.
-        unsafe { count.write(found as usize) };
+        unsafe { count.write(usize::try_from(found).unwrap_or(usize::MAX)) };
     }
     code(status)
 }

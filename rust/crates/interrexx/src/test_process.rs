@@ -4,7 +4,14 @@ use std::time::{Duration, Instant};
 /// A thread stack larger than any 64-bit host's address space, so a spawn
 /// asking for it fails whether or not an address cap is enforced: macOS
 /// enforces none, and has room for 64 TiB.
+#[cfg(target_pointer_width = "64")]
 pub(crate) const UNSPAWNABLE_STACK: usize = 1 << 62;
+
+/// A thread stack the whole of a 32-bit address space but its last 64 KiB, so
+/// a spawn asking for it fails: the program's own mappings already sit in that
+/// space.
+#[cfg(not(target_pointer_width = "64"))]
+pub(crate) const UNSPAWNABLE_STACK: usize = usize::MAX & !0xffff;
 
 /// Whether the test driver explicitly selected ThreadSanitizer resources.
 pub(crate) fn thread_sanitizer() -> bool {

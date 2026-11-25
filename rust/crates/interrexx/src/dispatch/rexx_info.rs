@@ -300,7 +300,8 @@ fn max_array_size(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    Ok(Some(interp.counted(super::MAX_FIXED_ARRAY_SIZE)))
+    let max = i64::try_from(super::MAX_FIXED_ARRAY_SIZE).expect("the maximum is an i64");
+    Ok(Some(whole(interp, max)))
 }
 
 /// The maximum exponent, the bound this crate's arithmetic reports error 42

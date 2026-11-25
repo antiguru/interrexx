@@ -26,7 +26,7 @@ use crate::error::Failure;
 
 /// The default word count `SUBWORD` and `DELWORD` use when their third
 /// argument is omitted.
-const ALL_REMAINING_WORDS: usize = 999_999_999_999_999_999;
+const ALL_REMAINING_WORDS: usize = usize::MAX;
 
 /// Whether `byte` separates words: blank or horizontal tab, and no other byte
 /// -- see the module doc for the 256-byte measurement.

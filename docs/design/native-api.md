@@ -78,6 +78,17 @@ statics of `unsafe extern "C" fn` slots.
   false, is one of those two handles, so an extension may compare it to them by handle. A built-in
   that answers `1` or `0` as numbers (`RegularExpression~match`, say) and Rexx code that does
   `return 1` answer numbers, as on ooRexx.
+* A handle is derived from the object reference, so the same object has the same handle in every
+  table of one interpreter. On a 64-bit target the handle's address is the reference's bits. On
+  a 32-bit target a reference that fits in 31 bits is carried in the address, and every other is
+  given a number by the interpreter's handle space. A number is held while any table of the
+  interpreter holds the reference, released handles included, or the interpreter keeps the
+  handle for later callbacks, and is given back when the last holder lets it go. Numbers are
+  handed out in turn, wrapping at 2^31 and skipping held ones, so a number given back names
+  nothing else until about two billion others have been handed out since: a handle kept past its
+  activation misses rather than naming another object, short of that. The space grows with the
+  handles in use, not with the handles ever made. Two handles to one object agree while either
+  resolves; one that no longer resolves may differ from a fresh handle to the object.
 * `RequestGlobalReference` holds an object in a separate table until `ReleaseGlobalReference`.
 * Memory lent to a native call (a `CSTRING` argument, `BufferData`, `MutableBufferData`) stays
   valid until that call completes. A buffer that grows during the call gets new storage, and the

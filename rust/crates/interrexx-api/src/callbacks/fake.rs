@@ -58,9 +58,11 @@ pub(crate) enum Held {
 
 impl FakeHost {
     pub(crate) fn new() -> FakeHost {
+        // One space for both tables, as an interpreter has.
+        let space = crate::handles::HandleSpace::new();
         FakeHost {
             heap: Heap::new(),
-            locals: Table::new(),
+            locals: Table::new(&space),
             cleared: 0,
             serves: true,
             held: None,
@@ -69,7 +71,7 @@ impl FakeHost {
             displayed: 0,
             variables: Vec::new(),
             globals: Vec::new(),
-            global_handles: Table::new(),
+            global_handles: Table::new(&space),
             object_variables: Vec::new(),
             memory: Vec::new(),
             cself: None,
@@ -154,8 +156,8 @@ impl Host for FakeHost {
         self.set_object_variable(name, None);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
-        match i64::try_from(value).ok().and_then(ObjRef::small_int) {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
+        match ObjRef::small_int(value) {
             Some(object) => object,
             None => self.text(value.to_string().as_bytes()),
         }

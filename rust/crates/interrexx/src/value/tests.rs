@@ -289,7 +289,7 @@ fn text_len_agrees_with_to_text() {
                 std::ptr::null_mut(),
             ))),
             Some(Box::new(interrexx_core::NativeState::Pointer(
-                std::ptr::without_provenance_mut(0x7f01_2345_6789),
+                std::ptr::without_provenance_mut(0x7f01_2345_6789_u64 as usize),
             ))),
         ] {
             let instance = interp.alloc_with(

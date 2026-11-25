@@ -174,6 +174,17 @@ From `rust/`, under the memory cap:
   checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target,
   runs this profile's unit tests (`--lib`) and the doc tests on the toolchain `rust-version`
   declares, on a checkout with no submodule.
+* The `i686` CI job builds every target and runs the `standalone` profile with Rust's i686 Linux
+  toolchain as the host, so 32-bit x86 is built and tested on every pull request. To run it
+  locally on x86-64 Linux, install the 32-bit C and C++ libraries and zlib (`gcc-multilib`,
+  `g++-multilib`, `zlib1g:i386`) and the toolchain (`rustup toolchain install
+  stable-i686-unknown-linux-gnu --force-non-host`), then, from `rust/`, run
+  `RUSTUP_TOOLCHAIN=stable-i686-unknown-linux-gnu PATH=$PWD/../ci/m32:$PATH cargo nextest run
+  --workspace --profile standalone`: the wrappers in `ci/m32` make what the build and the tests
+  compile 32-bit. Tests that need a non-root user and `/usr/bin/time` fail without them, as on any
+  host. `cargo clippy --workspace --all-targets --target i686-unknown-linux-gnu -- -D warnings`
+  checks the 32-bit `cfg` arms from a 64-bit toolchain. A size pin (`assert!(size_of::<T>() == N)`) holds
+  for 64-bit targets only, under `#[cfg(target_pointer_width = "64")]`.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under

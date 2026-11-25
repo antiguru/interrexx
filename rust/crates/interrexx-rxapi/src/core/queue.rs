@@ -141,7 +141,7 @@ impl Queues {
         }
         let mut name = self.generated_name(session);
         self.named.insert(fold(&name), Queue::default());
-        let capacity = size.saturating_sub(1) as usize;
+        let capacity = usize::try_from(size.saturating_sub(1)).unwrap_or(usize::MAX);
         let status = if name.len() > capacity {
             name.truncate(capacity);
             QUEUE_STORAGE

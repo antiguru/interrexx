@@ -1,6 +1,6 @@
 //! A live handle resolves; one that outlived its activation misses.
 
-use interrexx_api::handles::Table;
+use interrexx_api::handles::{HandleSpace, Table};
 use interrexx_core::{
     Body, Decoded, GENERATION_MAX, Heap, ObjRef, RootSet, SMALL_INT_MAX, SMALL_INT_MIN,
 };
@@ -32,11 +32,12 @@ fn array_len(heap: &Heap, object: ObjRef) -> Option<usize> {
 /// table that never resolves anything.
 #[test]
 fn a_live_handle_resolves_to_the_object_it_was_made_from() {
+    let space = HandleSpace::new();
     let mut heap = Heap::new();
     let roots = RootSet::new();
     let object = heap.alloc(array(3));
 
-    let mut table = Table::new();
+    let mut table = Table::new(&space);
     let handle = table.register(object);
 
     assert!(
@@ -69,12 +70,13 @@ fn a_live_handle_resolves_to_the_object_it_was_made_from() {
 /// and that object registered.
 #[test]
 fn a_handle_that_outlived_its_activation_misses_the_slots_next_occupant() {
+    let space = HandleSpace::new();
     let mut heap = Heap::new();
     let roots = RootSet::new();
 
     // The native call runs and is handed an object.
     let first = heap.alloc(array(3));
-    let mut table = Table::new();
+    let mut table = Table::new(&space);
     let stale = table.register(first);
     assert_eq!(table.resolve(stale), Some(first));
 
@@ -96,7 +98,7 @@ fn a_handle_that_outlived_its_activation_misses_the_slots_next_occupant() {
     assert_eq!(array_len(&heap, second), Some(4));
 
     // A later native call is handed the slot's new occupant.
-    let mut later = Table::new();
+    let mut later = Table::new(&space);
     let live = later.register(second);
     assert_eq!(later.resolve(live), Some(second));
 
@@ -111,15 +113,16 @@ fn a_handle_that_outlived_its_activation_misses_the_slots_next_occupant() {
 /// does not hold, changes nothing.
 #[test]
 fn release_unroots_one_registration_and_clear_drops_them_all() {
+    let space = HandleSpace::new();
     let mut heap = Heap::new();
     let first = heap.alloc(array(1));
     let second = heap.alloc(array(2));
     let stranger = heap.alloc(array(3));
 
-    let mut table = Table::new();
+    let mut table = Table::new(&space);
     let first_handle = table.register(first);
     let second_handle = table.register(second);
-    let stranger_handle = Table::new().register(stranger);
+    let stranger_handle = Table::new(&space).register(stranger);
 
     table.release(first_handle, |_| true);
     assert_eq!(table.roots().collect::<Vec<_>>(), vec![second]);
@@ -148,8 +151,9 @@ fn release_unroots_one_registration_and_clear_drops_them_all() {
 /// and one whose object lives is kept.
 #[test]
 fn released_handles_of_swept_objects_are_forgotten() {
+    let space = HandleSpace::new();
     let mut heap = Heap::new();
-    let mut table = Table::new();
+    let mut table = Table::new(&space);
     let kept = heap.alloc(array(1));
     let kept_handle = table.register(kept);
     table.release(kept_handle, |_| true);
@@ -173,10 +177,11 @@ fn released_handles_of_swept_objects_are_forgotten() {
 
 #[test]
 fn registering_the_same_object_twice_answers_the_same_handle() {
+    let space = HandleSpace::new();
     let mut heap = Heap::new();
     let object = heap.alloc(array(1));
 
-    let mut table = Table::new();
+    let mut table = Table::new(&space);
     let first = table.register(object);
     let second = table.register(object);
 
@@ -188,7 +193,8 @@ fn registering_the_same_object_twice_answers_the_same_handle() {
 /// `ObjRef` whose bits are zero is the first one a fresh heap allocates.
 #[test]
 fn the_extremes_of_the_handle_space_are_not_null() {
-    let mut table = Table::new();
+    let space = HandleSpace::new();
+    let mut table = Table::new(&space);
     for object in [
         ObjRef::heap(0, 0),
         ObjRef::heap(u32::MAX, GENERATION_MAX),

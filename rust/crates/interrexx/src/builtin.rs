@@ -1058,17 +1058,34 @@ fn pad_byte(
 /// and the argument's position in the call.
 #[inline]
 fn length_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure> {
-    usize::try_from(value).map_err(|_| {
-        Raised::argument_not_non_negative_call(name, position, value.to_string().as_bytes()).into()
-    })
+    if value < 0 {
+        return Err(Raised::argument_not_non_negative_call(
+            name,
+            position,
+            value.to_string().as_bytes(),
+        )
+        .into());
+    }
+    Ok(extent(value))
+}
+
+/// A whole number at least zero as a length, position or count. Where the
+/// target's `usize` is narrower than the number, it is held at `isize::MAX`,
+/// which no string or allocation reaches: a length or position that large
+/// reaches past every string, as the number itself does on a 64-bit target,
+/// and two of them still add without overflow.
+#[inline]
+pub(crate) fn extent(value: i64) -> usize {
+    debug_assert!(value >= 0, "an extent is at least zero");
+    usize::try_from(value).map_or(isize::MAX as usize, |value| value.min(isize::MAX as usize))
 }
 
 /// A converted argument used as a position: strictly positive, or the
 /// builtin's own 40.14 (`r[conv.position.check]`).
 #[inline]
 fn position_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure> {
-    match usize::try_from(value) {
-        Ok(at) if at > 0 => Ok(at),
+    match (value > 0).then(|| extent(value)) {
+        Some(at) => Ok(at),
         _ => {
             Err(Raised::argument_not_positive(name, position, value.to_string().as_bytes()).into())
         }
