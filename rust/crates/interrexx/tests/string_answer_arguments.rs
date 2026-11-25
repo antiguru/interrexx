@@ -1,18 +1,5 @@
-//! A builtin argument whose user `STRING` method answers an object with no
-//! string value (Deviations 30 and 169). Each `call` and `refuses` case runs
-//! `say <call>` with `o` an instance whose `STRING` answers the `string=`
-//! object; `program` runs its input as the whole program; `checked` runs `say
-//! <call>` with `o`'s `STRING` answering `.object~new` and the error trapped,
-//! for an argument whose check the builtin's body makes, one fault per call. A `call` or
-//! `program` case records the oracle's rc, stdout and stderr, except where its
-//! comment gives the oracle's answer as another. A `refuses` case records this
-//! crate's answer, and its comment the oracle's: SYNTAX 88.909 where the call's
-//! argument is one the builtin reads as a string
-//! (`r[conv.string.builtin-argument]`), the error of the argument's own check
-//! where the builtin reads it as a number, a character, an option or a stream
-//! name (`r[conv.string.argument-kind]`), and SYNTAX 98.973 for the string the
-//! builtin works on (`r[conv.string.deviation.169]`). It records as well what a
-//! trap of the error sees: the code, and for 88.909 the argument's position.
+//! String conversion of builtin arguments and direct method arguments. The
+//! cases exercise the fallback text, argument checks and trapped errors.
 
 use interrexx::Invocation;
 
@@ -41,14 +28,9 @@ fn trapped_program(call: &str, answer: &str) -> String {
     )
 }
 
-/// The program a `checked` case runs: it prints the code of the error the
-/// call raises, and `placeholder` after it when the message or an item of
-/// `ADDITIONAL` holds the text the builtin reads in place of the argument while
-/// its checks run.
+/// Runs one argument check with a non-convertible STRING answer.
 fn checked_program(call: &str) -> String {
-    format!(
-        "o = .q~new\nsignal on syntax\nsay {call}\nsay \"after\"\nexit\nsyntax: c = condition('o')\nseen = c~message\ndo item over c~additional\n  seen = seen || item\nend\nif pos('0101'x, seen) > 0 then say c~code 'placeholder'\nelse say c~code\nexit\n::class q\n::method string\n  return .object~new\n"
-    )
+    trapped_program(&format!("'value=[' || ({call}) || ']'"), ".object~new")
 }
 
 /// `rc`, stdout and stderr as the case file records them.
@@ -66,6 +48,7 @@ fn transcript(text: String) -> String {
     )
 }
 
+// spec: conv.string.builtin-argument, conv.string.argument-kind
 #[test]
 fn string_answers_at_builtin_argument_positions() {
     let mut cases = 0;

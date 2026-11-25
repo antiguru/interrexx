@@ -54,7 +54,7 @@ pub(crate) fn double_argument(
         )]
         return Ok(number as f64);
     }
-    let text = interp.required_string_or_nil(value)?;
+    let text = interp.required_string_value(value)?;
     let bytes = interp.to_text(text).into_owned();
     if Number::parse_bytes(&bytes).is_some() {
         return Ok(strtod(&bytes));

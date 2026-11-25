@@ -137,7 +137,7 @@ impl Interp {
                     // rendering. For example, `a.MS = 'hit'; i = .K; say a.i`
                     // with a class-side `makeString` returning `'MS'` prints
                     // `hit`.
-                    let value = self.required_string_or_nil(value)?;
+                    let value = self.required_string_value(value)?;
                     self.write_text(value, key);
                 }
             }

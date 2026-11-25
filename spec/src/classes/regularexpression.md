@@ -468,16 +468,13 @@ members are characters, ranges and [symbolic
 names](r:class.regularexpression.grammar.names). A `^` right after the opening
 bracket negates the set: it matches one character that is not a member; a `^`
 anywhere else is an ordinary member. A `-` between two characters makes a
-range. For a range the bytes count as numbers from -128 for `'80'x` up to 127
-for `'7f'x`, so `'80'x` to `'ff'x` come before `'00'x`. When the first
-character is not above the second, the range is all characters from the first
-to the second; when it is above, it is the characters above the second up to
-the first, so `[d-a]` is `b`, `c` and `d`. In a chain such as `[a-c-e]` the
-character that ends a range also starts the next one, so that set is `a` to
-`e`. A `\` right after the `-` of a range is the end of the range and not an
-escape, and a `-` after a symbolic name starts a range at the closing colon of
-the name, which is left out when the end is above it: `[:digit:-z]` is the
-digits and the characters from `;` to `z`. A `[` inside a set is an ordinary
+range. Each range includes both endpoints in unsigned byte order, from
+`'00'x` through `'FF'x`. The endpoints may appear in either order.
+A character that ends a range can also start the next range, so `[a-c-e]`
+includes every byte from `a` to `e`. Immediately after a range hyphen, a
+backslash is the endpoint itself. After a symbolic name, a range starts at
+the closing colon of the name. A range continuing up from that colon
+excludes it. A `[` inside a set is an ordinary
 member. A `-` that opens the set, or follows the `^` that opens it, is an
 ordinary member, and a `-` that ends the set is error 3. Inside a set the
 characters `?`, `*`, `+`, `|`, `(`, `)`, `{`, `}` and `.` stand for
@@ -490,15 +487,8 @@ present: error 3.
 re = .RegularExpression~new
 say 'members' re~parse('[xyz]') re~match('y') re~match('w')
 say 'range' re~parse('[a-d]') re~match('c') re~match('e')
-say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
-say 'signed' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
-  re~match('b')
 say 'high' re~parse('['||'80'x||'-'||'ff'x||']') re~match('90'x) re~match('a')
 say 'chain' re~parse('[a-c-e]') re~match('d') re~match('b') re~match('f')
-say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
-  re~match('\') re~match('c')
-say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
-  re~match('5') re~match('{')
 say 'bracket' re~parse('[[]') re~match('[') re~match('a')
 say 'ranges' re~parse('[a-cx-z]') re~match('b') re~match('y') re~match('m')
 say 'negated' re~parse('[^a-c]') re~match('d') re~match('b')
@@ -519,12 +509,8 @@ exit
 ```output
 members 0 1 0
 range 0 1 0
-backward 0 1 0 0
-signed 0 1 0 0
 high 0 1 0
 chain 0 1 1 0
-late end 0 1 1 0 0 1
-after name 0 1 0 1 0
 bracket 0 1 0
 ranges 0 1 1 0
 negated 0 1 0
@@ -739,22 +725,31 @@ re~position(5) => 93.902
 ## Deviations
 
 r[class.regularexpression.deviation.87]
-The pattern language is the one this
-page gives, and every call ends. ooRexx differs in many patterns; among them,
-it answers wrongly when a `+` is followed by a repeated element, as `c+a*`,
-which it does not match against `cca`, and when an alternative that begins
-with a repeated element is followed by another one, at the top or in a group:
-`b*c|a` is `b*c` or `a`, but ooRexx reads the second alternative as following
-the repeated element, so it finds `ba`. It does not end for a pattern that
-repeats a group that can match the empty string, such as `(a*)*`, for one that
-begins with a group whose first alternative can match the empty string and is
-followed by `|`, such as `(c*|b)|d`, and for a set with a range whose highest
-character, in the order of [the set
-rule](r:class.regularexpression.grammar.set), is `'7f'x`, as in `[a-'7f'x]`
-and `['7f'x-'81'x]`, and it crashes on others, such as `(c*|b)c|d`. And for a
-count it cannot build, as in `a{99999999999}`, it uses memory until it is
-stopped, where interrexx answers code 5 from `parse`. None of the examples is
-run on ooRexx.
+The pinned ooRexx revision uses signed range endpoints, miscompiles some
+alternatives and fails to terminate on some patterns with empty matches.
+ooRexx r13618 corrected the byte ranges and r13620 corrected the automaton.
+Interrexx also limits the size of the compiled pattern. If expanding a count
+would exceed that limit, `parse` answers 5.
+
+```rexx
+re = .RegularExpression~new
+say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
+say 'byte order' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
+  re~match('b')
+say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
+  re~match('\') re~match('c')
+say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
+  re~match('5') re~match('{')
+exit
+::requires "rxregexp.cls"
+```
+
+```output
+backward 0 1 0 1
+byte order 0 0 1 1
+late end 0 1 1 0 1 1
+after name 0 1 0 1 0
+```
 
 ```rexx
 re = .RegularExpression~new('b*c|a')

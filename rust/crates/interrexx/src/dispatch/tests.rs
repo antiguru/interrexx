@@ -632,11 +632,7 @@ fn a_write_to_a_packages_routines_table_moves_call_resolution() {
     );
 }
 
-/// A user `STRING` method's answer reads under the primitive string
-/// conversion: an array (or an `Array` subclass) joins its items and a buffer
-/// is its text. A `Queue`, `.nil` or any other object is `.nil` there: a truth
-/// value and a logical operator judge `.nil`, and a consumer of its bytes
-/// (concatenation, `LENGTH`) raises SYNTAX 98.973 (Deviations 30 and 169).
+/// A STRING answer can have its own intrinsic string value.
 #[test]
 fn a_string_answer_reads_as_primitive_make_string_reads_it() {
     let program = |answer: &str| {
@@ -655,49 +651,6 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
             run_source(&program(answer)),
             (0, stdout.to_owned(), String::new()),
             "{answer}"
-        );
-    }
-    // A consumer of the bytes raises SYNTAX 98.973, which a trap takes
-    // (Deviation 169).
-    for answer in [".directory~new", ".queue~of('a')", ".nil", ".object~new"] {
-        for statement in [
-            "say 'x' .k~new",
-            "say '' << .k~new",
-            "say 'abc' < .k~new",
-            "parse value .k~new with p",
-            "parse value .k~new with p q",
-            "call r .k~new\nexit\nr: signal on syntax name s\nparse arg p\nreturn",
-            "options .k~new",
-            "say length(.k~new)",
-        ] {
-            let program = format!(
-                "signal on syntax name s\n{statement}\nexit\n\
-                 s: say condition('O')~code\n::class k\n::method string\n  return {answer}\n"
-            );
-            assert_eq!(
-                run_source(&program),
-                (0, "98.973\n".to_owned(), String::new()),
-                "{statement} over {answer}"
-            );
-        }
-        let untrapped =
-            format!("say length(.k~new)\n::class k\n::method string\n  return {answer}\n");
-        assert_eq!(run_source(&untrapped).0, 158, "untrapped over {answer}");
-        let judged = format!(
-            "o = .k~new\nsignal on syntax name s1\nif o then nop\n\
-             s1: say condition('O')~code condition('O')~message\n\
-             signal on syntax name s2\nsay 1 & o\n\
-             s2: say condition('O')~code condition('O')~message\n\
-             exit\n::class k\n::method string\n  return {answer}\n"
-        );
-        assert_eq!(
-            run_source(&judged),
-            (
-                0,
-                expand("34.1 ⟨34.1¦The NIL object⟩\n34.901 ⟨34.901¦The NIL object⟩\n"),
-                String::new()
-            ),
-            "truth over {answer}"
         );
     }
 }

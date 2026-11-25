@@ -12,7 +12,6 @@ use crate::{Interp, Loud};
 
 /// What each builtin reads its arguments as, for the error of an argument
 /// whose `STRING` answer has no string value.
-pub(crate) mod argument_kinds;
 /// Crate-visible because the eight base conversions are methods on `String`
 /// as well as builtins -- `B2X` and the rest of the eight -- and the cores
 /// here are what keep the two forms from coming to disagree about a grouping
@@ -836,8 +835,7 @@ pub(crate) fn run(
     // `Interp::required_string_arguments` put it. The row's own name goes
     // with it, because which positions are exempt is a fact about the
     // builtin.
-    let deferred = argument_kinds::Deferred::default();
-    let answer = match interp.required_string_arguments(builtin.name, args, &deferred)? {
+    let answer = match interp.required_string_arguments(builtin.name, args)? {
         Some(converted) => (builtin.run)(
             interp,
             builtin.name,
@@ -855,7 +853,6 @@ pub(crate) fn run(
             },
         ),
     };
-    let answer = deferred.settle(interp, answer);
     interp.serve_posted_halt();
     answer
 }

@@ -519,8 +519,7 @@ trailing blank matters, and numbers are not compared as numbers, so `1` and
 `1.0` are not equal. The argument is required (`SYNTAX 93.903`) and a second
 raises `93.902`. The argument is converted by the [required-string
 protocol](r:conv.string.object). `.nil` compares unequal to every string.
-An object whose `string` method returns something with no string value also
-compares unequal when the conversion does not raise a condition.
+If conversion falls back to the object's name, equality compares that name.
 
 ```rexx
 say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')

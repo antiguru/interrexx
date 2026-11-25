@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30, 109, 169]
+deviations: [30, 109]
 ---
 
 # Conventions
@@ -50,22 +50,17 @@ say c2x(upper('61007a'x))
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
-replacement is found by sending the object the message `REQUEST` with the
-argument `STRING`, and nothing else is sent first. When the answer is a string,
-it is the replacement. When the answer is `.nil` or another object that is not
-a string, the replacement is the answer of the object's public
-[`STRING`](r:class.object.string) method, and when that answer is not a string
-either, see [Deviation 30](r:conv.string.deviation.30). The
-[`REQUEST`](r:class.object.request) of `Object` sends the object `MAKESTRING`
-when it has one and answers what that answers, and answers `.nil` when it has
-none. So an object with a `MAKESTRING` method is replaced by its answer, as for
-an [`Array`](r:class.array.makestring) or a
-[`MutableBuffer`](r:class.mutablebuffer.makestring), and an object with only a
-`STRING` method by the answer of that method. A class that declares its own
-`REQUEST` method decides the answer itself: its `MAKESTRING` method is not used
-unless its `REQUEST` sends it, and a `REQUEST` that answers a string is used
-even when the class has a `STRING` method. A `MAKESTRING` that answers `.nil`
-or an object that is not a string is like a `REQUEST` that does. An instance of
+replacement is found by sending `REQUEST('STRING')`. If it supplies a value
+that can be read as a string, that value supplies the replacement. Otherwise
+the interpreter sends [`STRING`](r:class.object.string). It can use the
+answer's own string value or ask that answer once for a string through
+`REQUEST('STRING')`. If neither supplies a string, the interpreter uses the
+original object's name. An unusable or missing `OBJECTNAME` answer leaves
+the object's built-in default name. An absent return value and `.nil`
+both count as failing to supply a string.
+The [`REQUEST`](r:class.object.request) of `Object` sends `MAKESTRING` when
+the object has that method. A class that overrides `REQUEST` controls that
+step and can forward to its `MAKESTRING`. An instance of
 a subclass of `String` is a string here, whether it is passed directly or is
 what `REQUEST` answers: the builtin works on its own characters, and no message
 is sent to it for that ([Deviation 109](r:class.string.deviation.109)). A
@@ -526,8 +521,8 @@ objects, by sending them `STRING`, is part of its checks: a call that has no
 fault sends `STRING` to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
 call of a builtin or a method, or the checks of one instruction, find one
-fault, the operation raises the error that the rule for that fault gives; a
-`STRING` answer that has no string value is such a fault. When they find more
+fault, the operation raises the error that the rule for that fault gives. When
+they find more
 than one, a wrong number of arguments or an omitted required argument among
 them, the operation raises the error of one of them, and which one is
 unspecified. Whether the checks after the first fault found are made, and so
@@ -693,194 +688,42 @@ say '['substr('abc', 2)']' '['substr(' a ', 1)']'
 ## Deviations
 
 r[conv.string.deviation.30]
-interrexx does not convert an argument whose `STRING` method answers an object
-that is not a string, such as a `Directory`, by reading the answer as a
-string. When a builtin receives such an argument where its page calls for a
-string, interrexx raises `SYNTAX 98.973`, or for an argument that [the
-argument rules](r:conv.string.builtin-argument) name the error they give, as
-[Deviation 169](r:conv.string.deviation.169) says, after raising
-[`NOSTRING`](r:cond.nostring.raise) when a trap for it is set. ooRexx reads
-the answer as a string, and what it does then depends on the builtin: `UPPER`
-ends the program with Error 5, `LENGTH` answers an unrelated number, and
-`STRIP` crashes the interpreter. A program can rely on none of these answers.
+The [string conversion rule](r:conv.string.object) uses the object's name
+when its `STRING` method provides no usable answer. The ooRexx revision
+pinned for comparisons can give inconsistent results or crash in this case.
+ooRexx r13624 corrected that behavior.
 
 ```rexx
 o = .weird~new
-say 'before'
-say upper(o)
-say 'after'
-::class weird
-::method string
-  return .directory~new
-```
-
-```output rc=158
-before
-```
-
-r[conv.string.deviation.169]
-Where a clause needs the bytes of an object's string value, the `STRING` method
-of the object answers an object with no string value, and no trap took the
-NOSTRING condition that the answer raises, the clause raises `SYNTAX 98.973`,
-the condition that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING. The
-condition is an ordinary SYNTAX condition: `SIGNAL ON SYNTAX` and `CALL ON
-SYNTAX` take it, `RC` is 98 there, and untrapped it ends the program with exit
-code 158. The clauses that do this include `SAY`, the three concatenation
-operators, the ordering comparisons, `PARSE VALUE`, `PARSE ARG`, `OPTIONS` and
-the receiver of a builtin, the string the builtin works on, and the name that
-`SYMBOL`, `VAR`, `VALUE`, `QUALIFY`, `RXFUNCADD`, `RXFUNCDROP` or
-`RXFUNCQUERY` reads, and the selector of `VALUE`. A clause that reads the
-answer as an object, such as a truth value, a logical operator or an equality
-comparison, takes it as `.nil`. Every other argument of a builtin has the error
-of its own kind, which [the next rule](r:conv.string.builtin-argument) states
-for an argument read as a string and [the rule after
-it](r:conv.string.argument-kind) for the others. That latter rule applies
-also to method arguments read as a number. ooRexx reads the answer
-as a string in each of the clauses above, with garbage results or a crash, so
-no answer of it is specified. The text of the message is not specified.
-
-```rexx
-o = .weird~new
-signal on syntax name s
-say length(o)
-s: say condition('o')~code rc
-signal on syntax name t
-say 'a' || o
-t: say condition('o')~code rc
-signal on syntax name u
-parse value o with a b
-u: say condition('o')~code rc
+say upper(o) length(o)
+say pos(o, 'x a WEIRD')
+signal on syntax name bad
+say 'x a WEIRD'~pos(o)
+bad: say condition('o')~code
 ::class weird
 ::method string
   return .directory~new
 ```
 
 ```output
-98.973 98
-98.973 98
-98.973 98
+A WEIRD 7
+3
+88.909
 ```
 
 r[conv.string.builtin-argument]
-Where the `STRING` method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as a string, the builtin
-raises `SYNTAX 88.909`, as the method
-the builtin stands for does. `N` is the position of the argument among the
-arguments of that method, which does not count the receiver, the string the
-builtin works on. So `CHANGESTR(needle, haystack, new)` numbers the needle 1
-and the replacement 2, and `STRIP(string, option, char)` numbers the option 1
-and the character 2. The arguments that are read as strings are those named
-here, and [the next rule](r:conv.string.argument-kind) gives the error of the
-others: the needle of
-`CHANGESTR`, `COUNTSTR`, `POS`, `LASTPOS` and `WORDPOS` and the replacement of
-`CHANGESTR`; the inserted string of `INSERT` and `OVERLAY`; the second string
-of `ABBREV`, `COMPARE`, `BITAND`, `BITOR` and `BITXOR`; the type of
-`DATATYPE`; the option and the character of `STRIP`; the two tables of
-`TRANSLATE`; the reference and the option of `VERIFY`; and the data of
-`CHAROUT` and `LINEOUT`. A method's argument and a native routine's argument that has no string
-value raise the same error with their own position. When the call has another
-fault as well, [the precedence rule](r:conv.error.precedence) applies.
-
-```rexx
-o = .weird~new
-signal on syntax name s
-say changestr('a', 'a', o)
-s: say condition('o')~code rc
-signal on syntax name t
-say pos(o, 'abc')
-t: say condition('o')~code rc
-signal on syntax name u
-say strip('xabx', 'B', o)
-u: say condition('o')~code rc
-signal on syntax name v
-say 'abc'~pos(o)
-v: say condition('o')~code rc
-::class weird
-::method string
-  return .directory~new
-```
-
-```output
-88.909 88
-88.909 88
-88.909 88
-88.909 88
-```
+Builtins that use the [full conversion](r:conv.string.object) use the
+resulting text at each string position, including where the text is the
+object's name. A method or native routine that requires a string through
+`REQUEST('STRING')` alone raises `SYNTAX 88.909` if the argument supplies no
+usable value. The error identifies the position in that method or routine's
+argument list.
 
 r[conv.string.argument-kind]
-Where the `STRING` method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as something other than a
-string, the argument fails the check of its kind, and the builtin raises the
-error that a string of the wrong form raises at that argument. A whole number,
-such as a count, a length or a position, raises `SYNTAX 40.12`; a pad or
-another single character `40.23`; an option `40.904`; the date or time that
-`DATE` or `TIME` converts `40.19`; a separator of `DATE` `40.43`; an argument
-of `XRANGE` that may be a class name `40.28`; the setting of `TRACE` `24.1`;
-and the queue name of `RXQUEUE` `40.26`. A number that `ABS`, `FORMAT`,
-`MAX`, `MIN`, `SIGN` and `TRUNC` work on raises `40.11` ([the number
-rule](r:conv.method.number)), the number of `D2C` and of `D2X` `93.929` and
-`93.928`, and the string of `X2B`, `X2C` and `X2D` and of `B2X` `93.933` and
-`93.934`, as for a string that is not a number, or not hexadecimal or binary.
-The name of a stream raises `93.938`, numbered 1, the error of the argument of
-the `Stream` method the builtin sends, and the command of `STREAM` raises
-`93.914`, the error of a command that is not one. When the call has another
-fault as well, it raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says. A method argument read as a number
-raises the error of its own check when `STRING` gives no string value. For
-`String` methods the [message rule](r:class.string.builtins.errors) names
-these errors. An argument such a method reads as a string, a pad among them,
-raises `88.909` (the previous rule). The string a
-builtin works on keeps `98.973` ([Deviation 169](r:conv.string.deviation.169)).
-
-```rexx
-o = .weird~new
-call try "left('abc', o)"
-call try "left('abc', 2, o)"
-call try "date(o)"
-call try "date('N', o, 'S')"
-call try "date('S', , , o)"
-call try "xrange(o)"
-call try "trace(o)"
-call try "rxqueue('S', o)"
-call try "abs(o)"
-call try "max(1, o)"
-call try "d2c(o)"
-call try "x2d(o)"
-call try "linein(o)"
-call try "'abc'~left(o)"
-call try "'abc'~substr(o)"
-call try "'abc'~left(2, o)"
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=> ok'
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class weird
-::method string
-  return .directory~new
-```
-
-```output
-left('abc', o) => 40.12
-left('abc', 2, o) => 40.23
-date(o) => 40.904
-date('N', o, 'S') => 40.19
-date('S', , , o) => 40.43
-xrange(o) => 40.28
-trace(o) => 24.1
-rxqueue('S', o) => 40.26
-abs(o) => 40.11
-max(1, o) => 40.11
-d2c(o) => 93.929
-x2d(o) => 93.933
-linein(o) => 93.938
-'abc'~left(o) => 93.923
-'abc'~substr(o) => 93.924
-'abc'~left(2, o) => 88.909
-```
+An argument interpreted as a number, position, option, or other constrained
+value is checked in that role after conversion. For example, a nonnumeric
+default name fails the normal numeric check. Where several checks fail,
+[the precedence rule](r:conv.error.precedence) applies.
 
 ```rexx
 o = .weird~new

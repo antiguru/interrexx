@@ -1,5 +1,3 @@
-/* A STRING answer with no string value is .nil to a native method's numeric,
-   stem and ObjectToString conversions, whose errors name the original object. */
 o = .sn~new
 t = .t~new
 signal on syntax name s1

@@ -999,18 +999,7 @@ e: say arg(1) '=>' condition('o')~code
 ## Deviations
 
 r[class.index.deviation.30]
-When the `string` method of an object answers an object that is not a
-string, interrexx gives ooRexx's answer wherever that is defined, and
-elsewhere, as for `say`, a joining operator or the receiver of a builtin, raises
-`SYNTAX 98.973` ([Deviation 169](r:conv.string.deviation.169)) after raising
-NOSTRING if it is trapped. ooRexx reads `.nil` as a string there, with garbage
-results or a crash. [The
-conventions](r:conv.string.deviation.30) and [the NOSTRING
-rule](r:cond.nostring.deviation.30) state it for builtin arguments and for
-the condition, [the argument rule](r:conv.string.builtin-argument) gives
-the `SYNTAX 88.909` of an argument a builtin reads as a string, and [the kind
-rule](r:conv.string.argument-kind) the error of an argument it reads as
-something else.
+Conversion uses the object's name when its `STRING` method answers no usable value. The pinned ooRexx revision can give an unusable result or crash. See the [conversion rule](r:conv.string.object).
 
 ```rexx
 say 'before'
@@ -1020,8 +1009,9 @@ say 'x' .weird~new
   return .directory~new
 ```
 
-```output rc=158
+```output
 before
+x a WEIRD
 ```
 
 r[class.index.deviation.32]

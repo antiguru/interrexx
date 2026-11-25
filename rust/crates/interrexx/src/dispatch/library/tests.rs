@@ -370,6 +370,32 @@ fn the_conversion_rows_answer_the_same_under_a_collection_at_every_allocation() 
     assert!(swept.collections > 0, "the stress mode did not collect");
 }
 
+/// A native method checks the fallback text for numeric and stem arguments.
+#[test]
+fn native_arguments_check_the_fallback_from_an_unusable_string_answer() {
+    let outcome = crate::run_program(
+        "/tmp/string_answer_nil_native.rex",
+        include_bytes!("tests/string_answer_nil_native.rex").to_vec(),
+        crate::Invocation::none().with_environment(vec![(
+            b"LD_LIBRARY_PATH".to_vec(),
+            worktree_library_directory()
+                .into_os_string()
+                .into_encoded_bytes(),
+        )]),
+    );
+    assert_eq!(
+        outcome.exit_code,
+        0,
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "int 88.907\ndouble 88.921\nsize 88.907\nstem 93.969\ntostring a SN\n"
+    );
+    assert!(outcome.stderr.is_empty());
+}
+
 /// A native call's frame is reused by the next call with nothing of the
 /// last one left in it: a handle the last call registered resolves to
 /// nothing, and its arguments, argument array, name and condition are

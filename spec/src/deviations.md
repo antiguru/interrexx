@@ -247,12 +247,10 @@ value for the first and removes the entry for the second.
 
 ## 30. A STRING method answering a non-string
 
-When an object's `STRING` method answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
-`SYNTAX 98.973` after raising NOSTRING if it is trapped, as [Deviation
-169](#169-a-string-method-answering-a-non-string-where-its-bytes-are-read)
-says. ooRexx reads `.nil` as a string there, with garbage results or a crash.
-The [conventions](r:conv.string.deviation.30) state it for builtin arguments.
+String conversion falls back to the object's name when `STRING` supplies no
+usable value. The pinned ooRexx revision may give an unusable result or crash.
+ooRexx r13624 adopted this fallback. See the [conversion
+rule](r:conv.string.deviation.30).
 
 ## 31. Withdrawn
 
@@ -660,9 +658,11 @@ macrospace, writes a line to standard error that says so
 
 ## 87. rxregexp follows its documented grammar
 
-rxregexp matches the documented pattern language and always terminates; a
-pattern too large to compile is compile error 5. ooRexx answers some patterns
-wrongly, never terminates on some and crashes on others.
+A pattern whose compiled automaton exceeds the size limit raises parse
+error 5. The pinned ooRexx revision can exhaust memory at large repeat
+counts. It also miscompiles some alternatives, loops on some empty matches,
+and uses signed byte values for set ranges. ooRexx r13618 fixed the range
+rules and r13620 fixed the automaton construction and empty cycles.
 
 ## 88. Extension calls that crash ooRexx
 
@@ -1387,23 +1387,11 @@ the words of the options as a blank does, and a command may begin and end with
 one. ooRexx accepts a tab after the word that names a command, and raises
 `SYNTAX 93.0` for a tab between or around the options that follow it.
 
-## 169. A STRING method answering a non-string where its bytes are read
+## 169. Withdrawn
 
-Where a clause needs the bytes of the string value of an object, and the
-`STRING` method of the object answers an object with no string value (`.nil`, a
-`Directory`, a `Queue`, an `Object`), interrexx raises `SYNTAX 98.973`, the
-error that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING, whether or not the
-program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
-untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
-takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. The arguments of a
-builtin are not part of this Deviation, except the string the builtin works on
-and the names that the conventions list: an argument raises the error of its
-own kind, `SYNTAX 88.909` with its position where the builtin reads it as a
-string ([the rule](r:conv.string.builtin-argument)) and the error of its check
-otherwise ([the kind rule](r:conv.string.argument-kind)). The
-[conventions](r:conv.string.deviation.169) state it. It replaces the refusal
-with exit code 120 that Deviation 30 described.
+The fallback to the object's name replaces the unconditional SYNTAX error.
+[Deviation 30](#30-a-string-method-answering-a-non-string) covers comparison
+with the pinned ooRexx revision.
 
 ## 170. Withdrawn
 

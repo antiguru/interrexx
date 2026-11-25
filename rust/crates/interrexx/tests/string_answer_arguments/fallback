@@ -1,0 +1,100 @@
+program
+v = .bad~new
+call exposed
+say length(v) words(v) '[' || v || ']' v~string~class~id
+say '[' || .nilString~new || ']' '[' || .selfString~new || ']'
+say '[' || .emptyRequest~new || ']' '[' || .wrongRequest~new || ']'
+say '[' || .makes~new || ']' '[' || .named~new || ']'
+say '[' || .badName~new~string || ']' '[' || .array~of(.badName~new)~toString || ']'
+say '[' || .array~of(.arrayName~new)~toString || ']' '[' || .array~of(.converterName~new)~toString || ']'
+say '[' || .bufferRequest~new || ']'
+say pos(v, 'a BAD')
+call strict
+call invalid
+call trapped
+exit
+
+exposed: procedure expose (v)
+  say 'exposed'
+  return
+strict:
+  signal on syntax name strictError
+  say 'a BAD'~pos(v)
+  return
+strictError:
+  say condition('o')~code
+  return
+invalid:
+  signal on syntax name invalidError
+  raise syntax (.nilString~new)
+  return
+invalidError:
+  say condition('o')~code
+  return
+trapped:
+  signal on nostring name noString
+  say v
+  return
+noString:
+  say condition('c') condition('d') (condition('o')~additional == v)
+  return
+
+::class bad
+::method string
+  return .directory~new
+::class nilString
+::method string
+  return .nil
+::class selfString
+::method string
+  return self
+::class emptyRequest
+::method request
+  return
+::class wrongRequest
+::method request
+  return .directory~new
+::method string
+  return 'from STRING'
+::class makes
+::method string
+  return .converter~new
+::class converter
+::method makestring
+  return 'converted'
+::class named
+::method string
+  return .nil
+::method objectname
+  return 'my name'
+::class badName
+::method objectname
+  return .directory~new
+::method defaultName
+  return 'override'
+::class arrayName
+::method objectname
+  return .array~of('x', 'y')
+::class converterName
+::method objectname
+  return .converter~new
+::class bufferRequest
+::method request
+  return .mutablebuffer~new('buffer')
+----
+rc 0
+[stdout]
+exposed
+5 2 [a BAD] Directory
+[a NILSTRING] [a SELFSTRING]
+[an EMPTYREQUEST] [from STRING]
+[converted] [my name]
+[a BADNAME] [a BADNAME]
+[x
+y] [a CONVERTERNAME]
+[buffer]
+1
+88.909
+33.904
+NOSTRING a BAD 1
+[stderr]

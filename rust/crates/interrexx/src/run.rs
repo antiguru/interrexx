@@ -1604,7 +1604,7 @@ impl Interp {
                 TailPiece::Constant(text) => key.extend_from_slice(text),
                 TailPiece::Variable { name, .. } if visible(name) => {
                     let value = self.read_by_name(name);
-                    let value = self.required_string_or_nil(value)?;
+                    let value = self.required_string_value(value)?;
                     self.write_text(value, &mut key);
                 }
                 TailPiece::Variable { name, .. } => key.extend_from_slice(name),
@@ -2669,7 +2669,7 @@ impl Interp {
         // conversion, measured: `trace r` over `interpret .K` with a
         // class-side `makeString` returning `'nop'` prints
         // `>>>   "nop"` and then the fragment's own `*-* nop`.
-        let value = self.required_string_or_nil(value)?;
+        let value = self.required_string_value(value)?;
         let text = self.to_text(value).to_vec();
         // `>>>` on the interpreted text itself, before the fragment
         // runs -- the same `trace_result` every other value-producing

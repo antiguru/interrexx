@@ -226,7 +226,7 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
 /// measured with `strlen`. A string request answering `.nil` is read as the
 /// null string.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
-    let string = interp.required_string_or_nil(value)?;
+    let string = interp.required_string_value(value)?;
     if string == ObjRef::NIL {
         return Ok(Vec::new());
     }

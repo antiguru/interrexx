@@ -484,7 +484,7 @@ impl Interp {
                 self.trace_numeric_operand("FORM", &text)?;
                 // The required-string protocol between the `>K>` and the
                 // validation, which is where the string request sits.
-                let converted = self.required_string_or_nil(value)?;
+                let converted = self.required_string_value(value)?;
                 let parsed = String::from_utf8_lossy(&self.to_text(converted)).into_owned();
                 if let Err(error) = self.activation_mut().settings.set_form_str(&parsed) {
                     return Err(raised_naming_the_operand(error, &text).into());
@@ -518,7 +518,7 @@ impl Interp {
         // "DIGITS" => "The K class"` and then answers `12` to `DIGITS()`. A
         // `STRING` answer with no string value converts to `.nil`, and the
         // refusal names the object: 26.5 `found "a SN"`.
-        let converted = self.required_string_or_nil(value)?;
+        let converted = self.required_string_value(value)?;
         if converted != value && converted != ObjRef::NIL {
             text.clear();
             text.extend_from_slice(&self.to_text(converted));

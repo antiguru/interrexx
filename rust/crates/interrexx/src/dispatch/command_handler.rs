@@ -390,7 +390,7 @@ pub(super) fn count_value(
     args: &[Option<ObjRef>],
 ) -> Answer {
     let count = object_argument(args, 0)?;
-    Ok(Some(interp.required_string_or_nil(count)?))
+    Ok(Some(interp.required_string_value(count)?))
 }
 
 /// `cmdcontext_lineIn`: the next line of the redirected input, `.nil` at its

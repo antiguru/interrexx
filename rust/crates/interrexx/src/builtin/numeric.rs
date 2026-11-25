@@ -381,9 +381,7 @@ pub(crate) fn max_min_over(
             }
             .into());
         };
-        // A `STRING` answer with no string value is no number
-        // (`r[conv.string.argument-kind]`).
-        let candidate = interp.required_string_or_nil(*candidate)?;
+        let candidate = interp.required_string_value(*candidate)?;
         interp.roots.activity_mut().push_temp(candidate);
         let found = interp.to_text(candidate).into_owned();
         let number = if candidate == ObjRef::NIL {
@@ -489,9 +487,7 @@ fn convert_extreme_arguments<'a>(
     let mut converted = std::borrow::Cow::Borrowed(rest);
     for (at, slot) in rest.iter().enumerate() {
         let Some(value) = slot else { break };
-        // A `STRING` answer with no string value is `.nil` here, no number
-        // (`r[conv.string.argument-kind]`).
-        let text = interp.required_string_or_nil(*value)?;
+        let text = interp.required_string_value(*value)?;
         interp.roots.activity_mut().push_temp(text);
         if text != *value {
             converted.to_mut()[at] = Some(text);

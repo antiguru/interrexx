@@ -1974,7 +1974,7 @@ pub(super) fn lines(
 /// number, so the argument fails the check of its kind, `SYNTAX 88.907`, as a
 /// string of the wrong form does (`r[conv.string.argument-kind]`).
 fn number_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
-    let text = interp.required_string_or_nil(value)?;
+    let text = interp.required_string_value(value)?;
     Ok(interp.to_text(text).into_owned())
 }
 
