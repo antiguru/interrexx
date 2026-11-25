@@ -1369,6 +1369,55 @@ ROUTINE INNER
 ROUTINE OUTER
 ```
 
+r[instr.trace.delivery.thread]
+Delivering a line takes no thread number (#1049). `.CONTEXT~THREAD` in the
+destination answers the thread of the activity that wrote the line, and the
+activities of the program are numbered as they would be if no line had been
+delivered.
+
+```rexx
+.local~seen = .array~new
+.traceoutput~destination(.sink~new)
+trace r
+x = 1
+trace off
+o = .w~new
+say 'started' o~start('t')~result
+trace r
+z = 3
+trace off
+say 'again' o~start('t')~result
+.traceoutput~destination(.output)
+do l over .local~seen
+  say l
+end
+::class w
+::method t
+  trace r
+  y = 2
+  trace off
+  return .context~thread
+::class sink
+::method lineout
+  use arg v
+  if pos('*-*', v~traceline) > 0 then
+    .local~seen~append('line' v~thread 'destination' .context~thread)
+  return 0
+```
+
+```output
+started 2
+again 2
+line 1 destination 1
+line 1 destination 1
+line 2 destination 2
+line 2 destination 2
+line 1 destination 1
+line 1 destination 1
+line 2 destination 2
+line 2 destination 2
+```
+
 r[instr.trace.delivery.wait]
 An activity that waits while a line of its own is delivered is not out of the
 program: a store that another activity makes to a variable a traced `GUARD WHEN`

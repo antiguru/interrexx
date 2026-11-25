@@ -1363,7 +1363,7 @@ pub(crate) fn start_trace_delivery(
         interp.roots.activity_mut().push_temp(object);
     }
     let spawner = interp.spawner_of_running()?;
-    let mut idle = interp.new_activity();
+    let mut idle = interp.unnumbered_activity();
     idle.activity.spawner = Some(spawner);
     idle.activity.delivering = true;
     idle.activity.depth_base = interp.nesting_depth();
