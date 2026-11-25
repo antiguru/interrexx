@@ -475,9 +475,10 @@ pub unsafe extern "C" fn RexxQueryMacro(name: *const c_char, position: *mut u16)
     // SAFETY: the caller's guarantee.
     let (status, found) = capi::query_macro(unsafe { self::name(name) });
     if !position.is_null() {
-        // The header's `unsigned short` keeps the low bits of the stored
-        // position, as ooRexx's `RexxQueryMacro` does for a position it stored
-        // whole (measured against the oracle, issue #1054).
+        // The service stores only position 1 or 2 (Deviation 185) and answers
+        // 0 for an absent macro, so the header's `unsigned short` holds the
+        // answer whole. A service started by an earlier build may hold another
+        // position, which keeps its low bits, as ooRexx answers one.
         // SAFETY: the caller's guarantee.
         unsafe { position.write(u16::cast_truncate(found)) };
     }

@@ -4,8 +4,8 @@
 
 use interrexx_cast::CastFrom;
 
-use crate::message::Macro;
 use crate::message::code::{MACRO_FILE_ERROR, OK};
+use crate::message::{Macro, macro_position};
 
 /// The header's text. The reference implementation's differs, so its files fail
 /// the check.
@@ -33,8 +33,9 @@ pub fn write(macros: &[Macro]) -> Vec<u8> {
 }
 
 /// The macros a file's bytes hold, in order, or the API code: `RXMACRO_FILE_ERROR` for a file
-/// too short for what it promises, `RXMACRO_SIGNATURE_ERROR` for one that is not this layout.
-/// The macros read before a failure come with it.
+/// too short for what it promises or with a macro whose position is neither before nor after,
+/// `RXMACRO_SIGNATURE_ERROR` for one that is not this layout. The macros read before a failure
+/// come with it.
 pub fn read(bytes: &[u8]) -> (u64, Vec<Macro>) {
     if bytes.len() < HEADER {
         return (MACRO_FILE_ERROR, Vec::new());
@@ -54,7 +55,7 @@ pub fn read(bytes: &[u8]) -> (u64, Vec<Macro>) {
         let Some((image, after)) = field(bytes, after) else {
             return (MACRO_FILE_ERROR, macros);
         };
-        let Some(position) = u64_at(bytes, after) else {
+        let Some(position) = u64_at(bytes, after).filter(|at| macro_position::is_valid(*at)) else {
             return (MACRO_FILE_ERROR, macros);
         };
         at = after + 8;
@@ -114,5 +115,23 @@ mod tests {
             (status, loaded),
             (MACRO_FILE_ERROR, vec![macro_of("a", "x", 1)])
         );
+    }
+
+    /// A macro whose position is neither before nor after stops the read as
+    /// a cut file does, with the macros before it.
+    #[test]
+    fn a_macro_of_no_search_position_stops_the_read() {
+        for position in [0, 3, 65537] {
+            let bytes = write(&[
+                macro_of("a", "x", 2),
+                macro_of("b", "y", position),
+                macro_of("c", "z", 1),
+            ]);
+            assert_eq!(
+                read(&bytes),
+                (MACRO_FILE_ERROR, vec![macro_of("a", "x", 2)]),
+                "{position}"
+            );
+        }
     }
 }

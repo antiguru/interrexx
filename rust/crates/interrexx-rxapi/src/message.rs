@@ -49,8 +49,25 @@ pub mod code {
     pub const MACRO_NOT_FOUND: u64 = 2;
     /// `RXMACRO_FILE_ERROR`.
     pub const MACRO_FILE_ERROR: u64 = 5;
+    /// `RXMACRO_INVALID_POSITION`.
+    pub const MACRO_INVALID_POSITION: u64 = 8;
     /// `RXAPI_NORXAPI`.
     pub const NO_SERVICE: u64 = 1004;
+}
+
+/// Where a macro is searched for, by the values in `rexxapidefs.h`.
+pub mod macro_position {
+    /// `RXMACRO_SEARCH_BEFORE`: before the routines a program defines and finds in files.
+    pub const BEFORE: u64 = 1;
+    /// `RXMACRO_SEARCH_AFTER`: after the external files.
+    pub const AFTER: u64 = 2;
+
+    /// Whether `position` is one of the two a macro can have. Any other names no
+    /// place in the search, so the macrospace refuses it (Deviation 185).
+    #[must_use]
+    pub fn is_valid(position: u64) -> bool {
+        matches!(position, BEFORE | AFTER)
+    }
 }
 
 /// The service's local time, as `struct tm` counts it. `hundredths` and `microseconds` are always

@@ -1294,11 +1294,11 @@ fn save(core: &mut Core, names: Option<&[&str]>) -> Reply {
     )
 }
 
-/// A macro is added, replaced, found, reordered and dropped. Any position is
-/// stored as given: measured, the oracle's `RexxAddMacro` and
-/// `RexxReorderMacro` answer 0 for positions 0, 3 and 65537 as for 1 and 2,
-/// and its `RexxQueryMacro` answers each through its `unsigned short`, so
-/// 65537 reads back as 1, as `librexxapi`'s does (#1054).
+/// A macro is added, replaced, found, reordered and dropped. A position other
+/// than before (1) or after (2) is refused with `RXMACRO_INVALID_POSITION`
+/// and changes nothing (Deviation 185): measured, the oracle stores any
+/// position with return code 0 and answers it through an `unsigned short`, so
+/// 65537 reads back as 1 (#1054).
 #[test]
 fn macros_add_replace_query_reorder_drop() {
     let mut core = Core::new();
@@ -1325,20 +1325,54 @@ fn macros_add_replace_query_reorder_drop() {
             image: Some(b"two".to_vec())
         }
     );
-    for stored in [0, 3, 99, 70000] {
+    for refused in [0, 3, 99, 65537] {
         let reorder = Request::ReorderMacro {
             name: macro_named("mac"),
-            position: stored,
+            position: refused,
         };
-        assert_eq!(status(&mut core, client(1), reorder), OK);
+        assert_eq!(
+            status(&mut core, client(1), reorder),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
+        assert_eq!(
+            status(&mut core, client(1), add_macro("mac", "three", refused)),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
+        assert_eq!(
+            status(&mut core, client(1), add_macro("other", "four", refused)),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
         assert_eq!(
             position(&mut core, "mac"),
             Reply::MacroPosition {
                 status: OK,
-                position: stored
+                position: 2
+            },
+            "a refused position changes nothing"
+        );
+        assert_eq!(
+            position(&mut core, "other"),
+            Reply::MacroPosition {
+                status: MACRO_NOT_FOUND,
+                position: 0
             }
         );
     }
+    let reorder = Request::ReorderMacro {
+        name: macro_named("mac"),
+        position: 1,
+    };
+    assert_eq!(status(&mut core, client(1), reorder), OK);
+    assert_eq!(
+        position(&mut core, "mac"),
+        Reply::MacroPosition {
+            status: OK,
+            position: 1
+        }
+    );
     let drop = Request::DropMacro {
         name: macro_named("MAC"),
     };

@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use super::{fold, truncated};
 use crate::message::code::*;
-use crate::message::{Macro, Reply};
+use crate::message::{Macro, Reply, macro_position};
 
 /// The image bytes a save may reach by listing a name repeatedly. A short request can name one
 /// large image many times, and the service would hold a copy for each.
@@ -21,7 +21,12 @@ fn key(name: &[u8]) -> Vec<u8> {
 }
 
 impl MacroSpace {
+    /// Adds or replaces a macro, or answers `RXMACRO_INVALID_POSITION` and
+    /// changes nothing for a position that is neither before nor after.
     pub(super) fn add(&mut self, name: Vec<u8>, image: Vec<u8>, position: u64) -> Reply {
+        if !macro_position::is_valid(position) {
+            return Reply::Status(MACRO_INVALID_POSITION);
+        }
         let name = truncated(name);
         self.macros
             .entry(fold(&name))
@@ -62,7 +67,13 @@ impl MacroSpace {
         }
     }
 
+    /// Moves a macro, or answers `RXMACRO_INVALID_POSITION` and changes
+    /// nothing for a position that is neither before nor after, whether or not
+    /// the macro is there.
     pub(super) fn reorder(&mut self, name: Vec<u8>, position: u64) -> Reply {
+        if !macro_position::is_valid(position) {
+            return Reply::Status(MACRO_INVALID_POSITION);
+        }
         Reply::Status(match self.macros.get_mut(&key(&name)) {
             Some(found) => {
                 found.position = position;
