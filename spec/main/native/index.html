@@ -238,6 +238,7 @@ to the next.</p>
 <tr><td><code>FxNumeric</code></td><td>none</td><td>the caller's <code>DIGITS</code>, <code>FUZZ</code> and <code>FORM</code></td></tr>
 <tr><td><code>FxOnThread</code></td><td>an object and a message name</td><td>starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers <code>1</code> at once</td></tr>
 <tr><td><code>FxOnThreadIdle</code></td><td>an object, a message name and a number of seconds</td><td>as <code>FxOnThread</code>, but after the message the thread stays attached, sending nothing, for that many seconds before it detaches</td></tr>
+<tr><td><code>FxOnThreadJoin</code></td><td>an object and a message name</td><td>as <code>FxOnThread</code>, but waits for the thread to exit before answering <code>1</code></td></tr>
 <tr><td><code>FxInstance</code></td><td>none</td><td>the interpreter instance the calling activity is given, written as an address</td></tr>
 <tr><td><code>FxHaltAll</code></td><td>none</td><td>asks the interpreter to halt every activity</td></tr>
 <tr><td><code>FxHaltThis</code></td><td>none</td><td>asks the interpreter to halt the calling activity</td></tr>

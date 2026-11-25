@@ -100350,6 +100350,7 @@ to the next.</p>
 <tr><td><code>FxNumeric</code></td><td>none</td><td>the caller's <code>DIGITS</code>, <code>FUZZ</code> and <code>FORM</code></td></tr>
 <tr><td><code>FxOnThread</code></td><td>an object and a message name</td><td>starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers <code>1</code> at once</td></tr>
 <tr><td><code>FxOnThreadIdle</code></td><td>an object, a message name and a number of seconds</td><td>as <code>FxOnThread</code>, but after the message the thread stays attached, sending nothing, for that many seconds before it detaches</td></tr>
+<tr><td><code>FxOnThreadJoin</code></td><td>an object and a message name</td><td>as <code>FxOnThread</code>, but waits for the thread to exit before answering <code>1</code></td></tr>
 <tr><td><code>FxInstance</code></td><td>none</td><td>the interpreter instance the calling activity is given, written as an address</td></tr>
 <tr><td><code>FxHaltAll</code></td><td>none</td><td>asks the interpreter to halt every activity</td></tr>
 <tr><td><code>FxHaltThis</code></td><td>none</td><td>asks the interpreter to halt the calling activity</td></tr>
@@ -101191,13 +101192,20 @@ of the messages it sends while the program's other activities run as well,
 except the one each message interrupts, which <a href="native/threads.html#r-native.threads.attach.deviation.178">Deviation
 178</a> stops, and it leaves the
 interpreter when it detaches. The fixture's thread posts an
-EventSemaphore that the main program waits on.</p>
+EventSemaphore that the main program waits on. Another activity joins the
+native thread, and the main program waits for its result before ending.</p>
 <pre><code class="language-rexx">src = .array~of( -
   "sem = .eventsemaphore~new", -
-  "say fxonthread(sem, 'POST')", -
+  "worker = .message~new(.n3zqattachjob~new, 'RUN', 'I', sem)", -
+  "worker~start", -
   "sem~wait", -
+  "say worker~result", -
   "say 'posted'", -
-  "::requires 'specfixture' LIBRARY")
+  "::requires 'specfixture' LIBRARY", -
+  "::class n3zqattachjob", -
+  "::method run", -
+  "  use strict arg sem", -
+  "  return fxonthreadjoin(sem, 'POST')")
 call sysfiledelete 'n3zqattach.rex'
 do line over src
   call lineout 'n3zqattach.rex', line
