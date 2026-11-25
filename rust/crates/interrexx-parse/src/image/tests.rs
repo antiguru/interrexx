@@ -1,4 +1,6 @@
-use super::{FORMAT, MAGIC, program_from_image, program_from_static_image, program_image};
+use super::{
+    FORMAT, MAGIC, fingerprint, program_from_image, program_from_static_image, program_image,
+};
 use crate::exprs::{ExprId, NodeKind};
 use crate::token::SymbolId;
 use crate::{
@@ -135,6 +137,11 @@ fn a_format_3_image_is_refused_and_its_text_parses() {
         3u32.to_le_bytes(),
         "the fixture is a FORMAT 3 image"
     );
+    assert_eq!(
+        FORMAT_3_IMAGE[MAGIC.len() + 4..MAGIC.len() + 12],
+        fingerprint(FORMAT_3_TEXT).to_le_bytes(),
+        "the fixture's fingerprint is that of its text, so only the format refuses it"
+    );
     assert!(program_from_image(FORMAT_3_IMAGE, FORMAT_3_TEXT).is_none());
     assert!(parse_program(FORMAT_3_TEXT.to_vec()).is_ok());
 }
@@ -252,6 +259,20 @@ fn an_image_whose_arena_is_inconsistent_is_refused() {
                 if let NodeKind::Binary { left, right, .. } = &mut exprs.node_mut(id).kind {
                     *right = *left;
                 }
+            }),
+        ),
+        (
+            "a binary operand tagged omitted",
+            edited_image(|program| {
+                let exprs = &mut program.main.exprs;
+                let id = (0..exprs.len())
+                    .map(ExprId::from_index)
+                    .find_map(|id| match exprs.node(id).kind() {
+                        NodeKind::Binary { left, .. } => Some(*left),
+                        _ => None,
+                    })
+                    .expect("a binary node");
+                exprs.node_mut(id).kind = NodeKind::Omitted;
             }),
         ),
         (

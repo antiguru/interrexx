@@ -111,7 +111,11 @@ fn arenas_hold(program: &Program) -> bool {
                     routine.body.as_ref().is_none_or(|b| b.check().is_ok())
                 }
                 DirectiveKind::Constant(constant) => constant.value.check().is_ok(),
-                _ => true,
+                DirectiveKind::Annotate(_)
+                | DirectiveKind::Class(_)
+                | DirectiveKind::Options(_)
+                | DirectiveKind::Requires(_)
+                | DirectiveKind::Resource(_) => true,
             })
 }
 

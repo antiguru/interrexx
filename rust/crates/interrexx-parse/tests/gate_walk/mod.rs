@@ -1,7 +1,7 @@
 //! This file stays `mod.rs`, not `gate_walk.rs`, because `tests/` is Cargo's
 //! integration-test root: a bare `tests/gate_walk.rs` would be auto-discovered
 //! as its own test binary in addition to being pulled in as a module by
-//! `tiling.rs`, `variants.rs` and `roots.rs`, compiling this walk standalone
+//! `tiling.rs` and `variants.rs`, compiling this walk standalone
 //! for no reason. Renaming it to `gate_walk.rs` would add that extra binary back.
 
 // Each test binary compiles its own copy of this module, and neither binary

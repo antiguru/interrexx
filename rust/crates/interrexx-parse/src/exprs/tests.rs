@@ -487,6 +487,81 @@ fn a_root_with_a_parent_breaks_the_link() {
     );
 }
 
+/// An `Omitted` node is read through an argument list, so it sits only at an
+/// argument or list-item position, and is never a root.
+#[test]
+fn an_omitted_node_outside_an_argument_position_is_misplaced() {
+    let misplaced = |node: ExprId| Err(Inconsistent::Misplaced { node: node.index() });
+
+    // An operand of a binary operator.
+    let mut exprs = Exprs::default();
+    let (one, _, sum) = sum(&mut exprs);
+    exprs.node_mut(one).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([sum]), misplaced(one));
+
+    // An operand of a prefix operator.
+    let mut exprs = Exprs::default();
+    let twelve = literal(&mut exprs, b"12", 1);
+    let negated = exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: twelve,
+        },
+        0..1,
+    );
+    exprs.node_mut(twelve).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([negated]), misplaced(twelve));
+
+    // A message's receiver, and the scope of a scoped one.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, false, 1);
+    exprs.node_mut(ExprId::from_index(0)).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([message]), misplaced(ExprId::from_index(0)));
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 2);
+    exprs.node_mut(ExprId::from_index(1)).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([message]), misplaced(ExprId::from_index(1)));
+
+    // An item of a logical list.
+    let mut exprs = Exprs::default();
+    let item = exprs.push(NodeKind::Variable(symbol(0)), 0..1);
+    let items = exprs.push_edges(&[item]);
+    let logical = exprs.push(NodeKind::Logical(items), 0..1);
+    assert_eq!(exprs.check([logical]), Ok(()));
+    exprs.node_mut(item).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([logical]), misplaced(item));
+
+    // A root.
+    let mut exprs = Exprs::default();
+    let root = exprs.push(NodeKind::Omitted, 0..0);
+    assert_eq!(exprs.check([root]), misplaced(root));
+
+    // An argument of a message is a place for one.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 3);
+    exprs.node_mut(ExprId::from_index(2)).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check([message]), Ok(()));
+}
+
+/// A `CATCH` variable is a root of its instruction.
+#[test]
+fn a_catch_variable_is_a_root() {
+    crate::with_parser_stack(|| {
+        let program = crate::parse_program(b"do\n  nop\ncatch err = syntax\n  nop\nend\n".to_vec())
+            .expect("a CATCH with a variable parses");
+        let mut found = Vec::new();
+        for instruction in &program.main.instructions {
+            if matches!(instruction.kind, crate::InstructionKind::Catch(_)) {
+                instruction
+                    .kind
+                    .for_each_root(&mut |expr| found.push(program.main.expr(expr).span()));
+            }
+        }
+        assert_eq!(found.len(), 1, "the CATCH variable is the one root");
+    })
+    .expect("the parser thread spawns");
+}
+
 #[test]
 fn leaves_of_every_kind_pass() {
     // `a b. c.d .e >f g:h` as separate roots.

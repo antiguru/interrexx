@@ -153,6 +153,9 @@ in debug builds after each body is parsed, in every build when a body is read fr
 3. **A tree, not a DAG.** Every node is the child of exactly one parent, or is the root of exactly
    one expression slot of one instruction. No node is unreachable.
 4. **`parent` and `position` agree with the parents' child lists.**
+5. **An `Omitted` node sits only at an argument or list-item position.** Its parent is a `Call`, a
+   `QualifiedCall`, a `List`, or a `Message` at a child position after the receiver and the scope,
+   and it is never the root of an expression slot.
 
 Invariant 2 is what every walk below leans on. It makes "the subtree of `n`" a slice, so a
 question about a subtree is a scan of that slice, and running a subtree is a loop over it. It also

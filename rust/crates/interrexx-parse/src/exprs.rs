@@ -245,6 +245,9 @@ pub enum Inconsistent {
     /// list, or a root has a parent. `node` is the child's index, or the
     /// root's, never the parent's.
     Link { node: usize },
+    /// An `Omitted` node outside an argument or list-item position, or a
+    /// root. `node` is the omitted node's index.
+    Misplaced { node: usize },
 }
 
 /// The child ids of `kind`, written to `inline` for the kinds that hold them
@@ -386,6 +389,18 @@ impl Exprs {
                         node: child.index(),
                     });
                 }
+                let omitted_here = match parent.kind {
+                    NodeKind::Call { .. } | NodeKind::QualifiedCall { .. } | NodeKind::List(_) => {
+                        true
+                    }
+                    NodeKind::Message { scoped, .. } => position > usize::from(scoped),
+                    _ => false,
+                };
+                if !omitted_here && at(child).is_some_and(|c| matches!(c.kind, NodeKind::Omitted)) {
+                    return Err(Inconsistent::Misplaced {
+                        node: child.index(),
+                    });
+                }
                 if let Some(times) = reached.get_mut(child.index()) {
                     *times = times.saturating_add(1);
                 }
@@ -397,6 +412,9 @@ impl Exprs {
             };
             if node.parent.is_some() {
                 return Err(Inconsistent::Link { node: root.index() });
+            }
+            if matches!(node.kind, NodeKind::Omitted) {
+                return Err(Inconsistent::Misplaced { node: root.index() });
             }
             if let Some(times) = reached.get_mut(root.index()) {
                 *times = times.saturating_add(1);

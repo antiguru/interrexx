@@ -85,8 +85,8 @@ fn compare_op(op: Operator) -> Option<CompareOp> {
 
 /// Evaluates the subtree at `root` in one forward pass over its post-order
 /// range, so the depth of the expression costs heap, never stack. Operands
-/// are complete before their operator, which makes the first failure in index
-/// order the one the left-before-right recursion would have met.
+/// are complete before their operator. The first failure in index order is the
+/// answer.
 fn eval(exprs: &Exprs, root: ExprId, symbols: &SymbolTable) -> Result<String, Failure> {
     let mut values: Vec<String> = Vec::new();
     for node in exprs.range(root) {
