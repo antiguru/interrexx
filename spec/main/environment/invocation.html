@@ -566,16 +566,24 @@ rule</a>), and for an error of the program, 256
 minus its major number as <a href="#r-env.invocation.status">the status rule</a> gives it.</p>
 <h3 id="what-an-image-is"><a class="header" href="#what-an-image-is">What an image is</a></h3>
 <div class="rule" id="r-env.invocation.rexxc.image"><a href="#r-env.invocation.rexxc.image">[env.invocation.rexxc.image]</a></div>
-<p>An image is the program in its translated form. Only its opening is specified,
-and it is the same for both interpreters. The first line is <code>#!/usr/bin/env rexx</code> and a line feed. The nine characters <code>/**/@REXX</code> follow, and then either
+<p>An image is the program in its translated form. Its opening is the same for
+both interpreters. The first line is <code>#!/usr/bin/env rexx</code> and a line feed. The nine characters <code>/**/@REXX</code> follow, and then either
 two bytes of 0, for the binary form that <code>rexxc</code> writes by default, or the
 character <code>@</code> and a line feed, for the form that the flag <code>e</code> asks for. The
 binary form is not text: it goes on with a header and the translated program,
-which include the byte 0, and what they hold is not specified. In the encoded
+which include the byte 0. In the encoded
 form what follows is lines of base64 text, each of 72 characters and each
 ended by a line feed, except the last, which may be shorter. Decoded, they
 give bytes that begin with <code>/**/@REXX</code> and the same two bytes of 0, as the
 binary form does after its first line.</p>
+<div class="rule" id="r-env.invocation.rexxc.required-level"><a href="#r-env.invocation.rexxc.required-level">[env.invocation.rexxc.required-level]</a></div>
+<p>The image header records the program's required language level in both forms.
+It starts at 6.05 and rises to 6.06 if translation resolves a call to the GC
+built-in or the program explicitly selects NUMERIC INHERIT or NUMERIC NOINHERIT
+in an OPTIONS directive.
+A symbol call to a local label named GC does not use the built-in. The
+<a href="../deviations.html#179-language-level-606">language-level deviation</a> covers
+features of 6.07.</p>
 <h3 id="running-an-image"><a class="header" href="#running-an-image">Running an image</a></h3>
 <div class="rule" id="r-env.invocation.rexxc.run"><a href="#r-env.invocation.rexxc.run">[env.invocation.rexxc.run]</a></div>
 <p><code>rexx</code> runs an image as it runs the program that it was made from: the words
