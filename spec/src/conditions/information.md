@@ -140,6 +140,8 @@ gave none, as [the SYNTAX rule of RAISE](r:instr.raise.syntax) says. SYNTAX
 adds `CODE`, the error number with its subcode as `41.1`, `RC`, its major
 number, `ERRORTEXT`, the text of the error that the `ERRORTEXT` builtin
 answers for `RC`, and `MESSAGE`, the text with the details of this occurrence.
+[`RaiseConditionObject`](r:native.calls.condition-object.code-spelling) keeps the spelling
+of the supplied `CODE`.
 ERROR and FAILURE have `RC`, the return code of the command. The texts of the
 messages are not specified, and the entry `RESULT` is not specified here.
 

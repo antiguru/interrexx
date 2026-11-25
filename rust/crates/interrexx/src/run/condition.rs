@@ -743,10 +743,6 @@ impl Interp {
         self.activation_mut()
             .replace_condition(Some(TrappedCondition {
                 name: raised.condition.as_bytes().into(),
-                // Only a `SYNTAX` condition has a `CODE` item at all (it is put in only there), so
-                // the name and not the number is the test: a trapped `HALT` reports `E` as the null
-                // string.
-                code_sub: (raised.condition == "SYNTAX").then_some(raised.sub),
                 call: false,
                 description: raised.description.clone(),
                 object: Some(object),
@@ -986,14 +982,6 @@ impl Interp {
             .activation_mut()
             .replace_condition(Some(TrappedCondition {
                 name: key.clone(),
-                // No condition reaching here has a `CODE`, and both halves of
-                // that are measured. A `CALL ON` trap cannot name `SYNTAX`
-                // directly -- `call on syntax` is a 25.1 translation error --
-                // and `CALL ON ANY`, the one spelling that could smuggle it in,
-                // does not catch a `SYNTAX` condition either: `call on any name
-                // uh` with `say 1/0` is the ordinary fatal 42.3 at rc 214 on
-                // both interpreters.
-                code_sub: None,
                 call: true,
                 description: pending.description.clone(),
                 // Carried from the queue rather than built here. By delivery the

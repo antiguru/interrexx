@@ -855,9 +855,8 @@ impl Surface for Interp {
         let raised = if name == b"SYNTAX" {
             let code = entry(self, b"CODE")
                 .filter(|&code| self.is_string(code))
-                .map(|code| self.unsent_string_value_text(code))
-                .and_then(|code| valid_error_code(&code));
-            let Some((major, minor)) = code else {
+                .map(|code| self.unsent_string_value_text(code));
+            let Some((major, minor)) = code.as_deref().and_then(valid_error_code) else {
                 self.hold_api_misuse(
                     b"the CODE of a SYNTAX condition object must be a valid error number",
                 );
@@ -888,6 +887,7 @@ impl Surface for Interp {
             }
             Raised {
                 description,
+                original_code: code.map(|code| Box::new(Bytes::from_vec(code))),
                 ..Raised::syntax(major, minor, substitutions)
             }
         } else {

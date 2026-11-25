@@ -287,6 +287,42 @@ fine / no result / condition 40.900
 still running
 ```
 
+r[native.calls.condition-object.code-spelling]
+`RaiseConditionObject` raises the condition described by a directory.
+For a `SYNTAX` condition the supplied `CODE` spelling is kept in
+`CONDITION('O')` and [`CONDITION('E')`](r:bif.condition.extra) reads its suffix.
+The error's major number determines `RC`.
+
+```rexx
+call native '41'
+call native '041'
+call native '40.004'
+signal on syntax name statement
+raise syntax 41
+statement:
+say 'statement' condition('o')~code rc '['condition('e')']'
+exit
+native: procedure
+  use arg code
+  condition = .directory~new
+  condition['CONDITION'] = 'SYNTAX'
+  condition['CODE'] = code
+  signal on syntax name trapped
+  call fxconditioncode condition
+  return
+trapped:
+  say 'native' condition('o')~code rc '['condition('e')']'
+  return
+::requires 'specfixture' LIBRARY
+```
+
+```output
+native 41 41 []
+native 041 41 []
+native 40.004 40 [004]
+statement 41.0 41 [0]
+```
+
 r[native.calls.condition-data]
 The interface declares a record of a condition with its texts as strings,
 `RexxConditionData`, which no function of the interface fills or reads. Its

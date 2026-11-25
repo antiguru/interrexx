@@ -218,8 +218,11 @@ r[bif.condition.extra]
 After a trap has caught a SYNTAX condition, the option `E` answers the subcode
 of the error number: the part after the period, as `12` for `40.12`. An error
 number raised without a subcode, as [`RAISE SYNTAX 40`](r:instr.raise.number)
-does, has the subcode 0 and the code `40.0`. After any other condition `E`
-answers the null string.
+does, has the subcode 0 and the code `40.0`. A
+[`RaiseConditionObject` call](r:native.calls.condition-object.code-spelling) keeps the
+supplied `CODE`, so `E` answers the part after the period as supplied, or the
+null string if there is no period. After any other condition `E` answers the
+null string.
 
 ```rexx
 signal on syntax name s
