@@ -118,3 +118,13 @@ rc> 213
 err>      1 *-* interpret rexx:length('abc')
 err> Error 43 running /nonexistent/ir-dual-case.rex line 1:
 err> Error 43.902:
+
+# an argument list with an omitted argument and a variable reference inside INTERPRET
+program
+a = 3; s.1 = 'xy'
+interpret "say f(1,,3) (>a)~value s.1~length"
+exit
+f: return arg() arg(2, 'o')
+----
+rc> 0
+out> 3 1 3 2

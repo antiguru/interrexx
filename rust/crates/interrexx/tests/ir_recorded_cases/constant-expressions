@@ -1,0 +1,52 @@
+# a `::constant` whose value is an expression: the value is read through the
+# constant's own body
+
+program
+say .k~c
+say .k~d
+::class k
+::constant c (1 + 2)
+::constant d (('a', , 'b')~items)
+----
+rc> 0
+out> 3
+out> 2
+
+# the same under `trace i`, which echoes the expression's own evaluation
+
+program
+say .k~c
+say .k~d
+::options trace i
+::class k
+::constant c (1 + 2)
+::constant d (('a', , 'b')~items)
+----
+rc> 0
+out> 3
+out> 2
+err>        >I>
+err>      5 *-* ::constant c (1 + 2)
+err>        >L>   "1"
+err>        >L>   "2"
+err>        >O>   "+" => "3"
+err>        >>>   "3"
+err>        <I<
+err>        >I>
+err>      6 *-* ::constant d (('a', , 'b')~items)
+err>        >L>   "a"
+err>        >A>   "a"
+err>        >L>   "b"
+err>        >A>   "b"
+err>        >>>   "an Array"
+err>        >M>   "ITEMS" => "2"
+err>        >>>   "2"
+err>        <I<
+err>      1 *-* say .k~c
+err>        >E>   .K => "The K class"
+err>        >M>   "C" => "3"
+err>        >>>   "3"
+err>      2 *-* say .k~d
+err>        >E>   .K => "The K class"
+err>        >M>   "D" => "2"
+err>        >>>   "2"
