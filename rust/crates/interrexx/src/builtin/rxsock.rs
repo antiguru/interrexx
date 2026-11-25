@@ -33,12 +33,11 @@ use std::time::{Duration, Instant};
 use interrexx_api::callbacks::Surface as _;
 use interrexx_core::{Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
-use rustix::event::{PollFd, PollFlags};
 use rustix::net::{RecvFlags, SendFlags};
 
 use super::native_args::{c_string, failed, int, number};
 use super::rxmath::{check_arity, double_argument, required};
-use super::rxsock_sys::{self, Os, with_socket, with_sockets};
+use super::rxsock_sys::{self, Os, PollFlags, PollRequest, SocketId, with_socket};
 use crate::scheduler::ParkReason;
 use crate::{Failure, Interp};
 
@@ -47,8 +46,6 @@ type Result<T> = std::result::Result<T, Failure>;
 const EINTR: i32 = libc::EINTR;
 const EAGAIN: i32 = libc::EAGAIN;
 const EBADF: i32 = libc::EBADF;
-const EINVAL: i32 = libc::EINVAL;
-const EDOM: i32 = libc::EDOM;
 const ENOPROTOOPT: i32 = libc::ENOPROTOOPT;
 const EAFNOSUPPORT: i32 = libc::EAFNOSUPPORT;
 const EINPROGRESS: i32 = libc::EINPROGRESS;
@@ -107,10 +104,6 @@ fn errno_text(errno: i32) -> Vec<u8> {
 
 fn os(error: rustix::io::Errno) -> i32 {
     error.raw_os_error()
-}
-
-fn nix_os(error: nix::errno::Errno) -> i32 {
-    error as i32
 }
 
 /// Sets the caller's `errno` to `errno`'s text and `h_errno` to 0, and keeps
@@ -452,7 +445,7 @@ fn target(address: Address) -> Target {
 /// A call waiting for its sockets, on [`crate::activity::Activity::socket_wait`].
 pub(crate) struct SocketWait {
     /// The descriptors and the readiness each waits for.
-    polls: Vec<(i32, PollFlags)>,
+    polls: Vec<PollRequest>,
     /// When the wait ends whatever the sockets do.
     deadline: Option<Instant>,
     op: Pending,
@@ -496,7 +489,7 @@ impl Drop for Helper {
 /// What a waiting call does once its wait ends.
 enum Pending {
     Accept {
-        fd: i32,
+        fd: SocketId,
         stem: Option<Vec<u8>>,
         /// The stem argument named no stem: the descriptor is lost.
         lost: bool,
@@ -504,11 +497,11 @@ enum Pending {
         accepted: Option<Os<Accepted>>,
     },
     Connect {
-        fd: i32,
+        fd: SocketId,
         to: SocketAddrV4,
     },
     Recv {
-        fd: i32,
+        fd: SocketId,
         var: Vec<u8>,
         len: usize,
         flags: RecvFlags,
@@ -521,22 +514,10 @@ enum Pending {
 
 /// The readiness of `polls` now, each entry's received events; `None` where
 /// any descriptor is invalid.
-fn poll_now(polls: &[(i32, PollFlags)]) -> Option<Vec<PollFlags>> {
-    let numbers: Vec<i32> = polls.iter().map(|(fd, _)| *fd).collect();
-    with_sockets(&numbers, |sockets| {
-        let mut fds: Vec<PollFd<'_>> = sockets
-            .iter()
-            .zip(polls)
-            .map(|(fd, (_, events))| PollFd::new(fd, *events))
-            .collect();
-        let zero = rustix::time::Timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        };
-        rustix::event::poll(&mut fds, Some(&zero)).map_err(os)?;
-        Ok(fds.iter().map(PollFd::revents).collect())
-    })
-    .ok()
+fn poll_now(polls: &[PollRequest]) -> Option<Vec<PollFlags>> {
+    rxsock_sys::poll(polls.iter().copied(), Some(Duration::ZERO), None)
+        .map(|(_, readiness)| readiness)
+        .ok()
 }
 
 /// Whether `revents` answers a wait for `events`, as `select` reads it:
@@ -551,7 +532,7 @@ pub(crate) fn answers(events: PollFlags, revents: PollFlags) -> bool {
 }
 
 /// Whether a wait for `polls` is over: any of them ready, or any invalid.
-fn any_ready(polls: &[(i32, PollFlags)]) -> bool {
+fn any_ready(polls: &[PollRequest]) -> bool {
     match poll_now(polls) {
         Some(revents) => polls
             .iter()
@@ -686,7 +667,7 @@ fn start_helper(interp: &mut Interp) -> bool {
 /// reactor: the token its end is posted under and how it is stopped.
 fn start_thread(
     interp: &mut Interp,
-    polls: Vec<(i32, PollFlags)>,
+    polls: Vec<PollRequest>,
     deadline: Option<Instant>,
 ) -> Option<(u64, Stop)> {
     let canceller = Arc::new(rxsock_wait::Canceller::new()?);
@@ -711,7 +692,7 @@ fn start_thread(
 /// left out of the polls that follow, and looked at again every
 /// [`MUTED_RECHECK`], since its socket may yet be connected.
 fn wait_off_baton(
-    polls: &[(i32, PollFlags)],
+    polls: &[PollRequest],
     deadline: Option<Instant>,
     cancel: &rxsock_wait::Canceller,
 ) {
@@ -728,22 +709,9 @@ fn wait_off_baton(
             (None, true) => Some(MUTED_RECHECK),
             (None, false) => None,
         };
-        let timeout = left.map(|left| rustix::time::Timespec {
-            tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
-            tv_nsec: i64::from(left.subsec_nanos()),
-        });
         let live: Vec<usize> = (0..polls.len()).filter(|&i| !muted[i]).collect();
-        let numbers: Vec<i32> = live.iter().map(|&i| polls[i].0).collect();
-        let polled = with_sockets(&numbers, |sockets| {
-            let mut fds: Vec<PollFd<'_>> = sockets
-                .iter()
-                .zip(&live)
-                .map(|(fd, &i)| PollFd::new(fd, polls[i].1))
-                .collect();
-            fds.push(PollFd::from_borrowed_fd(cancel.polled(), PollFlags::IN));
-            let ready = rustix::event::poll(&mut fds, timeout.as_ref()).map_err(os)?;
-            Ok((ready, fds.iter().map(PollFd::revents).collect::<Vec<_>>()))
-        });
+        let requests = live.iter().map(|&i| polls[i]);
+        let polled = rxsock_sys::poll(requests, left, Some(cancel.polled()));
         let (ready, revents) = match polled {
             Err(EINTR) => continue,
             Err(_) => return,
@@ -962,39 +930,21 @@ pub(crate) fn socket_new(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
 pub(crate) fn close(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let fd = int(interp, args, 1)?;
-    // The interpreter's own descriptors are not the program's to close.
-    let closed = if interrexx_rxapi::reserved::is_reserved(fd) {
-        Err(libc::EBADF)
-    } else {
-        nix::unistd::close(fd).map_err(nix_os)
-    };
-    Ok(code(interp, closed))
+    Ok(code(interp, rxsock_sys::close(fd)))
 }
 
 pub(crate) fn shutdown(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let fd = int(interp, args, 1)?;
     let how = int(interp, args, 2)?;
-    let result = with_socket(fd, |socket| {
-        let how = match how {
-            0 => rustix::net::Shutdown::Read,
-            1 => rustix::net::Shutdown::Write,
-            2 => rustix::net::Shutdown::Both,
-            _ => return Err(EINVAL),
-        };
-        rustix::net::shutdown(socket, how).map_err(os)
-    });
-    Ok(code(interp, result))
+    Ok(code(interp, rxsock_sys::shutdown(fd, how)))
 }
 
 pub(crate) fn listen(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let fd = int(interp, args, 1)?;
     let backlog = int(interp, args, 2)?;
-    let result = with_socket(fd, |socket| {
-        rustix::net::listen(socket, backlog).map_err(os)
-    });
-    Ok(code(interp, result))
+    Ok(code(interp, rxsock_sys::listen(fd, backlog)))
 }
 
 pub(crate) fn bind(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
@@ -1004,13 +954,14 @@ pub(crate) fn bind(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
         return Ok(number(interp, 0));
     };
     let address = read_address(interp, &stem);
-    let result = with_socket(fd, |socket| match target(address) {
-        Target::Inet(v4) => rustix::net::bind(socket, &v4).map_err(os),
-        Target::Unspec(v4) if v4.ip().is_unspecified() => {
-            rustix::net::bind(socket, &v4).map_err(os)
+    let result = match target(address) {
+        Target::Inet(v4) => rxsock_sys::bind(fd, &v4),
+        Target::Unspec(v4) if v4.ip().is_unspecified() => rxsock_sys::bind(fd, &v4),
+        Target::Unspec(_) | Target::Other => {
+            // Keep the descriptor error ahead of the address-family error.
+            with_socket(fd, |_| Err(EAFNOSUPPORT))
         }
-        Target::Unspec(_) | Target::Other => Err(EAFNOSUPPORT),
-    });
+    };
     Ok(code(interp, result))
 }
 
@@ -1127,7 +1078,7 @@ type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
 /// host's `accept` gives it for the listening socket's own mode, which the
 /// call's toggle does not change. A socket it cannot ready is closed and the
 /// failure answered.
-fn try_accept(fd: i32) -> Os<Accepted> {
+fn try_accept(fd: SocketId) -> Os<Accepted> {
     with_socket(fd, |socket| {
         let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
         let toggled = !flags.contains(rustix::fs::OFlags::NONBLOCK);
@@ -1174,7 +1125,7 @@ fn unconnected_stream(socket: std::os::fd::BorrowedFd<'_>) -> bool {
 /// (`Timeout::Send`) sets for a wait starting now; `None` where it is 0.
 fn socket_deadline(
     interp: &Interp,
-    fd: i32,
+    fd: SocketId,
     which: rustix::net::sockopt::Timeout,
 ) -> Option<Instant> {
     with_socket(fd, |socket| {
@@ -1531,7 +1482,7 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
 
 fn finish_recv(
     interp: &mut Interp,
-    fd: i32,
+    fd: SocketId,
     var: &[u8],
     len: usize,
     flags: RecvFlags,
@@ -1607,30 +1558,8 @@ fn check_level(interp: &Interp, level: &[u8]) -> Result<()> {
     }
 }
 
-/// The options neither `rustix` nor `nix` names, read and set by number as
-/// C `int`s: `SO_DEBUG`, `SO_RCVLOWAT`, `SO_SNDLOWAT` and the number 64
-/// `SO_USELOOPBACK` passes.
-const RAW_OPTIONS: [i32; 4] = [1, 18, 19, 64];
-
-/// The host's number for the raw option `option` identifies. On Apple's
-/// systems the option numbers are not Linux's (`SO_RCVLOWAT` is 0x1004, not
-/// 18); 64 is passed as itself on every host.
-fn raw_option(option: i32) -> i32 {
-    match option {
-        1 => libc::SO_DEBUG,
-        18 => libc::SO_RCVLOWAT,
-        19 => libc::SO_SNDLOWAT,
-        other => other,
-    }
-}
-
-fn timeval_millis(seconds: i64, micros: i64) -> i64 {
-    seconds * 1000 + micros / 1000
-}
-
 /// `SockGetSockOpt(s, level, option, var)`.
 pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
-    use nix::sys::socket::{getsockopt, sockopt};
     check_arity(args, 4)?;
     let fd = int(interp, args, 1)?;
     let level = c_string(interp, args, 2)?;
@@ -1638,54 +1567,7 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
     let var = c_string(interp, args, 4)?;
     check_level(interp, &level)?;
     let option = option_number(&option);
-    let bool_of = |result: nix::Result<bool>| result.map(|on| i64::from(on).to_string());
-    let read: Os<String> = match option {
-        None => Err(ENOPROTOOPT),
-        Some(option) if RAW_OPTIONS.contains(&option) => with_socket(fd, |socket| {
-            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, raw_option(option))
-                .map(|on| on.to_string())
-        }),
-        Some(option) => with_socket(fd, |socket| {
-            match option {
-                2 => bool_of(getsockopt(&socket, sockopt::ReuseAddr)),
-                3 => {
-                    return rustix::net::sockopt::socket_type(socket)
-                        .map(|kind| {
-                            match kind {
-                                rustix::net::SocketType::STREAM => "STREAM",
-                                rustix::net::SocketType::DGRAM => "DGRAM",
-                                rustix::net::SocketType::RAW => "RAW",
-                                _ => "UNKNOWN",
-                            }
-                            .to_owned()
-                        })
-                        .map_err(os);
-                }
-                4 => getsockopt(&socket, sockopt::SocketError).map(|errno| errno.to_string()),
-                5 => bool_of(getsockopt(&socket, sockopt::DontRoute)),
-                6 => bool_of(getsockopt(&socket, sockopt::Broadcast)),
-                7 => getsockopt(&socket, sockopt::SndBuf).map(|size| size.to_string()),
-                8 => getsockopt(&socket, sockopt::RcvBuf).map(|size| size.to_string()),
-                9 => bool_of(getsockopt(&socket, sockopt::KeepAlive)),
-                10 => bool_of(getsockopt(&socket, sockopt::OobInline)),
-                13 => getsockopt(&socket, sockopt::Linger)
-                    .map(|linger| format!("{} {}", linger.l_onoff, linger.l_linger)),
-                20 | 21 => {
-                    let time = match option {
-                        20 => getsockopt(&socket, sockopt::ReceiveTimeout),
-                        _ => getsockopt(&socket, sockopt::SendTimeout),
-                    };
-                    time.map(|time| {
-                        use nix::sys::time::TimeValLike as _;
-                        let micros = time.num_microseconds();
-                        timeval_millis(micros / 1_000_000, micros % 1_000_000).to_string()
-                    })
-                }
-                _ => return Err(ENOPROTOOPT),
-            }
-            .map_err(nix_os)
-        }),
-    };
+    let read = rxsock_sys::get_option(fd, option);
     let (text, result) = match read {
         Ok(text) => (text, Ok(())),
         Err(errno) => {
@@ -1705,7 +1587,6 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
 
 /// `SockSetSockOpt(s, level, option, value)`.
 pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
-    use nix::sys::socket::{setsockopt, sockopt};
     check_arity(args, 4)?;
     let fd = int(interp, args, 1)?;
     let level = c_string(interp, args, 2)?;
@@ -1718,63 +1599,17 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
         Some(option) => option,
     };
     let numeric = atoi(&value);
-    let on = numeric != 0;
-    let result = with_socket(fd, |socket| {
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "C passes the int, which the kernel reads unsigned"
-        )]
-        let size = numeric as u32 as usize;
-        let set = match option {
-            option if RAW_OPTIONS.contains(&option) => {
-                return rxsock_sys::set_int_option(
-                    socket,
-                    libc::SOL_SOCKET,
-                    raw_option(option),
-                    numeric,
-                );
-            }
-            2 => setsockopt(&socket, sockopt::ReuseAddr, &on),
-            5 => setsockopt(&socket, sockopt::DontRoute, &on),
-            6 => setsockopt(&socket, sockopt::Broadcast, &on),
-            7 => setsockopt(&socket, sockopt::SndBuf, &size),
-            8 => setsockopt(&socket, sockopt::RcvBuf, &size),
-            9 => setsockopt(&socket, sockopt::KeepAlive, &on),
-            10 => setsockopt(&socket, sockopt::OobInline, &on),
-            13 => {
-                let mut words = value
-                    .split(u8::is_ascii_whitespace)
-                    .filter(|word| !word.is_empty());
-                #[expect(clippy::cast_possible_truncation, reason = "each is a 16-bit field")]
-                let mut half = || i32::from(atoi(words.next().unwrap_or_default()) as u16);
-                let linger = nix::libc::linger {
-                    l_onoff: half(),
-                    l_linger: half(),
-                };
-                setsockopt(&socket, sockopt::Linger, &linger)
-            }
-            20 | 21 => {
-                let seconds = numeric / 1000;
-                let micros = (numeric % 1000) * 1000;
-                if micros < 0 {
-                    return Err(EDOM);
-                }
-                let micros = if seconds < 0 {
-                    0
-                } else {
-                    i64::from(seconds) * 1_000_000 + i64::from(micros)
-                };
-                let time =
-                    <nix::sys::time::TimeVal as nix::sys::time::TimeValLike>::microseconds(micros);
-                match option {
-                    20 => setsockopt(&socket, sockopt::ReceiveTimeout, &time),
-                    _ => setsockopt(&socket, sockopt::SendTimeout, &time),
-                }
-            }
-            _ => return Err(ENOPROTOOPT),
-        };
-        set.map_err(nix_os)
-    });
+    let linger = if option == 13 {
+        let mut words = value
+            .split(u8::is_ascii_whitespace)
+            .filter(|word| !word.is_empty());
+        #[expect(clippy::cast_possible_truncation, reason = "each is a 16-bit field")]
+        let mut half = || atoi(words.next().unwrap_or_default()) as u16;
+        (half(), half())
+    } else {
+        (0, 0)
+    };
+    let result = rxsock_sys::set_option(fd, option, numeric, linger);
     Ok(code(interp, result))
 }
 
@@ -1795,14 +1630,12 @@ pub(crate) fn ioctl(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjR
         let Some(on) = on else {
             return Err(failed(interp));
         };
-        let result = with_socket(fd, |socket| {
-            rustix::io::ioctl_fionbio(socket, on != 0).map_err(os)
-        });
+        let result = rxsock_sys::set_nonblocking(fd, on != 0);
         return Ok(code(interp, result));
     }
     if command.eq_ignore_ascii_case(b"FIONREAD") {
         let var = c_string(interp, args, 3)?;
-        let read = with_socket(fd, |socket| rustix::io::ioctl_fionread(socket).map_err(os));
+        let read = rxsock_sys::available_bytes(fd);
         let count = *read.as_ref().unwrap_or(&0);
         let count = number(interp, i128::from(count));
         interp.roots.activity_mut().push_temp(count);
@@ -1818,7 +1651,7 @@ pub(crate) fn ioctl(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjR
 #[derive(Clone)]
 struct Set {
     stem: Stem,
-    sockets: Vec<i32>,
+    sockets: Vec<SocketId>,
 }
 
 /// The set an argument names, `None` where it takes no part: omitted,
@@ -1842,7 +1675,7 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
         let Some(fd) = entry
             .as_deref()
             .and_then(whole)
-            .and_then(|fd| i32::try_from(fd).ok())
+            .and_then(|fd| SocketId::try_from(fd).ok())
         else {
             return Err(failed(interp));
         };
@@ -1868,7 +1701,7 @@ fn reached(sets: &[Option<Set>; 3]) -> [Vec<bool>; 3] {
 }
 
 /// The polls for the entries of `sets` that `reached` says `select` looks at.
-fn select_polls(sets: &[Option<Set>; 3], reached: &[Vec<bool>; 3]) -> Vec<(i32, PollFlags)> {
+fn select_polls(sets: &[Option<Set>; 3], reached: &[Vec<bool>; 3]) -> Vec<PollRequest> {
     sets.iter()
         .zip(SET_EVENTS)
         .zip(reached)
@@ -1923,7 +1756,7 @@ fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
     };
     let mut revents = revents.into_iter();
     let mut count = 0;
-    let mut kept: Vec<Option<Vec<i32>>> = Vec::new();
+    let mut kept: Vec<Option<Vec<SocketId>>> = Vec::new();
     for ((set, events), reached) in sets.iter().zip(SET_EVENTS).zip(&reached) {
         let Some(set) = set else {
             kept.push(None);

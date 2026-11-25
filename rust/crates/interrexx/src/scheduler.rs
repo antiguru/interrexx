@@ -1027,7 +1027,7 @@ impl Interp {
     #[cfg(unix)]
     pub(crate) fn register_socket_wait(
         &mut self,
-        polls: &[(i32, rustix::event::PollFlags)],
+        polls: &[crate::builtin::rxsock_sys::PollRequest],
         deadline: Option<std::time::Instant>,
     ) -> Option<(u64, crate::builtin::rxsock_wait::Wait)> {
         let token = self.activities.next_block + 1;
