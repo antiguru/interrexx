@@ -22,7 +22,8 @@ use support::oracle::{
     wrapped_exit_code,
 };
 use support::sidecar::{
-    self, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment, sidecar_for,
+    self, Half, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment,
+    sidecar_for,
 };
 
 /// Env var that flips this test from a progress report into the gate.
@@ -631,8 +632,14 @@ fn read_unfiled(corpus_dir: &Path) -> Vec<(String, String)> {
         .collect()
 }
 
-/// Every `<name>.env` and `<name>.d/` beside a corpus program names a program
-/// the corpus list runs, so a sidecar cannot sit unread.
+/// The reason an [`UNFILED_FILE`] entry gives when the ruled runner pins the
+/// program's answer. That runner hands the program its `.stdin` and nothing
+/// else of a sidecar.
+const RULED_RUNNER: &str = "input_oracle::the_unfiled_ruled_programs_answer_as_this_crate_rules";
+
+/// Every `<name>.env`, `<name>.d/` and `<name>.stdin` beside a corpus program
+/// names a program the corpus list runs, or, for a `.stdin` alone, one the
+/// ruled runner runs, so a sidecar cannot sit unread.
 #[test]
 fn every_sidecar_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -652,15 +659,23 @@ fn every_sidecar_names_a_program_the_subset_runs() {
         read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
             .into_iter()
             .collect();
+    let ruled: BTreeSet<String> = read_unfiled(&corpus_dir)
+        .into_iter()
+        .filter(|(_, reason)| reason.contains(RULED_RUNNER))
+        .map(|(entry, _)| entry)
+        .collect();
 
     for stem in &stems {
         let program = format!("{LANG_SUBDIR}/{stem}.rex");
+        let sidecar = sidecar_for(&corpus_dir, &program);
+        let stdin_only = sidecar.halves() == [Half::Stdin];
         assert!(
-            filed.contains(&program),
-            "{stem} has a sidecar and the corpus list does not name {program}, so nothing reads it"
+            filed.contains(&program) || (stdin_only && ruled.contains(&program)),
+            "{stem} has a sidecar and neither the corpus list nor, for a `.stdin` alone, \
+             {RULED_RUNNER} runs {program}, so nothing reads it"
         );
         assert!(
-            sidecar_for(&corpus_dir, &program).present(),
+            sidecar.present(),
             "{program}'s sidecar parsed to nothing, so the run would not differ from one without it"
         );
     }

@@ -1,8 +1,9 @@
-count 24
+count 21
 /* A call site that kept what the search finds after every routine table (an
-   external file, a routine loadLibrary registered, an internal routine) finds
-   the routine ~addRoutine or ~addPublicRoutine put in front of it, on its next
-   pass. */
+   external file, a routine loadLibrary registered) finds the routine
+   ~addRoutine or ~addPublicRoutine put in front of it, on its next pass. A
+   routine of the REXX package is library_routine_site_add_routine_filespec's:
+   FILESPEC is one only at language level 6.06 (Deviation 179). */
 p = .context~package
 do i = 1 to 2
   say 'function' i ext1(i)
@@ -18,8 +19,4 @@ x = p~loadLibrary('rxmathc')
 do i = 1 to 2
   say 'library' i RxCalcSqrt(16)
   if i = 1 then p~addPublicRoutine('RXCALCSQRT', .routine~new('x', 'return "public" arg(1)'))
-end
-do i = 1 to 2
-  say 'internal' i filespec('N', '/a/b.c')
-  if i = 1 then p~addRoutine('FILESPEC', .routine~new('x', 'return "added" arg(1)'))
 end

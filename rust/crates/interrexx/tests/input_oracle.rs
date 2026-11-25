@@ -904,4 +904,30 @@ fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
     for &(program, _) in ruled_corpus::CONCURRENCY {
         assert!(programs.contains(program), "{program} has no ruled outcome");
     }
+    // Every program corpus/unfiled.txt says this test pins has a case here.
+    let unfiled = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/unfiled.txt");
+    let text = fs::read_to_string(&unfiled)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", unfiled.display()));
+    let pinned: Vec<&str> = text
+        .lines()
+        .filter(|line| !line.starts_with('#'))
+        .filter_map(|line| line.split_once('\t'))
+        .filter(|(_, reason)| reason.contains(RULED_NAME))
+        .map(|(entry, _)| entry)
+        .collect();
+    assert!(
+        !pinned.is_empty(),
+        "{} names no ruled program",
+        unfiled.display()
+    );
+    for program in pinned {
+        assert!(
+            programs.contains(program),
+            "{} says this test pins {program}, which has no case",
+            unfiled.display()
+        );
+    }
 }
+
+/// How corpus/unfiled.txt names [`the_unfiled_ruled_programs_answer_as_this_crate_rules`].
+const RULED_NAME: &str = "input_oracle::the_unfiled_ruled_programs_answer_as_this_crate_rules";
