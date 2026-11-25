@@ -1,7 +1,7 @@
 name: Windows port checks
 on:
   pull_request:
-    branches: [main]
+    branches: [main, windows-rexxutil-printers]
     paths:
       - .github/workflows/windows-check.yml
       - .gitmodules
@@ -167,6 +167,9 @@ jobs:
           $caseRoot = Join-Path $env:RUNNER_TEMP 'rexxutil-case-probe'
           [IO.File]::WriteAllText($probe, 'test data')
           New-Item -ItemType Directory -Path $caseRoot | Out-Null
+          $pipeName = 'interrexx-smoke-' + [Guid]::NewGuid().ToString()
+          $pipe = [IO.Pipes.NamedPipeServerStream]::new($pipeName)
+          $env:REXX_TEST_NAMED_PIPE = '\\.\pipe\' + $pipeName
           try {
             try {
               [IO.File]::Encrypt($probe)
@@ -188,6 +191,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
             if ($env:REXX_TEST_CASE_PARENT) { Write-Host 'The case-sensitive NTFS sibling check passed.' }
           } finally {
+            $pipe.Dispose()
             Remove-Item -LiteralPath $probe
             Remove-Item -LiteralPath $caseRoot -Recurse
           }

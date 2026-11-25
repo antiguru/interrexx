@@ -20,7 +20,11 @@ pub(crate) mod windows_files;
 #[cfg(windows)]
 pub(crate) mod windows_ini;
 #[cfg(windows)]
+pub(crate) mod windows_interaction;
+#[cfg(windows)]
 pub(crate) mod windows_printers;
+#[cfg(windows)]
+pub(crate) mod windows_process;
 
 use interrexx_cast::TryCastFrom;
 use interrexx_core::{Body, Decoded, ObjRef};
