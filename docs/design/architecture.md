@@ -270,8 +270,8 @@ held at its bound, as follows:
   (`builtin::extent`), which no string reaches. A position or a "to the end" count that large
   behaves as on a 64-bit host; a result that large asks the allocator for what it may grant.
 * An array size within the limit that the target cannot address is error 5, as an allocator's
-  refusal is. An index that large is held as a length is: it is past every array's end, and an
-  array grown to it is refused the same way.
+  refusal is. An index that large is past every array's end, and an array grown to it is
+  refused the same way; an index past the limit is 93.959, as on a 64-bit host.
 * `NUMERIC DIGITS`, `FUZZ` and their `::OPTIONS` forms refuse a value past `usize::MAX` with
   their 26 errors.
 * The C API's `wholenumber_t`, `stringsize_t`, `size_t`, `ssize_t`, `intptr_t` and `uintptr_t`

@@ -2375,3 +2375,22 @@ fn a_position_past_the_address_space_is_past_every_end() {
         (0, "1 1\n[] []\n".to_string(), String::new())
     );
 }
+
+/// An index past the fixed-array limit is 93.959 on every target, though a
+/// 32-bit target holds an index it cannot address at its bound.
+#[test]
+fn an_index_past_the_array_limit_is_93_959_on_every_target() {
+    for (made, put) in [
+        (".array~new", "a[999999999999999999] = 1"),
+        (".array~new(1, 1)", "a[1, 999999999999999999] = 1"),
+    ] {
+        assert_eq!(
+            run_source(&format!(
+                "signal on syntax\na = {made}\n{put}\nexit\n\
+                 syntax: say condition('o')~code\n"
+            )),
+            (0, "93.959\n".to_string(), String::new()),
+            "{put}"
+        );
+    }
+}

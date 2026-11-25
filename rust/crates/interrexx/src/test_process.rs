@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 #[cfg(target_pointer_width = "64")]
 pub(crate) const UNSPAWNABLE_STACK: usize = 1 << 62;
 
-/// A thread stack the whole of a 32-bit address space but its last page, so a
-/// spawn asking for it fails: the program's own mappings already sit in that
+/// A thread stack the whole of a 32-bit address space but its last 64 KiB, so
+/// a spawn asking for it fails: the program's own mappings already sit in that
 /// space.
 #[cfg(not(target_pointer_width = "64"))]
 pub(crate) const UNSPAWNABLE_STACK: usize = usize::MAX & !0xffff;

@@ -113,9 +113,32 @@ pub(super) const MAX_FIXED_ARRAY_SIZE: u64 = 100_000_000_000_000_000;
 
 /// The product of `size` and `extent`, or 93.959 past [`MAX_FIXED_ARRAY_SIZE`].
 fn grown_array_size(size: u64, extent: usize) -> Result<u64, Failure> {
+    if past_fixed_array_size(extent) {
+        return Err(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE).into());
+    }
     size.checked_mul(extent as u64)
         .filter(|size| *size <= MAX_FIXED_ARRAY_SIZE)
         .ok_or_else(|| Failure::from(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE)))
+}
+
+/// An index of at least 1 as a slot position. On a 64-bit target it is the
+/// index itself. On a narrower one, an index the target cannot address is held
+/// at `isize::MAX` when it is within [`MAX_FIXED_ARRAY_SIZE`], past every
+/// array's end and refused as storage by a growth, and is `usize::MAX` past
+/// it, which no index within the limit there becomes and which
+/// [`past_fixed_array_size`] reads as past the limit.
+fn index_position(whole: i64) -> usize {
+    match usize::try_from(whole) {
+        Ok(index) if index <= isize::MAX as usize => index,
+        _ if whole as u64 > MAX_FIXED_ARRAY_SIZE => usize::MAX,
+        _ => isize::MAX as usize,
+    }
+}
+
+/// Whether a position [`index_position`] answered is past
+/// [`MAX_FIXED_ARRAY_SIZE`].
+fn past_fixed_array_size(position: usize) -> bool {
+    position as u64 > MAX_FIXED_ARRAY_SIZE || position == usize::MAX
 }
 
 /// A size [`grown_array_size`] answered, as a slot count, or the 5.0 that an
@@ -226,7 +249,7 @@ fn single_dimension_position(
             }
             match index_use {
                 IndexUse::Get => Ok(None),
-                IndexUse::Put if position as u64 > MAX_FIXED_ARRAY_SIZE => {
+                IndexUse::Put if past_fixed_array_size(position) => {
                     Err(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE).into())
                 }
                 IndexUse::Put => {
@@ -297,7 +320,7 @@ pub(super) fn whole_index(interp: &mut Interp, value: ObjRef) -> Result<Option<u
     Ok(index_number(interp, value)?
         .and_then(|number| number.whole_value(interrexx_num::ARGUMENT_DIGITS))
         .filter(|whole| *whole > 0)
-        .map(crate::builtin::extent))
+        .map(index_position))
 }
 
 /// A tagged integer that already is the answer, being narrow enough that the
