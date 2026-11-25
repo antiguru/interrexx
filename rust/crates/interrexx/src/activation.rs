@@ -507,6 +507,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<Activation>() == 392);
 
 impl ActivationFlags {

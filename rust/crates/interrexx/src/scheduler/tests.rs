@@ -1271,6 +1271,8 @@ fn an_inverted_pinned_wait_is_refused_under_every_opportunity() {
 /// Nested pinned waits share one Rust stack, so the stack remaining bounds
 /// their depth with 11.1: each started method waits pinned on the next, on
 /// an interpreter thread small enough for the bound to fire.
+// Its ten thousand activities exhaust a 32-bit address space before the stack.
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn nested_pinned_waits_are_bounded_by_the_stack_remaining() {
     let outcome = crate::run_program_on_stack(

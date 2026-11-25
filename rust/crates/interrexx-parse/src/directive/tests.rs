@@ -1084,10 +1084,20 @@ fn the_options_arguments_are_gated_the_way_the_oracle_gates_them() {
     assert_eq!(shapes("::options fuzz 0\n"), vec!["options fuzz 0"]);
     assert_eq!(err("::options digits 0\n"), (26, 5));
     // Eighteen digits is the boundary, `ARGUMENT_DIGITS` on a 64-bit build.
-    assert_eq!(
-        shapes("::options digits 123456789012345678\n"),
-        vec!["options digits 123456789012345678"]
-    );
+    // On a narrower one it is `usize::MAX`.
+    if cfg!(target_pointer_width = "64") {
+        assert_eq!(
+            shapes("::options digits 123456789012345678\n"),
+            vec!["options digits 123456789012345678"]
+        );
+    } else {
+        assert_eq!(err("::options digits 123456789012345678\n"), (26, 5));
+        let widest = format!("::options digits {}\n", usize::MAX);
+        assert_eq!(
+            shapes(&widest),
+            vec![format!("options digits {}", usize::MAX)]
+        );
+    }
     assert_eq!(err("::options digits 1234567890123456789\n"), (26, 5));
     // Every numeric rejection.
     for text in [

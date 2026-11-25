@@ -162,9 +162,9 @@ impl Host for Interpreter {
         self.variables.retain(|(bound, _)| *bound != name);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
         NUMBERS.with(|seen| seen.borrow_mut().push(value as wholenumber_t));
-        match i64::try_from(value).ok().and_then(ObjRef::small_int) {
+        match ObjRef::small_int(value) {
             Some(object) => object,
             None => self.text(value.to_string().as_bytes()),
         }

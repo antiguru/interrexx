@@ -106,7 +106,23 @@ fn array_is_fixed_dimension(interp: &Interp, receiver: ObjRef) -> Result<bool, F
     }
 }
 
-pub(super) const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
+/// The largest size an array may have. It is the same on every target: a size
+/// at or below it that the target cannot address is refused as storage the
+/// allocator cannot give ([`fixed_array_size`]), not as a size past this.
+pub(super) const MAX_FIXED_ARRAY_SIZE: u64 = 100_000_000_000_000_000;
+
+/// The product of `size` and `extent`, or 93.959 past [`MAX_FIXED_ARRAY_SIZE`].
+fn grown_array_size(size: u64, extent: usize) -> Result<u64, Failure> {
+    size.checked_mul(extent as u64)
+        .filter(|size| *size <= MAX_FIXED_ARRAY_SIZE)
+        .ok_or_else(|| Failure::from(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE)))
+}
+
+/// A size [`grown_array_size`] answered, as a slot count, or the 5.0 that an
+/// allocator refusing it raises where the target cannot address that many.
+fn fixed_array_size(size: u64) -> Result<usize, Failure> {
+    usize::try_from(size).map_err(|_| Failure::from(Raised::system_resources()))
+}
 
 /// `size` empty slots, or the 5.0 raised when the allocator refuses --
 /// [`Raised::system_resources`] carries why that refusal is asked of the
@@ -210,7 +226,7 @@ fn single_dimension_position(
             }
             match index_use {
                 IndexUse::Get => Ok(None),
-                IndexUse::Put if position > MAX_FIXED_ARRAY_SIZE => {
+                IndexUse::Put if position as u64 > MAX_FIXED_ARRAY_SIZE => {
                     Err(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE).into())
                 }
                 IndexUse::Put => {
@@ -280,8 +296,8 @@ pub(super) fn whole_index(interp: &mut Interp, value: ObjRef) -> Result<Option<u
     }
     Ok(index_number(interp, value)?
         .and_then(|number| number.whole_value(interrexx_num::ARGUMENT_DIGITS))
-        .and_then(|whole| usize::try_from(whole).ok())
-        .filter(|index| *index > 0))
+        .filter(|whole| *whole > 0)
+        .map(crate::builtin::extent))
 }
 
 /// A tagged integer that already is the answer, being narrow enough that the
@@ -405,19 +421,17 @@ fn array_extend_multi(
     let held = array_dimensions(interp, receiver)?;
     let old = held.filter(|dimensions| dimensions.len() == subscripts.len());
     let mut dimensions = Vec::with_capacity(subscripts.len());
-    let mut size = 1usize;
+    let mut size = 1u64;
     for (at, subscript) in subscripts.iter().enumerate() {
         let position = position_index(interp, *subscript, at + 1)?;
         let dimension = match &old {
             Some(old) => position.max(old[at]),
             None => position,
         };
-        size = size
-            .checked_mul(dimension)
-            .filter(|size| *size <= MAX_FIXED_ARRAY_SIZE)
-            .ok_or_else(|| Failure::from(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE)))?;
+        size = grown_array_size(size, dimension)?;
         dimensions.push(dimension);
     }
+    let size = fixed_array_size(size)?;
     array_reshape(interp, receiver, &dimensions, size, old.as_deref())?;
     Ok(dimensions)
 }
@@ -632,17 +646,14 @@ fn multidimensional_body(
     dimensions: &[Option<ObjRef>],
 ) -> Result<Body, Failure> {
     let mut shape = Vec::with_capacity(dimensions.len());
-    let mut size = 1usize;
+    let mut size = 1u64;
     for (at, dimension) in dimensions.iter().enumerate() {
         let extent = array_size_argument(interp, *dimension, at + 1)?;
-        size = size
-            .checked_mul(extent)
-            .filter(|size| *size <= MAX_FIXED_ARRAY_SIZE)
-            .ok_or_else(|| Failure::from(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE)))?;
+        size = grown_array_size(size, extent)?;
         shape.push(extent);
     }
     Ok(Body::Array {
-        slots: empty_array_slots(size)?,
+        slots: empty_array_slots(fixed_array_size(size)?)?,
         dimensions: Some(shape.into()),
     })
 }
@@ -659,9 +670,9 @@ fn array_size_argument(
     };
     let size = index_number(interp, value)?
         .and_then(|number| number.whole_value(interrexx_num::ARGUMENT_DIGITS))
-        .and_then(|whole| usize::try_from(whole).ok());
+        .and_then(|whole| u64::try_from(whole).ok());
     match size {
-        Some(size) if size <= MAX_FIXED_ARRAY_SIZE => Ok(size),
+        Some(size) if size <= MAX_FIXED_ARRAY_SIZE => fixed_array_size(size),
         Some(_) => Err(Raised::array_too_big(MAX_FIXED_ARRAY_SIZE).into()),
         None => {
             let found = interp.string_value_text(value)?;

@@ -6,10 +6,6 @@ use interrexx_core::ObjRef;
 
 use crate::layout::RexxObjectPtr;
 
-// A handle carries an `ObjRef`'s bits in the address of a pointer nothing
-// dereferences, so the whole width has to fit.
-const _: () = assert!(usize::BITS == u64::BITS);
-
 /// The objects one activation has handed a native call, held so the collector
 /// can see them (D5).
 ///
@@ -167,12 +163,14 @@ pub fn handle_of(object: ObjRef) -> RexxObjectPtr {
     std::ptr::without_provenance_mut(address_of(object))
 }
 
-/// `object`'s handle, as an address.
+/// `object`'s handle, as an address: on a 64-bit target the `ObjRef`'s own
+/// bits, carried in the address of a pointer nothing dereferences.
 ///
 /// # Panics
 /// If every bit of `object` is set, which no constructible `ObjRef` has: the
 /// tag reserves the low two bits, and the only tag that sets both leaves the
 /// three above the length clear.
+#[cfg(target_pointer_width = "64")]
 fn address_of(object: ObjRef) -> usize {
     // `NULLOBJECT` is the null pointer, so the `ObjRef`
     // whose bits are zero -- heap slot zero at generation zero, the first
@@ -180,6 +178,42 @@ fn address_of(object: ObjRef) -> usize {
     let biased = object.bits().wrapping_add(1);
     assert!(biased != 0, "an ObjRef with every bit set has no handle");
     biased as usize
+}
+
+/// `object`'s handle, as an address, on a target whose addresses are narrower
+/// than an `ObjRef`.
+///
+/// An `ObjRef` whose bits fit in one bit less than an address is carried in
+/// the address itself, shifted up with the low bit set, so the address is odd
+/// and never null. Every other `ObjRef` is numbered from one, in the order its
+/// handle is first asked for, by a table the whole process shares, and its
+/// address is that number shifted up, so it is even and never null. Either
+/// way two handles are equal exactly when they name the same `ObjRef`, in
+/// every table and every interpreter of the process, as on a 64-bit target.
+/// The shared table forgets nothing: a handle an extension kept may be
+/// presented again at any time, and a number given to a second `ObjRef` would
+/// let a stale handle name it.
+///
+/// # Panics
+/// Once the numbers an address can carry are used up.
+#[cfg(not(target_pointer_width = "64"))]
+fn address_of(object: ObjRef) -> usize {
+    use std::sync::{LazyLock, Mutex, PoisonError};
+
+    static NUMBERED: LazyLock<Mutex<FxHashMap<u64, usize>>> = LazyLock::new(Mutex::default);
+
+    let bits = object.bits();
+    if bits < 1 << (usize::BITS - 1) {
+        return ((bits as usize) << 1) | 1;
+    }
+    let mut numbered = NUMBERED.lock().unwrap_or_else(PoisonError::into_inner);
+    let next = numbered.len() + 1;
+    let number = *numbered.entry(bits).or_insert(next);
+    assert!(
+        number <= usize::MAX >> 1,
+        "every handle an address can carry has been given out"
+    );
+    number << 1
 }
 
 #[cfg(test)]
@@ -209,5 +243,41 @@ mod tests {
         assert_eq!(table.resolve(handles[1]), None);
         assert_eq!(table.resolve(plain), None);
         assert!(!table.holds(objects[1]));
+    }
+
+    /// On a narrow target the references carried in the address and the
+    /// numbered ones never share a handle, none is null, and the numbered
+    /// ones answer the same handle in every table.
+    #[cfg(not(target_pointer_width = "64"))]
+    #[test]
+    fn narrow_handles_are_distinct_and_shared_between_tables() {
+        let carried = [ObjRef::heap(0, 0), ObjRef::heap(1, 0), ObjRef::NIL];
+        let numbered = [ObjRef::heap(0, 1), ObjRef::heap(1, 1), ObjRef::heap(0, 2)];
+        let mut first = Table::new();
+        let mut second = Table::new();
+        let handles: Vec<RexxObjectPtr> = carried
+            .iter()
+            .chain(&numbered)
+            .map(|object| first.register(*object))
+            .collect();
+        for (at, handle) in handles.iter().enumerate() {
+            assert!(!handle.is_null());
+            assert!(handles[..at].iter().all(|other| other != handle));
+        }
+        for (object, handle) in carried.iter().chain(&numbered).zip(&handles) {
+            assert_eq!(second.register(*object), *handle);
+            assert_eq!(second.resolve(*handle), Some(*object));
+            assert_eq!(handle_of(*object), *handle);
+        }
+        assert!(
+            handles[..carried.len()]
+                .iter()
+                .all(|handle| handle.addr() & 1 == 1)
+        );
+        assert!(
+            handles[carried.len()..]
+                .iter()
+                .all(|handle| handle.addr() & 1 == 0)
+        );
     }
 }

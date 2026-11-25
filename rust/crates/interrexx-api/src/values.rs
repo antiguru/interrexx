@@ -520,7 +520,8 @@ pub trait Host {
     /// dropping the variable.
     fn drop_object_variable(&mut self, name: &[u8]);
 
-    fn whole_number(&mut self, value: isize) -> ObjRef;
+    /// A whole number, as `WholeNumberToObject` and `Int64ToObject` make one.
+    fn whole_number(&mut self, value: i64) -> ObjRef;
 
     /// A `.Pointer` wrapping `value`, which is `new_pointer`.
     fn new_pointer(&mut self, value: POINTER) -> ObjRef;
@@ -1088,7 +1089,7 @@ impl<'a> Activation<'a> {
     /// any returned object is.
     pub fn whole_number(&self, value: isize) -> RexxObjectPtr {
         let mut cx = self.conversion();
-        let object = cx.host.whole_number(value);
+        let object = cx.host.whole_number(value as i64);
         cx.host.register_local(object)
     }
 

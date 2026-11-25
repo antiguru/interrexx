@@ -174,6 +174,11 @@ From `rust/`, under the memory cap:
   checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target,
   runs this profile's unit tests (`--lib`) and the doc tests on the toolchain `rust-version`
   declares, on a checkout with no submodule.
+* The `i686` CI job builds every target and runs the `standalone` profile in an i386 Debian
+  container (`ci/i686-standalone.sh`), so 32-bit x86 is built and tested on every pull request.
+  `cargo clippy --workspace --all-targets --target i686-unknown-linux-gnu -- -D warnings` checks
+  the 32-bit `cfg` arms from a 64-bit host. A size pin (`assert!(size_of::<T>() == N)`) holds
+  for 64-bit targets only, under `#[cfg(target_pointer_width = "64")]`.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under

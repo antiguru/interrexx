@@ -259,6 +259,36 @@ to compile for any other target.
   nightly (`.github/workflows/macos-nightly.yml`), which fetches the ooTest and documentation
   checkouts itself and needs nothing of `third_party/`.
 
+### 32-bit targets
+
+interrexx also builds and runs on 32-bit x86 Linux. The language is the 64-bit host's
+(`r[conv.whole.digits]`): whole numbers have eighteen digits wherever they are read, and
+`.RexxInfo~maxArraySize` answers the same limit. What a 32-bit target cannot hold is refused or
+held at its bound, as follows:
+
+* A whole number used as a length, position or count is held at `isize::MAX`
+  (`builtin::extent`), which no string reaches. A position or a "to the end" count that large
+  behaves as on a 64-bit host; a result that large asks the allocator for what it may grant.
+* An array size within the limit that the target cannot address is error 5, as an allocator's
+  refusal is. An index that large is held as a length is: it is past every array's end, and an
+  array grown to it is refused the same way.
+* `NUMERIC DIGITS`, `FUZZ` and their `::OPTIONS` forms refuse a value past `usize::MAX` with
+  their 26 errors.
+* The C API's `wholenumber_t`, `stringsize_t`, `size_t`, `ssize_t`, `intptr_t` and `uintptr_t`
+  are the target's widths: an argument outside one is 88.907 naming that range, and a reader
+  such as `ObjectToWholeNumber` refuses a value its type cannot hold.
+* An `ObjRef` is 64 bits, wider than a native handle: the handle encoding is in
+  `native-api.md`, Handles and lifetimes.
+* The interpreter thread's stack is 256 MiB, half the 64-bit one, so that more than a few
+  interpreter and pool threads fit in the address space.
+* A map of names hashes as on a 64-bit target (`interrexx-core/src/name_hash.rs`), so
+  `Class~methods` and the other orders that follow a name map's come out the same.
+* `PARSE VERSION` names the width, `32-bit`, as `.RexxInfo~architecture` does.
+
+The `i686` CI job runs the `standalone` profile in an i386 container (`docs/developing.md`,
+Checks). A test that pins a 64-bit layout, range or resource bound is compiled for 64-bit targets
+only, with the reason beside its `cfg`.
+
 ## Standing decisions
 
 | | decision | reason |

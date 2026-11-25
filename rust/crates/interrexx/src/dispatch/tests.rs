@@ -236,13 +236,21 @@ fn pointer(interp: &mut Interp, address: usize) -> ObjRef {
 
 /// A `.Pointer` answers its address, its class and its own name, all
 /// measured against the oracle through a `CSELF` an
-/// `expose`-ing method handed back.
+/// `expose`-ing method handed back (on a 32-bit target, over an address of
+/// that width).
 #[test]
 fn a_pointer_renders_as_its_address_and_names_its_class() {
     let mut interp = Interp::new();
-    let object = pointer(&mut interp, 0x55f0_6283_2410);
-    assert_eq!(interp.to_text(object).into_owned(), b"0x55f062832410");
-    assert_eq!(interp.text_len(object), 14);
+    let address_text: &[u8] = if cfg!(target_pointer_width = "64") {
+        b"0x55f062832410"
+    } else {
+        b"0x5f062832"
+    };
+    let address = std::str::from_utf8(&address_text[2..]).expect("hex digits");
+    let address = usize::from_str_radix(address, 16).expect("an address");
+    let object = pointer(&mut interp, address);
+    assert_eq!(interp.to_text(object).into_owned(), address_text);
+    assert_eq!(interp.text_len(object), address_text.len());
 
     let class = interp
         .send_message(object, b"CLASS", None, &[], no_caller())
@@ -262,7 +270,7 @@ fn a_pointer_renders_as_its_address_and_names_its_class() {
         .send_message(object, b"STRING", None, &[], no_caller())
         .expect("a Pointer answers STRING")
         .expect("a string");
-    assert_eq!(interp.to_text(rendered).into_owned(), b"0x55f062832410");
+    assert_eq!(interp.to_text(rendered).into_owned(), address_text);
 
     // `~objectName=` renames the object without touching its string
     // value, which is the arm a buffer is in too.
@@ -270,7 +278,7 @@ fn a_pointer_renders_as_its_address_and_names_its_class() {
     interp
         .send_message(object, b"OBJECTNAME=", None, &[Some(renamed)], no_caller())
         .expect("a Pointer answers OBJECTNAME=");
-    assert_eq!(interp.to_text(object).into_owned(), b"0x55f062832410");
+    assert_eq!(interp.to_text(object).into_owned(), address_text);
 }
 
 /// A null address renders as `0x0` and answers `~isNull`, where any other
@@ -2351,4 +2359,19 @@ fn next_and_previous_take_an_array_index_beyond_a_dimension() {
     let (code, out, err) = run_source(program);
     assert_eq!((code, err.as_str()), (0, ""));
     assert_eq!(out, "1 1\n2,2\n2,2\n1,1\n3 1\n");
+}
+
+/// A whole number past `usize::MAX` on a 32-bit target is a position like any
+/// other past the end: an index past an array's end answers `.nil`, and a
+/// string position past the last word answers the null string, on every
+/// target.
+#[test]
+fn a_position_past_the_address_space_is_past_every_end() {
+    assert_eq!(
+        run_source(
+            "a = .array~of(1, 2)\nsay (a~at(5000000000) == .nil) (a[999999999999999999] == .nil)\n\
+             say '['word('a b', 5000000000)']' '['substr('abc', 5000000000)']'\n"
+        ),
+        (0, "1 1\n[] []\n".to_string(), String::new())
+    );
 }

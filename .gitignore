@@ -13,3 +13,6 @@ __pycache__/
 
 # The fetched corpus, see scripts/fetch-corpus.sh: never committed.
 /corpus/
+
+# The i686 CI job's container toolchain, cargo home and target directory.
+/.i686/

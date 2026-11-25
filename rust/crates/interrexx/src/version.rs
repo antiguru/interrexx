@@ -9,8 +9,17 @@ pub(crate) const PLATFORM: &[u8] = b"LINUX";
 pub(crate) const LINE_END: &[u8] = b"\n";
 
 /// `PARSE VERSION`'s string: ooRexx's shape and language level, stamped with this build's date.
+#[cfg(target_pointer_width = "64")]
 pub(crate) const VERSION: &[u8] = concat!(
     "REXX-ooRexx_5.3.0(MT)_64-bit 6.06 ",
+    env!("INTERREXX_BUILD_DATE")
+)
+.as_bytes();
+
+/// `PARSE VERSION`'s string on a 32-bit target, whose width it names.
+#[cfg(target_pointer_width = "32")]
+pub(crate) const VERSION: &[u8] = concat!(
+    "REXX-ooRexx_5.3.0(MT)_32-bit 6.06 ",
     env!("INTERREXX_BUILD_DATE")
 )
 .as_bytes();

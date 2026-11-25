@@ -28,7 +28,7 @@ use interrexx_api::constants::{
 };
 use interrexx_api::exports::{Declared, EXPORTS, export_types, pointer_types};
 use interrexx_api::layout::{
-    CONSTRXSTRING, CallContextInterface, EXIT_FLAG_BITS, ExitContextInterface, ExitFlags,
+    CMember, CONSTRXSTRING, CallContextInterface, EXIT_FLAG_BITS, ExitContextInterface, ExitFlags,
     IORedirectorInterface, MethodContextInterface, REXXDATETIME, RXCMDHST_PARM, RXFNCCAL_PARM,
     RXHLTTST_PARM, RXMSQNAM_PARM, RXMSQPLL_PARM, RXMSQPSH_PARM, RXMSQSIZ_PARM, RXOFNCCAL_PARM,
     RXSIODTR_PARM, RXSIOSAY_PARM, RXSIOTRD_PARM, RXSTRING, RXSYSEXIT, RXTRCTST_PARM,
@@ -598,6 +598,29 @@ struct TypeCheck {
     key: String,
     expression: String,
     rust: &'static str,
+    /// Whether the header spells a parameter `thread_id_t`, which [`expected_type`] reads.
+    thread_parameter: bool,
+}
+
+/// Whether a declaration's parameters name `thread_id_t`.
+fn names_thread_id(declaration: &CMember) -> bool {
+    matches!(declaration, CMember::Function { parameters, .. } if parameters.contains(&"thread_id_t"))
+}
+
+/// The C type `check`'s expression must have. Where `unsigned long` is 32 bits wide, glibc's
+/// `pthread_t` is that type and the Rust `thread_id_t` is `u32`, the same width and signedness
+/// but not the same C type as the `uint32_t` [`c_type`] maps `u32` to, so a parameter the header
+/// spells `thread_id_t` is measured as `pthread_t` there.
+fn expected_type(check: &TypeCheck) -> String {
+    let expected = c_member_type(check.rust);
+    if check.thread_parameter && cfg!(all(target_os = "linux", target_pointer_width = "32")) {
+        assert_eq!(
+            size_of::<interrexx_api::layout::thread_id_t>(),
+            size_of::<u32>()
+        );
+        return expected.replace(", uint32_t)", ", pthread_t)");
+    }
+    expected
 }
 
 /// Every handler typedef, declared export, pointer typedef and argument type, each checked by
@@ -610,6 +633,7 @@ fn type_checks() -> Vec<TypeCheck> {
             key: format!("type handler {name}"),
             expression: format!("({name} *)0"),
             rust,
+            thread_parameter: false,
         });
     }
     for (export, (name, rust)) in EXPORTS.iter().zip(export_types()) {
@@ -620,14 +644,16 @@ fn type_checks() -> Vec<TypeCheck> {
                 key: format!("type export {name}"),
                 expression: format!("&{name}"),
                 rust,
+                thread_parameter: names_thread_id(&export.declaration),
             });
         }
     }
-    for (name, _, rust) in pointer_types() {
+    for (name, declaration, rust) in pointer_types() {
         out.push(TypeCheck {
             key: format!("type pointer {name}"),
             expression: format!("({name})0"),
             rust,
+            thread_parameter: names_thread_id(&declaration),
         });
     }
     {
@@ -643,6 +669,7 @@ fn type_checks() -> Vec<TypeCheck> {
                 key: format!("type typedef {name}"),
                 expression: format!("({name})0"),
                 rust,
+                thread_parameter: false,
             });
         }
     }
@@ -664,6 +691,7 @@ fn type_checks() -> Vec<TypeCheck> {
                 key: format!("type typedef {name}"),
                 expression: format!("({name})0"),
                 rust,
+                thread_parameter: false,
             });
         }
     }
@@ -673,6 +701,7 @@ fn type_checks() -> Vec<TypeCheck> {
             key: format!("type argument {name}"),
             expression: format!("(ARGUMENT_TYPE_{name})0"),
             rust,
+            thread_parameter: false,
         });
     }
     for name in optional_argument_types() {
@@ -684,6 +713,7 @@ fn type_checks() -> Vec<TypeCheck> {
             key: format!("type argument OPTIONAL_{name}"),
             expression: format!("(ARGUMENT_TYPE_OPTIONAL_{name})0"),
             rust,
+            thread_parameter: false,
         });
     }
     out
@@ -963,7 +993,7 @@ fn dump_program() -> String {
         .unwrap();
     }
     for check in type_checks() {
-        let expected = c_member_type(check.rust);
+        let expected = expected_type(&check);
         writeln!(
             out,
             "  printf(\"{}\\t%d\\n\", SAME({}, {expected}));",
@@ -1239,7 +1269,7 @@ fn a_swapped_pair_of_members_is_reported() {
     assert!(found[0].contains("RexxCondition"), "{found:?}");
     // A changed typedef width is reported the same way.
     let mut mutated = rust_facts();
-    mutated.insert("typedef logical_t size".to_string(), "4".to_string());
+    mutated.insert("typedef logical_t size".to_string(), "3".to_string());
     assert_eq!(differences(&measured, &mutated).len(), 1);
 }
 

@@ -248,7 +248,14 @@ pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
 /// ```text
 /// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 47999520 bytes, per frame: 480.0 bytes
 /// ```
+#[cfg(target_pointer_width = "64")]
 pub const INTERPRETER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
+/// The interpreter thread's stack on a 32-bit target, in bytes: half the
+/// 64-bit stack, whose frames hold pointers half as wide, so that more than a
+/// handful of interpreter and pool threads fit in the address space.
+#[cfg(not(target_pointer_width = "64"))]
+pub const INTERPRETER_STACK_BYTES: usize = 256 * 1024 * 1024;
 
 /// A new interpreter's pool.
 #[cfg(not(test))]
@@ -2027,6 +2034,7 @@ impl MethodBodies {
 /// path -- measured, `bench-programs/dispatchclass.rex` at +1.88% and 121
 /// `instructions:u` per send when a [`GeneratedKind`] discriminant sat
 /// beside `program` and `directive` (see [`GeneratedMethod`]).
+#[cfg(target_pointer_width = "64")]
 const _: () = assert!(size_of::<InstalledMethodBody>() == 16);
 
 /// One installed method that the *directive* implements rather than a body:

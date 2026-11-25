@@ -27,6 +27,12 @@ fn main() {
         elf(&names, &out);
     }
     println!("cargo:rerun-if-changed=build.rs");
+    for variable in ["CC", "TARGET_CC"] {
+        println!("cargo:rerun-if-env-changed={variable}");
+    }
+    let target = std::env::var("TARGET").expect("cargo sets TARGET");
+    println!("cargo:rerun-if-env-changed=CC_{}", target.replace('-', "_"));
+    println!("cargo:rerun-if-env-changed=CC_{target}");
     println!("cargo:rerun-if-changed=../interrexx-api/src/library_names.rs");
 }
 
@@ -67,10 +73,31 @@ fn apple(names: &library_names::ApiLibraries, out: &Path) {
     );
 }
 
-/// Links an empty shared library at `stub` with the driver's `flags`.
+/// Links an empty shared library at `stub` with the driver's `flags`, for the
+/// target: the driver is `CC_<target>`, or `TARGET_CC` when cross-compiling,
+/// or `CC`, or `cc`, the variables the `cc` crate reads. On x86 the target's
+/// width is passed as well, so a multilib driver links a 32-bit stub for a
+/// 32-bit target.
 fn stub_library(stub: &Path, flags: &[&str]) {
-    let compiler = std::env::var_os("CC").unwrap_or_else(|| "cc".into());
-    let status = Command::new(&compiler)
+    let target = std::env::var("TARGET").expect("cargo sets TARGET");
+    let host = std::env::var("HOST").expect("cargo sets HOST");
+    let compiler = std::env::var_os(format!("CC_{}", target.replace('-', "_")))
+        .or_else(|| std::env::var_os(format!("CC_{target}")))
+        .or_else(|| {
+            (target != host)
+                .then(|| std::env::var_os("TARGET_CC"))
+                .flatten()
+        })
+        .or_else(|| std::env::var_os("CC"))
+        .unwrap_or_else(|| "cc".into());
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").expect("cargo sets CARGO_CFG_TARGET_ARCH");
+    let width = std::env::var("CARGO_CFG_TARGET_POINTER_WIDTH")
+        .expect("cargo sets CARGO_CFG_TARGET_POINTER_WIDTH");
+    let mut command = Command::new(&compiler);
+    if matches!(arch.as_str(), "x86" | "x86_64") {
+        command.arg(format!("-m{width}"));
+    }
+    let status = command
         .args(flags)
         .arg("-o")
         .arg(stub)

@@ -1193,7 +1193,7 @@ impl Raised {
 
     /// 93.959: an array size or dimension product past the fixed-array size
     /// limit. `max` is that bound, which the message names.
-    pub(crate) fn array_too_big(max: usize) -> Raised {
+    pub(crate) fn array_too_big(max: u64) -> Raised {
         Raised::syntax(93, 959, vec![max.to_string().into_bytes()])
     }
 

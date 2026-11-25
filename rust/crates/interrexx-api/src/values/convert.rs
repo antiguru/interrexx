@@ -183,7 +183,7 @@ pub(super) fn signed_word_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    signed(cx, argument, position, i64::MIN, i64::MAX).map(Value::Isize)
+    signed(cx, argument, position, isize::MIN as i64, isize::MAX as i64).map(Value::Isize)
 }
 
 /// `REXX_VALUE_wholenumber_t`.
@@ -192,7 +192,8 @@ pub(super) fn whole_number_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    signed(cx, argument, position, -MAX_WHOLENUMBER, MAX_WHOLENUMBER).map(Value::Isize)
+    let max = MAX_WHOLENUMBER.min(isize::MAX as i64);
+    signed(cx, argument, position, -max, max).map(Value::Isize)
 }
 
 /// `REXX_VALUE_uint8_t`.
@@ -238,7 +239,7 @@ pub(super) fn unsigned_word_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    unsigned(cx, argument, position, u64::MAX).map(Value::Usize)
+    unsigned(cx, argument, position, usize::MAX as u64).map(Value::Usize)
 }
 
 /// `REXX_VALUE_stringsize_t`.
@@ -247,7 +248,7 @@ pub(super) fn string_size_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    let max = MAX_WHOLENUMBER.unsigned_abs();
+    let max = MAX_WHOLENUMBER.unsigned_abs().min(usize::MAX as u64);
     unsigned(cx, argument, position, max).map(Value::Usize)
 }
 
@@ -523,7 +524,7 @@ pub(super) fn int8_from_native(
     let Value::Int8(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    Ok(Some(cx.host.whole_number(isize::from(number))))
+    Ok(Some(cx.host.whole_number(i64::from(number))))
 }
 
 /// The object a `REXX_VALUE_int16_t` value becomes.
@@ -534,7 +535,7 @@ pub(super) fn int16_from_native(
     let Value::Int16(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    Ok(Some(cx.host.whole_number(isize::from(number))))
+    Ok(Some(cx.host.whole_number(i64::from(number))))
 }
 
 /// The object a `REXX_VALUE_int32_t` value becomes.
@@ -545,8 +546,7 @@ pub(super) fn int32_from_native(
     let Value::Int32(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    let number = isize::try_from(number).map_err(|_| Failure::ResultSignature)?;
-    Ok(Some(cx.host.whole_number(number)))
+    Ok(Some(cx.host.whole_number(i64::from(number))))
 }
 
 /// The object a `REXX_VALUE_int64_t` value becomes: what a pointer-sized
@@ -558,7 +558,6 @@ pub(super) fn int64_from_native(
     let Value::Int64(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    let number = isize::try_from(number).map_err(|_| Failure::ResultSignature)?;
     Ok(Some(cx.host.whole_number(number)))
 }
 
@@ -570,7 +569,7 @@ pub(super) fn isize_from_native(
     let Value::Isize(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    Ok(Some(cx.host.whole_number(number)))
+    Ok(Some(cx.host.whole_number(number as i64)))
 }
 
 /// The object a `REXX_VALUE_uint8_t` value becomes.

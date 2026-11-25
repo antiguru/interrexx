@@ -447,7 +447,13 @@ fn answer(root: &Path, row: &Row) -> Answer {
 #[test]
 fn rexxc_agrees_with_every_recorded_parse_error_row() {
     let rows = rows();
-    let checked: Vec<&Row> = rows.iter().collect();
+    // A DIGITS value past `usize::MAX` is refused on a narrower target
+    // (`docs/design/architecture.md`, 32-bit targets), where the oracle's 64-bit build
+    // accepts it.
+    let narrow_only = |row: &&Row| {
+        cfg!(target_pointer_width = "64") || row.program != b"::options digits 123456789012345678\n"
+    };
+    let checked: Vec<&Row> = rows.iter().filter(narrow_only).collect();
     assert!(
         checked.iter().any(|row| row.class == "install"
             && row

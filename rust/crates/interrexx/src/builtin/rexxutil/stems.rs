@@ -665,8 +665,8 @@ pub(crate) fn sort(
         values.push(value);
     }
     let columns = (first_column != 1 || last_column != MAX_WHOLENUMBER).then(|| {
-        let start = usize::try_from(first_column - 1).expect("a positive column");
-        let length = usize::try_from(last_column - first_column + 1).expect("an ordered range");
+        let start = crate::builtin::extent(first_column - 1);
+        let length = crate::builtin::extent(last_column - first_column + 1);
         (start, length)
     });
     let sorting = SortOrder {

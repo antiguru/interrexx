@@ -154,8 +154,8 @@ impl Host for FakeHost {
         self.set_object_variable(name, None);
     }
 
-    fn whole_number(&mut self, value: isize) -> ObjRef {
-        match i64::try_from(value).ok().and_then(ObjRef::small_int) {
+    fn whole_number(&mut self, value: i64) -> ObjRef {
+        match ObjRef::small_int(value) {
             Some(object) => object,
             None => self.text(value.to_string().as_bytes()),
         }

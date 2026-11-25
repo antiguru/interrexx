@@ -569,6 +569,64 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
+  # 32-bit x86: every target built and the `standalone` profile run in an i386 Debian userland,
+  # on a checkout without the submodule. The runner's kernel runs the container's 32-bit
+  # programs natively, so the build scripts, the fixtures the tests compile and the test
+  # binaries are all 32-bit (`ci/i686-standalone.sh`). The actions run on the runner, not in the
+  # container: they need a 64-bit userland.
+  i686:
+    name: 32-bit x86 standalone (i686)
+    needs: [third-party]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - uses: actions/cache/restore@v6
+        with:
+          # Only ootest and oodocs are kept below.
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Remove everything of the upstream tier
+        # See msrv-standalone.
+        working-directory: .
+        run: |
+          rm -rf third_party/oracle build
+          # The gitlink checks out as an empty directory without the submodule.
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+          test -d ootest
+          test -d oodocs
+      - uses: actions/cache@v6
+        with:
+          # The container's toolchain, cargo home and target directory, under the checkout so
+          # that the container sees them through the mount. Saved by this job only.
+          path: |
+            .i686/rustup
+            .i686/cargo
+            .i686/target
+          key: i686-${{ hashFiles('rust/Cargo.lock', 'rust/rust-toolchain.toml', 'ci/i686-standalone.sh') }}
+          restore-keys: i686-
+      - name: Build and test in an i386 container
+        # The script installs packages as root and builds as the checkout's owner, the runner's
+        # user, so the cached directories stay the runner's to save.
+        working-directory: .
+        run: >
+          docker run --rm --platform linux/386
+          -v "$PWD:/work" -w /work
+          -e RUSTUP_HOME=/work/.i686/rustup -e CARGO_HOME=/work/.i686/cargo
+          -e CARGO_TARGET_DIR=/work/.i686/target
+          -e CARGO_TERM_COLOR=always -e CARGO_INCREMENTAL=0 -e CARGO_PROFILE_DEV_DEBUG=0
+          -e CARGO_PROFILE_TEST_DEBUG=0
+          mirror.gcr.io/library/debian:trixie sh ci/i686-standalone.sh
+
   # macOS: every target built, linked and linted on Apple's toolchain, on a checkout without the
   # submodule. Code that only one host compiles (`cfg`) is checked by this job and `clippy`
   # between them. The tests run on macOS nightly (`macos-nightly.yml`), not per pull request.
@@ -606,13 +664,13 @@ jobs:
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build]
+    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build, i686]
     runs-on: ubuntu-26.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}, macOS build: ${{ needs.macos-build.result }}"
+          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}, macOS build: ${{ needs.macos-build.result }}, i686: ${{ needs.i686.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.upstream-tier.result }}" = success
           test "${{ needs.msrv-standalone.result }}" = success
@@ -626,6 +684,7 @@ jobs:
           test "${{ needs.fmt.result }}" = success
           test "${{ needs.jit.result }}" = success
           test "${{ needs.macos-build.result }}" = success
+          test "${{ needs.i686.result }}" = success
 
   # The `jit` feature (Cranelift), which no other job builds: clippy with it, and the JIT's
   # own tests in debug, where the Cranelift verifier runs on every loop compiled, a refused
