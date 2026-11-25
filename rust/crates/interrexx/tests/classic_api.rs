@@ -10,7 +10,10 @@ use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[path = "support/api_socket.rs"]
+mod api_socket;
 #[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
 mod cdylibs;
 
@@ -209,12 +212,49 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
     run_group_in(dir, group, library_path, &[])
 }
 
+/// One work directory per group invocation and a separate, short service path.
+fn group_directories(root: &Path, group: &str) -> (PathBuf, PathBuf) {
+    static RUNS: AtomicUsize = AtomicUsize::new(0);
+    let run = loop {
+        let seq = RUNS.fetch_add(1, Ordering::Relaxed);
+        let run = root.join(format!("run-{group}-{}-{seq}", std::process::id()));
+        match std::fs::create_dir(&run) {
+            Ok(()) => break run,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("creating {}: {error}", run.display()),
+        }
+    };
+    // An overlong socket path makes rxapi fall back to the shared service.
+    let api = api_socket::api_dir(&run);
+    (run, api)
+}
+
+#[test]
+fn repeated_group_runs_get_distinct_work_and_service_directories() {
+    use std::os::unix::net::SocketAddr;
+
+    let root = scratch().join(format!(
+        "{}-{}",
+        "long-scratch-path-".repeat(8),
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&root).expect("long scratch root");
+    let (first_run, first_api) = group_directories(&root, "ProcessInvocation");
+    let (second_run, second_api) = group_directories(&root, "ProcessInvocation");
+    assert_ne!(first_run, second_run);
+    assert_ne!(first_api, second_api);
+    for (run, api) in [(first_run, first_api), (second_run, second_api)] {
+        assert!(run.is_dir());
+        assert!(SocketAddr::from_pathname(api.join("rxapi.2.sock")).is_ok());
+        api_socket::end_api_dir(&run);
+    }
+    std::fs::remove_dir_all(root).expect("remove group test fixture");
+}
+
 /// [`run_group`] with `env` added to the run's environment.
 fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &Path)]) -> Outcome {
     let ootest = repository().join("ootest");
-    // Named by process too: under nextest each test is a process, and tests share groups.
-    let run = scratch().join(format!("run-{group}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&run);
+    let (run, api) = group_directories(scratch(), group);
     std::fs::create_dir_all(run.join("ooRexx").join(dir)).expect("the run directory");
     let copy = |from: &Path, to: &Path| {
         let status = Command::new("cp")
@@ -233,7 +273,6 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    let api = scratch().join(format!("api-{group}-{}", std::process::id()));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
     let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
@@ -242,16 +281,17 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
         library_path,
     );
     command.envs(env.iter().copied());
-    let output = command.output().expect("rexx runs");
+    let output = command.output();
     stop_service(&api);
+    api_socket::end_api_dir(&run);
+    let _ = std::fs::remove_dir_all(&run);
+    let output = output.expect("rexx runs");
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     assert!(
         stdout.contains("Tests ran:"),
         "no summary:\n{stdout}\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    let _ = std::fs::remove_dir_all(&run);
-    let _ = std::fs::remove_dir_all(&api);
     let mut failed = BTreeSet::new();
     let mut in_detail = false;
     for line in stdout.lines() {
