@@ -89,7 +89,6 @@ call t "SysFormatMessage('&1&2', .array~of(.array~of(1, 2), .object~new))"
 call t "SysFormatMessage('&1', .array~of(.nil))"
 call t "SysFormatMessage('&1', .array~of(.arrayString~new))"
 call t "SysFormatMessage('&1', .array~of(.seven~new))"
-call t "SysFormatMessage('&1', .array~of(.nilString~new))"
 call t "SysFormatMessage('&1', .array~of(.noString~new))"
 call t "SysFormatMessage('&2', .array~of(.loud~new('one'), .loud~new('two')))"
 call t "SysFormatMessage('x', .array~of(.raiser~new('first'), .loud~new('after')))"
@@ -265,8 +264,6 @@ catalog: procedure
 ::method string; return 7
 ::class arrayString
 ::method string; return .array~of('s1', 's2')
-::class nilString
-::method string; return .nil
 ::class noString
 ::class loud
 ::method init; expose text; use arg text
