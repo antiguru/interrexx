@@ -332,7 +332,9 @@ pub unsafe extern "C-unwind" fn RexxCallBack(
 /// The key a `RexxStart` run is found by, from the `pthread_t` its thread is.
 #[cfg(not(target_vendor = "apple"))]
 fn thread_key(thread: thread_id_t) -> usize {
-    thread as usize
+    use interrexx_cast::CastFrom;
+    // Linux's `pthread_t`, an `unsigned long`, and Windows' `DWORD` fit `usize`.
+    usize::cast_from(thread)
 }
 
 /// The key a `RexxStart` run is found by, from the `pthread_t` its thread is: a
@@ -443,7 +445,7 @@ unsafe fn instance_options(options: *const RexxOption) -> interrexx::embedding::
             let word = (*at).option.value.value_POINTER;
             match name {
                 b"InitialAddress" => read.initial_address = text_of(word.cast()),
-                b"ApplicationData" => read.application_data = word as usize,
+                b"ApplicationData" => read.application_data = word.expose_provenance(),
                 b"LoadRequiredLibrary" => read.load_libraries.extend(text_of(word.cast())),
                 b"ExternalCallPath" => read.external_call_path = text_of(word.cast()),
                 b"ExternalCallPathExt" => {
@@ -504,7 +506,7 @@ pub unsafe extern "C" fn RexxCreateInterpreter(
     let Some(context) = interrexx::embedding::create_instance(options) else {
         return 0;
     };
-    let context = context as *mut RexxThreadContext_;
+    let context = std::ptr::with_exposed_provenance_mut::<RexxThreadContext_>(context);
     // SAFETY: `context` is the live root thread context, whose `instance`
     // link its interpreter wrote; the writes are the caller's guarantee.
     unsafe {

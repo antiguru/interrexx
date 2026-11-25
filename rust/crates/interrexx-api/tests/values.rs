@@ -11,6 +11,7 @@ use interrexx_api::values::{
     descriptor, from_native, pointer_string, repr, result_read, rows, takes_argument_list,
     to_native,
 };
+use interrexx_cast::{CastFrom, i64_from_isize, i128_from_i64, i128_from_u64, u64_from_usize};
 use interrexx_core::{BehaviourHandle, Body, Bytes, Heap, ObjRef, RootSet};
 
 /// Stands in for the interpreter the table calls back into.
@@ -1545,33 +1546,38 @@ fn the_int64_row_converts_its_range_both_ways() {
 fn the_intptr_row_converts_its_range_both_ways() {
     signed_row(
         code::INTPTR_T,
-        isize::MIN as i128,
-        isize::MAX as i128,
+        i128::cast_from(isize::MIN),
+        i128::cast_from(isize::MAX),
         |v| Value::Isize(narrow(v)),
     );
 }
 
 #[test]
 fn the_ssize_row_converts_its_range_both_ways() {
-    signed_row(code::SSIZE_T, isize::MIN as i128, isize::MAX as i128, |v| {
-        Value::Isize(narrow(v))
-    });
+    signed_row(
+        code::SSIZE_T,
+        i128::cast_from(isize::MIN),
+        i128::cast_from(isize::MAX),
+        |v| Value::Isize(narrow(v)),
+    );
 }
 
 /// The largest `wholenumber_t` the row converts: eighteen nines, or what the C
 /// type holds where that is less.
-const WHOLENUMBER_MAX: i128 = if isize::MAX as i128 > 999_999_999_999_999_999 {
+const WHOLENUMBER_MAX: i128 = if i128_from_i64(i64_from_isize(isize::MAX)) > 999_999_999_999_999_999
+{
     999_999_999_999_999_999
 } else {
-    isize::MAX as i128
+    i128_from_i64(i64_from_isize(isize::MAX))
 };
 
 /// The largest `stringsize_t` the row converts, as [`WHOLENUMBER_MAX`] for the
 /// unsigned type.
-const STRINGSIZE_MAX: i128 = if usize::MAX as i128 > 999_999_999_999_999_999 {
+const STRINGSIZE_MAX: i128 = if i128_from_u64(u64_from_usize(usize::MAX)) > 999_999_999_999_999_999
+{
     999_999_999_999_999_999
 } else {
-    usize::MAX as i128
+    i128_from_u64(u64_from_usize(usize::MAX))
 };
 
 #[test]
@@ -1610,14 +1616,14 @@ fn the_uint64_row_converts_its_range_both_ways() {
 
 #[test]
 fn the_uintptr_row_converts_its_range_both_ways() {
-    unsigned_row(code::UINTPTR_T, usize::MAX as i128, |v| {
+    unsigned_row(code::UINTPTR_T, i128::cast_from(usize::MAX), |v| {
         Value::Usize(narrow(v))
     });
 }
 
 #[test]
 fn the_size_row_converts_its_range_both_ways() {
-    unsigned_row(code::SIZE_T, usize::MAX as i128, |v| {
+    unsigned_row(code::SIZE_T, i128::cast_from(usize::MAX), |v| {
         Value::Usize(narrow(v))
     });
 }

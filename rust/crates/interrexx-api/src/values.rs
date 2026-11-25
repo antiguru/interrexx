@@ -8,6 +8,7 @@ use std::cell::{Cell, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int};
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 
 use crate::callbacks::Surface;
@@ -1089,7 +1090,7 @@ impl<'a> Activation<'a> {
     /// any returned object is.
     pub fn whole_number(&self, value: isize) -> RexxObjectPtr {
         let mut cx = self.conversion();
-        let object = cx.host.whole_number(value as i64);
+        let object = cx.host.whole_number(i64::cast_from(value));
         cx.host.register_local(object)
     }
 

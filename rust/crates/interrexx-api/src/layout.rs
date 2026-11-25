@@ -1200,7 +1200,14 @@ macro_rules! entry_address {
         None
     };
     ($member:expr, $($kind:tt)*) => {
-        Some($member as usize)
+        Some({
+            #[expect(
+                clippy::as_conversions,
+                reason = "a function pointer has no method that answers its address"
+            )]
+            let address = $member as usize;
+            address
+        })
     };
 }
 

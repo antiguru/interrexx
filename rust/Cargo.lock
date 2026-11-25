@@ -718,6 +718,7 @@ dependencies = [
 name = "interrexx-api"
 version = "0.1.0"
 dependencies = [
+ "interrexx-cast",
  "interrexx-core",
  "interrexx-upstream",
  "libc",
@@ -739,6 +740,7 @@ version = "0.1.0"
 dependencies = [
  "interrexx",
  "interrexx-api",
+ "interrexx-cast",
  "libc",
 ]
 
@@ -747,6 +749,7 @@ name = "interrexx-capi-rxapi"
 version = "0.1.0"
 dependencies = [
  "interrexx-api",
+ "interrexx-cast",
  "libc",
  "windows-sys 0.61.2",
 ]

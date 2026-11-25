@@ -278,9 +278,11 @@ pub fn handle_of(object: ObjRef) -> RexxObjectPtr {
 /// three above the length clear.
 #[cfg(target_pointer_width = "64")]
 fn carried(object: ObjRef) -> Option<usize> {
+    use interrexx_cast::CastFrom;
+
     let biased = object.bits().wrapping_add(1);
     assert!(biased != 0, "an ObjRef with every bit set has no handle");
-    Some(biased as usize)
+    Some(usize::cast_from(biased))
 }
 
 /// `object`'s handle, as an address, where the address carries the `ObjRef`
@@ -291,7 +293,9 @@ fn carried(object: ObjRef) -> Option<usize> {
 #[cfg(not(target_pointer_width = "64"))]
 fn carried(object: ObjRef) -> Option<usize> {
     let bits = object.bits();
-    (bits < 1 << (usize::BITS - 1)).then_some(((bits as usize) << 1) | 1)
+    (bits < 1 << (usize::BITS - 1)).then(|| {
+        (usize::try_from(bits).expect("the bits are below half the address range") << 1) | 1
+    })
 }
 
 /// The handles of one interpreter. On a 64-bit target a handle is the
