@@ -54,6 +54,36 @@ int wmain(int argc, wchar_t **argv)
         return 6;
     }
     CloseHandle(child.hThread);
+
+    /* The script waits for a second key while the modal box is visible.
+     * Send it only after seeing that window, then verify that halting the
+     * Rexx activity closes the box while the interpreter stays alive. */
+    wchar_t title[128];
+    swprintf_s(title, _countof(title), L"interrexx-rexxutil-dialog-%lu", child.dwProcessId);
+    HWND dialog = NULL;
+    for (int i = 0; i < 150 && dialog == NULL; ++i) {
+        if (WaitForSingleObject(child.hProcess, 30) != WAIT_TIMEOUT) {
+            break;
+        }
+        dialog = FindWindowW(NULL, title);
+    }
+    if (dialog != NULL) {
+        key.Event.KeyEvent.wVirtualKeyCode = 'H';
+        key.Event.KeyEvent.uChar.UnicodeChar = L'H';
+        if (!WriteConsoleInputW(input, &key, 1, &written) || written != 1) {
+            TerminateProcess(child.hProcess, 18);
+        }
+    }
+    BOOL closed_early = FALSE;
+    for (int i = 0; dialog != NULL && i < 50; ++i) {
+        if (WaitForSingleObject(child.hProcess, 20) != WAIT_TIMEOUT) {
+            break;
+        }
+        if (FindWindowW(NULL, title) == NULL) {
+            closed_early = TRUE;
+            break;
+        }
+    }
     if (WaitForSingleObject(child.hProcess, 15000) != WAIT_OBJECT_0) {
         TerminateProcess(child.hProcess, 7);
         CloseHandle(child.hProcess);
@@ -65,5 +95,8 @@ int wmain(int argc, wchar_t **argv)
     CloseHandle(output);
     CloseHandle(input);
     FreeConsole();
-    return ok ? (int)status : 8;
+    if (!ok || status != 0) {
+        return ok ? (int)status : 8;
+    }
+    return closed_early ? 0 : 19;
 }
