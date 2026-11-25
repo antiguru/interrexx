@@ -669,7 +669,9 @@ it](r:cond.index.syntax)) goes the same way: each of its lines is sent as
 `LINEOUT` with a `TraceObject` to `.traceoutput`, so a destination set on
 `.error` receives it, and an object stored in `.local` under `ERROR` does
 not, because `.traceoutput` passes the lines on to the monitor it was given at
-the start. In the example, the first line shows that the monitor
+the start. If delivering a report of an exhausted control stack exhausts the
+stack again, the remaining report lines go directly to standard output.
+In the example, the first line shows that the monitor
 `.traceoutput` is connected to `.error`, and the spy receives the lines of the
 report of the division by zero.
 

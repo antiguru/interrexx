@@ -160,28 +160,29 @@ impl Interp {
     /// [`Interp::route_trace_line`] for a `>I>` (`entry`) or `<I<` line, whose
     /// `TraceObject` names the caller's frame for `>I>`. Standard error is
     /// handed over after it. Not gated on the source: these are written for a
-    /// restored program too.
-    pub(crate) fn route_trace_line_as(&mut self, start: usize, entry: bool) {
-        self.deliver_trace_line_as(start, entry);
+    /// restored program too. Answers whether delivery exhausted the stack.
+    pub(crate) fn route_trace_line_as(&mut self, start: usize, entry: bool) -> bool {
+        let exhausted = self.deliver_trace_line_as(start, entry);
         self.hand_over_stderr();
+        exhausted
     }
 
     /// Trace output: every line becomes a `TraceObject`, which is sent to
     /// `.TRACEOUTPUT`, writes to standard error where that is the error
     /// stream, or keeps back under `.TraceObject~option` `P`. Without the
     /// class the line goes to standard error as it is.
-    fn deliver_trace_line_as(&mut self, start: usize, entry: bool) {
+    fn deliver_trace_line_as(&mut self, start: usize, entry: bool) -> bool {
         let variable = self.traced_variable.take();
         if self.activity.routing_trace || self.activity.delivering {
             self.trace.truncate(start);
-            return;
+            return false;
         }
         if self.trace_failure_queued() {
             self.trace.truncate(start);
-            return;
+            return false;
         }
         let Some(class) = self.rexx_package_class(b"TRACEOBJECT") else {
-            return;
+            return false;
         };
         // Only the line end the formatter appended: measured, a traced clause
         // ending in `'0a'x` is delivered with it.
@@ -253,8 +254,14 @@ impl Interp {
                     self.trace.push(b'\n');
                 }
             }
-            Err(failure) => self.queue_trace_failure(failure, &line),
+            Err(failure) => {
+                let exhausted =
+                    matches!(&failure, Failure::Raised(raised) if raised.delivery.stack_exhausted);
+                self.queue_trace_failure(failure, &line);
+                return exhausted;
+            }
         }
+        false
     }
 
     /// Whether `.TRACEOUTPUT` writes to standard error, or is not there.
@@ -397,18 +404,29 @@ impl Interp {
     /// **The levels the failure left are cleared first.** The lines are
     /// already rendered and hold all they report, and nothing reads the levels
     /// after the report, so delivering a line has no levels left to copy.
-    pub(crate) fn write_trace_report_lines(&mut self, lines: &[Vec<u8>]) {
+    ///
+    /// If delivery of an exhausted-stack report also exhausts the stack,
+    /// finish the report on stdout (r[env.objects.error.report]).
+    pub(crate) fn write_trace_report_lines(&mut self, lines: &[Vec<u8>], stack_exhausted: bool) {
         self.clear_failure_levels();
+        let mut direct = false;
         for line in lines {
-            self.write_trace_report_line(line);
+            if direct {
+                self.write_out_line(line);
+            } else {
+                direct = self.write_trace_report_line(line) && stack_exhausted;
+            }
         }
     }
 
-    fn write_trace_report_line(&mut self, line: &[u8]) {
+    fn write_trace_report_line(&mut self, line: &[u8]) -> bool {
+        if self.untraceable_code() {
+            return false;
+        }
         let start = self.trace.len();
         self.trace.extend_from_slice(line);
         self.trace.push(b'\n');
-        self.route_trace_line(start);
+        self.route_trace_line_as(start, false)
     }
 
     /// The `TraceObject` carrying `line` and where it was traced, then its
