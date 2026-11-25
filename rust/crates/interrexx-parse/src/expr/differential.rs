@@ -4,7 +4,7 @@
 use interrexx_num::{CompareOp, DivOp, Number};
 
 use crate::ast::PrefixOp;
-use crate::exprs::{ExprRef, ExprView};
+use crate::exprs::{ExprId, Exprs, NodeKind};
 use crate::token::{Operator, SymbolTable};
 
 use super::tests::{Entry, parse};
@@ -83,37 +83,48 @@ fn compare_op(op: Operator) -> Option<CompareOp> {
     })
 }
 
-fn eval(expr: ExprRef<'_>, symbols: &SymbolTable) -> Result<String, Failure> {
-    match expr.kind() {
-        ExprView::Literal(bytes) => {
-            String::from_utf8(bytes.to_vec()).map_err(|_| Failure::Unsupported)
-        }
-        // A constant's value is its own upcased spelling, which is why
-        // `say 1e5` prints `1E5`.
-        ExprView::Constant(id) => Ok(symbols.name(id).to_string()),
-        ExprView::Variable(id) => Ok(value_of(symbols.name(id))),
-        ExprView::Prefix { op, operand } => {
-            let value = eval(operand, symbols)?;
-            match op {
-                // Prefix `+` and `-` are arithmetic, so they normalise their
-                // operand: measured, `+' 2.50 '` is 2.50 and `-'007'` is -7,
-                // matching `x + 0` and `0 - x`.
-                PrefixOp::Plus => number(&value)?
-                    .add(&Number::zero(), DIGITS)
-                    .map(|n| n.format(DIGITS))
-                    .map_err(|_| Failure::Raised),
-                PrefixOp::Minus => Number::zero()
-                    .sub(&number(&value)?, DIGITS)
-                    .map(|n| n.format(DIGITS))
-                    .map_err(|_| Failure::Raised),
-                PrefixOp::Not => Ok(boolean(!logical(&value)?)),
+/// Evaluates the subtree at `root` in one forward pass over its post-order
+/// range, so the depth of the expression costs heap, never stack. Operands
+/// are complete before their operator, which makes the first failure in index
+/// order the one the left-before-right recursion would have met.
+fn eval(exprs: &Exprs, root: ExprId, symbols: &SymbolTable) -> Result<String, Failure> {
+    let mut values: Vec<String> = Vec::new();
+    for node in exprs.range(root) {
+        let value = match node.kind() {
+            NodeKind::Literal(range) => String::from_utf8(exprs.bytes(*range).to_vec())
+                .map_err(|_| Failure::Unsupported)?,
+            // A constant's value is its own upcased spelling, which is why
+            // `say 1e5` prints `1E5`.
+            NodeKind::Constant(id) => symbols.name(*id).to_string(),
+            NodeKind::Variable(id) => value_of(symbols.name(*id)),
+            NodeKind::Prefix { op, .. } => {
+                let value = values.pop().ok_or(Failure::Unsupported)?;
+                match op {
+                    // Prefix `+` and `-` are arithmetic, so they normalise
+                    // their operand: measured, `+' 2.50 '` is 2.50 and
+                    // `-'007'` is -7, matching `x + 0` and `0 - x`.
+                    PrefixOp::Plus => number(&value)?
+                        .add(&Number::zero(), DIGITS)
+                        .map(|n| n.format(DIGITS))
+                        .map_err(|_| Failure::Raised)?,
+                    PrefixOp::Minus => Number::zero()
+                        .sub(&number(&value)?, DIGITS)
+                        .map(|n| n.format(DIGITS))
+                        .map_err(|_| Failure::Raised)?,
+                    PrefixOp::Not => boolean(!logical(&value)?),
+                }
             }
-        }
-        ExprView::Binary { op, left, right } => {
-            let left = eval(left, symbols)?;
-            let right = eval(right, symbols)?;
-            binary(op, &left, &right)
-        }
+            NodeKind::Binary { op, .. } => {
+                let right = values.pop().ok_or(Failure::Unsupported)?;
+                let left = values.pop().ok_or(Failure::Unsupported)?;
+                binary(*op, &left, &right)?
+            }
+            _ => return Err(Failure::Unsupported),
+        };
+        values.push(value);
+    }
+    match (values.pop(), values.is_empty()) {
+        (Some(value), true) => Ok(value),
         _ => Err(Failure::Unsupported),
     }
 }
@@ -211,7 +222,7 @@ fn every_generated_expression_evaluates_to_what_the_interpreter_evaluated() {
             (false, Err(err)) => {
                 wrong.push(format!("{text:?}: failed to parse: {err:?}"));
             }
-            (false, Ok((exprs, root, symbols))) => match (verdict, eval(exprs.get(root), &symbols))
+            (false, Ok((exprs, root, symbols))) => match (verdict, eval(&exprs, root, &symbols))
             {
                 ("OK", Ok(got)) => {
                     checked_value += 1;
@@ -290,7 +301,7 @@ fn the_evaluator_is_wired_to_the_operators_it_claims() {
         let (exprs, root, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(exprs.get(root), &symbols).as_deref(),
+            eval(&exprs, root, &symbols).as_deref(),
             Ok(*expected),
             "{text:?} evaluated wrongly"
         );
@@ -305,9 +316,24 @@ fn the_evaluator_reports_the_forms_it_does_not_implement() {
         let (exprs, root, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(exprs.get(root), &symbols),
+            eval(&exprs, root, &symbols),
             Err(Failure::Unsupported),
             "{text:?} should be out of the evaluator's scope"
         );
     }
+}
+
+#[test]
+fn the_differential_evaluator_runs_a_long_chain_on_a_small_thread() {
+    let text = vec!["1"; 100_000].join(" + ");
+    let answer = std::thread::Builder::new()
+        .stack_size(256 * 1024)
+        .spawn(move || {
+            let (exprs, root, symbols) = parse(&text, Entry::Required).expect("parses");
+            eval(&exprs, root, &symbols)
+        })
+        .expect("spawn")
+        .join()
+        .expect("the evaluator stays within the small stack");
+    assert_eq!(answer.as_deref(), Ok("100000"));
 }
