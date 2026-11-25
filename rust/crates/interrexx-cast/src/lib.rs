@@ -145,12 +145,9 @@ macro_rules! try_from_float {
                 fn try_cast_from(from: $float) -> Option<$to> {
                     // Both bounds are powers of two, which a float holds
                     // exactly: the least value, and one past the greatest.
-                    let low = if <$to>::MIN == 0 { 0.0 } else { -(2.0 as $float).powi(<$to>::BITS as i32 - 1) };
-                    let high = if <$to>::MIN == 0 {
-                        (2.0 as $float).powi(<$to>::BITS as i32)
-                    } else {
-                        (2.0 as $float).powi(<$to>::BITS as i32 - 1)
-                    };
+                    let half = (2.0 as $float).powi(<$to>::BITS as i32 - 1);
+                    let low = if <$to>::MIN == 0 { 0.0 } else { -half };
+                    let high = if <$to>::MIN == 0 { 2.0 * half } else { half };
                     let whole = from.trunc();
                     (whole >= low && whole < high).then(|| whole as $to)
                 }
