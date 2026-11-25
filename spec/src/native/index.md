@@ -74,6 +74,7 @@ to the next.
 | `FxNumeric` | none | the caller's `DIGITS`, `FUZZ` and `FORM` |
 | `FxOnThread` | an object and a message name | starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers `1` at once |
 | `FxOnThreadIdle` | an object, a message name and a number of seconds | as `FxOnThread`, but after the message the thread stays attached, sending nothing, for that many seconds before it detaches |
+| `FxOnThreadJoin` | an object and a message name | as `FxOnThread`, but waits for the thread to exit before answering `1` |
 | `FxInstance` | none | the interpreter instance the calling activity is given, written as an address |
 | `FxHaltAll` | none | asks the interpreter to halt every activity |
 | `FxHaltThis` | none | asks the interpreter to halt the calling activity |
