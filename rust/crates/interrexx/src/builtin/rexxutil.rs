@@ -14,7 +14,11 @@ pub(crate) mod tree;
 #[cfg(windows)]
 pub(crate) mod windows_console;
 #[cfg(windows)]
+pub(crate) mod windows_encoding;
+#[cfg(windows)]
 pub(crate) mod windows_files;
+#[cfg(windows)]
+pub(crate) mod windows_ini;
 
 use interrexx_core::{Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};

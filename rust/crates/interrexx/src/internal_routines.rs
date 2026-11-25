@@ -163,6 +163,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysFormatMessage",
         crate::builtin::rexxutil::messages::format,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysFromUnicode",
+        crate::builtin::rexxutil::windows_encoding::from_unicode,
+    ),
     util_run(
         "SysGetErrorText",
         crate::builtin::rexxutil::messages::error_text,
@@ -197,6 +202,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysGetShortPathName",
         crate::builtin::rexxutil::windows_files::file_name_spelling::<true>,
     ),
+    #[cfg(windows)]
+    util_run("SysIni", crate::builtin::rexxutil::windows_ini::ini),
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
     #[cfg(windows)]
     util_run(
@@ -337,6 +344,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysTextScreenSize",
         crate::builtin::rexxutil::windows_console::screen_size,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysToUnicode",
+        crate::builtin::rexxutil::windows_encoding::to_unicode,
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
