@@ -922,7 +922,7 @@ fn compile_settled(
             // spellings and reach one `exec_parse`. The `SAY` shape, with the
             // expression present only for `PARSE VALUE expr WITH` -- every
             // other source reads a variable, an argument list or a line, none
-            // of which is an `Expr` a register could hold. The template then
+            // of which is an expression a register could hold. The template then
             // compiles to its walk, with runs for the operands the stream
             // evaluates where `compiled_template` takes it, and otherwise to
             // the walk's opening alone.

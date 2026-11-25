@@ -1208,7 +1208,7 @@ impl Interp {
         };
         // **`message_term` directly rather than through `Interp::eval`**,
         // even for the form that is an ordinary expression: `eval`'s own
-        // `ExprKind::Message` arm turns a valueless send into 91.999, which
+        // `NodeKind::Message` arm turns a valueless send into 91.999, which
         // is the expression position's error and not this one's -- measured,
         // a whole-clause `.K~m` on a method ending in a bare `return` is
         // rc 0.
@@ -2252,7 +2252,9 @@ impl Interp {
                         values.push(None);
                     }
                     Some(expr) => {
-                        values.push(Some(self.eval_traced_argument(code, code.body.expr(*expr))?));
+                        values.push(Some(
+                            self.eval_traced_argument(code, code.body.expr(*expr))?,
+                        ));
                     }
                 }
             }
@@ -2540,7 +2542,7 @@ impl Interp {
     }
 
     /// `SIGL`, set at the point of every control transfer -- `SIGNAL`'s own
-    /// two `step` arms and `Interp::invoke_call` (`CALL`, and `ExprKind::
+    /// two `step` arms and `Interp::invoke_call` (`CALL`, and `NodeKind::
     /// Call` through `eval_call`, `eval.rs`) -- to `line`, always `self.
     /// current_clause_line` at the call site (`lib.rs`'s own doc comment on
     /// that field has why it is a field and not a parameter here).
@@ -3980,13 +3982,7 @@ impl Interp {
                 | InstructionKind::Arg(parse)
                 | InstructionKind::Pull(parse),
                 slot,
-            ) => body.expr(
-                parse
-                    .template
-                    .get(usize::from(slot) - 1)?
-                    .as_ref()?
-                    .value?,
-            ),
+            ) => body.expr(parse.template.get(usize::from(slot) - 1)?.as_ref()?.value?),
             (InstructionKind::If { condition, .. }, 0) => body.expr(*condition),
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.

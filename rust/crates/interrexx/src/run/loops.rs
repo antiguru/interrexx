@@ -2861,7 +2861,7 @@ impl Interp {
                 (value, novalue, None)
             }
             // A bare stem never raises `NOVALUE` on read (`eval_
-            // node`'s own `ExprKind::Stem` arm has the citation),
+            // node`'s own `NodeKind::Stem` arm has the citation),
             // so there is no fallible read to thread through.
             // The slot comes off the entry rather than from the
             // loop's kept `at`, which is the same source the write

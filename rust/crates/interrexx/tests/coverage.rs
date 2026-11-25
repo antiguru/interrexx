@@ -174,7 +174,9 @@ fn each_body<'a>(p: &'a Program, visit: &mut impl FnMut(&'a CodeBody)) {
 
 /// Every instruction of every body `each_body` visits.
 fn each_instruction<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Instruction)) {
-    each_body(p, &mut |body| body.instructions.iter().for_each(&mut *visit));
+    each_body(p, &mut |body| {
+        body.instructions.iter().for_each(&mut *visit)
+    });
 }
 
 /// Every expression node of every body `each_body` visits: the subtrees of a

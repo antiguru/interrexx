@@ -7,8 +7,8 @@ use interrexx_inventory::errors::{
 };
 
 use crate::ast::{ControlExpr, Controlled, Loop, LoopConditional, LoopKind};
-use crate::exprs::ExprId;
 use crate::expr::{Terminators, need_variable};
+use crate::exprs::ExprId;
 use crate::token::{Operator, ParseError, SymbolId, Tag, Token, TokenKind};
 
 use super::{

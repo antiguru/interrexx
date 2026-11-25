@@ -1,7 +1,7 @@
 # What promoting an `IF`'s condition has to keep.
 
 # 34.6, a comma list: the raiser is `eval_logical_list`'s own, per element,
-# rather than the IF keyword's 34.1. `native_shape` has no `ExprKind::Logical`
+# rather than the IF keyword's 34.1. `native_shape` has no `NodeKind::Logical`
 # arm, so the whole condition stays one `Op::EvalExpr` and no `Op::ConditionJump`
 # is emitted behind it.
 program

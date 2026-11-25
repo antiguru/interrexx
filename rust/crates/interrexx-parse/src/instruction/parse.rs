@@ -5,10 +5,10 @@ use interrexx_inventory::errors::{
 };
 
 use crate::ast::{Parse, ParseSource, ParseTrigger, TriggerKind};
-use crate::exprs::{ExprId, NodeKind};
 use crate::expr::{
     Terminators, need_variable, parse_paren_expression, parse_variable_or_message_term, symbol_kind,
 };
+use crate::exprs::{ExprId, NodeKind};
 use crate::token::{Operator, ParseError, SymbolClass, Tag, Token, TokenKind};
 
 use super::{
@@ -179,7 +179,9 @@ impl<'a> Inst<'a> {
                         SymbolClass::Constant => {
                             template.push(Some(ParseTrigger {
                                 kind: TriggerKind::Absolute,
-                                value: Some(self.ctx.push(symbol_kind(id, class), token.span.clone())),
+                                value: Some(
+                                    self.ctx.push(symbol_kind(id, class), token.span.clone()),
+                                ),
                                 targets: std::mem::take(&mut targets),
                             }));
                         }

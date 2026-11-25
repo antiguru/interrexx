@@ -27,13 +27,13 @@ mod token;
 
 pub use ast::{
     Access, Address, AddressIo, Annotate, Annotation, AnnotationTarget, AttributeDirective,
-    AttributeStyle, Body, Call, Catch, CatchCode, CatchCondition, ClassDirective,
-    ClassRef, CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue,
-    ControlExpr, Controlled, Directive, DirectiveKind, EndStyle, EndTarget, ExternalSpec, Forward, Guard, GuardOption, Instruction, InstructionKind, Loop, LoopConditional,
-    LoopKind, MethodDirective, NumericSetting, OptionsForm, OutputOption, PackageOption, Parse,
-    ParseSource, ParseTrigger, PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires,
-    Resource, RoutineDirective, Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef,
-    compound_parts,
+    AttributeStyle, Body, Call, Catch, CatchCode, CatchCondition, ClassDirective, ClassRef,
+    CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue, ControlExpr,
+    Controlled, Directive, DirectiveKind, EndStyle, EndTarget, ExternalSpec, Forward, Guard,
+    GuardOption, Instruction, InstructionKind, Loop, LoopConditional, LoopKind, MethodDirective,
+    NumericSetting, OptionsForm, OutputOption, PackageOption, Parse, ParseSource, ParseTrigger,
+    PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires, Resource, RoutineDirective,
+    Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef, compound_parts,
 };
 pub use convert::syntax_code;
 /// The parser's own nesting limit, exported because a caller has to be able
@@ -42,8 +42,8 @@ pub use convert::syntax_code;
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
 pub use exprs::{
-    Args, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node, NodeKind,
-    Target,
+    Args, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node,
+    NodeKind, Target,
 };
 pub use image::{program_from_image, program_from_static_image, program_image};
 pub use scanner::{ResourceBody, Scanned, scan};

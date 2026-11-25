@@ -822,10 +822,12 @@ fn check_body(
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
             InstructionKind::Select { case, .. } => case.as_ref().map(|e| root_of(body.expr(*e))),
-            InstructionKind::When { condition, .. } => match condition_root(body.expr(*condition)) {
-                Root::EvalExpr => None,
-                root => Some(root),
-            },
+            InstructionKind::When { condition, .. } => {
+                match condition_root(body.expr(*condition)) {
+                    Root::EvalExpr => None,
+                    root => Some(root),
+                }
+            }
             // A message instruction whose term and assigned value are native
             // ends in its send, and one whose are not in no `Root` at all.
             InstructionKind::Message { term, value } => {

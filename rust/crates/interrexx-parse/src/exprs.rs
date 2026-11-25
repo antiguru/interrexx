@@ -92,59 +92,76 @@ pub struct BytesRange {
 /// What a `Call` node calls.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum CallTarget {
+    /// `f(...)`. The id holds the upcased spelling, and this form can also
+    /// resolve to an internal label.
     Symbol(SymbolId),
+    /// `"f"(...)`. Never an internal label, never a builtin unless the literal
+    /// is already upper case.
     Literal(BytesRange),
 }
 
 /// A node's kind, with its payload and its child ids.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum NodeKind {
+    /// A quoted literal, carrying its decoded bytes: doubled quotes collapsed
+    /// and any `x` or `b` suffix already packed.
     Literal(BytesRange),
+    /// A symbol whose value is its own spelling, so never a variable: constant
+    /// and dummy symbols, which are treated alike.
     Constant(SymbolId),
+    /// A simple variable, no periods.
     Variable(SymbolId),
+    /// `stem.`, the id including the trailing period.
     Stem(SymbolId),
+    /// `stem.i.j`, the id holding the whole dotted name, which
+    /// [`crate::compound_parts`] splits.
     Compound(SymbolId),
+    /// `.name`, an environment symbol.
     DotVariable(SymbolId),
     /// `>name` or `<name`: the variable is named, never evaluated, so it is a
     /// leaf.
-    VariableReference {
-        symbol: SymbolId,
-        stem: bool,
-    },
-    ClassResolver {
-        namespace: SymbolId,
-        name: SymbolId,
-    },
+    VariableReference { symbol: SymbolId, stem: bool },
+    /// `ns:name` with no argument list, a namespace-qualified class lookup.
+    ClassResolver { namespace: SymbolId, name: SymbolId },
     /// An omitted argument or list item, a node so that its position has a
     /// place in the evaluation order.
     Omitted,
-    Prefix {
-        op: PrefixOp,
-        operand: ExprId,
-    },
+    /// A prefix operator applied to a message subterm.
+    Prefix { op: PrefixOp, operand: ExprId },
+    /// A dyadic operator. `Operator::Backslash` never appears here: `\` is
+    /// prefix-only, and one in a dyadic position is error 35.1.
     Binary {
         op: Operator,
         left: ExprId,
         right: ExprId,
     },
-    Call {
-        target: CallTarget,
-        args: EdgeRange,
-    },
+    /// `f(...)` or `"f"(...)`. An omitted argument is an `Omitted` child:
+    /// `f(,1)` passes two arguments of which the first is omitted. Trailing
+    /// omitted arguments are already dropped, so `f(1,)` holds one.
+    Call { target: CallTarget, args: EdgeRange },
+    /// `ns:name(...)`, a namespace-qualified call.
     QualifiedCall {
         namespace: SymbolId,
         name: SymbolId,
         args: EdgeRange,
     },
-    /// The children are the receiver, then the scope where `scoped`, then
-    /// the arguments, the order they are evaluated in.
+    /// `target~name`, `target~~name`, and `target[...]`. The children are
+    /// the receiver, then the scope where `scoped` (`target~name:super`),
+    /// then the arguments, the order they are evaluated in. `name` is
+    /// upcased for every spelling, `[]` for the bracket form; `cascade` is
+    /// true for `~~`, which discards the result and yields the receiver.
     Message {
         name: Selector,
         cascade: bool,
         scoped: bool,
         children: EdgeRange,
     },
+    /// A comma-separated list in parentheses, which builds an array. Its
+    /// trailing omitted items are kept: `(1,)~size` is 2.
     List(EdgeRange),
+    /// A comma-separated list in a conditional, which is a logical AND of its
+    /// parts, built for `IF`, `WHEN`, `GUARD`, `WHILE` and `UNTIL`. No part
+    /// is omitted.
     Logical(EdgeRange),
 }
 

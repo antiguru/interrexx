@@ -20,7 +20,7 @@ use interrexx_parse::{Args, ExprRef, ExprView, Operator, PrefixOp, SymbolId, Tar
 const MAX_EVAL_DEPTH: usize = 100_000;
 
 /// Which of the three bare-symbol reads an expression is, carried where the
-/// `ExprKind` itself is not.
+/// `NodeKind` itself is not.
 pub(crate) const LOGICAL_TRUE: ObjRef = ObjRef::inline_byte(b'1');
 /// See [`LOGICAL_TRUE`].
 pub(crate) const LOGICAL_FALSE: ObjRef = ObjRef::inline_byte(b'0');
@@ -38,12 +38,12 @@ enum ArithOperand {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum SymbolRead {
-    /// `ExprKind::Variable`: one slot, and the derived name when it is unset.
+    /// `NodeKind::Variable`: one slot, and the derived name when it is unset.
     Simple,
-    /// `ExprKind::Stem`: one slot too, but a miss allocates a real
+    /// `NodeKind::Stem`: one slot too, but a miss allocates a real
     /// `Body::Stem` there rather than deriving a name (`Interp::read_stem`).
     Stem,
-    /// `ExprKind::Compound`: a stem slot and a tail key resolved at the read
+    /// `NodeKind::Compound`: a stem slot and a tail key resolved at the read
     /// site, neither of which is the symbol's own slot -- which is why a
     /// compound is the kind a compiled read has no slot for.
     Compound,
@@ -53,7 +53,7 @@ pub(crate) enum SymbolRead {
     /// where). The read holds its key in `Interp::shared_key` for that
     /// write.
     CompoundShared,
-    /// `ExprKind::DotVariable`: an environment symbol, which traces `>E>`.
+    /// `NodeKind::DotVariable`: an environment symbol, which traces `>E>`.
     Environment,
 }
 
@@ -278,10 +278,10 @@ impl Interp {
             // `Interp::message_term` (`dispatch.rs`) emits it instead, at the
             // same point in the sequence this hook would have.
             ExprView::Message { .. } => {}
-            // A comma list (`ExprKind::Logical`) has no value line of its
+            // A comma list (`NodeKind::Logical`) has no value line of its
             // own -- each element is a full `eval` call in its own right
             // (`eval_logical_list`), and traces itself through this same
-            // function when it runs. Every other unimplemented `ExprKind`
+            // function when it runs. Every other unimplemented `NodeKind`
             // never reaches here at all (`eval_node`'s own loud fallback).
             _ => {}
         }
@@ -618,7 +618,7 @@ impl Interp {
         self.namespace_class(package, &namespace, &name)
     }
 
-    /// `ExprKind::List`: a fresh `.Array` whose slots are the list's
+    /// `NodeKind::List`: a fresh `.Array` whose slots are the list's
     /// positions.
     #[inline(never)]
     fn eval_list(&mut self, code: &Code<'_>, items: Args<'_>) -> Result<ObjRef, Failure> {
@@ -646,7 +646,7 @@ impl Interp {
         Ok(array)
     }
 
-    /// `ExprKind::Call`: the internal-function form, evaluated for its
+    /// `NodeKind::Call`: the internal-function form, evaluated for its
     /// value rather than run as a clause of its own.
     fn eval_call(
         &mut self,
@@ -1457,7 +1457,7 @@ impl Interp {
     /// both raise 34.901 on `"x"` even though the result is already
     /// decided by the first operand alone, and `say ('y' & 'x')` (both
     /// bad) reports `"y"`, the left operand's own text, not `"x"`. The
-    /// opposite rule from `ExprKind::Logical`'s comma list, below, which
+    /// opposite rule from `NodeKind::Logical`'s comma list, below, which
     /// does short-circuit -- both are implemented exactly as measured rather
     /// than made to agree with each other. The evaluation half of that rule
     /// belongs to whoever calls this: the check half is here, and it checks
@@ -1783,7 +1783,7 @@ impl Interp {
         }
     }
 
-    /// `ExprKind::Logical`: the comma-separated conditional list `IF a, b,
+    /// `NodeKind::Logical`: the comma-separated conditional list `IF a, b,
     /// c THEN` (and `WHEN`/`GUARD`/`WHILE`/`UNTIL`'s own versions)
     /// desugars to, "a logical AND of its parts" (`ast.rs`'s own doc
     /// comment).

@@ -711,7 +711,7 @@ fn logical_operators_raise_34_901_on_a_non_logical_operand() {
 fn logical_operators_do_not_short_circuit() {
     // say (0 & 'x') -> still raises on 'x', even though 0 already
     // decides the AND -- both operands are always evaluated and
-    // checked. Contrast with ExprKind::Logical's comma list, below.
+    // checked. Contrast with NodeKind::Logical's comma list, below.
     let mut interp = Interp::new();
     let and_failure = eval_source(&mut interp, b"say (0 & 'x')").unwrap_err();
     assert!(
@@ -737,14 +737,14 @@ fn a_logical_operator_reports_a_bad_left_operand() {
     assert_eq!(raised.additional, vec![b"y".to_vec()]);
 }
 
-// ---- ExprKind::Logical (the comma list) ----
+// ---- NodeKind::Logical (the comma list) ----
 
 /// Parses `if <cond> then nop`, extracts the `IF`'s own `condition`
-/// (an `ExprKind::Logical` for a comma list, an ordinary `Expr`
+/// (a `NodeKind::Logical` for a comma list, any other expression
 /// otherwise) and evaluates it directly, bypassing `run`. The only way
 /// to build one: comma-list syntax is gated to `IF`/`WHEN`/`GUARD`/
-/// `WHILE`/`UNTIL` in the parser (`ast.rs`'s own doc comment on
-/// `ExprKind::Logical`). `IF`/`WHEN`/`WHILE`/`UNTIL` all run since
+/// `WHILE`/`UNTIL` in the parser (`exprs.rs`'s own doc comment on
+/// `NodeKind::Logical`). `IF`/`WHEN`/`WHILE`/`UNTIL` all run since
 /// Tasks 10/11, so a real program can reach one through `run` too --
 /// this helper stays because it isolates `eval`'s own handling of the
 /// condition from `step`'s surrounding dispatch, not because `run`
@@ -999,7 +999,7 @@ fn a_parse_pattern_and_an_expression_share_the_eval_depth_limit() {
     assert_eq!(past.stdout, b"");
 }
 
-// ---- ExprKind::Call: the internal-function expression form ----
+// ---- NodeKind::Call: the internal-function expression form ----
 
 #[test]
 fn qualified_calls_resolve_after_arguments_in_the_driver_and_walker() {

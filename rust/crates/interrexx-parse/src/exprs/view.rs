@@ -82,10 +82,7 @@ pub struct Args<'a> {
 #[derive(Copy, Clone)]
 enum ArgsBacking<'a> {
     /// A node's children, where an `Omitted` node reads as omitted.
-    Edges {
-        exprs: &'a Exprs,
-        ids: &'a [ExprId],
-    },
+    Edges { exprs: &'a Exprs, ids: &'a [ExprId] },
     /// An instruction's own list, where `None` is omitted.
     Slots {
         exprs: &'a Exprs,

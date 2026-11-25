@@ -1,5 +1,5 @@
 //! The differential check: 4,240 generated expressions, evaluated under
-//! `build/bin/rexx` and again over the parsed tree.
+//! `build/bin/rexx` and again over the parsed expression.
 
 use interrexx_num::{CompareOp, DivOp, Number};
 
@@ -211,7 +211,8 @@ fn every_generated_expression_evaluates_to_what_the_interpreter_evaluated() {
             (false, Err(err)) => {
                 wrong.push(format!("{text:?}: failed to parse: {err:?}"));
             }
-            (false, Ok((exprs, root, symbols))) => match (verdict, eval(exprs.get(root), &symbols)) {
+            (false, Ok((exprs, root, symbols))) => match (verdict, eval(exprs.get(root), &symbols))
+            {
                 ("OK", Ok(got)) => {
                     checked_value += 1;
                     if got != expected {

@@ -5,8 +5,8 @@ use std::cell::RefCell;
 
 use interrexx_inventory::errors::{E35_912, E35_918, E35_929};
 
-use crate::exprs::{ExprId, ExprView, Exprs};
 use crate::clause::split_clauses;
+use crate::exprs::{ExprId, ExprView, Exprs};
 use crate::selector::SelectorTable;
 use crate::token::{ParseCtx, ParseError, SymbolTable, TokenCursor};
 use crate::{ProgramSource, SourceKind, scan};
@@ -30,10 +30,7 @@ pub(super) enum Entry {
 /// table its `SymbolId`s belong to. A parse that succeeds leaves an arena
 /// whose one root is the answer, which is checked here, so every grammar
 /// test also checks that each discarded trial was rewound.
-pub(super) fn parse(
-    text: &str,
-    entry: Entry,
-) -> Result<(Exprs, ExprId, SymbolTable), ParseError> {
+pub(super) fn parse(text: &str, entry: Entry) -> Result<(Exprs, ExprId, SymbolTable), ParseError> {
     let source = ProgramSource::new(text.as_bytes().to_vec(), SourceKind::Program);
     let scanned = scan(&source).expect("the test input scans");
     let clauses = split_clauses(&scanned.tokens).expect("the test input splits");
@@ -69,7 +66,11 @@ pub(super) fn parse(
     };
     let root = result?;
     let exprs = exprs.into_inner();
-    assert_eq!(exprs.check([root]), Ok(()), "{text:?} leaves a consistent arena");
+    assert_eq!(
+        exprs.check([root]),
+        Ok(()),
+        "{text:?} leaves a consistent arena"
+    );
     Ok((exprs, root, scanned.symbols))
 }
 

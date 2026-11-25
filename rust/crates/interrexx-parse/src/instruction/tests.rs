@@ -4,9 +4,9 @@
 use std::cell::RefCell;
 
 use crate::ast::{CodeBody, Instruction, InstructionKind};
-use crate::exprs::{ExprId, ExprView, Exprs};
 use crate::block::translate_block;
 use crate::clause::{ClauseCursor, split_clauses};
+use crate::exprs::{ExprId, ExprView, Exprs};
 use crate::selector::SelectorTable;
 use crate::token::{Keywords, ParseCtx, ParseError, SymbolTable};
 use crate::{ProgramSource, SourceKind, scan};

@@ -19,7 +19,7 @@ if 0 then options "GATE_VARIANTS"
 if 0 then signal value "AFTER_VALUE"
 after_value:
 
-/* ExprKind::QualifiedCall, ExprKind::ClassResolver, Call::Qualified */
+/* NodeKind::QualifiedCall, NodeKind::ClassResolver, Call::Qualified */
 if 0 then x = gate_ns:helper(1)
 if 0 then y = gate_ns:someclass
 if 0 then call gate_ns:helper 2
@@ -27,7 +27,7 @@ if 0 then call gate_ns:helper 2
 /* Call::Trap */
 if 0 then call on user gatecond name after_value
 
-/* ExprKind::VariableReference */
+/* NodeKind::VariableReference */
 if 0 then z = >refvar
 
 /* LoopKind::With */

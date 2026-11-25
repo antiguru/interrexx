@@ -745,7 +745,10 @@ impl Plan {
                 self.note(body.expr(controlled.initial), symbols);
                 self.note_opt(controlled.to.as_ref().map(|e| body.expr(*e)), symbols);
                 self.note_opt(controlled.by.as_ref().map(|e| body.expr(*e)), symbols);
-                self.note_opt(controlled.for_count.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(
+                    controlled.for_count.as_ref().map(|e| body.expr(*e)),
+                    symbols,
+                );
             }
             LoopKind::Over {
                 control,
@@ -780,13 +783,15 @@ impl Plan {
     /// A `PARSE`/`ARG`/`PULL` instruction's own names: `PARSE VAR name`'s
     /// source variable (read from, so bound the same way any read is), any
     /// expression a `VALUE` source or a trigger's pattern carries, and
-    /// every template target -- already `Expr`s (`ast.rs`'s own doc: a
+    /// every template target -- already expressions (`ast.rs`'s own doc: a
     /// dropped `.` placeholder aside, a target is a `Variable`/`Stem`/
     /// `Compound` node), so `note` alone is enough for them.
     fn note_parse(&mut self, body: &CodeBody, parse: &Parse, symbols: &SymbolTable) {
         match &parse.source {
             ParseSource::Var(id) => self.bind(*id, symbols.name(*id)),
-            ParseSource::Value(expr) => self.note_opt(expr.as_ref().map(|e| body.expr(*e)), symbols),
+            ParseSource::Value(expr) => {
+                self.note_opt(expr.as_ref().map(|e| body.expr(*e)), symbols)
+            }
             ParseSource::Arg
             | ParseSource::LineIn
             | ParseSource::Pull
@@ -931,7 +936,7 @@ impl Plan {
     }
 
     /// `note` for an optional expression: an omitted argument, a `Say` with
-    /// nothing after it, and every other `Option<Expr>` field this module
+    /// nothing after it, and every other `Option<ExprId>` field this module
     /// walks share this one shape rather than each writing its own `if let`.
     fn note_opt(&mut self, expr: Option<ExprRef<'_>>, symbols: &SymbolTable) {
         if let Some(expr) = expr {
@@ -940,7 +945,7 @@ impl Plan {
     }
 
     /// `note` for an argument list, an omitted position skipped -- the
-    /// `Vec<Option<Expr>>` shape a call's arguments, a list's elements and a
+    /// `Args` shape a call's arguments, a list's elements and a
     /// `PARSE` template's targets all share.
     fn note_args(&mut self, args: Args<'_>, symbols: &SymbolTable) {
         for arg in args.iter().flatten() {

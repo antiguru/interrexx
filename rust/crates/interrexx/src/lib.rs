@@ -4843,7 +4843,7 @@ fn execute_kept(
     };
     let mut exit_code = match result {
         // `Failure::Exited` is not a failure -- it is `EXIT` (or falling off
-        // the routine's own end) reached through `ExprKind::Call`'s
+        // the routine's own end) reached through `NodeKind::Call`'s
         // expression form, tunnelled here through `Err`/`?` only because
         // `eval`'s own return type has no `Flow` to carry it through instead
         // (`Failure::Exited`'s own doc, `error.rs`, has the full argument).

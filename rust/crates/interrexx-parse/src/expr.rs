@@ -1028,7 +1028,7 @@ impl<'a, 'c> Parser<'a, 'c> {
                 self.advance();
                 // The parenthesised expression is returned unchanged, so
                 // there is no node for the parentheses and the span still
-                // covers only what built the node. See `ast`'s module docs.
+                // covers only what built the node.
                 Ok(Some(inner))
             }
             TokenKind::Symbol { id, class } => {
@@ -1100,11 +1100,7 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// `ns:name`, either a qualified call or a class lookup.
-    fn qualified_symbol(
-        &mut self,
-        namespace: SymbolId,
-        from: usize,
-    ) -> Result<ExprId, ParseError> {
+    fn qualified_symbol(&mut self, namespace: SymbolId, from: usize) -> Result<ExprId, ParseError> {
         let Some(token) = self.peek() else {
             return Err(self.raise(E20_923, []));
         };

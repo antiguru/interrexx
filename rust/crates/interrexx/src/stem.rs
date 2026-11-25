@@ -224,7 +224,7 @@ impl Interp {
     /// Reads a variable by name alone, the same slot machinery `read` uses
     /// but with no `SymbolId` to try first: a tail piece from
     /// `compound_parts` is a borrowed `&str`, not a token, so there is no id
-    /// for it (`ExprKind::Compound`'s doc comment on `ast.rs`). Unset
+    /// for it (`NodeKind::Compound`'s doc comment in `exprs.rs`). Unset
     /// derives the name's own (already upcased) spelling, same as any
     /// uninitialised simple-variable read.
     pub(crate) fn read_by_name(&mut self, name: &[u8]) -> ObjRef {
@@ -246,7 +246,7 @@ impl Interp {
         }
     }
 
-    /// Reads a bare stem (`ExprKind::Stem`): the auto-vivification rule, which
+    /// Reads a bare stem (`NodeKind::Stem`): the auto-vivification rule, which
     /// fires on any miss to the variable dictionary, reads included.
     pub(crate) fn read_stem(&mut self, name: &[u8]) -> ObjRef {
         self.read_stem_at(name, None)
@@ -617,7 +617,7 @@ impl Interp {
     }
 
     /// [`Interp::stem_assign`] with the stem's slot already in hand, which is
-    /// what an `ExprKind::Stem` assignment target carries: the symbol whose
+    /// what a `NodeKind::Stem` assignment target carries: the symbol whose
     /// spelling `stem_name` is was bound to that slot by `Plan::bind`.
     /// [`Interp::stem_slot`] is what `at` means here.
     pub(crate) fn stem_assign_at(&mut self, stem_name: &[u8], at: Option<usize>, value: ObjRef) {
@@ -992,7 +992,7 @@ mod tests {
     /// `Interp::run` does inline, but stopping short of calling
     /// `run_activation` -- these tests call stem functions directly rather
     /// than through the instruction loop, which does not yet dispatch
-    /// `ExprKind::Stem`/`Compound` at all (that wiring is a later task's).
+    /// `NodeKind::Stem`/`Compound` at all (that wiring is a later task's).
     /// Never popped: the whole `Interp` drops at the end of the test, and
     /// nothing here needs the frame released early.
     fn activate(interp: &mut Interp, program: Program) -> Rc<Program> {

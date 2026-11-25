@@ -862,7 +862,10 @@ fn an_operator_assignment_reads_its_target_before_its_value() {
         .iter()
         .map(|node| tag(node.kind()))
         .collect();
-    assert_eq!(order, ["Variable", "Variable", "Constant", "Binary", "Binary"]);
+    assert_eq!(
+        order,
+        ["Variable", "Variable", "Constant", "Binary", "Binary"]
+    );
     assert!(target.index() < exprs.node(*value).first().index());
     assert_eq!(exprs.shape(*value, &program.symbols), "(+ A (* B 2))");
 }

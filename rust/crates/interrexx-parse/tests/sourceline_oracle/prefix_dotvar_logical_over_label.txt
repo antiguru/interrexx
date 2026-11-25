@@ -1,7 +1,7 @@
 count 20
 /* Closes the criterion-1 coverage gap analysis's Program A: InstructionKind
    ::Loop (the LOOP keyword, distinct from DO) and ::Label (a bare label,
-   traced as a no-op); ExprKind::DotVariable (.nil) and ::Logical (a
+   traced as a no-op); NodeKind::DotVariable (.nil) and ::Logical (a
    comma-list condition, `if a, b then`, evaluated as an AND of its parts);
    LoopKind::Over on a non-stem target (DO OVER on a stem is the excluded
    traversal-order deviation and could never pass -- a string or number
