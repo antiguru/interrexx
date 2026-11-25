@@ -1,7 +1,7 @@
 //! The expression arena of one code body: its nodes in post-order, with the
 //! child lists and literal bytes in side vectors.
 //!
-//! An [`ExprId`] names a node of the arena. The arena satisfies four
+//! An [`ExprId`] names a node of the arena. The arena satisfies these
 //! invariants, which [`Exprs::check`] verifies:
 //!
 //! 1. **Children before parents.** Every child's id is less than its
@@ -229,7 +229,8 @@ pub enum Inconsistent {
     /// A node is reached by parents and roots other than once.
     Reached { node: usize, times: u32 },
     /// A child's `parent` or `position` disagrees with its parent's child
-    /// list, or a root has a parent.
+    /// list, or a root has a parent. `node` is the child's index, or the
+    /// root's, never the parent's.
     Link { node: usize },
 }
 
@@ -310,7 +311,7 @@ impl Exprs {
         &self.bytes[range.start as usize..range.end as usize]
     }
 
-    /// Checks the four invariants, with `roots` the roots of the body's
+    /// Checks the invariants, with `roots` the roots of the body's
     /// expression slots. Reads every node, edge and byte range through
     /// bounds-checked lookups, so any arena answers rather than panicking,
     /// and takes time linear in the nodes plus the edges.
@@ -447,6 +448,10 @@ impl Exprs {
                     "a node's children tile the nodes before it"
                 );
             }
+            debug_assert!(
+                node.parent.is_none(),
+                "a node is adopted by one parent only"
+            );
             node.parent = Some(id);
             node.position = offset(position, "child positions");
             if !matches!(node.kind, NodeKind::Omitted) {

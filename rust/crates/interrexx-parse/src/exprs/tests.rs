@@ -633,3 +633,25 @@ fn a_copy_of_an_operand_is_a_root() {
     assert_eq!(exprs.node(copy).span(), 4..7);
     assert_eq!(exprs.check([sum, copy]), Ok(()));
 }
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "adopted by one parent only")]
+fn a_node_is_adopted_by_one_parent_only() {
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: one,
+        },
+        0..1,
+    );
+    exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: one,
+        },
+        0..1,
+    );
+}
