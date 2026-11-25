@@ -249,12 +249,25 @@ const CONCURRENTLY_TRACED: &[&str] = &["lang/directive_options_trace_reply.rex"]
 /// order, which here is insertion order and on the oracle its storage order.
 const HASH_ORDERED_STDOUT: &[&str] = &["lang/package_writes.rex"];
 
-/// The `stdout` comparison one corpus entry gets.
+/// Corpus programs whose `stdout` is compared with the text of each trace
+/// announcement cut, as `stderr` is: a trace line that its destination fails
+/// to take is written to standard output, and an announcement's text is not
+/// specified (`r[instr.trace.tags]`).
+const TRACED_STDOUT: &[&str] = &["lang/trace_output_invalid_destination.rex"];
+
+/// The `stdout` comparison one corpus entry gets, and no entry may ask for two.
 fn stdout_mode(rel_path: &str) -> StdoutComparison {
-    if HASH_ORDERED_STDOUT.contains(&rel_path) {
-        StdoutComparison::Multiset
-    } else {
-        StdoutComparison::Raw
+    match (
+        HASH_ORDERED_STDOUT.contains(&rel_path),
+        TRACED_STDOUT.contains(&rel_path),
+    ) {
+        (true, true) => panic!(
+            "{rel_path} is on both HASH_ORDERED_STDOUT and TRACED_STDOUT, which ask for two \
+             comparisons of the same channel"
+        ),
+        (true, false) => StdoutComparison::Multiset,
+        (false, true) => StdoutComparison::TraceCut,
+        (false, false) => StdoutComparison::Raw,
     }
 }
 
@@ -274,8 +287,9 @@ fn stderr_mode(rel_path: &str) -> StderrComparison {
     }
 }
 
-/// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`] and
-/// [`HASH_ORDERED_STDOUT`] is a line the corpus list actually names.
+/// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`],
+/// [`HASH_ORDERED_STDOUT`] and [`TRACED_STDOUT`] is a line the corpus list
+/// actually names.
 #[test]
 fn every_opted_in_comparison_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -288,6 +302,7 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
         (RAW_STDERR_COMPARISON, "raw"),
         (CONCURRENTLY_TRACED, "multiset"),
         (HASH_ORDERED_STDOUT, "multiset stdout"),
+        (TRACED_STDOUT, "trace-cut stdout"),
     ] {
         for listed in list {
             assert!(
@@ -300,7 +315,8 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
     }
 }
 
-/// [`stdout_mode`] answers the multiset mode for exactly the listed programs.
+/// [`stdout_mode`] answers the multiset mode and the trace-cut mode for
+/// exactly the programs of their lists.
 #[test]
 fn the_multiset_stdout_mode_is_selected_for_exactly_the_listed_programs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -314,14 +330,23 @@ fn the_multiset_stdout_mode_is_selected_for_exactly_the_listed_programs() {
         "the list is empty or is the whole subset, so this control separates nothing"
     );
     for entry in &subset {
-        let listed = HASH_ORDERED_STDOUT.contains(&entry.as_str());
         let mode = stdout_mode(entry);
-        assert_eq!(
-            mode == StdoutComparison::Multiset,
-            listed,
-            "{entry} is compared as {mode:?} and is {} on HASH_ORDERED_STDOUT",
-            if listed { "" } else { "not" }
-        );
+        for (list, name, selected) in [
+            (
+                HASH_ORDERED_STDOUT,
+                "HASH_ORDERED_STDOUT",
+                StdoutComparison::Multiset,
+            ),
+            (TRACED_STDOUT, "TRACED_STDOUT", StdoutComparison::TraceCut),
+        ] {
+            let listed = list.contains(&entry.as_str());
+            assert_eq!(
+                mode == selected,
+                listed,
+                "{entry} is compared as {mode:?} and is {} on {name}",
+                if listed { "" } else { "not" }
+            );
+        }
     }
 }
 
