@@ -197,7 +197,9 @@ or an instance of a subclass of `Array`, whose items joined by a newline are
 its string value, or a `MutableBuffer` or an instance of a subclass of it,
 whatever `MAKESTRING` such a subclass has. An instance of a subclass of `Stem`
 has the one its default value would have as such an answer, or its name when
-it has no default value, whatever `MAKESTRING` the subclass has. An instance of
+it has no default value, whatever `MAKESTRING` the subclass has; where following
+default values from one such instance to the next comes back to one already
+passed, the answer has none. An instance of
 `File`, `DateTime`, `TimeSpan` or `TraceObject`, an instance of any other class
 that a program defines, other than a subclass of `Queue`, and a class object
 have the one that the object's `REQUEST('STRING')` answers. An instance of any other

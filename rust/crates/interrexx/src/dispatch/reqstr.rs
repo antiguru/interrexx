@@ -3,6 +3,7 @@
 
 use super::{Body, Decoded, Failure, Interp, ObjRef, Primitive, Raised};
 use crate::value::Referent;
+use rustc_hash::FxHashSet;
 
 /// What the protocol's conversion limbs answered, before anything is built.
 enum RequiredString {
@@ -209,22 +210,39 @@ impl Interp {
     /// class defined in Rexx, other than a `Queue`, and for a class object,
     /// what its `REQUEST('STRING')` answers; else `None`, an answer with no
     /// string value (`r[conv.string.answer]`).
+    ///
+    /// The default values are followed in a loop rather than by recursion,
+    /// so a chain of any length does not grow the native stack, and a chain
+    /// that comes back to an instance it already passed is an answer with no
+    /// string value (`r[conv.string.answer]`).
     pub(crate) fn string_answer_conversion(
         &mut self,
-        answered: ObjRef,
+        mut answered: ObjRef,
     ) -> Result<Option<Vec<u8>>, Failure> {
-        if let Some(text) = self.primitive_answer_text(answered)? {
-            return Ok(Some(text));
-        }
-        if let Some(store) = self.stem_subclass_store(answered) {
+        // Only a default value that is itself a `Stem` subclass instance
+        // needs the set, so the common answer allocates none.
+        let mut passed: Option<FxHashSet<ObjRef>> = None;
+        loop {
+            if let Some(text) = self.primitive_answer_text(answered)? {
+                return Ok(Some(text));
+            }
+            let Some(store) = self.stem_subclass_store(answered) else {
+                break;
+            };
             let default = match self.heap.get(store).map(|object| &object.body) {
                 Some(Body::Stem { default, .. }) => *default,
                 _ => None,
             };
-            return match default {
-                Some(default) => self.string_answer_conversion(default),
-                None => Ok(Some(self.to_text(store).into_owned())),
+            let Some(default) = default else {
+                return Ok(Some(self.to_text(store).into_owned()));
             };
+            if !passed
+                .get_or_insert_with(FxHashSet::default)
+                .insert(answered)
+            {
+                return Ok(None);
+            }
+            answered = default;
         }
         // A `Stem`, a `VariableReference` or a `StackFrame` has no string
         // value here, whatever its `REQUEST` answers, and neither has a
