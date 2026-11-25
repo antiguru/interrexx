@@ -4524,6 +4524,10 @@ fn switch_mode_refused(message: &str) -> Outcome {
         failure_level_roots: 0,
         chunks_refused: 0,
         sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
     }
 }
 
