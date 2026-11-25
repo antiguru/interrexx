@@ -1,7 +1,7 @@
 name: Windows port checks
 on:
   pull_request:
-    branches: [main, windows-rexxutil-printers]
+    branches: [main]
     paths:
       - .github/workflows/windows-check.yml
       - .gitmodules
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-cargo-check
+  group: ${{ github.event.pull_request.number == 1073 && 'windows-rexxutil-native-proof' || 'windows-cargo-check' }}
   cancel-in-progress: false
 
 defaults:
