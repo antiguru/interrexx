@@ -57,15 +57,13 @@ pub(crate) fn set_default(
             // A description may come back from this package with driver and
             // port fields. Try the complete name first, since it may contain commas.
             let status = host::set_default_printer(description);
-            if status == ERROR_INVALID_PRINTER_NAME {
-                if let Some((name, _)) = description
+            if status == ERROR_INVALID_PRINTER_NAME
+                && let Some((name, _)) = description
                     .rsplit_once(',')
                     .and_then(|(left, _)| left.rsplit_once(','))
-                {
-                    if !name.is_empty() {
-                        return host::set_default_printer(name);
-                    }
-                }
+                && !name.is_empty()
+            {
+                return host::set_default_printer(name);
             }
             status
         });

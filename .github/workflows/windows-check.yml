@@ -104,6 +104,12 @@ jobs:
           sdk\bin\sdk-smoke.exe || exit /b 1
           target\debug\rxapi-smoke.exe || exit /b 1
           del sdk\bin\sdk-smoke.exe
+          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe || exit /b 1
+          target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-rexxutil-console.rex"
+          if errorlevel 1 (
+            echo RexxUtil console fixture failed at check %ERRORLEVEL%
+            exit /b 1
+          )
 
       - uses: actions/upload-artifact@v7
         with:
@@ -195,11 +201,6 @@ jobs:
             Remove-Item -LiteralPath $probe
             Remove-Item -LiteralPath $caseRoot -Recurse
           }
-
-      - name: Measure Windows RexxUtil behavior with ooRexx 5.2.0
-        if: ${{ !cancelled() }}
-        shell: pwsh
-        run: ../ci/windows-rexxutil-oracle.ps1
 
       - name: Verify Windows file timestamps across daylight saving time
         shell: pwsh

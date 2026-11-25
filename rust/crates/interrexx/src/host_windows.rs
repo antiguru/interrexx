@@ -820,20 +820,20 @@ pub(crate) fn wait_named_pipe(
     stopped: &std::sync::atomic::AtomicBool,
 ) -> u32 {
     use std::sync::atomic::Ordering;
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
     use windows_sys::Win32::{
         Foundation::{ERROR_OPERATION_ABORTED, ERROR_SEM_TIMEOUT, GetLastError},
         System::Pipes::WaitNamedPipeW,
     };
 
-    let end = (timeout > 0).then(|| Instant::now() + Duration::from_millis(timeout as u64));
+    let end = (timeout > 0).then(|| crate::sync::now() + Duration::from_millis(timeout as u64));
     loop {
         if stopped.load(Ordering::Relaxed) {
             return ERROR_OPERATION_ABORTED;
         }
         let slice = match end {
             Some(end) => {
-                let remaining = end.saturating_duration_since(Instant::now());
+                let remaining = end.saturating_duration_since(crate::sync::now());
                 u32::try_from(remaining.as_millis().clamp(1, 100)).unwrap_or(100)
             }
             None if timeout < 0 => 100,
@@ -846,7 +846,9 @@ pub(crate) fn wait_named_pipe(
             }
             GetLastError()
         };
-        if code != ERROR_SEM_TIMEOUT || timeout == 0 || end.is_some_and(|end| Instant::now() >= end)
+        if code != ERROR_SEM_TIMEOUT
+            || timeout == 0
+            || end.is_some_and(|end| crate::sync::now() >= end)
         {
             return code;
         }

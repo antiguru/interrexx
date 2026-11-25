@@ -184,7 +184,7 @@ fn find_executable(interp: &Interp, name: &str) -> Option<PathBuf> {
     if name.components().count() != 1 || name.has_root() {
         let qualified = qualify(&name);
         let qualified = crate::paths::os_path(&qualified);
-        return qualified.is_file().then(|| qualified.to_path_buf());
+        return qualified.is_absolute().then(|| qualified.to_path_buf());
     }
     let paths = [
         std::env::current_exe()
