@@ -466,7 +466,23 @@ or SIGNAL OFF for the condition drops them. A CALL ON or SIGNAL ON for the
 condition answers them at the end of that instruction, with the trap that the
 instruction set. When the routine returns, the CALL trap answers them by
 calling the routine again. A SIGNAL trap is never `DELAY`.
-The held conditions are [Deviation 75](r:cond.traps.deviation.75).
+Differences in the delivery of held conditions are
+[Deviation 75](r:cond.traps.deviation.75).
+
+```rexx
+call on notready name report
+total = readValue('first') + readValue('second')
+say 'total' total
+exit
+readValue: raise notready description (arg(1)) return 1
+report: say condition('c') condition('d'); return
+```
+
+```output
+NOTREADY first
+NOTREADY second
+total 2
+```
 
 ```rexx
 address system
@@ -691,7 +707,10 @@ routine that the handler calls, is held and answered as [the delay
 rule](r:cond.traps.delay) says: the handler is called again when it returns,
 or at once when a CALL ON or a SIGNAL ON for the condition runs, and several
 such conditions are answered one after the other in the order raised. ooRexx
-loses such a condition, and crashes in some programs.
+can resume the caller for another clause before it delivers a held USER
+condition, and issuing SIGNAL ON inside a handler can leave a held condition
+undelivered. An explicit ERROR raised again by its own handler can call the
+ooRexx handler again.
 
 ```rexx
 call on user foo name h
