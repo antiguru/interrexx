@@ -156,7 +156,6 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysFileSystemType",
         crate::builtin::rexxutil::windows_files::file_system_type,
     ),
-    #[cfg(unix)]
     util_run("SysFileTree", crate::builtin::rexxutil::tree::file_tree),
     #[cfg(unix)]
     util_run("SysFork", crate::builtin::rexxutil::process::fork),
