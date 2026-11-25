@@ -179,8 +179,8 @@
 Unix-like system: they work with drives, volumes, printers, the console
 screen, code pages and the attributes of files on Windows file systems.
 interrexx does not provide them on a Unix-like system, and this page lists
-them and says what a call of one of them does there. Support for them on
-Windows is tracked in issue #215.</p>
+them and says what a call of one of them does there. The Windows port is
+tracked in issue #215.</p>
 <p>The Windows-only functions are these:</p>
 <ul>
 <li><code>RxMessageBox</code>, <code>RxWinExec</code>, <code>SysBootDrive</code>, <code>SysDriveInfo</code>, <code>SysDriveMap</code>,
@@ -244,6 +244,56 @@ e: if arg(2, 'E') then return condition('o')~code
 88.922
 0 0 0 0
 </code></pre>
+<h2 id="windows-system-paths"><a class="header" href="#windows-system-paths">Windows system paths</a></h2>
+<div class="rule" id="r-util.windows.system-paths"><a href="#r-util.windows.system-paths">[util.windows.system-paths]</a></div>
+<p>On Windows, <code>SysBootDrive()</code> answers the drive letter and colon of the
+Windows installation, such as <code>C:</code>. <code>SysSystemDirectory()</code> answers the full
+path of the Windows system directory. Both routines take zero arguments
+and answer the null string if the system query fails.</p>
+<h2 id="windows-volume-information"><a class="header" href="#windows-volume-information">Windows volume information</a></h2>
+<div class="rule" id="r-util.windows.volume"><a href="#r-util.windows.volume">[util.windows.volume]</a></div>
+<p>On Windows, <code>SysDriveInfo([drive])</code>, <code>SysFileSystemType([drive])</code> and
+<code>SysVolumeLabel([drive])</code> query a drive letter or UNC share. With the argument
+omitted they query the drive of the interpreter's current directory.
+<code>SysDriveInfo</code> answers the drive identifier, unused bytes, total bytes and
+volume label separated by spaces. The other two routines answer the filesystem
+name and volume label respectively. They answer the null string if the drive
+cannot be queried.</p>
+<h2 id="windows-version"><a class="header" href="#windows-version">Windows version</a></h2>
+<div class="rule" id="r-util.windows.version"><a href="#r-util.windows.version">[util.windows.version]</a></div>
+<p><code>SysWinVer()</code> and <code>SysVersion()</code> take no arguments and answer the same operating
+system version information on Windows. The result starts with <code>Windows</code>, followed
+by the operating system version when available.</p>
+<h2 id="windows-drive-map"><a class="header" href="#windows-drive-map">Windows drive map</a></h2>
+<div class="rule" id="r-util.windows.drive-map"><a href="#r-util.windows.drive-map">[util.windows.drive-map]</a></div>
+<p><code>SysDriveMap([drive], [option])</code> lists drive letters from the given letter
+through <code>Z:</code>, separated by spaces and in ascending order. With both
+arguments omitted it lists the assigned drives starting at <code>C:</code>. <code>USED</code>
+lists assigned drives and <code>FREE</code> lists unassigned letters. <code>LOCAL</code>,
+<code>REMOTE</code>, <code>REMOVABLE</code>, <code>CDROM</code> and <code>RAMDISK</code> restrict the list to drives
+of the chosen type.</p>
+<h2 id="windows-file-encryption"><a class="header" href="#windows-file-encryption">Windows file encryption</a></h2>
+<div class="rule" id="r-util.windows.efs"><a href="#r-util.windows.efs">[util.windows.efs]</a></div>
+<p><code>SysWinEncryptFile(filename)</code> and <code>SysWinDecryptFile(filename)</code> set and
+clear Windows filesystem encryption for the named file. Each takes a file
+name and answers <code>0</code> on success or a Windows system error code on failure.</p>
+<h2 id="windows-console-size"><a class="header" href="#windows-console-size">Windows console size</a></h2>
+<div class="rule" id="r-util.windows.console-size"><a href="#r-util.windows.console-size">[util.windows.console-size]</a></div>
+<p><code>SysTextScreenSize()</code> or <code>SysTextScreenSize('BUFFERSIZE')</code> answers the
+console's buffer size as rows and columns. <code>WINDOWRECT</code> answers the visible
+rectangle as top, left, bottom and right. <code>MAXWINDOWSIZE</code> answers the maximum
+window size as rows and columns for the current buffer and display. A
+query without a console output buffer answers zero for each field.
+<code>BUFFERSIZE</code> with rows and columns, or <code>WINDOWRECT</code> with all four coordinates,
+changes that property and answers <code>0</code> on success or a Windows system error
+code on failure.</p>
+<h2 id="windows-file-name-spellings"><a class="header" href="#windows-file-name-spellings">Windows file name spellings</a></h2>
+<div class="rule" id="r-util.windows.file-name-spelling"><a href="#r-util.windows.file-name-spelling">[util.windows.file-name-spelling]</a></div>
+<p><code>SysGetLongPathName(path)</code> and <code>SysGetShortPathName(path)</code> answer the long
+or short Windows spelling of an existing file or directory. A relative name
+is interpreted against the interpreter's current directory and answered as a
+relative name. An absolute name is answered as an absolute name. A missing
+entry or a failed Windows name query answers the null string.</p>
 
                     </main>
 
