@@ -625,6 +625,15 @@ say (length(SockGetHostName()) &gt; 0)
 0
 1
 </code></pre>
+<h2 id="windows-loopback-sockets"><a class="header" href="#windows-loopback-sockets">Windows loopback sockets</a></h2>
+<div class="rule" id="r-rxsock.sockets.windows-loopback"><a href="#r-rxsock.sockets.windows-loopback">[rxsock.sockets.windows-loopback]</a></div>
+<p>The <code>rxsock</code> library on Windows uses the Winsock identifiers returned by
+<code>SockSocket</code> and <code>SockAccept</code>. On IPv4 loopback a program can connect and accept TCP sockets, send and receive bytes
+over TCP and UDP, and wait for readiness with <code>SockSelect</code>. A waiting accept
+or receive lets the interpreter run another activity that can supply the
+connection or data. The exception set of <code>SockSelect</code> reports TCP
+out-of-band data. A receive on a nonblocking socket without data answers
+<code>-1</code> with <code>EWOULDBLOCK</code>.</p>
 
                     </main>
 
