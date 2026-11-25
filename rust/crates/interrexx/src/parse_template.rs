@@ -16,7 +16,7 @@ use crate::error::{Failure, Raised};
 use crate::version::{PLATFORM, VERSION};
 use crate::{Code, Interp, Loud};
 use interrexx_core::{Bytes, Decoded, InlineText, ObjRef};
-use interrexx_parse::{ExprView, Parse, ParseSource, ParseTrigger, TriggerKind};
+use interrexx_parse::{Parse, ParseSource, ParseTrigger, TriggerKind};
 
 /// The two bytes `PARSE` treats as whitespace when carving a section into
 /// words: blank and tab, and nothing else.
@@ -686,10 +686,11 @@ impl Interp {
                 self.piece_value(&source, piece)
             };
             self.roots.activity_mut().push_temp(value);
-            let bound = match code.body.expr(*target).kind() {
-                ExprView::Variable(id) => code.slot_for(id).map(|slot| (id, slot)),
-                _ => None,
-            };
+            let bound = code
+                .body
+                .expr(*target)
+                .variable()
+                .and_then(|id| code.slot_for(id).map(|slot| (id, slot)));
             match bound {
                 Some((id, slot)) => self.assign_bound_variable(code, id, slot, value, None, indent),
                 None => {
@@ -991,10 +992,11 @@ impl Interp {
                     // changed: of the `slot_of` calls that program makes,
                     // 2,800,003 were `PARSE` targets and every one of them
                     // resolved to the slot `by_symbol` already held.
-                    let bound = match code.body.expr(*target).kind() {
-                        ExprView::Variable(id) => code.slot_for(id).map(|slot| (id, slot)),
-                        _ => None,
-                    };
+                    let bound = code
+                        .body
+                        .expr(*target)
+                        .variable()
+                        .and_then(|id| code.slot_for(id).map(|slot| (id, slot)));
                     // One copy of the piece for whichever of the two lines
                     // below will print it, taken only where one of them will
                     // -- the parse string itself may not be borrowed across

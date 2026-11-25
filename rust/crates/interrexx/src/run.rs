@@ -27,9 +27,9 @@ use interrexx_core::{
 };
 use interrexx_num::{ArithError, CompareOp, Form, Number, SettingsError, compare_decoded};
 use interrexx_parse::{
-    Args, CodeBody, ConditionTrap, ControlExpr, DirectiveKind, EndStyle, ExprRef, ExprView,
-    Forward, Fragment, Guard, Instruction, InstructionKind, Loop, LoopConditional, LoopKind,
-    NumericSetting, ProgramSource, Raise, SymbolId, Trace, Use, UseTarget, VariableRef,
+    Args, Branches, CodeBody, ConditionTrap, ControlExpr, DirectiveKind, EndStyle, ExprId, ExprRef,
+    ExprView, Forward, Fragment, Guard, Instruction, InstructionKind, Loop, LoopConditional,
+    LoopKind, NumericSetting, ProgramSource, Raise, SymbolId, Trace, Use, UseTarget, VariableRef,
 };
 use std::borrow::Cow;
 use std::rc::Rc;
@@ -843,7 +843,7 @@ impl Interp {
                 let value = self.eval(code, code.body.expr(*value))?;
                 // `None`: this engine resolves nothing ahead of time, so the
                 // write resolves its own slot the way it always has.
-                self.assign_evaluated(code, code.body.expr(*target), value, None, false)?;
+                self.assign_evaluated(code, *target, value, None, false)?;
                 Ok(Flow::Next)
             }
 
@@ -1167,11 +1167,7 @@ impl Interp {
             // A message send as a whole clause: `q~append(1)`, `q~~append(1)`
             // and the message-assignment form `q[1] = 2`. See
             // `exec_message`.
-            InstructionKind::Message { term, value } => self.exec_message(
-                code,
-                code.body.expr(*term),
-                value.as_ref().map(|v| code.body.expr(*v)),
-            ),
+            InstructionKind::Message { term, value } => self.exec_message(code, *term, *value),
 
             // `OPTIONS`: the expression is evaluated, converted and traced, and
             // nothing else.
@@ -1185,13 +1181,16 @@ impl Interp {
         }
     }
 
-    /// A message send that is a clause of its own.
+    /// A message send that is a clause of its own: `term` and the
+    /// assignment form's `value`, as nodes of `code`'s body.
     pub(crate) fn exec_message(
         &mut self,
         code: &Code<'_>,
-        term: ExprRef<'_>,
-        value: Option<ExprRef<'_>>,
+        term: ExprId,
+        value: Option<ExprId>,
     ) -> Result<Flow, Failure> {
+        let term = code.body.expr(term);
+        let value = value.map(|value| code.body.expr(value));
         let ExprView::Message {
             target,
             name,
@@ -4044,21 +4043,16 @@ impl Interp {
         };
         let mut steps = path.steps();
         while let Some(step) = steps.next() {
-            node = match (node.kind(), step) {
-                (ExprView::Binary { left, .. }, false) => left,
-                (ExprView::Binary { right, .. }, true) => right,
-                (ExprView::Prefix { operand, .. }, false) => operand,
+            node = match (node.branches(), step) {
+                (Branches::Binary(left, _), false) => left,
+                (Branches::Binary(_, right), true) => right,
+                (Branches::Prefix(operand), false) => operand,
                 // A list step: its index in clear steps, then a set one.
-                (
-                    ExprView::Call { args, .. }
-                    | ExprView::QualifiedCall { args, .. }
-                    | ExprView::List(args),
-                    _,
-                ) => {
+                (Branches::Items(args), _) => {
                     let index = list_step(step, &mut steps)?;
                     args.get(index)??
                 }
-                (ExprView::Message { target, args, .. }, _) => {
+                (Branches::Message { target, args }, _) => {
                     match list_step(step, &mut steps)?.checked_sub(1) {
                         None => target,
                         Some(index) => args.get(index)??,

@@ -42,8 +42,8 @@ pub use convert::syntax_code;
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
 pub use exprs::{
-    Args, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node,
-    NodeKind, Target,
+    Args, Branches, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs,
+    Inconsistent, Node, NodeKind, Target,
 };
 pub use image::{program_from_image, program_from_static_image, program_image};
 pub use scanner::{ResourceBody, Scanned, scan};

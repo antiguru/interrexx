@@ -7,7 +7,7 @@ impl Interp {
     pub(crate) fn assign_evaluated(
         &mut self,
         code: &Code<'_>,
-        target: ExprRef<'_>,
+        target: ExprId,
         value: ObjRef,
         at: Option<usize>,
         shared_key: bool,
@@ -24,6 +24,7 @@ impl Interp {
         // site's own copy never learned about the offset when the field was
         // added.
         let indent = self.activity.clause_state.current_value_indent;
+        let target = code.body.expr(target);
         // The entry gate excludes a result line when evaluation enabled tracing.
         if self.activity.clause_state.instructions_traced_at_entry
             && let Some(rendered) = self.result_text(value)?

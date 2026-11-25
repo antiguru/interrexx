@@ -96,7 +96,10 @@ impl<'a> ExprRef<'a> {
         self.id
     }
 
-    /// The node's kind, with its children as views.
+    /// The node's kind, with its children as views. Always inlined, with
+    /// `arena_view`, so a caller's match on one variant compiles to a match
+    /// on the node rather than building the whole view.
+    #[inline(always)]
     pub fn kind(self) -> ExprView<'a> {
         arena_view(self.exprs, self.id)
     }
@@ -106,6 +109,74 @@ impl<'a> ExprRef<'a> {
     pub fn span(self) -> Range<usize> {
         self.exprs.node(self.id).span()
     }
+
+    // The accessors below each read one variant and answer only what their
+    // callers use, so a hot reader does not build the whole `ExprView`.
+
+    /// The symbol of a simple variable, `None` for any other node.
+    #[inline]
+    pub fn variable(self) -> Option<SymbolId> {
+        match self.exprs.node(self.id).kind() {
+            NodeKind::Variable(id) => Some(*id),
+            _ => None,
+        }
+    }
+
+    /// What a `Call` node names, `None` for any other node.
+    #[inline]
+    pub fn call_target(self) -> Option<Target<'a>> {
+        match self.exprs.node(self.id).kind() {
+            NodeKind::Call { target, .. } => Some(match target {
+                CallTarget::Symbol(id) => Target::Symbol(*id),
+                CallTarget::Literal(bytes) => Target::Literal(self.exprs.bytes(*bytes)),
+            }),
+            _ => None,
+        }
+    }
+
+    /// The children a node path steps through, as [`Branches`] groups them.
+    #[inline]
+    pub fn branches(self) -> Branches<'a> {
+        let exprs = self.exprs;
+        let edges = |range: EdgeRange| Args::edges(exprs, exprs.edges(range));
+        match exprs.node(self.id).kind() {
+            NodeKind::Prefix { operand, .. } => Branches::Prefix(exprs.get(*operand)),
+            NodeKind::Binary { left, right, .. } => {
+                Branches::Binary(exprs.get(*left), exprs.get(*right))
+            }
+            NodeKind::Call { args, .. }
+            | NodeKind::QualifiedCall { args, .. }
+            | NodeKind::List(args) => Branches::Items(edges(*args)),
+            NodeKind::Message {
+                scoped, children, ..
+            } => {
+                // The receiver, then the scope where scoped, then the
+                // arguments, as `ExprView::Message` splits them.
+                let children = exprs.edges(*children);
+                Branches::Message {
+                    target: exprs.get(children[0]),
+                    args: Args::edges(exprs, &children[1 + usize::from(*scoped)..]),
+                }
+            }
+            _ => Branches::Other,
+        }
+    }
+}
+
+/// A node's children as a node path addresses them.
+#[derive(Copy, Clone, Debug)]
+pub enum Branches<'a> {
+    /// A prefix operator's operand.
+    Prefix(ExprRef<'a>),
+    /// A dyadic operator's left and right operands.
+    Binary(ExprRef<'a>, ExprRef<'a>),
+    /// A call's arguments, a qualified call's, or a parenthesised list's
+    /// items.
+    Items(Args<'a>),
+    /// A message's receiver and its arguments; a scope is not addressed.
+    Message { target: ExprRef<'a>, args: Args<'a> },
+    /// Any node a path does not step into: a leaf, or a conditional's list.
+    Other,
 }
 
 impl std::fmt::Debug for ExprRef<'_> {
@@ -133,6 +204,7 @@ impl Exprs {
     }
 }
 
+#[inline(always)]
 fn arena_view(exprs: &Exprs, id: ExprId) -> ExprView<'_> {
     let edges = |range: EdgeRange| Args {
         backing: ArgsBacking::Edges {
