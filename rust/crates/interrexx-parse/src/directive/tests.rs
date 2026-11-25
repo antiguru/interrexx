@@ -43,6 +43,7 @@ fn parse_with_symbols(
             selectors: &selectors,
             keywords: scanned.keywords,
             resources: &scanned.resources,
+            required_level: None,
         };
         let mut cursor = ClauseCursor::new(split_clauses(ctx.tokens)?);
         let mut directives = Vec::new();

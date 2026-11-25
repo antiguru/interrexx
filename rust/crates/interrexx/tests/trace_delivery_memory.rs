@@ -1,7 +1,8 @@
-//! A trace destination whose `LINEOUT` fails deep in a recursion, under the
-//! address-space cap the corpus gives the oracle. The oracle segfaults on this
-//! shape (`corpus/oracle-crashes.txt` entries 51 and 52), so there is no
-//! differential to run.
+//! Trace destinations the oracle cannot run, under a bound: one whose
+//! `LINEOUT` fails deep in a recursion, under the address-space cap the corpus
+//! gives the oracle (`corpus/oracle-crashes.txt` entries 51 and 52), and one
+//! whose own clauses are traced (entry 14). The oracle crashes on both, so
+//! there is no differential to run.
 
 #![expect(clippy::disallowed_methods, reason = "this harness bounds a real run")]
 
@@ -90,5 +91,61 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
         (Some(214), String::new())
     );
     assert!(stdout == expected, "stdout:\n{stdout}");
+    fs::remove_dir_all(&dir).expect("the probe directory is removed");
+}
+
+/// **A destination writes no trace lines of its own.** Under package-wide
+/// `::OPTIONS TRACE I` the sink's `LINEOUT` is traced too; its lines are
+/// dropped rather than delivered, which would deliver again without end. The
+/// main program's lines up to the destination's reset reach the sink.
+#[test]
+fn a_destination_whose_own_clauses_are_traced_delivers_none_of_them() {
+    let source = "s = .sink~new\n\
+         zz = .traceoutput~destination(s)\n\
+         aa = 1 + 1\n\
+         zz = .traceoutput~destination(.stderr)\n\
+         zz = .stderr~lineout('total=' s~count)\n\
+         ::options trace i\n\
+         ::class sink\n\
+         ::method init\n\
+         \x20 expose count\n\
+         \x20 count = 0\n\
+         ::method count\n\
+         \x20 expose count\n\
+         \x20 return count\n\
+         ::method lineout\n\
+         \x20 expose count\n\
+         \x20 count = count + 1\n\
+         \x20 return 0\n";
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("the clock is after the epoch")
+        .as_nanos();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("trace-own-lines-{}-{nanos}", std::process::id()));
+    fs::create_dir_all(&dir).expect("a probe directory of this run's own");
+    let file = dir.join("main.rex");
+    fs::write(&file, source).expect("the program is writable");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_bounded-run"))
+        .args(["-s", "KILL", "20"])
+        .arg(env!("CARGO_BIN_EXE_rexx"))
+        .arg(&file)
+        .current_dir(&dir)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("bounded-run starts");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(
+        (
+            output.status.code(),
+            stderr
+                .lines()
+                .filter(|line| line.starts_with("total="))
+                .collect::<Vec<_>>()
+        ),
+        (Some(0), vec!["total= 13"]),
+        "stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
     fs::remove_dir_all(&dir).expect("the probe directory is removed");
 }

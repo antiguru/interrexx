@@ -1148,6 +1148,7 @@ struct PendingTrap {
     /// An `ObjRef` reachable only through this queue, so
     /// [`Activity::object_roots`] names it: that destructure guards `Activity`'s
     /// own fields and would not have caught one added inside a `VecDeque`.
+    /// For a halt request, `Some(.nil)` means its description is `.nil`.
     object: Option<ObjRef>,
     /// The activation this may be delivered to: the raising activation's
     /// **caller**, which is the one whose trap table matched.
@@ -2844,7 +2845,7 @@ impl Interp {
         let nested = self.running_activation().is_some();
         let probe = 0u8;
         if nested
-            && (self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+            && (self.nesting_depth() >= crate::run::MAX_ACTIVATION_DEPTH
                 || self.stack_exhausted(&raw const probe))
         {
             return Err(Raised::insufficient_stack().into());
@@ -2946,7 +2947,7 @@ impl Interp {
         name: &[u8],
     ) -> Result<Option<ObjRef>, Failure> {
         let probe = 0u8;
-        if self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+        if self.nesting_depth() >= crate::run::MAX_ACTIVATION_DEPTH
             || self.stack_exhausted(&raw const probe)
         {
             return Err(Raised::insufficient_stack().into());
@@ -4158,15 +4159,33 @@ pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> 
 /// and reports a refusal as [`run_program_named`] would. The translation
 /// binds each `EXTERNAL` library name as the run does.
 pub fn translate_program(path: &[u8], text: Vec<u8>) -> Outcome {
+    translate_program_with_image(path, text, None).0
+}
+
+/// Translates without running the program. When `encode` is supplied and
+/// translation succeeds, also returns the binary or encoded compiled image.
+pub fn translate_program_with_image(
+    path: &[u8],
+    text: Vec<u8>,
+    encode: Option<bool>,
+) -> (Outcome, Option<Vec<u8>>) {
     let path = path.to_vec();
     on_interpreter_thread(move || {
-        execute_kept(
+        let image_source = encode.map(|encode| (text.clone(), encode));
+        let required_level = std::cell::Cell::new(interrexx_parse::RequiredLanguageLevel::V6_06);
+        let (outcome, interp) = execute_kept(
             &path,
             text,
-            Entry::Translate,
+            Entry::Translate(encode.map(|_| &required_level)),
             Invocation::none(),
             Some(INTERPRETER_STACK_BYTES),
-        )
+        );
+        let image = image_source
+            .filter(|_| outcome.error.is_none())
+            .map(|(source, encode)| {
+                compiled::write_image_for_level(&source, &path, encode, required_level.get())
+            });
+        ((outcome, image), interp)
     })
 }
 
@@ -4336,9 +4355,9 @@ fn report_late_failures(
 }
 
 /// Runs `body` on a thread with `INTERPRETER_STACK_BYTES` of stack.
-fn on_interpreter_thread(
-    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
-) -> Outcome {
+fn on_interpreter_thread<T: Send + 'static>(
+    body: impl FnOnce() -> (T, Option<Interp>) + Send + 'static,
+) -> T {
     on_thread_of(INTERPRETER_STACK_BYTES, body)
 }
 
@@ -4346,10 +4365,10 @@ fn on_interpreter_thread(
 /// outcome as soon as it has one. An interpreter `body` hands back still has
 /// calls in flight: it stays on that thread, serving them, and is dropped
 /// once they have ended ([`Interp::wind_down`]), while the caller goes on.
-fn on_thread_of(
+fn on_thread_of<T: Send + 'static>(
     stack: usize,
-    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
-) -> Outcome {
+    body: impl FnOnce() -> (T, Option<Interp>) + Send + 'static,
+) -> T {
     let (deliver, delivered) = std::sync::mpsc::channel();
     #[cfg(test)]
     let family = libraries::round_gate::family();
@@ -4451,14 +4470,14 @@ fn unrestorable_outcome(raised: Raised) -> Outcome {
 }
 
 /// What [`execute_as`] does with the program it parses.
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum Entry {
+#[derive(Copy, Clone)]
+enum Entry<'a> {
     /// Runs it.
     Run,
     /// Runs it with `Heap::collect` after every allocation.
     CollectEveryAlloc,
     /// Translates it and runs none of it.
-    Translate,
+    Translate(Option<&'a std::cell::Cell<interrexx_parse::RequiredLanguageLevel>>),
 }
 
 /// Everything that happens on the interpreter thread: parse, run, report.
@@ -4485,7 +4504,7 @@ fn execute_on(
 fn execute_as(
     path: &[u8],
     text: Vec<u8>,
-    entry: Entry,
+    entry: Entry<'_>,
     invocation: Invocation,
     stack: Option<usize>,
 ) -> Outcome {
@@ -4504,7 +4523,7 @@ fn execute_as(
 fn execute_kept(
     path: &[u8],
     text: Vec<u8>,
-    entry: Entry,
+    entry: Entry<'_>,
     invocation: Invocation,
     stack: Option<usize>,
 ) -> (Outcome, Option<Interp>) {
@@ -4512,7 +4531,7 @@ fn execute_kept(
     let base = &raw const probe as usize;
     // `rexxc` translates its input as source, an image included: `rexxc`
     // answers 13.1 at the `@` of a `.rxo` it is given.
-    let source = if entry == Entry::Translate {
+    let source = if matches!(entry, Entry::Translate(_)) {
         interrexx_parse::ProgramSource::new(text, interrexx_parse::SourceKind::Program)
     } else {
         match compiled::program_source(text, path) {
@@ -4522,7 +4541,15 @@ fn execute_kept(
     };
     // A rejected source that passed an `EXTERNAL`'s resolution point needs an
     // interpreter to resolve it in, which `Interp::raise_parse_failure` does.
-    let program = match interrexx_parse::program_from(source) {
+    let parsed = if let Entry::Translate(Some(required_level)) = entry {
+        interrexx_parse::program_from_with_language_level(source).map(|(program, level)| {
+            required_level.set(level);
+            program
+        })
+    } else {
+        interrexx_parse::program_from(source)
+    };
+    let program = match parsed {
         Ok(program) => Ok(program),
         Err(rejected) if rejected.binds.is_empty() => {
             return (parse_failure_outcome(path, &rejected), None);
@@ -4535,7 +4562,7 @@ fn execute_kept(
         interp.measure_stack(base, stack);
     }
     interp.program_path = path.to_vec();
-    if entry == Entry::CollectEveryAlloc {
+    if matches!(entry, Entry::CollectEveryAlloc) {
         interp.enable_stress_collect();
     }
     // The command line is the top-level program's caller, so what it supplied
@@ -4646,7 +4673,7 @@ fn execute_kept(
         }
         match (entry, program) {
             (_, Err(rejected)) => Err(interp.raise_parse_failure(&rejected, None)),
-            (Entry::Translate, Ok(program)) => interp.translate(program),
+            (Entry::Translate(_), Ok(program)) => interp.translate(program),
             (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => {
                 interp.run_as_started(program, start, address)
             }

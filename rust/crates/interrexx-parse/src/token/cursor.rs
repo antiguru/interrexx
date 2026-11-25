@@ -1,14 +1,14 @@
 //! The context every `parse_*` function is handed, and the cursor over one
 //! clause's tokens.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ops::Range;
 
-use crate::ProgramSource;
 use crate::scanner::ResourceBody;
 use crate::selector::SelectorTable;
+use crate::{ProgramSource, RequiredLanguageLevel};
 
-use super::{Keywords, SymbolTable, Tag, Token};
+use super::{Keywords, SymbolId, SymbolTable, Tag, Token};
 
 /// Everything a `parse_*` function needs that is not the clause it is
 /// parsing.
@@ -33,6 +33,42 @@ pub(crate) struct ParseCtx<'a> {
     /// The `::RESOURCE` bodies `scan` copied out, keyed by the index of the
     /// `::` token that opened each directive.
     pub(crate) resources: &'a [ResourceBody],
+    /// Collected only when translating an image.
+    pub(crate) required_level: Option<&'a RequiredLanguage>,
+}
+
+impl ParseCtx<'_> {
+    pub(crate) fn note_symbol_call(&self, id: SymbolId) {
+        if let Some(required_level) = self.required_level
+            && self.symbols.name(id) == "GC"
+        {
+            required_level.pending_gc.set(true);
+        }
+    }
+
+    pub(crate) fn note_literal_call(&self, name: &[u8]) {
+        if let Some(required_level) = self.required_level
+            && name == b"GC"
+        {
+            // A literal call skips internal labels.
+            required_level.level.set(RequiredLanguageLevel::V6_06);
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct RequiredLanguage {
+    pub(crate) level: Cell<RequiredLanguageLevel>,
+    pending_gc: Cell<bool>,
+}
+
+impl RequiredLanguage {
+    /// The label may appear after the call, so resolve it after parsing the body.
+    pub(crate) fn finish_body(&self, has_gc_label: bool) {
+        if self.pending_gc.replace(false) && !has_gc_label {
+            self.level.set(RequiredLanguageLevel::V6_06);
+        }
+    }
 }
 
 /// A position inside one clause's token range, not inside the whole vector,

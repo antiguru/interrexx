@@ -957,6 +957,7 @@ impl<'a, 'c> Parser<'a, 'c> {
                     Some(Tag::LeftParen) => {
                         self.advance();
                         let args = self.arg_list(Some(Tag::RightParen))?;
+                        self.ctx.note_symbol_call(id);
                         let extent = self.extent(from);
                         Ok(Some(Expr::new(
                             ExprKind::Call {
@@ -979,6 +980,7 @@ impl<'a, 'c> Parser<'a, 'c> {
                 if self.peek_tag() == Some(Tag::LeftParen) {
                     self.advance();
                     let args = self.arg_list(Some(Tag::RightParen))?;
+                    self.ctx.note_literal_call(&value);
                     let extent = self.extent(from);
                     return Ok(Some(Expr::new(
                         ExprKind::Call {

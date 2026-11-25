@@ -86,3 +86,98 @@ out> a 0
 err>     13 *-* say 'b' o~gone
 err> Error 97 running <dir>/class_behaviour_snapshot_delete.rex line 13:  Object method not found.
 err> Error 97.1:  Method "GONE" not found in object "a K".
+
+run
+lang/date_time_conversion_refusals.rex
+----
+rc> 0
+out> 1 raised 40.19
+out> 2 raised 40.19
+out> 3 raised 40.19
+out> 4 raised 40.19
+out> 5 00:00:00 12:59:00 13:05:00
+out> 6 raised 40.19
+out> 7 raised 40.19
+out> 8 -62135534028
+out> 9 17:26:12
+out> 10 -62135596800 -62135510401
+out> 11 -62135596800 -86400 0
+out> 12 32303037003039003232
+out> 13 32322D30392D3037
+out> 14 raised 40.44
+out> 15 raised 40.904
+out> 16 raised 40.43
+
+run
+lang/sys_semaphores_unnamed.rex
+----
+rc> 0
+out> handle 0 1
+out> post 0 0
+out> wait 0 0
+out> timed 121
+out> polled long enough 1
+out> timed1 121
+out> polled once 1
+out> negative 0
+out> post 0 reset 0 wait 121
+out> close 0
+out> mutex handle 0
+out> request 0 121
+out> release 0 0 0 121
+out> release 0 post 6 6 request 0 121 121 121
+out> event release 6 6 121 121
+out> close 0 6
+out> error 88.901
+out> error 88.907
+out> error 88.907
+out> error 88.907
+out> error 88.922
+out> error 88.922
+out> error 88.907
+out> error 88.907
+out> error 88.922
+
+run
+lang/sys_semaphores_across_activities.rex
+----
+rc> 0
+out> post 0
+out> for ever 0
+out> nothing left 121
+out> post 0
+out> polled 0
+out> main request 0
+out> contended 6
+out> worker release 0
+out> main request again 0
+out> close 0 0
+
+run
+lang/requires_manager_rename.rex
+----
+rc> 0
+out> -- an existing file renamed to another
+out> loaded the replaced file 1
+out> event name ends with the original 1
+out> -- a missing file renamed to an existing one
+out> <dir>/rq_replaced.cls
+out> 1 events
+out> -- a file loaded twice
+out> first load 1 2 events
+out> second load 1 2 events
+out> by its full name 1 2 events
+
+run
+lang/security_manager_requires_replacement.rex
+----
+rc> 0
+out> nil 43.901
+out> nil events: 1
+out> missing 43.901
+out> missing events: 1
+out> removed 43.901
+out> removed events: 1
+out> smreq loaded
+out> unchanged smreq.cls
+out> unchanged events: 2

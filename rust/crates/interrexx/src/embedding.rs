@@ -173,11 +173,11 @@ pub fn rexx_start(start: Start) -> Started {
     };
     // An in-store source's image is saved once it has translated, before it
     // runs, so a run that fails still leaves it.
-    let image = (loaded.image_wanted
-        && crate::translate_program(&loaded.path, loaded.text.clone())
-            .error
-            .is_none())
-    .then(|| crate::compiled::write_image(&loaded.text, &loaded.path, false));
+    let image = if loaded.image_wanted {
+        crate::translate_program_with_image(&loaded.path, loaded.text.clone(), Some(false)).1
+    } else {
+        None
+    };
     if translate_only {
         let outcome = crate::translate_program(&loaded.path, loaded.text);
         write_outcome(&outcome);
@@ -257,8 +257,8 @@ pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 
             return code;
         }
     };
-    let image = crate::compiled::write_image(&loaded.text, &loaded.path, encode);
-    let outcome = crate::translate_program(&loaded.path, loaded.text);
+    let (outcome, image) =
+        crate::translate_program_with_image(&loaded.path, loaded.text, output.map(|_| encode));
     write_outcome(&outcome);
     if let Some(number) = outcome.error {
         return -number;
@@ -267,7 +267,12 @@ pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 
         return 0;
     };
     let path = crate::paths::os_path(output);
-    if std::fs::write(path, &image).is_err() {
+    if std::fs::write(
+        path,
+        image.expect("successful output translation yields an image"),
+    )
+    .is_err()
+    {
         let _ = std::fs::remove_file(path);
         let (report, _) = launcher::output_unwritable(output);
         let _ = std::io::stderr().write_all(&report);
@@ -279,11 +284,10 @@ pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 
 /// `RexxTranslateInstoreProgram`: `source`, named `name`, translated, and its image; an error
 /// is reported nowhere and answers its negated number.
 pub fn translate_instore(name: &[u8], source: Vec<u8>) -> Result<Vec<u8>, i32> {
-    let image = crate::compiled::write_image(&source, name, false);
-    let outcome = crate::translate_program(name, source);
+    let (outcome, image) = crate::translate_program_with_image(name, source, Some(false));
     match outcome.error {
         Some(number) => Err(-number),
-        None => Ok(image),
+        None => Ok(image.expect("successful in-store translation yields an image")),
     }
 }
 

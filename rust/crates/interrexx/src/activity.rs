@@ -40,6 +40,9 @@ pub(crate) struct Activity {
     /// The `TRACE` setting of whatever [`Activity::running`] holds, kept beside
     /// it rather than read through it.
     pub(crate) trace_cache: crate::trace::TraceCache,
+    /// A debug input handler may trace its clauses, but cannot open another
+    /// interactive stop while it is supplying the current stop's input.
+    pub(crate) reading_debug_input: bool,
     /// The activations that entered before [`Activity::running`], oldest
     /// first, so `suspended.last()` is the running activation's own caller.
     #[expect(
@@ -293,6 +296,17 @@ pub(crate) struct Activity {
     /// (oracle defect, `corpus/oracle-crashes.txt` entry 14), and this crate
     /// must terminate.
     pub(crate) routing_trace: bool,
+    /// Whether this activity delivers a trace line another activity wrote, to
+    /// the end of that line's `LINEOUT`.
+    pub(crate) delivering: bool,
+    /// The clauses a delivering activity has run since a slice fell due.
+    pub(crate) delivery_clauses: u32,
+    /// The nesting depth of the code whose trace line this activity
+    /// delivers, which its own depth counts on top of.
+    pub(crate) depth_base: usize,
+    /// Slices a delivering activity let pass while pinned and holding a
+    /// guard.
+    pub(crate) guarded_slices: u32,
     /// Current `eval` recursion depth, and the deepest it has reached.
     pub(crate) depth: usize,
     pub(crate) max_depth: usize,
@@ -354,6 +368,9 @@ pub(crate) struct Activity {
     pub(crate) sliced: Option<(usize, u32)>,
     /// How main's root driver ended where a loop other than its own ran it.
     pub(crate) root_end: Option<Result<crate::run::Ended, Failure>>,
+    /// The failure a delivery of this activity's trace line ended with,
+    /// handed back as it was raised, its levels already on this record.
+    pub(crate) delivery_failure: Option<Failure>,
     /// What `.context~thread` answers, assigned on first use
     /// ([`crate::Interp::activity_number`]).
     pub(crate) number: Option<u32>,
@@ -622,6 +639,10 @@ impl Activity {
             fragments: Vec::new(),
             fragment_clause: 0,
             routing_trace: false,
+            delivering: false,
+            delivery_clauses: 0,
+            depth_base: 0,
+            guarded_slices: 0,
             depth: 0,
             max_depth: 0,
             stack_entry: 0,
@@ -644,6 +665,7 @@ impl Activity {
             drive_floor: None,
             sliced: None,
             root_end: None,
+            delivery_failure: None,
             number: None,
             spawner: None,
             splits_owed: 0,
@@ -666,6 +688,7 @@ impl Activity {
             parked_socket: None,
             waiting_traced: None,
             trace_cache: crate::trace::TraceCache::of(crate::trace::TraceMode::OFF, false),
+            reading_debug_input: false,
             #[cfg(feature = "pinning")]
             pins: crate::pinning::PinStack::default(),
             #[cfg(feature = "sharing")]
@@ -729,6 +752,7 @@ impl Activity {
             builtin_answered_nothing: _,
             running,
             trace_cache: _,
+            reading_debug_input: _,
             suspended,
             // A finished activation's leftovers, overwritten at reuse and read
             // by nothing in between.
@@ -813,6 +837,10 @@ impl Activity {
             fragments: _,
             fragment_clause: _,
             routing_trace: _,
+            delivering: _,
+            delivery_clauses: _,
+            depth_base: _,
+            guarded_slices: _,
             depth: _,
             max_depth: _,
             stack_entry: _,
@@ -837,6 +865,7 @@ impl Activity {
             drive_floor: _,
             sliced: _,
             root_end,
+            delivery_failure,
             number: _,
             spawner,
             splits_owed: _,
@@ -892,6 +921,9 @@ impl Activity {
             }) => out.extend([*frame, *executable]),
             Some(Spawner::Table(table)) => out.push(*table),
             _ => {}
+        }
+        if let Some(Failure::Exited(value)) = delivery_failure {
+            out.extend(*value);
         }
         match root_end {
             Some(Ok(crate::run::Ended::Returned(value) | crate::run::Ended::Exited(value)))

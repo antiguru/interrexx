@@ -50,6 +50,7 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), Par
             selectors: &selectors,
             keywords: scanned.keywords,
             resources: &scanned.resources,
+            required_level: None,
         };
         let mut cursor = TokenCursor::new(clauses[0].tokens.clone());
         match entry {
@@ -657,6 +658,7 @@ fn an_empty_required_expression_raises_the_sub_number_the_caller_supplied() {
         selectors: &selectors,
         keywords: scanned.keywords,
         resources: &scanned.resources,
+        required_level: None,
     };
     for msg in [E35_918, E35_912] {
         let mut cursor = TokenCursor::new(1..1);

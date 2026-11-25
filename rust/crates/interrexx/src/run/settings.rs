@@ -190,10 +190,11 @@ impl Interp {
         }
     }
 
-    /// `>I>`, if this activation is a `::ROUTINE` still on its first
-    /// instruction and the setting just installed traces labels.
+    /// `>I>` while the activation can still announce its entry and its
+    /// setting traces labels, including a queued external announcement.
     pub(crate) fn trace_invocation_entry(&mut self) {
-        if !self.activation().trace_entry.may_announce() {
+        let entry = self.activation().trace_entry;
+        if !entry.may_announce() && entry != TraceEntry::External {
             return;
         }
         let Some(subject) = self.invocation_subject() else {
@@ -233,10 +234,12 @@ impl Interp {
         self.trace_invocation(">I>", &subject, &package);
     }
 
-    /// `<I<`, on every way a routine activation can end, with what `ending`
-    /// answers, the value it ends with, rooted while the line is delivered.
+    /// `<I<` on every way a traced routine activation can end, after any
+    /// external entry still due. The value from `ending` stays rooted while
+    /// the lines are delivered.
     pub(crate) fn trace_invocation_exit(&mut self, ending: impl FnOnce() -> Option<ObjRef>) {
-        if self.activation().trace_entry != TraceEntry::Done {
+        let entry = self.activation().trace_entry;
+        if !matches!(entry, TraceEntry::Done | TraceEntry::External) {
             return;
         }
         if self.activation().entry == crate::activation::Entry::Method {
@@ -255,6 +258,9 @@ impl Interp {
             .roots
             .activity_mut()
             .park(ending().into_iter().collect());
+        if entry == TraceEntry::External {
+            self.trace_invocation_entry();
+        }
         self.trace_invocation("<I<", &subject, &package);
         self.roots.activity_mut().release(parked);
     }

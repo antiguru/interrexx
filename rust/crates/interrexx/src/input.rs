@@ -602,7 +602,7 @@ impl Interp {
             self.send_message(queue, b"PULL", None, &[], caller)
         )?;
         match answer {
-            Some(value) if value != ObjRef::NIL => Ok(self.to_text(value).into_owned()),
+            Some(value) if value != ObjRef::NIL => self.input_answer_text(Some(value)),
             _ => self.linein_line(),
         }
     }
@@ -636,10 +636,17 @@ impl Interp {
             crate::pinning::PinKind::PullWrapper,
             self.send_message(route, crate::dispatch::LINEIN, None, &[], caller)
         )?;
-        Ok(match answer {
-            Some(value) => self.to_text(value).into_owned(),
-            None => Vec::new(),
-        })
+        self.input_answer_text(answer)
+    }
+
+    /// Input instructions and debug reads use the required string conversion.
+    /// A `LINEIN` with no result or a `.nil` result supplies an empty line.
+    pub(crate) fn input_answer_text(&mut self, answer: Option<ObjRef>) -> Result<Vec<u8>, Failure> {
+        let Some(value) = answer.filter(|value| *value != ObjRef::NIL) else {
+            return Ok(Vec::new());
+        };
+        let value = self.required_string_value(value)?;
+        Ok(self.to_text(value).into_owned())
     }
 
     /// The reader behind `.STDIN~LINEIN`, keeping end of input apart from an

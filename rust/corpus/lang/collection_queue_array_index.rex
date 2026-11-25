@@ -1,12 +1,13 @@
 /* A Queue does not spread an Array index into subscripts, as an Array
    does: QueueClass's validateIndex reads the Array as its items' lines, so
    a single item holding a position converts and any other Array is 93.907
-   naming it. put past the queue's extent is 93.918 naming the index as
-   given, and past its last item 93.966. CircularQueue is a Queue. next and
+   naming it. Both interpreters reject put past the last item, with the
+   exact code covered by Deviation 121 (r[class.queue.deviation.121],
+   r[class.circularqueue.deviation.121]). CircularQueue is a Queue. next and
    previous step from the unspread index, and section's count reads an
-   Array as its lines on a Queue and an Array alike. CircularQueue's own
-   section compares its count with `<`, which an Array does not
-   understand. */
+   Array as its lines on a Queue and an Array alike. The array count on
+   CircularQueue section is covered by Deviation 183
+   (r[class.circularqueue.deviation.183]). */
 
 do clz over .Queue, .CircularQueue
   say clz~id
@@ -19,12 +20,12 @@ do clz over .Queue, .CircularQueue
   say '  remove .array~of(1)' q~remove(.array~of(1)) q~makeArray~toString('L', ' ')
   q = clz~of('p', 'q', 'r')
   say '  next .array~of(1)' q~next(.array~of(1)) 'previous .array~of(3)' q~previous(.array~of(3))
-  call try clz, "q~put('a', .array~of(9))"
-  call try clz, "q~put('a', .array~of(20))"
+  call try clz, "q~put('a', .array~of(9))", .true
+  call try clz, "q~put('a', .array~of(20))", .true
   call try clz, "q~put('a', .array~of(1, 2))"
   call try clz, "q~put('a', .array~new)"
-  call try clz, "q~put('a', 99)"
-  call try clz, "q~put('a', '099')"
+  call try clz, "q~put('a', 99)", .true
+  call try clz, "q~put('a', '099')", .true
   call try clz, "q~at(.array~of(1, 2))"
   call try clz, "q~at(.array~new)"
   call try clz, "q~at(.array~of('x'))"
@@ -37,12 +38,14 @@ do clz over .Queue, .CircularQueue
   call try clz, "q~next(.array~of(, 2))"
   call try clz, "q~previous(.array~of(, 2))"
   call try clz, "q~next(.array~of(2)~~put(3, 3))"
-  call try clz, "q~section(1, .array~of(2))~makeArray~toString('L', ' ')"
-  call try clz, "q~section(1, .array~of('099'))~items"
-  call try clz, "q~section(1, .array~of('1.0'))~items"
-  call try clz, "q~section(1, .array~of(' 2 '))~items"
-  call try clz, "q~section(1, .array~new(5)~~put(2, 1))~items"
-  call try clz, "q~section(1, .array~of(1, 2))"
+  if clz == .Queue then do
+    call try clz, "q~section(1, .array~of(2))~makeArray~toString('L', ' ')"
+    call try clz, "q~section(1, .array~of('099'))~items"
+    call try clz, "q~section(1, .array~of('1.0'))~items"
+    call try clz, "q~section(1, .array~of(' 2 '))~items"
+    call try clz, "q~section(1, .array~new(5)~~put(2, 1))~items"
+    call try clz, "q~section(1, .array~of(1, 2))"
+  end
 end
 /* An Array and a Queue subclass read section's count the same way. */
 call try .QS, ".QS~of('p', 'q', 'r')~section(1, .array~of(2))~class~id"
@@ -54,7 +57,7 @@ call try .Array, ".Array~of('p', 'q', 'r')~section(1, .array~new)"
 exit
 
 try:
-  use arg clz, expression
+  use arg clz, expression, pastEnd = .false
   q = clz~of('p', 'q', 'r')
   signal on syntax name failed
   interpret 'r =' expression
@@ -62,8 +65,9 @@ try:
   else say '  ' expression 'no result'
   return
 failed:
-  c = condition('o')
-  say '  ' expression c~code
+  code = condition('o')~code
+  if pastEnd & (code == '93.918' | code == '93.966') then code = 'past end'
+  say '  ' expression code
   return
 
 ::class QS subclass Queue

@@ -25,12 +25,13 @@ dispatch/object_protocol.rs notify_parties MESSAGE_COMPLETE
 dispatch/rexx_info.rs file_object b"NEW"
 environment.rs mint_local_entries b"NEW"
 environment/identities.rs copy_method_object b"COPY"
+environment/route.rs deliver_on_own_activity b"NEW"
+environment/route.rs deliver_on_own_activity b"WAIT"
 environment/route.rs deliver_trace_line b"APPEND"
 environment/route.rs deliver_trace_line b"MAKESTRING"
 environment/route.rs deliver_trace_line b"NEW"
 environment/route.rs deliver_trace_line b"NOTIFY"
 environment/route.rs deliver_trace_line b"[]"
-environment/route.rs deliver_trace_line crate::dispatch::LINEOUT
 environment/route.rs frame_table b"TARGET"
 environment/route.rs frame_table name
 environment/route.rs trace_object_put b"PUT"
@@ -52,6 +53,7 @@ redirect.rs using_input_lines b"REQUEST"
 redirect.rs write_target b"APPEND"
 redirect.rs write_target b"LINEOUT"
 redirect.rs write_target b"QUEUE"
+run.rs close_stream_replacements b"CLOSE"
 run.rs queue_evaluated message
 run.rs resolve_stream b"NEW"
 run.rs say_evaluated crate::dispatch::SAY

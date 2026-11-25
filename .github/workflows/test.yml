@@ -19,7 +19,7 @@ jobs:
   # submodule revision and restored from the cache by every job that runs tests.
   third-party:
     name: third-party trees
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       key: ${{ steps.key.outputs.key }}
     steps:
@@ -28,7 +28,7 @@ jobs:
           submodules: true
       - id: key
         working-directory: .
-        run: echo "key=third-party-${{ runner.os }}-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
+        run: echo "key=third-party-ubuntu-26.04-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v6
         with:
@@ -48,7 +48,7 @@ jobs:
   # Compiles every test binary once and packs them for the shards.
   build:
     name: build test archive
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -119,7 +119,7 @@ jobs:
   shard:
     name: nextest shard ${{ matrix.shard }}/6
     needs: [third-party, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +173,7 @@ jobs:
   spec-oracle:
     name: spec examples against the oracle
     needs: [third-party, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -210,7 +210,7 @@ jobs:
   attached-stress:
     name: attached-thread stress runs
     needs: [third-party, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -248,7 +248,7 @@ jobs:
   bsf4oorexx:
     name: BSF4ooRexx test suite
     needs: [third-party]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
       # No symbols: the release profile's debug info changes no code and only slows the build.
@@ -355,7 +355,7 @@ jobs:
 
   doctest:
     name: cargo doc tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -382,7 +382,7 @@ jobs:
   pinning:
     name: pinning reports
     needs: [third-party]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -418,7 +418,7 @@ jobs:
   # submodule but no oracle build, so it does not wait for the third-party trees.
   upstream-interface:
     name: upstream interface
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -461,7 +461,7 @@ jobs:
   upstream-tier:
     name: upstream tier
     needs: [third-party, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -497,7 +497,7 @@ jobs:
   # The toolchain floor the workspace declares. `rust-version` in Cargo.toml is its only source.
   msrv:
     name: determine MSRV
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       msrv: ${{ steps.msrv.outputs.msrv }}
     steps:
@@ -517,7 +517,7 @@ jobs:
   msrv-standalone:
     name: standalone (no submodule, rust ${{ needs.msrv.outputs.msrv }})
     needs: [third-party, msrv]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       # Overrides the `stable` channel of rust-toolchain.toml for every cargo call below.
       RUSTUP_TOOLCHAIN: ${{ needs.msrv.outputs.msrv }}
@@ -607,7 +607,7 @@ jobs:
     name: cargo test # the name branch protection requires; keep it
     if: always()
     needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Every test job succeeded
         working-directory: .
@@ -632,7 +632,7 @@ jobs:
   # function panics, and the slot window is checked after each unbracketed call.
   jit:
     name: jit feature
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -658,7 +658,7 @@ jobs:
 
   fmt:
     name: Cargo fmt
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v2
@@ -669,7 +669,7 @@ jobs:
 
   clippy:
     name: Cargo clippy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:

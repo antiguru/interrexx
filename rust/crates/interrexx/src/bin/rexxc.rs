@@ -3,7 +3,6 @@
 use std::io::Write;
 use std::process::ExitCode;
 
-use interrexx::compiled;
 use interrexx::launcher;
 
 fn main() -> ExitCode {
@@ -35,10 +34,11 @@ fn main() -> ExitCode {
         Ok(loaded) => loaded,
         Err(failure) => return report(failure),
     };
-    let image = compile.output.as_ref().map(|_| {
-        compiled::write_image(&text, found.as_os_str().as_encoded_bytes(), compile.encode)
-    });
-    let outcome = launcher::translate(&found, text);
+    let (outcome, image) = interrexx::translate_program_with_image(
+        found.as_os_str().as_encoded_bytes(),
+        text,
+        compile.output.as_ref().map(|_| compile.encode),
+    );
     let _ = std::io::stdout().write_all(&outcome.stdout);
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().write_all(&outcome.stderr);

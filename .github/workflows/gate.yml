@@ -26,7 +26,7 @@ jobs:
   # neither starts a second run nor cancels one. Every other event runs it.
   decide:
     name: decide
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       run: ${{ steps.decide.outputs.run }}
     steps:
@@ -66,7 +66,7 @@ jobs:
     concurrency:
       group: gate-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Measured on 4 cores: 286 s to build and 1271 s to test.
     timeout-minutes: 90
     env:
@@ -83,7 +83,7 @@ jobs:
         # The same key as the Test Suite's `third-party` job, so either workflow's build serves
         # the other.
         working-directory: .
-        run: echo "key=third-party-${{ runner.os }}-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
+        run: echo "key=third-party-ubuntu-26.04-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v6
         with:

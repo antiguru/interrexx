@@ -1363,6 +1363,7 @@ impl<'a> Inst<'a> {
                     _ => {
                         let name = self.value_of(token);
                         let args = self.arg_list(None)?;
+                        self.ctx.note_symbol_call(*id);
                         Ok(Call::Named {
                             name,
                             literal: false,
@@ -1376,6 +1377,7 @@ impl<'a> Inst<'a> {
             TokenKind::Literal { value } => {
                 let name = value.clone();
                 let args = self.arg_list(None)?;
+                self.ctx.note_literal_call(&name);
                 Ok(Call::Named {
                     name,
                     literal: true,
