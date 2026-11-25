@@ -74,6 +74,32 @@ of an option word in `.syscargs`](r:env.invocation.syscargs). ooRexx writes
 unbuffered output whatever the words say, and ignores `-u` as an option word
 it does not know.
 
+r[env.invocation.heap-limit]
+The environment variable `REXX_HEAP_LIMIT` bounds the memory a run's objects
+may hold. Its value is decimal digits, optionally followed by `K`, `M` or `G`
+in either case, for that many units of 1024, 1024² or 1024³ bytes. An empty
+value is the same as none, and none leaves the memory unbounded. `rexx`
+refuses any other value, writing why to standard error and ending with the
+status 2 without running the program; an embedded run writes the same to its
+standard error and runs unbounded. An embedding can set the bound itself, in
+place of the variable's. The bound counts the bytes of strings, buffers and
+the slots of collections; the interpreter's own structures, such as its
+frames and translated programs, are not counted.
+
+r[env.invocation.heap-limit.raise]
+Under a bound, a single request for more than the bound, for an array, a buffer or a string
+sized by a number the program gives, raises `SYNTAX 5.0` where it is made.
+Memory that grows past the bound otherwise raises `SYNTAX 5.0` at the end of
+a clause, once a collection of unreachable objects has found more than the
+bound still in use. By then the run may hold more than the bound: by up to a
+sixteenth of it, and what the clause that crossed it allocated. The condition
+is raised again when a later collection finds the memory in use grown by more
+than a sixteenth of the bound past what the run could hold when it was last
+raised, or, after a collection has found it within the bound, past the bound
+again. Without a bound, a request the host refuses raises `SYNTAX 5.0` where
+it can, and a request the host grants but cannot back may end the process.
+ooRexx has no such bound.
+
 ## Running a string
 
 r[env.invocation.expression]

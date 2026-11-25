@@ -1130,6 +1130,7 @@ fn fresh_buffer(len: usize) -> Result<Vec<u8>, Failure> {
 /// amortised lets the capacity settle at the longest result a program asks
 /// for and stay there.
 fn buffer(interp: &Interp, len: usize) -> Result<Vec<u8>, Failure> {
+    interp.admit_bytes(len)?;
     let mut out = interp.take_result_buffer();
     out.try_reserve(len)
         .map_err(|_| Failure::from(Raised::system_resources()))?;

@@ -460,6 +460,13 @@ impl Interp {
         // The halt and trace exits, ahead of the conditions the boundary
         // delivers; their failure is the clause's.
         if self.clause_exits {
+            // The heap passed its limit at the last collection
+            // (r[env.invocation.heap-limit.raise]): raised as a halt is, at the end
+            // of the clause that was running.
+            if self.heap_over_limit {
+                self.heap_limit_raised();
+                return Err(crate::error::Raised::system_resources().into());
+            }
             if let Some(value) = value.rooted() {
                 self.roots.activity_mut().push_temp(value);
             }

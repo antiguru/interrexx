@@ -38,6 +38,9 @@ pub struct Invocation {
     /// `None` for no bound at all -- which is what every shipped caller
     /// passes. See [`Invocation::with_deadline`].
     deadline: Option<Duration>,
+    /// The most body bytes the heap may hold, or `None` to take
+    /// [`crate::HEAP_LIMIT_ENV`]'s value. See [`Invocation::with_heap_limit`].
+    heap_limit: Option<usize>,
     /// The directory the interpreter resolves relative paths against, or
     /// `None` to take the process's. A harness running interpreters on threads
     /// sets it, because the process's own directory is shared.
@@ -174,6 +177,7 @@ impl Invocation {
             argument: None,
             input: ProgramInput::Nothing,
             deadline: None,
+            heap_limit: None,
             directory: None,
             environment: None,
             standard_transient: [true; 3],
@@ -296,6 +300,15 @@ impl Invocation {
         }
     }
 
+    /// The same invocation, holding the heap to `bytes` of body
+    /// (r[env.invocation.heap-limit]) whatever [`crate::HEAP_LIMIT_ENV`] says.
+    pub fn with_heap_limit(self, bytes: usize) -> Invocation {
+        Invocation {
+            heap_limit: Some(bytes),
+            ..self
+        }
+    }
+
     /// The same invocation, carving register frames from blocks of
     /// `frame_block`. The size is validated when the `FrameBlock` is built.
     pub fn with_frame_block(self, frame_block: FrameBlock) -> Invocation {
@@ -349,6 +362,7 @@ impl Invocation {
             argument: self.argument,
             input: self.input,
             deadline: self.deadline,
+            heap_limit: self.heap_limit,
             directory: self.directory,
             environment: self.environment,
             standard_transient: self.standard_transient,
@@ -374,6 +388,7 @@ pub(crate) struct InvocationParts {
     pub(crate) argument: Option<Vec<u8>>,
     pub(crate) input: ProgramInput,
     pub(crate) deadline: Option<Duration>,
+    pub(crate) heap_limit: Option<usize>,
     pub(crate) directory: Option<std::path::PathBuf>,
     pub(crate) environment: Option<Vec<(Vec<u8>, Vec<u8>)>>,
     pub(crate) standard_transient: [bool; 3],

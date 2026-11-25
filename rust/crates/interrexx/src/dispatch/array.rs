@@ -151,10 +151,11 @@ fn fixed_array_size(size: u64) -> Result<usize, Failure> {
     usize::try_from(size).map_err(|_| Failure::from(Raised::system_resources()))
 }
 
-/// `size` empty slots, or the 5.0 raised when the allocator refuses --
-/// [`Raised::system_resources`] carries why that refusal is asked of the
-/// allocator rather than of a size limit.
-fn empty_slots(size: usize) -> Result<Vec<Option<ObjRef>>, Failure> {
+/// `size` empty slots, or the 5.0 raised when the heap limit or the allocator
+/// refuses -- [`Raised::system_resources`] carries why that refusal is asked of
+/// the allocator rather than of a size limit.
+fn empty_slots(interp: &Interp, size: usize) -> Result<Vec<Option<ObjRef>>, Failure> {
+    interp.admit_bytes(size.saturating_mul(interrexx_core::SLOT_BYTES))?;
     let mut slots = Vec::new();
     slots
         .try_reserve_exact(size)
@@ -164,7 +165,8 @@ fn empty_slots(size: usize) -> Result<Vec<Option<ObjRef>>, Failure> {
 }
 
 /// [`empty_slots`] as an array body's slots.
-fn empty_array_slots(size: usize) -> Result<ArraySlots, Failure> {
+fn empty_array_slots(interp: &Interp, size: usize) -> Result<ArraySlots, Failure> {
+    interp.admit_bytes(size.saturating_mul(interrexx_core::SLOT_BYTES))?;
     ArraySlots::empty(size).map_err(|_| Failure::from(Raised::system_resources()))
 }
 
@@ -431,6 +433,7 @@ fn position_index(
 /// Grow the receiver to `size` slots, the added ones empty.
 fn array_resize(interp: &mut Interp, receiver: ObjRef, size: usize) -> Result<(), Failure> {
     let receiver = collection_store(interp, receiver);
+    interp.admit_bytes(size.saturating_mul(interrexx_core::SLOT_BYTES))?;
     let grown = match interp.heap.get_mut(receiver).map(|object| &mut object.body) {
         Some(Body::Array { slots, .. }) => {
             let before = slots.capacity();
@@ -493,7 +496,7 @@ fn array_reshape(
         old.is_some() || slots.iter().all(Option::is_none),
         "a reshape with no source shape must have nothing to move"
     );
-    let mut grown = empty_slots(size)?;
+    let mut grown = empty_slots(interp, size)?;
     if let Some(old) = old {
         for (position, item) in slots.iter().enumerate() {
             if item.is_none() {
@@ -639,7 +642,7 @@ pub(super) fn native_array_new(
             None => {
                 let size = fixed_array_size(array_size_argument(interp, *only, 1)?)?;
                 Body::Array {
-                    slots: empty_array_slots(size)?,
+                    slots: empty_array_slots(interp, size)?,
                     // `newRexx`'s own `if (totalSize == 0)`, whose one entry
                     // nothing reads: an explicit zero size fixes the shape,
                     // and the entry is not the extent.
@@ -695,7 +698,7 @@ fn multidimensional_body(
         size = grown_array_size(size, extent)?;
         shape.push(extent);
     }
-    let slots = empty_array_slots(fixed_array_size(size)?)?;
+    let slots = empty_array_slots(interp, fixed_array_size(size)?)?;
     // A zero extent leaves the product zero, so an extent can still be one the
     // target does not address.
     let shape = shape

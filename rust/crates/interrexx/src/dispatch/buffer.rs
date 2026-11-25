@@ -343,6 +343,7 @@ pub(super) fn native_mutable_buffer_new(
     }
     let default_size = optional_length_argument(interp, args, 1)?.unwrap_or(BUFFER_DEFAULT_LENGTH);
     let capacity = default_size.max(initial.len());
+    interp.admit_bytes(capacity)?;
     let mut bytes = Vec::new();
     bytes
         .try_reserve_exact(capacity)
@@ -1380,6 +1381,7 @@ fn grow_buffer(
     receiver: ObjRef,
     added: usize,
 ) -> Result<&mut BufferState, Failure> {
+    interp.admit_bytes(added)?;
     let state = buffer_state_mut(interp, receiver)?;
     let grown = state
         .ensure_capacity(added)
@@ -1400,6 +1402,7 @@ fn grow_buffer_to(
     receiver: ObjRef,
     length: usize,
 ) -> Result<&mut BufferState, Failure> {
+    interp.admit_bytes(length)?;
     let state = buffer_state_mut(interp, receiver)?;
     let grown = state
         .set_capacity(length)

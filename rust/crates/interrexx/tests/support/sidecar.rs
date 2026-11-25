@@ -235,15 +235,22 @@ pub fn instrument_directory() -> PathBuf {
     .clone()
 }
 
+/// The heap limit of every in-process corpus run: far above what a corpus
+/// program holds, and low enough that a request the host would grant but
+/// cannot back is refused with 5.0 rather than taking the machine.
+pub const CORPUS_HEAP_LIMIT: usize = 1 << 30;
+
 /// The in-process interpreter's invocation for one run from `directory`:
-/// `overrides` laid over the process's own environment, and `stdin` as its
-/// standard input.
+/// `overrides` laid over the process's own environment, `stdin` as its
+/// standard input, and [`CORPUS_HEAP_LIMIT`] as its heap limit.
 pub fn invocation(
     directory: &Path,
     overrides: &[(String, String)],
     stdin: Option<&[u8]>,
 ) -> interrexx::Invocation {
-    let mut invocation = interrexx::Invocation::none().with_directory(directory.to_path_buf());
+    let mut invocation = interrexx::Invocation::none()
+        .with_directory(directory.to_path_buf())
+        .with_heap_limit(CORPUS_HEAP_LIMIT);
     if let Some(bytes) = stdin {
         invocation = invocation.with_input(interrexx::ProgramInput::Bytes(bytes.to_vec()));
     }

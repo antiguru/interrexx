@@ -1,0 +1,193 @@
+# REXX_HEAP_LIMIT values.
+
+parse
+1048576
+----
+1048576
+
+parse
+64k
+----
+65536
+
+parse
+64M
+----
+67108864
+
+parse
+2G
+----
+2147483648
+
+parse
+0
+----
+0
+
+parse
+
+----
+unbounded
+
+parse
+12Q
+----
+error: REXX_HEAP_LIMIT must be empty or decimal digits, optionally followed by K, M or G, naming a size this host can address, not `12Q`
+
+parse
+-5
+----
+error: REXX_HEAP_LIMIT must be empty or decimal digits, optionally followed by K, M or G, naming a size this host can address, not `-5`
+
+parse
+M
+----
+error: REXX_HEAP_LIMIT must be empty or decimal digits, optionally followed by K, M or G, naming a size this host can address, not `M`
+
+parse
+99999999999999999999G
+----
+error: REXX_HEAP_LIMIT must be empty or decimal digits, optionally followed by K, M or G, naming a size this host can address, not `99999999999999999999G`
+
+# A request larger than the limit alone is refused where it is made, on every
+# path that sizes an array, a buffer or a string from a program's number.
+
+run limit=64M
+call try ".Array~new(10000000)"
+call try ".Array~new(10000, 1000)"
+call try ".Array~new~insert('z', 10000000)"
+call try ".Array~of('p')~put('z', 10000000)"
+call try "a = .Array~of('p'); a[10000000] = 'z'"
+call try ".MutableBuffer~new('', 100000000)"
+call try "b = .MutableBuffer~new('x'); b~insert('y', 100000000)"
+call try "b = .MutableBuffer~new('x'); b~overlay('y', 100000000)"
+call try "a = .Array~new(1, 1); a[10000, 1000] = 'z'"
+call try "s = copies('x', 100000000)"
+exit
+try:
+  parse arg expression
+  signal on syntax name failed
+  interpret expression
+  say expression 'raised nothing'
+  return
+failed:
+  say expression condition('o')~code
+  return
+----
+.Array~new(10000000) 5.0
+.Array~new(10000, 1000) 5.0
+.Array~new~insert('z', 10000000) 5.0
+.Array~of('p')~put('z', 10000000) 5.0
+a = .Array~of('p'); a[10000000] = 'z' 5.0
+.MutableBuffer~new('', 100000000) 5.0
+b = .MutableBuffer~new('x'); b~insert('y', 100000000) 5.0
+b = .MutableBuffer~new('x'); b~overlay('y', 100000000) 5.0
+a = .Array~new(1, 1); a[10000, 1000] = 'z' 5.0
+s = copies('x', 100000000) 5.0
+rc=0
+
+# The same requests within a limit are made.
+
+run limit=1G
+a = .Array~new(10000000); say a~size
+s = copies('x', 100000000); say length(s)
+----
+10000000
+100000000
+rc=0
+
+# Growth across many requests is raised at the end of a clause, and the
+# handler runs: it can let go of what the program holds and go on.
+
+run limit=64M
+signal on syntax
+s = 'x'
+do 40
+  s = s || s
+end
+say 'no error'
+exit
+syntax:
+say 'trapped' condition('o')~code
+s = ''
+say 'continued' length(copies('y', 1000))
+----
+trapped 5.0
+continued 1000
+rc=0
+
+# Untrapped, it ends the program with error 5.
+
+run limit=64M
+a = .Array~new
+do i = 1 to 100000000
+  a[i] = i
+end
+say 'no error'
+----
+rc=251
+       *-* Built-in method "[]=", scope "Array".
+     3 *-*   a[i] = i
+Error 5 running INSTORE line 3:  System resources exhausted.
+
+# Raised again once the heap, still held, grows on past where it was raised.
+
+run limit=64M
+count = 0
+s = 'x'
+call grow
+call grow
+say 'raised' count
+exit
+grow:
+  signal on syntax
+  do 40
+    s = s || s
+  end
+  return
+syntax:
+  count = count + 1
+  return
+----
+raised 2
+rc=0
+
+# Garbage never counts: a run that makes and drops far more than the limit is
+# not refused.
+
+run limit=64M
+do 1000
+  s = copies('z', 1000000)
+end
+say 'done' length(s)
+----
+done 1000000
+rc=0
+
+# A handler that lets go of what it held re-arms the limit: a later growth
+# that passes it raises again, though far short of where it was raised first.
+
+run limit=64M
+signal on syntax
+s = 'x'
+do 40
+  s = s || s
+end
+exit
+syntax:
+s = ''
+say 'first' condition('o')~code
+signal on syntax name second
+a = .Array~new
+do i = 1 to 1000
+  a[i] = copies('s', 1000000)
+end
+say 'no error'
+exit
+second:
+say 'second' condition('o')~code (a~items < 200)
+----
+first 5.0
+second 5.0 1
+rc=0

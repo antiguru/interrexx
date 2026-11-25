@@ -62,6 +62,16 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     }
 
+    // `REXX_HEAP_LIMIT` bounds the heap (r[env.invocation.heap-limit]). An
+    // embedded run passes over a value it cannot read, so that value is
+    // refused here.
+    if let Some(value) = std::env::var_os(interrexx::HEAP_LIMIT_ENV)
+        && let Err(message) = interrexx::parse_heap_limit(value.as_encoded_bytes())
+    {
+        eprintln!("rexx: {message}");
+        return ExitCode::from(2);
+    }
+
     // `REXX_SWITCH_MODE` is the deterministic switch mode, for tests:
     // `every`, `at:K` for the program's K-th clause, or the simulation mode,
     // `sim`, `sim:SEED[,...]` or `sim:replay=FILE[,trace=FILE]`.
