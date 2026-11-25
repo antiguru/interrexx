@@ -78,6 +78,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Filespec", crate::builtin::platform::filespec),
     rexx_run("Beep", crate::builtin::platform::beep),
     util_run("SysAddRexxMacro", crate::builtin::rexxutil::macros::add),
+    #[cfg(windows)]
+    util_run(
+        "SysBootDrive",
+        crate::builtin::rexxutil::windows_files::boot_drive,
+    ),
     util_run(
         "SysClearRexxMacroSpace",
         crate::builtin::rexxutil::macros::clear,
@@ -100,6 +105,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysCreatePipe",
         crate::builtin::rexxutil::process::create_pipe,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysDriveInfo",
+        crate::builtin::rexxutil::windows_files::drive_info,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysDriveMap",
+        crate::builtin::rexxutil::windows_files::drive_map,
     ),
     util_run("SysDropFuncs", crate::builtin::rexxutil::load_funcs),
     util_run(
@@ -132,10 +147,14 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(unix)]
     util_run("SysFileMove", crate::builtin::rexxutil::files::file_move),
-    #[cfg(unix)]
     util_run(
         "SysFileSearch",
-        crate::builtin::rexxutil::files::file_search,
+        crate::builtin::rexxutil::search::file_search,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysFileSystemType",
+        crate::builtin::rexxutil::windows_files::file_system_type,
     ),
     #[cfg(unix)]
     util_run("SysFileTree", crate::builtin::rexxutil::tree::file_tree),
@@ -272,10 +291,14 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSaveRexxMacroSpace",
         crate::builtin::rexxutil::macros::save,
     ),
-    #[cfg(unix)]
     util_run(
         "SysSearchPath",
-        crate::builtin::rexxutil::files::search_path,
+        crate::builtin::rexxutil::search::search_path,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysSetFileDateTime",
+        crate::builtin::rexxutil::windows_files::set_file_date_time,
     ),
     #[cfg(unix)]
     util_run(
@@ -292,6 +315,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysStemDelete", crate::builtin::rexxutil::stems::delete),
     util_run("SysStemInsert", crate::builtin::rexxutil::stems::insert),
     util_run("SysStemSort", crate::builtin::rexxutil::stems::sort),
+    #[cfg(windows)]
+    util_run(
+        "SysSystemDirectory",
+        crate::builtin::rexxutil::windows_files::system_directory,
+    ),
     #[cfg(unix)]
     util_run(
         "SysTempFileName",
@@ -299,9 +327,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
+    #[cfg(windows)]
+    util_run(
+        "SysVolumeLabel",
+        crate::builtin::rexxutil::windows_files::volume_label,
+    ),
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
+    #[cfg(windows)]
+    util_run("SysWinVer", crate::builtin::rexxutil::version),
 ];
 
 /// Every row `package` exports, in table order.

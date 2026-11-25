@@ -308,7 +308,6 @@ pub(super) fn append_slot(
 impl Interp {
     /// `Array~append` with no message send, as a native routine's
     /// `ArrayAppendString` reaches it: the 1-based index `item` landed on.
-    #[cfg(unix)]
     pub(crate) fn array_append(&mut self, array: ObjRef, item: ObjRef) -> Result<usize, Failure> {
         append_slot(self, array, item)
     }

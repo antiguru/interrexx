@@ -3,7 +3,8 @@
 use interrexx_core::ObjRef;
 use rustix::fs::{FileType, Stat};
 
-use super::files::{CivilTime, Found, OPTION_MESSAGE_LIMIT, local_time, program_zone};
+use super::files::{CivilTime, local_time, program_zone};
+use super::search::{Found, OPTION_MESSAGE_LIMIT};
 use super::{answer, c_string, check_arity, optional_text, os_path, required, required_c_string};
 use crate::builtin::platform::{expand_tilde, qualify_name};
 use crate::error::Raised;

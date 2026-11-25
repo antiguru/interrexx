@@ -106,24 +106,52 @@ pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io
 pub(crate) fn local_file_time(ticks: u64) -> Option<windows_sys::Win32::Foundation::SYSTEMTIME> {
     use windows_sys::Win32::{
         Foundation::{FILETIME, SYSTEMTIME},
-        Storage::FileSystem::FileTimeToLocalFileTime,
-        System::Time::FileTimeToSystemTime,
+        System::Time::{FileTimeToSystemTime, SystemTimeToTzSpecificLocalTimeEx},
     };
 
     let ticks = ticks.to_le_bytes();
-    let utc = FILETIME {
+    let raw = FILETIME {
         dwLowDateTime: u32::from_le_bytes(ticks[..4].try_into().unwrap()),
         dwHighDateTime: u32::from_le_bytes(ticks[4..].try_into().unwrap()),
     };
-    let mut local = FILETIME::default();
+    let mut utc = SYSTEMTIME::default();
     let mut civil = SYSTEMTIME::default();
-    // SAFETY: all pointers refer to live structures of the required type.
-    if unsafe { FileTimeToLocalFileTime(&utc, &mut local) } == 0
-        || unsafe { FileTimeToSystemTime(&local, &mut civil) } == 0
-    {
-        return None;
-    }
-    Some(civil)
+    // SAFETY: all non-null pointers refer to distinct live structures.
+    // The null zone uses the active Windows zone and its date-specific rules.
+    let ok = unsafe {
+        FileTimeToSystemTime(&raw, &mut utc) != 0
+            && SystemTimeToTzSpecificLocalTimeEx(std::ptr::null(), &utc, &mut civil) != 0
+    };
+    ok.then_some(civil)
+}
+
+/// Writes the modification time, interpreting `civil` in Windows local time.
+pub(crate) fn set_local_file_time(
+    file: &std::fs::File,
+    civil: &windows_sys::Win32::Foundation::SYSTEMTIME,
+) -> Option<()> {
+    use std::os::windows::io::AsRawHandle as _;
+    use windows_sys::Win32::{
+        Foundation::{FILETIME, SYSTEMTIME},
+        Storage::FileSystem::SetFileTime,
+        System::Time::{SystemTimeToFileTime, TzSpecificLocalTimeToSystemTimeEx},
+    };
+
+    let mut utc = SYSTEMTIME::default();
+    let mut raw = FILETIME::default();
+    // SAFETY: both conversions use distinct live structures. The file
+    // handle stays open and null leaves creation and access unchanged.
+    let ok = unsafe {
+        TzSpecificLocalTimeToSystemTimeEx(std::ptr::null(), civil, &mut utc) != 0
+            && SystemTimeToFileTime(&utc, &mut raw) != 0
+            && SetFileTime(
+                file.as_raw_handle(),
+                std::ptr::null(),
+                std::ptr::null(),
+                &raw,
+            ) != 0
+    };
+    ok.then_some(())
 }
 
 /// Clears the console screen buffer and moves the cursor back to its origin.
@@ -157,4 +185,120 @@ pub(crate) fn clear_console() -> i64 {
         }
     }
     0
+}
+
+/// The drive containing the Windows installation.
+pub(crate) fn boot_drive() -> Option<[u8; 2]> {
+    use std::path::{Component, Path, Prefix};
+    use windows_sys::Win32::System::SystemInformation::GetSystemWindowsDirectoryW;
+
+    let directory = system_path(GetSystemWindowsDirectoryW)?;
+    match Path::new(&directory).components().next()? {
+        Component::Prefix(prefix) => match prefix.kind() {
+            Prefix::Disk(drive) | Prefix::VerbatimDisk(drive) => Some([drive, b':']),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub(crate) fn system_directory() -> Option<String> {
+    use windows_sys::Win32::System::SystemInformation::GetSystemDirectoryW;
+
+    system_path(GetSystemDirectoryW)
+}
+
+/// These Win32 queries return the required capacity, including the
+/// terminator, if the supplied buffer cannot hold the path.
+fn system_path(query: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option<String> {
+    let mut buffer = vec![0; 260];
+    loop {
+        let capacity = u32::try_from(buffer.len()).ok()?;
+        // SAFETY: the buffer is writable for exactly capacity UTF-16 units.
+        let count = unsafe { query(buffer.as_mut_ptr(), capacity) };
+        if count == 0 {
+            return None;
+        }
+        if count < capacity {
+            return String::from_utf16(&buffer[..count as usize]).ok();
+        }
+        buffer.resize((count as usize).checked_add(1)?, 0);
+    }
+}
+
+/// Returns the volume label and filesystem name. The root includes a trailing backslash.
+pub(crate) fn volume_names(root: &std::path::Path) -> Option<(String, String)> {
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Storage::FileSystem::GetVolumeInformationW;
+
+    let root = file_path(root).ok()?;
+    let mut label = [0; 261];
+    let mut filesystem = [0; 261];
+    // SAFETY: root ends in NUL, and both output buffers have the advertised capacity.
+    let result = unsafe {
+        GetVolumeInformationW(
+            root.as_ptr(),
+            label.as_mut_ptr(),
+            label.len() as u32,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            filesystem.as_mut_ptr(),
+            filesystem.len() as u32,
+        )
+    };
+    if result == 0 {
+        return None;
+    }
+    Some((
+        String::from_utf16_lossy(label.split(|unit| *unit == 0).next()?),
+        String::from_utf16_lossy(filesystem.split(|unit| *unit == 0).next()?),
+    ))
+}
+
+/// Returns the free bytes on the volume and its total size.
+pub(crate) fn volume_space(root: &std::path::Path) -> Option<(u64, u64)> {
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+
+    let root = file_path(root).ok()?;
+    let mut free = 0;
+    let mut total = 0;
+    // SAFETY: root ends in NUL and the non-null outputs are writable u64s.
+    let result =
+        unsafe { GetDiskFreeSpaceExW(root.as_ptr(), std::ptr::null_mut(), &mut total, &mut free) };
+    (result != 0).then_some((free, total))
+}
+
+/// Read the running version regardless of the caller's application manifest.
+pub(crate) fn windows_version() -> Option<String> {
+    use windows_sys::Wdk::System::SystemServices::RtlGetVersion;
+    use windows_sys::Win32::System::SystemInformation::OSVERSIONINFOW;
+
+    let mut info = OSVERSIONINFOW {
+        dwOSVersionInfoSize: std::mem::size_of::<OSVERSIONINFOW>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: info is writable and its size identifies the structure version.
+    let status = unsafe { RtlGetVersion(&mut info) };
+    (status >= 0).then(|| {
+        format!(
+            "Windows {}.{}.{}",
+            info.dwMajorVersion, info.dwMinorVersion, info.dwBuildNumber
+        )
+    })
+}
+
+/// The bit for each drive letter currently assigned by Windows.
+pub(crate) fn logical_drives() -> Option<u32> {
+    use windows_sys::Win32::Storage::FileSystem::GetLogicalDrives;
+    // SAFETY: GetLogicalDrives has no parameters or memory to validate.
+    let drives = unsafe { GetLogicalDrives() };
+    (drives != 0).then_some(drives)
+}
+
+pub(crate) fn drive_type(letter: u8) -> u32 {
+    use windows_sys::Win32::Storage::FileSystem::GetDriveTypeW;
+    let root = [u16::from(letter), u16::from(b':'), u16::from(b'\\'), 0];
+    // SAFETY: root is NUL-terminated and lives through the query.
+    unsafe { GetDriveTypeW(root.as_ptr()) }
 }

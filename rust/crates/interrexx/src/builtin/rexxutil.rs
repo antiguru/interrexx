@@ -7,6 +7,7 @@ pub(crate) mod macros;
 pub(crate) mod messages;
 #[cfg(unix)]
 pub(crate) mod process;
+pub(crate) mod search;
 pub(crate) mod stems;
 pub(crate) mod timezone;
 #[cfg(unix)]
@@ -657,8 +658,7 @@ fn outside_range(position: usize, min: i128, max: i128, found: &[u8]) -> Failure
     raised.into()
 }
 
-/// `SysVersion()` and `SysLinVer()`, which are one entry point: `uname`'s
-/// `sysname` and `release`, a space between them.
+/// `SysVersion()`, also named `SysLinVer()` on Unix and `SysWinVer()` on Windows.
 pub(crate) fn version(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -676,6 +676,58 @@ pub(crate) fn version(
         text
     };
     #[cfg(windows)]
-    let text = b"Windows".to_vec();
+    let text = crate::host::windows_version()
+        .unwrap_or_else(|| "Windows".into())
+        .into_bytes();
     Ok(interp.text_built(text))
+}
+
+/// `sscanf` over `text` with the format `%<w>d<sep>%<w>d<sep>%<w>d`, the
+/// widths in `widths`: the three numbers where all three convert. Each
+/// number skips white space before it and then reads a sign and digits,
+/// `width` bytes at most with the sign counted. A separator matches only
+/// itself, with no white space before it, and whatever follows the third
+/// number is ignored.
+fn scan_triple(text: &[u8], separator: u8, widths: [usize; 3]) -> Option<[i64; 3]> {
+    let mut at = 0;
+    let mut out = [0; 3];
+    for (index, width) in widths.into_iter().enumerate() {
+        if index > 0 {
+            if text.get(at) != Some(&separator) {
+                return None;
+            }
+            at += 1;
+        }
+        while text
+            .get(at)
+            .is_some_and(|byte| matches!(byte, b' ' | b'\t'..=b'\r'))
+        {
+            at += 1;
+        }
+        let end = (at + width).min(text.len());
+        let mut cursor = at;
+        let negative = match text.get(cursor) {
+            Some(b'-') if cursor < end => {
+                cursor += 1;
+                true
+            }
+            Some(b'+') if cursor < end => {
+                cursor += 1;
+                false
+            }
+            _ => false,
+        };
+        let digits_start = cursor;
+        let mut value: i64 = 0;
+        while cursor < end && text[cursor].is_ascii_digit() {
+            value = value * 10 + i64::from(text[cursor] - b'0');
+            cursor += 1;
+        }
+        if cursor == digits_start {
+            return None;
+        }
+        out[index] = if negative { -value } else { value };
+        at = cursor;
+    }
+    Some(out)
 }

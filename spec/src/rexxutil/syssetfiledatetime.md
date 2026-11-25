@@ -397,3 +397,13 @@ and not changed: 1
 syssetfiledatetime('~/f.txt', '2037-01-01', '01:01:01') -> 0
 sysgetfiledatetime(f) -> 2037-01-01 01:01:01
 ```
+
+## Windows
+
+r[util.syssetfiledatetime.windows]
+On Windows, the path can name a file or directory. The routine changes only
+its last-write time. A supplied date or time is interpreted in the Windows
+local time zone using the offset applicable on that date. If one argument
+is omitted, the corresponding part of the previous local timestamp is
+retained. If both are omitted, the last-write time is set to the current time. The result is `0` on success or `-1` if
+the named entry cannot be updated or the date or time is invalid.

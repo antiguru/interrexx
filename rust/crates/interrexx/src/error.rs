@@ -1535,7 +1535,6 @@ impl Raised {
 
     /// 40.900: `Error_Incorrect_call_user_defined`, whose whole message the
     /// routine supplies.
-    #[cfg(unix)]
     pub(crate) fn routine_user_defined(text: &[u8]) -> Raised {
         Raised::syntax(40, 900, vec![text.to_vec()])
     }
@@ -1543,7 +1542,6 @@ impl Raised {
     /// 40.925: the argument at `position` is not an array, a stem or a stem
     /// name. The substitution is the stem that failed to resolve, which is
     /// null, so the value it reports is always empty.
-    #[cfg(unix)]
     pub(crate) fn not_an_array_or_stem(position: usize) -> Raised {
         Raised::syntax(40, 925, vec![position.to_string().into_bytes(), Vec::new()])
     }
