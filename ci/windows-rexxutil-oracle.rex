@@ -47,8 +47,12 @@ list: procedure expose root
     otherwise rc = SysFileTree(spec, 'items.', options)
   end
   say 'rc/count:' rc items.0
+  lines = .array~new
   do i = 1 to items.0
-    say '['changestr(root, items.i, '<ROOT>')']'
+    lines~append('['changestr(root, items.i, '<ROOT>')']')
+  end
+  do line over lines~sort
+    say line
   end
   return
 invalid:

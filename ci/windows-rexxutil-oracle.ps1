@@ -14,16 +14,26 @@ if (-not $oracle) { throw 'The ooRexx archive did not contain rexx.exe' }
 $env:PATH = "$($oracle.DirectoryName);$env:PATH"
 $script = Join-Path $PSScriptRoot 'windows-rexxutil-oracle.rex'
 $fixture = Join-Path $env:RUNNER_TEMP 'rexxutil-oracle-fixture'
-New-Item -ItemType Directory -Path $fixture | Out-Null
-try {
-    $probe = Start-Process $oracle.FullName -NoNewWindow -PassThru -ArgumentList @(
-        ('"' + $script + '"'), ('"' + $fixture + '"')
-    )
-    if (-not $probe.WaitForExit(30000)) {
-        $probe.Kill()
-        throw 'The ooRexx RexxUtil probe timed out'
+function Invoke-Probe($label, $executable) {
+    $stdout = Join-Path $env:RUNNER_TEMP "rexxutil-$label.stdout"
+    $stderr = Join-Path $env:RUNNER_TEMP "rexxutil-$label.stderr"
+    New-Item -ItemType Directory -Path $fixture | Out-Null
+    try {
+        $probe = Start-Process $executable -NoNewWindow -PassThru -ArgumentList @(
+            ('"' + $script + '"'), ('"' + $fixture + '"')
+        ) -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        if (-not $probe.WaitForExit(30000)) {
+            $probe.Kill()
+            throw "$label RexxUtil probe timed out"
+        }
+        Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ }
+        if ($probe.ExitCode -ne 0) { throw "$label RexxUtil probe exited $($probe.ExitCode)" }
+        Write-Host "$label observations:"
+        Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_; $_ }
+    } finally {
+        Remove-Item -LiteralPath $fixture -Recurse -Force
     }
-    if ($probe.ExitCode -ne 0) { throw "ooRexx RexxUtil probe exited $($probe.ExitCode)" }
-} finally {
-    Remove-Item -LiteralPath $fixture -Recurse -Force
 }
+$actual = @(Invoke-Probe interrexx (Resolve-Path ./target/debug/rexx.exe).Path)
+$expected = @(Invoke-Probe oorexx $oracle.FullName)
+Compare-Object -ReferenceObject $expected -DifferenceObject $actual -SyncWindow 0 | Out-String | Write-Host
