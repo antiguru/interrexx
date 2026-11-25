@@ -1636,3 +1636,11 @@ checking their values. ooRexx sends `<`, `UPPER`, `CASELESSSTARTSWITH` or
 `CASELESSMATCHCHAR` to the arguments themselves, which can raise
 `SYNTAX 97.1` even for objects that supply valid text
 ([example](r:class.circularqueue.deviation.183)).
+
+## 184. Instantiating a run-time subclass of TraceObject
+
+The normal subclass and constructor rules apply when `TraceObject~subclass`
+creates a class at run time. ooRexx creates the subclass, then raises
+`SYNTAX 41.1` when `NEW` first instantiates it. A class declared with
+`::CLASS ... SUBCLASS TraceObject` can be instantiated on both interpreters
+([example](r:class.traceobject.deviation.184)). Ruled by the owner in #1036.

@@ -2,7 +2,7 @@
 element: "TraceObject"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > TraceObject Class; Builtin Classes > Utility Classes > TraceObject Class > activate (Class Method); Builtin Classes > Utility Classes > TraceObject Class > collector (Class Method); Builtin Classes > Utility Classes > TraceObject Class > collector= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > counter (Class Method); Builtin Classes > Utility Classes > TraceObject Class > makeStringImpl (Class Method); Builtin Classes > Utility Classes > TraceObject Class > new (Class Method); Builtin Classes > Utility Classes > TraceObject Class > notify (Class Method); Builtin Classes > Utility Classes > TraceObject Class > notify= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > option (Class Method); Builtin Classes > Utility Classes > TraceObject Class > option= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > setMakeString (Class Method); Builtin Classes > Utility Classes > TraceObject Class > unsetMakeString (Class Method); Builtin Classes > Utility Classes > TraceObject Class > compareTo; Builtin Classes > Utility Classes > TraceObject Class > makeString"
-deviations: [7, 50, 109]
+deviations: [7, 50, 109, 184]
 ---
 
 # TraceObject
@@ -40,6 +40,8 @@ attributes of its own: its `new` counts with its own `counter`, from `0`, sends
 `append` to its own `collector`, and its instances' `makeString` follows its own
 `option` and `setMakeString`. The interpreter makes the objects for trace lines
 with `TraceObject` itself, so the attributes of a subclass do not affect them.
+This applies to a class made with [`subclass`](r:class.class.subclass) as well
+as one declared by `::CLASS` ([Deviation 184](r:class.traceobject.deviation.184)).
 
 ```rexx
 t = .traceobject
@@ -1489,4 +1491,30 @@ say .traceobject~option
 
 ```output
 S
+```
+
+r[class.traceobject.deviation.184]
+An instance of a `TraceObject` subclass can be made whether the subclass was
+declared or created at run time. Each subclass counts its own instances.
+ooRexx creates the run-time subclass and then raises `SYNTAX 41.1` on its
+first `NEW`. It instantiates the declared subclass.
+
+```rexx
+declared = .declared~new
+say 'declared' declared~class~id declared['NUMBER']
+runtime = .traceobject~subclass('DynamicTrace')
+say 'superclass' runtime~superclass~id
+signal on syntax name failed
+first = runtime~new
+second = runtime~new
+say 'dynamic' first~class~id first['NUMBER'] second['NUMBER'] .traceobject~counter
+exit
+failed: say 'error' condition('o')~code
+::class declared subclass TraceObject
+```
+
+```output
+declared DECLARED 1
+superclass TraceObject
+dynamic DynamicTrace 1 2 0
 ```
