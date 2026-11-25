@@ -598,50 +598,67 @@ impl<'a, 'c> Parser<'a, 'c> {
 
     /// Prefix operators, then a subterm with every message send that follows it.
     fn message_subterm(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
-        let Some(token) = self.peek() else {
-            return Ok(None);
+        // Every prefix operator of a run is read here, so the length of the run
+        // costs no native stack.
+        let mut run: Vec<(PrefixOp, std::ops::Range<usize>, Operator)> = Vec::new();
+        let operand = loop {
+            let Some(token) = self.peek() else {
+                break None;
+            };
+            if self.is_terminator(Some(token), term) {
+                break None;
+            }
+            if let TokenKind::Operator(op) = token.kind {
+                let op_span = token.span.clone();
+                let from = self.cursor.position();
+                let prefix = match op {
+                    Operator::Plus => PrefixOp::Plus,
+                    Operator::Subtract => PrefixOp::Minus,
+                    Operator::Backslash => PrefixOp::Not,
+                    // A prefix `>` or `<` is not an operator: it takes a
+                    // reference to a variable. Its message cascade is left to
+                    // the caller's terminators
+                    // (`r[expr.terms.message.reference]`).
+                    Operator::LessThan | Operator::GreaterThan => {
+                        self.advance();
+                        break Some(self.variable_reference_term(from)?);
+                    }
+                    _ => return Err(self.invalid_at(Some(token))),
+                };
+                self.advance();
+                run.push((prefix, op_span, op));
+                continue;
+            }
+            let Some(atom) = self.subterm(term)? else {
+                break None;
+            };
+            // A message cascade is part of the same expression term, and its
+            // message names are parsed with the end-of-clause terminator rather
+            // than the caller's set.
+            break Some(self.cascade(atom, Terminators::EOC)?);
         };
-        if self.is_terminator(Some(token), term) {
-            return Ok(None);
-        }
-        if let TokenKind::Operator(op) = token.kind {
-            let op_span = token.span.clone();
-            let from = self.cursor.position();
-            let prefix = match op {
-                Operator::Plus => PrefixOp::Plus,
-                Operator::Subtract => PrefixOp::Minus,
-                Operator::Backslash => PrefixOp::Not,
-                // A prefix `>` or `<` is not an operator: it takes a
-                // reference to a variable.
-                Operator::LessThan | Operator::GreaterThan => {
-                    self.advance();
-                    return self.variable_reference_term(from).map(Some);
-                }
-                _ => return Err(self.invalid_at(Some(token))),
+        let Some(mut operand) = operand else {
+            // The innermost operator is the one left without a term.
+            return match run.last() {
+                Some(&(_, _, op)) => Err(self.operator_without_term(E35_901, op)),
+                None => Ok(None),
             };
-            self.advance();
-            // Recursing on the whole subterm rather than on an atom is what
-            // puts prefix operators above `**`: `-2 ** 2` is `(-2) ** 2`,
-            // which is 4. It also means a chain works, though `--` is a line
-            // comment so `- -2` needs the blank.
-            let Some(operand) = self.message_subterm(term)? else {
-                return Err(self.operator_without_term(E35_901, op));
-            };
-            return Ok(Some(Expr::new(
+        };
+        // The last operator read is innermost, so the prefixes are built from
+        // the end of the run. Wrapping the whole subterm rather than an atom is
+        // what puts prefix operators above `**`: `-2 ** 2` is `(-2) ** 2`,
+        // which is 4. A chain works, though `--` is a line comment so `- -2`
+        // needs the blank.
+        while let Some((op, span, _)) = run.pop() {
+            operand = Expr::new(
                 ExprKind::Prefix {
-                    op: prefix,
+                    op,
                     operand: Box::new(operand),
                 },
-                op_span,
-            )));
+                span,
+            );
         }
-        let Some(atom) = self.subterm(term)? else {
-            return Ok(None);
-        };
-        // A message cascade is part of the same expression term, and its message
-        // names are parsed with the end-of-clause terminator rather than the
-        // caller's set.
-        self.cascade(atom, Terminators::EOC).map(Some)
+        Ok(Some(operand))
     }
 
     /// Applies every `~`, `~~` and `[` that follows a term.

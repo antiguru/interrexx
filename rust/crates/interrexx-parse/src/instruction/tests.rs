@@ -2087,3 +2087,11 @@ fn a_when_inside_select_case_builds_a_value_list_not_an_and() {
         other => panic!("expected a plain WHEN, got {other:?}"),
     }
 }
+
+#[test]
+fn a_reference_cascade_reads_its_names_under_the_clause_terminators() {
+    // `parse_kind` assembles a body, so each `DO` needs its `END`.
+    assert_eq!(err("do i = 1 to >a~for\nend"), (19, 909));
+    assert_eq!(err("do i = 1 to - >a~for\nend"), (19, 909));
+    assert_eq!(names(&ok("do i = 1 to b~for\nend")), ["DO", "END"]);
+}

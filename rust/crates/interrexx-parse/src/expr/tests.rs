@@ -884,3 +884,17 @@ fn the_bracket_form_and_the_written_name_are_one_selector() {
     assert!(crate::Selector::same(&selectors[0], &selectors[1]));
     assert_eq!(selectors[0].bytes(), b"[]");
 }
+
+#[test]
+fn a_message_after_a_prefixed_reference_goes_to_the_prefixed_term() {
+    assert_eq!(shape("- >a~value"), "(msg~ (u- (vref A)) \"VALUE\")");
+    assert_eq!(shape("- >a[1]"), "(msg~ (u- (vref A)) \"[]\" 1)");
+    assert_eq!(shape("- (>a~value)"), "(u- (msg~ (vref A) \"VALUE\"))");
+    assert_eq!(shape("\\ - >a~b"), "(msg~ (u\\ (u- (vref A))) \"B\")");
+}
+
+#[test]
+fn a_prefix_run_without_its_term_names_the_innermost_operator() {
+    assert_eq!(error("+ - \\"), (35, 901));
+    assert_eq!(error("- - * 2"), (35, 1));
+}

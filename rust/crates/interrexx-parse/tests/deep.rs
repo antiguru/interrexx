@@ -130,3 +130,20 @@ fn recursive_expression_traits_run_on_the_parser_stack() {
     })
     .expect("spawns");
 }
+
+/// A run of prefix operators is read in a loop, so its length costs no
+/// native stack.
+#[test]
+fn a_long_prefix_chain_parses_on_a_default_stack_thread() {
+    let mut src = String::from("say ");
+    src.push_str(&"- ".repeat(100_000));
+    src.push_str("1\n");
+    // An explicit 2 MiB, so an environment's RUST_MIN_STACK cannot hide a
+    // recursion per operator.
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || drop(parse_program(src.into_bytes()).expect("parses")))
+        .expect("spawns")
+        .join()
+        .expect("parses without overflowing");
+}
