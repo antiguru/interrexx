@@ -7,7 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use interrexx_parse::{
-    Call, CodeBody, DirectiveKind, Expr, ExprKind, InstructionKind, Operator, parse_program,
+    Args, Call, CodeBody, DirectiveKind, ExprRef, ExprView, InstructionKind, Operator,
+    parse_program,
 };
 
 use super::golden::render;
@@ -151,29 +152,29 @@ fn promoted_as(kind: &InstructionKind, index: usize, listed: &[usize]) -> Option
 }
 
 /// The op the expression [`check_body`] hands this must end in.
-fn root_of(expr: &Expr) -> Root {
-    match &expr.kind {
+fn root_of(expr: ExprRef<'_>) -> Root {
+    match expr.kind() {
         // A call at the root is the whole slot's expression, so the route down
         // to it has no steps and every address reaches it. A call *below* the
         // root is an operand and never the last op, so it is [`native`]'s
         // business rather than this function's.
-        ExprKind::Call { .. } | ExprKind::QualifiedCall { .. } => Root::CallExpr,
-        ExprKind::Literal(_) => Root::Const,
-        ExprKind::Constant(_) => Root::LoadConstant,
-        ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_) => Root::Load,
-        ExprKind::Message { .. } if native(expr, Some(0)) => Root::Send,
-        ExprKind::List(_) if native(expr, Some(0)) => Root::List,
-        ExprKind::VariableReference(_) => Root::Reference,
-        ExprKind::ClassResolver { .. } => Root::ClassAt,
-        ExprKind::Binary { op, left, right }
+        ExprView::Call { .. } | ExprView::QualifiedCall { .. } => Root::CallExpr,
+        ExprView::Literal(_) => Root::Const,
+        ExprView::Constant(_) => Root::LoadConstant,
+        ExprView::Variable(_)
+        | ExprView::Stem(_)
+        | ExprView::Compound(_)
+        | ExprView::DotVariable(_) => Root::Load,
+        ExprView::Message { .. } if native(expr, Some(0)) => Root::Send,
+        ExprView::List(_) if native(expr, Some(0)) => Root::List,
+        ExprView::VariableReference { .. } => Root::Reference,
+        ExprView::ClassResolver { .. } => Root::ClassAt,
+        ExprView::Binary { op, left, right }
             if native(left, step(Some(0), 1)) && native(right, step(Some(0), 1)) =>
         {
-            if arithmetic(*op) {
+            if arithmetic(op) {
                 Root::Arith
-            } else if other_family(*op) {
+            } else if other_family(op) {
                 Root::Binary
             } else {
                 Root::EvalExpr
@@ -184,7 +185,7 @@ fn root_of(expr: &Expr) -> Root {
         // its operator, and one that did not would leave an `Op::EvalExpr`
         // where this arm calls for `Root::Prefix` -- which reddens rather than
         // passes, so the arm is the claim and not an assumption behind it.
-        ExprKind::Prefix { operand, .. } if native(operand, step(Some(0), 1)) => Root::Prefix,
+        ExprView::Prefix { operand, .. } if native(operand, step(Some(0), 1)) => Root::Prefix,
         _ => Root::EvalExpr,
     }
 }
@@ -206,20 +207,20 @@ fn step(taken: Option<usize>, width: usize) -> Option<usize> {
 /// route steps stand between `expr` and its slot's own root: one below an
 /// operator, `k + 1` for the `k`th child of a list of them, and `None` once
 /// no address reaches it.
-fn native(expr: &Expr, taken: Option<usize>) -> bool {
-    match &expr.kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_) => true,
-        ExprKind::Call { .. }
-        | ExprKind::QualifiedCall { .. }
-        | ExprKind::VariableReference(_)
-        | ExprKind::ClassResolver { .. } => taken.is_some(),
+fn native(expr: ExprRef<'_>, taken: Option<usize>) -> bool {
+    match expr.kind() {
+        ExprView::Literal(_)
+        | ExprView::Constant(_)
+        | ExprView::Variable(_)
+        | ExprView::Stem(_)
+        | ExprView::Compound(_)
+        | ExprView::DotVariable(_) => true,
+        ExprView::Call { .. }
+        | ExprView::QualifiedCall { .. }
+        | ExprView::VariableReference { .. }
+        | ExprView::ClassResolver { .. } => taken.is_some(),
         // A `:scope` override has no route of its own.
-        ExprKind::Message {
+        ExprView::Message {
             target,
             super_class,
             args,
@@ -227,29 +228,26 @@ fn native(expr: &Expr, taken: Option<usize>) -> bool {
         } => {
             taken.is_some()
                 && native(target, step(taken, 1))
-                && super_class
-                    .as_deref()
-                    .is_none_or(|scope| native(scope, None))
+                && super_class.is_none_or(|scope| native(scope, None))
                 && arguments(args, taken, 1)
         }
-        ExprKind::List(items) => arguments(items, taken, 0),
-        ExprKind::Binary { op, left, right } => {
-            (arithmetic(*op) || other_family(*op))
+        ExprView::List(items) => arguments(items, taken, 0),
+        ExprView::Binary { op, left, right } => {
+            (arithmetic(op) || other_family(op))
                 && native(left, step(taken, 1))
                 && native(right, step(taken, 1))
         }
-        ExprKind::Prefix { operand, .. } => native(operand, step(taken, 1)),
+        ExprView::Prefix { operand, .. } => native(operand, step(taken, 1)),
         _ => false,
     }
 }
 
 /// Whether every written one of `args` is [`native`], the `k`th being child
 /// `first + k` of a node `taken` steps down.
-fn arguments(args: &[Option<Expr>], taken: Option<usize>, first: usize) -> bool {
-    args.iter().enumerate().all(|(k, arg)| {
-        arg.as_ref()
-            .is_none_or(|expr| native(expr, step(taken, first + k + 1)))
-    })
+fn arguments(args: Args<'_>, taken: Option<usize>, first: usize) -> bool {
+    args.iter()
+        .enumerate()
+        .all(|(k, arg)| arg.is_none_or(|expr| native(expr, step(taken, first + k + 1))))
 }
 
 /// The operators `Interp::eval_arithmetic` computes, as this file's own
@@ -302,17 +300,17 @@ fn other_family(op: Operator) -> bool {
 
 /// Whether `expr` holds a function call, a message send or a comma list
 /// anywhere, which the side table of loop conditions cannot run.
-fn outside_side_table(expr: &Expr) -> bool {
-    match &expr.kind {
-        ExprKind::Call { .. }
-        | ExprKind::QualifiedCall { .. }
-        | ExprKind::Message { .. }
-        | ExprKind::Logical(_) => true,
-        ExprKind::Binary { left, right, .. } => {
+fn outside_side_table(expr: ExprRef<'_>) -> bool {
+    match expr.kind() {
+        ExprView::Call { .. }
+        | ExprView::QualifiedCall { .. }
+        | ExprView::Message { .. }
+        | ExprView::Logical(_) => true,
+        ExprView::Binary { left, right, .. } => {
             outside_side_table(left) || outside_side_table(right)
         }
-        ExprKind::Prefix { operand, .. } => outside_side_table(operand),
-        ExprKind::List(items) => items.iter().flatten().any(outside_side_table),
+        ExprView::Prefix { operand, .. } => outside_side_table(operand),
+        ExprView::List(items) => items.iter().flatten().any(outside_side_table),
         _ => false,
     }
 }
@@ -461,7 +459,7 @@ fn check_body(
                 let expected = if *role == crate::run::HeaderRole::Counter {
                     Root::Const
                 } else {
-                    super::compile::loop_header_expr(loop_, slot).map_or(Root::EvalExpr, root_of)
+                    crate::run::loop_header_slot(body, loop_, slot).map_or(Root::EvalExpr, root_of)
                 };
                 let actual = region[group..op_at].iter().filter_map(Root::of).next_back();
                 assert_eq!(
@@ -483,7 +481,7 @@ fn check_body(
             // `LoopTested`, and one that does neither is in the side table.
             // Neither walks.
             if let Some(conditional) = &loop_.conditional {
-                let expected = root_of(&conditional.condition);
+                let expected = root_of(body.expr(&conditional.condition));
                 let test = chunk.loop_test_at(index);
                 let side = chunk.condition_at(index);
                 if expected == Root::EvalExpr {
@@ -493,7 +491,7 @@ fn check_body(
                          that is not native\n{}",
                         render(&chunk)
                     );
-                } else if outside_side_table(&conditional.condition) {
+                } else if outside_side_table(body.expr(&conditional.condition)) {
                     let test = test.unwrap_or_else(|| {
                         panic!(
                             "{where_}: instruction {index} ({construct}) has a condition that \
@@ -537,7 +535,7 @@ fn check_body(
         // is not native, is walked on every test.
         if let InstructionKind::Guard(guard) = &instruction.kind {
             let side = chunk.condition_at(index);
-            match &guard.condition {
+            match guard.condition.as_ref().map(|c| body.expr(c)) {
                 Some(condition)
                     if root_of(condition) != Root::EvalExpr && !outside_side_table(condition) =>
                 {
@@ -614,19 +612,20 @@ fn check_body(
                     assert_eq!(*last, at);
                     let base = *base;
                     let slot = |offset: Option<u16>| base + offset.expect("the part is present");
-                    let mut expected: Vec<(crate::run::RaisePart, u16, Option<&Expr>)> = Vec::new();
+                    let mut expected: Vec<(crate::run::RaisePart, u16, Option<ExprRef<'_>>)> =
+                        Vec::new();
                     use crate::run::RaisePart;
-                    if let Some(expr) = &raise.rc {
+                    if let Some(expr) = raise.rc.as_ref().map(|e| body.expr(e)) {
                         expected.push((RaisePart::Code, slot(layout.code), Some(expr)));
                     }
-                    if let Some(expr) = &raise.description {
+                    if let Some(expr) = raise.description.as_ref().map(|e| body.expr(e)) {
                         expected.push((
                             RaisePart::Description,
                             slot(layout.description),
                             Some(expr),
                         ));
                     }
-                    if let Some(expr) = &raise.additional {
+                    if let Some(expr) = raise.additional.as_ref().map(|e| body.expr(e)) {
                         expected.push((RaisePart::Additional, slot(layout.additional), Some(expr)));
                     }
                     // An item has a part of its own, its trace lines, only
@@ -650,12 +649,21 @@ fn check_body(
                                     Some(_) => array + k,
                                     None => Op::ARG_OMITTED,
                                 };
-                                expected.push((RaisePart::Item, src, item.as_ref()));
+                                expected.push((
+                                    RaisePart::Item,
+                                    src,
+                                    item.as_ref().map(|e| body.expr(e)),
+                                ));
                             }
                         }
                         expected.push((RaisePart::Array, array, None));
                     }
-                    if let Some(expr) = raise.result.as_ref().and_then(|r| r.value.as_ref()) {
+                    if let Some(expr) = raise
+                        .result
+                        .as_ref()
+                        .and_then(|r| r.value.as_ref())
+                        .map(|e| body.expr(e))
+                    {
                         expected.push((RaisePart::Result, slot(layout.result), Some(expr)));
                     }
                     let mut group = 0;
@@ -706,7 +714,7 @@ fn check_body(
                                 );
                             }
                             Some(expr) => {
-                                let root = root_of(expr);
+                                let root = root_of(*expr);
                                 let actual = ops[group..op_at]
                                     .iter()
                                     .copied()
@@ -779,7 +787,7 @@ fn check_body(
         // `Op::WhenTest`, which is not a slot this file has anything to state
         // about that the op's presence in the stream has not already said.
         let expected = match &instruction.kind {
-            InstructionKind::Assignment { value, .. } => Some(root_of(value)),
+            InstructionKind::Assignment { value, .. } => Some(root_of(body.expr(value))),
             // A `SAY`, a `RETURN`, an `EXIT`, a `PUSH` and a `QUEUE` are one
             // row: each offers its whole expression to `push_native` and each
             // bare form holds none, so `None` here is a clause whose region
@@ -788,39 +796,41 @@ fn check_body(
             | InstructionKind::Return { expression }
             | InstructionKind::Exit { expression }
             | InstructionKind::Push { expression }
-            | InstructionKind::Queue { expression } => expression.as_ref().map(root_of),
-            InstructionKind::If { condition, .. } => Some(condition_root(condition)),
+            | InstructionKind::Queue { expression } => {
+                expression.as_ref().map(|e| root_of(body.expr(e)))
+            }
+            InstructionKind::If { condition, .. } => Some(condition_root(body.expr(condition))),
             // An instruction `Op::ExecValue` runs from its expression's value.
             InstructionKind::Numeric {
                 expression: Some(expression),
                 ..
             }
             | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
-                Some(root_of(expression))
+                Some(root_of(body.expr(expression)))
             }
             InstructionKind::Address(address)
                 if address.command.is_none() && address.environment.is_none() =>
             {
-                address.dynamic.as_ref().map(root_of)
+                address.dynamic.as_ref().map(|e| root_of(body.expr(e)))
             }
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
-                Some(root_of(expression))
+                Some(root_of(body.expr(expression)))
             }
             InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
-                expression.as_ref().map(root_of)
+                expression.as_ref().map(|e| root_of(body.expr(e)))
             }
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
-            InstructionKind::Select { case, .. } => case.as_ref().map(root_of),
-            InstructionKind::When { condition, .. } => match condition_root(condition) {
+            InstructionKind::Select { case, .. } => case.as_ref().map(|e| root_of(body.expr(e))),
+            InstructionKind::When { condition, .. } => match condition_root(body.expr(condition)) {
                 Root::EvalExpr => None,
                 root => Some(root),
             },
             // A message instruction whose term and assigned value are native
             // ends in its send, and one whose are not in no `Root` at all.
             InstructionKind::Message { term, value } => {
-                let native_term = match &term.kind {
-                    ExprKind::Message {
+                let native_term = match body.expr(term).kind() {
+                    ExprView::Message {
                         target,
                         super_class,
                         args,
@@ -829,11 +839,11 @@ fn check_body(
                     } => {
                         (value.is_some() || !cascade)
                             && native(target, Some(1))
-                            && super_class
-                                .as_deref()
-                                .is_none_or(|scope| native(scope, None))
+                            && super_class.is_none_or(|scope| native(scope, None))
                             && arguments(args, Some(0), 1)
-                            && value.as_ref().is_none_or(|value| native(value, Some(0)))
+                            && value
+                                .as_ref()
+                                .is_none_or(|value| native(body.expr(value), Some(0)))
                     }
                     _ => false,
                 };
@@ -855,11 +865,11 @@ fn check_body(
     }
 }
 
-fn condition_root(condition: &Expr) -> Root {
-    if let ExprKind::Logical(items) = &condition.kind
+fn condition_root(condition: ExprRef<'_>) -> Root {
+    if let ExprView::Logical(items) = condition.kind()
         && u16::try_from(items.len()).is_ok()
-        && items.iter().all(|item| native(item, Some(0)))
-        && let Some(last) = items.last()
+        && items.iter().flatten().all(|item| native(item, Some(0)))
+        && let Some(last) = items.iter().flatten().last()
     {
         return root_of(last);
     }

@@ -7,7 +7,7 @@
 use interrexx_cast::CastFrom;
 use std::rc::Rc;
 
-use interrexx_parse::{ExprKind, InstructionKind, parse_program};
+use interrexx_parse::{ExprView, InstructionKind, parse_program};
 
 use super::Op;
 use super::golden::render;
@@ -167,11 +167,11 @@ fn a_compiled_read_names_the_symbol_its_expression_does() {
     let InstructionKind::Assignment { value, .. } = &program.main.instructions[0].kind else {
         panic!("the program's one instruction is an assignment");
     };
-    let ExprKind::Compound(id) = &value.kind else {
+    let ExprView::Compound(id) = program.main.expr(value).kind() else {
         panic!("its value is a compound");
     };
     assert_eq!(
-        program.symbols.name(*id),
+        program.symbols.name(id),
         "ZA.ZI",
         "the expression names the compound, not the target"
     );
@@ -186,7 +186,7 @@ fn a_compiled_read_names_the_symbol_its_expression_does() {
         .collect();
     assert_eq!(
         named,
-        vec![*id, *id],
+        vec![id, id],
         "the load and its echo both name the symbol the expression does"
     );
 }

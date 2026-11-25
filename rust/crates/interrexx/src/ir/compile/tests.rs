@@ -1,5 +1,5 @@
 use interrexx_cast::CastFrom;
-use interrexx_parse::{SymbolId, SymbolTable};
+use interrexx_parse::{InstructionKind, SymbolId, SymbolTable, parse_program};
 
 use super::{
     Op, PlanSlot, Registers, SymbolRead, assert_exec_regions_hold_nothing_else,
@@ -416,27 +416,18 @@ fn ops_naming_their_own_region_clause_are_accepted() {
     ]);
 }
 
-/// An operator chain of `depth` levels over `leaf`, left-deep for a binary
-/// chain and nested for a prefix one.
-fn chain(depth: usize, prefix: bool, leaf: interrexx_parse::ExprKind) -> interrexx_parse::Expr {
-    use interrexx_parse::{Expr, ExprKind, Operator, PrefixOp};
-    let mut expr = Expr::new(leaf, 0..0);
-    for _ in 0..depth {
-        let kind = if prefix {
-            ExprKind::Prefix {
-                op: PrefixOp::Minus,
-                operand: Box::new(expr),
-            }
-        } else {
-            ExprKind::Binary {
-                op: Operator::Plus,
-                left: Box::new(expr),
-                right: Box::new(Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..0)),
-            }
-        };
-        expr = Expr::new(kind, 0..0);
+/// The source of a `SAY` of an operator chain of `depth` levels over `leaf`,
+/// left-deep for a binary chain and nested for a prefix one.
+fn chain(depth: usize, prefix: bool, leaf: &str) -> Vec<u8> {
+    let mut source = String::from("say ");
+    if prefix {
+        source.push_str(&"- ".repeat(depth));
+        source.push_str(leaf);
+    } else {
+        source.push_str(leaf);
+        source.push_str(&"+1".repeat(depth));
     }
-    expr
+    source.into_bytes()
 }
 
 /// `calls_nothing` walks a chain far deeper than a small stack holds frames
@@ -446,17 +437,22 @@ fn calls_nothing_walks_a_deep_chain_on_a_small_stack() {
     std::thread::Builder::new()
         .stack_size(256 * 1024)
         .spawn(|| {
-            let mut symbols = SymbolTable::default();
-            let dot = symbols.intern(".ZV");
             for prefix in [false, true] {
-                let plain = chain(
-                    200_000,
-                    prefix,
-                    interrexx_parse::ExprKind::Literal(Box::from(&b"1"[..])),
-                );
-                assert!(calls_nothing(&plain));
-                let called = chain(200_000, prefix, interrexx_parse::ExprKind::DotVariable(dot));
-                assert!(!calls_nothing(&called));
+                for (leaf, calls) in [("1", false), (".zv", true)] {
+                    let program = parse_program(chain(200_000, prefix, leaf))
+                        .expect("a chain as deep as the parser accepts parses");
+                    let InstructionKind::Say {
+                        expression: Some(expression),
+                    } = &program.main.instructions[0].kind
+                    else {
+                        panic!("prefix {prefix}, leaf {leaf}: a SAY with an expression");
+                    };
+                    assert_eq!(
+                        calls_nothing(program.main.expr(expression)),
+                        !calls,
+                        "prefix {prefix}, leaf {leaf}"
+                    );
+                }
             }
         })
         .expect("a test thread")

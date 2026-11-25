@@ -6,8 +6,8 @@ use interrexx_cast::CastFrom;
 use rustc_hash::FxHashMap;
 
 use interrexx_parse::{
-    Call, CodeBody, Expr, ExprKind, Instruction, InstructionKind, LoopKind, ParseSource, SymbolId,
-    Use,
+    Args, Call, CodeBody, ExprRef, ExprView, Instruction, InstructionKind, LoopKind, ParseSource,
+    SymbolId, Use,
 };
 
 use super::{
@@ -367,7 +367,7 @@ fn compile_settled(
                     // before any of it compiled. `run.rs`'s own
                     // `eval_chunk_expr` is where a slot with no expression then
                     // ends up, and it is loud there.
-                    match loop_header_expr(body_node, slot) {
+                    match crate::run::loop_header_slot(body, body_node, slot) {
                         Some(expr) if native_shape(expr, Some(NodePath::ROOT)) => push_native(
                             &mut ops,
                             echoes_values,
@@ -417,8 +417,8 @@ fn compile_settled(
                 // header walks the expression instead whenever `TRACE` shows
                 // intermediates.
                 if let Some(conditional) = &body_node.conditional
-                    && !value_only(&conditional.condition)
-                    && native_shape(&conditional.condition, Some(NodePath::ROOT))
+                    && !value_only(body.expr(&conditional.condition))
+                    && native_shape(body.expr(&conditional.condition), Some(NodePath::ROOT))
                     && plan.trace_events().get(index) == Some(&crate::trace::TraceEvent::Keeps)
                 {
                     // **A condition that calls or sends is a region of its own
@@ -447,7 +447,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        &conditional.condition,
+                        body.expr(&conditional.condition),
                         instruction_index(index)?,
                         LOOP_CONDITION_SLOT,
                         Some(NodePath::ROOT),
@@ -463,8 +463,8 @@ fn compile_settled(
                     }
                     loop_test_of[index] = Some(LoopTestOps { test, body });
                 } else if let Some(conditional) = &body_node.conditional
-                    && value_only(&conditional.condition)
-                    && native_shape(&conditional.condition, Some(NodePath::ROOT))
+                    && value_only(body.expr(&conditional.condition))
+                    && native_shape(body.expr(&conditional.condition), Some(NodePath::ROOT))
                 {
                     let dst = registers.alloc()?;
                     let start = op_index(&conditions)?;
@@ -476,7 +476,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        &conditional.condition,
+                        body.expr(&conditional.condition),
                         instruction_index(index)?,
                         0,
                         Some(NodePath::ROOT),
@@ -567,7 +567,7 @@ fn compile_settled(
                     &mut hints,
                     &mut calls,
                     plan,
-                    condition,
+                    body.expr(condition),
                     instruction_index(index)?,
                     dst,
                     ConditionKeyword::If,
@@ -631,7 +631,9 @@ fn compile_settled(
                     end: 0,
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
-                if let (Some(dst), Some(case)) = (case_reg, case) {
+                if let (Some(dst), Some(case)) =
+                    (case_reg, case.as_ref().map(|case| body.expr(case)))
+                {
                     if native_shape(case, Some(NodePath::ROOT)) {
                         push_native(
                             &mut ops,
@@ -764,7 +766,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        condition,
+                        body.expr(condition),
                         instruction_index(index)?,
                         dst,
                         ConditionKeyword::When,
@@ -816,15 +818,19 @@ fn compile_settled(
                     &mut hints,
                     &mut calls,
                     plan,
-                    value,
+                    body.expr(value),
                     instruction_index(index)?,
                     0,
                     dst,
                 )?;
-                let shared = share_tail_key(&mut ops[usize::cast_from(at)..], target, value);
+                let shared = share_tail_key(
+                    &mut ops[usize::cast_from(at)..],
+                    body.expr(target),
+                    body.expr(value),
+                );
                 ops.push(Op::Store {
                     index: instruction_index(index)?,
-                    at: write_slot(plan, target),
+                    at: write_slot(plan, body.expr(target)),
                     src: dst,
                     shared,
                 });
@@ -855,7 +861,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            expression,
+                            body.expr(expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -896,7 +902,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            expression,
+                            body.expr(expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -942,7 +948,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            expression,
+                            body.expr(expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -969,8 +975,8 @@ fn compile_settled(
                             .iter()
                             .flatten()
                             .flat_map(|trigger| trigger.targets.iter().flatten())
-                            .map(|target| match target.kind {
-                                ExprKind::Variable(id) => plan.slot_for_symbol(id),
+                            .map(|target| match body.expr(target).kind() {
+                                ExprView::Variable(id) => plan.slot_for_symbol(id),
                                 _ => None,
                             })
                             .eq(writes.iter().map(|&(slot, _)| Some(usize::cast_from(slot)))),
@@ -991,6 +997,7 @@ fn compile_settled(
                     }));
                 } else {
                     push_template(
+                        body,
                         &mut ops,
                         &mut consts,
                         &mut registers,
@@ -1036,7 +1043,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            expression,
+                            body.expr(expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -1080,7 +1087,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            expression,
+                            body.expr(expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -1124,13 +1131,13 @@ fn compile_settled(
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
                 // **The arguments become ops of their own where they can**,
-                // exactly as `ExprKind::Call`'s arm does it. Argument `k` is
+                // exactly as `ExprView::Call`'s arm does it. Argument `k` is
                 // the instruction's expression slot `k`.
+                let args = body.args(args);
                 let native = u16::try_from(args.len()).is_ok()
-                    && args.iter().all(|arg| {
-                        arg.as_ref()
-                            .is_none_or(|expr| native_shape(expr, Some(NodePath::ROOT)))
-                    });
+                    && args
+                        .iter()
+                        .all(|arg| arg.is_none_or(|expr| native_shape(expr, Some(NodePath::ROOT))));
                 if native {
                     let argc = push_arguments(
                         &mut ops,
@@ -1169,15 +1176,18 @@ fn compile_settled(
             // arguments, and the send. The term is slot 0 and the assigned
             // value slot 1.
             InstructionKind::Message { term, value }
-                if native_message_instruction(term, value.as_ref()) =>
+                if native_message_instruction(
+                    body.expr(term),
+                    value.as_ref().map(|value| body.expr(value)),
+                ) =>
             {
-                let ExprKind::Message {
+                let ExprView::Message {
                     target,
                     name,
                     super_class,
                     args,
                     ..
-                } = &term.kind
+                } = body.expr(term).kind()
                 else {
                     unreachable!("the guard above admits only a message term")
                 };
@@ -1212,11 +1222,11 @@ fn compile_settled(
                     &mut hints,
                     &mut calls,
                     plan,
-                    super_class.as_deref(),
+                    super_class,
                     instruction_index(index)?,
                     recv,
                 )?;
-                let assigned = match value {
+                let assigned = match value.as_ref().map(|value| body.expr(value)) {
                     Some(value) => {
                         let src = registers.alloc()?;
                         push_native(
@@ -1368,7 +1378,7 @@ fn compile_settled(
             // expression's ops, then `Op::ExecValue`, which does the rest.
             // A `REPLY` has `Op::ReplyCheck` ahead of them, the check it makes
             // before evaluating.
-            kind if let Some(expression) = exec_value_node(kind) => {
+            kind if let Some(expression) = crate::Interp::exec_value_expression(body, kind) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);
@@ -1417,7 +1427,7 @@ fn compile_settled(
                 if forward.array.as_ref().is_none_or(|array| {
                     array.len() <= usize::cast_from(u32::from(u16::MAX) - FORWARD_ARRAY_SLOT)
                 }) && (forward.array.is_some()
-                    || forward_option_parts(forward)
+                    || crate::run::forward_option_parts(body, forward)
                         .iter()
                         .any(|(_, expr)| expr.is_some())) =>
             {
@@ -1434,7 +1444,7 @@ fn compile_settled(
                     part: ForwardPart::Method,
                     src: Op::ARG_OMITTED,
                 });
-                let scalars = forward_option_parts(forward);
+                let scalars = crate::run::forward_option_parts(body, forward);
                 let base = registers.alloc()?;
                 for _ in 1..scalars.iter().filter(|(_, expr)| expr.is_some()).count() {
                     registers.alloc()?;
@@ -1474,7 +1484,7 @@ fn compile_settled(
                                 &mut hints,
                                 &mut calls,
                                 plan,
-                                expr,
+                                body.expr(expr),
                                 clause,
                                 FORWARD_ARRAY_SLOT
                                     + u32::try_from(slot).expect("within the bound the arm checks"),
@@ -1524,30 +1534,30 @@ fn compile_settled(
                 // expression into its register and the part that follows it,
                 // or a part with no expression of its own.
                 let at = |offset: Option<u16>| offset.map(|offset| base + offset);
-                let mut steps: Vec<(Option<(&Expr, u32)>, RaisePart, u16)> = Vec::new();
-                fn value(
-                    expr: Option<&Expr>,
+                let mut steps: Vec<(Option<(ExprRef<'_>, u32)>, RaisePart, u16)> = Vec::new();
+                fn value<'a>(
+                    expr: Option<ExprRef<'a>>,
                     slot: u32,
                     dst: Option<u16>,
                     part: RaisePart,
-                ) -> Option<(Option<(&Expr, u32)>, RaisePart, u16)> {
+                ) -> Option<(Option<(ExprRef<'a>, u32)>, RaisePart, u16)> {
                     expr.zip(dst)
                         .map(|(expr, dst)| (Some((expr, slot)), part, dst))
                 }
                 steps.extend(value(
-                    raise.rc.as_ref(),
+                    raise.rc.as_ref().map(|e| body.expr(e)),
                     0,
                     at(layout.code),
                     RaisePart::Code,
                 ));
                 steps.extend(value(
-                    raise.description.as_ref(),
+                    raise.description.as_ref().map(|e| body.expr(e)),
                     1,
                     at(layout.description),
                     RaisePart::Description,
                 ));
                 steps.extend(value(
-                    raise.additional.as_ref(),
+                    raise.additional.as_ref().map(|e| body.expr(e)),
                     2,
                     at(layout.additional),
                     RaisePart::Additional,
@@ -1564,7 +1574,9 @@ fn compile_settled(
                             .and_then(|k| array.checked_add(k))
                             .ok_or(ChunkTooLarge { what: "registers" })?;
                         match item {
-                            Some(expr) => steps.push((Some((expr, slot)), RaisePart::Item, dst)),
+                            Some(expr) => {
+                                steps.push((Some((body.expr(expr), slot)), RaisePart::Item, dst))
+                            }
                             None => steps.push((None, RaisePart::Item, Op::ARG_OMITTED)),
                         }
                     }
@@ -1572,7 +1584,7 @@ fn compile_settled(
                 }
                 if let Some(result) = &raise.result {
                     steps.extend(value(
-                        result.value.as_ref(),
+                        result.value.as_ref().map(|e| body.expr(e)),
                         3,
                         at(layout.result),
                         RaisePart::Result,
@@ -1648,7 +1660,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        default,
+                        body.expr(default),
                         clause,
                         u32::from(slot),
                         src,
@@ -1667,7 +1679,7 @@ fn compile_settled(
             // stays the delegating `Op::Exec` region below. The registers are
             // the clause's own while it runs, which nothing else holds.
             InstructionKind::Guard(guard)
-                if let Some(condition) = &guard.condition
+                if let Some(condition) = guard.condition.as_ref().map(|c| body.expr(c))
                     && value_only(condition)
                     && native_shape(condition, Some(NodePath::ROOT)) =>
             {
@@ -1850,16 +1862,16 @@ fn compile_settled(
 /// Whether `expr` is built from reads, literals and operators alone, which is
 /// what [`Chunk::conditions`] may hold: no call, which would have to park the
 /// driver, and no comma list, whose elements are judged one by one.
-fn value_only(expr: &Expr) -> bool {
-    match &expr.kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_) => true,
-        ExprKind::Binary { left, right, .. } => value_only(left) && value_only(right),
-        ExprKind::Prefix { operand, .. } => value_only(operand),
+fn value_only(expr: ExprRef<'_>) -> bool {
+    match expr.kind() {
+        ExprView::Literal(_)
+        | ExprView::Constant(_)
+        | ExprView::Variable(_)
+        | ExprView::Stem(_)
+        | ExprView::Compound(_)
+        | ExprView::DotVariable(_) => true,
+        ExprView::Binary { left, right, .. } => value_only(left) && value_only(right),
+        ExprView::Prefix { operand, .. } => value_only(operand),
         _ => false,
     }
 }
@@ -1879,7 +1891,7 @@ fn push_value<'a>(
     hints: &mut Hints,
     calls: &mut Calls,
     plan: &Plan,
-    expr: &'a Expr,
+    expr: ExprRef<'a>,
     index: u32,
     slot: u32,
     dst: u16,
@@ -1920,24 +1932,25 @@ fn push_condition<'a>(
     hints: &mut Hints,
     calls: &mut Calls,
     plan: &Plan,
-    condition: &'a Expr,
+    condition: ExprRef<'a>,
     index: u32,
     dst: u16,
     keyword: ConditionKeyword,
     patch: &mut impl FnMut(u32),
 ) -> Result<bool, ChunkTooLarge> {
-    let (items, comma_list) = match &condition.kind {
-        ExprKind::Logical(items) => (items.as_slice(), true),
-        _ => (std::slice::from_ref(condition), false),
+    let comma_list = matches!(condition.kind(), ExprView::Logical(_));
+    let items: Vec<ExprRef<'a>> = match condition.kind() {
+        ExprView::Logical(items) => items.iter().flatten().collect(),
+        _ => vec![condition],
     };
     if u16::try_from(items.len()).is_err()
         || items
             .iter()
-            .any(|item| !native_shape(item, Some(NodePath::ROOT)))
+            .any(|&item| !native_shape(item, Some(NodePath::ROOT)))
     {
         return Ok(false);
     }
-    for (item_at, item) in items.iter().enumerate() {
+    for (item_at, &item) in items.iter().enumerate() {
         let slot = if comma_list {
             u32::try_from(item_at).expect("an item of one clause") + 1
         } else {
@@ -2020,7 +2033,7 @@ fn parse_opening(parse: &interrexx_parse::Parse, plan: &Plan) -> (ParseOpening, 
 /// [`Op::ParseRun`]s: a source the compiled walk reads in place, no fold, and
 /// every trigger operand an expression the stream can evaluate. `PARSE VAR
 /// name w1 ... rest` keeps the template engine's own walk for that shape.
-fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
+fn compiled_template(body: &CodeBody, parse: &interrexx_parse::Parse) -> bool {
     use interrexx_parse::TriggerKind;
     let source = match &parse.source {
         ParseSource::Value(_) | ParseSource::Arg => true,
@@ -2039,7 +2052,7 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
             trigger
                 .value
                 .as_ref()
-                .is_none_or(|operand| native_shape(operand, Some(NodePath::ROOT)))
+                .is_none_or(|operand| native_shape(body.expr(operand), Some(NodePath::ROOT)))
         })
 }
 
@@ -2058,6 +2071,7 @@ fn compiled_template(parse: &interrexx_parse::Parse) -> bool {
               ops name, how its opening takes it, and whether its operands may get ops"
 )]
 fn push_template<'a>(
+    body: &'a CodeBody,
     ops: &mut Vec<Op>,
     consts: &mut Constants<'a>,
     registers: &mut Registers,
@@ -2070,18 +2084,22 @@ fn push_template<'a>(
     (opening, strings): (ParseOpening, u8),
     untraced: bool,
 ) -> Result<(), ChunkTooLarge> {
-    let runs = untraced && opening != ParseOpening::Engine && compiled_template(parse);
+    let runs = untraced && opening != ParseOpening::Engine && compiled_template(body, parse);
     /// The operand of `entry` that the stream evaluates: one that is not a
     /// literal or a simple variable, which the walk reads where it reaches
     /// it, as the template engine reads them.
-    fn evaluated(entry: &Option<interrexx_parse::ParseTrigger>) -> Option<&Expr> {
+    fn evaluated<'a>(
+        body: &'a CodeBody,
+        entry: &'a Option<interrexx_parse::ParseTrigger>,
+    ) -> Option<ExprRef<'a>> {
         entry
             .as_ref()
             .and_then(|trigger| trigger.value.as_ref())
+            .map(|operand| body.expr(operand))
             .filter(|operand| {
                 !matches!(
-                    operand.kind,
-                    ExprKind::Literal(_) | ExprKind::Constant(_) | ExprKind::Variable(_)
+                    operand.kind(),
+                    ExprView::Literal(_) | ExprView::Constant(_) | ExprView::Variable(_)
                 )
             })
     }
@@ -2090,7 +2108,7 @@ fn push_template<'a>(
     // run, and the template's end. A template the walk runs whole has none.
     let starts: Vec<usize> = if runs {
         (parse.template.iter().enumerate())
-            .filter(|(_, entry)| evaluated(entry).is_some())
+            .filter(|(_, entry)| evaluated(body, entry).is_some())
             .map(|(at, _)| at)
             .collect()
     } else {
@@ -2115,7 +2133,7 @@ fn push_template<'a>(
         strings,
     });
     for (run, &from) in starts.iter().enumerate() {
-        let Some(operand) = evaluated(&parse.template[from]) else {
+        let Some(operand) = evaluated(body, &parse.template[from]) else {
             continue;
         };
         let mark = registers.mark();
@@ -2150,22 +2168,22 @@ fn push_template<'a>(
 
 /// Whether `expr` compiles to native ops entire, with `eval.rs` not entered
 /// for any part of it.
-fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
-    match &expr.kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_) => true,
+fn native_shape(expr: ExprRef<'_>, path: Option<NodePath>) -> bool {
+    match expr.kind() {
+        ExprView::Literal(_)
+        | ExprView::Constant(_)
+        | ExprView::Variable(_)
+        | ExprView::Stem(_)
+        | ExprView::Compound(_)
+        | ExprView::DotVariable(_) => true,
         // A call needs an address, and a node past the width has none. The
         // whole slot then falls to `Op::EvalExpr`, which is the answer it had
         // before there was an address at all.
-        ExprKind::Call { .. } | ExprKind::QualifiedCall { .. } => path.is_some(),
+        ExprView::Call { .. } | ExprView::QualifiedCall { .. } => path.is_some(),
         // A send needs an address for the same reason; the receiver is child
         // 0 and the arguments follow it. A `:scope` override has no address
         // of its own, so a call in it leaves the slot general.
-        ExprKind::Message {
+        ExprView::Message {
             target,
             super_class,
             args,
@@ -2173,16 +2191,14 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         } => {
             path.is_some()
                 && native_shape(target, descend_nth(path, 0))
-                && super_class
-                    .as_deref()
-                    .is_none_or(|scope| native_shape(scope, None))
+                && super_class.is_none_or(|scope| native_shape(scope, None))
                 && native_arguments(args, path, 1)
         }
-        ExprKind::List(items) => native_arguments(items, path, 0),
+        ExprView::List(items) => native_arguments(items, path, 0),
         // A reference names its variable through its address.
-        ExprKind::VariableReference(_) | ExprKind::ClassResolver { .. } => path.is_some(),
-        ExprKind::Binary { op, left, right } => {
-            is_native_binary(*op)
+        ExprView::VariableReference { .. } | ExprView::ClassResolver { .. } => path.is_some(),
+        ExprView::Binary { op, left, right } => {
+            is_native_binary(op)
                 && native_shape(left, descend(path, false))
                 && native_shape(right, descend(path, true))
         }
@@ -2190,7 +2206,7 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
         // `Interp::apply_prefix` matches `PrefixOp` exhaustively, so a variant
         // added to that enum is a compile error there rather than an operator
         // silently promoted here.
-        ExprKind::Prefix { operand, .. } => native_shape(operand, descend(path, false)),
+        ExprView::Prefix { operand, .. } => native_shape(operand, descend(path, false)),
         _ => false,
     }
 }
@@ -2198,22 +2214,20 @@ fn native_shape(expr: &Expr, path: Option<NodePath>) -> bool {
 /// Whether a message instruction's term and assigned `value` compile to
 /// native ops. A cascade answers its receiver, which only the assignment
 /// form, whose answer is never the term's, can ignore.
-fn native_message_instruction(term: &Expr, value: Option<&Expr>) -> bool {
-    let ExprKind::Message {
+fn native_message_instruction(term: ExprRef<'_>, value: Option<ExprRef<'_>>) -> bool {
+    let ExprView::Message {
         target,
         super_class,
         args,
         cascade,
         ..
-    } = &term.kind
+    } = term.kind()
     else {
         return false;
     };
     (value.is_some() || !cascade)
         && native_shape(target, NodePath::ROOT.nth(0))
-        && super_class
-            .as_deref()
-            .is_none_or(|scope| native_shape(scope, None))
+        && super_class.is_none_or(|scope| native_shape(scope, None))
         && native_arguments(args, Some(NodePath::ROOT), 1)
         && value.is_none_or(|value| native_shape(value, Some(NodePath::ROOT)))
 }
@@ -2232,12 +2246,12 @@ fn descend_nth(path: Option<NodePath>, index: usize) -> Option<NodePath> {
 
 /// Whether every one of `args` is omitted or compiles to native ops, each at
 /// child `first + k` of the node `path` addresses, and their count fits an op.
-fn native_arguments(args: &[Option<Expr>], path: Option<NodePath>, first: usize) -> bool {
+fn native_arguments(args: Args<'_>, path: Option<NodePath>, first: usize) -> bool {
     u16::try_from(args.len()).is_ok()
-        && args.iter().enumerate().all(|(k, arg)| {
-            arg.as_ref()
-                .is_none_or(|expr| native_shape(expr, descend_nth(path, first + k)))
-        })
+        && args
+            .iter()
+            .enumerate()
+            .all(|(k, arg)| arg.is_none_or(|expr| native_shape(expr, descend_nth(path, first + k))))
 }
 
 /// The ops that push each of `args` onto the driver's argument stack, the
@@ -2255,7 +2269,7 @@ fn push_arguments<'a>(
     hints: &mut Hints,
     calls: &mut Calls,
     plan: &Plan,
-    args: &'a [Option<Expr>],
+    args: Args<'a>,
     index: u32,
     address: impl Fn(usize) -> (u32, Option<NodePath>),
     trace_omitted: bool,
@@ -2312,7 +2326,7 @@ fn push_scope<'a>(
     hints: &mut Hints,
     calls: &mut Calls,
     plan: &Plan,
-    scope: Option<&'a Expr>,
+    scope: Option<ExprRef<'a>>,
     index: u32,
     recv: u16,
 ) -> Result<u16, ChunkTooLarge> {
@@ -2353,14 +2367,14 @@ fn push_native<'a>(
     hints: &mut Hints,
     calls: &mut Calls,
     plan: &Plan,
-    expr: &'a Expr,
+    expr: ExprRef<'a>,
     index: u32,
     slot: u32,
     path: Option<NodePath>,
     dst: u16,
 ) -> Result<(), ChunkTooLarge> {
-    match &expr.kind {
-        ExprKind::Literal(bytes) => {
+    match expr.kind() {
+        ExprView::Literal(bytes) => {
             ops.push(Op::Const {
                 dst,
                 konst: consts.intern(bytes)?,
@@ -2376,36 +2390,36 @@ fn push_native<'a>(
         // in the op and the spelling is read at run time, where the table is
         // in hand. The echo behind it is the literal's, because the line is the
         // same `>L>`.
-        ExprKind::Constant(id) => {
-            ops.push(Op::LoadConstant { symbol: *id, dst });
+        ExprView::Constant(id) => {
+            ops.push(Op::LoadConstant { symbol: id, dst });
             if echoes_values {
                 ops.push(Op::TraceLiteral { src: dst });
             }
         }
-        // The three bare-symbol reads. **`ExprKind::DotVariable` and
-        // `ExprKind::VariableReference` are not among them and are not
+        // The three bare-symbol reads. **`ExprView::DotVariable` and
+        // `ExprView::VariableReference` are not among them and are not
         // reads**: they trace `>E>` and `>O>` rather than `>V>`.
-        ExprKind::Variable(id) => push_read(ops, echoes_values, plan, SymbolRead::Simple, *id, dst),
-        ExprKind::Stem(id) => push_read(ops, echoes_values, plan, SymbolRead::Stem, *id, dst),
-        ExprKind::Compound(id) => {
-            push_read(ops, echoes_values, plan, SymbolRead::Compound, *id, dst)
+        ExprView::Variable(id) => push_read(ops, echoes_values, plan, SymbolRead::Simple, id, dst),
+        ExprView::Stem(id) => push_read(ops, echoes_values, plan, SymbolRead::Stem, id, dst),
+        ExprView::Compound(id) => {
+            push_read(ops, echoes_values, plan, SymbolRead::Compound, id, dst)
         }
-        ExprKind::DotVariable(id) => {
+        ExprView::DotVariable(id) => {
             ops.push(Op::Load {
-                symbol: *id,
+                symbol: id,
                 read: SymbolRead::Environment,
                 at: calls.reserve_environment(),
                 dst,
             });
             if echoes_values {
                 ops.push(Op::TraceRead {
-                    symbol: *id,
+                    symbol: id,
                     read: SymbolRead::Environment,
                     src: dst,
                 });
             }
         }
-        ExprKind::Binary { op, left, right } => {
+        ExprView::Binary { op, left, right } => {
             // **The left operand lands in `dst` itself and only the right one
             // takes a register of its own**, which is what keeps a chain's
             // register cost at two however long it runs: `za + zb + zc + zd`
@@ -2448,9 +2462,9 @@ fn push_native<'a>(
             // the ops that can specialise, so a slot reserved for an operator
             // that never reads one would shift every later arithmetic site's
             // index by one and hand it somebody else's decision.
-            ops.push(if is_arithmetic(*op) {
+            ops.push(if is_arithmetic(op) {
                 Op::Arith {
-                    op: *op,
+                    op,
                     hint: hints.reserve()?,
                     lhs: dst,
                     rhs,
@@ -2458,21 +2472,17 @@ fn push_native<'a>(
                 }
             } else {
                 Op::Binary {
-                    op: *op,
+                    op,
                     lhs: dst,
                     rhs,
                     dst,
-                    text: crate::eval::compares_as_text(
-                        *op,
-                        interrexx_parse::ExprRef::tree(left),
-                        interrexx_parse::ExprRef::tree(right),
-                    ),
+                    text: crate::eval::compares_as_text(op, left, right),
                     // The left operand compiled into `dst` ends in its own
                     // concatenation op, which is what `onto` claims.
-                    onto: is_concatenation(*op)
+                    onto: is_concatenation(op)
                         && matches!(
-                            &left.kind,
-                            ExprKind::Binary { op: inner, .. } if is_concatenation(*inner)
+                            left.kind(),
+                            ExprView::Binary { op: inner, .. } if is_concatenation(inner)
                         ),
                 }
             });
@@ -2480,14 +2490,14 @@ fn push_native<'a>(
             // `eval.rs` emits this line post-order, with the value in hand --
             // so an inner operator's line precedes the outer one's.
             if echoes_values {
-                ops.push(Op::TraceOperator { op: *op, src: dst });
+                ops.push(Op::TraceOperator { op, src: dst });
             }
             // Held until the operation has run: the right operand's register
             // is live right up to it, and a release any earlier would hand it
             // out to the next operand of an enclosing operator.
             registers.release(mark);
         }
-        ExprKind::Prefix { op, operand } => {
+        ExprView::Prefix { op, operand } => {
             // **The operand lands in `dst` itself and no register is taken**,
             // which is the one-operand case of the discipline the binary arm
             // above states: the operand is read before the destination is
@@ -2507,26 +2517,22 @@ fn push_native<'a>(
                 descend(path, false),
                 dst,
             )?;
-            ops.push(Op::Prefix {
-                op: *op,
-                src: dst,
-                dst,
-            });
+            ops.push(Op::Prefix { op, src: dst, dst });
             // Behind the operation rather than in front of it, because
             // `eval.rs` emits this line post-order, with the value in hand --
             // so an inner operator's line precedes the outer one's.
             if echoes_values {
-                ops.push(Op::TracePrefix { op: *op, src: dst });
+                ops.push(Op::TracePrefix { op, src: dst });
             }
         }
         // The call's address leads back to the target and to any arguments
         // that need the expression evaluator.
-        ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
+        ExprView::Call { args, .. } | ExprView::QualifiedCall { args, .. } => {
             let slot16 = u16::try_from(slot).map_err(|_| ChunkTooLarge {
                 what: "expression slots past u16",
             })?;
             let path = path.expect("native_shape accepts a call only where an address reaches it");
-            let qualified = matches!(expr.kind, ExprKind::QualifiedCall { .. });
+            let qualified = matches!(expr.kind(), ExprView::QualifiedCall { .. });
             let reserve_site = |calls: &mut Calls| {
                 if qualified {
                     Ok(super::UNCACHED_CALL)
@@ -2595,7 +2601,7 @@ fn push_native<'a>(
         }
         // The receiver lands in `dst` itself, which the send reads before it
         // writes its answer there.
-        ExprKind::Message {
+        ExprView::Message {
             target,
             name,
             super_class,
@@ -2626,7 +2632,7 @@ fn push_native<'a>(
                 hints,
                 calls,
                 plan,
-                super_class.as_deref(),
+                super_class,
                 index,
                 dst,
             )?;
@@ -2644,7 +2650,7 @@ fn push_native<'a>(
                 true,
             )?;
             let site = calls.reserve_send(Box::from(&name[..]))?;
-            ops.push(if scope == Op::NO_SCOPE && !*cascade {
+            ops.push(if scope == Op::NO_SCOPE && !cascade {
                 Op::Send {
                     site,
                     recv: dst,
@@ -2660,7 +2666,7 @@ fn push_native<'a>(
                     dst,
                     scope,
                     // `~~` answers the receiver.
-                    form: if *cascade {
+                    form: if cascade {
                         SendForm::Cascade
                     } else {
                         SendForm::Value
@@ -2671,7 +2677,7 @@ fn push_native<'a>(
         }
         // `>name`/`<name`, which traces as an operator (`>O>`) through the
         // same node-addressed echo a call's `>F>` uses.
-        ExprKind::VariableReference(_) => {
+        ExprView::VariableReference { .. } => {
             let slot = u16::try_from(slot).map_err(|_| ChunkTooLarge {
                 what: "expression slots past u16",
             })?;
@@ -2688,7 +2694,7 @@ fn push_native<'a>(
             }
         }
         // `namespace:Name`, whose `>N>` line is the node-addressed echo too.
-        ExprKind::ClassResolver { .. } => {
+        ExprView::ClassResolver { .. } => {
             let slot = u16::try_from(slot).map_err(|_| ChunkTooLarge {
                 what: "expression slots past u16",
             })?;
@@ -2706,7 +2712,7 @@ fn push_native<'a>(
         }
         // An omitted item owes no `>A>` line, where an omitted argument owes
         // an empty one (`eval_list`).
-        ExprKind::List(items) => {
+        ExprView::List(items) => {
             let mark = registers.mark();
             let argc = push_arguments(
                 ops,
@@ -2738,8 +2744,8 @@ fn push_native<'a>(
 /// holds, as a switch to another activity does. Where the answer is yes,
 /// the reads of the compound among `ops`, the ops compiled for `value`, are
 /// marked [`SymbolRead::CompoundShared`].
-pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> bool {
-    let ExprKind::Compound(id) = target.kind else {
+pub(crate) fn share_tail_key(ops: &mut [Op], target: ExprRef<'_>, value: ExprRef<'_>) -> bool {
+    let ExprView::Compound(id) = target.kind() else {
         return false;
     };
     // The write takes the key of the last read before it, so every read of
@@ -2771,17 +2777,17 @@ pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> boo
 /// Whether `expr` is literals, symbols and operators only. Walked with a
 /// worklist rather than by recursion, so that an operator chain as deep as
 /// the parser accepts costs heap rather than stack.
-fn calls_nothing(expr: &Expr) -> bool {
+fn calls_nothing(expr: ExprRef<'_>) -> bool {
     let mut pending = vec![expr];
     while let Some(expr) = pending.pop() {
-        match &expr.kind {
-            ExprKind::Literal(_)
-            | ExprKind::Constant(_)
-            | ExprKind::Variable(_)
-            | ExprKind::Stem(_)
-            | ExprKind::Compound(_) => {}
-            ExprKind::Prefix { operand, .. } => pending.push(operand),
-            ExprKind::Binary { left, right, .. } => {
+        match expr.kind() {
+            ExprView::Literal(_)
+            | ExprView::Constant(_)
+            | ExprView::Variable(_)
+            | ExprView::Stem(_)
+            | ExprView::Compound(_) => {}
+            ExprView::Prefix { operand, .. } => pending.push(operand),
+            ExprView::Binary { left, right, .. } => {
                 pending.push(right);
                 pending.push(left);
             }
@@ -2793,10 +2799,10 @@ fn calls_nothing(expr: &Expr) -> bool {
 
 /// The slot one assignment *target* resolves to, or [`PlanSlot::UNRESOLVED`]
 /// for a target that does not write a slot by name.
-fn write_slot(plan: &Plan, target: &Expr) -> PlanSlot {
-    match &target.kind {
-        ExprKind::Variable(id) => plan
-            .slot_for_symbol(*id)
+fn write_slot(plan: &Plan, target: ExprRef<'_>) -> PlanSlot {
+    match target.kind() {
+        ExprView::Variable(id) => plan
+            .slot_for_symbol(id)
             .map_or(PlanSlot::UNRESOLVED, PlanSlot::of),
         _ => PlanSlot::UNRESOLVED,
     }
@@ -3073,66 +3079,3 @@ pub(crate) fn compile_calls() -> usize {
 
 #[cfg(test)]
 mod tests;
-
-// The compiler still walks the tree, so it reads the instruction slots the
-// run-time helpers answer as views through these twins. Each goes with the
-// compiler's own move to the view.
-
-/// [`crate::run::loop_header_slot`]'s expression, as the node the tree holds.
-pub(super) fn loop_header_expr(header: &interrexx_parse::Loop, slot: u32) -> Option<&Expr> {
-    use interrexx_parse::LoopKind;
-    let plan = loop_header_plan(header);
-    let role = *plan.roles().get(slot as usize)?;
-    match (&header.kind, role) {
-        (LoopKind::Count(expr), HeaderRole::Count) => expr.as_ref(),
-        (LoopKind::Controlled(ctrl), HeaderRole::Initial) => Some(&ctrl.initial),
-        (LoopKind::Controlled(ctrl), HeaderRole::To) => ctrl.to.as_ref(),
-        (LoopKind::Controlled(ctrl), HeaderRole::By) => ctrl.by.as_ref(),
-        (LoopKind::Controlled(ctrl), HeaderRole::For) => ctrl.for_count.as_ref(),
-        (LoopKind::Over { target, .. }, HeaderRole::Over) => Some(target),
-        (LoopKind::Over { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
-        (LoopKind::With { target, .. }, HeaderRole::With) => Some(target),
-        (LoopKind::With { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
-        _ => None,
-    }
-}
-
-/// [`crate::Interp::exec_value_expression`]'s expression, as the node the
-/// tree holds.
-fn exec_value_node(kind: &InstructionKind) -> Option<&Expr> {
-    let expression = match kind {
-        InstructionKind::Numeric {
-            expression: Some(expression),
-            ..
-        }
-        | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => expression,
-        InstructionKind::Address(address)
-            if address.command.is_none() && address.environment.is_none() =>
-        {
-            address.dynamic.as_ref()?
-        }
-        InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
-            expression
-        }
-        InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
-            expression.as_ref()?
-        }
-        InstructionKind::Call(call) => match &**call {
-            interrexx_parse::Call::Dynamic { target, .. } => target,
-            _ => return None,
-        },
-        _ => return None,
-    };
-    Some(expression)
-}
-
-/// [`crate::run::forward_option_parts`]'s expressions, as the nodes the tree
-/// holds.
-fn forward_option_parts(forward: &interrexx_parse::Forward) -> [(ForwardPart, Option<&Expr>); 4] {
-    [
-        (ForwardPart::To, forward.to.as_ref()),
-        (ForwardPart::Message, forward.message.as_ref()),
-        (ForwardPart::Class, forward.class.as_ref()),
-        (ForwardPart::Arguments, forward.arguments.as_ref()),
-    ]
-}

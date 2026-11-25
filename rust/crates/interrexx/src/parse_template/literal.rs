@@ -1,10 +1,11 @@
 use super::*;
 use crate::plan::Plan;
-use interrexx_parse::SymbolTable;
+use interrexx_parse::{CodeBody, SymbolTable};
 
 /// The slot writes for a literal source and a template whose positions and
 /// target values are known independently of the running activation.
 pub(crate) fn literal_writes(
+    body: &CodeBody,
     parse: &Parse,
     plan: &Plan,
     symbols: &SymbolTable,
@@ -12,7 +13,7 @@ pub(crate) fn literal_writes(
     let ParseSource::Value(Some(expression)) = &parse.source else {
         return None;
     };
-    let ExprKind::Literal(bytes) = &expression.kind else {
+    let ExprView::Literal(bytes) = body.expr(expression).kind() else {
         return None;
     };
     if parse.upper || parse.lower || crate::value::canonical_small_int(bytes).is_some() {
@@ -25,9 +26,9 @@ pub(crate) fn literal_writes(
         if trigger.kind == TriggerKind::End {
             cursor.move_to_end();
         } else {
-            let operand = match &trigger.value.as_ref()?.kind {
-                ExprKind::Literal(operand) => operand,
-                ExprKind::Constant(id) => symbols.name(*id).as_bytes(),
+            let operand = match body.expr(trigger.value.as_ref()?).kind() {
+                ExprView::Literal(operand) => operand,
+                ExprView::Constant(id) => symbols.name(id).as_bytes(),
                 _ => return None,
             };
             match trigger.kind {
@@ -60,7 +61,7 @@ pub(crate) fn literal_writes(
                 cursor.next_word(bytes)
             };
             let Some(target) = target else { continue };
-            let ExprKind::Variable(id) = target.kind else {
+            let ExprView::Variable(id) = body.expr(target).kind() else {
                 return None;
             };
             let slot = u32::try_from(plan.slot_for_symbol(id)?).ok()?;
