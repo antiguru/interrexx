@@ -7,6 +7,7 @@
 use crate::Interp;
 use crate::run::{NameShape, shape_of};
 use crate::trace::{ChunkTrace, TraceEvent};
+use interrexx_cast::{CastFrom, CastTruncate};
 use interrexx_core::ObjRef;
 use interrexx_parse::{
     Call, CallTarget, CodeBody, DirectiveKind, Expr, ExprKind, Fragment, Instruction,
@@ -36,12 +37,12 @@ impl ProgramId {
     /// The slot this id names.
     #[inline]
     fn slot(self) -> u32 {
-        self.0 as u32
+        u32::cast_truncate(self.0)
     }
 
     #[inline]
     fn generation(self) -> u32 {
-        (self.0 >> 32) as u32
+        u32::try_from(self.0 >> 32).expect("the high half")
     }
 
     /// The id the `slot`th program loaded into a fresh interpreter gets.
@@ -100,7 +101,7 @@ impl Programs {
     pub(crate) fn insert(&mut self, program: Rc<Program>) -> ProgramId {
         self.live += 1;
         let id = if let Some(slot) = self.free.pop() {
-            let held = &mut self.slots[slot as usize];
+            let held = &mut self.slots[usize::cast_from(slot)];
             held.program = Some(program);
             held.id
         } else {
@@ -121,7 +122,7 @@ impl Programs {
     /// The program `id` names, or `None` once it has been freed.
     #[inline]
     pub(crate) fn get(&self, id: ProgramId) -> Option<&Rc<Program>> {
-        let held = self.slots.get(id.slot() as usize)?;
+        let held = self.slots.get(usize::cast_from(id.slot()))?;
         if held.id != id {
             return None;
         }
@@ -137,7 +138,7 @@ impl Programs {
     #[inline]
     fn package_slot(&self, id: ProgramId) -> Option<&PackageSlot> {
         self.get(id)?;
-        self.packages.get(id.slot() as usize)
+        self.packages.get(usize::cast_from(id.slot()))
     }
 
     /// The object standing for `id`'s package, or `None` before one is built
@@ -156,7 +157,7 @@ impl Programs {
     /// answers the hold it keeps on the program. `None` for a freed `id`.
     pub(crate) fn set_package(&mut self, id: ProgramId, package: ObjRef) -> Option<ProgramHold> {
         self.get(id)?;
-        let held = &mut self.packages[id.slot() as usize];
+        let held = &mut self.packages[usize::cast_from(id.slot())];
         let hold = Rc::new(id);
         held.package = Some(package);
         held.holds = Some(Rc::downgrade(&hold));
@@ -185,9 +186,12 @@ impl Programs {
             // A slot whose generation would reach the last one is retired, so
             // that the id it holds is never issued.
             let next = held.id.generation() + 1;
-            held.id = ProgramId::new(slot as u32, next);
+            held.id = ProgramId::new(
+                u32::try_from(slot).expect("fewer than 2^32 program slots"),
+                next,
+            );
             if next < u32::MAX {
-                self.free.push(slot as u32);
+                self.free.push(held.id.slot());
             }
         }
         freed

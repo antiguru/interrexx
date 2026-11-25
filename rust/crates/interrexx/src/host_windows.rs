@@ -1,6 +1,8 @@
 //! Windows host operations.
 #![allow(unsafe_code)]
 
+use interrexx_cast::CastFrom;
+
 pub(crate) fn pipe() -> std::io::Result<(std::io::PipeReader, std::io::PipeWriter)> {
     std::io::pipe()
 }
@@ -314,9 +316,9 @@ fn wide_path_answer(query: impl Fn(*mut u16, u32) -> u32) -> Option<String> {
             return None;
         }
         if count < capacity {
-            return String::from_utf16(&buffer[..count as usize]).ok();
+            return String::from_utf16(&buffer[..usize::cast_from(count)]).ok();
         }
-        buffer.resize((count as usize).checked_add(1)?, 0);
+        buffer.resize(usize::cast_from(count).checked_add(1)?, 0);
     }
 }
 
@@ -333,12 +335,12 @@ pub(crate) fn volume_names(root: &std::path::Path) -> Option<(String, String)> {
         GetVolumeInformationW(
             root.as_ptr(),
             label.as_mut_ptr(),
-            label.len() as u32,
+            u32::try_from(label.len()).expect("261 units"),
             null_mut(),
             null_mut(),
             null_mut(),
             filesystem.as_mut_ptr(),
-            filesystem.len() as u32,
+            u32::try_from(filesystem.len()).expect("261 units"),
         )
     };
     if result == 0 {
@@ -369,7 +371,8 @@ pub(crate) fn windows_version() -> Option<String> {
     use windows_sys::Win32::System::SystemInformation::OSVERSIONINFOW;
 
     let mut info = OSVERSIONINFOW {
-        dwOSVersionInfoSize: std::mem::size_of::<OSVERSIONINFOW>() as u32,
+        dwOSVersionInfoSize: u32::try_from(std::mem::size_of::<OSVERSIONINFOW>())
+            .expect("a small struct"),
         ..Default::default()
     };
     // SAFETY: info is writable and its size identifies the structure version.

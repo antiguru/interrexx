@@ -22,7 +22,7 @@ fn path_splits_on_blanks_and_keeps_quoted_runs_whole() {
 fn a_command_past_the_argument_cap_does_not_split() {
     let text = vec![b'a'; MAX_COMMAND_ARGS * 2]
         .iter()
-        .map(|byte| (*byte as char).to_string())
+        .map(|byte| char::from(*byte).to_string())
         .collect::<Vec<_>>()
         .join(" ");
     assert!(scan_command(text.as_bytes()).is_none());

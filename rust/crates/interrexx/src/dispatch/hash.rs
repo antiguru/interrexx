@@ -324,9 +324,13 @@ fn object_hash_code(text: &[u8]) -> u64 {
         bytes.copy_from_slice(&text[..8]);
         return u64::from_le_bytes(bytes);
     }
-    let low = text[0] as u16;
-    let high = if text.len() > 1 { text[1] as u16 } else { 0 };
-    ((low | (high << 8)) as i16) as i64 as u64
+    let low = u16::from(text[0]);
+    let high = if text.len() > 1 {
+        u16::from(text[1])
+    } else {
+        0
+    };
+    i64::from((low | (high << 8)).cast_signed()).cast_unsigned()
 }
 
 /// The hash a store looks an index up by.

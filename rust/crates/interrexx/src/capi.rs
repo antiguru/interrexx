@@ -3,6 +3,7 @@
 //!
 //! A `None` name is a NULL pointer at the C API. Statuses are the public API's values.
 
+use interrexx_cast::CastFrom;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
@@ -123,7 +124,7 @@ pub fn create_queue(requested: Option<&[u8]>, size: usize) -> (u64, Option<Vec<u
     let reply = call(Request::CreateQueue {
         session: session(),
         requested: owned(requested),
-        size: size as u64,
+        size: u64::cast_from(size),
     });
     match reply {
         Ok(Reply::QueueCreated {

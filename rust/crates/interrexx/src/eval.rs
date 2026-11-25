@@ -61,7 +61,7 @@ impl Interp {
     /// Evaluates one expression node, and keeps the depth bookkeeping the
     /// evaluation-depth limit needs.
     pub(crate) fn enter_eval_node<T>(&mut self, anchor: *const T) -> Result<(), Failure> {
-        let here = anchor as usize;
+        let here = anchor.addr();
 
         self.activity.depth += 1;
         if self.activity.depth == 1 {

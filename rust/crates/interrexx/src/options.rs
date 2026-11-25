@@ -1,5 +1,6 @@
 //! `::OPTIONS`: what a file's directives leave on its own package.
 
+use interrexx_cast::CastFrom;
 use interrexx_num::{Form, Settings, SettingsError};
 use interrexx_parse::{ConditionOption, OptionsForm, PackageOption};
 
@@ -196,8 +197,8 @@ impl PackageOptions {
             PackageOption::NumericInherit(_) => names("NUMERIC"),
         }
         match option {
-            PackageOption::Digits(digits) => self.numeric.set_digits(*digits as u64)?,
-            PackageOption::Fuzz(fuzz) => self.numeric.set_fuzz(*fuzz as u64)?,
+            PackageOption::Digits(digits) => self.numeric.set_digits(u64::cast_from(*digits))?,
+            PackageOption::Fuzz(fuzz) => self.numeric.set_fuzz(u64::cast_from(*fuzz))?,
             PackageOption::Form(form) => self.numeric.set_form(match form {
                 OptionsForm::Scientific => Form::Scientific,
                 OptionsForm::Engineering => Form::Engineering,

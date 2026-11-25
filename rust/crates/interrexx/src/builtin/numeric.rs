@@ -14,6 +14,7 @@
 //!   -> 1.2300, which is text and could not have moved
 //! ```
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 use interrexx_num::{CompareOp, DivOp, Form, Number, compare_decoded};
 
@@ -75,7 +76,7 @@ fn non_negative(name: &[u8], value: Option<i64>, position: usize) -> Result<Opti
 /// first asked the allocator for it.
 fn padding_width(value: i64) -> Result<u32, Failure> {
     let width = u32::try_from(value).map_err(|_| Failure::from(Raised::system_resources()))?;
-    fresh_buffer(width as usize)?;
+    fresh_buffer(usize::cast_from(width))?;
     Ok(width)
 }
 
@@ -447,7 +448,8 @@ fn extreme_arguments<'a>(
     rest: &'a [Option<ObjRef>],
     digits: u64,
 ) -> Result<(std::borrow::Cow<'a, [Option<ObjRef>]>, bool), Failure> {
-    let width = digits.min(WRITTEN_WHOLE_DIGITS as u64) as u32;
+    let width =
+        u32::try_from(digits.min(u64::cast_from(WRITTEN_WHOLE_DIGITS))).expect("at most eighteen");
     if !whole_written(target).is_some_and(|value| value.unsigned_abs() < 10u64.pow(width)) {
         return Ok((std::borrow::Cow::Borrowed(rest), false));
     }
@@ -518,7 +520,8 @@ fn whole_written(text: &[u8]) -> Option<i64> {
 /// Whether `MAX`/`MIN` stay quiet on LOSTDIGITS (Deviation 44): the target is
 /// written as a whole number that fits `digits`, and so is every argument.
 fn written_whole(interp: &mut Interp, target: &[u8], rest: &[Option<ObjRef>], digits: u64) -> bool {
-    let width = digits.min(WRITTEN_WHOLE_DIGITS as u64) as u32;
+    let width =
+        u32::try_from(digits.min(u64::cast_from(WRITTEN_WHOLE_DIGITS))).expect("at most eighteen");
     whole_written(target).is_some_and(|value| value.unsigned_abs() < 10u64.pow(width))
         && rest
             .iter()
@@ -608,7 +611,7 @@ fn next_seed(interp: &mut Interp, seed: Option<i64>) -> u64 {
         // "flipping all of the bits gives us a better spread", then thirteen
         // scrambles, then the unconditional fourteenth below.
         Some(seed) => {
-            let mut state = !(seed as u64);
+            let mut state = !seed.cast_unsigned();
             for _ in 0..13 {
                 state = randomize(state);
             }

@@ -306,7 +306,7 @@ fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
     let target = system_time_of(when);
     let spec = match target.duration_since(std::time::UNIX_EPOCH) {
         Ok(since) => rustix::fs::Timespec {
-            tv_sec: since.as_secs() as i64,
+            tv_sec: i64::try_from(since.as_secs()).expect("from microseconds in an i64"),
             tv_nsec: i64::from(since.subsec_nanos()),
         },
         // Before the epoch: one second earlier plus the remainder forward,
@@ -314,9 +314,12 @@ fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
         Err(before) => {
             let gap = before.duration();
             let (seconds, nanos) = match gap.subsec_nanos() {
-                0 => (-(gap.as_secs() as i64), 0),
+                0 => (
+                    -i64::try_from(gap.as_secs()).expect("from microseconds in an i64"),
+                    0,
+                ),
                 nanos => (
-                    -(gap.as_secs() as i64) - 1,
+                    -i64::try_from(gap.as_secs()).expect("from microseconds in an i64") - 1,
                     1_000_000_000 - i64::from(nanos),
                 ),
             };

@@ -10,11 +10,12 @@ use super::{
 };
 use crate::clause::{ClauseEntry, DeadlineCounted};
 use crate::ir::Chunk;
+use interrexx_cast::CastFrom;
 use interrexx_num::Scaled;
 
 /// The expression slot a `DO`/`LOOP`'s `WHILE` or `UNTIL` condition is
 /// addressed by, past every header slot `loop_header_plan` hands out.
-pub(crate) const LOOP_CONDITION_SLOT: u32 = u16::MAX as u32;
+pub(crate) const LOOP_CONDITION_SLOT: u32 = interrexx_cast::u32_from_u16(u16::MAX);
 
 /// [`FlatLoop::op_test`] for a loop whose condition is not in the stream.
 const NO_TEST: u32 = u32::MAX;
@@ -133,17 +134,30 @@ impl PassTest {
         }
     }
 
+    /// The test's bits: its discriminant.
+    fn bits(self) -> u8 {
+        match self {
+            PassTest::Plain => 0,
+            PassTest::Until => 1,
+            PassTest::General => 2,
+            PassTest::UntilGeneral => 3,
+            PassTest::StreamedUntil => 5,
+            PassTest::StreamedGeneral => 6,
+            PassTest::StreamedUntilGeneral => 7,
+        }
+    }
+
     fn until(self) -> bool {
-        self as u8 & 1 != 0
+        self.bits() & 1 != 0
     }
 
     fn general(self) -> bool {
-        self as u8 & 2 != 0
+        self.bits() & 2 != 0
     }
 
     /// Whether the condition is in a test region.
     fn streamed(self) -> bool {
-        self as u8 & 4 != 0
+        self.bits() & 4 != 0
     }
 
     /// This, for a loop whose condition is in a test region.
@@ -403,7 +417,7 @@ impl FlatLoop {
 
 /// [`FlatLoop::object_key`] for the boxed state itself.
 fn object_key(ctl: &ObjectControl) -> usize {
-    std::ptr::from_ref(ctl) as usize
+    std::ptr::from_ref(ctl).addr()
 }
 
 /// A `DO WITH` loop's supplier and the names it binds.
@@ -627,7 +641,7 @@ fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
 /// addressing, where a slot is a position in [`HeaderPlan::roles`].
 pub(crate) fn loop_header_slot(body: &Loop, slot: u32) -> Option<&Expr> {
     let plan = loop_header_plan(body);
-    let role = *plan.roles().get(slot as usize)?;
+    let role = *plan.roles().get(usize::cast_from(slot))?;
     header_expr_for(&body.kind, role)
 }
 
@@ -1548,7 +1562,7 @@ impl Interp {
                 current: ControlValue::Small(running),
                 ..
             }) => *running = value,
-            Some(LoopState::Count { remaining }) => *remaining = value as u64,
+            Some(LoopState::Count { remaining }) => *remaining = value.cast_unsigned(),
             _ => {}
         }
     }

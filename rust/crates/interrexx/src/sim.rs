@@ -20,6 +20,7 @@
 //! sim:replay=FILE        the decisions FILE holds taken in place of drawn
 //! ```
 
+use interrexx_cast::{CastFrom, CastLossy};
 use std::collections::{BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -595,13 +596,15 @@ impl Rng {
 
     /// A draw from `[0, 1)`.
     pub(crate) fn unit(&mut self) -> f64 {
-        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+        f64::cast_lossy(self.next_u64() >> 11) / f64::cast_lossy(1u64 << 53)
     }
 
     /// A draw from `range`.
     pub(crate) fn within(&mut self, range: std::ops::RangeInclusive<u64>) -> u64 {
         let span = range.end() - range.start() + 1;
-        range.start() + ((u128::from(self.next_u64()) * u128::from(span)) >> 64) as u64
+        range.start()
+            + u64::try_from((u128::from(self.next_u64()) * u128::from(span)) >> 64)
+                .expect("the high half of a product of two u64")
     }
 }
 
@@ -764,9 +767,12 @@ impl Clock {
             ClockOrigin::Midnight => {
                 let day = offset_micros / (DAY_SECONDS * 1_000_000);
                 let midnight = epoch + Duration::from_secs((day + 1) * DAY_SECONDS);
-                let utc = crate::builtin::datetime::UNIX_BASE_TIME + midnight.as_micros() as i64;
+                let utc = crate::builtin::datetime::UNIX_BASE_TIME
+                    + i64::try_from(midnight.as_micros()).expect("a day near the epoch base");
                 let local = crate::builtin::datetime::local_offset_micros(utc);
-                let at = midnight.as_micros() as i64 - local - before_midnight_micros as i64;
+                let at = i64::try_from(midnight.as_micros()).expect("a day near the epoch base")
+                    - local
+                    - i64::try_from(before_midnight_micros).expect("at most five seconds");
                 Duration::from_micros(u64::try_from(at).unwrap_or_default())
             }
             ClockOrigin::Real =>
@@ -1049,7 +1055,7 @@ fn draw_points(stream: &mut Rng, count: u64, k: u64) -> Vec<u64> {
         return (1..=k).collect();
     }
     let mut points = Vec::new();
-    while (points.len() as u64) < count {
+    while u64::cast_from(points.len()) < count {
         let point = stream.within(1..=k);
         if !points.contains(&point) {
             points.push(point);
@@ -1201,8 +1207,9 @@ impl Interp {
         if priorities.len() <= handle {
             priorities.resize(handle + 1, PRIORITY_BASE);
         }
-        priorities[handle] =
-            PRIORITY_BASE + sim.streams.schedule.within(0..=u64::from(u32::MAX)) as i64;
+        priorities[handle] = PRIORITY_BASE
+            + i64::try_from(sim.streams.schedule.within(0..=u64::from(u32::MAX)))
+                .expect("at most u32::MAX");
     }
 
     /// A clause boundary in the simulation mode, the `clauses`-th: virtual
@@ -1292,7 +1299,7 @@ impl Interp {
         if ready.is_empty() || !matches!(sim.config.policy, Policy::Pct { .. }) {
             return ready.pop_front();
         }
-        let last = ready.len() as u64 - 1;
+        let last = u64::cast_from(ready.len()) - 1;
         let index = match &mut sim.replaying {
             Some(replaying) => replaying.pick(last, 0),
             None => {
@@ -1305,11 +1312,11 @@ impl Interp {
                         best = at;
                     }
                 }
-                best as u64
+                u64::cast_from(best)
             }
         };
         sim.trace.record(Decision::Pick(index));
-        ready.remove(index as usize)
+        ready.remove(usize::try_from(index).unwrap_or(usize::MAX))
     }
 
     /// Shuffles the activities one event readied, those from `mark` on in
@@ -1327,11 +1334,11 @@ impl Interp {
         let readied = ready.len().saturating_sub(mark);
         for i in (1..readied).rev() {
             let j = match &mut sim.replaying {
-                Some(replaying) => replaying.pick(i as u64, i as u64),
-                None => sim.streams.order.within(0..=i as u64),
+                Some(replaying) => replaying.pick(u64::cast_from(i), u64::cast_from(i)),
+                None => sim.streams.order.within(0..=u64::cast_from(i)),
             };
             sim.trace.record(Decision::Pick(j));
-            ready.swap(mark + i, mark + j as usize);
+            ready.swap(mark + i, mark + usize::try_from(j).unwrap_or(usize::MAX));
         }
     }
 

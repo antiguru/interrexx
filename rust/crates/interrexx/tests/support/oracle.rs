@@ -13,6 +13,7 @@
     reason = "this harness times or bounds real runs"
 )]
 
+use interrexx_cast::CastTruncate;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -360,7 +361,7 @@ impl Oracle {
 /// Truncates an in-process exit code to the single byte a real process's
 /// status would carry.
 pub fn wrapped_exit_code(code: i32) -> i32 {
-    i32::from(code as u8)
+    i32::from(u8::cast_truncate(code.cast_unsigned()))
 }
 
 /// How `stderr` is compared: [`descriptor_diffs`]'s DEVIATION 0 normalisation

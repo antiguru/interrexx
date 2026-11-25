@@ -26,6 +26,7 @@
 //! installs fresh arrays. A caller that kept a position across a send can
 //! therefore trust it while the arrays are the same and the position is live.
 
+use interrexx_cast::CastTruncate;
 use interrexx_core::SMALL_INT_MAX;
 
 use super::*;
@@ -150,7 +151,7 @@ impl Counts {
 
     fn encode(self) -> ObjRef {
         debug_assert!(self.live <= self.used && self.used < MAXIMUM_SLOTS);
-        small(((self.used as i64) << Self::BITS | self.live as i64) - Self::BIAS)
+        small((count_value(self.used) << Self::BITS | count_value(self.live)) - Self::BIAS)
     }
 
     fn decode(value: ObjRef) -> Option<Self> {
@@ -159,10 +160,21 @@ impl Counts {
         };
         let packed = value + Self::BIAS;
         Some(Self {
-            used: (packed >> Self::BITS) as usize,
-            live: (packed & Self::MASK) as usize,
+            used: stored_count(packed >> Self::BITS),
+            live: stored_count(packed & Self::MASK),
         })
     }
+}
+
+/// A position or count of a store as the small integer it is kept as. Both
+/// are below [`MAXIMUM_SLOTS`].
+fn count_value(count: usize) -> i64 {
+    i64::try_from(count).expect("below MAXIMUM_SLOTS")
+}
+
+/// A position or count [`count_value`] kept, back as a `usize`.
+fn stored_count(value: i64) -> usize {
+    usize::try_from(value).expect("a position or count this store kept")
 }
 
 /// The entry capacity of a store of `slots` slots: two thirds, so that the
@@ -208,7 +220,7 @@ fn regrown(live: usize, used: usize) -> usize {
 /// codes, which is all a comparison of codes relies on.
 pub(super) fn code_of(hash: u64) -> u64 {
     let mixed = hash.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-    (mixed ^ (mixed >> 29)) & SMALL_INT_MAX as u64
+    (mixed ^ (mixed >> 29)) & SMALL_INT_MAX.unsigned_abs()
 }
 
 /// The slots a code probes, in order: a perturbed sequence over a power of
@@ -226,7 +238,7 @@ impl Sequence {
         let mask = slots - 1;
         Sequence {
             mask,
-            at: code as usize & mask,
+            at: usize::cast_truncate(code) & mask,
             perturb: code,
         }
     }
@@ -242,7 +254,7 @@ impl Sequence {
             .at
             .wrapping_mul(5)
             .wrapping_add(1)
-            .wrapping_add(self.perturb as usize)
+            .wrapping_add(usize::cast_truncate(self.perturb))
             & self.mask;
     }
 }
@@ -260,7 +272,7 @@ pub(super) enum Mark {
 pub(super) fn mark_in(slots: &[Option<ObjRef>], slot: usize) -> Mark {
     match slots.get(slot).copied().flatten().map(ObjRef::decode) {
         Some(Decoded::SmallInt(DELETED)) => Mark::Deleted,
-        Some(Decoded::SmallInt(value)) if value > EMPTY => Mark::Entry(value as usize - 1),
+        Some(Decoded::SmallInt(value)) if value > EMPTY => Mark::Entry(stored_count(value) - 1),
         _ => Mark::Empty,
     }
 }
@@ -312,20 +324,20 @@ impl<'a> Codes<'a> {
     /// The code cached for the entry at a position, `None` for a hole.
     #[inline]
     pub(super) fn code(&self, position: usize) -> Option<u64> {
-        self.field(position, CODE).map(|code| code as u64)
+        self.field(position, CODE).map(i64::cast_unsigned)
     }
 
     /// The entry after the one at `position` in its chain, `None` for the
     /// newest.
     #[inline]
     pub(super) fn next(&self, position: usize) -> Option<usize> {
-        self.field(position, NEXT).map(|next| next as usize)
+        self.field(position, NEXT).map(stored_count)
     }
 
     /// The newest entry of the chain whose oldest is at `head`.
     #[inline]
     fn tail(&self, head: usize) -> usize {
-        self.field(head, TAIL).map_or(head, |tail| tail as usize)
+        self.field(head, TAIL).map_or(head, stored_count)
     }
 
     /// The positions of the chain whose oldest entry is at `head`, oldest
@@ -452,7 +464,7 @@ pub(super) fn pool_variable(
 
 pub(super) fn counted(value: ObjRef) -> Option<usize> {
     match value.decode() {
-        Decoded::SmallInt(value) if value >= 0 => Some(value as usize),
+        Decoded::SmallInt(value) => usize::try_from(value).ok(),
         _ => None,
     }
 }
@@ -509,7 +521,7 @@ fn build(
     for (position, &(index, item, code)) in entries.iter().enumerate() {
         index_slots[position] = Some(index);
         item_slots[position] = item;
-        code_slots[position * stride + CODE] = Some(small(code as i64));
+        code_slots[position * stride + CODE] = Some(small(code.cast_signed()));
         if !linked {
             // Every code is a chain of its own: the entry takes the first
             // empty slot of its sequence.
@@ -521,17 +533,17 @@ fn build(
             while mark_in(&marks, sequence.at()) != Mark::Empty {
                 sequence.advance();
             }
-            marks[sequence.at()] = Some(small(position as i64 + 1));
+            marks[sequence.at()] = Some(small(count_value(position) + 1));
             continue;
         }
         let codes = Codes::new(&code_slots, slot_count);
         match chain_in(&marks, codes, code) {
             Ok((_, head)) => {
                 let tail = codes.tail(head);
-                code_slots[tail * stride + NEXT] = Some(small(position as i64));
-                code_slots[head * stride + TAIL] = Some(small(position as i64));
+                code_slots[tail * stride + NEXT] = Some(small(count_value(position)));
+                code_slots[head * stride + TAIL] = Some(small(count_value(position)));
             }
-            Err(slot) => marks[slot] = Some(small(position as i64 + 1)),
+            Err(slot) => marks[slot] = Some(small(count_value(position) + 1)),
         }
     }
     // Each array is rooted as soon as it exists: the next allocation may
@@ -986,14 +998,19 @@ pub(super) fn append(
         interp,
         store.codes,
         position * stride + CODE,
-        Some(small(code as i64)),
+        Some(small(code.cast_signed())),
     );
     match chain {
         Ok((head, tail)) => {
             write_field(interp, &store, stride, tail, NEXT, Some(position));
             write_field(interp, &store, stride, head, TAIL, Some(position));
         }
-        Err(slot) => write_slot(interp, store.slots, slot, Some(small(position as i64 + 1))),
+        Err(slot) => write_slot(
+            interp,
+            store.slots,
+            slot,
+            Some(small(count_value(position) + 1)),
+        ),
     }
     set_counts(
         interp,
@@ -1021,7 +1038,7 @@ fn relink(
         let (_, codes) = codes_of(interp, store)?;
         for position in 0..store.used {
             if let Some(code) = codes.code(position) {
-                fields[position * FIELDS + CODE] = Some(small(code as i64));
+                fields[position * FIELDS + CODE] = Some(small(code.cast_signed()));
             }
         }
     }
@@ -1079,7 +1096,7 @@ fn write_field(
     value: Option<usize>,
 ) {
     debug_assert!(field < stride, "an unlinked store has no links to write");
-    let value = value.map(|value| small(value as i64));
+    let value = value.map(|value| small(count_value(value)));
     write_slot(interp, store.codes, position * stride + field, value);
 }
 
@@ -1144,7 +1161,12 @@ pub(super) fn remove_entry(
             next: Some(next),
             tail,
         }) => {
-            write_slot(interp, store.slots, slot, Some(small(next as i64 + 1)));
+            write_slot(
+                interp,
+                store.slots,
+                slot,
+                Some(small(count_value(next) + 1)),
+            );
             write_field(interp, store, stride, next, TAIL, Some(tail));
         }
         Some(Unlink::Head {

@@ -2,6 +2,7 @@
 //! Decisions section: "compilation is whole-body and lazy: one body at a
 //! time, on first entry, cached").
 
+use interrexx_cast::CastFrom;
 use rustc_hash::FxHashMap;
 
 use interrexx_parse::{
@@ -458,7 +459,7 @@ fn compile_settled(
                         src: dst,
                     });
                     let body = op_index(&ops)?;
-                    if let Op::LoopTest { end, .. } = &mut ops[test as usize] {
+                    if let Op::LoopTest { end, .. } = &mut ops[usize::cast_from(test)] {
                         *end = body;
                     }
                     loop_test_of[index] = Some(LoopTestOps { test, body });
@@ -483,15 +484,17 @@ fn compile_settled(
                         dst,
                     )?;
                     debug_assert!(
-                        conditions[start as usize..].iter().all(|op| matches!(
-                            op,
-                            Op::Const { .. }
-                                | Op::LoadConstant { .. }
-                                | Op::Load { .. }
-                                | Op::Arith { .. }
-                                | Op::Binary { .. }
-                                | Op::Prefix { .. }
-                        )),
+                        conditions[usize::cast_from(start)..]
+                            .iter()
+                            .all(|op| matches!(
+                                op,
+                                Op::Const { .. }
+                                    | Op::LoadConstant { .. }
+                                    | Op::Load { .. }
+                                    | Op::Arith { .. }
+                                    | Op::Binary { .. }
+                                    | Op::Prefix { .. }
+                            )),
                         "a compiled loop condition holds an op `Interp::run_condition` does not run"
                     );
                     condition_of[index] = Some(ConditionOps {
@@ -819,7 +822,7 @@ fn compile_settled(
                     0,
                     dst,
                 )?;
-                let shared = share_tail_key(&mut ops[at as usize..], target, value);
+                let shared = share_tail_key(&mut ops[usize::cast_from(at)..], target, value);
                 ops.push(Op::Store {
                     index: instruction_index(index)?,
                     at: write_slot(plan, target),
@@ -1098,7 +1101,12 @@ fn compile_settled(
                         plan,
                         args,
                         instruction_index(index)?,
-                        |k| (k as u32, Some(NodePath::ROOT)),
+                        |k| {
+                            (
+                                u32::try_from(k).expect("an argument of one clause"),
+                                Some(NodePath::ROOT),
+                            )
+                        },
                         true,
                     )?;
                     ops.push(Op::CallNamed {
@@ -1366,7 +1374,7 @@ fn compile_settled(
             // Bare FORWARD has no option expressions to compile.
             InstructionKind::Forward(forward)
                 if forward.array.as_ref().is_none_or(|array| {
-                    array.len() <= (u32::from(u16::MAX) - FORWARD_ARRAY_SLOT) as usize
+                    array.len() <= usize::cast_from(u32::from(u16::MAX) - FORWARD_ARRAY_SLOT)
                 }) && (forward.array.is_some()
                     || forward_option_parts(forward)
                         .iter()
@@ -1403,7 +1411,7 @@ fn compile_settled(
                         plan,
                         expr,
                         clause,
-                        slot as u32,
+                        u32::try_from(slot).expect("one of the option parts"),
                         src,
                     )?;
                     ops.push(Op::ForwardPart {
@@ -1427,7 +1435,8 @@ fn compile_settled(
                                 plan,
                                 expr,
                                 clause,
-                                FORWARD_ARRAY_SLOT + slot as u32,
+                                FORWARD_ARRAY_SLOT
+                                    + u32::try_from(slot).expect("within the bound the arm checks"),
                                 src,
                             )?;
                             src
@@ -1605,7 +1614,7 @@ fn compile_settled(
                     )?;
                     ops.push(Op::UseArg(UseArgOp::BindDefault { slot, src }));
                     let skip = op_index(&ops)? - bind - 1;
-                    ops[bind as usize] = Op::UseArg(UseArgOp::Bind { slot, skip });
+                    ops[usize::cast_from(bind)] = Op::UseArg(UseArgOp::Bind { slot, skip });
                     registers.release(mark);
                 }
                 close_region(&mut ops, at)?;
@@ -1739,7 +1748,7 @@ fn compile_settled(
                 landing[select].expect("a SELECT's EnterOtherwise is emitted before patching")
             }
         };
-        match &mut ops[patch.op as usize] {
+        match &mut ops[usize::cast_from(patch.op)] {
             Op::Jump { target: slot }
             | Op::JumpUnless { target: slot, .. }
             | Op::ConditionJump { target: slot, .. } => *slot = target,
@@ -1886,7 +1895,11 @@ fn push_condition<'a>(
         return Ok(false);
     }
     for (item_at, item) in items.iter().enumerate() {
-        let slot = if comma_list { item_at as u32 + 1 } else { 0 };
+        let slot = if comma_list {
+            u32::try_from(item_at).expect("an item of one clause") + 1
+        } else {
+            0
+        };
         push_native(
             ops,
             echoes_values,
@@ -2878,7 +2891,7 @@ fn release_to(slot: &mut Option<Mark>, mark: Mark) {
 /// an [`Op::CallingClause`] where the region holds an op a callee resumes.
 fn close_region(ops: &mut [Op], at: u32) -> Result<(), ChunkTooLarge> {
     let end = op_index(ops)?;
-    let (head, region) = ops[at as usize..].split_at_mut(1);
+    let (head, region) = ops[usize::cast_from(at)..].split_at_mut(1);
     let calling = region.iter().any(|op| {
         matches!(
             op,

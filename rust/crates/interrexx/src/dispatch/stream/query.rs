@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::builtin::rexxutil::timezone::program_zone;
+use interrexx_cast::CastFrom;
 
 /// `query_exists`: the qualified name when it names a file, and the null string
 /// otherwise -- a directory answers nothing, because the check is for a regular
@@ -274,7 +275,7 @@ pub(in crate::dispatch) fn query_handle(
             let handle = {
                 use std::os::windows::io::AsRawHandle;
                 require(interp, receiver)?.open.as_ref().map(|open| {
-                    (open.file().as_raw_handle() as usize)
+                    (open.file().as_raw_handle().addr())
                         .to_string()
                         .into_bytes()
                 })
@@ -395,7 +396,10 @@ pub(in crate::dispatch) fn query_position(
         } else if !write {
             Some(1)
         } else {
-            at.map(|at| at.saturating_add(interp.out.len() as u64).saturating_add(1))
+            at.map(|at| {
+                at.saturating_add(u64::cast_from(interp.out.len()))
+                    .saturating_add(1)
+            })
         };
         return Ok(Some(match answer {
             Some(at) => interp.text_built(at.to_string().into_bytes()),

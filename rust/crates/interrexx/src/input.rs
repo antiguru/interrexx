@@ -16,12 +16,13 @@
 //! "a\x00b\n"         ->  "a\x00b"  (3)   NUL is data
 //! ```
 
+use interrexx_cast::CastFrom;
 use std::io::{BufRead, Cursor, Read};
 
 use interrexx_core::ObjRef;
 
 use crate::invocation::ProgramInput;
-use crate::lines::{as_position, lines_after, offset_of, read_from, size_of};
+use crate::lines::{as_position, lines_after, memory_count, offset_of, read_from, size_of};
 use crate::{Failure, Interp};
 
 /// `.input`'s position: the one line cursor every input construct advances.
@@ -148,7 +149,7 @@ impl FileConsole {
     /// whether the file has one.
     fn fill(&mut self) -> bool {
         let at = self.position();
-        let end = self.buffered_at + self.buffered.len() as u64;
+        let end = self.buffered_at + u64::cast_from(self.buffered.len());
         if at >= self.buffered_at && at < end {
             return true;
         }
@@ -186,7 +187,7 @@ impl FileConsole {
     /// a mark moved without a walk cannot vouch for one.
     fn advance(&mut self, taken: usize, line_ends: i64) {
         let from = self.open.read_position;
-        self.open.read_position += taken as i64;
+        self.open.read_position += memory_count(taken);
         if let Some((mark, line)) = self.open.line_mark
             && mark == from
         {
@@ -204,14 +205,14 @@ impl FileConsole {
             let take = ahead.len().min(wanted - out.len());
             out.extend_from_slice(&ahead[..take]);
             let line_ends = ahead[..take].iter().filter(|byte| **byte == b'\n').count();
-            self.advance(take, line_ends as i64);
+            self.advance(take, memory_count(line_ends));
         }
         out
     }
 
     /// CHARS: the characters from the read position to the end of the file.
     fn chars_left(&self) -> u64 {
-        let left = size_of(self.open.file()) as i64 - (self.open.read_position - 1);
+        let left = as_position(size_of(self.open.file())) - (self.open.read_position - 1);
         u64::try_from(left).unwrap_or(0)
     }
 
@@ -225,7 +226,7 @@ impl FileConsole {
     /// so the count is dropped when the file's size changes instead.
     fn lines_left(&mut self) -> u64 {
         let size = size_of(self.open.file());
-        if self.open.read_position > size as i64 {
+        if self.open.read_position > as_position(size) {
             return 0;
         }
         match self.counted_size {
@@ -484,7 +485,8 @@ impl Input {
                 }
                 // A final line with no terminator still counts, which is why
                 // this is not simply the newline count.
-                let terminators = left.iter().filter(|byte| **byte == b'\n').count() as u64;
+                let terminators =
+                    u64::cast_from(left.iter().filter(|byte| **byte == b'\n').count());
                 Some(match left.last() {
                     Some(b'\n') => terminators,
                     _ => terminators + 1,
@@ -565,7 +567,7 @@ impl Input {
             Source::Nothing => None,
             Source::Stdin(_) | Source::File(_) => None,
             Source::Bytes(cursor) => {
-                Some((cursor.get_ref().len() as u64).saturating_sub(cursor.position()))
+                Some(u64::cast_from(cursor.get_ref().len()).saturating_sub(cursor.position()))
             }
         }
     }

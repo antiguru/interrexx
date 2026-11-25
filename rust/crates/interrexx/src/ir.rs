@@ -1,6 +1,7 @@
 //! The register-based instruction stream: `Op`, `Chunk`, and the
 //! shapes they compile from.
 
+use interrexx_cast::CastFrom;
 use std::cell::Cell;
 
 use interrexx_core::{ObjRef, RegFrame};
@@ -535,7 +536,7 @@ impl PlanSlot {
 
     /// The slot, or `None` when this op carries none.
     pub(crate) fn resolved(self) -> Option<usize> {
-        (self != PlanSlot::UNRESOLVED).then_some(self.0 as usize)
+        (self != PlanSlot::UNRESOLVED).then_some(usize::cast_from(self.0))
     }
 }
 
@@ -616,13 +617,13 @@ impl Hints {
         !QUICKENING
             || self
                 .slots
-                .get(at as usize)
+                .get(usize::cast_from(at))
                 .is_none_or(|slot| slot.get() == TRY_SMALL_INT)
     }
 
     /// Records that site `at` has had the small-integer path answer `None`.
     fn saw_general(&self, at: u32) {
-        if QUICKENING && let Some(slot) = self.slots.get(at as usize) {
+        if QUICKENING && let Some(slot) = self.slots.get(usize::cast_from(at)) {
             slot.set(GENERAL);
         }
     }
@@ -755,7 +756,7 @@ impl Calls {
     /// answers wrongly.
     fn resolved(&self, at: u16, generation: u32) -> Option<Resolved> {
         self.slots
-            .get(at as usize)
+            .get(usize::cast_from(at))
             .and_then(|slot| slot.get(generation))
     }
 
@@ -775,7 +776,7 @@ impl Calls {
         if matches!(resolved, Resolved::Unresolved) {
             return Repin::NONE;
         }
-        match self.slots.get(at as usize) {
+        match self.slots.get(usize::cast_from(at)) {
             Some(slot) => slot.set(resolved, generation, hold),
             None => Repin::NONE,
         }
@@ -934,13 +935,13 @@ impl Chunk {
     /// without a second check per op.
     #[inline]
     fn ops_upto(&self, stop: u32) -> Option<&[Op]> {
-        self.ops.get(..stop as usize)
+        self.ops.get(..usize::cast_from(stop))
     }
 
     /// The ops of `[at, end)`, or `None` when that is not a range of this
     /// stream.
     fn ops_in(&self, at: u32, end: u32) -> Option<&[Op]> {
-        self.ops.get(at as usize..end as usize)
+        self.ops.get(usize::cast_from(at)..usize::cast_from(end))
     }
 
     /// The compiled condition of the loop at instruction `index`, if it
@@ -960,7 +961,7 @@ impl Chunk {
     #[inline]
     pub(crate) fn condition_ops(&self, condition: ConditionOps) -> Option<&[Op]> {
         self.conditions
-            .get(condition.start as usize..condition.end as usize)
+            .get(usize::cast_from(condition.start)..usize::cast_from(condition.end))
     }
 
     /// The setting this chunk's trace ops were emitted for.
@@ -983,13 +984,15 @@ impl Chunk {
     /// The bytes of constant `at`, or `None` when the index is outside the
     /// table this chunk was compiled with.
     fn konst(&self, at: u32) -> Option<&[u8]> {
-        self.consts.get(at as usize).map(|bytes| &bytes[..])
+        self.consts
+            .get(usize::cast_from(at))
+            .map(|bytes| &bytes[..])
     }
 
     /// The value constant `at` was interned to, or [`ObjRef::NIL`] when it has
     /// not been built yet or the index names no entry.
     fn interned_konst(&self, at: u32) -> ObjRef {
-        match self.interned.get(at as usize) {
+        match self.interned.get(usize::cast_from(at)) {
             Some(cell) => cell.get(),
             None => ObjRef::NIL,
         }
@@ -997,7 +1000,7 @@ impl Chunk {
 
     /// Records what constant `at` was interned to.
     fn remember_konst(&self, at: u32, value: ObjRef) {
-        if let Some(cell) = self.interned.get(at as usize) {
+        if let Some(cell) = self.interned.get(usize::cast_from(at)) {
             cell.set(value);
         }
     }
@@ -1079,7 +1082,10 @@ impl Chunk {
     /// The message name send site `at` sends, or `None` for a site this
     /// chunk does not have.
     pub(crate) fn send_name(&self, at: u32) -> Option<&[u8]> {
-        self.calls.sends.get(at as usize).map(|site| &site.name[..])
+        self.calls
+            .sends
+            .get(usize::cast_from(at))
+            .map(|site| &site.name[..])
     }
 
     /// Send site `at`'s message name and the memo of its last resolution.
@@ -1089,7 +1095,7 @@ impl Chunk {
     ) -> Option<(&[u8], &Cell<Option<crate::dispatch::SendMemo>>)> {
         self.calls
             .sends
-            .get(at as usize)
+            .get(usize::cast_from(at))
             .map(|site| (&site.name[..], &site.memo))
     }
 

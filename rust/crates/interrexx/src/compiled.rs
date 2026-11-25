@@ -69,6 +69,15 @@ pub enum Restore {
     Undecodable,
 }
 
+/// The number a header records for `level`: its discriminant, the release
+/// as ooRexx numbers it.
+fn level_code(level: RequiredLanguageLevel) -> u32 {
+    match level {
+        RequiredLanguageLevel::V6_05 => 60500,
+        RequiredLanguageLevel::V6_06 => 60600,
+    }
+}
+
 /// The header this build writes, up to its source length field.
 fn header_prefix(level: RequiredLanguageLevel) -> [u8; LENGTH_AT] {
     let mut header = [0u8; LENGTH_AT];
@@ -77,7 +86,8 @@ fn header_prefix(level: RequiredLanguageLevel) -> [u8; LENGTH_AT] {
     header[18..20].copy_from_slice(&FORMAT_VERSION.to_le_bytes());
     // `wordSize`, then `bigEndian` left 0.
     header[20..22].copy_from_slice(&64u16.to_le_bytes());
-    header[REQUIRED_LEVEL_AT..REQUIRED_LEVEL_AT + 4].copy_from_slice(&(level as u32).to_le_bytes());
+    header[REQUIRED_LEVEL_AT..REQUIRED_LEVEL_AT + 4]
+        .copy_from_slice(&level_code(level).to_le_bytes());
     header
 }
 

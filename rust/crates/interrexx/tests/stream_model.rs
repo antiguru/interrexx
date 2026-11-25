@@ -33,6 +33,7 @@
 
 mod support;
 
+use interrexx_cast::CastFrom;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -192,7 +193,7 @@ impl Rng {
     }
 
     fn below(&mut self, n: usize) -> usize {
-        usize::try_from(self.next() % n as u64).expect("below fits")
+        usize::try_from(self.next() % u64::cast_from(n)).expect("below fits")
     }
 
     fn pick<'a>(&mut self, items: &[&'a str]) -> &'a str {
@@ -642,11 +643,15 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
                 _ => false,
             };
         if completes && let Some(p) = previous_write {
-            let at = if append { overlay.len() as i64 + 1 } else { p };
-            let used = (at - 1).rem_euclid(record as i64);
+            let at = if append {
+                i64::try_from(overlay.len()).expect("a test file") + 1
+            } else {
+                p
+            };
+            let used = (at - 1).rem_euclid(i64::try_from(record).expect("a test record"));
             if at >= 1 && used != 0 {
                 let landed = usize::try_from(at - 1).expect("landed");
-                let end = landed + (record - used as usize);
+                let end = landed + (record - usize::try_from(used).expect("a remainder"));
                 if overlay.len() < end {
                     overlay.resize(end, 0);
                     covered.resize(end, false);
@@ -674,15 +679,17 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
             if words[0] != "CO" {
                 if record > 0 {
                     let start = match (words.get(2), previous_write) {
-                        _ if append => overlay.len() as i64 + 1,
+                        _ if append => i64::try_from(overlay.len()).expect("a test file") + 1,
                         (Some(line), _) => {
-                            (line.parse::<i64>().expect("a line") - 1) * record as i64 + 1
+                            (line.parse::<i64>().expect("a line") - 1)
+                                * i64::try_from(record).expect("a test record")
+                                + 1
                         }
                         (None, Some(p)) => p,
                         (None, None) => return Ok(()),
                     };
                     let room = after_write - start;
-                    if room < bytes.len() as i64 {
+                    if room < i64::try_from(bytes.len()).expect("a test write") {
                         return Err(format!("{op} landed in less room than it wrote"));
                     }
                     bytes.resize(usize::try_from(room).expect("room"), b' ');
@@ -690,7 +697,7 @@ fn check_reflective(scenario: &Scenario, answer: &str) -> Result<(), String> {
                     bytes.push(b'\n');
                 }
             }
-            let landed = after_write - bytes.len() as i64;
+            let landed = after_write - i64::try_from(bytes.len()).expect("a test write");
             if landed < 1 {
                 return Ok(());
             }

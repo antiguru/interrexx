@@ -2,6 +2,7 @@
 //! through, and the two rules that are observable everywhere.
 
 use crate::{Failure, Interp};
+use interrexx_cast::{CastFrom, CastTruncate};
 use interrexx_core::{
     BehaviourId, Body, BufferState, Bytes, Decoded, INLINE_BYTES, InlineText, NotNumeric, ObjRef,
     SMALL_INT_MAX, SMALL_INT_MIN, VarRef, VarRefHome,
@@ -53,7 +54,7 @@ impl TextNumbers {
         let mut mixed = value.bits().wrapping_mul(0xff51_afd7_ed55_8ccd);
         mixed ^= mixed >> 33;
         mixed = mixed.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
-        (mixed as usize) & (TEXT_NUMBERS - 1)
+        usize::cast_truncate(mixed) & (TEXT_NUMBERS - 1)
     }
 }
 
@@ -92,7 +93,7 @@ fn write_small_int(buffer: &mut [u8; TEXT_SCRATCH], value: i64) -> usize {
     let mut magnitude = value.unsigned_abs();
     loop {
         at -= 1;
-        buffer[at] = b'0' + (magnitude % 10) as u8;
+        buffer[at] = b'0' + u8::try_from(magnitude % 10).expect("a decimal digit");
         magnitude /= 10;
         if magnitude == 0 {
             break;
@@ -1022,7 +1023,7 @@ impl Interp {
                     value,
                     carried: Carried::Scratch {
                         buffer,
-                        at: at as u8,
+                        at: u8::try_from(at).expect("within TEXT_SCRATCH"),
                     },
                 };
             }
@@ -1380,7 +1381,8 @@ const POW10: [u64; 19] = [
 /// Whether `value` is written in at most `digits` significant digits, so
 /// that rounding it to that precision is the identity.
 pub(crate) fn within_digits(value: i64, digits: u64) -> bool {
-    digits >= POW10.len() as u64 || value.unsigned_abs() < POW10[digits as usize]
+    digits >= u64::cast_from(POW10.len())
+        || value.unsigned_abs() < POW10[usize::try_from(digits).expect("below POW10.len()")]
 }
 
 /// The bound [`within_digits`] and [`ObjRef::small_int`] together put on a
@@ -1390,7 +1392,7 @@ pub(crate) fn within_digits(value: i64, digits: u64) -> bool {
 #[cfg(feature = "jit")]
 pub(crate) fn small_int_bound(digits: u64) -> i64 {
     let handle = interrexx_core::SMALL_INT_MAX;
-    match POW10.get(digits as usize) {
+    match POW10.get(usize::try_from(digits).unwrap_or(usize::MAX)) {
         Some(&power) => i64::try_from(power).map_or(handle, |power| power.min(handle)),
         None => handle,
     }

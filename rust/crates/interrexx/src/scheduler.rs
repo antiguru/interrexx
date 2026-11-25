@@ -5,6 +5,7 @@
 //! above its own runs waits for that loop to return, so a buried sleeper can
 //! wake after a later deadline: a recorded divergence, counted as a late wake.
 
+use interrexx_cast::CastFrom;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
 use std::time::Instant;
@@ -47,7 +48,7 @@ pub(crate) struct ActivityId(u32);
 impl ActivityId {
     /// The handle's offset in the activity table.
     pub(crate) fn index(self) -> usize {
-        self.0 as usize
+        usize::cast_from(self.0)
     }
 }
 
@@ -69,7 +70,7 @@ impl TimerId {
     }
 
     pub(crate) fn address(self) -> usize {
-        self.0 as usize
+        usize::cast_from(self.0)
     }
 }
 
@@ -769,10 +770,10 @@ impl Scheduler for Interp {
             Some(index) => ActivityId(index),
             None => {
                 table.idle.push(None);
-                ActivityId((table.idle.len() - 1) as u32)
+                ActivityId(u32::try_from(table.idle.len() - 1).expect("fewer than 2^32 activities"))
             }
         };
-        table.idle[id.0 as usize] = Some(idle);
+        table.idle[id.index()] = Some(idle);
         table.ready.push_back(id);
         if self.sim.is_some() {
             self.sim_spawned(id.index());
@@ -1157,7 +1158,7 @@ impl Interp {
     }
 
     fn swap_idle(&mut self, id: ActivityId) {
-        let Some(idle) = self.activities.idle[id.0 as usize].as_deref_mut() else {
+        let Some(idle) = self.activities.idle[id.index()].as_deref_mut() else {
             unreachable!("an idle handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -1359,7 +1360,7 @@ impl Interp {
         if activity == self.activities.running {
             return Some(&self.activity);
         }
-        (self.activities.idle.get(activity.0 as usize))
+        (self.activities.idle.get(activity.index()))
             .and_then(Option::as_ref)
             .map(|idle| &idle.activity)
     }
@@ -1472,7 +1473,7 @@ impl Interp {
             self.activity.guard_posted = true;
             return;
         }
-        let Some(Some(idle)) = self.activities.idle.get_mut(watcher.0 as usize) else {
+        let Some(Some(idle)) = self.activities.idle.get_mut(watcher.index()) else {
             return;
         };
         idle.activity.guard_posted = true;
@@ -1500,7 +1501,7 @@ impl Interp {
     /// retired where it has `ended`.
     fn switch_to(&mut self, next: ActivityId, ended: bool) {
         let table = &mut self.activities;
-        let Some(mut idle) = table.idle[next.0 as usize].take() else {
+        let Some(mut idle) = table.idle[next.index()].take() else {
             unreachable!("a ready handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -1520,7 +1521,7 @@ impl Interp {
                 table.pooled.push_back(idle.activity.number);
             }
         } else {
-            table.idle[outgoing.0 as usize] = Some(idle);
+            table.idle[outgoing.index()] = Some(idle);
         }
         // A slice belongs to the activity it was set for.
         self.timer.requests().clear(SLICE);
@@ -1604,7 +1605,7 @@ impl Interp {
         }
         let mut free = vec![false; handles];
         for &handle in &table.free {
-            if let Some(mark) = free.get_mut(handle as usize) {
+            if let Some(mark) = free.get_mut(usize::cast_from(handle)) {
                 *mark = true;
             }
         }
@@ -1806,7 +1807,7 @@ impl Interp {
     /// expression level raises 11.1 rather than risk the thread's end.
     #[inline(always)]
     pub(crate) fn stack_exhausted<T>(&self, here: *const T) -> bool {
-        self.stack_base.abs_diff(here as usize) > self.stack_room
+        self.stack_base.abs_diff(here.addr()) > self.stack_room
     }
 
     /// A new timer, not posted, which ends with a wait on it where
@@ -2421,7 +2422,7 @@ impl Interp {
         }
         self.activities
             .idle
-            .get_mut(activity.0 as usize)
+            .get_mut(activity.index())
             .and_then(Option::as_mut)
             .map(|idle| &mut idle.activity)
     }
@@ -2469,7 +2470,7 @@ impl Interp {
             Recaller::Call { activity, frame } => {
                 self.activities
                     .idle
-                    .get(activity.0 as usize)
+                    .get(activity.index())
                     .and_then(Option::as_ref)
                     .is_some_and(|idle| {
                         idle.activity
@@ -2553,7 +2554,7 @@ impl Interp {
                 let record = if activity == self.activities.running {
                     Some(&self.activity)
                 } else {
-                    (self.activities.idle.get(activity.0 as usize))
+                    (self.activities.idle.get(activity.index()))
                         .and_then(Option::as_ref)
                         .map(|idle| &idle.activity)
                 };
@@ -2573,7 +2574,7 @@ impl Interp {
                 let (activity, record) = match self.context_owner(address) {
                     Some(owner) => (
                         owner,
-                        (self.activities.idle.get(owner.0 as usize))
+                        (self.activities.idle.get(owner.index()))
                             .and_then(Option::as_ref)
                             .map(|idle| &idle.activity),
                     ),
@@ -2597,7 +2598,7 @@ impl Interp {
         let record = if activity == self.activities.running {
             Some(&self.activity)
         } else {
-            (self.activities.idle.get(activity.0 as usize))
+            (self.activities.idle.get(activity.index()))
                 .and_then(Option::as_ref)
                 .map(|idle| &idle.activity)
         };
@@ -2723,7 +2724,7 @@ impl Interp {
             pool::posting_panics(&inbox, &baton, || {
                 let probe = 0u8;
                 let mut lent = crate::island::Lent::wait(&baton);
-                lent.interp().serve_vacancy(&raw const probe as usize);
+                lent.interp().serve_vacancy((&raw const probe).addr());
             });
         }));
         Some(server)
@@ -2836,7 +2837,7 @@ impl Interp {
     /// without a switch's other work.
     fn swap_running(&mut self, next: ActivityId, running: ActivityId) {
         let table = &mut self.activities;
-        let Some(mut idle) = table.idle[next.0 as usize].take() else {
+        let Some(mut idle) = table.idle[next.index()].take() else {
             unreachable!("a recalled handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -2847,7 +2848,7 @@ impl Interp {
         self.shared_key_for = None;
         #[cfg(feature = "sharing")]
         self.heap.share_as(self.activity.sharing_tag);
-        table.idle[running.0 as usize] = Some(idle);
+        table.idle[running.index()] = Some(idle);
         table.running = next;
     }
 
@@ -2939,7 +2940,7 @@ impl Interp {
         loop {
             self.run_others(false)?;
             let table = &self.activities;
-            let me = table.running.0 as usize;
+            let me = table.running.index();
             // An attached activity idle between its callbacks does not hold
             // the end (`r[native.threads.end]`). One running a callback holds
             // the baton, so the end comes after it.
@@ -3089,7 +3090,7 @@ impl Interp {
     fn root_ended(&self, activity: ActivityId) -> bool {
         self.activities
             .idle
-            .get(activity.0 as usize)
+            .get(activity.index())
             .and_then(Option::as_ref)
             .is_some_and(|idle| idle.activity.root_end.is_some())
     }
@@ -3222,7 +3223,7 @@ impl Interp {
                 return Ok(Some(ready));
             }
             #[cfg(feature = "pinning")]
-            if let Some(Some(idle)) = self.activities.idle.get(ready.0 as usize) {
+            if let Some(Some(idle)) = self.activities.idle.get(ready.index()) {
                 late_wake!(self, idle.activity);
             }
             self.activities.set_aside.push((ready, level));
@@ -3891,7 +3892,7 @@ impl Interp {
     fn yield_after_notifier_failure(&mut self) -> Result<(), Failure> {
         let probe = 0u8;
         if !self.any_ready()
-            || self.stack_base.abs_diff(&raw const probe as usize) > self.stack_room / 2
+            || self.stack_base.abs_diff((&raw const probe).addr()) > self.stack_room / 2
         {
             return Ok(());
         }
@@ -4096,7 +4097,7 @@ impl Interp {
         let record = if activity == table.running {
             &mut self.activity
         } else {
-            match table.idle.get_mut(activity.0 as usize) {
+            match table.idle.get_mut(activity.index()) {
                 Some(Some(idle)) => &mut idle.activity,
                 _ => return,
             }

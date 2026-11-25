@@ -5,6 +5,7 @@
 //! say verify('a','b','X','q')         40.12 argument 4  (not the bad option)
 //! ```
 
+use interrexx_cast::CastFrom;
 use interrexx_core::{INLINE_TEXT, ObjRef};
 
 use super::{
@@ -148,7 +149,7 @@ pub(crate) fn find_byte(hay: &[u8], byte: u8) -> Option<usize> {
         let masked = u64::from_le_bytes(*word) ^ repeated;
         let hits = masked.wrapping_sub(LOW) & !masked & HIGH;
         if hits != 0 {
-            return Some(index * 8 + (hits.trailing_zeros() as usize) / 8);
+            return Some(index * 8 + usize::cast_from(hits.trailing_zeros()) / 8);
         }
     }
     tail.iter()

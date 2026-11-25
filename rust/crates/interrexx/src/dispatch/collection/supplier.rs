@@ -85,7 +85,11 @@ fn supplier_state(
     let Decoded::SmallInt(position) = position.decode() else {
         unreachable!("the position this crate stored is a small integer")
     };
-    Ok((items, indexes, position as usize))
+    Ok((
+        items,
+        indexes,
+        usize::try_from(position).expect("a position this crate stored"),
+    ))
 }
 
 /// The pairs `supplier` has left, index then item with an empty slot read as

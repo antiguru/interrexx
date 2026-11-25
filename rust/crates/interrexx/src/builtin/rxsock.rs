@@ -24,6 +24,7 @@
 mod hosts;
 
 use super::rxsock_wait;
+use interrexx_cast::CastTruncate;
 
 use rustix::fd::{AsFd as _, BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::net::{Ipv4Addr, SocketAddrV4};
@@ -300,9 +301,8 @@ fn atoi(text: &[u8]) -> i32 {
     if negative {
         value = value.wrapping_neg();
     }
-    #[expect(clippy::cast_possible_truncation, reason = "C's int wraps")]
-    let wrapped = value as i32;
-    wrapped
+    // C's int wraps.
+    i32::cast_truncate(value)
 }
 
 /// A whole number, as a stem's count or entries are read: `None` for any
@@ -476,22 +476,14 @@ fn read_address(interp: &mut Interp, stem: &Stem) -> Address {
         return Address::ZERO;
     };
     let family = trimmed(&family);
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "C's u_short"
-    )]
+    // C's u_short.
     let family = if family.eq_ignore_ascii_case(b"AF_INET") {
         2
     } else {
-        atoi(family) as u16
+        u16::cast_truncate(atoi(family).cast_unsigned())
     };
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "C's htons"
-    )]
-    let port = atoi(trimmed(&port)) as u16;
+    // C's htons.
+    let port = u16::cast_truncate(atoi(trimmed(&port)).cast_unsigned());
     Address {
         family,
         port,
@@ -1895,8 +1887,9 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
         let mut words = value
             .split(u8::is_ascii_whitespace)
             .filter(|word| !word.is_empty());
-        #[expect(clippy::cast_possible_truncation, reason = "each is a 16-bit field")]
-        let mut half = || atoi(words.next().unwrap_or_default()) as u16;
+        // Each is a 16-bit field.
+        let mut half =
+            || u16::cast_truncate(atoi(words.next().unwrap_or_default()).cast_unsigned());
         (half(), half())
     } else {
         (0, 0)

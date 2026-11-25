@@ -131,7 +131,8 @@ impl Interp {
                 if code == exit_code::SIO
                     && let Some(exits) = &mut self.exits
                 {
-                    exits.handlers[exit_code::SIO as usize] = None;
+                    exits.handlers
+                        [usize::try_from(exit_code::SIO).expect("an exit code is positive")] = None;
                 }
                 Err(Raised::syntax(48, 1, vec![exit_code::name(code).as_bytes().to_vec()]).into())
             }

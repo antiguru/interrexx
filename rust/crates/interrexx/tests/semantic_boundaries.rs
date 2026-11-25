@@ -1,6 +1,7 @@
 //! Observable required-string and trace boundaries, including Deviations 44, 72, 77 and 83.
 
 use interrexx::Invocation;
+use interrexx_cast::CastFrom;
 use std::path::Path;
 
 mod watchdog;
@@ -156,7 +157,10 @@ fn check_owned_stdout(case: &str, source: &[u8], expected: &[u8], errors: &[u8],
         .unwrap();
     assert!(child.status.success(), "{:?}", child.stderr);
     assert_eq!(child.stderr, errors, "{case}");
-    assert_eq!(output.metadata().unwrap().len(), expected.len() as u64);
+    assert_eq!(
+        output.metadata().unwrap().len(),
+        u64::cast_from(expected.len())
+    );
     assert_eq!(output.stream_position().unwrap(), offset, "{case}");
     output.rewind().unwrap();
     let mut bytes = Vec::new();

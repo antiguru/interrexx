@@ -826,7 +826,7 @@ pub(crate) fn run(
         // this shape.
         return Err(Loud::unresolved_call(name).into());
     };
-    let builtin = &IMPLEMENTED[row as usize];
+    let builtin = &IMPLEMENTED[usize::from(row)];
     interp.activity.builtin_answered_nothing = false;
     check_arity(builtin, args)?;
     // **The required-string protocol runs here, once, over the argument
@@ -1069,6 +1069,14 @@ fn length_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure>
     Ok(extent(value))
 }
 
+/// The number `errno` holds for `error`.
+#[cfg(unix)]
+pub(crate) fn errno_number(error: nix::errno::Errno) -> i32 {
+    std::io::Error::from(error)
+        .raw_os_error()
+        .expect("made from an errno")
+}
+
 /// A whole number at least zero as a length, position or count. Where the
 /// target's `usize` is narrower than the number, it is held at `isize::MAX`,
 /// which no string or allocation reaches: a length or position that large
@@ -1077,7 +1085,9 @@ fn length_of(name: &[u8], position: usize, value: i64) -> Result<usize, Failure>
 #[inline]
 pub(crate) fn extent(value: i64) -> usize {
     debug_assert!(value >= 0, "an extent is at least zero");
-    usize::try_from(value).map_or(isize::MAX as usize, |value| value.min(isize::MAX as usize))
+    usize::try_from(value).map_or(isize::MAX.unsigned_abs(), |value| {
+        value.min(isize::MAX.unsigned_abs())
+    })
 }
 
 /// A converted argument used as a position: strictly positive, or the

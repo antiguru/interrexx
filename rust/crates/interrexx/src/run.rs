@@ -21,6 +21,7 @@ use crate::{
     ActiveCondition, CallContext, Code, Failure, InstalledRoutine, Interp, Loud, Novalue,
     PendingTrap, VarHome,
 };
+use interrexx_cast::CastFrom;
 use interrexx_core::{
     BehaviourId, Body, Decoded, FrameId, ObjRef, RegFrame, ScopePools, SlotFrame, VarRefHome,
 };
@@ -129,9 +130,13 @@ pub(crate) const FORWARD_ARRAY_SLOT: u32 = 4;
 
 fn forward_slot(forward: &Forward, slot: u32) -> Option<&Expr> {
     if let Some(item) = slot.checked_sub(FORWARD_ARRAY_SLOT) {
-        return forward.array.as_ref()?.get(item as usize)?.as_ref();
+        return forward
+            .array
+            .as_ref()?
+            .get(usize::cast_from(item))?
+            .as_ref();
     }
-    forward_option_parts(forward)[slot as usize].1
+    forward_option_parts(forward)[usize::cast_from(slot)].1
 }
 
 /// Where control goes after one instruction (the design's "Control flow").
@@ -2596,7 +2601,7 @@ impl Interp {
         let indent = if let Some(indent) = rerun {
             indent
         } else if shortcut {
-            position.indent as usize + self.activity.activation_indent
+            usize::cast_from(position.indent) + self.activity.activation_indent
         } else {
             self.printed_indent(code, index)
         };
@@ -2620,7 +2625,7 @@ impl Interp {
         // `ClauseEntry` this hands back is what `leave_stepped_clause` spends
         // on the matching half.
         let line = if shortcut {
-            position.line as usize
+            usize::cast_from(position.line)
         } else {
             self.clause_line_at(code, index, instruction, source)
                 .unwrap_or_else(|| self.activity.clause_state.line())
@@ -4013,7 +4018,7 @@ impl Interp {
                 self.eval(code, expression)
             }
             (InstructionKind::Use(use_), slot) => {
-                let Some(expr) = Self::use_arg_default(use_, slot as usize) else {
+                let Some(expr) = Self::use_arg_default(use_, usize::cast_from(slot)) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
                 self.eval(code, expr)

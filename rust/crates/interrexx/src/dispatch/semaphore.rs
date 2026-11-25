@@ -1,6 +1,7 @@
 //! `EventSemaphore`'s and `MutexSemaphore`'s methods, whose waits park the
 //! activity.
 
+use interrexx_cast::{CastLossy, TryCastFrom};
 use std::time::Duration;
 
 use interrexx_core::{Decoded, ObjRef};
@@ -141,9 +142,9 @@ fn timeout_argument(
     let seconds = timeout_seconds(interp, method, value);
     interp.roots.activity_mut().pop_frame(frame);
     let seconds = seconds?;
-    Ok((0.0..=LONGEST_SECONDS)
-        .contains(&seconds)
-        .then(|| Duration::from_millis((seconds * 1000.0) as u64)))
+    Ok((0.0..=LONGEST_SECONDS).contains(&seconds).then(|| {
+        Duration::from_millis(u64::try_cast_from(seconds * 1000.0).expect("within LONGEST_SECONDS"))
+    }))
 }
 
 /// A floating-point `timeout` argument in seconds.
@@ -164,11 +165,8 @@ fn timeout_seconds(
         value
     };
     if let Decoded::SmallInt(number) = seconds.decode() {
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "`RexxInteger::doubleValue` is the same C conversion"
-        )]
-        return Ok(number as f64);
+        // `RexxInteger::doubleValue` is the same C conversion.
+        return Ok(f64::cast_lossy(number));
     }
     interp.roots.activity_mut().push_temp(seconds);
     let text = pinned!(
