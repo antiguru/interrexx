@@ -386,6 +386,21 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         crate::builtin::rexxutil::windows_files::set_encrypted::<true>,
     ),
     #[cfg(windows)]
+    util_run(
+        "SysWinGetDefaultPrinter",
+        crate::builtin::rexxutil::windows_printers::get_default,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinGetPrinters",
+        crate::builtin::rexxutil::windows_printers::list,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinSetDefaultPrinter",
+        crate::builtin::rexxutil::windows_printers::set_default,
+    ),
+    #[cfg(windows)]
     util_run("SysWinVer", crate::builtin::rexxutil::version),
 ];
 
