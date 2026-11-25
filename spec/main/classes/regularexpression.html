@@ -588,16 +588,13 @@ members are characters, ranges and <a href="#r-class.regularexpression.grammar.n
 names</a>. A <code>^</code> right after the opening
 bracket negates the set: it matches one character that is not a member; a <code>^</code>
 anywhere else is an ordinary member. A <code>-</code> between two characters makes a
-range. For a range the bytes count as numbers from -128 for <code>'80'x</code> up to 127
-for <code>'7f'x</code>, so <code>'80'x</code> to <code>'ff'x</code> come before <code>'00'x</code>. When the first
-character is not above the second, the range is all characters from the first
-to the second; when it is above, it is the characters above the second up to
-the first, so <code>[d-a]</code> is <code>b</code>, <code>c</code> and <code>d</code>. In a chain such as <code>[a-c-e]</code> the
-character that ends a range also starts the next one, so that set is <code>a</code> to
-<code>e</code>. A <code>\</code> right after the <code>-</code> of a range is the end of the range and not an
-escape, and a <code>-</code> after a symbolic name starts a range at the closing colon of
-the name, which is left out when the end is above it: <code>[:digit:-z]</code> is the
-digits and the characters from <code>;</code> to <code>z</code>. A <code>[</code> inside a set is an ordinary
+range. Each range includes both endpoints in unsigned byte order, from
+<code>'00'x</code> through <code>'FF'x</code>. The endpoints may appear in either order.
+A character that ends a range can also start the next range, so <code>[a-c-e]</code>
+includes every byte from <code>a</code> to <code>e</code>. Immediately after a range hyphen, a
+backslash is the endpoint itself. After a symbolic name, a range starts at
+the closing colon of the name. A range continuing up from that colon
+excludes it. A <code>[</code> inside a set is an ordinary
 member. A <code>-</code> that opens the set, or follows the <code>^</code> that opens it, is an
 ordinary member, and a <code>-</code> that ends the set is error 3. Inside a set the
 characters <code>?</code>, <code>*</code>, <code>+</code>, <code>|</code>, <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code> and <code>.</code> stand for
@@ -608,15 +605,8 @@ present: error 3.</p>
 <pre><code class="language-rexx">re = .RegularExpression~new
 say 'members' re~parse('[xyz]') re~match('y') re~match('w')
 say 'range' re~parse('[a-d]') re~match('c') re~match('e')
-say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
-say 'signed' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
-  re~match('b')
 say 'high' re~parse('['||'80'x||'-'||'ff'x||']') re~match('90'x) re~match('a')
 say 'chain' re~parse('[a-c-e]') re~match('d') re~match('b') re~match('f')
-say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
-  re~match('\') re~match('c')
-say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
-  re~match('5') re~match('{')
 say 'bracket' re~parse('[[]') re~match('[') re~match('a')
 say 'ranges' re~parse('[a-cx-z]') re~match('b') re~match('y') re~match('m')
 say 'negated' re~parse('[^a-c]') re~match('d') re~match('b')
@@ -635,12 +625,8 @@ exit
 </code></pre>
 <pre><code class="language-output">members 0 1 0
 range 0 1 0
-backward 0 1 0 0
-signed 0 1 0 0
 high 0 1 0
 chain 0 1 1 0
-late end 0 1 1 0 0 1
-after name 0 1 0 1 0
 bracket 0 1 0
 ranges 0 1 1 0
 negated 0 1 0
@@ -832,22 +818,27 @@ re~position(5) =&gt; 93.902
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.regularexpression.deviation.87"><a href="#r-class.regularexpression.deviation.87">[class.regularexpression.deviation.87]</a></div>
-<p>The pattern language is the one this
-page gives, and every call ends. ooRexx differs in many patterns; among them,
-it answers wrongly when a <code>+</code> is followed by a repeated element, as <code>c+a*</code>,
-which it does not match against <code>cca</code>, and when an alternative that begins
-with a repeated element is followed by another one, at the top or in a group:
-<code>b*c|a</code> is <code>b*c</code> or <code>a</code>, but ooRexx reads the second alternative as following
-the repeated element, so it finds <code>ba</code>. It does not end for a pattern that
-repeats a group that can match the empty string, such as <code>(a*)*</code>, for one that
-begins with a group whose first alternative can match the empty string and is
-followed by <code>|</code>, such as <code>(c*|b)|d</code>, and for a set with a range whose highest
-character, in the order of <a href="#r-class.regularexpression.grammar.set">the set
-rule</a>, is <code>'7f'x</code>, as in <code>[a-'7f'x]</code>
-and <code>['7f'x-'81'x]</code>, and it crashes on others, such as <code>(c*|b)c|d</code>. And for a
-count it cannot build, as in <code>a{99999999999}</code>, it uses memory until it is
-stopped, where interrexx answers code 5 from <code>parse</code>. None of the examples is
-run on ooRexx.</p>
+<p>The pinned ooRexx revision uses signed range endpoints, miscompiles some
+alternatives and fails to terminate on some patterns with empty matches.
+ooRexx r13618 corrected the byte ranges and r13620 corrected the automaton.
+Interrexx also limits the size of the compiled pattern. If expanding a count
+would exceed that limit, <code>parse</code> answers 5.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
+say 'byte order' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
+  re~match('b')
+say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
+  re~match('\') re~match('c')
+say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
+  re~match('5') re~match('{')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">backward 0 1 0 1
+byte order 0 0 1 1
+late end 0 1 1 0 1 1
+after name 0 1 0 1 0
+</code></pre>
 <pre><code class="language-rexx">re = .RegularExpression~new('b*c|a')
 say re~match('ba') re~position re~pos('ba') re~position
 say re~match('bc') re~position re~match('a') re~position

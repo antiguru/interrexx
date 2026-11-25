@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D30, D109, D169</p>
+<p class="deviations">Deviations: D30, D109</p>
 <p>The rules on this page hold on every page that links to them. A builtin
 page states what its arguments are (a string, a position, a length, a pad)
 and links here for what that means, instead of restating it.</p>
@@ -206,22 +206,17 @@ say c2x(upper('61007a'x))
 <div class="rule" id="r-conv.string.object"><a href="#r-conv.string.object">[conv.string.object]</a></div>
 <p>An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
-replacement is found by sending the object the message <code>REQUEST</code> with the
-argument <code>STRING</code>, and nothing else is sent first. When the answer is a string,
-it is the replacement. When the answer is <code>.nil</code> or another object that is not
-a string, the replacement is the answer of the object's public
-<a href="classes/object.html#r-class.object.string"><code>STRING</code></a> method, and when that answer is not a string
-either, see <a href="#r-conv.string.deviation.30">Deviation 30</a>. The
-<a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends the object <code>MAKESTRING</code>
-when it has one and answers what that answers, and answers <code>.nil</code> when it has
-none. So an object with a <code>MAKESTRING</code> method is replaced by its answer, as for
-an <a href="classes/array.html#r-class.array.makestring"><code>Array</code></a> or a
-<a href="classes/mutablebuffer.html#r-class.mutablebuffer.makestring"><code>MutableBuffer</code></a>, and an object with only a
-<code>STRING</code> method by the answer of that method. A class that declares its own
-<code>REQUEST</code> method decides the answer itself: its <code>MAKESTRING</code> method is not used
-unless its <code>REQUEST</code> sends it, and a <code>REQUEST</code> that answers a string is used
-even when the class has a <code>STRING</code> method. A <code>MAKESTRING</code> that answers <code>.nil</code>
-or an object that is not a string is like a <code>REQUEST</code> that does. An instance of
+replacement is found by sending <code>REQUEST('STRING')</code>. If it supplies a value
+that can be read as a string, that value supplies the replacement. Otherwise
+the interpreter sends <a href="classes/object.html#r-class.object.string"><code>STRING</code></a>. It can use the
+answer's own string value or ask that answer once for a string through
+<code>REQUEST('STRING')</code>. If neither supplies a string, the interpreter uses the
+original object's name. An unusable or missing <code>OBJECTNAME</code> answer leaves
+the object's built-in default name. An absent return value and <code>.nil</code>
+both count as failing to supply a string.
+The <a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends <code>MAKESTRING</code> when
+the object has that method. A class that overrides <code>REQUEST</code> controls that
+step and can forward to its <code>MAKESTRING</code>. An instance of
 a subclass of <code>String</code> is a string here, whether it is passed directly or is
 what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
 is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
@@ -605,8 +600,8 @@ objects, by sending them <code>STRING</code>, is part of its checks: a call that
 fault sends <code>STRING</code> to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
 call of a builtin or a method, or the checks of one instruction, find one
-fault, the operation raises the error that the rule for that fault gives; a
-<code>STRING</code> answer that has no string value is such a fault. When they find more
+fault, the operation raises the error that the rule for that fault gives. When
+they find more
 than one, a wrong number of arguments or an omitted required argument among
 them, the operation raises the error of one of them, and which one is
 unspecified. Whether the checks after the first fault found are made, and so
@@ -740,174 +735,36 @@ with no blanks added or removed.</p>
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-conv.string.deviation.30"><a href="#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
-<p>interrexx does not convert an argument whose <code>STRING</code> method answers an object
-that is not a string, such as a <code>Directory</code>, by reading the answer as a
-string. When a builtin receives such an argument where its page calls for a
-string, interrexx raises <code>SYNTAX 98.973</code>, or for an argument that <a href="#r-conv.string.builtin-argument">the
-argument rules</a> name the error they give, as
-<a href="#r-conv.string.deviation.169">Deviation 169</a> says, after raising
-<a href="conditions/nostring.html#r-cond.nostring.raise"><code>NOSTRING</code></a> when a trap for it is set. ooRexx reads
-the answer as a string, and what it does then depends on the builtin: <code>UPPER</code>
-ends the program with Error 5, <code>LENGTH</code> answers an unrelated number, and
-<code>STRIP</code> crashes the interpreter. A program can rely on none of these answers.</p>
+<p>The <a href="#r-conv.string.object">string conversion rule</a> uses the object's name
+when its <code>STRING</code> method provides no usable answer. The ooRexx revision
+pinned for comparisons can give inconsistent results or crash in this case.
+ooRexx r13624 corrected that behavior.</p>
 <pre><code class="language-rexx">o = .weird~new
-say 'before'
-say upper(o)
-say 'after'
+say upper(o) length(o)
+say pos(o, 'x a WEIRD')
+signal on syntax name bad
+say 'x a WEIRD'~pos(o)
+bad: say condition('o')~code
 ::class weird
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=158">before
-</code></pre>
-<div class="rule" id="r-conv.string.deviation.169"><a href="#r-conv.string.deviation.169">[conv.string.deviation.169]</a></div>
-<p>Where a clause needs the bytes of an object's string value, the <code>STRING</code> method
-of the object answers an object with no string value, and no trap took the
-NOSTRING condition that the answer raises, the clause raises <code>SYNTAX 98.973</code>,
-the condition that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING. The
-condition is an ordinary SYNTAX condition: <code>SIGNAL ON SYNTAX</code> and <code>CALL ON SYNTAX</code> take it, <code>RC</code> is 98 there, and untrapped it ends the program with exit
-code 158. The clauses that do this include <code>SAY</code>, the three concatenation
-operators, the ordering comparisons, <code>PARSE VALUE</code>, <code>PARSE ARG</code>, <code>OPTIONS</code> and
-the receiver of a builtin, the string the builtin works on, and the name that
-<code>SYMBOL</code>, <code>VAR</code>, <code>VALUE</code>, <code>QUALIFY</code>, <code>RXFUNCADD</code>, <code>RXFUNCDROP</code> or
-<code>RXFUNCQUERY</code> reads, and the selector of <code>VALUE</code>. A clause that reads the
-answer as an object, such as a truth value, a logical operator or an equality
-comparison, takes it as <code>.nil</code>. Every other argument of a builtin has the error
-of its own kind, which <a href="#r-conv.string.builtin-argument">the next rule</a> states
-for an argument read as a string and <a href="#r-conv.string.argument-kind">the rule after
-it</a> for the others. That latter rule applies
-also to method arguments read as a number. ooRexx reads the answer
-as a string in each of the clauses above, with garbage results or a crash, so
-no answer of it is specified. The text of the message is not specified.</p>
-<pre><code class="language-rexx">o = .weird~new
-signal on syntax name s
-say length(o)
-s: say condition('o')~code rc
-signal on syntax name t
-say 'a' || o
-t: say condition('o')~code rc
-signal on syntax name u
-parse value o with a b
-u: say condition('o')~code rc
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">98.973 98
-98.973 98
-98.973 98
+<pre><code class="language-output">A WEIRD 7
+3
+88.909
 </code></pre>
 <div class="rule" id="r-conv.string.builtin-argument"><a href="#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
-<p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as a string, the builtin
-raises <code>SYNTAX 88.909</code>, as the method
-the builtin stands for does. <code>N</code> is the position of the argument among the
-arguments of that method, which does not count the receiver, the string the
-builtin works on. So <code>CHANGESTR(needle, haystack, new)</code> numbers the needle 1
-and the replacement 2, and <code>STRIP(string, option, char)</code> numbers the option 1
-and the character 2. The arguments that are read as strings are those named
-here, and <a href="#r-conv.string.argument-kind">the next rule</a> gives the error of the
-others: the needle of
-<code>CHANGESTR</code>, <code>COUNTSTR</code>, <code>POS</code>, <code>LASTPOS</code> and <code>WORDPOS</code> and the replacement of
-<code>CHANGESTR</code>; the inserted string of <code>INSERT</code> and <code>OVERLAY</code>; the second string
-of <code>ABBREV</code>, <code>COMPARE</code>, <code>BITAND</code>, <code>BITOR</code> and <code>BITXOR</code>; the type of
-<code>DATATYPE</code>; the option and the character of <code>STRIP</code>; the two tables of
-<code>TRANSLATE</code>; the reference and the option of <code>VERIFY</code>; and the data of
-<code>CHAROUT</code> and <code>LINEOUT</code>. A method's argument and a native routine's argument that has no string
-value raise the same error with their own position. When the call has another
-fault as well, <a href="#r-conv.error.precedence">the precedence rule</a> applies.</p>
-<pre><code class="language-rexx">o = .weird~new
-signal on syntax name s
-say changestr('a', 'a', o)
-s: say condition('o')~code rc
-signal on syntax name t
-say pos(o, 'abc')
-t: say condition('o')~code rc
-signal on syntax name u
-say strip('xabx', 'B', o)
-u: say condition('o')~code rc
-signal on syntax name v
-say 'abc'~pos(o)
-v: say condition('o')~code rc
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">88.909 88
-88.909 88
-88.909 88
-88.909 88
-</code></pre>
+<p>Builtins that use the <a href="#r-conv.string.object">full conversion</a> use the
+resulting text at each string position, including where the text is the
+object's name. A method or native routine that requires a string through
+<code>REQUEST('STRING')</code> alone raises <code>SYNTAX 88.909</code> if the argument supplies no
+usable value. The error identifies the position in that method or routine's
+argument list.</p>
 <div class="rule" id="r-conv.string.argument-kind"><a href="#r-conv.string.argument-kind">[conv.string.argument-kind]</a></div>
-<p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as something other than a
-string, the argument fails the check of its kind, and the builtin raises the
-error that a string of the wrong form raises at that argument. A whole number,
-such as a count, a length or a position, raises <code>SYNTAX 40.12</code>; a pad or
-another single character <code>40.23</code>; an option <code>40.904</code>; the date or time that
-<code>DATE</code> or <code>TIME</code> converts <code>40.19</code>; a separator of <code>DATE</code> <code>40.43</code>; an argument
-of <code>XRANGE</code> that may be a class name <code>40.28</code>; the setting of <code>TRACE</code> <code>24.1</code>;
-and the queue name of <code>RXQUEUE</code> <code>40.26</code>. A number that <code>ABS</code>, <code>FORMAT</code>,
-<code>MAX</code>, <code>MIN</code>, <code>SIGN</code> and <code>TRUNC</code> work on raises <code>40.11</code> (<a href="#r-conv.method.number">the number
-rule</a>), the number of <code>D2C</code> and of <code>D2X</code> <code>93.929</code> and
-<code>93.928</code>, and the string of <code>X2B</code>, <code>X2C</code> and <code>X2D</code> and of <code>B2X</code> <code>93.933</code> and
-<code>93.934</code>, as for a string that is not a number, or not hexadecimal or binary.
-The name of a stream raises <code>93.938</code>, numbered 1, the error of the argument of
-the <code>Stream</code> method the builtin sends, and the command of <code>STREAM</code> raises
-<code>93.914</code>, the error of a command that is not one. When the call has another
-fault as well, it raises the error of one of them, as <a href="#r-conv.error.precedence">the precedence
-rule</a> says. A method argument read as a number
-raises the error of its own check when <code>STRING</code> gives no string value. For
-<code>String</code> methods the <a href="classes/string.html#r-class.string.builtins.errors">message rule</a> names
-these errors. An argument such a method reads as a string, a pad among them,
-raises <code>88.909</code> (the previous rule). The string a
-builtin works on keeps <code>98.973</code> (<a href="#r-conv.string.deviation.169">Deviation 169</a>).</p>
-<pre><code class="language-rexx">o = .weird~new
-call try "left('abc', o)"
-call try "left('abc', 2, o)"
-call try "date(o)"
-call try "date('N', o, 'S')"
-call try "date('S', , , o)"
-call try "xrange(o)"
-call try "trace(o)"
-call try "rxqueue('S', o)"
-call try "abs(o)"
-call try "max(1, o)"
-call try "d2c(o)"
-call try "x2d(o)"
-call try "linein(o)"
-call try "'abc'~left(o)"
-call try "'abc'~substr(o)"
-call try "'abc'~left(2, o)"
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt; ok'
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">left('abc', o) =&gt; 40.12
-left('abc', 2, o) =&gt; 40.23
-date(o) =&gt; 40.904
-date('N', o, 'S') =&gt; 40.19
-date('S', , , o) =&gt; 40.43
-xrange(o) =&gt; 40.28
-trace(o) =&gt; 24.1
-rxqueue('S', o) =&gt; 40.26
-abs(o) =&gt; 40.11
-max(1, o) =&gt; 40.11
-d2c(o) =&gt; 93.929
-x2d(o) =&gt; 93.933
-linein(o) =&gt; 93.938
-'abc'~left(o) =&gt; 93.923
-'abc'~substr(o) =&gt; 93.924
-'abc'~left(2, o) =&gt; 88.909
-</code></pre>
+<p>An argument interpreted as a number, position, option, or other constrained
+value is checked in that role after conversion. For example, a nonnumeric
+default name fails the normal numeric check. Where several checks fail,
+<a href="#r-conv.error.precedence">the precedence rule</a> applies.</p>
 <pre><code class="language-rexx">o = .weird~new
 a = .array~of('a', 'b')
 m = .array~new(2, 2)

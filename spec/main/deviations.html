@@ -354,12 +354,10 @@ is refused, exit code 120, and so is <code>d~unknown('A=', args)</code> sent dir
 with an argument array that holds no item. ooRexx stores an unrelated leftover
 value for the first and removes the entry for the second.</p>
 <h2 id="30-a-string-method-answering-a-non-string"><a class="header" href="#30-a-string-method-answering-a-non-string">30. A STRING method answering a non-string</a></h2>
-<p>When an object's <code>STRING</code> method answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
-<code>SYNTAX 98.973</code> after raising NOSTRING if it is trapped, as <a href="#169-a-string-method-answering-a-non-string-where-its-bytes-are-read">Deviation
-169</a>
-says. ooRexx reads <code>.nil</code> as a string there, with garbage results or a crash.
-The <a href="conventions.html#r-conv.string.deviation.30">conventions</a> state it for builtin arguments.</p>
+<p>String conversion falls back to the object's name when <code>STRING</code> supplies no
+usable value. The pinned ooRexx revision may give an unusable result or crash.
+ooRexx r13624 adopted this fallback. See the <a href="conventions.html#r-conv.string.deviation.30">conversion
+rule</a>.</p>
 <h2 id="31-withdrawn"><a class="header" href="#31-withdrawn">31. Withdrawn</a></h2>
 <p>Replaced by <a href="#36-strings-and-numbers-are-value-based">Deviation 36</a>.</p>
 <h2 id="32-a-new-that-answers-another-object"><a class="header" href="#32-a-new-that-answers-another-object">32. A NEW that answers another object</a></h2>
@@ -650,9 +648,11 @@ first attempt to reach the service, for a queue, a registration or the
 macrospace, writes a line to standard error that says so
 (<a href="rexxutil/macrospace.html#r-util.macrospace.deviation.86">the rule</a>). ooRexx accepts such a directory.</p>
 <h2 id="87-rxregexp-follows-its-documented-grammar"><a class="header" href="#87-rxregexp-follows-its-documented-grammar">87. rxregexp follows its documented grammar</a></h2>
-<p>rxregexp matches the documented pattern language and always terminates; a
-pattern too large to compile is compile error 5. ooRexx answers some patterns
-wrongly, never terminates on some and crashes on others.</p>
+<p>A pattern whose compiled automaton exceeds the size limit raises parse
+error 5. The pinned ooRexx revision can exhaust memory at large repeat
+counts. It also miscompiles some alternatives, loops on some empty matches,
+and uses signed byte values for set ranges. ooRexx r13618 fixed the range
+rules and r13620 fixed the automaton construction and empty cycles.</p>
 <h2 id="88-extension-calls-that-crash-oorexx"><a class="header" href="#88-extension-calls-that-crash-oorexx">88. Extension calls that crash ooRexx</a></h2>
 <p>RegularExpression <code>match</code> or <code>pos</code> with no pattern, and <code>match</code>, <code>pos</code> or
 <code>parse</code> after <code>uninit</code>, SysGetgrnam or SysGetgrgid of a missing group,
@@ -1210,22 +1210,10 @@ at the same character; its <code>LINEOUT</code> at that write position continues
 the words of the options as a blank does, and a command may begin and end with
 one. ooRexx accepts a tab after the word that names a command, and raises
 <code>SYNTAX 93.0</code> for a tab between or around the options that follow it.</p>
-<h2 id="169-a-string-method-answering-a-non-string-where-its-bytes-are-read"><a class="header" href="#169-a-string-method-answering-a-non-string-where-its-bytes-are-read">169. A STRING method answering a non-string where its bytes are read</a></h2>
-<p>Where a clause needs the bytes of the string value of an object, and the
-<code>STRING</code> method of the object answers an object with no string value (<code>.nil</code>, a
-<code>Directory</code>, a <code>Queue</code>, an <code>Object</code>), interrexx raises <code>SYNTAX 98.973</code>, the
-error that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING, whether or not the
-program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
-untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
-takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. The arguments of a
-builtin are not part of this Deviation, except the string the builtin works on
-and the names that the conventions list: an argument raises the error of its
-own kind, <code>SYNTAX 88.909</code> with its position where the builtin reads it as a
-string (<a href="conventions.html#r-conv.string.builtin-argument">the rule</a>) and the error of its check
-otherwise (<a href="conventions.html#r-conv.string.argument-kind">the kind rule</a>). The
-<a href="conventions.html#r-conv.string.deviation.169">conventions</a> state it. It replaces the refusal
-with exit code 120 that Deviation 30 described.</p>
+<h2 id="169-withdrawn"><a class="header" href="#169-withdrawn">169. Withdrawn</a></h2>
+<p>The fallback to the object's name replaces the unconditional SYNTAX error.
+<a href="#30-a-string-method-answering-a-non-string">Deviation 30</a> covers comparison
+with the pinned ooRexx revision.</p>
 <h2 id="170-withdrawn"><a class="header" href="#170-withdrawn">170. Withdrawn</a></h2>
 <p>A builtin's conversion of its arguments is part of its checks, and a call with
 no fault converts them from the left before the checks, as ooRexx does

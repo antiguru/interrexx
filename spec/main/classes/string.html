@@ -615,8 +615,7 @@ trailing blank matters, and numbers are not compared as numbers, so <code>1</cod
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
 raises <code>93.902</code>. The argument is converted by the <a href="../conventions.html#r-conv.string.object">required-string
 protocol</a>. <code>.nil</code> compares unequal to every string.
-An object whose <code>string</code> method returns something with no string value also
-compares unequal when the conversion does not raise a condition.</p>
+If conversion falls back to the object's name, equality compares that name.</p>
 <pre><code class="language-rexx">say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
 say '1'~equals('1.0') 12~equals('12') 'abc'~equals(.nil)
 say 'an Object'~equals(.object~new)

@@ -260,7 +260,7 @@ both are silent, a rule matches ooRexx, and a note says so. The wording of
 this book is its own.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D30, D109, D169</p>
+<p class="deviations">Deviations: D30, D109</p>
 <p>The rules on this page hold on every page that links to them. A builtin
 page states what its arguments are (a string, a position, a length, a pad)
 and links here for what that means, instead of restating it.</p>
@@ -291,22 +291,17 @@ say c2x(upper('61007a'x))
 <div class="rule" id="r-conv.string.object"><a href="conventions.html#r-conv.string.object">[conv.string.object]</a></div>
 <p>An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
-replacement is found by sending the object the message <code>REQUEST</code> with the
-argument <code>STRING</code>, and nothing else is sent first. When the answer is a string,
-it is the replacement. When the answer is <code>.nil</code> or another object that is not
-a string, the replacement is the answer of the object's public
-<a href="classes/object.html#r-class.object.string"><code>STRING</code></a> method, and when that answer is not a string
-either, see <a href="conventions.html#r-conv.string.deviation.30">Deviation 30</a>. The
-<a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends the object <code>MAKESTRING</code>
-when it has one and answers what that answers, and answers <code>.nil</code> when it has
-none. So an object with a <code>MAKESTRING</code> method is replaced by its answer, as for
-an <a href="classes/array.html#r-class.array.makestring"><code>Array</code></a> or a
-<a href="classes/mutablebuffer.html#r-class.mutablebuffer.makestring"><code>MutableBuffer</code></a>, and an object with only a
-<code>STRING</code> method by the answer of that method. A class that declares its own
-<code>REQUEST</code> method decides the answer itself: its <code>MAKESTRING</code> method is not used
-unless its <code>REQUEST</code> sends it, and a <code>REQUEST</code> that answers a string is used
-even when the class has a <code>STRING</code> method. A <code>MAKESTRING</code> that answers <code>.nil</code>
-or an object that is not a string is like a <code>REQUEST</code> that does. An instance of
+replacement is found by sending <code>REQUEST('STRING')</code>. If it supplies a value
+that can be read as a string, that value supplies the replacement. Otherwise
+the interpreter sends <a href="classes/object.html#r-class.object.string"><code>STRING</code></a>. It can use the
+answer's own string value or ask that answer once for a string through
+<code>REQUEST('STRING')</code>. If neither supplies a string, the interpreter uses the
+original object's name. An unusable or missing <code>OBJECTNAME</code> answer leaves
+the object's built-in default name. An absent return value and <code>.nil</code>
+both count as failing to supply a string.
+The <a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends <code>MAKESTRING</code> when
+the object has that method. A class that overrides <code>REQUEST</code> controls that
+step and can forward to its <code>MAKESTRING</code>. An instance of
 a subclass of <code>String</code> is a string here, whether it is passed directly or is
 what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
 is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
@@ -690,8 +685,8 @@ objects, by sending them <code>STRING</code>, is part of its checks: a call that
 fault sends <code>STRING</code> to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
 call of a builtin or a method, or the checks of one instruction, find one
-fault, the operation raises the error that the rule for that fault gives; a
-<code>STRING</code> answer that has no string value is such a fault. When they find more
+fault, the operation raises the error that the rule for that fault gives. When
+they find more
 than one, a wrong number of arguments or an omitted required argument among
 them, the operation raises the error of one of them, and which one is
 unspecified. Whether the checks after the first fault found are made, and so
@@ -825,174 +820,36 @@ with no blanks added or removed.</p>
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-conv.string.deviation.30"><a href="conventions.html#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
-<p>interrexx does not convert an argument whose <code>STRING</code> method answers an object
-that is not a string, such as a <code>Directory</code>, by reading the answer as a
-string. When a builtin receives such an argument where its page calls for a
-string, interrexx raises <code>SYNTAX 98.973</code>, or for an argument that <a href="conventions.html#r-conv.string.builtin-argument">the
-argument rules</a> name the error they give, as
-<a href="conventions.html#r-conv.string.deviation.169">Deviation 169</a> says, after raising
-<a href="conditions/nostring.html#r-cond.nostring.raise"><code>NOSTRING</code></a> when a trap for it is set. ooRexx reads
-the answer as a string, and what it does then depends on the builtin: <code>UPPER</code>
-ends the program with Error 5, <code>LENGTH</code> answers an unrelated number, and
-<code>STRIP</code> crashes the interpreter. A program can rely on none of these answers.</p>
+<p>The <a href="conventions.html#r-conv.string.object">string conversion rule</a> uses the object's name
+when its <code>STRING</code> method provides no usable answer. The ooRexx revision
+pinned for comparisons can give inconsistent results or crash in this case.
+ooRexx r13624 corrected that behavior.</p>
 <pre><code class="language-rexx">o = .weird~new
-say 'before'
-say upper(o)
-say 'after'
+say upper(o) length(o)
+say pos(o, 'x a WEIRD')
+signal on syntax name bad
+say 'x a WEIRD'~pos(o)
+bad: say condition('o')~code
 ::class weird
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=158">before
-</code></pre>
-<div class="rule" id="r-conv.string.deviation.169"><a href="conventions.html#r-conv.string.deviation.169">[conv.string.deviation.169]</a></div>
-<p>Where a clause needs the bytes of an object's string value, the <code>STRING</code> method
-of the object answers an object with no string value, and no trap took the
-NOSTRING condition that the answer raises, the clause raises <code>SYNTAX 98.973</code>,
-the condition that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING. The
-condition is an ordinary SYNTAX condition: <code>SIGNAL ON SYNTAX</code> and <code>CALL ON SYNTAX</code> take it, <code>RC</code> is 98 there, and untrapped it ends the program with exit
-code 158. The clauses that do this include <code>SAY</code>, the three concatenation
-operators, the ordering comparisons, <code>PARSE VALUE</code>, <code>PARSE ARG</code>, <code>OPTIONS</code> and
-the receiver of a builtin, the string the builtin works on, and the name that
-<code>SYMBOL</code>, <code>VAR</code>, <code>VALUE</code>, <code>QUALIFY</code>, <code>RXFUNCADD</code>, <code>RXFUNCDROP</code> or
-<code>RXFUNCQUERY</code> reads, and the selector of <code>VALUE</code>. A clause that reads the
-answer as an object, such as a truth value, a logical operator or an equality
-comparison, takes it as <code>.nil</code>. Every other argument of a builtin has the error
-of its own kind, which <a href="conventions.html#r-conv.string.builtin-argument">the next rule</a> states
-for an argument read as a string and <a href="conventions.html#r-conv.string.argument-kind">the rule after
-it</a> for the others. That latter rule applies
-also to method arguments read as a number. ooRexx reads the answer
-as a string in each of the clauses above, with garbage results or a crash, so
-no answer of it is specified. The text of the message is not specified.</p>
-<pre><code class="language-rexx">o = .weird~new
-signal on syntax name s
-say length(o)
-s: say condition('o')~code rc
-signal on syntax name t
-say 'a' || o
-t: say condition('o')~code rc
-signal on syntax name u
-parse value o with a b
-u: say condition('o')~code rc
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">98.973 98
-98.973 98
-98.973 98
+<pre><code class="language-output">A WEIRD 7
+3
+88.909
 </code></pre>
 <div class="rule" id="r-conv.string.builtin-argument"><a href="conventions.html#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
-<p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as a string, the builtin
-raises <code>SYNTAX 88.909</code>, as the method
-the builtin stands for does. <code>N</code> is the position of the argument among the
-arguments of that method, which does not count the receiver, the string the
-builtin works on. So <code>CHANGESTR(needle, haystack, new)</code> numbers the needle 1
-and the replacement 2, and <code>STRIP(string, option, char)</code> numbers the option 1
-and the character 2. The arguments that are read as strings are those named
-here, and <a href="conventions.html#r-conv.string.argument-kind">the next rule</a> gives the error of the
-others: the needle of
-<code>CHANGESTR</code>, <code>COUNTSTR</code>, <code>POS</code>, <code>LASTPOS</code> and <code>WORDPOS</code> and the replacement of
-<code>CHANGESTR</code>; the inserted string of <code>INSERT</code> and <code>OVERLAY</code>; the second string
-of <code>ABBREV</code>, <code>COMPARE</code>, <code>BITAND</code>, <code>BITOR</code> and <code>BITXOR</code>; the type of
-<code>DATATYPE</code>; the option and the character of <code>STRIP</code>; the two tables of
-<code>TRANSLATE</code>; the reference and the option of <code>VERIFY</code>; and the data of
-<code>CHAROUT</code> and <code>LINEOUT</code>. A method's argument and a native routine's argument that has no string
-value raise the same error with their own position. When the call has another
-fault as well, <a href="conventions.html#r-conv.error.precedence">the precedence rule</a> applies.</p>
-<pre><code class="language-rexx">o = .weird~new
-signal on syntax name s
-say changestr('a', 'a', o)
-s: say condition('o')~code rc
-signal on syntax name t
-say pos(o, 'abc')
-t: say condition('o')~code rc
-signal on syntax name u
-say strip('xabx', 'B', o)
-u: say condition('o')~code rc
-signal on syntax name v
-say 'abc'~pos(o)
-v: say condition('o')~code rc
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">88.909 88
-88.909 88
-88.909 88
-88.909 88
-</code></pre>
+<p>Builtins that use the <a href="conventions.html#r-conv.string.object">full conversion</a> use the
+resulting text at each string position, including where the text is the
+object's name. A method or native routine that requires a string through
+<code>REQUEST('STRING')</code> alone raises <code>SYNTAX 88.909</code> if the argument supplies no
+usable value. The error identifies the position in that method or routine's
+argument list.</p>
 <div class="rule" id="r-conv.string.argument-kind"><a href="conventions.html#r-conv.string.argument-kind">[conv.string.argument-kind]</a></div>
-<p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
-string value, and the builtin reads that argument as something other than a
-string, the argument fails the check of its kind, and the builtin raises the
-error that a string of the wrong form raises at that argument. A whole number,
-such as a count, a length or a position, raises <code>SYNTAX 40.12</code>; a pad or
-another single character <code>40.23</code>; an option <code>40.904</code>; the date or time that
-<code>DATE</code> or <code>TIME</code> converts <code>40.19</code>; a separator of <code>DATE</code> <code>40.43</code>; an argument
-of <code>XRANGE</code> that may be a class name <code>40.28</code>; the setting of <code>TRACE</code> <code>24.1</code>;
-and the queue name of <code>RXQUEUE</code> <code>40.26</code>. A number that <code>ABS</code>, <code>FORMAT</code>,
-<code>MAX</code>, <code>MIN</code>, <code>SIGN</code> and <code>TRUNC</code> work on raises <code>40.11</code> (<a href="conventions.html#r-conv.method.number">the number
-rule</a>), the number of <code>D2C</code> and of <code>D2X</code> <code>93.929</code> and
-<code>93.928</code>, and the string of <code>X2B</code>, <code>X2C</code> and <code>X2D</code> and of <code>B2X</code> <code>93.933</code> and
-<code>93.934</code>, as for a string that is not a number, or not hexadecimal or binary.
-The name of a stream raises <code>93.938</code>, numbered 1, the error of the argument of
-the <code>Stream</code> method the builtin sends, and the command of <code>STREAM</code> raises
-<code>93.914</code>, the error of a command that is not one. When the call has another
-fault as well, it raises the error of one of them, as <a href="conventions.html#r-conv.error.precedence">the precedence
-rule</a> says. A method argument read as a number
-raises the error of its own check when <code>STRING</code> gives no string value. For
-<code>String</code> methods the <a href="classes/string.html#r-class.string.builtins.errors">message rule</a> names
-these errors. An argument such a method reads as a string, a pad among them,
-raises <code>88.909</code> (the previous rule). The string a
-builtin works on keeps <code>98.973</code> (<a href="conventions.html#r-conv.string.deviation.169">Deviation 169</a>).</p>
-<pre><code class="language-rexx">o = .weird~new
-call try "left('abc', o)"
-call try "left('abc', 2, o)"
-call try "date(o)"
-call try "date('N', o, 'S')"
-call try "date('S', , , o)"
-call try "xrange(o)"
-call try "trace(o)"
-call try "rxqueue('S', o)"
-call try "abs(o)"
-call try "max(1, o)"
-call try "d2c(o)"
-call try "x2d(o)"
-call try "linein(o)"
-call try "'abc'~left(o)"
-call try "'abc'~substr(o)"
-call try "'abc'~left(2, o)"
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt; ok'
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">left('abc', o) =&gt; 40.12
-left('abc', 2, o) =&gt; 40.23
-date(o) =&gt; 40.904
-date('N', o, 'S') =&gt; 40.19
-date('S', , , o) =&gt; 40.43
-xrange(o) =&gt; 40.28
-trace(o) =&gt; 24.1
-rxqueue('S', o) =&gt; 40.26
-abs(o) =&gt; 40.11
-max(1, o) =&gt; 40.11
-d2c(o) =&gt; 93.929
-x2d(o) =&gt; 93.933
-linein(o) =&gt; 93.938
-'abc'~left(o) =&gt; 93.923
-'abc'~substr(o) =&gt; 93.924
-'abc'~left(2, o) =&gt; 88.909
-</code></pre>
+<p>An argument interpreted as a number, position, option, or other constrained
+value is checked in that role after conversion. For example, a nonnumeric
+default name fails the normal numeric check. Where several checks fail,
+<a href="conventions.html#r-conv.error.precedence">the precedence rule</a> applies.</p>
 <pre><code class="language-rexx">o = .weird~new
 a = .array~of('a', 'b')
 m = .array~new(2, 2)
@@ -26317,23 +26174,19 @@ bdflt
 NOSTRING [a PLAIN] The Stem class
 </code></pre>
 <div class="rule" id="r-cond.nostring.deviation.30"><a href="conditions/nostring.html#r-cond.nostring.deviation.30">[cond.nostring.deviation.30]</a></div>
-<p>When the <code>STRING</code> method of an object answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
-<code>SYNTAX 98.973</code> (<a href="conditions/../conventions.html#r-conv.string.deviation.169">Deviation
-169</a>) after raising NOSTRING if it is trapped. For a
-NOSTRING raised for such an object, the description is not specified. ooRexx
-reads <code>.nil</code> as a string there, with garbage results or a crash. <a href="conditions/../conventions.html#r-conv.string.deviation.30">The
-conventions</a> state it for builtin arguments.</p>
+<p>With a missing or unusable <code>STRING</code> answer, the description of NOSTRING is the fallback text. If the condition goes untrapped, the clause uses that same text. The pinned ooRexx revision can supply an unusable description or fail during conversion.</p>
 <pre><code class="language-rexx">signal on nostring name n
 say 'x' .weird~new
 n: say 'trapped' condition('c') condition('o')~additional~class
-x = 'a' || .weird~new
-say 'not reached'
+say 'a' || .weird~new
+say 'after'
 ::class weird
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=158">trapped NOSTRING The WEIRD class
+<pre><code class="language-output">trapped NOSTRING The WEIRD class
+aa WEIRD
+after
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="nomethod"><a class="header" href="#nomethod">NOMETHOD</a></h1>
 <p class="references">rexxref: Conditions and Condition Traps; Conditions and Condition Traps &gt; Condition Information &gt; Descriptive Strings; Conditions and Condition Traps &gt; Condition Information &gt; Additional Object Information; Conditions and Condition Traps &gt; Action Taken when a Condition Is Trapped</p>
@@ -28334,25 +28187,15 @@ e: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <h2 id="deviations-27"><a class="header" href="#deviations-27">Deviations</a></h2>
 <div class="rule" id="r-class.index.deviation.30"><a href="classes/index.html#r-class.index.deviation.30">[class.index.deviation.30]</a></div>
-<p>When the <code>string</code> method of an object answers an object that is not a
-string, interrexx gives ooRexx's answer wherever that is defined, and
-elsewhere, as for <code>say</code>, a joining operator or the receiver of a builtin, raises
-<code>SYNTAX 98.973</code> (<a href="classes/../conventions.html#r-conv.string.deviation.169">Deviation 169</a>) after raising
-NOSTRING if it is trapped. ooRexx reads <code>.nil</code> as a string there, with garbage
-results or a crash. <a href="classes/../conventions.html#r-conv.string.deviation.30">The
-conventions</a> and <a href="classes/../conditions/nostring.html#r-cond.nostring.deviation.30">the NOSTRING
-rule</a> state it for builtin arguments and for
-the condition, <a href="classes/../conventions.html#r-conv.string.builtin-argument">the argument rule</a> gives
-the <code>SYNTAX 88.909</code> of an argument a builtin reads as a string, and <a href="classes/../conventions.html#r-conv.string.argument-kind">the kind
-rule</a> the error of an argument it reads as
-something else.</p>
+<p>Conversion uses the object's name when its <code>STRING</code> method answers no usable value. The pinned ooRexx revision can give an unusable result or crash. See the <a href="classes/../conventions.html#r-conv.string.object">conversion rule</a>.</p>
 <pre><code class="language-rexx">say 'before'
 say 'x' .weird~new
 ::class weird
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=158">before
+<pre><code class="language-output">before
+x a WEIRD
 </code></pre>
 <div class="rule" id="r-class.index.deviation.32"><a href="classes/index.html#r-class.index.deviation.32">[class.index.deviation.32]</a></div>
 <p>When a class-side <code>new</code> reached through <code>enhanced</code> answers an object it did
@@ -32177,11 +32020,7 @@ say 'after'
 <pre><code class="language-output no-oracle rc=120">set
 </code></pre>
 <div class="rule" id="r-class.object.deviation.30"><a href="classes/object.html#r-class.object.deviation.30">[class.object.deviation.30]</a></div>
-<p>When the <code>string</code> method of an object answers an object that is not a string,
-interrexx gives the answer ooRexx gives wherever that is defined, and
-elsewhere raises <code>SYNTAX 98.973</code>, as <a href="classes/index.html#r-class.index.deviation.30">the chapter
-rule</a> says. The <code>string</code> method of <code>Object</code> is not
-affected: it answers the name.</p>
+<p>An explicit <code>STRING</code> send returns the method's answer. When a clause needs text, the <a href="classes/../conventions.html#r-conv.string.object">conversion rule</a> checks that answer and can use the object's name. The pinned ooRexx revision may fail during that conversion.</p>
 <pre><code class="language-rexx">a = .weird~new
 say a~string~class~id
 say 'before'
@@ -32190,8 +32029,9 @@ say 'x' a
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=158">Directory
+<pre><code class="language-output">Directory
 before
+x a WEIRD
 </code></pre>
 <div class="rule" id="r-class.object.deviation.32"><a href="classes/object.html#r-class.object.deviation.32">[class.object.deviation.32]</a></div>
 <p>When the class method <code>new</code> of a class answers an object that it did not
@@ -34857,8 +34697,7 @@ trailing blank matters, and numbers are not compared as numbers, so <code>1</cod
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
 raises <code>93.902</code>. The argument is converted by the <a href="classes/../conventions.html#r-conv.string.object">required-string
 protocol</a>. <code>.nil</code> compares unequal to every string.
-An object whose <code>string</code> method returns something with no string value also
-compares unequal when the conversion does not raise a condition.</p>
+If conversion falls back to the object's name, equality compares that name.</p>
 <pre><code class="language-rexx">say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
 say '1'~equals('1.0') 12~equals('12') 'abc'~equals(.nil)
 say 'an Object'~equals(.object~new)
@@ -81305,7 +81144,7 @@ rc 2
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="commandcontext"><a class="header" href="#commandcontext">CommandContext</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandContext Class; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]=; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; dropVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; environment; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; error; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; getVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; hasVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; input; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isRedirected; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isValid; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; output; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raise; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseError; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseFailure; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; setVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; variables</p>
-<p class="deviations">Deviations: D109, D183</p>
+<p class="deviations">Deviations: D30, D109, D183</p>
 <p>When a command reaches a handler written in Rexx, the interpreter makes a
 <code>CommandContext</code> for that one command and passes it to the method <code>command</code> of
 the <a href="classes/commandhandler.html"><code>CommandHandler</code></a> as the second argument. The context
@@ -82203,9 +82042,8 @@ rule</a> finds it: <code>request</code> with <code>STRING</code> is sent to it
 first, and its <code>string</code> method when that answers no string, so that a class
 with its own <code>request</code> decides the description. The condition holds that
 string; an instance of a subclass of <code>String</code> is a string here (<a href="classes/commandcontext.html#r-class.commandcontext.deviation.109">the deviation
-rule</a>). If the <code>string</code> result has no
-string value and the conversion does not raise a condition, the condition
-holds <code>.nil</code> for its description. <code>additional</code> is the <code>ADDITIONAL</code>
+rule</a>). The description uses the object's
+name when <code>STRING</code> supplies no usable value. <code>additional</code> is the <code>ADDITIONAL</code>
 entry of the condition object, the object as it was given, and when it is
 omitted or <code>.nil</code> the condition object has no such entry. The condition object
 has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
@@ -82260,62 +82098,6 @@ USER returned, rc &lt;8&gt; 0
 DEFAULTS returned, rc &lt;9&gt; 1
   trap ERROR &lt;NILS&gt; rc 10 entry 10 none
 NILS returned, rc &lt;10&gt; 1
-</code></pre>
-<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_no_text', .raiser~new)
-do mode over .array~of('error call', 'error signal', 'halt call',,
-    'halt signal', 'nostring')
-  call exercise mode
-end
-x = .commandhandler~deregister('spec_cc_no_text')
-exit
-exercise: procedure
-  use arg mode
-  select
-    when mode = 'error call' then call on error name trapped
-    when mode = 'error signal' then signal on error name trapped
-    when mode = 'halt call' then call on halt name trapped
-    when mode = 'halt signal' then signal on halt name trapped
-    otherwise signal on nostring name trapped
-  end
-  address spec_cc_no_text mode
-  say 'return' rc
-  say 'next clause'
-  return
-trapped:
-  if condition('c') = 'NOSTRING' then say 'NOSTRING'
-  else say condition('c') (condition('d') == .nil) (condition('o')~description == .nil)
-  return
-::class raiser inherit CommandHandler
-::method command
-  use arg command, caller
-  parse var command kind .
-  if kind = 'nostring' then kind = 'error'
-  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
-  return 10
-::class unreadable
-::method string
-  say 'string called'
-  return .object~new
-</code></pre>
-<pre><code class="language-output">raise returned 5
-string called
-ERROR 1 1
-return 5
-next clause
-raise returned 5
-string called
-ERROR 1 1
-raise returned 5
-string called
-return 5
-HALT 1 1
-next clause
-raise returned 5
-string called
-HALT 1 1
-raise returned 5
-string called
-NOSTRING
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_halt', .halter~new)
 call on halt name stopped
@@ -82785,6 +82567,66 @@ copy-twice: rc 0 0
 copy-later: rc 1 1
 </code></pre>
 <h2 id="deviations-69"><a class="header" href="#deviations-69">Deviations</a></h2>
+<div class="rule" id="r-class.commandcontext.deviation.30"><a href="classes/commandcontext.html#r-class.commandcontext.deviation.30">[class.commandcontext.deviation.30]</a></div>
+<p>A command condition whose description has no usable <code>STRING</code> answer carries
+the fallback name. The pinned ooRexx revision carries <code>.nil</code> in this case.
+The <a href="classes/../conditions/nostring.html#r-cond.nostring.raise">NOSTRING rules</a> still apply.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_no_text', .raiser~new)
+do mode over .array~of('error call', 'error signal', 'halt call',,
+    'halt signal', 'nostring')
+  call exercise mode
+end
+x = .commandhandler~deregister('spec_cc_no_text')
+exit
+exercise: procedure
+  use arg mode
+  select
+    when mode = 'error call' then call on error name trapped
+    when mode = 'error signal' then signal on error name trapped
+    when mode = 'halt call' then call on halt name trapped
+    when mode = 'halt signal' then signal on halt name trapped
+    otherwise signal on nostring name trapped
+  end
+  address spec_cc_no_text mode
+  say 'return' rc
+  say 'next clause'
+  return
+trapped:
+  if condition('c') = 'NOSTRING' then say 'NOSTRING'
+  else say condition('c') condition('d') (condition('d') == condition('o')~description)
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  parse var command kind .
+  if kind = 'nostring' then kind = 'error'
+  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
+  return 10
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+</code></pre>
+<pre><code class="language-output">raise returned 5
+string called
+ERROR an UNREADABLE 1
+return 5
+next clause
+raise returned 5
+string called
+ERROR an UNREADABLE 1
+raise returned 5
+string called
+return 5
+HALT an UNREADABLE 1
+next clause
+raise returned 5
+string called
+HALT an UNREADABLE 1
+raise returned 5
+string called
+NOSTRING
+</code></pre>
 <div class="rule" id="r-class.commandcontext.deviation.183"><a href="classes/commandcontext.html#r-class.commandcontext.deviation.183">[class.commandcontext.deviation.183]</a></div>
 <p>An object whose <code>REQUEST('String')</code> answers an error number as text supplies
 that code to <code>CommandContext~raise('SYNTAX', code)</code>. The handler receives
@@ -86479,16 +86321,13 @@ members are characters, ranges and <a href="classes/regularexpression.html#r-cla
 names</a>. A <code>^</code> right after the opening
 bracket negates the set: it matches one character that is not a member; a <code>^</code>
 anywhere else is an ordinary member. A <code>-</code> between two characters makes a
-range. For a range the bytes count as numbers from -128 for <code>'80'x</code> up to 127
-for <code>'7f'x</code>, so <code>'80'x</code> to <code>'ff'x</code> come before <code>'00'x</code>. When the first
-character is not above the second, the range is all characters from the first
-to the second; when it is above, it is the characters above the second up to
-the first, so <code>[d-a]</code> is <code>b</code>, <code>c</code> and <code>d</code>. In a chain such as <code>[a-c-e]</code> the
-character that ends a range also starts the next one, so that set is <code>a</code> to
-<code>e</code>. A <code>\</code> right after the <code>-</code> of a range is the end of the range and not an
-escape, and a <code>-</code> after a symbolic name starts a range at the closing colon of
-the name, which is left out when the end is above it: <code>[:digit:-z]</code> is the
-digits and the characters from <code>;</code> to <code>z</code>. A <code>[</code> inside a set is an ordinary
+range. Each range includes both endpoints in unsigned byte order, from
+<code>'00'x</code> through <code>'FF'x</code>. The endpoints may appear in either order.
+A character that ends a range can also start the next range, so <code>[a-c-e]</code>
+includes every byte from <code>a</code> to <code>e</code>. Immediately after a range hyphen, a
+backslash is the endpoint itself. After a symbolic name, a range starts at
+the closing colon of the name. A range continuing up from that colon
+excludes it. A <code>[</code> inside a set is an ordinary
 member. A <code>-</code> that opens the set, or follows the <code>^</code> that opens it, is an
 ordinary member, and a <code>-</code> that ends the set is error 3. Inside a set the
 characters <code>?</code>, <code>*</code>, <code>+</code>, <code>|</code>, <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code> and <code>.</code> stand for
@@ -86499,15 +86338,8 @@ present: error 3.</p>
 <pre><code class="language-rexx">re = .RegularExpression~new
 say 'members' re~parse('[xyz]') re~match('y') re~match('w')
 say 'range' re~parse('[a-d]') re~match('c') re~match('e')
-say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
-say 'signed' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
-  re~match('b')
 say 'high' re~parse('['||'80'x||'-'||'ff'x||']') re~match('90'x) re~match('a')
 say 'chain' re~parse('[a-c-e]') re~match('d') re~match('b') re~match('f')
-say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
-  re~match('\') re~match('c')
-say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
-  re~match('5') re~match('{')
 say 'bracket' re~parse('[[]') re~match('[') re~match('a')
 say 'ranges' re~parse('[a-cx-z]') re~match('b') re~match('y') re~match('m')
 say 'negated' re~parse('[^a-c]') re~match('d') re~match('b')
@@ -86526,12 +86358,8 @@ exit
 </code></pre>
 <pre><code class="language-output">members 0 1 0
 range 0 1 0
-backward 0 1 0 0
-signed 0 1 0 0
 high 0 1 0
 chain 0 1 1 0
-late end 0 1 1 0 0 1
-after name 0 1 0 1 0
 bracket 0 1 0
 ranges 0 1 1 0
 negated 0 1 0
@@ -86723,22 +86551,27 @@ re~position(5) =&gt; 93.902
 </code></pre>
 <h2 id="deviations-73"><a class="header" href="#deviations-73">Deviations</a></h2>
 <div class="rule" id="r-class.regularexpression.deviation.87"><a href="classes/regularexpression.html#r-class.regularexpression.deviation.87">[class.regularexpression.deviation.87]</a></div>
-<p>The pattern language is the one this
-page gives, and every call ends. ooRexx differs in many patterns; among them,
-it answers wrongly when a <code>+</code> is followed by a repeated element, as <code>c+a*</code>,
-which it does not match against <code>cca</code>, and when an alternative that begins
-with a repeated element is followed by another one, at the top or in a group:
-<code>b*c|a</code> is <code>b*c</code> or <code>a</code>, but ooRexx reads the second alternative as following
-the repeated element, so it finds <code>ba</code>. It does not end for a pattern that
-repeats a group that can match the empty string, such as <code>(a*)*</code>, for one that
-begins with a group whose first alternative can match the empty string and is
-followed by <code>|</code>, such as <code>(c*|b)|d</code>, and for a set with a range whose highest
-character, in the order of <a href="classes/regularexpression.html#r-class.regularexpression.grammar.set">the set
-rule</a>, is <code>'7f'x</code>, as in <code>[a-'7f'x]</code>
-and <code>['7f'x-'81'x]</code>, and it crashes on others, such as <code>(c*|b)c|d</code>. And for a
-count it cannot build, as in <code>a{99999999999}</code>, it uses memory until it is
-stopped, where interrexx answers code 5 from <code>parse</code>. None of the examples is
-run on ooRexx.</p>
+<p>The pinned ooRexx revision uses signed range endpoints, miscompiles some
+alternatives and fails to terminate on some patterns with empty matches.
+ooRexx r13618 corrected the byte ranges and r13620 corrected the automaton.
+Interrexx also limits the size of the compiled pattern. If expanding a count
+would exceed that limit, <code>parse</code> answers 5.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
+say 'byte order' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
+  re~match('b')
+say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
+  re~match('\') re~match('c')
+say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
+  re~match('5') re~match('{')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">backward 0 1 0 1
+byte order 0 0 1 1
+late end 0 1 1 0 1 1
+after name 0 1 0 1 0
+</code></pre>
 <pre><code class="language-rexx">re = .RegularExpression~new('b*c|a')
 say re~match('ba') re~position re~pos('ba') re~position
 say re~match('bc') re~position re~match('a') re~position
@@ -131490,12 +131323,10 @@ is refused, exit code 120, and so is <code>d~unknown('A=', args)</code> sent dir
 with an argument array that holds no item. ooRexx stores an unrelated leftover
 value for the first and removes the entry for the second.</p>
 <h2 id="30-a-string-method-answering-a-non-string"><a class="header" href="#30-a-string-method-answering-a-non-string">30. A STRING method answering a non-string</a></h2>
-<p>When an object's <code>STRING</code> method answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
-<code>SYNTAX 98.973</code> after raising NOSTRING if it is trapped, as <a href="deviations.html#169-a-string-method-answering-a-non-string-where-its-bytes-are-read">Deviation
-169</a>
-says. ooRexx reads <code>.nil</code> as a string there, with garbage results or a crash.
-The <a href="conventions.html#r-conv.string.deviation.30">conventions</a> state it for builtin arguments.</p>
+<p>String conversion falls back to the object's name when <code>STRING</code> supplies no
+usable value. The pinned ooRexx revision may give an unusable result or crash.
+ooRexx r13624 adopted this fallback. See the <a href="conventions.html#r-conv.string.deviation.30">conversion
+rule</a>.</p>
 <h2 id="31-withdrawn"><a class="header" href="#31-withdrawn">31. Withdrawn</a></h2>
 <p>Replaced by <a href="deviations.html#36-strings-and-numbers-are-value-based">Deviation 36</a>.</p>
 <h2 id="32-a-new-that-answers-another-object"><a class="header" href="#32-a-new-that-answers-another-object">32. A NEW that answers another object</a></h2>
@@ -131786,9 +131617,11 @@ first attempt to reach the service, for a queue, a registration or the
 macrospace, writes a line to standard error that says so
 (<a href="rexxutil/macrospace.html#r-util.macrospace.deviation.86">the rule</a>). ooRexx accepts such a directory.</p>
 <h2 id="87-rxregexp-follows-its-documented-grammar"><a class="header" href="#87-rxregexp-follows-its-documented-grammar">87. rxregexp follows its documented grammar</a></h2>
-<p>rxregexp matches the documented pattern language and always terminates; a
-pattern too large to compile is compile error 5. ooRexx answers some patterns
-wrongly, never terminates on some and crashes on others.</p>
+<p>A pattern whose compiled automaton exceeds the size limit raises parse
+error 5. The pinned ooRexx revision can exhaust memory at large repeat
+counts. It also miscompiles some alternatives, loops on some empty matches,
+and uses signed byte values for set ranges. ooRexx r13618 fixed the range
+rules and r13620 fixed the automaton construction and empty cycles.</p>
 <h2 id="88-extension-calls-that-crash-oorexx"><a class="header" href="#88-extension-calls-that-crash-oorexx">88. Extension calls that crash ooRexx</a></h2>
 <p>RegularExpression <code>match</code> or <code>pos</code> with no pattern, and <code>match</code>, <code>pos</code> or
 <code>parse</code> after <code>uninit</code>, SysGetgrnam or SysGetgrgid of a missing group,
@@ -132346,22 +132179,10 @@ at the same character; its <code>LINEOUT</code> at that write position continues
 the words of the options as a blank does, and a command may begin and end with
 one. ooRexx accepts a tab after the word that names a command, and raises
 <code>SYNTAX 93.0</code> for a tab between or around the options that follow it.</p>
-<h2 id="169-a-string-method-answering-a-non-string-where-its-bytes-are-read"><a class="header" href="#169-a-string-method-answering-a-non-string-where-its-bytes-are-read">169. A STRING method answering a non-string where its bytes are read</a></h2>
-<p>Where a clause needs the bytes of the string value of an object, and the
-<code>STRING</code> method of the object answers an object with no string value (<code>.nil</code>, a
-<code>Directory</code>, a <code>Queue</code>, an <code>Object</code>), interrexx raises <code>SYNTAX 98.973</code>, the
-error that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING, whether or not the
-program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
-untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
-takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. The arguments of a
-builtin are not part of this Deviation, except the string the builtin works on
-and the names that the conventions list: an argument raises the error of its
-own kind, <code>SYNTAX 88.909</code> with its position where the builtin reads it as a
-string (<a href="conventions.html#r-conv.string.builtin-argument">the rule</a>) and the error of its check
-otherwise (<a href="conventions.html#r-conv.string.argument-kind">the kind rule</a>). The
-<a href="conventions.html#r-conv.string.deviation.169">conventions</a> state it. It replaces the refusal
-with exit code 120 that Deviation 30 described.</p>
+<h2 id="169-withdrawn"><a class="header" href="#169-withdrawn">169. Withdrawn</a></h2>
+<p>The fallback to the object's name replaces the unconditional SYNTAX error.
+<a href="deviations.html#30-a-string-method-answering-a-non-string">Deviation 30</a> covers comparison
+with the pinned ooRexx revision.</p>
 <h2 id="170-withdrawn"><a class="header" href="#170-withdrawn">170. Withdrawn</a></h2>
 <p>A builtin's conversion of its arguments is part of its checks, and a call with
 no fault converts them from the left before the checks, as ooRexx does
