@@ -116,6 +116,41 @@ pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
     out
 }
 
+/// Relativize two spellings on the same Windows root without folding names.
+/// Windows directories can have distinct children whose names differ by case.
+#[cfg(windows)]
+pub(crate) fn relative_windows_path(base: &Path, target: &Path) -> Option<std::path::PathBuf> {
+    use std::path::{Component, PathBuf};
+
+    let mut base = base.components().peekable();
+    let mut target = target.components().peekable();
+    match (base.next(), target.next()) {
+        (Some(Component::Prefix(left)), Some(Component::Prefix(right))) if left == right => {}
+        _ => return None,
+    }
+    if base.next() != Some(Component::RootDir) || target.next() != Some(Component::RootDir) {
+        return None;
+    }
+    while let (Some(parent), Some(part)) = (base.peek(), target.peek()) {
+        if parent != part {
+            break;
+        }
+        base.next();
+        target.next();
+    }
+    let mut relative = PathBuf::new();
+    for _ in base {
+        relative.push("..");
+    }
+    for component in target {
+        relative.push(component.as_os_str());
+    }
+    if relative.as_os_str().is_empty() {
+        relative.push(".");
+    }
+    Some(relative)
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
@@ -172,6 +207,18 @@ mod tests {
 
 #[cfg(all(test, windows))]
 mod windows_tests {
+    #[test]
+    fn relative_path_keeps_case_only_siblings_distinct() {
+        use super::{Path, relative_windows_path};
+
+        let base = Path::new(r"\\?\C:\parent\Foo");
+        let target = Path::new(r"\\?\C:\parent\foo\file.txt");
+        assert_eq!(
+            relative_windows_path(base, target).as_deref(),
+            Some(Path::new(r"..\foo\file.txt"))
+        );
+    }
+
     use super::*;
 
     #[test]

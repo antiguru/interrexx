@@ -1,6 +1,8 @@
 //! File routines backed by the Windows filesystem APIs.
 
-use super::{answer, c_string, check_arity, optional_text, path_argument, scan_triple};
+use super::{
+    answer, c_string, check_arity, optional_text, path_argument, required_c_string, scan_triple,
+};
 use crate::error::Raised;
 use crate::{Failure, Interp};
 use interrexx_core::ObjRef;
@@ -361,4 +363,55 @@ pub(crate) fn drive_map(
         }
     }
     Ok(interp.text_built(result))
+}
+
+pub(crate) fn file_name_spelling<const SHORT: bool>(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 1)?;
+    let given = required_c_string(interp, args, 1)?;
+    let answer = converted_name(interp, &given, SHORT).unwrap_or_default();
+    Ok(interp.text_built(answer.into_bytes()))
+}
+
+fn converted_name(interp: &Interp, given: &[u8], short: bool) -> Option<String> {
+    use crate::builtin::platform::qualify_name;
+    use crate::paths::{os_path, relative_windows_path};
+    use std::path::Component;
+
+    let original = os_path(given);
+    let qualified = qualify_name(interp, given);
+    if qualified.is_empty() {
+        return None;
+    }
+    let qualified = os_path(&qualified);
+    // The conversion APIs can copy path components already in the requested spelling.
+    std::fs::symlink_metadata(qualified).ok()?;
+    let answer = crate::host::file_name_spelling(qualified, short)?;
+    if original.is_absolute() {
+        return Some(answer);
+    }
+    let answer = Path::new(&answer);
+    if original.has_root() {
+        // The caller supplied the root separator but left out the drive or share.
+        let mut components = answer.components();
+        match components.next()? {
+            Component::Prefix(_) => return components.as_path().to_str().map(str::to_owned),
+            _ => return None,
+        }
+    }
+
+    // Qualify against the interpreter's directory without changing the process
+    // directory. Convert that directory as well before making the answer relative.
+    let base = crate::host::file_name_spelling(os_path(interp.cwd_bytes()), short)?;
+    let relative = relative_windows_path(Path::new(&base), answer)?;
+    let relative = relative.to_str()?;
+    match original.components().next() {
+        Some(Component::Prefix(prefix)) => {
+            Some(format!("{}{relative}", prefix.as_os_str().to_str()?))
+        }
+        _ => Some(relative.to_owned()),
+    }
 }
