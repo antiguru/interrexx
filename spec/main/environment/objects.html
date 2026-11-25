@@ -738,7 +738,9 @@ it</a>) goes the same way: each of its lines is sent as
 <code>LINEOUT</code> with a <code>TraceObject</code> to <code>.traceoutput</code>, so a destination set on
 <code>.error</code> receives it, and an object stored in <code>.local</code> under <code>ERROR</code> does
 not, because <code>.traceoutput</code> passes the lines on to the monitor it was given at
-the start. In the example, the first line shows that the monitor
+the start. If delivering a report of an exhausted control stack exhausts the
+stack again, the remaining report lines go directly to standard output.
+In the example, the first line shows that the monitor
 <code>.traceoutput</code> is connected to <code>.error</code>, and the spy receives the lines of the
 report of the division by zero.</p>
 <pre><code class="language-rexx">.error~destination(.spy~new)
