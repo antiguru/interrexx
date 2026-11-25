@@ -91,8 +91,9 @@ fn eval(exprs: &Exprs, root: ExprId, symbols: &SymbolTable) -> Result<String, Fa
     let mut values: Vec<String> = Vec::new();
     for node in exprs.range(root) {
         let value = match node.kind() {
-            NodeKind::Literal(range) => String::from_utf8(exprs.bytes(*range).to_vec())
-                .map_err(|_| Failure::Unsupported)?,
+            NodeKind::Literal(range) => {
+                String::from_utf8(exprs.bytes(*range).to_vec()).map_err(|_| Failure::Unsupported)?
+            }
             // A constant's value is its own upcased spelling, which is why
             // `say 1e5` prints `1E5`.
             NodeKind::Constant(id) => symbols.name(*id).to_string(),
@@ -222,8 +223,7 @@ fn every_generated_expression_evaluates_to_what_the_interpreter_evaluated() {
             (false, Err(err)) => {
                 wrong.push(format!("{text:?}: failed to parse: {err:?}"));
             }
-            (false, Ok((exprs, root, symbols))) => match (verdict, eval(&exprs, root, &symbols))
-            {
+            (false, Ok((exprs, root, symbols))) => match (verdict, eval(&exprs, root, &symbols)) {
                 ("OK", Ok(got)) => {
                     checked_value += 1;
                     if got != expected {
