@@ -4,9 +4,15 @@
 //!
 //! An image holds everything a [`Program`] holds except its text, which the
 //! reader is handed and checks against the image: the image is refused
-//! unless it was written by this build's format from that same text. A
-//! refused image is `None`, never a partial program, and the caller parses
-//! the text instead.
+//! unless it was written by this build's format from that same text and every
+//! expression arena it holds is consistent (see [`Exprs::check`]). A refused
+//! image is `None`, never a partial program: `None` is the caller's cue to
+//! parse the text instead.
+//!
+//! The image of the interpreter's own library is read without that check, by
+//! [`program_from_static_image`] and the lazy body reader: the build wrote it from
+//! a parse that had already validated its arenas, and the check would read
+//! every body at startup, which that image exists to avoid.
 
 use interrexx_cast::CastTruncate;
 use std::collections::BTreeMap;
@@ -81,7 +87,32 @@ fn read_program(image: &[u8], whole: Option<&'static [u8]>, text: &[u8]) -> Opti
         main: Image::get(&mut input)?,
         directives: Image::get(&mut input)?,
     };
-    input.bytes.is_empty().then_some(program)
+    if !input.bytes.is_empty() || (whole.is_none() && !arenas_hold(&program)) {
+        return None;
+    }
+    Some(program)
+}
+
+/// Whether the arena of every body and every `::CONSTANT` expression of
+/// `program` is consistent with the roots its instructions name.
+fn arenas_hold(program: &Program) -> bool {
+    program.main.check().is_ok()
+        && program
+            .directives
+            .iter()
+            .all(|directive| match &directive.kind {
+                DirectiveKind::Method(method) => {
+                    method.body.as_ref().is_none_or(|b| b.check().is_ok())
+                }
+                DirectiveKind::Attribute(attribute) => {
+                    attribute.body.as_ref().is_none_or(|b| b.check().is_ok())
+                }
+                DirectiveKind::Routine(routine) => {
+                    routine.body.as_ref().is_none_or(|b| b.check().is_ok())
+                }
+                DirectiveKind::Constant(constant) => constant.value.check().is_ok(),
+                _ => true,
+            })
 }
 
 /// The code body a [`Body`] left encoded holds.
