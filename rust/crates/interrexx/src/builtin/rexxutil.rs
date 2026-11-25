@@ -13,6 +13,8 @@ pub(crate) mod timezone;
 #[cfg(unix)]
 pub(crate) mod tree;
 #[cfg(windows)]
+pub(crate) mod windows_console;
+#[cfg(windows)]
 pub(crate) mod windows_files;
 
 use interrexx_core::{Body, Decoded, ObjRef};
@@ -730,4 +732,10 @@ fn scan_triple(text: &[u8], separator: u8, widths: [usize; 3]) -> Option<[i64; 3
         at = cursor;
     }
     Some(out)
+}
+
+/// A number from the process's random keys, for a name nobody predicts.
+fn random_name_seed() -> u64 {
+    use std::hash::BuildHasher as _;
+    std::hash::RandomState::new().hash_one(0u8)
 }

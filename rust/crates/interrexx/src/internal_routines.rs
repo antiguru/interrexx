@@ -320,10 +320,14 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSystemDirectory",
         crate::builtin::rexxutil::windows_files::system_directory,
     ),
-    #[cfg(unix)]
     util_run(
         "SysTempFileName",
-        crate::builtin::rexxutil::files::temp_file_name,
+        crate::builtin::rexxutil::search::temp_file_name,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysTextScreenSize",
+        crate::builtin::rexxutil::windows_console::screen_size,
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
@@ -335,6 +339,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
+    #[cfg(windows)]
+    util_run(
+        "SysWinDecryptFile",
+        crate::builtin::rexxutil::windows_files::set_encrypted::<false>,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinEncryptFile",
+        crate::builtin::rexxutil::windows_files::set_encrypted::<true>,
+    ),
     #[cfg(windows)]
     util_run("SysWinVer", crate::builtin::rexxutil::version),
 ];

@@ -152,8 +152,20 @@ jobs:
           $env:REXX_TEST_FREE_DRIVES = ((65..90 | ForEach-Object { [string][char]$_ + ':' }) |
             Where-Object { $_ -notin $driveNames }) -join ' '
           $env:REXX_TEST_VOLUME_SIZE = $drive.TotalSize.ToString([cultureinfo]::InvariantCulture)
-          & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
-          if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
+          $probe = Join-Path $env:RUNNER_TEMP 'rexxutil-efs-probe'
+          [IO.File]::WriteAllText($probe, 'test data')
+          try {
+            try {
+              [IO.File]::Encrypt($probe)
+              $env:REXX_TEST_EFS_PROBE = $probe
+            } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+              Write-Host 'The runner cannot encrypt a file on its temporary volume.'
+            }
+            & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
+            if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
+          } finally {
+            Remove-Item -LiteralPath $probe
+          }
 
       - name: Verify Windows file timestamps across daylight saving time
         shell: pwsh

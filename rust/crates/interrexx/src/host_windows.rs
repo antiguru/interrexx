@@ -91,6 +91,25 @@ pub(crate) fn copy_file(from: &std::path::Path, to: &std::path::Path) -> std::io
     Ok(())
 }
 
+pub(crate) fn set_file_encryption(path: &std::path::Path, encrypted: bool) -> std::io::Result<()> {
+    use windows_sys::Win32::Storage::FileSystem::{DecryptFileW, EncryptFileW};
+
+    let path = file_path(path)?;
+    // SAFETY: path is a NUL-terminated UTF-16 string live across the call.
+    let done = unsafe {
+        if encrypted {
+            EncryptFileW(path.as_ptr())
+        } else {
+            DecryptFileW(path.as_ptr(), 0)
+        }
+    };
+    if done == 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn move_file(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
     use windows_sys::Win32::Storage::FileSystem::MoveFileW;
     let from = file_path(from)?;
@@ -152,6 +171,60 @@ pub(crate) fn set_local_file_time(
             ) != 0
     };
     ok.then_some(())
+}
+
+pub(crate) fn console_info()
+-> Option<windows_sys::Win32::System::Console::CONSOLE_SCREEN_BUFFER_INFO> {
+    use windows_sys::Win32::System::Console::{
+        CONSOLE_SCREEN_BUFFER_INFO, GetConsoleScreenBufferInfo, GetStdHandle, STD_OUTPUT_HANDLE,
+    };
+
+    let mut info = CONSOLE_SCREEN_BUFFER_INFO::default();
+    // SAFETY: info is writable and GetConsoleScreenBufferInfo validates the handle.
+    let ok = unsafe { GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &mut info) };
+    (ok != 0).then_some(info)
+}
+
+pub(crate) fn resize_console_buffer(rows: i16, columns: i16) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{COORD, GetStdHandle, STD_OUTPUT_HANDLE, SetConsoleScreenBufferSize},
+    };
+
+    // SAFETY: SetConsoleScreenBufferSize validates the dimensions and handle.
+    unsafe {
+        let size = COORD {
+            X: columns,
+            Y: rows,
+        };
+        if SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), size) != 0 {
+            0
+        } else {
+            i64::from(GetLastError())
+        }
+    }
+}
+
+pub(crate) fn set_console_window([top, left, bottom, right]: [i16; 4]) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{GetStdHandle, SMALL_RECT, STD_OUTPUT_HANDLE, SetConsoleWindowInfo},
+    };
+
+    // SAFETY: the rectangle lives through the call, which validates the handle.
+    unsafe {
+        let rect = SMALL_RECT {
+            Top: top,
+            Left: left,
+            Bottom: bottom,
+            Right: right,
+        };
+        if SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), 1, &rect) != 0 {
+            0
+        } else {
+            i64::from(GetLastError())
+        }
+    }
 }
 
 /// Clears the console screen buffer and moves the cursor back to its origin.

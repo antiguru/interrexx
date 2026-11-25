@@ -1502,7 +1502,6 @@ impl Raised {
     /// 40.23 as a routine of this package raises it, naming the argument
     /// rather than numbering it: `argument` of `routine` is not exactly one
     /// character.
-    #[cfg(unix)]
     pub(crate) fn routine_argument_not_a_character(
         routine: &str,
         argument: &str,

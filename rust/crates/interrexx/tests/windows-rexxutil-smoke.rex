@@ -84,3 +84,39 @@ if SysIsFileNotContentIndexed(missing) | SysIsFileOffline(missing) then exit 10
 if SysIsFileSparse(missing) | SysIsFileTemporary(missing) then exit 11
 if SysGetFileDateTime(missing) <> -1 then exit 15
 if SysSetFileDateTime(missing) <> -1 then exit 29
+
+/* spec: util.windows.efs */
+if SysWinEncryptFile(missing) <= 0 | SysWinDecryptFile(missing) <= 0 then exit 53
+probe = value('REXX_TEST_EFS_PROBE', , 'ENVIRONMENT')
+if probe \== '' then do
+  if \SysIsFileEncrypted(probe) then exit 54
+  if SysWinDecryptFile(probe) <> 0 then exit 55
+  if SysIsFileEncrypted(probe) then exit 56
+  if SysWinEncryptFile(probe) <> 0 then exit 57
+  if \SysIsFileEncrypted(probe) then exit 58
+  if linein(probe) \== 'test data' then exit 59
+  call stream probe, 'c', 'close'
+end
+
+/* spec: util.systempfilename.answer */
+prefix = dir || '\temporary'
+temporary = SysTempFileName(prefix || 'QQ', 'Q')
+if left(temporary, length(prefix)) \== prefix then exit 60
+digits = substr(temporary, length(prefix) + 1)
+if length(digits) <> 2 | verify(digits, '0123456789') <> 0 then exit 61
+if SysFileExists(temporary) then exit 62
+if SysTempFileName(dir || '\never') \== '' then exit 63
+
+/* spec: util.windows.console-size */
+size = SysTextScreenSize()
+if words(size) <> 2 | size \== SysTextScreenSize('buffersize') then exit 64
+if words(SysTextScreenSize('WINDOWRECT')) <> 4 then exit 65
+if words(SysTextScreenSize('MAXWINDOWSIZE')) <> 2 then exit 66
+if size == '0 0' then do
+  if SysTextScreenSize('WINDOWRECT') \== '0 0 0 0' then exit 67
+  if SysTextScreenSize('MAXWINDOWSIZE') \== '0 0' then exit 68
+  if SysTextScreenSize('BUFFERSIZE', 25, 80) <= 0 then exit 69
+  if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 79) <= 0 then exit 70
+end
+if SysTextScreenSize('BUFFERSIZE', 32768, 80) <> 87 then exit 71
+if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 32768) <> 87 then exit 72

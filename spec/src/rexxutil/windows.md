@@ -117,3 +117,22 @@ arguments omitted it lists the assigned drives starting at `C:`. `USED`
 lists assigned drives and `FREE` lists unassigned letters. `LOCAL`,
 `REMOTE`, `REMOVABLE`, `CDROM` and `RAMDISK` restrict the list to drives
 of the chosen type.
+
+## Windows file encryption
+
+r[util.windows.efs]
+`SysWinEncryptFile(filename)` and `SysWinDecryptFile(filename)` set and
+clear Windows filesystem encryption for the named file. Each takes a file
+name and answers `0` on success or a Windows system error code on failure.
+
+## Windows console size
+
+r[util.windows.console-size]
+`SysTextScreenSize()` or `SysTextScreenSize('BUFFERSIZE')` answers the
+console's buffer size as rows and columns. `WINDOWRECT` answers the visible
+rectangle as top, left, bottom and right. `MAXWINDOWSIZE` answers the maximum
+window size as rows and columns for the current buffer and display. A
+query without a console output buffer answers zero for each field.
+`BUFFERSIZE` with rows and columns, or `WINDOWRECT` with all four coordinates,
+changes that property and answers `0` on success or a Windows system error
+code on failure.
