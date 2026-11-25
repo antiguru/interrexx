@@ -38,6 +38,17 @@ impl Drop for Pending {
 }
 
 pub(crate) fn waiting(interp: &Interp) -> bool {
+    // Message~halt queues HALT for the target activity. Stop waiting at the
+    // next poll so the activity reaches its clause boundary and the worker
+    // sees the cancellation before the interpreter processes that HALT.
+    if interp
+        .activity
+        .pending_traps
+        .iter()
+        .any(|trap| trap.request)
+    {
+        return false;
+    }
     interp
         .activity
         .windows_util_wait
