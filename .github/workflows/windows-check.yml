@@ -241,6 +241,17 @@ jobs:
             Remove-Item -LiteralPath $dir -Recurse
           }
 
+      - uses: actions/cache@v5
+        if: github.head_ref == 'windows-rexxutil-process'
+        with:
+          path: ${{ runner.temp }}/oorexx-oracle.zip
+          key: oorexx-5.2.0-13156-portable-x64-rexxutil-reference
+      - name: Compare the Windows SysFileTree draft with ooRexx
+        if: github.head_ref == 'windows-rexxutil-process'
+        continue-on-error: true
+        shell: pwsh
+        run: ../ci/windows-rexxutil-oracle.ps1
+
       - name: Check out the pinned ooRexx sources
         working-directory: .
         run: git submodule update --init --depth 1 -- third_party/ooRexx
