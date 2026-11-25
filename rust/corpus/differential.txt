@@ -574,7 +574,6 @@ lang/scope_setlocal_routine.rex
 lang/scope_propagate_routine.rex
 lang/scope_propagate_after_routine.rex
 lang/scope_internal_depth.rex
-lang/scope_debug_pause_routine.rex
 lang/do_counter_ctrl.rex
 lang/do_counter_rep.rex
 lang/do_counter_forever.rex
@@ -719,7 +718,6 @@ lang/debug_pause_loops.rex
 lang/debug_pause_commands.rex
 lang/debug_pause_command_error.rex
 lang/debug_pause_before_trap.rex
-lang/debug_call_return.rex
 lang/debug_call_pause_caller.rex
 lang/debug_reexecute.rex
 lang/debug_reexecute_command.rex
@@ -935,7 +933,6 @@ lang/address_with_stream.rex
 lang/condition_object_syntax.rex
 lang/executable_context.rex
 lang/external_search_order.rex
-lang/internal_routine_frame.rex
 lang/sys_file_functions.rex
 lang/trace_debug.rex
 lang/trace_debug_skip.rex
@@ -1296,7 +1293,6 @@ lang/stream_standard_open.rex
 lang/command_background_child.rex
 lang/stream_append_held.rex
 lang/trace_reference_value_rooted.rex
-lang/native_routine_argument_marshalling.rex
 lang/class_side_defaultname.rex
 lang/string_translate_empty_input_table.rex
 lang/array_sort_leading_items.rex
