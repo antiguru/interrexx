@@ -285,7 +285,7 @@ held at its bound, as follows:
   `Class~methods` and the other orders that follow a name map's come out the same.
 * `PARSE VERSION` names the width, `32-bit`, as `.RexxInfo~architecture` does.
 
-The `i686` CI job runs the `standalone` profile in an i386 container (`docs/developing.md`,
+The `i686` CI job runs the `standalone` profile on a 32-bit build (`docs/developing.md`,
 Checks). A test that pins a 64-bit layout, range or resource bound is compiled for 64-bit targets
 only, with the reason beside its `cfg`.
 

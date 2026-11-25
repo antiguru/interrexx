@@ -569,19 +569,27 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
-  # 32-bit x86: every target built and the `standalone` profile run in an i386 Debian userland,
-  # on a checkout without the submodule. The runner's kernel runs the container's 32-bit
-  # programs natively, so the build scripts, the fixtures the tests compile and the test
-  # binaries are all 32-bit (`ci/i686-standalone.sh`). The actions run on the runner, not in the
-  # container: they need a 64-bit userland.
+  # 32-bit x86: every target built for `i686-unknown-linux-gnu` and the `standalone` profile run,
+  # on a checkout without the submodule. The 32-bit test binaries run on the runner's kernel; the
+  # wrappers in `ci/m32` make the C and C++ fixtures they compile and load 32-bit as well, and
+  # the build scripts, which run on the runner, link with the unwrapped driver.
   i686:
     name: 32-bit x86 standalone (i686)
     needs: [third-party]
     runs-on: ubuntu-26.04
+    env:
+      CARGO_BUILD_TARGET: i686-unknown-linux-gnu
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: /usr/bin/cc
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          target: i686-unknown-linux-gnu
+          cache-workspaces: rust
+          # See the build job.
+          cache-key: no-submodule-i686
       - uses: actions/cache/restore@v6
         with:
           # Only ootest and oodocs are kept below.
@@ -604,29 +612,19 @@ jobs:
           test ! -e build && test ! -L build
           test -d ootest
           test -d oodocs
-      - uses: actions/cache@v6
+      - name: Install the 32-bit C library and the tools the tests run
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib subversion time
+      - name: Install nextest
+        uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
-          # The container's toolchain, cargo home and target directory, under the checkout so
-          # that the container sees them through the mount. Saved by this job only.
-          path: |
-            .i686/rustup
-            .i686/cargo
-            .i686/target
-          key: i686-${{ hashFiles('rust/Cargo.lock', 'rust/rust-toolchain.toml', 'ci/i686-standalone.sh') }}
-          restore-keys: i686-
-      - name: Build and test in an i386 container
-        # The script installs packages as root and builds as the checkout's owner, the runner's
-        # user, so the cached directories stay the runner's to save. The container shares the
-        # runner's network: on Docker's default bridge it cannot resolve names.
+          tool: nextest@0.9.150
+      - name: Put the 32-bit compiler wrappers first
         working-directory: .
-        run: >
-          docker run --rm --platform linux/386 --network host
-          -v "$PWD:/work" -w /work
-          -e RUSTUP_HOME=/work/.i686/rustup -e CARGO_HOME=/work/.i686/cargo
-          -e CARGO_TARGET_DIR=/work/.i686/target
-          -e CARGO_TERM_COLOR=always -e CARGO_INCREMENTAL=0 -e CARGO_PROFILE_DEV_DEBUG=0
-          -e CARGO_PROFILE_TEST_DEBUG=0
-          mirror.gcr.io/library/debian:trixie sh ci/i686-standalone.sh
+        run: echo "$PWD/ci/m32" >> "$GITHUB_PATH"
+      - name: Cargo build
+        run: cargo build --locked --workspace --all-targets
+      - name: Cargo nextest
+        run: cargo nextest run --locked --workspace --profile standalone
 
   # macOS: every target built, linked and linted on Apple's toolchain, on a checkout without the
   # submodule. Code that only one host compiles (`cfg`) is checked by this job and `clippy`
