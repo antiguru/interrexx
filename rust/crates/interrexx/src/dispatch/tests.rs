@@ -2376,13 +2376,17 @@ fn a_position_past_the_address_space_is_past_every_end() {
     );
 }
 
-/// An index past the fixed-array limit is 93.959 on every target, though a
-/// 32-bit target holds an index it cannot address at its bound.
+/// An index, or a product of dimensions, past the fixed-array limit is 93.959
+/// on every target, though a 32-bit target cannot address a dimension that
+/// large.
 #[test]
 fn an_index_past_the_array_limit_is_93_959_on_every_target() {
     for (made, put) in [
         (".array~new", "a[999999999999999999] = 1"),
         (".array~new(1, 1)", "a[1, 999999999999999999] = 1"),
+        // Each dimension within the limit, their product past it.
+        (".array~new(2, 2)", "a[2, 60000000000000000] = 1"),
+        (".array~new(2, 60000000000000000)", "nop"),
     ] {
         assert_eq!(
             run_source(&format!(
