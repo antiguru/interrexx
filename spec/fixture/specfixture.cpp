@@ -296,22 +296,15 @@ static void *runJob(void *arg)
     return NULL;
 }
 
-// Starts a detached thread for a job. Answers 1 where it started, 0 otherwise.
 static logical_t startJob(RexxCallContext *context, RexxObjectPtr target, CSTRING message,
-                          unsigned idle)
+                          unsigned idle, pthread_t *thread, const pthread_attr_t *attributes)
 {
     ThreadJob *job = new ThreadJob;
     job->instance = context->threadContext->instance;
     job->target = context->RequestGlobalReference(target);
     snprintf(job->message, sizeof job->message, "%s", message);
     job->idle = idle;
-    pthread_t thread;
-    pthread_attr_t attributes;
-    pthread_attr_init(&attributes);
-    pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
-    int started = pthread_create(&thread, &attributes, runJob, job);
-    pthread_attr_destroy(&attributes);
-    if (started != 0)
+    if (pthread_create(thread, attributes, runJob, job) != 0)
     {
         context->ReleaseGlobalReference(job->target);
         delete job;
@@ -320,12 +313,24 @@ static logical_t startJob(RexxCallContext *context, RexxObjectPtr target, CSTRIN
     return 1;
 }
 
+static logical_t startDetachedJob(RexxCallContext *context, RexxObjectPtr target, CSTRING message,
+                                  unsigned idle)
+{
+    pthread_t thread;
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
+    logical_t started = startJob(context, target, message, idle, &thread, &attributes);
+    pthread_attr_destroy(&attributes);
+    return started;
+}
+
 // Starts a thread that attaches to the interpreter, sends `message` to `target`, and detaches.
 // Answers at once, without waiting for the thread: 1 where it started, 0 otherwise.
-// Serves r[native.threads.attach], r[native.threads.end].
+// Serves r[native.threads.end].
 RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
 {
-    return startJob(context, target, message, 0);
+    return startDetachedJob(context, target, message, 0);
 }
 
 // As FxOnThread, but after the message the thread stays attached, idle, for `seconds` seconds
@@ -334,7 +339,18 @@ RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
 RexxRoutine3(logical_t, FxOnThreadIdle, RexxObjectPtr, target, CSTRING, message,
              nonnegative_wholenumber_t, seconds)
 {
-    return startJob(context, target, message, (unsigned)seconds);
+    return startDetachedJob(context, target, message, (unsigned)seconds);
+}
+
+// Serves r[native.threads.attach]. The joining activity can wait while the main activity runs.
+RexxRoutine2(logical_t, FxOnThreadJoin, RexxObjectPtr, target, CSTRING, message)
+{
+    pthread_t thread;
+    if (!startJob(context, target, message, 0, &thread, NULL))
+    {
+        return 0;
+    }
+    return pthread_join(thread, NULL) == 0;
 }
 
 // Answers the interpreter instance the calling activity is given, written as an address, so
@@ -513,6 +529,7 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxNumeric, FxNumeric),
     REXX_TYPED_ROUTINE(FxOnThread, FxOnThread),
     REXX_TYPED_ROUTINE(FxOnThreadIdle, FxOnThreadIdle),
+    REXX_TYPED_ROUTINE(FxOnThreadJoin, FxOnThreadJoin),
     REXX_TYPED_ROUTINE(FxInstance, FxInstance),
     REXX_TYPED_ROUTINE(FxAddHandler, FxAddHandler),
     REXX_TYPED_ROUTINE(FxHaltAll, FxHaltAll),
