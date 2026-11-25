@@ -29,6 +29,12 @@ if SockIoctl(server, 'FIONBIO', 0) <> 0 then exit 16
 sending = .sender~new~start('send', client)
 if SockRecv(server, 'data', 5) <> 5 | data \== 'hello' then exit 17
 if sending~result <> 5 then exit 18
+exception.0 = 1
+exception.1 = server
+if SockSelect(, , 'exception.', 0.02) <> 0 then exit 29
+if SockSend(client, '!', 'MSG_OOB') <> 1 then exit 30
+if SockSelect(, , 'exception.', 1) <> 1 | exception.1 <> server then exit 31
+if SockRecv(server, 'urgent', 1, 'MSG_OOB') <> 1 | urgent \== '!' then exit 32
 if SockClose(client) <> 0 | SockClose(server) <> 0 | SockClose(listen) <> 0 then exit 19
 
 receiver = SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_UDP')

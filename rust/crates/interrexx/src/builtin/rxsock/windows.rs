@@ -1,6 +1,6 @@
 //! Winsock-specific operations missing from the portable socket API.
 
-use super::{Os, RawFd};
+use super::{Os, PollFlags, RawFd};
 use rustix::fd::{AsRawFd as _, BorrowedFd};
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
@@ -203,5 +203,24 @@ pub(crate) fn prepare_socket(socket: BorrowedFd<'_>) -> rustix::io::Result<()> {
         Err(rustix::io::Errno::INVAL)
     } else {
         Ok(())
+    }
+}
+
+// Winsock's provider reports TCP out-of-band data in the priority band.
+const PRIORITY_BAND: PollFlags = PollFlags::from_bits_retain(wsa::POLLRDBAND);
+
+pub(super) fn poll_interest(events: PollFlags) -> PollFlags {
+    if events.contains(PollFlags::PRI) {
+        (events - PollFlags::PRI) | PRIORITY_BAND
+    } else {
+        events
+    }
+}
+
+pub(super) fn poll_readiness(interest: PollFlags, revents: PollFlags) -> PollFlags {
+    if interest.contains(PollFlags::PRI) && revents.contains(PRIORITY_BAND) {
+        revents | PollFlags::PRI
+    } else {
+        revents
     }
 }

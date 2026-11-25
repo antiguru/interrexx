@@ -522,5 +522,6 @@ The `rxsock` library on Windows uses the Winsock identifiers returned by
 `SockSocket` and `SockAccept`. On IPv4 loopback a program can connect and accept TCP sockets, send and receive bytes
 over TCP and UDP, and wait for readiness with `SockSelect`. A waiting accept
 or receive lets the interpreter run another activity that can supply the
-connection or data. A receive on a nonblocking socket without data answers
+connection or data. The exception set of `SockSelect` reports TCP
+out-of-band data. A receive on a nonblocking socket without data answers
 `-1` with `EWOULDBLOCK`.

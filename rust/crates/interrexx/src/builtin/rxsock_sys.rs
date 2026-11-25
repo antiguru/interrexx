@@ -125,17 +125,36 @@ pub(crate) fn poll(
     with_sockets(&numbers, |sockets| {
         let mut descriptors: Vec<_> = sockets
             .iter()
-            .zip(requests)
-            .map(|(fd, (_, events))| PollFd::new(fd, events))
+            .zip(requests.clone())
+            .map(|(fd, (_, events))| PollFd::new(fd, poll_interest(events)))
             .collect();
         if let Some(cancel) = cancel {
             descriptors.push(PollFd::from_borrowed_fd(cancel, PollFlags::IN));
         }
         let count = rustix::event::poll(&mut descriptors, timeout.as_ref())
             .map_err(rustix::io::Errno::raw_os_error)?;
-        Ok((count, descriptors.iter().map(PollFd::revents).collect()))
+        let interests = requests.map(|(_, events)| events).chain([PollFlags::IN]);
+        let revents = descriptors
+            .iter()
+            .zip(interests)
+            .map(|(descriptor, events)| poll_readiness(events, descriptor.revents()))
+            .collect();
+        Ok((count, revents))
     })
 }
+
+#[cfg(unix)]
+fn poll_interest(events: PollFlags) -> PollFlags {
+    events
+}
+
+#[cfg(unix)]
+fn poll_readiness(_: PollFlags, revents: PollFlags) -> PollFlags {
+    revents
+}
+
+#[cfg(windows)]
+use windows::{poll_interest, poll_readiness};
 
 /// `getsockopt(socket, level, name)` for an option whose value is a C `int`.
 #[cfg(unix)]
