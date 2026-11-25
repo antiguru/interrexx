@@ -613,8 +613,11 @@ a CHAROUT start named, or that a SEEK set, moved past the characters written.</p
 <p>The first SEEK of a transient stream that nothing has opened raises
 <code>93.958</code>, as any positioning of a transient stream does. ooRexx answers 1.</p>
 <h2 id="81-a-stems-string-method"><a class="header" href="#81-a-stems-string-method">81. A stem's STRING method</a></h2>
-<p>A stem's <code>STRING</code> sends <code>STRING</code> to its default value. ooRexx answers the
-default's default name. A trace value line still shows the default's name.</p>
+<p>A stem's <a href="classes/stem.html#r-class.stem.deviation.81"><code>STRING</code></a> sends <code>STRING</code> to its default
+value. SAY uses that answer when it falls back to the stem's <code>STRING</code>.
+ooRexx uses the default's name in both cases. SAY on an unset compound
+variable converts the default object itself on both interpreters. A trace
+value line shows the default's name.</p>
 <h2 id="82-closing-lineout-on-a-fifo"><a class="header" href="#82-closing-lineout-on-a-fifo">82. Closing LINEOUT on a FIFO</a></h2>
 <p>A LINEOUT that closes a FIFO consumes no input. ooRexx consumes a byte.</p>
 <h2 id="83-withdrawn"><a class="header" href="#83-withdrawn">83. Withdrawn</a></h2>

@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="stem"><a class="header" href="#stem">Stem</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Stem Class; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; request; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; toDirectory; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; unknown</p>
-<p class="deviations">Deviations: D1, D68, D109, D118, D124</p>
+<p class="deviations">Deviations: D1, D68, D81, D109, D118, D124</p>
 <p>A <code>Stem</code> is the collection that a stem symbol names: <a href="../expressions/variables.html#r-expr.variables.stem">the value of a stem
 symbol</a> is a <code>Stem</code> object, and the compound variables
 of the stem are its entries. An entry is a tail, a string, and the item stored
@@ -860,6 +860,8 @@ t~copy(1) =&gt; 93.902
 when it has no default (<a href="../expressions/variables.html#r-expr.variables.stem">the stem rule</a>); <code>string</code> and
 <code>say</code> use it, and a stem has no <code>makeString</code> of its own, so <code>makeString</code> is
 passed on by <a href="#r-class.stem.unknown">the unknown rule</a> with the same answer.
+<code>STRING</code> and the fallback conversion in SAY follow <a href="#r-class.stem.deviation.81">Deviation
+81</a> for a default with its own <code>STRING</code> method.
 <code>objectName</code> is that of <code>Object</code>, <code>a Stem</code>, and is not the string value.</p>
 <pre><code class="language-rexx">s = .stem~new('N.')
 say s '|' s~string '|' s~objectName
@@ -1076,6 +1078,28 @@ say s~length s~foo(1, 2)
   return 'asked for' name args~items
 </code></pre>
 <pre><code class="language-output">asked for LENGTH 0 asked for FOO 2
+</code></pre>
+<div class="rule" id="r-class.stem.deviation.81"><a href="#r-class.stem.deviation.81">[class.stem.deviation.81]</a></div>
+<p>When a stem's default has its own <code>STRING</code> method, the stem's <code>STRING</code>
+sends it to the default. SAY uses that answer when it falls back to the
+stem's <code>STRING</code>. ooRexx uses the default's name in both cases. An unset
+compound variable reads the default object itself, so SAY sends that
+object's <code>STRING</code> on both interpreters. See <a href="../deviations.html">Deviation 81</a>.</p>
+<pre><code class="language-rexx">sample. = .example~new
+say sample.~string
+say sample.
+say sample.1
+::class example
+::method string
+  say 'STRING ran'
+  return 'rendered'
+</code></pre>
+<pre><code class="language-output">STRING ran
+rendered
+STRING ran
+rendered
+STRING ran
+rendered
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.109"><a href="#r-class.stem.deviation.109">[class.stem.deviation.109]</a></div>
 <p>A name given to <code>new</code> and an index that are instances of a subclass of
