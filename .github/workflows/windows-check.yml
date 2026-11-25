@@ -137,6 +137,17 @@ jobs:
             & $rxapi --stop
           }
 
+      - name: Exercise Windows RxSock TCP and UDP loopback
+        shell: pwsh
+        run: |
+          $rexx = Resolve-Path target/debug/rexx.exe
+          $smoke = Start-Process $rexx -NoNewWindow -PassThru -ArgumentList 'crates/interrexx/tests/windows-rxsock-smoke.rex'
+          if (-not $smoke.WaitForExit(30000)) {
+            $smoke.Kill()
+            throw 'RxSock smoke timed out'
+          }
+          if ($smoke.ExitCode -ne 0) { throw "RxSock smoke failed at check $($smoke.ExitCode)" }
+
       - name: Exercise Windows RexxUtil filesystem routines
         shell: pwsh
         run: |

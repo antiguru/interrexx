@@ -7,7 +7,15 @@
 //! resolver through `getaddrinfo` and `getnameinfo` (`dns-lookup`), which
 //! give the canonical name and the addresses but no aliases.
 
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4};
+#[cfg(unix)]
+use libc::{AI_CANONNAME, NI_NAMEREQD};
+#[cfg(unix)]
+use std::net::Ipv6Addr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
+#[cfg(windows)]
+const AI_CANONNAME: i32 = windows_sys::Win32::Networking::WinSock::AI_CANONNAME as i32;
+#[cfg(windows)]
+const NI_NAMEREQD: i32 = windows_sys::Win32::Networking::WinSock::NI_NAMEREQD as i32;
 
 use super::inet_aton;
 
@@ -20,6 +28,7 @@ pub(super) struct Host {
 
 /// One line of the hosts file: its address, as an `AF_INET` lookup reads
 /// it, and its names, the official one first.
+#[cfg(unix)]
 struct Entry {
     address: Ipv4Addr,
     names: Vec<Vec<u8>>,
@@ -28,6 +37,7 @@ struct Entry {
 /// An address field as glibc's files backend reads it for `AF_INET`: a
 /// dotted quad, or an IPv6 address that is IPv4-mapped (its last four bytes)
 /// or the loopback `::1` (127.0.0.1). `None` skips the line.
+#[cfg(unix)]
 fn entry_address(text: &str) -> Option<Ipv4Addr> {
     if let Ok(v4) = text.parse::<Ipv4Addr>() {
         return Some(v4);
@@ -40,6 +50,7 @@ fn entry_address(text: &str) -> Option<Ipv4Addr> {
 }
 
 /// The hosts file's entries, in file order.
+#[cfg(unix)]
 fn entries() -> Vec<Entry> {
     let Ok(text) = std::fs::read("/etc/hosts") else {
         return Vec::new();
@@ -63,6 +74,7 @@ fn entries() -> Vec<Entry> {
 
 /// Whether `/etc/host.conf` (or `RESOLV_MULTI`) turns on `multi`, which
 /// makes a name lookup gather every matching hosts-file line.
+#[cfg(unix)]
 fn multi() -> bool {
     if let Some(value) = std::env::var_os("RESOLV_MULTI") {
         return value.eq_ignore_ascii_case("on");
@@ -101,6 +113,7 @@ pub(super) fn by_name(name: &[u8]) -> Option<Host> {
             addresses: vec![address],
         });
     }
+    #[cfg(unix)]
     if let Some(found) = by_name_in_files(name) {
         return Some(found);
     }
@@ -113,6 +126,7 @@ pub(super) fn by_name(name: &[u8]) -> Option<Host> {
     by_name_in_dns(name)
 }
 
+#[cfg(unix)]
 fn by_name_in_files(name: &[u8]) -> Option<Host> {
     let matches = |entry: &Entry| {
         entry
@@ -146,7 +160,7 @@ fn by_name_in_files(name: &[u8]) -> Option<Host> {
 fn by_name_in_dns(name: &[u8]) -> Option<Host> {
     let name = std::str::from_utf8(name).ok()?;
     let hints = dns_lookup::AddrInfoHints {
-        flags: libc::AI_CANONNAME,
+        flags: AI_CANONNAME,
         address: dns_lookup::AddrFamily::Inet.into(),
         socktype: dns_lookup::SockType::Stream.into(),
         protocol: 0,
@@ -174,6 +188,7 @@ fn by_name_in_dns(name: &[u8]) -> Option<Host> {
 
 /// `gethostbyaddr(address, 4, AF_INET)`, `None` where it finds nothing.
 pub(super) fn by_addr(address: Ipv4Addr) -> Option<Host> {
+    #[cfg(unix)]
     if let Some(entry) = entries().into_iter().find(|entry| entry.address == address) {
         let mut names = entry.names.into_iter();
         return Some(Host {
@@ -183,7 +198,7 @@ pub(super) fn by_addr(address: Ipv4Addr) -> Option<Host> {
         });
     }
     let socket = SocketAddr::V4(SocketAddrV4::new(address, 0));
-    let (name, _) = dns_lookup::getnameinfo(&socket, libc::NI_NAMEREQD).ok()?;
+    let (name, _) = dns_lookup::getnameinfo(&socket, NI_NAMEREQD).ok()?;
     if name.parse::<IpAddr>().is_ok() {
         return None;
     }

@@ -1,16 +1,18 @@
-//! Unix socket operations and the descriptor access needed by `HANDLE:` streams.
+//! Host socket operations and the descriptor access needed by `HANDLE:` streams.
 //!
 //! Descriptor validation and borrowing live alongside the socket operations
-//! they support. `HANDLE:n` streams use [`duplicate`] to retain their own
-//! descriptor. Options without a wrapper in `rustix` or `nix` use the raw
+//! they support. `HANDLE:n` streams use `duplicate` to retain their own
+//! descriptor on Unix. Options without a wrapper in `rustix` or `nix` use the raw
 //! `getsockopt` and `setsockopt` calls here.
 
 #![allow(unsafe_code)]
 
 pub(crate) use rustix::event::PollFlags;
 use rustix::event::{PollFd, Timespec};
+#[cfg(unix)]
+use rustix::fd::AsRawFd as _;
+use rustix::fd::{BorrowedFd, RawFd};
 use std::net::SocketAddrV4;
-use std::os::fd::{AsRawFd as _, BorrowedFd, RawFd};
 use std::time::Duration;
 
 /// The host identifier a Rexx socket operation receives.
@@ -23,6 +25,7 @@ pub(crate) type PollRequest = (SocketId, PollFlags);
 pub(crate) type Os<T> = std::result::Result<T, i32>;
 
 /// The calling thread's `errno`, as the last failed call left it.
+#[cfg(unix)]
 fn errno() -> i32 {
     std::io::Error::last_os_error()
         .raw_os_error()
@@ -32,6 +35,7 @@ fn errno() -> i32 {
 /// `EBADF` unless `fd` names an open descriptor of this process, as
 /// `fcntl(F_GETFD)` finds it; a negative number names none, and neither does
 /// one of the interpreter's own (`interrexx_rxapi::reserved`).
+#[cfg(unix)]
 fn check_open(fd: RawFd) -> Os<()> {
     if fd < 0 || interrexx_rxapi::reserved::is_reserved(fd) {
         return Err(libc::EBADF);
@@ -77,6 +81,7 @@ pub(crate) fn with_socket<T>(
 /// interpreter holds that is not reserved, such as a command's capture pipe,
 /// is duplicated as any other. Safe: the borrow is [`with_socket`]'s, and the duplicate
 /// is a new descriptor the returned `OwnedFd` owns.
+#[cfg(unix)]
 pub(crate) fn duplicate(fd: RawFd) -> Os<std::os::fd::OwnedFd> {
     with_socket(fd, |borrowed| {
         borrowed
@@ -108,9 +113,16 @@ pub(crate) fn poll(
     cancel: Option<BorrowedFd<'_>>,
 ) -> Os<(usize, Vec<PollFlags>)> {
     let numbers: Vec<_> = requests.clone().map(|(fd, _)| fd).collect();
+    #[cfg(windows)]
+    if numbers.is_empty() && cancel.is_none() {
+        return Ok((0, Vec::new()));
+    }
     let timeout = timeout.map(|left| Timespec {
         tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
-        tv_nsec: i64::from(left.subsec_nanos()),
+        tv_nsec: left
+            .subsec_nanos()
+            .try_into()
+            .expect("nanoseconds fit in Timespec"),
     });
     with_sockets(&numbers, |sockets| {
         let mut descriptors: Vec<_> = sockets
@@ -128,6 +140,7 @@ pub(crate) fn poll(
 }
 
 /// `getsockopt(socket, level, name)` for an option whose value is a C `int`.
+#[cfg(unix)]
 fn get_int_option(socket: BorrowedFd<'_>, level: i32, name: i32) -> Os<i32> {
     let mut value: libc::c_int = 0;
     let mut length = libc::socklen_t::try_from(std::mem::size_of::<libc::c_int>())
@@ -151,6 +164,7 @@ fn get_int_option(socket: BorrowedFd<'_>, level: i32, name: i32) -> Os<i32> {
 }
 
 /// `setsockopt(socket, level, name)` to the C `int` `value`.
+#[cfg(unix)]
 fn set_int_option(socket: BorrowedFd<'_>, level: i32, name: i32, value: i32) -> Os<()> {
     let value: libc::c_int = value;
     let length = libc::socklen_t::try_from(std::mem::size_of::<libc::c_int>())
@@ -175,11 +189,13 @@ fn set_int_option(socket: BorrowedFd<'_>, level: i32, name: i32, value: i32) -> 
 /// The options neither `rustix` nor `nix` names, read and set by number as
 /// C `int`s: `SO_DEBUG`, `SO_RCVLOWAT`, `SO_SNDLOWAT` and the number 64
 /// `SO_USELOOPBACK` passes.
+#[cfg(unix)]
 const RAW_OPTIONS: [i32; 4] = [1, 18, 19, 64];
 
 /// The host's number for the raw option `option` identifies. On Apple's
 /// systems the option numbers are not Linux's (`SO_RCVLOWAT` is 0x1004, not
 /// 18); 64 is passed as itself on every host.
+#[cfg(unix)]
 fn raw_option(option: i32) -> i32 {
     match option {
         1 => libc::SO_DEBUG,
@@ -189,11 +205,13 @@ fn raw_option(option: i32) -> i32 {
     }
 }
 
+#[cfg(unix)]
 fn timeval_millis(seconds: i64, micros: i64) -> i64 {
     seconds * 1000 + micros / 1000
 }
 
 /// Reads a RexxSock `SOL_SOCKET` option, formatting the OS value for Rexx.
+#[cfg(unix)]
 pub(crate) fn get_option(fd: RawFd, option: Option<i32>) -> Os<String> {
     use nix::sys::socket::{getsockopt, sockopt};
 
@@ -247,6 +265,7 @@ pub(crate) fn get_option(fd: RawFd, option: Option<i32>) -> Os<String> {
 }
 
 /// Sets a RexxSock `SOL_SOCKET` option from a parsed integer or linger pair.
+#[cfg(unix)]
 pub(crate) fn set_option(fd: RawFd, option: i32, numeric: i32, linger: (u16, u16)) -> Os<()> {
     use nix::sys::socket::{setsockopt, sockopt};
 
@@ -301,6 +320,7 @@ pub(crate) fn set_option(fd: RawFd, option: i32, numeric: i32, linger: (u16, u16
 }
 
 /// Closes a socket that belongs to the program.
+#[cfg(unix)]
 pub(crate) fn close(fd: RawFd) -> Os<()> {
     // The interpreter's own descriptors are not the program's to close.
     if interrexx_rxapi::reserved::is_reserved(fd) {
@@ -316,7 +336,7 @@ pub(crate) fn shutdown(fd: RawFd, how: i32) -> Os<()> {
             0 => rustix::net::Shutdown::Read,
             1 => rustix::net::Shutdown::Write,
             2 => rustix::net::Shutdown::Both,
-            _ => return Err(libc::EINVAL),
+            _ => return Err(rustix::io::Errno::INVAL.raw_os_error()),
         };
         rustix::net::shutdown(socket, how).map_err(rustix::io::Errno::raw_os_error)
     })
@@ -334,6 +354,7 @@ pub(crate) fn bind(fd: RawFd, address: &SocketAddrV4) -> Os<()> {
     })
 }
 
+#[cfg(unix)]
 pub(crate) fn set_nonblocking(fd: RawFd, enabled: bool) -> Os<()> {
     with_socket(fd, |socket| {
         rustix::io::ioctl_fionbio(socket, enabled).map_err(rustix::io::Errno::raw_os_error)
@@ -345,3 +366,24 @@ pub(crate) fn available_bytes(fd: RawFd) -> Os<u64> {
         rustix::io::ioctl_fionread(socket).map_err(rustix::io::Errno::raw_os_error)
     })
 }
+
+#[cfg(windows)]
+#[path = "rxsock/windows.rs"]
+mod windows;
+#[cfg(windows)]
+pub(crate) use windows::{
+    blocks, close, ensure_started, get_option, hostname, publish_socket, set_nonblocking,
+    set_option,
+};
+
+#[cfg(windows)]
+use windows::check_open;
+
+#[cfg(unix)]
+pub(crate) use crate::host::{
+    CONNECT_WAIT_EVENTS, POLL_HANGS_UP_UNCONNECTED, is_listening, no_sigpipe_flags, prepare_socket,
+};
+#[cfg(windows)]
+pub(crate) use windows::{
+    CONNECT_WAIT_EVENTS, POLL_HANGS_UP_UNCONNECTED, is_listening, no_sigpipe_flags, prepare_socket,
+};
