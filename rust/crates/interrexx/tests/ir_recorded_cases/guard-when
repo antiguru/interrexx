@@ -136,3 +136,21 @@ say o~last
 ----
 rc> 0
 out> 5
+
+# a reference argument names the exposed variable the condition watches
+program
+say .g~new~m
+::class g
+::method init
+  expose x
+  x = 1
+::method m
+  expose x
+  guard on when check(>x)
+  return 'passed'
+::routine check
+  use arg r
+  return r~value = 1
+----
+rc> 0
+out> passed

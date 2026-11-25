@@ -3,7 +3,8 @@
 
 use interrexx_num::{CompareOp, DivOp, Number};
 
-use crate::ast::{Expr, ExprKind, PrefixOp};
+use crate::ast::PrefixOp;
+use crate::exprs::{ExprRef, ExprView};
 use crate::token::{Operator, SymbolTable};
 
 use super::tests::{Entry, parse};
@@ -82,16 +83,16 @@ fn compare_op(op: Operator) -> Option<CompareOp> {
     })
 }
 
-fn eval(expr: &Expr, symbols: &SymbolTable) -> Result<String, Failure> {
-    match &expr.kind {
-        ExprKind::Literal(bytes) => {
+fn eval(expr: ExprRef<'_>, symbols: &SymbolTable) -> Result<String, Failure> {
+    match expr.kind() {
+        ExprView::Literal(bytes) => {
             String::from_utf8(bytes.to_vec()).map_err(|_| Failure::Unsupported)
         }
         // A constant's value is its own upcased spelling, which is why
         // `say 1e5` prints `1E5`.
-        ExprKind::Constant(id) => Ok(symbols.name(*id).to_string()),
-        ExprKind::Variable(id) => Ok(value_of(symbols.name(*id))),
-        ExprKind::Prefix { op, operand } => {
+        ExprView::Constant(id) => Ok(symbols.name(id).to_string()),
+        ExprView::Variable(id) => Ok(value_of(symbols.name(id))),
+        ExprView::Prefix { op, operand } => {
             let value = eval(operand, symbols)?;
             match op {
                 // Prefix `+` and `-` are arithmetic, so they normalise their
@@ -108,10 +109,10 @@ fn eval(expr: &Expr, symbols: &SymbolTable) -> Result<String, Failure> {
                 PrefixOp::Not => Ok(boolean(!logical(&value)?)),
             }
         }
-        ExprKind::Binary { op, left, right } => {
+        ExprView::Binary { op, left, right } => {
             let left = eval(left, symbols)?;
             let right = eval(right, symbols)?;
-            binary(*op, &left, &right)
+            binary(op, &left, &right)
         }
         _ => Err(Failure::Unsupported),
     }
@@ -210,7 +211,7 @@ fn every_generated_expression_evaluates_to_what_the_interpreter_evaluated() {
             (false, Err(err)) => {
                 wrong.push(format!("{text:?}: failed to parse: {err:?}"));
             }
-            (false, Ok((expr, symbols))) => match (verdict, eval(&expr, &symbols)) {
+            (false, Ok((expr, symbols))) => match (verdict, eval(ExprRef::tree(&expr), &symbols)) {
                 ("OK", Ok(got)) => {
                     checked_value += 1;
                     if got != expected {
@@ -288,7 +289,7 @@ fn the_evaluator_is_wired_to_the_operators_it_claims() {
         let (expr, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(&expr, &symbols).as_deref(),
+            eval(ExprRef::tree(&expr), &symbols).as_deref(),
             Ok(*expected),
             "{text:?} evaluated wrongly"
         );
@@ -303,7 +304,7 @@ fn the_evaluator_reports_the_forms_it_does_not_implement() {
         let (expr, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(&expr, &symbols),
+            eval(ExprRef::tree(&expr), &symbols),
             Err(Failure::Unsupported),
             "{text:?} should be out of the evaluator's scope"
         );

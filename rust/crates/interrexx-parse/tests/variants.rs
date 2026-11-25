@@ -11,7 +11,7 @@ use gate_walk::{
     samples_dir,
 };
 use interrexx_parse::{
-    Call, DirectiveKind, ExprKind, InstructionKind, LoopKind, ParseSource, Signal, Trace, Use,
+    Call, DirectiveKind, ExprView, InstructionKind, LoopKind, ParseSource, Signal, Trace, Use,
     parse_program,
 };
 
@@ -74,22 +74,22 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::Nop => "Nop",
 });
 
-tags!(expr_tag, EXPR_TAGS, ExprKind, {
-    ExprKind::Literal(_) => "Literal",
-    ExprKind::Constant(_) => "Constant",
-    ExprKind::Variable(_) => "Variable",
-    ExprKind::Stem(_) => "Stem",
-    ExprKind::Compound(_) => "Compound",
-    ExprKind::DotVariable(_) => "DotVariable",
-    ExprKind::Prefix { .. } => "Prefix",
-    ExprKind::Binary { .. } => "Binary",
-    ExprKind::Call { .. } => "Call",
-    ExprKind::QualifiedCall { .. } => "QualifiedCall",
-    ExprKind::ClassResolver { .. } => "ClassResolver",
-    ExprKind::Message { .. } => "Message",
-    ExprKind::List(_) => "List",
-    ExprKind::Logical(_) => "Logical",
-    ExprKind::VariableReference(_) => "VariableReference",
+tags!(expr_tag, EXPR_TAGS, ExprView<'_>, {
+    ExprView::Literal(_) => "Literal",
+    ExprView::Constant(_) => "Constant",
+    ExprView::Variable(_) => "Variable",
+    ExprView::Stem(_) => "Stem",
+    ExprView::Compound(_) => "Compound",
+    ExprView::DotVariable(_) => "DotVariable",
+    ExprView::Prefix { .. } => "Prefix",
+    ExprView::Binary { .. } => "Binary",
+    ExprView::Call { .. } => "Call",
+    ExprView::QualifiedCall { .. } => "QualifiedCall",
+    ExprView::ClassResolver { .. } => "ClassResolver",
+    ExprView::Message { .. } => "Message",
+    ExprView::List(_) => "List",
+    ExprView::Logical(_) => "Logical",
+    ExprView::VariableReference { .. } => "VariableReference",
 });
 
 tags!(directive_tag, DIRECTIVE_TAGS, DirectiveKind, {
@@ -227,7 +227,7 @@ fn every_variant_is_constructed_by_the_corpus_and_samples() {
             directives.seen.insert(directive_tag(&d.kind));
         });
         each_expr(&p, &mut |e| {
-            exprs.seen.insert(expr_tag(&e.kind));
+            exprs.seen.insert(expr_tag(&e.kind()));
         });
     }
 

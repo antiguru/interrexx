@@ -7,7 +7,9 @@ use std::ops::Range;
 use gate_walk::{
     DECLARATION_ERRORS, body_of_directive, children_of, corpus_dir, each_expr, rex_files_under,
 };
-use interrexx_parse::{DirectiveKind, Expr, ExprKind, Operator, Program, parse_program};
+use interrexx_parse::{
+    DirectiveKind, Expr, ExprKind, ExprRef, ExprView, Operator, Program, parse_program,
+};
 
 /// The non-whitespace-class bytes of `text[range]`, each with its offset.
 fn non_whitespace_class(text: &[u8], range: Range<usize>) -> Vec<(usize, u8)> {
@@ -115,12 +117,12 @@ fn non_whitespace_class_line_tail(text: &[u8], range: Range<usize>) -> Option<us
 }
 
 /// Property 1: every node's span contains its children's spans.
-fn containment_errors(e: &Expr, errors: &mut Vec<String>) {
+fn containment_errors(e: ExprRef<'_>, errors: &mut Vec<String>) {
     children_of(e, &mut |child| {
-        if child.span.start < e.span.start || child.span.end > e.span.end {
+        let (child, parent) = (child.span(), e.span());
+        if child.start < parent.start || child.end > parent.end {
             errors.push(format!(
-                "child span {:?} escapes parent span {:?}",
-                child.span, e.span
+                "child span {child:?} escapes parent span {parent:?}"
             ));
         }
     });
@@ -138,18 +140,19 @@ fn is_operator_byte(b: u8) -> bool {
 
 /// Property 2: a binary node's operands are ordered and the gap between them
 /// holds the operator and nothing else.
-fn binary_tightness_errors(text: &[u8], e: &Expr, errors: &mut Vec<String>) {
-    let ExprKind::Binary { op, left, right } = &e.kind else {
+fn binary_tightness_errors(text: &[u8], e: ExprRef<'_>, errors: &mut Vec<String>) {
+    let ExprView::Binary { op, left, right } = e.kind() else {
         return;
     };
-    if left.span.end > right.span.start {
+    let (left, right) = (left.span(), right.span());
+    if left.end > right.start {
         errors.push(format!(
             "binary {:?}: left operand span {:?} overlaps right operand span {:?}",
-            op, left.span, right.span
+            op, left, right
         ));
         return;
     }
-    let gap = non_whitespace_class(text, left.span.end..right.span.start);
+    let gap = non_whitespace_class(text, left.end..right.start);
     let synthetic = matches!(op, Operator::Abuttal | Operator::Blank);
     let mut saw_operator_byte = false;
     for &(offset, byte) in &gap {
@@ -166,34 +169,35 @@ fn binary_tightness_errors(text: &[u8], e: &Expr, errors: &mut Vec<String>) {
             op,
             char::from(byte),
             offset,
-            left.span,
-            right.span
+            left,
+            right
         ));
     }
     if synthetic && saw_operator_byte {
         errors.push(format!(
             "binary {:?}: an operator byte sits between the operand spans {:?} and \
              {:?}, but this operator is synthesised and has no source spelling",
-            op, left.span, right.span
+            op, left, right
         ));
     }
     if !synthetic && !saw_operator_byte {
         errors.push(format!(
             "binary {:?}: no operator byte between the operand spans {:?} and {:?}",
-            op, left.span, right.span
+            op, left, right
         ));
     }
 }
 
 /// A prefix node's span starts before its operand's, because the operator
 /// token sits in front. Falsifiable the same way property 2 is.
-fn prefix_order_errors(e: &Expr, errors: &mut Vec<String>) {
-    if let ExprKind::Prefix { operand, .. } = &e.kind
-        && e.span.start >= operand.span.start
+fn prefix_order_errors(e: ExprRef<'_>, errors: &mut Vec<String>) {
+    if let ExprView::Prefix { operand, .. } = e.kind()
+        && e.span().start >= operand.span().start
     {
         errors.push(format!(
             "prefix node span {:?} does not start before its operand span {:?}",
-            e.span, operand.span
+            e.span(),
+            operand.span()
         ));
     }
 }
@@ -358,7 +362,7 @@ fn binary(op: Operator, left: Expr, right: Expr, span: Range<usize>) -> Expr {
 fn the_containment_checker_rejects_a_child_escaping_its_parent() {
     let e = binary(Operator::Plus, leaf(0..1), leaf(4..9), 0..5);
     let mut errors = Vec::new();
-    containment_errors(&e, &mut errors);
+    containment_errors(ExprRef::tree(&e), &mut errors);
     assert_eq!(errors.len(), 1, "{errors:?}");
     assert!(errors[0].contains("escapes"), "{errors:?}");
 }
@@ -371,7 +375,7 @@ fn the_tightness_checker_rejects_a_mis_nested_operand() {
     let text = b"a + b c";
     let e = binary(Operator::Plus, leaf(0..1), leaf(6..7), 0..7);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    binary_tightness_errors(text, ExprRef::tree(&e), &mut errors);
     assert!(
         errors
             .iter()
@@ -385,7 +389,7 @@ fn the_tightness_checker_rejects_overlapping_operands() {
     let text = b"a + b";
     let e = binary(Operator::Plus, leaf(0..3), leaf(2..5), 0..5);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    binary_tightness_errors(text, ExprRef::tree(&e), &mut errors);
     assert!(errors.iter().any(|m| m.contains("overlaps")), "{errors:?}");
 }
 
@@ -396,7 +400,7 @@ fn the_tightness_checker_rejects_a_missing_operator() {
     let text = b"a   b";
     let e = binary(Operator::Plus, leaf(0..1), leaf(4..5), 0..5);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    binary_tightness_errors(text, ExprRef::tree(&e), &mut errors);
     assert!(
         errors.iter().any(|m| m.contains("no operator byte")),
         "{errors:?}"
@@ -413,7 +417,7 @@ fn the_prefix_checker_rejects_an_operator_with_nothing_in_front() {
         span: 0..1,
     };
     let mut errors = Vec::new();
-    prefix_order_errors(&e, &mut errors);
+    prefix_order_errors(ExprRef::tree(&e), &mut errors);
     assert_eq!(errors.len(), 1, "{errors:?}");
 }
 

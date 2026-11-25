@@ -1266,6 +1266,13 @@ fn guard_takes_on_or_off_and_an_optional_when() {
 }
 
 #[test]
+fn a_reference_in_a_guard_condition_names_an_exposed_variable() {
+    // `r[instr.guard.when.exposed]`: `>a` names `a`, so the condition watches it.
+    assert_eq!(names(&ok("expose a\nguard on when check(>a)"))[1], "GUARD");
+    assert_eq!(err("guard on when check(>a)"), (99, 913));
+}
+
+#[test]
 fn every_forward_option_is_accepted_once() {
     // Measured with rexxc inside a method, all rc 0.
     assert_eq!(names(&ok("forward")), ["FORWARD"]);

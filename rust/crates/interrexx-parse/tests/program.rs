@@ -283,11 +283,14 @@ fn interpret_accepts_ordinary_text_with_no_directive_and_no_label() {
 // ---- Fragment's SymbolTable is independent of any enclosing Program's ----
 
 /// `a`'s `SymbolId` in `target`, panicking if `target` is not a plain
-/// variable assignment.
-fn assigned_symbol(instruction: &interrexx_parse::Instruction) -> interrexx_parse::SymbolId {
+/// variable assignment. `instruction` is one of `body`'s.
+fn assigned_symbol(
+    body: &interrexx_parse::CodeBody,
+    instruction: &interrexx_parse::Instruction,
+) -> interrexx_parse::SymbolId {
     match &instruction.kind {
-        InstructionKind::Assignment { target, .. } => match &target.kind {
-            interrexx_parse::ExprKind::Variable(id) => *id,
+        InstructionKind::Assignment { target, .. } => match body.expr(target).kind() {
+            interrexx_parse::ExprView::Variable(id) => id,
             other => panic!("assignment target is not a plain variable: {other:?}"),
         },
         other => panic!("not an assignment: {other:?}"),
@@ -305,8 +308,8 @@ fn assigned_symbol(instruction: &interrexx_parse::Instruction) -> interrexx_pars
 fn a_fragments_symbol_table_is_its_own_not_shared_across_calls() {
     let f1 = parse_interpret(b"a = 1".to_vec()).unwrap();
     let f2 = parse_interpret(b"b = 2".to_vec()).unwrap();
-    let a_id = assigned_symbol(&f1.body.instructions[0]);
-    let b_id = assigned_symbol(&f2.body.instructions[0]);
+    let a_id = assigned_symbol(&f1.body, &f1.body.instructions[0]);
+    let b_id = assigned_symbol(&f2.body, &f2.body.instructions[0]);
     assert_eq!(f1.symbols.name(a_id), "A");
     assert_eq!(f2.symbols.name(b_id), "B");
     // `f1`'s table has no entry for `B` at all, and vice versa: querying the
