@@ -40,20 +40,67 @@ fn fresh_run_dir() -> PathBuf {
     dir
 }
 
-/// `stdout` with the build date, the last three words of the line, replaced by `<date>`.
-fn mask_date(stdout: &mut Vec<u8>) {
+/// `stdout` with the build date, the last three words of the line, replaced by
+/// `<date>`, and the language level before it, a word `n.nn`, by `<level>`.
+/// The two sides answer different levels by decision (Deviation 179;
+/// `docs/design/decisions.md`, the language level is the one interrexx
+/// implements), so the level is not compared; every other word is.
+fn mask_date_and_level(stdout: &mut Vec<u8>) {
     let text = String::from_utf8_lossy(stdout).into_owned();
+    let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
     let masked: Vec<String> = text
         .lines()
         .map(|line| {
-            let words: Vec<&str> = line.split(' ').collect();
-            match words.len().checked_sub(3) {
-                Some(keep) => format!("{} <date>", words[..keep].join(" ")),
-                None => line.to_string(),
+            let mut words: Vec<&str> = line.split(' ').collect();
+            let Some(keep) = words.len().checked_sub(3) else {
+                return line.to_string();
+            };
+            words.truncate(keep);
+            if let Some(level) = words.last_mut()
+                && level
+                    .split_once('.')
+                    .is_some_and(|(major, minor)| digits(major) && digits(minor))
+            {
+                *level = "<level>";
             }
+            format!("{} <date>", words.join(" "))
         })
         .collect();
     *stdout = format!("{}\n", masked.join("\n")).into_bytes();
+}
+
+/// The level and the date are the only words masked: two levels mask alike,
+/// and a change to any other word still differs.
+#[test]
+fn only_the_language_level_and_the_build_date_are_masked() {
+    const OURS: &str = "REXX-ooRexx_5.3.0(MT)_64-bit 6.06 14 Nov 2026";
+    let masked = |line: &str| {
+        let mut bytes = line.as_bytes().to_vec();
+        mask_date_and_level(&mut bytes);
+        String::from_utf8(bytes).expect("the mask keeps UTF-8")
+    };
+    assert_eq!(
+        masked(OURS),
+        "REXX-ooRexx_5.3.0(MT)_64-bit <level> <date>\n"
+    );
+    assert_eq!(
+        masked(&OURS.replace("6.06 14 Nov", "6.07 30 Jul")),
+        masked(OURS)
+    );
+    for (from, to) in [
+        ("REXX-ooRexx", "REXX-ooRexy"),
+        ("5.3.0", "5.3.1"),
+        ("(MT)", "(ST)"),
+        ("64-bit", "32-bit"),
+        ("6.06", "6.06 extra"),
+        ("6.06", "6.x"),
+    ] {
+        assert_ne!(
+            masked(&OURS.replacen(from, to, 1)),
+            masked(OURS),
+            "{from} -> {to}"
+        );
+    }
 }
 
 /// `PARSE VERSION` answers what the oracle answers, or this crate's recorded
@@ -99,17 +146,18 @@ fn parse_version_still_answers_what_the_oracle_answers() {
         cpp.termination
     );
 
-    // The build date is each binary's own; the rest of the string must agree.
+    // The build date is each binary's own and the level is licensed; the rest
+    // of the string must agree.
     let (mut rust, mut cpp) = (rust, cpp);
-    mask_date(&mut rust.stdout);
-    mask_date(&mut cpp.stdout);
+    mask_date_and_level(&mut rust.stdout);
+    mask_date_and_level(&mut cpp.stdout);
     let diffs = descriptor_diffs(&rust, &cpp);
     assert!(
         diffs.is_empty(),
         "PARSE VERSION disagrees with the oracle on [{}]. This crate's \
          version.rs VERSION constant is a recorded measurement of the \
-         oracle's own build identity -- name and language level -- and \
-         a rebuilt oracle changes it. Re-measure rather than editing this \
+         oracle's own build identity, its name, and a rebuilt oracle \
+         changes it; the language level is interrexx's own (Deviation 179). Re-measure rather than editing this \
          test:\n  rust:   {:?}\n  oracle: {:?}\n  exit: rust {} oracle {}",
         diffs.join(", "),
         String::from_utf8_lossy(&rust.stdout),
