@@ -174,15 +174,16 @@ From `rust/`, under the memory cap:
   checkout with the submodule and the oracle build. The `msrv-standalone` job builds every target,
   runs this profile's unit tests (`--lib`) and the doc tests on the toolchain `rust-version`
   declares, on a checkout with no submodule.
-* The `i686` CI job builds every target for `i686-unknown-linux-gnu` and runs the `standalone`
-  profile, so 32-bit x86 is built and tested on every pull request. To run it locally, install
-  the multilib C and C++ libraries (`gcc-multilib`, `g++-multilib`) and the Rust target, then,
-  from `rust/`, run `PATH=$PWD/../ci/m32:$PATH CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/cc
-  cargo nextest run --workspace --profile standalone --target i686-unknown-linux-gnu`: the
-  wrappers in `ci/m32` make the fixtures the tests compile 32-bit, and the variable keeps build
-  scripts on the unwrapped driver. Tests that need a non-root user and `/usr/bin/time` fail
-  without them, as on any host. `cargo clippy --workspace --all-targets --target
-  i686-unknown-linux-gnu -- -D warnings` checks the 32-bit `cfg` arms. A size pin (`assert!(size_of::<T>() == N)`) holds
+* The `i686` CI job builds every target and runs the `standalone` profile with Rust's i686 Linux
+  toolchain as the host, so 32-bit x86 is built and tested on every pull request. To run it
+  locally on x86-64 Linux, install the 32-bit C and C++ libraries and zlib (`gcc-multilib`,
+  `g++-multilib`, `zlib1g:i386`) and the toolchain (`rustup toolchain install
+  stable-i686-unknown-linux-gnu --force-non-host`), then, from `rust/`, run
+  `RUSTUP_TOOLCHAIN=stable-i686-unknown-linux-gnu PATH=$PWD/../ci/m32:$PATH cargo nextest run
+  --workspace --profile standalone`: the wrappers in `ci/m32` make what the build and the tests
+  compile 32-bit. Tests that need a non-root user and `/usr/bin/time` fail without them, as on any
+  host. `cargo clippy --workspace --all-targets --target i686-unknown-linux-gnu -- -D warnings`
+  checks the 32-bit `cfg` arms from a 64-bit toolchain. A size pin (`assert!(size_of::<T>() == N)`) holds
   for 64-bit targets only, under `#[cfg(target_pointer_width = "64")]`.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
