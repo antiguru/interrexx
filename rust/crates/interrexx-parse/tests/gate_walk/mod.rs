@@ -102,11 +102,11 @@ pub fn exprs_of_instruction<'a>(kind: &'a InstructionKind, f: &mut impl FnMut(&'
             }
         }
         InstructionKind::Select { case, .. } => opt(case, f),
+        InstructionKind::Catch(catch) => opt(&catch.variable, f),
         InstructionKind::Label { .. }
         | InstructionKind::Then
         | InstructionKind::Else { .. }
         | InstructionKind::Otherwise
-        | InstructionKind::Catch(_)
         | InstructionKind::Leave { .. }
         | InstructionKind::Iterate { .. }
         | InstructionKind::End { .. }

@@ -776,9 +776,7 @@ impl InstructionKind {
 impl InstructionKind {
     /// Calls `f` on the root of each expression slot the instruction holds,
     /// skipping the slots left empty and the omitted positions of a list.
-    /// The slots come in the order the fields are declared, which is source
-    /// order except for a controlled loop's `TO`, `BY` and `FOR`, which come
-    /// in that order whatever order they were written in.
+    /// The slots come in the order the fields are declared.
     pub fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
         let opt = |slot: &'a Option<Expr>, f: &mut dyn FnMut(&'a Expr)| {
             if let Some(expr) = slot {
@@ -808,11 +806,11 @@ impl InstructionKind {
             }
             InstructionKind::WhenCase { values, .. } => values.iter().for_each(&mut *f),
             InstructionKind::Select { case, .. } => opt(case, f),
+            InstructionKind::Catch(catch) => opt(&catch.variable, f),
             InstructionKind::Label { .. }
             | InstructionKind::Then
             | InstructionKind::Else { .. }
             | InstructionKind::Otherwise
-            | InstructionKind::Catch(_)
             | InstructionKind::Leave { .. }
             | InstructionKind::Iterate { .. }
             | InstructionKind::End { .. }
