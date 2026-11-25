@@ -27,7 +27,7 @@ defaults:
     working-directory: rust
 
 jobs:
-  # The nightly runs only when main has moved since the last scheduled run
+  # The nightly is skipped when the last successful scheduled run tested the same commit
   # (`scripts/nightly-changed.sh`); a dispatch or a pull request always runs. On Linux, so a
   # night with nothing new takes no macOS runner.
   decide:

@@ -23,8 +23,9 @@ defaults:
 jobs:
   # A pull request runs the gate when it carries the `gate` label or changes the pinned ooRexx
   # or its build script. Adding a label runs it only when that label is `gate`, so another label
-  # neither starts a second run nor cancels one. The nightly runs it only when main has moved
-  # since the last scheduled run (`scripts/nightly-changed.sh`). Every other event runs it.
+  # neither starts a second run nor cancels one. The nightly skips it when the last successful
+  # scheduled run tested the same commit (`scripts/nightly-changed.sh`). Every other event runs
+  # it.
   decide:
     name: decide
     runs-on: ubuntu-26.04
