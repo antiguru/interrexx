@@ -566,7 +566,10 @@ impl Interp {
             entries.push((key::RESULT, result));
         }
         if syntax {
-            let code = self.text(format!("{}.{}", raised.number, raised.sub).as_bytes());
+            let code = match raised.original_code.as_deref() {
+                Some(code) => self.text(code),
+                None => self.text(format!("{}.{}", raised.number, raised.sub).as_bytes()),
+            };
             self.roots.activity_mut().push_temp(code);
             entries.push((key::CODE, code));
             let errortext = raised.message(raised.number, 0);

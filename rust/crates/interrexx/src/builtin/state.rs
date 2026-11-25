@@ -430,10 +430,18 @@ pub(crate) fn condition(
             }
             None => Ok(interp.text(b"")),
         },
-        (b'E', Some(condition)) => match condition.code_sub {
-            Some(sub) => Ok(interp.text(sub.to_string().as_bytes())),
-            None => Ok(interp.text(b"")),
-        },
+        (b'E', Some(condition)) => {
+            if condition.name.as_ref() == b"SYNTAX"
+                && let Some(object) = condition.object
+                && let Some(code) = interp.condition_entry_held(object, b"CODE")
+            {
+                let code = interp.unsent_string_value_text(code);
+                if let Some(dot) = code.iter().position(|&byte| byte == b'.') {
+                    return Ok(interp.text(&code[dot + 1..]));
+                }
+            }
+            Ok(interp.text(b""))
+        }
         (b'I', Some(condition)) => {
             let text: &[u8] = if condition.call { b"CALL" } else { b"SIGNAL" };
             Ok(interp.text(text))

@@ -1,7 +1,7 @@
 //! `Raised`: the payload of a real Rexx condition.
 
 use crate::Loud;
-use interrexx_core::ObjRef;
+use interrexx_core::{Bytes, ObjRef};
 use interrexx_num::{ArithError, FormatError};
 use interrexx_parse::{ParseError, ProgramSource};
 use std::borrow::Cow;
@@ -71,6 +71,9 @@ pub(crate) struct Raised {
     pub(crate) condition: Cow<'static, str>,
     pub(crate) number: u16,
     pub(crate) sub: u16,
+    /// The supplied `CODE` spelling from `RaiseConditionObject`, boxed to keep
+    /// this error payload small.
+    pub(crate) original_code: Option<Box<Bytes>>,
     /// What `&1`, `&2`, ... in this error's catalogue entry stand for.
     pub(crate) additional: Vec<Substitution>,
     /// What a trapping handler reads back from `RC`, or `None` to leave `RC`
@@ -127,6 +130,7 @@ impl Raised {
             condition: Cow::Borrowed("SYNTAX"),
             number,
             sub,
+            original_code: None,
             additional,
             rc: Some(number.to_string().into_bytes()),
             description: None,
@@ -142,6 +146,7 @@ impl Raised {
             condition: name,
             number: 0,
             sub: 0,
+            original_code: None,
             additional: Vec::new(),
             rc: None,
             description: None,

@@ -49,9 +49,6 @@ pub(crate) struct TrappedCondition {
     /// `CONDITION('C')`: the condition's own name, the same bytes
     /// [`Activation::traps`] is keyed by -- `SYNTAX`, `NOVALUE`, `USER UC`.
     pub(crate) name: Box<[u8]>,
-    /// `CONDITION('E')`: the part of the condition object's `CODE` item
-    /// after the dot, which only a `SYNTAX` condition has one of.
-    pub(crate) code_sub: Option<u16>,
     /// `CONDITION('I')`: the trap that fired was `CALL ON` rather than
     /// `SIGNAL ON`.
     pub(crate) call: bool,
@@ -1237,7 +1234,6 @@ impl Activation {
         {
             if let Some(TrappedCondition {
                 name: _,
-                code_sub: _,
                 call: _,
                 description: _,
                 object,

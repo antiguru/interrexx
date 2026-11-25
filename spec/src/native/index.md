@@ -70,6 +70,7 @@ to the next.
 | `FxRaise` | a message | raises `SYNTAX 40.900` with it, sets the caller's variable `AFTER` to `ran on`, and answers `returned` |
 | `FxCondition` | a name, a description and an object | raises the condition of that name with them, and answers `returned` |
 | `FxSend` | an object and a message name | sends the message and answers its result, `no result`, or `condition` and the code of a condition the message raised, which it clears |
+| `FxConditionCode` | a condition directory | raises the condition described by the directory |
 | `FxSetVar`, `FxGetVar`, `FxDropVar` | a variable name, and for `FxSetVar` a value | set, get (or `(unset)`) and drop a variable of the caller |
 | `FxNumeric` | none | the caller's `DIGITS`, `FUZZ` and `FORM` |
 | `FxOnThread` | an object and a message name | starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers `1` at once |

@@ -212,6 +212,14 @@ RexxRoutine2(RexxObjectPtr, FxSend, RexxObjectPtr, target, CSTRING, message)
     return answer == NULLOBJECT ? context->String("no result") : answer;
 }
 
+// Raises the condition described by a directory.
+// Serves r[native.calls.condition-object.code-spelling].
+RexxRoutine1(RexxObjectPtr, FxConditionCode, RexxObjectPtr, condition)
+{
+    context->RaiseConditionObject(static_cast<RexxDirectoryObject>(condition));
+    return NULLOBJECT;
+}
+
 // The caller's variable pool.
 // Serves r[native.calls.variables].
 RexxRoutine2(RexxObjectPtr, FxSetVar, CSTRING, name, RexxObjectPtr, value)
@@ -498,6 +506,7 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxRaise, FxRaise),
     REXX_TYPED_ROUTINE(FxCondition, FxCondition),
     REXX_TYPED_ROUTINE(FxSend, FxSend),
+    REXX_TYPED_ROUTINE(FxConditionCode, FxConditionCode),
     REXX_TYPED_ROUTINE(FxSetVar, FxSetVar),
     REXX_TYPED_ROUTINE(FxGetVar, FxGetVar),
     REXX_TYPED_ROUTINE(FxDropVar, FxDropVar),
