@@ -616,10 +616,11 @@ jobs:
           restore-keys: i686-
       - name: Build and test in an i386 container
         # The script installs packages as root and builds as the checkout's owner, the runner's
-        # user, so the cached directories stay the runner's to save.
+        # user, so the cached directories stay the runner's to save. The container shares the
+        # runner's network: on Docker's default bridge it cannot resolve names.
         working-directory: .
         run: >
-          docker run --rm --platform linux/386
+          docker run --rm --platform linux/386 --network host
           -v "$PWD:/work" -w /work
           -e RUSTUP_HOME=/work/.i686/rustup -e CARGO_HOME=/work/.i686/cargo
           -e CARGO_TARGET_DIR=/work/.i686/target
