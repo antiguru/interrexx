@@ -233,6 +233,7 @@ to the next.</p>
 <tr><td><code>FxRaise</code></td><td>a message</td><td>raises <code>SYNTAX 40.900</code> with it, sets the caller's variable <code>AFTER</code> to <code>ran on</code>, and answers <code>returned</code></td></tr>
 <tr><td><code>FxCondition</code></td><td>a name, a description and an object</td><td>raises the condition of that name with them, and answers <code>returned</code></td></tr>
 <tr><td><code>FxSend</code></td><td>an object and a message name</td><td>sends the message and answers its result, <code>no result</code>, or <code>condition</code> and the code of a condition the message raised, which it clears</td></tr>
+<tr><td><code>FxConditionCode</code></td><td>a condition directory</td><td>raises the condition described by the directory</td></tr>
 <tr><td><code>FxSetVar</code>, <code>FxGetVar</code>, <code>FxDropVar</code></td><td>a variable name, and for <code>FxSetVar</code> a value</td><td>set, get (or <code>(unset)</code>) and drop a variable of the caller</td></tr>
 <tr><td><code>FxNumeric</code></td><td>none</td><td>the caller's <code>DIGITS</code>, <code>FUZZ</code> and <code>FORM</code></td></tr>
 <tr><td><code>FxOnThread</code></td><td>an object and a message name</td><td>starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers <code>1</code> at once</td></tr>

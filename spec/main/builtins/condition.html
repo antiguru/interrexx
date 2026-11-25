@@ -348,8 +348,11 @@ h: o = condition('o')
 <p>After a trap has caught a SYNTAX condition, the option <code>E</code> answers the subcode
 of the error number: the part after the period, as <code>12</code> for <code>40.12</code>. An error
 number raised without a subcode, as <a href="../instructions/raise.html#r-instr.raise.number"><code>RAISE SYNTAX 40</code></a>
-does, has the subcode 0 and the code <code>40.0</code>. After any other condition <code>E</code>
-answers the null string.</p>
+does, has the subcode 0 and the code <code>40.0</code>. A
+<a href="../native/calls.html#r-native.calls.condition-object.code-spelling"><code>RaiseConditionObject</code> call</a> keeps the
+supplied <code>CODE</code>, so <code>E</code> answers the part after the period as supplied, or the
+null string if there is no period. After any other condition <code>E</code> answers the
+null string.</p>
 <pre><code class="language-rexx">signal on syntax name s
 x = 1 + 'a'
 s: say condition('E') condition('O')~code

@@ -291,6 +291,8 @@ gave none, as <a href="../instructions/raise.html#r-instr.raise.syntax">the SYNT
 adds <code>CODE</code>, the error number with its subcode as <code>41.1</code>, <code>RC</code>, its major
 number, <code>ERRORTEXT</code>, the text of the error that the <code>ERRORTEXT</code> builtin
 answers for <code>RC</code>, and <code>MESSAGE</code>, the text with the details of this occurrence.
+<a href="../native/calls.html#r-native.calls.condition-object.code-spelling"><code>RaiseConditionObject</code></a> keeps the spelling
+of the supplied <code>CODE</code>.
 ERROR and FAILURE have <code>RC</code>, the return code of the command. The texts of the
 messages are not specified, and the entry <code>RESULT</code> is not specified here.</p>
 <pre><code class="language-rexx">address system

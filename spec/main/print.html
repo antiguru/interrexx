@@ -24806,6 +24806,8 @@ gave none, as <a href="conditions/../instructions/raise.html#r-instr.raise.synta
 adds <code>CODE</code>, the error number with its subcode as <code>41.1</code>, <code>RC</code>, its major
 number, <code>ERRORTEXT</code>, the text of the error that the <code>ERRORTEXT</code> builtin
 answers for <code>RC</code>, and <code>MESSAGE</code>, the text with the details of this occurrence.
+<a href="conditions/../native/calls.html#r-native.calls.condition-object.code-spelling"><code>RaiseConditionObject</code></a> keeps the spelling
+of the supplied <code>CODE</code>.
 ERROR and FAILURE have <code>RC</code>, the return code of the command. The texts of the
 messages are not specified, and the entry <code>RESULT</code> is not specified here.</p>
 <pre><code class="language-rexx">address system
@@ -100487,6 +100489,7 @@ to the next.</p>
 <tr><td><code>FxRaise</code></td><td>a message</td><td>raises <code>SYNTAX 40.900</code> with it, sets the caller's variable <code>AFTER</code> to <code>ran on</code>, and answers <code>returned</code></td></tr>
 <tr><td><code>FxCondition</code></td><td>a name, a description and an object</td><td>raises the condition of that name with them, and answers <code>returned</code></td></tr>
 <tr><td><code>FxSend</code></td><td>an object and a message name</td><td>sends the message and answers its result, <code>no result</code>, or <code>condition</code> and the code of a condition the message raised, which it clears</td></tr>
+<tr><td><code>FxConditionCode</code></td><td>a condition directory</td><td>raises the condition described by the directory</td></tr>
 <tr><td><code>FxSetVar</code>, <code>FxGetVar</code>, <code>FxDropVar</code></td><td>a variable name, and for <code>FxSetVar</code> a value</td><td>set, get (or <code>(unset)</code>) and drop a variable of the caller</td></tr>
 <tr><td><code>FxNumeric</code></td><td>none</td><td>the caller's <code>DIGITS</code>, <code>FUZZ</code> and <code>FORM</code></td></tr>
 <tr><td><code>FxOnThread</code></td><td>an object and a message name</td><td>starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers <code>1</code> at once</td></tr>
@@ -101204,6 +101207,37 @@ say 'still running'
 </code></pre>
 <pre><code class="language-output">fine / no result / condition 40.900
 still running
+</code></pre>
+<div class="rule" id="r-native.calls.condition-object.code-spelling"><a href="native/calls.html#r-native.calls.condition-object.code-spelling">[native.calls.condition-object.code-spelling]</a></div>
+<p><code>RaiseConditionObject</code> raises the condition described by a directory.
+For a <code>SYNTAX</code> condition the supplied <code>CODE</code> spelling is kept in
+<code>CONDITION('O')</code> and <a href="native/../builtins/condition.html#r-bif.condition.extra"><code>CONDITION('E')</code></a> reads its suffix.
+The error's major number determines <code>RC</code>.</p>
+<pre><code class="language-rexx">call native '41'
+call native '041'
+call native '40.004'
+signal on syntax name statement
+raise syntax 41
+statement:
+say 'statement' condition('o')~code rc '['condition('e')']'
+exit
+native: procedure
+  use arg code
+  condition = .directory~new
+  condition['CONDITION'] = 'SYNTAX'
+  condition['CODE'] = code
+  signal on syntax name trapped
+  call fxconditioncode condition
+  return
+trapped:
+  say 'native' condition('o')~code rc '['condition('e')']'
+  return
+::requires 'specfixture' LIBRARY
+</code></pre>
+<pre><code class="language-output">native 41 41 []
+native 041 41 []
+native 40.004 40 [004]
+statement 41.0 41 [0]
 </code></pre>
 <div class="rule" id="r-native.calls.condition-data"><a href="native/calls.html#r-native.calls.condition-data">[native.calls.condition-data]</a></div>
 <p>The interface declares a record of a condition with its texts as strings,
@@ -118343,8 +118377,11 @@ h: o = condition('o')
 <p>After a trap has caught a SYNTAX condition, the option <code>E</code> answers the subcode
 of the error number: the part after the period, as <code>12</code> for <code>40.12</code>. An error
 number raised without a subcode, as <a href="builtins/../instructions/raise.html#r-instr.raise.number"><code>RAISE SYNTAX 40</code></a>
-does, has the subcode 0 and the code <code>40.0</code>. After any other condition <code>E</code>
-answers the null string.</p>
+does, has the subcode 0 and the code <code>40.0</code>. A
+<a href="builtins/../native/calls.html#r-native.calls.condition-object.code-spelling"><code>RaiseConditionObject</code> call</a> keeps the
+supplied <code>CODE</code>, so <code>E</code> answers the part after the period as supplied, or the
+null string if there is no period. After any other condition <code>E</code> answers the
+null string.</p>
 <pre><code class="language-rexx">signal on syntax name s
 x = 1 + 'a'
 s: say condition('E') condition('O')~code
