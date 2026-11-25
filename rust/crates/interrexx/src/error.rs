@@ -44,6 +44,8 @@ pub(crate) struct Delivery {
     /// Name `REXX` in place of the program's path, for a raise that is not
     /// [`Delivery::lineless`].
     pub(crate) internal_package: bool,
+    /// The interpreter exhausted a nesting limit (r[expr.index.nesting]).
+    pub(crate) stack_exhausted: bool,
     /// A condition held while its `CALL ON` trap was delayed and released
     /// by a `SIGNAL ON`: trapped with the object it was raised with, which
     /// `Activity::reraised_object` carries.
@@ -213,7 +215,9 @@ impl Raised {
     /// (`eval.rs`'s own `MAX_EVAL_DEPTH`). No substitution: the parse-side 11.1
     /// (nested parens/calls, Deviation 2) carries none either.
     pub(crate) fn insufficient_stack() -> Raised {
-        Raised::syntax(11, 1, Vec::new())
+        let mut raised = Raised::syntax(11, 1, Vec::new());
+        raised.delivery.stack_exhausted = true;
+        raised
     }
 
     /// 34.6: one element of a comma-separated logical list

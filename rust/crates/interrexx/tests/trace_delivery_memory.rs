@@ -94,6 +94,55 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
     fs::remove_dir_all(&dir).expect("the probe directory is removed");
 }
 
+#[test]
+fn a_destination_exhausting_the_stack_cannot_recurse_for_every_report_line() {
+    let source = "\
+.traceoutput~destination(.deep~new)
+trace r
+x = 1
+trace off
+say 'after'
+::class deep
+::method lineout unguarded
+  call spin
+  return 0
+spin: call spin
+";
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("the clock is after the epoch")
+        .as_nanos();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("trace-stack-{}-{nanos}", std::process::id()));
+    fs::create_dir_all(&dir).expect("a probe directory of this run's own");
+    let file = dir.join("main.rex");
+    fs::write(&file, source).expect("the program is writable");
+    let output = run_under_memory_cap(
+        ORACLE_MEMORY_LIMIT_KIB,
+        PEAK_RSS_KIB,
+        env!("CARGO_BIN_EXE_bounded-run"),
+        &[
+            "-s".as_ref(),
+            "KILL".as_ref(),
+            "30".as_ref(),
+            env!("CARGO_BIN_EXE_rexx").as_ref(),
+            file.as_os_str(),
+        ],
+        &dir,
+    );
+    fs::remove_dir_all(&dir).expect("the probe directory is removed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(
+        output.status.code(),
+        Some(245),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(stdout.starts_with("     3 *-* x = 1\n"));
+    assert!(stdout.lines().any(|line| line.starts_with("Error 11.1:")));
+    assert!(output.stderr.is_empty());
+}
+
 /// **A destination writes no trace lines of its own.** Under package-wide
 /// `::OPTIONS TRACE I` the sink's `LINEOUT` is traced too; its lines are
 /// dropped rather than delivered, which would deliver again without end. The

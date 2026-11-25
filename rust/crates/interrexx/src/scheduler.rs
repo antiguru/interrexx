@@ -3533,7 +3533,7 @@ impl Interp {
             positionless.delivery.positionless = true;
             positionless.report_lines(&site)
         };
-        self.write_trace_report_lines(&report);
+        self.write_trace_report_lines(&report, raised.delivery.stack_exhausted);
     }
 
     /// The running activity's main-program root, a park or slice in which
