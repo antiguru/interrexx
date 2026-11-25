@@ -417,8 +417,8 @@ fn compile_settled(
                 // header walks the expression instead whenever `TRACE` shows
                 // intermediates.
                 if let Some(conditional) = &body_node.conditional
-                    && !value_only(body.expr(&conditional.condition))
-                    && native_shape(body.expr(&conditional.condition), Some(NodePath::ROOT))
+                    && !value_only(body.expr(conditional.condition))
+                    && native_shape(body.expr(conditional.condition), Some(NodePath::ROOT))
                     && plan.trace_events().get(index) == Some(&crate::trace::TraceEvent::Keeps)
                 {
                     // **A condition that calls or sends is a region of its own
@@ -447,7 +447,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        body.expr(&conditional.condition),
+                        body.expr(conditional.condition),
                         instruction_index(index)?,
                         LOOP_CONDITION_SLOT,
                         Some(NodePath::ROOT),
@@ -463,8 +463,8 @@ fn compile_settled(
                     }
                     loop_test_of[index] = Some(LoopTestOps { test, body });
                 } else if let Some(conditional) = &body_node.conditional
-                    && value_only(body.expr(&conditional.condition))
-                    && native_shape(body.expr(&conditional.condition), Some(NodePath::ROOT))
+                    && value_only(body.expr(conditional.condition))
+                    && native_shape(body.expr(conditional.condition), Some(NodePath::ROOT))
                 {
                     let dst = registers.alloc()?;
                     let start = op_index(&conditions)?;
@@ -476,7 +476,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        body.expr(&conditional.condition),
+                        body.expr(conditional.condition),
                         instruction_index(index)?,
                         0,
                         Some(NodePath::ROOT),
@@ -567,7 +567,7 @@ fn compile_settled(
                     &mut hints,
                     &mut calls,
                     plan,
-                    body.expr(condition),
+                    body.expr(*condition),
                     instruction_index(index)?,
                     dst,
                     ConditionKeyword::If,
@@ -632,7 +632,7 @@ fn compile_settled(
                 });
                 push_echo(&mut ops, echo, instruction_index(index)?);
                 if let (Some(dst), Some(case)) =
-                    (case_reg, case.as_ref().map(|case| body.expr(case)))
+                    (case_reg, case.as_ref().map(|case| body.expr(*case)))
                 {
                     if native_shape(case, Some(NodePath::ROOT)) {
                         push_native(
@@ -766,7 +766,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        body.expr(condition),
+                        body.expr(*condition),
                         instruction_index(index)?,
                         dst,
                         ConditionKeyword::When,
@@ -818,19 +818,19 @@ fn compile_settled(
                     &mut hints,
                     &mut calls,
                     plan,
-                    body.expr(value),
+                    body.expr(*value),
                     instruction_index(index)?,
                     0,
                     dst,
                 )?;
                 let shared = share_tail_key(
                     &mut ops[usize::cast_from(at)..],
-                    body.expr(target),
-                    body.expr(value),
+                    body.expr(*target),
+                    body.expr(*value),
                 );
                 ops.push(Op::Store {
                     index: instruction_index(index)?,
-                    at: write_slot(plan, body.expr(target)),
+                    at: write_slot(plan, body.expr(*target)),
                     src: dst,
                     shared,
                 });
@@ -861,7 +861,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            body.expr(expression),
+                            body.expr(*expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -902,7 +902,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            body.expr(expression),
+                            body.expr(*expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -948,7 +948,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            body.expr(expression),
+                            body.expr(*expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -1043,7 +1043,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            body.expr(expression),
+                            body.expr(*expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -1087,7 +1087,7 @@ fn compile_settled(
                             &mut hints,
                             &mut calls,
                             plan,
-                            body.expr(expression),
+                            body.expr(*expression),
                             instruction_index(index)?,
                             0,
                             dst,
@@ -1177,8 +1177,8 @@ fn compile_settled(
             // value slot 1.
             InstructionKind::Message { term, value }
                 if native_message_instruction(
-                    body.expr(term),
-                    value.as_ref().map(|value| body.expr(value)),
+                    body.expr(*term),
+                    value.as_ref().map(|value| body.expr(*value)),
                 ) =>
             {
                 let ExprView::Message {
@@ -1187,7 +1187,7 @@ fn compile_settled(
                     super_class,
                     args,
                     ..
-                } = body.expr(term).kind()
+                } = body.expr(*term).kind()
                 else {
                     unreachable!("the guard above admits only a message term")
                 };
@@ -1226,7 +1226,7 @@ fn compile_settled(
                     instruction_index(index)?,
                     recv,
                 )?;
-                let assigned = match value.as_ref().map(|value| body.expr(value)) {
+                let assigned = match value.as_ref().map(|value| body.expr(*value)) {
                     Some(value) => {
                         let src = registers.alloc()?;
                         push_native(
@@ -1484,7 +1484,7 @@ fn compile_settled(
                                 &mut hints,
                                 &mut calls,
                                 plan,
-                                body.expr(expr),
+                                body.expr(*expr),
                                 clause,
                                 FORWARD_ARRAY_SLOT
                                     + u32::try_from(slot).expect("within the bound the arm checks"),
@@ -1545,19 +1545,19 @@ fn compile_settled(
                         .map(|(expr, dst)| (Some((expr, slot)), part, dst))
                 }
                 steps.extend(value(
-                    raise.rc.as_ref().map(|e| body.expr(e)),
+                    raise.rc.as_ref().map(|e| body.expr(*e)),
                     0,
                     at(layout.code),
                     RaisePart::Code,
                 ));
                 steps.extend(value(
-                    raise.description.as_ref().map(|e| body.expr(e)),
+                    raise.description.as_ref().map(|e| body.expr(*e)),
                     1,
                     at(layout.description),
                     RaisePart::Description,
                 ));
                 steps.extend(value(
-                    raise.additional.as_ref().map(|e| body.expr(e)),
+                    raise.additional.as_ref().map(|e| body.expr(*e)),
                     2,
                     at(layout.additional),
                     RaisePart::Additional,
@@ -1575,7 +1575,7 @@ fn compile_settled(
                             .ok_or(ChunkTooLarge { what: "registers" })?;
                         match item {
                             Some(expr) => {
-                                steps.push((Some((body.expr(expr), slot)), RaisePart::Item, dst))
+                                steps.push((Some((body.expr(*expr), slot)), RaisePart::Item, dst))
                             }
                             None => steps.push((None, RaisePart::Item, Op::ARG_OMITTED)),
                         }
@@ -1584,7 +1584,7 @@ fn compile_settled(
                 }
                 if let Some(result) = &raise.result {
                     steps.extend(value(
-                        result.value.as_ref().map(|e| body.expr(e)),
+                        result.value.as_ref().map(|e| body.expr(*e)),
                         3,
                         at(layout.result),
                         RaisePart::Result,
@@ -1660,7 +1660,7 @@ fn compile_settled(
                         &mut hints,
                         &mut calls,
                         plan,
-                        body.expr(default),
+                        body.expr(*default),
                         clause,
                         u32::from(slot),
                         src,
@@ -1679,7 +1679,7 @@ fn compile_settled(
             // stays the delegating `Op::Exec` region below. The registers are
             // the clause's own while it runs, which nothing else holds.
             InstructionKind::Guard(guard)
-                if let Some(condition) = guard.condition.as_ref().map(|c| body.expr(c))
+                if let Some(condition) = guard.condition.as_ref().map(|c| body.expr(*c))
                     && value_only(condition)
                     && native_shape(condition, Some(NodePath::ROOT)) =>
             {
@@ -2052,7 +2052,7 @@ fn compiled_template(body: &CodeBody, parse: &interrexx_parse::Parse) -> bool {
             trigger
                 .value
                 .as_ref()
-                .is_none_or(|operand| native_shape(body.expr(operand), Some(NodePath::ROOT)))
+                .is_none_or(|operand| native_shape(body.expr(*operand), Some(NodePath::ROOT)))
         })
 }
 
@@ -2095,7 +2095,7 @@ fn push_template<'a>(
         entry
             .as_ref()
             .and_then(|trigger| trigger.value.as_ref())
-            .map(|operand| body.expr(operand))
+            .map(|operand| body.expr(*operand))
             .filter(|operand| {
                 !matches!(
                     operand.kind(),

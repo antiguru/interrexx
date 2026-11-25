@@ -1,28 +1,11 @@
-//! The expression tree and the instruction nodes.
+//! The instruction and directive nodes. An instruction names its
+//! expressions by [`ExprId`] in the arena of the code body that holds it.
 
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use crate::exprs::{Args, ExprRef};
-use crate::selector::Selector;
-use crate::token::{Operator, SymbolId};
-// Only `shape` needs the table, to turn a `SymbolId` back into a spelling, and
-// `shape` renders trees for test assertions.
-#[cfg(test)]
-use crate::token::SymbolTable;
-
-/// One expression node: what it is, and the source it came from.
-///
-/// The `Debug`, `Clone`, and equality implementations recurse through the
-/// subtree. A deep tree can exhaust the thread's stack during these
-/// operations. Consider [`crate::with_parser_stack`] when processing deep
-/// trees. Dropping an expression is iterative.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Expr {
-    pub kind: ExprKind,
-    /// Byte range in the retained source. Contains every child's range.
-    pub span: Range<usize>,
-}
+use crate::exprs::{Args, ExprId, ExprRef, Exprs, Inconsistent};
+use crate::token::SymbolId;
 
 /// The prefix operators.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -42,346 +25,6 @@ impl PrefixOp {
             PrefixOp::Not => "\\",
         }
     }
-}
-
-/// What a function call names.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum CallTarget {
-    /// `f(...)`. The id holds the upcased spelling, and this form can also
-    /// resolve to an internal label.
-    Symbol(SymbolId),
-    /// `"f"(...)`. Never an internal label, never a builtin unless the literal
-    /// is already upper case.
-    Literal(Box<[u8]>),
-}
-
-/// One expression form.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ExprKind {
-    /// A quoted literal, carrying its decoded bytes: doubled quotes collapsed
-    /// and any `x` or `b` suffix already packed.
-    Literal(Box<[u8]>),
-    /// A symbol whose value is its own spelling, so never a variable: constant
-    /// and dummy symbols, which are treated alike.
-    Constant(SymbolId),
-    /// A simple variable, no periods.
-    Variable(SymbolId),
-    /// `stem.`, the id including the trailing period.
-    Stem(SymbolId),
-    /// `stem.i.j`, the id holding the whole dotted name.
-    Compound(SymbolId),
-    /// `.name`, an environment symbol.
-    DotVariable(SymbolId),
-    /// A prefix operator applied to a message subterm.
-    Prefix { op: PrefixOp, operand: Box<Expr> },
-    /// A dyadic operator. `Operator::Backslash` never appears here: `\` is
-    /// prefix-only, and one in a dyadic position is error 35.1.
-    Binary {
-        op: Operator,
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    /// `f(...)` or `"f"(...)`.
-    Call {
-        target: CallTarget,
-        /// An omitted argument is `None`: `f(,1)` passes two arguments of
-        /// which the first is omitted. Trailing omitted arguments are already
-        /// dropped, so `f(1,)` holds one.
-        args: Vec<Option<Expr>>,
-    },
-    /// `ns:name(...)`, a namespace-qualified call.
-    QualifiedCall {
-        namespace: SymbolId,
-        name: SymbolId,
-        args: Vec<Option<Expr>>,
-    },
-    /// `ns:name` with no argument list, a namespace-qualified class lookup.
-    ClassResolver { namespace: SymbolId, name: SymbolId },
-    /// `target~name`, `target~~name`, and `target[...]`.
-    Message {
-        target: Box<Expr>,
-        /// Upcased, for every spelling. So `"abc"~'length'`, `"abc"~'LENGTH'`
-        /// and `"abc"~"lEnGtH"` all give 3, because the name is upcased whether
-        /// it came from a symbol or a literal. `[]` for the bracket form.
-        name: Selector,
-        /// `target~name:super(...)`, the superclass override.
-        super_class: Option<Box<Expr>>,
-        args: Vec<Option<Expr>>,
-        /// True for `~~`, which discards the result and yields the target.
-        cascade: bool,
-    },
-    /// A comma-separated list in parentheses, which builds an array.
-    List(Vec<Option<Expr>>),
-    /// A comma-separated list in a conditional, which is a logical AND of its
-    /// parts, built for `IF`, `WHEN`, `GUARD`, `WHILE` and `UNTIL`. No element
-    /// may be omitted.
-    Logical(Vec<Expr>),
-    /// A prefix `>` or `<` on a simple variable or a stem.
-    VariableReference(Box<Expr>),
-}
-
-impl ExprKind {
-    /// Calls `f` on each child expression, in source order.
-    pub(crate) fn for_each_child<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
-        match self {
-            ExprKind::Literal(_)
-            | ExprKind::Constant(_)
-            | ExprKind::Variable(_)
-            | ExprKind::Stem(_)
-            | ExprKind::Compound(_)
-            | ExprKind::DotVariable(_)
-            | ExprKind::ClassResolver { .. } => {}
-            ExprKind::Prefix { operand, .. } => f(operand),
-            ExprKind::Binary { left, right, .. } => {
-                f(left);
-                f(right);
-            }
-            ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            ExprKind::Message {
-                target,
-                super_class,
-                args,
-                ..
-            } => {
-                f(target);
-                if let Some(super_class) = super_class {
-                    f(super_class);
-                }
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            ExprKind::List(items) => {
-                for item in items.iter().flatten() {
-                    f(item);
-                }
-            }
-            ExprKind::Logical(items) => {
-                for item in items {
-                    f(item);
-                }
-            }
-            ExprKind::VariableReference(inner) => f(inner),
-        }
-    }
-
-    /// The mutable twin of `for_each_child`, for `Expr`'s iterative `Drop`.
-    fn for_each_child_mut(&mut self, f: &mut impl FnMut(&mut Expr)) {
-        match self {
-            ExprKind::Literal(_)
-            | ExprKind::Constant(_)
-            | ExprKind::Variable(_)
-            | ExprKind::Stem(_)
-            | ExprKind::Compound(_)
-            | ExprKind::DotVariable(_)
-            | ExprKind::ClassResolver { .. } => {}
-            ExprKind::Prefix { operand, .. } => f(operand),
-            ExprKind::Binary { left, right, .. } => {
-                f(left);
-                f(right);
-            }
-            ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
-                for arg in args.iter_mut().flatten() {
-                    f(arg);
-                }
-            }
-            ExprKind::Message {
-                target,
-                super_class,
-                args,
-                ..
-            } => {
-                f(target);
-                if let Some(super_class) = super_class {
-                    f(super_class);
-                }
-                for arg in args.iter_mut().flatten() {
-                    f(arg);
-                }
-            }
-            ExprKind::List(items) => {
-                for item in items.iter_mut().flatten() {
-                    f(item);
-                }
-            }
-            ExprKind::Logical(items) => {
-                for item in items {
-                    f(item);
-                }
-            }
-            ExprKind::VariableReference(inner) => f(inner),
-        }
-    }
-}
-
-impl Expr {
-    /// Builds a node whose span is `extent` widened to contain every child's
-    /// span.
-    pub fn new(kind: ExprKind, extent: Range<usize>) -> Self {
-        let mut span = extent;
-        kind.for_each_child(&mut |child| {
-            span.start = span.start.min(child.span.start);
-            span.end = span.end.max(child.span.end);
-        });
-        Expr { kind, span }
-    }
-
-    /// A binary node spanning from its left operand to its right.
-    pub fn binary(op: Operator, left: Expr, right: Expr) -> Self {
-        let extent = left.span.start..right.span.end;
-        Expr::new(
-            ExprKind::Binary {
-                op,
-                left: Box::new(left),
-                right: Box::new(right),
-            },
-            extent,
-        )
-    }
-
-    /// A canonical rendering, for asserting tree shape in tests.
-    #[cfg(test)]
-    pub(crate) fn shape(&self, symbols: &SymbolTable) -> String {
-        match &self.kind {
-            ExprKind::Literal(bytes) => quoted(bytes),
-            ExprKind::Constant(id) | ExprKind::Variable(id) => symbols.name(*id).to_string(),
-            ExprKind::Stem(id) => format!("stem:{}", symbols.name(*id)),
-            ExprKind::Compound(id) => {
-                let name = symbols.name(*id);
-                let (stem, tails) = compound_parts(name);
-                let rendered: Vec<String> = tails
-                    .iter()
-                    .map(|t| match t {
-                        Tail::Constant(text) => format!("const:{text}"),
-                        Tail::Variable(text) => format!("var:{text}"),
-                    })
-                    .collect();
-                format!("compound:{stem}[{}]", rendered.join(","))
-            }
-            ExprKind::DotVariable(id) => format!("env:{}", symbols.name(*id)),
-            ExprKind::Prefix { op, operand } => {
-                let name = match op {
-                    PrefixOp::Plus => "u+",
-                    PrefixOp::Minus => "u-",
-                    PrefixOp::Not => "u\\",
-                };
-                format!("({name} {})", operand.shape(symbols))
-            }
-            ExprKind::Binary { op, left, right } => {
-                let name = match op {
-                    Operator::Abuttal => "abut",
-                    Operator::Blank => "blank",
-                    other => other.spelling(),
-                };
-                format!("({name} {} {})", left.shape(symbols), right.shape(symbols))
-            }
-            ExprKind::Call { target, args } => {
-                let name = match target {
-                    CallTarget::Symbol(id) => symbols.name(*id).to_string(),
-                    CallTarget::Literal(bytes) => quoted(bytes),
-                };
-                format!("(call {name}{})", render_args(symbols, args))
-            }
-            ExprKind::QualifiedCall {
-                namespace,
-                name,
-                args,
-            } => format!(
-                "(qcall {}:{}{})",
-                symbols.name(*namespace),
-                symbols.name(*name),
-                render_args(symbols, args)
-            ),
-            ExprKind::ClassResolver { namespace, name } => {
-                format!(
-                    "(class {}:{})",
-                    symbols.name(*namespace),
-                    symbols.name(*name)
-                )
-            }
-            ExprKind::Message {
-                target,
-                name,
-                super_class,
-                args,
-                cascade,
-            } => {
-                let twiddle = if *cascade { "~~" } else { "~" };
-                let sup = match super_class {
-                    Some(s) => format!(" :{}", s.shape(symbols)),
-                    None => String::new(),
-                };
-                format!(
-                    "(msg{twiddle} {} {}{sup}{})",
-                    target.shape(symbols),
-                    quoted(name.bytes()),
-                    render_args(symbols, args)
-                )
-            }
-            ExprKind::List(items) => format!("(list{})", render_args(symbols, items)),
-            ExprKind::Logical(items) => {
-                let mut out = String::from("(logical");
-                for item in items {
-                    out.push(' ');
-                    out.push_str(&item.shape(symbols));
-                }
-                out.push(')');
-                out
-            }
-            ExprKind::VariableReference(inner) => format!("(vref {})", inner.shape(symbols)),
-        }
-    }
-}
-
-/// Drops the whole subtree by iteration, not by the recursion a derived
-/// `Drop` would use.
-impl Drop for Expr {
-    fn drop(&mut self) {
-        let mut worklist: Vec<Expr> = Vec::new();
-        self.kind.for_each_child_mut(&mut |child| {
-            worklist.push(std::mem::replace(child, cheap_leaf()));
-        });
-        while let Some(mut expr) = worklist.pop() {
-            expr.kind.for_each_child_mut(&mut |child| {
-                worklist.push(std::mem::replace(child, cheap_leaf()));
-            });
-        }
-    }
-}
-
-/// A leaf with no children, swapped into a slot once its real value has been
-/// moved onto `Drop`'s worklist, so the slot's own drop has nothing deep left
-/// to walk. The span is meaningless: this node is never observed, only
-/// dropped.
-fn cheap_leaf() -> Expr {
-    Expr {
-        kind: ExprKind::Literal(Box::from(&b""[..])),
-        span: 0..0,
-    }
-}
-
-#[cfg(test)]
-fn render_args(symbols: &SymbolTable, args: &[Option<Expr>]) -> String {
-    let mut out = String::new();
-    for arg in args {
-        out.push(' ');
-        match arg {
-            Some(e) => out.push_str(&e.shape(symbols)),
-            // An omitted argument, which is a position with no expression.
-            None => out.push_str("<omitted>"),
-        }
-    }
-    out
-}
-
-/// Bytes as a quoted, escaped string, so that no two byte strings render alike.
-#[cfg(test)]
-fn quoted(bytes: &[u8]) -> String {
-    format!("{:?}", String::from_utf8_lossy(bytes))
 }
 
 /// One tail element of a compound variable, borrowed from the interned name.
@@ -434,25 +77,42 @@ pub struct CodeBody {
     /// accepted and `signal a` reaches the first -- so this is built with
     /// "insert if absent", never an unconditional overwrite.
     pub labels: BTreeMap<Box<[u8]>, usize>,
+    /// The expressions of every instruction above, each subtree a contiguous
+    /// range in evaluation order.
+    pub exprs: Exprs,
 }
 
 impl CodeBody {
     /// The view of `expr`, an expression slot of one of this body's
     /// instructions.
-    pub fn expr<'a>(&'a self, expr: &'a Expr) -> ExprRef<'a> {
-        ExprRef::tree(expr)
+    pub fn expr(&self, expr: ExprId) -> ExprRef<'_> {
+        self.exprs.get(expr)
     }
 
     /// The view of `list`, an argument or item list of one of this body's
     /// instructions, where `None` is omitted.
-    pub fn args<'a>(&'a self, list: &'a [Option<Expr>]) -> Args<'a> {
-        Args::tree(list)
+    pub fn args<'a>(&'a self, list: &'a [Option<ExprId>]) -> Args<'a> {
+        Args::slots(&self.exprs, list)
     }
 
     /// The view of `list`, a list of one of this body's instructions whose
     /// items are all present.
-    pub fn items<'a>(&'a self, list: &'a [Expr]) -> Args<'a> {
-        Args::tree_required(list)
+    pub fn items<'a>(&'a self, list: &'a [ExprId]) -> Args<'a> {
+        Args::edges(&self.exprs, list)
+    }
+
+    /// Checks the arena's invariants against the roots of every
+    /// instruction's expression slots.
+    ///
+    /// # Errors
+    ///
+    /// The first invariant found broken, as [`Exprs::check`] reports it.
+    pub fn check(&self) -> Result<(), Inconsistent> {
+        let mut roots = Vec::new();
+        for instruction in &self.instructions {
+            instruction.kind.for_each_root(&mut |root| roots.push(root));
+        }
+        self.exprs.check(roots)
     }
 }
 
@@ -581,10 +241,11 @@ pub struct Instruction {
 pub enum InstructionKind {
     // ---- the four clause shapes with no keyword ----
     /// `name = expr`, and also `name (op)= expr`, whose right-hand side is
-    /// already the expanded `name op expr` tree.
+    /// already the expanded `name op expr`, its read of `name` a node of its
+    /// own before the value's.
     Assignment {
-        target: Expr,
-        value: Expr,
+        target: ExprId,
+        value: ExprId,
     },
     /// `name:`, and also `"name":`. The clause ends at the colon.
     Label {
@@ -593,22 +254,23 @@ pub enum InstructionKind {
     /// A standalone message send, `q~append(1)`, and the message-assignment
     /// forms `q[1] = 2` and `q[1] += 2`.
     Message {
-        term: Expr,
+        term: ExprId,
         /// The right-hand side when this is an assignment form. For the
-        /// `(op)=` spelling this is already the expanded tree.
-        value: Option<Expr>,
+        /// `(op)=` spelling this is already the expanded `term op expr`, over
+        /// a copy of the term pushed before the value.
+        value: Option<ExprId>,
     },
     /// Anything else: a clause that is an expression is a command, dispatched
     /// through the current `ADDRESS`.
     Command {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
 
     // ---- control flow (12) ----
     Do(Box<Loop>),
     Loop(Box<Loop>),
     If {
-        condition: Expr,
+        condition: ExprId,
         /// Where control goes when `condition` is false: the `ELSE` when there
         /// is one, otherwise the instruction after the `THEN` branch. `None` is
         /// the end of this body.
@@ -624,7 +286,7 @@ pub enum InstructionKind {
         label: Option<SymbolId>,
         /// `SELECT CASE expr`, a different instruction class from the plain
         /// `SELECT`.
-        case: Option<Expr>,
+        case: Option<ExprId>,
         /// The `WHEN` instructions this `SELECT` collected, in source order.
         whens: Vec<usize>,
         otherwise: Option<usize>,
@@ -632,7 +294,7 @@ pub enum InstructionKind {
         end: Option<usize>,
     },
     When {
-        condition: Expr,
+        condition: ExprId,
         /// Where control goes when `condition` is false: the next `WHEN`, the
         /// `OTHERWISE`, or the enclosing `SELECT`'s `END`.
         false_target: Option<usize>,
@@ -645,7 +307,7 @@ pub enum InstructionKind {
     /// because the clause means something else.
     WhenCase {
         /// At least one, and none may be omitted: an empty element is 35.934.
-        values: Vec<Expr>,
+        values: Vec<ExprId>,
         false_target: Option<usize>,
         exit: Option<usize>,
     },
@@ -674,33 +336,33 @@ pub enum InstructionKind {
     Arg(Box<Parse>),
     Pull(Box<Parse>),
     Push {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Queue {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Say {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
 
     // ---- procedure (11) ----
     Call(Box<Call>),
     Return {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Procedure {
         variables: Vec<VariableRef>,
     },
     Signal(Box<Signal>),
     Exit {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Interpret {
-        expression: Expr,
+        expression: ExprId,
     },
     Guard(Box<Guard>),
     Reply {
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Forward(Box<Forward>),
     Raise(Box<Raise>),
@@ -709,12 +371,12 @@ pub enum InstructionKind {
     // ---- settings (4) ----
     Numeric {
         setting: NumericSetting,
-        expression: Option<Expr>,
+        expression: Option<ExprId>,
     },
     Address(Box<Address>),
     Trace(Trace),
     Options {
-        expression: Expr,
+        expression: ExprId,
     },
 
     // ---- and NOP ----
@@ -777,19 +439,19 @@ impl InstructionKind {
     /// Calls `f` on the root of each expression slot the instruction holds,
     /// skipping the slots left empty and the omitted positions of a list.
     /// The slots come in the order the fields are declared.
-    pub fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
-        let opt = |slot: &'a Option<Expr>, f: &mut dyn FnMut(&'a Expr)| {
-            if let Some(expr) = slot {
+    pub fn for_each_root(&self, f: &mut impl FnMut(ExprId)) {
+        let opt = |slot: &Option<ExprId>, f: &mut dyn FnMut(ExprId)| {
+            if let Some(expr) = *slot {
                 f(expr);
             }
         };
         match self {
             InstructionKind::Assignment { target, value } => {
-                f(target);
-                f(value);
+                f(*target);
+                f(*value);
             }
             InstructionKind::Message { term, value } => {
-                f(term);
+                f(*term);
                 opt(value, f);
             }
             InstructionKind::Command { expression }
@@ -802,9 +464,9 @@ impl InstructionKind {
             | InstructionKind::Numeric { expression, .. } => opt(expression, f),
             InstructionKind::Do(header) | InstructionKind::Loop(header) => header.for_each_root(f),
             InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. } => {
-                f(condition)
+                f(*condition)
             }
-            InstructionKind::WhenCase { values, .. } => values.iter().for_each(&mut *f),
+            InstructionKind::WhenCase { values, .. } => values.iter().copied().for_each(&mut *f),
             InstructionKind::Select { case, .. } => opt(case, f),
             InstructionKind::Catch(catch) => opt(&catch.variable, f),
             InstructionKind::Label { .. }
@@ -823,20 +485,20 @@ impl InstructionKind {
             | InstructionKind::Pull(parse) => parse.for_each_root(f),
             InstructionKind::Call(call) => match &**call {
                 Call::Named { args, .. } | Call::Qualified { args, .. } => {
-                    args.iter().flatten().for_each(&mut *f)
+                    args.iter().flatten().copied().for_each(&mut *f)
                 }
                 Call::Dynamic { target, args } => {
-                    f(target);
-                    args.iter().flatten().for_each(&mut *f);
+                    f(*target);
+                    args.iter().flatten().copied().for_each(&mut *f);
                 }
                 Call::Trap(_) => {}
             },
             InstructionKind::Signal(signal) => match &**signal {
-                Signal::Value(expr) => f(expr),
+                Signal::Value(expr) => f(*expr),
                 Signal::Label(_) | Signal::Trap(_) => {}
             },
             InstructionKind::Interpret { expression } | InstructionKind::Options { expression } => {
-                f(expression)
+                f(*expression)
             }
             InstructionKind::Guard(guard) => opt(&guard.condition, f),
             InstructionKind::Forward(forward) => {
@@ -851,7 +513,7 @@ impl InstructionKind {
                 for slot in [to, message, class, arguments] {
                     opt(slot, f);
                 }
-                array.iter().flatten().flatten().for_each(&mut *f);
+                array.iter().flatten().flatten().copied().for_each(&mut *f);
             }
             InstructionKind::Raise(raise) => {
                 let Raise {
@@ -866,7 +528,7 @@ impl InstructionKind {
                 for slot in [rc, description, additional] {
                     opt(slot, f);
                 }
-                array.iter().flatten().flatten().for_each(&mut *f);
+                array.iter().flatten().flatten().copied().for_each(&mut *f);
                 if let Some(result) = result {
                     opt(&result.value, f);
                 }
@@ -874,7 +536,7 @@ impl InstructionKind {
             InstructionKind::Use(using) => match &**using {
                 Use::Arg { targets, .. } => {
                     for target in targets.iter().flatten() {
-                        f(&target.target);
+                        f(target.target);
                         opt(&target.default, f);
                     }
                 }
@@ -886,13 +548,13 @@ impl InstructionKind {
                 if let Some(io) = &address.io {
                     for redirection in [&io.input, &io.output, &io.error] {
                         match redirection {
-                            Redirection::Stream(expr) | Redirection::Using(expr) => f(expr),
+                            Redirection::Stream(expr) | Redirection::Using(expr) => f(*expr),
                             Redirection::Default | Redirection::Normal | Redirection::Stem(_) => {}
                         }
                     }
                 }
             }
-            InstructionKind::Trace(Trace::Value(expr)) => f(expr),
+            InstructionKind::Trace(Trace::Value(expr)) => f(*expr),
             InstructionKind::Trace(Trace::Default | Trace::Setting(_) | Trace::Skip(_)) => {}
         }
     }
@@ -902,7 +564,7 @@ impl InstructionKind {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Catch {
     /// Where to assign the condition object on entry, if specified.
-    pub variable: Option<Expr>,
+    pub variable: Option<ExprId>,
     /// The listed conditions, in the order they were written.
     pub conditions: Vec<CatchCondition>,
     /// The opening instruction. Set when the parser assembles the block.
@@ -928,7 +590,7 @@ pub enum CatchCode {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum VariableRef {
     /// A name written out: a simple variable, a stem, or a compound. Which
-    /// of the three follows from the spelling, as it does for `ExprKind`.
+    /// of the three follows from the spelling, as it does for an expression leaf.
     Direct(SymbolId),
     /// `(name)`, where the *value* of `name` names the variable to act on.
     Indirect(SymbolId),
@@ -952,13 +614,13 @@ pub struct Loop {
 
 impl Loop {
     /// [`InstructionKind::for_each_root`] for a `DO` or `LOOP` header.
-    fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
+    fn for_each_root(&self, f: &mut impl FnMut(ExprId)) {
         match &self.kind {
             LoopKind::Simple | LoopKind::Forever => {}
-            LoopKind::Count(count) => count.iter().for_each(&mut *f),
+            LoopKind::Count(count) => count.iter().copied().for_each(&mut *f),
             LoopKind::Controlled(controlled) => {
-                f(&controlled.initial);
-                [&controlled.to, &controlled.by, &controlled.for_count]
+                f(controlled.initial);
+                [controlled.to, controlled.by, controlled.for_count]
                     .into_iter()
                     .flatten()
                     .for_each(&mut *f);
@@ -969,12 +631,12 @@ impl Loop {
             | LoopKind::With {
                 target, for_count, ..
             } => {
-                f(target);
-                for_count.iter().for_each(&mut *f);
+                f(*target);
+                for_count.iter().copied().for_each(&mut *f);
             }
         }
         if let Some(conditional) = &self.conditional {
-            f(&conditional.condition);
+            f(conditional.condition);
         }
     }
 }
@@ -987,22 +649,22 @@ pub enum LoopKind {
     /// `DO FOREVER`, and `LOOP` with no control at all.
     Forever,
     /// `DO expr`, repeated that many times.
-    Count(Option<Expr>),
+    Count(Option<ExprId>),
     /// `DO i = 1 TO 9 BY 2 FOR 3`.
     Controlled(Box<Controlled>),
     /// `DO name OVER expr`.
     Over {
         control: SymbolId,
-        target: Expr,
-        for_count: Option<Expr>,
+        target: ExprId,
+        for_count: Option<ExprId>,
     },
     /// `DO WITH INDEX i ITEM v OVER expr`. At least one of the two variables
     /// is present.
     With {
         index: Option<SymbolId>,
         item: Option<SymbolId>,
-        target: Expr,
-        for_count: Option<Expr>,
+        target: ExprId,
+        for_count: Option<ExprId>,
     },
 }
 
@@ -1010,10 +672,10 @@ pub enum LoopKind {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Controlled {
     pub control: SymbolId,
-    pub initial: Expr,
-    pub to: Option<Expr>,
-    pub by: Option<Expr>,
-    pub for_count: Option<Expr>,
+    pub initial: ExprId,
+    pub to: Option<ExprId>,
+    pub by: Option<ExprId>,
+    pub for_count: Option<ExprId>,
     /// The order the three keyword expressions were written in, which is the
     /// order they are evaluated in (`control.expressions[keyslot++]`).
     /// Evaluation order is observable, because an expression can have side
@@ -1034,7 +696,7 @@ pub enum ControlExpr {
 pub struct LoopConditional {
     /// True for `UNTIL`, which is tested after the body rather than before.
     pub until: bool,
-    pub condition: Expr,
+    pub condition: ExprId,
 }
 
 /// A `PARSE`, `ARG` or `PULL` instruction.
@@ -1052,13 +714,13 @@ pub struct Parse {
 
 impl Parse {
     /// [`InstructionKind::for_each_root`] for a `PARSE`, `ARG` or `PULL`.
-    fn for_each_root<'a>(&'a self, f: &mut impl FnMut(&'a Expr)) {
-        if let ParseSource::Value(Some(value)) = &self.source {
+    fn for_each_root(&self, f: &mut impl FnMut(ExprId)) {
+        if let ParseSource::Value(Some(value)) = self.source {
             f(value);
         }
         for trigger in self.template.iter().flatten() {
-            trigger.value.iter().for_each(&mut *f);
-            trigger.targets.iter().flatten().for_each(&mut *f);
+            trigger.value.iter().copied().for_each(&mut *f);
+            trigger.targets.iter().flatten().copied().for_each(&mut *f);
         }
     }
 }
@@ -1074,7 +736,7 @@ pub enum ParseSource {
     Var(SymbolId),
     /// `PARSE VALUE expr WITH`. The expression is optional and defaults to
     /// the null string.
-    Value(Option<Expr>),
+    Value(Option<ExprId>),
 }
 
 /// One template trigger and the variables it assigns.
@@ -1083,10 +745,10 @@ pub struct ParseTrigger {
     pub kind: TriggerKind,
     /// The pattern or column: a literal, a numeric symbol, or a
     /// parenthesised expression. Absent for `TriggerKind::End`.
-    pub value: Option<Expr>,
+    pub value: Option<ExprId>,
     /// The targets assigned when this trigger fires. `None` is a `.`
     /// placeholder, which consumes a field and assigns nothing.
-    pub targets: Vec<Option<Expr>>,
+    pub targets: Vec<Option<ExprId>>,
 }
 
 /// What a `PARSE` template trigger matches on.
@@ -1118,18 +780,18 @@ pub enum Call {
     Named {
         name: Box<[u8]>,
         literal: bool,
-        args: Vec<Option<Expr>>,
+        args: Vec<Option<ExprId>>,
     },
     /// `CALL (expr) arg`, whose target is only known at run time.
     Dynamic {
-        target: Expr,
-        args: Vec<Option<Expr>>,
+        target: ExprId,
+        args: Vec<Option<ExprId>>,
     },
     /// `CALL ns:name arg`, restricted to public routines of that namespace.
     Qualified {
         namespace: SymbolId,
         name: SymbolId,
-        args: Vec<Option<Expr>>,
+        args: Vec<Option<ExprId>>,
     },
     /// `CALL ON cond NAME label` and `CALL OFF cond`.
     Trap(ConditionTrap),
@@ -1142,7 +804,7 @@ pub enum Signal {
     Label(Box<[u8]>),
     /// `SIGNAL VALUE expr`, and the implicit form where the target is not a
     /// symbol or a literal.
-    Value(Expr),
+    Value(ExprId),
     /// `SIGNAL ON cond NAME label` and `SIGNAL OFF cond`.
     Trap(ConditionTrap),
 }
@@ -1163,7 +825,7 @@ pub struct ConditionTrap {
 pub struct Guard {
     pub on: bool,
     /// `GUARD ON WHEN expr`.
-    pub condition: Option<Expr>,
+    pub condition: Option<ExprId>,
     /// The exposed variables `condition` names, each once, upcased: what a
     /// wait watches.
     pub watched: Vec<Box<[u8]>>,
@@ -1172,13 +834,13 @@ pub struct Guard {
 /// A `FORWARD` instruction's options, all of them optional.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Forward {
-    pub to: Option<Expr>,
-    pub message: Option<Expr>,
-    pub class: Option<Expr>,
+    pub to: Option<ExprId>,
+    pub message: Option<ExprId>,
+    pub class: Option<ExprId>,
     /// `FORWARD ARGUMENTS expr`, mutually exclusive with `array`.
-    pub arguments: Option<Expr>,
+    pub arguments: Option<ExprId>,
     /// `FORWARD ARRAY (a, b)`.
-    pub array: Option<Vec<Option<Expr>>>,
+    pub array: Option<Vec<Option<ExprId>>>,
     pub continue_: bool,
 }
 
@@ -1189,11 +851,11 @@ pub struct Raise {
     pub condition: Box<[u8]>,
     pub propagate: bool,
     /// The argument `ERROR`, `FAILURE` and `SYNTAX` take.
-    pub rc: Option<Expr>,
-    pub description: Option<Expr>,
+    pub rc: Option<ExprId>,
+    pub description: Option<ExprId>,
     /// `ADDITIONAL expr`, mutually exclusive with `array`.
-    pub additional: Option<Expr>,
-    pub array: Option<Vec<Option<Expr>>>,
+    pub additional: Option<ExprId>,
+    pub array: Option<Vec<Option<ExprId>>>,
     /// `RETURN expr` or `EXIT expr`, whose value is optional either way.
     pub result: Option<RaiseResult>,
 }
@@ -1202,7 +864,7 @@ pub struct Raise {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RaiseResult {
     pub exit: bool,
-    pub value: Option<Expr>,
+    pub value: Option<ExprId>,
 }
 
 /// A `USE ARG`, `USE STRICT ARG` or `USE LOCAL` instruction.
@@ -1225,9 +887,9 @@ pub enum Use {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct UseTarget {
     /// A variable or a message term.
-    pub target: Expr,
+    pub target: ExprId,
     /// `USE ARG a = 1`, a constant expression. Never present with `alias`.
-    pub default: Option<Expr>,
+    pub default: Option<ExprId>,
     /// `USE ARG >a`, which aliases the caller's variable rather than copying.
     /// `<` is the same thing.
     pub alias: bool,
@@ -1242,9 +904,9 @@ pub struct Address {
     pub environment: Option<Box<[u8]>>,
     /// `ADDRESS VALUE expr`, and the implicit form where the target is
     /// neither a symbol nor a literal.
-    pub dynamic: Option<Expr>,
+    pub dynamic: Option<ExprId>,
     /// `ADDRESS env command`.
-    pub command: Option<Expr>,
+    pub command: Option<ExprId>,
     /// The `WITH` redirections. Absent means the plain `ADDRESS` form rather
     /// than the `WITH` form.
     pub io: Option<Box<AddressIo>>,
@@ -1271,9 +933,9 @@ pub enum Redirection {
     /// `STEM name.`.
     Stem(SymbolId),
     /// `STREAM expr`, a constant expression naming a file.
-    Stream(Expr),
+    Stream(ExprId),
     /// `USING expr`, an object decided at run time.
-    Using(Expr),
+    Using(ExprId),
 }
 
 /// `APPEND` or `REPLACE` on an output redirection.
@@ -1313,7 +975,7 @@ pub enum Trace {
     Skip(i64),
     /// `TRACE VALUE expr`, and the implicit form where what follows is not a
     /// symbol, a literal, or a signed number.
-    Value(Expr),
+    Value(ExprId),
 }
 
 /// One `::` directive, and the clause it was built from.
@@ -1507,16 +1169,30 @@ pub enum ConstantValue {
     /// the blank dropped.
     Text(Box<[u8]>),
     /// `(expr)`, which is evaluated when the package is installed rather than
-    /// now.
-    Expression(Expr),
+    /// now. The expression is outside any code body, so it has an arena of
+    /// its own, whose one root is `root`.
+    Expression { exprs: Exprs, root: ExprId },
 }
 
 impl ConstantValue {
     /// The view of the `(expr)` value, if the value is one.
     pub fn expression(&self) -> Option<ExprRef<'_>> {
         match self {
-            ConstantValue::Expression(expr) => Some(ExprRef::tree(expr)),
+            ConstantValue::Expression { exprs, root } => Some(exprs.get(*root)),
             ConstantValue::Name | ConstantValue::Text(_) => None,
+        }
+    }
+
+    /// Checks the arena of an `(expr)` value's invariants; `Ok` for the
+    /// other forms, which hold none.
+    ///
+    /// # Errors
+    ///
+    /// The first invariant found broken, as [`Exprs::check`] reports it.
+    pub fn check(&self) -> Result<(), Inconsistent> {
+        match self {
+            ConstantValue::Expression { exprs, root } => exprs.check([*root]),
+            ConstantValue::Name | ConstantValue::Text(_) => Ok(()),
         }
     }
 }

@@ -644,7 +644,7 @@ fn header_expr_for<'a>(
         (LoopKind::With { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
         _ => None,
     };
-    expr.map(|expr| body.expr(expr))
+    expr.map(|expr| body.expr(*expr))
 }
 
 /// The expression of `body`'s header at `slot` -- the compiled stream's own
@@ -1809,7 +1809,7 @@ impl Interp {
                     chunk,
                     registers,
                     flat.do_index,
-                    code.body.expr(&cond.condition),
+                    code.body.expr(cond.condition),
                     ConditionTrace::Keyword(loop_indent, "UNTIL"),
                     raised_until_not_logical,
                 )
@@ -2279,7 +2279,7 @@ impl Interp {
                         chunk,
                         registers,
                         do_index,
-                        code.body.expr(&cond.condition),
+                        code.body.expr(cond.condition),
                         ConditionTrace::Keyword(loop_indent, "WHILE"),
                         raised_while_not_logical,
                     )

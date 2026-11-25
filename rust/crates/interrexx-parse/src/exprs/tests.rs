@@ -656,174 +656,6 @@ fn a_node_is_adopted_by_one_parent_only() {
     );
 }
 
-/// Copies `expr` into `into` and answers the copy's root, an omitted argument
-/// or item becoming an `Omitted` node at the parent's start. Recursive, so its
-/// callers run it on a large stack.
-pub(crate) fn lower(expr: &crate::ast::Expr, into: &mut Exprs) -> ExprId {
-    use crate::ast::{CallTarget as Target, ExprKind};
-
-    let at = expr.span.start;
-    let list = |items: &[Option<crate::ast::Expr>], into: &mut Exprs, ids: &mut Vec<ExprId>| {
-        for item in items {
-            ids.push(match item {
-                Some(item) => lower(item, into),
-                None => into.push(NodeKind::Omitted, at..at),
-            });
-        }
-    };
-    let mut ids = Vec::new();
-    let kind = match &expr.kind {
-        ExprKind::Literal(bytes) => NodeKind::Literal(into.push_bytes(bytes)),
-        ExprKind::Constant(id) => NodeKind::Constant(*id),
-        ExprKind::Variable(id) => NodeKind::Variable(*id),
-        ExprKind::Stem(id) => NodeKind::Stem(*id),
-        ExprKind::Compound(id) => NodeKind::Compound(*id),
-        ExprKind::DotVariable(id) => NodeKind::DotVariable(*id),
-        ExprKind::ClassResolver { namespace, name } => NodeKind::ClassResolver {
-            namespace: *namespace,
-            name: *name,
-        },
-        ExprKind::VariableReference(inner) => match inner.kind {
-            ExprKind::Variable(symbol) => NodeKind::VariableReference {
-                symbol,
-                stem: false,
-            },
-            ExprKind::Stem(symbol) => NodeKind::VariableReference { symbol, stem: true },
-            _ => panic!("a reference names a variable or a stem"),
-        },
-        ExprKind::Prefix { op, operand } => NodeKind::Prefix {
-            op: *op,
-            operand: lower(operand, into),
-        },
-        ExprKind::Binary { op, left, right } => {
-            let left = lower(left, into);
-            NodeKind::Binary {
-                op: *op,
-                left,
-                right: lower(right, into),
-            }
-        }
-        ExprKind::Call { target, args } => {
-            let target = match target {
-                Target::Symbol(id) => CallTarget::Symbol(*id),
-                Target::Literal(bytes) => CallTarget::Literal(into.push_bytes(bytes)),
-            };
-            list(args, into, &mut ids);
-            NodeKind::Call {
-                target,
-                args: into.push_edges(&ids),
-            }
-        }
-        ExprKind::QualifiedCall {
-            namespace,
-            name,
-            args,
-        } => {
-            list(args, into, &mut ids);
-            NodeKind::QualifiedCall {
-                namespace: *namespace,
-                name: *name,
-                args: into.push_edges(&ids),
-            }
-        }
-        ExprKind::Message {
-            target,
-            name,
-            super_class,
-            args,
-            cascade,
-        } => {
-            ids.push(lower(target, into));
-            if let Some(scope) = super_class {
-                ids.push(lower(scope, into));
-            }
-            list(args, into, &mut ids);
-            NodeKind::Message {
-                name: name.clone(),
-                cascade: *cascade,
-                scoped: super_class.is_some(),
-                children: into.push_edges(&ids),
-            }
-        }
-        ExprKind::List(items) => {
-            list(items, into, &mut ids);
-            NodeKind::List(into.push_edges(&ids))
-        }
-        ExprKind::Logical(items) => {
-            for item in items {
-                ids.push(lower(item, into));
-            }
-            NodeKind::Logical(into.push_edges(&ids))
-        }
-    };
-    into.push(kind, expr.span.clone())
-}
-
-/// Asserts that the arena renders `expr` as the tree does, and that the copy
-/// is a valid arena.
-fn assert_renders_alike(expr: &crate::ast::Expr, symbols: &crate::token::SymbolTable) {
-    let mut exprs = Exprs::default();
-    let root = lower(expr, &mut exprs);
-    assert_eq!(exprs.check([root]), Ok(()));
-    assert_eq!(exprs.shape(root, symbols), expr.shape(symbols));
-}
-
-#[test]
-fn the_arena_renders_every_shape_the_tree_renders() {
-    use crate::ast::InstructionKind;
-
-    crate::with_parser_stack(|| {
-        let texts = [
-            "'a''b'",
-            "abc",
-            "3",
-            "s.",
-            "s.1.k",
-            ".nil",
-            "- \\ + a",
-            "a b",
-            "a||b",
-            "a'q'",
-            "f(1,,3)",
-            "'F'(1)",
-            "ns:f(,2)",
-            "ns:cls",
-            "a~m:super(1, , 2)",
-            "a~~m",
-            "a[1, 2]",
-            "(1, , )",
-            ">a",
-            "<s.",
-        ];
-        for text in texts {
-            let program = crate::parse_program(format!("x = {text}").into_bytes())
-                .unwrap_or_else(|error| panic!("`x = {text}` parses: {error:?}"));
-            let value = program
-                .main
-                .instructions
-                .iter()
-                .find_map(|instruction| match &instruction.kind {
-                    InstructionKind::Assignment { value, .. } => Some(value),
-                    _ => None,
-                })
-                .expect("the program assigns");
-            assert_renders_alike(value, &program.symbols);
-        }
-        let program = crate::parse_program(b"if a, b then nop".to_vec()).expect("the IF parses");
-        let condition = program
-            .main
-            .instructions
-            .iter()
-            .find_map(|instruction| match &instruction.kind {
-                InstructionKind::If { condition, .. } => Some(condition),
-                _ => None,
-            })
-            .expect("the program has an IF");
-        assert_renders_alike(condition, &program.symbols);
-    })
-    .expect("the parser thread spawns");
-}
-
 #[test]
 fn a_long_chain_and_a_deep_nesting_render_on_a_small_thread() {
     std::thread::Builder::new()
@@ -872,12 +704,12 @@ fn a_long_chain_and_a_deep_nesting_render_on_a_small_thread() {
 }
 
 /// The right-hand side of the program's first assignment.
-fn assigned(program: &crate::Program) -> &crate::ast::Expr {
+fn assigned(program: &crate::Program) -> ExprId {
     program
         .main
         .instructions
         .iter()
-        .find_map(|instruction| match &instruction.kind {
+        .find_map(|instruction| match instruction.kind {
             crate::ast::InstructionKind::Assignment { value, .. } => Some(value),
             _ => None,
         })
@@ -900,28 +732,18 @@ fn assert_one_omitted_three(args: super::Args<'_>) {
 
 #[test]
 fn an_argument_list_view_keeps_its_omitted_positions() {
-    use super::{Args, ExprRef, ExprView};
+    use super::{Args, ExprView};
 
     let program = crate::parse_program(b"x = f(1,,3)".to_vec()).expect("the program parses");
     let value = assigned(&program);
     let ExprView::Call { args, .. } = program.main.expr(value).kind() else {
-        panic!("a call through the tree");
-    };
-    assert_one_omitted_three(args);
-    let ExprView::Call { args, .. } = ExprRef::tree(value).kind() else {
-        panic!("a call through the tree");
-    };
-    assert_one_omitted_three(args);
-
-    let mut exprs = Exprs::default();
-    let root = lower(value, &mut exprs);
-    let ExprView::Call { args, .. } = exprs.get(root).kind() else {
-        panic!("a call through the arena");
+        panic!("a call");
     };
     assert_one_omitted_three(args);
 
     // An instruction's own list, where the omitted position has no node.
-    let NodeKind::Call { args, .. } = *exprs.node(root).kind() else {
+    let exprs = &program.main.exprs;
+    let NodeKind::Call { args, .. } = *exprs.node(value).kind() else {
         panic!("a call in the arena");
     };
     let ids: Vec<Option<ExprId>> = exprs
@@ -929,126 +751,7 @@ fn an_argument_list_view_keeps_its_omitted_positions() {
         .iter()
         .map(|&id| (!matches!(exprs.node(id).kind(), NodeKind::Omitted)).then_some(id))
         .collect();
-    assert_one_omitted_three(Args::slots(&exprs, &ids));
-}
-
-/// Asserts that `tree` and `arena` view the same node, and their children
-/// pairwise likewise, counting the nodes compared. Recursive, so its callers
-/// run it on a large stack.
-fn agree(tree: super::ExprRef<'_>, arena: super::ExprRef<'_>, compared: &mut usize) {
-    use super::ExprView as V;
-
-    *compared += 1;
-    assert_eq!(tree.span(), arena.span(), "spans of {tree:?}");
-    match (tree.kind(), arena.kind()) {
-        (V::Literal(a), V::Literal(b)) => assert_eq!(a, b),
-        (V::Constant(a), V::Constant(b))
-        | (V::Variable(a), V::Variable(b))
-        | (V::Stem(a), V::Stem(b))
-        | (V::Compound(a), V::Compound(b))
-        | (V::DotVariable(a), V::DotVariable(b)) => assert_eq!(a, b),
-        (
-            V::Prefix { op, operand },
-            V::Prefix {
-                op: op2,
-                operand: operand2,
-            },
-        ) => {
-            assert_eq!(op, op2);
-            agree(operand, operand2, compared);
-        }
-        (
-            V::Binary { op, left, right },
-            V::Binary {
-                op: op2,
-                left: left2,
-                right: right2,
-            },
-        ) => {
-            assert_eq!(op, op2);
-            agree(left, left2, compared);
-            agree(right, right2, compared);
-        }
-        (
-            V::Call { target, args },
-            V::Call {
-                target: target2,
-                args: args2,
-            },
-        ) => {
-            assert_eq!(target, target2);
-            agree_args(args, args2, compared);
-        }
-        (
-            V::QualifiedCall {
-                namespace,
-                name,
-                args,
-            },
-            V::QualifiedCall {
-                namespace: namespace2,
-                name: name2,
-                args: args2,
-            },
-        ) => {
-            assert_eq!((namespace, name), (namespace2, name2));
-            agree_args(args, args2, compared);
-        }
-        (
-            V::ClassResolver { namespace, name },
-            V::ClassResolver {
-                namespace: namespace2,
-                name: name2,
-            },
-        ) => assert_eq!((namespace, name), (namespace2, name2)),
-        (
-            V::Message {
-                target,
-                name,
-                super_class,
-                args,
-                cascade,
-            },
-            V::Message {
-                target: target2,
-                name: name2,
-                super_class: super_class2,
-                args: args2,
-                cascade: cascade2,
-            },
-        ) => {
-            assert_eq!((name, cascade), (name2, cascade2));
-            agree(target, target2, compared);
-            match (super_class, super_class2) {
-                (Some(a), Some(b)) => agree(a, b, compared),
-                (None, None) => {}
-                (a, b) => panic!("scopes {a:?} and {b:?} of {tree:?}"),
-            }
-            agree_args(args, args2, compared);
-        }
-        (V::List(a), V::List(b)) | (V::Logical(a), V::Logical(b)) => {
-            agree_args(a, b, compared);
-        }
-        (
-            V::VariableReference { symbol, stem },
-            V::VariableReference {
-                symbol: symbol2,
-                stem: stem2,
-            },
-        ) => assert_eq!((symbol, stem), (symbol2, stem2)),
-        (a, b) => panic!("{a:?} through the tree, {b:?} through the arena"),
-    }
-}
-
-fn agree_args(tree: super::Args<'_>, arena: super::Args<'_>, compared: &mut usize) {
-    assert_eq!(tree.len(), arena.len(), "list lengths");
-    for index in 0..=tree.len() {
-        match (tree.get(index), arena.get(index)) {
-            (Some(Some(a)), Some(Some(b))) => agree(a, b, compared),
-            (Some(None), Some(None)) | (None, None) => {}
-            (a, b) => panic!("item {index}: {a:?} through the tree, {b:?} through the arena"),
-        }
-    }
+    assert_one_omitted_three(Args::slots(exprs, &ids));
 }
 
 /// Every `*.rex` file under `dir`, recursively, in a stable order.
@@ -1069,84 +772,136 @@ fn rex_files_under(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
     files
 }
 
-/// Lowers `expr` into a fresh arena and asserts the arena is valid, renders
-/// alike, and reads alike through `view`, which views `expr` in the tree.
-fn assert_reads_alike(
-    expr: &crate::ast::Expr,
-    view: super::ExprRef<'_>,
-    symbols: &crate::token::SymbolTable,
-    compared: &mut usize,
-) {
-    let mut exprs = Exprs::default();
-    let root = lower(expr, &mut exprs);
-    assert_eq!(exprs.check([root]), Ok(()));
-    assert_eq!(exprs.shape(root, symbols), expr.shape(symbols));
-    agree(view, exprs.get(root), compared);
-}
-
-/// Compares every expression root of `program`, answering how many roots and
-/// how many nodes it compared.
-fn compare_program(program: &crate::Program) -> (usize, usize) {
+/// Checks every body of `program` and each `::CONSTANT` value, answering
+/// how many nodes the checked arenas hold.
+fn check_program(program: &crate::Program) -> usize {
     use crate::ast::{CodeBody, DirectiveKind};
 
-    let (mut roots, mut nodes) = (0, 0);
-    let mut body = |body: &CodeBody| {
-        for instruction in &body.instructions {
-            instruction.kind.for_each_root(&mut |expr| {
-                roots += 1;
-                assert_reads_alike(expr, body.expr(expr), &program.symbols, &mut nodes);
-            });
-        }
+    let body = |body: &CodeBody| {
+        assert_eq!(body.check(), Ok(()));
+        body.exprs.len()
     };
-    body(&program.main);
+    let mut nodes = body(&program.main);
     for directive in &program.directives {
-        match &directive.kind {
-            DirectiveKind::Method(method) => method.body.as_deref().map(&mut body),
-            DirectiveKind::Attribute(attribute) => attribute.body.as_deref().map(&mut body),
-            DirectiveKind::Routine(routine) => routine.body.as_deref().map(&mut body),
+        nodes += match &directive.kind {
+            DirectiveKind::Method(method) => method.body.as_deref().map_or(0, body),
+            DirectiveKind::Attribute(attribute) => attribute.body.as_deref().map_or(0, body),
+            DirectiveKind::Routine(routine) => routine.body.as_deref().map_or(0, body),
+            DirectiveKind::Constant(constant) => {
+                assert_eq!(constant.value.check(), Ok(()));
+                match &constant.value {
+                    crate::ast::ConstantValue::Expression { exprs, .. } => exprs.len(),
+                    crate::ast::ConstantValue::Name | crate::ast::ConstantValue::Text(_) => 0,
+                }
+            }
             DirectiveKind::Annotate(_)
             | DirectiveKind::Class(_)
-            | DirectiveKind::Constant(_)
             | DirectiveKind::Options(_)
             | DirectiveKind::Requires(_)
-            | DirectiveKind::Resource(_) => None,
+            | DirectiveKind::Resource(_) => 0,
         };
     }
-    for directive in &program.directives {
-        if let DirectiveKind::Constant(constant) = &directive.kind {
-            match (&constant.value, constant.value.expression()) {
-                (crate::ast::ConstantValue::Expression(expr), Some(view)) => {
-                    roots += 1;
-                    assert_reads_alike(expr, view, &program.symbols, &mut nodes);
-                }
-                (crate::ast::ConstantValue::Expression(_), None) => {
-                    panic!("a `(expr)` constant has an expression")
-                }
-                (_, view) => assert!(view.is_none(), "only a `(expr)` constant has one"),
-            }
-        }
-    }
-    (roots, nodes)
+    nodes
 }
 
 #[test]
-fn every_corpus_expression_reads_alike_through_the_tree_and_the_arena() {
+fn every_body_of_the_corpus_and_the_library_passes_the_validator() {
     crate::with_parser_stack(|| {
         let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-        let mut roots = 0;
+        let mut nodes = 0;
         for path in rex_files_under(&corpus) {
             let text = std::fs::read(&path).expect("a readable corpus file");
             let Ok(program) = crate::parse_program(text) else {
                 continue;
             };
-            roots += compare_program(&program).0;
+            nodes += check_program(&program);
         }
         let library = crate::parse_known_program(interrexx_lib::LIBRARY.source.to_vec())
             .expect("the library parses");
-        let (library_roots, _) = compare_program(&library);
-        assert!(library_roots > 0, "the library holds expressions");
-        roots += library_roots;
-        assert!(roots > 10_000, "compared only {roots} expressions");
+        let library_nodes = check_program(&library);
+        assert!(library_nodes > 0, "the library holds expressions");
+        nodes += library_nodes;
+        assert!(nodes > 100_000, "checked only {nodes} nodes");
     })
     .expect("the parser thread spawns");
+}
+
+/// The name of `kind`'s variant.
+fn tag(kind: &NodeKind) -> &'static str {
+    match kind {
+        NodeKind::Literal(_) => "Literal",
+        NodeKind::Constant(_) => "Constant",
+        NodeKind::Variable(_) => "Variable",
+        NodeKind::Stem(_) => "Stem",
+        NodeKind::Compound(_) => "Compound",
+        NodeKind::DotVariable(_) => "DotVariable",
+        NodeKind::VariableReference { .. } => "VariableReference",
+        NodeKind::ClassResolver { .. } => "ClassResolver",
+        NodeKind::Omitted => "Omitted",
+        NodeKind::Prefix { .. } => "Prefix",
+        NodeKind::Binary { .. } => "Binary",
+        NodeKind::Call { .. } => "Call",
+        NodeKind::QualifiedCall { .. } => "QualifiedCall",
+        NodeKind::Message { .. } => "Message",
+        NodeKind::List(_) => "List",
+        NodeKind::Logical(_) => "Logical",
+    }
+}
+
+#[test]
+fn an_operator_assignment_reads_its_target_before_its_value() {
+    use crate::ast::InstructionKind;
+
+    let program = crate::parse_program(b"a += b * 2".to_vec()).expect("parses");
+    let InstructionKind::Assignment { target, value } = &program.main.instructions[0].kind else {
+        panic!("an assignment");
+    };
+    let exprs = &program.main.exprs;
+    let order: Vec<&str> = exprs
+        .range(*value)
+        .iter()
+        .map(|node| tag(node.kind()))
+        .collect();
+    assert_eq!(order, ["Variable", "Variable", "Constant", "Binary", "Binary"]);
+    assert!(target.index() < exprs.node(*value).first().index());
+    assert_eq!(exprs.shape(*value, &program.symbols), "(+ A (* B 2))");
+}
+
+#[test]
+fn a_message_operator_assignment_copies_its_term_before_its_value() {
+    use crate::ast::InstructionKind;
+
+    let program = crate::parse_program(b"q[1] += 2".to_vec()).expect("parses");
+    let InstructionKind::Message {
+        term,
+        value: Some(value),
+    } = &program.main.instructions[0].kind
+    else {
+        panic!("a message assignment");
+    };
+    let exprs = &program.main.exprs;
+    assert_eq!(
+        exprs.shape(*value, &program.symbols),
+        "(+ (msg~ Q \"[]\" 1) 2)"
+    );
+    assert!(term.index() < exprs.node(*value).first().index());
+    assert_eq!(program.main.check(), Ok(()));
+}
+
+#[test]
+fn a_discarded_message_trial_leaves_no_node_behind() {
+    use crate::ast::InstructionKind;
+
+    // `x~y z` is tried as a message instruction, then falls back to a command.
+    let program = crate::parse_program(b"x~y z".to_vec()).expect("parses");
+    let InstructionKind::Command {
+        expression: Some(expression),
+    } = &program.main.instructions[0].kind
+    else {
+        panic!("a command");
+    };
+    assert_eq!(
+        program.main.exprs.len(),
+        program.main.exprs.range(*expression).len()
+    );
 }

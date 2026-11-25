@@ -59,7 +59,7 @@ impl Interp {
         match &when_instruction.kind {
             InstructionKind::When { condition, .. } => self.eval_condition(
                 code,
-                code.body.expr(condition),
+                code.body.expr(*condition),
                 ConditionTrace::Result(indent),
                 raised_when_not_logical,
             ),
@@ -74,7 +74,7 @@ impl Interp {
                 // never matches, the identical fallback.
                 None => {
                     for value in values {
-                        let v = self.eval(code, code.body.expr(value))?;
+                        let v = self.eval(code, code.body.expr(*value))?;
                         self.roots.activity_mut().push_temp(v);
                     }
                     Ok(false)

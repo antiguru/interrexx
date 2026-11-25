@@ -185,7 +185,7 @@ impl Interp {
             .as_ref()?
             .default
             .as_ref()
-            .map(|e| body.expr(e))
+            .map(|e| body.expr(*e))
     }
 
     /// Bind the supplied value, or leave the next ops to compute and bind the
@@ -320,7 +320,7 @@ impl Interp {
             Some(argument) => Some(argument),
             None => match &target.default {
                 Some(default) => {
-                    let value = self.eval(code, code.body.expr(default))?;
+                    let value = self.eval(code, code.body.expr(*default))?;
                     self.roots.activity_mut().push_temp(value);
                     Some(value)
                 }
@@ -331,7 +331,7 @@ impl Interp {
         // a no-op, so an omitted argument
         // without a default leaves it alone.
         if matches!(
-            code.body.expr(&target.target).kind(),
+            code.body.expr(target.target).kind(),
             ExprView::Message { .. }
         ) {
             return match value {
@@ -343,7 +343,7 @@ impl Interp {
                     }
                     self.assign_expr_target(
                         code,
-                        code.body.expr(&target.target),
+                        code.body.expr(target.target),
                         value,
                         indent,
                         None,
@@ -361,7 +361,7 @@ impl Interp {
         // A simple variable the plan bound a slot to is assigned through the
         // slot, which is the one `assign_by_name` finds by the name's shape
         // and hash.
-        if let ExprView::Variable(id) = code.body.expr(&target.target).kind()
+        if let ExprView::Variable(id) = code.body.expr(target.target).kind()
             && let Some(slot) = code.slot_for(id)
             && let Some(value) = value
         {
@@ -370,7 +370,7 @@ impl Interp {
         let mut name = self.use_target_name(code, target)?;
         // A compound target's tail takes the values its variables have now,
         // so an earlier target of this `USE` that set one counts.
-        let compound = match code.body.expr(&target.target).kind() {
+        let compound = match code.body.expr(target.target).kind() {
             ExprView::Compound(id) => {
                 let (stem_name, stem_at) = code.stem(id);
                 let key = self.tail_key(code, id)?;
@@ -480,7 +480,7 @@ impl Interp {
 
     /// One `USE ARG` target's variable name.
     fn use_target_name(&self, code: &Code<'_>, target: &UseTarget) -> Result<Vec<u8>, Failure> {
-        match code.body.expr(&target.target).kind() {
+        match code.body.expr(target.target).kind() {
             ExprView::Variable(id) | ExprView::Stem(id) | ExprView::Compound(id) => {
                 Ok(code.symbols.name(id).as_bytes().to_vec())
             }

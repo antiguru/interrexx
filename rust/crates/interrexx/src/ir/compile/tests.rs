@@ -448,7 +448,7 @@ fn calls_nothing_walks_a_deep_chain_on_a_small_stack() {
                         panic!("prefix {prefix}, leaf {leaf}: a SAY with an expression");
                     };
                     assert_eq!(
-                        calls_nothing(program.main.expr(expression)),
+                        calls_nothing(program.main.expr(*expression)),
                         !calls,
                         "prefix {prefix}, leaf {leaf}"
                     );

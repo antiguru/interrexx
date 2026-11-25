@@ -7,11 +7,11 @@ mod gate_walk;
 use std::collections::HashSet;
 
 use gate_walk::{
-    DECLARATION_ERRORS, corpus_dir, each_directive, each_expr, each_instruction, rex_files_under,
+    DECLARATION_ERRORS, corpus_dir, each_directive, each_instruction, each_node, rex_files_under,
     samples_dir,
 };
 use interrexx_parse::{
-    Call, DirectiveKind, ExprView, InstructionKind, LoopKind, ParseSource, Signal, Trace, Use,
+    Call, DirectiveKind, InstructionKind, LoopKind, NodeKind, ParseSource, Signal, Trace, Use,
     parse_program,
 };
 
@@ -74,22 +74,23 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::Nop => "Nop",
 });
 
-tags!(expr_tag, EXPR_TAGS, ExprView<'_>, {
-    ExprView::Literal(_) => "Literal",
-    ExprView::Constant(_) => "Constant",
-    ExprView::Variable(_) => "Variable",
-    ExprView::Stem(_) => "Stem",
-    ExprView::Compound(_) => "Compound",
-    ExprView::DotVariable(_) => "DotVariable",
-    ExprView::Prefix { .. } => "Prefix",
-    ExprView::Binary { .. } => "Binary",
-    ExprView::Call { .. } => "Call",
-    ExprView::QualifiedCall { .. } => "QualifiedCall",
-    ExprView::ClassResolver { .. } => "ClassResolver",
-    ExprView::Message { .. } => "Message",
-    ExprView::List(_) => "List",
-    ExprView::Logical(_) => "Logical",
-    ExprView::VariableReference { .. } => "VariableReference",
+tags!(node_tag, NODE_TAGS, NodeKind, {
+    NodeKind::Literal(_) => "Literal",
+    NodeKind::Constant(_) => "Constant",
+    NodeKind::Variable(_) => "Variable",
+    NodeKind::Stem(_) => "Stem",
+    NodeKind::Compound(_) => "Compound",
+    NodeKind::DotVariable(_) => "DotVariable",
+    NodeKind::VariableReference { .. } => "VariableReference",
+    NodeKind::ClassResolver { .. } => "ClassResolver",
+    NodeKind::Omitted => "Omitted",
+    NodeKind::Prefix { .. } => "Prefix",
+    NodeKind::Binary { .. } => "Binary",
+    NodeKind::Call { .. } => "Call",
+    NodeKind::QualifiedCall { .. } => "QualifiedCall",
+    NodeKind::Message { .. } => "Message",
+    NodeKind::List(_) => "List",
+    NodeKind::Logical(_) => "Logical",
 });
 
 tags!(directive_tag, DIRECTIVE_TAGS, DirectiveKind, {
@@ -176,7 +177,7 @@ impl Coverage {
 #[test]
 fn every_variant_is_constructed_by_the_corpus_and_samples() {
     let mut instructions = Coverage::new("InstructionKind", INSTRUCTION_TAGS);
-    let mut exprs = Coverage::new("ExprKind", EXPR_TAGS);
+    let mut nodes = Coverage::new("NodeKind", NODE_TAGS);
     let mut directives = Coverage::new("DirectiveKind", DIRECTIVE_TAGS);
     let mut loops = Coverage::new("LoopKind", LOOP_TAGS);
     let mut calls = Coverage::new("Call", CALL_TAGS);
@@ -226,8 +227,8 @@ fn every_variant_is_constructed_by_the_corpus_and_samples() {
         each_directive(&p, &mut |d| {
             directives.seen.insert(directive_tag(&d.kind));
         });
-        each_expr(&p, &mut |e| {
-            exprs.seen.insert(expr_tag(&e.kind()));
+        each_node(&p, &mut |node| {
+            nodes.seen.insert(node_tag(node.kind()));
         });
     }
 
@@ -240,7 +241,7 @@ fn every_variant_is_constructed_by_the_corpus_and_samples() {
     let mut report = String::new();
     for cov in [
         &instructions,
-        &exprs,
+        &nodes,
         &directives,
         &loops,
         &calls,

@@ -1,12 +1,11 @@
-//! A borrowed view of one expression node, backed either by the boxed tree
-//! or by an arena, so that a reader written against the view reads both.
+//! A borrowed view of one expression node of an arena.
 //!
 //! Every method reads one node: a child is answered as another view, never
 //! visited, so the view itself never walks.
 
 use std::ops::Range;
 
-use crate::ast::{CallTarget as TreeTarget, Expr, ExprKind, PrefixOp};
+use crate::ast::PrefixOp;
 use crate::selector::Selector;
 use crate::token::{Operator, SymbolId};
 
@@ -15,13 +14,8 @@ use super::{CallTarget, EdgeRange, ExprId, Exprs, NodeKind};
 /// One expression node, borrowed.
 #[derive(Copy, Clone)]
 pub struct ExprRef<'a> {
-    backing: Backing<'a>,
-}
-
-#[derive(Copy, Clone)]
-enum Backing<'a> {
-    Tree(&'a Expr),
-    Arena { exprs: &'a Exprs, id: ExprId },
+    exprs: &'a Exprs,
+    id: ExprId,
 }
 
 /// What a node is, with its payload and its children as views.
@@ -87,8 +81,6 @@ pub struct Args<'a> {
 
 #[derive(Copy, Clone)]
 enum ArgsBacking<'a> {
-    Tree(&'a [Option<Expr>]),
-    TreeRequired(&'a [Expr]),
     /// A node's children, where an `Omitted` node reads as omitted.
     Edges {
         exprs: &'a Exprs,
@@ -102,28 +94,20 @@ enum ArgsBacking<'a> {
 }
 
 impl<'a> ExprRef<'a> {
-    /// The view of a tree node.
-    pub fn tree(expr: &'a Expr) -> ExprRef<'a> {
-        ExprRef {
-            backing: Backing::Tree(expr),
-        }
+    /// The node's id in its arena.
+    pub fn id(self) -> ExprId {
+        self.id
     }
 
     /// The node's kind, with its children as views.
     pub fn kind(self) -> ExprView<'a> {
-        match self.backing {
-            Backing::Tree(expr) => tree_view(expr),
-            Backing::Arena { exprs, id } => arena_view(exprs, id),
-        }
+        arena_view(self.exprs, self.id)
     }
 
     /// The byte range in the retained source, which contains every present
     /// child's span.
     pub fn span(self) -> Range<usize> {
-        match self.backing {
-            Backing::Tree(expr) => expr.span.clone(),
-            Backing::Arena { exprs, id } => exprs.node(id).span(),
-        }
+        self.exprs.node(self.id).span()
     }
 }
 
@@ -138,72 +122,7 @@ impl std::fmt::Debug for ExprRef<'_> {
 impl Exprs {
     /// The view of the node `id`.
     pub fn get(&self, id: ExprId) -> ExprRef<'_> {
-        ExprRef {
-            backing: Backing::Arena { exprs: self, id },
-        }
-    }
-}
-
-fn tree_view(expr: &Expr) -> ExprView<'_> {
-    match &expr.kind {
-        ExprKind::Literal(bytes) => ExprView::Literal(bytes),
-        ExprKind::Constant(id) => ExprView::Constant(*id),
-        ExprKind::Variable(id) => ExprView::Variable(*id),
-        ExprKind::Stem(id) => ExprView::Stem(*id),
-        ExprKind::Compound(id) => ExprView::Compound(*id),
-        ExprKind::DotVariable(id) => ExprView::DotVariable(*id),
-        ExprKind::Prefix { op, operand } => ExprView::Prefix {
-            op: *op,
-            operand: ExprRef::tree(operand),
-        },
-        ExprKind::Binary { op, left, right } => ExprView::Binary {
-            op: *op,
-            left: ExprRef::tree(left),
-            right: ExprRef::tree(right),
-        },
-        ExprKind::Call { target, args } => ExprView::Call {
-            target: match target {
-                TreeTarget::Symbol(id) => Target::Symbol(*id),
-                TreeTarget::Literal(bytes) => Target::Literal(bytes),
-            },
-            args: Args::tree(args),
-        },
-        ExprKind::QualifiedCall {
-            namespace,
-            name,
-            args,
-        } => ExprView::QualifiedCall {
-            namespace: *namespace,
-            name: *name,
-            args: Args::tree(args),
-        },
-        ExprKind::ClassResolver { namespace, name } => ExprView::ClassResolver {
-            namespace: *namespace,
-            name: *name,
-        },
-        ExprKind::Message {
-            target,
-            name,
-            super_class,
-            args,
-            cascade,
-        } => ExprView::Message {
-            target: ExprRef::tree(target),
-            name,
-            super_class: super_class.as_deref().map(ExprRef::tree),
-            args: Args::tree(args),
-            cascade: *cascade,
-        },
-        ExprKind::List(items) => ExprView::List(Args::tree(items)),
-        ExprKind::Logical(items) => ExprView::Logical(Args::tree_required(items)),
-        ExprKind::VariableReference(inner) => match inner.kind {
-            ExprKind::Variable(symbol) => ExprView::VariableReference {
-                symbol,
-                stem: false,
-            },
-            ExprKind::Stem(symbol) => ExprView::VariableReference { symbol, stem: true },
-            _ => panic!("a variable reference names a variable or a stem"),
-        },
+        ExprRef { exprs: self, id }
     }
 }
 
@@ -283,23 +202,15 @@ fn arena_view(exprs: &Exprs, id: ExprId) -> ExprView<'_> {
 }
 
 impl<'a> Args<'a> {
-    pub(crate) fn tree(list: &'a [Option<Expr>]) -> Args<'a> {
+    /// A node's children, or an instruction's list whose items are all
+    /// present, over `exprs`; an `Omitted` node reads as omitted.
+    pub(crate) fn edges(exprs: &'a Exprs, ids: &'a [ExprId]) -> Args<'a> {
         Args {
-            backing: ArgsBacking::Tree(list),
-        }
-    }
-
-    pub(crate) fn tree_required(list: &'a [Expr]) -> Args<'a> {
-        Args {
-            backing: ArgsBacking::TreeRequired(list),
+            backing: ArgsBacking::Edges { exprs, ids },
         }
     }
 
     /// An instruction's own list over `exprs`, where `None` is omitted.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "no code body holds an arena yet")
-    )]
     pub(crate) fn slots(exprs: &'a Exprs, ids: &'a [Option<ExprId>]) -> Args<'a> {
         Args {
             backing: ArgsBacking::Slots { exprs, ids },
@@ -309,8 +220,6 @@ impl<'a> Args<'a> {
     /// How many positions the list has, omitted ones included.
     pub fn len(self) -> usize {
         match self.backing {
-            ArgsBacking::Tree(list) => list.len(),
-            ArgsBacking::TreeRequired(list) => list.len(),
             ArgsBacking::Edges { ids, .. } => ids.len(),
             ArgsBacking::Slots { ids, .. } => ids.len(),
         }
@@ -324,10 +233,6 @@ impl<'a> Args<'a> {
     /// omitted.
     pub fn get(self, index: usize) -> Option<Option<ExprRef<'a>>> {
         match self.backing {
-            ArgsBacking::Tree(list) => list.get(index).map(|item| item.as_ref().map(ExprRef::tree)),
-            ArgsBacking::TreeRequired(list) => {
-                list.get(index).map(|item| Some(ExprRef::tree(item)))
-            }
             ArgsBacking::Edges { exprs, ids } => ids.get(index).map(|&id| {
                 (!matches!(exprs.node(id).kind(), NodeKind::Omitted)).then(|| exprs.get(id))
             }),

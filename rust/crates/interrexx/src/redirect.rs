@@ -721,7 +721,7 @@ impl Interp {
                 (Pending::Stem(object), Origin::Stem(object))
             }
             Redirection::Using(expression) => {
-                let object = self.eval(code, code.body.expr(expression))?;
+                let object = self.eval(code, code.body.expr(*expression))?;
                 self.roots.activity_mut().push_temp(object);
                 self.trace_redirect_target(Stream::Input, object)?;
                 let origin = if self.is_stem_object(object) {
@@ -735,7 +735,7 @@ impl Interp {
             }
             Redirection::Stream(expression) => {
                 let name =
-                    self.redirect_stream_name(code, code.body.expr(expression), Stream::Input)?;
+                    self.redirect_stream_name(code, code.body.expr(*expression), Stream::Input)?;
                 (Pending::Stream(name.clone()), Origin::Name(name))
             }
         })
@@ -832,13 +832,13 @@ impl Interp {
                 Ok(Target::Stem { object, append })
             }
             Redirection::Using(expression) => {
-                let object = self.eval(code, code.body.expr(expression))?;
+                let object = self.eval(code, code.body.expr(*expression))?;
                 self.roots.activity_mut().push_temp(object);
                 self.trace_redirect_target(stream, object)?;
                 self.using_output_target(object, option, input_name)
             }
             Redirection::Stream(expression) => {
-                let name = self.redirect_stream_name(code, code.body.expr(expression), stream)?;
+                let name = self.redirect_stream_name(code, code.body.expr(*expression), stream)?;
                 self.named_output_target(name, append, input_name)
             }
         }

@@ -82,7 +82,7 @@ fn raise_has_result(raise: &Raise) -> bool {
 
 /// The `RETURN` or `EXIT` expression of `raise`, if it has one.
 fn raise_result_expr<'a>(body: &'a CodeBody, raise: &'a Raise) -> Option<ExprRef<'a>> {
-    raise.result.as_ref()?.value.as_ref().map(|e| body.expr(e))
+    raise.result.as_ref()?.value.as_ref().map(|e| body.expr(*e))
 }
 
 /// Expression `slot` of `raise`, as a compiled `RAISE` addresses them: `0`
@@ -103,7 +103,7 @@ pub(crate) fn raise_slot<'a>(
         3 => return raise_result_expr(code, raise),
         item => raise.array.as_deref()?.get(usize::from(item - 4))?.as_ref(),
     };
-    expr.map(|expr| code.expr(expr))
+    expr.map(|expr| code.expr(*expr))
 }
 
 /// What a `RAISE` keeps of each expression once its part has run: the
@@ -141,15 +141,15 @@ impl Interp {
     ) -> Result<Flow, Failure> {
         let mut held = RaiseHeld::default();
         if let Some(expr) = &raise.rc {
-            let value = self.eval(code, code.body.expr(expr))?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             held.code = Some(self.raise_code(raise, value)?);
         }
         if let Some(expr) = &raise.description {
-            let value = self.eval(code, code.body.expr(expr))?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             held.description = Some(self.raise_description(raise, value)?);
         }
         if let Some(expr) = &raise.additional {
-            let value = self.eval(code, code.body.expr(expr))?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             self.raise_additional_operand(raise, value)?;
             held.additional = Some(value);
         }
@@ -157,7 +157,7 @@ impl Interp {
             let mut values = Vec::with_capacity(items.len());
             for item in items {
                 let value = match item {
-                    Some(expr) => Some(self.eval(code, code.body.expr(expr))?),
+                    Some(expr) => Some(self.eval(code, code.body.expr(*expr))?),
                     None => None,
                 };
                 self.raise_item(value)?;

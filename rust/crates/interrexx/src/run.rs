@@ -122,18 +122,18 @@ pub(crate) fn forward_option_parts<'a>(
     forward: &'a Forward,
 ) -> [(ForwardPart, Option<ExprRef<'a>>); 4] {
     [
-        (ForwardPart::To, forward.to.as_ref().map(|e| body.expr(e))),
+        (ForwardPart::To, forward.to.as_ref().map(|e| body.expr(*e))),
         (
             ForwardPart::Message,
-            forward.message.as_ref().map(|e| body.expr(e)),
+            forward.message.as_ref().map(|e| body.expr(*e)),
         ),
         (
             ForwardPart::Class,
-            forward.class.as_ref().map(|e| body.expr(e)),
+            forward.class.as_ref().map(|e| body.expr(*e)),
         ),
         (
             ForwardPart::Arguments,
-            forward.arguments.as_ref().map(|e| body.expr(e)),
+            forward.arguments.as_ref().map(|e| body.expr(*e)),
         ),
     ]
 }
@@ -147,7 +147,7 @@ fn forward_slot<'a>(body: &'a CodeBody, forward: &'a Forward, slot: u32) -> Opti
             .as_ref()?
             .get(usize::cast_from(item))?
             .as_ref()
-            .map(|e| body.expr(e));
+            .map(|e| body.expr(*e));
     }
     forward_option_parts(body, forward)[usize::cast_from(slot)].1
 }
@@ -740,7 +740,7 @@ impl Interp {
         match &instruction.kind {
             InstructionKind::Guard(guard) => self.exec_guard(code, index, guard, None),
             InstructionKind::Reply { expression } => {
-                self.exec_reply(code, expression.as_ref().map(|e| code.body.expr(e)))
+                self.exec_reply(code, expression.as_ref().map(|e| code.body.expr(*e)))
             }
             // `FORWARD` and its options. See `exec_forward`.
             InstructionKind::Forward(forward) => self.exec_forward(code, forward),
@@ -770,7 +770,7 @@ impl Interp {
                         index,
                         instruction,
                         source,
-                        code.body.expr(expression),
+                        code.body.expr(*expression),
                         None,
                         None,
                     ),
@@ -788,7 +788,7 @@ impl Interp {
                     let environment = match (&address.environment, &address.dynamic) {
                         (Some(name), _) => name.to_vec(),
                         (None, Some(expression)) => {
-                            let value = self.eval(code, code.body.expr(expression))?;
+                            let value = self.eval(code, code.body.expr(*expression))?;
                             self.roots.activity_mut().push_temp(value);
                             let value = self.required_string_value(value)?;
                             self.to_text(value).into_owned()
@@ -805,7 +805,7 @@ impl Interp {
                         index,
                         instruction,
                         source,
-                        code.body.expr(command),
+                        code.body.expr(*command),
                         Some(&environment),
                         address.io.as_deref(),
                     );
@@ -832,7 +832,7 @@ impl Interp {
         match &instruction.kind {
             InstructionKind::Say { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(*expression))?),
                     None => None,
                 };
                 self.say_evaluated(value)?;
@@ -840,10 +840,10 @@ impl Interp {
             }
 
             InstructionKind::Assignment { target, value } => {
-                let value = self.eval(code, code.body.expr(value))?;
+                let value = self.eval(code, code.body.expr(*value))?;
                 // `None`: this engine resolves nothing ahead of time, so the
                 // write resolves its own slot the way it always has.
-                self.assign_evaluated(code, code.body.expr(target), value, None, false)?;
+                self.assign_evaluated(code, code.body.expr(*target), value, None, false)?;
                 Ok(Flow::Next)
             }
 
@@ -869,7 +869,7 @@ impl Interp {
                 self.exec_numeric(
                     code,
                     setting,
-                    expression.as_ref().map(|e| code.body.expr(e)),
+                    expression.as_ref().map(|e| code.body.expr(*e)),
                 )?;
                 Ok(Flow::Next)
             }
@@ -891,7 +891,7 @@ impl Interp {
             // that `execute` does not already have.
             InstructionKind::Exit { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(*expression))?),
                     None => None,
                 };
                 self.returned_value(value, ReturnKeyword::Exit)
@@ -911,7 +911,7 @@ impl Interp {
             // run it against **this** activation, through `run_fragment`. The
             // arm is thin because `run_fragment` is where the work is.
             InstructionKind::Interpret { expression } => {
-                let value = self.eval(code, code.body.expr(expression))?;
+                let value = self.eval(code, code.body.expr(*expression))?;
                 self.exec_interpret_value(index, instruction, source, value)
             }
 
@@ -1016,7 +1016,7 @@ impl Interp {
                 // while `nm = 'sub'; call (nm)` is Error 43.1 naming `sub`,
                 // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
-                    let value = self.eval(code, code.body.expr(target))?;
+                    let value = self.eval(code, code.body.expr(*target))?;
                     self.exec_dynamic_call(code, value, code.body.args(args))
                 }
                 // `CALL ON cond NAME label` / `CALL OFF cond`. Shares every
@@ -1054,7 +1054,7 @@ impl Interp {
             // `RETURN` ends the program.
             InstructionKind::Return { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(*expression))?),
                     None => None,
                 };
                 self.returned_value(value, ReturnKeyword::Return)
@@ -1085,7 +1085,7 @@ impl Interp {
                 // ordinary non-label string all raise 16.1 naming that exact
                 // text, none of them a different error.
                 interrexx_parse::Signal::Value(expr) => {
-                    let value = self.eval(code, code.body.expr(expr))?;
+                    let value = self.eval(code, code.body.expr(*expr))?;
                     // Rooted here rather than inside `signal_to_value`, which
                     // the compiled stream reaches with the value already in a
                     // register: the temp is what roots it across the render
@@ -1137,7 +1137,7 @@ impl Interp {
             // `crate::ir::Op::Queue`.
             InstructionKind::Push { expression } | InstructionKind::Queue { expression } => {
                 let value = match expression {
-                    Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
+                    Some(expression) => Some(self.eval(code, code.body.expr(*expression))?),
                     None => None,
                 };
                 let keyword = if matches!(instruction.kind, InstructionKind::Push { .. }) {
@@ -1169,14 +1169,14 @@ impl Interp {
             // `exec_message`.
             InstructionKind::Message { term, value } => self.exec_message(
                 code,
-                code.body.expr(term),
-                value.as_ref().map(|v| code.body.expr(v)),
+                code.body.expr(*term),
+                value.as_ref().map(|v| code.body.expr(*v)),
             ),
 
             // `OPTIONS`: the expression is evaluated, converted and traced, and
             // nothing else.
             InstructionKind::Options { expression } => {
-                let value = self.eval(code, code.body.expr(expression))?;
+                let value = self.eval(code, code.body.expr(*expression))?;
                 self.exec_options_value(value)?;
                 Ok(Flow::Next)
             }
@@ -1855,13 +1855,13 @@ impl Interp {
                             chunk,
                             registers,
                             index,
-                            code.body.expr(condition),
+                            code.body.expr(*condition),
                             trace,
                             raised_guard_not_logical,
                         ),
                         None => self.eval_condition(
                             code,
-                            code.body.expr(condition),
+                            code.body.expr(*condition),
                             trace,
                             raised_guard_not_logical,
                         ),
@@ -1985,12 +1985,12 @@ impl Interp {
         // `ARRAY` items' own `>A>` lines ahead of its keyword line.
         let target = match &forward.to {
             None => receiver,
-            Some(expr) => self.forward_keyword(code, code.body.expr(expr), "TO")?,
+            Some(expr) => self.forward_keyword(code, code.body.expr(*expr), "TO")?,
         };
         let message = match &forward.message {
             None => own_name,
             Some(expr) => {
-                let value = self.forward_keyword(code, code.body.expr(expr), "MESSAGE")?;
+                let value = self.forward_keyword(code, code.body.expr(*expr), "MESSAGE")?;
                 let text = self.required_string_value(value)?;
                 Rc::from(self.to_text(text).to_ascii_uppercase())
             }
@@ -1998,7 +1998,7 @@ impl Interp {
         let start_scope = match &forward.class {
             None => None,
             Some(expr) => {
-                let value = self.eval(code, code.body.expr(expr))?;
+                let value = self.eval(code, code.body.expr(*expr))?;
                 self.roots.activity_mut().push_temp(value);
                 self.forward_class(value)?;
                 Some(value)
@@ -2241,7 +2241,7 @@ impl Interp {
         mark: usize,
     ) -> Result<(), Failure> {
         if let Some(expr) = &forward.arguments {
-            let value = self.forward_keyword(code, code.body.expr(expr), "ARGUMENTS")?;
+            let value = self.forward_keyword(code, code.body.expr(*expr), "ARGUMENTS")?;
             return self.convert_forward_arguments(value, values, mark);
         }
         if let Some(items) = &forward.array {
@@ -2252,7 +2252,7 @@ impl Interp {
                         values.push(None);
                     }
                     Some(expr) => {
-                        values.push(Some(self.eval_traced_argument(code, code.body.expr(expr))?));
+                        values.push(Some(self.eval_traced_argument(code, code.body.expr(*expr))?));
                     }
                 }
             }
@@ -2854,7 +2854,7 @@ impl Interp {
             },
             _ => return None,
         };
-        Some(body.expr(expression))
+        Some(body.expr(*expression))
     }
 
     /// Whether the instruction [`Interp::exec_value_expression`] names runs
@@ -3931,7 +3931,7 @@ impl Interp {
         path: NodePath,
     ) -> Option<ExprRef<'a>> {
         let mut node = match (&instruction.kind, slot) {
-            (InstructionKind::Assignment { value, .. }, 0) => body.expr(value),
+            (InstructionKind::Assignment { value, .. }, 0) => body.expr(*value),
             // The one expression of an instruction that computes a value and
             // does something with it, slot `0`. A bare form holds no
             // expression at all, so it names no node and matches no arm here.
@@ -3952,7 +3952,7 @@ impl Interp {
                     expression: Some(expression),
                 },
                 0,
-            ) => body.expr(expression),
+            ) => body.expr(*expression),
             (InstructionKind::Forward(forward), slot) => {
                 forward_slot(body, forward, u32::from(slot))?
             }
@@ -3961,7 +3961,7 @@ impl Interp {
             // `push_value` like any other, so a call inside it emits an
             // `Op::CallExpr` that addresses the node from here.
             (InstructionKind::Signal(signal), 0) => match &**signal {
-                interrexx_parse::Signal::Value(expression) => body.expr(expression),
+                interrexx_parse::Signal::Value(expression) => body.expr(*expression),
                 interrexx_parse::Signal::Label(_) | interrexx_parse::Signal::Trap(_) => {
                     return None;
                 }
@@ -3972,7 +3972,7 @@ impl Interp {
                 | InstructionKind::Pull(parse),
                 0,
             ) => match &parse.source {
-                interrexx_parse::ParseSource::Value(Some(expression)) => body.expr(expression),
+                interrexx_parse::ParseSource::Value(Some(expression)) => body.expr(*expression),
                 _ => return None,
             },
             (
@@ -3985,10 +3985,9 @@ impl Interp {
                     .template
                     .get(usize::from(slot) - 1)?
                     .as_ref()?
-                    .value
-                    .as_ref()?,
+                    .value?,
             ),
-            (InstructionKind::If { condition, .. }, 0) => body.expr(condition),
+            (InstructionKind::If { condition, .. }, 0) => body.expr(*condition),
             // An instruction run by `Op::ExecValue`, whose expression is
             // slot `0`.
             (kind, 0) if let Some(expression) = Self::exec_value_expression(body, kind) => {
@@ -4000,12 +3999,12 @@ impl Interp {
                     case: Some(case), ..
                 },
                 0,
-            ) => body.expr(case),
-            (InstructionKind::When { condition, .. }, 0) => body.expr(condition),
+            ) => body.expr(*case),
+            (InstructionKind::When { condition, .. }, 0) => body.expr(*condition),
             (
                 InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. },
                 slot,
-            ) => match body.expr(condition).kind() {
+            ) => match body.expr(*condition).kind() {
                 ExprView::Logical(items) => items.get(usize::from(slot - 1))??,
                 _ => return None,
             },
@@ -4019,7 +4018,7 @@ impl Interp {
             (InstructionKind::Do(loop_body) | InstructionKind::Loop(loop_body), slot)
                 if u32::from(slot) == LOOP_CONDITION_SLOT =>
             {
-                body.expr(&loop_body.conditional.as_ref()?.condition)
+                body.expr(loop_body.conditional.as_ref()?.condition)
             }
             (InstructionKind::Do(loop_body) | InstructionKind::Loop(loop_body), slot) => {
                 loop_header_slot(body, loop_body, u32::from(slot))?
@@ -4033,13 +4032,13 @@ impl Interp {
                 _ => return None,
             },
             // A message instruction's term, and the assignment form's value.
-            (InstructionKind::Message { term, .. }, 0) => body.expr(term),
+            (InstructionKind::Message { term, .. }, 0) => body.expr(*term),
             (
                 InstructionKind::Message {
                     value: Some(value), ..
                 },
                 1,
-            ) => body.expr(value),
+            ) => body.expr(*value),
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
             (InstructionKind::Raise(raise), slot) => raise_slot(body, raise, slot)?,
             (InstructionKind::Use(use_), slot) => {
@@ -4106,7 +4105,7 @@ impl Interp {
                 self.eval(code, expr)
             }
             (InstructionKind::If { condition, .. }, 0) => {
-                let holds = self.eval_if_condition(code, code.body.expr(condition))?;
+                let holds = self.eval_if_condition(code, code.body.expr(*condition))?;
                 // In range unconditionally: `SMALL_INT_MAX` is far above one.
                 Ok(ObjRef::small_int(i64::from(holds)).unwrap_or(ObjRef::NIL))
             }
@@ -4116,7 +4115,7 @@ impl Interp {
                     ..
                 },
                 0,
-            ) => self.select_case(code, code.body.expr(case_expr)),
+            ) => self.select_case(code, code.body.expr(*case_expr)),
             // A `DO`/`LOOP` header's `slot`th expression, in the order
             // `loop_header_plan` puts them in -- the order they were written,
             // which is the order they are evaluated. The expression is
@@ -4151,7 +4150,7 @@ impl Interp {
                 let interrexx_parse::Signal::Value(expr) = &**signal else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, code.body.expr(expr))
+                self.eval(code, code.body.expr(*expr))
             }
             // `PARSE VALUE expr WITH`'s own expression, on the same terms. The
             // `>K>` echo belongs to `Op::ParseBegin`. This fallback is only for
@@ -4166,10 +4165,10 @@ impl Interp {
                 let interrexx_parse::ParseSource::Value(Some(expr)) = &parse.source else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, code.body.expr(expr))
+                self.eval(code, code.body.expr(*expr))
             }
             (InstructionKind::Assignment { value, .. }, 0) => {
-                self.eval(code, code.body.expr(value))
+                self.eval(code, code.body.expr(*value))
             }
             (
                 InstructionKind::Say {
@@ -4188,7 +4187,7 @@ impl Interp {
                     expression: Some(expression),
                 },
                 0,
-            ) => self.eval(code, code.body.expr(expression)),
+            ) => self.eval(code, code.body.expr(*expression)),
             (kind, _) => Err(Loud::instruction(kind).into()),
         }
     }

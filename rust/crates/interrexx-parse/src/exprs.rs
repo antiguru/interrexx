@@ -204,10 +204,6 @@ pub struct Exprs {
 
 /// How far an arena reached, for [`Exprs::rewind`].
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the parser does not build an arena yet")
-)]
 pub(crate) struct Mark {
     nodes: u32,
     edges: u32,
@@ -402,10 +398,6 @@ impl Exprs {
     }
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the parser does not build an arena yet")
-)]
 impl Exprs {
     /// Appends `bytes` and answers their range.
     pub(crate) fn push_bytes(&mut self, bytes: &[u8]) -> BytesRange {

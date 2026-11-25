@@ -14,6 +14,7 @@ use std::ops::Range;
 
 use crate::Program;
 use crate::ast::*;
+use crate::exprs::{BytesRange, CallTarget, EdgeRange, ExprId, Exprs, Node, NodeKind};
 use crate::selector::{Selector, SelectorTable};
 use crate::source::{ProgramSource, SourceKind};
 use crate::token::{Operator, SymbolId, SymbolTable};
@@ -23,7 +24,7 @@ const MAGIC: &[u8; 8] = b"RXPARSED";
 
 /// The layout this module writes and reads. A change to what any type below
 /// writes changes it.
-const FORMAT: u32 = 3;
+const FORMAT: u32 = 4;
 
 /// `program`, which was parsed from its own source text, as an image.
 pub fn program_image(program: &Program) -> Vec<u8> {
@@ -203,6 +204,49 @@ impl Image for usize {
 
     fn get(input: &mut Reader<'_>) -> Option<Self> {
         input.usize()
+    }
+}
+
+impl Image for u32 {
+    fn put(&self, out: &mut Writer) {
+        out.usize(*self as usize);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        u32::try_from(input.usize()?).ok()
+    }
+}
+
+/// A node id as the `u32` it is, never 0.
+impl Image for ExprId {
+    fn put(&self, out: &mut Writer) {
+        self.0.get().put(out);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        std::num::NonZeroU32::new(u32::get(input)?).map(ExprId)
+    }
+}
+
+/// The arena's vectors, its literal bytes as one run.
+impl Image for Exprs {
+    fn put(&self, out: &mut Writer) {
+        let Exprs {
+            nodes,
+            edges,
+            bytes,
+        } = self;
+        nodes.put(out);
+        edges.put(out);
+        out.bytes(bytes);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        Some(Exprs {
+            nodes: Image::get(input)?,
+            edges: Image::get(input)?,
+            bytes: input.bytes()?.to_vec(),
+        })
     }
 }
 
@@ -509,40 +553,53 @@ image_enum!(Operator {
     31 => Backslash,
 });
 
-image_struct!(Expr { kind, span });
-
 image_enum!(PrefixOp {
     0 => Plus,
     1 => Minus,
     2 => Not,
 });
 
+image_struct!(EdgeRange { start, end });
+
+image_struct!(BytesRange { start, end });
+
 image_enum!(CallTarget {
     0 => Symbol(id),
     1 => Literal(bytes),
 });
 
-image_enum!(ExprKind {
+image_enum!(NodeKind {
     0 => Literal(bytes),
     1 => Constant(id),
     2 => Variable(id),
     3 => Stem(id),
     4 => Compound(id),
     5 => DotVariable(id),
-    6 => Prefix { op, operand },
-    7 => Binary { op, left, right },
-    8 => Call { target, args },
-    9 => QualifiedCall { namespace, name, args },
-    10 => ClassResolver { namespace, name },
-    11 => Message { target, name, super_class, args, cascade },
-    12 => List(items),
-    13 => Logical(items),
-    14 => VariableReference(inner),
+    6 => VariableReference { symbol, stem },
+    7 => ClassResolver { namespace, name },
+    8 => Omitted,
+    9 => Prefix { op, operand },
+    10 => Binary { op, left, right },
+    11 => Call { target, args },
+    12 => QualifiedCall { namespace, name, args },
+    13 => Message { name, cascade, scoped, children },
+    14 => List(items),
+    15 => Logical(items),
+});
+
+image_struct!(Node {
+    kind,
+    start,
+    end,
+    first,
+    parent,
+    position
 });
 
 image_struct!(CodeBody {
     instructions,
-    labels
+    labels,
+    exprs
 });
 
 image_enum!(EndStyle {
@@ -877,7 +934,7 @@ image_struct!(ConstantDirective { name, value });
 image_enum!(ConstantValue {
     0 => Name,
     1 => Text(text),
-    2 => Expression(expression),
+    2 => Expression { exprs, root },
 });
 
 image_struct!(Annotate {

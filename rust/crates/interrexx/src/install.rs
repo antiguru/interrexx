@@ -1110,7 +1110,7 @@ impl Interp {
             let value = match &constant.value {
                 ConstantValue::Name => self.literal(&constant.name),
                 ConstantValue::Text(text) => self.literal(text),
-                ConstantValue::Expression(_) => continue,
+                ConstantValue::Expression { .. } => continue,
             };
             self.record_constant_value(id, index, value);
         }

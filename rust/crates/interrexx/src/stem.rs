@@ -1163,7 +1163,7 @@ mod tests {
         let id = match &program.main.instructions[0].kind {
             InstructionKind::Say {
                 expression: Some(expr),
-            } => match program.main.expr(expr).kind() {
+            } => match program.main.expr(*expr).kind() {
                 ExprView::Compound(id) => id,
                 other => panic!("expected a compound expression, got {other:?}"),
             },

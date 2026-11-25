@@ -5,7 +5,7 @@ use std::cell::RefCell;
 
 use interrexx_inventory::errors::{E35_912, E35_918, E35_929};
 
-use crate::ast::{Expr, ExprKind};
+use crate::exprs::{ExprId, ExprView, Exprs};
 use crate::clause::split_clauses;
 use crate::selector::SelectorTable;
 use crate::token::{ParseCtx, ParseError, SymbolTable, TokenCursor};
@@ -26,9 +26,14 @@ pub(super) enum Entry {
     Logical(Terminators),
 }
 
-/// Parses `text` as one clause and returns the tree with the table its
-/// `SymbolId`s belong to.
-pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), ParseError> {
+/// Parses `text` as one clause and returns the arena and the root with the
+/// table its `SymbolId`s belong to. A parse that succeeds leaves an arena
+/// whose one root is the answer, which is checked here, so every grammar
+/// test also checks that each discarded trial was rewound.
+pub(super) fn parse(
+    text: &str,
+    entry: Entry,
+) -> Result<(Exprs, ExprId, SymbolTable), ParseError> {
     let source = ProgramSource::new(text.as_bytes().to_vec(), SourceKind::Program);
     let scanned = scan(&source).expect("the test input scans");
     let clauses = split_clauses(&scanned.tokens).expect("the test input splits");
@@ -41,6 +46,7 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), Par
         clauses[0].label.is_none(),
         "{text:?} was read as a label clause"
     );
+    let exprs = RefCell::new(Exprs::default());
     let result = {
         let selectors = RefCell::new(SelectorTable::new());
         let ctx = ParseCtx {
@@ -48,6 +54,7 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), Par
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
+            exprs: &exprs,
             keywords: scanned.keywords,
             resources: &scanned.resources,
             required_level: None,
@@ -60,31 +67,34 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), Par
             Entry::Logical(term) => parse_logical(&ctx, &mut cursor, term, E35_929),
         }
     };
-    result.map(|expr| (expr, scanned.symbols))
+    let root = result?;
+    let exprs = exprs.into_inner();
+    assert_eq!(exprs.check([root]), Ok(()), "{text:?} leaves a consistent arena");
+    Ok((exprs, root, scanned.symbols))
 }
 
 /// The canonical shape of `text`, which must parse.
 fn shape(text: &str) -> String {
-    let (expr, symbols) =
+    let (exprs, root, symbols) =
         parse(text, Entry::Required).unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
-    check_spans(&expr, text);
-    expr.shape(&symbols)
+    check_spans(&exprs, root, text);
+    exprs.shape(root, &symbols)
 }
 
 /// The shape of `text` parsed with a terminator set, plus the source of
 /// whatever the parse stopped before.
 fn shape_until(text: &str, term: Terminators) -> String {
-    let (expr, symbols) = parse(text, Entry::Optional(term))
+    let (exprs, root, symbols) = parse(text, Entry::Optional(term))
         .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
-    check_spans(&expr, text);
-    expr.shape(&symbols)
+    check_spans(&exprs, root, text);
+    exprs.shape(root, &symbols)
 }
 
 fn shape_logical(text: &str, term: Terminators) -> String {
-    let (expr, symbols) = parse(text, Entry::Logical(term))
+    let (exprs, root, symbols) = parse(text, Entry::Logical(term))
         .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
-    check_spans(&expr, text);
-    expr.shape(&symbols)
+    check_spans(&exprs, root, text);
+    exprs.shape(root, &symbols)
 }
 
 /// The error number and sub-number `text` raises, which it must.
@@ -102,23 +112,26 @@ fn logical_error(text: &str, term: Terminators) -> (u16, u16) {
     (err.code, err.sub)
 }
 
-/// Asserts the gate's span property over a whole tree: every node's span
-/// contains each of its children's, and the root stays inside `text`.
-pub(super) fn check_spans(expr: &Expr, text: &str) {
-    assert!(
-        expr.span.end <= text.len() && expr.span.start <= expr.span.end,
-        "span {:?} is not a range inside {text:?}",
-        expr.span
-    );
-    expr.kind.for_each_child(&mut |child| {
+/// Asserts the gate's span property over the expression at `root`: every
+/// node's span lies inside `text`, and inside its parent's unless it is an
+/// omitted position, whose empty span marks where it was found.
+pub(super) fn check_spans(exprs: &Exprs, root: ExprId, text: &str) {
+    for node in exprs.range(root) {
+        let span = node.span();
         assert!(
-            expr.span.start <= child.span.start && child.span.end <= expr.span.end,
-            "in {text:?}: node span {:?} does not contain child span {:?}",
-            expr.span,
-            child.span
+            span.end <= text.len() && span.start <= span.end,
+            "span {span:?} is not a range inside {text:?}"
         );
-        check_spans(child, text);
-    });
+        if let Some(parent) = node.parent()
+            && !matches!(node.kind(), crate::exprs::NodeKind::Omitted)
+        {
+            let outer = exprs.node(parent).span();
+            assert!(
+                outer.start <= span.start && span.end <= outer.end,
+                "in {text:?}: node span {outer:?} does not contain child span {span:?}"
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -651,11 +664,13 @@ fn an_empty_required_expression_raises_the_sub_number_the_caller_supplied() {
     let source = ProgramSource::new(b"nop".to_vec(), SourceKind::Program);
     let scanned = scan(&source).expect("scans");
     let selectors = RefCell::new(SelectorTable::new());
+    let exprs = RefCell::new(Exprs::default());
     let ctx = ParseCtx {
         source: &source,
         tokens: &scanned.tokens,
         symbols: &scanned.symbols,
         selectors: &selectors,
+        exprs: &exprs,
         keywords: scanned.keywords,
         resources: &scanned.resources,
         required_level: None,
@@ -675,42 +690,44 @@ fn an_empty_required_expression_raises_the_sub_number_the_caller_supplied() {
 #[test]
 fn a_nodes_span_covers_its_own_tokens_and_not_the_parentheses_around_them() {
     let text = "(a) + b";
-    let (expr, _) = parse(text, Entry::Required).expect("parses");
+    let (exprs, root, _) = parse(text, Entry::Required).expect("parses");
+    let expr = exprs.get(root);
     // A node's span runs from its leftmost token to its rightmost, and the
     // `+` node's leftmost token is `a` rather than `(`, because
     // `subterm` consumes the parentheses and returns the inner node
     // unchanged. So the span starts at 1.
-    assert_eq!(expr.span, 1..7);
+    assert_eq!(expr.span(), 1..7);
     // Slicing that span therefore yields unbalanced text, which is expected
     // and not a defect: a span is the extent from one token's start to
     // another's end, not a self-contained substring, and the same is true of a
     // clause span that crosses a comma continuation. The property the gate
     // checks is containment, and it holds: 1..7 contains both 1..2 and 6..7.
-    assert_eq!(&text[expr.span.clone()], "a) + b");
-    let ExprKind::Binary { left, right, .. } = &expr.kind else {
-        panic!("expected a binary node, got {:?}", expr.kind);
+    assert_eq!(&text[expr.span()], "a) + b");
+    let ExprView::Binary { left, right, .. } = expr.kind() else {
+        panic!("expected a binary node, got {:?}", expr.kind());
     };
-    assert_eq!(left.span, 1..2);
-    assert_eq!(right.span, 6..7);
+    assert_eq!(left.span(), 1..2);
+    assert_eq!(right.span(), 6..7);
 }
 
 #[test]
 fn a_leaf_span_is_exactly_its_token() {
     let text = "abc.def";
-    let (expr, _) = parse(text, Entry::Required).expect("parses");
-    assert_eq!(expr.span, 0..7);
-    assert_eq!(&text[expr.span.clone()], "abc.def");
+    let (exprs, root, _) = parse(text, Entry::Required).expect("parses");
+    let span = exprs.node(root).span();
+    assert_eq!(span, 0..7);
+    assert_eq!(&text[span], "abc.def");
 }
 
 #[test]
 fn a_call_span_reaches_its_closing_parenthesis() {
     let text = "f(1, 2)";
-    let (expr, _) = parse(text, Entry::Required).expect("parses");
-    assert_eq!(expr.span, 0..7);
+    let (exprs, root, _) = parse(text, Entry::Required).expect("parses");
+    assert_eq!(exprs.node(root).span(), 0..7);
     // And a message span reaches past its own closing parenthesis too.
     let text = "a~m(1)";
-    let (expr, _) = parse(text, Entry::Required).expect("parses");
-    assert_eq!(expr.span, 0..6);
+    let (exprs, root, _) = parse(text, Entry::Required).expect("parses");
+    assert_eq!(exprs.node(root).span(), 0..6);
 }
 
 #[test]
@@ -726,8 +743,9 @@ fn every_node_in_a_dense_expression_contains_its_operands() {
         ">stem.",
         "a.b.c d.e",
     ] {
-        let (expr, _) = parse(text, Entry::Required).unwrap_or_else(|e| panic!("{text:?}: {e:?}"));
-        check_spans(&expr, text);
+        let (exprs, root, _) =
+            parse(text, Entry::Required).unwrap_or_else(|e| panic!("{text:?}: {e:?}"));
+        check_spans(&exprs, root, text);
     }
 }
 
@@ -837,8 +855,8 @@ fn program_selectors(text: &str) -> Vec<crate::Selector> {
         .map(|instruction| match &instruction.kind {
             crate::InstructionKind::Say {
                 expression: Some(expr),
-            } => match &expr.kind {
-                ExprKind::Message { name, .. } => name.clone(),
+            } => match program.main.expr(*expr).kind() {
+                ExprView::Message { name, .. } => name.clone(),
                 other => panic!("a SAY of something other than a message send: {other:?}"),
             },
             other => panic!("an instruction other than SAY: {other:?}"),

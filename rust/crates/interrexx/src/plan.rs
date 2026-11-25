@@ -591,12 +591,12 @@ impl Plan {
     fn note_instruction(&mut self, body: &CodeBody, kind: &InstructionKind, symbols: &SymbolTable) {
         match kind {
             InstructionKind::Assignment { target, value } => {
-                self.note(body.expr(target), symbols);
-                self.note(body.expr(value), symbols);
+                self.note(body.expr(*target), symbols);
+                self.note(body.expr(*value), symbols);
             }
             InstructionKind::Message { term, value } => {
-                self.note(body.expr(term), symbols);
-                self.note_opt(value.as_ref().map(|e| body.expr(e)), symbols);
+                self.note(body.expr(*term), symbols);
+                self.note_opt(value.as_ref().map(|e| body.expr(*e)), symbols);
             }
             InstructionKind::Command { expression }
             | InstructionKind::Push { expression }
@@ -606,28 +606,28 @@ impl Plan {
             | InstructionKind::Exit { expression }
             | InstructionKind::Reply { expression }
             | InstructionKind::Numeric { expression, .. } => {
-                self.note_opt(expression.as_ref().map(|e| body.expr(e)), symbols)
+                self.note_opt(expression.as_ref().map(|e| body.expr(*e)), symbols)
             }
             InstructionKind::Interpret { expression } | InstructionKind::Options { expression } => {
                 self.keeps_the_trace_setting = false;
-                self.note(body.expr(expression), symbols);
+                self.note(body.expr(*expression), symbols);
             }
             InstructionKind::Do(loop_) | InstructionKind::Loop(loop_) => {
                 self.note_loop(body, loop_, symbols);
             }
             InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. } => {
-                self.note(body.expr(condition), symbols);
+                self.note(body.expr(*condition), symbols);
             }
             InstructionKind::WhenCase { values, .. } => {
                 for value in values {
-                    self.note(body.expr(value), symbols);
+                    self.note(body.expr(*value), symbols);
                 }
             }
             InstructionKind::Select { case, .. } => {
-                self.note_opt(case.as_ref().map(|e| body.expr(e)), symbols)
+                self.note_opt(case.as_ref().map(|e| body.expr(*e)), symbols)
             }
             InstructionKind::Catch(handler) => {
-                self.note_opt(handler.variable.as_ref().map(|e| body.expr(e)), symbols);
+                self.note_opt(handler.variable.as_ref().map(|e| body.expr(*e)), symbols);
                 for condition in &handler.conditions {
                     if let Some(interrexx_parse::CatchCode::Variable(name)) = condition.code {
                         self.note_variable_ref(&VariableRef::Direct(name), symbols);
@@ -660,39 +660,39 @@ impl Plan {
             InstructionKind::Call(call) => self.note_call(body, call, symbols),
             InstructionKind::Signal(signal) => {
                 if let Signal::Value(expr) = &**signal {
-                    self.note(body.expr(expr), symbols);
+                    self.note(body.expr(*expr), symbols);
                 }
                 // `Label`/`Trap` name a label or a condition, neither a
                 // data variable.
             }
             InstructionKind::Guard(guard) => {
-                self.note_opt(guard.condition.as_ref().map(|e| body.expr(e)), symbols)
+                self.note_opt(guard.condition.as_ref().map(|e| body.expr(*e)), symbols)
             }
             InstructionKind::Forward(forward) => {
-                self.note_opt(forward.to.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(forward.message.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(forward.class.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(forward.arguments.as_ref().map(|e| body.expr(e)), symbols);
+                self.note_opt(forward.to.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(forward.message.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(forward.class.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(forward.arguments.as_ref().map(|e| body.expr(*e)), symbols);
                 if let Some(items) = &forward.array {
                     self.note_args(body.args(items), symbols);
                 }
             }
             InstructionKind::Raise(raise) => {
-                self.note_opt(raise.rc.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(raise.description.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(raise.additional.as_ref().map(|e| body.expr(e)), symbols);
+                self.note_opt(raise.rc.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(raise.description.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(raise.additional.as_ref().map(|e| body.expr(*e)), symbols);
                 if let Some(items) = &raise.array {
                     self.note_args(body.args(items), symbols);
                 }
                 if let Some(result) = &raise.result {
-                    self.note_opt(result.value.as_ref().map(|e| body.expr(e)), symbols);
+                    self.note_opt(result.value.as_ref().map(|e| body.expr(*e)), symbols);
                 }
             }
             InstructionKind::Use(use_) => match &**use_ {
                 Use::Arg { targets, .. } => {
                     for target in targets.iter().flatten() {
-                        self.note(body.expr(&target.target), symbols);
-                        self.note_opt(target.default.as_ref().map(|e| body.expr(e)), symbols);
+                        self.note(body.expr(target.target), symbols);
+                        self.note_opt(target.default.as_ref().map(|e| body.expr(*e)), symbols);
                     }
                 }
                 Use::Local { variables } => {
@@ -702,8 +702,8 @@ impl Plan {
                 }
             },
             InstructionKind::Address(address) => {
-                self.note_opt(address.dynamic.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(address.command.as_ref().map(|e| body.expr(e)), symbols);
+                self.note_opt(address.dynamic.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(address.command.as_ref().map(|e| body.expr(*e)), symbols);
                 if let Some(io) = &address.io {
                     for redirection in [&io.input, &io.output, &io.error] {
                         match redirection {
@@ -713,7 +713,7 @@ impl Plan {
                             // gives one, id and all.
                             Redirection::Stem(id) => self.bind(*id, symbols.name(*id)),
                             Redirection::Stream(expr) | Redirection::Using(expr) => {
-                                self.note(body.expr(expr), symbols);
+                                self.note(body.expr(*expr), symbols);
                             }
                             Redirection::Default | Redirection::Normal => {}
                         }
@@ -723,7 +723,7 @@ impl Plan {
             InstructionKind::Trace(trace) => {
                 self.keeps_the_trace_setting = false;
                 if let Trace::Value(expr) = trace {
-                    self.note(body.expr(expr), symbols);
+                    self.note(body.expr(*expr), symbols);
                 }
             }
         }
@@ -739,13 +739,13 @@ impl Plan {
         }
         match &loop_.kind {
             LoopKind::Simple | LoopKind::Forever => {}
-            LoopKind::Count(count) => self.note_opt(count.as_ref().map(|e| body.expr(e)), symbols),
+            LoopKind::Count(count) => self.note_opt(count.as_ref().map(|e| body.expr(*e)), symbols),
             LoopKind::Controlled(controlled) => {
                 self.bind(controlled.control, symbols.name(controlled.control));
-                self.note(body.expr(&controlled.initial), symbols);
-                self.note_opt(controlled.to.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(controlled.by.as_ref().map(|e| body.expr(e)), symbols);
-                self.note_opt(controlled.for_count.as_ref().map(|e| body.expr(e)), symbols);
+                self.note(body.expr(controlled.initial), symbols);
+                self.note_opt(controlled.to.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(controlled.by.as_ref().map(|e| body.expr(*e)), symbols);
+                self.note_opt(controlled.for_count.as_ref().map(|e| body.expr(*e)), symbols);
             }
             LoopKind::Over {
                 control,
@@ -753,8 +753,8 @@ impl Plan {
                 for_count,
             } => {
                 self.bind(*control, symbols.name(*control));
-                self.note(body.expr(target), symbols);
-                self.note_opt(for_count.as_ref().map(|e| body.expr(e)), symbols);
+                self.note(body.expr(*target), symbols);
+                self.note_opt(for_count.as_ref().map(|e| body.expr(*e)), symbols);
             }
             LoopKind::With {
                 index,
@@ -768,12 +768,12 @@ impl Plan {
                 if let Some(item) = item {
                     self.bind(*item, symbols.name(*item));
                 }
-                self.note(body.expr(target), symbols);
-                self.note_opt(for_count.as_ref().map(|e| body.expr(e)), symbols);
+                self.note(body.expr(*target), symbols);
+                self.note_opt(for_count.as_ref().map(|e| body.expr(*e)), symbols);
             }
         }
         if let Some(conditional) = &loop_.conditional {
-            self.note(body.expr(&conditional.condition), symbols);
+            self.note(body.expr(conditional.condition), symbols);
         }
     }
 
@@ -786,7 +786,7 @@ impl Plan {
     fn note_parse(&mut self, body: &CodeBody, parse: &Parse, symbols: &SymbolTable) {
         match &parse.source {
             ParseSource::Var(id) => self.bind(*id, symbols.name(*id)),
-            ParseSource::Value(expr) => self.note_opt(expr.as_ref().map(|e| body.expr(e)), symbols),
+            ParseSource::Value(expr) => self.note_opt(expr.as_ref().map(|e| body.expr(*e)), symbols),
             ParseSource::Arg
             | ParseSource::LineIn
             | ParseSource::Pull
@@ -794,7 +794,7 @@ impl Plan {
             | ParseSource::Version => {}
         }
         for trigger in parse.template.iter().flatten() {
-            self.note_opt(trigger.value.as_ref().map(|e| body.expr(e)), symbols);
+            self.note_opt(trigger.value.as_ref().map(|e| body.expr(*e)), symbols);
             self.note_args(body.args(&trigger.targets), symbols);
         }
     }
@@ -820,7 +820,7 @@ impl Plan {
             Call::Dynamic { target, args } => {
                 // The target is a run-time value, so this cannot be read here.
                 self.keeps_the_trace_setting = false;
-                self.note(body.expr(target), symbols);
+                self.note(body.expr(*target), symbols);
                 self.note_args(body.args(args), symbols);
             }
             Call::Trap(_) => {}

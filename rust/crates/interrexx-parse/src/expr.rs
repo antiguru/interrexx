@@ -7,7 +7,8 @@ use interrexx_inventory::errors::{
     E36_902, E37_1, E37_2, E37_901, Msg,
 };
 
-use crate::ast::{CallTarget, Expr, ExprKind, PrefixOp};
+use crate::ast::PrefixOp;
+use crate::exprs::{CallTarget, ExprId, NodeKind};
 use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
 };
@@ -115,7 +116,7 @@ pub(crate) fn parse_expr(
     cursor: &mut TokenCursor,
     term: Terminators,
     missing: Msg<0>,
-) -> Result<Expr, ParseError> {
+) -> Result<ExprId, ParseError> {
     let mut parser = Parser::new(ctx, cursor);
     match parser.expression(term)? {
         Some(expr) => Ok(expr),
@@ -128,7 +129,7 @@ pub(crate) fn parse_expression(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
     term: Terminators,
-) -> Result<Option<Expr>, ParseError> {
+) -> Result<Option<ExprId>, ParseError> {
     Parser::new(ctx, cursor).expression(term)
 }
 
@@ -138,7 +139,7 @@ pub(crate) fn parse_logical(
     cursor: &mut TokenCursor,
     term: Terminators,
     missing: Msg<0>,
-) -> Result<Expr, ParseError> {
+) -> Result<ExprId, ParseError> {
     Parser::new(ctx, cursor).logical(term, missing)
 }
 
@@ -148,17 +149,19 @@ pub(crate) fn parse_case_when_list(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
     term: Terminators,
-) -> Result<Vec<Expr>, ParseError> {
+) -> Result<Vec<ExprId>, ParseError> {
     Parser::new(ctx, cursor).comma_list(term, E35_934)
 }
 
-/// Parses an argument list up to `closer`, which is consumed.
+/// Parses an instruction's own argument list up to `closer`, which is
+/// consumed. An omitted position is `None` and pushes no node, because an
+/// instruction slot is no node's child.
 pub(crate) fn parse_arg_list(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
     closer: Option<Tag>,
-) -> Result<Vec<Option<Expr>>, ParseError> {
-    Parser::new(ctx, cursor).arg_list(closer)
+) -> Result<Vec<Option<ExprId>>, ParseError> {
+    Parser::new(ctx, cursor).arg_list(closer, false)
 }
 
 /// Parses the expression inside a `(`, whose `(` is already consumed, and
@@ -166,7 +169,7 @@ pub(crate) fn parse_arg_list(
 pub(crate) fn parse_paren_expression(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
-) -> Result<Option<Expr>, ParseError> {
+) -> Result<Option<ExprId>, ParseError> {
     let mut parser = Parser::new(ctx, cursor);
     let opener = parser.cursor.position() - 1;
     let inner = parser.subexpression(Terminators::RIGHT)?;
@@ -182,7 +185,7 @@ pub(crate) fn parse_paren_expression(
 pub(crate) fn parse_constant_expression(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
-) -> Result<Option<Expr>, ParseError> {
+) -> Result<Option<ExprId>, ParseError> {
     let mut parser = Parser::new(ctx, cursor);
     parser.skip_blanks();
     let Some(token) = parser.peek() else {
@@ -192,9 +195,8 @@ pub(crate) fn parse_constant_expression(
     let span = token.span.clone();
     match &token.kind {
         TokenKind::Literal { value } => {
-            let value = value.clone();
             parser.advance();
-            Ok(Some(Expr::new(ExprKind::Literal(value), span)))
+            Ok(Some(parser.literal(value, span)))
         }
         // A symbol that is not a variable, a stem or a compound, so a number, a
         // lone period, or a dot symbol.
@@ -206,7 +208,7 @@ pub(crate) fn parse_constant_expression(
         {
             let kind = symbol_kind(*id, *class);
             parser.advance();
-            Ok(Some(Expr::new(kind, span)))
+            Ok(Some(ctx.push(kind, span)))
         }
         TokenKind::LeftParen => {
             parser.advance();
@@ -228,7 +230,7 @@ pub(crate) fn parse_constant_expression(
 pub(crate) fn parse_message_term(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
-) -> Result<Option<Expr>, ParseError> {
+) -> Result<Option<ExprId>, ParseError> {
     Parser::new(ctx, cursor).message_term()
 }
 
@@ -237,10 +239,11 @@ pub(crate) fn parse_message_term(
 pub(crate) fn parse_variable_or_message_term(
     ctx: &ParseCtx,
     cursor: &mut TokenCursor,
-) -> Result<Option<Expr>, ParseError> {
+) -> Result<Option<ExprId>, ParseError> {
     // The message-term attempt runs on a cursor of its own, because it may
     // consume tokens and come back empty and the fallback below has to see the
-    // first token again.
+    // first token again. A term that comes back empty has rewound the arena
+    // itself, so the fallback pushes onto what was there before.
     let mut trial = TokenCursor::new(cursor.start()..cursor.end());
     while trial.position() < cursor.position() {
         trial.advance();
@@ -249,7 +252,7 @@ pub(crate) fn parse_variable_or_message_term(
         *cursor = trial;
         // Converting the message into an assignment message belongs to whoever
         // executes it: the name it would append `=` to is
-        // `ExprKind::Message::name`, and the instruction node already records
+        // `NodeKind::Message`'s `name`, and the instruction node already records
         // that this term is an assignment target.
         return Ok(Some(term));
     }
@@ -265,7 +268,7 @@ pub(crate) fn parse_variable_or_message_term(
     let (id, class) = (*id, *class);
     need_variable(ctx, id, class, parser.clause_byte)?;
     parser.advance();
-    Ok(Some(Expr::new(symbol_kind(id, class), span)))
+    Ok(Some(ctx.push(symbol_kind(id, class), span)))
 }
 
 /// Raises the error a non-variable symbol gets where a variable was required.
@@ -454,56 +457,83 @@ impl<'a, 'c> Parser<'a, 'c> {
         start..end
     }
 
+    /// An `Omitted` node, with the empty span where the cursor stands.
+    fn omitted(&self) -> ExprId {
+        let at = self.extent(self.cursor.position());
+        self.ctx.push(NodeKind::Omitted, at)
+    }
+
+    /// A `Literal` leaf holding `value`.
+    fn literal(&self, value: &[u8], span: Range<usize>) -> ExprId {
+        let bytes = self.ctx.exprs.borrow_mut().push_bytes(value);
+        self.ctx.push(NodeKind::Literal(bytes), span)
+    }
+
     /// Skip to the first real token, then parse a full subexpression, where
     /// commas build a list.
-    fn expression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn expression(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         self.skip_blanks();
         self.full_subexpression(term)
     }
 
     /// One or more comma-separated subexpressions, which become an
     /// array-building list when there is more than one.
-    fn full_subexpression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn full_subexpression(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         let from = self.cursor.position();
-        let mut parts: Vec<Option<Expr>> = Vec::new();
+        let mut parts: Vec<ExprId> = Vec::new();
         loop {
-            parts.push(self.subexpression(term)?);
-            if self.peek_tag() == Some(Tag::Comma) {
+            let part = self.subexpression(term)?;
+            let comma = self.peek_tag() == Some(Tag::Comma);
+            match part {
+                Some(part) => parts.push(part),
+                // An omitted item is a node only inside a list, so it is
+                // pushed once a comma shows there is one.
+                None if comma || !parts.is_empty() => parts.push(self.omitted()),
+                // A single subexpression that is absent: no list, no node.
+                None => return Ok(None),
+            }
+            if comma {
                 self.advance();
             } else {
                 break;
             }
         }
-        if parts.len() == 1 {
-            // A single subexpression is itself, absent or not.
-            return Ok(parts.pop().expect("just checked the length"));
+        if let [part] = parts[..] {
+            // A single subexpression is itself.
+            return Ok(Some(part));
         }
         // Trailing omitted elements are kept here, unlike in an argument list:
         // measured, `(1,)~size` is 2 and `(1,,)~size` is 3, where `f(1,)`
         // passes one argument. The full-subexpression parse returns the total
         // where the argument-list parse returns the real count.
         let extent = self.extent(from);
-        Ok(Some(Expr::new(ExprKind::List(parts), extent)))
+        let items = self.ctx.exprs.borrow_mut().push_edges(&parts);
+        Ok(Some(self.ctx.push(NodeKind::List(items), extent)))
     }
 
-    fn logical(&mut self, term: Terminators, missing: Msg<0>) -> Result<Expr, ParseError> {
+    fn logical(&mut self, term: Terminators, missing: Msg<0>) -> Result<ExprId, ParseError> {
         let from = {
             self.skip_blanks();
             self.cursor.position()
         };
-        let mut parts = self.comma_list(term, missing)?;
-        if parts.len() == 1 {
-            return Ok(parts.pop().expect("just checked the length"));
+        let parts = self.comma_list(term, missing)?;
+        if let [part] = parts[..] {
+            return Ok(part);
         }
         let extent = self.extent(from);
-        Ok(Expr::new(ExprKind::Logical(parts), extent))
+        let items = self.ctx.exprs.borrow_mut().push_edges(&parts);
+        Ok(self.ctx.push(NodeKind::Logical(items), extent))
     }
 
     /// The comma-separated loop that the logical list and the `SELECT CASE`
     /// `WHEN` list share.
-    fn comma_list(&mut self, term: Terminators, missing: Msg<0>) -> Result<Vec<Expr>, ParseError> {
+    fn comma_list(
+        &mut self,
+        term: Terminators,
+        missing: Msg<0>,
+    ) -> Result<Vec<ExprId>, ParseError> {
         self.skip_blanks();
-        let mut parts: Vec<Expr> = Vec::new();
+        let mut parts: Vec<ExprId> = Vec::new();
         loop {
             let Some(part) = self.subexpression(term)? else {
                 return Err(self.missing_expression(missing));
@@ -519,20 +549,21 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// A term, then dyadic operators by precedence. A comma always terminates.
-    fn subexpression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn subexpression(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         let Some(left) = self.message_subterm(term)? else {
             return Ok(None);
         };
         self.binary_rest(left, 1, term).map(Some)
     }
 
-    /// The precedence loop.
+    /// The precedence loop. `left` is the last node pushed, and so is every
+    /// node this answers.
     fn binary_rest(
         &mut self,
-        mut left: Expr,
+        mut left: ExprId,
         min_prec: u8,
         term: Terminators,
-    ) -> Result<Expr, ParseError> {
+    ) -> Result<ExprId, ParseError> {
         loop {
             let Some(token) = self.peek() else {
                 return Ok(left);
@@ -592,12 +623,12 @@ impl<'a, 'c> Parser<'a, 'c> {
                 return Err(self.operator_without_term(E35_1, op));
             };
             let right = self.binary_rest(right, prec + 1, term)?;
-            left = Expr::binary(op, left, right);
+            left = push_binary(self.ctx, op, left, right);
         }
     }
 
     /// Prefix operators, then a subterm with every message send that follows it.
-    fn message_subterm(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn message_subterm(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         // Every prefix operator of a run is read here, so the length of the run
         // costs no native stack.
         let mut run: Vec<(PrefixOp, std::ops::Range<usize>, Operator)> = Vec::new();
@@ -650,19 +681,13 @@ impl<'a, 'c> Parser<'a, 'c> {
         // which is 4. A chain works, though `--` is a line comment so `- -2`
         // needs the blank.
         while let Some((op, span, _)) = run.pop() {
-            operand = Expr::new(
-                ExprKind::Prefix {
-                    op,
-                    operand: Box::new(operand),
-                },
-                span,
-            );
+            operand = self.ctx.push(NodeKind::Prefix { op, operand }, span);
         }
         Ok(Some(operand))
     }
 
     /// Applies every `~`, `~~` and `[` that follows a term.
-    fn cascade(&mut self, mut target: Expr, term: Terminators) -> Result<Expr, ParseError> {
+    fn cascade(&mut self, mut target: ExprId, term: Terminators) -> Result<ExprId, ParseError> {
         loop {
             match self.peek_tag() {
                 Some(Tag::LeftBracket) => {
@@ -680,36 +705,38 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
     }
 
-    /// `target[args]`, which is the `[]` message.
-    fn collection_message(&mut self, target: Expr, from: usize) -> Result<Expr, ParseError> {
-        let args = self.arg_list(Some(Tag::RightBracket))?;
+    /// `target[args]`, which is the `[]` message. `target` is the last node
+    /// pushed.
+    fn collection_message(&mut self, target: ExprId, from: usize) -> Result<ExprId, ParseError> {
+        let mut children = vec![target];
+        children.extend(self.call_args(Some(Tag::RightBracket))?);
         let extent = self.extent(from);
         // Interned like a written name, where a pool of pre-made names would be
         // a second pool this crate does not have, and one pool that holds the
         // spelling however it was written is the same answer for a reader that
         // compares selectors.
         let name = self.ctx.selectors.borrow_mut().intern(b"[]");
-        Ok(Expr::new(
-            ExprKind::Message {
-                target: Box::new(target),
+        let children = self.ctx.exprs.borrow_mut().push_edges(&children);
+        Ok(self.ctx.push(
+            NodeKind::Message {
                 name,
-                super_class: None,
-                args,
                 cascade: false,
+                scoped: false,
+                children,
             },
             extent,
         ))
     }
 
     /// The message name, an optional `:superclass` override, and an optional
-    /// argument list.
+    /// argument list. `target` is the last node pushed.
     fn message(
         &mut self,
-        target: Expr,
+        target: ExprId,
         cascade: bool,
         from: usize,
         term: Terminators,
-    ) -> Result<Expr, ParseError> {
+    ) -> Result<ExprId, ParseError> {
         // No blank is ever skipped here, and the next-token read does not skip
         // one either. A blank is only a token when the next real character
         // starts a symbol, a literal, `(` or `[`, and the previous token was a
@@ -734,30 +761,31 @@ impl<'a, 'c> Parser<'a, 'c> {
         let name = self.ctx.selectors.borrow_mut().intern(&name);
         self.advance();
 
-        let mut super_class = None;
-        if self.peek_tag() == Some(Tag::Colon) {
+        // The receiver, then the scope, then the arguments: the order they
+        // are evaluated in.
+        let mut children = vec![target];
+        let scoped = self.peek_tag() == Some(Tag::Colon);
+        if scoped {
             self.advance();
-            super_class = Some(Box::new(self.super_class_term(term)?));
+            children.push(self.super_class_term(term)?);
         }
 
         // Only a parenthesis directly abutted to the name is an argument
         // list. `a~m (1)` is a blank concatenation of `a~m` and `(1)`,
         // because the blank before `(` is a token.
-        let args = if self.peek_tag() == Some(Tag::LeftParen) {
+        if self.peek_tag() == Some(Tag::LeftParen) {
             self.advance();
-            self.arg_list(Some(Tag::RightParen))?
-        } else {
-            Vec::new()
-        };
+            children.extend(self.call_args(Some(Tag::RightParen))?);
+        }
 
         let extent = self.extent(from);
-        Ok(Expr::new(
-            ExprKind::Message {
-                target: Box::new(target),
+        let children = self.ctx.exprs.borrow_mut().push_edges(&children);
+        Ok(self.ctx.push(
+            NodeKind::Message {
                 name,
-                super_class,
-                args,
                 cascade,
+                scoped,
+                children,
             },
             extent,
         ))
@@ -765,7 +793,7 @@ impl<'a, 'c> Parser<'a, 'c> {
 
     /// The `:superclass` override's term, which must pass
     /// A simple variable, a stem, a compound variable or a dot symbol.
-    fn super_class_term(&mut self, term: Terminators) -> Result<Expr, ParseError> {
+    fn super_class_term(&mut self, term: Terminators) -> Result<ExprId, ParseError> {
         let Some(token) = self.peek() else {
             return Err(self.raise(E20_917, []));
         };
@@ -790,38 +818,54 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
         let kind = symbol_kind(*id, *class);
         self.advance();
-        Ok(Expr::new(kind, span))
+        Ok(self.ctx.push(kind, span))
     }
 
-    /// A prefix `>` or `<` on a simple variable or a stem.
-    fn variable_reference_term(&mut self, from: usize) -> Result<Expr, ParseError> {
+    /// A prefix `>` or `<` on a simple variable or a stem: a leaf, because the
+    /// variable is named and never evaluated.
+    fn variable_reference_term(&mut self, from: usize) -> Result<ExprId, ParseError> {
         self.skip_blanks();
         let Some(token) = self.peek() else {
             return Err(self.not_a_reference(None));
         };
-        let span = token.span.clone();
         let kind = match &token.kind {
             TokenKind::Symbol {
                 id,
                 class: SymbolClass::Variable,
-            } => ExprKind::Variable(*id),
+            } => NodeKind::VariableReference {
+                symbol: *id,
+                stem: false,
+            },
             TokenKind::Symbol {
                 id,
                 class: SymbolClass::Stem,
-            } => ExprKind::Stem(*id),
+            } => NodeKind::VariableReference {
+                symbol: *id,
+                stem: true,
+            },
             _ => return Err(self.not_a_reference(Some(token))),
         };
         self.advance();
-        let inner = Expr::new(kind, span);
         let extent = self.extent(from);
-        Ok(Expr::new(
-            ExprKind::VariableReference(Box::new(inner)),
-            extent,
-        ))
+        Ok(self.ctx.push(kind, extent))
     }
 
-    /// Comma-separated arguments up to `closer`, which is consumed.
-    fn arg_list(&mut self, closer: Option<Tag>) -> Result<Vec<Option<Expr>>, ParseError> {
+    /// The arguments of a call or message up to `closer`, which is consumed:
+    /// each a child, an omitted one an `Omitted` node, with the trailing
+    /// omitted ones dropped.
+    fn call_args(&mut self, closer: Option<Tag>) -> Result<Vec<ExprId>, ParseError> {
+        let args = self.arg_list(closer, true)?;
+        Ok(args.into_iter().flatten().collect())
+    }
+
+    /// Comma-separated arguments up to `closer`, which is consumed. With
+    /// `nodes` an omitted position pushes an `Omitted` node, so every
+    /// position answered is `Some`; without, it is `None` and pushes nothing.
+    fn arg_list(
+        &mut self,
+        closer: Option<Tag>,
+        nodes: bool,
+    ) -> Result<Vec<Option<ExprId>>, ParseError> {
         // An argument list re-enters expression parsing, so
         // `f(f(f(...)))` and `a[a[a[...]]]` recurse once per nesting level
         // exactly as grouping parentheses do, through different code and off
@@ -831,7 +875,7 @@ impl<'a, 'c> Parser<'a, 'c> {
             return Err(self.raise(E11_1, []));
         }
         self.expr_depth += 1;
-        let args = self.arg_list_inner(closer);
+        let args = self.arg_list_inner(closer, nodes);
         // Decremented before the `?` in the caller's chain, so an error path
         // unwinds the count as faithfully as a success path. `arg_list` has
         // several early returns inside, which is why the body is a separate
@@ -840,7 +884,11 @@ impl<'a, 'c> Parser<'a, 'c> {
         args
     }
 
-    fn arg_list_inner(&mut self, closer: Option<Tag>) -> Result<Vec<Option<Expr>>, ParseError> {
+    fn arg_list_inner(
+        &mut self,
+        closer: Option<Tag>,
+        nodes: bool,
+    ) -> Result<Vec<Option<ExprId>>, ParseError> {
         let bracket = closer == Some(Tag::RightBracket);
         // The `(` or `[` the caller consumed.
         let opener = self.cursor.position().wrapping_sub(1);
@@ -851,14 +899,22 @@ impl<'a, 'c> Parser<'a, 'c> {
         };
         // Skips the blank a `CALL` keyword leaves before its first argument.
         self.skip_blanks();
-        let mut args: Vec<Option<Expr>> = Vec::new();
+        let mut args: Vec<Option<ExprId>> = Vec::new();
         let mut real = 0;
+        // The arena as it stood after the last present argument, so that the
+        // trailing `Omitted` nodes, the last pushed and no node's children
+        // yet, are dropped by a rewind.
+        let mut present = self.ctx.exprs.borrow().mark();
         loop {
-            let arg = self.subexpression(term)?;
-            if arg.is_some() {
-                real = args.len() + 1;
+            match self.subexpression(term)? {
+                Some(arg) => {
+                    args.push(Some(arg));
+                    real = args.len();
+                    present = self.ctx.exprs.borrow().mark();
+                }
+                None if nodes => args.push(Some(self.omitted())),
+                None => args.push(None),
             }
-            args.push(arg);
             if self.peek_tag() == Some(Tag::Comma) {
                 self.advance();
                 continue;
@@ -872,11 +928,13 @@ impl<'a, 'c> Parser<'a, 'c> {
             self.advance();
         }
         args.truncate(real);
+        self.ctx.exprs.borrow_mut().rewind(present);
         Ok(args)
     }
 
-    /// A subterm with at least one `~`, `~~` or `[` applied to it.
-    fn message_term(&mut self) -> Result<Option<Expr>, ParseError> {
+    /// A subterm with at least one `~`, `~~` or `[` applied to it. A subterm
+    /// that took none is rewound out of the arena.
+    fn message_term(&mut self) -> Result<Option<ExprId>, ParseError> {
         let Some(token) = self.peek() else {
             return Ok(None);
         };
@@ -904,6 +962,8 @@ impl<'a, 'c> Parser<'a, 'c> {
                 return Ok(None);
             }
         }
+        // Taken before the subterm, which adopts no node pushed before it.
+        let mark = self.ctx.exprs.borrow().mark();
         let Some(start) = self.subterm(Terminators::EOC)? else {
             return Ok(None);
         };
@@ -927,11 +987,15 @@ impl<'a, 'c> Parser<'a, 'c> {
             }
             applied = true;
         }
-        Ok(applied.then_some(target))
+        if !applied {
+            self.ctx.exprs.borrow_mut().rewind(mark);
+            return Ok(None);
+        }
+        Ok(Some(target))
     }
 
     /// The atoms.
-    fn subterm(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn subterm(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         let Some(token) = self.peek() else {
             return Ok(None);
         };
@@ -973,11 +1037,12 @@ impl<'a, 'c> Parser<'a, 'c> {
                 match self.peek_tag() {
                     Some(Tag::LeftParen) => {
                         self.advance();
-                        let args = self.arg_list(Some(Tag::RightParen))?;
+                        let args = self.call_args(Some(Tag::RightParen))?;
                         self.ctx.note_symbol_call(id);
                         let extent = self.extent(from);
-                        Ok(Some(Expr::new(
-                            ExprKind::Call {
+                        let args = self.ctx.exprs.borrow_mut().push_edges(&args);
+                        Ok(Some(self.ctx.push(
+                            NodeKind::Call {
                                 target: CallTarget::Symbol(id),
                                 args,
                             },
@@ -988,26 +1053,29 @@ impl<'a, 'c> Parser<'a, 'c> {
                         self.advance();
                         self.qualified_symbol(id, from).map(Some)
                     }
-                    _ => Ok(Some(Expr::new(symbol_kind(id, class), span))),
+                    _ => Ok(Some(self.ctx.push(symbol_kind(id, class), span))),
                 }
             }
             TokenKind::Literal { value } => {
-                let value = value.clone();
                 self.advance();
                 if self.peek_tag() == Some(Tag::LeftParen) {
                     self.advance();
-                    let args = self.arg_list(Some(Tag::RightParen))?;
-                    self.ctx.note_literal_call(&value);
+                    let args = self.call_args(Some(Tag::RightParen))?;
+                    self.ctx.note_literal_call(value);
                     let extent = self.extent(from);
-                    return Ok(Some(Expr::new(
-                        ExprKind::Call {
-                            target: CallTarget::Literal(value),
+                    let (args, name) = {
+                        let mut exprs = self.ctx.exprs.borrow_mut();
+                        (exprs.push_edges(&args), exprs.push_bytes(value))
+                    };
+                    return Ok(Some(self.ctx.push(
+                        NodeKind::Call {
+                            target: CallTarget::Literal(name),
                             args,
                         },
                         extent,
                     )));
                 }
-                Ok(Some(Expr::new(ExprKind::Literal(value), span)))
+                Ok(Some(self.literal(value, span)))
             }
             TokenKind::Operator(op) => match op {
                 // Not this function's business: `message_subterm` handles a
@@ -1032,7 +1100,11 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// `ns:name`, either a qualified call or a class lookup.
-    fn qualified_symbol(&mut self, namespace: SymbolId, from: usize) -> Result<Expr, ParseError> {
+    fn qualified_symbol(
+        &mut self,
+        namespace: SymbolId,
+        from: usize,
+    ) -> Result<ExprId, ParseError> {
         let Some(token) = self.peek() else {
             return Err(self.raise(E20_923, []));
         };
@@ -1043,10 +1115,11 @@ impl<'a, 'c> Parser<'a, 'c> {
         // Only an immediately following parenthesis makes this a call.
         if self.peek_tag() == Some(Tag::LeftParen) {
             self.advance();
-            let args = self.arg_list(Some(Tag::RightParen))?;
+            let args = self.call_args(Some(Tag::RightParen))?;
             let extent = self.extent(from);
-            return Ok(Expr::new(
-                ExprKind::QualifiedCall {
+            let args = self.ctx.exprs.borrow_mut().push_edges(&args);
+            return Ok(self.ctx.push(
+                NodeKind::QualifiedCall {
                     namespace,
                     name,
                     args,
@@ -1055,10 +1128,9 @@ impl<'a, 'c> Parser<'a, 'c> {
             ));
         }
         let extent = self.extent(from);
-        Ok(Expr::new(
-            ExprKind::ClassResolver { namespace, name },
-            extent,
-        ))
+        Ok(self
+            .ctx
+            .push(NodeKind::ClassResolver { namespace, name }, extent))
     }
 }
 
@@ -1089,14 +1161,25 @@ pub(crate) fn display_value(ctx: &ParseCtx, token: Option<&Token>) -> Vec<u8> {
 }
 
 /// The leaf node a symbol token stands for, from its scanned class.
-pub(crate) fn symbol_kind(id: SymbolId, class: SymbolClass) -> ExprKind {
+pub(crate) fn symbol_kind(id: SymbolId, class: SymbolClass) -> NodeKind {
     match class {
-        SymbolClass::Dummy | SymbolClass::Constant => ExprKind::Constant(id),
-        SymbolClass::Variable => ExprKind::Variable(id),
-        SymbolClass::Stem => ExprKind::Stem(id),
-        SymbolClass::Compound => ExprKind::Compound(id),
-        SymbolClass::DotSymbol => ExprKind::DotVariable(id),
+        SymbolClass::Dummy | SymbolClass::Constant => NodeKind::Constant(id),
+        SymbolClass::Variable => NodeKind::Variable(id),
+        SymbolClass::Stem => NodeKind::Stem(id),
+        SymbolClass::Compound => NodeKind::Compound(id),
+        SymbolClass::DotSymbol => NodeKind::DotVariable(id),
     }
+}
+
+/// Pushes `left op right` over its operands, which are the two subtrees
+/// pushed last, `right`'s after `left`'s. The node spans from its left
+/// operand to its right.
+pub(crate) fn push_binary(ctx: &ParseCtx, op: Operator, left: ExprId, right: ExprId) -> ExprId {
+    let extent = {
+        let exprs = ctx.exprs.borrow();
+        exprs.node(left).span().start..exprs.node(right).span().end
+    };
+    ctx.push(NodeKind::Binary { op, left, right }, extent)
 }
 
 #[cfg(test)]

@@ -4,12 +4,6 @@
 //! use [`with_parser_stack`] or give the parsing thread [`PARSER_STACK_BYTES`]
 //! of stack. On a smaller stack, native stack exhaustion can abort the process
 //! before parsing reaches [`MAX_EXPR_DEPTH`].
-//!
-//! `Debug`, `Clone`, and equality on [`Expr`] and the AST types containing
-//! expressions recurse through the tree. Use a large stack for these operations
-//! on deep trees too. Flat expressions can build deeper trees than the
-//! grammar's nesting limit, so the parser stack size is not a depth guarantee
-//! for those traits.
 
 // A layer's entry
 // point can have no non-test caller. `cargo clippy
@@ -33,10 +27,9 @@ mod token;
 
 pub use ast::{
     Access, Address, AddressIo, Annotate, Annotation, AnnotationTarget, AttributeDirective,
-    AttributeStyle, Body, Call, CallTarget, Catch, CatchCode, CatchCondition, ClassDirective,
+    AttributeStyle, Body, Call, Catch, CatchCode, CatchCondition, ClassDirective,
     ClassRef, CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue,
-    ControlExpr, Controlled, Directive, DirectiveKind, EndStyle, EndTarget, Expr, ExprKind,
-    ExternalSpec, Forward, Guard, GuardOption, Instruction, InstructionKind, Loop, LoopConditional,
+    ControlExpr, Controlled, Directive, DirectiveKind, EndStyle, EndTarget, ExternalSpec, Forward, Guard, GuardOption, Instruction, InstructionKind, Loop, LoopConditional,
     LoopKind, MethodDirective, NumericSetting, OptionsForm, OutputOption, PackageOption, Parse,
     ParseSource, ParseTrigger, PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires,
     Resource, RoutineDirective, Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef,
@@ -49,7 +42,7 @@ pub use convert::syntax_code;
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
 pub use exprs::{
-    Args, BytesRange, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node, NodeKind,
+    Args, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs, Inconsistent, Node, NodeKind,
     Target,
 };
 pub use image::{program_from_image, program_from_static_image, program_image};
@@ -267,15 +260,17 @@ fn parse(
 ) -> Result<Parsed, (ParseError, Vec<Directive>)> {
     let (scanned, scan_error) = scan_to_error(source);
     // Declared ahead of `ctx`, which borrows it, and dropped with the parse.
-    // A `Selector` in the tree holds the name's bytes itself, so what the
+    // A `Selector` in the arena holds the name's bytes itself, so what the
     // pool's own entry buys is finding a spelling again while the parse is
     // still reading names -- which is exactly as long as it lives.
     let selectors = std::cell::RefCell::new(SelectorTable::new());
+    let exprs = std::cell::RefCell::new(Exprs::default());
     let ctx = ParseCtx {
         source,
         tokens: &scanned.tokens,
         symbols: &scanned.symbols,
         selectors: &selectors,
+        exprs: &exprs,
         keywords: scanned.keywords,
         resources: &scanned.resources,
         required_level,

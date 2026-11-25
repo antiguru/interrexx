@@ -68,7 +68,7 @@ fn eval_source(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure> {
         symbols: &program.symbols,
         plan: None,
     };
-    interp.eval(&code, code.body.expr(expr))
+    interp.eval(&code, code.body.expr(*expr))
 }
 
 fn eval_text(interp: &mut Interp, source: &[u8]) -> Vec<u8> {
@@ -92,7 +92,7 @@ fn eval_in_place(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure> 
         symbols: &program.symbols,
         plan: None,
     };
-    interp.eval(&code, code.body.expr(expr))
+    interp.eval(&code, code.body.expr(*expr))
 }
 
 fn eval_in_place_text(interp: &mut Interp, source: &[u8]) -> Vec<u8> {
@@ -345,7 +345,7 @@ fn a_variable_reads_through_the_plan() {
         symbols: &program.symbols,
         plan: None,
     };
-    let value = interp.eval(&code, code.body.expr(expr)).unwrap();
+    let value = interp.eval(&code, code.body.expr(*expr)).unwrap();
     assert_eq!(&*interp.to_text(value), b"5");
 }
 
@@ -583,7 +583,7 @@ fn the_three_concatenation_forms() {
         symbols: &program.symbols,
         plan: None,
     };
-    let value = interp.eval(&code, code.body.expr(expr)).unwrap();
+    let value = interp.eval(&code, code.body.expr(*expr)).unwrap();
     assert_eq!(&*interp.to_text(value), b"ab");
 }
 
@@ -763,7 +763,7 @@ fn eval_condition(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure>
         InstructionKind::If { condition, .. } => condition,
         other => panic!("expected an IF, got {other:?}"),
     };
-    interp.eval(&code, code.body.expr(condition))
+    interp.eval(&code, code.body.expr(*condition))
 }
 
 fn eval_condition_text(interp: &mut Interp, source: &[u8]) -> Vec<u8> {

@@ -681,7 +681,7 @@ fn pass_of(
                     if matches!(
                         kind_at(code, index),
                         Some(InstructionKind::Assignment { target, .. })
-                            if matches!(code.body.expr(target).kind(), ExprView::Compound(_))
+                            if matches!(code.body.expr(*target).kind(), ExprView::Compound(_))
                     ) =>
                 {
                     Step::Compound { pc: at }
@@ -1433,7 +1433,7 @@ impl Host for Driven<'_, '_> {
                 else {
                     return false;
                 };
-                let target = self.code.body.expr(target);
+                let target = self.code.body.expr(*target);
                 let ExprView::Compound(id) = target.kind() else {
                     return false;
                 };

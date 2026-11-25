@@ -36,11 +36,13 @@ fn parse_with_symbols(
     let scanned = scan(&source)?;
     let result = {
         let selectors = RefCell::new(SelectorTable::new());
+        let exprs = RefCell::new(crate::exprs::Exprs::default());
         let ctx = ParseCtx {
             source: &source,
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
+            exprs: &exprs,
             keywords: scanned.keywords,
             resources: &scanned.resources,
             required_level: None,
@@ -197,7 +199,9 @@ fn shape(directive: &Directive, symbols: &SymbolTable, text: &str) -> String {
             out.push(match &constant.value {
                 ConstantValue::Name => "<name>".to_string(),
                 ConstantValue::Text(value) => format!("text {}", string(value)),
-                ConstantValue::Expression(expr) => format!("expr {}", expr.shape(symbols)),
+                ConstantValue::Expression { exprs, root } => {
+                    format!("expr {}", exprs.shape(*root, symbols))
+                }
             });
         }
         DirectiveKind::Annotate(annotate) => {

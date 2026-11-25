@@ -11,6 +11,7 @@ use crate::ProgramSource;
 use crate::ast::{CodeBody, EndStyle, EndTarget, Instruction, InstructionKind, LoopKind};
 use crate::clause::{ClauseCursor, PendingThen};
 use crate::expr::display_value;
+use crate::exprs::Exprs;
 use crate::instruction::{missing_then, parse_instruction};
 use crate::token::{ParseCtx, ParseError, SymbolId, SymbolTable, Tag};
 
@@ -640,7 +641,7 @@ impl<'a> Block<'a> {
         }
     }
 
-    fn finish(mut self) -> CodeBody {
+    fn finish(mut self, exprs: Exprs) -> CodeBody {
         self.resolve_targets();
         // `assert!` rather than `debug_assert!`: this is the only thing standing
         // between a release consumer and a `None` that the field's contract says
@@ -656,10 +657,13 @@ impl<'a> Block<'a> {
             }),
             "every block and every END is matched in a body that assembled"
         );
-        CodeBody {
+        let body = CodeBody {
             instructions: self.instructions,
             labels: self.labels,
-        }
+            exprs,
+        };
+        debug_assert_eq!(body.check(), Ok(()), "a body's arena is consistent");
+        body
     }
 }
 
@@ -747,7 +751,7 @@ pub(crate) fn translate_block(
                 return Err(block.block_error(top, cursor.peek().is_none()));
             }
             block.pop();
-            let body = block.finish();
+            let body = block.finish(ctx.take_exprs());
             if let Some(required_level) = ctx.required_level {
                 required_level.finish_body(body.labels.contains_key(b"GC".as_slice()));
             }

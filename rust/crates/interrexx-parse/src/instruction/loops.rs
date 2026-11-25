@@ -6,7 +6,8 @@ use interrexx_inventory::errors::{
     E35_904, E35_905, E35_906, E35_907, E35_911, E35_929, Msg,
 };
 
-use crate::ast::{ControlExpr, Controlled, Expr, Loop, LoopConditional, LoopKind};
+use crate::ast::{ControlExpr, Controlled, Loop, LoopConditional, LoopKind};
+use crate::exprs::ExprId;
 use crate::expr::{Terminators, need_variable};
 use crate::token::{Operator, ParseError, SymbolId, Tag, Token, TokenKind};
 
@@ -333,7 +334,7 @@ impl<'a> Inst<'a> {
     /// share.
     fn for_and_conditional(
         &mut self,
-    ) -> Result<(Option<Expr>, Option<LoopConditional>), ParseError> {
+    ) -> Result<(Option<ExprId>, Option<LoopConditional>), ParseError> {
         let mut for_count = None;
         let mut conditional = None;
         while let Some(token) = self.peek_real() {

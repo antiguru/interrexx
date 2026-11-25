@@ -165,7 +165,7 @@ fn say_form_name(source: &str) -> String {
     else {
         panic!("a SAY with an expression expected");
     };
-    form_name(program.main.expr(expression).kind())
+    form_name(program.main.expr(*expression).kind())
 }
 
 fn sum(terms: usize) -> String {

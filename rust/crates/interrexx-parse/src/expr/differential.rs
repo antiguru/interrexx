@@ -203,40 +203,40 @@ fn every_generated_expression_evaluates_to_what_the_interpreter_evaluated() {
                     ));
                 }
             }
-            (true, Ok((expr, symbols))) => wrong.push(format!(
+            (true, Ok((exprs, root, symbols))) => wrong.push(format!(
                 "{text:?}: interpreter rejected it with error {expected}, this \
                  parse accepted it as {}",
-                expr.shape(&symbols)
+                exprs.shape(root, &symbols)
             )),
             (false, Err(err)) => {
                 wrong.push(format!("{text:?}: failed to parse: {err:?}"));
             }
-            (false, Ok((expr, symbols))) => match (verdict, eval(ExprRef::tree(&expr), &symbols)) {
+            (false, Ok((exprs, root, symbols))) => match (verdict, eval(exprs.get(root), &symbols)) {
                 ("OK", Ok(got)) => {
                     checked_value += 1;
                     if got != expected {
                         wrong.push(format!(
                             "{text:?}: interpreter {expected:?}, this parse {got:?} \
                              (shape {})",
-                            expr.shape(&symbols)
+                            exprs.shape(root, &symbols)
                         ));
                     }
                 }
                 ("OK", Err(failure)) => wrong.push(format!(
                     "{text:?}: interpreter {expected:?}, this parse failed with \
                      {failure:?} (shape {})",
-                    expr.shape(&symbols)
+                    exprs.shape(root, &symbols)
                 )),
                 ("ERR", Err(Failure::Raised)) => checked_raise += 1,
                 ("ERR", Err(Failure::Unsupported)) => wrong.push(format!(
                     "{text:?}: the evaluator does not implement this, so the \
                      corpus is out of its bounds (shape {})",
-                    expr.shape(&symbols)
+                    exprs.shape(root, &symbols)
                 )),
                 ("ERR", Ok(got)) => wrong.push(format!(
                     "{text:?}: interpreter raised error {expected}, this parse \
                      gave {got:?} (shape {})",
-                    expr.shape(&symbols)
+                    exprs.shape(root, &symbols)
                 )),
                 (other, _) => wrong.push(format!("{text:?}: unknown verdict {other:?}")),
             },
@@ -286,10 +286,10 @@ fn the_evaluator_is_wired_to_the_operators_it_claims() {
         ("s || t", "xy9"),
     ];
     for (text, expected) in cases {
-        let (expr, symbols) = parse(text, Entry::Required)
+        let (exprs, root, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(ExprRef::tree(&expr), &symbols).as_deref(),
+            eval(exprs.get(root), &symbols).as_deref(),
             Ok(*expected),
             "{text:?} evaluated wrongly"
         );
@@ -301,10 +301,10 @@ fn the_evaluator_reports_the_forms_it_does_not_implement() {
     // The bound has to be visible: a silent `Unsupported` in the corpus check
     // would look like agreement.
     for text in ["f(1)", "a~b", "a.b", "(1,2)", ">a", "a[1]", ".true"] {
-        let (expr, symbols) = parse(text, Entry::Required)
+        let (exprs, root, symbols) = parse(text, Entry::Required)
             .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
         assert_eq!(
-            eval(ExprRef::tree(&expr), &symbols),
+            eval(exprs.get(root), &symbols),
             Err(Failure::Unsupported),
             "{text:?} should be out of the evaluator's scope"
         );

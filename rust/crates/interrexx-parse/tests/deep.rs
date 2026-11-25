@@ -1,7 +1,7 @@
 //! A deep `1 + 1 + ... + 1` chain must parse and drop on a normal,
 //! default-stack test thread, not just on the wide thread `rexx` uses.
 
-use interrexx_parse::{Expr, ExprKind, MAX_EXPR_DEPTH, Operator, parse_program, with_parser_stack};
+use interrexx_parse::{MAX_EXPR_DEPTH, parse_program, with_parser_stack};
 
 /// Builds `say (((...('a')...)))` with `depth` levels of parenthesis
 /// nesting.
@@ -117,18 +117,23 @@ fn parens_and_calls_share_one_budget_rather_than_one_each() {
     assert_eq!((err.code(), err.sub()), (11, 1));
 }
 
-/// These traits exhaust the default stack on a chain of this length.
+/// #69: the traits of a long chain's body use no stack per term, on a thread
+/// with the default 2 MiB, sized by nothing in this crate.
 #[test]
-fn recursive_expression_traits_run_on_the_parser_stack() {
-    let leaf = || Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-    let expr = (0..5_000).fold(leaf(), |left, _| Expr::binary(Operator::Plus, left, leaf()));
-
-    with_parser_stack(|| {
-        let clone = expr.clone();
-        assert!(expr == clone);
-        assert!(format!("{expr:?}").starts_with("Expr { kind: Binary"));
-    })
-    .expect("spawns");
+fn a_long_chains_body_clones_compares_formats_and_drops_on_a_default_thread() {
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(|| {
+            let program = parse_program(deep_sum_program(200_000)).expect("parses");
+            let copy = program.main.clone();
+            assert!(copy == program.main);
+            assert!(!format!("{:?}", program.main).is_empty());
+            drop(copy);
+            drop(program);
+        })
+        .expect("spawns")
+        .join()
+        .expect("runs");
 }
 
 /// A run of prefix operators is read in a loop, so its length costs no

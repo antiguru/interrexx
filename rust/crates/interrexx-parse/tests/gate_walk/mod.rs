@@ -15,7 +15,8 @@
 use std::path::{Path, PathBuf};
 
 use interrexx_parse::{
-    Args, CodeBody, Directive, DirectiveKind, ExprRef, ExprView, Instruction, Program,
+    Args, CodeBody, ConstantValue, Directive, DirectiveKind, ExprRef, ExprView, Instruction, Node,
+    Program,
 };
 
 /// Calls `f` on each direct child expression of `expr`, in source order. A
@@ -113,8 +114,8 @@ pub fn each_directive<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Directive))
 /// Calls `visit` on every expression in the program, parents before children.
 pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(ExprRef<'a>)) {
     // An explicit stack rather than recursion through `children_of`, because
-    // a left-leaning expression tree the width of one clause overflows the
-    // stack here otherwise: `deep_nested_expr.rex`'s 3000-term chain aborted
+    // a left-leaning expression the width of one clause overflows the stack
+    // here otherwise: `deep_nested_expr.rex`'s 3000-term chain aborted
     // this walk on a default 2 MiB thread.
     // Pushing a node's children in reverse and popping is what keeps this a
     // parents-before-children, left-to-right walk exactly like the recursive
@@ -142,6 +143,30 @@ pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(ExprRef<'a>)) {
     for d in &p.directives {
         if let Some(e) = expr_of_directive(&d.kind) {
             walk(e, visit);
+        }
+    }
+}
+
+/// Calls `visit` on every node of every arena of the program, body by body,
+/// each slot's subtree in evaluation order. The subtrees of a body's roots
+/// cover its arena once, so this is a loop over each arena's nodes.
+pub fn each_node<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Node)) {
+    let bodies = std::iter::once(&p.main).chain(
+        p.directives
+            .iter()
+            .filter_map(|d| body_of_directive(&d.kind)),
+    );
+    for body in bodies {
+        for i in &body.instructions {
+            i.kind
+                .for_each_root(&mut |root| body.exprs.range(root).iter().for_each(&mut *visit));
+        }
+    }
+    for d in &p.directives {
+        if let DirectiveKind::Constant(c) = &d.kind
+            && let ConstantValue::Expression { exprs, root } = &c.value
+        {
+            exprs.range(*root).iter().for_each(&mut *visit);
         }
     }
 }

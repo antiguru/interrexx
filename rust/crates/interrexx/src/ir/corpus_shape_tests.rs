@@ -481,7 +481,7 @@ fn check_body(
             // `LoopTested`, and one that does neither is in the side table.
             // Neither walks.
             if let Some(conditional) = &loop_.conditional {
-                let expected = root_of(body.expr(&conditional.condition));
+                let expected = root_of(body.expr(conditional.condition));
                 let test = chunk.loop_test_at(index);
                 let side = chunk.condition_at(index);
                 if expected == Root::EvalExpr {
@@ -491,7 +491,7 @@ fn check_body(
                          that is not native\n{}",
                         render(&chunk)
                     );
-                } else if outside_side_table(body.expr(&conditional.condition)) {
+                } else if outside_side_table(body.expr(conditional.condition)) {
                     let test = test.unwrap_or_else(|| {
                         panic!(
                             "{where_}: instruction {index} ({construct}) has a condition that \
@@ -535,7 +535,7 @@ fn check_body(
         // is not native, is walked on every test.
         if let InstructionKind::Guard(guard) = &instruction.kind {
             let side = chunk.condition_at(index);
-            match guard.condition.as_ref().map(|c| body.expr(c)) {
+            match guard.condition.as_ref().map(|c| body.expr(*c)) {
                 Some(condition)
                     if root_of(condition) != Root::EvalExpr && !outside_side_table(condition) =>
                 {
@@ -615,17 +615,17 @@ fn check_body(
                     let mut expected: Vec<(crate::run::RaisePart, u16, Option<ExprRef<'_>>)> =
                         Vec::new();
                     use crate::run::RaisePart;
-                    if let Some(expr) = raise.rc.as_ref().map(|e| body.expr(e)) {
+                    if let Some(expr) = raise.rc.as_ref().map(|e| body.expr(*e)) {
                         expected.push((RaisePart::Code, slot(layout.code), Some(expr)));
                     }
-                    if let Some(expr) = raise.description.as_ref().map(|e| body.expr(e)) {
+                    if let Some(expr) = raise.description.as_ref().map(|e| body.expr(*e)) {
                         expected.push((
                             RaisePart::Description,
                             slot(layout.description),
                             Some(expr),
                         ));
                     }
-                    if let Some(expr) = raise.additional.as_ref().map(|e| body.expr(e)) {
+                    if let Some(expr) = raise.additional.as_ref().map(|e| body.expr(*e)) {
                         expected.push((RaisePart::Additional, slot(layout.additional), Some(expr)));
                     }
                     // An item has a part of its own, its trace lines, only
@@ -652,7 +652,7 @@ fn check_body(
                                 expected.push((
                                     RaisePart::Item,
                                     src,
-                                    item.as_ref().map(|e| body.expr(e)),
+                                    item.as_ref().map(|e| body.expr(*e)),
                                 ));
                             }
                         }
@@ -662,7 +662,7 @@ fn check_body(
                         .result
                         .as_ref()
                         .and_then(|r| r.value.as_ref())
-                        .map(|e| body.expr(e))
+                        .map(|e| body.expr(*e))
                     {
                         expected.push((RaisePart::Result, slot(layout.result), Some(expr)));
                     }
@@ -787,7 +787,7 @@ fn check_body(
         // `Op::WhenTest`, which is not a slot this file has anything to state
         // about that the op's presence in the stream has not already said.
         let expected = match &instruction.kind {
-            InstructionKind::Assignment { value, .. } => Some(root_of(body.expr(value))),
+            InstructionKind::Assignment { value, .. } => Some(root_of(body.expr(*value))),
             // A `SAY`, a `RETURN`, an `EXIT`, a `PUSH` and a `QUEUE` are one
             // row: each offers its whole expression to `push_native` and each
             // bare form holds none, so `None` here is a clause whose region
@@ -797,39 +797,39 @@ fn check_body(
             | InstructionKind::Exit { expression }
             | InstructionKind::Push { expression }
             | InstructionKind::Queue { expression } => {
-                expression.as_ref().map(|e| root_of(body.expr(e)))
+                expression.as_ref().map(|e| root_of(body.expr(*e)))
             }
-            InstructionKind::If { condition, .. } => Some(condition_root(body.expr(condition))),
+            InstructionKind::If { condition, .. } => Some(condition_root(body.expr(*condition))),
             // An instruction `Op::ExecValue` runs from its expression's value.
             InstructionKind::Numeric {
                 expression: Some(expression),
                 ..
             }
             | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => {
-                Some(root_of(body.expr(expression)))
+                Some(root_of(body.expr(*expression)))
             }
             InstructionKind::Address(address)
                 if address.command.is_none() && address.environment.is_none() =>
             {
-                address.dynamic.as_ref().map(|e| root_of(body.expr(e)))
+                address.dynamic.as_ref().map(|e| root_of(body.expr(*e)))
             }
             InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
-                Some(root_of(body.expr(expression)))
+                Some(root_of(body.expr(*expression)))
             }
             InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
-                expression.as_ref().map(|e| root_of(body.expr(e)))
+                expression.as_ref().map(|e| root_of(body.expr(*e)))
             }
             // A `SELECT CASE`'s expression, filed by `Op::SelectCase` behind
             // it, and a plain `SELECT`'s region, which ends in no `Root`.
-            InstructionKind::Select { case, .. } => case.as_ref().map(|e| root_of(body.expr(e))),
-            InstructionKind::When { condition, .. } => match condition_root(body.expr(condition)) {
+            InstructionKind::Select { case, .. } => case.as_ref().map(|e| root_of(body.expr(*e))),
+            InstructionKind::When { condition, .. } => match condition_root(body.expr(*condition)) {
                 Root::EvalExpr => None,
                 root => Some(root),
             },
             // A message instruction whose term and assigned value are native
             // ends in its send, and one whose are not in no `Root` at all.
             InstructionKind::Message { term, value } => {
-                let native_term = match body.expr(term).kind() {
+                let native_term = match body.expr(*term).kind() {
                     ExprView::Message {
                         target,
                         super_class,
@@ -843,7 +843,7 @@ fn check_body(
                             && arguments(args, Some(0), 1)
                             && value
                                 .as_ref()
-                                .is_none_or(|value| native(body.expr(value), Some(0)))
+                                .is_none_or(|value| native(body.expr(*value), Some(0)))
                     }
                     _ => false,
                 };

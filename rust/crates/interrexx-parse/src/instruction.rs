@@ -16,7 +16,7 @@ use interrexx_inventory::errors::{
 };
 
 use crate::ast::{
-    Call, Catch, CatchCode, CatchCondition, ConditionTrap, Expr, Forward, Guard, Instruction,
+    Call, Catch, CatchCode, CatchCondition, ConditionTrap, Forward, Guard, Instruction,
     InstructionKind, NumericSetting, ParseSource, Raise, RaiseResult, Signal, Tail, Trace, Use,
     UseTarget, VariableRef, compound_parts,
 };
@@ -26,9 +26,9 @@ use crate::convert::{check_trace_setting, whole_number};
 use crate::expr::{
     Terminators, display_value, need_variable, parse_arg_list, parse_case_when_list,
     parse_constant_expression, parse_expr, parse_expression, parse_logical, parse_message_term,
-    parse_paren_expression, parse_variable_or_message_term, symbol_kind,
+    parse_paren_expression, parse_variable_or_message_term, push_binary, symbol_kind,
 };
-use crate::exprs::{Args, ExprRef, ExprView};
+use crate::exprs::{Args, ExprId, ExprRef, ExprView};
 use crate::source::SourceKind;
 use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
@@ -375,15 +375,15 @@ impl<'a> Inst<'a> {
 
     // ---- expression grammar, on this clause's cursor ----
 
-    fn expr(&mut self, term: Terminators, missing: Msg<0>) -> Result<Expr, ParseError> {
+    fn expr(&mut self, term: Terminators, missing: Msg<0>) -> Result<ExprId, ParseError> {
         parse_expr(self.ctx, &mut self.cursor, term, missing)
     }
 
-    fn opt_expr(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
+    fn opt_expr(&mut self, term: Terminators) -> Result<Option<ExprId>, ParseError> {
         parse_expression(self.ctx, &mut self.cursor, term)
     }
 
-    fn logical(&mut self, term: Terminators, missing: Msg<0>) -> Result<Expr, ParseError> {
+    fn logical(&mut self, term: Terminators, missing: Msg<0>) -> Result<ExprId, ParseError> {
         parse_logical(self.ctx, &mut self.cursor, term, missing)
     }
 
@@ -496,13 +496,16 @@ impl<'a> Inst<'a> {
         };
         need_variable(self.ctx, id, class, self.clause_byte)?;
         self.seek(self.cursor.position() + 2);
-        let value = self.expr(Terminators::EOC, E35_918)?;
         // `a += b` is expanded into `a = a + b` at parse time, building the
         // binary node itself, so there is one instruction form and not two.
-        let target = Expr::new(symbol_kind(id, class), target_span);
-        let value = match op {
+        // The target is a leaf of its own slot; the read of `a` is a second
+        // leaf, pushed before the value because it is evaluated before it.
+        let target = self.ctx.push(symbol_kind(id, class), target_span.clone());
+        let read = op.map(|op| (op, self.ctx.push(symbol_kind(id, class), target_span)));
+        let value = self.expr(Terminators::EOC, E35_918)?;
+        let value = match read {
             None => value,
-            Some(op) => Expr::binary(op, target.clone(), value),
+            Some((op, read)) => push_binary(self.ctx, op, read, value),
         };
         Ok(Some(InstructionKind::Assignment { target, value }))
     }
@@ -510,6 +513,8 @@ impl<'a> Inst<'a> {
     /// The four message-term forms.
     fn message(&mut self) -> Result<Option<InstructionKind>, ParseError> {
         let mut trial = self.trial();
+        // Taken before the trial, which adopts no node pushed before it.
+        let mark = self.ctx.exprs.borrow().mark();
         let Some(term) = parse_message_term(self.ctx, &mut trial)? else {
             return Ok(None);
         };
@@ -528,22 +533,26 @@ impl<'a> Inst<'a> {
             Some(TokenKind::Assignment(op)) => Some(*op),
             // Anything else means this was not a message instruction after all,
             // so the clause goes back to keyword processing with its position
-            // reset, by falling through to the first token.
+            // reset, by falling through to the first token, and the term's
+            // nodes are dropped with it.
             _ => {
                 self.cursor = TokenCursor::new(self.clause.tokens.clone());
+                self.ctx.exprs.borrow_mut().rewind(mark);
                 return Ok(None);
             }
         };
         self.cursor.advance();
+        // A copy of the message term is the left operand and the original is
+        // turned into the assignment. The copy is pushed before the value,
+        // because it is evaluated before it.
+        let read = op.map(|op| (op, self.ctx.exprs.borrow_mut().copy(term)));
         // A missing value names the `=` or assignment operator.
         let Some(value) = self.opt_expr(Terminators::EOC)? else {
             return Err(self.found(E35_1, second));
         };
-        let value = match op {
+        let value = match read {
             None => value,
-            // A copy of the message term is kept as the left operand and the
-            // original is turned into the assignment.
-            Some(op) => Expr::binary(op, term.clone(), value),
+            Some((op, read)) => push_binary(self.ctx, op, read, value),
         };
         Ok(Some(InstructionKind::Message {
             term,
@@ -833,7 +842,7 @@ impl<'a> Inst<'a> {
         Ok(Some(id))
     }
 
-    fn numeric(&mut self) -> Result<(NumericSetting, Option<Expr>), ParseError> {
+    fn numeric(&mut self) -> Result<(NumericSetting, Option<ExprId>), ParseError> {
         // Measured as 20.905 for a bare `numeric` and for `numeric "x"`.
         let Some(token) = self.next_real() else {
             return Err(self.found(E20_905, None));
@@ -964,11 +973,11 @@ impl<'a> Inst<'a> {
                 // woken again, so it is rejected. The names could be collected
                 // while the expression is evaluated, through guard-variable
                 // capture on the simple-variable and stem paths, and then
-                // counted. Walking the finished tree is equivalent because
+                // counted. Walking the finished expression is equivalent because
                 // capture is unconditional over the whole expression and those
                 // two paths are reached for exactly the variable references in
                 // it.
-                self.guard_exposes(ExprRef::tree(&condition), block, &mut watched);
+                self.guard_exposes(self.ctx.exprs.borrow().get(condition), block, &mut watched);
                 if watched.is_empty() {
                     return Err(self.error(E99_913, []));
                 }
@@ -1044,7 +1053,7 @@ impl<'a> Inst<'a> {
     /// One `FORWARD` option that takes a constant expression.
     fn forward_option(
         &mut self,
-        slot: &mut Option<Expr>,
+        slot: &mut Option<ExprId>,
         duplicate: Msg<0>,
         missing: Msg<0>,
     ) -> Result<(), ParseError> {
@@ -1223,7 +1232,7 @@ impl<'a> Inst<'a> {
                     return Err(self.found(E20_931, Some(name)));
                 }
                 targets.push(Some(UseTarget {
-                    target: Expr::new(symbol_kind(id, class), name.span.clone()),
+                    target: self.ctx.push(symbol_kind(id, class), name.span.clone()),
                     default: None,
                     alias: true,
                 }));
@@ -1451,7 +1460,7 @@ impl<'a> Inst<'a> {
                 need_variable(self.ctx, id, class, self.clause_byte)?;
                 self.next_real();
                 self.next_real();
-                Some(Expr::new(symbol_kind(id, class), token.span.clone()))
+                Some(self.ctx.push(symbol_kind(id, class), token.span.clone()))
             }
             _ => None,
         };
@@ -1650,7 +1659,7 @@ impl<'a> Inst<'a> {
 
     /// An argument list with no bracket to match, which is the form every
     /// instruction uses.
-    fn arg_list(&mut self, closer: Option<Tag>) -> Result<Vec<Option<Expr>>, ParseError> {
+    fn arg_list(&mut self, closer: Option<Tag>) -> Result<Vec<Option<ExprId>>, ParseError> {
         parse_arg_list(self.ctx, &mut self.cursor, closer)
     }
 
@@ -1880,7 +1889,7 @@ impl<'a> Inst<'a> {
 }
 
 /// A `SELECT` with nothing wired to it yet.
-fn select_node(label: Option<SymbolId>, case: Option<Expr>) -> InstructionKind {
+fn select_node(label: Option<SymbolId>, case: Option<ExprId>) -> InstructionKind {
     InstructionKind::Select {
         label,
         case,

@@ -289,7 +289,7 @@ fn assigned_symbol(
     instruction: &interrexx_parse::Instruction,
 ) -> interrexx_parse::SymbolId {
     match &instruction.kind {
-        InstructionKind::Assignment { target, .. } => match body.expr(target).kind() {
+        InstructionKind::Assignment { target, .. } => match body.expr(*target).kind() {
             interrexx_parse::ExprView::Variable(id) => id,
             other => panic!("assignment target is not a plain variable: {other:?}"),
         },

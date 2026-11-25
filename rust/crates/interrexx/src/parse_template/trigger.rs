@@ -25,7 +25,7 @@ impl Interp {
                 return Ok(());
             }
             _ => match &trigger.value {
-                Some(operand) => code.body.expr(operand),
+                Some(operand) => code.body.expr(*operand),
                 None => return Err(Loud::parse_trigger_operand().into()),
             },
         };

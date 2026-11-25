@@ -167,7 +167,7 @@ fn a_compiled_read_names_the_symbol_its_expression_does() {
     let InstructionKind::Assignment { value, .. } = &program.main.instructions[0].kind else {
         panic!("the program's one instruction is an assignment");
     };
-    let ExprView::Compound(id) = program.main.expr(value).kind() else {
+    let ExprView::Compound(id) = program.main.expr(*value).kind() else {
         panic!("its value is a compound");
     };
     assert_eq!(

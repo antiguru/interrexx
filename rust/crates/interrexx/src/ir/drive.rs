@@ -1182,7 +1182,7 @@ macro_rules! region_ops {
                                 &$clause.kind,
                                 InstructionKind::Assignment { target, .. }
                                     if matches!(
-                                        $code.body.expr(target).kind(),
+                                        $code.body.expr(*target).kind(),
                                         ExprView::Variable(id) if $code.slot_for(id) == at
                                     )
                             ),
@@ -1202,7 +1202,7 @@ macro_rules! region_ops {
                         if let Err(failure) =
                             $self.assign_evaluated(
                                 $code,
-                                $code.body.expr(target),
+                                $code.body.expr(*target),
                                 value,
                                 at,
                                 *shared,
@@ -1503,8 +1503,8 @@ macro_rules! region_ops {
                         crate::pinning::PinKind::TreeSend,
                         $self.exec_message(
                             $code,
-                            $code.body.expr(term),
-                            value.as_ref().map(|value| $code.body.expr(value)),
+                            $code.body.expr(*term),
+                            value.as_ref().map(|value| $code.body.expr(*value)),
                         )
                     ) {
                         Ok(flow) => flow,
