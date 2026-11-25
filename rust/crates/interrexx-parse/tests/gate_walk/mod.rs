@@ -73,22 +73,6 @@ pub fn body_of_directive(kind: &DirectiveKind) -> Option<&CodeBody> {
     }
 }
 
-/// The expression a directive holds outside any body: only `::CONSTANT (expr)`
-/// has one.
-pub fn expr_of_directive(kind: &DirectiveKind) -> Option<ExprRef<'_>> {
-    match kind {
-        DirectiveKind::Constant(c) => c.value.expression(),
-        DirectiveKind::Annotate(_)
-        | DirectiveKind::Attribute(_)
-        | DirectiveKind::Class(_)
-        | DirectiveKind::Method(_)
-        | DirectiveKind::Options(_)
-        | DirectiveKind::Requires(_)
-        | DirectiveKind::Resource(_)
-        | DirectiveKind::Routine(_) => None,
-    }
-}
-
 /// Calls `visit` on every instruction of the program: the main body's, then
 /// each directive body's, in source order.
 pub fn each_instruction<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Instruction)) {
@@ -111,25 +95,10 @@ pub fn each_directive<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Directive))
     }
 }
 
-/// Calls `visit` on every expression in the program, parents before children.
+/// Calls `visit` on every expression in the program: each root's subtree in
+/// arena order, which puts a node's children before the node. A subtree is a
+/// contiguous run of its arena, so this is a loop over the arena's nodes.
 pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(ExprRef<'a>)) {
-    // An explicit stack rather than recursion through `children_of`, because
-    // a left-leaning expression the width of one clause overflows the stack
-    // here otherwise: `deep_nested_expr.rex`'s 3000-term chain aborted
-    // this walk on a default 2 MiB thread.
-    // Pushing a node's children in reverse and popping is what keeps this a
-    // parents-before-children, left-to-right walk exactly like the recursive
-    // version: the leftmost child is pushed last, so it is popped, and so
-    // fully visited depth-first, before its next sibling.
-    fn walk<'a>(root: ExprRef<'a>, visit: &mut impl FnMut(ExprRef<'a>)) {
-        let mut stack = vec![root];
-        while let Some(e) = stack.pop() {
-            visit(e);
-            let mut children: Vec<ExprRef<'a>> = Vec::new();
-            children_of(e, &mut |child| children.push(child));
-            stack.extend(children.into_iter().rev());
-        }
-    }
     let bodies = std::iter::once(&p.main).chain(
         p.directives
             .iter()
@@ -137,12 +106,15 @@ pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(ExprRef<'a>)) {
     );
     for body in bodies {
         for i in &body.instructions {
-            i.kind.for_each_root(&mut |e| walk(body.expr(e), visit));
+            i.kind
+                .for_each_root(&mut |root| body.exprs.subtree(root).for_each(&mut *visit));
         }
     }
     for d in &p.directives {
-        if let Some(e) = expr_of_directive(&d.kind) {
-            walk(e, visit);
+        if let DirectiveKind::Constant(c) = &d.kind
+            && let ConstantValue::Expression { exprs, root } = &c.value
+        {
+            exprs.subtree(*root).for_each(&mut *visit);
         }
     }
 }

@@ -883,11 +883,21 @@ fn a_message_operator_assignment_copies_its_term_before_its_value() {
         panic!("a message assignment");
     };
     let exprs = &program.main.exprs;
+    assert!(term.index() < exprs.node(*value).first().index());
+    // The copy is the value's first subtree and `2` follows it.
+    let order: Vec<&str> = exprs
+        .range(*value)
+        .iter()
+        .map(|node| tag(node.kind()))
+        .collect();
+    assert_eq!(
+        order,
+        ["Variable", "Constant", "Message", "Constant", "Binary"]
+    );
     assert_eq!(
         exprs.shape(*value, &program.symbols),
         "(+ (msg~ Q \"[]\" 1) 2)"
     );
-    assert!(term.index() < exprs.node(*value).first().index());
     assert_eq!(program.main.check(), Ok(()));
 }
 

@@ -991,8 +991,7 @@ mod tests {
     /// Pushes a fresh top-level activation for `program`, the same setup
     /// `Interp::run` does inline, but stopping short of calling
     /// `run_activation` -- these tests call stem functions directly rather
-    /// than through the instruction loop, which does not yet dispatch
-    /// `NodeKind::Stem`/`Compound` at all (that wiring is a later task's).
+    /// than through the instruction loop.
     /// Never popped: the whole `Interp` drops at the end of the test, and
     /// nothing here needs the frame released early.
     fn activate(interp: &mut Interp, program: Program) -> Rc<Program> {

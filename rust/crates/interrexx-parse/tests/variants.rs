@@ -1,4 +1,4 @@
-//! Every `Instruction` and `Expr` variant is constructed at
+//! Every `Instruction` variant and every arena node kind is constructed at
 //! least once by parsing `rust/corpus/lang/` and `samples/` together, asserted
 //! by enumerating the variants rather than by inspection.
 

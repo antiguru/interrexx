@@ -233,10 +233,10 @@ impl Raised {
     /// 'x' then` gives 34.6, a different message
     /// from `&`'s 34.901 for the identical bad value. `IF`/`WHEN`/`WHILE`/
     /// `UNTIL`'s own 34.1/34.2/34.3/34.4 are for when the *whole* condition
-    /// is a single expression, not a list, and are Tasks 9-11's to raise
-    /// when they exist; this crate has no instruction context yet to
-    /// prefer one of those over 34.6, so 34.6 is `NodeKind::Logical`'s own
-    /// answer regardless of which keyword built the list.
+    /// is a single expression, not a list; a list has no instruction
+    /// context to prefer one of those over 34.6, so 34.6 is
+    /// `NodeKind::Logical`'s own answer regardless of which keyword built the
+    /// list.
     pub(crate) fn logical_list_element(found: &[u8]) -> Raised {
         Raised::syntax(34, 6, vec![found.to_vec()])
     }

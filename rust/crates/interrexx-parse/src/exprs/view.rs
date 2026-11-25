@@ -121,6 +121,16 @@ impl Exprs {
     pub fn get(&self, id: ExprId) -> ExprRef<'_> {
         ExprRef { exprs: self, id }
     }
+
+    /// The views of the subtree rooted at `root`, children before their
+    /// parent, ending with `root`: the arena's `range` as views, without its
+    /// `Omitted` nodes, which are read through their list and never viewed.
+    pub fn subtree(&self, root: ExprId) -> impl Iterator<Item = ExprRef<'_>> {
+        (self.node(root).first.index()..=root.index())
+            .map(ExprId::after)
+            .filter(|id| !matches!(self.node(*id).kind, NodeKind::Omitted))
+            .map(|id| self.get(id))
+    }
 }
 
 fn arena_view(exprs: &Exprs, id: ExprId) -> ExprView<'_> {

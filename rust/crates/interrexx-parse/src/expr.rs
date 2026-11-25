@@ -928,6 +928,8 @@ impl<'a, 'c> Parser<'a, 'c> {
             self.advance();
         }
         args.truncate(real);
+        // Only expression lists (`nodes`) push `Omitted` nodes, so only they
+        // rely on this rewind; for the others it truncates nothing.
         self.ctx.exprs.borrow_mut().rewind(present);
         Ok(args)
     }
