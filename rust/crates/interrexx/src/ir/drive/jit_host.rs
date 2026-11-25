@@ -638,14 +638,14 @@ fn pass_of(
                 | Op::TraceRead { .. }
                 | Op::TraceOperator { .. }
                 | Op::TracePrefix { .. } => Step::Trace { pc: at },
-                // The region's last op, so the clause's close follows it.
-                Op::ConditionJump { reg, target, .. } if at + 1 == end && inside(target) => {
-                    Step::Branch {
-                        pc: at,
-                        reg,
-                        target,
-                    }
-                }
+                // A false condition leaves the clause. A true comma-list
+                // item can fall through to the next item in the same clause.
+                Op::ConditionJump { reg, target, .. } if inside(target) => Step::Branch {
+                    pc: at,
+                    reg,
+                    target,
+                    keep_open: at + 1 < end,
+                },
                 Op::Load {
                     read: SymbolRead::Simple,
                     at: slot,
