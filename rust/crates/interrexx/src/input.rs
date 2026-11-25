@@ -661,7 +661,7 @@ impl Interp {
     }
 
     /// Whether `.input` is the process's own standard input.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     pub(crate) fn input_is_process_stdin(&self) -> bool {
         self.input.is_live()
     }

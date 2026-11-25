@@ -77,6 +77,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Directory", crate::builtin::platform::directory),
     rexx_run("Filespec", crate::builtin::platform::filespec),
     rexx_run("Beep", crate::builtin::platform::beep),
+    #[cfg(windows)]
+    util_run(
+        "RxMessageBox",
+        crate::builtin::rexxutil::windows_interaction::message_box,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "RxWinExec",
+        crate::builtin::rexxutil::windows_process::win_exec,
+    ),
     util_run("SysAddRexxMacro", crate::builtin::rexxutil::macros::add),
     #[cfg(windows)]
     util_run(
@@ -192,6 +202,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysGetFileDateTime",
         crate::builtin::rexxutil::files::get_file_date_time,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysGetKey",
+        crate::builtin::rexxutil::windows_interaction::get_key,
+    ),
     #[cfg(unix)]
     util_run("SysGetKey", crate::builtin::rexxutil::process::get_key),
     #[cfg(windows)]
@@ -290,6 +305,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysOpenEventSem", crate::builtin::rexxutil::open_sem),
     util_run("SysOpenMutexSem", crate::builtin::rexxutil::open_sem),
     util_run("SysPostEventSem", crate::builtin::rexxutil::post_event_sem),
+    #[cfg(windows)]
+    util_run(
+        "SysQueryProcess",
+        crate::builtin::rexxutil::windows_process::query_process,
+    ),
     #[cfg(unix)]
     util_run(
         "SysQueryProcess",
@@ -331,16 +351,31 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSetFileDateTime",
         crate::builtin::rexxutil::files::set_file_date_time,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysSetPriority",
+        crate::builtin::rexxutil::windows_process::set_priority,
+    ),
     #[cfg(unix)]
     util_run(
         "SysSetPriority",
         crate::builtin::rexxutil::process::set_priority,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysShutdownSystem",
+        crate::builtin::rexxutil::windows_process::shutdown_system,
     ),
     util_run("SysSleep", crate::builtin::rexxutil::sleep),
     util_run("SysStemCopy", crate::builtin::rexxutil::stems::copy),
     util_run("SysStemDelete", crate::builtin::rexxutil::stems::delete),
     util_run("SysStemInsert", crate::builtin::rexxutil::stems::insert),
     util_run("SysStemSort", crate::builtin::rexxutil::stems::sort),
+    #[cfg(windows)]
+    util_run(
+        "SysSwitchSession",
+        crate::builtin::rexxutil::windows_interaction::switch_session,
+    ),
     #[cfg(windows)]
     util_run(
         "SysSystemDirectory",
@@ -374,6 +409,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
+    #[cfg(windows)]
+    util_run(
+        "SysWaitNamedPipe",
+        crate::builtin::rexxutil::windows_interaction::wait_named_pipe,
+    ),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
     #[cfg(windows)]
     util_run(

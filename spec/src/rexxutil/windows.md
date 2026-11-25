@@ -192,3 +192,28 @@ one on failure. `SysWinGetDefaultPrinter()` answers the description of
 the default printer, or the null string when none is available.
 `SysWinSetDefaultPrinter(name)` accepts a printer name or a description.
 It answers zero on success or a Windows system error code on failure.
+
+## Windows interaction
+
+r[util.windows.interaction]
+`RxMessageBox` displays the supplied text and returns the selected
+button's Windows identifier. `SysSwitchSession` looks up a top-level
+window by title and asks Windows to bring it forward.
+`SysWaitNamedPipe(name[, timeout])` waits for an available server
+instance. It uses the server's default timeout for zero and waits
+without a deadline for minus one. It answers zero for an available
+pipe or the Windows system error code. `SysGetKey` reads one character
+from the Windows keyboard with optional echo. A keyboard, pipe or
+message-box wait parks its calling Rexx activity.
+
+## Windows processes
+
+r[util.windows.process]
+On Windows `SysQueryProcess` accepts `PID`, `TID`, `PPRIO`,
+`TPRIO`, `PTIME` and `TTIME`. The default selector is `PID`.
+`SysSetPriority` selects a process priority class and a thread
+priority and answers a Windows status. `RxWinExec` starts a Windows
+program from a command line with the requested window style. It
+answers the process ID on success. A Windows error greater than 32
+is returned as a negative number. `SysShutdownSystem` requests
+shutdown or reboot through Windows using the caller's token.

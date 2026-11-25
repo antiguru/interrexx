@@ -1,5 +1,19 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use strict arg root
+/* All Windows-only entries in the project inventory must be callable. */
+windowsRoutines = 'RxMessageBox RxWinExec SysBootDrive SysCurPos SysCurState SysDriveInfo SysDriveMap',
+  'SysFileSystemType SysFromUnicode SysGetLongPathName SysGetShortPathName SysIni',
+  'SysIsFileCompressed SysIsFileEncrypted SysIsFileNotContentIndexed SysIsFileOffline',
+  'SysIsFileSparse SysIsFileTemporary SysShutdownSystem SysSwitchSession',
+  'SysSystemDirectory SysTextScreenRead SysTextScreenSize SysToUnicode SysVolumeLabel',
+  'SysWaitNamedPipe SysWinDecryptFile SysWinEncryptFile SysWinGetPrinters',
+  'SysWinGetDefaultPrinter SysWinSetDefaultPrinter SysWinVer'
+do routine over windowsRoutines~makeArray(' ')
+  if RxFuncQuery(routine) <> 0 then do
+    say 'Missing Windows RexxUtil routine' routine
+    exit 145
+  end
+end
 /* spec: util.windows.version */
 windowsVersion = value('REXX_TEST_WINDOWS_VERSION', , 'ENVIRONMENT')
 if SysVersion() \== windowsVersion | SysWinVer() \== windowsVersion then exit 47
@@ -225,3 +239,23 @@ do i = 1 to printers.0
 end
 if defaultPrinter \== '' & foundDefault <> 1 then exit 143
 if SysWinSetDefaultPrinter('') = 0 then exit 144
+
+/* spec: util.windows.interaction */
+pipe = value('REXX_TEST_NAMED_PIPE', , 'ENVIRONMENT')
+if pipe == '' then exit 150
+if SysWaitNamedPipe(pipe, 200) <> 0 then exit 151
+if SysWaitNamedPipe(pipe || '-missing', 200) <> 2 then exit 152
+if SysSwitchSession(pipe || '-missing') = 0 then exit 153
+/* spec: util.windows.process */
+if SysQueryProcess() <= 0 | SysQueryProcess('TID') <= 0 then exit 156
+if SysQueryProcess() <> SysQueryProcess('PID') then exit 157
+if SysQueryProcess('PPRIO') == '' | SysQueryProcess('TPRIO') == '' then exit 158
+if SysSetPriority('not-a-class', 'NORMAL') <> 307 then exit 159
+if RxWinExec('"Z:\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
+command = '"' || systemDir || '\cmd.exe" /D /C exit 0'
+if RxWinExec(command, 'HIDE') <= 32 then exit 161
+signal on syntax name rejected
+call RxMessageBox 'unopened', , 'invalid-button'
+exit 154
+rejected:
+if condition('O')~code <> 40.920 then exit 155

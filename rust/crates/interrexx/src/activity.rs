@@ -343,6 +343,8 @@ pub(crate) struct Activity {
     /// The park a primitive method answered, from its answer until the
     /// activity wakes.
     pub(crate) native_park: Option<Box<crate::dispatch::NativePark>>,
+    #[cfg(windows)]
+    pub(crate) windows_util_wait: Option<crate::builtin::rexxutil::windows_interaction::Pending>,
     /// A native call that leaves its driver, from its `prepare` until its
     /// `finish`.
     pub(crate) native_call: Option<Box<crate::dispatch::library::NativeInFlight>>,
@@ -657,6 +659,8 @@ impl Activity {
             pin_depth: 0,
             driver_pins: 0,
             native_park: None,
+            #[cfg(windows)]
+            windows_util_wait: None,
             native_call: None,
             blocked: crate::command::Blocks::default(),
             resuming: false,
@@ -881,6 +885,8 @@ impl Activity {
             guard_posted: _,
             when_parked: _,
             asleep: _,
+            #[cfg(windows)]
+                windows_util_wait: _,
             woken_by_halt: _,
             queue_wait: _,
             scoped_guard: _,
