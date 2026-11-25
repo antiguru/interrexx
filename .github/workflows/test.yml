@@ -580,6 +580,10 @@ jobs:
     env:
       CARGO_BUILD_TARGET: i686-unknown-linux-gnu
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: /usr/bin/cc
+      # A target triple adds a directory to every path under the target directory, which takes
+      # the API service's socket under a test's scratch directory past the 108-byte limit; this
+      # short name links to `rust/target`, which the cache saves.
+      CARGO_TARGET_DIR: /tmp/t
     steps:
       - uses: actions/checkout@v7
         with:
@@ -621,6 +625,8 @@ jobs:
       - name: Put the 32-bit compiler wrappers first
         working-directory: .
         run: echo "$PWD/ci/m32" >> "$GITHUB_PATH"
+      - name: Link the short target directory
+        run: mkdir -p target && ln -s "$PWD/target" /tmp/t
       - name: Cargo build
         run: cargo build --locked --workspace --all-targets
       - name: Cargo nextest
