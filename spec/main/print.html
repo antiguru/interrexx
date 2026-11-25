@@ -75287,7 +75287,7 @@ above give.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="traceobject"><a class="header" href="#traceobject">TraceObject</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TraceObject Class; Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; activate (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; collector (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; collector= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; counter (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; makeStringImpl (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; notify (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; notify= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; option (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; option= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; setMakeString (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; unsetMakeString (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; makeString</p>
-<p class="deviations">Deviations: D7, D50, D109</p>
+<p class="deviations">Deviations: D7, D50, D109, D184</p>
 <p>Every line that <a href="classes/../instructions/trace.html#r-instr.trace.destination">TRACE</a> writes is first an object,
 a <code>TraceObject</code>: a <a href="classes/stringtable.html"><code>StringTable</code></a> whose entries describe the
 line, the code that produced it and the moment, and whose string value is the
@@ -75317,7 +75317,9 @@ class of the library is its subclass. Its instance side defines <code>compareTo<
 attributes of its own: its <code>new</code> counts with its own <code>counter</code>, from <code>0</code>, sends
 <code>append</code> to its own <code>collector</code>, and its instances' <code>makeString</code> follows its own
 <code>option</code> and <code>setMakeString</code>. The interpreter makes the objects for trace lines
-with <code>TraceObject</code> itself, so the attributes of a subclass do not affect them.</p>
+with <code>TraceObject</code> itself, so the attributes of a subclass do not affect them.
+This applies to a class made with <a href="classes/class.html#r-class.class.subclass"><code>subclass</code></a> as well
+as one declared by <code>::CLASS</code> (<a href="classes/traceobject.html#r-class.traceobject.deviation.184">Deviation 184</a>).</p>
 <pre><code class="language-rexx">t = .traceobject
 say t~superclasses~items t~superclass~id t~subclasses~items
 say t~isSubclassOf(.stringtable) t~isSubclassOf(.directory)
@@ -76627,6 +76629,27 @@ say .traceobject~option
   return 'Full'
 </code></pre>
 <pre><code class="language-output">S
+</code></pre>
+<div class="rule" id="r-class.traceobject.deviation.184"><a href="classes/traceobject.html#r-class.traceobject.deviation.184">[class.traceobject.deviation.184]</a></div>
+<p>An instance of a <code>TraceObject</code> subclass can be made whether the subclass was
+declared or created at run time. Each subclass counts its own instances.
+ooRexx creates the run-time subclass and then raises <code>SYNTAX 41.1</code> on its
+first <code>NEW</code>. It instantiates the declared subclass.</p>
+<pre><code class="language-rexx">declared = .declared~new
+say 'declared' declared~class~id declared['NUMBER']
+runtime = .traceobject~subclass('DynamicTrace')
+say 'superclass' runtime~superclass~id
+signal on syntax name failed
+first = runtime~new
+second = runtime~new
+say 'dynamic' first~class~id first['NUMBER'] second['NUMBER'] .traceobject~counter
+exit
+failed: say 'error' condition('o')~code
+::class declared subclass TraceObject
+</code></pre>
+<pre><code class="language-output">declared DECLARED 1
+superclass TraceObject
+dynamic DynamicTrace 1 2 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="validate"><a class="header" href="#validate">Validate</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Validate Class; Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; classType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; length (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; logical (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; number (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; numberRange (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; position (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; requestClassType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumberRange (Class Method)</p>
@@ -132527,6 +132550,12 @@ checking their values. ooRexx sends <code>&lt;</code>, <code>UPPER</code>, <code
 <code>CASELESSMATCHCHAR</code> to the arguments themselves, which can raise
 <code>SYNTAX 97.1</code> even for objects that supply valid text
 (<a href="classes/circularqueue.html#r-class.circularqueue.deviation.183">example</a>).</p>
+<h2 id="184-instantiating-a-run-time-subclass-of-traceobject"><a class="header" href="#184-instantiating-a-run-time-subclass-of-traceobject">184. Instantiating a run-time subclass of TraceObject</a></h2>
+<p>The normal subclass and constructor rules apply when <code>TraceObject~subclass</code>
+creates a class at run time. ooRexx creates the subclass, then raises
+<code>SYNTAX 41.1</code> when <code>NEW</code> first instantiates it. A class declared with
+<code>::CLASS ... SUBCLASS TraceObject</code> can be instantiated on both interpreters
+(<a href="classes/traceobject.html#r-class.traceobject.deviation.184">example</a>). Ruled by the owner in #1036.</p>
 
                     </main>
 
