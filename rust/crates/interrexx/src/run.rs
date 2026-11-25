@@ -27,7 +27,7 @@ use interrexx_core::{
 };
 use interrexx_num::{ArithError, CompareOp, Form, Number, SettingsError, compare_decoded};
 use interrexx_parse::{
-    Args, CodeBody, ConditionTrap, ControlExpr, DirectiveKind, EndStyle, Expr, ExprRef, ExprView,
+    Args, CodeBody, ConditionTrap, ControlExpr, DirectiveKind, EndStyle, ExprRef, ExprView,
     Forward, Fragment, Guard, Instruction, InstructionKind, Loop, LoopConditional, LoopKind,
     NumericSetting, ProgramSource, Raise, SymbolId, Trace, Use, UseTarget, VariableRef,
 };
@@ -88,7 +88,7 @@ pub(crate) use loops::QuickTest;
 use loops::numeric_less;
 pub(crate) use loops::{
     FlatLoop, FlatStart, FlatStep, HeaderRole, LOOP_CONDITION_SLOT, LoopHeaderValues, TestOpen,
-    loop_header_expr, loop_header_plan, loop_header_slot,
+    loop_header_plan, loop_header_slot,
 };
 
 /// A `FORWARD` with its options evaluated and checked, whose send the driver
@@ -117,26 +117,39 @@ pub(crate) enum ForwardPart {
 
 /// Scalar options in evaluation order. The index also addresses the option
 /// expression in the instruction; `ARRAY` items follow these four slots.
-pub(crate) fn forward_option_parts(forward: &Forward) -> [(ForwardPart, Option<&Expr>); 4] {
+pub(crate) fn forward_option_parts<'a>(
+    body: &'a CodeBody,
+    forward: &'a Forward,
+) -> [(ForwardPart, Option<ExprRef<'a>>); 4] {
     [
-        (ForwardPart::To, forward.to.as_ref()),
-        (ForwardPart::Message, forward.message.as_ref()),
-        (ForwardPart::Class, forward.class.as_ref()),
-        (ForwardPart::Arguments, forward.arguments.as_ref()),
+        (ForwardPart::To, forward.to.as_ref().map(|e| body.expr(e))),
+        (
+            ForwardPart::Message,
+            forward.message.as_ref().map(|e| body.expr(e)),
+        ),
+        (
+            ForwardPart::Class,
+            forward.class.as_ref().map(|e| body.expr(e)),
+        ),
+        (
+            ForwardPart::Arguments,
+            forward.arguments.as_ref().map(|e| body.expr(e)),
+        ),
     ]
 }
 
 pub(crate) const FORWARD_ARRAY_SLOT: u32 = 4;
 
-fn forward_slot(forward: &Forward, slot: u32) -> Option<&Expr> {
+fn forward_slot<'a>(body: &'a CodeBody, forward: &'a Forward, slot: u32) -> Option<ExprRef<'a>> {
     if let Some(item) = slot.checked_sub(FORWARD_ARRAY_SLOT) {
         return forward
             .array
             .as_ref()?
             .get(usize::cast_from(item))?
-            .as_ref();
+            .as_ref()
+            .map(|e| body.expr(e));
     }
-    forward_option_parts(forward)[usize::cast_from(slot)].1
+    forward_option_parts(body, forward)[usize::cast_from(slot)].1
 }
 
 /// Where control goes after one instruction (the design's "Control flow").
@@ -726,7 +739,9 @@ impl Interp {
         }
         match &instruction.kind {
             InstructionKind::Guard(guard) => self.exec_guard(code, index, guard, None),
-            InstructionKind::Reply { expression } => self.exec_reply(code, expression.as_ref()),
+            InstructionKind::Reply { expression } => {
+                self.exec_reply(code, expression.as_ref().map(|e| code.body.expr(e)))
+            }
             // `FORWARD` and its options. See `exec_forward`.
             InstructionKind::Forward(forward) => self.exec_forward(code, forward),
             InstructionKind::Command { .. } | InstructionKind::Address(_)
@@ -750,9 +765,15 @@ impl Interp {
                     "a command clause reached execution with no expression"
                 );
                 match expression {
-                    Some(expression) => {
-                        self.exec_command(code, index, instruction, source, expression, None, None)
-                    }
+                    Some(expression) => self.exec_command(
+                        code,
+                        index,
+                        instruction,
+                        source,
+                        code.body.expr(expression),
+                        None,
+                        None,
+                    ),
                     None => Ok(ExecOutcome::Done(Flow::Next)),
                 }
             }
@@ -784,7 +805,7 @@ impl Interp {
                         index,
                         instruction,
                         source,
-                        command,
+                        code.body.expr(command),
                         Some(&environment),
                         address.io.as_deref(),
                     );
@@ -845,7 +866,11 @@ impl Interp {
                 setting,
                 expression,
             } => {
-                self.exec_numeric(code, setting, expression)?;
+                self.exec_numeric(
+                    code,
+                    setting,
+                    expression.as_ref().map(|e| code.body.expr(e)),
+                )?;
                 Ok(Flow::Next)
             }
 
@@ -1830,13 +1855,16 @@ impl Interp {
                             chunk,
                             registers,
                             index,
-                            condition,
+                            code.body.expr(condition),
                             trace,
                             raised_guard_not_logical,
                         ),
-                        None => {
-                            self.eval_condition(code, condition, trace, raised_guard_not_logical)
-                        }
+                        None => self.eval_condition(
+                            code,
+                            code.body.expr(condition),
+                            trace,
+                            raised_guard_not_logical,
+                        ),
                     };
                     self.roots.activity_mut().pop_frame(frame);
                     match holds {
@@ -1880,12 +1908,12 @@ impl Interp {
     fn exec_reply(
         &mut self,
         code: &Code<'_>,
-        expression: Option<&Expr>,
+        expression: Option<ExprRef<'_>>,
     ) -> Result<ExecOutcome, Failure> {
         self.reply_permitted()?;
         park_point!(self, crate::pinning::ParkKind::Reply);
         let value = match expression {
-            Some(expression) => Some(self.eval(code, code.body.expr(expression))?),
+            Some(expression) => Some(self.eval(code, expression)?),
             None => None,
         };
         self.exec_reply_value(value)
@@ -1957,12 +1985,12 @@ impl Interp {
         // `ARRAY` items' own `>A>` lines ahead of its keyword line.
         let target = match &forward.to {
             None => receiver,
-            Some(expr) => self.forward_keyword(code, expr, "TO")?,
+            Some(expr) => self.forward_keyword(code, code.body.expr(expr), "TO")?,
         };
         let message = match &forward.message {
             None => own_name,
             Some(expr) => {
-                let value = self.forward_keyword(code, expr, "MESSAGE")?;
+                let value = self.forward_keyword(code, code.body.expr(expr), "MESSAGE")?;
                 let text = self.required_string_value(value)?;
                 Rc::from(self.to_text(text).to_ascii_uppercase())
             }
@@ -1998,6 +2026,7 @@ impl Interp {
     #[inline(never)]
     fn exec_forward_evaluated(
         &mut self,
+        code: &Code<'_>,
         forward: &Forward,
         registers: RegFrame<'_>,
         mut src: u16,
@@ -2005,8 +2034,8 @@ impl Interp {
         let Some(identity) = self.activation().method_identity.as_ref() else {
             return Err(Raised::forward_outside_method().into());
         };
-        let [target, message, start_scope, arguments] =
-            forward_option_parts(forward).map(|(_, expr)| {
+        let [target, message, start_scope, arguments] = forward_option_parts(code.body, forward)
+            .map(|(_, expr)| {
                 expr.map(|_| {
                     let value = registers.get(src);
                     src += 1;
@@ -2181,10 +2210,10 @@ impl Interp {
     fn forward_keyword(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
         keyword: &str,
     ) -> Result<ObjRef, Failure> {
-        let value = self.eval(code, code.body.expr(expr))?;
+        let value = self.eval(code, expr)?;
         self.roots.activity_mut().push_temp(value);
         self.trace_forward_keyword(keyword, value)?;
         Ok(value)
@@ -2212,7 +2241,7 @@ impl Interp {
         mark: usize,
     ) -> Result<(), Failure> {
         if let Some(expr) = &forward.arguments {
-            let value = self.forward_keyword(code, expr, "ARGUMENTS")?;
+            let value = self.forward_keyword(code, code.body.expr(expr), "ARGUMENTS")?;
             return self.convert_forward_arguments(value, values, mark);
         }
         if let Some(items) = &forward.array {
@@ -2802,12 +2831,6 @@ impl Interp {
         body: &'a CodeBody,
         kind: &'a InstructionKind,
     ) -> Option<ExprRef<'a>> {
-        Self::exec_value_node(kind).map(|expression| body.expr(expression))
-    }
-
-    /// [`Interp::exec_value_expression`]'s expression, as the node the
-    /// body's tree holds.
-    pub(crate) fn exec_value_node(kind: &InstructionKind) -> Option<&Expr> {
         let expression = match kind {
             InstructionKind::Numeric {
                 expression: Some(expression),
@@ -2831,7 +2854,7 @@ impl Interp {
             },
             _ => return None,
         };
-        Some(expression)
+        Some(body.expr(expression))
     }
 
     /// Whether the instruction [`Interp::exec_value_expression`] names runs
@@ -2933,7 +2956,7 @@ impl Interp {
                 .map(ExecOutcome::Done);
         }
         if let InstructionKind::Forward(forward) = &instruction.kind {
-            return self.exec_forward_evaluated(forward, registers, src);
+            return self.exec_forward_evaluated(code, forward, registers, src);
         }
         let value = registers.get(src);
         match &instruction.kind {
@@ -3885,7 +3908,11 @@ impl Interp {
 
     /// An `IF`'s own condition, evaluated as the whole of the `IF` clause's
     /// work.
-    fn eval_if_condition(&mut self, code: &Code<'_>, condition: &Expr) -> Result<bool, Failure> {
+    fn eval_if_condition(
+        &mut self,
+        code: &Code<'_>,
+        condition: ExprRef<'_>,
+    ) -> Result<bool, Failure> {
         let indent = self.activity.clause_state.current_value_indent;
         self.eval_condition(
             code,
@@ -3927,7 +3954,7 @@ impl Interp {
                 0,
             ) => body.expr(expression),
             (InstructionKind::Forward(forward), slot) => {
-                body.expr(forward_slot(forward, u32::from(slot))?)
+                forward_slot(body, forward, u32::from(slot))?
             }
             // The two instructions whose slot `0` exists only in one of their
             // forms. Both are reachable: the expression is compiled through
@@ -4016,7 +4043,7 @@ impl Interp {
             // A `RAISE`'s expression `slot`, as `raise_slot` numbers them.
             (InstructionKind::Raise(raise), slot) => raise_slot(body, raise, slot)?,
             (InstructionKind::Use(use_), slot) => {
-                body.expr(Self::use_arg_default(use_, usize::from(slot))?)
+                Self::use_arg_default(body, use_, usize::from(slot))?
             }
             _ => return None,
         };
@@ -4061,10 +4088,11 @@ impl Interp {
                 self.eval(code, expression)
             }
             (InstructionKind::Use(use_), slot) => {
-                let Some(expr) = Self::use_arg_default(use_, usize::cast_from(slot)) else {
+                let Some(expr) = Self::use_arg_default(code.body, use_, usize::cast_from(slot))
+                else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, code.body.expr(expr))
+                self.eval(code, expr)
             }
             // A `RAISE`'s expression `slot`, evaluated and nothing else: each
             // part's work is its own `Op::RaisePart`.
@@ -4078,7 +4106,7 @@ impl Interp {
                 self.eval(code, expr)
             }
             (InstructionKind::If { condition, .. }, 0) => {
-                let holds = self.eval_if_condition(code, condition)?;
+                let holds = self.eval_if_condition(code, code.body.expr(condition))?;
                 // In range unconditionally: `SMALL_INT_MAX` is far above one.
                 Ok(ObjRef::small_int(i64::from(holds)).unwrap_or(ObjRef::NIL))
             }
@@ -4088,7 +4116,7 @@ impl Interp {
                     ..
                 },
                 0,
-            ) => self.select_case(code, case_expr),
+            ) => self.select_case(code, code.body.expr(case_expr)),
             // A `DO`/`LOOP` header's `slot`th expression, in the order
             // `loop_header_plan` puts them in -- the order they were written,
             // which is the order they are evaluated. The expression is
@@ -4110,10 +4138,10 @@ impl Interp {
             // to arm here because this is the same
             // `eval` call it makes.
             (InstructionKind::Forward(forward), slot) => {
-                let Some(expr) = forward_slot(forward, slot) else {
+                let Some(expr) = forward_slot(code.body, forward, slot) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
-                self.eval(code, code.body.expr(expr))
+                self.eval(code, expr)
             }
             // `SIGNAL VALUE`'s own expression, for the shapes `compile` emits
             // no native op for. The `>K>` echo and the search are
@@ -4184,7 +4212,7 @@ impl Interp {
         chunk: &crate::ir::Chunk,
         registers: RegFrame<'_>,
         do_index: usize,
-        condition: &Expr,
+        condition: ExprRef<'_>,
         trace: ConditionTrace<'_>,
         raise: fn(&[u8]) -> Raised,
     ) -> Result<bool, Failure> {
@@ -4202,12 +4230,12 @@ impl Interp {
     fn eval_condition(
         &mut self,
         code: &Code<'_>,
-        condition: &Expr,
+        condition: ExprRef<'_>,
         trace: ConditionTrace<'_>,
         raise: fn(&[u8]) -> Raised,
     ) -> Result<bool, Failure> {
-        let value = self.eval(code, code.body.expr(condition))?;
-        let checked = matches!(code.body.expr(condition).kind(), ExprView::Logical(_));
+        let value = self.eval(code, condition)?;
+        let checked = matches!(condition.kind(), ExprView::Logical(_));
         self.condition_value(value, trace, checked, raise)
     }
 
@@ -4287,12 +4315,12 @@ impl Interp {
     fn test_case_when(
         &mut self,
         code: &Code<'_>,
-        values: &[Expr],
+        values: Args<'_>,
         case: ObjRef,
         indent: usize,
     ) -> Result<bool, Failure> {
-        for value in values {
-            let value = self.eval(code, code.body.expr(value))?;
+        for value in values.iter().flatten() {
+            let value = self.eval(code, value)?;
             self.roots.activity_mut().push_temp(value);
             self.trace_value_result(indent, value);
             let answer = self.apply_binary(interrexx_parse::Operator::StrictEqual, case, value)?;

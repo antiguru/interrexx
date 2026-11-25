@@ -172,11 +172,20 @@ impl Interp {
             .flatten()
     }
 
-    pub(super) fn use_arg_default(use_: &Use, slot: usize) -> Option<&Expr> {
+    pub(super) fn use_arg_default<'a>(
+        body: &'a CodeBody,
+        use_: &'a Use,
+        slot: usize,
+    ) -> Option<ExprRef<'a>> {
         let Use::Arg { targets, .. } = use_ else {
             return None;
         };
-        targets.get(slot)?.as_ref()?.default.as_ref()
+        targets
+            .get(slot)?
+            .as_ref()?
+            .default
+            .as_ref()
+            .map(|e| body.expr(e))
     }
 
     /// Bind the supplied value, or leave the next ops to compute and bind the

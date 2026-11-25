@@ -461,7 +461,7 @@ fn check_body(
                 let expected = if *role == crate::run::HeaderRole::Counter {
                     Root::Const
                 } else {
-                    crate::run::loop_header_expr(loop_, slot).map_or(Root::EvalExpr, root_of)
+                    super::compile::loop_header_expr(loop_, slot).map_or(Root::EvalExpr, root_of)
                 };
                 let actual = region[group..op_at].iter().filter_map(Root::of).next_back();
                 assert_eq!(

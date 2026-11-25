@@ -2,9 +2,9 @@
 
 use super::{
     ArithError, BehaviourId, Body, ClauseOutcome, Code, CodeBody, CompareOp, ConditionTrace,
-    ControlExpr, Cow, Decoded, Expr, ExprRef, Failure, Flow, Instruction, InstructionKind, Interp,
-    Loop, LoopConditional, LoopKind, Loud, NameShape, Novalue, Number, ObjRef, ProgramSource,
-    Raised, RegFrame, SymbolId, compare_decoded, exact_small_int, raised_available_not_logical,
+    ControlExpr, Cow, Decoded, ExprRef, Failure, Flow, Instruction, InstructionKind, Interp, Loop,
+    LoopConditional, LoopKind, Loud, NameShape, Novalue, Number, ObjRef, ProgramSource, Raised,
+    RegFrame, SymbolId, compare_decoded, exact_small_int, raised_available_not_logical,
     raised_for_count_not_whole, raised_iterate_wrong_kind, raised_repetition_count_not_whole,
     raised_until_not_logical, raised_while_not_logical, shape_of, within_digits,
 };
@@ -627,8 +627,12 @@ pub(crate) fn loop_header_plan(body: &Loop) -> HeaderPlan {
 
 /// The expression `role` names in `kind`, or `None` when that kind has no
 /// expression for it.
-fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
-    match (kind, role) {
+fn header_expr_for<'a>(
+    body: &'a CodeBody,
+    kind: &'a LoopKind,
+    role: HeaderRole,
+) -> Option<ExprRef<'a>> {
+    let expr = match (kind, role) {
         (LoopKind::Count(expr), HeaderRole::Count) => expr.as_ref(),
         (LoopKind::Controlled(ctrl), HeaderRole::Initial) => Some(&ctrl.initial),
         (LoopKind::Controlled(ctrl), HeaderRole::To) => ctrl.to.as_ref(),
@@ -639,7 +643,8 @@ fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
         (LoopKind::With { target, .. }, HeaderRole::With) => Some(target),
         (LoopKind::With { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
         _ => None,
-    }
+    };
+    expr.map(|expr| body.expr(expr))
 }
 
 /// The expression of `body`'s header at `slot` -- the compiled stream's own
@@ -649,14 +654,9 @@ pub(crate) fn loop_header_slot<'a>(
     header: &'a Loop,
     slot: u32,
 ) -> Option<ExprRef<'a>> {
-    loop_header_expr(header, slot).map(|expr| code.expr(expr))
-}
-
-/// [`loop_header_slot`]'s expression, as the node the body's tree holds.
-pub(crate) fn loop_header_expr(header: &Loop, slot: u32) -> Option<&Expr> {
     let plan = loop_header_plan(header);
     let role = *plan.roles().get(usize::cast_from(slot))?;
-    header_expr_for(&header.kind, role)
+    header_expr_for(code, &header.kind, role)
 }
 
 /// One `DO`/`LOOP` header's evaluated and validated values.
@@ -1809,7 +1809,7 @@ impl Interp {
                     chunk,
                     registers,
                     flat.do_index,
-                    &cond.condition,
+                    code.body.expr(&cond.condition),
                     ConditionTrace::Keyword(loop_indent, "UNTIL"),
                     raised_until_not_logical,
                 )
@@ -2279,7 +2279,7 @@ impl Interp {
                         chunk,
                         registers,
                         do_index,
-                        &cond.condition,
+                        code.body.expr(&cond.condition),
                         ConditionTrace::Keyword(loop_indent, "WHILE"),
                         raised_while_not_logical,
                     )

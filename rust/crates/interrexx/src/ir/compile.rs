@@ -18,8 +18,7 @@ use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary}
 use crate::plan::Plan;
 use crate::run::{
     FORWARD_ARRAY_SLOT, ForwardPart, HeaderRole, LOOP_CONDITION_SLOT, QueueKeyword, ReturnKeyword,
-    forward_option_parts, if_targets, loop_header_expr, loop_header_plan, otherwise_range,
-    when_targets,
+    if_targets, loop_header_plan, otherwise_range, when_targets,
 };
 use crate::trace::ChunkTrace;
 
@@ -1369,7 +1368,7 @@ fn compile_settled(
             // expression's ops, then `Op::ExecValue`, which does the rest.
             // A `REPLY` has `Op::ReplyCheck` ahead of them, the check it makes
             // before evaluating.
-            kind if let Some(expression) = crate::Interp::exec_value_node(kind) => {
+            kind if let Some(expression) = exec_value_node(kind) => {
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
                 let echo = echoes(trace, instruction);
@@ -3074,3 +3073,66 @@ pub(crate) fn compile_calls() -> usize {
 
 #[cfg(test)]
 mod tests;
+
+// The compiler still walks the tree, so it reads the instruction slots the
+// run-time helpers answer as views through these twins. Each goes with the
+// compiler's own move to the view.
+
+/// [`crate::run::loop_header_slot`]'s expression, as the node the tree holds.
+pub(super) fn loop_header_expr(header: &interrexx_parse::Loop, slot: u32) -> Option<&Expr> {
+    use interrexx_parse::LoopKind;
+    let plan = loop_header_plan(header);
+    let role = *plan.roles().get(slot as usize)?;
+    match (&header.kind, role) {
+        (LoopKind::Count(expr), HeaderRole::Count) => expr.as_ref(),
+        (LoopKind::Controlled(ctrl), HeaderRole::Initial) => Some(&ctrl.initial),
+        (LoopKind::Controlled(ctrl), HeaderRole::To) => ctrl.to.as_ref(),
+        (LoopKind::Controlled(ctrl), HeaderRole::By) => ctrl.by.as_ref(),
+        (LoopKind::Controlled(ctrl), HeaderRole::For) => ctrl.for_count.as_ref(),
+        (LoopKind::Over { target, .. }, HeaderRole::Over) => Some(target),
+        (LoopKind::Over { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
+        (LoopKind::With { target, .. }, HeaderRole::With) => Some(target),
+        (LoopKind::With { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
+        _ => None,
+    }
+}
+
+/// [`crate::Interp::exec_value_expression`]'s expression, as the node the
+/// tree holds.
+fn exec_value_node(kind: &InstructionKind) -> Option<&Expr> {
+    let expression = match kind {
+        InstructionKind::Numeric {
+            expression: Some(expression),
+            ..
+        }
+        | InstructionKind::Trace(interrexx_parse::Trace::Value(expression)) => expression,
+        InstructionKind::Address(address)
+            if address.command.is_none() && address.environment.is_none() =>
+        {
+            address.dynamic.as_ref()?
+        }
+        InstructionKind::Options { expression } | InstructionKind::Interpret { expression } => {
+            expression
+        }
+        InstructionKind::Command { expression } | InstructionKind::Reply { expression } => {
+            expression.as_ref()?
+        }
+        InstructionKind::Call(call) => match &**call {
+            interrexx_parse::Call::Dynamic { target, .. } => target,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    Some(expression)
+}
+
+/// [`crate::run::forward_option_parts`]'s expressions, as the nodes the tree
+/// holds.
+fn forward_option_parts(forward: &interrexx_parse::Forward) -> [(ForwardPart, Option<&Expr>); 4] {
+    [
+        (ForwardPart::To, forward.to.as_ref()),
+        (ForwardPart::Message, forward.message.as_ref()),
+        (ForwardPart::Class, forward.class.as_ref()),
+        (ForwardPart::Arguments, forward.arguments.as_ref()),
+    ]
+}

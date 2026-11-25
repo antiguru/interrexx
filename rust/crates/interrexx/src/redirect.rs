@@ -11,7 +11,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use interrexx_core::{Body, Decoded, ObjRef};
-use interrexx_parse::{AddressIo, Expr, Fragment, OutputOption, Redirection, SymbolId};
+use interrexx_parse::{AddressIo, ExprRef, Fragment, OutputOption, Redirection, SymbolId};
 
 use crate::activation::{ActivationId, IoConfigs};
 use crate::error::{Failure, Raised};
@@ -734,7 +734,8 @@ impl Interp {
                 (Pending::Using(object), origin)
             }
             Redirection::Stream(expression) => {
-                let name = self.redirect_stream_name(code, expression, Stream::Input)?;
+                let name =
+                    self.redirect_stream_name(code, code.body.expr(expression), Stream::Input)?;
                 (Pending::Stream(name.clone()), Origin::Name(name))
             }
         })
@@ -837,7 +838,7 @@ impl Interp {
                 self.using_output_target(object, option, input_name)
             }
             Redirection::Stream(expression) => {
-                let name = self.redirect_stream_name(code, expression, stream)?;
+                let name = self.redirect_stream_name(code, code.body.expr(expression), stream)?;
                 self.named_output_target(name, append, input_name)
             }
         }
@@ -1031,10 +1032,10 @@ impl Interp {
     fn redirect_stream_name(
         &mut self,
         code: &Code<'_>,
-        expression: &Expr,
+        expression: ExprRef<'_>,
         stream: Stream,
     ) -> Result<Vec<u8>, Failure> {
-        let value = self.eval(code, code.body.expr(expression))?;
+        let value = self.eval(code, expression)?;
         self.roots.activity_mut().push_temp(value);
         self.trace_redirect_target(stream, value)?;
         let value = self.required_string_value(value)?;
