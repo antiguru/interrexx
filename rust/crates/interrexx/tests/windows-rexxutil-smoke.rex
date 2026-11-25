@@ -251,7 +251,7 @@ if SysQueryProcess() <= 0 | SysQueryProcess('TID') <= 0 then exit 156
 if SysQueryProcess() <> SysQueryProcess('PID') then exit 157
 if SysQueryProcess('PPRIO') == '' | SysQueryProcess('TPRIO') == '' then exit 158
 if SysSetPriority('not-a-class', 'NORMAL') <> 307 then exit 159
-if RxWinExec('"Z:\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
+if RxWinExec('"' || systemDir || '\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
 command = '"' || systemDir || '\cmd.exe" /D /C exit 0'
 if RxWinExec(command, 'HIDE') <= 32 then exit 161
 signal on syntax name rejected

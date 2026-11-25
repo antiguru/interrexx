@@ -84,10 +84,10 @@ pub(crate) fn cursor_position(
     let previous = crate::host::console_info()
         .unwrap_or_default()
         .dwCursorPosition;
-    if args.iter().any(Option::is_some) {
-        if let Some([row, column]) = coordinates(interp, args)? {
-            crate::host::move_console_cursor(row, column);
-        }
+    if args.iter().any(Option::is_some)
+        && let Some([row, column]) = coordinates(interp, args)?
+    {
+        crate::host::move_console_cursor(row, column);
     }
     Ok(interp.text_built(format!("{} {}", previous.Y, previous.X).into_bytes()))
 }
