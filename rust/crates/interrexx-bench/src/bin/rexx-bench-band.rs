@@ -6,6 +6,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use interrexx_cast::{CastLossy, TryCastFrom};
+
 use interrexx_bench::arms::Arm;
 use interrexx_bench::child::{Counted, Side, Wrapper, parse_counters, run};
 
@@ -329,7 +331,7 @@ fn summarise(files: &[PathBuf], reduction: &Reduction) -> ExitCode {
     }
     let value = |row: &Row| -> f64 {
         if use_cycles {
-            row.cycles.unwrap_or(0) as f64
+            f64::cast_lossy(row.cycles.unwrap_or(0))
         } else {
             row.wall
         }
@@ -459,10 +461,11 @@ fn quantile(sorted: &[f64], p: f64) -> f64 {
     if n == 1 {
         return sorted[0];
     }
-    let position = p * (n - 1) as f64;
-    let below = position.floor() as usize;
-    let above = position.ceil() as usize;
-    sorted[below] + (position - below as f64) * (sorted[above] - sorted[below])
+    let position = p * f64::cast_lossy(n - 1);
+    // `p` is within 0..=1, so both neighbours are positions in the sample.
+    let below = usize::try_cast_from(position.floor()).expect("p is within 0..=1");
+    let above = usize::try_cast_from(position.ceil()).expect("p is within 0..=1");
+    sorted[below] + (position - f64::cast_lossy(below)) * (sorted[above] - sorted[below])
 }
 
 /// Standard deviation of `ratios` as a fraction of their mean.
@@ -471,12 +474,12 @@ fn relative_sd(ratios: &[f64]) -> f64 {
     if n < 2 {
         return 0.0;
     }
-    let mean = ratios.iter().sum::<f64>() / n as f64;
+    let mean = ratios.iter().sum::<f64>() / f64::cast_lossy(n);
     let variance = ratios
         .iter()
         .map(|ratio| (ratio - mean) * (ratio - mean))
         .sum::<f64>()
-        / (n - 1) as f64;
+        / f64::cast_lossy(n - 1);
     variance.sqrt() / mean
 }
 

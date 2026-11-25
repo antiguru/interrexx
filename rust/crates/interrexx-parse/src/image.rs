@@ -8,6 +8,7 @@
 //! refused image is `None`, never a partial program, and the caller parses
 //! the text instead.
 
+use interrexx_cast::CastTruncate;
 use std::collections::BTreeMap;
 use std::ops::Range;
 
@@ -112,7 +113,7 @@ impl Writer {
     /// LEB128.
     fn usize(&mut self, mut value: usize) {
         loop {
-            let byte = (value & 0x7f) as u8;
+            let byte = u8::cast_truncate(value & 0x7f);
             value >>= 7;
             if value == 0 {
                 self.0.push(byte);

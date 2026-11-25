@@ -163,7 +163,11 @@ fn binary_tightness_errors(text: &[u8], e: &Expr, errors: &mut Vec<String>) {
         errors.push(format!(
             "binary {:?}: byte {:?} at offset {} sits between the operand spans \
              {:?} and {:?} but cannot be part of an operator",
-            op, byte as char, offset, left.span, right.span
+            op,
+            char::from(byte),
+            offset,
+            left.span,
+            right.span
         ));
     }
     if synthetic && saw_operator_byte {
@@ -220,7 +224,9 @@ fn tiling_errors(text: &[u8], spans: &[Range<usize>], errors: &mut Vec<String>) 
             errors.push(format!(
                 "byte {:?} at offset {} sits between clause spans and belongs to \
                  no instruction{}",
-                byte as char, offset, hint
+                char::from(byte),
+                offset,
+                hint
             ));
         }
         previous_end = span.end;
@@ -229,7 +235,8 @@ fn tiling_errors(text: &[u8], spans: &[Range<usize>], errors: &mut Vec<String>) 
         errors.push(format!(
             "byte {:?} at offset {} sits after the last clause span and belongs \
              to no node",
-            byte as char, offset
+            char::from(byte),
+            offset
         ));
     }
 }

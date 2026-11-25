@@ -1,6 +1,7 @@
 //! Account identity, access control and cancellation for local Windows pipes.
 #![allow(unsafe_code)]
 
+use interrexx_cast::CastFrom;
 use std::io;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::ptr::{null, null_mut};
@@ -54,7 +55,7 @@ fn sid(process: HANDLE) -> io::Result<String> {
     if size == 0 {
         return Err(io::Error::last_os_error());
     }
-    let mut data = vec![0usize; (size as usize).div_ceil(std::mem::size_of::<usize>())];
+    let mut data = vec![0usize; usize::cast_from(size).div_ceil(std::mem::size_of::<usize>())];
     // SAFETY: buffer is aligned and large enough for the reported size.
     if unsafe {
         GetTokenInformation(

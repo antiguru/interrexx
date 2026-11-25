@@ -2,6 +2,8 @@
 //! an 8-byte signature and an 8-byte count, then per macro its name, position and image, each
 //! length-prefixed, little-endian.
 
+use interrexx_cast::CastFrom;
+
 use crate::message::Macro;
 use crate::message::code::{MACRO_FILE_ERROR, OK};
 
@@ -19,10 +21,10 @@ pub fn write(macros: &[Macro]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(HEADER);
     bytes.extend_from_slice(TEXT);
     bytes.extend_from_slice(&SIGNATURE.to_le_bytes());
-    bytes.extend_from_slice(&(macros.len() as u64).to_le_bytes());
+    bytes.extend_from_slice(&u64::cast_from(macros.len()).to_le_bytes());
     for entry in macros {
         for field in [&entry.name, &entry.image] {
-            bytes.extend_from_slice(&(field.len() as u64).to_le_bytes());
+            bytes.extend_from_slice(&u64::cast_from(field.len()).to_le_bytes());
             bytes.extend_from_slice(field);
         }
         bytes.extend_from_slice(&entry.position.to_le_bytes());

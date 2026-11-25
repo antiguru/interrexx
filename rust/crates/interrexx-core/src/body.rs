@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
 use crate::{ArraySlots, ObjRef, SlotRef};
+use interrexx_cast::CastFrom;
 use interrexx_num::{Form, Number};
 use rustc_hash::FxHashMap;
 use std::collections::TryReserveError;
@@ -882,7 +883,7 @@ impl PoolHint {
     #[inline]
     fn get(&self) -> (usize, usize) {
         let at = self.0.get();
-        ((at >> 16) as usize, (at & 0xffff) as usize)
+        (usize::cast_from(at >> 16), usize::cast_from(at & 0xffff))
     }
 
     /// Records `pool` and `entry`, or nothing where either is too wide to
@@ -1604,7 +1605,7 @@ mod aligned_tests {
     fn aligned_bytes_are_aligned_and_read_back() {
         assert_eq!(std::mem::align_of::<Word>(), 16);
         let mut bytes = AlignedBytes::zeroed(20);
-        assert_eq!(bytes.as_mut_ptr() as usize % 16, 0);
+        assert_eq!(bytes.as_mut_ptr().addr() % 16, 0);
         bytes.write(15, b"abcdefgh");
         let read = bytes.to_vec();
         assert_eq!((read.len(), &read[15..20]), (20, &b"abcde"[..]));

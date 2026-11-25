@@ -13,6 +13,9 @@ description = "Object model, heap and garbage collector for interrexx"
 # object model depends on the arithmetic core.
 interrexx-num.workspace = true
 
+# Every numeric conversion, named for whether it is exact, rounds or truncates.
+interrexx-cast.workspace = true
+
 # The hasher behind `NameMap`, the two hot name-keyed tables. See that alias
 # for what it replaces and why the default one costs what it does.
 rustc-hash = "2.1.2"

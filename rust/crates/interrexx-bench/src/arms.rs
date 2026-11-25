@@ -4,6 +4,8 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use interrexx_cast::CastLossy;
+
 use crate::child::{Counted, Side, Wrapper, parse_counters, run};
 
 /// Which engine arm of a build a run used.
@@ -58,8 +60,8 @@ impl Reading {
 
     fn on(self, instrument: Instrument) -> f64 {
         match instrument {
-            Instrument::Instructions => self.instructions as f64,
-            Instrument::Cycles => self.cycles as f64,
+            Instrument::Instructions => f64::cast_lossy(self.instructions),
+            Instrument::Cycles => f64::cast_lossy(self.cycles),
         }
     }
 }
@@ -392,7 +394,7 @@ impl ScaledSitting {
         for round in 0..self.0.rounds {
             let small = self.0.find(build, arm, Size::Small, round)?;
             let per_pass = self.per_pass_in(build, arm, instrument, round)?;
-            per_round.push(small.reading.on(instrument) - per_pass * small.passes as f64);
+            per_round.push(small.reading.on(instrument) - per_pass * f64::cast_lossy(small.passes));
         }
         Figure::of(&mut per_round)
     }
@@ -410,7 +412,9 @@ impl ScaledSitting {
         if passes == 0 {
             return None;
         }
-        Some((large.reading.on(instrument) - small.reading.on(instrument)) / passes as f64)
+        Some(
+            (large.reading.on(instrument) - small.reading.on(instrument)) / f64::cast_lossy(passes),
+        )
     }
 }
 

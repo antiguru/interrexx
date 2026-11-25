@@ -3,6 +3,7 @@
 
 use std::ops::Range;
 
+use interrexx_cast::CastFrom;
 use interrexx_inventory::errors::Msg;
 
 mod cursor;
@@ -88,7 +89,7 @@ impl ParseError {
     /// translated, from its first token to the last one scanned, as the stack
     /// frame records it.
     pub fn clause(&self) -> Range<usize> {
-        self.byte..(self.end as usize).max(self.byte)
+        self.byte..usize::cast_from(self.end).max(self.byte)
     }
 
     /// This error reported against `clause` and echoing it, unless it already

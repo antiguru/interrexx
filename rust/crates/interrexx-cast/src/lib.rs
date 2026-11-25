@@ -205,6 +205,24 @@ const_widen! {
     isize_from_i64: i64 => isize;
 }
 
+macro_rules! const_truncate {
+    ($($name:ident: $from:ty => $to:ty;)*) => {
+        $(
+            #[doc = concat!("The low bits of a `", stringify!($from), "` as a `", stringify!($to), "`, for a constant.")]
+            #[inline(always)]
+            #[must_use]
+            pub const fn $name(from: $from) -> $to {
+                from as $to
+            }
+        )*
+    };
+}
+
+const_truncate! {
+    u8_truncate_u64: u64 => u8;
+    u32_truncate_u64: u64 => u32;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,5 +276,12 @@ mod tests {
         assert_eq!(WIDE, 4_294_967_295);
         assert_eq!(i64_from_i32(i32::MIN), -2_147_483_648);
         assert_eq!(u32_from_char('\u{10ffff}'), 0x10_ffff);
+    }
+
+    #[test]
+    fn the_const_truncations_keep_the_low_bits() {
+        const LOW: u32 = u32_truncate_u64(0x1234_5678_9abc_def0);
+        assert_eq!(LOW, 0x9abc_def0);
+        assert_eq!(u8_truncate_u64(0x1ff), 0xff);
     }
 }

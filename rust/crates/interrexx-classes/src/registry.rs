@@ -797,7 +797,7 @@ fn uninit_bucket(id: &[u8]) -> usize {
     const BUCKETS: u64 = 17;
     let hash = id.iter().fold(0u64, |hash, &byte| {
         hash.wrapping_mul(31)
-            .wrapping_add(i64::from(byte as i8) as u64)
+            .wrapping_add(i64::from(byte.cast_signed()).cast_unsigned())
     });
-    (hash % BUCKETS) as usize
+    usize::try_from(hash % BUCKETS).expect("below BUCKETS")
 }

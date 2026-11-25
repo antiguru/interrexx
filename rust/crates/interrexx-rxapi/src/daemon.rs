@@ -74,7 +74,8 @@ pub enum Exit {
 }
 
 fn timestamp<Tz: TimeZone>(time: &DateTime<Tz>) -> Timestamp {
-    let narrow = |value: u32| value as u16;
+    // Each field is a calendar position, at most 365 (`ordinal0`).
+    let narrow = |value: u32| u16::try_from(value).expect("a calendar field is below 366");
     Timestamp {
         year: u16::try_from(time.year() - 1900).unwrap_or(0),
         month: narrow(time.month0()),

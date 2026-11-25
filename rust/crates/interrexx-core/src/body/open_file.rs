@@ -1,3 +1,5 @@
+use interrexx_cast::CastFrom;
+
 /// How many written bytes a buffered stream holds before it writes them: the
 /// default buffer size.
 pub const STREAM_BUFFER: usize = 4096;
@@ -140,9 +142,9 @@ impl OpenFile {
                 self.file.seek(SeekFrom::Start(self.held_at))?;
                 self.buffering = WriteBuffering::Standard;
             }
-            self.write(self.held_at + self.held.len() as u64, bytes)?;
+            self.write(self.held_at + u64::cast_from(self.held.len()), bytes)?;
         }
-        self.write_position = self.offset() as i64 + 1;
+        self.write_position = self.offset().cast_signed() + 1;
         Ok(())
     }
 
@@ -166,7 +168,7 @@ impl OpenFile {
         let size = self.file.metadata().map_or(0, |meta| meta.len());
         match self.held.is_empty() || self.transient {
             true => size,
-            false => size.max(self.held_at + self.held.len() as u64),
+            false => size.max(self.held_at + u64::cast_from(self.held.len())),
         }
     }
 
@@ -179,7 +181,7 @@ impl OpenFile {
         }
         match self.held.is_empty() || self.transient {
             true => self.file.stream_position().unwrap_or(0),
-            false => self.held_at + self.held.len() as u64,
+            false => self.held_at + u64::cast_from(self.held.len()),
         }
     }
 
@@ -201,7 +203,7 @@ impl OpenFile {
         if self.buffering == WriteBuffering::None {
             return self.write_through(offset, bytes);
         }
-        let follows = self.transient || self.held_at + self.held.len() as u64 == offset;
+        let follows = self.transient || self.held_at + u64::cast_from(self.held.len()) == offset;
         if !follows || bytes.len() > STREAM_BUFFER {
             self.flush()?;
         }
@@ -214,7 +216,7 @@ impl OpenFile {
         let mut rest = bytes;
         while !rest.is_empty() {
             if self.held.len() == STREAM_BUFFER {
-                let at = self.held_at + STREAM_BUFFER as u64;
+                let at = self.held_at + u64::cast_from(STREAM_BUFFER);
                 self.flush()?;
                 self.held_at = at;
             }
@@ -236,7 +238,7 @@ impl OpenFile {
         }
         self.file.write_all(bytes)?;
         if standard {
-            self.held_at += bytes.len() as u64;
+            self.held_at += u64::cast_from(bytes.len());
         }
         Ok(())
     }

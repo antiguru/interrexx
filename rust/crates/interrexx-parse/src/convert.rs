@@ -46,7 +46,9 @@ pub fn syntax_code(text: &[u8]) -> Option<u64> {
     /// One half of the argument as a Rexx number, then a
     /// whole-number check. `None` for anything that is not a whole number.
     fn whole(text: &str) -> Option<i64> {
-        Number::parse(text)?.whole_value(interrexx_num::DEFAULT_DIGITS as usize)
+        Number::parse(text)?.whole_value(
+            usize::try_from(interrexx_num::DEFAULT_DIGITS).expect("DEFAULT_DIGITS is 9"),
+        )
     }
 
     let text = String::from_utf8_lossy(text);
@@ -64,7 +66,7 @@ pub fn syntax_code(text: &[u8]) -> Option<u64> {
         return None;
     }
     // Both bounds are checked above, so neither narrowing can lose anything.
-    Some(major as u64 * 1000 + sub as u64)
+    Some(major.unsigned_abs() * 1000 + sub.unsigned_abs())
 }
 
 /// A CATCH SYNTAX matcher is a decimal major with an optional nonzero minor.
