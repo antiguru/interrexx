@@ -9,7 +9,7 @@
 ::requires 'streamsocket.cls'
 
 
-::class 'smtpmsg' public
+::class smtpmsg public
 
 ::attribute from
 ::attribute subject
@@ -43,7 +43,7 @@
   return recipients
 
 
-::class 'smtp' public
+::class smtp public
 
 ::attribute authid
 ::attribute cmdresponse

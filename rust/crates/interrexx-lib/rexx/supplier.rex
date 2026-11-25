@@ -3,7 +3,7 @@
    See spec/src/classes/supplier.md, rules class.supplier.allitems,
    class.supplier.allitems.sends and class.supplier.supplier. */
 
-::class SupplierMixin
+::class "SupplierMixin"
 
 /* r[class.supplier.allitems] */
 ::method allItems

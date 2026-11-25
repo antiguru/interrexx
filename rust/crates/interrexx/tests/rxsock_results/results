@@ -655,6 +655,29 @@ Array[0]:
 Array[0]: 
 "1"
 
+# Public class IDs retain the exact spelling of their bundled declarations.
+program
+do name over .array~of('socket.cls', 'streamsocket.cls', 'mime.cls', 'smtp.cls', 'rxregexp.cls')
+  pkg = .context~package~loadPackage(name)
+  classes = pkg~publicClasses
+  do key over classes~allIndexes~sort
+    say name key classes[key]~id
+  end
+end
+----
+rc 0
+[stdout]
+socket.cls HOSTINFO HOSTINFO
+socket.cls INETADDRESS INETADDRESS
+socket.cls SOCKET Socket
+streamsocket.cls STREAMSOCKET StreamSocket
+mime.cls MIMEMULTIPART MIMEMULTIPART
+mime.cls MIMEPART MIMEPART
+smtp.cls SMTP SMTP
+smtp.cls SMTPMSG SMTPMSG
+rxregexp.cls REGULAREXPRESSION RegularExpression
+[stderr]
+
 # mime.cls: a part's string byte for byte, its headers only where set, a
 # lone period doubled, and a multipart's boundary and part layout.
 program
