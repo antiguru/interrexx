@@ -109,6 +109,27 @@ if caseParent \== '' then do
   call stream shortCase, 'c', 'close'
   call directory savedDirectory
 end
+/* spec: util.sysfiletree.windows */
+if SysMkDir(dir || '\tree') <> 0 then exit 87
+treeFile = dir || '\tree\Mixed.TXT'
+if charout(treeFile, 'data') <> 0 then exit 88
+call stream treeFile, 'c', 'close'
+if SysSetFileDateTime(treeFile, '2024-02-03', '14:05:06') <> 0 then exit 89
+if SysFileTree(dir || '\*.txt', 'matches.', 'FSO') <> 0 then exit 90
+if matches.0 <> 1 | matches.1 \== treeFile then exit 91
+treeResults = .array~of('old-1', 'old-2')
+if SysFileTree(dir || '\tree\*.*', treeResults, 'FLH') <> 0 then exit 92
+if treeResults~items <> 1 then exit 93
+if left(treeResults[1], 19) \== '2024-02-03 14:05:06' then exit 94
+if word(treeResults[1], 3) \== '4' then exit 95
+if right(treeResults[1], length(treeFile)) \== treeFile then exit 96
+if SysFileTree(treeFile, 'matches.', 'F', , '**+**') <> 0 then exit 97
+if SysFileTree(treeFile, 'matches.', 'FO', '**+**') <> 0 then exit 98
+if matches.0 <> 1 | matches.1 \== treeFile then exit 99
+if SysFileTree(treeFile, 'matches.', 'F', , '**-**') <> 0 then exit 100
+if SysFileTree(treeFile, 'matches.', 'FO', '**+**') <> 0 then exit 101
+if matches.0 <> 0 then exit 102
+if SysFileDelete(treeFile) <> 0 | SysRmDir(dir || '\tree') <> 0 then exit 103
 if SysRmDir(dir) <> 0 then exit 8
 missing = dir || '\missing'
 if SysIsFileCompressed(missing) | SysIsFileEncrypted(missing) then exit 9

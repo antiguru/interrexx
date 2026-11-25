@@ -1121,3 +1121,20 @@ dangling, D:    0 0
 dangling, F:    0 1
 dangling data:  7 lrwxrwxrwx
 ```
+
+## Windows
+
+r[util.sysfiletree.windows]
+On Windows the directory is resolved against the interpreter's current
+directory. The final component is matched using Windows wildcard rules,
+which include extensionless names in `*.*`. The `I` option has no effect
+on this search. Under `S`, recurse into subdirectories and do not descend
+through directory reparse points. The name in each result is absolute.
+
+The target mask filters on the archive, directory, hidden, read-only, and
+system attributes in that order. A plus requires the attribute, a minus
+requires its absence, and an asterisk leaves it unrestricted. The new mask
+can set or clear the archive, hidden, read-only, and system attributes.
+The result reports the attributes after any change. Full entries use
+Windows local last-write time, byte size, and a five-character attribute
+field whose letters are `ADHRS`. A dash marks an attribute that is clear.
