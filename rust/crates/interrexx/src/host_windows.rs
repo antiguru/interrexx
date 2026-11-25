@@ -582,3 +582,84 @@ pub(crate) fn write_profile(
         WritePrivateProfileStringW(section.as_ptr(), string(key), string(value), file.as_ptr()) != 0
     }
 }
+
+pub(crate) fn move_console_cursor(row: i16, column: i16) {
+    use windows_sys::Win32::System::Console::{
+        COORD, GetStdHandle, STD_OUTPUT_HANDLE, SetConsoleCursorPosition,
+    };
+
+    // SAFETY: both APIs validate the arguments and the coordinate is passed by value.
+    unsafe {
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), COORD { X: column, Y: row })
+    };
+}
+
+pub(crate) fn set_console_cursor_visible(visible: bool) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{
+            CONSOLE_CURSOR_INFO, GetConsoleCursorInfo, GetStdHandle, STD_OUTPUT_HANDLE,
+            SetConsoleCursorInfo,
+        },
+    };
+
+    let mut cursor = CONSOLE_CURSOR_INFO::default();
+    // SAFETY: both APIs validate this handle; cursor is a live writable struct.
+    unsafe {
+        let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if GetConsoleCursorInfo(handle, &mut cursor) == 0 {
+            return i64::from(GetLastError());
+        }
+        cursor.bVisible = i32::from(visible);
+        if SetConsoleCursorInfo(handle, &cursor) == 0 {
+            return i64::from(GetLastError());
+        }
+    }
+    0
+}
+
+pub(crate) fn read_console_screen(row: i16, column: i16, requested: u32) -> Vec<u8> {
+    use windows_sys::Win32::System::Console::{
+        COORD, GetStdHandle, ReadConsoleOutputCharacterW, STD_OUTPUT_HANDLE,
+    };
+
+    let Some(info) = console_info() else {
+        return Vec::new();
+    };
+    let (width, height) = (info.dwSize.X, info.dwSize.Y);
+    if !(0..height).contains(&row) || !(0..width).contains(&column) {
+        return Vec::new();
+    }
+    let available =
+        u32::from(width as u16) * u32::from((height - row) as u16) - u32::from(column as u16);
+    let length = available.min(requested);
+    // Read only actual characters, in chunks so a large reported screen
+    // buffer does not cause one huge preallocation.
+    let mut wide = Vec::new();
+    let mut buffer = [0; 4096];
+    while (wide.len() as u32) < length {
+        let offset = u32::from(column as u16) + wide.len() as u32;
+        let width = u32::from(width as u16);
+        let coord = COORD {
+            X: (offset % width) as i16,
+            Y: row + (offset / width) as i16,
+        };
+        let count = (length - wide.len() as u32).min(buffer.len() as u32);
+        let mut read = 0;
+        // SAFETY: buffer covers count writable units, and read is a live u32.
+        let ok = unsafe {
+            ReadConsoleOutputCharacterW(
+                GetStdHandle(STD_OUTPUT_HANDLE),
+                buffer.as_mut_ptr(),
+                count,
+                coord,
+                &mut read,
+            )
+        };
+        if ok == 0 || read == 0 {
+            break;
+        }
+        wide.extend_from_slice(&buffer[..read as usize]);
+    }
+    String::from_utf16_lossy(&wide).into_bytes()
+}
