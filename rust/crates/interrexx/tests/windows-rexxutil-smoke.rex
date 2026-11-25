@@ -212,3 +212,16 @@ if size \== '0 0' then do
   if SysCurState('ON') <> 0 then exit 136
   if length(SysTextScreenRead(0, 0, 1)) <> 1 then exit 137
 end
+
+/* spec: util.windows.printers */
+printerRc = SysWinGetPrinters('printers.')
+if printerRc <> 0 & printerRc <> 1 then exit 140
+if printerRc = 1 & printers.0 <> 0 then exit 141
+defaultPrinter = SysWinGetDefaultPrinter()
+foundDefault = 0
+do i = 1 to printers.0
+  if countstr(',', printers.i) < 2 then exit 142
+  if defaultPrinter \== '' & defaultPrinter == printers.i then foundDefault = 1
+end
+if defaultPrinter \== '' & foundDefault <> 1 then exit 143
+if SysWinSetDefaultPrinter('') = 0 then exit 144

@@ -181,3 +181,14 @@ position and moves the cursor. `SysCurState('ON')` and
 `SysTextScreenRead(row, column[, length])` reads screen characters
 starting at the specified cell. With no length, it reads to the end of
 the screen buffer. A read outside the buffer answers the null string.
+
+## Windows printers
+
+r[util.windows.printers]
+`SysWinGetPrinters(stemarray)` fills a stem or array with the installed
+printer descriptions. Each description includes the printer, driver and
+port names, separated by commas. The call answers zero on success and
+one on failure. `SysWinGetDefaultPrinter()` answers the description of
+the default printer, or the null string when none is available.
+`SysWinSetDefaultPrinter(name)` accepts a printer name or a description.
+It answers zero on success or a Windows system error code on failure.
